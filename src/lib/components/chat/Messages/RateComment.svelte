@@ -130,9 +130,9 @@
 		</button>
 	</div>
 
-	<div class="w-full flex justify-center">
-		<div class=" relative w-fit overflow-x-auto scrollbar-none">
-			<div class="mt-1.5 w-fit flex gap-1 pb-2">
+	<div class="w-full overflow-x-auto scrollbar-thin">
+		<div class="relative min-w-max w-fit mx-auto">
+			<div class="mt-1.5 flex gap-1 pb-2">
 				<!-- 1-10 scale -->
 				{#each Array.from({ length: 10 }).map((_, i) => i + 1) as rating}
 					<button
@@ -222,7 +222,7 @@
 			placeholder={$i18n.t('Feel free to add specific details')}
 			aria-label={$i18n.t('Additional feedback comments')}
 			rows="3"
-		/>
+		></textarea>
 	</div>
 
 	<div class="mt-2 gap-1.5 flex justify-between">
