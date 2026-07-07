@@ -2,6 +2,7 @@ import asyncio
 import logging
 from contextlib import AsyncExitStack
 from typing import Optional
+from urllib.parse import urlparse
 
 log = logging.getLogger(__name__)
 
@@ -62,10 +63,20 @@ class MCPClient:
         self.exit_stack = None
 
     async def connect(self, url: str, headers: Optional[dict] = None):
+        if not url or not isinstance(url, str):
+            raise ValueError('MCP server URL is required')
+        normalized_url = url.strip()
+        if any(ch in normalized_url for ch in ('\\', '\r', '\n', '\t')):
+            raise ValueError('MCP server URL contains unsupported characters')
+
+        parsed = urlparse(normalized_url)
+        if parsed.scheme not in ('http', 'https') or not parsed.netloc:
+            raise ValueError('MCP server URL must be an http(s) URL')
+
         async with AsyncExitStack() as exit_stack:
             try:
                 self._streams_context = streamablehttp_client(
-                    url,
+                    normalized_url,
                     headers=headers,
                     httpx_client_factory=create_httpx_client
                     if AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
