@@ -2010,6 +2010,9 @@ def process_messages_with_output(
     processed = []
 
     for message in messages:
+        if _is_empty_assistant_message(message):
+            continue
+
         if message.get('role') == 'assistant' and message.get('output'):
             # Use output items for clean OpenAI-format messages
             output_messages = convert_output_to_messages(
@@ -2026,6 +2029,30 @@ def process_messages_with_output(
         processed.append(clean_message)
 
     return processed
+
+
+def _has_message_content(content) -> bool:
+    if isinstance(content, str):
+        return bool(content.strip())
+    if isinstance(content, list):
+        for part in content:
+            if not isinstance(part, dict):
+                return True
+            if part.get('type') != 'text':
+                return True
+            if part.get('text', '').strip():
+                return True
+        return False
+    return content is not None
+
+
+def _is_empty_assistant_message(message: dict) -> bool:
+    return (
+        message.get('role') == 'assistant'
+        and not message.get('output')
+        and not message.get('tool_calls')
+        and not _has_message_content(message.get('content'))
+    )
 
 
 def strip_compaction_fields(messages: list[dict]) -> list[dict]:
