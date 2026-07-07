@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import logging
+from urllib.parse import urlparse
 from typing import Optional
 
 import aiohttp
@@ -76,6 +77,21 @@ async def get_config_values(key_map: dict[str, str]) -> dict:
 
 def config_updates(data: dict, key_map: dict[str, str]) -> dict:
     return {key_map[field]: value for field, value in data.items() if field in key_map}
+
+
+def _normalize_http_url(value: str, field_name: str) -> str:
+    if not value or not isinstance(value, str):
+        raise ValueError(f'{field_name} is required')
+
+    if any(ch in value for ch in ('\\', '\r', '\n', '\t')):
+        raise ValueError(f'{field_name} contains unsupported characters')
+
+    normalized_url = value.strip()
+    parsed = urlparse(normalized_url)
+    if parsed.scheme not in ('http', 'https') or not parsed.netloc:
+        raise ValueError(f'{field_name} must be an absolute http(s) URL')
+
+    return normalized_url
 
 
 ############################
@@ -348,8 +364,10 @@ async def verify_terminal_server_connection(
     (plain terminal).  Returns ``{status: true, type: "orchestrator"|"terminal"}``.
     """
     base_url = (form_data.url or '').rstrip('/')
-    if not base_url:
-        raise HTTPException(status_code=400, detail='Terminal server URL is required')
+    try:
+        base_url = _normalize_http_url(base_url, 'Terminal server URL')
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f'Invalid terminal server URL: {exc}')
 
     headers = {}
     if form_data.auth_type == 'bearer' and form_data.key:
@@ -538,6 +556,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
     Verify the connection to the tool server.
     """
     try:
+        tool_server_url = _normalize_http_url(form_data.url, 'Tool server URL')
         if form_data.type == 'mcp':
             if form_data.auth_type in ('oauth_2.1', 'oauth_2.1_static'):
                 oauth_server_url = (
@@ -607,7 +626,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
                         custom_headers = get_custom_headers(form_data.headers, user)
                         headers.update(custom_headers)
 
-                    await client.connect(form_data.url, headers=headers)
+                    await client.connect(tool_server_url, headers=headers)
                     specs = await client.list_tool_specs()
                     return {
                         'status': True,
@@ -652,7 +671,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
                 custom_headers = get_custom_headers(form_data.headers, user)
                 headers.update(custom_headers)
 
-            url = get_tool_server_url(form_data.url, form_data.path)
+            url = get_tool_server_url(tool_server_url, form_data.path)
             return await get_tool_server_data(url, headers=headers)
     except HTTPException as e:
         raise e
