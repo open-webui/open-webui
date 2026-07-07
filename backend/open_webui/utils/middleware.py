@@ -2836,6 +2836,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     metadata['sources'] = sources[:] if sources else []
 
     # If context is not empty, insert it into the messages
+    # Re-read the last user message: Vision Image RAG (above) may have replaced
+    # an image-only message with a text description, so the `prompt` captured
+    # earlier could be empty and would silently drop the retrieved sources.
+    prompt = get_last_user_message(form_data['messages'])
     if sources and prompt:
         form_data['messages'] = await apply_source_context_to_messages(request, form_data['messages'], sources, prompt)
 
