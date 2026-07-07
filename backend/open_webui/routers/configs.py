@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import logging
+from urllib.parse import urlparse
 from typing import Optional
 
 import aiohttp
@@ -33,7 +34,7 @@ from open_webui.utils.tools import (
     set_terminal_servers,
     set_tool_servers,
 )
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 router = APIRouter()
 
@@ -76,6 +77,21 @@ async def get_config_values(key_map: dict[str, str]) -> dict:
 
 def config_updates(data: dict, key_map: dict[str, str]) -> dict:
     return {key_map[field]: value for field, value in data.items() if field in key_map}
+
+
+def _validate_http_url(value: str, field_name: str) -> str:
+    if not value or not isinstance(value, str):
+        raise ValueError(f'{field_name} must be a non-empty URL string')
+
+    if any(ch in value for ch in ('\\', '\r', '\n', '\t')):
+        raise ValueError(f'{field_name} contains unsupported characters')
+
+    url = value.strip()
+    parsed = urlparse(url)
+    if parsed.scheme not in ('http', 'https') or not parsed.netloc:
+        raise ValueError(f'{field_name} must be an absolute http(s) URL')
+
+    return url
 
 
 ############################
@@ -217,6 +233,29 @@ class ToolServerConnection(BaseModel):
 
     model_config = ConfigDict(extra='allow')
 
+    @field_validator('url')
+    @classmethod
+    def validate_url(cls, value: str) -> str:
+        return _validate_http_url(value, 'url')
+
+    @field_validator('type')
+    @classmethod
+    def validate_type(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        if value not in ('openapi', 'mcp'):
+            raise ValueError('type must be "openapi" or "mcp"')
+        return value
+
+    @field_validator('path')
+    @classmethod
+    def validate_path(cls, value: str) -> str:
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError('path must be a non-empty string')
+        if any(ch in value for ch in ('\\', '\r', '\n', '\t')):
+            raise ValueError('path contains unsupported characters')
+        return value
+
 
 class ToolServersConfigForm(BaseModel):
     TOOL_SERVER_CONNECTIONS: list[ToolServerConnection]
@@ -304,6 +343,20 @@ class TerminalServerConnection(BaseModel):
     policy: dict | None = None  # cached policy data
 
     model_config = ConfigDict(extra='allow')
+
+    @field_validator('url')
+    @classmethod
+    def validate_url(cls, value: str) -> str:
+        return _validate_http_url(value, 'url')
+
+    @field_validator('path')
+    @classmethod
+    def validate_path(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        if any(ch in value for ch in ('\\', '\r', '\n', '\t')):
+            raise ValueError('path contains unsupported characters')
+        return value
 
 
 class TerminalServersConfigForm(BaseModel):
