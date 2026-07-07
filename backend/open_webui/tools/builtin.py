@@ -1126,6 +1126,26 @@ async def write_note(
         return json.dumps({'error': str(e)})
 
 
+async def sync_note_document_after_external_update(note, ydoc_manager=None, socket=None) -> None:
+    document_id = f'note:{note.id}'
+
+    if ydoc_manager is None or socket is None:
+        from open_webui.socket.main import YDOC_MANAGER, sio
+
+        ydoc_manager = ydoc_manager or YDOC_MANAGER
+        socket = socket or sio
+
+    try:
+        await ydoc_manager.clear_document(document_id)
+        await socket.emit(
+            'note-events',
+            note.model_dump(),
+            to=document_id,
+        )
+    except Exception as e:
+        log.exception(f'Failed to sync note document after external update: {e}')
+
+
 async def replace_note_content(
     note_id: str,
     content: str,
@@ -1180,6 +1200,8 @@ async def replace_note_content(
 
         if not updated_note:
             return json.dumps({'error': 'Failed to update note'})
+
+        await sync_note_document_after_external_update(updated_note)
 
         return json.dumps(
             {

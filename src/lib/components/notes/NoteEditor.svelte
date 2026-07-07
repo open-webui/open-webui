@@ -41,6 +41,7 @@
 	} from '$lib/stores';
 
 	import { downloadPdf } from './utils';
+	import { resolveNoteEventContent } from './events';
 
 	import Controls from './NoteEditor/Controls.svelte';
 	import Chat from './NoteEditor/Chat.svelte';
@@ -799,6 +800,19 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		if (_note.data && _note.data.files) {
 			files = _note.data.files;
 			note.data.files = files;
+		}
+
+		if (_note.data?.content) {
+			const content = resolveNoteEventContent(
+				note.data.content ?? {},
+				_note.data.content,
+				(md) => marked.parse(md, { async: false }) as string
+			);
+
+			if (!equal(content, note.data.content)) {
+				note.data.content = content;
+				editor?.commands.setContent(content.json ?? content.html);
+			}
 		}
 
 		if (_note.title && _note.title) {
