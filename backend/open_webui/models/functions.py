@@ -42,7 +42,7 @@ class FunctionMeta(BaseModel):
 
 class FunctionModel(BaseModel):
     id: str
-    user_id: str
+    user_id: str | None = None  # may be null for legacy/malformed records
     name: str
     type: str
     content: str
@@ -58,7 +58,7 @@ class FunctionModel(BaseModel):
 # --- form / schema definitions ---
 class FunctionWithValvesModel(BaseModel):
     id: str
-    user_id: str
+    user_id: str | None = None  # may be null for legacy/malformed records
     name: str
     type: str
     content: str
@@ -79,7 +79,7 @@ class FunctionWithValvesModel(BaseModel):
 
 class FunctionResponse(BaseModel):
     id: str
-    user_id: str
+    user_id: str | None = None  # may be null for legacy/malformed records
     type: str
     name: str
     meta: FunctionMeta
