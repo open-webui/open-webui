@@ -69,6 +69,7 @@
 
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
+	import { getAvailableFeatureToggleState } from './MessageInput/features';
 
 	import ToolServersModal from './ToolServersModal.svelte';
 	import SkillsModal from './SkillsModal.svelte';
@@ -552,6 +553,11 @@
 		selectedModelIds.length === imageGenerationCapableModels.length &&
 		$config?.features?.enable_image_generation &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.image_generation);
+
+	$: imageGenerationEnabled = getAvailableFeatureToggleState(
+		imageGenerationEnabled,
+		showImageGenerationButton
+	);
 
 	let showCodeInterpreterButton = false;
 	$: showCodeInterpreterButton =
