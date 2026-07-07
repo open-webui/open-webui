@@ -31,6 +31,7 @@
 
 	import TurndownService from 'turndown';
 	import { gfm } from '@joplin/turndown-plugin-gfm';
+	import { getEditorPlainText } from './RichTextInput/plainText';
 	const turndownService = new TurndownService({
 		codeBlockStyle: 'fenced',
 		headingStyle: 'atx'
@@ -893,18 +894,7 @@
 						)
 						.replace(/\u00a0/g, ' ');
 				} else {
-					mdValue = turndownService
-						.turndown(
-							htmlValue
-								// Replace empty paragraphs with line breaks
-								.replace(/<p><\/p>/g, '<br/>')
-								// Replace multiple spaces with non-breaking spaces
-								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
-								// Replace tabs with non-breaking spaces (preserve indentation)
-								.replace(/\t/g, '\u00a0\u00a0\u00a0\u00a0') // 1 tab = 4 spaces
-						)
-						// Convert non-breaking spaces back to regular spaces for markdown
-						.replace(/\u00a0/g, ' ');
+					mdValue = getEditorPlainText(editor);
 				}
 
 				onChange({
@@ -1267,14 +1257,16 @@
 
 		const jsonValue = editor.getJSON();
 		const htmlValue = editor.getHTML();
-		let mdValue = turndownService
-			.turndown(
-				(preserveBreaks ? htmlValue.replace(/<p><\/p>/g, '<br/>') : htmlValue).replace(
-					/ {2,}/g,
-					(m) => m.replace(/ /g, '\u00a0')
-				)
-			)
-			.replace(/\u00a0/g, ' ');
+		let mdValue = richText
+			? turndownService
+					.turndown(
+						(preserveBreaks ? htmlValue.replace(/<p><\/p>/g, '<br/>') : htmlValue).replace(
+							/ {2,}/g,
+							(m) => m.replace(/ /g, '\u00a0')
+						)
+					)
+					.replace(/\u00a0/g, ' ')
+			: getEditorPlainText(editor);
 
 		if (value === '') {
 			editor.commands.clearContent(); // Clear content if value is empty
