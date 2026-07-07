@@ -19,6 +19,8 @@
 
 	import { reindexKnowledgeFiles } from '$lib/apis/knowledge';
 	import { deleteAllFiles } from '$lib/apis/files';
+	import { getRagVisionConfig, setRagVisionConfig } from '$lib/apis/configs';
+	import { models } from '$lib/stores';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -66,6 +68,10 @@
 	};
 
 	let RAGConfig = null;
+
+	// Optional model id used to describe images for RAG when the chatting
+	// model does not support vision. Empty string means disabled.
+	let visionSupportModel = '';
 
 	const embeddingModelUpdateHandler = async () => {
 		if (RAG_EMBEDDING_ENGINE === '' && RAG_EMBEDDING_MODEL.split('/').length - 1 > 1) {
@@ -321,6 +327,11 @@
 		config.RAG_TOKENIZER_MODEL = config?.RAG_TOKENIZER_MODEL ?? '';
 
 		RAGConfig = config;
+
+		visionSupportModel = await getRagVisionConfig(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return '';
+		});
 	});
 </script>
 
@@ -1546,6 +1557,43 @@
 									/>
 								</Tooltip>
 							</div>
+						</div>
+					</div>
+
+					<!-- Vision Image RAG -->
+					<div class="mb-2.5 flex flex-col w-full justify-between">
+						<div class="mb-1 text-xs font-medium">{$i18n.t('Vision Support Model')}</div>
+						<div class="flex w-full">
+							<select
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								bind:value={visionSupportModel}
+								placeholder={$i18n.t('Select a model')}
+								on:change={async () => {
+									const res = await setRagVisionConfig(
+										localStorage.token,
+										visionSupportModel
+									).catch((error) => {
+										toast.error(`${error}`);
+										return null;
+									});
+									if (res !== null) {
+										toast.success($i18n.t('Vision Support Model updated successfully'));
+									}
+								}}
+							>
+								<option value="">{$i18n.t('Disabled (vision models only)')}</option>
+								{#each $models as model}
+									<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+										{model.name}
+										{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+									</option>
+								{/each}
+							</select>
+						</div>
+						<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t(
+								'Used to describe images for RAG when the chatting model does not support vision. Leave disabled to use only vision-capable chatting models.'
+							)}
 						</div>
 					</div>
 				</div>
