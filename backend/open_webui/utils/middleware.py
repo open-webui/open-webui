@@ -2360,15 +2360,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if 'files' in folder.data:
                 # Defensive: filter to entries the caller can still read.
                 allowed_files = await get_accessible_folder_files(folder.data['files'], user)
-                if metadata.get('params', {}).get('function_calling') == 'legacy':
-                    form_data['files'] = [
-                        *allowed_files,
-                        *form_data.get('files', []),
-                    ]
-                else:
-                    # Native FC: skip RAG injection, builtin tools
-                    # will read folder knowledge from metadata.
-                    metadata['folder_knowledge'] = allowed_files
+                # Inject folder knowledge for RAG on every query regardless of
+                # function-calling mode (consistent with model-attached knowledge
+                # below). Upstream gated this on `== 'legacy'`, which skipped
+                # auto-RAG in default/native modes.
+                form_data['files'] = [
+                    *allowed_files,
+                    *form_data.get('files', []),
+                ]
+                # Also expose to builtin knowledge tools for follow-up searches.
+                metadata['folder_knowledge'] = allowed_files
 
     # Model "Knowledge" handling
     user_message = get_last_user_message(form_data['messages'])
