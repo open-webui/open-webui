@@ -31,6 +31,7 @@
 
 	import TurndownService from 'turndown';
 	import { gfm } from '@joplin/turndown-plugin-gfm';
+	import { getDirectTableCells, getDirectTableRows } from './RichTextInput/tableNodes';
 	const turndownService = new TurndownService({
 		codeBlockStyle: 'fenced',
 		headingStyle: 'atx'
@@ -65,13 +66,13 @@
 		filter: 'table',
 		replacement: function (content, node) {
 			// Extract rows
-			const rows = Array.from(node.querySelectorAll('tr'));
+			const rows = getDirectTableRows(node);
 			if (rows.length === 0) return content;
 
 			let markdown = '\n';
 
 			rows.forEach((row, rowIndex) => {
-				const cells = Array.from(row.querySelectorAll('th, td'));
+				const cells = getDirectTableCells(row);
 				const cellContents = cells.map((cell) => {
 					// Get the text content and clean it up
 					let cellContent = turndownService.turndown(cell.innerHTML).trim();
