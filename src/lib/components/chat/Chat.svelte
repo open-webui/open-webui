@@ -113,6 +113,7 @@
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import { isEmbedWindow } from '../common/FullHeightIframe.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
@@ -791,18 +792,18 @@
 
 	const onMessageHandler = async (event: {
 		origin: string;
+		source: unknown;
 		data: { type: string; text: string };
 	}) => {
 		const isSameOrigin = event.origin === window.origin;
 		const type = event.data?.type;
 
-		// Prompt-driving message types let an embedding page control the chat
-		// input / submission.  Cross-origin sources are only trusted when the
-		// user has explicitly opted in via the "iframe Sandbox Allow Same
-		// Origin" interface setting (the same toggle that governs whether
-		// rendered iframes receive `allow-same-origin`).
+		// Prompt-driving types are trusted only same-origin, from our own embed iframes
+		// (opaque srcdoc origin, submission still confirmed below) or via explicit opt-in.
 		const promptTypes = ['input:prompt', 'input:prompt:submit', 'action:submit'];
-		const isTrusted = isSameOrigin || ($settings?.iframeSandboxAllowSameOrigin ?? false);
+		const isOwnEmbed = isEmbedWindow(event.source);
+		const isTrusted =
+			isSameOrigin || isOwnEmbed || ($settings?.iframeSandboxAllowSameOrigin ?? false);
 
 		// Non-prompt message types are always restricted to same-origin only.
 		if (!isSameOrigin && !promptTypes.includes(type)) {
