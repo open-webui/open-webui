@@ -177,7 +177,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 	};
 
 	const SHOW_THINKING_SYSTEM_PROMPTS = $settings?.showThinkingSystemPrompts ?? false;
-	const SHOW_THINKING_SETTINGS = $settings?.showThinkingSettings ?? 0;
+	const SHOW_THINKING_SETTINGS = $settings?.showThinkingSettings ?? 1;
 
 	function selectThinkingBudget(value) {
 		$thinkingBudget = value;
