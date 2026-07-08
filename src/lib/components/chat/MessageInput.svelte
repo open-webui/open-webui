@@ -170,10 +170,10 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 	}));
 
 	let configValues = {
-		flash: { value: 0, systemPrompt: 'reasoning_effort=None/Max (0%)\nAnswer the user in a quick manner without asking for clarifications or overthinking.' },
-		standard: { value: 512, systemPrompt: 'reasoning_effort=Standard/Max (33%)\nAnswer the user\'s inquiry normally.' },
-		extended: { value: 2048, systemPrompt: 'reasoning_effort=High/Max (66%)\nGo over everything you know about the topic being talked about and answer the user\'s inquiry. Ask for details if you need them.' },
-		deep: { value: -1, systemPrompt: 'reasoning_effort=Max/Max (100%)\nYou are an expert at the given topic being discussed. Go into as much detail as possible, utilize your thinking to double and triple check facts, replies and story information. You should not leave any details out. Create a thorough plan of action to the user\'s inquiry.' }
+		flash: { value: 0, systemPrompt: 'reasoning_effort=None (0%). This is the lowest effort you can utilize. Your reasoning modes are: None, Standard, High, Max.\nAnswer the user in a quick manner without asking for clarifications or overthinking.' },
+		standard: { value: 512, systemPrompt: 'reasoning_effort=Standard (33%). This is a balanaced effort of your abilities. Your reasoning modes are: None, Standard, High, Max.\nAnswer the user\'s inquiry normally.' },
+		extended: { value: 2048, systemPrompt: 'reasoning_effort=High (66%). This is a higher effort setting of your abilities. Your reasoning modes are: None, Standard, High, Max.\nGo over everything you know about the topic being talked about and answer the user\'s inquiry. Ask for details if you need them.' },
+		deep: { value: -1, systemPrompt: 'reasoning_effort=Max (100%). This is the maximum effort setting of your abilities. Your reasoning modes are: None, Standard, High, Max.\nYou are an expert at the given topic being discussed. Go into as much detail as possible, utilize your thinking to double and triple check facts, replies and story information. You should not leave any details out. Create a thorough plan of action to the user\'s inquiry.' }
 	};
 
 	const SHOW_THINKING_SYSTEM_PROMPTS = $settings?.showThinkingSystemPrompts ?? false;
@@ -196,10 +196,10 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 
 	function resetConfigEditor() {
 		configValues = {
-			flash: { value: 0, systemPrompt: 'reasoning_effort=None\nAnswer the user in a quick manner without asking for clarifications or overthinking.' },
-			standard: { value: 512, systemPrompt: 'reasoning_effort=Standard\nAnswer the user\'s inquiry normally.' },
-			extended: { value: 2048, systemPrompt: 'reasoning_effort=High\nGo over everything you know about the topic being talked about and answer the user\'s inquiry. Ask for details if you need them.' },
-			deep: { value: -1, systemPrompt: 'reasoning_effort=Max\nGo over everything you know about the topic being talked about, double check it and utilize tools if necessary. Create a thorough plan of action to the user\'s inquiry.' }
+		flash: { value: 0, systemPrompt: 'reasoning_effort=None (0%). This is the lowest effort you can utilize. Your reasoning modes are: None, Standard, High, Max.\nAnswer the user in a quick manner without asking for clarifications or overthinking.' },
+		standard: { value: 512, systemPrompt: 'reasoning_effort=Standard (33%). This is a balanaced effort of your abilities. Your reasoning modes are: None, Standard, High, Max.\nAnswer the user\'s inquiry normally.' },
+		extended: { value: 2048, systemPrompt: 'reasoning_effort=High (66%). This is a higher effort setting of your abilities. Your reasoning modes are: None, Standard, High, Max.\nGo over everything you know about the topic being talked about and answer the user\'s inquiry. Ask for details if you need them.' },
+		deep: { value: -1, systemPrompt: 'reasoning_effort=Max (100%). This is the maximum effort setting of your abilities. Your reasoning modes are: None, Standard, High, Max.\nYou are an expert at the given topic being discussed. Go into as much detail as possible, utilize your thinking to double and triple check facts, replies and story information. You should not leave any details out. Create a thorough plan of action to the user\'s inquiry.' }
 		};
 	}
 
