@@ -72,7 +72,7 @@ async def _has_read_access_to_file(
     return await has_access_to_file(
         file_id=file.id,
         access_type='read',
-        user=UserModel(**{'id': user_id, 'role': user_role}),
+        user=UserModel.model_construct(id=user_id, role=user_role),
     )
 
 
@@ -2705,6 +2705,98 @@ async def query_knowledge_files(
         return json.dumps(chunks, ensure_ascii=False)
     except Exception as e:
         log.exception(f'query_knowledge_files error: {e}')
+        return json.dumps({'error': str(e)})
+
+
+async def query_chat_file(
+    query: str,
+    file_id: str,
+    count: Optional[int] = None,
+    __request__: Request = None,
+    __user__: dict = None,
+    __model_knowledge__: list[dict] = None,
+) -> str:
+    """
+    Search a file attached to the current chat using semantic/vector search.
+    Use the file id from the url attribute of the <attached_files> block.
+    Helpful for retrieving relevant passages from documents the user attached to the conversation.
+
+    :param query: The search query to find semantically relevant content
+    :param file_id: The id of the attached file to search
+    :param count: Maximum number of results to return (defaults to the server-configured top k)
+    :return: JSON with relevant chunks containing content, source filename, and relevance score
+    """
+    if __request__ is None:
+        return json.dumps({'error': 'Request context not available'})
+
+    if not __user__:
+        return json.dumps({'error': 'User context not available'})
+
+    if not file_id or not isinstance(file_id, str):
+        return json.dumps({'error': 'file_id is required'})
+
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(count, str):
+        if count.lower() in ('none', 'null', ''):
+            count = None
+        else:
+            try:
+                count = int(count)
+            except ValueError:
+                count = None
+
+    try:
+        from open_webui.models.files import Files
+        from open_webui.retrieval.utils import query_collection
+
+        user_id = __user__.get('id')
+        user_role = __user__.get('role', 'user')
+
+        embedding_function = __request__.app.state.EMBEDDING_FUNCTION
+        if not embedding_function:
+            return json.dumps({'error': 'Embedding function not configured'})
+
+        # The admin-configured RAG top k is both the default and the upper bound
+        top_k = await Config.get('rag.top_k')
+        count = top_k if count is None else max(1, min(count, top_k))
+
+        file = await Files.get_file_by_id(file_id)
+        if not file:
+            return json.dumps({'error': 'File not found'})
+
+        if not await _has_read_access_to_file(file, user_id, user_role, __model_knowledge__):
+            return json.dumps({'error': 'File not found'})
+
+        query_results = await query_collection(
+            __request__,
+            collection_names=[f'file-{file.id}'],
+            queries=[query],
+            embedding_function=embedding_function,
+            k=count,
+        )
+
+        chunks = []
+        if query_results and 'documents' in query_results:
+            documents = query_results.get('documents', [[]])[0]
+            metadatas = query_results.get('metadatas', [[]])[0]
+            distances = query_results.get('distances', [[]])[0]
+
+            for idx, doc in enumerate(documents):
+                chunk_info = {
+                    'content': doc,
+                    'source': metadatas[idx].get('source', metadatas[idx].get('name', file.filename)),
+                    'file_id': metadatas[idx].get('file_id', file.id),
+                }
+                if idx < len(distances):
+                    chunk_info['distance'] = distances[idx]
+                chunks.append(chunk_info)
+
+        # Limit to requested count
+        chunks = chunks[:count]
+
+        return json.dumps(chunks, ensure_ascii=False)
+    except Exception as e:
+        log.exception(f'query_chat_file error: {e}')
         return json.dumps({'error': str(e)})
 
 
