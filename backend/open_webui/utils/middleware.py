@@ -1769,6 +1769,12 @@ async def chat_completion_files_handler(
         all_full_context = all(item.get('context') == 'full' for item in files)
 
         queries = []
+        # When the query-generation LLM returns an empty list, it signals that
+        # no targeted search is needed (e.g. summarise, translate, list all).
+        # In that case we fall back to full-context mode instead of using the
+        # raw user message as a similarity query (which always scores ~0).
+        llm_requested_full_context = False
+
         if not all_full_context:
             try:
                 queries_response = await generate_queries(
@@ -1796,6 +1802,9 @@ async def chat_completion_files_handler(
                     queries_response = {'queries': [queries_response]}
 
                 queries = queries_response.get('queries', [])
+                if len(queries) == 0:
+                    # LLM explicitly decided no search is needed → use full context
+                    llm_requested_full_context = True
             except Exception:
                 pass
 
@@ -1810,7 +1819,9 @@ async def chat_completion_files_handler(
                 }
             )
 
-        if len(queries) == 0:
+        # Only fall back to the raw user message when the LLM did NOT explicitly
+        # return an empty list (i.e. when query generation itself failed/errored).
+        if len(queries) == 0 and not llm_requested_full_context:
             queries = [get_last_user_message(body['messages']) or '']
 
         try:
@@ -1832,7 +1843,7 @@ async def chat_completion_files_handler(
                 r=await Config.get('rag.relevance_threshold'),
                 hybrid_bm25_weight=await Config.get('rag.hybrid_bm25_weight'),
                 hybrid_search=await Config.get('rag.enable_hybrid_search'),
-                full_context=all_full_context or await Config.get('rag.full_context'),
+                full_context=all_full_context or llm_requested_full_context or await Config.get('rag.full_context'),
                 user=user,
             )
         except Exception as e:
