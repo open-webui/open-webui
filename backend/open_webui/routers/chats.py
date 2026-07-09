@@ -51,6 +51,7 @@ SEARCH_FILTER_PREFIXES = ('tag:', 'folder:', 'pinned:', 'archived:', 'shared:')
 CHAT_CONFIG_KEYS = {
     'ENABLE_CONTEXT_COMPACTION': 'chat.context_compaction.enable',
     'CONTEXT_COMPACTION_TOKEN_THRESHOLD': 'chat.context_compaction.token_threshold',
+    'CONTEXT_COMPACTION_TOKEN_CAP': 'chat.context_compaction.token_cap',
     'CONTEXT_COMPACTION_PROMPT_TEMPLATE': 'chat.context_compaction.prompt_template',
 }
 
@@ -58,6 +59,7 @@ CHAT_CONFIG_KEYS = {
 class ChatConfigForm(BaseModel):
     ENABLE_CONTEXT_COMPACTION: bool
     CONTEXT_COMPACTION_TOKEN_THRESHOLD: int
+    CONTEXT_COMPACTION_TOKEN_CAP: int
     CONTEXT_COMPACTION_PROMPT_TEMPLATE: str
 
 
@@ -712,11 +714,13 @@ async def get_chat_config(user=Depends(get_admin_user)):
 @router.post('/config', response_model=ChatConfigForm)
 async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user)):
     threshold = max(1, int(form_data.CONTEXT_COMPACTION_TOKEN_THRESHOLD))
+    token_cap = max(1, int(form_data.CONTEXT_COMPACTION_TOKEN_CAP))
     await Config.upsert(
         chat_config_updates(
             {
                 **form_data.model_dump(),
                 'CONTEXT_COMPACTION_TOKEN_THRESHOLD': threshold,
+                'CONTEXT_COMPACTION_TOKEN_CAP': token_cap,
             }
         )
     )
