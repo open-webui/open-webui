@@ -230,7 +230,7 @@ def get_output_text(output: list | None) -> str:
         if not isinstance(item, dict) or item.get('type') != 'message':
             continue
         text = ''.join(
-            part.get('text') or ''
+            str(part.get('text') or '')
             for part in item.get('content', [])
             if isinstance(part, dict) and part.get('type') == 'output_text'
         )
