@@ -16,24 +16,6 @@
 		permissions = fillMissingProperties(permissions, DEFAULT_PERMISSIONS);
 	}
 
-	$: if (
-		$config?.features?.enable_plugins === false &&
-		permissions?.workspace &&
-		(permissions.workspace.tools ||
-			permissions.workspace.tools_import ||
-			permissions.workspace.tools_export)
-	) {
-		permissions = {
-			...permissions,
-			workspace: {
-				...permissions.workspace,
-				tools: false,
-				tools_import: false,
-				tools_export: false
-			}
-		};
-	}
-
 	function fillMissingProperties(obj: any, defaults: any) {
 		return {
 			...defaults,
