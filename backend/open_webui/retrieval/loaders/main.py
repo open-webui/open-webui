@@ -1,8 +1,11 @@
 import asyncio
+import inspect
 import json
 import logging
 import sys
+import time
 
+import aiohttp
 import ftfy
 import requests
 from azure.identity import DefaultAzureCredential
@@ -179,23 +182,60 @@ class TikaLoader:
 
 
 class DoclingLoader:
-    def __init__(self, url, api_key=None, file_path=None, mime_type=None, params=None):
+    """
+    Docling Serve loader with both sync and async support.
+
+    Loads documents by submitting them to Docling Serve's async API
+    (submit → long-poll for status → retrieve), so large/scanned PDFs don't
+    block indefinitely on a single request.
+
+    - `load()` / `load_from_task_id()`: synchronous, using `requests` + `time.sleep()`
+      between polls. Used by callers that already run off the event loop
+      (e.g. the sync URL-content-extraction path), where blocking a thread
+      for the poll duration is expected and harmless.
+    - `aload()` / `aload_from_task_id()`: asynchronous, using `aiohttp` +
+      `await asyncio.sleep()` between polls. Used by the interactive file-upload
+      path so a slow Docling conversion doesn't occupy a worker thread from the
+      shared `asyncio.to_thread` pool for its entire duration.
+    """
+
+    def __init__(
+        self, url, api_key=None, file_path=None, mime_type=None, params=None, timeout=None, status_callback=None
+    ):
         self.url = url.rstrip('/')
         self.api_key = api_key
         self.file_path = file_path
         self.mime_type = mime_type
-
         self.params = params or {}
+        self.timeout = timeout  # total seconds to wait; None = infinite
+        self.status_callback = status_callback  # optional callable(dict) to persist queue state
 
-    def load(self) -> list[Document]:
+    def _build_headers(self) -> dict:
+        headers = {}
+        if self.api_key:
+            headers['X-Api-Key'] = f'{self.api_key}'
+        return headers
+
+    async def _notify_status_async(self, data: dict) -> None:
+        """Invoke status_callback from async code, awaiting it if it's a coroutine function.
+
+        A caller running inside the event loop (like the file-upload path) may
+        reasonably supply an async callback (e.g. one that persists to the DB
+        with `await`). Calling it as a plain function would silently produce an
+        unawaited coroutine that never runs, so this checks and awaits it.
+        """
+        if not self.status_callback:
+            return
+        result = self.status_callback(data)
+        if inspect.isawaitable(result):
+            await result
+
+    def _submit_file(self) -> tuple[str, int | None]:
+        headers = self._build_headers()
         page_break_marker = '\f'
         with open(self.file_path, 'rb') as f:
-            headers = {}
-            if self.api_key:
-                headers['X-Api-Key'] = f'{self.api_key}'
-
             r = requests.post(
-                f'{self.url}/v1/convert/file',
+                f'{self.url}/v1/convert/file/async',
                 files={
                     'files': (
                         self.file_path,
@@ -213,27 +253,10 @@ class DoclingLoader:
                 },
                 headers=headers,
                 verify=AIOHTTP_CLIENT_SESSION_SSL,
+                timeout=30,
             )
-        if r.ok:
-            result = r.json()
-            document_data = result.get('document', {})
-            md_content = document_data.get('md_content', '')
-            text = md_content or '<No text content found>'
 
-            metadata = {'Content-Type': self.mime_type} if self.mime_type else {}
-            if page_break_marker in md_content:
-                documents = [
-                    Document(page_content=page.strip(), metadata={**metadata, 'page': page_idx})
-                    for page_idx, page in enumerate(md_content.split(page_break_marker))
-                    if page.strip()
-                ]
-                if documents:
-                    log.debug('Docling extracted text: %s', text)
-                    return documents
-
-            log.debug('Docling extracted text: %s', text)
-            return [Document(page_content=text, metadata=metadata)]
-        else:
+        if not r.ok:
             error_msg = f'Error calling Docling API: {r.reason}'
             if r.text:
                 try:
@@ -243,6 +266,235 @@ class DoclingLoader:
                 except Exception:
                     error_msg += f' - {r.text}'
             raise Exception(f'Error calling Docling: {error_msg}')
+
+        submit_data = r.json()
+        task_id = submit_data.get('task_id')
+        task_position = submit_data.get('task_position')
+        if not task_id:
+            raise Exception('Docling async submit did not return a task_id')
+        log.info(
+            'Docling task submitted: %s, queue position: %s',
+            task_id,
+            task_position,
+        )
+        if self.status_callback:
+            self.status_callback({'task_id': task_id, 'task_position': task_position})
+
+        return task_id, task_position
+
+    def _poll_task_until_done(self, task_id: str) -> dict:
+        headers = self._build_headers()
+        deadline = time.monotonic() + self.timeout if self.timeout is not None else None
+        poll_wait = 30  # long-poll window per request (seconds)
+
+        while True:
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise Exception(f'Docling conversion timed out after {self.timeout}s (task_id={task_id})')
+                poll_wait = min(poll_wait, int(remaining) + 1)
+
+            poll_start = time.monotonic()
+            try:
+                status_r = requests.get(
+                    f'{self.url}/v1/status/poll/{task_id}',
+                    params={'wait': poll_wait},
+                    headers=headers,
+                    timeout=poll_wait + 10,
+                )
+            except requests.Timeout:
+                log.warning('Docling status poll timed out for task %s, retrying', task_id)
+                elapsed = time.monotonic() - poll_start
+                if elapsed < poll_wait:
+                    time.sleep(poll_wait - elapsed)
+                continue
+
+            if not status_r.ok:
+                raise Exception(f'Error polling Docling task status: {status_r.reason}')
+
+            status_data = status_r.json()
+            task_status = status_data.get('task_status', '')
+            log.debug(
+                'Docling task %s: status=%s, queue_position=%s',
+                task_id,
+                task_status,
+                status_data.get('task_position'),
+            )
+            if self.status_callback and status_data.get('task_position') is not None:
+                self.status_callback({'task_position': status_data['task_position']})
+
+            if task_status == 'success':
+                return status_data
+            elif task_status == 'failure':
+                error_msg = status_data.get('error_message') or 'Unknown error'
+                raise Exception(f'Docling conversion failed: {error_msg}')
+            # else "pending" or "started" – keep polling
+
+            elapsed = time.monotonic() - poll_start
+            if elapsed < poll_wait:
+                time.sleep(poll_wait - elapsed)
+
+    def _retrieve_result(self, task_id: str) -> dict:
+        headers = self._build_headers()
+        result_r = requests.get(f'{self.url}/v1/result/{task_id}', headers=headers, timeout=30)
+        if not result_r.ok:
+            raise Exception(f'Error retrieving Docling result: {result_r.reason}')
+        return result_r.json()
+
+    def format_result(self, result_json: dict) -> list[Document]:
+        document_data = result_json.get('document', {})
+        text = document_data.get('md_content', '<No text content found>')
+        metadata = {'Content-Type': self.mime_type} if self.mime_type else {}
+        log.debug('Docling extracted text: %s', text)
+        return [Document(page_content=text, metadata=metadata)]
+
+    def load(self) -> list[Document]:
+        task_id, _ = self._submit_file()
+        self._poll_task_until_done(task_id)
+        result_json = self._retrieve_result(task_id)
+        return self.format_result(result_json)
+
+    def load_from_task_id(self, task_id: str) -> list[Document]:
+        """Resume processing from an already-submitted docling task_id.
+
+        Used on server restart when docling-serve is still running the task:
+        skips re-submission and goes straight to polling → retrieve → format.
+        """
+        self._poll_task_until_done(task_id)
+        result_json = self._retrieve_result(task_id)
+        return self.format_result(result_json)
+
+    async def _submit_file_async(self, session: aiohttp.ClientSession) -> tuple[str, int | None]:
+        headers = self._build_headers()
+        page_break_marker = '\f'
+
+        with open(self.file_path, 'rb') as f:
+            writer = aiohttp.MultipartWriter('form-data')
+
+            file_part = writer.append(f, {'Content-Type': self.mime_type or 'application/octet-stream'})
+            file_part.set_content_disposition('form-data', name='files', filename=self.file_path)
+
+            for field_name, value in {
+                'image_export_mode': 'placeholder',
+                'md_page_break_placeholder': page_break_marker,
+                **self.params,
+            }.items():
+                part = writer.append(str(value))
+                part.set_content_disposition('form-data', name=field_name)
+
+            async with session.post(
+                f'{self.url}/v1/convert/file/async',
+                data=writer,
+                headers=headers,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                timeout=aiohttp.ClientTimeout(total=30),
+            ) as r:
+                if r.status >= 400:
+                    error_msg = f'Error calling Docling API: {r.reason}'
+                    text = await r.text()
+                    if text:
+                        try:
+                            error_data = json.loads(text)
+                            if 'detail' in error_data:
+                                error_msg += f' - {error_data["detail"]}'
+                        except Exception:
+                            error_msg += f' - {text}'
+                    raise Exception(f'Error calling Docling: {error_msg}')
+
+                submit_data = await r.json()
+
+        task_id = submit_data.get('task_id')
+        task_position = submit_data.get('task_position')
+        if not task_id:
+            raise Exception('Docling async submit did not return a task_id')
+        log.info(
+            'Docling task submitted: %s, queue position: %s',
+            task_id,
+            task_position,
+        )
+        await self._notify_status_async({'task_id': task_id, 'task_position': task_position})
+
+        return task_id, task_position
+
+    async def _poll_task_until_done_async(self, session: aiohttp.ClientSession, task_id: str) -> dict:
+        headers = self._build_headers()
+        deadline = time.monotonic() + self.timeout if self.timeout is not None else None
+        poll_wait = 30  # long-poll window per request (seconds)
+
+        while True:
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise Exception(f'Docling conversion timed out after {self.timeout}s (task_id={task_id})')
+                poll_wait = min(poll_wait, int(remaining) + 1)
+
+            poll_start = time.monotonic()
+            try:
+                async with session.get(
+                    f'{self.url}/v1/status/poll/{task_id}',
+                    params={'wait': poll_wait},
+                    headers=headers,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    timeout=aiohttp.ClientTimeout(total=poll_wait + 10),
+                ) as status_r:
+                    if status_r.status >= 400:
+                        raise Exception(f'Error polling Docling task status: {status_r.reason}')
+                    status_data = await status_r.json()
+            except asyncio.TimeoutError:
+                log.warning('Docling status poll timed out for task %s, retrying', task_id)
+                elapsed = time.monotonic() - poll_start
+                if elapsed < poll_wait:
+                    await asyncio.sleep(poll_wait - elapsed)
+                continue
+
+            task_status = status_data.get('task_status', '')
+            log.debug(
+                'Docling task %s: status=%s, queue_position=%s',
+                task_id,
+                task_status,
+                status_data.get('task_position'),
+            )
+            if status_data.get('task_position') is not None:
+                await self._notify_status_async({'task_position': status_data['task_position']})
+
+            if task_status == 'success':
+                return status_data
+            elif task_status == 'failure':
+                error_msg = status_data.get('error_message') or 'Unknown error'
+                raise Exception(f'Docling conversion failed: {error_msg}')
+            # else "pending" or "started" – keep polling
+
+            elapsed = time.monotonic() - poll_start
+            if elapsed < poll_wait:
+                await asyncio.sleep(poll_wait - elapsed)
+
+    async def _retrieve_result_async(self, session: aiohttp.ClientSession, task_id: str) -> dict:
+        headers = self._build_headers()
+        async with session.get(
+            f'{self.url}/v1/result/{task_id}',
+            headers=headers,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            timeout=aiohttp.ClientTimeout(total=30),
+        ) as result_r:
+            if result_r.status >= 400:
+                raise Exception(f'Error retrieving Docling result: {result_r.reason}')
+            return await result_r.json()
+
+    async def aload(self) -> list[Document]:
+        async with aiohttp.ClientSession() as session:
+            task_id, _ = await self._submit_file_async(session)
+            await self._poll_task_until_done_async(session, task_id)
+            result_json = await self._retrieve_result_async(session, task_id)
+        return self.format_result(result_json)
+
+    async def aload_from_task_id(self, task_id: str) -> list[Document]:
+        """Async counterpart to `load_from_task_id`: resumes polling and result
+        retrieval for an already-submitted task_id without re-uploading the file.
+        """
+        async with aiohttp.ClientSession() as session:
+            await self._poll_task_until_done_async(session, task_id)
+            result_json = await self._retrieve_result_async(session, task_id)
+        return self.format_result(result_json)
 
 
 class Loader:
@@ -262,11 +514,16 @@ class Loader:
         """
         Async wrapper around `load`.
 
-        Document loaders dispatched by `_get_loader` (PyMuPDF, Unstructured,
+        Most loaders dispatched by `_get_loader` (PyMuPDF, Unstructured,
         python-docx, Tika, etc.) are uniformly synchronous and CPU/IO-bound.
         Calling `load` directly from an async handler would block the event
         loop for the entire parse — minutes for large PDFs. This offloads
         the work to a worker thread so the loop stays responsive.
+
+        `DoclingLoader` is the exception: it has a true async path (`aload`)
+        that uses aiohttp + `asyncio.sleep` for its submit/poll/retrieve cycle,
+        so a slow conversion never ties up a worker thread from the shared
+        `asyncio.to_thread` pool for its entire duration.
         """
         # Group lookup is async-only, so it must happen before `load`
         # is offloaded to a thread without a running event loop.
@@ -275,7 +532,14 @@ class Loader:
                 self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_HEADERS'), self.user
             )
 
-        return await asyncio.to_thread(self.load, filename, file_content_type, file_path)
+        loader = await asyncio.to_thread(self._get_loader, filename, file_content_type, file_path)
+
+        if isinstance(loader, DoclingLoader):
+            docs = await loader.aload()
+        else:
+            docs = await asyncio.to_thread(loader.load)
+
+        return [Document(page_content=ftfy.fix_text(doc.page_content), metadata=doc.metadata) for doc in docs]
 
     def _is_text_file(self, file_ext: str, file_content_type: str) -> bool:
         return file_ext in known_source_ext or (
@@ -513,12 +777,21 @@ class Loader:
                         log.error('Invalid DOCLING_PARAMS format, expected JSON object')
                         params = {}
 
+                docling_timeout = self.kwargs.get('DOCLING_SERVE_TIMEOUT')
+                if docling_timeout is not None:
+                    try:
+                        docling_timeout = int(docling_timeout)
+                    except (ValueError, TypeError):
+                        docling_timeout = None
+
                 loader = DoclingLoader(
                     url=self.kwargs.get('DOCLING_SERVER_URL'),
                     api_key=self.kwargs.get('DOCLING_API_KEY', None),
                     file_path=file_path,
                     mime_type=file_content_type,
                     params=params,
+                    timeout=docling_timeout,
+                    status_callback=self.kwargs.get('DOCLING_STATUS_CALLBACK'),
                 )
         elif (
             self.engine == 'document_intelligence'
