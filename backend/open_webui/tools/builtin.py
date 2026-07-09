@@ -2597,7 +2597,7 @@ async def query_knowledge_files(
                             permission='read',
                         )
                     ):
-                        content = note.data.get('content', {}).get('md', '')
+                        content = (note.data or {}).get('content', {}).get('md', '')
                         note_results.append(
                             {
                                 'content': content,
