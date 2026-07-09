@@ -1270,6 +1270,27 @@ class OAuthConfigForm(BaseModel):
     OPENID_END_SESSION_ENDPOINT: str | None = None
     OAUTH_TIMEOUT: int | str | None = None
 
+    # Branded providers
+    GOOGLE_CLIENT_ID: str | None = None
+    GOOGLE_CLIENT_SECRET: str | None = None
+    GOOGLE_OAUTH_SCOPE: str | None = None
+    GOOGLE_REDIRECT_URI: str | None = None
+    MICROSOFT_CLIENT_ID: str | None = None
+    MICROSOFT_CLIENT_SECRET: str | None = None
+    MICROSOFT_CLIENT_TENANT_ID: str | None = None
+    MICROSOFT_CLIENT_LOGIN_BASE_URL: str | None = None
+    MICROSOFT_CLIENT_PICTURE_URL: str | None = None
+    MICROSOFT_OAUTH_SCOPE: str | None = None
+    MICROSOFT_REDIRECT_URI: str | None = None
+    GITHUB_CLIENT_ID: str | None = None
+    GITHUB_CLIENT_SECRET: str | None = None
+    GITHUB_CLIENT_SCOPE: str | None = None
+    GITHUB_CLIENT_REDIRECT_URI: str | None = None
+    FEISHU_CLIENT_ID: str | None = None
+    FEISHU_CLIENT_SECRET: str | None = None
+    FEISHU_OAUTH_SCOPE: str | None = None
+    FEISHU_REDIRECT_URI: str | None = None
+
     # Claims
     OAUTH_EMAIL_CLAIM: str | None = None
     OAUTH_USERNAME_CLAIM: str | None = None
@@ -1321,6 +1342,25 @@ OAUTH_CONFIG_KEYS = {
     'OAUTH_TOKEN_ENDPOINT_AUTH_METHOD': 'oauth.token_endpoint_auth_method',
     'OPENID_END_SESSION_ENDPOINT': 'oauth.end_session_endpoint',
     'OAUTH_TIMEOUT': 'oauth.timeout',
+    'GOOGLE_CLIENT_ID': 'oauth.google.client_id',
+    'GOOGLE_CLIENT_SECRET': 'oauth.google.client_secret',
+    'GOOGLE_OAUTH_SCOPE': 'oauth.google.scope',
+    'GOOGLE_REDIRECT_URI': 'oauth.google.redirect_uri',
+    'MICROSOFT_CLIENT_ID': 'oauth.microsoft.client_id',
+    'MICROSOFT_CLIENT_SECRET': 'oauth.microsoft.client_secret',
+    'MICROSOFT_CLIENT_TENANT_ID': 'oauth.microsoft.tenant_id',
+    'MICROSOFT_CLIENT_LOGIN_BASE_URL': 'oauth.microsoft.login_base_url',
+    'MICROSOFT_CLIENT_PICTURE_URL': 'oauth.microsoft.picture_url',
+    'MICROSOFT_OAUTH_SCOPE': 'oauth.microsoft.scope',
+    'MICROSOFT_REDIRECT_URI': 'oauth.microsoft.redirect_uri',
+    'GITHUB_CLIENT_ID': 'oauth.github.client_id',
+    'GITHUB_CLIENT_SECRET': 'oauth.github.client_secret',
+    'GITHUB_CLIENT_SCOPE': 'oauth.github.scope',
+    'GITHUB_CLIENT_REDIRECT_URI': 'oauth.github.redirect_uri',
+    'FEISHU_CLIENT_ID': 'oauth.feishu.client_id',
+    'FEISHU_CLIENT_SECRET': 'oauth.feishu.client_secret',
+    'FEISHU_OAUTH_SCOPE': 'oauth.feishu.scope',
+    'FEISHU_REDIRECT_URI': 'oauth.feishu.redirect_uri',
     'OAUTH_EMAIL_CLAIM': 'oauth.email_claim',
     'OAUTH_USERNAME_CLAIM': 'oauth.username_claim',
     'OAUTH_PICTURE_CLAIM': 'oauth.picture_claim',
