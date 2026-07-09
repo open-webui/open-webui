@@ -54,6 +54,14 @@
 		return !!res;
 	};
 
+	// The code challenge select needs '' instead of null to match an option
+	const normalizeOAuthConfig = (config) => {
+		if (config) {
+			config.OAUTH_CODE_CHALLENGE_METHOD = config.OAUTH_CODE_CHALLENGE_METHOD ?? '';
+		}
+		return config;
+	};
+
 	const updateOAuthHandler = async () => {
 		// Read-only when managed by environment variables (ENABLE_OAUTH_PERSISTENT_CONFIG=false)
 		if (!oauthConfig || oauthConfig.OAUTH_CONFIG_EDITABLE === false) return true;
@@ -62,7 +70,7 @@
 			return null;
 		});
 		if (res) {
-			oauthConfig = res;
+			oauthConfig = normalizeOAuthConfig(res);
 		}
 		return !!res;
 	};
@@ -99,7 +107,9 @@
 				LDAP_SERVER = await getLdapServer(localStorage.token);
 			})(),
 			(async () => {
-				oauthConfig = await getOAuthConfig(localStorage.token).catch(() => null);
+				oauthConfig = normalizeOAuthConfig(
+					await getOAuthConfig(localStorage.token).catch(() => null)
+				);
 			})()
 		]);
 
@@ -595,6 +605,21 @@
 										placeholder="openid email profile"
 										bind:value={oauthConfig.OAUTH_SCOPES}
 									/>
+								</div>
+							</div>
+
+							<div class="flex w-full justify-between pr-2">
+								<div class="self-center text-xs font-medium">
+									{$i18n.t('Code Challenge Method (PKCE)')}
+								</div>
+								<div class="flex items-center relative">
+									<select
+										class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+										bind:value={oauthConfig.OAUTH_CODE_CHALLENGE_METHOD}
+									>
+										<option value="">{$i18n.t('Disabled')}</option>
+										<option value="S256">S256</option>
+									</select>
 								</div>
 							</div>
 
