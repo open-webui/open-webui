@@ -121,7 +121,6 @@
 		const res = await getToolServerConnections(localStorage.token);
 		servers = res.TOOL_SERVER_CONNECTIONS as ToolServerConnection[];
 
-		// Load terminal server connections
 		try {
 			const terminalRes = await getTerminalServerConnections(localStorage.token);
 			if (terminalRes?.TERMINAL_SERVER_CONNECTIONS) {
