@@ -67,6 +67,11 @@ class User(Base):  # identity & profile
     status_message = Column(Text, nullable=True)
     status_expires_at = Column(BigInteger, nullable=True)
 
+    # Two-factor authentication (TOTP)
+    totp_secret = Column(Text, nullable=True)  # base32-encoded TOTP secret
+    totp_enabled = Column(Boolean, default=False)  # whether 2FA is active
+    totp_backup_codes = Column(JSON, nullable=True)  # hashed backup codes
+
     # Metadata
     info = Column(JSON, nullable=True)
     settings = Column(JSON, nullable=True)
@@ -103,6 +108,10 @@ class UserModel(BaseModel):
     status_emoji: str | None = None
     status_message: str | None = None
     status_expires_at: int | None = None
+
+    totp_secret: str | None = None
+    totp_enabled: bool = False
+    totp_backup_codes: list[str] | None = None
 
     info: dict | None = None
     settings: UserSettings | None = None
@@ -672,6 +681,63 @@ class UsersTable:
                 return None
             for key, value in updated.items():
                 setattr(user, key, value)
+            await session.commit()
+            await session.refresh(user)
+            return UserModel.model_validate(user)
+
+    async def enable_totp(self, id: str, secret: str, db: AsyncSession | None = None) -> UserModel | None:
+        """Enable TOTP for a user and store the secret."""
+        async with get_async_db_context(db) as session:
+            user = await session.get(User, id)
+            if not user:
+                return None
+            user.totp_secret = secret
+            user.totp_enabled = True
+            user.updated_at = int(time.time())
+            await session.commit()
+            await session.refresh(user)
+            return UserModel.model_validate(user)
+
+    async def disable_totp(self, id: str, db: AsyncSession | None = None) -> UserModel | None:
+        """Disable TOTP for a user and clear the secret."""
+        async with get_async_db_context(db) as session:
+            user = await session.get(User, id)
+            if not user:
+                return None
+            user.totp_secret = None
+            user.totp_enabled = False
+            user.totp_backup_codes = None
+            user.updated_at = int(time.time())
+            await session.commit()
+            await session.refresh(user)
+            return UserModel.model_validate(user)
+
+    async def set_totp_backup_codes(
+        self, id: str, codes: list[str], db: AsyncSession | None = None
+    ) -> UserModel | None:
+        """Store hashed backup codes for a user."""
+        async with get_async_db_context(db) as session:
+            user = await session.get(User, id)
+            if not user:
+                return None
+            user.totp_backup_codes = codes
+            user.updated_at = int(time.time())
+            await session.commit()
+            await session.refresh(user)
+            return UserModel.model_validate(user)
+
+    async def remove_totp_backup_code(self, id: str, index: int, db: AsyncSession | None = None) -> UserModel | None:
+        """Remove a used backup code at the given index."""
+        async with get_async_db_context(db) as session:
+            user = await session.get(User, id)
+            if not user or not user.totp_backup_codes:
+                return None
+            codes = list(user.totp_backup_codes)
+            if index < 0 or index >= len(codes):
+                return None
+            codes.pop(index)
+            user.totp_backup_codes = codes
+            user.updated_at = int(time.time())
             await session.commit()
             await session.refresh(user)
             return UserModel.model_validate(user)

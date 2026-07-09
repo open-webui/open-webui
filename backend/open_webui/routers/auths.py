@@ -73,6 +73,14 @@ from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.rate_limit import RateLimiter
 from open_webui.utils.redis import get_redis_client
+from open_webui.utils.totp import (
+    generate_backup_codes,
+    generate_totp_secret,
+    get_totp_uri,
+    hash_backup_codes,
+    verify_backup_code,
+    verify_totp,
+)
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -211,9 +219,40 @@ async def create_session_response(
 ############################
 
 
+class TOTPSetupResponse(BaseModel):
+    secret: str
+    uri: str
+    backup_codes: list[str]
+
+
+class TOTPVerifyForm(BaseModel):
+    code: str
+    session_id: str | None = None
+
+
+class TOTPSetupVerifyForm(BaseModel):
+    secret: str
+    code: str
+
+
+class TOTPDisableForm(BaseModel):
+    password: str
+    code: str | None = None
+
+
+class TOTPBackupCodesResponse(BaseModel):
+    backup_codes: list[str]
+
+
 class SessionUserResponse(Token, UserProfileImageResponse):
     expires_at: int | None = None
     permissions: dict | None = None
+
+
+class SigninTOTPResponse(BaseModel):
+    totp_required: bool = True
+    session_id: str
+    email: str
 
 
 class SessionUserInfoResponse(SessionUserResponse, UserStatus):
@@ -396,6 +435,178 @@ async def update_password(
             raise HTTPException(400, detail=ERROR_MESSAGES.INCORRECT_PASSWORD)
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+
+############################
+# TOTP / Two-Factor Authentication
+############################
+
+
+@router.get('/totp/setup', response_model=TOTPSetupResponse)
+async def totp_setup(
+    request: Request,
+    session_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not session_user:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.INVALID_TOKEN)
+
+    if session_user.totp_enabled:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='TOTP is already enabled')
+
+    secret = generate_totp_secret()
+    email = session_user.email
+    uri = get_totp_uri(secret, email)
+    backup_codes = generate_backup_codes()
+
+    return TOTPSetupResponse(
+        secret=secret,
+        uri=uri,
+        backup_codes=backup_codes,
+    )
+
+
+@router.post('/totp/setup', response_model=SessionUserResponse)
+async def totp_verify_and_enable(
+    request: Request,
+    response: Response,
+    form_data: TOTPSetupVerifyForm,
+    session_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not session_user:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.INVALID_TOKEN)
+
+    if not verify_totp(form_data.secret, form_data.code):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='Invalid TOTP code')
+
+    secret = form_data.secret
+    backup_codes = hash_backup_codes(generate_backup_codes())
+
+    user = await Users.enable_totp(session_user.id, secret, db=db)
+    if not user:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Failed to enable TOTP')
+
+    await Users.set_totp_backup_codes(session_user.id, backup_codes, db=db)
+
+    user_permissions = await get_permissions(user.id, await Config.get('user.permissions'), db=db)
+    expires_delta = parse_duration(await Config.get('auth.jwt_expiry'))
+    token = create_token(data={'id': user.id}, expires_delta=expires_delta)
+
+    return {
+        'token': token,
+        'token_type': 'Bearer',
+        'id': user.id,
+        'email': user.email,
+        'name': user.name,
+        'role': user.role,
+        'profile_image_url': f'/api/v1/users/{user.id}/profile/image',
+        'permissions': user_permissions,
+    }
+
+
+@router.post('/totp/disable', response_model=SessionUserResponse)
+async def totp_disable(
+    request: Request,
+    response: Response,
+    form_data: TOTPDisableForm,
+    session_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not session_user:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.INVALID_TOKEN)
+
+    if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
+
+    if not session_user.totp_enabled:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='TOTP is not enabled')
+
+    user = await Auths.authenticate_user(
+        session_user.email,
+        lambda pw: verify_password(form_data.password, pw),
+        db=db,
+    )
+    if not user:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INCORRECT_PASSWORD)
+
+    if form_data.code:
+        if not verify_totp(user.totp_secret, form_data.code):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='Invalid TOTP code')
+
+    disabled_user = await Users.disable_totp(user.id, db=db)
+    if not disabled_user:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Failed to disable TOTP')
+
+    user_permissions = await get_permissions(disabled_user.id, await Config.get('user.permissions'), db=db)
+    expires_delta = parse_duration(await Config.get('auth.jwt_expiry'))
+    token = create_token(data={'id': disabled_user.id}, expires_delta=expires_delta)
+
+    return {
+        'token': token,
+        'token_type': 'Bearer',
+        'id': disabled_user.id,
+        'email': disabled_user.email,
+        'name': disabled_user.name,
+        'role': disabled_user.role,
+        'profile_image_url': f'/api/v1/users/{disabled_user.id}/profile/image',
+        'permissions': user_permissions,
+    }
+
+
+@router.post('/totp/generate-backup-codes', response_model=TOTPBackupCodesResponse)
+async def totp_generate_backup_codes(
+    request: Request,
+    session_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not session_user:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.INVALID_TOKEN)
+
+    if not session_user.totp_enabled:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='TOTP is not enabled')
+
+    backup_codes = generate_backup_codes()
+    hashed = hash_backup_codes(backup_codes)
+    await Users.set_totp_backup_codes(session_user.id, hashed, db=db)
+
+    return TOTPBackupCodesResponse(backup_codes=backup_codes)
+
+
+@router.post('/totp/authenticate', response_model=SessionUserResponse)
+async def totp_authenticate(
+    request: Request,
+    response: Response,
+    form_data: TOTPVerifyForm,
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not form_data.session_id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='Missing session_id')
+
+    data = decode_token(form_data.session_id)
+    if not data:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.INVALID_TOKEN)
+
+    if not data.get('totp'):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='Invalid session token')
+
+    user = await Users.get_user_by_id(data['id'], db=db)
+    if not user:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.INVALID_TOKEN)
+
+    if not user.totp_enabled:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='TOTP is not enabled for this user')
+
+    if user.totp_backup_codes:
+        code_index = verify_backup_code(form_data.code, user.totp_backup_codes)
+        if code_index is not None:
+            await Users.remove_totp_backup_code(user.id, code_index, db=db)
+            return await create_session_response(request, user, db, response, set_cookie=True, source='password')
+
+    if not verify_totp(user.totp_secret, form_data.code):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail='Invalid TOTP or backup code')
+
+    return await create_session_response(request, user, db, response, set_cookie=True, source='password')
 
 
 ############################
@@ -750,6 +961,20 @@ async def signin(
         )
 
     if user:
+        if user.totp_enabled and auth_source == 'password':
+            session_id = create_token(
+                data={'id': user.id, 'totp': True},
+                expires_delta=datetime.timedelta(minutes=5),
+            )
+            return JSONResponse(
+                status_code=status.HTTP_202_ACCEPTED,
+                content={
+                    'totp_required': True,
+                    'session_id': session_id,
+                    'email': user.email,
+                },
+            )
+
         return await create_session_response(request, user, db, response, set_cookie=True, source=auth_source)
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
