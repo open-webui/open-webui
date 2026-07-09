@@ -239,6 +239,12 @@ class Config(Base):
 
         Called at startup to ensure all known config keys have values.
         Existing DB values take precedence over defaults.
+
+        Keys whose persistence is currently disabled are skipped: seeding them
+        would freeze env-derived values into rows that later become
+        authoritative (and stale) once persistence is enabled for them. They
+        are seeded with then-current defaults on the first startup where
+        persistence covers them.
         """
         async with get_async_db() as db:
             result = await db.execute(select(Config.key))
@@ -246,16 +252,23 @@ class Config(Base):
 
             now = int(time.time())
             new_count = 0
+            skipped_count = 0
             for key, value in defaults.items():
-                if key not in existing_keys:
-                    value = _json_value(value)
-                    db.add(Config(key=key, value=value, updated_at=now))
-                    existing_keys.add(key)
-                    new_count += 1
+                if key in existing_keys:
+                    continue
+                if not Config.persistent_enabled_for(key):
+                    skipped_count += 1
+                    continue
+                value = _json_value(value)
+                db.add(Config(key=key, value=value, updated_at=now))
+                existing_keys.add(key)
+                new_count += 1
 
             if new_count:
                 await db.commit()
                 log.info('Seeded %d new config defaults', new_count)
+            if skipped_count:
+                log.info('Skipped seeding %d config defaults with persistence disabled', skipped_count)
 
     @staticmethod
     async def rename_prefix(old_prefix: str, new_prefix: str) -> None:
