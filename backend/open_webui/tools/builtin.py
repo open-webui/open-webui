@@ -2358,8 +2358,7 @@ async def list_knowledge(
 ) -> str:
     """
     List knowledge bases, files, and notes attached to the current model.
-    This is an inventory tool only; for questions that require content from
-    knowledge files, call query_knowledge_files instead.
+    Use this first to discover what knowledge is available before querying or reading files.
     Without knowledge_id: returns KB summaries (name, description, file_count)
     plus standalone files and notes — no file listing inside KBs.
     With knowledge_id: includes paginated file listing for that specific KB.
