@@ -2743,7 +2743,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # Inject builtin tools for native function calling based on enabled features and model capability.
         # Only inject when the request originates from the UI (identified by session_id).
         # API callers don't expect hidden tools; they can explicitly request tools via tool_ids.
-        if ENABLE_PLUGINS and use_builtin_tools:
+        if use_builtin_tools:
             # Add file context to user messages
             chat_id = metadata.get('chat_id')
             form_data['messages'] = await add_file_context(form_data.get('messages', []), chat_id, user)
@@ -3920,8 +3920,7 @@ async def streaming_chat_response_handler(response, ctx):
             model_capabilities = model.get('info', {}).get('meta', {}).get('capabilities') or {}
             builtin_tools_meta = model.get('info', {}).get('meta', {}).get('builtinTools', {})
             DETECT_CODE_INTERPRETER = (
-                ENABLE_PLUGINS
-                and bool(features.get('code_interpreter'))
+                bool(features.get('code_interpreter'))
                 and builtin_tools_meta.get('code_interpreter', True)
                 and await Config.get('code_interpreter.enable')
                 and model_capabilities.get('code_interpreter', True)
