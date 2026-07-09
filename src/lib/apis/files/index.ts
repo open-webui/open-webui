@@ -6,6 +6,10 @@ export const uploadFile = async (
 	file: File,
 	metadata?: object | null,
 	process?: boolean | null,
+	onProgress?: (data: { status: string; error?: string }) => void,
+	/** Called immediately after the file record is created, with the new file id.
+	 *  Use this to update local placeholders before the SSE stream finishes. */
+	onUploaded?: (id: string) => void,
 	stream: boolean = true
 ) => {
 	const data = new FormData();
@@ -44,6 +48,12 @@ export const uploadFile = async (
 	}
 
 	if (res && stream) {
+		// Fire immediately so callers can associate the real file id with their
+		// local placeholder before the (potentially very long) SSE stream runs.
+		if (onUploaded) {
+			onUploaded(res.id);
+		}
+
 		const status = await getFileProcessStatus(token, res.id);
 
 		if (status && status.ok) {
@@ -77,6 +87,10 @@ export const uploadFile = async (
 
 								if (res?.data) {
 									res.data = data;
+								}
+
+								if (onProgress) {
+									onProgress(data);
 								}
 							}
 						}

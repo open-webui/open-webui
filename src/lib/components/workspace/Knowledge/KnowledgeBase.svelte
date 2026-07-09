@@ -38,6 +38,7 @@
 		updateKnowledgeById,
 		updateKnowledgeAccessGrants,
 		searchKnowledgeFilesById,
+		getPendingFilesByKnowledgeId,
 		createKnowledgeDirectory,
 		updateKnowledgeDirectory,
 		deleteKnowledgeDirectory,
@@ -132,6 +133,30 @@
 	let fileItems = null;
 	let fileItemsTotal = null;
 
+	// Poll every 15 s while any file is still being processed, so the UI
+	// reflects status changes (pending → processing → completed / failed)
+	// without requiring a manual page refresh.
+	let pollingInterval: ReturnType<typeof setInterval> | null = null;
+
+	$: {
+		const hasPendingFiles = fileItems?.some(
+			(f) =>
+				f?.data?.status === 'pending' ||
+				f?.data?.status === 'processing' ||
+				f?.status === 'uploading'
+		);
+		if (hasPendingFiles && pollingInterval === null) {
+			pollingInterval = setInterval(() => {
+				getItemsPage(true);
+			}, 15_000);
+		} else if (fileItems !== null && !hasPendingFiles && pollingInterval !== null) {
+			// Only stop polling once we have a real result — not while fileItems is
+			// momentarily null during a refresh, which would kill the interval early.
+			clearInterval(pollingInterval);
+			pollingInterval = null;
+		}
+	}
+
 	// Directory state
 	let currentDirectoryId: string | null = null;
 	let directoryItems = [];
@@ -184,32 +209,74 @@
 		getItemsPage();
 	}
 
-	const getItemsPage = async () => {
+	$: if (
+		query !== undefined &&
+		viewOption !== undefined &&
+		sortKey !== undefined &&
+		direction !== undefined
+	) {
+		reset();
+	}
+
+	// silent=true preserves the current list while refreshing (used by the
+	// polling interval) so files don't flash away every 15 seconds.
+	const getItemsPage = async (silent = false) => {
 		if (knowledgeId === null) return;
 
-		fileItems = null;
-		fileItemsTotal = null;
+		if (!silent) {
+			fileItems = null;
+			fileItemsTotal = null;
+		}
 
 		if (sortKey === null) {
 			direction = null;
 		}
 
-		const res = await searchKnowledgeFilesById(
-			localStorage.token,
-			knowledge.id,
-			query,
-			viewOption,
-			sortKey,
-			direction,
-			currentPage,
-			currentDirectoryId,
-			includeContent
-		).catch(() => {
-			return null;
-		});
+		const [res, pendingFromServer] = await Promise.all([
+			searchKnowledgeFilesById(
+				localStorage.token,
+				knowledge.id,
+				query,
+				viewOption,
+				sortKey,
+				direction,
+				currentPage,
+				currentDirectoryId,
+				includeContent
+			).catch(() => {
+				return null;
+			}),
+			getPendingFilesByKnowledgeId(
+				localStorage.token,
+				knowledge.id
+			).catch(() => [])
+		]);
 
 		if (res) {
-			fileItems = res.items;
+			const linkedIds = new Set(res.items.map((f) => f.id).filter(Boolean));
+
+			// Pending files from the server that are not yet in the linked list.
+			const serverPending = (pendingFromServer ?? []).filter((f) => !linkedIds.has(f.id));
+
+			if (silent && fileItems !== null) {
+				// During a polling refresh, also preserve local-only in-flight
+				// placeholders (e.g. files uploading in this tab right now) that
+				// aren't reflected in the server responses yet.
+				const serverIds = new Set([
+					...linkedIds,
+					...serverPending.map((f) => f.id).filter(Boolean)
+				]);
+				const localInFlight = fileItems.filter(
+					(f) =>
+						(f.status === 'uploading' ||
+							f?.data?.status === 'pending' ||
+							f?.data?.status === 'processing') &&
+						!serverIds.has(f.id)
+				);
+				fileItems = [...localInFlight, ...serverPending, ...res.items];
+			} else {
+				fileItems = [...serverPending, ...res.items];
+			}
 			fileItemsTotal = res.total;
 			directoryItems = res.directories ?? [];
 			breadcrumbs = res.breadcrumbs ?? [];
@@ -347,6 +414,18 @@
 					const uploadedFile = await uploadFile(localStorage.token, file, {
 						knowledge_id: knowledge.id,
 						directory_id: currentDirectoryId
+					}, null, (statusData) => {
+						fileItems = fileItems.map((item) =>
+							item.itemId === fileItem.itemId
+								? { ...item, data: { ...(item.data ?? {}), ...statusData } }
+								: item
+						);
+					}, (fileId) => {
+						// Set the real id immediately so polling deduplication works
+						// before the SSE stream finishes.
+						fileItems = fileItems.map((item) =>
+							item.itemId === fileItem.itemId ? { ...item, id: fileId } : item
+						);
 					}).catch((e) => {
 						toast.error(`${e}`);
 						return null;
@@ -435,7 +514,28 @@
 					: {})
 			};
 
-			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
+			const uploadedFile = await uploadFile(
+				localStorage.token,
+				file,
+				metadata,
+				null,
+				(statusData) => {
+					// Update the local placeholder item with the server-side status so
+					// the tooltip (and spinner) reflect real progress while we wait.
+					fileItems = fileItems.map((item) =>
+						item.itemId === fileItem.itemId
+							? { ...item, data: { ...(item.data ?? {}), ...statusData } }
+							: item
+					);
+				},
+				(fileId) => {
+					// Set the real id immediately so polling deduplication works
+					// before the SSE stream finishes.
+					fileItems = fileItems.map((item) =>
+						item.itemId === fileItem.itemId ? { ...item, id: fileId } : item
+					);
+				}
+			).catch((e) => {
 				toast.error(`${e}`);
 				return null;
 			});
@@ -1132,6 +1232,7 @@
 
 	onDestroy(() => {
 		clearTimeout(searchDebounceTimer);
+		if (pollingInterval !== null) clearInterval(pollingInterval);
 		if (pendingPollTimer) {
 			clearInterval(pendingPollTimer);
 			pendingPollTimer = null;
