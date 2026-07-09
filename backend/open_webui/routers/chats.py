@@ -59,7 +59,7 @@ CHAT_CONFIG_KEYS = {
 class ChatConfigForm(BaseModel):
     ENABLE_CONTEXT_COMPACTION: bool
     CONTEXT_COMPACTION_TOKEN_THRESHOLD: int
-    CONTEXT_COMPACTION_TOKEN_CAP: int
+    CONTEXT_COMPACTION_TOKEN_CAP: int | None = None
     CONTEXT_COMPACTION_PROMPT_TEMPLATE: str
 
 
@@ -106,7 +106,10 @@ def chat_search_snippet(chat: dict, search_text: str, max_length: int = 200) -> 
 
 async def get_chat_config_values() -> dict:
     values = await Config.get_many(*CHAT_CONFIG_KEYS.values())
-    return {field: values[storage_key] for field, storage_key in CHAT_CONFIG_KEYS.items() if storage_key in values}
+    config = {field: values[storage_key] for field, storage_key in CHAT_CONFIG_KEYS.items() if storage_key in values}
+    if config.get('CONTEXT_COMPACTION_TOKEN_CAP') is None:
+        config['CONTEXT_COMPACTION_TOKEN_CAP'] = config.get('CONTEXT_COMPACTION_TOKEN_THRESHOLD', 80000)
+    return config
 
 
 def chat_config_updates(data: dict) -> dict:
@@ -714,7 +717,7 @@ async def get_chat_config(user=Depends(get_admin_user)):
 @router.post('/config', response_model=ChatConfigForm)
 async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user)):
     threshold = max(1, int(form_data.CONTEXT_COMPACTION_TOKEN_THRESHOLD))
-    token_cap = max(1, int(form_data.CONTEXT_COMPACTION_TOKEN_CAP))
+    token_cap = max(1, int(form_data.CONTEXT_COMPACTION_TOKEN_CAP or threshold))
     await Config.upsert(
         chat_config_updates(
             {
