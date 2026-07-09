@@ -54,6 +54,7 @@ from open_webui.config import (
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
     OAUTH_PICTURE_CLAIM,
     OAUTH_PROVIDERS,
+    build_oauth_providers,
     OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE,
     OAUTH_ROLES_CLAIM,
     OAUTH_ROLES_SEPARATOR,
@@ -1213,18 +1214,41 @@ class OAuthClientManager:
 
 class OAuthManager:
     def __init__(self, app):
-        self.oauth = OAuth()
         self.app = app
-
+        self.oauth = OAuth()
         self._clients = {}
+        self.reload()
 
-        for name, provider_config in OAUTH_PROVIDERS.items():
+    def reload(self, providers: dict | None = None):
+        """(Re)register Authlib clients from *providers* or the current OAUTH_PROVIDERS registry.
+
+        Registrations are built into locals and committed only after every
+        provider registers successfully, so a failure leaves the shared
+        OAUTH_PROVIDERS registry and the previous clients intact and
+        consistent with each other.
+        """
+        if providers is None:
+            providers = OAUTH_PROVIDERS
+
+        oauth = OAuth()
+        clients = {}
+
+        for name, provider_config in providers.items():
             if 'register' not in provider_config:
                 log.error(f'OAuth provider {name} missing register function')
                 continue
 
-            client = provider_config['register'](self.oauth)
-            self._clients[name] = client
+            clients[name] = provider_config['register'](oauth)
+
+        if providers is not OAUTH_PROVIDERS:
+            OAUTH_PROVIDERS.clear()
+            OAUTH_PROVIDERS.update(providers)
+        self.oauth = oauth
+        self._clients = clients
+
+    async def reload_from_config(self):
+        """Re-register providers from effective config (DB-backed when OAuth persistence is enabled)."""
+        self.reload(build_oauth_providers(await Config.get_namespace('oauth')))
 
     def get_client(self, provider_name):
         if provider_name not in self._clients:

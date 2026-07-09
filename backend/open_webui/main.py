@@ -315,6 +315,14 @@ async def lifespan(app: FastAPI):
 
     await import_legacy_config_json()
     await seed_registered_defaults()
+
+    # Provider registration at module import only sees environment values;
+    # re-register here so persisted OAuth settings take effect (#26917).
+    try:
+        await app.state.oauth_manager.reload_from_config()
+    except Exception:
+        log.exception('Failed to apply persisted OAuth configuration')
+
     await initialize_runtime_config(app)
     await migrate_legacy_webhook_config()
     await publish_event(app, EVENTS.SYSTEM_STARTUP_STARTED, source='system')

@@ -1393,6 +1393,15 @@ async def update_oauth_config(request: Request, form_data: OAuthConfigForm, user
         )
 
     await Config.upsert(oauth_config_updates(form_data.model_dump(exclude_none=True)))
+
+    # Re-register providers so the saved settings apply without a restart.
+    # Only this worker re-registers immediately; sibling uvicorn workers keep
+    # the previous registration until the service restarts.
+    try:
+        await request.app.state.oauth_manager.reload_from_config()
+    except Exception:
+        log.exception('OAuth provider re-registration failed after config update; a restart may be required')
+
     return await get_oauth_config_values()
 
 

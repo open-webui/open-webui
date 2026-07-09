@@ -2553,145 +2553,193 @@ if _oauth_authorize_params:
         log.warning('OAUTH_AUTHORIZE_PARAMS is not valid JSON, ignoring')
 
 
-def load_oauth_providers():
-    OAUTH_PROVIDERS.clear()
-    if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
+def build_oauth_providers(values: dict | None = None) -> dict:
+    """Build a provider registry from effective OAuth settings.
+
+    Without *values* the provider settings come from the environment-derived
+    module globals (import-time behavior). Pass a mapping of oauth.* config
+    keys (e.g. from Config.get_namespace('oauth'), which already resolves
+    DB-vs-env precedence) to build providers from persisted config. Unknown
+    keys are ignored; missing keys fall back to the env globals.
+    """
+    values = values or {}
+
+    def cfg(key: str, default):
+        return values.get(key, default)
+
+    oauth_timeout = cfg('oauth.timeout', OAUTH_TIMEOUT)
+
+    google_client_id = cfg('oauth.google.client_id', GOOGLE_CLIENT_ID)
+    google_client_secret = cfg('oauth.google.client_secret', GOOGLE_CLIENT_SECRET)
+    google_scope = cfg('oauth.google.scope', GOOGLE_OAUTH_SCOPE)
+    google_redirect_uri = cfg('oauth.google.redirect_uri', GOOGLE_REDIRECT_URI)
+
+    microsoft_client_id = cfg('oauth.microsoft.client_id', MICROSOFT_CLIENT_ID)
+    microsoft_client_secret = cfg('oauth.microsoft.client_secret', MICROSOFT_CLIENT_SECRET)
+    microsoft_tenant_id = cfg('oauth.microsoft.tenant_id', MICROSOFT_CLIENT_TENANT_ID)
+    microsoft_login_base_url = cfg('oauth.microsoft.login_base_url', MICROSOFT_CLIENT_LOGIN_BASE_URL)
+    microsoft_picture_url = cfg('oauth.microsoft.picture_url', MICROSOFT_CLIENT_PICTURE_URL)
+    microsoft_scope = cfg('oauth.microsoft.scope', MICROSOFT_OAUTH_SCOPE)
+    microsoft_redirect_uri = cfg('oauth.microsoft.redirect_uri', MICROSOFT_REDIRECT_URI)
+
+    github_client_id = cfg('oauth.github.client_id', GITHUB_CLIENT_ID)
+    github_client_secret = cfg('oauth.github.client_secret', GITHUB_CLIENT_SECRET)
+    github_scope = cfg('oauth.github.scope', GITHUB_CLIENT_SCOPE)
+    github_redirect_uri = cfg('oauth.github.redirect_uri', GITHUB_CLIENT_REDIRECT_URI)
+
+    oidc_client_id = cfg('oauth.client_id', OAUTH_CLIENT_ID)
+    oidc_client_secret = cfg('oauth.client_secret', OAUTH_CLIENT_SECRET)
+    oidc_provider_url = cfg('oauth.provider_url', OPENID_PROVIDER_URL)
+    oidc_scopes = cfg('oauth.scopes', OAUTH_SCOPES)
+    oidc_token_endpoint_auth_method = cfg('oauth.token_endpoint_auth_method', OAUTH_TOKEN_ENDPOINT_AUTH_METHOD)
+    oidc_code_challenge_method = cfg('oauth.code_challenge_method', OAUTH_CODE_CHALLENGE_METHOD)
+    oidc_redirect_uri = cfg('oauth.redirect_uri', OPENID_REDIRECT_URI)
+    oidc_provider_name = cfg('oauth.provider_name', OAUTH_PROVIDER_NAME)
+    oidc_end_session_endpoint = cfg('oauth.end_session_endpoint', OPENID_END_SESSION_ENDPOINT)
+
+    feishu_client_id = cfg('oauth.feishu.client_id', FEISHU_CLIENT_ID)
+    feishu_client_secret = cfg('oauth.feishu.client_secret', FEISHU_CLIENT_SECRET)
+    feishu_scope = cfg('oauth.feishu.scope', FEISHU_OAUTH_SCOPE)
+    feishu_redirect_uri = cfg('oauth.feishu.redirect_uri', FEISHU_REDIRECT_URI)
+
+    providers = {}
+    if google_client_id and google_client_secret:
 
         def google_oauth_register(oauth: OAuth):
             client = oauth.register(
                 name='google',
-                client_id=GOOGLE_CLIENT_ID,
-                client_secret=GOOGLE_CLIENT_SECRET,
+                client_id=google_client_id,
+                client_secret=google_client_secret,
                 server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
                 client_kwargs={
-                    'scope': GOOGLE_OAUTH_SCOPE,
-                    **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
+                    'scope': google_scope,
+                    **({'timeout': int(oauth_timeout)} if oauth_timeout else {}),
                 },
-                redirect_uri=GOOGLE_REDIRECT_URI,
+                redirect_uri=google_redirect_uri,
                 **({'authorize_params': GOOGLE_OAUTH_AUTHORIZE_PARAMS} if GOOGLE_OAUTH_AUTHORIZE_PARAMS else {}),
             )
             return client
 
-        OAUTH_PROVIDERS['google'] = {
+        providers['google'] = {
             'register': google_oauth_register,
         }
 
-    if MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET and MICROSOFT_CLIENT_TENANT_ID:
+    if microsoft_client_id and microsoft_client_secret and microsoft_tenant_id:
 
         def microsoft_oauth_register(oauth: OAuth):
             client = oauth.register(
                 name='microsoft',
-                client_id=MICROSOFT_CLIENT_ID,
-                client_secret=MICROSOFT_CLIENT_SECRET,
-                server_metadata_url=f'{MICROSOFT_CLIENT_LOGIN_BASE_URL}/{MICROSOFT_CLIENT_TENANT_ID}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID}',
+                client_id=microsoft_client_id,
+                client_secret=microsoft_client_secret,
+                server_metadata_url=f'{microsoft_login_base_url}/{microsoft_tenant_id}/v2.0/.well-known/openid-configuration?appid={microsoft_client_id}',
                 client_kwargs={
-                    'scope': MICROSOFT_OAUTH_SCOPE,
-                    **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
+                    'scope': microsoft_scope,
+                    **({'timeout': int(oauth_timeout)} if oauth_timeout else {}),
                 },
-                redirect_uri=MICROSOFT_REDIRECT_URI,
+                redirect_uri=microsoft_redirect_uri,
             )
             return client
 
-        OAUTH_PROVIDERS['microsoft'] = {
-            'picture_url': MICROSOFT_CLIENT_PICTURE_URL,
+        providers['microsoft'] = {
+            'picture_url': microsoft_picture_url,
             'register': microsoft_oauth_register,
         }
 
-    if GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET:
+    if github_client_id and github_client_secret:
 
         def github_oauth_register(oauth: OAuth):
             client = oauth.register(
                 name='github',
-                client_id=GITHUB_CLIENT_ID,
-                client_secret=GITHUB_CLIENT_SECRET,
+                client_id=github_client_id,
+                client_secret=github_client_secret,
                 access_token_url='https://github.com/login/oauth/access_token',
                 authorize_url='https://github.com/login/oauth/authorize',
                 api_base_url='https://api.github.com',
                 userinfo_endpoint='https://api.github.com/user',
                 client_kwargs={
-                    'scope': GITHUB_CLIENT_SCOPE,
-                    **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
+                    'scope': github_scope,
+                    **({'timeout': int(oauth_timeout)} if oauth_timeout else {}),
                 },
-                redirect_uri=GITHUB_CLIENT_REDIRECT_URI,
+                redirect_uri=github_redirect_uri,
             )
             return client
 
-        OAUTH_PROVIDERS['github'] = {
+        providers['github'] = {
             'register': github_oauth_register,
             'sub_claim': 'id',
         }
 
-    if OAUTH_CLIENT_ID and (OAUTH_CLIENT_SECRET or OAUTH_CODE_CHALLENGE_METHOD) and OPENID_PROVIDER_URL:
+    if oidc_client_id and (oidc_client_secret or oidc_code_challenge_method) and oidc_provider_url:
 
         def oidc_oauth_register(oauth: OAuth):
             client_kwargs = {
-                'scope': OAUTH_SCOPES,
+                'scope': oidc_scopes,
                 **(
-                    {'token_endpoint_auth_method': OAUTH_TOKEN_ENDPOINT_AUTH_METHOD}
-                    if OAUTH_TOKEN_ENDPOINT_AUTH_METHOD
+                    {'token_endpoint_auth_method': oidc_token_endpoint_auth_method}
+                    if oidc_token_endpoint_auth_method
                     else {}
                 ),
-                **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
+                **({'timeout': int(oauth_timeout)} if oauth_timeout else {}),
             }
 
-            if OAUTH_CODE_CHALLENGE_METHOD and OAUTH_CODE_CHALLENGE_METHOD == 'S256':
+            if oidc_code_challenge_method and oidc_code_challenge_method == 'S256':
                 client_kwargs['code_challenge_method'] = 'S256'
-            elif OAUTH_CODE_CHALLENGE_METHOD:
+            elif oidc_code_challenge_method:
                 raise Exception(
                     'Code challenge methods other than "%s" not supported. Given: "%s"'
-                    % ('S256', OAUTH_CODE_CHALLENGE_METHOD)
+                    % ('S256', oidc_code_challenge_method)
                 )
 
             client = oauth.register(
                 name='oidc',
-                client_id=OAUTH_CLIENT_ID,
-                client_secret=OAUTH_CLIENT_SECRET,
-                server_metadata_url=OPENID_PROVIDER_URL,
+                client_id=oidc_client_id,
+                client_secret=oidc_client_secret,
+                server_metadata_url=oidc_provider_url,
                 client_kwargs=client_kwargs,
-                redirect_uri=OPENID_REDIRECT_URI,
+                redirect_uri=oidc_redirect_uri,
             )
             return client
 
-        OAUTH_PROVIDERS['oidc'] = {
-            'name': OAUTH_PROVIDER_NAME,
+        providers['oidc'] = {
+            'name': oidc_provider_name,
             'register': oidc_oauth_register,
         }
 
-    if FEISHU_CLIENT_ID and FEISHU_CLIENT_SECRET:
+    if feishu_client_id and feishu_client_secret:
 
         def feishu_oauth_register(oauth: OAuth):
             client = oauth.register(
                 name='feishu',
-                client_id=FEISHU_CLIENT_ID,
-                client_secret=FEISHU_CLIENT_SECRET,
+                client_id=feishu_client_id,
+                client_secret=feishu_client_secret,
                 access_token_url='https://open.feishu.cn/open-apis/authen/v2/oauth/token',
                 authorize_url='https://accounts.feishu.cn/open-apis/authen/v1/authorize',
                 api_base_url='https://open.feishu.cn/open-apis',
                 userinfo_endpoint='https://open.feishu.cn/open-apis/authen/v1/user_info',
                 client_kwargs={
-                    'scope': FEISHU_OAUTH_SCOPE,
-                    **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
+                    'scope': feishu_scope,
+                    **({'timeout': int(oauth_timeout)} if oauth_timeout else {}),
                 },
-                redirect_uri=FEISHU_REDIRECT_URI,
+                redirect_uri=feishu_redirect_uri,
             )
             return client
 
-        OAUTH_PROVIDERS['feishu'] = {
+        providers['feishu'] = {
             'register': feishu_oauth_register,
             'sub_claim': 'user_id',
         }
 
     configured_providers = []
-    if GOOGLE_CLIENT_ID:
+    if google_client_id:
         configured_providers.append('Google')
-    if MICROSOFT_CLIENT_ID:
+    if microsoft_client_id:
         configured_providers.append('Microsoft')
-    if GITHUB_CLIENT_ID:
+    if github_client_id:
         configured_providers.append('GitHub')
-    if FEISHU_CLIENT_ID:
+    if feishu_client_id:
         configured_providers.append('Feishu')
 
-    if configured_providers and not OPENID_PROVIDER_URL and not OPENID_END_SESSION_ENDPOINT:
+    if configured_providers and not oidc_provider_url and not oidc_end_session_endpoint:
         provider_list = ', '.join(configured_providers)
         log.warning(
             f'⚠️  OAuth providers configured ({provider_list}) but OPENID_PROVIDER_URL not set - logout will not work!'
@@ -2700,6 +2748,15 @@ def load_oauth_providers():
             f"Set OPENID_PROVIDER_URL to your OAuth provider's OpenID Connect discovery endpoint,"
             f' or set OPENID_END_SESSION_ENDPOINT to a custom logout URL to fix logout functionality.'
         )
+
+    return providers
+
+
+def load_oauth_providers(values: dict | None = None):
+    """Rebuild the shared OAUTH_PROVIDERS registry in place."""
+    providers = build_oauth_providers(values)
+    OAUTH_PROVIDERS.clear()
+    OAUTH_PROVIDERS.update(providers)
 
 
 load_oauth_providers()
