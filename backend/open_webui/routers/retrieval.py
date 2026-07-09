@@ -9,6 +9,7 @@ import re
 import shutil
 import uuid
 from datetime import datetime
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Callable, Iterator, Optional, Sequence, Union
@@ -276,8 +277,10 @@ RETRIEVAL_CONFIG_KEYS = {
     'DATALAB_MARKER_USE_LLM': 'rag.datalab_marker_use_llm',
     'DDGS_BACKEND': 'web.search.ddgs_backend',
     'DOCLING_API_KEY': 'rag.docling_api_key',
+    'DOCLING_JSON_CHUNK_MODE': 'rag.DOCLING_JSON_CHUNK_MODE',
     'DOCLING_PARAMS': 'rag.docling_params',
     'DOCLING_SERVER_URL': 'rag.docling_server_url',
+    'DOCLING_SERVE_TIMEOUT': 'rag.docling_serve_timeout',
     'DOCUMENT_INTELLIGENCE_ENDPOINT': 'rag.document_intelligence_endpoint',
     'DOCUMENT_INTELLIGENCE_KEY': 'rag.document_intelligence_key',
     'DOCUMENT_INTELLIGENCE_MODEL': 'rag.document_intelligence_model',
@@ -645,7 +648,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'TIKA_SERVER_URL': config.TIKA_SERVER_URL,
         'DOCLING_SERVER_URL': config.DOCLING_SERVER_URL,
         'DOCLING_API_KEY': config.DOCLING_API_KEY,
+        'DOCLING_JSON_CHUNK_MODE': config.DOCLING_JSON_CHUNK_MODE,
         'DOCLING_PARAMS': config.DOCLING_PARAMS,
+        'DOCLING_SERVE_TIMEOUT': config.DOCLING_SERVE_TIMEOUT,
         'DOCUMENT_INTELLIGENCE_ENDPOINT': config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         'DOCUMENT_INTELLIGENCE_KEY': config.DOCUMENT_INTELLIGENCE_KEY,
         'DOCUMENT_INTELLIGENCE_MODEL': config.DOCUMENT_INTELLIGENCE_MODEL,
@@ -877,7 +882,9 @@ class ConfigForm(BaseModel):
     TIKA_SERVER_URL: str | None = None
     DOCLING_SERVER_URL: str | None = None
     DOCLING_API_KEY: str | None = None
+    DOCLING_JSON_CHUNK_MODE: str | None = None
     DOCLING_PARAMS: dict | None = None
+    DOCLING_SERVE_TIMEOUT: int | None = None
     DOCUMENT_INTELLIGENCE_ENDPOINT: str | None = None
     DOCUMENT_INTELLIGENCE_KEY: str | None = None
     DOCUMENT_INTELLIGENCE_MODEL: str | None = None
@@ -1052,7 +1059,15 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     config.DOCLING_API_KEY = (
         form_data.DOCLING_API_KEY if form_data.DOCLING_API_KEY is not None else config.DOCLING_API_KEY
     )
+    config.DOCLING_JSON_CHUNK_MODE = (
+        form_data.DOCLING_JSON_CHUNK_MODE if form_data.DOCLING_JSON_CHUNK_MODE is not None else config.DOCLING_JSON_CHUNK_MODE
+    )
     config.DOCLING_PARAMS = form_data.DOCLING_PARAMS if form_data.DOCLING_PARAMS is not None else config.DOCLING_PARAMS
+    config.DOCLING_SERVE_TIMEOUT = (
+        form_data.DOCLING_SERVE_TIMEOUT
+        if form_data.DOCLING_SERVE_TIMEOUT is not None
+        else config.DOCLING_SERVE_TIMEOUT
+    )
     config.DOCUMENT_INTELLIGENCE_ENDPOINT = (
         form_data.DOCUMENT_INTELLIGENCE_ENDPOINT
         if form_data.DOCUMENT_INTELLIGENCE_ENDPOINT is not None
@@ -1344,7 +1359,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'TIKA_SERVER_URL': config.TIKA_SERVER_URL,
         'DOCLING_SERVER_URL': config.DOCLING_SERVER_URL,
         'DOCLING_API_KEY': config.DOCLING_API_KEY,
+        'DOCLING_JSON_CHUNK_MODE': config.DOCLING_JSON_CHUNK_MODE,
         'DOCLING_PARAMS': config.DOCLING_PARAMS,
+        'DOCLING_SERVE_TIMEOUT': config.DOCLING_SERVE_TIMEOUT,
         'DOCUMENT_INTELLIGENCE_ENDPOINT': config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         'DOCUMENT_INTELLIGENCE_KEY': config.DOCUMENT_INTELLIGENCE_KEY,
         'DOCUMENT_INTELLIGENCE_MODEL': config.DOCUMENT_INTELLIGENCE_MODEL,
@@ -1896,6 +1913,24 @@ async def process_file(
                 file_path = file.path
                 if file_path:
                     file_path = await asyncio.to_thread(Storage.get_file, file_path)
+
+                    # Mark as actively processing and record start time so the
+                    # UI polling loop can show meaningful status information.
+                    await Files.update_file_data_by_id(
+                        file.id,
+                        {"status": "processing", "started_at": int(time.time())},
+                        db=db,
+                    )
+
+                    # Callback used by DoclingLoader to persist queue position
+                    # and task_id so they appear in the UI tooltip.
+                    _file_id_for_callback = file.id
+
+                    async def _docling_status_callback(data: dict) -> None:
+                        await Files.update_file_data_by_id(
+                            _file_id_for_callback, data, db=db
+                        )
+
                     loader_config = await get_loader_config()
                     loader = build_loader_from_config(request, loader_config)
                     loader.user = user
@@ -1904,6 +1939,7 @@ async def process_file(
                         'file_name': file.filename,
                         'file_content_type': file.meta.get('content_type'),
                     }
+                    loader.kwargs['DOCLING_STATUS_CALLBACK'] = _docling_status_callback
                     docs = await loader.aload(file.filename, file.meta.get('content_type'), file_path)
 
                     docs = [
@@ -1988,6 +2024,37 @@ async def process_file(
                     log.info(f'added {len(docs)} items to collection {collection_name}')
 
                     if result:
+                        # Guard: check that the file record still exists before
+                        # committing the final status.  The user may have pressed
+                        # the delete button while docling/embedding was running.
+                        async with get_async_db() as _guard_session:
+                            if await Files.get_file_by_id(file.id, db=_guard_session) is None:
+                                log.warning(
+                                    "File %s was deleted during processing; "
+                                    "discarding embeddings to prevent orphaned vectors.",
+                                    file.id,
+                                )
+                                try:
+                                    if form_data.collection_name:
+                                        # Shared knowledge collection – remove only this file's chunks
+                                        VECTOR_DB_CLIENT.delete(
+                                            collection_name=collection_name,
+                                            filter={"file_id": file.id},
+                                        )
+                                    else:
+                                        # Private file collection – drop entirely
+                                        VECTOR_DB_CLIENT.delete_collection(
+                                            collection_name=collection_name
+                                        )
+                                except Exception as _cleanup_err:
+                                    log.debug(
+                                        "Vector DB cleanup after user-delete: %s",
+                                        _cleanup_err,
+                                    )
+                                return {
+                                    "status": False,
+                                    "reason": "file_deleted_during_processing",
+                                }
                         # Fresh session for the final update.
                         async with get_async_db() as session:
                             await Files.update_file_metadata_by_id(

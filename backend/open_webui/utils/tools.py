@@ -533,6 +533,8 @@ async def get_builtin_tools(
                 builtin_functions.append(query_knowledge_bases)
                 builtin_functions.append(search_knowledge_bases)
         elif model_knowledge:
+            # Model has attached knowledge - provide discovery, view and search tools
+            # view tools before search tools so LLM sees direct-read option first
             builtin_functions.extend(
                 [list_knowledge, search_knowledge_files, grep_knowledge_files, query_knowledge_files]
             )

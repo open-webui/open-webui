@@ -376,6 +376,69 @@ def get_citation_source_from_tool_result(
             # Empty result fallback
             return []
 
+        elif isinstance(tool_result, dict) and isinstance(tool_result.get('results'), list):
+            # Generic handler for external RAG retriever responses.
+            # Expects: {"results": [{"payload": {"title": ..., "url": ..., "date": ...}}, ...],
+            #          "context": "<source id='1' ...>text...</source>..."}
+            # Each result becomes an individual citation with title + URL, and text from context XML.
+            import re
+            
+            # Parse context XML to extract text content per result index
+            context_xml = tool_result.get('context', '')
+            text_by_index = {}
+            if context_xml:
+                try:
+                    # Match: <source id="1" ...>TEXT</source>
+                    for match in re.finditer(r'<source[^>]*id="(\d+)"[^>]*>([\s\S]*?)</source>', context_xml):
+                        idx = int(match.group(1)) - 1  # Convert 1-based XML id to 0-based array index
+                        import html as _html
+                        text = _html.unescape(match.group(2)).strip()
+                        if text:
+                            text_by_index[idx] = text
+                except Exception as e:
+                    log.debug(f'Error parsing context XML: {e}')
+            
+            documents = []
+            metadata = []
+            for i, result in enumerate(tool_result['results']):
+                payload = result.get('payload', {})
+                title = payload.get('title') or result.get('id', '')
+                url = payload.get('url', '')
+                date = payload.get('date', '')
+                score = result.get('score')
+                # Use the URL as the citation id so it renders as a clickable link
+                source_id = url if url else title
+                
+                # Prefer text from context XML, fall back to chunk_text if present, else title
+                content = text_by_index.get(i, '')
+                if not content:
+                    content = payload.get('chunk_text', '')
+                if not content:
+                    content = title
+                
+                documents.append(content)
+                meta = {'source': source_id, 'name': title}
+                if url:
+                    meta['url'] = url
+                if date:
+                    meta['date'] = date
+                if score is not None:
+                    meta['score'] = score
+                metadata.append(meta)
+            if documents:
+                return [
+                    {
+                        'source': {
+                            'name': tool_name,
+                            'type': 'tool',
+                            'id': tool_id or tool_name,
+                        },
+                        'document': documents,
+                        'metadata': metadata,
+                    }
+                ]
+            return []
+
         else:
             # Fallback for other tools
             return [
@@ -750,29 +813,94 @@ def handle_responses_streaming_event(
         return current_output, None
 
 
-def get_source_context(sources: list, source_ids: dict = None, include_content: bool = True) -> str:
+# Metadata keys whose presence indicates a provider that supplies rich per-chunk
+# metadata (page numbers, word offsets, original filename).  Add further provider
+# fingerprint keys here as new loaders are introduced.
+_RICH_METADATA_KEYS = frozenset({"chunk_mode"})
+
+
+def _enrich_source_attrs(meta: dict) -> dict:
+    """Return the extra metadata fields we want to forward to the LLM for
+    'rich' providers (those that set at least one key from _RICH_METADATA_KEYS).
+
+    Returns an empty dict for all other providers so the call site is uniform.
     """
-    Build <source> tag context string from citation sources.
+    if not (_RICH_METADATA_KEYS & meta.keys()):
+        return {}
+    extra = {}
+    if meta.get("page") is not None:
+        extra["page"] = meta["page"]
+    if meta.get("chunk_start_word") is not None:
+        extra["chunk_start"] = meta["chunk_start_word"]
+    if meta.get("chunk_end_word") is not None:
+        extra["chunk_end"] = meta["chunk_end_word"]
+    filename = meta.get("filename") or meta.get("document_name")
+    if filename:
+        extra["filename"] = filename
+    return extra
+
+
+def get_source_context(
+    sources: list, source_ids: dict = None, include_content: bool = True, format: str = "xml"
+) -> str:
+    """Build context string from citation sources.
+
+    format="xml"  (default) — current behaviour: <source id="…" …>content</source>
+                               Rich-metadata providers also get page, chunk_start,
+                               chunk_end, and filename as XML attributes.
+    format="json"            — JSON array of objects.  Use {{CONTEXT_JSON}} in the
+                               RAG_TEMPLATE to activate this path automatically.
     """
-    context_string = ''
+    context_string = ""
     if source_ids is None:
         source_ids = {}
+    if format == "json":
+        items = []
+        for source in sources:
+            for doc, meta in zip(
+                source.get("document", []), source.get("metadata", [])
+            ):
+                source_id = (
+                    meta.get("source") or source.get("source", {}).get("id") or "N/A"
+                )
+                if source_id not in source_ids:
+                    source_ids[source_id] = len(source_ids) + 1
+                entry: dict = {
+                    "id": source_ids[source_id],
+                    "content": doc if include_content else "",
+                }
+                src_name = source.get("source", {}).get("name")
+                if src_name:
+                    entry["name"] = src_name
+                entry.update(_enrich_source_attrs(meta))
+                items.append(entry)
+        return json.dumps(items, ensure_ascii=False, indent=2)
+
+    # XML format (default)
+    context_string = ""
     for source in sources:
-        for doc, meta in zip(source.get('document', []), source.get('metadata', [])):
-            source_id = meta.get('source') or source.get('source', {}).get('id') or 'N/A'
+        for doc, meta in zip(source.get("document", []), source.get("metadata", [])):
+            source_id = (
+                meta.get("source") or source.get("source", {}).get("id") or "N/A"
+            )
             if source_id not in source_ids:
                 source_ids[source_id] = len(source_ids) + 1
-            src_name = source.get('source', {}).get('name')
-            src_type = source.get('source', {}).get('type')
-            src_rid = source.get('source', {}).get('id')
-            body = doc if include_content else ''
-            context_string += (
-                f'<source id="{source_ids[source_id]}"'
-                + (f' name="{src_name}"' if src_name else '')
-                + (f' resource-type="{src_type}"' if src_type else '')
-                + (f' resource-id="{src_rid}"' if src_rid else '')
-                + f'>{body}</source>\n'
-            )
+            src_name = source.get("source", {}).get("name")
+            src_type = source.get("source", {}).get("type")
+            src_rid = source.get("source", {}).get("id")
+            body = doc if include_content else ""
+
+            tag = f'<source id="{source_ids[source_id]}"'
+            if src_name:
+                tag += f' name="{src_name}"'
+            if src_type:
+                tag += f' resource-type="{src_type}"'
+            if src_rid:
+                tag += f' resource-id="{src_rid}"'
+            for attr, val in _enrich_source_attrs(meta).items():
+                tag += f' {attr}="{val}"'
+            tag += f">{body}</source>\n"
+            context_string += tag
     return context_string
 
 
@@ -790,28 +918,48 @@ async def apply_source_context_to_messages(
     When include_content is False, emit <source> tags with id/name but no
     document body — useful when the content is already present elsewhere
     (e.g. in a tool result message) and only citation markers are needed.
+
+    Format detection
+    ----------------
+    If the configured RAG_TEMPLATE contains the token ``{{CONTEXT_JSON}}``,
+    the context is emitted as a JSON array and that token is substituted in
+    the template (instead of the usual ``{{CONTEXT}}``).  All other template
+    tokens (``{{QUERY}}``, ``[query]``, etc.) continue to work normally.
+    This lets you switch to JSON context simply by editing the RAG_TEMPLATE
+    in the Admin UI — no code change required.
     """
     if not sources or not user_message:
         return messages
 
-    context = get_source_context(sources, include_content=include_content)
+    rag_tmpl = await Config.get('rag.template')
 
-    context = context.strip()
-    if not context:
-        return messages
-
-    if RAG_SYSTEM_CONTEXT:
-        return add_or_update_system_message(
-            await rag_template(await Config.get('rag.template'), context, user_message),
-            messages,
-            append=True,
+    if "{{CONTEXT_JSON}}" in rag_tmpl:
+        # JSON path: substitute {{CONTEXT_JSON}} ourselves, then hand the
+        # already-substituted template to rag_template with an empty context
+        # placeholder so it only processes {{QUERY}} / [query].
+        context = get_source_context(
+            sources, include_content=include_content, format="json"
+        ).strip()
+        if not context:
+            return messages
+        # Replace our custom token first, then let rag_template handle {{QUERY}}.
+        filled = await rag_template(
+            rag_tmpl.replace("{{CONTEXT_JSON}}", context),
+            "",          # {{CONTEXT}} is not present, so this is a no-op
+            user_message,
         )
     else:
-        return add_or_update_user_message(
-            await rag_template(await Config.get('rag.template'), context, user_message),
-            messages,
-            append=False,
-        )
+        context = get_source_context(
+            sources, include_content=include_content, format="xml"
+        ).strip()
+        if not context:
+            return messages
+        filled = await rag_template(rag_tmpl, context, user_message)
+
+    if RAG_SYSTEM_CONTEXT:
+        return add_or_update_system_message(filled, messages, append=True)
+    else:
+        return add_or_update_user_message(filled, messages, append=False)
 
 
 async def process_tool_result(
@@ -1253,22 +1401,28 @@ async def chat_completion_tools_handler(
 
                     tool_name = f'{tool_id}/{tool_function_name}' if tool_id else f'{tool_function_name}'
 
-                    # Citation is enabled for this tool
-                    sources.append(
-                        {
-                            'source': {
-                                'name': (f'{tool_name}'),
-                            },
-                            'document': [str(tool_result)],
-                            'metadata': [
-                                {
-                                    'source': (f'{tool_name}'),
-                                    'parameters': tool_function_params,
-                                }
-                            ],
-                            'tool_result': True,
-                        }
-                    )
+                    # Try to extract structured citation sources (e.g. from RAG retrievers).
+                    # Falls back to a single raw-content source for unknown tool formats.
+                    try:
+                        citation_sources = get_citation_source_from_tool_result(
+                            tool_name=tool_function_name,
+                            tool_params=tool_function_params,
+                            tool_result=tool_result,
+                            tool_id=tool_id,
+                        )
+                        for src in citation_sources:
+                            src['tool_result'] = True
+                            sources.append(src)
+                    except Exception as e:
+                        log.debug(f'Error extracting citation from tool result: {e}')
+                        sources.append(
+                            {
+                                'source': {'name': tool_name},
+                                'document': [str(tool_result)],
+                                'metadata': [{'source': tool_name, 'parameters': tool_function_params}],
+                                'tool_result': True,
+                            }
+                        )
 
                     if tools[tool_function_name].get('metadata', {}).get('file_handler', False):
                         skip_files = True
@@ -1769,6 +1923,12 @@ async def chat_completion_files_handler(
         all_full_context = all(item.get('context') == 'full' for item in files)
 
         queries = []
+        # When the query-generation LLM returns an empty list, it signals that
+        # no targeted search is needed (e.g. summarise, translate, list all).
+        # In that case we fall back to full-context mode instead of using the
+        # raw user message as a similarity query (which always scores ~0).
+        llm_requested_full_context = False
+
         if not all_full_context:
             try:
                 queries_response = await generate_queries(
@@ -1796,6 +1956,9 @@ async def chat_completion_files_handler(
                     queries_response = {'queries': [queries_response]}
 
                 queries = queries_response.get('queries', [])
+                if len(queries) == 0:
+                    # LLM explicitly decided no search is needed → use full context
+                    llm_requested_full_context = True
             except Exception:
                 pass
 
@@ -1810,7 +1973,9 @@ async def chat_completion_files_handler(
                 }
             )
 
-        if len(queries) == 0:
+        # Only fall back to the raw user message when the LLM did NOT explicitly
+        # return an empty list (i.e. when query generation itself failed/errored).
+        if len(queries) == 0 and not llm_requested_full_context:
             queries = [get_last_user_message(body['messages']) or '']
 
         try:
@@ -1832,7 +1997,7 @@ async def chat_completion_files_handler(
                 r=await Config.get('rag.relevance_threshold'),
                 hybrid_bm25_weight=await Config.get('rag.hybrid_bm25_weight'),
                 hybrid_search=await Config.get('rag.enable_hybrid_search'),
-                full_context=all_full_context or await Config.get('rag.full_context'),
+                full_context=all_full_context or llm_requested_full_context or await Config.get('rag.full_context'),
                 user=user,
             )
         except Exception as e:
@@ -2499,6 +2664,21 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     tool_ids = form_data.pop('tool_ids', None)
     terminal_id = form_data.pop('terminal_id', None)
+
+    # In native FC mode, intercept KB collections before they reach chat_completion_files_handler.
+    # Move them into metadata['folder_knowledge'] so builtin tools (list_knowledge,
+    # view_knowledge_file) handle them instead of the auto-RAG pipeline.
+    # At this point metadata == extra_params['__metadata__'] (same dict object),
+    # so changes here are visible to get_builtin_tools() later.
+    if metadata.get('params', {}).get('function_calling') == 'native':
+        raw_files = form_data.get('files') or []
+        kb_collections = [f for f in raw_files if f.get('type') == 'collection']
+        if kb_collections:
+            non_collection_files = [f for f in raw_files if f.get('type') != 'collection']
+            form_data['files'] = non_collection_files
+            existing_fk = list(metadata.get('folder_knowledge') or [])
+            metadata['folder_knowledge'] = existing_fk + kb_collections
+
     files = form_data.pop('files', None)
     form_data.pop('folder_id', None)
 
@@ -4765,18 +4945,7 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         # Extract citation sources from tool results
-                        if (
-                            citations_enabled
-                            and tool_function_name
-                            in [
-                                'search_web',
-                                'fetch_url',
-                                'view_file',
-                                'view_knowledge_file',
-                                'query_knowledge_files',
-                            ]
-                            and tool_result
-                        ):
+                        if citations_enabled and tool_result:
                             try:
                                 citation_sources = get_citation_source_from_tool_result(
                                     tool_name=tool_function_name,

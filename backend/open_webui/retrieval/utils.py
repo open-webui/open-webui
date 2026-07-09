@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import logging
 import os
+import json
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -90,6 +91,8 @@ LOADER_CONFIG_KEYS = {
     'DOCLING_SERVER_URL': 'rag.docling_server_url',
     'DOCLING_API_KEY': 'rag.docling_api_key',
     'DOCLING_PARAMS': 'rag.docling_params',
+    'DOCLING_JSON_CHUNK_MODE': 'rag.DOCLING_JSON_CHUNK_MODE',
+    'DOCLING_SERVE_TIMEOUT': 'rag.docling_serve_timeout',
     'PDF_EXTRACT_IMAGES': 'rag.pdf_extract_images',
     'PDF_LOADER_MODE': 'rag.pdf_loader_mode',
     'DOCUMENT_INTELLIGENCE_ENDPOINT': 'rag.document_intelligence_endpoint',
@@ -302,7 +305,13 @@ def query_doc(collection_name: str, query_embedding: list[float], k: int, user: 
         )
 
         if result:
-            log.info(f'query_doc:result {result.ids} {result.metadatas}')
+            try:
+                metas_str = json.dumps(result.metadatas, ensure_ascii=False)
+            except Exception:
+                metas_str = str(result.metadatas)
+            if len(metas_str) > 1000:
+                metas_str = metas_str[:1000] + "...(truncated)"
+            log.info(f"query_doc:result {result.ids} {metas_str}")
 
         return result
     except Exception as e:
@@ -1144,9 +1153,13 @@ def get_embedding_function(
 
                 # Flatten results — raise if any batch failed
                 embeddings = []
-                for i, batch_embeddings in enumerate(batch_results):
-                    if batch_embeddings is None:
-                        raise Exception(f'Embedding generation failed for batch {i + 1}/{len(batches)}')
+                for batch_embeddings in batch_results:
+                    if not isinstance(batch_embeddings, list):
+                        raise ValueError(
+                            f"Embedding API returned {type(batch_embeddings).__name__!r} for a batch "
+                            "(expected a list of vectors). An API error or timeout likely occurred "
+                            "for one or more batches — check the log lines above for details."
+                        )
                     embeddings.extend(batch_embeddings)
 
                 log.debug(

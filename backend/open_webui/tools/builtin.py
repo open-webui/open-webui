@@ -2357,8 +2357,19 @@ async def list_knowledge(
     __model_knowledge__: Optional[list[dict]] = None,
 ) -> str:
     """
-    List knowledge bases, files, and notes attached to the current model.
-    Use this first to discover what knowledge is available before querying or reading files.
+    IMPORTANT: Call this tool FIRST when working with attached knowledge.
+    This lists all available files, knowledge bases, and notes so you can make an informed decision
+    about the best retrieval strategy.
+
+    After listing, decide your next step based on what you see:
+    - If there are a small number of relevant files you can identify by name or KB → read them directly
+      using view_knowledge_file(file_id) with pagination. This preserves full content, tables, and formatting.
+    - If you need to search across many files to find relevant content → use query_knowledge_files(query)
+      for semantic/vector search. Note: vector search does not preserve table structure or handle
+      structured documents well.
+
+    DO NOT skip this step and go straight to query_knowledge_files — listing first makes you smarter.
+
     Without knowledge_id: returns KB summaries (name, description, file_count)
     plus standalone files and notes — no file listing inside KBs.
     With knowledge_id: includes paginated file listing for that specific KB.
@@ -2499,8 +2510,20 @@ async def query_knowledge_files(
     __model_knowledge__: list[dict] = None,
 ) -> str:
     """
-    Search knowledge base files using semantic/vector search. Searches across collections (KBs),
-    individual files, and notes that the user has access to.
+    Semantic/vector search across knowledge base files. Only use this AFTER you have called list_knowledge
+    and determined that you need to search broadly for relevant content.
+
+    When to use:
+    - You've listed available files and need to find relevant passages across many documents
+    - You're doing a broad topical search and don't know which specific files contain the answer
+    - You need to find semantically similar content that might not match keyword search
+
+    When NOT to use:
+    - You already know which file(s) to read → use view_knowledge_file(file_id) instead
+    - The file appears to contain tables, structured data, or markdown → use view_knowledge_file, as
+      vector search does not preserve formatting or table structure
+
+    Searches across collections (KBs), individual files, and notes that the user has access to.
     Helpful for internal documentation, uploaded knowledge, and attached model knowledge.
 
     :param query: The search query to find semantically relevant content
