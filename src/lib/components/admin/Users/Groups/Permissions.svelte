@@ -6,6 +6,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	import { DEFAULT_PERMISSIONS } from '$lib/constants/permissions';
+	import { config } from '$lib/stores';
 
 	export let permissions = {};
 	export let defaultPermissions = {};
@@ -13,6 +14,24 @@
 	// Reactive statement to ensure all fields are present in `permissions`
 	$: {
 		permissions = fillMissingProperties(permissions, DEFAULT_PERMISSIONS);
+	}
+
+	$: if (
+		$config?.features?.enable_plugins === false &&
+		permissions?.workspace &&
+		(permissions.workspace.tools ||
+			permissions.workspace.tools_import ||
+			permissions.workspace.tools_export)
+	) {
+		permissions = {
+			...permissions,
+			workspace: {
+				...permissions.workspace,
+				tools: false,
+				tools_import: false,
+				tools_export: false
+			}
+		};
 	}
 
 	function fillMissingProperties(obj: any, defaults: any) {
@@ -122,43 +141,45 @@
 			{/if}
 		</div>
 
-		<div class="flex flex-col w-full">
-			<Tooltip
-				className="flex w-full justify-between my-1"
-				content={$i18n.t(
-					'Warning: Enabling this will allow users to upload arbitrary code on the server.'
-				)}
-				placement="top-start"
-			>
-				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Tools Access')}
-				</div>
-				<Switch bind:state={permissions.workspace.tools} />
-			</Tooltip>
+		{#if $config?.features?.enable_plugins}
+			<div class="flex flex-col w-full">
+				<Tooltip
+					className="flex w-full justify-between my-1"
+					content={$i18n.t(
+						'Warning: Enabling this will allow users to upload arbitrary code on the server.'
+					)}
+					placement="top-start"
+				>
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Tools Access')}
+					</div>
+					<Switch bind:state={permissions.workspace.tools} />
+				</Tooltip>
 
-			{#if permissions.workspace.tools}
-				<div class="ml-2 flex flex-col gap-2 pt-0.5 pb-1">
-					<div class="flex w-full justify-between">
-						<div class="self-center text-xs">
-							{$i18n.t('Import Tools')}
+				{#if permissions.workspace.tools}
+					<div class="ml-2 flex flex-col gap-2 pt-0.5 pb-1">
+						<div class="flex w-full justify-between">
+							<div class="self-center text-xs">
+								{$i18n.t('Import Tools')}
+							</div>
+							<Switch bind:state={permissions.workspace.tools_import} />
 						</div>
-						<Switch bind:state={permissions.workspace.tools_import} />
-					</div>
-					<div class="flex w-full justify-between">
-						<div class="self-center text-xs">
-							{$i18n.t('Export Tools')}
+						<div class="flex w-full justify-between">
+							<div class="self-center text-xs">
+								{$i18n.t('Export Tools')}
+							</div>
+							<Switch bind:state={permissions.workspace.tools_export} />
 						</div>
-						<Switch bind:state={permissions.workspace.tools_export} />
 					</div>
-				</div>
-			{:else if defaultPermissions?.workspace?.tools}
-				<div class="pb-0.5">
-					<div class="text-xs text-gray-500">
-						{$i18n.t('This is a default user permission and will remain enabled.')}
+				{:else if defaultPermissions?.workspace?.tools}
+					<div class="pb-0.5">
+						<div class="text-xs text-gray-500">
+							{$i18n.t('This is a default user permission and will remain enabled.')}
+						</div>
 					</div>
-				</div>
-			{/if}
-		</div>
+				{/if}
+			</div>
+		{/if}
 
 		<div class="flex flex-col w-full">
 			<Tooltip
