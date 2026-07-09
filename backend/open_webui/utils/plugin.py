@@ -13,6 +13,7 @@ from typing import Any
 
 from open_webui.env import (
     ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS,
+    ENABLE_PLUGINS,
     OFFLINE_MODE,
     PIP_OPTIONS,
     PIP_PACKAGE_INDEX_OPTIONS,
@@ -203,6 +204,9 @@ def replace_imports(content):
 # May the intent of the one who wrote it survive every
 # import and transformation, as a deed survives the generations.
 async def load_tool_module_by_id(tool_id, content=None):
+    if not ENABLE_PLUGINS:
+        raise RuntimeError('Plugins are disabled by ENABLE_PLUGINS=false')
+
     if content is None:
         tool = await Tools.get_tool_by_id(tool_id)
         if not tool:
@@ -251,6 +255,9 @@ async def load_tool_module_by_id(tool_id, content=None):
 
 
 async def load_function_module_by_id(function_id: str, content: str | None = None):
+    if not ENABLE_PLUGINS:
+        raise RuntimeError('Plugins are disabled by ENABLE_PLUGINS=false')
+
     if content is None:
         function = await Functions.get_function_by_id(function_id)
         if not function:
@@ -447,6 +454,10 @@ async def install_tool_and_function_dependencies():
     and then installing them using pip. Duplicates or similar version specifications are
     handled by pip as much as possible.
     """
+    if not ENABLE_PLUGINS:
+        log.info('ENABLE_PLUGINS is disabled, skipping tool and function dependencies.')
+        return
+
     function_list = await Functions.get_functions(active_only=True)
     tool_list = await Tools.get_tools()
 

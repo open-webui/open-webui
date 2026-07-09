@@ -83,6 +83,7 @@ from open_webui.env import (
     ENABLE_COMPRESSION_MIDDLEWARE,
     ENABLE_CUSTOM_MODEL_FALLBACK,
     ENABLE_EASTER_EGGS,
+    ENABLE_PLUGINS,
     EXTERNAL_PWA_MANIFEST_URL,
     # OAuth Back-Channel Logout
     ENABLE_OAUTH_BACKCHANNEL_LOGOUT,
@@ -1927,6 +1928,7 @@ async def get_app_config(request: Request):
                     'enable_public_active_users_count': ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
                     'enable_easter_eggs': ENABLE_EASTER_EGGS,
                     'enable_direct_connections': config.get('direct.enable'),
+                    'enable_plugins': ENABLE_PLUGINS,
                     'enable_folders': config.get('folders.enable'),
                     'folder_max_file_count': config.get('folders.max_file_count'),
                     'enable_channels': config.get('channels.enable'),

@@ -8,7 +8,7 @@ import uuid
 from types import SimpleNamespace
 from typing import Any
 
-from open_webui.env import VERSION
+from open_webui.env import ENABLE_PLUGINS, VERSION
 from open_webui.models.config import Config
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from open_webui.retrieval.web.utils import validate_url
@@ -1025,6 +1025,9 @@ class WebhookEventSink:
 
 
 async def dispatch_event_functions(app: Any, event: Event, request: Any | None = None) -> None:
+    if not ENABLE_PLUGINS:
+        return
+
     from open_webui.models.functions import Functions
     from open_webui.utils.plugin import get_function_module_from_cache
 

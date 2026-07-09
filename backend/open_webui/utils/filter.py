@@ -1,6 +1,7 @@
 import inspect
 import logging
 
+from open_webui.env import ENABLE_PLUGINS
 from open_webui.models.functions import Functions
 from open_webui.utils.plugin import (
     get_function_module_from_cache,
@@ -19,6 +20,9 @@ async def get_function_module(request, function_id, load_from_db=True):
 
 
 async def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list = None):
+    if not ENABLE_PLUGINS:
+        return []
+
     async def get_priority(function_id):
         try:
             function_module = await get_function_module(request, function_id)
@@ -64,6 +68,9 @@ async def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list =
 # Grant these filters the discernment to pass what serves
 # and refuse what harms, for every soul in the house.
 async def process_filter_functions(request, filter_functions, filter_type, form_data, extra_params):
+    if not ENABLE_PLUGINS:
+        return form_data, {}
+
     skip_files = None
 
     for function in filter_functions:

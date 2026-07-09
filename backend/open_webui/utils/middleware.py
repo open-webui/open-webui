@@ -33,6 +33,7 @@ from open_webui.env import (
     CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
     ENABLE_API_OUTLET_FILTERS,
     ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION,
+    ENABLE_PLUGINS,
     ENABLE_QUERIES_CACHE,
     ENABLE_REALTIME_CHAT_SAVE,
     ENABLE_RESPONSES_API_STATEFUL,
@@ -2421,19 +2422,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     except Exception as e:
         raise e
 
-    try:
-        filter_ids = await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
-        filter_functions = await Functions.get_functions_by_ids(filter_ids)
+    if ENABLE_PLUGINS:
+        try:
+            filter_ids = await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
+            filter_functions = await Functions.get_functions_by_ids(filter_ids)
 
-        form_data, flags = await process_filter_functions(
-            request=request,
-            filter_functions=filter_functions,
-            filter_type='inlet',
-            form_data=form_data,
-            extra_params=extra_params,
-        )
-    except Exception as e:
-        raise Exception(f'{e}')
+            form_data, flags = await process_filter_functions(
+                request=request,
+                filter_functions=filter_functions,
+                filter_type='inlet',
+                form_data=form_data,
+                extra_params=extra_params,
+            )
+        except Exception as e:
+            raise Exception(f'{e}')
 
     features = form_data.pop('features', None) or {}
     extra_params['__features__'] = features
@@ -2618,6 +2620,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         mcp_tools_dict = {}
 
         if tool_ids:
+            db_tool_ids = []
             for tool_id in tool_ids:
                 if tool_id.startswith('server:mcp:'):
                     try:
@@ -2669,18 +2672,21 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 }
                             )
                         continue
+                elif ENABLE_PLUGINS:
+                    db_tool_ids.append(tool_id)
 
-            tools_dict = await get_tools(
-                request,
-                tool_ids,
-                user,
-                {
-                    **extra_params,
-                    '__model__': models[task_model_id],
-                    '__messages__': form_data['messages'],
-                    '__files__': metadata.get('files', []),
-                },
-            )
+            if db_tool_ids:
+                tools_dict = await get_tools(
+                    request,
+                    db_tool_ids,
+                    user,
+                    {
+                        **extra_params,
+                        '__model__': models[task_model_id],
+                        '__messages__': form_data['messages'],
+                        '__files__': metadata.get('files', []),
+                    },
+                )
 
             if mcp_tools_dict:
                 tools_dict = {**tools_dict, **mcp_tools_dict}
@@ -2737,7 +2743,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # Inject builtin tools for native function calling based on enabled features and model capability.
         # Only inject when the request originates from the UI (identified by session_id).
         # API callers don't expect hidden tools; they can explicitly request tools via tool_ids.
-        if use_builtin_tools:
+        if ENABLE_PLUGINS and use_builtin_tools:
             # Add file context to user messages
             chat_id = metadata.get('chat_id')
             form_data['messages'] = await add_file_context(form_data.get('messages', []), chat_id, user)
@@ -3371,16 +3377,19 @@ async def outlet_filter_handler(ctx):
             '__model__': model,
         }
 
-        filter_ids = await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
-        filter_functions = await Functions.get_functions_by_ids(filter_ids)
+        if ENABLE_PLUGINS:
+            filter_ids = await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
+            filter_functions = await Functions.get_functions_by_ids(filter_ids)
 
-        outlet_result, _ = await process_filter_functions(
-            request=request,
-            filter_functions=filter_functions,
-            filter_type='outlet',
-            form_data=outlet_data,
-            extra_params=extra_params,
-        )
+            outlet_result, _ = await process_filter_functions(
+                request=request,
+                filter_functions=filter_functions,
+                filter_type='outlet',
+                form_data=outlet_data,
+                extra_params=extra_params,
+            )
+        else:
+            outlet_result = outlet_data
 
         if outlet_result and outlet_result.get('messages'):
             if not is_temp_chat and messages_map:
@@ -3620,10 +3629,14 @@ async def streaming_chat_response_handler(response, ctx):
         '__model__': model,
     }
 
-    filter_functions = [
-        await Functions.get_function_by_id(filter_id)
-        for filter_id in await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
-    ]
+    filter_functions = (
+        [
+            await Functions.get_function_by_id(filter_id)
+            for filter_id in await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
+        ]
+        if ENABLE_PLUGINS
+        else []
+    )
 
     # Standard streaming response handler
     # event_caller is optional — only needed for direct (client-side) tools
@@ -3907,7 +3920,8 @@ async def streaming_chat_response_handler(response, ctx):
             model_capabilities = model.get('info', {}).get('meta', {}).get('capabilities') or {}
             builtin_tools_meta = model.get('info', {}).get('meta', {}).get('builtinTools', {})
             DETECT_CODE_INTERPRETER = (
-                bool(features.get('code_interpreter'))
+                ENABLE_PLUGINS
+                and bool(features.get('code_interpreter'))
                 and builtin_tools_meta.get('code_interpreter', True)
                 and await Config.get('code_interpreter.enable')
                 and model_capabilities.get('code_interpreter', True)

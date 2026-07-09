@@ -35,6 +35,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
     ENABLE_FORWARD_USER_INFO_HEADERS,
+    ENABLE_PLUGINS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
     REDIS_KEY_PREFIX,
@@ -253,6 +254,9 @@ async def get_updated_tool_function(function: Callable, extra_params: dict):
 
 async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extra_params: dict) -> dict[str, dict]:
     """Load tools for the given tool_ids, checking access control."""
+    if not ENABLE_PLUGINS:
+        return {}
+
     if not tool_ids:
         return {}
 
@@ -469,6 +473,9 @@ async def get_builtin_tools(
     Get built-in tools for native function calling.
     Only returns tools when BOTH the global config is enabled AND the model capability allows it.
     """
+    if not ENABLE_PLUGINS:
+        return {}
+
     tools_dict = {}
     builtin_functions = []
     features = features or {}
