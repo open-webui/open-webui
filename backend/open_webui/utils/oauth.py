@@ -192,6 +192,11 @@ DEFAULT_TOKEN_EXPIRY_SECONDS = 3600
 # (e.g. Slack xoxp user tokens): long-lived until revoked, cannot be refreshed.
 NON_REFRESHABLE_TOKEN_EXPIRY_SECONDS = 365 * 24 * 3600
 
+# Marker key stamped on tokens that carry no expiry metadata and no
+# refresh_token. It flags the token as long-lived so the refresh path can
+# renew the local expiry in place instead of deleting the session (#26141).
+NON_REFRESHABLE_TOKEN_MARKER = 'non_refreshable'
+
 
 # Apereo CAS includes client_id in ID token JWS headers; Authlib 1.7/joserfc
 # rejects unknown headers unless we register the provider extension.
@@ -211,8 +216,9 @@ def _normalize_token_expiry(token: dict) -> dict:
        ``DEFAULT_TOKEN_EXPIRY_SECONDS`` and log a warning so operators can
        identify providers that omit expiration.
     4. Otherwise the token is non-expiring and non-refreshable; use
-       ``NON_REFRESHABLE_TOKEN_EXPIRY_SECONDS`` so the refresh path (which
-       would inevitably fail and delete the session) is not triggered.
+       ``NON_REFRESHABLE_TOKEN_EXPIRY_SECONDS`` and flag it with
+       ``NON_REFRESHABLE_TOKEN_MARKER`` so the refresh path renews the local
+       expiry in place instead of deleting the session.
 
     Also stamps *issued_at* for auditing.
     """
@@ -237,11 +243,33 @@ def _normalize_token_expiry(token: dict) -> dict:
         token['expires_at'] = int(datetime.now().timestamp() + DEFAULT_TOKEN_EXPIRY_SECONDS)
     else:
         log.info(
-            "OAuth token response missing 'expires_in', 'expires_at' and 'refresh_token'; "
-            'treating token as long-lived'
+            "OAuth token response missing 'expires_in', 'expires_at' and 'refresh_token'; treating token as long-lived"
         )
         token['expires_at'] = int(datetime.now().timestamp() + NON_REFRESHABLE_TOKEN_EXPIRY_SECONDS)
+        token[NON_REFRESHABLE_TOKEN_MARKER] = True
     return token
+
+
+def _renew_non_refreshable_token(token_data: dict, session_id: str):
+    """Renew the local expiry of a long-lived, non-refreshable token.
+
+    Providers such as Slack issue user tokens that never expire and never
+    carry a ``refresh_token`` (see ``_normalize_token_expiry`` case 4). When
+    such a token approaches its fabricated expiry it reaches the refresh path,
+    which can only fail — deleting the session and forcing a needless
+    re-authentication (#26141). Instead of failing, re-stamp the local expiry
+    in place so the session keeps renewing itself.
+
+    Returns the (mutated) token dict when it was flagged long-lived, else
+    ``None`` so the caller falls through to its normal no-refresh-token
+    handling (tokens with a real provider-declared expiry are left to expire).
+    """
+    if not token_data.get(NON_REFRESHABLE_TOKEN_MARKER):
+        return None
+
+    token_data['expires_at'] = int(datetime.now().timestamp() + NON_REFRESHABLE_TOKEN_EXPIRY_SECONDS)
+    log.debug(f'Renewing long-lived non-refreshable token for session {session_id}')
+    return token_data
 
 
 FERNET = None
@@ -1070,6 +1098,9 @@ class OAuthClientManager:
         token_data = session.token
 
         if not token_data.get('refresh_token'):
+            renewed = _renew_non_refreshable_token(token_data, session.id)
+            if renewed is not None:
+                return renewed
             log.warning(f'No refresh token available for session {session.id}')
             return None
 
@@ -1349,6 +1380,9 @@ class OAuthManager:
         auth_config = await get_oauth_runtime_config()
 
         if not token_data.get('refresh_token'):
+            renewed = _renew_non_refreshable_token(token_data, session.id)
+            if renewed is not None:
+                return renewed
             log.warning(f'No refresh token available for session {session.id}')
             return None
 
