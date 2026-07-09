@@ -90,6 +90,7 @@ LOADER_CONFIG_KEYS = {
     'DOCLING_SERVER_URL': 'rag.docling_server_url',
     'DOCLING_API_KEY': 'rag.docling_api_key',
     'DOCLING_PARAMS': 'rag.docling_params',
+    'DOCLING_SERVE_TIMEOUT': 'rag.docling_serve_timeout',
     'PDF_EXTRACT_IMAGES': 'rag.pdf_extract_images',
     'PDF_LOADER_MODE': 'rag.pdf_loader_mode',
     'DOCUMENT_INTELLIGENCE_ENDPOINT': 'rag.document_intelligence_endpoint',
