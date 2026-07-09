@@ -91,6 +91,14 @@ LOADER_CONFIG_KEYS = {
     'DOCLING_API_KEY': 'rag.docling_api_key',
     'DOCLING_PARAMS': 'rag.docling_params',
     'DOCLING_SERVE_TIMEOUT': 'rag.docling_serve_timeout',
+    'DOCLING_JSON_CHUNK_MODE': 'rag.DOCLING_JSON_CHUNK_MODE',
+    # Threaded through so DoclingLoaderJson's "chunk" mode respects the admin's
+    # real chunk-size/overlap/splitter settings instead of its own hardcoded
+    # fallbacks. Nothing else currently reads these via self.kwargs.
+    'CHUNK_SIZE': 'rag.chunk_size',
+    'CHUNK_OVERLAP': 'rag.chunk_overlap',
+    'TEXT_SPLITTER': 'rag.text_splitter',
+    'TIKTOKEN_ENCODING_NAME': 'rag.tiktoken_encoding_name',
     'PDF_EXTRACT_IMAGES': 'rag.pdf_extract_images',
     'PDF_LOADER_MODE': 'rag.pdf_loader_mode',
     'DOCUMENT_INTELLIGENCE_ENDPOINT': 'rag.document_intelligence_endpoint',

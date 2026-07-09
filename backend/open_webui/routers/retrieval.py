@@ -279,6 +279,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'DOCLING_PARAMS': 'rag.docling_params',
     'DOCLING_SERVER_URL': 'rag.docling_server_url',
     'DOCLING_SERVE_TIMEOUT': 'rag.docling_serve_timeout',
+    'DOCLING_JSON_CHUNK_MODE': 'rag.DOCLING_JSON_CHUNK_MODE',
     'DOCUMENT_INTELLIGENCE_ENDPOINT': 'rag.document_intelligence_endpoint',
     'DOCUMENT_INTELLIGENCE_KEY': 'rag.document_intelligence_key',
     'DOCUMENT_INTELLIGENCE_MODEL': 'rag.document_intelligence_model',
@@ -648,6 +649,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'DOCLING_API_KEY': config.DOCLING_API_KEY,
         'DOCLING_PARAMS': config.DOCLING_PARAMS,
         'DOCLING_SERVE_TIMEOUT': config.DOCLING_SERVE_TIMEOUT,
+        'DOCLING_JSON_CHUNK_MODE': config.DOCLING_JSON_CHUNK_MODE,
         'DOCUMENT_INTELLIGENCE_ENDPOINT': config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         'DOCUMENT_INTELLIGENCE_KEY': config.DOCUMENT_INTELLIGENCE_KEY,
         'DOCUMENT_INTELLIGENCE_MODEL': config.DOCUMENT_INTELLIGENCE_MODEL,
@@ -881,6 +883,7 @@ class ConfigForm(BaseModel):
     DOCLING_API_KEY: str | None = None
     DOCLING_PARAMS: dict | None = None
     DOCLING_SERVE_TIMEOUT: int | None = None
+    DOCLING_JSON_CHUNK_MODE: str | None = None
     DOCUMENT_INTELLIGENCE_ENDPOINT: str | None = None
     DOCUMENT_INTELLIGENCE_KEY: str | None = None
     DOCUMENT_INTELLIGENCE_MODEL: str | None = None
@@ -1060,6 +1063,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         form_data.DOCLING_SERVE_TIMEOUT
         if form_data.DOCLING_SERVE_TIMEOUT is not None
         else config.DOCLING_SERVE_TIMEOUT
+    )
+    config.DOCLING_JSON_CHUNK_MODE = (
+        form_data.DOCLING_JSON_CHUNK_MODE if form_data.DOCLING_JSON_CHUNK_MODE is not None else config.DOCLING_JSON_CHUNK_MODE
     )
     config.DOCUMENT_INTELLIGENCE_ENDPOINT = (
         form_data.DOCUMENT_INTELLIGENCE_ENDPOINT
@@ -1354,6 +1360,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'DOCLING_API_KEY': config.DOCLING_API_KEY,
         'DOCLING_PARAMS': config.DOCLING_PARAMS,
         'DOCLING_SERVE_TIMEOUT': config.DOCLING_SERVE_TIMEOUT,
+        'DOCLING_JSON_CHUNK_MODE': config.DOCLING_JSON_CHUNK_MODE,
         'DOCUMENT_INTELLIGENCE_ENDPOINT': config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         'DOCUMENT_INTELLIGENCE_KEY': config.DOCUMENT_INTELLIGENCE_KEY,
         'DOCUMENT_INTELLIGENCE_MODEL': config.DOCUMENT_INTELLIGENCE_MODEL,
