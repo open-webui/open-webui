@@ -61,6 +61,11 @@
 	};
 
 	onMount(() => {
+		if (!$config?.features?.enable_plugins) {
+			goto('/admin');
+			return;
+		}
+
 		window.addEventListener('message', async (event) => {
 			if (
 				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(

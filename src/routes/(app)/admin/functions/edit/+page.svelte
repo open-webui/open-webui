@@ -60,6 +60,11 @@
 	};
 
 	onMount(async () => {
+		if (!$config?.features?.enable_plugins) {
+			goto('/admin');
+			return;
+		}
+
 		console.log('mounted');
 		const id = $page.url.searchParams.get('id');
 

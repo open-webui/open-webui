@@ -15,6 +15,11 @@
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			await goto('/');
+		} else if (
+			!$config?.features?.enable_plugins &&
+			$page.url.pathname.includes('/admin/functions')
+		) {
+			await goto('/admin');
 		}
 		loaded = true;
 	});
@@ -85,13 +90,15 @@
 							href="/admin/evaluations">{$i18n.t('Evaluations')}</a
 						>
 
-						<a
-							draggable="false"
-							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/functions')
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-							href="/admin/functions">{$i18n.t('Functions')}</a
-						>
+						{#if $config?.features?.enable_plugins}
+							<a
+								draggable="false"
+								class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/functions')
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+								href="/admin/functions">{$i18n.t('Functions')}</a
+							>
+						{/if}
 
 						<a
 							draggable="false"
