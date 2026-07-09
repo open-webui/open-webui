@@ -1286,6 +1286,10 @@ class OAuthConfigForm(BaseModel):
     # Token
     OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE: bool | None = None
 
+    # Read-only metadata, ignored on update: False when the settings are
+    # managed by environment variables (OAuth persistence disabled).
+    OAUTH_CONFIG_EDITABLE: bool | None = None
+
 
 OAUTH_COMMA_LIST_FIELDS = {
     'OAUTH_ALLOWED_DOMAINS',
@@ -1345,12 +1349,19 @@ def _parse_oauth_update_value(field: str, value):
     return value
 
 
+def oauth_config_editable() -> bool:
+    return all(Config.persistent_enabled_for(storage_key) for storage_key in OAUTH_CONFIG_KEYS.values())
+
+
 async def get_oauth_config_values() -> dict:
     values = await Config.get_many(*OAUTH_CONFIG_KEYS.values())
     return {
-        field: _format_oauth_form_value(field, values[storage_key])
-        for field, storage_key in OAUTH_CONFIG_KEYS.items()
-        if storage_key in values
+        **{
+            field: _format_oauth_form_value(field, values[storage_key])
+            for field, storage_key in OAUTH_CONFIG_KEYS.items()
+            if storage_key in values
+        },
+        'OAUTH_CONFIG_EDITABLE': oauth_config_editable(),
     }
 
 
@@ -1369,6 +1380,18 @@ async def get_oauth_config(request: Request, user=Depends(get_admin_user)):
 
 @router.post('/admin/config/oauth', response_model=OAuthConfigForm)
 async def update_oauth_config(request: Request, form_data: OAuthConfigForm, user=Depends(get_admin_user)):
+    if not oauth_config_editable():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                'OAuth settings are managed by environment variables. '
+                'Set ENABLE_OAUTH_PERSISTENT_CONFIG=true to edit them here.'
+                if Config.PERSISTENT_ENABLED
+                else 'OAuth settings are managed by environment variables '
+                '(persistent config is disabled via ENABLE_PERSISTENT_CONFIG).'
+            ),
+        )
+
     await Config.upsert(oauth_config_updates(form_data.model_dump(exclude_none=True)))
     return await get_oauth_config_values()
 

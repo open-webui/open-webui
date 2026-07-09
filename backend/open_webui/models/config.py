@@ -104,6 +104,10 @@ class Config(Base):
     updated_at = Column(BigInteger, nullable=True)
 
     DEFAULTS: ClassVar[dict[str, Any]] = {}
+    # Values upserted while persistence is disabled for their key. Process-local
+    # and lost on restart; kept separate from DEFAULTS so the env-derived
+    # baseline stays intact.
+    RUNTIME_OVERRIDES: ClassVar[dict[str, Any]] = {}
     PERSISTENT_ENABLED: ClassVar[bool] = True
     OAUTH_PERSISTENT_ENABLED: ClassVar[bool] = False
 
@@ -118,12 +122,21 @@ class Config(Base):
         enable_oauth_persistent: bool = False,
     ) -> None:
         cls.DEFAULTS = dict(defaults or {})
+        cls.RUNTIME_OVERRIDES = {}
         cls.PERSISTENT_ENABLED = enable_persistent
         cls.OAUTH_PERSISTENT_ENABLED = enable_oauth_persistent
 
     @classmethod
     def default_value(cls, key: str, default: Any = None) -> Any:
+        if key in cls.RUNTIME_OVERRIDES:
+            return cls.RUNTIME_OVERRIDES[key]
         return cls.DEFAULTS.get(key, default)
+
+    @classmethod
+    def _effective_defaults(cls) -> dict[str, Any]:
+        if not cls.RUNTIME_OVERRIDES:
+            return cls.DEFAULTS
+        return {**cls.DEFAULTS, **cls.RUNTIME_OVERRIDES}
 
     @classmethod
     def persistent_enabled_for(cls, key: str) -> bool:
@@ -145,10 +158,11 @@ class Config(Base):
     @staticmethod
     async def get_many(*keys: str) -> dict:
         """Get multiple config values. Returns {key: value} for keys that exist."""
+        known_defaults = Config._effective_defaults()
         disabled_values = {
             key: Config.default_value(key)
             for key in keys
-            if not Config.persistent_enabled_for(key) and key in Config.DEFAULTS
+            if not Config.persistent_enabled_for(key) and key in known_defaults
         }
         enabled_keys = {key for key in keys if Config.persistent_enabled_for(key)}
         if not enabled_keys:
@@ -159,7 +173,7 @@ class Config(Base):
             return {
                 key: values.get(key, Config.default_value(key))
                 for key in keys
-                if key in values or key in Config.DEFAULTS or key in disabled_values
+                if key in values or key in known_defaults or key in disabled_values
             }
 
     @staticmethod
@@ -167,7 +181,7 @@ class Config(Base):
         """Get all config keys under a dotted namespace."""
         default_values = {
             key: value
-            for key, value in Config.DEFAULTS.items()
+            for key, value in Config._effective_defaults().items()
             if key.startswith(f'{namespace}.') and not Config.persistent_enabled_for(key)
         }
         if not Config.PERSISTENT_ENABLED:
@@ -182,27 +196,48 @@ class Config(Base):
     async def get_all() -> dict:
         """Get all config as {key: value}."""
         if not Config.PERSISTENT_ENABLED:
-            return dict(Config.DEFAULTS)
+            return dict(Config._effective_defaults())
         async with get_async_db() as db:
             result = await db.execute(select(Config))
             values = {row.key: row.value for row in result.scalars().all()}
             if not Config.OAUTH_PERSISTENT_ENABLED:
-                values.update({key: value for key, value in Config.DEFAULTS.items() if key.startswith('oauth.')})
+                values.update(
+                    {key: value for key, value in Config._effective_defaults().items() if key.startswith('oauth.')}
+                )
             return values
 
     @staticmethod
-    async def upsert(updates: dict) -> None:
-        """Upsert multiple config key-value pairs. Raises on failure."""
+    async def upsert(updates: dict) -> dict[str, str]:
+        """Upsert multiple config key-value pairs. Raises on DB failure.
+
+        Returns {key: 'persisted' | 'ephemeral'}. Keys whose persistence is
+        disabled (ENABLE_PERSISTENT_CONFIG=false, or oauth.* while
+        ENABLE_OAUTH_PERSISTENT_CONFIG=false) are never written to the DB; they
+        become process-local runtime overrides that last until restart.
+        """
         persistent_updates = {}
+        statuses = {}
+        ephemeral_keys = []
         for key, value in updates.items():
             value = _json_value(value)
             if Config.persistent_enabled_for(key):
                 persistent_updates[key] = value
+                statuses[key] = 'persisted'
             else:
-                Config.DEFAULTS[key] = value
+                Config.RUNTIME_OVERRIDES[key] = value
+                statuses[key] = 'ephemeral'
+                ephemeral_keys.append(key)
+
+        if ephemeral_keys:
+            log.warning(
+                'Persistence is disabled for %d config key(s); the values are kept in memory '
+                'for this process only and will be lost on restart: %s',
+                len(ephemeral_keys),
+                ', '.join(sorted(ephemeral_keys)),
+            )
 
         if not persistent_updates:
-            return
+            return statuses
 
         async with get_async_db() as db:
             now = int(time.time())
@@ -214,6 +249,8 @@ class Config(Base):
                 else:
                     db.add(Config(key=key, value=value, updated_at=now))
             await db.commit()
+
+        return statuses
 
     @staticmethod
     async def delete(key: str) -> bool:

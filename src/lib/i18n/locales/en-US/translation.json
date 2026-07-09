@@ -1622,6 +1622,7 @@
 	"OAuth Scopes": "",
 	"OAuth Server URL": "",
 	"OAuth session disconnected": "",
+	"OAuth settings are managed by environment variables. Set ENABLE_OAUTH_PERSISTENT_CONFIG=true to edit them here.": "",
 	"October": "",
 	"Off": "",
 	"Okay, Let's Go!": "",
