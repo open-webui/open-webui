@@ -150,7 +150,7 @@
 		<div>
 			<Tooltip
 				content={$i18n.t(
-					'Lower the context compaction token threshold for this model. The global context compaction threshold remains the maximum.'
+					'Set a model-specific context compaction token threshold. When set, this overrides the global threshold up to the global cap.'
 				)}
 				placement="top-start"
 				className="inline-tooltip"
