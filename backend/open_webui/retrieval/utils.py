@@ -72,6 +72,8 @@ LOADER_CONFIG_KEYS = {
     'web_loader_concurrent_requests': 'web.loader.concurrent_requests',
     'web_search_trust_env': 'web.search.trust_env',
     'CONTENT_EXTRACTION_ENGINE': 'rag.content_extraction_engine',
+    'CONTENT_EXTRACTION_ENGINE_CHAT': 'rag.content_extraction_engine_chat',
+    'CONTENT_EXTRACTION_ENGINE_KNOWLEDGE': 'rag.content_extraction_engine_knowledge',
     'DATALAB_MARKER_API_KEY': 'rag.datalab_marker_api_key',
     'DATALAB_MARKER_API_BASE_URL': 'rag.datalab_marker_api_base_url',
     'DATALAB_MARKER_ADDITIONAL_CONFIG': 'rag.datalab_marker_additional_config',

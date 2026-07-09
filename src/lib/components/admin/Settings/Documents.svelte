@@ -383,7 +383,7 @@
 					<div class="mb-2.5 flex flex-col w-full justify-between">
 						<div class="flex w-full justify-between mb-1">
 							<div class="self-center text-xs font-medium">
-								{$i18n.t('Content Extraction Engine')}
+								{$i18n.t('Content Extraction Engine (Default)')}
 							</div>
 							<div class="">
 								<select
@@ -391,6 +391,50 @@
 									bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
 								>
 									<option value="">{$i18n.t('Default')}</option>
+									<option value="external">{$i18n.t('External')}</option>
+									<option value="tika">{$i18n.t('Tika')}</option>
+									<option value="docling">{$i18n.t('Docling')}</option>
+									<option value="datalab_marker">{$i18n.t('Datalab Marker API')}</option>
+									<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
+									<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
+									<option value="paddleocr_vl">{$i18n.t('PaddleOCR-vl')}</option>
+									<option value="mineru">{$i18n.t('MinerU')}</option>
+								</select>
+							</div>
+						</div>
+
+						<div class="flex w-full justify-between mb-1 mt-2">
+							<div class="self-center text-xs font-medium text-gray-500">
+								{$i18n.t('Content Extraction Engine (Chat)')}
+							</div>
+							<div class="">
+								<select
+									class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+									bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE_CHAT}
+								>
+									<option value="">{$i18n.t('Use Default')}</option>
+									<option value="external">{$i18n.t('External')}</option>
+									<option value="tika">{$i18n.t('Tika')}</option>
+									<option value="docling">{$i18n.t('Docling')}</option>
+									<option value="datalab_marker">{$i18n.t('Datalab Marker API')}</option>
+									<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
+									<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
+									<option value="paddleocr_vl">{$i18n.t('PaddleOCR-vl')}</option>
+									<option value="mineru">{$i18n.t('MinerU')}</option>
+								</select>
+							</div>
+						</div>
+
+						<div class="flex w-full justify-between mb-1 mt-2">
+							<div class="self-center text-xs font-medium text-gray-500">
+								{$i18n.t('Content Extraction Engine (Knowledge)')}
+							</div>
+							<div class="">
+								<select
+									class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+									bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE_KNOWLEDGE}
+								>
+									<option value="">{$i18n.t('Use Default')}</option>
 									<option value="external">{$i18n.t('External')}</option>
 									<option value="tika">{$i18n.t('Tika')}</option>
 									<option value="docling">{$i18n.t('Docling')}</option>

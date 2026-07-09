@@ -263,6 +263,8 @@ RETRIEVAL_CONFIG_KEYS = {
     'CHUNK_OVERLAP': 'rag.chunk_overlap',
     'CHUNK_SIZE': 'rag.chunk_size',
     'CONTENT_EXTRACTION_ENGINE': 'rag.content_extraction_engine',
+    'CONTENT_EXTRACTION_ENGINE_CHAT': 'rag.content_extraction_engine_chat',
+    'CONTENT_EXTRACTION_ENGINE_KNOWLEDGE': 'rag.content_extraction_engine_knowledge',
     'DATALAB_MARKER_ADDITIONAL_CONFIG': 'rag.datalab_marker_additional_config',
     'DATALAB_MARKER_API_BASE_URL': 'rag.datalab_marker_api_base_url',
     'DATALAB_MARKER_API_KEY': 'rag.datalab_marker_api_key',
@@ -1897,6 +1899,12 @@ async def process_file(
                 if file_path:
                     file_path = await asyncio.to_thread(Storage.get_file, file_path)
                     loader_config = await get_loader_config()
+                    # Use context-specific extraction engine if set
+                    is_knowledge = form_data.collection_name is not None
+                    context_engine_key = 'CONTENT_EXTRACTION_ENGINE_KNOWLEDGE' if is_knowledge else 'CONTENT_EXTRACTION_ENGINE_CHAT'
+                    context_engine = loader_config.get(context_engine_key)
+                    if context_engine:
+                        loader_config['CONTENT_EXTRACTION_ENGINE'] = context_engine
                     loader = build_loader_from_config(request, loader_config)
                     loader.user = user
                     loader.metadata = {

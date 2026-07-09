@@ -852,6 +852,8 @@ ONEDRIVE_SHAREPOINT_TENANT_ID = os.getenv('ONEDRIVE_SHAREPOINT_TENANT_ID', '')
 
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = os.getenv('CONTENT_EXTRACTION_ENGINE', '').lower()
+CONTENT_EXTRACTION_ENGINE_CHAT = os.getenv('CONTENT_EXTRACTION_ENGINE_CHAT', '').lower()
+CONTENT_EXTRACTION_ENGINE_KNOWLEDGE = os.getenv('CONTENT_EXTRACTION_ENGINE_KNOWLEDGE', '').lower()
 
 DATALAB_MARKER_API_KEY = os.getenv('DATALAB_MARKER_API_KEY', '')
 
@@ -2783,6 +2785,8 @@ DEFAULT_CONFIG = {
     'onedrive.sharepoint_url': ONEDRIVE_SHAREPOINT_URL,
     'onedrive.sharepoint_tenant_id': ONEDRIVE_SHAREPOINT_TENANT_ID,
     'rag.content_extraction_engine': CONTENT_EXTRACTION_ENGINE,
+    'rag.content_extraction_engine_chat': CONTENT_EXTRACTION_ENGINE_CHAT,
+    'rag.content_extraction_engine_knowledge': CONTENT_EXTRACTION_ENGINE_KNOWLEDGE,
     'rag.datalab_marker_api_key': DATALAB_MARKER_API_KEY,
     'rag.datalab_marker_api_base_url': DATALAB_MARKER_API_BASE_URL,
     'rag.datalab_marker_additional_config': DATALAB_MARKER_ADDITIONAL_CONFIG,
