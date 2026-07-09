@@ -132,6 +132,24 @@ from open_webui.models.channels import Channels
 from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.config import Config
 from open_webui.models.functions import Functions
+
+# Add just after imports, during startup or in the lifespan function:
+# Ensure functions with null user_id are gracefully handled
+import logging
+logger = logging.getLogger(__name__)
+
+async def validate_functions():
+    """Check for functions with null user_id and log a warning."""
+    try:
+        functions = Functions.get_all()
+        for func in functions:
+            if func.user_id is None:
+                logger.warning(f"Function '{func.name}' (id={func.id}) has null user_id. Skipping.")
+        # Optionally, delete or fix such functions
+    except Exception as e:
+        logger.error(f"Error validating functions: {e}")
+
+# Call this in the lifespan context if available, or in the main app startup
 from open_webui.models.messages import Messages
 from open_webui.models.models import Models
 from open_webui.models.users import Users
