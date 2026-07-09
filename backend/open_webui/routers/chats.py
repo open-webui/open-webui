@@ -35,7 +35,13 @@ from open_webui.socket.main import get_event_emitter
 from open_webui.tasks import has_active_tasks, stop_item_tasks
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.folders import has_folder_access
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import (
+    get_admin_user,
+    get_current_user,
+    get_verified_user,
+    bearer_security,
+)
+from fastapi.security import HTTPAuthorizationCredentials
 from open_webui.utils.context_compaction import compact_chat_branch
 from open_webui.utils.misc import get_message_list
 from open_webui.utils.models import get_all_models
@@ -1045,8 +1051,33 @@ async def get_shared_session_user_chat_list(
 
 @router.get('/share/{share_id}', response_model=ChatResponse | None)
 async def get_shared_chat_by_id(
-    share_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    request: Request,
+    share_id: str,
+    db: AsyncSession = Depends(get_async_session),
+    auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
 ):
+    # Try to resolve user from auth token (optional)
+    user = None
+    try:
+        user = await get_current_user(request, request, None, auth_token) if auth_token else None
+    except HTTPException:
+        user = None
+
+    shared = await SharedChats.get_by_id(share_id, db=db)
+    if not shared:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    # Allow public shared chats without authentication
+    if shared.is_public:
+        chat = await Chats.get_chat_by_share_id(share_id, db=db)
+        if chat:
+            return ChatResponse(**chat.model_dump())
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    # Fall through to authenticated path
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.INVALID_TOKEN)
+
     if user.role == 'pending':
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
@@ -1061,7 +1092,6 @@ async def get_shared_chat_by_id(
 
     # Look up the original chat_id to check access grants (admins bypass)
     if user.role != 'admin' or not ENABLE_ADMIN_CHAT_ACCESS:
-        shared = await SharedChats.get_by_id(share_id, db=db)
         if shared and shared.user_id != user.id:
             has_grant = await AccessGrants.has_access(
                 user_id=user.id,
@@ -1077,6 +1107,49 @@ async def get_shared_chat_by_id(
                 )
 
     return ChatResponse(**chat.model_dump())
+
+
+@router.get('/share/{share_id}/public', response_model=dict)
+async def get_shared_chat_public_status(
+    share_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Get whether a shared chat is publicly accessible."""
+    shared = await SharedChats.get_by_id(share_id, db=db)
+    if not shared:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if shared.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+    return {'is_public': shared.is_public}
+
+
+@router.post('/share/{share_id}/public', response_model=dict)
+async def toggle_shared_chat_public(
+    share_id: str,
+    body: dict,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Toggle whether a shared chat is publicly accessible.
+
+    Request body: {\"is_public\": true}
+    """
+    is_public = body.get('is_public', False)
+    if not isinstance(is_public, bool):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='is_public must be a boolean')
+
+    shared = await SharedChats.get_by_id(share_id, db=db)
+    if not shared:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if shared.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+    updated = await SharedChats.set_public_status(share_id, is_public, db=db)
+    if not updated:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Failed to update public status')
+
+    return {'is_public': updated.is_public}
 
 
 ############################

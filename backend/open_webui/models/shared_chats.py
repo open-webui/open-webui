@@ -5,7 +5,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Column, ForeignKey, Text, delete, select
+from sqlalchemy import JSON, BigInteger, Boolean, Column, ForeignKey, Text, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -22,6 +22,8 @@ class SharedChat(Base):
     chat_id = Column(Text, ForeignKey('chat.id', ondelete='CASCADE'), nullable=False)
     user_id = Column(Text, nullable=False)  # Who created this share
 
+    is_public = Column(Boolean, default=False)  # Whether the shared link is publicly accessible
+
     title = Column(Text)
     chat = Column(JSON)  # Snapshot of chat JSON at share time
 
@@ -35,6 +37,7 @@ class SharedChatModel(BaseModel):
     id: str
     chat_id: str
     user_id: str
+    is_public: bool = False
 
     title: str
     chat: dict
@@ -47,6 +50,7 @@ class SharedChatResponse(BaseModel):
     id: str
     chat_id: str
     title: str
+    is_public: bool = False
     share_id: Optional[str] = None  # Alias for id, for backward compat
     updated_at: int
     created_at: int
@@ -174,12 +178,27 @@ class SharedChatsTable:
                     id=sc.chat_id,
                     chat_id=sc.chat_id,
                     title=sc.title,
+                    is_public=sc.is_public,
                     share_id=sc.id,
                     updated_at=sc.updated_at,
                     created_at=sc.created_at,
                 )
                 for sc in result.scalars().all()
             ]
+
+    async def set_public_status(
+        self, share_id: str, is_public: bool, db: Optional[AsyncSession] = None
+    ) -> Optional[SharedChatModel]:
+        """Set whether a shared chat is publicly accessible."""
+        async with get_async_db_context(db) as db:
+            shared_chat = await db.get(SharedChat, share_id)
+            if not shared_chat:
+                return None
+            shared_chat.is_public = is_public
+            shared_chat.updated_at = int(time.time())
+            await db.commit()
+            await db.refresh(shared_chat)
+            return SharedChatModel.model_validate(shared_chat)
 
     async def delete_by_id(self, share_id: str, db: Optional[AsyncSession] = None) -> bool:
         """Delete a shared chat by its share token."""

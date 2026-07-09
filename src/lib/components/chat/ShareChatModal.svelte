@@ -8,7 +8,9 @@
 		getChatById,
 		shareChatById,
 		getChatAccessGrants,
-		updateChatAccessGrants
+		updateChatAccessGrants,
+		getSharedChatPublicStatus,
+		toggleSharedChatPublic
 	} from '$lib/apis/chats';
 	import { copyToClipboard } from '$lib/utils';
 
@@ -22,15 +24,19 @@
 	let chat = null;
 	let shareUrl = null;
 	let accessGrants: any[] = [];
+	let isPublic = false;
+	let shareId: string | null = null;
 	const i18n = getContext('i18n');
 
 	const shareLocalChat = async () => {
 		const _chat = chat;
 
 		const sharedChat = await shareChatById(localStorage.token, chatId);
-		shareUrl = `${window.location.origin}/s/${sharedChat.share_id}`;
+		shareId = sharedChat.share_id;
+		shareUrl = `${window.location.origin}/s/${shareId}`;
 		console.log(shareUrl);
 		chat = await getChatById(localStorage.token, chatId);
+		loadPublicStatus(shareId);
 
 		return shareUrl;
 	};
@@ -81,6 +87,27 @@
 		}
 	};
 
+	const loadPublicStatus = async (_shareId: string) => {
+		try {
+			const result = await getSharedChatPublicStatus(localStorage.token, _shareId);
+			isPublic = result?.is_public ?? false;
+		} catch (e) {
+			console.error('Failed to load public status', e);
+			isPublic = false;
+		}
+	};
+
+	const togglePublic = async () => {
+		if (!shareId) return;
+		try {
+			const result = await toggleSharedChatPublic(localStorage.token, shareId, !isPublic);
+			isPublic = result?.is_public ?? false;
+			toast.success(isPublic ? $i18n.t('Chat is now publicly accessible') : $i18n.t('Chat is no longer publicly accessible'));
+		} catch (e) {
+			toast.error(`${e}`);
+		}
+	};
+
 	export let show = false;
 
 	const isDifferentChat = (_chat) => {
@@ -100,10 +127,16 @@
 				if (isDifferentChat(_chat)) {
 					chat = _chat;
 				}
+				if (_chat?.share_id) {
+					shareId = _chat.share_id;
+					await loadPublicStatus(shareId);
+				}
 				await loadAccessGrants();
 			} else {
 				chat = null;
 				accessGrants = [];
+				isPublic = false;
+				shareId = null;
 			}
 		})();
 	}
@@ -153,6 +186,21 @@
 				</div>
 
 				{#if chat.share_id}
+					<div class="mt-3 flex items-center justify-between">
+						<span class="text-sm dark:text-gray-300">{$i18n.t('Allow public access (no login required)')}</span>
+						<button
+							class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors {isPublic ? 'bg-black dark:bg-white' : 'bg-gray-300 dark:bg-gray-600'}"
+							on:click={togglePublic}
+							aria-label={$i18n.t('Toggle public access')}
+							type="button"
+							role="switch"
+							aria-checked={isPublic}
+						>
+							<span
+								class="inline-block h-3.5 w-3.5 transform rounded-full bg-white dark:bg-gray-900 transition-transform {isPublic ? 'translate-x-[18px]' : 'translate-x-[3px]'}"
+							/>
+						</button>
+					</div>
 					<div class="mt-3">
 						<AccessControl
 							bind:accessGrants
