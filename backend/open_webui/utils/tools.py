@@ -473,9 +473,6 @@ async def get_builtin_tools(
     Get built-in tools for native function calling.
     Only returns tools when BOTH the global config is enabled AND the model capability allows it.
     """
-    if not ENABLE_PLUGINS:
-        return {}
-
     tools_dict = {}
     builtin_functions = []
     features = features or {}
