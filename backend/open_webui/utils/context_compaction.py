@@ -205,9 +205,7 @@ def _parse_positive_int(value: Any) -> int | None:
 
 def _resolve_token_threshold(global_threshold: int, metadata: dict) -> int:
     configured_threshold = _parse_positive_int((metadata.get('params') or {}).get('compact_token_threshold'))
-    if configured_threshold is None:
-        return global_threshold
-    return min(configured_threshold, global_threshold)
+    return configured_threshold or global_threshold
 
 
 def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], str | None]:
