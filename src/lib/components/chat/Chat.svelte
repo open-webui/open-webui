@@ -2530,8 +2530,10 @@
 				} else {
 					toolServerIds.push(serverId);
 				}
-			} else {
+			} else if (toolId.startsWith('server:') || $config?.features?.enable_plugins) {
 				toolIds.push(toolId);
+			} else {
+				continue;
 			}
 		}
 
@@ -2559,7 +2561,10 @@
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
 
-				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
+				filter_ids:
+					$config?.features?.enable_plugins && selectedFilterIds.length > 0
+						? selectedFilterIds
+						: undefined,
 				tool_ids: toolIds.length > 0 ? toolIds : undefined,
 				skill_ids: skillIds.length > 0 ? skillIds : undefined,
 				terminal_id: terminalEnabled ? (activeTerminalId ?? undefined) : undefined,
