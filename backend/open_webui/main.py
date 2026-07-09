@@ -1075,6 +1075,7 @@ async def chat_completion(
         stream_delta_chunk_size = form_data.get('params', {}).get('stream_delta_chunk_size')
         reasoning_tags = form_data.get('params', {}).get('reasoning_tags')
         compact_token_threshold = form_data.get('params', {}).get('compact_token_threshold')
+        reinject_reasoning = form_data.get('params', {}).get('reinject_reasoning')
 
         # Model Params
         if model_info_params.get('stream_response') is not None:
@@ -1148,6 +1149,7 @@ async def chat_completion(
                 'stream_delta_chunk_size': stream_delta_chunk_size,
                 'reasoning_tags': reasoning_tags,
                 'compact_token_threshold': compact_token_threshold,
+                'reinject_reasoning': reinject_reasoning,
                 'function_calling': (
                     form_data.get('params', {}).get('function_calling')
                     or model_info_params.get('function_calling')

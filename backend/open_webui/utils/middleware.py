@@ -1878,6 +1878,7 @@ def apply_params_to_form_data(form_data, model):
         'stream_delta_chunk_size': int,
         'function_calling': str,
         'reasoning_tags': list,
+        'reinject_reasoning': bool,
         'compact_token_threshold': int,
         'system': str,
     }
@@ -1980,15 +1981,23 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
     ]
 
 
-def get_reasoning_format(model: dict) -> str | None:
+def get_reasoning_format(model: dict, reinject_reasoning: bool = False) -> str | None:
     """
     Determine how reasoning should be included in reconstructed messages.
+
+    Args:
+        model: The model dict from the app state model registry.
+        reinject_reasoning: Per-model toggle. When True, reasoning is reinjected
+            using the provider-specific format. When False (default), reasoning
+            is skipped to prevent models from imitating think tags.
 
     Returns:
         'think_tags': Ollama expects <think> tags in content.
         'reasoning_content': llama.cpp supports reasoning_content as a top-level field.
         None: skip reasoning (safe default for strict providers).
     """
+    if not reinject_reasoning:
+        return None
     provider = model.get('provider', '')
     if provider == 'ollama':
         return 'think_tags'
@@ -2291,7 +2300,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Process messages with OR-aligned output items for clean LLM messages
     form_data['messages'] = process_messages_with_output(
         form_data.get('messages', []),
-        reasoning_format=get_reasoning_format(model),
+        reasoning_format=get_reasoning_format(
+            model,
+            reinject_reasoning=metadata.get('params', {}).get('reinject_reasoning', False),
+        ),
     )
     form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
 
@@ -4936,16 +4948,18 @@ async def streaming_chat_response_handler(response, ctx):
                         }
 
                         if ENABLE_RESPONSES_API_STATEFUL and last_response_id:
+                            _reinject = metadata.get('params', {}).get('reinject_reasoning', False)
                             system_message = get_system_message(form_data['messages'])
                             new_form_data['messages'] = (
                                 [system_message] if system_message else []
                             ) + convert_output_to_messages(
-                                output, raw=True, reasoning_format=get_reasoning_format(model)
+                                output, raw=True, reasoning_format=get_reasoning_format(model, reinject_reasoning=_reinject)
                             )
                             new_form_data['previous_response_id'] = last_response_id
                         else:
+                            _reinject = metadata.get('params', {}).get('reinject_reasoning', False)
                             tool_messages = convert_output_to_messages(
-                                output, raw=True, reasoning_format=get_reasoning_format(model)
+                                output, raw=True, reasoning_format=get_reasoning_format(model, reinject_reasoning=_reinject)
                             )
 
                             # Chat Completions providers don't support multimodal
@@ -5185,7 +5199,10 @@ async def streaming_chat_response_handler(response, ctx):
                                 'messages': [
                                     *form_data['messages'],
                                     *convert_output_to_messages(
-                                        output, raw=True, reasoning_format=get_reasoning_format(model)
+                                        output, raw=True, reasoning_format=get_reasoning_format(
+                                            model,
+                                            reinject_reasoning=metadata.get('params', {}).get('reinject_reasoning', False),
+                                        )
                                     ),
                                 ],
                             }

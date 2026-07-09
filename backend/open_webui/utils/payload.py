@@ -84,6 +84,7 @@ def remove_open_webui_params(params: dict) -> dict:
         'stream_delta_chunk_size': int,
         'function_calling': str,
         'reasoning_tags': list,
+        'reinject_reasoning': bool,
         'compact_token_threshold': int,
         'system': str,
     }

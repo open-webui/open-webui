@@ -19,6 +19,7 @@
 		compact_token_threshold: null,
 		function_calling: null,
 		reasoning_tags: null,
+		reinject_reasoning: null,
 		seed: null,
 		stop: null,
 		temperature: null,
@@ -223,6 +224,42 @@
 						<span class="ml-2 self-center">{$i18n.t('Native')}</span>
 					{:else if params.function_calling === 'legacy'}
 						<span class="ml-2 self-center">{$i18n.t('Legacy')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+	</div>
+
+	<div>
+		<Tooltip
+			content={$i18n.t(
+				'When enabled, the model\'s reasoning / thinking output (e.g. <think> tags) is reinjected into the conversation history for follow-up turns. Disabled by default to prevent models from imitating or amplifying thinking tags.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs">
+					{$i18n.t('Reinject Reasoning')}
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition"
+					on:click={() => {
+						params.reinject_reasoning =
+							(params?.reinject_reasoning ?? null) === null
+								? true
+								: params.reinject_reasoning
+									? false
+									: null;
+					}}
+					type="button"
+				>
+					{#if params.reinject_reasoning === true}
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+					{:else if params.reinject_reasoning === false}
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 					{:else}
 						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 					{/if}
