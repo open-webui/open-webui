@@ -1269,7 +1269,6 @@ class OAuthConfigForm(BaseModel):
     OAUTH_TOKEN_ENDPOINT_AUTH_METHOD: str | None = None
     OPENID_END_SESSION_ENDPOINT: str | None = None
     OAUTH_TIMEOUT: int | str | None = None
-    OAUTH_CLIENT_TIMEOUT: int | str | None = None
 
     # Claims
     OAUTH_EMAIL_CLAIM: str | None = None
@@ -1322,7 +1321,6 @@ OAUTH_CONFIG_KEYS = {
     'OAUTH_TOKEN_ENDPOINT_AUTH_METHOD': 'oauth.token_endpoint_auth_method',
     'OPENID_END_SESSION_ENDPOINT': 'oauth.end_session_endpoint',
     'OAUTH_TIMEOUT': 'oauth.timeout',
-    'OAUTH_CLIENT_TIMEOUT': 'oauth.client.timeout',
     'OAUTH_EMAIL_CLAIM': 'oauth.email_claim',
     'OAUTH_USERNAME_CLAIM': 'oauth.username_claim',
     'OAUTH_PICTURE_CLAIM': 'oauth.picture_claim',
@@ -1344,9 +1342,26 @@ def _format_oauth_form_value(field: str, value):
 def _parse_oauth_update_value(field: str, value):
     if field in OAUTH_COMMA_LIST_FIELDS and isinstance(value, str):
         return [item.strip() for item in value.split(',') if item.strip()]
-    if field in {'OAUTH_TIMEOUT', 'OAUTH_CLIENT_TIMEOUT'} and value == '':
+    if field == 'OAUTH_TIMEOUT' and value == '':
         return ''
     return value
+
+
+def _validate_oauth_config_form(form_data: OAuthConfigForm) -> None:
+    """Reject values that would make provider registration raise (see build_oauth_providers)."""
+    if form_data.OAUTH_CODE_CHALLENGE_METHOD not in (None, '', 'S256'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Unsupported code challenge method; only "S256" (or empty to disable) is supported.',
+        )
+    if form_data.OAUTH_TIMEOUT not in (None, ''):
+        try:
+            int(form_data.OAUTH_TIMEOUT)
+        except (TypeError, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='OAuth timeout must be an integer number of seconds (or empty to disable).',
+            )
 
 
 def oauth_config_editable() -> bool:
@@ -1391,6 +1406,8 @@ async def update_oauth_config(request: Request, form_data: OAuthConfigForm, user
                 '(persistent config is disabled via ENABLE_PERSISTENT_CONFIG).'
             ),
         )
+
+    _validate_oauth_config_form(form_data)
 
     await Config.upsert(oauth_config_updates(form_data.model_dump(exclude_none=True)))
 

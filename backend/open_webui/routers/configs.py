@@ -91,7 +91,16 @@ class ImportConfigForm(BaseModel):
 
 @router.post('/import', response_model=dict)
 async def import_config(request: Request, form_data: ImportConfigForm, user=Depends(get_admin_user)):
-    await Config.upsert(form_data.config)
+    statuses = await Config.upsert(form_data.config)
+
+    # Imported OAuth settings should apply like admin-form saves (#26917);
+    # ephemeral (non-persisted) writes never drive provider registration.
+    if any(key.startswith('oauth.') and state == 'persisted' for key, state in statuses.items()):
+        try:
+            await request.app.state.oauth_manager.reload_from_config()
+        except Exception:
+            log.exception('OAuth provider re-registration failed after config import; a restart may be required')
+
     await publish_event(
         request,
         EVENTS.CONFIG_IMPORTED,
