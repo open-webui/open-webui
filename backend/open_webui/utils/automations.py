@@ -77,7 +77,13 @@ def _parse_rule(s: str):
 
     if freq in ('MINUTELY', 'HOURLY'):
         epoch = datetime(2000, 1, 1, 0, 0, 0)
-        return rrulestr(s, dtstart=epoch, ignoretz=True)
+        # Snap DTSTART to the most recent point on the fixed epoch grid at or
+        # before now so .after() walks a bounded remainder instead of ~26 years
+        # of steps, while keeping the exact same clock-aligned occurrences. The
+        # 2-day back-off keeps the anchor at or before any caller's local now.
+        step = int(parts.get('INTERVAL', '1')) * (60 if freq == 'MINUTELY' else 3600)
+        k = int((datetime.now() - timedelta(days=2) - epoch).total_seconds() // step)
+        return rrulestr(s, dtstart=epoch + timedelta(seconds=k * step), ignoretz=True)
     return rrulestr(s, ignoretz=True)
 
 
