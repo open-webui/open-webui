@@ -1415,34 +1415,32 @@
 								</div>
 							{/if}
 
-							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
-								<div class="  mb-2.5 flex flex-col w-full justify-between">
-									<div class=" flex w-full justify-between">
-										<div class=" self-center text-xs font-medium">
-											{$i18n.t('Relevance Threshold')}
-										</div>
-										<div class="flex items-center relative">
-											<input
-												class="flex-1 w-full text-sm bg-transparent outline-hidden"
-												type="number"
-												step="0.01"
-												placeholder={$i18n.t('Enter Score')}
-												bind:value={RAGConfig.RELEVANCE_THRESHOLD}
-												autocomplete="off"
-												min="0.0"
-												title={$i18n.t(
-													'The score should be a value between 0.0 (0%) and 1.0 (100%).'
-												)}
-											/>
-										</div>
+							<div class="  mb-2.5 flex flex-col w-full justify-between">
+								<div class=" flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">
+										{$i18n.t('Relevance Threshold')}
 									</div>
-									<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-										{$i18n.t(
-											'Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.'
-										)}
+									<div class="flex items-center relative">
+										<input
+											class="flex-1 w-full text-sm bg-transparent outline-hidden"
+											type="number"
+											step="0.01"
+											placeholder={$i18n.t('Enter Score')}
+											bind:value={RAGConfig.RELEVANCE_THRESHOLD}
+											autocomplete="off"
+											min="0.0"
+											title={$i18n.t(
+												'The score should be a value between 0.0 (0%) and 1.0 (100%).'
+											)}
+										/>
 									</div>
 								</div>
-							{/if}
+								<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+									{$i18n.t(
+										'Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score. Applies to both vector and hybrid search.'
+									)}
+								</div>
+							</div>
 
 							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
 								<div class=" mb-2.5 py-0.5 w-full justify-between">
