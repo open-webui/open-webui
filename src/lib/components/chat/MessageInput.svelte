@@ -147,7 +147,8 @@
 	// or one of 'off' | 'low' | 'medium' | 'high'.
 	export let thinkingEffort: string | null = null;
 
-	const thinkingEffortOptions = ['off', 'low', 'medium', 'high'];
+	// Anthropic adaptive-thinking effort ladder (+ off).
+	const thinkingEffortOptions = ['off', 'low', 'medium', 'high', 'xhigh', 'max'];
 	let showThinkingMenu = false;
 
 	export let pendingOAuthTools = [];
