@@ -337,6 +337,10 @@
 							e.preventDefault();
 							show = false;
 							goto('/calendar');
+							if ($mobile) {
+								await tick();
+								showSidebar.set(false);
+							}
 						}}
 					>
 						<div class="self-center">
