@@ -47,11 +47,41 @@ toda decisão/mudança de status é registrada primeiro aqui.
   de propósito — **nenhum vira ponteiro do outro**. Registrada a nota de referência
   cruzada no topo deste arquivo. (Não existe REGISTRO no `nidum-platform` a converter.)
 
-**Fontes da marca (Item A — pendente, por último):** redistribuição das fontes
-(Maxima Nouva + Ibrand) e logos **autorizada verbalmente** pela empresa de branding
-contratada; **confirmação escrita (e-mail) a caminho**. Viabilidade verificada:
-`static/brand/` completo (8 `.ttf` + 5 logos); **Docker instalado mas com o daemon
-parado** → o teste de build do Item A depende de subir o Docker Desktop.
+**Item A — CONCLUÍDO (branch `feat/fontes-da-marca-no-build`):** fontes da marca no build.
+- **Dockerfile reconstruído do zero** (a modificação anterior, não-commitada, foi perdida
+  quando um `git reset --hard` da branch de docs a descartou — lição: nunca mais
+  `reset --hard`, usar `checkout -b <branch> origin/main`). Reconstrução conforme spec:
+  `fontconfig` no `apt`; instala os 8 `.ttf` em `/usr/share/fonts/nidum` + `fc-cache`;
+  **sem guarda silencioso** — se `./open_webui/static/brand/fonts` não existir, imprime
+  **`AVISO: fontes da marca ausentes — PDFs sairão com fonte de fallback`** (avisa, **não
+  falha**, para não quebrar clones sem os assets).
+- Commit único com `Dockerfile` + `static/brand/` (8 `.ttf` + 5 logos). Redistribuição
+  **autorizada verbalmente** pela empresa de branding; **confirmação por e-mail a caminho**.
+- **TESTE 1 (build local):** exit 0; o passo das fontes imprimiu `OK: fontes da marca
+  Nidum instaladas em /usr/share/fonts/nidum` (achou os assets, não caiu no AVISO).
+- **TESTE 2 (`fc-list` no container):** as **8 fontes** aparecem no fontconfig
+  (`Ibrand` + 7 pesos de `Maxima Nouva`).
+- **TESTE 3 (alternativa aprovada — reportlab em container efêmero):** replicado o caminho
+  real da ferramenta (`_font_path` + `registerFont`); `pdffonts` do PDF gerado prova
+  **embedding**: `AAAAAA+MaximaNouva-Regular`, `AAAAAA+MaximaNouva-Bold`,
+  `AAAAAA+Ibrand-Regular` — todos `emb=yes sub=yes`, carregados de
+  `/app/backend/open_webui/static/brand/fonts`.
+
+**Dois achados (Item A) para quem mantém:**
+1. **O PDF da ferramenta NÃO usa o fontconfig.** O motor é **reportlab**, que carrega os
+   `.ttf` **por caminho** (`os.path.dirname(open_webui.__file__)/static/brand/fonts`).
+   Quem garante isso na imagem é o `COPY ./backend .` (assets agora versionados). O
+   `fontconfig`/`fc-cache` do Dockerfile serve os caminhos **HTML/`@font-face`**, não o
+   PDF do reportlab — mas ambos ficam cobertos.
+2. **`reportlab` não está na imagem base** (`ModuleNotFoundError` no container). É
+   **esperado**: o Open WebUI instala os `requirements:` da ferramenta
+   (`python-pptx, openpyxl, python-docx, reportlab`) **em tempo de carregamento da tool**,
+   não no build. Por isso o teste do reportlab exigiu `pip install` no container.
+
+**PENDENTE (Item A):** **conferência visual "de olho" na UI** — só um humano fecha, num
+Open WebUI rodando, gerando um arquivo pela ferramenta e olhando a tipografia. Fica para
+pós-merge. *(Obs.: o build emitiu 2 warnings pré-existentes — `OPENAI_API_KEY`/
+`WEBUI_SECRET_KEY` como ENV na linha 80 do Dockerfile; não é desta mudança.)*
 
 **Ordem de execução aprovada:** **B → C+D → E → A**. O Item A só é mergeado **depois**
 de B e C+D.
