@@ -143,7 +143,12 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
-	export let thinkingEnabled: boolean | null = null;
+	// Reasoning effort sent as reasoning_effort: null = default (omit),
+	// or one of 'off' | 'low' | 'medium' | 'high'.
+	export let thinkingEffort: string | null = null;
+
+	const thinkingEffortOptions = ['off', 'low', 'medium', 'high'];
+	let showThinkingMenu = false;
 
 	export let pendingOAuthTools = [];
 
@@ -189,7 +194,7 @@
 		imageGenerationEnabled,
 		webSearchEnabled,
 		codeInterpreterEnabled,
-		thinkingEnabled
+		thinkingEffort
 	});
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
@@ -1770,7 +1775,6 @@
 												bind:webSearchEnabled
 												bind:imageGenerationEnabled
 												bind:codeInterpreterEnabled
-												bind:thinkingEnabled
 												{onWebSearchToggle}
 												closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
 												onShowValves={(e) => {
@@ -1942,25 +1946,6 @@
 												</Tooltip>
 											{/if}
 
-											{#if thinkingEnabled !== null}
-												<Tooltip
-													content={thinkingEnabled
-														? $i18n.t('Thinking Enabled')
-														: $i18n.t('Thinking Disabled')}
-													placement="top"
-												>
-													<button
-														on:click|preventDefault={() => (thinkingEnabled = !thinkingEnabled)}
-														type="button"
-														class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {thinkingEnabled
-															? 'text-purple-500 dark:text-purple-300 bg-purple-50 hover:bg-purple-100 dark:bg-purple-400/10 dark:hover:bg-purple-600/10 border border-purple-200/40 dark:border-purple-500/20'
-															: 'text-gray-400 dark:text-gray-500 bg-gray-50 hover:bg-gray-100 dark:bg-gray-700/50 dark:hover:bg-gray-700 border border-gray-200/40 dark:border-gray-600/20'}"
-													>
-														<Brain className="size-4" strokeWidth="1.75" />
-													</button>
-												</Tooltip>
-											{/if}
-
 											{#if imageGenerationEnabled}
 												<Tooltip content={$i18n.t('Image')} placement="top">
 													<button
@@ -2068,6 +2053,79 @@
 										{/if}
 
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
+											<!-- Reasoning effort selector -->
+											<div class="flex items-center">
+												<Dropdown bind:show={showThinkingMenu} align="end">
+													<Tooltip
+														content={thinkingEffort === null
+															? $i18n.t('Reasoning Effort')
+															: $i18n.t('Reasoning Effort') + ': ' + thinkingEffort}
+														placement="top"
+													>
+														<button
+															type="button"
+															id="thinking-effort-button"
+															class="flex items-center gap-1 p-1.5 self-center text-sm transition rounded-full cursor-pointer {thinkingEffort ===
+															null
+																? 'text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200'
+																: thinkingEffort === 'off'
+																	? 'text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400'
+																	: 'text-purple-500 dark:text-purple-300 hover:text-purple-600 dark:hover:text-purple-200'}"
+														>
+															<Brain className="size-4.5" strokeWidth="1.75" />
+															{#if thinkingEffort !== null && thinkingEffort !== 'off'}
+																<span class="text-[11px] font-medium capitalize"
+																	>{thinkingEffort}</span
+																>
+															{/if}
+														</button>
+													</Tooltip>
+
+													<div slot="content">
+														<div
+															class="min-w-40 rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+														>
+															<button
+																type="button"
+																class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl {thinkingEffort ===
+																null
+																	? 'bg-gray-50 dark:bg-gray-800/50'
+																	: 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}"
+																on:click={() => {
+																	thinkingEffort = null;
+																	showThinkingMenu = false;
+																}}
+															>
+																<span>{$i18n.t('Default')}</span>
+															</button>
+															{#each thinkingEffortOptions as effort}
+																<button
+																	type="button"
+																	class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl {thinkingEffort ===
+																	effort
+																		? 'bg-gray-50 dark:bg-gray-800/50'
+																		: 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}"
+																	on:click={() => {
+																		thinkingEffort = effort;
+																		showThinkingMenu = false;
+																	}}
+																>
+																	<span class="capitalize">{$i18n.t(effort)}</span>
+																	{#if effort !== 'off'}
+																		<Brain
+																			className="size-3.5 shrink-0 {thinkingEffort === effort
+																				? 'text-purple-500 dark:text-purple-300'
+																				: 'text-gray-300 dark:text-gray-600'}"
+																			strokeWidth="2"
+																		/>
+																	{/if}
+																</button>
+															{/each}
+														</div>
+													</div>
+												</Dropdown>
+											</div>
+
 											<!-- Terminal Server Selector -->
 											{@const hasDirectToolServerAccess =
 												$_user?.role === 'admin' ||
