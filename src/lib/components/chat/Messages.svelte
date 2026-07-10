@@ -43,6 +43,8 @@
 	export let regenerateResponse: Function;
 	export let mergeResponses: Function;
 
+	export let stopResponse: Function = () => {};
+
 	export let chatActionHandler: Function;
 	export let showMessage: Function = () => {};
 	export let submitMessage: Function = () => {};
@@ -440,6 +442,19 @@
 		const messageToDelete = history.messages[messageId];
 		const parentMessageId = messageToDelete.parentId;
 		const childMessageIds = messageToDelete.childrenIds ?? [];
+
+		const deletedIds = [messageId, ...childMessageIds];
+		const activeId = history.currentId;
+		const activeMessage = activeId ? history.messages[activeId] : null;
+		if (
+			activeMessage &&
+			activeMessage.role === 'assistant' &&
+			!activeMessage.done &&
+			deletedIds.includes(activeId)
+		) {
+			await stopResponse(false);
+			await tick();
+		}
 
 		// Collect all grandchildren
 		const grandchildrenIds = childMessageIds.flatMap(

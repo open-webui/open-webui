@@ -731,6 +731,22 @@ class ChatTable:
                         parent_id = existing_id
                         break
 
+            if parent_id is None and messages:
+                log.info(
+                    'Skipping stale upsert for message %s in chat %s: no resolvable parent',
+                    message_id,
+                    id,
+                )
+                return await self.get_chat_by_id(id)
+            if parent_id is not None and parent_id not in messages:
+                log.info(
+                    'Skipping stale upsert for message %s in chat %s: parent %s no longer exists',
+                    message_id,
+                    id,
+                    parent_id,
+                )
+                return await self.get_chat_by_id(id)
+
             parent = messages.get(parent_id) if parent_id else None
             output = message.get('output') or []
             output_role = next(
@@ -756,7 +772,17 @@ class ChatTable:
                 'timestamp': message.get('timestamp') or int(time.time()),
             }
 
-        history['currentId'] = message_id
+        upserted = messages.get(message_id)
+        upserted_parent = upserted.get('parentId') if isinstance(upserted, dict) else None
+        if upserted_parent is None or upserted_parent in messages:
+            history['currentId'] = message_id
+        else:
+            log.info(
+                'Not advancing currentId to message %s in chat %s: parent %s missing',
+                message_id,
+                id,
+                upserted_parent,
+            )
 
         chat['history'] = history
 
