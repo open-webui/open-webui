@@ -1043,6 +1043,13 @@
 				pageSubscribe();
 				showControlsSubscribe();
 				selectedFolderSubscribe();
+
+				// Clear the selected chat when leaving the chat surface (e.g. navigating
+				// to the admin panel), otherwise the previously-viewed chat stays selected
+				// in the sidebar and deleting/archiving it wrongly navigates away.
+				chatId.set('');
+				chatTitle.set('');
+
 				window.removeEventListener('message', onMessageHandler);
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('connect', handleSocketConnect);
