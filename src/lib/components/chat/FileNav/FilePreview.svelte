@@ -400,10 +400,9 @@
 			{/if}
 			<iframe
 				src={serveUrl}
-				sandbox="allow-scripts allow-same-origin allow-downloads{($settings?.iframeSandboxAllowForms ??
-				false)
+				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
 					? ' allow-forms'
-					: ''}"
+					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
 				class="w-full h-full border-none bg-white"
 				title="HTML Preview"
 			/>
