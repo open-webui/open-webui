@@ -634,7 +634,7 @@
 				} else if (type === 'chat:active') {
 					if (!data?.active) {
 						taskIds = null;
-						if (chatIdProp && !$temporaryChatEnabled && hasPendingAssistantLeaf()) {
+						if ($chatId && !$temporaryChatEnabled && hasPendingAssistantLeaf()) {
 							await loadChat();
 						}
 					}
@@ -907,7 +907,8 @@
 		);
 
 	const handleSocketConnect = async () => {
-		if (!chatIdProp || $temporaryChatEnabled) {
+		// Gate on $chatId, not chatIdProp: chats started from the home page keep an empty chatIdProp
+		if (!$chatId || $temporaryChatEnabled) {
 			return;
 		}
 
@@ -1590,7 +1591,8 @@
 	};
 
 	const loadChat = async () => {
-		chatId.set(chatIdProp);
+		// chatIdProp is empty for chats started from the home page (URL set via replaceState)
+		chatId.set(chatIdProp || $chatId);
 
 		if ($temporaryChatEnabled) {
 			temporaryChatEnabled.set(false);
