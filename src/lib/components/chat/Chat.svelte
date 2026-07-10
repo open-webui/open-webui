@@ -3723,6 +3723,7 @@
 										{continueResponse}
 										{regenerateResponse}
 										{mergeResponses}
+										{stopResponse}
 										{chatActionHandler}
 										{addMessages}
 										topPadding={!embedded}
