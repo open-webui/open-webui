@@ -1753,6 +1753,9 @@ export interface ModelMeta {
 	description?: string;
 	capabilities?: object;
 	profile_image_url?: string;
+	start_form?: {
+		enabled?: boolean;
+	};
 }
 
 export interface ModelParams {}

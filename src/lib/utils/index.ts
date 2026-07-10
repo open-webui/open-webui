@@ -1651,6 +1651,18 @@ export const extractInputVariables = (text: string): Record<string, any> => {
 	return variables;
 };
 
+export const renderInputVariables = (text: string, variables: Record<string, unknown>): string => {
+	return text.replace(/{{\s*([^|}\s]+)(?:\s*\|\s*[^}]*)?\s*}}/g, (_, key) => {
+		const value = variables[key.trim()];
+
+		if (value === undefined || value === null) {
+			return '';
+		}
+
+		return String(value);
+	});
+};
+
 export const splitProperties = (str: string, delimiter: string): string[] => {
 	const result: string[] = [];
 	let current = '';

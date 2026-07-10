@@ -110,6 +110,7 @@
 	let accessGrants = [];
 	let terminalId = '';
 	let tts = { voice: '' };
+	let startFormEnabled = false;
 	export let suggestionTags: { name: string }[] = [];
 	let voices: { id: string; name?: string }[] = [];
 
@@ -277,6 +278,14 @@
 			}
 		}
 
+		if (startFormEnabled) {
+			info.meta.start_form = { enabled: true };
+		} else {
+			if (info.meta.start_form) {
+				delete info.meta.start_form;
+			}
+		}
+
 		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop
 			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
@@ -388,6 +397,7 @@
 			builtinTools = model?.meta?.builtinTools ?? builtinTools;
 			terminalId = model?.meta?.terminalId ?? '';
 			tts = { voice: model?.meta?.tts?.voice ?? '' };
+			startFormEnabled = model?.meta?.start_form?.enabled ?? false;
 
 			accessGrants = model?.access_grants ?? [];
 
@@ -742,6 +752,23 @@
 										bind:value={system}
 									/>
 								</div>
+							</div>
+
+							<div class="my-2 flex items-start gap-2">
+								<input
+									id="model-start-form-enabled"
+									type="checkbox"
+									class="mt-1 size-3.5 rounded border border-gray-200 dark:border-gray-700"
+									bind:checked={startFormEnabled}
+								/>
+								<label for="model-start-form-enabled" class="flex flex-col gap-1 text-sm">
+									<span class="font-medium">{$i18n.t('Start Form')}</span>
+									<span class="text-xs text-gray-500">
+										{$i18n.t(
+											'Ask for system prompt variables before the first message in a new chat.'
+										)}
+									</span>
+								</label>
 							</div>
 
 							<div class="flex w-full justify-between">

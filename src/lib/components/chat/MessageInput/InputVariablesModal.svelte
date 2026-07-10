@@ -16,6 +16,10 @@
 	export let variables = {};
 
 	export let onSave = (e) => {};
+	export let onCancel = () => {};
+	export let title = 'Input Variables';
+	export let submitLabel = 'Save';
+	export let cancelLabel = 'Cancel';
 
 	let loading = true;
 	let variableValues = {};
@@ -67,10 +71,11 @@
 <Modal bind:show size="md">
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Input Variables')}</div>
+			<div class=" text-lg font-medium self-center">{$i18n.t(title)}</div>
 			<button
 				class="self-center"
 				on:click={() => {
+					onCancel();
 					show = false;
 				}}
 			>
@@ -355,17 +360,18 @@
 							class="px-3.5 py-1.5 text-sm font-medium bg-white hover:bg-gray-100 text-black dark:bg-black dark:text-white dark:hover:bg-gray-900 transition rounded-full"
 							type="button"
 							on:click={() => {
+								onCancel();
 								show = false;
 							}}
 						>
-							{$i18n.t('Cancel')}
+							{$i18n.t(cancelLabel)}
 						</button>
 
 						<button
 							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 							type="submit"
 						>
-							{$i18n.t('Save')}
+							{$i18n.t(submitLabel)}
 						</button>
 					</div>
 				</form>

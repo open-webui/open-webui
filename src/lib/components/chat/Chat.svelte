@@ -60,7 +60,9 @@
 		getMessageContentParts,
 		createMessagesList,
 		sanitizeHistory,
+		extractInputVariables,
 		getPromptVariables,
+		renderInputVariables,
 		processDetails,
 		removeAllDetails,
 		getCodeBlockContents,
@@ -111,6 +113,7 @@
 	import WebSearchConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
+	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -233,6 +236,10 @@
 	let chatFiles = [];
 	let files = [];
 	let params = {};
+	let showStartFormModal = false;
+	let startFormVariables = {};
+	let startFormModalCallback: (values: Record<string, unknown>) => void = () => {};
+	let startFormModalCancel = () => {};
 
 	$: if (chatIdProp) {
 		navigateHandler();
@@ -2126,6 +2133,60 @@
 		await sendMessage(history, userMessageId);
 	};
 
+	const getSelectedPrimaryModel = () => {
+		const modelId = atSelectedModel?.id ?? selectedModels[0];
+		return $models.find((m) => m.id === modelId);
+	};
+
+	const shouldShowStartForm = (model: Model | undefined) => {
+		if (!model || $chatId || history.currentId) {
+			return false;
+		}
+
+		return model?.info?.meta?.start_form?.enabled ?? false;
+	};
+
+	const resolveStartForm = async (model: Model | undefined) => {
+		if (!shouldShowStartForm(model)) {
+			return true;
+		}
+
+		const systemPromptTemplate = params?.system ?? model?.info?.params?.system ?? '';
+		if (!systemPromptTemplate) {
+			return true;
+		}
+
+		const variables = extractInputVariables(systemPromptTemplate);
+		if (Object.keys(variables).length === 0) {
+			return true;
+		}
+
+		startFormVariables = variables;
+		showStartFormModal = true;
+
+		const variableValues = await new Promise<Record<string, unknown> | null>((resolve) => {
+			startFormModalCallback = (values) => {
+				showStartFormModal = false;
+				resolve(values);
+			};
+			startFormModalCancel = () => {
+				showStartFormModal = false;
+				resolve(null);
+			};
+		});
+
+		if (!variableValues) {
+			return false;
+		}
+
+		params = {
+			...params,
+			system: renderInputVariables(systemPromptTemplate, variableValues)
+		};
+
+		return true;
+	};
+
 	const submitHandler = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitHandler', userPrompt, $chatId);
 
@@ -2147,6 +2208,10 @@
 		}
 		if (selectedModels.includes('')) {
 			toast.error($i18n.t('Model not selected'));
+			return;
+		}
+
+		if (!(await resolveStartForm(getSelectedPrimaryModel()))) {
 			return;
 		}
 
@@ -3094,6 +3159,15 @@
 </svelte:head>
 
 <audio id="audioElement" style="display: none;"></audio>
+
+<InputVariablesModal
+	bind:show={showStartFormModal}
+	title="Start Form"
+	submitLabel="Start Chat"
+	variables={startFormVariables}
+	onSave={startFormModalCallback}
+	onCancel={startFormModalCancel}
+/>
 
 <WebSearchConfirmDialog
 	bind:show={showWebSearchConfirm}
