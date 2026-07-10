@@ -168,8 +168,9 @@ def get_rf(
     auto_update: bool = RAG_RERANKING_MODEL_AUTO_UPDATE,
 ):
     rf = None
-    # Convert timeout string to int or None (system default)
-    timeout_value = int(external_reranker_timeout) if external_reranker_timeout else None
+    # Convert timeout string to int; default to 30s so an unreachable external
+    # reranker fails fast instead of hanging the whole RAG step indefinitely.
+    timeout_value = int(external_reranker_timeout) if external_reranker_timeout else 30
     if reranking_model:
         if any(model in reranking_model for model in ['jinaai/jina-colbert-v2']):
             try:

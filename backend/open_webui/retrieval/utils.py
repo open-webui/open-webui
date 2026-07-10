@@ -53,6 +53,12 @@ from open_webui.utils.misc import get_message_list
 
 log = logging.getLogger(__name__)
 
+# Hybrid search safety nets. The hybrid path builds an in-memory BM25 index over
+# the whole collection and reranks, which is far heavier than a top-k vector
+# search. These keep it from monopolising the event loop / thread pool.
+RAG_HYBRID_SEARCH_TIMEOUT = float(os.getenv('RAG_HYBRID_SEARCH_TIMEOUT', '30'))
+RAG_HYBRID_SEARCH_CONCURRENCY = int(os.getenv('RAG_HYBRID_SEARCH_CONCURRENCY', '4'))
+
 
 from typing import Any
 
@@ -504,7 +510,8 @@ async def query_doc_with_hybrid_search(
 
         bm25_texts = get_enriched_texts(collection_result) if enable_enriched_texts else original_texts
 
-        bm25_retriever = BM25Retriever.from_texts(
+        bm25_retriever = await asyncio.to_thread(
+            BM25Retriever.from_texts,
             texts=bm25_texts,
             metadatas=bm25_metadatas,
         )
@@ -679,19 +686,25 @@ async def query_collection(
                 if request.app.state.RERANKING_FUNCTION
                 else None
             )
-            return await query_collection_with_hybrid_search(
-                collection_names=collection_names,
-                queries=queries,
-                embedding_function=embedding_function,
-                k=k,
-                reranking_function=reranking_function,
-                k_reranker=config.get('rag.top_k_reranker'),
-                r=config.get('rag.relevance_threshold'),
-                hybrid_bm25_weight=config.get('rag.hybrid_bm25_weight'),
-                enable_enriched_texts=config.get('rag.enable_hybrid_search_enriched_texts'),
+            return await asyncio.wait_for(
+                query_collection_with_hybrid_search(
+                    collection_names=collection_names,
+                    queries=queries,
+                    embedding_function=embedding_function,
+                    k=k,
+                    reranking_function=reranking_function,
+                    k_reranker=config.get('rag.top_k_reranker'),
+                    r=config.get('rag.relevance_threshold'),
+                    hybrid_bm25_weight=config.get('rag.hybrid_bm25_weight'),
+                    enable_enriched_texts=config.get('rag.enable_hybrid_search_enriched_texts'),
+                ),
+                timeout=RAG_HYBRID_SEARCH_TIMEOUT,
             )
-        except Exception as e:
-            log.debug(f'Hybrid search failed, falling back to vector search: {e}')
+        except (Exception, asyncio.TimeoutError) as e:
+            log.warning(
+                f'Hybrid search failed or timed out after {RAG_HYBRID_SEARCH_TIMEOUT}s, '
+                f'falling back to vector search: {e}'
+            )
 
     results = []
     error = False
@@ -828,7 +841,16 @@ async def query_collection_with_hybrid_search(
     ]
 
     # Run all queries in parallel using asyncio.gather
-    task_results = await asyncio.gather(*[process_query(collection_name, query) for collection_name, query in tasks])
+    # Cap concurrency: each task builds a BM25 index + reranks, both now
+    # offloaded to threads. Without a cap, many (query x collection) combos can
+    # starve the default thread pool on large knowledge bases.
+    _hybrid_sem = asyncio.Semaphore(RAG_HYBRID_SEARCH_CONCURRENCY)
+
+    async def _limited_process(collection_name, query):
+        async with _hybrid_sem:
+            return await process_query(collection_name, query)
+
+    task_results = await asyncio.gather(*[_limited_process(collection_name, query) for collection_name, query in tasks])
 
     for result, err in task_results:
         if err is not None:
@@ -1717,7 +1739,8 @@ class RerankCompressor(BaseDocumentCompressor):
             query_embedding = await self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
             doc_texts = [doc.page_content for doc in documents]
             document_embedding = await self.embedding_function(doc_texts, RAG_EMBEDDING_CONTENT_PREFIX)
-            scores = st_util.cos_sim(query_embedding, document_embedding)[0]
+            # cos_sim is a blocking torch op — keep it off the event loop.
+            scores = await asyncio.to_thread(lambda: st_util.cos_sim(query_embedding, document_embedding)[0])
 
         if scores is not None:
             docs_with_scores = list(

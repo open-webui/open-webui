@@ -50,7 +50,8 @@ class ExternalReranker(BaseReranker):
                 f'{self.url}',
                 headers=headers,
                 json=payload,
-                timeout=self.timeout,
+                # Never hang forever on an unreachable external reranker.
+                timeout=self.timeout or 30,
                 verify=REQUESTS_VERIFY,
             )
 

@@ -592,6 +592,13 @@ async def initialize_runtime_config(app: FastAPI):
         )
         app.state.ef = get_ef(rag_config.get('rag.embedding_engine'), rag_config.get('rag.embedding_model'))
         if rag_config.get('rag.enable_hybrid_search') and not rag_config.get('rag.bypass_embedding_and_retrieval'):
+            if not rag_config.get('rag.reranking_model'):
+                log.warning(
+                    'Hybrid search is enabled but no reranking model is configured '
+                    '(RAG_RERANKING_MODEL is empty). Hybrid search will fall back to '
+                    'embedding-based similarity, which is slower for large collections. '
+                    'Set a reranking model in Documents settings for best results.'
+                )
             app.state.rf = get_rf(
                 rag_config.get('rag.reranking_engine'),
                 rag_config.get('rag.reranking_model'),
