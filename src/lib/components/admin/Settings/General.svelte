@@ -403,6 +403,7 @@
 							<button
 								class="p-1 px-3 text-xs flex rounded-sm transition"
 								type="button"
+								aria-label={$i18n.t('Add Banner')}
 								on:click={() => {
 									if (banners.length === 0 || banners.at(-1).content !== '') {
 										banners = [

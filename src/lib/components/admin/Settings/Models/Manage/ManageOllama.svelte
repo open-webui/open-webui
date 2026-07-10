@@ -617,6 +617,7 @@
 							<Tooltip content="Update All Models" placement="top">
 								<button
 									class="flex gap-2 items-center bg-transparent rounded-lg transition"
+									aria-label={$i18n.t('Update All Models')}
 									on:click={() => {
 										updateModelsHandler();
 									}}
@@ -721,6 +722,7 @@
 							<Tooltip content={$i18n.t('Cancel')}>
 								<button
 									class="text-gray-800 dark:text-gray-100"
+									aria-label={$i18n.t('Cancel')}
 									on:click={() => {
 										cancelUpdateModelHandler(updateModelId);
 									}}
@@ -769,6 +771,7 @@
 											<Tooltip content={$i18n.t('Cancel')}>
 												<button
 													class="text-gray-800 dark:text-gray-100"
+													aria-label={$i18n.t('Cancel')}
 													on:click={() => {
 														cancelModelPullHandler(model);
 													}}
@@ -828,6 +831,7 @@
 						<Tooltip content={$i18n.t('Delete Model')} placement="top">
 							<button
 								class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+								aria-label={$i18n.t('Delete Model')}
 								on:click={() => {
 									showModelDeleteConfirm = true;
 								}}
@@ -876,6 +880,7 @@
 							<Tooltip content={$i18n.t('Create Model')} placement="top">
 								<button
 									class="px-2.5 py-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition disabled:cursor-not-allowed"
+									aria-label={$i18n.t('Create Model')}
 									on:click={() => {
 										createModelHandler();
 									}}

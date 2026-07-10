@@ -609,6 +609,7 @@
 				<button
 					id="confirm-recording-button"
 					type="button"
+					aria-label={$i18n.t('Confirm recording')}
 					class="p-1.5 bg-indigo-500 text-white dark:bg-indigo-500 dark:text-blue-950 rounded-full"
 					on:click={async () => {
 						await confirmRecording();

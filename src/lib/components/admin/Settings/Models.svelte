@@ -698,6 +698,7 @@
 									<button
 										class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 										type="button"
+										aria-label={$i18n.t('Edit')}
 										on:click={() => {
 											selectedModelId = model.id;
 										}}
