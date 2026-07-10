@@ -85,6 +85,7 @@ from open_webui.retrieval.web.bing import search_bing
 from open_webui.retrieval.web.bocha import search_bocha
 from open_webui.retrieval.web.brave import search_brave
 from open_webui.retrieval.web.brave_llm_context import search_brave_llm_context
+from open_webui.retrieval.web.crw import search_crw
 from open_webui.retrieval.web.duckduckgo import search_duckduckgo
 from open_webui.retrieval.web.exa import search_exa
 from open_webui.retrieval.web.external import search_external
@@ -303,6 +304,10 @@ RETRIEVAL_CONFIG_KEYS = {
     'FILE_IMAGE_COMPRESSION_WIDTH': 'file.image_compression_width',
     'FILE_MAX_COUNT': 'rag.file.max_count',
     'FILE_MAX_SIZE': 'rag.file.max_size',
+    'CRW_API_BASE_URL': 'web.loader.crw_api_url',
+    'CRW_API_KEY': 'web.loader.crw_api_key',
+    'CRW_SEARCH_CATEGORIES': 'web.search.crw_search_categories',
+    'CRW_TIMEOUT': 'web.loader.crw_timeout',
     'FIRECRAWL_API_BASE_URL': 'web.loader.firecrawl_api_url',
     'FIRECRAWL_API_KEY': 'web.loader.firecrawl_api_key',
     'FIRECRAWL_TIMEOUT': 'web.loader.firecrawl_timeout',
@@ -745,6 +750,10 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'FIRECRAWL_API_KEY': config.FIRECRAWL_API_KEY,
             'FIRECRAWL_API_BASE_URL': config.FIRECRAWL_API_BASE_URL,
             'FIRECRAWL_TIMEOUT': config.FIRECRAWL_TIMEOUT,
+            'CRW_API_KEY': config.CRW_API_KEY,
+            'CRW_API_BASE_URL': config.CRW_API_BASE_URL,
+            'CRW_TIMEOUT': config.CRW_TIMEOUT,
+            'CRW_SEARCH_CATEGORIES': config.CRW_SEARCH_CATEGORIES,
             'TAVILY_EXTRACT_DEPTH': config.TAVILY_EXTRACT_DEPTH,
             'EXTERNAL_WEB_SEARCH_URL': config.EXTERNAL_WEB_SEARCH_URL,
             'EXTERNAL_WEB_SEARCH_API_KEY': config.EXTERNAL_WEB_SEARCH_API_KEY,
@@ -823,6 +832,10 @@ class WebConfig(BaseModel):
     FIRECRAWL_API_KEY: str | None = None
     FIRECRAWL_API_BASE_URL: str | None = None
     FIRECRAWL_TIMEOUT: str | None = None
+    CRW_API_KEY: str | None = None
+    CRW_API_BASE_URL: str | None = None
+    CRW_TIMEOUT: str | None = None
+    CRW_SEARCH_CATEGORIES: str | None = None
     TAVILY_EXTRACT_DEPTH: str | None = None
     EXTERNAL_WEB_SEARCH_URL: str | None = None
     EXTERNAL_WEB_SEARCH_API_KEY: str | None = None
@@ -1295,6 +1308,10 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.FIRECRAWL_API_KEY = form_data.web.FIRECRAWL_API_KEY
         config.FIRECRAWL_API_BASE_URL = form_data.web.FIRECRAWL_API_BASE_URL
         config.FIRECRAWL_TIMEOUT = form_data.web.FIRECRAWL_TIMEOUT
+        config.CRW_API_KEY = form_data.web.CRW_API_KEY
+        config.CRW_API_BASE_URL = form_data.web.CRW_API_BASE_URL
+        config.CRW_TIMEOUT = form_data.web.CRW_TIMEOUT
+        config.CRW_SEARCH_CATEGORIES = form_data.web.CRW_SEARCH_CATEGORIES
         config.EXTERNAL_WEB_SEARCH_URL = form_data.web.EXTERNAL_WEB_SEARCH_URL
         config.EXTERNAL_WEB_SEARCH_API_KEY = form_data.web.EXTERNAL_WEB_SEARCH_API_KEY
         config.EXTERNAL_WEB_LOADER_URL = form_data.web.EXTERNAL_WEB_LOADER_URL
@@ -1441,6 +1458,10 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'FIRECRAWL_API_KEY': config.FIRECRAWL_API_KEY,
             'FIRECRAWL_API_BASE_URL': config.FIRECRAWL_API_BASE_URL,
             'FIRECRAWL_TIMEOUT': config.FIRECRAWL_TIMEOUT,
+            'CRW_API_KEY': config.CRW_API_KEY,
+            'CRW_API_BASE_URL': config.CRW_API_BASE_URL,
+            'CRW_TIMEOUT': config.CRW_TIMEOUT,
+            'CRW_SEARCH_CATEGORIES': config.CRW_SEARCH_CATEGORIES,
             'TAVILY_EXTRACT_DEPTH': config.TAVILY_EXTRACT_DEPTH,
             'EXTERNAL_WEB_SEARCH_URL': config.EXTERNAL_WEB_SEARCH_URL,
             'EXTERNAL_WEB_SEARCH_API_KEY': config.EXTERNAL_WEB_SEARCH_API_KEY,
@@ -2464,6 +2485,16 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             query,
             config.WEB_SEARCH_RESULT_COUNT,
             config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
+    elif engine == 'crw':
+        return await asyncio.to_thread(
+            search_crw,
+            config.CRW_API_BASE_URL,
+            config.CRW_API_KEY,
+            query,
+            config.WEB_SEARCH_RESULT_COUNT,
+            config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            config.CRW_SEARCH_CATEGORIES,
         )
     elif engine == 'external':
         return await asyncio.to_thread(

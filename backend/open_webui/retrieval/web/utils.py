@@ -30,6 +30,9 @@ from langchain_community.document_loaders import PlaywrightURLLoader, WebBaseLoa
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 from open_webui.config import (
+    CRW_API_BASE_URL,
+    CRW_API_KEY,
+    CRW_TIMEOUT,
     ENABLE_LOCAL_WEB_FETCH,
     EXTERNAL_WEB_LOADER_API_KEY,
     EXTERNAL_WEB_LOADER_URL,
@@ -57,6 +60,7 @@ from open_webui.env import (
 from open_webui.retrieval.loaders.external_web import ExternalWebLoader
 from open_webui.retrieval.loaders.microsoft_web_iq import MicrosoftWebIQLoader
 from open_webui.retrieval.loaders.tavily import TavilyLoader
+from open_webui.retrieval.web.crw import DEFAULT_CRW_API_BASE_URL, scrape_crw_url
 from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
 from open_webui.utils.misc import is_host_allowed
 
@@ -363,6 +367,82 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             except Exception as e:
                 if self.continue_on_failure:
                     log.warning(f'Error extracting content from {url} with Firecrawl: {e}')
+                    continue
+                raise
+
+
+class SafeCRWLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
+    def __init__(
+        self,
+        web_paths,
+        verify_ssl: bool = True,
+        trust_env: bool = False,
+        requests_per_second: Optional[float] = None,
+        continue_on_failure: bool = True,
+        api_key: Optional[str] = None,
+        api_url: Optional[str] = None,
+        timeout: Optional[int] = None,
+        proxy: Optional[Dict[str, str]] = None,
+        params: Optional[Dict] = None,
+    ):
+        proxy_server = proxy.get('server') if proxy else None
+        if trust_env and not proxy_server:
+            env_proxies = urllib.request.getproxies()
+            env_proxy_server = env_proxies.get('https') or env_proxies.get('http')
+            if env_proxy_server:
+                if proxy:
+                    proxy['server'] = env_proxy_server
+                else:
+                    proxy = {'server': env_proxy_server}
+        self.web_paths = web_paths
+        self.verify_ssl = verify_ssl
+        self.requests_per_second = requests_per_second
+        self.last_request_time = None
+        self.trust_env = trust_env
+        self.continue_on_failure = continue_on_failure
+        self.api_key = api_key
+        self.api_url = (api_url or DEFAULT_CRW_API_BASE_URL).rstrip('/')
+        self.timeout = timeout
+        self.params = params or {}
+
+    def lazy_load(self) -> Iterator[Document]:
+        for url in self.web_paths:
+            try:
+                self._sync_wait_for_rate_limit()
+                doc = scrape_crw_url(
+                    self.api_url,
+                    self.api_key,
+                    url,
+                    verify_ssl=self.verify_ssl,
+                    timeout=self.timeout,
+                    params=self.params,
+                )
+                if doc is not None:
+                    yield doc
+            except Exception as e:
+                if self.continue_on_failure:
+                    log.warning(f'Error extracting content from {url} with fastCRW: {e}')
+                    continue
+                raise
+
+    async def alazy_load(self):
+        for url in self.web_paths:
+            try:
+                await self._wait_for_rate_limit()
+                doc = await run_in_threadpool(
+                    scrape_crw_url,
+                    self.api_url,
+                    self.api_key,
+                    url,
+                    verify_ssl=self.verify_ssl,
+                    timeout=self.timeout,
+                    params=self.params,
+                )
+                if doc is not None:
+                    yield doc
+            except Exception as e:
+                if self.continue_on_failure:
+                    log.warning(f'Error extracting content from {url} with fastCRW: {e}')
                     continue
                 raise
 
@@ -886,6 +966,16 @@ def get_web_loader(
             except ValueError:
                 pass
 
+    if WEB_LOADER_ENGINE == 'crw':
+        WebLoaderClass = SafeCRWLoader
+        web_loader_args['api_key'] = CRW_API_KEY
+        web_loader_args['api_url'] = CRW_API_BASE_URL
+        if CRW_TIMEOUT:
+            try:
+                web_loader_args['timeout'] = int(CRW_TIMEOUT)
+            except ValueError:
+                pass
+
     if WEB_LOADER_ENGINE == 'tavily':
         WebLoaderClass = SafeTavilyLoader
         web_loader_args['api_key'] = TAVILY_API_KEY
@@ -920,5 +1010,5 @@ def get_web_loader(
     else:
         raise ValueError(
             f'Invalid WEB_LOADER_ENGINE: {WEB_LOADER_ENGINE}. '
-            "Please set it to 'safe_web', 'playwright', 'firecrawl', 'tavily', 'external', or 'microsoft_web_iq'."
+            "Please set it to 'safe_web', 'playwright', 'firecrawl', 'crw', 'tavily', 'external', or 'microsoft_web_iq'."
         )
