@@ -604,7 +604,7 @@ def merge_get_results(get_results: list[dict]) -> dict:
     return result
 
 
-def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
+def merge_and_sort_query_results(query_results: list[dict], k: int, r: float = 0.0) -> dict:
     # Initialize lists to store combined data
     combined = dict()  # To store documents with unique document hashes
 
@@ -635,6 +635,14 @@ def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
     combined = list(combined.values())
     # Sort the list based on distances
     combined.sort(key=lambda x: x[0], reverse=True)
+
+    # Drop results below the relevance threshold. Distances are normalised so
+    # 1.0 = most similar; keep only those >= r. r=0.0 (default) keeps all,
+    # preserving prior behaviour. This is the only place the admin-configured
+    # RAG_RELEVANCE_THRESHOLD takes effect on the NON-hybrid path (hybrid
+    # filtering happens in RerankCompressor.r_score).
+    if r:
+        combined = [item for item in combined if item[0] >= r]
 
     # Slice to keep only the top k elements
     sorted_distances, sorted_documents, sorted_metadatas = zip(*combined[:k]) if combined else ([], [], [])
@@ -752,7 +760,14 @@ async def query_collection(
     if error and not results:
         log.warning('All collection queries failed. No results returned.')
 
-    return merge_and_sort_query_results(results, k=k)
+    return merge_and_sort_query_results(
+        results,
+        k=k,
+        # Non-hybrid path: enforce the admin relevance threshold here (hybrid
+        # enforces it separately via RerankCompressor.r_score). config is the
+        # Config.get_many result fetched at the top of query_collection.
+        r=(config.get('rag.relevance_threshold') or 0.0),
+    )
 
 
 async def query_collection_with_hybrid_search(
