@@ -4,6 +4,13 @@
 > **Quando consultar:** ao retomar o trabalho ou planejar a próxima sessão.
 > **Como manter:** este é um registro **vivo e datado**. A cada sessão relevante, **acrescentar** uma entrada nova no topo do histórico — **nunca apagar** o que já está escrito.
 
+> **Referência cruzada (decisão de 2026-07-10, opção b):** este é o diário oficial da
+> **PLATAFORMA** (ChatND / Open WebUI — código das funções, deploy, runbooks). O
+> projeto da **ESTEIRA** (SharePoint → base de conhecimento) tem o seu **próprio**
+> registro oficial em `nidum-chatnd-basefonte/_docs/REGISTRO_TRABALHO.md`. São **dois
+> registros distintos de propósito** — cada um é a fonte da verdade do seu escopo;
+> nenhum vira ponteiro do outro.
+
 ---
 
 ## Sessão 2026-07-10 — Versionamento do código e das docs no Git (fonte da verdade)
@@ -34,12 +41,11 @@ toda decisão/mudança de status é registrada primeiro aqui.
 - `backup/` adicionado ao `.gitignore`: são **retratos locais** do código das funções
   (podem conter segredos em valves) — não vão ao Git; o código oficial vive em
   `_nidum_tools/`.
-- **EM ABERTO (C+D.2 — aguardando decisão do Davi):** a regra pede "o REGISTRO da
-  plataforma vira ponteiro para este diário". Porém **não existe REGISTRO no
-  `nidum-platform`**, e o `REGISTRO_TRABALHO.md` do basefonte **já é um ponteiro**
-  (feito fora da sessão) apontando para `nidum-chatnd-basefonte/_docs/REGISTRO_TRABALHO.md`
-  — não para este diário. Definir qual é o **registro oficial único** antes de
-  redirecionar qualquer arquivo (a mudança cruzaria repositórios).
+- **C+D.2 — RESOLVIDO (opção b):** decidido que **não** há registro único. Este
+  diário é o oficial da **plataforma**; a **esteira** mantém o seu em
+  `nidum-chatnd-basefonte/_docs/REGISTRO_TRABALHO.md`. São dois registros distintos
+  de propósito — **nenhum vira ponteiro do outro**. Registrada a nota de referência
+  cruzada no topo deste arquivo. (Não existe REGISTRO no `nidum-platform` a converter.)
 
 **Fontes da marca (Item A — pendente, por último):** redistribuição das fontes
 (Maxima Nouva + Ibrand) e logos **autorizada verbalmente** pela empresa de branding
