@@ -131,7 +131,7 @@ RUN apt-get update && \
     python3-dev \
     ffmpeg libsm6 libxext6 zstd \
     libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 libcairo2 libffi8 \
-    fonts-dejavu-core shared-mime-info \
+    fonts-dejavu-core shared-mime-info fontconfig \
     && rm -rf /var/lib/apt/lists/*
 
 # install python dependencies
@@ -185,6 +185,20 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
+
+# Fontes da marca Nidum (Maxima Nouva + Ibrand) para os PDFs gerados pela ferramenta.
+# Os .ttf chegam no COPY acima (backend/open_webui/static/brand/fonts). Instala no
+# fontconfig do sistema para que fc-list/geracao de PDF as enxerguem.
+# AVISO, NAO FALHA: se os assets nao vierem no contexto do build (ex.: clone sem os
+# fontes da marca), o build SEGUE com fonte de fallback -- mas avisa bem alto no log.
+RUN if [ -d "./open_webui/static/brand/fonts" ]; then \
+        mkdir -p /usr/share/fonts/nidum && \
+        cp ./open_webui/static/brand/fonts/*.ttf /usr/share/fonts/nidum/ && \
+        fc-cache -f /usr/share/fonts/nidum && \
+        echo "OK: fontes da marca Nidum instaladas em /usr/share/fonts/nidum"; \
+    else \
+        echo "AVISO: fontes da marca ausentes — PDFs sairão com fonte de fallback"; \
+    fi
 
 EXPOSE 8080
 
