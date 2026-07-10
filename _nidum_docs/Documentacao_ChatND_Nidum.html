@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChatND — Documentação Técnica Viva</title>
+<style>
+:root{--terracota:#9A4A2E;--verde:#647260;--azul:#4F7187;--cinza:#8A8880;
+--preto:#1F1E1B;--creme:#EAE6DC;--cremealt:#E5E0D5;}
+*{box-sizing:border-box}
+html{background:var(--creme)}
+body{background:var(--creme);color:var(--preto);
+font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+line-height:1.7;margin:0 auto;max-width:860px;padding:56px 40px 80px;font-size:17px;}
+header{border-bottom:3px solid var(--terracota);padding-bottom:20px;margin-bottom:36px;}
+.eyebrow{color:var(--cinza);text-transform:uppercase;letter-spacing:.16em;font-size:.8em;margin:0 0 6px;}
+h1{color:var(--verde);font-size:2.2em;font-weight:700;line-height:1.1;margin:0 0 8px;}
+.sub{color:var(--cinza);font-size:1em;margin:0;}
+h2{color:var(--verde);font-size:1.45em;margin:2.2em 0 .5em;
+padding-bottom:.2em;border-bottom:2px solid rgba(154,74,46,.25);}
+h3{color:var(--terracota);font-size:1.12em;margin:1.6em 0 .4em;}
+p{margin:0 0 1em;}
+strong{color:var(--terracota);}
+code{font-family:Consolas,Menlo,monospace;background:var(--cremealt);
+border-radius:6px;padding:.1em .4em;font-size:.9em;}
+pre{font-family:Consolas,Menlo,monospace;background:var(--preto);color:var(--creme);
+border-radius:10px;padding:1.1em 1.3em;overflow:auto;font-size:.86em;line-height:1.55;}
+table{border-collapse:separate;border-spacing:0;width:100%;margin:1.4em 0;
+border-radius:10px;overflow:hidden;font-size:.95em;}
+th{background:var(--verde);color:var(--creme);text-align:left;padding:10px 13px;font-weight:600;}
+td{padding:10px 13px;border-bottom:1px solid #DEDAD0;background:rgba(255,255,255,.5);vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+.tag{display:inline-block;border-radius:999px;padding:.1em .7em;font-size:.78em;
+font-weight:600;letter-spacing:.03em;color:var(--creme);}
+.tag.feito{background:var(--verde);} .tag.pend{background:var(--terracota);}
+.tag.config{background:var(--azul);}
+.box{background:var(--cremealt);border-left:4px solid var(--azul);
+border-radius:0 10px 10px 0;padding:.9em 1.2em;margin:1.2em 0;}
+.box.alerta{border-left-color:var(--terracota);}
+ul{margin:0 0 1em 1.2em;} li{margin:.4em 0;}
+footer{margin-top:56px;padding-top:16px;border-top:2px solid rgba(138,136,128,.3);
+color:var(--cinza);font-size:.88em;}
+</style>
+</head>
+<body>
+
+<header>
+<p class="eyebrow">Nidum · Tecnologia</p>
+<h1>ChatND — Documentação Técnica Viva</h1>
+<p class="sub">O que o sistema é, o que foi diagnosticado, o que foi alterado e o que ainda falta. Última atualização: 02/07/2026 (v1.14.0 em produção).</p>
+</header>
+
+<h2>1. O que é o sistema (visão de 2 minutos)</h2>
+<p>O ChatND roda dentro do <strong>Open WebUI</strong> e é composto por três peças:</p>
+<table>
+<tr><th>Peça</th><th>O que faz</th><th>Arquivo</th></tr>
+<tr><td><strong>Pipe ChatND</strong> (roteador)</td><td>Classifica cada mensagem (imagem, arquivo, documentos, rápido, dia a dia, raciocínio) e a encaminha ao motor certo. Na rota <em>documentos</em> e <em>arquivo</em>, injeta o conteúdo da base institucional (RAG).</td><td><code>chatnd_router.py</code> (v1.17.0)</td></tr>
+<tr><td><strong>Gerador de Arquivos</strong> (tool)</td><td>Monta PPTX, XLSX, DOCX, PDF e HTML com a identidade Nidum e devolve link de download. É chamado pelo pipe na rota <em>arquivo</em>.</td><td><code>gerador_de_arquivos_nidum_v2_2_0.py</code></td></tr>
+<tr><td><strong>Base de conhecimento</strong></td><td>Documentos Fundadores (v29/v30), livros, convergências (atas de reunião) e arquivos de marca (MKT_). Alimenta o RAG.</td><td>Coleção no Open WebUI</td></tr>
+</table>
+<p>Importante entender: <strong>o armazenamento de conversas, embeddings e arquivos não vive nesses códigos</strong> — vive na plataforma Open WebUI, e se configura por variáveis de ambiente. Os códigos acima usam as abstrações da plataforma (por isso a migração de infraestrutura é majoritariamente configuração, não código).</p>
+
+<h2>2. Diagnóstico — o que foi descoberto</h2>
+
+<h3>2.1 Consumo de disco (ordem real, informada pela equipe)</h3>
+<p>1º embeddings · 2º arquivos enviados nas conversas · 3º arquivos gerados (pptx/docx/pdf).</p>
+<ul>
+<li><strong>Embeddings:</strong> por padrão o Open WebUI usa ChromaDB local sobre SQLite — que é ao mesmo tempo o maior consumidor de disco <em>e</em> um bloqueio para operação multiusuário (não é seguro com mais de 1 worker/instância). Solução: migrar para <code>pgvector</code> no PostgreSQL (Railway). É configuração de plataforma.</li>
+<li><strong>Uploads de conversa e arquivos gerados:</strong> ambos passam pelo mesmo <code>Storage</code> do Open WebUI. Um único switch (<code>STORAGE_PROVIDER=s3</code> apontando para o Cloudflare R2) resolve os dois. Lifecycle rules no bucket dão retenção automática dos artefatos.</li>
+</ul>
+
+<h3>2.2 Bug do RAG dos fundadores (incidente de 01/07/2026)</h3>
+<p>Pergunta "como funciona a distribuição do lucro para os coautores?" respondida com "não tenho o documento", embora v29/v30 estivessem na base. Causa: a priorização dos fundadores dependia de <strong>palavras-gatilho</strong> ("v29", "documento fundador", "alinhamento"...) que a pergunta não continha; o ranking por similaridade não trouxe os fundadores para os 2 slots de injeção. Agravante: ao ser questionado, o modelo <strong>confabulou</strong> uma explicação introspectiva falsa ("excesso de cautela") — ele não tem visibilidade do que o RAG lhe entregou.</p>
+
+<h3>2.3 Problemas da tool geradora</h3>
+<ul>
+<li><strong>Bloqueio do event loop:</strong> a montagem de arquivos (trabalho pesado de CPU) rodava dentro do loop assíncrono — um PDF grande congelava <em>todos</em> os usuários até terminar.</li>
+<li><strong>Vazamento de traceback:</strong> qualquer erro interno despejava o traceback completo (caminhos internos, estrutura do código) no chat do usuário.</li>
+<li><strong>Incompatibilidade futura com R2:</strong> o upload enviava tags (<code>x-amz-tagging</code>), header que o Cloudflare R2 não implementa no PutObject — o upload quebraria na migração.</li>
+<li><strong>Valves mortas:</strong> <code>OPENWEBUI_API_KEY</code>/<code>BASE_URL</code> definidas e nunca usadas (campo de secret sem função é passivo de segurança).</li>
+</ul>
+
+<h2>3. Alterações aplicadas — Pipe ChatND <span class="tag feito">v1.12.0</span></h2>
+<table>
+<tr><th>Mudança</th><th>Por quê</th><th>Como validar</th></tr>
+<tr><td><strong>Piso dos fundadores</strong> — v30/v29 sempre entram no contexto das rotas documentos/arquivo, <em>depois</em> dos documentos ranqueados, com orçamento reservado (<code>FUNDADORES_MAX_CHARS</code>, 60k cada). Gatilhos mantidos: citar v29/v30 ainda os promove ao topo.</td><td>Corrige o bug 2.2 sem trocar por um espelho dele (piso ingênuo expulsaria o documento certo em perguntas sobre outros livros).</td><td>Conversa nova, perguntar "como funciona a distribuição do lucro para os coautores?" — deve vir a regra 25/10/65 de primeira.</td></tr>
+<tr><td><strong>Anti-confabulação</strong> — instrução na injeção de contexto: o motor não pode inventar causas internas para respostas anteriores.</td><td>Corrige a explicação falsa do incidente 2.2.</td><td>Perguntar "por que você não respondeu antes?" após divergência — resposta deve citar variação da consulta, não "falha de leitura".</td></tr>
+<tr><td><strong>Logging</strong> (logger <code>chatnd</code>) em todos os erros antes engolidos em silêncio.</td><td>Operar em escala sem logs é operar às cegas.</td><td>Ver logs do container ao forçar um erro.</td></tr>
+<tr><td><strong>Lock no cache da tool</strong> (double-checked locking).</td><td>Evita carga duplicada sob concorrência.</td><td>—</td></tr>
+<tr><td><strong>Atalho de saudação</strong> — "oi"/"bom dia" em conversa nova vai direto à rota rápido, sem pagar o classificador. "ok"/"sim" nunca entram (são confirmações).</td><td>Latência menor no caso mais comum.</td><td>Conversa nova com "oi" responde mais rápido; "ok" no meio de um fluxo de arquivo continua gerando o arquivo.</td></tr>
+</table>
+<p>Valves novas: <code>FUNDADORES_SEMPRE</code> (padrão true), <code>FUNDADORES_MAX_CHARS</code> (60000), <code>ATALHO_SAUDACAO</code> (true).</p>
+
+<h2>4. Alterações aplicadas — Gerador de Arquivos <span class="tag feito">v2.2.0</span></h2>
+<table>
+<tr><th>Mudança</th><th>Por quê</th><th>Como validar</th></tr>
+<tr><td><strong>Geração não-bloqueante</strong> — montagem de pptx/xlsx/docx/pdf/html e o upload ao Storage rodam em <code>asyncio.to_thread</code>.</td><td>Um render grande não congela mais os demais usuários. Essencial quando o Storage virar rede (R2).</td><td>Gerar um PDF longo e, em outra conta, conversar ao mesmo tempo — o chat não deve travar.</td></tr>
+<tr><td><strong>Upload tolerante a R2</strong> — tenta com tags; se o provedor rejeitar (<code>NotImplemented x-amz-tagging</code>, caso do R2), repete sem tags.</td><td>O arquivo salva de qualquer forma na migração para R2. No storage local atual, nada muda (1 tentativa, com tags).</td><td>Testado em simulação (fallback confirmado). Revalidar no dia da virada para R2.</td></tr>
+<tr><td><strong>Traceback só no log</strong> — o chat recebe mensagem limpa com <strong>código de erro de 8 caracteres</strong>; o traceback completo vai ao log (logger <code>gerador_nidum</code>) com o mesmo código.</td><td>Não vazar caminhos e estrutura interna aos usuários; suporte correlaciona pelo código.</td><td>Forçar um erro; conferir código no chat e no log.</td></tr>
+<tr><td><strong>Limpeza</strong> — valves mortas removidas.</td><td>Campo de secret sem uso é risco sem benefício.</td><td>—</td></tr>
+</table>
+<div class="box">O diagnóstico de entrada vazia ("DIAGNOSTICO gerar_x: recebi 0 itens...") foi <strong>mantido</strong> no chat: ele expõe apenas o dado enviado (útil para depurar), não internos do sistema.</div>
+
+<h2>5. Infraestrutura — decisões e pendências</h2>
+<table>
+<tr><th>Item</th><th>Status</th><th>Detalhe</th></tr>
+<tr><td>Embeddings → pgvector (PostgreSQL/Railway)</td><td><span class="tag feito">feito</span></td><td><strong>Concluído em 02/07/2026.</strong> <code>VECTOR_DB=pgvector</code> + <code>DATABASE_URL</code> (Postgres no Railway). Base institucional (<code>60dfba25</code>) re-embedada; RAG validado. Chroma/SQLite antigos permanecem no volume como backup.</td></tr>
+<tr><td>Storage → Cloudflare R2</td><td><span class="tag feito">feito</span></td><td><strong>Concluído em 02/07/2026.</strong> <code>STORAGE_PROVIDER=s3</code> apontando para o R2 (bucket <code>nidum-arquivos</code>). Uploads novos já caem no R2; a tool v2.2.0 é tolerante a R2 (upload sem tags). Pendente: <em>lifecycle rules</em> no bucket para retenção automática.</td></tr>
+<tr><td>Multiusuário (workers &gt; 1)</td><td><span class="tag pend">pendente</span></td><td>PostgreSQL externo: <strong>pré-requisito pronto</strong> (pgvector + <code>DATABASE_URL</code>). <strong>Verificado 02/07: workers ainda em 1</strong> — <code>backend/start.sh</code> usa <code>UVICORN_WORKERS:-1</code> e a variável não está setada; serviço único (sfo); sem Redis/WebSocket configurado. Checklist de subida ainda pendente: Redis para WebSockets (<code>ENABLE_WEBSOCKET_SUPPORT=True</code>, <code>WEBSOCKET_MANAGER=redis</code>), <code>WEBUI_SECRET_KEY</code> idêntico entre réplicas, e apenas 1 processo rodando migrations no upgrade. Subir workers sem isso quebra o streaming.</td></tr>
+<tr><td>Retenção de conversas (7/30 dias) e backup → SharePoint</td><td><span class="tag pend">pendente</span></td><td>Jobs fora do caminho quente: cron de <code>DELETE</code> por data no PostgreSQL; <code>pg_dump</code> agendado + upload via Microsoft Graph. Nunca dentro do pipe.</td></tr>
+<tr><td>Variáveis de ambiente do Railway</td><td><span class="tag pend">pendente</span></td><td>Equipe ainda vai levantar quais estão setadas (só nomes + valores não-secretos) para fechar o checklist acima.</td></tr>
+</table>
+
+<h2>6. Convenções e decisões de produto</h2>
+<ul>
+<li><strong>"Convergências" = atas de reunião</strong> (mesma coisa, nome diferente). Volume previsto: ~2 por semana, 2–3 páginas.</li>
+<li><strong>Upload das convergências:</strong> feito por responsáveis definidos (fundadores/facilitador). Padronização de nomes em andamento — recomendação: incluir <strong>data e projeto no nome</strong> (ex.: <code>Convergencia_2026-07-01_Projeto.pdf</code>), pois o pipe se apoia em nomes de arquivo e busca semântica não entende recência.</li>
+<li><strong>Nomes dos fundadores são carga-portante:</strong> o piso os localiza por "fundador"/"v29"/"v30" no nome do arquivo. Renomear sem esses termos quebra o piso (há warning no log). Ao subir um v31, atualizar o pipe.</li>
+<li><strong>Quando as atas entrarem na base:</strong> subir a valve <code>MAX_DOCS_INTEIROS</code> de 2 para 5 (perguntas do tipo "o que decidimos nas últimas reuniões?" atravessam várias atas).</li>
+<li><strong>Fase 2 (perguntas majoritariamente sobre projetos):</strong> reduzir <code>FUNDADORES_MAX_CHARS</code> (~15–20k) ou desligar <code>FUNDADORES_SEMPRE</code>. Sinal de virada: &gt;50% das perguntas da rota documentos sobre projetos. Evolução futura possível: separar a base em coleções (fundadores / convergências / projetos) — só se a precisão degradar.</li>
+</ul>
+
+<h2>7. Como manter este documento (instrução para o Claude Code)</h2>
+<p>Cole o bloco abaixo no <code>CLAUDE.md</code> do projeto. Ele instrui o Claude Code a manter esta documentação viva a cada alteração:</p>
+<pre>## Documentacao continua (obrigatorio)
+Este projeto mantem uma documentacao viva em Documentacao_ChatND_Nidum.html.
+Sempre que alterar o pipe ChatND, a tool gerador_de_arquivos_nidum, ou
+qualquer configuracao de infraestrutura (env vars, storage, banco):
+
+1. Atualize Documentacao_ChatND_Nidum.html na mesma sessao da alteracao.
+2. Registre na secao "Historico de alteracoes": data, componente, versao,
+   O QUE mudou, POR QUE mudou e COMO VALIDAR (um teste concreto).
+3. Se a mudanca criar/alterar valves ou variaveis de ambiente, atualize
+   tambem as secoes 3, 4 ou 5 conforme o caso.
+4. Linguagem objetiva e didatica, em portugues. Sem jargao desnecessario:
+   o leitor pode nao ser tecnico.
+5. NUNCA apague o historico - acrescente a nova linha no TOPO da tabela.
+6. Ao subir a versao de um arquivo, atualize o numero de versao no
+   docstring do arquivo E na secao 1 desta documentacao.</pre>
+
+<h2>8. Histórico de alterações</h2>
+<table>
+<tr><th>Data</th><th>Componente</th><th>Versão</th><th>Resumo</th></tr>
+<tr><td>02/07/2026</td><td><strong>Pipe ChatND</strong></td><td>1.16.0 → 1.17.0</td><td><strong>Imagem conversacional / multi-turno (Fase C).</strong> <em>O que mudou:</em> corrige dois bugs expostos pelo smoke test real, ambos com a mesma raiz (o caminho de imagem era single-turn). <strong>C1 (roteamento ciente de contexto):</strong> o classificador passou a tratar um <strong>ajuste/crítica de uma imagem recém-gerada</strong> como <em>imagem</em> (antes caía como conversa/texto). Âncora <strong>determinística</strong>: <code>_ultima_foi_imagem</code> detecta o <strong>marcador EXATO</strong> (<code>_MARCADOR_IMAGEM</code> — uma constante usada também pela saída e pelo parser, impossível dessincronizar) na última resposta do assistente. <strong>Trava anti-falso-positivo:</strong> conversa comum pós-imagem (agradecimento, pergunta não-visual) continua indo para texto. <strong>C2 (caminho de imagem ciente de contexto):</strong> <code>_gerar_imagem</code> recebe o <strong>contexto recente do usuário</strong> (o tema persiste entre turnos) e a <strong>descrição da imagem anterior</strong> (recuperada da mensagem <em>crua</em>, com degradação segura). Numa <strong>revisão</strong>, o refino <strong>mantém a peça anterior como base e soma o ajuste</strong> (não começa do zero), com o ajuste atual como comando dominante e o contexto só esclarecendo o tema; reusa a fusão multimodal da Fase B. <em>Por que:</em> caminho de imagem era single-turn — Bug C1 (ajuste pós-imagem virava texto) e Bug C2 (tema se perdia entre turnos). <em>Como validar (testes C3 por API):</em> ajuste ("muito azul", "e a manga?") → imagem, e "valeu, qual o prazo?" → texto; <strong>revisão sob tensão</strong> ("cade os tracos da despedida?" após imagem com tema de solteiro no turno 1) → base preservada (tucunaré, bandeira, degradê) + tema CORRETO (taças, gravata, "DESPEDIDA DO NOIVO" — não gaivotas/adeus) + presença SÓLIDA (não translúcida), tudo junto; ajuste pequeno ("deixa a gola vermelha") → proporcional, sem inflar; tema entre turnos; fusão; não-regressões. <em>Decisões de design (NÃO "consertar"):</em> (i) <strong>revisão por TEXTO</strong> (descrição anterior), não por imagem/URL — fidelidade iterativa e menor risco (URL comporia erro sobre erro e expira com a retenção); a revisão por imagem fica reservada com a <strong>opção (b) image-to-image, condicionada</strong>. (ii) O <strong>equilíbrio da instrução de revisão</strong> (base preservada × ajuste com presença real) foi calibrado de propósito, fechando com a frase de integração — <strong>mexer reabre o risco de oscilar</strong> para um extremo (ajuste sutil demais / ajuste que engole a base). Publicado só o pipe via API; estado anterior em <code>backup/02-07-2026/chatnd_LIVE_v1_16_0_antes.py</code> (rollback para v1.16.0). <strong>⚠️ Publicar 1.17.0 é "Fase C em validação", não "concluída"</strong> — falta o 2º smoke test humano da Fase C (ver 07_Diario).</td></tr>
+<tr><td>02/07/2026</td><td><strong>Pipe ChatND</strong></td><td>1.15.1 → 1.16.0</td><td><strong>Suporte a imagem de referência (Fase B — refino assistido por visão).</strong> <em>O que mudou:</em> o caminho de imagem passou a <strong>usar a imagem anexada</strong> (corrige o <strong>Bug 1</strong>, em que o anexo era descartado). Havendo anexo, a imagem vai como <strong>referência</strong> ao refino multimodal (o modelo de refino a "vê" e incorpora estilo/tema/forma na descrição); a engine segue texto-para-imagem. A <strong>ponte da Fase A foi REMOVIDA como comportamento padrão</strong> e <strong>preservada como salvaguarda de erro</strong>: anexo detectado mas não-extraível → mensagem honesta, sem imagem-lixo. O <code>IMAGEM_PROMPT</code> ganhou cláusula (auto-gated) que manda COMBINAR referência + texto e NÃO reproduzir marcas/logotipos/emblemas/patches de terceiros (princípio: "não trazer identidade visual de terceiros para a nova peça"). Branding neutro (v1.15.0) e sentinel (v1.15.1) intactos no caminho sem anexo. <em>Por que:</em> Bug 1 — o anexo era descartado (o refino só via texto). <em>Como validar (5 testes por API):</em> (1) <strong>fusão sob tensão</strong> — referência = camisa verde/azul+peixe+emblema, texto = "tema despedida de solteiro" → descrição herda a forma/cores da referência E troca o tema, substituindo o emblema por elemento do tema (anel); (2) <strong>controle de logo</strong> — referência com emblema + pedido neutro → marca de terceiro removida ("sem texto/sem logotipos"); (3) anexo detectado não-extraível → mensagem honesta, sem gerar; (4) sem anexo, texto neutro → descrição neutra (sem regressão v1.15.0); (5) marca explícita → paleta incorporada. <em>Decisão de design (NÃO "consertar"):</em> no caso <strong>neutro</strong> pode restar um <strong>bordado genérico</strong> no lugar do logo — <strong>ACEITO</strong>; forçar "superfície lisa" foi avaliado e <strong>rejeitado</strong> por arriscar o caso de uso real (fusão com tema, que aprendeu a substituir o emblema por elemento do tema). O resíduo neutro não é branding alheio (a marca é removida ativamente). Se um dia incomodar, o caminho é a <strong>opção (b) image-to-image</strong> com controle de fidelidade — <strong>não</strong> endurecer esta cláusula. (b) segue <strong>mapeada e condicionada</strong> à verificação do mismatch <code>IMAGE_EDIT_ENGINE=openai</code> × <code>IMAGE_EDIT_MODEL=imagen</code>. Publicado só o pipe via API; estado anterior em <code>backup/02-07-2026/chatnd_LIVE_v1_15_1_antes.py</code> (rollback para v1.15.1). <strong>⚠️ Publicar 1.16.0 é "Fase B em validação", não "concluída"</strong> — falta o 2º smoke test humano (ver 07_Diario).</td></tr>
+<tr><td>02/07/2026</td><td><strong>Verificação — smoke test de anexo</strong></td><td>v1.15.1 (sem mudança de código)</td><td><strong>Smoke test de anexo real PASSOU; Fase B desbloqueada.</strong> Evidência: em produção, um anexo de imagem <strong>real</strong> enviado pela interface (pedido "utilize a imagem em anexo de modelo") disparou a <strong>mensagem-ponte honesta</strong>, <strong>sem imagem-lixo</strong>. Confirma que <code>_tem_anexo_imagem</code> reconhece o formato de anexo real desta instância — o risco de falso-negativo mapeado na v1.15.1 <strong>não se materializou</strong> (o passo 2 do roteiro, texto puro gerando normal, ficou coberto pelo mesmo uso). Com isso, a dependência "Fase B (B0) bloqueada até o smoke test passar" está <strong>LIBERADA</strong>. O passo 3 (anexo que não é imagem, ex.: PDF) fica como <strong>verificação de robustez a fazer durante a Fase B</strong> (onde o tratamento de tipos de anexo será reescrito) — não bloqueia o B0. Só documentação: sem mudança de código, sem bump de versão, sem republicação.</td></tr>
+<tr><td>02/07/2026</td><td><strong>Pipe ChatND</strong></td><td>1.15.0 → 1.15.1</td><td><strong>Hotfix do caminho de imagem (Fase A de 2).</strong> <em>Os três bugs e o encadeamento:</em> <strong>Bug 1</strong> — o anexo de imagem do usuário era descartado (o refino só via texto); <strong>Bug 2</strong> — o pipe gerava imagem mesmo quando o refino não produzia uma descrição visual (só guardava string vazia); <strong>Bug 3</strong> — "imagem-lixo", que era <em>consequência do Bug 2</em> (o motor recebia um texto que não era descrição). <em>O que esta fase resolve:</em> (a) <strong>guarda estrutural de anexo</strong> em <code>_gerar_imagem</code> (parâmetro <code>tem_anexo_imagem</code>, detectado por <code>_tem_anexo_imagem</code> pelo <code>type</code> declarado das partes — não heurística de texto): havendo anexo, curto-circuito honesto, sem chamar o motor; (b) <strong>sentinel <code>SEM_IMAGEM:</code></strong> no <code>IMAGEM_PROMPT</code> + guarda no pipe: se o refino declara que não há descrição possível (pedido não-imagem, ou dependente de anexo não fornecido no texto), devolve a explicação como mensagem normal, sem gerar. Isso <strong>elimina Bug 2 e Bug 3</strong>. <em>Bug 1 continua aberto por ora — de propósito:</em> a guarda de anexo é uma <strong>PONTE INTENCIONAL E TEMPORÁRIA</strong> (marcada no código com <code># PONTE FASE A - substituir na Fase B</code>); o suporte real a imagem de referência (multimodal) vem na <strong>v1.16.0 (Fase B)</strong>, que substitui o curto-circuito pelo uso da referência. <strong>Não "consertar" a ponte achando que é esquecimento</strong> — é trabalho já sequenciado. A regra de branding da v1.15.0 (imagem neutra por padrão) fica intacta. <em>Como validar (4 testes comportamentais de A3):</em> (1) "foto realista de um cafe numa mesa de madeira" → gera, descrição neutra; (2a) "qual a capital da Franca?" no caminho de imagem → refino responde <code>SEM_IMAGEM:</code>, não gera; <strong>(2b, fronteira)</strong> "faca igual a camisa que te mandei" <em>sem anexo estrutural</em> → refino <code>SEM_IMAGEM:</code> ("não recebi a imagem…"), não gera — é a falha da imagem-lixo pela via textual, capturada; (3) mensagem com anexo (image_url/files) → <code>_tem_anexo_imagem</code>=True → ponte honesta, não gera; (4) "banner com as cores da Nidum" → paleta incorporada (sem regressão). Publicado só o pipe via API; estado anterior em <code>backup/02-07-2026/chatnd_LIVE_v1_15_0_antes.py</code> (rollback para v1.15.0 possível). <em>Pendência:</em> validar o detector de anexo com upload real end-to-end (smoke test) — ver 07_Diario.</td></tr>
+<tr><td>02/07/2026</td><td><strong>Pipe ChatND</strong></td><td>1.14.0 → 1.15.0</td><td><strong>Imagem sem branding por padrão (Abordagem 5 — co-localização de instruções).</strong> <em>O que mudou:</em> só a constante <code>IMAGEM_PROMPT</code> do pipe. O default de geração de imagem deixou de aplicar a identidade visual da Nidum e passou a produzir descrição <strong>fotorrealista neutra</strong>; a paleta (terracota #9A4A2E, verde oliva #647260, azul aço #4F7187, creme #EAE6DC) foi <strong>preservada</strong> na constante, mas só entra quando o usuário pede explicitamente elementos da marca. O bloco de refino e o contrato de saída ficaram intactos; wrappers/tool não foram tocados. <em>Por que:</em> o default antigo ("aplique a marca salvo se pedirem o contrário") era um vazamento de instrução — fotos realistas saíam artificiais. Inverteu-se para "não aplique salvo se pedirem". <em>Como validar (testes de regressão, descrições refinadas registradas):</em> (a) "uma foto realista de um cafe numa mesa de madeira" → descrição fotorrealista neutra, <strong>sem hex/logo/estética corporativa</strong> (o "cerâmica creme"/"veios marcantes" que apareceram são cor natural de objeto, não branding); (b) "um banner com as cores da Nidum" → descrição incorpora a paleta completa (os 4 hex). Publicado só o pipe via API; estado anterior em <code>backup/02-07-2026/chatnd_LIVE_v1_14_antes.py</code> (rollback para v1.14.0 possível).</td></tr>
+<tr><td>02/07/2026</td><td><strong>Teste de visibilidade de log</strong></td><td>tool 2.2.0 (somente leitura)</td><td><strong>PASS.</strong> Forçado um erro interno na <em>montagem</em> (sem alterar código/config): pedido de xlsx com nome de aba contendo caracteres proibidos pelo openpyxl (<code>[</code> <code>]</code> <code>:</code>) — passa do diagnóstico de entrada e quebra em <code>create_sheet</code>. <strong>(2) Chat:</strong> mensagem limpa <em>"Não consegui gerar o arquivo… Codigo do erro: FA2E33E4"</em> — <strong>sem</strong> traceback e <strong>sem</strong> caminhos internos. <strong>(3) Log Railway (mesmo instante, 23:15:52 UTC):</strong> <code>ERROR | tool_gerador_de_arquivos_nidum:_erro_limpo:516 - gerador_nidum: gerar_xlsx falhou (codigo FA2E33E4)</code> + traceback completo (openpyxl <code>create_sheet</code> → <code>worksheet.title</code>) com o <strong>mesmo código</strong>. <strong>Conclusão:</strong> o logger <code>gerador_nidum</code> (via <code>log.exception</code>) É capturado nos logs do Railway com traceback; a correlação chat↔log pelo código de 8 chars funciona. <strong>Corolário:</strong> valida retroativamente a Verificação 1 anterior — como o logger aparece, a ausência do warning <code>upload variante 'bytesio+tags' falhou</code> era sinal real: o fallback do R2 não está disparando (upload com tags aceito).</td></tr>
+<tr><td>02/07/2026</td><td><strong>Verificação pós-deploy</strong></td><td>v1.14.0 (somente leitura)</td><td>Sessão de verificação, sem alterar pipe/tool/valves/env. <strong>V1 (fallback R2):</strong> gerado 1 PDF de teste pela rota <em>arquivo</em> (23:00–23:01 UTC, sucesso); no log do período <strong>NÃO</strong> apareceu o warning <code>gerador_nidum: upload variante 'bytesio+tags' falhou</code> → fallback não observado. Ressalva: a tool loga apenas as variantes que falham (não a bem-sucedida), então o log não nomeia explicitamente a variante usada — reporta-se a ausência do warning, não uma dedução. <strong>V2 (infra):</strong> <code>VECTOR_DB=pgvector</code>, <code>STORAGE_PROVIDER=s3</code> (R2), <code>S3_REGION_NAME=auto</code>; setados/mascarados <code>DATABASE_URL</code>, <code>S3_ENDPOINT_URL</code>, <code>S3_BUCKET_NAME</code>, <code>S3_ACCESS_KEY_ID</code>, <code>S3_SECRET_ACCESS_KEY</code>, <code>WEBUI_SECRET_KEY</code>, <code>DATABASE_POOL_*</code>; <strong>ausentes</strong> Redis/WebSocket e <code>UVICORN_WORKERS</code>/<code>WEB_CONCURRENCY</code> → <strong>workers = 1</strong> (start.sh <code>UVICORN_WORKERS:-1</code>; serviço único sfo). Seção 5 ajustada. <strong>V3 (valve × default):</strong> ativo <code>60dfba25…</code> vs default do código <code>f2c8a48c…</code> — <strong>divergem</strong>; alinhar o default numa versão futura deliberada (1 linha). <em>Candidatos a próxima versão (nada implementado):</em> alinhamento do default do <code>BASE_CONHECIMENTO_ID</code>; tool v2.3.0 (valve p/ pular tags) <strong>não</strong> justificada por ora, pois o fallback não está disparando.</td></tr>
+<tr><td>02/07/2026</td><td><strong>Deploy — v1.14.0</strong></td><td>Pipe 1.13.0 → 1.14.0</td><td><strong>Publicado em produção byte a byte</strong> (fonte de verdade <code>chatnd_v1_14_0.py</code>; tool <strong>não alterada</strong>, segue 2.2.0). <em>Validação estática:</em> py_compile OK, 0 bytes não-ASCII, <code>version: 1.14.0</code>, presença de "REGRA DE DESEMPATE" e "MESMO que a pergunta nao cite as palavras 'Nidum' ou 'documento'"; diff cirúrgico contra o backup = apenas cabeçalho/changelog + categoria <em>documentos</em> (nada mais). Valve <code>BASE_CONHECIMENTO_ID=60dfba25</code> preservada. <em>Aceitação (todos PASS):</em> <strong>4a</strong> "como funciona a distribuição de lucro aos coautores?" → rota <em>documentos</em>, "[Fonte — Documento Fundador v30] regra 25/10/65" (o caso que falhava na v1.13.0 agora funciona); <strong>4b</strong> "e-mail para fornecedor" → <em>dia a dia</em> (o desempate não promoveu tudo); <strong>4c</strong> "apresentação sobre distribuição de lucro da Nidum" → <em>arquivo</em> (gerou .pptx); <strong>4d</strong> "oi" → <em>rápido</em> (atalho intacto); <strong>4e</strong> LOG sem warning "falha ao listar arquivos". Backup do estado anterior (v1.13.0) em <code>backup/02-07-2026/</code>.</td></tr>
+<tr><td>02/07/2026</td><td>Pipe ChatND</td><td>1.13.0 → 1.14.0</td><td>Classificador por princípio: a categoria <em>documentos</em> deixa de depender de palavras-gatilho e passa a cobrir qualquer pergunta sobre a Nidum como organização (governança, sociedade, remuneração, projetos, pessoas, decisões), mesmo sem citar “Nidum” ou “documento”, com regra de desempate a favor de documentos. Corrige o incidente pós-deploy: “como funciona a distribuição de lucro aos coautores” roteada para dia-a-dia (sem RAG), impedindo o piso dos fundadores de agir. Alternativa de lista de vocabulário no classificador foi descartada por exigir manutenção perpétua. Pacote validado estaticamente (compilação, ASCII, diff cirurgico de 2 blocos); deploy pendente — testes de aceitação na seção 3.</td></tr>
+<tr><td>02/07/2026</td><td>Pipe ChatND</td><td>1.12.0 → 1.13.0</td><td>Fusão com a etiqueta [Fonte] que já estava na v1.12.0 em produção: a instrução de abrir a resposta da rota documentos com a etiqueta de certeza ([Fonte -...]/[Convergência -...]/[Em aberto]/[Fora do acervo]) foi combinada ao piso dos fundadores e à anti-confabulação no _injetar_contexto. Sem essa fusão, aplicar o arquivo 1.12.0 do pacote reverteria a etiqueta. Pacote preparado e validado estaticamente (compilação, ASCII, diff cirúrgico); deploy pendente — validar em runtime pelo checklist da seção 3, incluindo conferir no log a ausência do warning "falha ao listar arquivos da base de conhecimento".</td></tr>
+<tr><td>02/07/2026</td><td>Gerador de Arquivos</td><td>2.1.0 → 2.2.0</td><td>Geração não-bloqueante (to_thread), upload tolerante a R2, traceback só no log com código de erro, valves mortas removidas. Validado em simulação (fallback R2, caminho local intacto, geração xlsx ponta-a-ponta).</td></tr>
+<tr><td>02/07/2026</td><td>Pipe ChatND</td><td>1.11.2 → 1.12.0</td><td>Piso dos fundadores com orçamento reservado (corrige bug do RAG de 01/07), anti-confabulação, logging, lock no cache da tool, atalho de saudação. Validado em simulação (cenário do bug reproduzido e corrigido).</td></tr>
+<tr><td>01/07/2026</td><td>—</td><td>—</td><td>Incidente: pergunta sobre distribuição de lucro não recuperou v29/v30; modelo confabulou explicação. Diagnóstico na seção 2.2.</td></tr>
+</table>
+
+<footer>nidum · fazer da casa um ninho. — Documentação técnica interna. Gerada em 02/07/2026; mantida pelo Claude Code conforme seção 7.</footer>
+
+</body>
+</html>

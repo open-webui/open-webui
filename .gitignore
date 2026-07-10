@@ -313,3 +313,7 @@ cypress/screenshots
 
 # Item E — bytecode Python
 *.pyc
+
+# Retratos/backups locais do codigo das funcoes (NAO versionar: sao snapshots
+# locais, podem conter segredos em valves). O codigo-fonte oficial vive em _nidum_tools/.
+backup/
