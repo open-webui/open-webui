@@ -206,6 +206,10 @@ async def generate_function_chat_completion(request, form_data, user, models: di
 
         return params
 
+    # Copy so the base-model substitution below doesn't leak into the caller's
+    # payload, which the tool-call continuation re-submits. Mirrors the routers.
+    form_data = {**form_data}
+
     model_id = form_data.get('model')
     model_info = await Models.get_model_by_id(model_id)
 
