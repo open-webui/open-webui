@@ -20,6 +20,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.users import Users
 from open_webui.utils.access_control import has_connection_access
 from open_webui.utils.auth import get_verified_user
+from open_webui.utils.terminals import get_terminal_server_url
 from open_webui.utils.tools import bearer_auth_header, normalize_bearer_token
 from starlette.background import BackgroundTask
 
@@ -100,7 +101,7 @@ async def proxy_terminal(
     if not await has_connection_access(user, connection, user_group_ids):
         return JSONResponse({'error': 'Access denied'}, status_code=403)
 
-    base_url = (connection.get('url') or '').rstrip('/')
+    base_url = get_terminal_server_url(connection)
     if not base_url:
         return JSONResponse({'error': 'Terminal server URL not configured'}, status_code=503)
 
@@ -109,11 +110,6 @@ async def proxy_terminal(
         return JSONResponse({'error': 'Invalid path'}, status_code=400)
 
     target_url = f'{base_url}/{safe_path}'
-
-    # Route through orchestrator policy endpoint if policy_id is set
-    policy_id = connection.get('policy_id')
-    if policy_id:
-        target_url = f'{base_url}/p/{policy_id}/{safe_path}'
 
     if request.query_params:
         target_url += f'?{request.query_params}'
@@ -272,7 +268,7 @@ async def ws_terminal(
         return
     user, connection = result
 
-    base_url = (connection.get('url') or '').rstrip('/')
+    base_url = get_terminal_server_url(connection)
     if not base_url:
         await ws.close(code=4003, reason='Terminal server URL not configured')
         return
@@ -280,8 +276,6 @@ async def ws_terminal(
     # Build upstream WebSocket URL (no token in URL)
     ws_base = base_url.replace('https://', 'wss://').replace('http://', 'ws://')
 
-    # Route through orchestrator policy endpoint if policy_id is set
-    policy_id = connection.get('policy_id')
     upstream_params = {}
     # For orchestrator-backed servers, pass user_id
     upstream_params['user_id'] = user.id
@@ -292,10 +286,7 @@ async def ws_terminal(
     # decode depth) and inject an attacker-chosen user_id ahead of the one appended below.
     safe_session_id = urllib.parse.quote(session_id, safe='')
 
-    if policy_id:
-        upstream_url = f'{ws_base}/p/{policy_id}/api/terminals/{safe_session_id}'
-    else:
-        upstream_url = f'{ws_base}/api/terminals/{safe_session_id}'
+    upstream_url = f'{ws_base}/api/terminals/{safe_session_id}'
     if upstream_params:
         upstream_url += f'?{urllib.parse.urlencode(upstream_params)}'
 

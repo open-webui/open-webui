@@ -36,6 +36,7 @@ from open_webui.models.users import Users
 from open_webui.utils.auth import create_token
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.task import prompt_template
+from open_webui.utils.terminals import get_terminal_server_url
 from starlette.datastructures import Headers
 
 log = logging.getLogger(__name__)
@@ -323,16 +324,11 @@ async def _set_terminal_cwd(app, server_id: str, user, cwd: str, chat_id: str) -
         log.warning(f'Terminal server {server_id} not found for CWD set')
         return
 
-    base_url = (connection.get('url') or '').rstrip('/')
+    base_url = get_terminal_server_url(connection)
     if not base_url:
         return
 
-    # Build target URL — route through orchestrator policy if configured
-    policy_id = connection.get('policy_id')
-    if connection.get('server_type') == 'orchestrator' and policy_id:
-        target_url = f'{base_url}/p/{policy_id}/files/cwd'
-    else:
-        target_url = f'{base_url}/files/cwd'
+    target_url = f'{base_url}/files/cwd'
 
     headers = {'Content-Type': 'application/json', 'X-User-Id': user.id}
     if chat_id:
