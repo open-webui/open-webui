@@ -146,7 +146,19 @@ class MilvusClient(VectorDBBase):
             index_params['params'] = {'nlist': MILVUS_IVF_FLAT_NLIST}
 
         collection.create_index('vector', index_params)
-        collection.create_index(RESOURCE_ID_FIELD)
+        try:
+            # A Milvus server auto-selects the scalar index type; embedded
+            # Milvus Lite requires an explicit one.
+            collection.create_index(RESOURCE_ID_FIELD)
+        except MilvusException:
+            try:
+                collection.create_index(RESOURCE_ID_FIELD, {'index_type': 'INVERTED'})
+            except MilvusException as e:
+                # The index only accelerates resource_id filters; never fail
+                # collection creation over it.
+                log.warning(
+                    f'Could not create {RESOURCE_ID_FIELD} index on {mt_collection_name}: {e}'
+                )
         log.info(f'Created shared collection: {mt_collection_name}')
         return collection
 
