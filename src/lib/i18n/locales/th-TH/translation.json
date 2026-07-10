@@ -2230,6 +2230,7 @@
 	"Theme": "ธีม",
 	"There was an error syncing your stats. Please try again.": "",
 	"Thinking...": "กำลังคิด...",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "การกระทำนี้ไม่สามารถย้อนกลับได้ คุณต้องการดำเนินการต่อหรือไม่?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "สร้างช่องนี้เมื่อ {{createdAt}} นี่คือจุดเริ่มต้นของช่อง {{channelName}}",
 	"This chat won't appear in history and your messages will not be saved.": "การแชทนี้จะไม่ปรากฏในประวัติ และข้อความของคุณจะไม่ถูกบันทึก",

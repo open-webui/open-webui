@@ -2241,6 +2241,7 @@
 	"Theme": "Mövzu",
 	"There was an error syncing your stats. Please try again.": "Statistikanızın sinxronizasiyası zamanı xəta baş verdi. Lütfən yenidən cəhd edin.",
 	"Thinking...": "Düşünür...",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "Bu əməliyyat geri qaytarıla bilməz. Davam etmək istəyirsiniz?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "Bu kanal {{createdAt}} tarixində yaradılıb. Bu, {{channelName}} kanalının ən başlanğıcıdır.",
 	"This chat won't appear in history and your messages will not be saved.": "Bu çat tarixçədə görünməyəcək və mesajlarınız yadda saxlanılmayacaq.",

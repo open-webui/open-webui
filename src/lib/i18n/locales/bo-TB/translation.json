@@ -2230,6 +2230,7 @@
 	"Theme": "བརྗོད་གཞི།",
 	"There was an error syncing your stats. Please try again.": "",
 	"Thinking...": "བསམ་བཞིན་པ།...",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "བྱ་སྤྱོད་འདི་ཕྱིར་ལྡོག་བྱེད་མི་ཐུབ། ཁྱེད་མུ་མཐུད་འདོད་ཡོད་དམ།",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "བགྲོ་གླེང་འདི་ {{createdAt}} ལ་བཟོས་པ། འདི་ནི་ {{channelName}} བགྲོ་གླེང་གི་ཐོག་མ་རང་ཡིན།",
 	"This chat won't appear in history and your messages will not be saved.": "",

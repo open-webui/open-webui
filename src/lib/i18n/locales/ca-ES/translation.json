@@ -2252,6 +2252,7 @@
 	"Theme": "Tema",
 	"There was an error syncing your stats. Please try again.": "S'ha produït un error en sincronitzar les estadístiques. Torna-ho a provar.",
 	"Thinking...": "Pensant...",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "Aquesta acció no es pot desfer. Vols continuar?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "Aquest canal es va crear el dia {{createdAt}}. Aquest és el començament del canal {{channelName}}.",
 	"This chat won't appear in history and your messages will not be saved.": "Aquest xat no apareixerà a l'historial i els teus missatges no es desaran.",

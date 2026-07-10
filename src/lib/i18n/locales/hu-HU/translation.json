@@ -2241,6 +2241,7 @@
 	"Theme": "Téma",
 	"There was an error syncing your stats. Please try again.": "",
 	"Thinking...": "Gondolkodik...",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "Ez a művelet nem vonható vissza. Szeretné folytatni?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "Ez a csatorna {{createdAt}} időpontban jött létre. Ez a {{channelName}} csatorna legeslegeleje.",
 	"This chat won't appear in history and your messages will not be saved.": "Ez a csevegés nem jelenik meg az előzményekben, és az üzeneteid nem kerülnek mentésre.",

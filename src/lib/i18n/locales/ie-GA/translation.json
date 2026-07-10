@@ -2241,6 +2241,7 @@
 	"Theme": "Téama",
 	"There was an error syncing your stats. Please try again.": "Tharla earráid agus do staitisticí á sioncrónú. Déan iarracht arís.",
 	"Thinking...": "Ag smaoineamh...",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "Ní féidir an gníomh seo a chur ar ais. Ar mhaith leat leanúint ar aghaidh?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "Cruthaíodh an cainéal seo ar {{createdAt}}. Seo tús an chainéil {{channelName}}.",
 	"This chat won't appear in history and your messages will not be saved.": "Ní bheidh an comhrá seo le feiceáil sa stair agus ní shábhálfar do theachtaireachtaí.",

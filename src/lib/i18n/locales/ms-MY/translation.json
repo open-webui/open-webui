@@ -2230,6 +2230,7 @@
 	"Theme": "Tema",
 	"There was an error syncing your stats. Please try again.": "Terdapat ralat dalam menyegerakkan statistik anda. Sila cuba lagi.",
 	"Thinking...": "Berfikir...",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "Tindakan ini tidak boleh diubah semula kepada asal. Adakah anda ingin teruskan",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "Saluran ini telah diwujudkan pada {{createdAt}}. Ini adalah permulaan saluran {{channelName}}.",
 	"This chat won't appear in history and your messages will not be saved.": "Perbualan ini tidak akan dipaparkan dalam sejarah dan mesej anda tidak akan disimpan.",

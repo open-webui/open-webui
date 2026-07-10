@@ -2233,6 +2233,7 @@
 	"Theme": "테마",
 	"There was an error syncing your stats. Please try again.": "통계 동기화 중 오류가 발생했습니다. 다시 시도해 주세요.",
 	"Thinking...": "생각 중...",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "이 행동은 되돌릴 수 없습니다. 계속 하시겠습니까?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "{{createdAt}}에 {{channelName}} 채널이 처음 만들어졌습니다. 대화를 시작해보세요.",
 	"This chat won't appear in history and your messages will not be saved.": "이 채팅은 기록에 나타나지 않으며 메시지가 저장되지 않습니다.",

@@ -2241,6 +2241,7 @@
 	"Theme": "ਥੀਮ",
 	"There was an error syncing your stats. Please try again.": "",
 	"Thinking...": "",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "",
 	"This chat won't appear in history and your messages will not be saved.": "",

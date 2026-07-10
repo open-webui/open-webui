@@ -2241,6 +2241,7 @@
 	"Theme": "Teema",
 	"There was an error syncing your stats. Please try again.": "Tilastojen synkronoinnissa tapahtui virhe. Yritä uudelleen.",
 	"Thinking...": "Ajattelee...",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "Tätä toimintoa ei voi peruuttaa. Haluatko jatkaa?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "Tämä kanava on luotiin {{createdAt}}. Tämä on {{channelName}} kanavan alku.",
 	"This chat won't appear in history and your messages will not be saved.": "Tämä keskustelu ei näy historiassa, eikä viestejäsi tallenneta.",

@@ -2241,6 +2241,7 @@
 	"Theme": "پوسته",
 	"There was an error syncing your stats. Please try again.": "",
 	"Thinking...": "در حال فکر کردن...",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "این عمل قابل بازگشت نیست. آیا می\u200cخواهید ادامه دهید؟",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "این کانال در {{createdAt}} ایجاد شد. این آغاز کانال {{channelName}} است.",
 	"This chat won't appear in history and your messages will not be saved.": "این چت در تاریخچه ظاهر نمی\u200cشود و پیام\u200cهای شما ذخیره نخواهند شد.",

@@ -146,10 +146,15 @@ function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string,
 function buildReasoningToken(item: OutputItem, isLastItem: boolean) {
 	const duration = item.duration ?? '';
 	const isDone = isDoneStatus(item.status) || item.duration !== undefined || !isLastItem;
-	const text = getReasoningText(item)
+	const rawText = getReasoningText(item);
+	const text = rawText
 		.split('\n')
 		.map((line) => (line.startsWith('>') ? line : `> ${line}`))
 		.join('\n');
+	// Live token estimate (~4 chars/token) from the streamed reasoning text.
+	// The API only reports the true thinking token count at end of stream
+	// (in usage), so this drives the incrementing "Thinking..." counter.
+	const tokens = Math.ceil(rawText.length / 4);
 
 	return {
 		summary: isDone ? `Thought for ${duration || 0} seconds` : 'Thinking...',
@@ -157,7 +162,8 @@ function buildReasoningToken(item: OutputItem, isLastItem: boolean) {
 		attributes: {
 			type: 'reasoning',
 			done: isDone ? 'true' : 'false',
-			duration: String(duration)
+			duration: String(duration),
+			tokens: String(tokens)
 		}
 	};
 }

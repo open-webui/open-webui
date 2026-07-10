@@ -2241,6 +2241,7 @@
 	"Theme": "Tema",
 	"There was an error syncing your stats. Please try again.": "İstatistikleriniz eşitlenirken bir hata oluştu. Lütfen tekrar deneyin.",
 	"Thinking...": "Düşünüyor...",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "Bu eylem geri alınamaz. Devam etmek istiyor musunuz?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "Bu kanal {{createdAt}} tarihinde oluşturuldu. Bu, {{channelName}} kanalının en başıdır.",
 	"This chat won't appear in history and your messages will not be saved.": "Bu sohbet geçmişte görünmeyecek ve mesajlarınız kaydedilmeyecek.",

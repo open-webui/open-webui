@@ -102,6 +102,8 @@
 							{/if}
 						{:else if attributes?.done === 'true' || messageDone}
 							{$i18n.t('Thought')}
+						{:else if attributes?.tokens && Number(attributes.tokens) > 0}
+							{$i18n.t('Thinking... ~{{COUNT}} tokens', { COUNT: attributes.tokens })}
 						{:else}
 							{$i18n.t('Thinking...')}
 						{/if}

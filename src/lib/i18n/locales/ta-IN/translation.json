@@ -2241,6 +2241,7 @@
 	"Theme": "தீம்",
 	"There was an error syncing your stats. Please try again.": "உங்கள் புள்ளிவிவரங்களை ஒத்திசைப்பதில் பிழை. மீண்டும் முயற்சிக்கவும்.",
 	"Thinking...": "யோசிக்கிறது...",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "இந்தச் செயலைச் செயல்தவிர்க்க முடியாது. நீங்கள் தொடர விரும்புகிறீர்களா?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "இந்த சேனல் {{createdAt}} இல் உருவாக்கப்பட்டது. இது {{channelName}} சேனலின் ஆரம்பம்.",
 	"This chat won't appear in history and your messages will not be saved.": "இந்த அரட்டை வரலாற்றில் தோன்றாது மற்றும் உங்கள் செய்திகள் சேமிக்கப்படாது.",

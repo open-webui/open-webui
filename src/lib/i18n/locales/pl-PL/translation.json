@@ -2263,6 +2263,7 @@
 	"Theme": "Motyw",
 	"There was an error syncing your stats. Please try again.": "Wystąpił błąd podczas synchronizacji statystyk. Spróbuj ponownie.",
 	"Thinking...": "Myślę...",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "Tej akcji nie można cofnąć. Kontynuować?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "Ten kanał utworzono {{createdAt}}. To początek kanału {{channelName}}.",
 	"This chat won't appear in history and your messages will not be saved.": "Ten czat nie pojawi się w historii, a wiadomości nie zostaną zapisane.",

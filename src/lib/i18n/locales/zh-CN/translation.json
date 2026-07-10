@@ -2230,6 +2230,7 @@
 	"Theme": "主题",
 	"There was an error syncing your stats. Please try again.": "同步使用统计数据时发生错误。请稍后重试。",
 	"Thinking...": "正在思考...",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "此操作无法撤销。您确认要继续吗？",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "欢迎来到 {{channelName}}，本频道创建于 {{createdAt}}。",
 	"This chat won't appear in history and your messages will not be saved.": "此对话将不会出现在历史记录中，且您的消息不会被保存",

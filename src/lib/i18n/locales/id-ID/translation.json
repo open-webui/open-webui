@@ -2230,6 +2230,7 @@
 	"Theme": "Tema",
 	"There was an error syncing your stats. Please try again.": "",
 	"Thinking...": "Berpikir",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "Tindakan ini tidak dapat dibatalkan. Apakah Anda ingin melanjutkan?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "",
 	"This chat won't appear in history and your messages will not be saved.": "",

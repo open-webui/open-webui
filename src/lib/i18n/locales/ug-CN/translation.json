@@ -2241,6 +2241,7 @@
 	"Theme": "ئۈسلۇب",
 	"There was an error syncing your stats. Please try again.": "",
 	"Thinking...": "ئويلاۋاتىدۇ...",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "بۇ ھەرىكەت ئەسلىگە كەلتۈرگىلى بولمايدۇ. داۋاملاشامسىز؟",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "بۇ قانال {{createdAt}} قۇرۇلغان. بۇ {{channelName}} قانالىنىڭ باشلىنىشى.",
 	"This chat won't appear in history and your messages will not be saved.": "بۇ سۆھبەت تارىختا كۆرۈلمەيدۇ، ئۇچۇرلىرىڭىز ساقلانمايدۇ.",

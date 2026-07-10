@@ -2241,6 +2241,7 @@
 	"Theme": "Asentel",
 	"There was an error syncing your stats. Please try again.": "",
 	"Thinking...": "Yettxemmim…",
+	"Thinking... ~{{COUNT}} tokens": "",
 	"This action cannot be undone. Do you wish to continue?": "Tigawt-a ur tettwakkes ara. Tebɣiḍ ad tkemmleḍ?",
 	"This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.": "Abadu-a yettwasnulaf-d deg {{created} Ɣef}}. D ta i d tazwara maḍi n ubadu {{channelName}}.",
 	"This chat won't appear in history and your messages will not be saved.": "Aqeṣṣer-a ur d-yettban deg umezruy yerna iznan-nnek ur ttwaselkamen.",
