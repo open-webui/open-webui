@@ -1240,6 +1240,7 @@ class OAuthConfigForm(BaseModel):
     """All OAuth/OIDC settings exposed to the admin panel."""
 
     # General OAuth
+    ENABLE_OAUTH: bool | None = None
     ENABLE_OAUTH_SIGNUP: bool | None = None
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL: bool | None = None
     OAUTH_AUTO_REDIRECT: bool | None = None
@@ -1295,6 +1296,7 @@ OAUTH_COMMA_LIST_FIELDS = {
 
 
 OAUTH_CONFIG_KEYS = {
+    'ENABLE_OAUTH': 'oauth.enable',
     'ENABLE_OAUTH_SIGNUP': 'oauth.enable_signup',
     'OAUTH_MERGE_ACCOUNTS_BY_EMAIL': 'oauth.merge_accounts_by_email',
     'OAUTH_AUTO_REDIRECT': 'oauth.auto_redirect',

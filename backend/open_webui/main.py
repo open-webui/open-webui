@@ -1946,6 +1946,7 @@ async def get_app_config(request: Request):
     license_metadata = getattr(app.state, 'LICENSE_METADATA', None)
     user_count = await Users.get_num_users() if license_metadata else None
     config = await Config.get_many(
+        'oauth.enable',
         'oauth.auto_redirect',
         'ldap.enable',
         'ui.enable_signup',
@@ -2000,7 +2001,13 @@ async def get_app_config(request: Request):
         'version': VERSION,
         'default_locale': str(DEFAULT_LOCALE),
         'oauth': {
-            'providers': {name: config.get('name', name) for name, config in OAUTH_PROVIDERS.items()},
+            # Hide providers (and thus the login buttons / auto-redirect) when OAuth
+            # is disabled, without clearing the admin's provider configuration.
+            'providers': (
+                {name: provider.get('name', name) for name, provider in OAUTH_PROVIDERS.items()}
+                if config.get('oauth.enable', True)
+                else {}
+            ),
             'auto_redirect': config.get('oauth.auto_redirect'),
         },
         'features': {
