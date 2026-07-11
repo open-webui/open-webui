@@ -704,18 +704,28 @@ class ChatTable:
     async def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict
     ) -> ChatModel | None:
-        chat = await self.get_chat_by_id(id)
-        if chat is None:
+        chat_model = await self.get_chat_by_id(id)
+        if chat_model is None:
             return None
 
         # Sanitize message content for null characters before upserting
         if isinstance(message.get('content'), str):
             message['content'] = sanitize_text_for_db(message['content'])
 
-        user_id = chat.user_id
-        chat = chat.chat
+        user_id = chat_model.user_id
+        chat = chat_model.chat
         history = chat.get('history', {})
         messages = history.setdefault('messages', {})
+
+        # Don't resurrect a deleted message from an in-flight update. A partial
+        # update (no 'parentId' supplied) that targets a message no longer in the
+        # history means the message was deleted while it was still being written —
+        # e.g. the user deleted a response that was mid-stream. Recreating it here
+        # would produce a parentless orphan and, via the currentId assignment
+        # below, hijack the visible conversation on reload. Message creation always
+        # supplies 'parentId', so this only skips stale updates. (#26668)
+        if message_id not in messages and 'parentId' not in message:
+            return chat_model
 
         if message_id in messages:
             messages[message_id] = {
