@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import ssl
 
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.utils.session_pool import get_session
@@ -16,6 +18,19 @@ _SEARXNG_HEADERS = {
     'Connection': 'keep-alive',
 }
 
+# Optional mTLS client cert capability.
+SEARXNG_CLIENT_CERT_FILE = os.getenv('SEARXNG_CLIENT_CERT_FILE', '')
+SEARXNG_CLIENT_KEY_FILE = os.getenv('SEARXNG_CLIENT_KEY_FILE', '')
+
+def _get_client_ssl_context() -> ssl.SSLContext | None:
+    if not SEARXNG_CLIENT_CERT_FILE:
+        return None
+    ctx = ssl.create_default_context()
+    ctx.load_cert_chain(
+        certfile=SEARXNG_CLIENT_CERT_FILE,
+        keyfile=SEARXNG_CLIENT_KEY_FILE or None,
+    )
+    return ctx
 
 async def search_searxng(
     query_url: str,
@@ -47,8 +62,16 @@ async def search_searxng(
 
     log.debug('searching %s', query_url)
 
+    ssl_context = _get_client_ssl_context()
+    request_kwargs: dict = {'ssl': ssl_context} if ssl_context is not None else {}
+
     session = await get_session()
-    async with session.get(query_url, headers=_SEARXNG_HEADERS, params=params) as response:
+    async with session.get(
+        query_url,
+        headers=_SEARXNG_HEADERS,
+        params=params,
+        **request_kwargs,
+    ) as response:
         response.raise_for_status()
         payload = await response.json()
 
