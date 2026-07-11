@@ -1067,7 +1067,7 @@
 			</div>
 
 			<div
-				class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden pt-2.5 pb-2.5"
+				class="relative flex flex-col flex-1 overflow-x-hidden overflow-y-auto scrollbar-hidden pt-2.5 pb-2.5"
 				on:scroll={(e) => {
 					if (e.target.scrollTop === 0) {
 						scrollTop = 0;
@@ -1077,7 +1077,7 @@
 				}}
 			>
 				<div class="pb-1">
-					<div class="px-1 flex justify-center text-gray-800 dark:text-gray-200">
+					<div class="px-1 flex justify-start text-gray-800 dark:text-gray-200">
 						<a
 							id="sidebar-new-chat-button"
 							class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
@@ -1091,14 +1091,16 @@
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm">{$i18n.t('New Chat')}</div>
+								<div class=" self-center text-sm whitespace-nowrap">
+									{$i18n.t('New Chat')}
+								</div>
 							</div>
 
 							<HotkeyHint name="newChat" className=" group-hover:visible invisible" />
 						</a>
 					</div>
 
-					<div class="px-1 flex justify-center text-gray-800 dark:text-gray-200">
+					<div class="px-1 flex justify-start text-gray-800 dark:text-gray-200">
 						<button
 							id="sidebar-search-button"
 							class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
@@ -1113,7 +1115,9 @@
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm">{$i18n.t('Search')}</div>
+								<div class=" self-center text-sm whitespace-nowrap">
+									{$i18n.t('Search')}
+								</div>
 							</div>
 							<HotkeyHint name="search" className=" group-hover:visible invisible" />
 						</button>
