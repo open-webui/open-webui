@@ -1,3 +1,11 @@
+# Open WebUI fork with reasoning selector
+
+This fork add the ability to select the reasoning effort.
+
+![Open WebUI fork buttons](https://i.imgur.com/mP0kUM9.png)
+
+---
+
 # Open WebUI 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
