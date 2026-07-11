@@ -2084,13 +2084,16 @@
 																	: 'text-purple-500 dark:text-purple-300 hover:text-purple-600 dark:hover:text-purple-200'}"
 														>
 															<Brain className="size-4.5" strokeWidth="1.75" />
-															{#if effectiveThinkingEffort !== null && effectiveThinkingEffort !== 'off'}
-																<span
-																	class="text-[11px] font-medium capitalize {thinkingEffort === null
-																		? 'opacity-60'
-																		: ''}">{effectiveThinkingEffort}</span
-																>
-															{/if}
+															<span class="text-[11px] font-medium whitespace-nowrap">
+																{#if thinkingEffort !== null}
+																	<span class="capitalize">{thinkingEffort}</span>
+																{:else if defaultThinkingEffort !== null}
+																	<span class="opacity-60">({$i18n.t('Default')})</span>
+																	<span class="capitalize">{defaultThinkingEffort}</span>
+																{:else}
+																	<span class="opacity-60">{$i18n.t('Default')}</span>
+																{/if}
+															</span>
 														</button>
 													</Tooltip>
 
