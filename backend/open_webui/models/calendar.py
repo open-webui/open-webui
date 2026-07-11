@@ -764,22 +764,34 @@ class CalendarEventAttendeeTable:
     async def set_attendees(
         self, event_id: str, attendees: list[dict], db: Optional[AsyncSession] = None
     ) -> list[CalendarEventAttendeeModel]:
-        """Replace all attendees for an event.
+        """Replace all attendees for an event ({user_id, meta?} per dict).
 
-        Each dict in attendees: {user_id: str, status?: str, meta?: dict}
+        RSVP status is the attendee's alone to set (via update_rsvp): an existing
+        attendee keeps their status, a newly added one starts 'pending'. A
+        caller-supplied status is ignored so an organiser cannot set it for others.
         """
         async with get_async_db_context(db) as db:
+            existing_status = {
+                row.user_id: row.status
+                for row in (
+                    await db.execute(
+                        select(CalendarEventAttendee).filter(CalendarEventAttendee.event_id == event_id)
+                    )
+                ).scalars()
+            }
+
             # Remove existing
             await db.execute(delete(CalendarEventAttendee).filter(CalendarEventAttendee.event_id == event_id))
 
             now = int(time.time_ns())
             models = []
             for att in attendees:
+                user_id = att['user_id']
                 row = CalendarEventAttendee(
                     id=str(uuid4()),
                     event_id=event_id,
-                    user_id=att['user_id'],
-                    status=att.get('status', 'pending'),
+                    user_id=user_id,
+                    status=existing_status.get(user_id, 'pending'),
                     meta=att.get('meta'),
                     created_at=now,
                     updated_at=now,
