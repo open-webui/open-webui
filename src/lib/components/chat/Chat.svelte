@@ -163,6 +163,16 @@
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
 	let thinkingEffort: string | null = null;
+
+	// Model-level default reasoning effort (Advanced Params on the model).
+	// Shown in the chat-bar selector when the user hasn't overridden it;
+	// applied backend-side, so it is NOT re-sent with the request.
+	let defaultThinkingEffort: string | null = null;
+	$: {
+		const currentModelId = atSelectedModel?.id ?? selectedModels[0];
+		defaultThinkingEffort =
+			$models.find((m) => m.id === currentModelId)?.info?.params?.reasoning_effort ?? null;
+	}
 	let webSearchActive = false;
 	let showWebSearchConfirm = false;
 	let pendingWebSearchPrompt: string | null = null;
@@ -3306,6 +3316,7 @@
 										{pendingOAuthTools}
 										bind:webSearchEnabled
 										bind:thinkingEffort
+										{defaultThinkingEffort}
 										bind:atSelectedModel
 										bind:showCommands
 										bind:dragged
@@ -3390,6 +3401,7 @@
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
 									bind:thinkingEffort
+									{defaultThinkingEffort}
 									bind:atSelectedModel
 									bind:showCommands
 									bind:dragged

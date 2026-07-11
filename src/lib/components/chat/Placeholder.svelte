@@ -57,6 +57,7 @@
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
 	export let thinkingEffort: string | null = null;
+	export let defaultThinkingEffort: string | null = null;
 
 	export let onUpload: Function = (e) => {};
 	export let onSelect = (e) => {};
@@ -237,6 +238,7 @@
 						bind:codeInterpreterEnabled
 						bind:webSearchEnabled
 						bind:thinkingEffort
+						{defaultThinkingEffort}
 						bind:atSelectedModel
 						bind:showCommands
 						bind:dragged

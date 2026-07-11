@@ -144,12 +144,15 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 	// Reasoning effort sent as reasoning_effort: null = default (omit),
-	// or one of 'off' | 'low' | 'medium' | 'high'.
+	// or one of 'off' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'.
 	export let thinkingEffort: string | null = null;
+	// Model-level default (model Advanced Params); shown when no override.
+	export let defaultThinkingEffort: string | null = null;
 
 	// Anthropic adaptive-thinking effort ladder (+ off).
 	const thinkingEffortOptions = ['off', 'low', 'medium', 'high', 'xhigh', 'max'];
 	let showThinkingMenu = false;
+	$: effectiveThinkingEffort = thinkingEffort ?? defaultThinkingEffort;
 
 	export let pendingOAuthTools = [];
 
@@ -2058,25 +2061,34 @@
 											<div class="flex items-center">
 												<Dropdown bind:show={showThinkingMenu} align="end">
 													<Tooltip
-														content={thinkingEffort === null
-															? $i18n.t('Reasoning Effort')
-															: $i18n.t('Reasoning Effort') + ': ' + thinkingEffort}
+														content={thinkingEffort !== null
+															? $i18n.t('Reasoning Effort') + ': ' + thinkingEffort
+															: defaultThinkingEffort !== null
+																? $i18n.t('Reasoning Effort') +
+																	': ' +
+																	defaultThinkingEffort +
+																	' (' +
+																	$i18n.t('model default') +
+																	')'
+																: $i18n.t('Reasoning Effort')}
 														placement="top"
 													>
 														<button
 															type="button"
 															id="thinking-effort-button"
-															class="flex items-center gap-1 p-1.5 self-center text-sm transition rounded-full cursor-pointer {thinkingEffort ===
+															class="flex items-center gap-1 p-1.5 self-center text-sm transition rounded-full cursor-pointer {effectiveThinkingEffort ===
 															null
 																? 'text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200'
-																: thinkingEffort === 'off'
+																: effectiveThinkingEffort === 'off'
 																	? 'text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400'
 																	: 'text-purple-500 dark:text-purple-300 hover:text-purple-600 dark:hover:text-purple-200'}"
 														>
 															<Brain className="size-4.5" strokeWidth="1.75" />
-															{#if thinkingEffort !== null && thinkingEffort !== 'off'}
-																<span class="text-[11px] font-medium capitalize"
-																	>{thinkingEffort}</span
+															{#if effectiveThinkingEffort !== null && effectiveThinkingEffort !== 'off'}
+																<span
+																	class="text-[11px] font-medium capitalize {thinkingEffort === null
+																		? 'opacity-60'
+																		: ''}">{effectiveThinkingEffort}</span
 																>
 															{/if}
 														</button>
@@ -2097,7 +2109,11 @@
 																	showThinkingMenu = false;
 																}}
 															>
-																<span>{$i18n.t('Default')}</span>
+																<span>
+																	{$i18n.t('Default')}{defaultThinkingEffort !== null
+																		? ` (${defaultThinkingEffort})`
+																		: ''}
+																</span>
 															</button>
 															{#each thinkingEffortOptions as effort}
 																<button

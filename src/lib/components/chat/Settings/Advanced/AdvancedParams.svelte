@@ -503,14 +503,15 @@
 
 		{#if (params?.reasoning_effort ?? null) !== null}
 			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						class="text-sm w-full bg-transparent outline-hidden outline-none"
-						type="text"
-						placeholder={$i18n.t('Enter reasoning effort')}
+				<div class=" flex-1 flex justify-end">
+					<select
+						class="w-fit pr-8 rounded-sm py-1 px-2 text-xs bg-transparent text-right outline-hidden"
 						bind:value={params.reasoning_effort}
-						autocomplete="off"
-					/>
+					>
+						{#each ['off', 'low', 'medium', 'high', 'xhigh', 'max'] as effort}
+							<option value={effort}>{effort}</option>
+						{/each}
+					</select>
 				</div>
 			</div>
 		{/if}

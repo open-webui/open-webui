@@ -100,6 +100,12 @@ def remove_open_webui_params(params: dict) -> dict:
 def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
     params = remove_open_webui_params(params)
 
+    # Model-level reasoning_effort is a *default*: a per-chat/per-message
+    # value (e.g. the chat-input thinking selector) already present in the
+    # payload takes precedence over it.
+    if form_data.get('reasoning_effort') is not None:
+        params.pop('reasoning_effort', None)
+
     custom_params = params.pop('custom_params', {})
     if custom_params:
         # Attempt to parse custom_params if they are strings
