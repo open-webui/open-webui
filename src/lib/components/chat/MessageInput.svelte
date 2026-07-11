@@ -2076,22 +2076,17 @@
 														<button
 															type="button"
 															id="thinking-effort-button"
-															class="flex items-center gap-1 p-1.5 self-center text-sm transition rounded-full cursor-pointer {effectiveThinkingEffort ===
-															null
-																? 'text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200'
-																: effectiveThinkingEffort === 'off'
-																	? 'text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400'
-																	: 'text-purple-500 dark:text-purple-300 hover:text-purple-600 dark:hover:text-purple-200'}"
+															class="flex items-center gap-1 p-1.5 self-center text-sm transition rounded-full cursor-pointer text-purple-500 dark:text-purple-300 hover:text-purple-600 dark:hover:text-purple-200"
 														>
 															<Brain className="size-4.5" strokeWidth="1.75" />
 															<span class="text-[11px] font-medium whitespace-nowrap">
 																{#if thinkingEffort !== null}
 																	<span class="capitalize">{thinkingEffort}</span>
 																{:else if defaultThinkingEffort !== null}
-																	<span class="opacity-60">({$i18n.t('Default')})</span>
+																	<span>({$i18n.t('Default')})</span>
 																	<span class="capitalize">{defaultThinkingEffort}</span>
 																{:else}
-																	<span class="opacity-60">{$i18n.t('Default')}</span>
+																	<span>{$i18n.t('Default')}</span>
 																{/if}
 															</span>
 														</button>

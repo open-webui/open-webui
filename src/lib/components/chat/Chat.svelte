@@ -164,14 +164,23 @@
 	let codeInterpreterEnabled = false;
 	let thinkingEffort: string | null = null;
 
-	// Model-level default reasoning effort (Advanced Params on the model).
+	// Model-level default reasoning effort (set in the model editor).
 	// Shown in the chat-bar selector when the user hasn't overridden it;
 	// applied backend-side, so it is NOT re-sent with the request.
 	let defaultThinkingEffort: string | null = null;
+	let _effortModelId: string | null = null;
 	$: {
 		const currentModelId = atSelectedModel?.id ?? selectedModels[0];
 		defaultThinkingEffort =
 			$models.find((m) => m.id === currentModelId)?.info?.params?.reasoning_effort ?? null;
+		// Swapping model drops any per-chat override back to the new
+		// model's default.
+		if (currentModelId && _effortModelId && currentModelId !== _effortModelId) {
+			thinkingEffort = null;
+		}
+		if (currentModelId) {
+			_effortModelId = currentModelId;
+		}
 	}
 	let webSearchActive = false;
 	let showWebSearchConfirm = false;

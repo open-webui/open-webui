@@ -161,7 +161,15 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                             filter_ids.extend(model['info']['meta'].get('filterIds', []))
 
                         if 'params' in model['info']:
-                            del model['info']['params']
+                            # Strip params from the client-facing list (may
+                            # contain the system prompt), but keep the display
+                            # defaults the chat UI reflects (reasoning pill).
+                            _client_params = {
+                                k: v
+                                for k, v in (model['info']['params'] or {}).items()
+                                if k in ('reasoning_effort',) and v is not None
+                            }
+                            model['info']['params'] = _client_params
 
                     model['action_ids'] = action_ids
                     model['filter_ids'] = filter_ids
@@ -200,8 +208,12 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
             info = custom_model.model_dump()
             if 'params' in info:
-                # Remove params to avoid exposing sensitive info
-                del info['params']
+                # Remove params to avoid exposing sensitive info (e.g. the
+                # system prompt), but keep the display defaults the chat UI
+                # reflects (reasoning pill).
+                info['params'] = {
+                    k: v for k, v in (info['params'] or {}).items() if k in ('reasoning_effort',) and v is not None
+                }
 
             model['info'] = info
 
