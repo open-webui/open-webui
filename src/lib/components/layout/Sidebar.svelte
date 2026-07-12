@@ -352,7 +352,10 @@
 			})(),
 			(async () => {
 				console.log('Init chat list');
-				const _chats = await getChatList(localStorage.token, $currentChatPage);
+				// The mobile sidebar's visible loader may advance currentChatPage while
+				// initialization is awaiting the other requests. Always initialize from
+				// page 1 so an empty later page cannot replace the visible chat list.
+				const _chats = await getChatList(localStorage.token, 1);
 				await chats.set(_chats);
 			})()
 		]);
