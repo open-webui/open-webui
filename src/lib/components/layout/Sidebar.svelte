@@ -31,7 +31,7 @@
 		sidebarWidth,
 		activeChatIds
 	} from '$lib/stores';
-	import { onMount, getContext, tick, onDestroy } from 'svelte';
+	import { onMount, getContext, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
 
@@ -98,6 +98,8 @@
 	// Pagination variables
 	let chatListLoading = false;
 	let allChatsLoaded = false;
+	let chatListGeneration = 0;
+	let destroyed = false;
 
 	let showCreateFolderModal = false;
 
@@ -250,10 +252,6 @@
 		}
 	};
 
-	const initSharedFolders = async () => {
-		await initFolders();
-	};
-
 	const createFolder = async ({ name, data, parent_id }) => {
 		name = name?.trim();
 		if (!name) {
@@ -321,24 +319,34 @@
 	};
 
 	const initChatList = async () => {
+		if (destroyed) {
+			return;
+		}
+
+		const generation = ++chatListGeneration;
+
 		// Reset pagination variables
 		console.log('initChatList');
 		currentChatPage.set(1);
 		allChatsLoaded = false;
+		chatListLoading = false;
 		scrollPaginationEnabled.set(false);
 
 		initFolders();
-		initSharedFolders();
 		await Promise.all([
 			(async () => {
 				console.log('Init tags');
 				const _tags = await getAllTags(localStorage.token);
-				tags.set(_tags);
+				if (!destroyed && generation === chatListGeneration) {
+					tags.set(_tags);
+				}
 			})(),
 			(async () => {
 				console.log('Init pinned chats');
 				const _pinnedChats = await getPinnedChatList(localStorage.token);
-				pinnedChats.set(_pinnedChats);
+				if (!destroyed && generation === chatListGeneration) {
+					pinnedChats.set(_pinnedChats);
+				}
 			})(),
 			(async () => {
 				if (
@@ -347,39 +355,61 @@
 				) {
 					console.log('Init pinned notes');
 					const _pinnedNotes = await getPinnedNoteList(localStorage.token).catch(() => []);
-					pinnedNotes.set(_pinnedNotes);
+					if (!destroyed && generation === chatListGeneration) {
+						pinnedNotes.set(_pinnedNotes);
+					}
 				}
 			})(),
 			(async () => {
 				console.log('Init chat list');
-				// The mobile sidebar's visible loader may advance currentChatPage while
-				// initialization is awaiting the other requests. Always initialize from
-				// page 1 so an empty later page cannot replace the visible chat list.
 				const _chats = await getChatList(localStorage.token, 1);
-				await chats.set(_chats);
+				if (!destroyed && generation === chatListGeneration) {
+					await chats.set(_chats);
+				}
 			})()
 		]);
 
 		// Enable pagination
-		scrollPaginationEnabled.set(true);
+		if (!destroyed && generation === chatListGeneration) {
+			scrollPaginationEnabled.set(true);
+		}
 	};
 
 	const loadMoreChats = async () => {
+		if (destroyed || chatListLoading || allChatsLoaded || !$scrollPaginationEnabled) {
+			return;
+		}
+
+		const generation = chatListGeneration;
+		const basePage = $currentChatPage;
+		const nextPage = basePage + 1;
 		chatListLoading = true;
 
-		currentChatPage.set($currentChatPage + 1);
+		try {
+			const newChatList = await getChatList(localStorage.token, nextPage);
 
-		let newChatList = [];
+			if (
+				destroyed ||
+				generation !== chatListGeneration ||
+				$currentChatPage !== basePage ||
+				!$scrollPaginationEnabled
+			) {
+				return;
+			}
 
-		newChatList = await getChatList(localStorage.token, $currentChatPage);
-
-		// once the bottom of the list has been reached (no results) there is no need to continue querying
-		allChatsLoaded = newChatList.length === 0;
-		const existingIds = new Set(($chats ?? []).map((c) => c.id));
-		const uniqueNewChats = newChatList.filter((c) => !existingIds.has(c.id));
-		await chats.set([...($chats ? $chats : []), ...uniqueNewChats]);
-
-		chatListLoading = false;
+			// Once the bottom of the list has been reached (no results), stop querying.
+			allChatsLoaded = newChatList.length === 0;
+			chats.update((currentChats) => {
+				const existingIds = new Set((currentChats ?? []).map((chat) => chat.id));
+				const uniqueNewChats = newChatList.filter((chat) => !existingIds.has(chat.id));
+				return [...(currentChats ?? []), ...uniqueNewChats];
+			});
+			currentChatPage.set(nextPage);
+		} finally {
+			if (!destroyed && generation === chatListGeneration) {
+				chatListLoading = false;
+			}
+		}
 	};
 
 	const importChatHandler = async (items, pinned = false, folderId = null) => {
@@ -550,7 +580,7 @@
 		document.documentElement.style.setProperty('--sidebar-width', `${newSidebarWidth}px`);
 	};
 
-	onMount(async () => {
+	onMount(() => {
 		try {
 			const width = Number(localStorage.getItem('sidebarWidth'));
 			if (!Number.isNaN(width) && width >= MIN_WIDTH && width <= MAX_WIDTH) {
@@ -559,13 +589,12 @@
 		} catch {}
 
 		document.documentElement.style.setProperty('--sidebar-width', `${$sidebarWidth}px`);
-		sidebarWidth.subscribe((w) => {
-			document.documentElement.style.setProperty('--sidebar-width', `${w}px`);
-		});
-
 		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
 
 		const unsubscribers = [
+			sidebarWidth.subscribe((w) => {
+				document.documentElement.style.setProperty('--sidebar-width', `${w}px`);
+			}),
 			mobile.subscribe((value) => {
 				if ($showSidebar && value) {
 					showSidebar.set(false);
@@ -597,14 +626,18 @@
 				}
 
 				if (value) {
+					// Reset chat pagination before any other sidebar initialization can yield.
+					const chatListInitialization = initChatList();
+
 					// Only fetch channels if the feature is enabled and user has permission
 					if (
 						$config?.features?.enable_channels &&
 						($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))
 					) {
-						await initChannels();
+						await Promise.all([chatListInitialization, initChannels()]);
+					} else {
+						await chatListInitialization;
 					}
-					await initChatList();
 
 					// Check which chats have active tasks
 					const allChatIds = [...$chats.map((c) => c.id), ...$pinnedChats.map((c) => c.id)];
@@ -645,10 +678,15 @@
 		const socketInstance = $socket;
 		socketInstance?.on('events', chatActiveEventHandler);
 
-		await tick();
-		initPinnedMenuSortable();
+		void tick().then(() => {
+			if (!destroyed) {
+				initPinnedMenuSortable();
+			}
+		});
 
 		return () => {
+			destroyed = true;
+			chatListGeneration++;
 			unsubscribers.forEach((unsubscriber) => unsubscriber());
 
 			window.removeEventListener('keydown', onKeyDown);
