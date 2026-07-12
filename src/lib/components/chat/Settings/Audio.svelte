@@ -195,22 +195,25 @@
 					</div>
 				</div>
 
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
+				<div class=" py-0.5 flex w-full justify-between gap-2">
+					<div class=" self-center text-xs font-medium shrink-0 whitespace-nowrap">
+						{$i18n.t('Language')}
+					</div>
 
-					<div class="flex items-center relative text-xs px-3">
+					<div class="flex items-center relative text-xs px-3 min-w-0">
 						<Tooltip
 							content={$i18n.t(
 								'The language of the input audio. Supplying the input language in ISO-639-1 (e.g. en) format will improve accuracy and latency. Leave blank to automatically detect the language.'
 							)}
 							placement="top"
+							className="flex w-full min-w-0"
 						>
 							<input
 								type="text"
 								bind:value={STTLanguage}
 								aria-label={$i18n.t('Speech-to-Text Language')}
 								placeholder={$i18n.t('e.g. en')}
-								class=" text-sm text-right bg-transparent dark:text-gray-300 outline-hidden"
+								class=" w-full min-w-0 text-sm text-right bg-transparent dark:text-gray-300 outline-hidden"
 							/>
 						</Tooltip>
 					</div>
@@ -298,17 +301,19 @@
 				</button>
 			</div>
 
-			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Speech Playback Speed')}</div>
+			<div class=" py-0.5 flex w-full justify-between gap-2">
+				<div class=" self-center text-xs font-medium shrink-0 whitespace-nowrap">
+					{$i18n.t('Speech Playback Speed')}
+				</div>
 
-				<div class="flex items-center relative text-xs px-3">
+				<div class="flex items-center relative text-xs px-3 min-w-0">
 					<input
 						type="number"
 						min="0"
 						step="0.01"
 						bind:value={playbackRate}
 						aria-label={$i18n.t('Speech Playback Speed')}
-						class=" text-sm text-right bg-transparent dark:text-gray-300 outline-hidden"
+						class=" w-full min-w-0 text-sm text-right bg-transparent dark:text-gray-300 outline-hidden"
 					/>
 					x
 				</div>

@@ -210,11 +210,13 @@
 		<div class="">
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Settings')}</div>
 
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
-				<div class="flex items-center relative">
+			<div class="flex w-full justify-between gap-2">
+				<div class=" self-center text-xs font-medium shrink-0 whitespace-nowrap">
+					{$i18n.t('Theme')}
+				</div>
+				<div class="flex items-center relative min-w-0">
 					<select
-						class="w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
+						class="w-fit max-w-full pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
 							? ''
 							: 'outline-hidden'}"
 						bind:value={selectedTheme}
@@ -232,11 +234,13 @@
 				</div>
 			</div>
 
-			<div class=" flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
-				<div class="flex items-center relative">
+			<div class=" flex w-full justify-between gap-2">
+				<div class=" self-center text-xs font-medium shrink-0 whitespace-nowrap">
+					{$i18n.t('Language')}
+				</div>
+				<div class="flex items-center relative min-w-0">
 					<select
-						class="w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
+						class="w-fit max-w-full pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
 							? ''
 							: 'outline-hidden'}"
 						bind:value={lang}
