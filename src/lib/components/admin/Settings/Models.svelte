@@ -604,13 +604,13 @@
 							id="model-item-{model.id}"
 						>
 							<button
-								class=" flex flex-1 text-left space-x-3.5 cursor-pointer w-full"
+								class=" flex flex-1 text-left space-x-3.5 cursor-pointer w-full min-w-0"
 								type="button"
 								on:click={() => {
 									selectedModelId = model.id;
 								}}
 							>
-								<div class=" self-center w-9">
+								<div class=" self-center w-9 shrink-0">
 									<div
 										class=" rounded-full object-cover {(model?.is_active ?? true)
 											? ''
@@ -628,7 +628,9 @@
 								</div>
 
 								<div
-									class=" flex-1 self-center {(model?.is_active ?? true) ? '' : 'text-gray-500'}"
+									class=" flex-1 self-center min-w-0 {(model?.is_active ?? true)
+										? ''
+										: 'text-gray-500'}"
 								>
 									<Tooltip
 										content={marked.parse(
@@ -638,13 +640,23 @@
 													? `${model?.ollama?.digest} **(${model?.ollama?.modified_at})**`
 													: model.id
 										)}
-										className=" w-fit"
+										className=" w-full min-w-0"
 										placement="top-start"
 									>
-										<div class="font-medium line-clamp-1 flex items-center gap-2">
-											{model.name}
-
-											<Badge
+										<div class="font-medium truncate min-w-0">{model.name}</div>
+									</Tooltip>
+									<div
+										class=" text-xs overflow-hidden text-ellipsis line-clamp-1 flex items-center gap-1 text-gray-500 min-w-0"
+									>
+										<span class=" truncate min-w-0">
+											{!!model?.meta?.description
+												? model?.meta?.description
+												: model?.ollama?.digest
+													? `${model.id} (${model?.ollama?.digest})`
+													: model.id}
+										</span>
+										<span class="shrink-0"
+											><Badge
 												type={(model?.access_grants ?? []).some(
 													(g) =>
 														g.principal_type === 'user' &&
@@ -661,23 +673,12 @@
 												)
 													? $i18n.t('Public')
 													: $i18n.t('Private')}
-											/>
-										</div>
-									</Tooltip>
-									<div
-										class=" text-xs overflow-hidden text-ellipsis line-clamp-1 flex items-center gap-1 text-gray-500"
-									>
-										<span class=" line-clamp-1">
-											{!!model?.meta?.description
-												? model?.meta?.description
-												: model?.ollama?.digest
-													? `${model.id} (${model?.ollama?.digest})`
-													: model.id}
-										</span>
+											/></span
+										>
 									</div>
 								</div>
 							</button>
-							<div class="flex flex-row gap-0.5 items-center self-center">
+							<div class="flex flex-row gap-0.5 items-center self-center shrink-0">
 								{#if shiftKey}
 									<Tooltip content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}>
 										<button
@@ -696,7 +697,7 @@
 									</Tooltip>
 								{:else}
 									<button
-										class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										class="hidden sm:flex self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 										type="button"
 										on:click={() => {
 											selectedModelId = model.id;
