@@ -329,7 +329,7 @@ def downgrade() -> None:
             try:
                 conn.execute(
                     sa.text(f"""
-                        UPDATE "{table_name}" 
+                        UPDATE "{table_name}"
                         SET access_control = :private_value
                         WHERE id NOT IN (
                             SELECT DISTINCT resource_id FROM access_grant WHERE resource_type = :resource_type
