@@ -98,6 +98,7 @@
 	// Pagination variables
 	let chatListLoading = false;
 	let allChatsLoaded = false;
+	let chatListGeneration = 0;
 
 	let showCreateFolderModal = false;
 
@@ -321,10 +322,13 @@
 	};
 
 	const initChatList = async () => {
+		const generation = ++chatListGeneration;
+
 		// Reset pagination variables
 		console.log('initChatList');
 		currentChatPage.set(1);
 		allChatsLoaded = false;
+		chatListLoading = false;
 		scrollPaginationEnabled.set(false);
 
 		initFolders();
@@ -352,31 +356,46 @@
 			})(),
 			(async () => {
 				console.log('Init chat list');
-				const _chats = await getChatList(localStorage.token, $currentChatPage);
-				await chats.set(_chats);
+				const _chats = await getChatList(localStorage.token, 1);
+				if (generation === chatListGeneration) {
+					await chats.set(_chats);
+				}
 			})()
 		]);
 
 		// Enable pagination
-		scrollPaginationEnabled.set(true);
+		if (generation === chatListGeneration) {
+			scrollPaginationEnabled.set(true);
+		}
 	};
 
 	const loadMoreChats = async () => {
+		if (chatListLoading || allChatsLoaded || !$scrollPaginationEnabled) {
+			return;
+		}
+
+		const generation = chatListGeneration;
+		const nextPage = $currentChatPage + 1;
 		chatListLoading = true;
 
-		currentChatPage.set($currentChatPage + 1);
+		try {
+			const newChatList = await getChatList(localStorage.token, nextPage);
 
-		let newChatList = [];
+			if (generation !== chatListGeneration) {
+				return;
+			}
 
-		newChatList = await getChatList(localStorage.token, $currentChatPage);
-
-		// once the bottom of the list has been reached (no results) there is no need to continue querying
-		allChatsLoaded = newChatList.length === 0;
-		const existingIds = new Set(($chats ?? []).map((c) => c.id));
-		const uniqueNewChats = newChatList.filter((c) => !existingIds.has(c.id));
-		await chats.set([...($chats ? $chats : []), ...uniqueNewChats]);
-
-		chatListLoading = false;
+			// Once the bottom of the list has been reached (no results), stop querying.
+			allChatsLoaded = newChatList.length === 0;
+			const existingIds = new Set(($chats ?? []).map((c) => c.id));
+			const uniqueNewChats = newChatList.filter((c) => !existingIds.has(c.id));
+			await chats.set([...($chats ? $chats : []), ...uniqueNewChats]);
+			currentChatPage.set(nextPage);
+		} finally {
+			if (generation === chatListGeneration) {
+				chatListLoading = false;
+			}
+		}
 	};
 
 	const importChatHandler = async (items, pinned = false, folderId = null) => {
