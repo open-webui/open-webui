@@ -299,7 +299,7 @@
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
-							<div class="text-xs pr-2">
+							<div class="text-xs pr-2 shrink-0">
 								<div class="">
 									{$i18n.t('Image Generation')}
 								</div>
@@ -318,7 +318,7 @@
 					{#if config.ENABLE_IMAGE_GENERATION}
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
-								<div class="text-xs pr-2">
+								<div class="text-xs pr-2 shrink-0">
 									<div class="shrink-0">
 										{$i18n.t('Model')}
 									</div>
@@ -344,7 +344,7 @@
 
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
-								<div class="text-xs pr-2">
+								<div class="text-xs pr-2 shrink-0">
 									<div class="shrink-0">
 										{$i18n.t('Image Size')}
 									</div>
@@ -363,7 +363,7 @@
 						{#if ['comfyui', 'automatic1111', ''].includes(config?.IMAGE_GENERATION_ENGINE)}
 							<div class="mb-2.5">
 								<div class="flex w-full justify-between items-center">
-									<div class="text-xs pr-2">
+									<div class="text-xs pr-2 shrink-0">
 										<div class="">
 											{$i18n.t('Steps')}
 										</div>
@@ -386,7 +386,7 @@
 
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
-								<div class="text-xs pr-2">
+								<div class="text-xs pr-2 shrink-0">
 									<div class="">
 										{$i18n.t('Image Prompt Generation')}
 									</div>
@@ -399,7 +399,7 @@
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
-							<div class="text-xs pr-2">
+							<div class="text-xs pr-2 shrink-0">
 								<div class="">
 									{$i18n.t('Image Generation Engine')}
 								</div>
@@ -864,7 +864,7 @@
 
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
-								<div class="text-xs pr-2">
+								<div class="text-xs pr-2 shrink-0">
 									<div class="">
 										{$i18n.t('Gemini Endpoint Method')}
 									</div>
@@ -890,7 +890,7 @@
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
-							<div class="text-xs pr-2">
+							<div class="text-xs pr-2 shrink-0">
 								<div class="">
 									{$i18n.t('Image Edit')}
 								</div>
@@ -903,7 +903,7 @@
 					{#if config?.ENABLE_IMAGE_GENERATION && config?.ENABLE_IMAGE_EDIT}
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
-								<div class="text-xs pr-2">
+								<div class="text-xs pr-2 shrink-0">
 									<div class="shrink-0">
 										{$i18n.t('Model')}
 									</div>
@@ -928,7 +928,7 @@
 
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between items-center">
-								<div class="text-xs pr-2">
+								<div class="text-xs pr-2 shrink-0">
 									<div class="shrink-0">
 										{$i18n.t('Image Size')}
 									</div>
@@ -947,7 +947,7 @@
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
-							<div class="text-xs pr-2">
+							<div class="text-xs pr-2 shrink-0">
 								<div class="">
 									{$i18n.t('Image Edit Engine')}
 								</div>

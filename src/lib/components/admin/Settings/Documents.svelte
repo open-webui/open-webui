@@ -382,12 +382,12 @@
 
 					<div class="mb-2.5 flex flex-col w-full justify-between">
 						<div class="flex w-full justify-between mb-1">
-							<div class="self-center text-xs font-medium">
+							<div class="self-center text-xs font-medium shrink-0">
 								{$i18n.t('Content Extraction Engine')}
 							</div>
 							<div class="">
 								<select
-									class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+									class="w-fit max-w-full min-w-0 pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 									bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
 								>
 									<option value="">{$i18n.t('Default')}</option>
@@ -417,7 +417,7 @@
 
 							<div class="flex w-full mt-2">
 								<div class="flex-1 flex justify-between">
-									<div class=" self-center text-xs font-medium">
+									<div class=" self-center text-xs font-medium shrink-0">
 										<Tooltip
 											content={$i18n.t(
 												'Page mode creates one document per page. Single mode combines all pages into one document for better chunking across page boundaries.'
@@ -429,7 +429,7 @@
 									</div>
 									<div class="">
 										<select
-											class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+											class="w-fit max-w-full min-w-0 pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 											bind:value={RAGConfig.PDF_LOADER_MODE}
 										>
 											<option value="page">{$i18n.t('Page')}</option>
@@ -588,7 +588,7 @@
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
+								<div class="self-center text-xs font-medium shrink-0">
 									<Tooltip
 										content={$i18n.t(
 											"The output format for the text. Can be 'json', 'markdown', or 'html'. Defaults to 'markdown'."
@@ -600,7 +600,7 @@
 								</div>
 								<div class="">
 									<select
-										class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+										class="w-fit max-w-full min-w-0 pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 										bind:value={RAGConfig.DATALAB_MARKER_OUTPUT_FORMAT}
 									>
 										<option value="markdown">{$i18n.t('Markdown')}</option>
@@ -792,11 +792,11 @@
 							<!-- API Mode Selection -->
 							<div class="flex w-full mt-2">
 								<div class="flex-1 flex justify-between">
-									<div class="self-center text-xs font-medium">
+									<div class="self-center text-xs font-medium shrink-0">
 										{$i18n.t('API Mode')}
 									</div>
 									<select
-										class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden"
+										class="w-fit max-w-full min-w-0 pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden"
 										bind:value={RAGConfig.MINERU_API_MODE}
 										on:change={() => {
 											// Auto-update URL when switching modes if it's empty or matches the opposite mode's default
@@ -918,10 +918,12 @@
 
 					{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
+							<div class=" self-center text-xs font-medium shrink-0">
+								{$i18n.t('Text Splitter')}
+							</div>
 							<div class="flex items-center relative">
 								<select
-									class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+									class="w-fit max-w-full min-w-0 pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 									bind:value={RAGConfig.TEXT_SPLITTER}
 								>
 									<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
@@ -1042,12 +1044,12 @@
 
 						<div class="  mb-2.5 flex flex-col w-full justify-between">
 							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
+								<div class=" self-center text-xs font-medium shrink-0">
 									{$i18n.t('Embedding Model Engine')}
 								</div>
 								<div class="flex items-center relative">
 									<select
-										class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+										class="w-fit max-w-full min-w-0 pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 										bind:value={RAG_EMBEDDING_ENGINE}
 										placeholder={$i18n.t('Select an embedding model engine')}
 										on:change={(e) => {
@@ -1298,12 +1300,12 @@
 
 								<div class="  mb-2.5 flex flex-col w-full justify-between">
 									<div class="flex w-full justify-between">
-										<div class=" self-center text-xs font-medium">
+										<div class=" self-center text-xs font-medium shrink-0">
 											{$i18n.t('Reranking Engine')}
 										</div>
 										<div class="flex items-center relative">
 											<select
-												class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+												class="w-fit max-w-full min-w-0 pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 												bind:value={RAGConfig.RAG_RERANKING_ENGINE}
 												placeholder={$i18n.t('Select a reranking model engine')}
 												on:change={(e) => {
@@ -1376,9 +1378,9 @@
 
 							<div class="  mb-2.5 flex w-full justify-between">
 								<div class=" self-center text-xs font-medium">{$i18n.t('Top K')}</div>
-								<div class="flex items-center relative">
+								<div class="">
 									<input
-										class="flex-1 w-full text-sm bg-transparent outline-hidden"
+										class=" bg-transparent text-center w-14 outline-none"
 										type="number"
 										placeholder={$i18n.t('Enter Top K')}
 										bind:value={RAGConfig.TOP_K}
@@ -1391,9 +1393,9 @@
 							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
 								<div class="mb-2.5 flex w-full justify-between">
 									<div class="self-center text-xs font-medium">{$i18n.t('Top K Reranker')}</div>
-									<div class="flex items-center relative">
+									<div class="">
 										<input
-											class="flex-1 w-full text-sm bg-transparent outline-hidden"
+											class=" bg-transparent text-center w-14 outline-none"
 											type="number"
 											placeholder={$i18n.t('Enter Top K Reranker')}
 											bind:value={RAGConfig.TOP_K_RERANKER}
@@ -1410,9 +1412,9 @@
 										<div class=" self-center text-xs font-medium">
 											{$i18n.t('Relevance Threshold')}
 										</div>
-										<div class="flex items-center relative">
+										<div class="">
 											<input
-												class="flex-1 w-full text-sm bg-transparent outline-hidden"
+												class=" bg-transparent text-center w-14 outline-none"
 												type="number"
 												step="0.01"
 												placeholder={$i18n.t('Enter Score')}
