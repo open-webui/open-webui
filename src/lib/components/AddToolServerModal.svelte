@@ -453,8 +453,8 @@
 				{/if}
 			</h1>
 
-			<div class="flex items-center gap-3">
-				<div class="flex gap-1.5 text-xs justify-end">
+			<div class="flex items-center gap-3 shrink-0">
+				<div class="flex gap-1.5 text-xs justify-end whitespace-nowrap">
 					<button
 						class=" hover:underline"
 						type="button"

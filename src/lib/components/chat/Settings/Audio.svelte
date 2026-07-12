@@ -246,11 +246,13 @@
 		<div>
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('TTS Settings')}</div>
 
-			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
-				<div class="flex items-center relative">
+			<div class=" py-0.5 flex w-full justify-between gap-2">
+				<div class=" self-center text-xs font-medium shrink-0 whitespace-nowrap">
+					{$i18n.t('Text-to-Speech Engine')}
+				</div>
+				<div class="flex items-center relative min-w-0">
 					<select
-						class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+						class="w-fit max-w-full min-w-0 pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 						bind:value={TTSEngine}
 						aria-label={$i18n.t('Text-to-Speech Engine')}
 						placeholder={$i18n.t('Select an engine')}

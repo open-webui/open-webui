@@ -53,15 +53,16 @@
 					{$i18n.t('Version')}
 				</div>
 			</div>
-			<div class="flex w-full justify-between items-center">
-				<div class="flex flex-col text-xs text-gray-700 dark:text-gray-200">
-					<div class="flex gap-1">
-						<Tooltip content={WEBUI_BUILD_HASH}>
+			<div class="flex w-full justify-between items-center gap-2">
+				<div class="flex flex-col text-xs text-gray-700 dark:text-gray-200 min-w-0">
+					<div class="flex flex-wrap items-center gap-1">
+						<Tooltip content={WEBUI_BUILD_HASH} className="flex whitespace-nowrap">
 							v{WEBUI_VERSION}
 						</Tooltip>
 
 						{#if $config?.features?.enable_version_update_check}
 							<a
+								class="whitespace-nowrap"
 								href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
 								target="_blank"
 							>
@@ -86,7 +87,7 @@
 
 				{#if $config?.features?.enable_version_update_check}
 					<button
-						class=" text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
+						class=" shrink-0 text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
 						on:click={() => {
 							checkForVersionUpdates();
 						}}
