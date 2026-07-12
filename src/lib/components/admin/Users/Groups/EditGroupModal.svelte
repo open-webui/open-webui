@@ -171,7 +171,7 @@
 						>
 							{#if tabs.includes('general')}
 								<button
-									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 flex text-right transition {selectedTab ===
 									'general'
 										? ''
 										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -194,13 +194,13 @@
 											/>
 										</svg>
 									</div>
-									<div class=" self-center">{$i18n.t('General')}</div>
+									<div class=" self-center whitespace-nowrap">{$i18n.t('General')}</div>
 								</button>
 							{/if}
 
 							{#if tabs.includes('permissions')}
 								<button
-									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 flex text-right transition {selectedTab ===
 									'permissions'
 										? ''
 										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -212,13 +212,13 @@
 									<div class=" self-center mr-2">
 										<WrenchSolid />
 									</div>
-									<div class=" self-center">{$i18n.t('Permissions')}</div>
+									<div class=" self-center whitespace-nowrap">{$i18n.t('Permissions')}</div>
 								</button>
 							{/if}
 
 							{#if tabs.includes('users')}
 								<button
-									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 flex text-right transition {selectedTab ===
 									'users'
 										? ''
 										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -230,13 +230,13 @@
 									<div class=" self-center mr-2">
 										<UserPlusSolid />
 									</div>
-									<div class=" self-center">{$i18n.t('Users')}</div>
+									<div class=" self-center whitespace-nowrap">{$i18n.t('Users')}</div>
 								</button>
 							{/if}
 
 							{#if tabs.includes('preview')}
 								<button
-									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 flex text-right transition {selectedTab ===
 									'preview'
 										? ''
 										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -260,7 +260,7 @@
 											/>
 										</svg>
 									</div>
-									<div class=" self-center">{$i18n.t('Preview')}</div>
+									<div class=" self-center whitespace-nowrap">{$i18n.t('Preview')}</div>
 								</button>
 							{/if}
 						</div>
