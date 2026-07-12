@@ -41,6 +41,7 @@
 		skills,
 		toolServers,
 		terminalServers,
+		terminalServersLoaded,
 		functions,
 		selectedFolder,
 		pinnedChats,
@@ -504,7 +505,7 @@
 				// Set Default Terminal — only if the referenced terminal actually exists
 				if (model?.info?.meta?.terminalId) {
 					const tid = model.info.meta.terminalId;
-					if (isTerminalAvailable(tid)) {
+					if (!$terminalServersLoaded || isTerminalAvailable(tid)) {
 						selectedTerminalId.set(tid);
 					}
 				}
@@ -939,18 +940,19 @@
 
 		// Restore direct terminal enabled states based on persisted selectedTerminalId
 		if ($settings?.terminalServers?.length) {
-			settings.set({
-				...$settings,
-				terminalServers: ($settings.terminalServers ?? []).map((s) => ({
-					...s,
-					enabled: $selectedTerminalId !== null && s.url === $selectedTerminalId
-				}))
-			});
-		}
+			const enabledDirectTerminal = ($settings.terminalServers ?? []).find((s) => s.enabled);
 
-		// Clear stale selectedTerminalId if the referenced terminal no longer exists
-		if ($selectedTerminalId && !isTerminalAvailable($selectedTerminalId)) {
-			selectedTerminalId.set(null);
+			if (!$selectedTerminalId && enabledDirectTerminal?.url) {
+				selectedTerminalId.set(enabledDirectTerminal.url);
+			} else if ($selectedTerminalId) {
+				settings.set({
+					...$settings,
+					terminalServers: ($settings.terminalServers ?? []).map((s) => ({
+						...s,
+						enabled: s.url === $selectedTerminalId
+					}))
+				});
+			}
 		}
 
 		const pageSubscribe = page.subscribe(async (p) => {
@@ -1056,6 +1058,14 @@
 			}
 		};
 	});
+
+	$: if (
+		$terminalServersLoaded &&
+		$selectedTerminalId &&
+		!isTerminalAvailable($selectedTerminalId)
+	) {
+		selectedTerminalId.set(null);
+	}
 
 	// File upload functions
 

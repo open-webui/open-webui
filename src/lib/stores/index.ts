@@ -73,8 +73,9 @@ export const tools = writable(null);
 export const skills = writable(null);
 export const functions = writable(null);
 
-export const toolServers = writable([]);
-export const terminalServers = writable([]);
+export const toolServers: Writable<any[]> = writable([]);
+export const terminalServers: Writable<any[]> = writable([]);
+export const terminalServersLoaded = writable(false);
 
 // Persistent Pyodide worker for code interpreter FS
 export const pyodideWorker: Writable<Worker | null> = writable(null);
@@ -180,7 +181,8 @@ type OllamaModelDetails = {
 
 type Settings = {
 	pinnedModels?: never[];
-	toolServers?: never[];
+	toolServers?: any[];
+	terminalServers?: any[];
 	detectArtifacts?: boolean;
 	showUpdateToast?: boolean;
 	showChangelog?: boolean;
