@@ -3534,6 +3534,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                             'type': 'chat:completion',
                             'data': {
                                 'done': True,
+                                'error': None,
                                 'output': response_output,
                                 'title': title,
                             },
@@ -3549,6 +3550,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                             metadata['message_id'],
                             {
                                 'done': True,
+                                'error': None,
                                 'role': 'assistant',
                                 'output': response_output,
                                 **({'usage': usage} if usage else {}),
@@ -5230,6 +5232,7 @@ async def streaming_chat_response_handler(response, ctx):
                 )
                 data = {
                     'done': True,
+                    'error': None,
                     'output': output,
                     'title': title,
                     **({'usage': usage} if usage else {}),
@@ -5243,6 +5246,7 @@ async def streaming_chat_response_handler(response, ctx):
                             metadata['message_id'],
                             {
                                 'done': True,
+                                'error': None,
                                 'output': output,
                                 **({'usage': usage} if usage else {}),
                             },
@@ -5251,13 +5255,13 @@ async def streaming_chat_response_handler(response, ctx):
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
-                            {'done': True, 'usage': usage},
+                            {'done': True, 'error': None, 'usage': usage},
                         )
                     else:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
-                            {'done': True},
+                            {'done': True, 'error': None},
                         )
 
                 # Send a webhook notification if the user is not active
