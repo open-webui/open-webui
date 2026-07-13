@@ -17,6 +17,7 @@ from open_webui.config import (
 )
 from open_webui.constants import ERROR_MESSAGES, TASKS
 from open_webui.models.config import Config
+from open_webui.models.usage_logs import UsageLogs
 from open_webui.routers.pipelines import process_pipeline_inlet_filter
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.chat import generate_chat_completion
@@ -57,6 +58,34 @@ TASK_CONFIG_KEYS = {
     'ENABLE_VOICE_MODE_PROMPT': 'task.voice.prompt.enable',
     'VOICE_MODE_PROMPT_TEMPLATE': 'task.voice.prompt_template',
 }
+
+
+async def _completion_with_usage_log(request: Request, payload: dict, user, models: dict):
+    """Run a task completion and record its token usage in the usage ledger.
+
+    Task generations (title, tags, ...) bypass process_chat_response, so
+    they need their own ledger write. Best-effort: never raises.
+    """
+    res = await generate_chat_completion(request, form_data=payload, user=user)
+    try:
+        if isinstance(res, dict) and res.get('usage'):
+            model_id = payload.get('model')
+            model = models.get(model_id) or {}
+            metadata = payload.get('metadata') or {}
+            await UsageLogs.record(
+                user_id=user.id,
+                model_id=model_id,
+                base_model_id=(model.get('info') or {}).get('base_model_id'),
+                usage=res.get('usage'),
+                pricing=model.get('pricing') or (model.get('openai') or {}).get('pricing'),
+                chat_id=metadata.get('chat_id'),
+                session_id=metadata.get('session_id'),
+                source='task',
+                task=metadata.get('task'),
+            )
+    except Exception:
+        log.exception('Failed to record task usage log')
+    return res
 
 
 async def get_config_values(key_map: dict[str, str]) -> dict:
@@ -195,7 +224,7 @@ async def generate_title(request: Request, form_data: dict, user=Depends(get_ver
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        return await _completion_with_usage_log(request, payload, user, models)
     except Exception as e:
         log.error('Exception occurred', exc_info=True)
         return JSONResponse(
@@ -265,7 +294,7 @@ async def generate_follow_ups(request: Request, form_data: dict, user=Depends(ge
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        return await _completion_with_usage_log(request, payload, user, models)
     except Exception as e:
         log.error('Exception occurred', exc_info=True)
         return JSONResponse(
@@ -335,7 +364,7 @@ async def generate_chat_tags(request: Request, form_data: dict, user=Depends(get
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        return await _completion_with_usage_log(request, payload, user, models)
     except Exception as e:
         log.error(f'Error generating chat completion: {e}')
         return JSONResponse(
@@ -399,7 +428,7 @@ async def generate_image_prompt(request: Request, form_data: dict, user=Depends(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        return await _completion_with_usage_log(request, payload, user, models)
     except Exception as e:
         log.error('Exception occurred', exc_info=True)
         return JSONResponse(
@@ -481,7 +510,7 @@ async def generate_queries(request: Request, form_data: dict, user=Depends(get_v
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        return await _completion_with_usage_log(request, payload, user, models)
     except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -562,7 +591,7 @@ async def generate_autocompletion(request: Request, form_data: dict, user=Depend
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        return await _completion_with_usage_log(request, payload, user, models)
     except Exception as e:
         log.error(f'Error generating chat completion: {e}')
         return JSONResponse(
@@ -629,7 +658,7 @@ async def generate_emoji(request: Request, form_data: dict, user=Depends(get_ver
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        return await _completion_with_usage_log(request, payload, user, models)
     except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -682,7 +711,7 @@ async def generate_moa_response(request: Request, form_data: dict, user=Depends(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        return await _completion_with_usage_log(request, payload, user, models)
     except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,

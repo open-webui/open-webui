@@ -45,6 +45,7 @@ from open_webui.models.folders import Folders
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 from open_webui.models.oauth_sessions import OAuthSessions
+from open_webui.models.usage_logs import UsageLogs, derive_usage_source
 from open_webui.models.users import UserModel, Users
 from open_webui.retrieval.utils import get_sources_from_items
 from open_webui.routers.images import (
@@ -3052,6 +3053,53 @@ async def get_system_oauth_token(request, user):
     return oauth_token
 
 
+async def record_usage_log(ctx, usage, status='completed', model_id=None):
+    """Append a row to the immutable usage ledger (usage_log).
+
+    Best-effort by design: called from every completion finalizer (success,
+    error, cancel, external API) and must never raise into the chat pipeline.
+    """
+    try:
+        metadata = ctx.get('metadata') or {}
+        model = ctx.get('model') or {}
+        request = ctx.get('request')
+
+        resolved_model_id = model_id or (model.get('id') if isinstance(model, dict) else None)
+
+        # Pricing snapshot and underlying model: prefer the resolved model's
+        # live entry (arena selections resolve to a different model than
+        # ctx['model']). base_model_id preserves which model actually served
+        # a workspace/preset model at this point in time.
+        pricing = None
+        base_model_id = None
+        model_entry = None
+        if request is not None and resolved_model_id:
+            model_entry = (getattr(request.app.state, 'MODELS', None) or {}).get(resolved_model_id)
+        if not model_entry and isinstance(model, dict):
+            model_entry = model
+        if model_entry:
+            pricing = model_entry.get('pricing') or (model_entry.get('openai') or {}).get('pricing')
+            base_model_id = (model_entry.get('info') or {}).get('base_model_id')
+
+        user = ctx.get('user')
+        chat_id = metadata.get('chat_id') or None
+
+        await UsageLogs.record(
+            user_id=getattr(user, 'id', None) or metadata.get('user_id'),
+            model_id=resolved_model_id,
+            base_model_id=base_model_id,
+            usage=usage,
+            pricing=pricing,
+            chat_id=chat_id,
+            message_id=metadata.get('message_id'),
+            session_id=metadata.get('session_id'),
+            source=derive_usage_source(chat_id),
+            status=status,
+        )
+    except Exception:
+        log.exception('Failed to record usage log')
+
+
 async def background_tasks_handler(ctx):
     request = ctx['request']
     form_data = ctx['form_data']
@@ -3448,6 +3496,13 @@ async def non_streaming_chat_response_handler(response, ctx):
 
                 log.error('Provider returned error (non-streaming): %s', error)
 
+                await record_usage_log(
+                    ctx,
+                    response_data.get('usage') or {},
+                    status='error',
+                    model_id=response_data.get('selected_model_id'),
+                )
+
                 if not metadata.get('chat_id', '').startswith('channel:'):
                     await Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata['chat_id'],
@@ -3541,6 +3596,13 @@ async def non_streaming_chat_response_handler(response, ctx):
                     # Save message in the database
                     usage = normalize_usage(response_data.get('usage', {}) or {})
 
+                    if 'error' not in response_data:
+                        await record_usage_log(
+                            ctx,
+                            usage,
+                            model_id=response_data.get('selected_model_id'),
+                        )
+
                     if not metadata.get('chat_id', '').startswith('channel:'):
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
@@ -3588,6 +3650,16 @@ async def non_streaming_chat_response_handler(response, ctx):
     choices = response_data.get('choices', [])
     output = response_data.get('output')
     content = choices[0].get('message', {}).get('content') if choices else ''
+
+    # External API path (no event emitter): record real usage in the ledger
+    if 'error' in response_data or content or output or response_data.get('usage'):
+        await record_usage_log(
+            ctx,
+            response_data.get('usage') or {},
+            status='error' if 'error' in response_data else 'completed',
+            model_id=response_data.get('selected_model_id'),
+        )
+
     if ENABLE_API_OUTLET_FILTERS and (content or output):
         usage = normalize_usage(response_data.get('usage', {}) or {})
         ctx['assistant_message'] = {
@@ -3899,6 +3971,7 @@ async def streaming_chat_response_handler(response, ctx):
                     output = []
 
             usage = None
+            stream_error = False
             prior_output = []
             last_response_id = None
 
@@ -3956,6 +4029,8 @@ async def streaming_chat_response_handler(response, ctx):
                 async def stream_body_handler(response, form_data):
                     nonlocal content
                     nonlocal usage
+                    nonlocal stream_error
+                    nonlocal model_id
                     nonlocal output
                     nonlocal prior_output
                     nonlocal last_response_id
@@ -4171,6 +4246,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     if not choices:
                                         error = data.get('error', {})
                                         if error:
+                                            stream_error = True
                                             log.error('Provider returned error (streaming): %s', error)
                                             try:
                                                 await Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -5229,6 +5305,15 @@ async def streaming_chat_response_handler(response, ctx):
                     **({'usage': usage} if usage else {}),
                 }
 
+                # Record real usage in the immutable ledger before any chat
+                # persistence — must not depend on the chat surviving.
+                await record_usage_log(
+                    ctx,
+                    usage,
+                    status='error' if stream_error else 'completed',
+                    model_id=model_id,
+                )
+
                 if not metadata.get('chat_id', '').startswith('channel:'):
                     if not ENABLE_REALTIME_CHAT_SAVE:
                         # Save message in the database
@@ -5299,6 +5384,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                 async def save_cancelled_state():
                     await event_emitter({'type': 'chat:tasks:cancel'})
+                    await record_usage_log(ctx, usage, status='cancelled', model_id=model_id)
                     if not metadata.get('chat_id', '').startswith('channel:'):
                         if not ENABLE_REALTIME_CHAT_SAVE:
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -5359,11 +5445,19 @@ async def streaming_chat_response_handler(response, ctx):
                 if data:
                     if ENABLE_API_OUTLET_FILTERS:
                         update_assistant_message_from_stream(assistant_message, data)
+                    else:
+                        # Cheap gate: only parse chunks that can carry usage,
+                        # so the ledger still sees external API token counts.
+                        line = data.decode('utf-8', 'replace') if isinstance(data, bytes) else data
+                        if isinstance(line, str) and ('"usage"' in line or '"timings"' in line):
+                            update_assistant_message_from_stream(assistant_message, data)
                     yield data
 
             if ENABLE_API_OUTLET_FILTERS and assistant_message:
                 ctx['assistant_message'] = assistant_message
                 await outlet_filter_handler(ctx)
+
+            await record_usage_log(ctx, assistant_message.get('usage'))
 
         return StreamingResponse(
             stream_wrapper(response.body_iterator, events),

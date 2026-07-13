@@ -33,8 +33,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      # Pinned: ruff formatting output changes between releases, so an open
+      # version range makes CI fail on files no PR ever touched.
       - name: Install formatter
-        run: pip install "ruff>=0.15.5"
+        run: pip install "ruff==0.15.21"
 
       - name: Verify formatting
         run: ruff format --check . --exclude .venv --exclude venv

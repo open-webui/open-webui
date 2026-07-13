@@ -2,8 +2,6 @@
 	import Fuse from 'fuse.js';
 	import Bolt from '$lib/components/icons/Bolt.svelte';
 	import { onMount, getContext } from 'svelte';
-	import { settings, WEBUI_NAME } from '$lib/stores';
-	import { WEBUI_VERSION } from '$lib/constants';
 
 	const i18n = getContext('i18n');
 
@@ -64,22 +62,12 @@
 	}
 </script>
 
-<div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-600 dark:text-gray-400">
-	{#if filteredPrompts.length > 0}
+{#if filteredPrompts.length > 0}
+	<div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-600 dark:text-gray-400">
 		<Bolt />
 		{$i18n.t('Suggested')}
-	{:else}
-		<!-- Keine Vorschläge -->
-
-		<div
-			class="flex w-full {$settings?.landingPageMode === 'chat'
-				? ' -mt-1'
-				: 'text-center items-center justify-center'}  self-start text-gray-600 dark:text-gray-400"
-		>
-			{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
-		</div>
-	{/if}
-</div>
+	</div>
+{/if}
 
 <div class="h-40 w-full">
 	{#if filteredPrompts.length > 0}

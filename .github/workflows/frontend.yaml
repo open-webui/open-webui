@@ -41,6 +41,15 @@ jobs:
       - name: Ensure working tree is clean
         run: git diff --exit-code
 
+      # Warm cache means prepare-pyodide.js reuses the downloaded packages
+      # instead of re-fetching them from jsdelivr/PyPI on every run — faster,
+      # and immune to transient CDN/DNS failures.
+      - name: Cache Pyodide packages
+        uses: actions/cache@v4
+        with:
+          path: static/pyodide
+          key: pyodide-${{ runner.os }}-${{ hashFiles('package.json', 'scripts/prepare-pyodide.js') }}
+
       - name: Production build
         run: npm run build
 

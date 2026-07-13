@@ -11,7 +11,8 @@ Changes from the upstream [open-webui/open-webui](https://github.com/open-webui/
 
 - CI trimmed: upstream release/PyPI workflows dropped; multi-arch Docker image published to `ghcr.io/m600x/open-webui` on push
 
-![Open WebUI fork buttons](https://i.imgur.com/mP0kUM9.png)
+![Open WebUI Reasoning Effort](https://i.imgur.com/fXllDwm.png)
+![Open WebUI Cost](https://i.imgur.com/Oz1nP2f.png)
 
 ---
 

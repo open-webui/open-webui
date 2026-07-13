@@ -209,11 +209,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                     if base_model and base_model.get('reasoning') is not None
                     else {}
                 ),
-                **(
-                    {'pricing': base_model['pricing']}
-                    if base_model and base_model.get('pricing') is not None
-                    else {}
-                ),
+                **({'pricing': base_model['pricing']} if base_model and base_model.get('pricing') is not None else {}),
             }
 
             info = custom_model.model_dump()
