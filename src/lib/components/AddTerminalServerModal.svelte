@@ -17,6 +17,8 @@
 		verifyTerminalServerConnection,
 		putOrchestratorPolicy,
 		putOrchestratorLifecycle,
+		getOrchestratorPolicy,
+		getOrchestratorLifecycle,
 		refreshOrchestratorTerminals
 	} from '$lib/apis/configs';
 	import { getTerminalConfig } from '$lib/apis/terminal';
@@ -56,6 +58,8 @@
 	let lifecycleJson = '{}';
 	let refreshOnlyIdle = true;
 	let refreshReset = false;
+	let loadingPolicy = false;
+	let policyLoadError = '';
 
 	const stringifyJson = (value: object | null | undefined) => {
 		return JSON.stringify(value && Object.keys(value).length ? value : {}, null, 2);
@@ -73,10 +77,10 @@
 			accessGrants = connection?.config?.access_grants ?? [];
 
 			// Restore policy state
-			serverType = connection?.server_type ?? null;
+			serverType = connection?.server_type ?? (connection?.policy_id ? 'orchestrator' : null);
 			policyId = connection?.policy_id ?? '';
 
-			const p = connection?.policy ?? {};
+			const p: Record<string, any> = {};
 			policyImage = p.image ?? '';
 			policyIdleTimeout = p.idle_timeout_minutes ?? 30;
 			policyStorage = p.storage ? 'persistent' : 'ephemeral';
@@ -89,9 +93,11 @@
 			// Restore resources
 			policyCpu = p.cpu_limit ?? '1';
 			policyMemory = p.memory_limit ?? '1Gi';
-			lifecycleJson = stringifyJson(connection?.lifecycle);
+			lifecycleJson = stringifyJson({});
 			refreshOnlyIdle = true;
 			refreshReset = false;
+			loadingPolicy = false;
+			policyLoadError = '';
 		} else {
 			id = '';
 			url = '';
@@ -114,11 +120,44 @@
 			lifecycleJson = '{}';
 			refreshOnlyIdle = true;
 			refreshReset = false;
+			loadingPolicy = false;
+			policyLoadError = '';
+		}
+	};
+
+	const loadPolicy = async () => {
+		if (!connection || serverType !== 'orchestrator' || !policyId || direct) return;
+
+		loadingPolicy = true;
+		policyLoadError = '';
+		try {
+			let policy: any = null;
+			try {
+				policy = await getOrchestratorPolicy(localStorage.token, url, key, policyId, auth_type);
+			} catch (error: any) {
+				if (error?.status !== 404) throw error;
+			}
+
+			const lifecycle = await getOrchestratorLifecycle(localStorage.token, url, key, policyId, auth_type);
+			const data = policy?.data ?? {};
+			policyImage = data.image ?? '';
+			policyIdleTimeout = data.idle_timeout_minutes ?? 30;
+			policyStorage = data.storage ? 'persistent' : 'ephemeral';
+			policyStorageSize = data.storage ?? '5Gi';
+			policyEnvPairs = Object.entries(data.env ?? {}).map(([key, value]) => ({ key, value: String(value) }));
+			policyCpu = data.cpu_limit ?? '1';
+			policyMemory = data.memory_limit ?? '1Gi';
+			lifecycleJson = stringifyJson(lifecycle?.data);
+		} catch (error: any) {
+			policyLoadError = error?.message || String(error);
+		} finally {
+			loadingPolicy = false;
 		}
 	};
 
 	$: if (show) {
 		init();
+		void loadPolicy();
 	}
 
 	const verifyHandler = async () => {
@@ -262,6 +301,14 @@
 		url = url.replace(/\/$/, '');
 		// Bearer key whitespace breaks the terminal WebSocket auth (HTTP headers strip it, JSON doesn't)
 		key = key.trim();
+		if (loadingPolicy) {
+			toast.error($i18n.t('Policy is still loading'));
+			return;
+		}
+		if (policyLoadError) {
+			toast.error($i18n.t('Failed to load policy: {{error}}', { error: policyLoadError }));
+			return;
+		}
 
 		// Save policy to orchestrator if applicable
 		let policyData = {};
@@ -301,8 +348,7 @@
 			},
 			// Policy fields
 			...(serverType ? { server_type: serverType } : {}),
-			...(serverType === 'orchestrator' && policyId ? { policy_id: policyId } : {}),
-			...(serverType === 'orchestrator' ? { policy: policyData, lifecycle: lifecycleData } : {})
+			...(serverType === 'orchestrator' && policyId ? { policy_id: policyId } : {})
 		};
 
 		onSubmit(result);
@@ -478,6 +524,11 @@
 									</div>
 								</div>
 							</div>
+							{#if loadingPolicy}
+								<div class="mt-2 text-xs text-gray-500">{$i18n.t('Loading policy...')}</div>
+							{:else if policyLoadError}
+								<div class="mt-2 text-xs text-red-600 dark:text-red-400">{$i18n.t('Failed to load policy: {{error}}', { error: policyLoadError })}</div>
+							{/if}
 
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
@@ -664,7 +715,7 @@
 								</div>
 							</div>
 
-							<div class="flex flex-wrap items-center justify-between gap-2 mt-2">
+								<div class="flex flex-wrap items-center justify-between gap-2 mt-2">
 								<div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
 									<label class="flex items-center gap-1.5">
 										<input type="checkbox" bind:checked={refreshOnlyIdle} />
@@ -674,6 +725,9 @@
 										<input type="checkbox" bind:checked={refreshReset} />
 										<span>{$i18n.t('Reset persisted files')}</span>
 									</label>
+								</div>
+								<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+									{$i18n.t('Policy changes apply to newly provisioned terminals. Refresh matching terminals to apply them to existing terminals.')}
 								</div>
 								<button
 									type="button"
@@ -843,8 +897,9 @@
 							</div>
 
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 disabled:opacity-50 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
 								type="submit"
+								disabled={loadingPolicy || !!policyLoadError}
 							>
 								{$i18n.t('Save')}
 							</button>
