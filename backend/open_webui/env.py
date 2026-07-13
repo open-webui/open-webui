@@ -565,6 +565,14 @@ try:
 except (ValueError, TypeError):
     AIOHTTP_CLIENT_TIMEOUT = 300
 
+# Per-chunk idle timeout (aiohttp sock_read) for streaming LLM calls: abort a
+# stalled stream while an active one keeps resetting it. Unset = no idle cap.
+_aiohttp_stream_idle_raw = os.getenv('AIOHTTP_CLIENT_TIMEOUT_STREAM_IDLE', '')
+try:
+    AIOHTTP_CLIENT_TIMEOUT_STREAM_IDLE = int(_aiohttp_stream_idle_raw) if _aiohttp_stream_idle_raw else None
+except (ValueError, TypeError):
+    AIOHTTP_CLIENT_TIMEOUT_STREAM_IDLE = None
+
 
 # SSL verification for general outbound requests (OpenAI, OAuth, etc.).
 # Accepts "True", "False", or a path to a CA bundle file.
