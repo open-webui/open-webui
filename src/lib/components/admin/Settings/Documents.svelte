@@ -1429,8 +1429,9 @@
 											bind:value={RAGConfig.RELEVANCE_THRESHOLD}
 											autocomplete="off"
 											min="0.0"
+											max="1.0"
 											title={$i18n.t(
-												'The score should be a value between 0.0 (0%) and 1.0 (100%).'
+												'Enter a DECIMAL between 0.0 and 1.0 (e.g. 0.4 = 40%). Values above 1.0 filter out everything.'
 											)}
 										/>
 									</div>
