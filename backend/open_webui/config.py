@@ -450,7 +450,23 @@ CODE_INTERPRETER_JUPYTER_TIMEOUT = int(
 )
 
 CODE_INTERPRETER_BLOCKED_MODULES = [
-    library.strip() for library in os.getenv('CODE_INTERPRETER_BLOCKED_MODULES', '').split(',') if library.strip()
+    library.strip()
+    for library in os.getenv(
+        'CODE_INTERPRETER_BLOCKED_MODULES',
+        # NOTE: this list is defense-in-depth only, NOT a security boundary.
+        # Python's import machinery (and many already-imported modules) keep
+        # references that a determined attacker can reach even with every name
+        # below blocked. Real isolation requires executing untrusted code in a
+        # separate process/container (or the pyodide frontend sandbox). The
+        # blocklist only raises the bar for the trivial primitives.
+        # `importlib` (and the frozen bootstrap / `_imp`) MUST be included:
+        # without them, `import importlib; importlib.import_module('os')`
+        # bypasses the builtins.__import__ override entirely, because
+        # importlib.import_module uses the bootstrap loader directly.
+        'os,sys,subprocess,socket,ctypes,shutil,pty,platform,multiprocessing,'
+        'importlib,_frozen_importlib,_frozen_importlib_external,_imp',
+    ).split(',')
+    if library.strip()
 ]
 
 DEFAULT_CODE_INTERPRETER_PROMPT = """

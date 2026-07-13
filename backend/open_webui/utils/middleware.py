@@ -5074,22 +5074,26 @@ async def streaming_chat_response_handler(response, ctx):
                                 # Sanitize code (strips ANSI codes and markdown fences)
                                 code = sanitize_code(code)
 
+                                # NOTE: defense-in-depth only, NOT a security
+                                # boundary -- see CODE_INTERPRETER_BLOCKED_MODULES
+                                # in config.py. `importlib` must stay in the list
+                                # or `importlib.import_module('os')` bypasses the
+                                # builtins.__import__ override below, and the
+                                # blocklist check must not be gated on __main__.
                                 if CODE_INTERPRETER_BLOCKED_MODULES:
                                     blocking_code = textwrap.dedent(f"""
                                         import builtins
-    
+
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
-    
+
                                         _real_import = builtins.__import__
                                         async def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
                                             if name.split('.')[0] in BLOCKED_MODULES:
-                                                importer_name = globals.get('__name__') if globals else None
-                                                if importer_name == '__main__':
-                                                    raise ImportError(
-                                                        f"Direct import of module {{name}} is restricted."
-                                                    )
+                                                raise ImportError(
+                                                    f"Import of module {{name}} is restricted."
+                                                )
                                             return _real_import(name, globals, locals, fromlist, level)
-    
+
                                         builtins.__import__ = restricted_import
                                     """)
                                     code = blocking_code + '\n' + code

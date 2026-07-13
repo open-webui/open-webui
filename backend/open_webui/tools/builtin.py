@@ -458,7 +458,16 @@ async def execute_code(
         # Import blocked modules from config (same as middleware)
         from open_webui.config import CODE_INTERPRETER_BLOCKED_MODULES
 
-        # Add import blocking code if there are blocked modules
+        # Add import blocking code if there are blocked modules.
+        # NOTE: this is defense-in-depth, NOT a security boundary -- see the
+        # comment on CODE_INTERPRETER_BLOCKED_MODULES in config.py. The list
+        # MUST include `importlib` (and the frozen bootstrap helpers): without
+        # it, `import importlib; importlib.import_module('os')` bypasses the
+        # builtins.__import__ override, because importlib.import_module reaches
+        # the bootstrap loader directly and never calls builtins.__import__.
+        # The blocklist check must NOT be gated on `importer_name == '__main__'`,
+        # as that allows bypass from any non-__main__ context (importlib,
+        # helper modules, exec with custom globals).
         if CODE_INTERPRETER_BLOCKED_MODULES:
             import textwrap
 
@@ -471,11 +480,9 @@ async def execute_code(
                 _real_import = builtins.__import__
                 def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
                     if name.split('.')[0] in BLOCKED_MODULES:
-                        importer_name = globals.get('__name__') if globals else None
-                        if importer_name == '__main__':
-                            raise ImportError(
-                                f"Direct import of module {{name}} is restricted."
-                            )
+                        raise ImportError(
+                            f"Import of module {{name}} is restricted."
+                        )
                     return _real_import(name, globals, locals, fromlist, level)
 
                 builtins.__import__ = restricted_import
