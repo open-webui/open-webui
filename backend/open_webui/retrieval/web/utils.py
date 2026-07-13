@@ -74,6 +74,37 @@ def resolve_hostname(hostname):
     return ipv4_addresses, ipv6_addresses
 
 
+def _embedded_ipv4(addr: ipaddress.IPv6Address) -> Optional[ipaddress.IPv4Address]:
+    # IPv4 that a standardized IPv6 transition form embeds; on a host with the matching
+    # routing (NAT64/6to4/Teredo) the packet reaches that IPv4, so it, not the literal v6,
+    # is what SSRF classification must judge (is_global reports the raw v6 as global).
+    if addr.ipv4_mapped is not None:  # ::ffff:a.b.c.d
+        return addr.ipv4_mapped
+    b = addr.packed
+    if b[:12] == b"\x00" * 12 and b[12:] not in (b"\x00\x00\x00\x00", b"\x00\x00\x00\x01"):
+        return ipaddress.IPv4Address(b[12:])  # ::a.b.c.d (IPv4-compatible)
+    if b[:2] == b"\x20\x02":  # 6to4 2002::/16
+        return ipaddress.IPv4Address(b[2:6])
+    if b[:4] == b"\x20\x01\x00\x00":  # Teredo 2001:0000::/32
+        return ipaddress.IPv4Address(bytes(x ^ 0xFF for x in b[12:16]))
+    if b[:12] == b"\x00\x64\xff\x9b" + b"\x00" * 8:  # NAT64 well-known 64:ff9b::/96
+        return ipaddress.IPv4Address(b[12:16])
+    if b[:6] == b"\x00\x64\xff\x9b\x00\x01":  # NAT64 RFC 8215 64:ff9b:1::/48
+        return ipaddress.IPv4Address(bytes([b[6], b[7], b[9], b[10]]))
+    return None
+
+
+def _is_global_addr(ip: str) -> bool:
+    # is_global, but first unwrap IPv6 transition forms so an embedded internal IPv4
+    # is judged rather than the literal v6 (which is_global wrongly treats as global).
+    addr = ipaddress.ip_address(ip)
+    if isinstance(addr, ipaddress.IPv6Address):
+        embedded = _embedded_ipv4(addr)
+        if embedded is not None:
+            return embedded.is_global
+    return addr.is_global
+
+
 def validate_url(url: Union[str, Sequence[str]]):
     if isinstance(url, str):
         if isinstance(validators.url(url), validators.ValidationError):
@@ -110,8 +141,7 @@ def validate_url(url: Union[str, Sequence[str]]):
             # Check if any of the resolved addresses are private
             # DNS rebinding is mitigated at the connection layer; see _SSRFSafeResolver / _SSRFSafeAdapter
             for ip in ipv4_addresses + ipv6_addresses:
-                addr = ipaddress.ip_address(ip)
-                if not addr.is_global:
+                if not _is_global_addr(ip):
                     raise ValueError(ERROR_MESSAGES.INVALID_URL)
         return True
     elif isinstance(url, Sequence):
@@ -146,7 +176,7 @@ def _ssrf_safe_new_conn(self):
         raise OSError(f'getaddrinfo for {host!r} returned empty list')
     if not ENABLE_LOCAL_WEB_FETCH:
         for _, _, _, _, sa in infos:
-            if not ipaddress.ip_address(sa[0]).is_global:
+            if not _is_global_addr(sa[0]):
                 raise ValueError(ERROR_MESSAGES.INVALID_URL)
     err = None
     for fam, typ, proto, _, sa in infos:
@@ -202,7 +232,7 @@ class _SSRFSafeResolver(aiohttp.resolver.DefaultResolver):
         results = await super().resolve(host, port, family)
         if not ENABLE_LOCAL_WEB_FETCH:
             for entry in results:
-                if not ipaddress.ip_address(entry['host']).is_global:
+                if not _is_global_addr(entry['host']):
                     raise ValueError(ERROR_MESSAGES.INVALID_URL)
         return results
 
