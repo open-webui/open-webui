@@ -1,6 +1,15 @@
 # Open WebUI fork with reasoning selector
 
-This fork add the ability to select the reasoning effort.
+Changes from the upstream [open-webui/open-webui](https://github.com/open-webui/open-webui) repo:
+
+- Reasoning effort selector (none, low, medium, high, xhigh, max)
+- Reasoning effort default value per model
+
+- When combined with [AI Subscription Gateway](https://github.com/m600x/ai-subscription-gateway/):
+  - Cost calculation per message and per chat session
+  - Auto discovery of reasoning effort
+
+- CI trimmed: upstream release/PyPI workflows dropped; multi-arch Docker image published to `ghcr.io/m600x/open-webui` on push
 
 ![Open WebUI fork buttons](https://i.imgur.com/mP0kUM9.png)
 

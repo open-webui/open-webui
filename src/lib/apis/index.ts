@@ -1755,4 +1755,8 @@ export interface ModelMeta {
 	profile_image_url?: string;
 }
 
-export interface ModelParams {}
+export interface ModelParams {
+	// Default reasoning effort for the model (workspace Model Params);
+	// overrides the provider-advertised default in the chat selector.
+	reasoning_effort?: string | null;
+}

@@ -1,4 +1,5 @@
 import type { Writable } from 'svelte/store';
+import type { ModelPricing } from '$lib/stores';
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 import DOMPurify from 'dompurify';
@@ -2141,6 +2142,134 @@ export const parseFrontmatter = (content) => {
 
 export const formatSkillName = (name) => {
 	return name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+/**
+ * Read the `reasoning` vendor extension a provider may attach to its
+ * /v1/models entries: the accepted reasoning_effort values and the
+ * provider-side default.
+ *
+ * `efforts: null` = extension absent (caller falls back to the full
+ * ladder); `efforts: []` = the model has no reasoning at all.
+ */
+export const getModelReasoningInfo = (
+	model: any
+): { efforts: string[] | null; default: string | null } => {
+	// Top-level first: direct-connection models only carry `openai: { id }`.
+	const reasoning = model?.reasoning ?? model?.openai?.reasoning ?? null;
+	if (!reasoning || !Array.isArray(reasoning.efforts)) {
+		return { efforts: null, default: null };
+	}
+	return { efforts: reasoning.efforts, default: reasoning.default || null };
+};
+
+/**
+ * Read the `pricing` vendor extension a provider may attach to its
+ * /v1/models entries (API-equivalent rates per 1M tokens). Returns null
+ * when the model has no usable pricing — skip cost estimation then,
+ * never assume zero.
+ */
+export const getModelPricing = (model: any): ModelPricing | null => {
+	const pricing = model?.pricing ?? model?.openai?.pricing ?? null;
+	if (
+		!pricing ||
+		typeof pricing.input !== 'number' ||
+		typeof pricing.output !== 'number' ||
+		(pricing.unit && pricing.unit !== 'per_million_tokens')
+	) {
+		return null;
+	}
+	return pricing;
+};
+
+/**
+ * Extract token counts from a usage object, preferring the normalized
+ * keys the backend guarantees and falling back to the OpenAI names.
+ * Missing detail objects mean a count of 0.
+ */
+export const getUsageTokens = (usage: any) => {
+	const input = usage?.input_tokens ?? usage?.prompt_tokens ?? 0;
+	const output = usage?.output_tokens ?? usage?.completion_tokens ?? 0;
+	const cached = usage?.prompt_tokens_details?.cached_tokens ?? usage?.cache_read_input_tokens ?? 0;
+	// Informational only: already included in `output` and billed at the
+	// output rate — never priced separately.
+	const reasoning = usage?.completion_tokens_details?.reasoning_tokens ?? 0;
+	return { input, output, cached, reasoning };
+};
+
+/**
+ * Estimate the cost of one response from its usage and the model's
+ * pricing. Cache-write tokens are invisible in usage (folded into the
+ * prompt count by the gateway) and are knowingly billed at the input
+ * rate — a small documented underestimate on cache-writing turns.
+ */
+export const computeUsageCost = (usage: any, pricing: ModelPricing | null): number | null => {
+	if (
+		!usage ||
+		!pricing ||
+		typeof pricing.input !== 'number' ||
+		typeof pricing.output !== 'number'
+	) {
+		return null;
+	}
+	const { input, output, cached } = getUsageTokens(usage);
+	const uncached = Math.max(0, input - cached);
+	return (
+		(uncached * pricing.input +
+			cached * (pricing.cache_read ?? pricing.input) +
+			output * pricing.output) /
+		1_000_000
+	);
+};
+
+export const formatCost = (value: number, currency: string = 'USD'): string => {
+	return new Intl.NumberFormat('en-US', {
+		style: 'currency',
+		currency,
+		minimumFractionDigits: 2,
+		maximumFractionDigits: value > 0 && value < 0.01 ? 4 : 2
+	}).format(value);
+};
+
+// Bare amount without a currency symbol, for "0.0042 USD"-style display.
+export const formatCostAmount = (value: number): string =>
+	value.toFixed(value > 0 && value < 0.01 ? 4 : 2);
+
+/**
+ * Sum the estimated cost of every assistant response in a chat history
+ * (all branches, including regenerated ones — what the session actually
+ * consumed). Responses whose model has no pricing are counted in
+ * `unpricedCount` instead of being treated as free.
+ */
+export const computeSessionCost = (
+	messages: Record<string, any>,
+	models: any[]
+): { cost: number | null; currency: string; pricedCount: number; unpricedCount: number } => {
+	const pricingById = new Map((models ?? []).map((m) => [m.id, getModelPricing(m)]));
+
+	let cost: number | null = null;
+	let currency = 'USD';
+	let pricedCount = 0;
+	let unpricedCount = 0;
+
+	for (const message of Object.values(messages ?? {})) {
+		if (message?.role !== 'assistant' || !message?.usage) {
+			continue;
+		}
+		const pricing = pricingById.get(message.model) ?? null;
+		const messageCost = computeUsageCost(message.usage, pricing);
+		if (messageCost === null) {
+			unpricedCount += 1;
+			continue;
+		}
+		cost = (cost ?? 0) + messageCost;
+		pricedCount += 1;
+		if (pricing?.currency) {
+			currency = pricing.currency;
+		}
+	}
+
+	return { cost, currency, pricedCount, unpricedCount };
 };
 
 /**

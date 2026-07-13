@@ -3,7 +3,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from open_webui.internal.db import get_async_session
 from open_webui.models.chat_messages import ChatMessageModel, ChatMessages
 from open_webui.models.chats import Chats
@@ -11,6 +11,8 @@ from open_webui.models.feedbacks import Feedbacks
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
 from open_webui.utils.auth import get_admin_user
+from open_webui.utils.models import get_all_models
+from open_webui.utils.response import compute_token_cost
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +20,23 @@ log = logging.getLogger(__name__)
 
 
 router = APIRouter()
+
+
+async def _get_pricing_by_model(request: Request, user) -> dict[str, dict]:
+    """Resolve the `pricing` vendor extension for every known model.
+
+    Models a provider no longer serves simply have no pricing and are
+    reported unpriced rather than priced at zero.
+    """
+    if not request.app.state.MODELS:
+        await get_all_models(request, user=user)
+
+    pricing_by_model = {}
+    for model_id, model in request.app.state.MODELS.items():
+        pricing = model.get('pricing') or (model.get('openai') or {}).get('pricing')
+        if pricing:
+            pricing_by_model[model_id] = pricing
+    return pricing_by_model
 
 
 ####################
@@ -44,6 +63,9 @@ class UserAnalyticsEntry(BaseModel):
     input_tokens: int = 0
     output_tokens: int = 0
     total_tokens: int = 0
+    # Estimated from current model pricing; covers priced models only
+    # (lower-bound estimate). None when no usage could be priced.
+    cost: Optional[float] = None
 
 
 class UserAnalyticsResponse(BaseModel):
@@ -84,6 +106,7 @@ async def get_model_analytics(
 
 @router.get('/users', response_model=UserAnalyticsResponse)
 async def get_user_analytics(
+    request: Request,
     start_date: Optional[int] = Query(None, description='Start timestamp (epoch)'),
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
@@ -98,6 +121,7 @@ async def get_user_analytics(
     token_usage = await ChatMessages.get_token_usage_by_user(
         start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
+    pricing_by_model = await _get_pricing_by_model(request, user)
 
     # Get user info for top users
     top_user_ids = [uid for uid, _ in sorted(counts.items(), key=lambda x: -x[1])[:limit]]
@@ -107,6 +131,18 @@ async def get_user_analytics(
     for user_id in top_user_ids:
         u = user_info.get(user_id)
         tokens = token_usage.get(user_id, {})
+
+        cost = None
+        for model_id, model_tokens in (tokens.get('models') or {}).items():
+            model_cost = compute_token_cost(
+                model_tokens.get('input_tokens', 0),
+                model_tokens.get('output_tokens', 0),
+                model_tokens.get('cached_tokens', 0),
+                pricing_by_model.get(model_id),
+            )
+            if model_cost is not None:
+                cost = (cost or 0.0) + model_cost
+
         users.append(
             UserAnalyticsEntry(
                 user_id=user_id,
@@ -116,6 +152,7 @@ async def get_user_analytics(
                 input_tokens=tokens.get('input_tokens', 0),
                 output_tokens=tokens.get('output_tokens', 0),
                 total_tokens=tokens.get('total_tokens', 0),
+                cost=cost,
             )
         )
 
@@ -221,8 +258,12 @@ class TokenUsageEntry(BaseModel):
     model_id: str
     input_tokens: int
     output_tokens: int
+    cached_tokens: int = 0
     total_tokens: int
     message_count: int
+    # Estimated from current model pricing; None when the model has no
+    # published pricing.
+    cost: Optional[float] = None
 
 
 class TokenUsageResponse(BaseModel):
@@ -230,10 +271,14 @@ class TokenUsageResponse(BaseModel):
     total_input_tokens: int
     total_output_tokens: int
     total_tokens: int
+    total_cost: Optional[float] = None
+    currency: Optional[str] = None
+    unpriced_models: int = 0
 
 
 @router.get('/tokens', response_model=TokenUsageResponse)
 async def get_token_usage(
+    request: Request,
     start_date: Optional[int] = Query(None),
     end_date: Optional[int] = Query(None),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
@@ -244,20 +289,41 @@ async def get_token_usage(
     usage = await ChatMessages.get_token_usage_by_model(
         start_date=start_date, end_date=end_date, group_id=group_id, db=db
     )
+    pricing_by_model = await _get_pricing_by_model(request, user)
 
     models = [
-        TokenUsageEntry(model_id=model_id, **data)
+        TokenUsageEntry(
+            model_id=model_id,
+            cost=compute_token_cost(
+                data['input_tokens'],
+                data['output_tokens'],
+                data.get('cached_tokens', 0),
+                pricing_by_model.get(model_id),
+            ),
+            **data,
+        )
         for model_id, data in sorted(usage.items(), key=lambda x: -x[1]['total_tokens'])
     ]
 
     total_input = sum(m.input_tokens for m in models)
     total_output = sum(m.output_tokens for m in models)
 
+    priced_costs = [m.cost for m in models if m.cost is not None]
+    currency = None
+    for model_id, _ in sorted(usage.items(), key=lambda x: -x[1]['total_tokens']):
+        pricing = pricing_by_model.get(model_id)
+        if pricing:
+            currency = pricing.get('currency', 'USD')
+            break
+
     return TokenUsageResponse(
         models=models,
         total_input_tokens=total_input,
         total_output_tokens=total_output,
         total_tokens=total_input + total_output,
+        total_cost=sum(priced_costs) if priced_costs else None,
+        currency=currency,
+        unpriced_models=len(models) - len(priced_costs),
     )
 
 

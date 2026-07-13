@@ -204,6 +204,16 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 **({'pipe': pipe} if pipe is not None else {}),
                 **({'provider': base_model.get('provider')} if base_model and base_model.get('provider') else {}),
                 **({'loaded': base_model.get('loaded')} if base_model and base_model.get('loaded') is not None else {}),
+                **(
+                    {'reasoning': base_model['reasoning']}
+                    if base_model and base_model.get('reasoning') is not None
+                    else {}
+                ),
+                **(
+                    {'pricing': base_model['pricing']}
+                    if base_model and base_model.get('pricing') is not None
+                    else {}
+                ),
             }
 
             info = custom_model.model_dump()

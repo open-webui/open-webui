@@ -19,6 +19,10 @@ type ResponseUsage = {
 	completion_tokens: number;
 	/** Sum of the above two fields */
 	total_tokens: number;
+	/** Cache-read subset of prompt_tokens (omitted when 0) */
+	prompt_tokens_details?: { cached_tokens?: number };
+	/** Hidden-reasoning subset of completion_tokens (omitted when 0) */
+	completion_tokens_details?: { reasoning_tokens?: number };
 	/** Any other fields that aren't part of the base OpenAI spec */
 	[other: string]: unknown;
 };

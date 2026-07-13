@@ -146,12 +146,17 @@
 	// Reasoning effort sent as reasoning_effort: null = default (omit),
 	// or one of 'off' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'.
 	export let thinkingEffort: string | null = null;
-	// Model-level default (model Advanced Params); shown when no override.
+	// Model-level default (model params or provider default); shown when no override.
 	export let defaultThinkingEffort: string | null = null;
+	// Efforts advertised by the provider for the model: null = no
+	// `reasoning` extension (fall back to the full ladder), [] = the
+	// model has no reasoning (hide the selector).
+	export let availableThinkingEfforts: string[] | null = null;
 
 	// Anthropic adaptive-thinking effort ladder (+ off).
-	const thinkingEffortOptions = ['off', 'low', 'medium', 'high', 'xhigh', 'max'];
+	const FALLBACK_THINKING_EFFORTS = ['off', 'low', 'medium', 'high', 'xhigh', 'max'];
 	let showThinkingMenu = false;
+	$: thinkingEffortOptions = availableThinkingEfforts ?? FALLBACK_THINKING_EFFORTS;
 	$: effectiveThinkingEffort = thinkingEffort ?? defaultThinkingEffort;
 
 	export let pendingOAuthTools = [];
@@ -2057,89 +2062,104 @@
 										{/if}
 
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
-											<!-- Reasoning effort selector -->
-											<div class="flex items-center">
-												<Dropdown bind:show={showThinkingMenu} align="end">
-													<Tooltip
-														content={thinkingEffort !== null
-															? $i18n.t('Reasoning Effort') + ': ' + thinkingEffort
-															: defaultThinkingEffort !== null
-																? $i18n.t('Reasoning Effort') +
-																	': ' +
-																	defaultThinkingEffort +
-																	' (' +
-																	$i18n.t('model default') +
-																	')'
-																: $i18n.t('Reasoning Effort')}
-														placement="top"
-													>
-														<button
-															type="button"
-															id="thinking-effort-button"
-															class="flex items-center gap-1 p-1.5 self-center text-sm transition rounded-full cursor-pointer text-purple-500 dark:text-purple-300 hover:text-purple-600 dark:hover:text-purple-200"
-														>
-															<Brain className="size-4.5" strokeWidth="1.75" />
-															<span class="text-[11px] font-medium whitespace-nowrap">
-																{#if thinkingEffort !== null}
-																	<span class="capitalize">{thinkingEffort}</span>
-																{:else if defaultThinkingEffort !== null}
-																	<span>({$i18n.t('Default')})</span>
-																	<span class="capitalize">{defaultThinkingEffort}</span>
-																{:else}
-																	<span>{$i18n.t('Default')}</span>
-																{/if}
-															</span>
-														</button>
-													</Tooltip>
-
-													<div slot="content">
-														<div
-															class="min-w-40 rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+											<!-- Reasoning effort selector (hidden when the model advertises no reasoning) -->
+											{#if thinkingEffortOptions.length > 0}
+												<div class="flex items-center">
+													<Dropdown bind:show={showThinkingMenu} align="end">
+														<Tooltip
+															content={thinkingEffort !== null
+																? $i18n.t('Reasoning Effort') + ': ' + thinkingEffort
+																: defaultThinkingEffort !== null
+																	? $i18n.t('Reasoning Effort') +
+																		': ' +
+																		defaultThinkingEffort +
+																		' (' +
+																		$i18n.t('model default') +
+																		')'
+																	: $i18n.t('Reasoning Effort')}
+															placement="top"
 														>
 															<button
 																type="button"
-																class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl {thinkingEffort ===
-																null
-																	? 'bg-gray-50 dark:bg-gray-800/50'
-																	: 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}"
-																on:click={() => {
-																	thinkingEffort = null;
-																	showThinkingMenu = false;
-																}}
+																id="thinking-effort-button"
+																class="flex items-center gap-1 p-1.5 self-center text-sm transition rounded-full cursor-pointer text-purple-500 dark:text-purple-300 hover:text-purple-600 dark:hover:text-purple-200"
 															>
-																<span>
-																	{$i18n.t('Default')}{defaultThinkingEffort !== null
-																		? ` (${defaultThinkingEffort})`
-																		: ''}
+																<Brain className="size-4.5" strokeWidth="1.75" />
+																<span class="text-[11px] font-medium whitespace-nowrap">
+																	{#if thinkingEffort !== null}
+																		<span class="capitalize">{thinkingEffort}</span>
+																	{:else if defaultThinkingEffort !== null}
+																		<span>({$i18n.t('Default')})</span>
+																		<span class="capitalize">{defaultThinkingEffort}</span>
+																	{:else}
+																		<span>{$i18n.t('Default')}</span>
+																	{/if}
 																</span>
 															</button>
-															{#each thinkingEffortOptions as effort}
-																<button
-																	type="button"
-																	class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl {thinkingEffort ===
-																	effort
-																		? 'bg-gray-50 dark:bg-gray-800/50'
-																		: 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}"
-																	on:click={() => {
-																		thinkingEffort = effort;
-																		showThinkingMenu = false;
-																	}}
-																>
-																	<span class="capitalize">{$i18n.t(effort)}</span>
-																	{#if effort !== 'off'}
-																		<Brain
-																			className="size-3.5 shrink-0 {thinkingEffort === effort
-																				? 'text-purple-500 dark:text-purple-300'
-																				: 'text-gray-300 dark:text-gray-600'}"
-																			strokeWidth="2"
-																		/>
-																	{/if}
-																</button>
-															{/each}
+														</Tooltip>
+
+														<div slot="content">
+															<div
+																class="min-w-40 rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+															>
+																{#if defaultThinkingEffort === null || !thinkingEffortOptions.includes(defaultThinkingEffort)}
+																	<button
+																		type="button"
+																		class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl {thinkingEffort ===
+																		null
+																			? 'bg-gray-50 dark:bg-gray-800/50'
+																			: 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}"
+																		on:click={() => {
+																			thinkingEffort = null;
+																			showThinkingMenu = false;
+																		}}
+																	>
+																		<span>
+																			{$i18n.t('Default')}{defaultThinkingEffort !== null
+																				? ` (${defaultThinkingEffort})`
+																				: ''}
+																		</span>
+																	</button>
+																{/if}
+																{#each thinkingEffortOptions as effort}
+																	<button
+																		type="button"
+																		class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl {effectiveThinkingEffort ===
+																		effort
+																			? 'bg-gray-50 dark:bg-gray-800/50'
+																			: 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}"
+																		on:click={() => {
+																			// Picking the model default reverts to "follow
+																			// the default" (nothing sent with the request).
+																			thinkingEffort =
+																				effort === defaultThinkingEffort ? null : effort;
+																			showThinkingMenu = false;
+																		}}
+																	>
+																		<span>
+																			<span class="capitalize">{$i18n.t(effort)}</span>
+																			{#if effort === defaultThinkingEffort}
+																				<span class="text-xs text-gray-400 dark:text-gray-500"
+																					>({$i18n.t('default')})</span
+																				>
+																			{/if}
+																		</span>
+																		{#if effort !== 'off'}
+																			<Brain
+																				className="size-3.5 shrink-0 {effectiveThinkingEffort ===
+																				effort
+																					? 'text-purple-500 dark:text-purple-300'
+																					: 'text-gray-300 dark:text-gray-600'}"
+																				strokeWidth="2"
+																			/>
+																		{/if}
+																	</button>
+																{/each}
+															</div>
 														</div>
-													</div>
-												</Dropdown>
-											</div>
+													</Dropdown>
+												</div>
+											{/if}
 
 											<!-- Terminal Server Selector -->
 											{@const hasDirectToolServerAccess =

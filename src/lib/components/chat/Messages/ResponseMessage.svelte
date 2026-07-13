@@ -34,7 +34,12 @@
 		createMessagesList,
 		formatDate,
 		removeDetails,
-		removeAllDetails
+		removeAllDetails,
+		getModelPricing,
+		getUsageTokens,
+		computeUsageCost,
+		computeSessionCost,
+		formatCostAmount
 	} from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import equal from 'fast-deep-equal';
@@ -175,6 +180,12 @@
 
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
+
+	$: usagePricing = getModelPricing(model);
+	$: usageCost = computeUsageCost(message?.usage, usagePricing);
+	$: usageTokens = getUsageTokens(message?.usage ?? {});
+	// Whole-chat total (all branches), shown next to the message cost.
+	$: sessionCost = usageCost !== null ? computeSessionCost(history?.messages ?? {}, $models) : null;
 
 	$: statusEntries = message?.statusHistory ?? [...(message?.status ? [message?.status] : [])];
 	$: hasVisibleStatus =
@@ -1160,7 +1171,18 @@
 								{#if message.usage}
 									<Tooltip
 										content={message.usage
-											? `<pre>${sanitizeResponseContent(
+											? `<div class="text-left">` +
+												`<div>${$i18n.t('Input tokens')}: ${usageTokens.input.toLocaleString()}</div>` +
+												(usageTokens.cached > 0
+													? `<div class="pl-3">${$i18n.t('Cached')}: ${usageTokens.cached.toLocaleString()}</div>`
+													: '') +
+												`<div>${$i18n.t('Output tokens')}: ${usageTokens.output.toLocaleString()}</div>` +
+												(usageTokens.reasoning > 0
+													? `<div class="pl-3">${$i18n.t('Reasoning tokens')}: ${usageTokens.reasoning.toLocaleString()}</div>`
+													: '') +
+												`</div>` +
+												`<hr class="my-1 border-gray-100 dark:border-gray-800" />` +
+												`<pre>${sanitizeResponseContent(
 													JSON.stringify(message.usage, null, 2)
 														.replace(/"([^(")"]+)":/g, '$1:')
 														.slice(1, -1)
@@ -1498,6 +1520,21 @@
 									{/each}
 								{/if}
 							{/if}
+						{/if}
+
+						{#if message.done && usageCost !== null}
+							<div
+								class="flex self-center items-center ml-1 text-[11px] italic text-gray-400 dark:text-gray-500 whitespace-nowrap"
+							>
+								{$i18n.t('Cost')}
+								{formatCostAmount(usageCost)}
+								{usagePricing?.currency ?? 'USD'}
+								{#if sessionCost?.cost != null}
+									({$i18n.t('total')}
+									{formatCostAmount(sessionCost.cost)}
+									{sessionCost.currency})
+								{/if}
+							</div>
 						{/if}
 					</div>
 

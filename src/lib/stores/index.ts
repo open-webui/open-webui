@@ -137,10 +137,26 @@ type BaseModel = {
 	owned_by: 'ollama' | 'openai' | 'arena';
 };
 
+// Provider vendor extension on /v1/models: API-equivalent sticker
+// rates per 1M tokens. `cache_write` is published for completeness but
+// cache-write tokens are invisible in usage, so it is never priced.
+export type ModelPricing = {
+	currency?: string;
+	unit?: string;
+	input?: number;
+	output?: number;
+	cache_read?: number;
+	cache_write?: number;
+};
+
 export interface OpenAIModel extends BaseModel {
 	owned_by: 'openai';
 	external: boolean;
 	source?: string;
+	// Provider vendor extension on /v1/models: accepted reasoning_effort
+	// values, the provider default, and the thinking mode.
+	reasoning?: { efforts: string[]; default?: string; mode?: string };
+	pricing?: ModelPricing;
 }
 
 export interface OllamaModel extends BaseModel {

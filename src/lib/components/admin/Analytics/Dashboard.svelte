@@ -16,7 +16,7 @@
 	import AnalyticsModelModal from './AnalyticsModelModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
-	import { formatNumber } from '$lib/utils';
+	import { formatNumber, formatCost } from '$lib/utils';
 	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
@@ -76,13 +76,22 @@
 		unique_chats?: number;
 		name?: string;
 	}> = [];
-	let userStats: Array<{ user_id: string; name?: string; email?: string; count: number }> = [];
+	let userStats: Array<{
+		user_id: string;
+		name?: string;
+		email?: string;
+		count: number;
+		total_tokens?: number;
+		cost?: number | null;
+	}> = [];
 	let dailyStats: Array<{ date: string; models: Record<string, number> }> = [];
 	let tokenStats: Record<
 		string,
-		{ input_tokens: number; output_tokens: number; total_tokens: number }
+		{ input_tokens: number; output_tokens: number; total_tokens: number; cost?: number | null }
 	> = {};
 	let totalTokens = { input: 0, output: 0, total: 0 };
+	let totalCost: number | null = null;
+	let costCurrency = 'USD';
 
 	let loading = true;
 
@@ -145,7 +154,8 @@
 					tokenStats[m.model_id] = {
 						input_tokens: m.input_tokens,
 						output_tokens: m.output_tokens,
-						total_tokens: m.total_tokens
+						total_tokens: m.total_tokens,
+						cost: m.cost ?? null
 					};
 				}
 				totalTokens = {
@@ -153,6 +163,8 @@
 					output: tokensRes.total_output_tokens,
 					total: tokensRes.total_tokens
 				};
+				totalCost = tokensRes.total_cost ?? null;
+				costCurrency = tokensRes.currency ?? 'USD';
 			}
 		} catch (err) {
 			console.error('Dashboard load failed:', err);
@@ -189,6 +201,11 @@
 			const bTokens = tokenStats[b.model_id]?.total_tokens ?? 0;
 			return modelDirection === 'asc' ? aTokens - bTokens : bTokens - aTokens;
 		}
+		if (modelOrderBy === 'cost') {
+			const aCost = tokenStats[a.model_id]?.cost ?? 0;
+			const bCost = tokenStats[b.model_id]?.cost ?? 0;
+			return modelDirection === 'asc' ? aCost - bCost : bCost - aCost;
+		}
 		if (modelOrderBy === 'users') {
 			const aUsers = a.unique_users ?? 0;
 			const bUsers = b.unique_users ?? 0;
@@ -212,6 +229,11 @@
 			const aTokens = a.total_tokens ?? 0;
 			const bTokens = b.total_tokens ?? 0;
 			return userDirection === 'asc' ? aTokens - bTokens : bTokens - aTokens;
+		}
+		if (userOrderBy === 'cost') {
+			const aCost = a.cost ?? 0;
+			const bCost = b.cost ?? 0;
+			return userDirection === 'asc' ? aCost - bCost : bCost - aCost;
 		}
 		return userDirection === 'asc' ? a.count - b.count : b.count - a.count;
 	});
@@ -300,6 +322,16 @@
 				{$i18n.t('tokens')}</span
 			>
 		</Tooltip>
+		{#if totalCost != null}
+			<Tooltip content={$i18n.t('Costs are estimates based on current model pricing')}>
+				<span class="cursor-help"
+					><span class="font-medium text-gray-900 dark:text-gray-300"
+						>~{formatCost(totalCost, costCurrency)}</span
+					>
+					{$i18n.t('cost')}</span
+				>
+			</Tooltip>
+		{/if}
 		<span
 			><span class="font-medium text-gray-900 dark:text-gray-300"
 				>{summary.total_chats.toLocaleString()}</span
@@ -450,6 +482,24 @@
 							</th>
 							<th
 								scope="col"
+								class="px-2.5 py-2 cursor-pointer select-none text-right"
+								on:click={() => toggleModelSort('cost')}
+							>
+								<div class="flex gap-1.5 items-center justify-end">
+									{$i18n.t('Cost')}
+									{#if modelOrderBy === 'cost'}
+										<span class="font-normal">
+											{#if modelDirection === 'asc'}<ChevronUp
+													className="size-2"
+												/>{:else}<ChevronDown className="size-2" />{/if}
+										</span>
+									{:else}
+										<span class="invisible"><ChevronUp className="size-2" /></span>
+									{/if}
+								</div>
+							</th>
+							<th
+								scope="col"
 								class="px-2.5 py-2 cursor-pointer select-none text-right w-16"
 								on:click={() => toggleModelSort('percentage')}
 							>
@@ -497,6 +547,11 @@
 								<td class="px-3 py-1 text-right"
 									>{formatNumber(tokenStats[model.model_id]?.total_tokens ?? 0)}</td
 								>
+								<td class="px-3 py-1 text-right">
+									{tokenStats[model.model_id]?.cost != null
+										? `~${formatCost(tokenStats[model.model_id].cost, costCurrency)}`
+										: '—'}
+								</td>
 								<td class="px-3 py-1 text-right text-gray-400">
 									{totalModelMessages > 0
 										? ((model.count / totalModelMessages) * 100).toFixed(1)
@@ -506,7 +561,7 @@
 						{/each}
 						{#if sortedModels.length === 0}
 							<tr
-								><td colspan="7" class="px-3 py-2 text-center text-gray-400"
+								><td colspan="8" class="px-3 py-2 text-center text-gray-400"
 									>{$i18n.t('No data')}</td
 								></tr
 							>
@@ -580,6 +635,24 @@
 									{/if}
 								</div>
 							</th>
+							<th
+								scope="col"
+								class="px-2.5 py-2 cursor-pointer select-none text-right"
+								on:click={() => toggleUserSort('cost')}
+							>
+								<div class="flex gap-1.5 items-center justify-end">
+									{$i18n.t('Cost')}
+									{#if userOrderBy === 'cost'}
+										<span class="font-normal">
+											{#if userDirection === 'asc'}<ChevronUp
+													className="size-2"
+												/>{:else}<ChevronDown className="size-2" />{/if}
+										</span>
+									{:else}
+										<span class="invisible"><ChevronUp className="size-2" /></span>
+									{/if}
+								</div>
+							</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -603,11 +676,14 @@
 								</td>
 								<td class="px-3 py-1 text-right">{user.count.toLocaleString()}</td>
 								<td class="px-3 py-1 text-right">{formatNumber(user.total_tokens ?? 0)}</td>
+								<td class="px-3 py-1 text-right">
+									{user.cost != null ? `~${formatCost(user.cost, costCurrency)}` : '—'}
+								</td>
 							</tr>
 						{/each}
 						{#if sortedUsers.length === 0}
 							<tr
-								><td colspan="4" class="px-3 py-2 text-center text-gray-400"
+								><td colspan="5" class="px-3 py-2 text-center text-gray-400"
 									>{$i18n.t('No data')}</td
 								></tr
 							>

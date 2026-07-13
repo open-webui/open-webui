@@ -65,7 +65,8 @@
 		removeAllDetails,
 		getCodeBlockContents,
 		isYoutubeUrl,
-		displayFileHandler
+		displayFileHandler,
+		getModelReasoningInfo
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
 	import { getOutputText } from './Messages/structuredOutput';
@@ -164,15 +165,22 @@
 	let codeInterpreterEnabled = false;
 	let thinkingEffort: string | null = null;
 
-	// Model-level default reasoning effort (set in the model editor).
-	// Shown in the chat-bar selector when the user hasn't overridden it;
-	// applied backend-side, so it is NOT re-sent with the request.
+	// Model-level default reasoning effort: the workspace param wins,
+	// else the provider's advertised default. Shown in the chat-bar
+	// selector when the user hasn't overridden it; applied backend-side
+	// (or gateway-side), so it is NOT re-sent with the request.
 	let defaultThinkingEffort: string | null = null;
+	// Efforts the provider advertises for the model; null = no
+	// `reasoning` extension, the selector falls back to the full ladder.
+	let availableThinkingEfforts: string[] | null = null;
 	let _effortModelId: string | null = null;
 	$: {
 		const currentModelId = atSelectedModel?.id ?? selectedModels[0];
+		const currentModel = $models.find((m) => m.id === currentModelId);
+		const reasoning = getModelReasoningInfo(currentModel);
+		availableThinkingEfforts = reasoning.efforts;
 		defaultThinkingEffort =
-			$models.find((m) => m.id === currentModelId)?.info?.params?.reasoning_effort ?? null;
+			currentModel?.info?.params?.reasoning_effort ?? reasoning.default ?? null;
 		// Swapping model drops any per-chat override back to the new
 		// model's default.
 		if (currentModelId && _effortModelId && currentModelId !== _effortModelId) {
@@ -181,6 +189,16 @@
 		if (currentModelId) {
 			_effortModelId = currentModelId;
 		}
+	}
+	// Drop an override the model doesn't advertise (stale draft restore,
+	// ladder change) before it can be sent. Separate statement so its
+	// `thinkingEffort` dependency doesn't re-run the block above.
+	$: if (
+		Array.isArray(availableThinkingEfforts) &&
+		thinkingEffort !== null &&
+		!availableThinkingEfforts.includes(thinkingEffort)
+	) {
+		thinkingEffort = null;
 	}
 	let webSearchActive = false;
 	let showWebSearchConfirm = false;
@@ -2904,6 +2922,10 @@
 				);
 				for await (const update of textStream) {
 					const { value, done, sources, error, usage } = update;
+					if (usage) {
+						message.usage = usage;
+						history.messages[messageId] = message;
+					}
 					if (error || done) {
 						generating = false;
 						generationController = null;
@@ -3326,6 +3348,7 @@
 										bind:webSearchEnabled
 										bind:thinkingEffort
 										{defaultThinkingEffort}
+										{availableThinkingEfforts}
 										bind:atSelectedModel
 										bind:showCommands
 										bind:dragged
@@ -3411,6 +3434,7 @@
 									bind:webSearchEnabled
 									bind:thinkingEffort
 									{defaultThinkingEffort}
+									{availableThinkingEfforts}
 									bind:atSelectedModel
 									bind:showCommands
 									bind:dragged

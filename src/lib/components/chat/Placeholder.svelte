@@ -58,6 +58,7 @@
 	export let webSearchEnabled = false;
 	export let thinkingEffort: string | null = null;
 	export let defaultThinkingEffort: string | null = null;
+	export let availableThinkingEfforts: string[] | null = null;
 
 	export let onUpload: Function = (e) => {};
 	export let onSelect = (e) => {};
@@ -239,6 +240,7 @@
 						bind:webSearchEnabled
 						bind:thinkingEffort
 						{defaultThinkingEffort}
+						{availableThinkingEfforts}
 						bind:atSelectedModel
 						bind:showCommands
 						bind:dragged

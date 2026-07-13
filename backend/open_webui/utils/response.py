@@ -51,6 +51,41 @@ def normalize_usage(usage: dict) -> dict:
     return result
 
 
+def compute_token_cost(
+    input_tokens: int,
+    output_tokens: int,
+    cached_tokens: int,
+    pricing: dict | None,
+) -> float | None:
+    """
+    Estimate cost from token counts and a model's `pricing` extension
+    (rates per 1M tokens). Returns None when the model has no usable
+    pricing — never report zero for unpriced usage.
+
+    Cache-write tokens are invisible in usage (folded into the prompt
+    count by the gateway) and are knowingly billed at the input rate.
+    """
+    if not pricing:
+        return None
+
+    input_rate = pricing.get('input')
+    output_rate = pricing.get('output')
+    if not isinstance(input_rate, Number) or not isinstance(output_rate, Number):
+        return None
+    if pricing.get('unit') and pricing.get('unit') != 'per_million_tokens':
+        return None
+
+    cached = cached_tokens or 0
+    uncached = max(0, (input_tokens or 0) - cached)
+    cache_read_rate = pricing.get('cache_read')
+    if not isinstance(cache_read_rate, Number):
+        cache_read_rate = input_rate
+
+    return (
+        uncached * input_rate + cached * cache_read_rate + (output_tokens or 0) * output_rate
+    ) / 1_000_000
+
+
 USAGE_TOKEN_KEYS = {
     'input_tokens',
     'output_tokens',

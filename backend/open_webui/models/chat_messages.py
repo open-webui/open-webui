@@ -54,21 +54,27 @@ def get_usage(data: dict) -> Optional[dict]:
 
 
 def _token_columns(dialect: str):
-    """Return (input_tokens, output_tokens) SQL column expressions.
+    """Return (input_tokens, output_tokens, cached_tokens) SQL column expressions.
 
     Falls back to OpenAI-style keys (prompt_tokens / completion_tokens)
-    when the normalized keys are absent.
+    when the normalized keys are absent. Cached tokens (cache reads) come
+    from the OpenAI details object, with the Anthropic-style top-level
+    key as fallback.
     """
     if dialect == 'sqlite':
-        extract = lambda key: cast(func.json_extract(ChatMessage.usage, f'$.{key}'), Integer)
+        extract = lambda *path: cast(func.json_extract(ChatMessage.usage, '$.' + '.'.join(path)), Integer)
     elif dialect == 'postgresql':
-        extract = lambda key: cast(func.json_extract_path_text(ChatMessage.usage, key), Integer)
+        extract = lambda *path: cast(func.json_extract_path_text(ChatMessage.usage, *path), Integer)
     else:
         raise NotImplementedError(f'Unsupported dialect: {dialect}')
 
     return (
         func.coalesce(extract('input_tokens'), extract('prompt_tokens')),
         func.coalesce(extract('output_tokens'), extract('completion_tokens')),
+        func.coalesce(
+            extract('prompt_tokens_details', 'cached_tokens'),
+            extract('cache_read_input_tokens'),
+        ),
     )
 
 
@@ -502,12 +508,13 @@ class ChatMessageTable:
             bind = await db.connection()
             dialect = bind.dialect.name
 
-            input_tokens, output_tokens = _token_columns(dialect)
+            input_tokens, output_tokens, cached_tokens = _token_columns(dialect)
 
             stmt = select(
                 ChatMessage.model_id,
                 func.coalesce(func.sum(input_tokens), 0).label('input_tokens'),
                 func.coalesce(func.sum(output_tokens), 0).label('output_tokens'),
+                func.coalesce(func.sum(cached_tokens), 0).label('cached_tokens'),
                 func.count(ChatMessage.id).label('message_count'),
             ).filter(
                 ChatMessage.role == 'assistant',
@@ -530,6 +537,7 @@ class ChatMessageTable:
                 row.model_id: {
                     'input_tokens': row.input_tokens,
                     'output_tokens': row.output_tokens,
+                    'cached_tokens': row.cached_tokens,
                     'total_tokens': row.input_tokens + row.output_tokens,
                     'message_count': row.message_count,
                 }
@@ -550,12 +558,16 @@ class ChatMessageTable:
             bind = await db.connection()
             dialect = bind.dialect.name
 
-            input_tokens, output_tokens = _token_columns(dialect)
+            input_tokens, output_tokens, cached_tokens = _token_columns(dialect)
 
+            # Grouped by (user, model) so per-model pricing can be applied
+            # by the caller; per-user totals are re-aggregated below.
             stmt = select(
                 ChatMessage.user_id,
+                ChatMessage.model_id,
                 func.coalesce(func.sum(input_tokens), 0).label('input_tokens'),
                 func.coalesce(func.sum(output_tokens), 0).label('output_tokens'),
+                func.coalesce(func.sum(cached_tokens), 0).label('cached_tokens'),
                 func.count(ChatMessage.id).label('message_count'),
             ).filter(
                 ChatMessage.role == 'assistant',
@@ -571,18 +583,32 @@ class ChatMessageTable:
                 group_users = select(GroupMember.user_id).filter(GroupMember.group_id == group_id).scalar_subquery()
                 stmt = stmt.filter(ChatMessage.user_id.in_(group_users))
 
-            stmt = stmt.group_by(ChatMessage.user_id)
+            stmt = stmt.group_by(ChatMessage.user_id, ChatMessage.model_id)
             result = await db.execute(stmt)
 
-            return {
-                row.user_id: {
+            usage_by_user: dict[str, dict] = {}
+            for row in result.all():
+                user_usage = usage_by_user.setdefault(
+                    row.user_id,
+                    {
+                        'input_tokens': 0,
+                        'output_tokens': 0,
+                        'total_tokens': 0,
+                        'message_count': 0,
+                        'models': {},
+                    },
+                )
+                user_usage['input_tokens'] += row.input_tokens
+                user_usage['output_tokens'] += row.output_tokens
+                user_usage['total_tokens'] += row.input_tokens + row.output_tokens
+                user_usage['message_count'] += row.message_count
+                user_usage['models'][row.model_id] = {
                     'input_tokens': row.input_tokens,
                     'output_tokens': row.output_tokens,
-                    'total_tokens': row.input_tokens + row.output_tokens,
-                    'message_count': row.message_count,
+                    'cached_tokens': row.cached_tokens,
                 }
-                for row in result.all()
-            }
+
+            return usage_by_user
 
     async def get_message_count_by_user(
         self,
