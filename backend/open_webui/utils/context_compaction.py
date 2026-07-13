@@ -232,8 +232,11 @@ def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: 
 
     for idx in range(len(messages) - 1, -1, -1):
         usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-        if isinstance(usage, dict) and usage.get('input_tokens'):
-            total = int(usage.get('input_tokens') or 0) + int(usage.get('output_tokens') or 0)
+        if isinstance(usage, dict) and (usage.get('last_input_tokens') or usage.get('input_tokens')):
+            # Last call's real context, not merge_usage's additive tool-loop total.
+            context_input = int(usage.get('last_input_tokens') or usage.get('input_tokens') or 0)
+            context_output = int(usage.get('last_output_tokens') or usage.get('output_tokens') or 0)
+            total = context_input + context_output
             return total + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
 
     estimated = _estimate_tokens(system_prompt) + _estimate_tokens(summary or '') + _estimate_messages_tokens(messages)

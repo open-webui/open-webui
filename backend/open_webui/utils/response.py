@@ -47,6 +47,9 @@ def normalize_usage(usage: dict) -> dict:
     result['input_tokens'] = int(input_tokens)
     result['output_tokens'] = int(output_tokens)
     result['total_tokens'] = int(total_tokens)
+    # Last call's real counts (not summed): merge_usage keeps these last-write-wins.
+    result['last_input_tokens'] = int(usage.get('last_input_tokens') or input_tokens)
+    result['last_output_tokens'] = int(usage.get('last_output_tokens') or output_tokens)
 
     return result
 
