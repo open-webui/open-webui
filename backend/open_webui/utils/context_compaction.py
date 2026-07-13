@@ -108,7 +108,13 @@ async def compact_messages_for_request(
         raise
 
     chat_id = metadata.get('chat_id')
-    checkpoint_message_id = metadata.get('user_message_id') or metadata.get('message_id')
+    # Anchor to the first retained message, not the current turn: reconstruction
+    # keeps messages from the marker forward (else the retained window is lost).
+    checkpoint_message_id = (
+        _retained_checkpoint_message_id(recent_messages)
+        or metadata.get('user_message_id')
+        or metadata.get('message_id')
+    )
     if chat_id and checkpoint_message_id and not chat_id.startswith(('local:', 'channel:')):
         await Chats.upsert_message_to_chat_by_id_and_message_id(
             chat_id,
@@ -209,6 +215,15 @@ def _parse_positive_int(value: Any) -> int | None:
 def _resolve_token_threshold(global_threshold: int, global_cap: int, metadata: dict) -> int:
     configured_threshold = _parse_positive_int((metadata.get('params') or {}).get('compact_token_threshold'))
     return min(configured_threshold or global_threshold, global_cap)
+
+
+def _retained_checkpoint_message_id(recent_messages: list[dict]) -> str | None:
+    """Id of the first retained message that has one — where the checkpoint belongs."""
+    for message in recent_messages:
+        message_id = message.get('id')
+        if isinstance(message_id, str) and message_id:
+            return message_id
+    return None
 
 
 def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], str | None]:
