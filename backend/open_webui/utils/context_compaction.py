@@ -244,15 +244,18 @@ def _find_compaction_boundary(messages: list[dict]) -> int:
     keep_count = max(2, len(messages) * 2 // 5)
     split = max(1, len(messages) - keep_count)
 
-    while split < len(messages) - 1:
-        previous = messages[split - 1] if split > 0 else {}
-        current = messages[split]
-        if current.get('role') == 'tool' or previous.get('tool_calls') or previous.get('output'):
-            split += 1
-            continue
-        break
+    turn_starts = [
+        idx
+        for idx, message in enumerate(messages)
+        if message.get('role') == 'user' and idx <= len(messages) - 2
+    ]
+    for turn_start in turn_starts:
+        if turn_start >= split:
+            return turn_start
 
-    return min(split, len(messages) - 2)
+    if turn_starts:
+        return turn_starts[-1]
+    return 0
 
 
 async def _generate_summary(
