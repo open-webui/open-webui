@@ -542,6 +542,19 @@ class SafeMicrosoftWebIQLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 raise e
 
 
+# Read-back types (their body reaches page.content()) get per-hop redirect
+# re-validation; everything else just gets the destination check.
+MAX_WEB_LOADER_REDIRECTS = 20
+_READBACK_RESOURCE_TYPES = {'document', 'xhr', 'fetch'}
+
+
+def _redirect_location(resp) -> str | None:
+    location = resp.headers.get('location')
+    if not location:
+        return None
+    return urllib.parse.urljoin(resp.url, location)
+
+
 class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessingMixin):
     """Load HTML pages safely with Playwright, supporting SSL verification, rate limiting, and remote browser connection.
 
@@ -600,56 +613,76 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
     def _intercept_navigation_sync(self, route, request=None):
         req = request or route.request
 
-        if req.resource_type != 'document':
-            route.continue_()
-            return
-
+        # Validate every request, not just the document navigation.
         try:
             validate_url(req.url)
         except Exception:
             route.abort()
             return
 
-        if AIOHTTP_CLIENT_ALLOW_REDIRECTS:
-            resp = route.fetch()
-        else:
-            try:
-                resp = route.fetch(max_redirects=0)
-            except TypeError:
-                route.abort()
-                return
+        if req.resource_type not in _READBACK_RESOURCE_TYPES:
+            route.continue_()
+            return
 
-            if 300 <= resp.status < 400:
+        try:
+            resp = route.fetch(max_redirects=0)
+        except TypeError:
+            route.abort()
+            return
+
+        redirects = 0
+        while 300 <= resp.status < 400:
+            if not AIOHTTP_CLIENT_ALLOW_REDIRECTS or redirects >= MAX_WEB_LOADER_REDIRECTS:
                 route.abort()
                 return
+            next_url = _redirect_location(resp)
+            if not next_url:
+                break
+            try:
+                validate_url(next_url)
+                resp = route.fetch(url=next_url, max_redirects=0)
+            except Exception:
+                route.abort()
+                return
+            redirects += 1
 
         route.fulfill(response=resp)
 
     async def _intercept_navigation(self, route, request=None):
         req = request or route.request
 
-        if req.resource_type != 'document':
-            await route.continue_()
-            return
-
+        # Validate every request, not just the document navigation.
         try:
             await run_in_threadpool(validate_url, req.url)
         except Exception:
             await route.abort()
             return
 
-        if AIOHTTP_CLIENT_ALLOW_REDIRECTS:
-            resp = await route.fetch()
-        else:
-            try:
-                resp = await route.fetch(max_redirects=0)
-            except TypeError:
-                await route.abort()
-                return
+        if req.resource_type not in _READBACK_RESOURCE_TYPES:
+            await route.continue_()
+            return
 
-            if 300 <= resp.status < 400:
+        try:
+            resp = await route.fetch(max_redirects=0)
+        except TypeError:
+            await route.abort()
+            return
+
+        redirects = 0
+        while 300 <= resp.status < 400:
+            if not AIOHTTP_CLIENT_ALLOW_REDIRECTS or redirects >= MAX_WEB_LOADER_REDIRECTS:
                 await route.abort()
                 return
+            next_url = _redirect_location(resp)
+            if not next_url:
+                break
+            try:
+                await run_in_threadpool(validate_url, next_url)
+                resp = await route.fetch(url=next_url, max_redirects=0)
+            except Exception:
+                await route.abort()
+                return
+            redirects += 1
 
         await route.fulfill(response=resp)
 
