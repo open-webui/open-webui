@@ -2528,7 +2528,12 @@
 		const toolIds = [];
 		const toolServerIds = [];
 
-		for (const toolId of selectedToolIds) {
+		// Include this model's own attached tools so they apply in multi-model chats,
+		// independent of the composer's selectedToolIds lifecycle.
+		const modelDefaultToolIds = (model?.info?.meta?.toolIds ?? []).filter((id) =>
+			$tools.find((t) => t.id === id)
+		);
+		for (const toolId of [...new Set([...selectedToolIds, ...modelDefaultToolIds])]) {
 			if (toolId.startsWith('direct_server:')) {
 				let serverId = toolId.replace('direct_server:', '');
 				// Check if serverId is a number
