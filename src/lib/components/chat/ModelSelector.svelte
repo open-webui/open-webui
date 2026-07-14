@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { models, showSettings, settings, user, mobile, config } from '$lib/stores';
-	import { onMount, tick, getContext } from 'svelte';
+	import { models, settings, user } from '$lib/stores';
+	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
-	import Tooltip from '../common/Tooltip.svelte';
 
 	import { updateUserSettings } from '$lib/apis/users';
 	import equal from 'fast-deep-equal';
@@ -14,6 +13,8 @@
 
 	export let showSetDefault = true;
 	export let triggerClassName = 'text-lg';
+
+	let compareModels = selectedModels.length > 1;
 
 	const saveDefaultModel = async () => {
 		const hasEmptyModel = selectedModels.filter((it) => it === '');
@@ -49,94 +50,35 @@
 			selectedModels = _selectedModels;
 		}
 	}
+
+	$: if (selectedModels.length > 1 && !compareModels) {
+		compareModels = true;
+	}
 </script>
 
 <div class="flex flex-col w-full items-start">
-	{#each selectedModels as selectedModel, selectedModelIdx}
-		<div class="flex w-full max-w-fit">
-			<div class="overflow-hidden w-full">
-				<div class="max-w-full {($settings?.highContrastMode ?? false) ? 'm-1' : 'mr-1'}">
-					<Selector
-						id={`${selectedModelIdx}`}
-						placeholder={$i18n.t('Select a model')}
-						items={$models.map((model) => ({
-							value: model.id,
-							label: model.name,
-							model: model
-						}))}
-						{pinModelHandler}
-						{triggerClassName}
-						bind:value={selectedModel}
-					/>
-				</div>
+	<div class="flex w-full max-w-fit">
+		<div class="overflow-hidden w-full">
+			<div class="max-w-full {($settings?.highContrastMode ?? false) ? 'm-1' : 'mr-1'}">
+				<Selector
+					id="model"
+					placeholder={$i18n.t('Select a model')}
+					items={$models.map((model) => ({
+						value: model.id,
+						label: model.name,
+						model: model
+					}))}
+					{pinModelHandler}
+					{triggerClassName}
+					{showSetDefault}
+					onSetDefault={saveDefaultModel}
+					multipleEnabled={$user?.role === 'admin' ||
+						($user?.permissions?.chat?.multiple_models ?? true)}
+					{disabled}
+					bind:compareEnabled={compareModels}
+					bind:values={selectedModels}
+				/>
 			</div>
-
-			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true)}
-				{#if selectedModelIdx === 0}
-					<div
-						class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
-					>
-						<Tooltip content={$i18n.t('Add Model')}>
-							<button
-								class=" "
-								{disabled}
-								on:click={() => {
-									selectedModels = [
-										...selectedModels,
-										selectedModels[selectedModels.length - 1] || ''
-									];
-								}}
-								aria-label="Add Model"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="2"
-									stroke="currentColor"
-									class="size-3.5"
-								>
-									<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
-								</svg>
-							</button>
-						</Tooltip>
-					</div>
-				{:else}
-					<div
-						class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
-					>
-						<Tooltip content={$i18n.t('Remove Model')}>
-							<button
-								{disabled}
-								on:click={() => {
-									selectedModels.splice(selectedModelIdx, 1);
-									selectedModels = selectedModels;
-								}}
-								aria-label="Remove Model"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="2"
-									stroke="currentColor"
-									class="size-3"
-								>
-									<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" />
-								</svg>
-							</button>
-						</Tooltip>
-					</div>
-				{/if}
-			{/if}
 		</div>
-	{/each}
-</div>
-
-{#if showSetDefault}
-	<div
-		class="relative text-left mt-[1px] ml-1 text-[0.7rem] text-gray-600 dark:text-gray-400 font-primary"
-	>
-		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 	</div>
-{/if}
+</div>

@@ -1,12 +1,6 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import {
-		config,
-		settings,
-		user as _user,
-		mobile,
-		temporaryChatEnabled
-	} from '$lib/stores';
+	import { config, settings, user as _user, mobile, temporaryChatEnabled } from '$lib/stores';
 	import { refreshChatList } from '$lib/stores/chat-list';
 	import { tick, getContext, onMount, onDestroy, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
@@ -23,7 +17,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let className = 'h-full flex pt-8';
+	export let className = 'h-full flex pt-12';
 
 	export let chatId = '';
 	export let user = $_user;

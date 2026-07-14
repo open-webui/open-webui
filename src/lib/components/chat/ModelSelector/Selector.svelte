@@ -43,6 +43,10 @@
 
 	export let id = '';
 	export let value: string | null = '';
+	export let values: string[] | null = null;
+	export let compareEnabled = false;
+	export let multipleEnabled = false;
+	export let disabled = false;
 	export let placeholder = $i18n.t('Select a model');
 	export let searchEnabled = true;
 	export let searchPlaceholder = $i18n.t('Search a model');
@@ -59,6 +63,8 @@
 
 	export let className = 'w-[32rem]';
 	export let triggerClassName = 'text-lg';
+	export let showSetDefault = false;
+	export let onSetDefault: () => Promise<void> | void = () => {};
 
 	export let pinModelHandler: (modelId: string) => void = () => {};
 
@@ -126,7 +132,15 @@
 	let tags = [];
 
 	let selectedModel = '';
-	$: selectedModel = items.find((item) => item.value === value) ?? '';
+	$: selectedValues = values ?? (value ? [value] : []);
+	$: primaryValue = selectedValues[0] ?? value ?? '';
+	$: selectedModel = items.find((item) => item.value === primaryValue) ?? '';
+	$: selectedCount = selectedValues.filter(Boolean).length;
+	$: triggerLabel = selectedModel
+		? compareEnabled && selectedCount > 1
+			? `${selectedModel.label} +${selectedCount - 1}`
+			: selectedModel.label
+		: placeholder;
 
 	let searchValue = '';
 
@@ -232,7 +246,7 @@
 	const resetView = async () => {
 		await tick();
 
-		const selectedInFiltered = filteredItems.findIndex((item) => item.value === value);
+		const selectedInFiltered = filteredItems.findIndex((item) => item.value === primaryValue);
 
 		if (selectedInFiltered >= 0) {
 			// The selected model is visible in the current filter
@@ -255,6 +269,45 @@
 		await tick();
 		const item = document.querySelector(`[data-arrow-selected="true"]`);
 		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+	};
+
+	const setCompareEnabled = (enabled: boolean) => {
+		compareEnabled = enabled;
+
+		if (!enabled && values) {
+			values = [primaryValue || selectedValues[0] || ''];
+			value = values[0];
+		}
+	};
+
+	const selectItem = (item, index: number) => {
+		selectedModelIdx = index;
+
+		if (values) {
+			if (compareEnabled) {
+				const nextValues = selectedValues.includes(item.value)
+					? selectedValues.length > 1
+						? selectedValues.filter((selectedValue) => selectedValue !== item.value)
+						: selectedValues
+					: [...selectedValues.filter(Boolean), item.value];
+
+				values = nextValues.length ? nextValues : [item.value];
+				value = values[0];
+				return;
+			}
+
+			values = [item.value];
+			value = item.value;
+			show = false;
+			return;
+		}
+
+		value = item.value;
+		show = false;
+	};
+
+	const setDefaultHandler = async () => {
+		await onSetDefault();
 	};
 
 	const pullModelHandler = async () => {
@@ -511,12 +564,13 @@
 			? ''
 			: 'outline-hidden focus:outline-hidden'}"
 		aria-label={selectedModel
-			? $i18n.t('Selected model: {{modelName}}', { modelName: selectedModel.label })
+			? $i18n.t('Selected model: {{modelName}}', { modelName: triggerLabel })
 			: placeholder}
 		aria-haspopup="listbox"
 		aria-expanded={show}
 		id="model-selector-{id}-button"
 		type="button"
+		{disabled}
 		on:click={toggleOpen}
 	>
 		<div
@@ -533,11 +587,7 @@
 				);
 			}}
 		>
-			{#if selectedModel}
-				{selectedModel.label}
-			{:else}
-				{placeholder}
-			{/if}
+			{triggerLabel}
 			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
 		</div>
 	</button>
@@ -570,8 +620,7 @@
 								aria-label={$i18n.t('Search In Models')}
 								on:keydown={(e) => {
 									if (e.code === 'Enter' && filteredItems.length > 0) {
-										value = filteredItems[selectedModelIdx].value;
-										show = false;
+										selectItem(filteredItems[selectedModelIdx], selectedModelIdx);
 										return; // dont need to scroll on selection
 									} else if (e.code === 'ArrowDown') {
 										e.stopPropagation();
@@ -592,6 +641,21 @@
 									});
 								}}
 							/>
+
+							{#if multipleEnabled}
+								<button
+									type="button"
+									class="shrink-0 rounded-full px-2 py-1 text-[11px] font-medium leading-none transition-colors duration-100 {compareEnabled
+										? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200'
+										: 'text-gray-400 hover:bg-gray-50 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800/40 dark:hover:text-gray-300'}"
+									aria-pressed={compareEnabled}
+									on:click={() => {
+										setCompareEnabled(!compareEnabled);
+									}}
+								>
+									{$i18n.t('Compare')}
+								</button>
+							{/if}
 						</div>
 					{/if}
 
@@ -740,16 +804,15 @@
 										{selectedModelIdx}
 										{item}
 										{index}
-										{value}
+										value={primaryValue}
 										{pinModelHandler}
 										{unloadModelHandler}
 										{deleteModelHandler}
 										{selectionOnly}
+										{compareEnabled}
+										{selectedValues}
 										onClick={() => {
-											value = item.value;
-											selectedModelIdx = index;
-
-											show = false;
+											selectItem(item, index);
 										}}
 									/>
 								{/each}
@@ -842,7 +905,19 @@
 						{/each}
 					</div>
 
-					<div class="pb-2"></div>
+					{#if showSetDefault}
+						<div class="px-3 pb-2 pt-1 text-left">
+							<button
+								type="button"
+								class="text-[0.7rem] font-normal text-gray-500 underline-offset-2 transition-colors duration-100 hover:text-gray-700 hover:underline dark:text-gray-500 dark:hover:text-gray-300"
+								on:click|stopPropagation={setDefaultHandler}
+							>
+								{$i18n.t('Set as default')}
+							</button>
+						</div>
+					{:else}
+						<div class="pb-2"></div>
+					{/if}
 
 					<div class="hidden w-[42rem]" />
 					<div class="hidden w-[32rem]" />

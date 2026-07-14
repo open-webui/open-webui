@@ -23,6 +23,8 @@
 	export let item: any = {};
 	export let index: number = -1;
 	export let value: string | null = '';
+	export let selectedValues: string[] = [];
+	export let compareEnabled = false;
 
 	export let unloadModelHandler: (modelValue: string) => void = () => {};
 	export let pinModelHandler: (modelId: string) => void = () => {};
@@ -43,16 +45,17 @@
 	};
 
 	let showMenu = false;
+	$: isSelected = compareEnabled ? selectedValues.includes(item.value) : value === item.value;
 </script>
 
 <button
 	role="option"
-	aria-selected={value === item.value}
+	aria-selected={isSelected}
 	aria-label={$i18n.t('Select {{modelName}} model', { modelName: item.label })}
 	class="flex group/item w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-[7px] pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer data-highlighted:bg-muted {index ===
-	selectedModelIdx
+		selectedModelIdx && !compareEnabled
 		? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
-		: ''}"
+		: ''} {isSelected ? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent' : ''}"
 	data-arrow-selected={index === selectedModelIdx}
 	data-value={item.value}
 	on:click={() => {
@@ -281,7 +284,7 @@
 			</ModelItemMenu>
 		{/if}
 
-		{#if value === item.value}
+		{#if isSelected}
 			<div>
 				<Check className="size-3" />
 			</div>

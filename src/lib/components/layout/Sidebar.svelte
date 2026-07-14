@@ -63,6 +63,7 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Folder from '../common/Folder.svelte';
+	import SidebarSection from './Sidebar/Section.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Folders from './Sidebar/Folders.svelte';
 	import SharedFolderItem from './Sidebar/SharedFolderItem.svelte';
@@ -1213,25 +1214,23 @@
 				</div>
 
 				{#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
-					<Folder
+					<SidebarSection
 						id="sidebar-models"
 						bind:open={showPinnedModels}
-						className="px-2 mt-0.5"
+						className="mt-0.5"
 						name={$i18n.t('Models')}
-						chevron={false}
 						dragAndDrop={false}
 					>
 						<PinnedModelList bind:selectedChatId {shiftKey} />
-					</Folder>
+					</SidebarSection>
 				{/if}
 
 				{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true)) && $pinnedNotes.length > 0}
-					<Folder
+					<SidebarSection
 						id="sidebar-pinned-notes"
 						bind:open={showPinnedNotes}
-						className="px-2 mt-0.5"
+						className="mt-0.5"
 						name={$i18n.t('Notes')}
-						chevron={false}
 						dragAndDrop={false}
 						onAdd={async () => {
 							const note = await createNoteHandler('New Note');
@@ -1242,16 +1241,15 @@
 						onAddLabel={$i18n.t('New Note')}
 					>
 						<PinnedNoteList bind:selectedChatId />
-					</Folder>
+					</SidebarSection>
 				{/if}
 
 				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))}
-					<Folder
+					<SidebarSection
 						id="sidebar-channels"
 						bind:open={showChannels}
-						className="px-2 mt-0.5"
+						className="mt-0.5"
 						name={$i18n.t('Channels')}
-						chevron={false}
 						dragAndDrop={false}
 						onAdd={$user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true)
 							? async () => {
@@ -1277,16 +1275,15 @@
 								/>
 							{/if}
 						{/each}
-					</Folder>
+					</SidebarSection>
 				{/if}
 
 				{#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
-					<Folder
+					<SidebarSection
 						id="sidebar-folders"
 						bind:open={showFolders}
-						className="px-2 mt-0.5"
+						className="mt-0.5"
 						name={$i18n.t('Folders')}
-						chevron={false}
 						onAdd={() => {
 							showCreateFolderModal = true;
 						}}
@@ -1331,14 +1328,13 @@
 								initChatList();
 							}}
 						/>
-					</Folder>
+					</SidebarSection>
 				{/if}
 
-				<Folder
+				<SidebarSection
 					id="sidebar-chats"
-					className="px-2 mt-0.5"
+					className="mt-0.5"
 					name={$i18n.t('Chats')}
-					chevron={false}
 					on:change={async (e) => {
 						selectedFolder.set(null);
 					}}
@@ -1582,7 +1578,7 @@
 							{/if}
 						</div>
 					</div>
-				</Folder>
+				</SidebarSection>
 			</div>
 
 			<div class="px-1.5 pt-1 pb-1.5 sticky bottom-0 z-10 -mt-2 sidebar">

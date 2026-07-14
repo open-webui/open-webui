@@ -229,7 +229,7 @@
 				>
 					<button
 						aria-label={$i18n.t('Change folder icon')}
-						class=" rounded-full bg-gray-50 dark:bg-gray-800 size-11 flex justify-center items-center"
+						class="rounded-full bg-gray-50 dark:bg-gray-800 size-11 flex justify-center items-center outline-hidden focus:outline-hidden"
 					>
 						{#if folder?.meta?.icon}
 							<Emoji className="size-6" shortCode={folder.meta.icon} />
