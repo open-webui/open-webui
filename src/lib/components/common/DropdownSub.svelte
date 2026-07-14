@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { flyAndScale } from '$lib/utils/transitions';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import { tick } from 'svelte';
 
 	/** CSS classes for the sub-content container */
@@ -120,8 +121,10 @@
 	<!-- Outer wrapper: positioned flush with trigger, invisible padding bridges the gap -->
 	<div use:portal bind:this={contentEl} on:mouseleave={handleContentMouseLeave}>
 		<!-- Inner content: visual styles and transition -->
-		<div class={contentClass} style="max-width: {maxWidth}px;" transition:flyAndScale>
-			<slot />
+		<div transition:flyAndScale>
+			<DropdownMenu className={contentClass} style="max-width: {maxWidth}px;">
+				<slot />
+			</DropdownMenu>
 		</div>
 	</div>
 {/if}

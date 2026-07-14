@@ -22,6 +22,7 @@
 
 	import Knobs from '$lib/components/icons/Knobs.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -140,8 +141,8 @@
 		<slot />
 	</Tooltip>
 	<div slot="content">
-		<div
-			class="min-w-70 max-w-70 rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
+		<DropdownMenu
+			className="min-w-70 max-w-70 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
 		>
 			{#if tab === ''}
 				<div in:fly={{ x: -20, duration: 150 }}>
@@ -549,6 +550,6 @@
 					{/each}
 				</div>
 			{/if}
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>

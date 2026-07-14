@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Share from '$lib/components/icons/Share.svelte';
@@ -39,9 +40,7 @@
 	</Tooltip>
 
 	<div slot="content">
-		<div
-			class="min-w-[180px] rounded-xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
-		>
+		<DropdownMenu className="min-w-[180px]">
 			{#if ['filter', 'action'].includes(func.type)}
 				<div
 					class="flex gap-2 justify-between items-center px-3 py-1.5 text-sm font-medium cursor-pointerrounded-md"
@@ -124,6 +123,6 @@
 				<GarbageBin strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</button>
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>

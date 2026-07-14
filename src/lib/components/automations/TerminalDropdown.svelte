@@ -49,15 +49,15 @@
 
 		<div
 			slot="content"
-			class="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 min-w-56 max-w-56 p-1"
+			class="rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 min-w-56 max-w-56 p-0.5"
 		>
-			<div class="px-2 text-xs text-gray-500 py-1">
+			<div class="px-2 text-[11px] text-gray-500 py-0.5">
 				{$i18n.t('Terminal')}
 			</div>
 
 			{#each terminalServers as server (server.id)}
 				<button
-					class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl {terminalServerId ===
+					class="flex w-full h-[1.6875rem] justify-between gap-2 items-center px-2 text-[13px] cursor-pointer rounded-xl {terminalServerId ===
 					server.id
 						? 'bg-gray-50 dark:bg-gray-800/50'
 						: 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}"
@@ -74,7 +74,7 @@
 					}}
 				>
 					<div class="flex flex-1 gap-2 items-center truncate">
-						<Cloud className="size-4 shrink-0" strokeWidth="2" />
+						<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
 						<span class="truncate">{server.name || server.id}</span>
 					</div>
 					{#if terminalServerId === server.id}
@@ -83,7 +83,7 @@
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 20 20"
 								fill="currentColor"
-								class="size-4"
+								class="size-3.5"
 							>
 								<path
 									fill-rule="evenodd"
@@ -98,7 +98,7 @@
 
 			{#if terminalServerId}
 				<div class="border-t border-gray-100 dark:border-gray-800 mt-1 pt-1">
-					<div class="px-2.5 py-1 text-xs text-gray-500">
+					<div class="px-2 py-0.5 text-[11px] text-gray-500">
 						{$i18n.t('Working Directory')}
 					</div>
 					<div class="px-2">
@@ -106,7 +106,7 @@
 							type="text"
 							bind:value={terminalCwd}
 							placeholder="/home/user/project"
-							class="w-full bg-transparent outline-hidden text-xs py-1.5 placeholder:text-gray-400 dark:placeholder:text-gray-600"
+							class="w-full bg-transparent outline-hidden text-[13px] py-1 placeholder:text-gray-400 dark:placeholder:text-gray-600"
 							on:click={(e) => e.stopPropagation()}
 							on:input={onChange}
 						/>

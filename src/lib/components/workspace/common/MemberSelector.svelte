@@ -22,6 +22,7 @@
 	export let includeUsers = true;
 	export let pagination = false;
 	export let includeSessionUser = false;
+	export let accessGrants: { principal_type: string; principal_id: string }[] = [];
 
 	export let groupIds = [];
 	export let userIds = [];
@@ -247,7 +248,7 @@
 
 							<div>
 								{#each users as user, userIdx (user.id)}
-									{#if includeSessionUser || user?.id !== $_user?.id}
+									{#if !accessGrants.some((grant) => grant.principal_type === 'user' && grant.principal_id === user.id) && (includeSessionUser || user?.id !== $_user?.id)}
 										<button
 											class=" dark:border-gray-850 text-xs flex items-center justify-between w-full"
 											type="button"

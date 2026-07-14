@@ -165,19 +165,19 @@
 
 	<div slot="content">
 		<div
-			class="max-w-full w-80 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 rounded-3xl z-9999 shadow-lg dark:text-white"
+			class="max-w-full w-80 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 rounded-xl z-9999 shadow-lg dark:text-white"
 		>
-			<div class="mb-1 px-4 pt-2.5 pb-2">
+			<div class="mb-0.5 px-3 pt-2 pb-1.5">
 				<input
 					type="text"
-					class="w-full text-sm bg-transparent outline-hidden"
+					class="w-full text-[13px] bg-transparent outline-hidden"
 					placeholder={$i18n.t('Search all emojis')}
 					bind:value={search}
 				/>
 			</div>
 
 			<!-- Virtualized Emoji List -->
-			<div class="w-full flex justify-start h-96 overflow-y-auto px-3 pb-3 text-sm">
+			<div class="w-full flex justify-start h-96 overflow-y-auto px-2.5 pb-2.5 text-[13px]">
 				{#if emojiRows.length === 0}
 					<div class="text-center text-xs text-gray-500 dark:text-gray-400">
 						{$i18n.t('No results')}
@@ -200,7 +200,7 @@
 												placement="top"
 											>
 												<button
-													class="p-1.5 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition {selected ===
+													class="p-1 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition {selected ===
 													emojiItem.shortCodes[0]
 														? 'bg-gray-200 dark:bg-gray-700'
 														: ''}"

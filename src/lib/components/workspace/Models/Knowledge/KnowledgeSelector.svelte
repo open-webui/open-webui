@@ -119,7 +119,7 @@
 
 	<div slot="content">
 		<div
-			class="z-[10000] text-black dark:text-white rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-64 p-1"
+			class="z-[10000] text-black dark:text-white rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-64 p-0.5"
 		>
 			<div class=" flex w-full space-x-1.5 px-1.5 pb-0.5">
 				<div class="flex flex-1">
@@ -127,7 +127,7 @@
 						<Search className="size-3.5" />
 					</div>
 					<input
-						class=" w-full text-sm py-0.5 outline-hidden bg-transparent"
+						class="w-full text-[13px] py-0.5 outline-hidden bg-transparent"
 						bind:value={query}
 						on:input={handleSearchInput}
 						placeholder={$i18n.t('Search')}
@@ -143,7 +143,7 @@
 				{:else}
 					{#each items as item, i}
 						{#if i === 0 || item?.type !== items[i - 1]?.type}
-							<div class="px-1.5 text-xs text-gray-500 py-0.5">
+							<div class="px-1.5 text-[11px] text-gray-500 py-0.5">
 								{#if item?.type === 'note'}
 									{$i18n.t('Notes')}
 								{:else if item?.type === 'collection'}
@@ -155,7 +155,7 @@
 						{/if}
 
 						<div
-							class=" px-1.5 py-0.5 rounded-xl w-full text-left flex justify-between items-center text-sm hover:bg-gray-50 hover:dark:bg-gray-800 hover:dark:text-gray-100 selected-command-option-button"
+							class="h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[13px] hover:bg-gray-50/60 hover:dark:bg-gray-800/60 hover:dark:text-gray-100 selected-command-option-button"
 						>
 							<button
 								class="w-full flex-1"
@@ -172,7 +172,7 @@
 											placement="top"
 											tippyOptions={{ zIndex: 100000 }}
 										>
-											<PageEdit className="size-4" />
+											<PageEdit className="size-3.5" />
 										</Tooltip>
 									{:else if item.type === 'collection'}
 										<Tooltip
@@ -180,7 +180,7 @@
 											placement="top"
 											tippyOptions={{ zIndex: 100000 }}
 										>
-											<Database className="size-4" />
+											<Database className="size-3.5" />
 										</Tooltip>
 									{:else if item.type === 'file'}
 										<Tooltip
@@ -188,7 +188,7 @@
 											placement="top"
 											tippyOptions={{ zIndex: 100000 }}
 										>
-											<DocumentPage className="size-4" />
+											<DocumentPage className="size-3.5" />
 										</Tooltip>
 									{/if}
 
@@ -197,7 +197,7 @@
 										placement="top-start"
 										tippyOptions={{ zIndex: 100000 }}
 									>
-										<div class="line-clamp-1 flex-1 text-sm text-left">
+										<div class="line-clamp-1 flex-1 text-[13px] text-left">
 											{decodeString(item?.name)}
 										</div>
 									</Tooltip>

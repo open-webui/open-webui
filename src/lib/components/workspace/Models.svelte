@@ -45,6 +45,7 @@
 	import Eye from '../icons/Eye.svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import ViewSelector from './common/ViewSelector.svelte';
 	import TagSelector from './common/TagSelector.svelte';
 	import Pagination from '../common/Pagination.svelte';
@@ -565,9 +566,7 @@
 				</Tooltip>
 
 				<div slot="content">
-					<div
-						class="w-[170px] rounded-xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
-					>
+					<DropdownMenu className="w-[170px] shadow-sm">
 						<button
 							class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 							type="button"
@@ -613,7 +612,7 @@
 							<EyeSlash className="size-4" />
 							<div class="flex items-center">{$i18n.t('Hide All')}</div>
 						</button>
-					</div>
+					</DropdownMenu>
 				</div>
 			</Dropdown>
 		</div>

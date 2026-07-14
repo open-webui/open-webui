@@ -26,6 +26,7 @@
 	import FeedbackModal from './FeedbackModal.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
@@ -240,9 +241,7 @@
 						</button>
 
 						<div slot="content">
-							<div
-								class="w-[170px] rounded-2xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-							>
+							<DropdownMenu className="w-[170px]">
 								<button
 									class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 									type="button"
@@ -258,7 +257,7 @@
 								>
 									{$i18n.t('Export as CSV')}
 								</button>
-							</div>
+							</DropdownMenu>
 						</div>
 					</Dropdown>
 				{/if}

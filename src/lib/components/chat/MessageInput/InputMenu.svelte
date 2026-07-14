@@ -8,6 +8,7 @@
 	import { createPicker } from '$lib/utils/google-drive-picker';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import DocumentArrowUp from '$lib/components/icons/DocumentArrowUp.svelte';
 	import Camera from '$lib/components/icons/Camera.svelte';
@@ -121,8 +122,8 @@
 	</Tooltip>
 
 	<div slot="content">
-		<div
-			class="w-70 rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
+		<DropdownMenu
+			className="w-70 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
 		>
 			{#if tab === ''}
 				<div in:fly={{ x: -20, duration: 150 }}>
@@ -607,6 +608,6 @@
 					{/if}
 				</div>
 			{/if}
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>

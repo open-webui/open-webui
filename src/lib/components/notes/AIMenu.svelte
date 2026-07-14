@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
 	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
 
@@ -27,9 +28,7 @@
 	<slot />
 
 	<div slot="content">
-		<div
-			class="min-w-[170px] text-sm rounded-xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
-		>
+		<DropdownMenu className="min-w-[170px] font-primary">
 			<button
 				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
@@ -55,6 +54,6 @@
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Chat')}</div>
 			</button>
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>

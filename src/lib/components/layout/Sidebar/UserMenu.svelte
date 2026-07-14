@@ -20,6 +20,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
@@ -121,14 +122,12 @@
 	<slot />
 
 	<div slot="content">
-		<div
-			class="{className} user-menu rounded-xl p-0.5 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg text-[13px]"
-		>
+		<DropdownMenu className="{className} text-[13px]">
 			{#if profile}
 				{#if $user?.status_emoji || $user?.status_message}
 					<div class="user-menu-status">
 						<button
-							class="w-full gap-2 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none text-[13px] flex items-center"
+							class="w-full h-[1.6875rem] gap-2 rounded-xl px-2 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none text-[13px] flex items-center"
 							type="button"
 							on:click={() => {
 								show = false;
@@ -137,7 +136,7 @@
 						>
 							{#if $user?.status_emoji}
 								<div class=" self-center shrink-0">
-									<Emoji className="size-4" shortCode={$user?.status_emoji} />
+									<Emoji className="size-3.5" shortCode={$user?.status_emoji} />
 								</div>
 							{/if}
 
@@ -171,7 +170,7 @@
 											}
 										}}
 									>
-										<XMark className="size-4 opacity-50" strokeWidth="2" />
+										<XMark className="size-3.5 opacity-50" strokeWidth="2" />
 									</button>
 								</Tooltip>
 							</div>
@@ -180,7 +179,7 @@
 				{:else}
 					<div class="user-menu-status">
 						<button
-							class="w-full gap-1 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none text-[13px] flex items-center justify-center"
+							class="w-full h-[1.6875rem] gap-1 rounded-xl px-2 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none text-[13px] flex items-center justify-center"
 							type="button"
 							on:click={() => {
 								show = false;
@@ -188,18 +187,18 @@
 							}}
 						>
 							<div class=" self-center">
-								<FaceSmile className="size-4" strokeWidth="1.5" />
+								<FaceSmile className="size-3.5" strokeWidth="1.5" />
 							</div>
 							<div class=" self-center truncate">{$i18n.t('Update your status')}</div>
 						</button>
 					</div>
 				{/if}
 
-				<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1.5 p-0" />
+				<hr class="border-gray-50/30 dark:border-gray-800/30 my-0.5 mx-1 p-0" />
 			{/if}
 
 			<button
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
+				class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 				type="button"
 				on:click={async () => {
 					show = false;
@@ -212,8 +211,8 @@
 					}
 				}}
 			>
-				<div class=" self-center mr-3">
-					<Settings className="w-5 h-5" strokeWidth="1.5" />
+				<div class="self-center">
+					<Settings className="size-3.5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
 			</button>
@@ -222,7 +221,7 @@
 				<a
 					href="/admin"
 					draggable="false"
-					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
+					class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 					on:click={async (e) => {
 						if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
 							return;
@@ -236,15 +235,15 @@
 						}
 					}}
 				>
-					<div class=" self-center mr-3">
-						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
+					<div class="self-center">
+						<UserGroup className="size-3.5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
 				</a>
 			{/if}
 
 			<button
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
+				class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 				type="button"
 				on:click={async () => {
 					show = false;
@@ -258,20 +257,20 @@
 					}
 				}}
 			>
-				<div class=" self-center mr-3">
-					<ArchiveBox className="size-5" strokeWidth="1.5" />
+				<div class="self-center">
+					<ArchiveBox className="size-3.5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
 			</button>
 
-			<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
+			<hr class="border-gray-50/30 dark:border-gray-800/30 my-0.5 mx-1 p-0" />
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools || $user?.permissions?.workspace?.skills}
 				<div class="flex items-center w-full">
 					<a
 						href="/workspace"
 						draggable="false"
-						class="flex flex-1 rounded-xl py-1.5 px-3 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
+						class="flex flex-1 h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 						on:click={async (e) => {
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
@@ -283,14 +282,14 @@
 							}
 						}}
 					>
-						<div class="self-center mr-3">
+						<div class="self-center">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								fill="none"
 								viewBox="0 0 24 24"
 								stroke-width="1.5"
 								stroke="currentColor"
-								class="size-5"
+								class="size-3.5"
 							>
 								<path
 									stroke-linecap="round"
@@ -328,7 +327,7 @@
 					<a
 						href="/notes"
 						draggable="false"
-						class="flex flex-1 rounded-xl py-1.5 px-3 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
+						class="flex flex-1 h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 						on:click={async (e) => {
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
@@ -340,8 +339,8 @@
 							}
 						}}
 					>
-						<div class="self-center mr-3">
-							<Note className="size-5" strokeWidth="1.5" />
+						<div class="self-center">
+							<Note className="size-3.5" strokeWidth="1.5" />
 						</div>
 						<div class="self-center truncate">{$i18n.t('Notes')}</div>
 					</a>
@@ -372,7 +371,7 @@
 					<a
 						href="/calendar"
 						draggable="false"
-						class="flex flex-1 rounded-xl py-1.5 px-3 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
+						class="flex flex-1 h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 						on:click={async (e) => {
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
@@ -380,14 +379,14 @@
 							goto('/calendar');
 						}}
 					>
-						<div class="self-center mr-3">
+						<div class="self-center">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								fill="none"
 								viewBox="0 0 24 24"
 								stroke-width="1.5"
 								stroke="currentColor"
-								class="size-5"
+								class="size-3.5"
 							>
 								<path
 									stroke-linecap="round"
@@ -425,7 +424,7 @@
 					<a
 						href="/automations"
 						draggable="false"
-						class="flex flex-1 rounded-xl py-1.5 px-3 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
+						class="flex flex-1 h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 						on:click={async (e) => {
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
@@ -437,14 +436,14 @@
 							}
 						}}
 					>
-						<div class="self-center mr-3">
+						<div class="self-center">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								fill="none"
 								viewBox="0 0 24 24"
 								stroke-width="1.5"
 								stroke="currentColor"
-								class="size-5"
+								class="size-3.5"
 							>
 								<path
 									stroke-linecap="round"
@@ -482,7 +481,7 @@
 					<a
 						href="/playground"
 						draggable="false"
-						class="flex flex-1 rounded-xl py-1.5 px-3 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
+						class="flex flex-1 h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 						on:click={async (e) => {
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
@@ -494,8 +493,8 @@
 							}
 						}}
 					>
-						<div class="self-center mr-3">
-							<Code className="size-5" strokeWidth="1.5" />
+						<div class="self-center">
+							<Code className="size-3.5" strokeWidth="1.5" />
 						</div>
 						<div class="self-center truncate">{$i18n.t('Playground')}</div>
 					</a>
@@ -522,7 +521,7 @@
 			{/if}
 
 			{#if help}
-				<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
+				<hr class="border-gray-50/30 dark:border-gray-800/30 my-0.5 mx-1 p-0" />
 
 				<!-- {$i18n.t('Help')} -->
 
@@ -531,14 +530,14 @@
 						href="https://docs.openwebui.com"
 						target="_blank"
 						draggable="false"
-						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
+						class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 						id="chat-share-button"
 						on:click={() => {
 							show = false;
 						}}
 					>
-						<div class=" self-center mr-3">
-							<QuestionMarkCircle className="size-5" />
+						<div class="self-center">
+							<QuestionMarkCircle className="size-3.5" />
 						</div>
 						<div class=" self-center truncate">{$i18n.t('Documentation')}</div>
 					</a>
@@ -548,21 +547,21 @@
 						href="https://github.com/open-webui/open-webui/releases"
 						target="_blank"
 						draggable="false"
-						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
+						class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 						id="chat-share-button"
 						on:click={() => {
 							show = false;
 						}}
 					>
-						<div class=" self-center mr-3">
-							<Map className="size-5" />
+						<div class="self-center">
+							<Map className="size-3.5" />
 						</div>
 						<div class=" self-center truncate">{$i18n.t('Releases')}</div>
 					</a>
 				{/if}
 
 				<button
-					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
+					class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 					type="button"
 					id="chat-share-button"
 					on:click={async () => {
@@ -575,17 +574,17 @@
 						}
 					}}
 				>
-					<div class=" self-center mr-3">
-						<Keyboard className="size-5" />
+					<div class="self-center">
+						<Keyboard className="size-3.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Keyboard Shortcuts')}</div>
 				</button>
 			{/if}
 
-			<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
+			<hr class="border-gray-50/30 dark:border-gray-800/30 my-0.5 mx-1 p-0" />
 
 			<button
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
+				class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 				type="button"
 				on:click={async () => {
 					const res = await userSignOut();
@@ -596,15 +595,15 @@
 					show = false;
 				}}
 			>
-				<div class=" self-center mr-3">
-					<SignOut className="w-5 h-5" strokeWidth="1.5" />
+				<div class="self-center">
+					<SignOut className="size-3.5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</button>
 
 			{#if showActiveUsers && ($config?.features?.enable_public_active_users_count || role === 'admin') && usage}
 				{#if usage?.user_count}
-					<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
+					<hr class="border-gray-50/30 dark:border-gray-800/30 my-0.5 mx-1 p-0" />
 
 					<Tooltip
 						content={usage?.model_ids && usage?.model_ids.length > 0
@@ -637,37 +636,6 @@
 					</Tooltip>
 				{/if}
 			{/if}
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>
-
-<style>
-	.user-menu > button,
-	.user-menu > a,
-	.user-menu > div > a {
-		height: 1.6875rem;
-		padding: 0 0.5rem;
-		border-radius: 0.75rem;
-	}
-
-	.user-menu > button > div:first-child,
-	.user-menu > a > div:first-child,
-	.user-menu > div > a > div:first-child {
-		margin-right: 0.5rem;
-	}
-
-	.user-menu > .user-menu-status > button {
-		height: 1.6875rem;
-		padding: 0 0.5rem;
-		border-radius: 0.75rem;
-	}
-
-	.user-menu > hr {
-		margin: 0.125rem 0.25rem;
-	}
-
-	.user-menu :global(svg) {
-		width: 0.875rem;
-		height: 0.875rem;
-	}
-</style>

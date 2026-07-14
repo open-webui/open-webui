@@ -5,6 +5,7 @@
 	const dispatch = createEventDispatcher();
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -42,43 +43,41 @@
 	</Tooltip>
 
 	<div slot="content">
-		<div
-			class="min-w-[170px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-		>
+		<DropdownMenu className="min-w-[170px]">
 			<button
-				class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] select-none cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
 				on:click={() => {
 					onCreateSubFolder();
 				}}
 			>
-				<Folder />
+				<Folder className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('Create Folder')}</div>
 			</button>
 
-			<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
+			<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 
 			<button
-				class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] select-none cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
 				on:click={() => {
 					onEdit();
 				}}
 			>
-				<Pencil />
+				<Pencil className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('Edit')}</div>
 			</button>
 
 			<button
-				class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] select-none cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
 				on:click={() => {
 					onExport();
 				}}
 			>
-				<Download />
+				<Download className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('Export')}</div>
 			</button>
 
 			<button
-				class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] select-none cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
 				on:click={() => {
 					onShare();
 				}}
@@ -89,7 +88,7 @@
 					viewBox="0 0 24 24"
 					stroke-width="1.5"
 					stroke="currentColor"
-					class="size-4"
+					class="size-3.5"
 				>
 					<path
 						stroke-linecap="round"
@@ -100,17 +99,17 @@
 				<div class="flex items-center">{$i18n.t('Share')}</div>
 			</button>
 
-			<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
+			<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 
 			<button
-				class="flex gap-2 items-center px-3 py-1.5 text-sm select-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] select-none cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
 				on:click={() => {
 					onDelete();
 				}}
 			>
-				<GarbageBin />
+				<GarbageBin className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</button>
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>

@@ -8,6 +8,8 @@
 
 	export let show = false;
 	export let shareUsers = true;
+	export let allowGroups = true;
+	export let accessGrants: { principal_type: string; principal_id: string }[] = [];
 	export let onAdd = (payload: { userIds: string[]; groupIds: string[] }) => {};
 
 	let userIds: string[] = [];
@@ -55,9 +57,10 @@
 						<MemberSelector
 							bind:userIds
 							bind:groupIds
-							includeGroups={true}
+							includeGroups={allowGroups}
 							includeUsers={shareUsers}
-							includeSessionUser={true}
+							includeSessionUser={false}
+							{accessGrants}
 						/>
 					</div>
 

@@ -5,6 +5,7 @@
 	const { saveAs } = fileSaver;
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
@@ -299,38 +300,34 @@
 	</Tooltip>
 
 	<div slot="content">
-		<div
-			class="select-none min-w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
-		>
+		<DropdownMenu className="select-none min-w-[200px] transition">
 			{#if $user?.role === 'admin' || ($user.permissions?.chat?.share ?? true)}
 				<button
 					draggable="false"
-					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60 w-full"
 					on:click={() => {
 						shareHandler();
 					}}
 				>
-					<Share strokeWidth="1.5" />
+					<Share className="size-3.5" strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Share')}</div>
 				</button>
 			{/if}
 
 			{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
-				<DropdownSub
-					contentClass="select-none rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
-				>
+				<DropdownSub contentClass="select-none z-50">
 					<button
 						slot="trigger"
 						draggable="false"
-						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60 w-full"
 					>
-						<Download strokeWidth="1.5" />
+						<Download className="size-3.5" strokeWidth="1.5" />
 						<div class="flex items-center">{$i18n.t('Download')}</div>
 					</button>
 
 					<button
 						draggable="false"
-						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60 w-full"
 						on:click={() => {
 							downloadJSONExport();
 						}}
@@ -340,7 +337,7 @@
 
 					<button
 						draggable="false"
-						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60 w-full"
 						on:click={() => {
 							downloadTxt();
 						}}
@@ -350,7 +347,7 @@
 
 					<button
 						draggable="false"
-						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60 select-none w-full"
 						on:click={() => {
 							downloadPdf();
 						}}
@@ -362,31 +359,31 @@
 
 			<button
 				draggable="false"
-				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60 w-full"
 				on:click={() => {
 					show = false;
 					renameHandler();
 				}}
 			>
-				<Pencil strokeWidth="1.5" />
+				<Pencil className="size-3.5" strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Rename')}</div>
 			</button>
 
-			<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
+			<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 
 			<button
 				draggable="false"
-				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60 w-full"
 				on:click={() => {
 					show = false;
 					pinHandler();
 				}}
 			>
 				{#if pinned}
-					<BookmarkSlash strokeWidth="1.5" />
+					<BookmarkSlash className="size-3.5" strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Unpin')}</div>
 				{:else}
-					<Bookmark strokeWidth="1.5" />
+					<Bookmark className="size-3.5" strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Pin')}</div>
 				{/if}
 			</button>
@@ -394,40 +391,38 @@
 			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true)}
 				<button
 					draggable="false"
-					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60 w-full"
 					on:click={() => {
 						show = false;
 						cloneChatHandler();
 					}}
 				>
-					<DocumentDuplicate strokeWidth="1.5" />
+					<DocumentDuplicate className="size-3.5" strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Clone')}</div>
 				</button>
 			{/if}
 
 			{#if chatId && $folders.length > 0}
-				<DropdownSub
-					contentClass="select-none rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white border border-gray-100 dark:border-gray-800 shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
-				>
+				<DropdownSub contentClass="select-none z-50 max-h-52 overflow-y-auto scrollbar-hidden">
 					<button
 						slot="trigger"
 						draggable="false"
-						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl select-none w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60 select-none w-full"
 					>
-						<Folder />
+						<Folder className="size-3.5" />
 						<div class="flex items-center">{$i18n.t('Move')}</div>
 					</button>
 
 					{#each $folders.sort((a, b) => b.updated_at - a.updated_at) as folder}
 						<button
 							draggable="false"
-							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl overflow-hidden w-full"
+							class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60 overflow-hidden w-full"
 							on:click={() => {
 								moveChatHandler(chatId, folder.id);
 							}}
 						>
 							<div class="shrink-0">
-								<Folder />
+								<Folder className="size-3.5" />
 							</div>
 
 							<div class="truncate">{folder?.name ?? 'Folder'}</div>
@@ -438,25 +433,25 @@
 
 			<button
 				draggable="false"
-				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60 w-full"
 				on:click={() => {
 					archiveChatHandler();
 				}}
 			>
-				<ArchiveBox strokeWidth="1.5" />
+				<ArchiveBox className="size-3.5" strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Archive')}</div>
 			</button>
 
 			<button
 				draggable="false"
-				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60 w-full"
 				on:click={() => {
 					deleteHandler();
 				}}
 			>
-				<GarbageBin strokeWidth="1.5" />
+				<GarbageBin className="size-3.5" strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</button>
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>

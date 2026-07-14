@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Link from '$lib/components/icons/Link.svelte';
@@ -30,9 +31,7 @@
 	</Tooltip>
 
 	<div slot="content">
-		<div
-			class="min-w-[190px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-		>
+		<DropdownMenu className="min-w-[190px]">
 			<button
 				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
 				on:click={async () => {
@@ -58,6 +57,6 @@
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Import From Link')}</div>
 			</button>
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>

@@ -5,6 +5,7 @@
 	import type { FileEntry } from '$lib/apis/terminal';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Folder from '../../icons/Folder.svelte';
 	import EllipsisHorizontal from '../../icons/EllipsisHorizontal.svelte';
 	import GarbageBin from '../../icons/GarbageBin.svelte';
@@ -304,9 +305,7 @@
 			</button>
 
 			<div slot="content">
-				<div
-					class="min-w-[150px] rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
-				>
+				<DropdownMenu className="min-w-[150px] z-[9999999]">
 					<button
 						type="button"
 						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
@@ -376,7 +375,7 @@
 						<GarbageBin className="size-4" />
 						<div class="flex items-center">{$i18n.t('Delete')}</div>
 					</button>
-				</div>
+				</DropdownMenu>
 			</div>
 		</Dropdown>
 	</div>

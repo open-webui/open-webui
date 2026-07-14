@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Pin from '$lib/components/icons/Pin.svelte';
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
@@ -43,9 +44,7 @@
 	</Tooltip>
 
 	<div slot="content">
-		<div
-			class="min-w-[210px] text-sm rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
-		>
+		<DropdownMenu className="min-w-[210px] z-[9999999]">
 			{#if model?.preset || model?.info?.base_model_id ? model?.info?.user_id === $user?.id : $user?.role === 'admin'}
 				<button
 					type="button"
@@ -166,6 +165,6 @@
 					<div class="flex items-center">{$i18n.t('Community Reviews')}</div>
 				</button>
 			{/if}
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>

@@ -192,15 +192,15 @@
 
 	<div
 		slot="content"
-		class="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-48 p-1"
+		class="rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-48 p-0.5"
 	>
-		<div class="px-2 text-xs text-gray-500 pt-1">
+		<div class="px-2 text-[11px] text-gray-500 pt-0.5">
 			{$i18n.t('Schedule')}
 		</div>
 
 		<div class="px-1.5 py-0.5">
 			<select
-				class="w-full bg-transparent rounded-xl text-xs py-1.5 px-1.5 outline-hidden"
+				class="w-full h-[1.6875rem] bg-transparent rounded-xl text-[13px] px-1.5 outline-hidden"
 				bind:value={frequency}
 				on:click={(e) => e.stopPropagation()}
 				on:change={onChange}
@@ -217,13 +217,13 @@
 					type="text"
 					bind:value={customRrule}
 					placeholder="RRULE:FREQ=DAILY;BYHOUR=9;BYMINUTE=0"
-					class="w-full bg-transparent outline-hidden text-xs placeholder:text-gray-400 dark:placeholder:text-gray-600"
+					class="w-full bg-transparent outline-hidden text-[13px] placeholder:text-gray-400 dark:placeholder:text-gray-600"
 					on:click={(e) => e.stopPropagation()}
 					on:input={onChange}
 				/>
 			</div>
 		{:else if frequency !== 'HOURLY'}
-			<div class="flex gap-2 flex-wrap items-center px-3 pb-2 text-xs">
+			<div class="flex gap-2 flex-wrap items-center px-3 pb-2 text-[13px]">
 				{#if frequency === 'ONCE'}
 					<div class="flex items-center gap-1.5">
 						<input

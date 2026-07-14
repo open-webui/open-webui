@@ -6,6 +6,7 @@
 	import { getToolServersData } from '$lib/apis';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cloud from '$lib/components/icons/Cloud.svelte';
 
@@ -108,8 +109,8 @@
 		</Tooltip>
 
 		<div slot="content">
-			<div
-				class="min-w-56 max-w-56 rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
+			<DropdownMenu
+				className="min-w-56 max-w-56 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
 			>
 				<!-- Direct terminals (gated by permission) -->
 				{#if directTerminals.length > 0 && ($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))}
@@ -246,7 +247,7 @@
 						</button>
 					{/each}
 				{/if}
-			</div>
+			</DropdownMenu>
 		</div>
 	</Dropdown>
 </div>

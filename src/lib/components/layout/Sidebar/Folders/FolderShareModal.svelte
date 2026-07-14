@@ -75,9 +75,12 @@
 				bind:accessGrants
 				onChange={handleAccessChange}
 				accessRoles={['read', 'write']}
+				defaultPermission="write"
 				share={$user?.role === 'admin' || $user?.permissions?.sharing?.folders}
 				sharePublic={false}
 				shareUsers={$user?.role === 'admin' || $user?.permissions?.access_grants?.allow_users}
+				allowGroups={$user?.role === 'admin' ||
+					($user?.permissions?.access_grants?.allow_groups ?? true)}
 			/>
 		</div>
 	</div>

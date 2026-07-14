@@ -46,6 +46,7 @@
 	import { goto } from '$app/navigation';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import AdminViewSelector from './Models/AdminViewSelector.svelte';
 	import TagSelector from '$lib/components/workspace/common/TagSelector.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
@@ -540,9 +541,7 @@
 					</Tooltip>
 
 					<div slot="content">
-						<div
-							class="w-[170px] rounded-xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
-						>
+						<DropdownMenu className="w-[170px]">
 							<button
 								class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 								type="button"
@@ -588,7 +587,7 @@
 								<EyeSlash className="size-4" />
 								<div class="flex items-center">{$i18n.t('Hide All')}</div>
 							</button>
-						</div>
+						</DropdownMenu>
 					</div>
 				</Dropdown>
 			</div>

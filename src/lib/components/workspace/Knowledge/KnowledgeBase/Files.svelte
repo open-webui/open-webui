@@ -15,6 +15,7 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
@@ -184,9 +185,7 @@
 						</button>
 
 						<div slot="content">
-							<div
-								class="min-w-[140px] rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
-							>
+							<DropdownMenu className="min-w-[140px] z-[9999999]">
 								<button
 									type="button"
 									class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
@@ -218,7 +217,7 @@
 									<GarbageBin className="size-3.5" />
 									{$i18n.t('Delete')}
 								</button>
-							</div>
+							</DropdownMenu>
 						</div>
 					</Dropdown>
 				</div>
