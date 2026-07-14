@@ -81,8 +81,6 @@
 		$selectedFolder.user_id !== $user?.id &&
 		$selectedFolder.permission !== 'write';
 
-	// True when the current user does NOT own this folder (hide management menus)
-	$: folderNotOwned = $selectedFolder != null && $selectedFolder.user_id !== $user?.id;
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
@@ -105,7 +103,7 @@
 			{#if $selectedFolder}
 				<FolderTitle
 					folder={$selectedFolder}
-					readOnly={folderNotOwned}
+					readOnly={folderReadOnly}
 					onUpdate={async (folder) => {
 						await chats.set(await getChatList(localStorage.token, $currentChatPage));
 						currentChatPage.set(1);

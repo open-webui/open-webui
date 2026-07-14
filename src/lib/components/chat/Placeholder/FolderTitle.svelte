@@ -77,8 +77,9 @@
 				return null;
 			});
 
-			await selectedFolder.set(_folder);
-			onUpdate(_folder);
+			const updatedFolder = { ...folder, ..._folder };
+			await selectedFolder.set(updatedFolder);
+			onUpdate(updatedFolder);
 		}
 	};
 
@@ -102,8 +103,9 @@
 				return null;
 			});
 
-			await selectedFolder.set(_folder);
-			onUpdate(_folder);
+			const updatedFolder = { ...folder, ..._folder };
+			await selectedFolder.set(updatedFolder);
+			onUpdate(updatedFolder);
 		}
 	};
 

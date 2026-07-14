@@ -540,7 +540,7 @@
 					? 'bg-gray-100 dark:bg-gray-900 selected'
 					: ''}"
 				on:dblclick={(e) => {
-					if (folders[folderId]?.shared) return;
+					if (folders[folderId]?.shared && folders[folderId]?.permission !== 'write') return;
 					if (clickTimer) {
 						clearTimeout(clickTimer); // cancel the single-click action
 						clickTimer = null;
@@ -640,7 +640,7 @@
 					{/if}
 				</div>
 
-				{#if !folders[folderId]?.shared}
+				{#if !folders[folderId]?.shared || folders[folderId]?.permission === 'write'}
 					<button
 						class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 					>
