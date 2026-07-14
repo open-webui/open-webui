@@ -53,106 +53,103 @@
 	}
 </script>
 
-<DropdownMenu
-	className="{(filteredItems ?? []).length > 0
-		? ''
-		: 'hidden'} w-72 font-sans text-xs"
-	id="suggestions-container"
->
-	<div class="overflow-y-auto scrollbar-thin max-h-60">
-		{#if char === '/'}
-			<Prompts
-				bind:this={suggestionElement}
-				{query}
-				bind:filteredItems
-				onSelect={(e) => {
-					const { type, data } = e;
+<div class={(filteredItems ?? []).length > 0 ? '' : 'hidden'} id="suggestions-container">
+	<DropdownMenu className="w-72 font-sans text-xs">
+		<div class="overflow-y-auto scrollbar-thin max-h-60">
+			{#if char === '/'}
+				<Prompts
+					bind:this={suggestionElement}
+					{query}
+					bind:filteredItems
+					onSelect={(e) => {
+						const { type, data } = e;
 
-					if (type === 'prompt') {
-						insertTextHandler(data.content);
-					}
-				}}
-			/>
-		{:else if char === '#'}
-			<Knowledge
-				bind:this={suggestionElement}
-				{query}
-				bind:filteredItems
-				onSelect={(e) => {
-					const { type, data } = e;
+						if (type === 'prompt') {
+							insertTextHandler(data.content);
+						}
+					}}
+				/>
+			{:else if char === '#'}
+				<Knowledge
+					bind:this={suggestionElement}
+					{query}
+					bind:filteredItems
+					onSelect={(e) => {
+						const { type, data } = e;
 
-					if (type === 'knowledge') {
-						insertTextHandler('');
+						if (type === 'knowledge') {
+							insertTextHandler('');
 
-						onUpload({
-							type: 'file',
-							data: data
-						});
-					} else if (type === 'web') {
-						insertTextHandler('');
+							onUpload({
+								type: 'file',
+								data: data
+							});
+						} else if (type === 'web') {
+							insertTextHandler('');
 
-						onUpload({
-							type: 'web',
-							data: data
-						});
-					}
-				}}
-			/>
-		{:else if char === '@'}
-			<Models
-				bind:this={suggestionElement}
-				{query}
-				bind:filteredItems
-				onSelect={(e) => {
-					const { type, data } = e;
+							onUpload({
+								type: 'web',
+								data: data
+							});
+						}
+					}}
+				/>
+			{:else if char === '@'}
+				<Models
+					bind:this={suggestionElement}
+					{query}
+					bind:filteredItems
+					onSelect={(e) => {
+						const { type, data } = e;
 
-					if (type === 'model') {
-						insertTextHandler('');
+						if (type === 'model') {
+							insertTextHandler('');
 
-						onSelect({
-							type: 'model',
-							data: data
-						});
-					}
-				}}
-			/>
-		{:else if char === '$'}
-			<Skills
-				bind:this={suggestionElement}
-				{query}
-				bind:filteredItems
-				onSelect={(e) => {
-					const { type, data } = e;
+							onSelect({
+								type: 'model',
+								data: data
+							});
+						}
+					}}
+				/>
+			{:else if char === '$'}
+				<Skills
+					bind:this={suggestionElement}
+					{query}
+					bind:filteredItems
+					onSelect={(e) => {
+						const { type, data } = e;
 
-					if (type === 'skill') {
-						command({
-							id: `${data.id}|${data.name}`,
-							label: data.name
-						});
+						if (type === 'skill') {
+							command({
+								id: `${data.id}|${data.name}`,
+								label: data.name
+							});
 
-						onSelect({
-							type: 'skill',
-							data: data
-						});
-					}
-				}}
-			/>
-		{:else if char === ':'}
-			<Emojis
-				bind:this={suggestionElement}
-				{query}
-				bind:filteredItems
-				onSelect={(e) => {
-					const { type, data } = e;
+							onSelect({
+								type: 'skill',
+								data: data
+							});
+						}
+					}}
+				/>
+			{:else if char === ':'}
+				<Emojis
+					bind:this={suggestionElement}
+					{query}
+					bind:filteredItems
+					onSelect={(e) => {
+						const { type, data } = e;
 
-					if (type === 'emoji') {
-						command({
-							id: data.name,
-							label: data.shortCodes[0]
-						});
-					}
-				}}
-			/>
-		{/if}
-	</div>
-</DropdownMenu>
+						if (type === 'emoji') {
+							command({
+								id: data.name,
+								label: data.shortCodes[0]
+							});
+						}
+					}}
+				/>
+			{/if}
+		</div>
+	</DropdownMenu>
+</div>
