@@ -1,9 +1,12 @@
 """
 title: SharePoint Nidum
 author: Nidum
-version: 1.0.1
+version: 1.0.2
 description: Salva um arquivo ja gerado no ChatND (ex.: o relatorio do Identificador de Ambientes) numa pasta do SharePoint da Nidum, via Microsoft Graph (app-only). Nunca sobrescreve: se ja existir, incrementa a versao. Devolve o link do SharePoint. Segredos SOMENTE nas Valves (visiveis so por admin). So-ASCII no codigo.
 changelog:
+  1.0.2:
+    - Adiciona diagnostico_sharepoint(): checa Valves/auth/biblioteca/escrita sem revelar
+      segredos. Ajuda a distinguir Valves vazias de falta de permissao de escrita.
   1.0.1:
     - Pasta destino padrao: 4 - Pastas de Trabalho/Plataformas/ChatND Identificacao
       (fora do escopo da esteira). Cria apenas a subpasta que faltar.
@@ -236,6 +239,36 @@ class Tools:
 
     def __init__(self):
         self.valves = self.Valves()
+
+    async def diagnostico_sharepoint(self, __user__: dict = None) -> str:
+        """Verifica a conexao com o SharePoint e diz exatamente onde falha, SEM revelar segredos.
+
+        Use quando o arquivamento falhar. Checa: Valves preenchidas? token (autenticacao)?
+        biblioteca encontrada? permissao de ESCRITA (tenta criar/garantir a pasta destino)?
+        """
+        v = self.valves
+        linhas = []
+        for n in ("TENANT_ID", "CLIENT_ID", "CLIENT_SECRET", "SITE_ID", "BIBLIOTECA", "PASTA_DESTINO"):
+            val = str(getattr(v, n, "") or "").strip()
+            linhas.append("- %s: %s" % (n, "preenchido" if val else "VAZIO"))
+        cab = "Configuracao (Valves):\n" + "\n".join(linhas)
+
+        try:
+            token = await asyncio.to_thread(_token, v)
+        except Exception as e:
+            return cab + "\n\nAutenticacao: FALHOU\n  %s" % str(e)[:300]
+
+        try:
+            drive_id = await asyncio.to_thread(_resolver_drive_id, token, v.SITE_ID.strip(), v.BIBLIOTECA)
+        except Exception as e:
+            return cab + "\n\nAutenticacao: OK\nBiblioteca %r: NAO ENCONTRADA\n  %s" % (v.BIBLIOTECA, str(e)[:300])
+
+        try:
+            await asyncio.to_thread(_garantir_pasta, token, drive_id, v.PASTA_DESTINO)
+            escrita = "OK (consegui criar/garantir a pasta destino)"
+        except Exception as e:
+            escrita = "FALHOU (provavel falta de permissao de ESCRITA do app no site)\n  %s" % str(e)[:300]
+        return cab + "\n\nAutenticacao: OK\nBiblioteca: OK\nEscrita: %s" % escrita
 
     async def salvar_relatorio(
         self,
