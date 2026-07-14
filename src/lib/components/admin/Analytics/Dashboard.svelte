@@ -1005,7 +1005,6 @@
 								</div>
 							</div>
 							{#if (user.models ?? []).length > 0}
-								{@const userModelTotal = (user.models ?? []).reduce((sum, x) => sum + x.count, 0)}
 								<div class="overflow-x-auto scrollbar-hidden mt-2.5">
 									<!-- table-fixed with constant column widths so every user card
 									     lines up column-for-column; the Model column absorbs the rest. -->
@@ -1041,7 +1040,7 @@
 										</thead>
 										<tbody>
 											{#each user.models ?? [] as m (modelKey(m.model_id, m.base_model_id))}
-												{@const pct = userModelTotal > 0 ? (m.count / userModelTotal) * 100 : 0}
+												{@const pct = user.count > 0 ? (m.count / user.count) * 100 : 0}
 												<tr
 													class="border-b border-gray-100/60 dark:border-gray-850/60 last:border-0"
 												>

@@ -225,12 +225,9 @@ class UsageLogTable:
         start_date: Optional[int] = None,
         end_date: Optional[int] = None,
         group_id: Optional[str] = None,
-        include_tasks: bool = False,
     ):
         from open_webui.models.groups import GroupMember
 
-        if not include_tasks:
-            stmt = stmt.filter(UsageLog.source != 'task')
         if start_date:
             stmt = stmt.filter(UsageLog.created_at >= start_date)
         if end_date:
@@ -240,8 +237,11 @@ class UsageLogTable:
             stmt = stmt.filter(UsageLog.user_id.in_(group_users))
         return stmt
 
-    # Activity counts (exclude task generations so background title/tag
-    # calls don't inflate user-facing message counts)
+    # Activity counts. Policy: EVERY logged completion counts — chat turns
+    # and background task generations (title/tags/compaction/...) alike —
+    # attributed to its user and to the model that served it. Counts and
+    # token/cost aggregations therefore share one population and per-model
+    # shares always total 100%.
 
     async def get_count_by_model(
         self,
@@ -325,7 +325,7 @@ class UsageLogTable:
             result = await db.execute(stmt)
             return {row.chat_id: row.count for row in result.all()}
 
-    # Token/cost aggregations (include task generations: billing truth)
+    # Token/cost aggregations (same all-completions population as the counts)
 
     def _token_usage_columns(self):
         return [
@@ -372,7 +372,6 @@ class UsageLogTable:
                 start_date,
                 end_date,
                 group_id,
-                include_tasks=True,
             ).group_by(UsageLog.model_id, UsageLog.base_model_id)
             result = await db.execute(stmt)
             return {(row.model_id, row.base_model_id): self._token_usage_entry(row) for row in result.all()}
@@ -398,7 +397,6 @@ class UsageLogTable:
                 start_date,
                 end_date,
                 group_id,
-                include_tasks=True,
             ).group_by(UsageLog.user_id, UsageLog.model_id, UsageLog.base_model_id)
             result = await db.execute(stmt)
 
@@ -440,7 +438,6 @@ class UsageLogTable:
                 start_date,
                 end_date,
                 group_id,
-                include_tasks=True,
             ).group_by(UsageLog.source, UsageLog.model_id)
             result = await db.execute(stmt)
 
