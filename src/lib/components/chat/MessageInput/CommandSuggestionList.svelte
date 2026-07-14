@@ -1,7 +1,7 @@
 <script lang="ts">
 	import SlashCommands from './Commands/SlashCommands.svelte';
+	import AtCommands from './Commands/AtCommands.svelte';
 	import Knowledge from './Commands/Knowledge.svelte';
-	import Models from './Commands/Models.svelte';
 	import Skills from './Commands/Skills.svelte';
 	import Emojis from './Commands/Emojis.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
@@ -10,12 +10,12 @@
 	export let query = '';
 	export let command: (payload: { id: string; label: string }) => void;
 
-	export let onSelect = (e) => {};
-	export let onUpload = (e) => {};
-	export let insertTextHandler = (text) => {};
+	export let onSelect: (e: any) => void = () => {};
+	export let onUpload: (e: any) => void = () => {};
+	export let insertTextHandler: (text: string) => void = () => {};
 
-	let suggestionElement = null;
-	let filteredItems = [];
+	let suggestionElement: any = null;
+	let filteredItems: any[] = [];
 
 	const onKeyDown = (event: KeyboardEvent) => {
 		if (!['ArrowUp', 'ArrowDown', 'Enter', 'Tab', 'Escape'].includes(event.key)) return false;
@@ -105,7 +105,7 @@
 					}}
 				/>
 			{:else if char === '@'}
-				<Models
+				<AtCommands
 					bind:this={suggestionElement}
 					{query}
 					bind:filteredItems
@@ -117,6 +117,20 @@
 
 							onSelect({
 								type: 'model',
+								data: data
+							});
+						} else if (type === 'knowledge') {
+							insertTextHandler('');
+
+							onUpload({
+								type: 'file',
+								data: data
+							});
+						} else if (type === 'web') {
+							insertTextHandler('');
+
+							onUpload({
+								type: 'web',
 								data: data
 							});
 						}
