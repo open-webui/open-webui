@@ -2282,9 +2282,7 @@
 													<Dropdown bind:show={showContextMenu} align="end">
 														<Tooltip
 															content={`${$i18n.t('Context')}${
-																displayedContextUsage.estimated
-																	? ` (${$i18n.t('estimated')})`
-																	: ''
+																displayedContextUsage.estimated ? ` (${$i18n.t('estimated')})` : ''
 															}: ${displayedContextUsage.used.toLocaleString()} / ${contextWindow.toLocaleString()} ${$i18n.t('tokens')}`}
 															placement="top"
 														>
@@ -2308,8 +2306,9 @@
 																<span
 																	class="text-[11px] font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap"
 																>
-																	{displayedContextUsage.estimated ? '~' : ''}{displayedContextUsage.percent <
-																	1
+																	{displayedContextUsage.estimated
+																		? '~'
+																		: ''}{displayedContextUsage.percent < 1
 																		? '<1'
 																		: Math.round(displayedContextUsage.percent)}%
 																</span>

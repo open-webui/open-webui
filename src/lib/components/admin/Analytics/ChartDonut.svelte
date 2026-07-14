@@ -161,8 +161,7 @@
 						class="size-2 rounded-full shrink-0"
 						style="background-color: {sliceColor(slice, idx, darkMode)}"
 					></span>
-					<span class="flex-1 min-w-0 truncate text-gray-600 dark:text-gray-300"
-						>{slice.label}</span
+					<span class="flex-1 min-w-0 truncate text-gray-600 dark:text-gray-300">{slice.label}</span
 					>
 					<span class="shrink-0 text-right text-gray-900 dark:text-white tabular-nums">
 						{valueFormatter(slice.value)}

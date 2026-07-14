@@ -250,9 +250,7 @@
 				);
 			} else if (res) {
 				if (res.reason === 'disabled') {
-					toast.error(
-						$i18n.t('Enable Context Compaction in Admin Settings > Interface first.')
-					);
+					toast.error($i18n.t('Enable Context Compaction in Admin Settings > Interface first.'));
 				} else {
 					toast.info($i18n.t('Nothing to compact yet.'));
 				}

@@ -893,7 +893,7 @@
 												e.target.src = '/favicon.png';
 											}}
 										/>
-										<span class="truncate max-w-[240px]"
+										<span class="truncate max-w-[28rem]"
 											>{displayModelName(model.model_id, model.base_model_id)}</span
 										>
 									</div>
@@ -1005,45 +1005,48 @@
 								</div>
 							</div>
 							{#if (user.models ?? []).length > 0}
+								{@const userModelTotal = (user.models ?? []).reduce((sum, x) => sum + x.count, 0)}
 								<div class="overflow-x-auto scrollbar-hidden mt-2.5">
+									<!-- table-fixed with constant column widths so every user card
+									     lines up column-for-column; the Model column absorbs the rest. -->
 									<table
-										class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto whitespace-nowrap"
+										class="w-full min-w-[52rem] table-fixed text-sm text-left text-gray-500 dark:text-gray-400 whitespace-nowrap"
 									>
 										<thead class="text-xs text-gray-400 uppercase bg-transparent">
 											<tr class="border-b border-gray-100 dark:border-gray-850">
 												<th scope="col" class="py-1 pr-2 font-medium">{$i18n.t('Model')}</th>
-												<th scope="col" class="py-1 px-2 font-medium text-right"
+												<th scope="col" class="py-1 px-2 font-medium text-right w-24"
 													>{$i18n.t('Chats')}</th
 												>
-												<th scope="col" class="py-1 px-2 font-medium text-right"
+												<th scope="col" class="py-1 px-2 font-medium text-right w-24"
 													>{$i18n.t('Messages')}</th
 												>
-												<th scope="col" class="py-1 px-2 font-medium text-right"
+												<th scope="col" class="py-1 px-2 font-medium text-right w-24"
 													>{$i18n.t('Input')}</th
 												>
-												<th scope="col" class="py-1 px-2 font-medium text-right"
+												<th scope="col" class="py-1 px-2 font-medium text-right w-24"
 													>{$i18n.t('Cached')}</th
 												>
-												<th scope="col" class="py-1 px-2 font-medium text-right"
+												<th scope="col" class="py-1 px-2 font-medium text-right w-24"
 													>{$i18n.t('Output')}</th
 												>
-												<th scope="col" class="py-1 px-2 font-medium text-right"
+												<th scope="col" class="py-1 px-2 font-medium text-right w-24"
 													>{$i18n.t('Tokens')}</th
 												>
-												<th scope="col" class="py-1 px-2 font-medium text-right"
+												<th scope="col" class="py-1 px-2 font-medium text-right w-24"
 													>{$i18n.t('Cost')}</th
 												>
-												<th scope="col" class="py-1 pl-2 font-medium text-right">%</th>
+												<th scope="col" class="py-1 pl-2 font-medium text-right w-16">%</th>
 											</tr>
 										</thead>
 										<tbody>
 											{#each user.models ?? [] as m (modelKey(m.model_id, m.base_model_id))}
-												{@const pct = user.count > 0 ? (m.count / user.count) * 100 : 0}
+												{@const pct = userModelTotal > 0 ? (m.count / userModelTotal) * 100 : 0}
 												<tr
 													class="border-b border-gray-100/60 dark:border-gray-850/60 last:border-0"
 												>
-													<td class="py-1 pr-2">
-														<div class="flex items-center gap-2 min-w-0 max-w-80">
+													<td class="py-1 pr-2 overflow-hidden">
+														<div class="flex items-center gap-2 min-w-0">
 															<span
 																class="size-1.5 rounded-full shrink-0"
 																style="background-color: {modelColorMap.get(m.model_id) ||
