@@ -390,6 +390,11 @@ async def update_folder_is_expanded_by_id(
 ):
     await check_folders_permission(request, user, db=db)
     folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
+    if not folder:
+        folder = await Folders.get_folder_by_id(id, db=db)
+        if folder and (user.role == 'admin' or await _has_folder_access(user.id, folder, 'read', db)):
+            return folder
+
     if folder:
         try:
             folder = await Folders.update_folder_is_expanded_by_id_and_user_id(
