@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { tick } from 'svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 
 	/** Currently selected value */
 	export let value = '';
@@ -21,8 +22,7 @@
 	export let labelClass = '';
 
 	/** CSS classes for the dropdown content container */
-	export let contentClass =
-		'rounded-2xl min-w-[170px] p-1 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 dark:text-white shadow-lg';
+	export let contentClass = 'min-w-[170px]';
 
 	/** Max height for the dropdown content */
 	export let maxHeight = '18rem';
@@ -127,7 +127,7 @@
 
 {#if open}
 	<div use:portal bind:this={contentEl} transition:flyAndScale>
-		<div class={contentClass} style:max-height={maxHeight} style:overflow-y="auto">
+		<DropdownMenu className={contentClass} style={`max-height: ${maxHeight}; overflow-y: auto;`}>
 			<slot {open} {selectItem}>
 				{#each items as item}
 					<button class={itemClass} type="button" on:click={() => selectItem(item)}>
@@ -137,6 +137,6 @@
 					</button>
 				{/each}
 			</slot>
-		</div>
+		</DropdownMenu>
 	</div>
 {/if}

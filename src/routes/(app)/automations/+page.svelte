@@ -27,6 +27,7 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Select from '$lib/components/common/Select.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
@@ -384,9 +385,7 @@
 							</Tooltip>
 
 							<div slot="content">
-								<div
-									class="w-[170px] rounded-xl p-1 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
-								>
+								<DropdownMenu className="w-[170px] shadow-sm">
 									<button
 										class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 										type="button"
@@ -403,7 +402,7 @@
 										<Minus className="size-4" />
 										{$i18n.t('Disable All')}
 									</button>
-								</div>
+								</DropdownMenu>
 							</div>
 						</Dropdown>
 					</div>

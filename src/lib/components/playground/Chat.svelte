@@ -20,6 +20,7 @@
 	import { splitStream } from '$lib/utils';
 	import Collapsible from '../common/Collapsible.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
+	import DropdownMenu from '../common/DropdownMenu.svelte';
 	import DropdownSub from '../common/DropdownSub.svelte';
 
 	import Messages from '$lib/components/playground/Chat/Messages.svelte';
@@ -394,9 +395,7 @@
 					</button>
 
 					<div slot="content">
-						<div
-							class="min-w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-						>
+						<DropdownMenu className="min-w-[200px]">
 							<DropdownSub>
 								<button
 									slot="trigger"
@@ -426,7 +425,7 @@
 									<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
 								</button>
 							</DropdownSub>
-						</div>
+						</DropdownMenu>
 					</div>
 				</Dropdown>
 			</div>
