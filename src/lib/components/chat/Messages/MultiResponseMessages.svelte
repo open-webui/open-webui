@@ -1,5 +1,4 @@
 <script lang="ts">
-	import dayjs from 'dayjs';
 	import { onMount, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -16,12 +15,11 @@
 	import Markdown from './Markdown.svelte';
 	import Name from './Name.svelte';
 	import Skeleton from './Skeleton.svelte';
-	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import ProfileImage from './ProfileImage.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import equal from 'fast-deep-equal';
+	import { formatMessageTimestamp, formatMessageTimestampFull } from '$lib/utils';
 	const i18n = getContext('i18n');
-	dayjs.extend(localizedFormat);
 
 	export let chatId;
 	export let history;
@@ -402,14 +400,6 @@
 							<div class="w-full rounded-xl pl-5 pr-2 py-2 mt-2">
 								<Name>
 									{$i18n.t('Merged Response')}
-
-									{#if message.timestamp}
-										<span
-											class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
-										>
-											{dayjs(message.timestamp * 1000).format('LT')}
-										</span>
-									{/if}
 								</Name>
 
 								<div class="mt-1 markdown-prose w-full min-w-full">
@@ -419,6 +409,23 @@
 										<Markdown id={`merged`} content={message.content ?? ''} />
 									{/if}
 								</div>
+
+								{#if message.timestamp}
+									<div class="mt-0.5 flex justify-start text-gray-600 dark:text-gray-500">
+										<Tooltip
+											className="flex self-center"
+											content={formatMessageTimestampFull(message.timestamp * 1000)}
+											placement="bottom"
+										>
+											<time
+												datetime={new Date(message.timestamp * 1000).toISOString()}
+												class="invisible group-hover:visible ml-1 text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
+											>
+												{formatMessageTimestamp(message.timestamp * 1000)}
+											</time>
+										</Tooltip>
+									</div>
+								{/if}
 							</div>
 						{/if}
 					</div>

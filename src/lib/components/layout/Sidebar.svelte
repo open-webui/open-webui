@@ -526,7 +526,7 @@
 		isResizing = true;
 
 		startClientX = e.clientX;
-		startWidth = $sidebarWidth ?? 250;
+		startWidth = $sidebarWidth ?? 245;
 
 		document.body.style.userSelect = 'none';
 	};
@@ -847,11 +847,11 @@
 						<div class=" self-center flex items-center justify-center size-9">
 							<img
 								src="{WEBUI_BASE_URL}/static/favicon.png"
-								class="sidebar-new-chat-icon size-6 rounded-full group-hover:hidden"
+								class="sidebar-new-chat-icon size-5 rounded-full group-hover:hidden"
 								alt=""
 							/>
 
-							<Sidebar className="size-5 hidden group-hover:flex" />
+							<Sidebar className="size-4.5 hidden group-hover:flex" />
 						</div>
 					</button>
 				</Tooltip>
@@ -874,7 +874,7 @@
 							aria-label={$i18n.t('New Chat')}
 						>
 							<div class=" self-center flex items-center justify-center size-9">
-								<PencilSquare className="size-4.5" />
+								<PencilSquare className="size-4" />
 							</div>
 						</a>
 					</Tooltip>
@@ -894,7 +894,7 @@
 							aria-label={$i18n.t('Search')}
 						>
 							<div class=" self-center flex items-center justify-center size-9">
-								<Search className="size-4.5" />
+								<Search className="size-4" />
 							</div>
 						</button>
 					</Tooltip>
@@ -919,7 +919,7 @@
 								>
 									<div class=" self-center flex items-center justify-center size-9">
 										{#if itemId === 'notes'}
-											<Note className="size-4.5" />
+											<Note className="size-4" />
 										{:else if itemId === 'workspace'}
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
@@ -927,7 +927,7 @@
 												viewBox="0 0 24 24"
 												stroke-width="1.5"
 												stroke="currentColor"
-												class="size-4.5"
+												class="size-4"
 											>
 												<path
 													stroke-linecap="round"
@@ -942,7 +942,7 @@
 												viewBox="0 0 24 24"
 												stroke-width="1.5"
 												stroke="currentColor"
-												class="size-4.5"
+												class="size-4"
 											>
 												<path
 													stroke-linecap="round"
@@ -957,7 +957,7 @@
 												viewBox="0 0 24 24"
 												stroke-width="1.5"
 												stroke="currentColor"
-												class="size-4.5"
+												class="size-4"
 											>
 												<path
 													stroke-linecap="round"
@@ -966,7 +966,7 @@
 												/>
 											</svg>
 										{:else if itemId === 'playground'}
-											<Code className="size-4.5" />
+											<Code className="size-4" />
 										{/if}
 									</div>
 								</a>
@@ -1047,7 +1047,7 @@
 				: 'invisible'}"
 		>
 			<div
-				class="sidebar px-1.5 pt-2 pb-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-3"
+				class="sidebar px-1.5 pt-1.5 pb-1 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-2"
 			>
 				<a
 					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
@@ -1058,7 +1058,7 @@
 					<img
 						crossorigin="anonymous"
 						src="{WEBUI_BASE_URL}/static/favicon.png"
-						class="sidebar-new-chat-icon size-6 rounded-full"
+						class="sidebar-new-chat-icon size-5 rounded-full"
 						alt=""
 					/>
 				</a>
@@ -1085,7 +1085,7 @@
 						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 					>
 						<div class=" self-center p-1.5">
-							<Sidebar />
+							<Sidebar className="size-4.5" />
 						</div>
 					</button>
 				</Tooltip>
@@ -1098,7 +1098,7 @@
 			</div>
 
 			<div
-				class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden pt-3 pb-3"
+				class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden pt-2.5 pb-2.5"
 				on:scroll={(e) => {
 					if (e.target.scrollTop === 0) {
 						scrollTop = 0;
@@ -1107,18 +1107,18 @@
 					}
 				}}
 			>
-				<div class="pb-1.5">
+				<div class="pb-1">
 					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 						<a
 							id="sidebar-new-chat-button"
-							class="group grow flex items-center space-x-2.5 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center space-x-2.5 rounded-xl px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 							href="/"
 							draggable="false"
 							on:click={newChatHandler}
 							aria-label={$i18n.t('New Chat')}
 						>
 							<div class="self-center">
-								<PencilSquare className=" size-4.5" strokeWidth="2" />
+								<PencilSquare className=" size-4" strokeWidth="2" />
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
@@ -1132,7 +1132,7 @@
 					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 						<button
 							id="sidebar-search-button"
-							class="group grow flex items-center space-x-2.5 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center space-x-2.5 rounded-xl px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 							on:click={() => {
 								showSearch.set(true);
 							}}
@@ -1140,7 +1140,7 @@
 							aria-label={$i18n.t('Search')}
 						>
 							<div class="self-center">
-								<Search strokeWidth="2" className="size-4.5" />
+								<Search strokeWidth="2" className="size-4" />
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
@@ -1160,7 +1160,7 @@
 								>
 									<a
 										id="sidebar-{itemId}-button"
-										class="grow flex items-center space-x-2.5 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+										class="grow flex items-center space-x-2.5 rounded-xl px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 										href={meta.href}
 										on:click={itemClickHandler}
 										draggable="false"
@@ -1168,7 +1168,7 @@
 									>
 										<div class="self-center">
 											{#if itemId === 'notes'}
-												<Note className="size-4.5" strokeWidth="2" />
+												<Note className="size-4" strokeWidth="2" />
 											{:else if itemId === 'workspace'}
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
@@ -1176,7 +1176,7 @@
 													viewBox="0 0 24 24"
 													stroke-width="2"
 													stroke="currentColor"
-													class="size-4.5"
+													class="size-4"
 												>
 													<path
 														stroke-linecap="round"
@@ -1191,7 +1191,7 @@
 													viewBox="0 0 24 24"
 													stroke-width="2"
 													stroke="currentColor"
-													class="size-4.5"
+													class="size-4"
 												>
 													<path
 														stroke-linecap="round"
@@ -1206,7 +1206,7 @@
 													viewBox="0 0 24 24"
 													stroke-width="2"
 													stroke="currentColor"
-													class="size-4.5"
+													class="size-4"
 												>
 													<path
 														stroke-linecap="round"
@@ -1215,7 +1215,7 @@
 													/>
 												</svg>
 											{:else if itemId === 'playground'}
-												<Code className="size-4.5" strokeWidth="2" />
+												<Code className="size-4" strokeWidth="2" />
 											{/if}
 										</div>
 
@@ -1524,7 +1524,7 @@
 											class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
 											0
 												? ''
-												: 'pt-5'} pb-1.5"
+												: 'pt-4'} pb-1"
 										>
 											{$i18n.t(chat.time_range)}
 											<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
@@ -1602,7 +1602,7 @@
 				</Folder>
 			</div>
 
-			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 -mt-3 sidebar">
+			<div class="px-1.5 pt-1 pb-1.5 sticky bottom-0 z-10 -mt-2 sidebar">
 				<div
 					class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 				></div>

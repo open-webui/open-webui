@@ -122,13 +122,13 @@
 
 	<div slot="content">
 		<div
-			class="{className} user-menu rounded-xl p-0.5 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg text-xs"
+			class="{className} user-menu rounded-xl p-0.5 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg text-[13px]"
 		>
 			{#if profile}
 				{#if $user?.status_emoji || $user?.status_message}
 					<div class="user-menu-status">
 						<button
-							class="w-full gap-2 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none text-xs flex items-center"
+							class="w-full gap-2 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none text-[13px] flex items-center"
 							type="button"
 							on:click={() => {
 								show = false;
@@ -180,7 +180,7 @@
 				{:else}
 					<div class="user-menu-status">
 						<button
-							class="w-full gap-1 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none text-xs flex items-center justify-center"
+							class="w-full gap-1 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none text-[13px] flex items-center justify-center"
 							type="button"
 							on:click={() => {
 								show = false;

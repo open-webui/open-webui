@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import dayjs from 'dayjs';
 
 	import { createEventDispatcher, onDestroy } from 'svelte';
 	import { onMount, tick, getContext } from 'svelte';
@@ -32,7 +31,8 @@
 		getMessageContentParts,
 		sanitizeResponseContent,
 		createMessagesList,
-		formatDate,
+		formatMessageTimestamp,
+		formatMessageTimestampFull,
 		removeDetails,
 		removeAllDetails
 	} from '$lib/utils';
@@ -668,24 +668,6 @@
 						{model?.name ?? message.model}
 					</span>
 				</Tooltip>
-
-				{#if message.timestamp}
-					<div
-						class="self-center text-xs font-medium first-letter:capitalize ml-0.5 translate-y-[1px] {($settings?.highContrastMode ??
-						false)
-							? 'dark:text-gray-100 text-gray-900'
-							: 'invisible group-hover:visible transition text-gray-400'}"
-					>
-						<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
-							<span class="line-clamp-1"
-								>{$i18n.t(formatDate(message.timestamp * 1000), {
-									LOCALIZED_TIME: dayjs(message.timestamp * 1000).format('LT'),
-									LOCALIZED_DATE: dayjs(message.timestamp * 1000).format('L')
-								})}</span
-							>
-						</Tooltip>
-					</div>
-				{/if}
 			</Name>
 
 			<div>
@@ -1496,6 +1478,21 @@
 											</button>
 										</Tooltip>
 									{/each}
+
+									{#if message.timestamp}
+										<Tooltip
+											className="flex self-center"
+											content={formatMessageTimestampFull(message.timestamp * 1000)}
+											placement="bottom"
+										>
+											<time
+												datetime={new Date(message.timestamp * 1000).toISOString()}
+												class="invisible group-hover:visible ml-1 text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
+											>
+												{formatMessageTimestamp(message.timestamp * 1000)}
+											</time>
+										</Tooltip>
+									{/if}
 								{/if}
 							{/if}
 						{/if}

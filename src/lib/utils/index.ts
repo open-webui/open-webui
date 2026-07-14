@@ -493,6 +493,10 @@ export const formatDate = (inputDate) => {
 	}
 };
 
+export const formatMessageTimestamp = (inputDate) => dayjs(inputDate).format('MMM D, LT');
+
+export const formatMessageTimestampFull = (inputDate) => dayjs(inputDate).format('LLLL');
+
 export const copyToClipboard = async (text, html = null, formatted = false) => {
 	if (formatted) {
 		let styledHtml = '';

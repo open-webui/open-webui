@@ -1,11 +1,14 @@
 <script lang="ts">
-	import dayjs from 'dayjs';
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
 	import { models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
-	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
+	import {
+		copyToClipboard as _copyToClipboard,
+		formatMessageTimestamp,
+		formatMessageTimestampFull
+	} from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import equal from 'fast-deep-equal';
 
@@ -18,10 +21,7 @@
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import SubagentResultRow from './SubagentResultRow.svelte';
 
-	import localizedFormat from 'dayjs/plugin/localizedFormat';
-
 	const i18n = getContext('i18n');
-	dayjs.extend(localizedFormat);
 	type SubagentResult = {
 		async_subagent_result: true;
 		delegation_id?: string;
@@ -165,47 +165,7 @@
 					{:else}
 						{$i18n.t('You')}
 					{/if}
-
-					{#if message.timestamp}
-						<div
-							class="self-center text-xs font-medium first-letter:capitalize ml-0.5 translate-y-[1px] {($settings?.highContrastMode ??
-							false)
-								? 'dark:text-gray-100 text-gray-900'
-								: 'invisible group-hover:visible transition'}"
-						>
-							<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
-								<!-- $i18n.t('Today at {{LOCALIZED_TIME}}') -->
-								<!-- $i18n.t('Yesterday at {{LOCALIZED_TIME}}') -->
-								<!-- $i18n.t('{{LOCALIZED_DATE}} at {{LOCALIZED_TIME}}') -->
-
-								<span class="line-clamp-1"
-									>{$i18n.t(formatDate(message.timestamp * 1000), {
-										LOCALIZED_TIME: dayjs(message.timestamp * 1000).format('LT'),
-										LOCALIZED_DATE: dayjs(message.timestamp * 1000).format('L')
-									})}</span
-								>
-							</Tooltip>
-						</div>
-					{/if}
 				</Name>
-			</div>
-		{:else if message.timestamp && !subagentResult}
-			<div class="flex justify-end pr-2 text-xs">
-				<div
-					class="text-[0.65rem] font-medium first-letter:capitalize mb-0.5 {($settings?.highContrastMode ??
-					false)
-						? 'dark:text-gray-100 text-gray-900'
-						: 'invisible group-hover:visible transition text-gray-400'}"
-				>
-					<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
-						<span class="line-clamp-1"
-							>{$i18n.t(formatDate(message.timestamp * 1000), {
-								LOCALIZED_TIME: dayjs(message.timestamp * 1000).format('LT'),
-								LOCALIZED_DATE: dayjs(message.timestamp * 1000).format('L')
-							})}</span
-						>
-					</Tooltip>
-				</div>
 			</div>
 		{/if}
 
@@ -412,6 +372,21 @@
 						? 'justify-end'
 						: ''}  text-gray-600 dark:text-gray-500"
 				>
+					{#if message.timestamp}
+						<Tooltip
+							className="flex self-center"
+							content={formatMessageTimestampFull(message.timestamp * 1000)}
+							placement="bottom"
+						>
+							<time
+								datetime={new Date(message.timestamp * 1000).toISOString()}
+								class="invisible group-hover:visible mr-1 text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
+							>
+								{formatMessageTimestamp(message.timestamp * 1000)}
+							</time>
+						</Tooltip>
+					{/if}
+
 					{#if !($settings?.chatBubble ?? true)}
 						{#if siblings.length > 1}
 							<div class="flex self-center" dir="ltr">

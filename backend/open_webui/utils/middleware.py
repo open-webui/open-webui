@@ -75,6 +75,7 @@ from open_webui.socket.main import (
 )
 from open_webui.utils.access_control import has_connection_access, has_permission
 from open_webui.utils.access_control.files import get_accessible_folder_files
+from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.context_compaction import compact_messages_for_request
@@ -2353,13 +2354,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         folder_id = metadata.get('folder_id', None)
 
     if folder_id and user:
-        folder = await Folders.get_folder_by_id_and_user_id(folder_id, user.id)
+        folder = await Folders.get_folder_by_id(folder_id)
+        if folder and user.role != 'admin' and not await has_folder_access(user.id, folder, 'read', db=None):
+            folder = None
 
         if folder and folder.data:
             if 'system_prompt' in folder.data:
                 form_data = await apply_system_prompt_to_body(folder.data['system_prompt'], form_data, metadata, user)
             if 'files' in folder.data:
-                # Defensive: filter to entries the caller can still read.
                 allowed_files = await get_accessible_folder_files(folder.data['files'], user)
                 if metadata.get('params', {}).get('function_calling') == 'legacy':
                     form_data['files'] = [
@@ -2583,7 +2585,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 # Get folder files
                 folder_id = file_item.get('id', None)
                 if folder_id:
-                    folder = await Folders.get_folder_by_id_and_user_id(folder_id, user.id)
+                    folder = await Folders.get_folder_by_id(folder_id)
+                    if folder and user.role != 'admin' and not await has_folder_access(
+                        user.id, folder, 'read', db=None
+                    ):
+                        folder = None
                     if folder and folder.data and 'files' in folder.data:
                         files = [f for f in files if f.get('id', None) != folder_id]
                         files = [*files, *await get_accessible_folder_files(folder.data['files'], user)]
