@@ -84,7 +84,7 @@
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
 	import Photo from '../icons/Photo.svelte';
 	import Wrench from '../icons/Wrench.svelte';
-	import Keyframes from '../icons/Keyframes.svelte';
+	import Cube from '../icons/Cube.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
 
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
@@ -1233,7 +1233,7 @@
 />
 
 {#if loaded}
-	<div class="w-full ">
+	<div class="w-full">
 		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div
 				class="flex flex-col px-3 {($settings?.widescreenMode ?? null)
@@ -1852,7 +1852,7 @@
 															showSkills = !showSkills;
 														}}
 													>
-														<Keyframes className="size-4" strokeWidth="1.75" />
+														<Cube className="size-4" strokeWidth="1.75" />
 
 														<span class="text-sm">
 															{(selectedSkillIds ?? []).length}

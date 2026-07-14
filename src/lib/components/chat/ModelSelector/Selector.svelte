@@ -74,7 +74,10 @@
 	let show = false;
 	let triggerElement: HTMLElement | null = null;
 	let contentElement: HTMLElement | null = null;
-	let dropdownPosition = { top: 0, left: 0 };
+	let dropdownPosition = { top: 0, left: 0, maxHeight: undefined as number | undefined };
+	let isSmallViewport = false;
+	let positionFrame: number | undefined;
+	let settleTimers: number[] = [];
 
 	const portal = (node: HTMLElement) => {
 		document.body.appendChild(node);
@@ -85,29 +88,77 @@
 		};
 	};
 
+	const visualViewportRect = () => {
+		const viewport = window.visualViewport;
+		return {
+			left: viewport?.offsetLeft ?? 0,
+			top: viewport?.offsetTop ?? 0,
+			width: viewport?.width ?? window.innerWidth,
+			height: viewport?.height ?? window.innerHeight
+		};
+	};
+
+	const updateViewportSize = () => {
+		isSmallViewport = (window.visualViewport?.width ?? window.innerWidth) < 640;
+	};
+
 	const updatePosition = () => {
 		if (!show || !triggerElement) return;
 		const rect = triggerElement.getBoundingClientRect();
 		const contentRect = contentElement?.getBoundingClientRect();
 		const contentWidth = contentRect?.width ?? 0;
 		const contentHeight = contentRect?.height ?? 0;
-		const spaceBelow = window.innerHeight - rect.bottom - 8;
-		const spaceAbove = rect.top - 8;
+		const viewport = visualViewportRect();
+		const viewportRight = viewport.left + viewport.width;
+		const viewportBottom = viewport.top + viewport.height;
+		const pad = 8;
+		const gap = 2;
+		const spaceBelow = viewportBottom - rect.bottom - gap - pad;
+		const spaceAbove = rect.top - viewport.top - gap - pad;
 		const preferredLeft = align === 'end' && contentWidth ? rect.right - contentWidth : rect.left;
-		const maxLeft = contentWidth ? window.innerWidth - contentWidth - 8 : preferredLeft;
+		const maxLeft = contentWidth ? viewportRight - contentWidth - pad : preferredLeft;
 		const resolvedPlacement =
 			placement === 'auto'
 				? contentHeight && spaceBelow < contentHeight && spaceAbove > spaceBelow
 					? 'top'
 					: 'bottom'
 				: placement;
+		const availableHeight = resolvedPlacement === 'top' ? spaceAbove : spaceBelow;
+		const constrainedHeight =
+			contentHeight && availableHeight >= 0
+				? Math.min(contentHeight, availableHeight)
+				: contentHeight;
+		const top =
+			resolvedPlacement === 'top' && contentHeight
+				? rect.top - constrainedHeight - gap
+				: rect.bottom + gap;
+
 		dropdownPosition = {
-			top:
-				resolvedPlacement === 'top' && contentHeight
-					? rect.top - contentHeight - 2
-					: rect.bottom + 2,
-			left: Math.max(8, Math.min(preferredLeft, maxLeft))
+			top: Math.max(viewport.top + pad, Math.min(top, viewportBottom - pad - constrainedHeight)),
+			left: Math.max(viewport.left + pad, Math.min(preferredLeft, maxLeft)),
+			maxHeight:
+				contentHeight && availableHeight >= 0 && contentHeight > availableHeight
+					? Math.max(0, availableHeight)
+					: undefined
 		};
+	};
+
+	const schedulePositionUpdate = () => {
+		if (positionFrame != null) cancelAnimationFrame(positionFrame);
+		positionFrame = requestAnimationFrame(() => {
+			positionFrame = undefined;
+			updatePosition();
+		});
+	};
+
+	const scheduleSettledPositionUpdates = () => {
+		updateViewportSize();
+		for (const timer of settleTimers) window.clearTimeout(timer);
+		settleTimers = [];
+		schedulePositionUpdate();
+		for (const delay of [50, 150, 300]) {
+			settleTimers.push(window.setTimeout(schedulePositionUpdate, delay));
+		}
 	};
 
 	const toggleOpen = async () => {
@@ -495,7 +546,7 @@
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 	};
 
-	onMount(async () => {
+	onMount(() => {
 		if (items) {
 			tags = items
 				.filter((item) => includeHidden || !(item.model?.info?.meta?.hidden ?? false))
@@ -504,6 +555,19 @@
 			// Remove duplicates and sort
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
+
+		updateViewportSize();
+		window.addEventListener('scroll', schedulePositionUpdate, true);
+		window.visualViewport?.addEventListener('resize', scheduleSettledPositionUpdates);
+		window.visualViewport?.addEventListener('scroll', schedulePositionUpdate);
+
+		return () => {
+			if (positionFrame != null) cancelAnimationFrame(positionFrame);
+			for (const timer of settleTimers) window.clearTimeout(timer);
+			window.removeEventListener('scroll', schedulePositionUpdate, true);
+			window.visualViewport?.removeEventListener('resize', scheduleSettledPositionUpdates);
+			window.visualViewport?.removeEventListener('scroll', schedulePositionUpdate);
+		};
 	});
 
 	$: if (show && !selectionOnly) {
@@ -585,11 +649,12 @@
 
 	let listScrollTop = 0;
 	let listContainer;
+	$: listViewportHeight = isSmallViewport ? 120 : 288;
 
 	$: visibleStart = Math.max(0, Math.floor(listScrollTop / ITEM_HEIGHT) - OVERSCAN);
 	$: visibleEnd = Math.min(
 		filteredItems.length,
-		Math.ceil((listScrollTop + 288) / ITEM_HEIGHT) + OVERSCAN
+		Math.ceil((listScrollTop + listViewportHeight) / ITEM_HEIGHT) + OVERSCAN
 	);
 </script>
 
@@ -607,7 +672,7 @@
 <svelte:window
 	on:pointerdown={handlePointerDown}
 	on:keydown={handleKeydown}
-	on:resize={updatePosition}
+	on:resize={scheduleSettledPositionUpdates}
 />
 
 <div class="relative w-full">
@@ -649,7 +714,9 @@
 		<div
 			use:portal
 			bind:this={contentElement}
-			style="position: fixed; z-index: 9999; top: {dropdownPosition.top}px; left: {dropdownPosition.left}px;"
+			style="position: fixed; z-index: 9999; top: {dropdownPosition.top}px; left: {dropdownPosition.left}px; {dropdownPosition.maxHeight
+				? `max-height: ${dropdownPosition.maxHeight}px;`
+				: ''}"
 		>
 			<div
 				class="z-40 {className} max-w-[calc(100vw-1rem)] justify-start rounded-xl border border-gray-100 bg-white p-0.5 shadow-lg outline-hidden dark:border-gray-800 dark:bg-gray-850 dark:text-white"
@@ -698,7 +765,7 @@
 											<button
 												type="button"
 												class="flex size-[1.375rem] shrink-0 items-center justify-center rounded-lg transition-colors duration-100 {compareEnabled
-													? 'bg-gray-100/60 text-gray-700 hover:bg-gray-100/60 dark:bg-gray-800/40 dark:text-gray-300 dark:hover:bg-gray-800/40'
+													? 'bg-gray-50 text-gray-700 hover:bg-gray-50 dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-gray-800/60'
 													: 'text-gray-500 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200'}"
 												aria-label={$i18n.t('Compare')}
 												aria-pressed={compareEnabled}
@@ -758,7 +825,8 @@
 						{:else}
 							<!-- svelte-ignore a11y-no-static-element-interactions -->
 							<div
-								class="max-h-72 overflow-y-auto"
+								class="overflow-y-auto"
+								style="max-height: {listViewportHeight}px;"
 								role="listbox"
 								aria-label={$i18n.t('Available models')}
 								bind:this={listContainer}

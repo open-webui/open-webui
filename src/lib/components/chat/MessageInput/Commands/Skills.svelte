@@ -2,7 +2,7 @@
 	import { getContext, onDestroy } from 'svelte';
 	import { getSkillItems } from '$lib/apis/skills';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Keyframes from '$lib/components/icons/Keyframes.svelte';
+	import Cube from '$lib/components/icons/Cube.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -96,7 +96,7 @@
 			>
 				<div class="flex w-full min-w-0 items-center text-black dark:text-gray-100">
 					<div class="flex items-center justify-center size-5 mr-2 shrink-0">
-						<Keyframes className="size-4" />
+						<Cube className="size-4" />
 					</div>
 					<div class="truncate min-w-0 flex-1">
 						{skill.name}
