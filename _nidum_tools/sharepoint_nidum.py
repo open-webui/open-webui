@@ -1,9 +1,12 @@
 """
 title: SharePoint Nidum
 author: Nidum
-version: 1.0.0
+version: 1.0.1
 description: Salva um arquivo ja gerado no ChatND (ex.: o relatorio do Identificador de Ambientes) numa pasta do SharePoint da Nidum, via Microsoft Graph (app-only). Nunca sobrescreve: se ja existir, incrementa a versao. Devolve o link do SharePoint. Segredos SOMENTE nas Valves (visiveis so por admin). So-ASCII no codigo.
 changelog:
+  1.0.1:
+    - Pasta destino padrao: 4 - Pastas de Trabalho/Plataformas/ChatND Identificacao
+      (fora do escopo da esteira). Cria apenas a subpasta que faltar.
   1.0.0:
     - Primeira versao. Reaproveita o app Entra ID da esteira (client credentials).
       Upload simples via PUT .../content (PDFs pequenos). Cria a pasta destino se faltar.
@@ -227,8 +230,9 @@ class Tools:
         BIBLIOTECA: str = Field(
             default="Nidum", description="Nome da biblioteca de documentos no site.")
         PASTA_DESTINO: str = Field(
-            default="Relatorios - Identificador de Ambientes",
-            description="Pasta de destino (fora do escopo da esteira). Pode ter subpastas com '/'.")
+            default="4 - Pastas de Trabalho/Plataformas/ChatND Identificacao",
+            description="Pasta de destino (fora do escopo da esteira). Subpastas separadas por '/'. "
+                        "So a pasta que faltar e criada; as existentes sao reaproveitadas.")
 
     def __init__(self):
         self.valves = self.Valves()
