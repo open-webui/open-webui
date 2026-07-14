@@ -474,7 +474,7 @@
 		deleteModelTarget = null;
 	};
 
-	const ITEM_HEIGHT = 42;
+	const ITEM_HEIGHT = 39;
 	const OVERSCAN = 10;
 
 	let listScrollTop = 0;
@@ -558,7 +558,7 @@
 			>
 				<slot>
 					{#if searchEnabled}
-						<div class="flex items-center gap-2.5 px-4.5 pt-3.5 mb-1.5">
+						<div class="flex items-center gap-2 px-3.5 pt-3 mb-1.5">
 							<Search className="size-4" strokeWidth="2.5" />
 
 							<input
@@ -695,7 +695,7 @@
 						{/if}
 					</div>
 
-					<div class="px-2.5 group relative">
+					<div class="px-2 group relative">
 						{#if filteredItems.length === 0}
 							{#if items.length === 0 && $user?.role === 'admin'}
 								<div class="flex flex-col items-start justify-center py-6 px-4 text-start">
@@ -765,7 +765,7 @@
 								placement="top-start"
 							>
 								<button
-									class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer data-highlighted:bg-muted"
+									class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-[7px] pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer data-highlighted:bg-muted"
 									on:click={() => {
 										pullModelHandler();
 									}}
@@ -781,7 +781,7 @@
 
 						{#each selectionOnly ? [] : Object.keys($MODEL_DOWNLOAD_POOL) as model}
 							<div
-								class="flex w-full justify-between font-medium select-none rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 rounded-xl cursor-pointer data-highlighted:bg-muted"
+								class="flex w-full justify-between font-medium select-none rounded-button py-[7px] pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 rounded-xl cursor-pointer data-highlighted:bg-muted"
 							>
 								<div class="flex">
 									<div class="mr-2.5 translate-y-0.5">
@@ -842,7 +842,7 @@
 						{/each}
 					</div>
 
-					<div class="pb-2.5"></div>
+					<div class="pb-2"></div>
 
 					<div class="hidden w-[42rem]" />
 					<div class="hidden w-[32rem]" />

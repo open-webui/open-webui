@@ -526,7 +526,7 @@
 		isResizing = true;
 
 		startClientX = e.clientX;
-		startWidth = $sidebarWidth ?? 240;
+		startWidth = $sidebarWidth ?? 250;
 
 		document.body.style.userSelect = 'none';
 	};
@@ -1047,7 +1047,7 @@
 				: 'invisible'}"
 		>
 			<div
-				class="sidebar px-1.5 pt-1.5 pb-1 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-2"
+				class="sidebar px-1.5 pt-2 pb-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-3"
 			>
 				<a
 					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
@@ -1098,7 +1098,7 @@
 			</div>
 
 			<div
-				class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden pt-2 pb-2"
+				class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden pt-3 pb-3"
 				on:scroll={(e) => {
 					if (e.target.scrollTop === 0) {
 						scrollTop = 0;
@@ -1107,11 +1107,11 @@
 					}
 				}}
 			>
-				<div class="pb-1">
+				<div class="pb-1.5">
 					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 						<a
 							id="sidebar-new-chat-button"
-							class="group grow flex items-center space-x-2.5 rounded-xl px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center space-x-2.5 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 							href="/"
 							draggable="false"
 							on:click={newChatHandler}
@@ -1132,7 +1132,7 @@
 					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 						<button
 							id="sidebar-search-button"
-							class="group grow flex items-center space-x-2.5 rounded-xl px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center space-x-2.5 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 							on:click={() => {
 								showSearch.set(true);
 							}}
@@ -1160,7 +1160,7 @@
 								>
 									<a
 										id="sidebar-{itemId}-button"
-										class="grow flex items-center space-x-2.5 rounded-xl px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+										class="grow flex items-center space-x-2.5 rounded-xl px-2.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 										href={meta.href}
 										on:click={itemClickHandler}
 										draggable="false"
@@ -1524,7 +1524,7 @@
 											class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
 											0
 												? ''
-												: 'pt-4'} pb-1"
+												: 'pt-5'} pb-1.5"
 										>
 											{$i18n.t(chat.time_range)}
 											<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
@@ -1602,7 +1602,7 @@
 				</Folder>
 			</div>
 
-			<div class="px-1.5 pt-1 pb-1.5 sticky bottom-0 z-10 -mt-2 sidebar">
+			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 -mt-3 sidebar">
 				<div
 					class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 				></div>
@@ -1621,7 +1621,7 @@
 						>
 							<button
 								type="button"
-								class=" flex items-center rounded-xl py-1.5 px-1.5 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
+								class=" flex items-center rounded-xl py-2 px-1.5 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
 								aria-label={$i18n.t('User menu')}
 							>
 								<div class=" self-center mr-3 relative flex-shrink-0">
