@@ -2592,14 +2592,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # Remove duplicate files based on their content
         files = list({json.dumps(f, sort_keys=True): f for f in files}.values())
 
-    metadata = {
-        **metadata,
-        'model_id': form_data.get('model'),
-        'tool_ids': tool_ids,
-        'terminal_id': terminal_id,
-        'files': files,
-        'features': features,
-    }
+    metadata.update(
+        {
+            'model_id': form_data.get('model'),
+            'tool_ids': tool_ids,
+            'skill_ids': list(skill_ids),
+            'terminal_id': terminal_id,
+            'files': files,
+            'features': features,
+        }
+    )
     form_data['metadata'] = metadata
 
     # When the caller provides an explicit `tools` key in the request body,
@@ -2717,6 +2719,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     )
             except Exception as e:
                 log.exception(e)
+                raise HTTPException(status_code=503, detail=f'Terminal unavailable: {e}') from e
 
         if direct_tool_servers:
             for tool_server in direct_tool_servers:
@@ -3556,7 +3559,11 @@ async def non_streaming_chat_response_handler(response, ctx):
                         )
 
                     # Send a webhook notification if the user is not active
-                    if await Config.get('ui.enable_user_webhooks') and not await Users.is_user_active(user.id):
+                    if (
+                        getattr(request.state, 'internal', False) is not True
+                        and await Config.get('ui.enable_user_webhooks')
+                        and not await Users.is_user_active(user.id)
+                    ):
                         webhook_url = await Users.get_user_webhook_url_by_id(user.id)
                         if webhook_url:
                             webui_url = await Config.get('webui.url')
@@ -4624,6 +4631,11 @@ async def streaming_chat_response_handler(response, ctx):
                         await response.background()
 
                 tool_call_iterations = 0
+                max_tool_call_iterations = getattr(
+                    request.state,
+                    'max_tool_call_iterations',
+                    CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS,
+                )
                 tool_call_sources = []  # Track citation sources from tool results
                 all_tool_call_sources = []  # Accumulated sources across all iterations
                 user_message = get_last_user_message(form_data['messages'])
@@ -4644,8 +4656,7 @@ async def streaming_chat_response_handler(response, ctx):
                     )
 
                 while tool_calls and (
-                    CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS is None
-                    or tool_call_iterations < CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS
+                    max_tool_call_iterations is None or tool_call_iterations < max_tool_call_iterations
                 ):
                     tool_call_iterations += 1
 
@@ -4682,83 +4693,92 @@ async def streaming_chat_response_handler(response, ctx):
 
                     results = []
 
+                    def parse_tool_params(tool_call):
+                        tool_args = tool_call.get('function', {}).get('arguments', '{}')
+                        params = {}
+                        if tool_args and tool_args.strip():
+                            try:
+                                params = ast.literal_eval(tool_args)
+                            except Exception as e:
+                                log.debug(e)
+                                try:
+                                    params = json.loads(tool_args)
+                                except Exception:
+                                    return None
+                        tool_call.setdefault('function', {})['arguments'] = json.dumps(params)
+                        return params
+
+                    async def execute_tool_call(tool_call):
+                        name = tool_call.get('function', {}).get('name', '')
+                        params = parse_tool_params(tool_call)
+                        if params is None:
+                            return {}, None, None, None, False
+                        tool = tools.get(name)
+                        if not tool:
+                            return params, f'Error: Tool "{name}" not found.', None, None, False
+                        spec = tool.get('spec', {})
+                        tool_type = tool.get('type', '')
+                        direct_tool = tool.get('direct', False)
+                        allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
+                        params = {key: value for key, value in params.items() if key in allowed_params}
+                        try:
+                            if direct_tool:
+                                result = await event_caller(
+                                    {
+                                        'type': 'execute:tool',
+                                        'data': {
+                                            'id': str(uuid4()),
+                                            'name': name,
+                                            'params': params,
+                                            'server': tool.get('server', {}),
+                                            'session_id': metadata.get('session_id'),
+                                        },
+                                    }
+                                )
+                            else:
+                                function = await get_updated_tool_function(
+                                    function=tool['callable'],
+                                    extra_params={
+                                        '__messages__': form_data.get('messages', []),
+                                        '__files__': metadata.get('files', []),
+                                    },
+                                )
+                                result = await function(**params)
+                        except Exception as e:
+                            result = str(e)
+                        return params, result, tool, tool_type, direct_tool
+
+                    delegate_calls = [
+                        tool_call
+                        for tool_call in response_tool_calls
+                        if tool_call.get('function', {}).get('name') == 'delegate_task'
+                    ]
+                    tool_results = {}
+                    for tool_call in response_tool_calls:
+                        if tool_call.get('function', {}).get('name') != 'delegate_task':
+                            tool_results[id(tool_call)] = await execute_tool_call(tool_call)
+                    tool_results.update(
+                        zip(
+                            [id(tool_call) for tool_call in delegate_calls],
+                            await asyncio.gather(*(execute_tool_call(tool_call) for tool_call in delegate_calls)),
+                        )
+                    )
+
                     for tool_call in response_tool_calls:
                         tool_call_id = tool_call.get('id', '')
                         tool_function_name = tool_call.get('function', {}).get('name', '')
-                        tool_args = tool_call.get('function', {}).get('arguments', '{}')
-
-                        tool_function_params = {}
-                        if tool_args and tool_args.strip():
-                            try:
-                                # json.loads cannot be used because some models do not produce valid JSON
-                                tool_function_params = ast.literal_eval(tool_args)
-                            except Exception as e:
-                                log.debug(e)
-                                # Fallback to JSON parsing
-                                try:
-                                    tool_function_params = json.loads(tool_args)
-                                except Exception as e:
-                                    log.error(f'Error parsing tool call arguments: {tool_args}')
-                                    results.append(
-                                        {
-                                            'tool_call_id': tool_call_id,
-                                            'content': f'Error: Tool call arguments could not be parsed. The model generated malformed or incomplete JSON for `{tool_function_name}`. Please try again.',
-                                        }
-                                    )
-                                    continue
-
-                        # Ensure arguments are valid JSON for downstream LLM integrations
-                        log.debug(f'Parsed args from {tool_args} to {tool_function_params}')
-                        tool_call.setdefault('function', {})['arguments'] = json.dumps(tool_function_params)
-
-                        tool_result = None
-                        tool = None
-                        tool_type = None
-                        direct_tool = False
-
-                        if tool_function_name in tools:
-                            tool = tools[tool_function_name]
-                            spec = tool.get('spec', {})
-
-                            tool_type = tool.get('type', '')
-                            direct_tool = tool.get('direct', False)
-
-                            try:
-                                allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
-
-                                tool_function_params = {
-                                    k: v for k, v in tool_function_params.items() if k in allowed_params
+                        tool_function_params, tool_result, tool, tool_type, direct_tool = tool_results[id(tool_call)]
+                        if tool_result is None:
+                            results.append(
+                                {
+                                    'tool_call_id': tool_call_id,
+                                    'content': (
+                                        'Error: Tool call arguments could not be parsed. The model generated '
+                                        f'malformed or incomplete JSON for `{tool_function_name}`. Please try again.'
+                                    ),
                                 }
-
-                                if direct_tool:
-                                    tool_result = await event_caller(
-                                        {
-                                            'type': 'execute:tool',
-                                            'data': {
-                                                'id': str(uuid4()),
-                                                'name': tool_function_name,
-                                                'params': tool_function_params,
-                                                'server': tool.get('server', {}),
-                                                'session_id': metadata.get('session_id', None),
-                                            },
-                                        }
-                                    )
-
-                                else:
-                                    tool_function = await get_updated_tool_function(
-                                        function=tool['callable'],
-                                        extra_params={
-                                            '__messages__': form_data.get('messages', []),
-                                            '__files__': metadata.get('files', []),
-                                        },
-                                    )
-
-                                    tool_result = await tool_function(**tool_function_params)
-
-                            except Exception as e:
-                                tool_result = str(e)
-                        else:
-                            tool_result = f'Error: Tool "{tool_function_name}" not found.'
+                            )
+                            continue
 
                         tool_result, tool_result_files, tool_result_embeds = await process_tool_result(
                             request,
@@ -5030,12 +5050,12 @@ async def streaming_chat_response_handler(response, ctx):
                         break
 
                 if (
-                    CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS is not None
+                    max_tool_call_iterations is not None
                     and tool_calls
-                    and tool_call_iterations >= CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS
+                    and tool_call_iterations >= max_tool_call_iterations
                 ):
-                    log.warning('Tool-call iteration limit reached (%s)', CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS)
-                    error_content = f'Tool-call limit reached ({CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS} iterations).'
+                    log.warning('Tool-call iteration limit reached (%s)', max_tool_call_iterations)
+                    error_content = f'Tool-call limit reached ({max_tool_call_iterations} iterations).'
                     if not metadata.get('chat_id', '').startswith('channel:'):
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
@@ -5261,7 +5281,11 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                 # Send a webhook notification if the user is not active
-                if await Config.get('ui.enable_user_webhooks') and not await Users.is_user_active(user.id):
+                if (
+                    getattr(request.state, 'internal', False) is not True
+                    and await Config.get('ui.enable_user_webhooks')
+                    and not await Users.is_user_active(user.id)
+                ):
                     webhook_url = await Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         webui_url = await Config.get('webui.url')

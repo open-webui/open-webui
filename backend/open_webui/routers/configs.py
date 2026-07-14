@@ -72,6 +72,8 @@ SUBAGENTS_CONFIG_KEYS = {
     'SUBAGENTS_BACKGROUND_ENABLED': 'subagents.background_enabled',
     'SUBAGENTS_MAX_CONCURRENT': 'subagents.max_concurrent',
     'SUBAGENTS_MAX_ASYNC': 'subagents.max_async',
+    'SUBAGENTS_MAX_ITERATIONS': 'subagents.max_iterations',
+    'SUBAGENTS_MAX_OUTPUT': 'subagents.max_output',
     'SUBAGENTS_SYSTEM_PROMPT': 'subagents.system_prompt',
 }
 
@@ -767,6 +769,8 @@ class SubagentsConfigForm(BaseModel):
     SUBAGENTS_BACKGROUND_ENABLED: bool
     SUBAGENTS_MAX_CONCURRENT: int
     SUBAGENTS_MAX_ASYNC: int
+    SUBAGENTS_MAX_ITERATIONS: int
+    SUBAGENTS_MAX_OUTPUT: int
     SUBAGENTS_SYSTEM_PROMPT: str
 
 

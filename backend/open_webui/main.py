@@ -1131,6 +1131,7 @@ async def chat_completion(
         metadata = {
             'user_id': user.id,
             'user_agent': request.headers.get('user-agent', '') or '',
+            'internal': getattr(request.state, 'internal', False) is True,
             'chat_id': form_data.pop('chat_id', None) or '',
             'user_message': user_message,
             'user_message_id': user_message.get('id') if user_message else None,
@@ -1590,9 +1591,39 @@ async def chat_completion(
             except Exception:
                 pass
 
+            try:
+                chat_id = metadata.get('chat_id')
+                if (
+                    chat_id
+                    and getattr(request.state, 'internal', False) is not True
+                    and not await has_active_tasks(request.app.state.redis, chat_id)
+                ):
+                    from open_webui.utils.subagents import process_pending_subagent_results
+
+                    await process_pending_subagent_results(
+                        request,
+                        chat_id,
+                        user.id,
+                        {
+                            'model_id': metadata.get('model_id') or form_data.get('model'),
+                            'session_id': metadata.get('session_id'),
+                            'tool_ids': metadata.get('tool_ids') or [],
+                            'skill_ids': metadata.get('skill_ids') or [],
+                            'system_prompt': metadata.get('system_prompt'),
+                            'filter_ids': metadata.get('filter_ids') or [],
+                            'terminal_id': metadata.get('terminal_id'),
+                            'features': metadata.get('features') or {},
+                            'variables': metadata.get('variables') or {},
+                        },
+                    )
+            except Exception:
+                log.exception('Failed to process pending sub-agent results for chat %s', metadata.get('chat_id'))
+
     # Fan out: one task per model
     if metadata.get('session_id') and metadata.get('chat_id'):
         task_ids = []
+        subagent_results = []
+        is_internal = getattr(request.state, 'internal', False) is True
         chat_id = metadata['chat_id']
 
         for idx, entry in enumerate(message_ids):
@@ -1619,27 +1650,38 @@ async def chat_completion(
 
             # Only the first model runs chat-level background tasks;
             # subsequent models only run follow-ups.
+            process = process_chat(
+                request,
+                model_form_data,
+                user,
+                per_model_metadata,
+                resolved_model,
+                tasks
+                if idx == 0
+                else {
+                    k: v for k, v in (tasks or {}).items() if k not in (TASKS.TITLE_GENERATION, TASKS.TAGS_GENERATION)
+                }
+                or None,
+            )
+            if is_internal:
+                subagent_results.append(await process)
+                continue
+
             task_id, _ = await create_task(
                 request.app.state.redis,
-                process_chat(
-                    request,
-                    model_form_data,
-                    user,
-                    per_model_metadata,
-                    resolved_model,
-                    tasks
-                    if idx == 0
-                    else {
-                        k: v
-                        for k, v in (tasks or {}).items()
-                        if k not in (TASKS.TITLE_GENERATION, TASKS.TAGS_GENERATION)
-                    }
-                    or None,
-                ),
+                process,
                 id=chat_id,
             )
             per_model_metadata['task_id'] = task_id
             task_ids.append(task_id)
+
+        if is_internal:
+            return {
+                'status': True,
+                'task_ids': [],
+                'chat_id': chat_id,
+                'results': subagent_results,
+            }
 
         # Emit chat:active=true
         if task_ids:

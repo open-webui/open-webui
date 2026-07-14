@@ -925,12 +925,17 @@ async def get_event_emitter(request_info, update_db=True):
         user_id = request_info['user_id']
         chat_id = request_info['chat_id']
         message_id = request_info['message_id']
+        internal = request_info.get('internal') is True
+
+        if internal and event_data.get('type') == 'notification':
+            return
 
         await sio.emit(
             'events',
             {
                 'chat_id': chat_id,
                 'message_id': message_id,
+                **({'internal': True} if internal else {}),
                 'data': event_data,
             },
             room=f'user:{user_id}',

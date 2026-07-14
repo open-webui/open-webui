@@ -616,7 +616,10 @@
 			}
 		}
 
-		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isInBackground) {
+		if (
+			!event?.internal &&
+			((event.chat_id !== $chatId && !$temporaryChatEnabled) || isInBackground)
+		) {
 			if (type === 'chat:completion') {
 				const { done, content, output, title } = data;
 				const displayTitle = title || $i18n.t('New Chat');

@@ -1991,6 +1991,8 @@ ENABLE_SUBAGENTS = os.getenv('ENABLE_SUBAGENTS', 'False').lower() == 'true'
 SUBAGENTS_BACKGROUND_ENABLED = os.getenv('SUBAGENTS_BACKGROUND_ENABLED', 'False').lower() == 'true'
 SUBAGENTS_MAX_CONCURRENT = int(os.getenv('SUBAGENTS_MAX_CONCURRENT', '20'))
 SUBAGENTS_MAX_ASYNC = int(os.getenv('SUBAGENTS_MAX_ASYNC', '20'))
+SUBAGENTS_MAX_ITERATIONS = int(os.getenv('SUBAGENTS_MAX_ITERATIONS', '30'))
+SUBAGENTS_MAX_OUTPUT = int(os.getenv('SUBAGENTS_MAX_OUTPUT', '30000'))
 SUBAGENTS_SYSTEM_PROMPT = os.getenv('SUBAGENTS_SYSTEM_PROMPT', '')
 
 AUTOMATION_MAX_COUNT = os.getenv('AUTOMATION_MAX_COUNT', '')
@@ -3029,6 +3031,8 @@ DEFAULT_CONFIG = {
     'subagents.background_enabled': SUBAGENTS_BACKGROUND_ENABLED,
     'subagents.max_concurrent': SUBAGENTS_MAX_CONCURRENT,
     'subagents.max_async': SUBAGENTS_MAX_ASYNC,
+    'subagents.max_iterations': SUBAGENTS_MAX_ITERATIONS,
+    'subagents.max_output': SUBAGENTS_MAX_OUTPUT,
     'subagents.system_prompt': SUBAGENTS_SYSTEM_PROMPT,
     'automations.max_count': AUTOMATION_MAX_COUNT,
     'automations.min_interval': AUTOMATION_MIN_INTERVAL,

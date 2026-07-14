@@ -1349,6 +1349,48 @@ async def view_chat(
 
 
 # =============================================================================
+# SUB-AGENT TOOL
+# =============================================================================
+
+
+async def delegate_task(
+    task: str,
+    context: str = '',
+    background: bool = False,
+    __request__: Request = None,
+    __user__: dict = None,
+    __metadata__: dict = None,
+    __chat_id__: str = None,
+    __message_id__: str = None,
+) -> str:
+    """
+    Delegate focused work to a parallel sub-agent using the current model and tools.
+
+    :param task: The specific task for the sub-agent to complete
+    :param context: Relevant context, decisions, or file paths for the task
+    :param background: Return immediately and continue this chat when the sub-agent finishes
+    :return: Foreground result text, or a JSON dispatch handle for background work
+    """
+    if __request__ is None:
+        return 'Error: request context not available.'
+    if getattr(__request__.state, 'internal', False) is True:
+        return 'Error: sub-agents cannot delegate recursively.'
+
+    from open_webui.utils.subagents import delegate
+
+    return await delegate(
+        task,
+        context,
+        background,
+        request=__request__,
+        user_data=__user__ or {},
+        metadata=__metadata__ or {},
+        parent_chat_id=__chat_id__ or '',
+        parent_message_id=__message_id__,
+    )
+
+
+# =============================================================================
 # CHANNELS TOOLS
 # =============================================================================
 

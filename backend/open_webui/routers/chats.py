@@ -26,6 +26,7 @@ from open_webui.models.chats import (
     ChatStatsExport,
     ChatTitleIdResponse,
     ChatUsageStatsListResponse,
+    is_internal_chat,
     MessageStats,
 )
 from open_webui.models.folders import Folders
@@ -1178,8 +1179,10 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSess
 
     if not chat:
         # Check if user has access via access grants (shared_chat grants)
-        if user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
-            chat = await Chats.get_chat_by_id(id, db=db)
+        if user.role == 'admin':
+            candidate = await Chats.get_chat_by_id(id, db=db)
+            if ENABLE_ADMIN_CHAT_ACCESS or (candidate and is_internal_chat(candidate.meta)):
+                chat = candidate
         else:
             has_grant = await AccessGrants.has_access(
                 user_id=user.id,
@@ -1430,6 +1433,13 @@ async def delete_chat_by_id(
     # before deleting the chat to prevent orphaned requests.
     await stop_item_tasks(request.app.state.redis, id)
 
+    async def delete_internal_children(owner_id: str) -> None:
+        child_ids = await Chats.get_internal_chat_ids_by_parent_id(id, owner_id)
+        for child_id in child_ids:
+            await stop_item_tasks(request.app.state.redis, child_id)
+            await Chats.delete_chat_by_id_and_user_id(child_id, owner_id)
+        await stop_item_tasks(request.app.state.redis, id)
+
     if user.role == 'admin':
         chat = await Chats.get_chat_by_id(id, db=db)
         if not chat:
@@ -1438,6 +1448,7 @@ async def delete_chat_by_id(
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
         await Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), user.id, threshold=1, db=db)
+        await delete_internal_children(chat.user_id)
 
         result = await Chats.delete_chat_by_id(id, db=db)
 
@@ -1464,6 +1475,7 @@ async def delete_chat_by_id(
                 detail=ERROR_MESSAGES.NOT_FOUND,
             )
         await Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), user.id, threshold=1, db=db)
+        await delete_internal_children(user.id)
 
         result = await Chats.delete_chat_by_id_and_user_id(id, user.id, db=db)
         if result:

@@ -16,11 +16,19 @@
 	import Markdown from './Markdown.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import SubagentResultRow from './SubagentResultRow.svelte';
 
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const i18n = getContext('i18n');
 	dayjs.extend(localizedFormat);
+	type SubagentResult = {
+		async_subagent_result: true;
+		delegation_id?: string;
+		delegation_ids?: string[];
+		subagent_chat_id?: string;
+		subagent_chat_ids?: string[];
+	};
 
 	export let user;
 
@@ -54,6 +62,7 @@
 	let editScrollContainer: HTMLDivElement;
 
 	let message = structuredClone(history.messages[messageId]);
+	let subagentResult: SubagentResult | undefined;
 	$: if (history.messages) {
 		const source = history.messages[messageId];
 		if (source) {
@@ -64,6 +73,7 @@
 			}
 		}
 	}
+	$: subagentResult = message?.meta?.async_subagent_result ? message.meta : undefined;
 
 	const copyToClipboard = async (text) => {
 		const res = await _copyToClipboard(text);
@@ -133,7 +143,7 @@
 	id="message-{message.id}"
 	style="scroll-margin-top: 3rem;"
 >
-	{#if !($settings?.chatBubble ?? true)}
+	{#if !($settings?.chatBubble ?? true) && !subagentResult}
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 mt-1`}>
 			<ProfileImage
 				src={user?.id
@@ -143,8 +153,8 @@
 			/>
 		</div>
 	{/if}
-	<div class="flex-auto w-0 max-w-full pl-1">
-		{#if !($settings?.chatBubble ?? true)}
+	<div class="flex-auto w-0 max-w-full {subagentResult ? '' : 'pl-1'}">
+		{#if !($settings?.chatBubble ?? true) && !subagentResult}
 			<div>
 				<Name>
 					{#if message.user}
@@ -179,7 +189,7 @@
 					{/if}
 				</Name>
 			</div>
-		{:else if message.timestamp}
+		{:else if message.timestamp && !subagentResult}
 			<div class="flex justify-end pr-2 text-xs">
 				<div
 					class="text-[0.65rem] font-medium first-letter:capitalize mb-0.5 {($settings?.highContrastMode ??
@@ -365,6 +375,8 @@
 						</div>
 					</div>
 				</div>
+			{:else if subagentResult}
+				<SubagentResultRow content={message.content} result={subagentResult} />
 			{:else if message.content !== ''}
 				<div class="w-full">
 					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
@@ -394,7 +406,7 @@
 				</div>
 			{/if}
 
-			{#if edit !== true}
+			{#if edit !== true && !subagentResult}
 				<div
 					class=" flex {($settings?.chatBubble ?? true)
 						? 'justify-end'

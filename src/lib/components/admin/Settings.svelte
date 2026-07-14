@@ -22,10 +22,12 @@
 	import Evaluations from './Settings/Evaluations.svelte';
 	import CodeExecution from './Settings/CodeExecution.svelte';
 	import Integrations from './Settings/Integrations.svelte';
+	import Subagents from './Settings/Subagents.svelte';
 
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
 	import Search from '../icons/Search.svelte';
+	import User from '../icons/User.svelte';
 	import XMark from '../icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
@@ -41,6 +43,7 @@
 			'authentication',
 			'connections',
 			'models',
+			'subagents',
 			'evaluations',
 			'integrations',
 			'documents',
@@ -144,6 +147,12 @@
 				'import',
 				'export'
 			]
+		},
+		{
+			id: 'subagents',
+			title: 'Sub-agents',
+			route: '/admin/settings/subagents',
+			keywords: ['sub-agents', 'subagents', 'delegation', 'background', 'agents']
 		},
 		{
 			id: 'evaluations',
@@ -345,6 +354,7 @@
 		<!-- {$i18n.t('Authentication')} -->
 		<!-- {$i18n.t('Connections')} -->
 		<!-- {$i18n.t('Models')} -->
+		<!-- {$i18n.t('Sub-agents')} -->
 		<!-- {$i18n.t('Evaluations')} -->
 		<!-- {$i18n.t('Integrations')} -->
 		<!-- {$i18n.t('Documents')} -->
@@ -431,6 +441,8 @@
 								clip-rule="evenodd"
 							/>
 						</svg>
+					{:else if tab.id === 'subagents'}
+						<User className="size-4" />
 					{:else if tab.id === 'documents'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -573,6 +585,8 @@
 			/>
 		{:else if selectedTab === 'models'}
 			<Models />
+		{:else if selectedTab === 'subagents'}
+			<Subagents />
 		{:else if selectedTab === 'evaluations'}
 			<Evaluations />
 		{:else if selectedTab === 'integrations'}

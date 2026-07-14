@@ -122,49 +122,13 @@
 
 	<div slot="content">
 		<div
-			class="{className} rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg text-sm"
+			class="{className} user-menu rounded-xl p-0.5 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg text-xs"
 		>
 			{#if profile}
-				<div class=" flex gap-3.5 w-full p-2.5 items-center">
-					<div class=" items-center flex shrink-0">
-						<img
-							src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
-							class=" size-10 object-cover rounded-full"
-							alt="profile"
-						/>
-					</div>
-
-					<div class=" flex flex-col w-full flex-1">
-						<div class="font-medium line-clamp-1 pr-2">
-							{$user.name}
-						</div>
-
-						<div class=" flex items-center gap-2">
-							{#if $user?.is_active ?? true}
-								<div>
-									<span class="relative flex size-2">
-										<span class="relative inline-flex rounded-full size-2 bg-green-500" />
-									</span>
-								</div>
-
-								<span class="text-xs"> {$i18n.t('Active')} </span>
-							{:else}
-								<div>
-									<span class="relative flex size-2">
-										<span class="relative inline-flex rounded-full size-2 bg-gray-500" />
-									</span>
-								</div>
-
-								<span class="text-xs"> {$i18n.t('Away')} </span>
-							{/if}
-						</div>
-					</div>
-				</div>
-
 				{#if $user?.status_emoji || $user?.status_message}
-					<div class="mx-1">
+					<div class="user-menu-status">
 						<button
-							class="mb-1 w-full gap-2 px-2.5 py-1.5 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center"
+							class="w-full gap-2 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none text-xs flex items-center"
 							type="button"
 							on:click={() => {
 								show = false;
@@ -184,9 +148,10 @@
 								{$user?.status_message}
 							</Tooltip>
 
-							<div class="self-start">
+							<div class="self-center">
 								<Tooltip content={$i18n.t('Clear status')}>
 									<button
+										class="flex size-5 items-center justify-center"
 										type="button"
 										on:click={async (e) => {
 											e.preventDefault();
@@ -213,9 +178,9 @@
 						</button>
 					</div>
 				{:else}
-					<div class="mx-1">
+					<div class="user-menu-status">
 						<button
-							class="mb-1 w-full px-3 py-1.5 gap-1 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center justify-center"
+							class="w-full gap-1 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none text-xs flex items-center justify-center"
 							type="button"
 							on:click={() => {
 								show = false;
@@ -234,7 +199,7 @@
 			{/if}
 
 			<button
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 				type="button"
 				on:click={async () => {
 					show = false;
@@ -257,7 +222,7 @@
 				<a
 					href="/admin"
 					draggable="false"
-					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 					on:click={async (e) => {
 						if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
 							return;
@@ -279,7 +244,7 @@
 			{/if}
 
 			<button
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 				type="button"
 				on:click={async () => {
 					show = false;
@@ -306,7 +271,7 @@
 					<a
 						href="/workspace"
 						draggable="false"
-						class="flex flex-1 rounded-xl py-1.5 px-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+						class="flex flex-1 rounded-xl py-1.5 px-3 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 						on:click={async (e) => {
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
@@ -344,7 +309,7 @@
 						>
 							<button
 								type="button"
-								class="p-1 mr-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
 								on:click|preventDefault|stopPropagation={() => togglePin('workspace')}
 							>
 								{#if isPinned('workspace')}
@@ -363,7 +328,7 @@
 					<a
 						href="/notes"
 						draggable="false"
-						class="flex flex-1 rounded-xl py-1.5 px-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+						class="flex flex-1 rounded-xl py-1.5 px-3 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 						on:click={async (e) => {
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
@@ -388,7 +353,7 @@
 						>
 							<button
 								type="button"
-								class="p-1 mr-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
 								on:click|preventDefault|stopPropagation={() => togglePin('notes')}
 							>
 								{#if isPinned('notes')}
@@ -407,7 +372,7 @@
 					<a
 						href="/calendar"
 						draggable="false"
-						class="flex flex-1 rounded-xl py-1.5 px-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+						class="flex flex-1 rounded-xl py-1.5 px-3 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 						on:click={async (e) => {
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
@@ -441,7 +406,7 @@
 						>
 							<button
 								type="button"
-								class="p-1 mr-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
 								on:click|preventDefault|stopPropagation={() => togglePin('calendar')}
 							>
 								{#if isPinned('calendar')}
@@ -460,7 +425,7 @@
 					<a
 						href="/automations"
 						draggable="false"
-						class="flex flex-1 rounded-xl py-1.5 px-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+						class="flex flex-1 rounded-xl py-1.5 px-3 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 						on:click={async (e) => {
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
@@ -498,7 +463,7 @@
 						>
 							<button
 								type="button"
-								class="p-1 mr-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
 								on:click|preventDefault|stopPropagation={() => togglePin('automations')}
 							>
 								{#if isPinned('automations')}
@@ -517,7 +482,7 @@
 					<a
 						href="/playground"
 						draggable="false"
-						class="flex flex-1 rounded-xl py-1.5 px-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+						class="flex flex-1 rounded-xl py-1.5 px-3 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 						on:click={async (e) => {
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
@@ -542,7 +507,7 @@
 						>
 							<button
 								type="button"
-								class="p-1 mr-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
 								on:click|preventDefault|stopPropagation={() => togglePin('playground')}
 							>
 								{#if isPinned('playground')}
@@ -566,7 +531,7 @@
 						href="https://docs.openwebui.com"
 						target="_blank"
 						draggable="false"
-						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 						id="chat-share-button"
 						on:click={() => {
 							show = false;
@@ -583,7 +548,7 @@
 						href="https://github.com/open-webui/open-webui/releases"
 						target="_blank"
 						draggable="false"
-						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 						id="chat-share-button"
 						on:click={() => {
 							show = false;
@@ -597,7 +562,7 @@
 				{/if}
 
 				<button
-					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 					type="button"
 					id="chat-share-button"
 					on:click={async () => {
@@ -620,7 +585,7 @@
 			<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
 
 			<button
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none"
 				type="button"
 				on:click={async () => {
 					const res = await userSignOut();
@@ -647,7 +612,7 @@
 							: ''}
 					>
 						<div
-							class="flex rounded-xl py-1 px-3 text-xs gap-2.5 items-center"
+							class="flex rounded-xl px-2 py-0.5 text-[10px] gap-1.5 items-center"
 							on:mouseenter={() => {
 								if ($config?.features?.enable_public_active_users_count || role === 'admin') {
 									getUsageInfo();
@@ -655,8 +620,8 @@
 							}}
 						>
 							<div class=" flex items-center">
-								<span class="relative flex size-2">
-									<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+								<span class="relative flex size-1.5">
+									<span class="relative inline-flex rounded-full size-1.5 bg-green-500" />
 								</span>
 							</div>
 
@@ -664,7 +629,7 @@
 								<span class="">
 									{$i18n.t('Active Users')}:
 								</span>
-								<span class=" font-semibold">
+								<span class="font-medium">
 									{usage?.user_count}
 								</span>
 							</div>
@@ -675,3 +640,34 @@
 		</div>
 	</div>
 </Dropdown>
+
+<style>
+	.user-menu > button,
+	.user-menu > a,
+	.user-menu > div > a {
+		height: 1.6875rem;
+		padding: 0 0.5rem;
+		border-radius: 0.75rem;
+	}
+
+	.user-menu > button > div:first-child,
+	.user-menu > a > div:first-child,
+	.user-menu > div > a > div:first-child {
+		margin-right: 0.5rem;
+	}
+
+	.user-menu > .user-menu-status > button {
+		height: 1.6875rem;
+		padding: 0 0.5rem;
+		border-radius: 0.75rem;
+	}
+
+	.user-menu > hr {
+		margin: 0.125rem 0.25rem;
+	}
+
+	.user-menu :global(svg) {
+		width: 0.875rem;
+		height: 0.875rem;
+	}
+</style>

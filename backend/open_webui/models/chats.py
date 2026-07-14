@@ -74,6 +74,10 @@ class Chat(Base):  # database table mapping for chat entity
     )
 
 
+def is_internal_chat(meta: dict | None) -> bool:
+    return bool(meta and meta.get('internal') is True)
+
+
 class ChatModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)  # allows ORM model binding
     id: str
@@ -349,7 +353,13 @@ class ChatTable:
         return True
 
     async def insert_new_chat(
-        self, id: str, user_id: str, form_data: ChatForm, db: AsyncSession | None = None
+        self,
+        id: str,
+        user_id: str,
+        form_data: ChatForm,
+        db: AsyncSession | None = None,
+        *,
+        internal_meta: dict | None = None,
     ) -> ChatModel | None:
         async with get_async_db_context(db) as session:
             chat = ChatModel(
@@ -361,6 +371,7 @@ class ChatTable:
                     ),
                     'chat': self._clean_null_bytes(form_data.chat),
                     'folder_id': form_data.folder_id,
+                    'meta': internal_meta or {},
                     'created_at': int(time.time()),
                     'updated_at': int(time.time()),
                     'last_read_at': int(time.time()),
@@ -388,6 +399,17 @@ class ChatTable:
                 log.warning(f'Failed to write initial messages to chat_message table: {e}')
 
             return ChatModel.model_validate(chat_item) if chat_item else None
+
+    async def get_internal_chat_ids_by_parent_id(self, parent_chat_id: str, user_id: str) -> list[str]:
+        async with get_async_db_context() as session:
+            result = await session.execute(
+                select(Chat.id).where(
+                    Chat.user_id == user_id,
+                    Chat.meta['internal'].as_boolean().is_(True),
+                    Chat.meta['parent_chat_id'].as_string() == parent_chat_id,
+                )
+            )
+            return list(result.scalars().all())
 
     def _chat_import_form_to_chat_model(self, user_id: str, form_data: ChatImportForm) -> ChatModel:
         id = str(uuid.uuid4())
@@ -951,6 +973,7 @@ class ChatTable:
             stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at).filter_by(
                 user_id=user_id, archived=True
             )
+            stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
 
             if filter:
                 query_key = filter.get('query')
@@ -998,7 +1021,8 @@ class ChatTable:
         db: AsyncSession | None = None,
     ) -> int:
         async with get_async_db_context(db) as session:
-            result = await session.execute(select(func.count(Chat.id)).filter_by(user_id=user_id, archived=True))
+            stmt = select(func.count(Chat.id)).filter_by(user_id=user_id, archived=True)
+            result = await session.execute(stmt.where(Chat.meta['internal'].as_boolean().is_not(True)))
             return result.scalar() or 0
 
     async def get_shared_chat_list_by_user_id(
@@ -1027,6 +1051,7 @@ class ChatTable:
             stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
                 user_id=user_id
             )
+            stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
             if not include_archived:
                 stmt = stmt.filter_by(archived=False)
 
@@ -1082,6 +1107,7 @@ class ChatTable:
             stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
                 user_id=user_id
             )
+            stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
 
             if not include_folders:
                 stmt = stmt.filter_by(folder_id=None)
@@ -1123,9 +1149,9 @@ class ChatTable:
         db: AsyncSession | None = None,
     ) -> list[ChatModel]:
         async with get_async_db_context(db) as session:
-            result = await session.execute(
-                select(Chat).filter(Chat.id.in_(chat_ids)).filter_by(archived=False).order_by(Chat.updated_at.desc())
-            )
+            stmt = select(Chat).filter(Chat.id.in_(chat_ids)).filter_by(archived=False)
+            stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
+            result = await session.execute(stmt.order_by(Chat.updated_at.desc()))
             all_chats = result.scalars().all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
@@ -1170,6 +1196,7 @@ class ChatTable:
                 select(Chat.id, Chat.user_id, Chat.title, Chat.updated_at, User.name.label('user_name'))
                 .join(chat_ids, chat_ids.c.chat_id == Chat.id)
                 .outerjoin(User, User.id == Chat.user_id)
+                .where(Chat.meta['internal'].as_boolean().is_not(True))
             )
 
             order_by = filter.get('order_by') if filter else None
@@ -1301,7 +1328,8 @@ class ChatTable:
 
     async def get_chats(self, skip: int = 0, limit: int = 50, db: AsyncSession | None = None) -> list[ChatModel]:
         async with get_async_db_context(db) as session:
-            result = await session.execute(select(Chat).order_by(Chat.updated_at.desc()))
+            stmt = select(Chat).where(Chat.meta['internal'].as_boolean().is_not(True))
+            result = await session.execute(stmt.order_by(Chat.updated_at.desc()))
             all_chats = result.scalars().all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
@@ -1316,6 +1344,7 @@ class ChatTable:
     ) -> ChatListResponse:
         async with get_async_db_context(db) as session:
             stmt = select(Chat).filter_by(user_id=user_id)
+            stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
 
             if filter:
                 if filter.get('updated_at'):
@@ -1359,11 +1388,11 @@ class ChatTable:
         self, user_id: str, db: AsyncSession | None = None
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as session:
-            result = await session.execute(
-                select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at)
-                .filter_by(user_id=user_id, pinned=True, archived=False)
-                .order_by(Chat.updated_at.desc())
+            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
+                user_id=user_id, pinned=True, archived=False
             )
+            stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
+            result = await session.execute(stmt.order_by(Chat.updated_at.desc()))
             all_chats = result.all()
             return [
                 ChatTitleIdResponse.model_validate(
@@ -1380,9 +1409,9 @@ class ChatTable:
 
     async def get_archived_chats_by_user_id(self, user_id: str, db: AsyncSession | None = None) -> list[ChatModel]:
         async with get_async_db_context(db) as session:
-            result = await session.execute(
-                select(Chat).filter_by(user_id=user_id, archived=True).order_by(Chat.updated_at.desc())
-            )
+            stmt = select(Chat).filter_by(user_id=user_id, archived=True)
+            stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
+            result = await session.execute(stmt.order_by(Chat.updated_at.desc()))
             return [ChatModel.model_validate(chat) for chat in result.scalars().all()]
 
     # search user conversations
@@ -1453,6 +1482,7 @@ class ChatTable:
 
         async with get_async_db_context(db) as session:
             stmt = select(Chat).filter(Chat.user_id == user_id)
+            stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
 
             if is_archived is not None:
                 stmt = stmt.filter(Chat.archived == is_archived)
@@ -1594,6 +1624,7 @@ class ChatTable:
                 .filter_by(folder_id=folder_id, user_id=user_id)
                 .filter(or_(Chat.pinned == False, Chat.pinned == None))
                 .filter_by(archived=False)
+                .where(Chat.meta['internal'].as_boolean().is_not(True))
                 .order_by(Chat.updated_at.desc(), Chat.id)
             )
 
@@ -1631,6 +1662,7 @@ class ChatTable:
                 .filter_by(folder_id=folder_id)
                 .filter(or_(Chat.pinned == False, Chat.pinned == None))
                 .filter_by(archived=False)
+                .where(Chat.meta['internal'].as_boolean().is_not(True))
                 .order_by(Chat.updated_at.desc(), Chat.id)
             )
 
@@ -1662,6 +1694,7 @@ class ChatTable:
                 .filter(Chat.folder_id.in_(folder_ids), Chat.user_id == user_id)
                 .filter(or_(Chat.pinned == False, Chat.pinned == None))
                 .filter_by(archived=False)
+                .where(Chat.meta['internal'].as_boolean().is_not(True))
                 .order_by(Chat.updated_at.desc())
             )
 
@@ -1707,6 +1740,7 @@ class ChatTable:
             stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
                 user_id=user_id
             )
+            stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
             tag_id = tag_name.replace(' ', '_').lower()
 
             bind = await session.connection()
@@ -1769,6 +1803,7 @@ class ChatTable:
     ) -> int:
         async with get_async_db_context(db) as session:
             stmt = select(func.count(Chat.id)).filter_by(user_id=user_id, archived=False)
+            stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
             tag_id = tag_name.replace(' ', '_').lower()
 
             bind = await session.connection()
@@ -1816,7 +1851,8 @@ class ChatTable:
         self, folder_id: str, user_id: str, db: AsyncSession | None = None
     ) -> int:
         async with get_async_db_context(db) as session:
-            result = await session.execute(select(func.count(Chat.id)).filter_by(user_id=user_id, folder_id=folder_id))
+            stmt = select(func.count(Chat.id)).filter_by(user_id=user_id, folder_id=folder_id)
+            result = await session.execute(stmt.where(Chat.meta['internal'].as_boolean().is_not(True)))
             count = result.scalar()
 
             log.info(f"Count of chats for folder '{folder_id}': {count}")
@@ -1829,9 +1865,8 @@ class ChatTable:
             return 0
 
         async with get_async_db_context(db) as session:
-            result = await session.execute(
-                select(func.count(Chat.id)).filter(Chat.user_id == user_id, Chat.folder_id.in_(folder_ids))
-            )
+            stmt = select(func.count(Chat.id)).filter(Chat.user_id == user_id, Chat.folder_id.in_(folder_ids))
+            result = await session.execute(stmt.where(Chat.meta['internal'].as_boolean().is_not(True)))
             count = result.scalar()
 
             log.info(f"Count of chats for folders '{folder_ids}': {count}")
