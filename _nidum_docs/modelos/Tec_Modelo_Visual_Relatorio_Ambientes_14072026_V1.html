@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tec_Modelo_Visual_Relatorio_Ambientes_14072026_V1</title>
+<style>
+  :root{
+    --areia:#E5E0D5;
+    --pedra:#9D9890;
+    --ceu:#4F7187;
+    --terracota:#9A4A2E;
+    --musgo:#515E52;
+    --escuro:#1F1E1B;
+    --branco:#FFFFFF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--areia);
+    color:var(--escuro);
+    font-family:"Maxima Nouva","Maxima Nova","Segoe UI",Arial,sans-serif;
+    font-size:15px;line-height:1.55;
+    padding:32px 16px 140px;
+  }
+  h1,h2{
+    font-family:"Ibrand","iBrand","Maxima Nouva",Arial,sans-serif;
+    line-height:1.2;
+  }
+  .pagina{
+    background:var(--branco);
+    max-width:800px;margin:0 auto;
+    padding:48px 56px 40px;
+    box-shadow:0 2px 12px rgba(31,30,27,.12);
+  }
+
+  /* ---------- Cabecalho ---------- */
+  .topo{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    margin-bottom:8px;
+  }
+  .logo{
+    /* NAO ALTERAR: substituir este texto pela logo oficial (arquivo do brandbook) */
+    font-family:"Ibrand","iBrand",Arial,sans-serif;
+    font-size:26px;color:var(--terracota);text-transform:lowercase;
+  }
+  .origem{
+    text-align:right;font-size:11px;color:var(--pedra);
+    letter-spacing:1.2px;text-transform:uppercase;line-height:1.6;
+  }
+  h1{
+    font-size:27px;color:var(--escuro);
+    margin:18px 0 4px;font-weight:600;
+  }
+  .subtitulo{color:var(--musgo);font-size:14px;margin-bottom:18px;}
+  .regua{height:3px;background:var(--terracota);margin-bottom:0;}
+
+  /* ---------- Metadados ---------- */
+  .metadados{
+    display:grid;grid-template-columns:repeat(4,1fr);
+    border:1px solid var(--areia);border-top:none;
+    margin-bottom:28px;
+  }
+  .metadados div{
+    padding:10px 14px;border-right:1px solid var(--areia);
+  }
+  .metadados div:last-child{border-right:none;}
+  .metadados .rotulo{
+    display:block;font-size:10px;letter-spacing:1.2px;
+    text-transform:uppercase;color:var(--pedra);margin-bottom:2px;
+  }
+  .metadados .valor{font-size:13.5px;font-weight:600;}
+
+  /* ---------- Sumario executivo ---------- */
+  .sumario{
+    display:grid;grid-template-columns:1fr 190px;gap:24px;
+    background:#F5F2EB;
+    padding:20px 24px;margin-bottom:32px;
+    border-left:5px solid var(--terracota);
+  }
+  .sumario .diagnostico-linha{
+    font-size:17px;font-weight:600;line-height:1.45;
+  }
+  .sumario .diagnostico-linha small{
+    display:block;font-size:10px;letter-spacing:1.2px;font-weight:400;
+    text-transform:uppercase;color:var(--pedra);margin-bottom:6px;
+  }
+  .confianca{text-align:right;}
+  .confianca .num{
+    font-family:"Ibrand","iBrand",Arial,sans-serif;
+    font-size:40px;color:var(--ceu);line-height:1;
+  }
+  .confianca .faixa{
+    height:8px;background:var(--areia);border-radius:4px;
+    margin:8px 0 6px;overflow:hidden;
+  }
+  .confianca .faixa span{
+    display:block;height:100%;width:65%;background:var(--ceu);
+  }
+  .confianca .leitura{font-size:11px;color:var(--musgo);line-height:1.4;}
+
+  /* ---------- Secoes ---------- */
+  section{margin-bottom:30px;}
+  h2{
+    font-size:13px;letter-spacing:1.6px;text-transform:uppercase;
+    color:var(--terracota);font-weight:700;
+    padding-bottom:6px;border-bottom:1px solid var(--areia);
+    margin-bottom:12px;
+  }
+  p{margin-bottom:10px;}
+
+  /* Fotos e qualidade */
+  .fotos{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;}
+  .foto{
+    width:300px;
+  }
+  .foto .imagem{
+    /* Na implementacao real, aqui entra a foto enviada pelo usuario */
+    width:100%;height:200px;background:var(--areia);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--pedra);font-size:13px;border:1px solid var(--pedra);
+  }
+  .foto figcaption{
+    font-size:11.5px;color:var(--musgo);margin-top:6px;
+  }
+  .qualidade{flex:1;min-width:220px;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+  .chip{
+    font-size:11.5px;padding:4px 10px;border-radius:12px;
+    background:#F5F2EB;border:1px solid var(--areia);color:var(--escuro);
+  }
+  .chip b{color:var(--musgo);font-weight:700;}
+
+  /* Evidencias */
+  .evidencias{
+    display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;
+    margin-top:6px;
+  }
+  .evidencia{
+    font-size:13.5px;padding-left:14px;position:relative;
+  }
+  .evidencia::before{
+    content:"";position:absolute;left:0;top:7px;
+    width:6px;height:6px;background:var(--ceu);
+  }
+
+  /* Avarias */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th{
+    text-align:left;font-size:10px;letter-spacing:1.2px;
+    text-transform:uppercase;color:var(--pedra);
+    padding:6px 10px;border-bottom:2px solid var(--areia);font-weight:700;
+  }
+  td{padding:9px 10px;border-bottom:1px solid var(--areia);vertical-align:top;}
+  .sev{
+    display:inline-block;font-size:10.5px;font-weight:700;
+    letter-spacing:1px;text-transform:uppercase;
+    color:#fff;padding:3px 10px;border-radius:3px;white-space:nowrap;
+  }
+  .sev.baixa{background:var(--musgo);}
+  .sev.media{background:var(--ceu);}
+  .sev.alta{background:var(--terracota);}
+  .sev.nc{background:var(--pedra);}
+
+  /* Incerteza */
+  .incerteza{
+    background:#F5F2EB;padding:14px 18px;margin-top:12px;
+  }
+  .incerteza .titulo{
+    font-size:10px;letter-spacing:1.2px;text-transform:uppercase;
+    color:var(--ceu);font-weight:700;margin-bottom:8px;
+  }
+  .incerteza ol{margin-left:18px;font-size:13.5px;}
+  .incerteza li{margin-bottom:4px;}
+
+  /* Ressalva e rodape */
+  .ressalva{
+    border:1px solid var(--pedra);
+    padding:14px 18px;font-size:12.5px;color:var(--musgo);
+    margin-top:8px;
+  }
+  .ressalva b{color:var(--escuro);}
+  .rodape{
+    display:flex;justify-content:space-between;
+    margin-top:36px;padding-top:14px;
+    border-top:1px solid var(--areia);
+    font-size:11px;color:var(--pedra);
+  }
+
+  /* ============ BLOCO EDITOR PADRAO ============ */
+  #barraEditor{
+    position:fixed;bottom:24px;right:24px;z-index:9999;
+    display:flex;gap:10px;background:var(--escuro);
+    padding:10px 12px;border-radius:10px;
+    box-shadow:0 4px 18px rgba(31,30,27,.35);
+  }
+  #barraEditor button{
+    font-family:"Maxima Nouva","Segoe UI",Arial,sans-serif;
+    font-size:14px;font-weight:600;border:none;border-radius:6px;
+    padding:9px 16px;cursor:pointer;
+  }
+  #btnEditar{background:var(--areia);color:var(--escuro);}
+  #btnEditar.ativo{background:var(--terracota);color:#fff;}
+  #btnSalvar{background:var(--ceu);color:#fff;}
+  #avisoEdicao{
+    position:fixed;bottom:84px;right:24px;z-index:9999;
+    background:var(--terracota);color:#fff;font-size:13px;
+    padding:6px 12px;border-radius:6px;display:none;
+  }
+  body.editando #avisoEdicao{display:block;}
+  body.editando .pagina{outline:2px dashed var(--terracota);outline-offset:8px;}
+</style>
+</head>
+<body>
+
+<div class="pagina">
+
+  <div class="topo">
+    <div class="logo">nidum</div>
+    <div class="origem">Identificador de Ambientes<br>ChatND · Plataforma Nidum</div>
+  </div>
+
+  <h1>Relatório de Análise — Piso Cerâmico</h1>
+  <div class="subtitulo">Análise visual assistida por IA · caráter orientativo</div>
+  <div class="regua"></div>
+
+  <div class="metadados">
+    <div><span class="rotulo">Data da análise</span><span class="valor">14/07/2026</span></div>
+    <div><span class="rotulo">Autor</span><span class="valor">Nome do usuário</span></div>
+    <div><span class="rotulo">Projeto / obra</span><span class="valor">Não informado</span></div>
+    <div><span class="rotulo">Documento</span><span class="valor">PLAT_Relatorio_Piso_14072026_V1</span></div>
+  </div>
+
+  <div class="sumario">
+    <div class="diagnostico-linha">
+      <small>Diagnóstico</small>
+      Revestimento cerâmico branco esmaltado, formato modular quadrado, assentado com rejunte aparente. Classificação exata (porcelanato × cerâmica comum) indeterminada pela imagem.
+    </div>
+    <div class="confianca">
+      <div class="num">65%</div>
+      <div class="faixa"><span></span></div>
+      <div class="leitura"><b>Hipótese forte</b> — falta close de textura e referência de escala para classificação exata.</div>
+    </div>
+  </div>
+
+  <section>
+    <h2>Material analisado</h2>
+    <div class="fotos">
+      <figure class="foto">
+        <div class="imagem">[ foto enviada pelo usuário ]</div>
+        <figcaption>Foto 1 — recebida em 14/07/2026, ângulo oblíquo.</figcaption>
+      </figure>
+      <div class="qualidade">
+        <p style="font-size:13.5px">1 foto recebida. A qualidade do material limita parcialmente a avaliação:</p>
+        <div class="chips">
+          <span class="chip">Nitidez: <b>baixa (desfoque)</b></span>
+          <span class="chip">Iluminação: <b>média</b></span>
+          <span class="chip">Ângulo: <b>oblíquo</b></span>
+          <span class="chip">Referência de escala: <b>ausente</b></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Diagnóstico e evidências</h2>
+    <p>Hipótese principal: revestimento cerâmico esmaltado (porcelanato ou cerâmica de acabamento acetinado/fosco), cor branca. Não é possível determinar pela foto se é porcelanato ou cerâmica esmaltada comum — a distinção depende de corte/espessura, verso (biscoito), absorção de água ou marcação de fábrica.</p>
+    <div class="evidencias">
+      <div class="evidencia">Placas quadradas modulares com juntas retas e regulares</div>
+      <div class="evidencia">Superfície lisa e homogênea, sem veios ou cristais (afasta mármore/granito)</div>
+      <div class="evidencia">Brilho suave/difuso, compatível com acabamento acetinado</div>
+      <div class="evidencia">Rejunte visível, indicando assentamento por placas individuais</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Avarias e estado de conservação</h2>
+    <table>
+      <tr><th style="width:32%">Avaria</th><th style="width:26%">Localização</th><th style="width:14%">Severidade</th><th>Observação</th></tr>
+      <tr>
+        <td>Escurecimento do rejunte (tom amarelado)</td>
+        <td>Generalizado nas juntas</td>
+        <td><span class="sev baixa">Baixa</span></td>
+        <td>Provável desgaste estético por acúmulo de sujeira.</td>
+      </tr>
+      <tr>
+        <td>Mancha rosada difusa</td>
+        <td>Terço central</td>
+        <td><span class="sev nc">Não conf.</span></td>
+        <td>Provavelmente reflexo de luz ou desfoque; não confirmável pela imagem.</td>
+      </tr>
+      <tr>
+        <td>Ponto escuro pequeno</td>
+        <td>Terço central-esquerdo</td>
+        <td><span class="sev baixa">Baixa</span></td>
+        <td>Sujeira, resíduo ou marca — indeterminado.</td>
+      </tr>
+    </table>
+    <p style="font-size:13px;color:var(--musgo);margin-top:8px">Sem evidência visível de trincas, quebras ou lascas nas áreas registradas pela foto.</p>
+  </section>
+
+  <section>
+    <h2>Grau de confiança</h2>
+    <p><b>~65%</b> — hipótese forte de cerâmica/porcelanato branco esmaltado, mas classificação exata indeterminada. Foto desfocada, sem close de textura e sem referência de escala impede diferenciar porcelanato de cerâmica comum e avaliar avarias com segurança.</p>
+    <div class="incerteza">
+      <div class="titulo">O que reduziria a incerteza</div>
+      <ol>
+        <li>Foto nítida e em close de uma placa (textura), com luz natural e ângulo frontal</li>
+        <li>Foto da borda/corte de uma peça (espessura e biscoito)</li>
+        <li>Objeto de referência de tamanho na cena (moeda, régua)</li>
+        <li>Marca/nota fiscal ou verso de peça sobressalente</li>
+        <li>Idade e uso do ambiente (área molhada? tráfego intenso?)</li>
+      </ol>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ajustes da conversa</h2>
+    <p>Nenhum ajuste registrado nesta conversa.</p>
+  </section>
+
+  <div class="ressalva">
+    <b>Ressalva.</b> Esta análise visual assistida por IA tem caráter orientativo e não substitui vistoria técnica presencial em decisões estruturais, jurídicas ou de alto valor.
+  </div>
+
+  <div class="rodape">
+    <span>nidum — fazer da casa um ninho.</span>
+    <span>PLAT_Relatorio_Piso_14072026_V1 · página 1 de 1</span>
+  </div>
+
+</div>
+
+<!-- ============ BLOCO EDITOR PADRAO ============ -->
+<div id="avisoEdicao">Modo de edição ativo — clique no texto para alterar</div>
+<div id="barraEditor">
+  <button id="btnEditar" type="button">Editar</button>
+  <button id="btnSalvar" type="button">Salvar HTML</button>
+</div>
+
+<script>
+(function(){
+  var btnEditar = document.getElementById('btnEditar');
+  var btnSalvar = document.getElementById('btnSalvar');
+  var editando = false;
+
+  btnEditar.addEventListener('click', function(){
+    editando = !editando;
+    var pagina = document.querySelector('.pagina');
+    if(pagina){ pagina.contentEditable = editando ? 'true' : 'false'; }
+    document.body.classList.toggle('editando', editando);
+    btnEditar.classList.toggle('ativo', editando);
+    btnEditar.textContent = editando ? 'Concluir edição' : 'Editar';
+  });
+
+  btnSalvar.addEventListener('click', function(){
+    var estavaEditando = editando;
+    if(estavaEditando){ btnEditar.click(); }
+
+    var clone = document.documentElement.cloneNode(true);
+    clone.querySelectorAll('[contenteditable]').forEach(function(el){
+      el.removeAttribute('contenteditable');
+    });
+    var corpoClone = clone.querySelector('body');
+    if(corpoClone){ corpoClone.classList.remove('editando'); }
+
+    var html = '<!DOCTYPE html>\n' + clone.outerHTML;
+    var blob = new Blob([html], {type:'text/html;charset=utf-8'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = document.title + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+
+    if(estavaEditando){ btnEditar.click(); }
+  });
+})();
+</script>
+
+</body>
+</html>
