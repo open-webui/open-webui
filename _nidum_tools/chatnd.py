@@ -1,9 +1,19 @@
 """
 title: ChatND
 author: Nidum
-version: 1.17.0
+version: 1.18.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum. Na rota de imagem, gera a imagem via Gemini (motor oculto). O usuario nao escolhe o motor.
 changelog:
+  1.18.0:
+    - CITACAO REFLETE A PASTA DE ORIGEM. A esteira passou a gravar no cabecalho de
+      cada .md o campo 'pasta:' (caminho da pasta no SharePoint). _montar_contexto
+      agora extrai esse campo do trecho recuperado e o expoe na linha da fonte
+      ('--- Fonte: <nome> | pasta: <area/subpasta> ---', sem o prefixo numerico da
+      pasta de topo). O prompt de _injetar_contexto pede para refletir essa area na
+      etiqueta apos o documento (ex.: '[Fonte - Metodologia . Acervos/Financas...]');
+      documentos fundadores (pasta 'Fonte') mantem a etiqueta [Fonte - ...] sem
+      repetir. Best-effort: se o trecho recuperado nao contiver o cabecalho, cai no
+      comportamento anterior (so o nome). Nenhuma outra rota alterada.
   1.17.0:
     - IMAGEM CONVERSACIONAL / MULTI-TURNO (Fase C). Corrige dois bugs expostos pelo
       smoke test real, ambos com a mesma raiz: o caminho de imagem era single-turn.
@@ -689,6 +699,20 @@ def _docs_prioritarios(texto, nomes):
     return pri
 
 
+# Cabecalho de rastreabilidade que a esteira grava no topo de cada .md:
+#   <!-- origem: sharepoint:... | pasta: 3 - Acervos Institucionais/Juridico | ... -->
+# Extrai o campo 'pasta' (caminho da pasta de origem) quando o trecho o traz.
+_RE_PASTA_DOC = re.compile(r"<!--[^>]*?\bpasta:\s*([^|>]+?)\s*(?:\||-->)")
+
+
+def _pasta_do_doc(doc):
+    m = _RE_PASTA_DOC.search(doc or "")
+    if not m:
+        return ""
+    # Tira o prefixo numerico da pasta de topo ("3 - Acervos ..." -> "Acervos ...").
+    return re.sub(r"^\s*\d+\s*-\s*", "", m.group(1).strip())
+
+
 def _montar_contexto(sources):
     blocos = []
     for src in sources or []:
@@ -697,8 +721,10 @@ def _montar_contexto(sources):
         for i, doc in enumerate(docs):
             meta = metas[i] if i < len(metas) else {}
             fonte = (meta or {}).get("name") or (meta or {}).get("source") or "documento"
+            pasta = _pasta_do_doc(str(doc))
+            rotulo = str(fonte) + (" | pasta: " + pasta if pasta else "")
             if doc:
-                blocos.append("--- Fonte: " + str(fonte) + " ---\n" + str(doc))
+                blocos.append("--- Fonte: " + rotulo + " ---\n" + str(doc))
     return "\n\n".join(blocos)
 
 
@@ -984,7 +1010,12 @@ class Pipe:
                         "dos livros/documentos fundadores; [Convergencia - frente . data] "
                         "quando vier de uma convergencia; [Em aberto] ou [Fora do acervo] "
                         "quando for o caso. Cite a origem no texto (o documento), mas NAO "
-                        "escreva o nome do arquivo com extensao (.pdf/.txt). Voce ja tem "
+                        "escreva o nome do arquivo com extensao (.pdf/.txt). Quando a linha "
+                        "'--- Fonte: ... | pasta: X ---' do trecho trouxer uma 'pasta:', "
+                        "REFLITA essa area/subpasta na etiqueta, apos o documento, com ' . ' "
+                        "- ex.: [Fonte - Metodologia de Gestao de Projetos . Acervos/Financas e Gestao de Projetos]. "
+                        "Para os livros/documentos fundadores (pasta comeca com 'Fonte'), a "
+                        "etiqueta [Fonte - ...] ja basta e NAO precisa repetir a pasta. Voce ja tem "
                         "acesso a esses documentos: NUNCA peca ao "
                         "usuario para enviar/colar o documento, e NUNCA diga que so "
                         "acessa o que foi enviado. Se algum ponto nao aparecer nos "
