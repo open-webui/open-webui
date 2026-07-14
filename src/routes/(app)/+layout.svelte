@@ -39,7 +39,9 @@
 		showSearch,
 		showSidebar,
 		showControls,
-		mobile
+		mobile,
+		chatId,
+		chats
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -314,6 +316,34 @@
 					console.log('Shortcut triggered: REGENERATE_RESPONSE');
 					event.preventDefault();
 					[...document.getElementsByClassName('regenerate-response-button')]?.at(-1)?.click();
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.NAVIGATE_CHAT_UP])) {
+					console.log('Shortcut triggered: NAVIGATE_CHAT_UP');
+					event.preventDefault();
+					if ($chats && $chats.length > 0) {
+						const currentIndex = $chats.findIndex((c) => c.id === $chatId);
+						if (currentIndex > 0) {
+							await goto(`/c/${$chats[currentIndex - 1].id}`);
+						} else if (currentIndex === -1) {
+							// No chat selected, go to the first chat
+							await goto(`/c/${$chats[0].id}`);
+						}
+					}
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.NAVIGATE_CHAT_DOWN])) {
+					console.log('Shortcut triggered: NAVIGATE_CHAT_DOWN');
+					event.preventDefault();
+					if ($chats && $chats.length > 0) {
+						const currentIndex = $chats.findIndex((c) => c.id === $chatId);
+						if (currentIndex !== -1 && currentIndex < $chats.length - 1) {
+							await goto(`/c/${$chats[currentIndex + 1].id}`);
+						} else if (currentIndex === -1) {
+							// No chat selected, go to the first chat
+							await goto(`/c/${$chats[0].id}`);
+						}
+					}
+				} else if (isShortcutMatch(event, shortcuts[Shortcut.TOGGLE_CONTROLS])) {
+					console.log('Shortcut triggered: TOGGLE_CONTROLS');
+					event.preventDefault();
+					showControls.set(!$showControls);
 				}
 			});
 		};
