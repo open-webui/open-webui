@@ -78,7 +78,6 @@
 		$selectedFolder != null &&
 		$selectedFolder.user_id !== $user?.id &&
 		$selectedFolder.permission !== 'write';
-
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
@@ -133,7 +132,7 @@
 									>
 										<img
 											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
-											class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
+											class=" size-9 @sm:size-10 rounded-full"
 											aria-hidden="true"
 											draggable="false"
 											on:error={(e) => {
@@ -219,7 +218,7 @@
 					<MessageInput
 						bind:this={messageInput}
 						{history}
-						{selectedModels}
+						bind:selectedModels
 						bind:files
 						bind:prompt
 						bind:autoScroll

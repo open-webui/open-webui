@@ -28,6 +28,9 @@
 	let showValves = getOpen('valves', false);
 	let showSystemPrompt = getOpen('systemPrompt');
 	let showAdvancedParams = getOpen('advancedParams');
+
+	const compactSectionButtonClass =
+		'w-full h-8 px-2.5 rounded-xl text-[13px] font-normal text-gray-600 hover:bg-gray-50/40 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800/40 dark:hover:text-gray-100 transition cursor-pointer select-none';
 </script>
 
 <div class=" dark:text-white">
@@ -80,8 +83,6 @@
 						{/each}
 					</div>
 				</Collapsible>
-
-				<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 			{/if}
 
 			{#if $user?.role === 'admin' || ($user?.permissions.chat?.valves ?? true)}
@@ -89,14 +90,12 @@
 					bind:open={showValves}
 					onChange={setOpen('valves')}
 					title={$i18n.t('Valves')}
-					buttonClassName="w-full"
+					buttonClassName={compactSectionButtonClass}
 				>
-					<div class="text-sm" slot="content">
+					<div class="px-2 pt-1 text-sm" slot="content">
 						<Valves show={showValves} />
 					</div>
 				</Collapsible>
-
-				<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 			{/if}
 
 			{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
@@ -104,21 +103,19 @@
 					title={$i18n.t('System Prompt')}
 					bind:open={showSystemPrompt}
 					onChange={setOpen('systemPrompt')}
-					buttonClassName="w-full"
+					buttonClassName={compactSectionButtonClass}
 				>
-					<div class="" slot="content">
+					<div class="px-2 pt-1" slot="content">
 						<textarea
 							bind:value={params.system}
-							class="w-full text-xs outline-hidden resize-vertical {$settings.highContrastMode
-								? 'border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 p-2.5'
-								: 'py-1.5 bg-transparent'}"
-							rows="4"
+							class="w-full text-sm outline-hidden resize-vertical {$settings.highContrastMode
+								? 'border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 px-2 py-1.5'
+								: 'py-1 bg-transparent'}"
+							rows="3"
 							placeholder={$i18n.t('Enter system prompt')}
 						/>
 					</div>
 				</Collapsible>
-
-				<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 			{/if}
 
 			{#if $user?.role === 'admin' || ($user?.permissions.chat?.params ?? true)}
@@ -126,9 +123,9 @@
 					title={$i18n.t('Advanced Params')}
 					bind:open={showAdvancedParams}
 					onChange={setOpen('advancedParams')}
-					buttonClassName="w-full"
+					buttonClassName={compactSectionButtonClass}
 				>
-					<div class="text-sm mt-1.5" slot="content">
+					<div class="px-2 pt-1 text-sm" slot="content">
 						<div>
 							<AdvancedParams admin={$user?.role === 'admin'} custom={true} bind:params />
 						</div>

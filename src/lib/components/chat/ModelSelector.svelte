@@ -14,6 +14,8 @@
 	export let showSetDefault = true;
 	export let triggerClassName = 'text-lg';
 	export let className = undefined;
+	export let placement: 'top' | 'bottom' | 'auto' = 'bottom';
+	export let align: 'start' | 'end' = 'start';
 
 	let compareModels = selectedModels.length > 1;
 
@@ -57,10 +59,10 @@
 	}
 </script>
 
-<div class="flex flex-col w-full items-start">
-	<div class="flex w-full max-w-fit">
-		<div class="overflow-hidden w-full">
-			<div class="max-w-full {($settings?.highContrastMode ?? false) ? 'm-1' : 'mr-1'}">
+<div class="flex min-w-0 max-w-full flex-col items-start">
+	<div class="flex min-w-0 max-w-full">
+		<div class="min-w-0 max-w-full overflow-hidden">
+			<div class="min-w-0 max-w-full">
 				<Selector
 					id="model"
 					placeholder={$i18n.t('Select a model')}
@@ -72,6 +74,8 @@
 					{pinModelHandler}
 					{className}
 					{triggerClassName}
+					{placement}
+					{align}
 					{showSetDefault}
 					onSetDefault={saveDefaultModel}
 					multipleEnabled={$user?.role === 'admin' ||

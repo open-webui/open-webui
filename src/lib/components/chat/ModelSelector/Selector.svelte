@@ -65,6 +65,8 @@
 
 	export let className = 'w-[22rem]';
 	export let triggerClassName = 'text-lg';
+	export let placement: 'top' | 'bottom' | 'auto' = 'bottom';
+	export let align: 'start' | 'end' = 'start';
 	export let showSetDefault = false;
 	export let onSetDefault: () => Promise<void> | void = () => {};
 
@@ -87,19 +89,35 @@
 	const updatePosition = () => {
 		if (!show || !triggerElement) return;
 		const rect = triggerElement.getBoundingClientRect();
+		const contentRect = contentElement?.getBoundingClientRect();
+		const contentWidth = contentRect?.width ?? 0;
+		const contentHeight = contentRect?.height ?? 0;
+		const spaceBelow = window.innerHeight - rect.bottom - 8;
+		const spaceAbove = rect.top - 8;
+		const resolvedPlacement =
+			placement === 'auto'
+				? contentHeight && spaceBelow < contentHeight && spaceAbove > spaceBelow
+					? 'top'
+					: 'bottom'
+				: placement;
 		dropdownPosition = {
-			top: rect.bottom + 2,
-			left: $mobile ? 8 : rect.left,
+			top:
+				resolvedPlacement === 'top' && contentHeight
+					? rect.top - contentHeight - 2
+					: rect.bottom + 2,
+			left: $mobile ? 8 : align === 'end' && contentWidth ? rect.right - contentWidth : rect.left,
 			width: $mobile ? window.innerWidth - 16 : 0
 		};
 	};
 
-	const toggleOpen = () => {
+	const toggleOpen = async () => {
 		show = !show;
 		if (show) {
 			searchValue = '';
 			listScrollTop = 0;
 			resetView();
+			updatePosition();
+			await tick();
 			updatePosition();
 			window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 		} else {
@@ -609,7 +627,7 @@
 		on:click={toggleOpen}
 	>
 		<div
-			class="flex w-full text-left px-0.5 bg-transparent truncate {triggerClassName} justify-between {($settings?.highContrastMode ??
+			class="flex w-full min-w-0 text-left px-0.5 bg-transparent {triggerClassName} justify-between {($settings?.highContrastMode ??
 			false)
 				? 'dark:placeholder-gray-100 placeholder-gray-800'
 				: 'placeholder-gray-400'}"
@@ -622,8 +640,8 @@
 				);
 			}}
 		>
-			{triggerLabel}
-			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
+			<span class="min-w-0 flex-1 truncate">{triggerLabel}</span>
+			<ChevronDown className="ml-1.5 size-2.5 shrink-0 self-center" strokeWidth="2.5" />
 		</div>
 	</button>
 

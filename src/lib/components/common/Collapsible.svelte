@@ -119,9 +119,9 @@
 				{#if !disabled}
 					<div class="flex self-center translate-y-[1px]">
 						{#if open}
-							<ChevronUp strokeWidth="3.5" className="size-3.5" />
+							<ChevronUp strokeWidth="2.75" className="size-3" />
 						{:else}
-							<ChevronDown strokeWidth="3.5" className="size-3.5" />
+							<ChevronDown strokeWidth="2.75" className="size-3" />
 						{/if}
 					</div>
 				{/if}
@@ -144,9 +144,9 @@
 					{#if chevron}
 						<div class="flex self-start translate-y-1">
 							{#if open}
-								<ChevronUp strokeWidth="3.5" className="size-3.5" />
+								<ChevronUp strokeWidth="2.75" className="size-3" />
 							{:else}
-								<ChevronDown strokeWidth="3.5" className="size-3.5" />
+								<ChevronDown strokeWidth="2.75" className="size-3" />
 							{/if}
 						</div>
 					{/if}

@@ -54,7 +54,7 @@
 				<XMark className="size-3.5" />
 			</button>
 		{:else}
-			<ChevronDown className=" size-3.5" strokeWidth="2.5" />
+			<ChevronDown className="size-2.5" strokeWidth="2.5" />
 		{/if}
 	</svelte:fragment>
 

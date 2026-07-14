@@ -91,14 +91,14 @@
 </script>
 
 <div class="flex items-center translate-x-0.5">
-	<Dropdown bind:show align="end">
+	<Dropdown bind:show align="start">
 		<Tooltip content={$i18n.t('Terminal')} placement="top">
 			<button
 				type="button"
-				class="flex items-center gap-1.5 translate-y-[1px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 text-[13px] transition rounded-lg cursor-pointer {$selectedTerminalId &&
+				class="flex items-center gap-1.5 translate-y-[1px] text-[13px] text-gray-600 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-800/40 dark:hover:text-gray-200 transition rounded-lg cursor-pointer {$selectedTerminalId &&
 				selectedLabel
-					? ' px-2.5 py-1 '
-					: ' p-2 opacity-50'}"
+					? ' p-1 '
+					: ' p-1 opacity-50'}"
 			>
 				<Cloud className="size-3.5" strokeWidth="2" />
 

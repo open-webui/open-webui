@@ -695,12 +695,12 @@
 				} else if (type === 'chat:message:favorite') {
 					// Update message favorite status
 					message.favorite = data.favorite;
-					} else if (type === 'chat:title') {
-						chatTitle.set(data);
-						await refreshChatList(localStorage.token);
-					} else if (type === 'chat:tags') {
-						chat = await getChatById(localStorage.token, $chatId);
-						allTags.set(await getAllTags(localStorage.token));
+				} else if (type === 'chat:title') {
+					chatTitle.set(data);
+					await refreshChatList(localStorage.token);
+				} else if (type === 'chat:tags') {
+					chat = await getChatById(localStorage.token, $chatId);
+					allTags.set(await getAllTags(localStorage.token));
 				} else if (type === 'source' || type === 'citation') {
 					if (data?.type === 'code_execution') {
 						// Code execution; update existing code execution by ID, or add new one.
@@ -1759,11 +1759,11 @@
 
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
 		// Backend handles outlet filters and persistence inline.
-			// Just refresh the sidebar chat list.
-			if ($chatId == _chatId && !$temporaryChatEnabled) {
-				await refreshChatList(localStorage.token);
-			}
-		};
+		// Just refresh the sidebar chat list.
+		if ($chatId == _chatId && !$temporaryChatEnabled) {
+			await refreshChatList(localStorage.token);
+		}
+	};
 
 	const chatActionHandler = async (_chatId, actionId, modelId, responseMessageId, event = null) => {
 		const messages = createMessagesList(history, responseMessageId);
@@ -1810,12 +1810,12 @@
 					history: history,
 					params: params,
 					files: chatFiles
-					});
+				});
 
-					await refreshChatList(localStorage.token);
-				}
+				await refreshChatList(localStorage.token);
 			}
-		};
+		}
+	};
 
 	const getChatEventEmitter = async (modelId: string, chatId: string = '') => {
 		return setInterval(() => {
@@ -2653,11 +2653,11 @@
 				// and causing spurious toast notifications / state duplication).
 				if (res.chat_id && $chatId !== res.chat_id && $chatId === _chatId) {
 					await chatId.set(res.chat_id);
-						if (!$temporaryChatEnabled) {
-							window.history.replaceState(history.state, '', `/c/${res.chat_id}`);
-							await refreshChatList(localStorage.token);
+					if (!$temporaryChatEnabled) {
+						window.history.replaceState(history.state, '', `/c/${res.chat_id}`);
+						await refreshChatList(localStorage.token);
 
-							// Persist chat-level params (system prompt, advanced
+						// Persist chat-level params (system prompt, advanced
 						// params) that the backend doesn't receive in the
 						// chat completion request.  Files are now persisted
 						// by the backend at chat creation time.
@@ -2930,14 +2930,14 @@
 			_chatId = chat.id;
 			await chatId.set(_chatId);
 
-				window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			window.history.replaceState(history.state, '', `/c/${_chatId}`);
 
-				await tick();
+			await tick();
 
-				await refreshChatList(localStorage.token);
+			await refreshChatList(localStorage.token);
 
-				selectedFolder.set(null);
-			} else {
+			selectedFolder.set(null);
+		} else {
 			_chatId = `local:${$socket?.id}`; // Use socket id for temporary chat
 			await chatId.set(_chatId);
 		}
@@ -3012,24 +3012,24 @@
 				}
 			);
 
-				if (res) {
-					await refreshChatList(localStorage.token, { refreshPinned: true });
+			if (res) {
+				await refreshChatList(localStorage.token, { refreshPinned: true });
 
-					toast.success($i18n.t('Chat moved successfully'));
-				}
+				toast.success($i18n.t('Chat moved successfully'));
+			}
 		} else {
 			toast.error($i18n.t('Failed to move chat'));
 		}
 	};
 
-		const archiveChatHandler = async (id: string) => {
-			try {
-				await archiveChatById(localStorage.token, id);
-				initNewChat();
-				await goto('/');
-				await refreshChatList(localStorage.token, { refreshPinned: true });
-				toast.success($i18n.t('Chat archived.'));
-			} catch (error) {
+	const archiveChatHandler = async (id: string) => {
+		try {
+			await archiveChatById(localStorage.token, id);
+			initNewChat();
+			await goto('/');
+			await refreshChatList(localStorage.token, { refreshPinned: true });
+			toast.success($i18n.t('Chat archived.'));
+		} catch (error) {
 			console.error('Error archiving chat:', error);
 			toast.error($i18n.t('Failed to archive chat.'));
 		}
@@ -3058,13 +3058,13 @@
 		if (!id) return;
 
 		try {
-				const res = await deleteChatById(localStorage.token, id);
-				if (res) {
-					initNewChat();
-					await goto('/');
-					await refreshChatList(localStorage.token, { refreshPinned: true });
-					allTags.set(await getAllTags(localStorage.token));
-					toast.success($i18n.t('Chat deleted.'));
+			const res = await deleteChatById(localStorage.token, id);
+			if (res) {
+				initNewChat();
+				await goto('/');
+				await refreshChatList(localStorage.token, { refreshPinned: true });
+				allTags.set(await getAllTags(localStorage.token));
+				toast.success($i18n.t('Chat deleted.'));
 			}
 		} catch (error) {
 			console.error('Error deleting chat:', error);
@@ -3183,7 +3183,6 @@
 						}}
 						{history}
 						title={$chatTitle}
-						bind:selectedModels
 						shareEnabled={!!history.currentId}
 						{initNewChat}
 						scrollToTop={!isNearTop ? scrollToTop : null}
@@ -3214,12 +3213,12 @@
 									null
 								);
 
-									if (savedChat) {
-										temporaryChatEnabled.set(false);
-										chatId.set(savedChat.id);
-										await refreshChatList(localStorage.token);
+								if (savedChat) {
+									temporaryChatEnabled.set(false);
+									chatId.set(savedChat.id);
+									await refreshChatList(localStorage.token);
 
-										await goto(`/c/${savedChat.id}`);
+									await goto(`/c/${savedChat.id}`);
 									toast.success($i18n.t('Conversation saved successfully'));
 								}
 							} catch (error) {
@@ -3253,7 +3252,7 @@
 										setInputText={(text) => {
 											messageInput?.setText(text);
 										}}
-										{selectedModels}
+										bind:selectedModels
 										{atSelectedModel}
 										{sendMessage}
 										{showMessage}
@@ -3282,7 +3281,7 @@
 										bind:this={messageInput}
 										{history}
 										{taskIds}
-										{selectedModels}
+										bind:selectedModels
 										bind:files
 										bind:prompt
 										bind:autoScroll
@@ -3365,7 +3364,7 @@
 							<div class="flex items-center h-full">
 								<Placeholder
 									{history}
-									{selectedModels}
+									bind:selectedModels
 									bind:messageInput
 									bind:files
 									bind:prompt

@@ -21,7 +21,6 @@
 	import { goto } from '$app/navigation';
 
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
-	import ModelSelector from '../chat/ModelSelector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Menu from '$lib/components/layout/Navbar/Menu.svelte';
 	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
@@ -50,9 +49,7 @@
 
 	export let chat;
 	export let history;
-	export let selectedModels;
-	export let showModelSelector = true;
-
+	export let title = '';
 	export let onSaveTempChat: () => {};
 	export let archiveChatHandler: (id: string) => void;
 	export let deleteChatHandler: (id: string) => void;
@@ -117,18 +114,15 @@
 					</div>
 				{/if}
 
-				<div
-					class="flex-1 overflow-hidden max-w-full mt-0.5 py-0.5
-			{$showSidebar ? 'ml-1' : ''}
-			"
-				>
-					{#if showModelSelector}
-						<ModelSelector
-							bind:selectedModels
-							showSetDefault={!shareEnabled && !readOnly}
-							disabled={readOnly}
-							triggerClassName="text-[17px]"
-						/>
+				<div class="flex-1 overflow-hidden max-w-full mt-0.5 py-0.5 {$showSidebar ? 'ml-1' : ''}">
+					{#if chat?.id}
+						<button
+							type="button"
+							class="max-w-full truncate rounded-lg px-2 py-1 text-left text-[13px] font-medium text-gray-700 transition-colors duration-100 hover:bg-gray-50/40 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800/40 dark:hover:text-gray-100"
+							on:click={() => scrollToTop?.()}
+						>
+							{title || chat?.chat?.title || $i18n.t('New Chat')}
+						</button>
 					{/if}
 				</div>
 
