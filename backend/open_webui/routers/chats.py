@@ -51,6 +51,7 @@ SEARCH_FILTER_PREFIXES = ('tag:', 'folder:', 'pinned:', 'archived:', 'shared:')
 CHAT_CONFIG_KEYS = {
     'ENABLE_CONTEXT_COMPACTION': 'chat.context_compaction.enable',
     'CONTEXT_COMPACTION_TOKEN_THRESHOLD': 'chat.context_compaction.token_threshold',
+    'CONTEXT_COMPACTION_WINDOW_PERCENT': 'chat.context_compaction.window_percent',
     'CONTEXT_COMPACTION_PROMPT_TEMPLATE': 'chat.context_compaction.prompt_template',
 }
 
@@ -58,6 +59,10 @@ CHAT_CONFIG_KEYS = {
 class ChatConfigForm(BaseModel):
     ENABLE_CONTEXT_COMPACTION: bool
     CONTEXT_COMPACTION_TOKEN_THRESHOLD: int
+    # Percentage of the model's advertised context_window that triggers
+    # compaction; the absolute token threshold is the fallback for models
+    # that don't advertise a window.
+    CONTEXT_COMPACTION_WINDOW_PERCENT: int = 80
     CONTEXT_COMPACTION_PROMPT_TEMPLATE: str
 
 

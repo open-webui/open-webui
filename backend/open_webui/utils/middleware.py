@@ -77,7 +77,7 @@ from open_webui.utils.access_control import has_connection_access, has_permissio
 from open_webui.utils.access_control.files import get_accessible_folder_files
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.code_interpreter import execute_code_jupyter
-from open_webui.utils.context_compaction import compact_messages_for_request
+from open_webui.utils.context_compaction import compact_messages_for_request, schedule_auto_compaction
 from open_webui.utils.files import (
     convert_markdown_base64_images,
     get_file_url_from_base64,
@@ -3323,6 +3323,18 @@ async def background_tasks_handler(ctx):
                 assistant_message=ctx.get('assistant_message') or {},
                 messages=messages,
             )
+
+    # Auto-compaction (fire-and-forget): fold older context into a summary
+    # checkpoint once the completed response's usage crosses the threshold,
+    # so the next request doesn't pay the summarization latency inline.
+    try:
+        if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
+            compaction_models = {request.state.model['id']: request.state.model}
+        else:
+            compaction_models = request.app.state.MODELS
+        schedule_auto_compaction(request, user, metadata, form_data.get('model'), compaction_models)
+    except Exception:
+        log.exception('Failed to schedule auto-compaction')
 
 
 async def outlet_filter_handler(ctx):

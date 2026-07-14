@@ -40,6 +40,7 @@
 	let chatConfig = {
 		ENABLE_CONTEXT_COMPACTION: false,
 		CONTEXT_COMPACTION_TOKEN_THRESHOLD: 80000,
+		CONTEXT_COMPACTION_WINDOW_PERCENT: 80,
 		CONTEXT_COMPACTION_PROMPT_TEMPLATE: ''
 	};
 
@@ -234,6 +235,26 @@
 				</div>
 
 				{#if chatConfig.ENABLE_CONTEXT_COMPACTION}
+					<div class="mb-2.5">
+						<div class=" mb-1 text-xs font-medium">{$i18n.t('Context Window Percent')}</div>
+
+						<Tooltip
+							content={$i18n.t(
+								'Compaction triggers when usage exceeds this percentage of the model’s advertised context window. The token threshold below is the fallback for models without one.'
+							)}
+							placement="top-start"
+						>
+							<input
+								type="number"
+								min="1"
+								max="100"
+								step="1"
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								bind:value={chatConfig.CONTEXT_COMPACTION_WINDOW_PERCENT}
+							/>
+						</Tooltip>
+					</div>
+
 					<div class="mb-2.5">
 						<div class=" mb-1 text-xs font-medium">{$i18n.t('Token Threshold')}</div>
 

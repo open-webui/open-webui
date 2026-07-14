@@ -74,6 +74,7 @@
 
 	import {
 		archiveChatById,
+		compactChatById,
 		createNewChat,
 		deleteChatById,
 		getAllTags,
@@ -205,6 +206,62 @@
 	) {
 		thinkingEffort = null;
 	}
+
+	// Manual context compaction: the /compact command and the context-meter
+	// panel button both land here. Folds older messages into a hidden
+	// summary checkpoint server-side; the visible chat stays unchanged.
+	let compactingContext = false;
+	// Post-compaction context-size estimate for the meter, anchored to the
+	// message that was current when compaction ran. It stops applying as
+	// soon as the conversation moves on (the next response carries real
+	// usage that supersedes it).
+	let contextUsageEstimate: { tokens: number; anchorId: string | null } | null = null;
+	$: canCompact = !!$chatId && !$temporaryChatEnabled;
+	const compactChatHandler = async () => {
+		if (compactingContext) {
+			return;
+		}
+		if (!canCompact) {
+			toast.error($i18n.t('Context compaction is not available in temporary chats.'));
+			return;
+		}
+		if (generating || (history.currentId && history.messages[history.currentId]?.done !== true)) {
+			toast.error($i18n.t('Wait for the current response to finish before compacting.'));
+			return;
+		}
+		compactingContext = true;
+		const toastId = toast.loading($i18n.t('Compacting context...'));
+		try {
+			const res = await compactChatById(localStorage.token, $chatId).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+			if (res?.compacted) {
+				if (typeof res.estimated_context_tokens === 'number' && res.estimated_context_tokens > 0) {
+					contextUsageEstimate = {
+						tokens: res.estimated_context_tokens,
+						anchorId: history.currentId ?? null
+					};
+				}
+				toast.success(
+					$i18n.t('Context compacted: {{COUNT}} older messages folded into a summary.', {
+						COUNT: res.dropped_messages
+					})
+				);
+			} else if (res) {
+				if (res.reason === 'disabled') {
+					toast.error(
+						$i18n.t('Enable Context Compaction in Admin Settings > Interface first.')
+					);
+				} else {
+					toast.info($i18n.t('Nothing to compact yet.'));
+				}
+			}
+		} finally {
+			toast.dismiss(toastId);
+			compactingContext = false;
+		}
+	};
 	let webSearchActive = false;
 	let showWebSearchConfirm = false;
 	let pendingWebSearchPrompt: string | null = null;
@@ -2119,6 +2176,13 @@
 	//////////////////////////
 
 	const submitPrompt = async (inputContent, inputFiles) => {
+		// /compact: manual context compaction instead of a chat message.
+		if (typeof inputContent === 'string' && inputContent.trim().toLowerCase() === '/compact') {
+			prompt = '';
+			await compactChatHandler();
+			return;
+		}
+
 		const _files = structuredClone(inputFiles);
 
 		chatFiles.push(
@@ -3355,6 +3419,9 @@
 										{defaultThinkingEffort}
 										{availableThinkingEfforts}
 										{contextWindow}
+										{contextUsageEstimate}
+										{canCompact}
+										onCompact={compactChatHandler}
 										bind:atSelectedModel
 										bind:showCommands
 										bind:dragged
@@ -3442,6 +3509,9 @@
 									{defaultThinkingEffort}
 									{availableThinkingEfforts}
 									{contextWindow}
+									{contextUsageEstimate}
+									{canCompact}
+									onCompact={compactChatHandler}
 									bind:atSelectedModel
 									bind:showCommands
 									bind:dragged

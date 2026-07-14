@@ -95,6 +95,8 @@
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
+	import ConfirmDialog from '../common/ConfirmDialog.svelte';
+	import ChartDonut from '../admin/Analytics/ChartDonut.svelte';
 
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
@@ -163,6 +165,16 @@
 	// Context window (tokens) the provider advertises for the selected model:
 	// null = unknown, the context meter stays hidden.
 	export let contextWindow: number | null = null;
+	// Post-compaction size estimate (from Chat.svelte): shown as ~% until the
+	// conversation moves past its anchor message and real usage supersedes it.
+	export let contextUsageEstimate: { tokens: number; anchorId: string | null } | null = null;
+	// Manual compaction hook (wired by Chat.svelte); false/null hides the
+	// "Compact context" button in the meter panel (e.g. temporary chats).
+	export let canCompact = false;
+	export let onCompact: (() => Promise<void>) | null = null;
+
+	let showContextMenu = false;
+	let showCompactConfirm = false;
 
 	// Context occupancy, Claude Code style: the last completed assistant
 	// response on the current branch resent the whole conversation, so its
@@ -187,6 +199,67 @@
 		}
 		return null;
 	})();
+
+	// After a manual compaction the last response's usage still describes the
+	// pre-compaction context; prefer the backend's estimate until the
+	// conversation moves on (anchor = currentId at compaction time).
+	$: displayedContextUsage = (() => {
+		if (!contextWindow) {
+			return null;
+		}
+		if (
+			contextUsageEstimate &&
+			contextUsageEstimate.tokens > 0 &&
+			history?.currentId === contextUsageEstimate.anchorId
+		) {
+			return {
+				used: contextUsageEstimate.tokens,
+				percent: Math.min(100, (contextUsageEstimate.tokens / contextWindow) * 100),
+				estimated: true
+			};
+		}
+		return contextUsage ? { ...contextUsage, estimated: false } : null;
+	})();
+
+	// Whole-session token totals (every response in the chat, all branches),
+	// split into non-overlapping buckets (cached ⊂ input, reasoning ⊂ output).
+	$: sessionUsage = (() => {
+		const totals = { input: 0, cached: 0, output: 0, reasoning: 0, total: 0 };
+		for (const id of Object.keys(history?.messages ?? {})) {
+			const m = history.messages[id];
+			if (m?.role !== 'assistant' || !m?.usage) {
+				continue;
+			}
+			const { input, output, cached, reasoning } = getUsageTokens(m.usage);
+			const cachedPart = Math.min(cached, input);
+			const reasoningPart = Math.min(reasoning, output);
+			totals.input += Math.max(0, input - cachedPart);
+			totals.cached += cachedPart;
+			totals.output += Math.max(0, output - reasoningPart);
+			totals.reasoning += reasoningPart;
+			totals.total += input + output;
+		}
+		return totals;
+	})();
+
+	$: contextSlices = [
+		{ label: $i18n.t('Input'), value: sessionUsage.input, color: '#2a78d6', colorDark: '#3987e5' },
+		{ label: $i18n.t('Cached'), value: sessionUsage.cached, color: '#10b981', colorDark: '#34d399' },
+		{ label: $i18n.t('Output'), value: sessionUsage.output, color: '#f59e0b', colorDark: '#fbbf24' },
+		{
+			label: $i18n.t('Reasoning'),
+			value: sessionUsage.reasoning,
+			color: '#8b5cf6',
+			colorDark: '#a78bfa'
+		}
+	].filter((slice) => slice.value > 0);
+
+	const formatCompactTokens = (n: number) =>
+		n >= 1_000_000
+			? `${(n / 1_000_000).toFixed(1)}M`
+			: n >= 1_000
+				? `${(n / 1_000).toFixed(1)}k`
+				: `${n}`;
 
 	export let pendingOAuthTools = [];
 
@@ -1250,6 +1323,18 @@
 	onSave={inputVariablesModalCallback}
 />
 
+<ConfirmDialog
+	bind:show={showCompactConfirm}
+	title={$i18n.t('Compact context?')}
+	message={$i18n.t(
+		'Older messages will be folded into a hidden summary that the model keeps as context. Your visible chat history stays unchanged; upcoming responses will use the summary instead of the full history.'
+	)}
+	confirmLabel={$i18n.t('Compact')}
+	on:confirm={() => {
+		onCompact?.();
+	}}
+/>
+
 <ValvesModal
 	bind:show={showValvesModal}
 	userValves={true}
@@ -2191,33 +2276,93 @@
 											{/if}
 
 											<!-- Context-window meter (hidden until a response reports usage, or
-											     when the model doesn't advertise a context_window) -->
-											{#if contextUsage && contextWindow}
-												<Tooltip
-													content={`${$i18n.t('Context')}: ${contextUsage.used.toLocaleString()} / ${contextWindow.toLocaleString()} ${$i18n.t('tokens')}`}
-													placement="top"
-													className="flex items-center"
-												>
-													<div class="flex items-center gap-1.5 px-1.5 self-center cursor-default">
-														<div
-															class="w-12 h-1 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden"
+											     when the model doesn't advertise a context_window). Click opens
+											     the session token-distribution panel with a manual compact action.
+											     After a manual compaction the bar shows the backend's ~estimate
+											     until the next response reports real usage. -->
+											{#if displayedContextUsage && contextWindow}
+												<div class="flex items-center">
+													<Dropdown bind:show={showContextMenu} align="end">
+														<Tooltip
+															content={`${$i18n.t('Context')}${
+																displayedContextUsage.estimated
+																	? ` (${$i18n.t('estimated')})`
+																	: ''
+															}: ${displayedContextUsage.used.toLocaleString()} / ${contextWindow.toLocaleString()} ${$i18n.t('tokens')}`}
+															placement="top"
 														>
+															<button
+																type="button"
+																id="context-window-button"
+																class="flex items-center gap-1.5 px-1.5 py-2 self-center rounded-full cursor-pointer transition hover:bg-gray-50 dark:hover:bg-gray-800/50"
+															>
+																<div
+																	class="w-12 h-1 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden"
+																>
+																	<div
+																		class="h-full rounded-full {displayedContextUsage.percent >= 90
+																			? 'bg-red-500'
+																			: displayedContextUsage.percent >= 75
+																				? 'bg-amber-500'
+																				: 'bg-gray-500 dark:bg-gray-400'}"
+																		style="width: {Math.max(2, displayedContextUsage.percent)}%"
+																	></div>
+																</div>
+																<span
+																	class="text-[11px] font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap"
+																>
+																	{displayedContextUsage.estimated ? '~' : ''}{displayedContextUsage.percent <
+																	1
+																		? '<1'
+																		: Math.round(displayedContextUsage.percent)}%
+																</span>
+															</button>
+														</Tooltip>
+
+														<div slot="content">
 															<div
-																class="h-full rounded-full {contextUsage.percent >= 90
-																	? 'bg-red-500'
-																	: contextUsage.percent >= 75
-																		? 'bg-amber-500'
-																		: 'bg-gray-500 dark:bg-gray-400'}"
-																style="width: {Math.max(2, contextUsage.percent)}%"
-															></div>
+																class="w-72 rounded-2xl px-3.5 py-3 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+															>
+																<div class="text-xs font-medium mb-2.5">
+																	{$i18n.t('Session Token Usage')}
+																</div>
+
+																<ChartDonut
+																	data={contextSlices}
+																	centerValue={formatCompactTokens(sessionUsage.total)}
+																	centerLabel={$i18n.t('tokens')}
+																	valueFormatter={(value) => value.toLocaleString()}
+																/>
+
+																<div class="mt-2.5 text-xs text-gray-500 dark:text-gray-400">
+																	{$i18n.t('Context')}: {displayedContextUsage.estimated
+																		? '~'
+																		: ''}{displayedContextUsage.used.toLocaleString()} / {contextWindow.toLocaleString()}
+																	{$i18n.t('tokens')} ({displayedContextUsage.percent < 1
+																		? '<1'
+																		: Math.round(displayedContextUsage.percent)}%)
+																</div>
+
+																{#if canCompact && onCompact}
+																	<div
+																		class="mt-2.5 pt-2.5 border-t border-gray-100 dark:border-gray-800"
+																	>
+																		<button
+																			type="button"
+																			class="flex w-full justify-center items-center gap-2 px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+																			on:click={() => {
+																				showContextMenu = false;
+																				showCompactConfirm = true;
+																			}}
+																		>
+																			{$i18n.t('Compact context')}
+																		</button>
+																	</div>
+																{/if}
+															</div>
 														</div>
-														<span
-															class="text-[11px] font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap"
-														>
-															{contextUsage.percent < 1 ? '<1' : Math.round(contextUsage.percent)}%
-														</span>
-													</div>
-												</Tooltip>
+													</Dropdown>
+												</div>
 											{/if}
 
 											<!-- Terminal Server Selector -->

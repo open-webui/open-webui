@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any
@@ -53,7 +54,7 @@ async def compact_messages_for_request(
         return messages, None, False
 
     messages, previous_summary = _apply_latest_summary_checkpoint(messages)
-    token_threshold = _resolve_token_threshold(config['token_threshold'], metadata)
+    token_threshold = _resolve_token_threshold(config, metadata, (models or {}).get(model_id))
     if not _exceeds_token_threshold(messages, system_prompt, previous_summary, token_threshold) or len(messages) <= 3:
         return messages, previous_summary, False
 
@@ -159,8 +160,20 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
     if len(messages) <= 2:
         return {'ok': True, 'compacted': False, 'reason': 'too_short'}
 
-    compacted_messages = messages[:-1]
-    recent_messages = messages[-1:]
+    # Anchor the checkpoint on the branch's last user message so the next
+    # request still starts with a user turn (Anthropic rejects an
+    # assistant-first messages array); the [user, assistant] tail stays
+    # verbatim and the summary covers everything before it.
+    boundary = next(
+        (idx for idx in range(len(messages) - 1, -1, -1) if messages[idx].get('role') == 'user'),
+        None,
+    )
+    if not boundary:  # absent, or 0 (nothing before it to fold)
+        return {'ok': True, 'compacted': False, 'reason': 'too_short'}
+    checkpoint_message_id = messages[boundary].get('id') or current_id
+
+    compacted_messages = messages[:boundary]
+    recent_messages = messages[boundary:]
     summary = await _generate_summary(
         request,
         user,
@@ -171,7 +184,7 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
         previous_summary,
         config['prompt_template'],
     )
-    await Chats.upsert_message_to_chat_by_id_and_message_id(chat.id, current_id, {'contextSummary': summary})
+    await Chats.upsert_message_to_chat_by_id_and_message_id(chat.id, checkpoint_message_id, {'contextSummary': summary})
 
     return {
         'ok': True,
@@ -179,20 +192,145 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
         'dropped_messages': len(compacted_messages),
         'kept_messages': len(recent_messages),
         'summary_chars': len(summary),
+        # Rough size of the next request's context (summary + kept messages,
+        # excluding the system prompt): lets the UI update its meter
+        # immediately; the next response's real usage corrects it.
+        'estimated_context_tokens': _estimate_tokens(summary) + _estimate_messages_tokens(recent_messages),
     }
+
+
+# Chats with a background compaction in flight (single-flight guard), plus
+# strong references to the fire-and-forget tasks so they aren't GC'd mid-run.
+_background_compactions: set[str] = set()
+_background_tasks: set[asyncio.Task] = set()
+
+
+def schedule_auto_compaction(request, user, metadata: dict, model_id: str | None, models: dict) -> None:
+    """Fire-and-forget entry point called after a response completes.
+
+    Never blocks the caller and never raises: if the completed response's
+    usage crossed the threshold, a background task folds everything before
+    the current turn into a contextSummary checkpoint. If the user sends
+    another message before the task lands, that request simply uses the
+    full history one more time.
+    """
+    chat_id = metadata.get('chat_id') or ''
+    if (
+        not model_id
+        or not chat_id
+        or not metadata.get('message_id')
+        or not metadata.get('user_message_id')
+        or chat_id.startswith(('local:', 'channel:'))
+        or chat_id in _background_compactions
+    ):
+        return
+
+    task = asyncio.create_task(_auto_compact_after_response(request, user, metadata, model_id, models))
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
+
+async def _auto_compact_after_response(request, user, metadata: dict, model_id: str, models: dict) -> None:
+    chat_id = metadata['chat_id']
+    if chat_id in _background_compactions:
+        return
+    _background_compactions.add(chat_id)
+    try:
+        config = await _load_config()
+        if not config['enable']:
+            return
+
+        messages_map = await Chats.get_messages_map_by_chat_id(chat_id)
+        if not messages_map:
+            return
+        chain = get_message_list(messages_map, metadata['message_id'])
+        if not chain:
+            return
+
+        messages, previous_summary = _apply_latest_summary_checkpoint(chain)
+        # Nothing to fold below the current [user, assistant] turn.
+        if len(messages) <= 3:
+            return
+
+        # Occupancy is the completed response's usage: its prompt tokens
+        # resent the whole (possibly already spliced) conversation, so they
+        # ARE the context occupancy. No usage -> the synchronous estimate
+        # path in compact_messages_for_request remains the safety net.
+        usage = messages[-1].get('usage') or (messages[-1].get('info') or {}).get('usage')
+        if not isinstance(usage, dict) or not usage.get('input_tokens'):
+            return
+        occupancy = int(usage.get('input_tokens') or 0) + int(usage.get('output_tokens') or 0)
+
+        threshold = _resolve_token_threshold(config, metadata, (models or {}).get(model_id))
+        if occupancy < threshold:
+            return
+
+        # Checkpoint on the current turn's user message: the summary covers
+        # everything strictly before it, the turn itself stays verbatim.
+        boundary = next(
+            (idx for idx, m in enumerate(messages) if m.get('id') == metadata['user_message_id']),
+            None,
+        )
+        if not boundary:  # absent, or 0 (nothing before it)
+            return
+        compacted_messages = messages[:boundary]
+        recent_messages = messages[boundary:]
+
+        summary = await _generate_summary(
+            request,
+            user,
+            model_id,
+            models,
+            compacted_messages,
+            recent_messages,
+            previous_summary,
+            config['prompt_template'],
+        )
+        await Chats.upsert_message_to_chat_by_id_and_message_id(
+            chat_id,
+            metadata['user_message_id'],
+            {'contextSummary': summary},
+        )
+        log.info(
+            'Auto-compacted chat=%s checkpoint=%s occupancy=%d threshold=%d dropped=%d kept=%d summary_chars=%d',
+            chat_id,
+            metadata['user_message_id'],
+            occupancy,
+            threshold,
+            len(compacted_messages),
+            len(recent_messages),
+            len(summary),
+        )
+    except Exception:
+        log.exception('Background auto-compaction failed for chat=%s', chat_id)
+    finally:
+        _background_compactions.discard(chat_id)
 
 
 async def _load_config() -> dict:
     values = await Config.get_many(
         'chat.context_compaction.enable',
         'chat.context_compaction.token_threshold',
+        'chat.context_compaction.window_percent',
         'chat.context_compaction.prompt_template',
     )
     return {
         'enable': bool(values.get('chat.context_compaction.enable', False)),
         'token_threshold': int(values.get('chat.context_compaction.token_threshold', 80000) or 80000),
+        'window_percent': int(values.get('chat.context_compaction.window_percent', 80) or 80),
         'prompt_template': values.get('chat.context_compaction.prompt_template', '') or '',
     }
+
+
+def get_model_context_window(model: dict | None) -> int | None:
+    """Read the `context_window` vendor extension a provider may attach to
+    its /v1/models entries (window size in tokens). Returns None when the
+    model doesn't advertise one — fall back to the absolute token threshold
+    then, never guess."""
+    if not isinstance(model, dict):
+        return None
+    ctx = model.get('context_window') or (model.get('openai') or {}).get('context_window')
+    return ctx if isinstance(ctx, int) and ctx > 0 else None
 
 
 def _parse_positive_int(value: Any) -> int | None:
@@ -203,7 +341,16 @@ def _parse_positive_int(value: Any) -> int | None:
     return parsed if parsed > 0 else None
 
 
-def _resolve_token_threshold(global_threshold: int, metadata: dict) -> int:
+def _resolve_token_threshold(config: dict, metadata: dict, model: dict | None) -> int:
+    """Effective compaction threshold in tokens: a percentage of the model's
+    advertised context_window when known, else the absolute token_threshold
+    config. A per-chat compact_token_threshold param can only tighten it."""
+    window = get_model_context_window(model)
+    if window:
+        global_threshold = max(1, window * config['window_percent'] // 100)
+    else:
+        global_threshold = config['token_threshold']
+
     configured_threshold = _parse_positive_int((metadata.get('params') or {}).get('compact_token_threshold'))
     if configured_threshold is None:
         return global_threshold
