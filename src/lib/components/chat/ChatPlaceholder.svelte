@@ -76,8 +76,8 @@
 				className="w-full flex justify-start mb-0.5"
 				placement="top"
 			>
-				<div class="flex items-center gap-2 text-gray-500 text-lg mt-2 w-fit">
-					<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
+				<div class="flex items-center gap-1.5 text-gray-500 text-xs mt-1 w-fit">
+					<EyeSlash strokeWidth="2" className="size-3.5" />{$i18n.t('Temporary Chat')}
 				</div>
 			</Tooltip>
 		{/if}

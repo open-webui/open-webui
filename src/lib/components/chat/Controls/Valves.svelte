@@ -148,7 +148,7 @@
 				<div class="flex gap-2">
 					<div class="flex-1">
 						<select
-							class="w-full h-[1.6875rem] rounded-xl text-xs px-2 bg-transparent outline-hidden"
+							class="w-full rounded-sm py-1 px-1 text-xs bg-transparent outline-hidden"
 							bind:value={tab}
 							placeholder={$i18n.t('Select')}
 						>
@@ -161,7 +161,7 @@
 
 					<div class="flex-1">
 						<select
-							class="w-full h-[1.6875rem] rounded-xl px-2 text-xs bg-transparent outline-hidden"
+							class="w-full rounded-sm py-1 px-1 text-xs bg-transparent outline-hidden"
 							bind:value={selectedId}
 							on:change={async () => {
 								await tick();

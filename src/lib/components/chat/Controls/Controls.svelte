@@ -30,7 +30,7 @@
 	let showAdvancedParams = getOpen('advancedParams');
 
 	const compactSectionButtonClass =
-		'w-full h-8 px-2.5 rounded-xl text-[13px] font-normal text-gray-600 hover:bg-gray-50/40 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800/40 dark:hover:text-gray-100 transition cursor-pointer select-none';
+		'w-full py-1 text-xs font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition cursor-pointer select-none';
 </script>
 
 <div class=" dark:text-white">
@@ -50,13 +50,15 @@
 	{/if}
 
 	{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
-		<div class=" dark:text-gray-200 text-sm py-0.5 px-0.5">
+		<div class="space-y-1 dark:text-gray-200 text-sm py-0.5 px-0.5">
 			{#if chatFiles.length > 0}
 				<Collapsible
 					title={$i18n.t('Files')}
 					bind:open={showFiles}
 					onChange={setOpen('files')}
 					buttonClassName="w-full"
+					chevronClassName="size-2.5"
+					chevronStrokeWidth="2"
 				>
 					<div class="flex flex-col gap-1 mt-1.5" slot="content">
 						{#each chatFiles as file, fileIdx}
@@ -91,8 +93,10 @@
 					onChange={setOpen('valves')}
 					title={$i18n.t('Valves')}
 					buttonClassName={compactSectionButtonClass}
+					chevronClassName="size-2.5"
+					chevronStrokeWidth="2"
 				>
-					<div class="px-2 pt-1 text-sm" slot="content">
+					<div class="pt-1 pb-1 text-xs" slot="content">
 						<Valves show={showValves} />
 					</div>
 				</Collapsible>
@@ -104,11 +108,13 @@
 					bind:open={showSystemPrompt}
 					onChange={setOpen('systemPrompt')}
 					buttonClassName={compactSectionButtonClass}
+					chevronClassName="size-2.5"
+					chevronStrokeWidth="2"
 				>
-					<div class="px-2 pt-1" slot="content">
+					<div class="pt-1 pb-1" slot="content">
 						<textarea
 							bind:value={params.system}
-							class="w-full text-sm outline-hidden resize-vertical {$settings.highContrastMode
+							class="w-full text-xs outline-hidden resize-vertical {$settings.highContrastMode
 								? 'border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 px-2 py-1.5'
 								: 'py-1 bg-transparent'}"
 							rows="3"
@@ -124,8 +130,10 @@
 					bind:open={showAdvancedParams}
 					onChange={setOpen('advancedParams')}
 					buttonClassName={compactSectionButtonClass}
+					chevronClassName="size-2.5"
+					chevronStrokeWidth="2"
 				>
-					<div class="px-2 pt-1 text-sm" slot="content">
+					<div class="pt-1 pb-1 text-xs" slot="content">
 						<div>
 							<AdvancedParams admin={$user?.role === 'admin'} custom={true} bind:params />
 						</div>

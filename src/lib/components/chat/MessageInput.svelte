@@ -2013,7 +2013,7 @@
 								</div>
 
 								<div class="self-end flex space-x-1 mr-1 shrink-0 gap-[0.5px]">
-									<div class="-mr-1 flex min-w-0 max-w-[10rem] items-center sm:max-w-[13rem]">
+									<div class="-mr-[0.5px] flex min-w-0 max-w-[10rem] items-center sm:max-w-[13rem]">
 										<ModelSelector
 											bind:selectedModels
 											showSetDefault={!history?.currentId}

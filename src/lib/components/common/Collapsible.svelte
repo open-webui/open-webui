@@ -45,6 +45,8 @@
 	export let id = '';
 	export let title = null;
 	export let attributes = null;
+	export let chevronClassName = 'size-3';
+	export let chevronStrokeWidth = '2.75';
 
 	export let chevron = false;
 	export let grow = false;
@@ -119,9 +121,9 @@
 				{#if !disabled}
 					<div class="flex self-center translate-y-[1px]">
 						{#if open}
-							<ChevronUp strokeWidth="2.75" className="size-3" />
+							<ChevronUp strokeWidth={chevronStrokeWidth} className={chevronClassName} />
 						{:else}
-							<ChevronDown strokeWidth="2.75" className="size-3" />
+							<ChevronDown strokeWidth={chevronStrokeWidth} className={chevronClassName} />
 						{/if}
 					</div>
 				{/if}
@@ -144,9 +146,9 @@
 					{#if chevron}
 						<div class="flex self-start translate-y-1">
 							{#if open}
-								<ChevronUp strokeWidth="2.75" className="size-3" />
+								<ChevronUp strokeWidth={chevronStrokeWidth} className={chevronClassName} />
 							{:else}
-								<ChevronDown strokeWidth="2.75" className="size-3" />
+								<ChevronDown strokeWidth={chevronStrokeWidth} className={chevronClassName} />
 							{/if}
 						</div>
 					{/if}
