@@ -3149,6 +3149,7 @@ async def background_tasks_handler(ctx):
                                 {
                                     'followUps': follow_ups,
                                 },
+                                touch=False,
                             )
 
                     except Exception as e:

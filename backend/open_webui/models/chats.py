@@ -482,6 +482,8 @@ class ChatTable:
         id: str,
         chat: dict,
         db: AsyncSession | None = None,
+        *,
+        touch: bool = True,
     ) -> ChatModel | None:
         """Persist updated chat content, sanitizing null bytes."""
         try:  # load the chat record for in-place mutation
@@ -493,7 +495,8 @@ class ChatTable:
                 chat_item.chat = self._clean_null_bytes(chat)
                 chat_item.title = self._clean_null_bytes(chat['title']) if 'title' in chat else 'New Chat'
 
-                chat_item.updated_at = int(time.time())
+                if touch:
+                    chat_item.updated_at = int(time.time())
 
                 await session.commit()
 
@@ -724,7 +727,7 @@ class ChatTable:
         return chat.chat.get('history', {}).get('messages', {}).get(message_id, {})
 
     async def upsert_message_to_chat_by_id_and_message_id(
-        self, id: str, message_id: str, message: dict
+        self, id: str, message_id: str, message: dict, *, touch: bool = True
     ) -> ChatModel | None:
         chat = await self.get_chat_by_id(id)
         if chat is None:
@@ -793,7 +796,7 @@ class ChatTable:
         except Exception as e:
             log.warning(f'Failed to write to chat_message table: {e}')
 
-        return await self.update_chat_by_id(id, chat)
+        return await self.update_chat_by_id(id, chat, touch=touch)
 
     async def delete_message_from_chat_by_id_and_message_id(self, id: str, message_id: str) -> ChatModel | None:
         chat_model = await self.get_chat_by_id(id)
