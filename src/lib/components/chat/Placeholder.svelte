@@ -93,9 +93,7 @@
 		</Tooltip>
 	{/if}
 
-	<div
-		class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 "
-	>
+	<div class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4">
 		<div class="w-full flex flex-col justify-center items-center">
 			{#if $selectedFolder}
 				<FolderTitle
@@ -146,7 +144,7 @@
 					</div>
 
 					<div
-						class=" text-3xl @sm:text-3xl line-clamp-1 flex items-center"
+						class=" text-2xl @sm:text-2xl line-clamp-1 flex items-center"
 						in:fade={{ duration: 100 }}
 					>
 						{#if models[selectedModelIdx]?.name}
@@ -249,14 +247,11 @@
 	</div>
 
 	{#if $selectedFolder}
-		<div
-			class="mx-auto px-4 md:max-w-3xl md:px-6  min-h-62"
-			in:fade={{ duration: 200, delay: 200 }}
-		>
+		<div class="mx-auto px-4 md:max-w-3xl md:px-6 min-h-62" in:fade={{ duration: 200, delay: 200 }}>
 			<FolderPlaceholder folder={$selectedFolder} />
 		</div>
 	{:else}
-		<div class="mx-auto max-w-2xl  mt-2" in:fade={{ duration: 200, delay: 200 }}>
+		<div class="mx-auto max-w-2xl mt-2" in:fade={{ duration: 200, delay: 200 }}>
 			<div class="mx-5">
 				<Suggestions
 					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
