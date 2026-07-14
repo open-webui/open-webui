@@ -62,7 +62,7 @@
 		[key: string]: any;
 	}[] = [];
 
-	export let className = 'w-[22rem]';
+	export let className = 'w-[20rem]';
 	export let triggerClassName = 'text-lg';
 	export let placement: 'top' | 'bottom' | 'auto' = 'bottom';
 	export let align: 'start' | 'end' = 'start';
@@ -74,8 +74,7 @@
 	let show = false;
 	let triggerElement: HTMLElement | null = null;
 	let contentElement: HTMLElement | null = null;
-	let dropdownPosition = { top: 0, left: 0, width: 0 };
-	const fullWidthBreakpoint = 640;
+	let dropdownPosition = { top: 0, left: 0 };
 
 	const portal = (node: HTMLElement) => {
 		document.body.appendChild(node);
@@ -94,7 +93,8 @@
 		const contentHeight = contentRect?.height ?? 0;
 		const spaceBelow = window.innerHeight - rect.bottom - 8;
 		const spaceAbove = rect.top - 8;
-		const fullWidth = window.innerWidth < fullWidthBreakpoint;
+		const preferredLeft = align === 'end' && contentWidth ? rect.right - contentWidth : rect.left;
+		const maxLeft = contentWidth ? window.innerWidth - contentWidth - 8 : preferredLeft;
 		const resolvedPlacement =
 			placement === 'auto'
 				? contentHeight && spaceBelow < contentHeight && spaceAbove > spaceBelow
@@ -106,8 +106,7 @@
 				resolvedPlacement === 'top' && contentHeight
 					? rect.top - contentHeight - 2
 					: rect.bottom + 2,
-			left: fullWidth ? 8 : align === 'end' && contentWidth ? rect.right - contentWidth : rect.left,
-			width: fullWidth ? window.innerWidth - 16 : 0
+			left: Math.max(8, Math.min(preferredLeft, maxLeft))
 		};
 	};
 
@@ -650,14 +649,10 @@
 		<div
 			use:portal
 			bind:this={contentElement}
-			style="position: fixed; z-index: 9999; top: {dropdownPosition.top}px; left: {dropdownPosition.left}px;{dropdownPosition.width
-				? ` width: ${dropdownPosition.width}px;`
-				: ''}"
+			style="position: fixed; z-index: 9999; top: {dropdownPosition.top}px; left: {dropdownPosition.left}px;"
 		>
 			<div
-				class="z-40 {dropdownPosition.width
-					? `w-full`
-					: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl border border-gray-100 bg-white p-0.5 shadow-lg outline-hidden dark:border-gray-800 dark:bg-gray-850 dark:text-white"
+				class="z-40 {className} max-w-[calc(100vw-1rem)] justify-start rounded-xl border border-gray-100 bg-white p-0.5 shadow-lg outline-hidden dark:border-gray-800 dark:bg-gray-850 dark:text-white"
 				transition:flyAndScale
 			>
 				<slot>
@@ -897,6 +892,7 @@
 					<div class="hidden w-[28rem]" />
 					<div class="hidden w-[24rem]" />
 					<div class="hidden w-[22rem]" />
+					<div class="hidden w-[20rem]" />
 				</slot>
 			</div>
 		</div>
