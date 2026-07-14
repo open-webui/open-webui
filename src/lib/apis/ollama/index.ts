@@ -524,3 +524,31 @@ export const uploadModel = async (token: string, file: File, urlIdx: string | nu
 // 		})
 // 	});
 // };
+
+export const getOllamaModelInfo = async (token: string = '', name: string) => {
+	let error = null;
+
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/show`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ name })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
