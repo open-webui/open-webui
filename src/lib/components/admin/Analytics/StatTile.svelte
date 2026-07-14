@@ -41,7 +41,7 @@
 			>
 				<slot name="icon" />
 			</div>
-			<span class="text-[11px] font-medium text-gray-500 dark:text-gray-400 truncate">{label}</span>
+			<span class="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">{label}</span>
 		</div>
 		{#if delta !== null && isFinite(delta)}
 			<Tooltip content={$i18n.t('vs previous period')}>

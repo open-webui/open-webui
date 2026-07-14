@@ -154,7 +154,7 @@
 				{/if}
 			</div>
 		</div>
-		<div class="flex-1 min-w-0 flex flex-col gap-1 text-xs">
+		<div class="flex-1 min-w-0 flex flex-col gap-1 {small ? 'text-xs' : 'text-sm'}">
 			{#each slices as slice, idx}
 				<div class="flex items-center gap-2 min-w-0">
 					<span

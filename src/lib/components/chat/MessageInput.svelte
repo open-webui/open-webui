@@ -2318,7 +2318,7 @@
 
 														<div slot="content">
 															<div
-																class="w-72 rounded-2xl px-3.5 py-3 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+																class="w-96 max-w-[calc(100vw-2rem)] rounded-2xl px-4 py-3 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 															>
 																<div class="text-xs font-medium mb-2.5">
 																	{$i18n.t('Session Token Usage')}

@@ -130,13 +130,13 @@
 			<tbody>
 				{#each sortedUsers as user, idx (user.user_id)}
 					<tr
-						class="bg-white dark:bg-gray-900 text-xs hover:bg-gray-50 dark:hover:bg-gray-850/50 transition"
+						class="bg-white dark:bg-gray-900 text-sm hover:bg-gray-50 dark:hover:bg-gray-850/50 transition"
 					>
 						<td class="px-3 py-1.5 font-medium text-gray-900 dark:text-white">
 							{idx + 1}
 						</td>
 						<td class="px-3 py-1.5">
-							<span class="font-medium text-gray-800 dark:text-gray-200 font-mono text-xs">
+							<span class="font-medium text-gray-800 dark:text-gray-200 font-mono text-sm">
 								{user.user_id.substring(0, 8)}...
 							</span>
 						</td>

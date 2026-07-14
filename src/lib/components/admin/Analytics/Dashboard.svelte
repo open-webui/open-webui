@@ -55,7 +55,7 @@
 	// Shared card shell for every dashboard panel
 	const CARD =
 		'rounded-2xl border border-gray-100 dark:border-gray-850 bg-gray-50/50 dark:bg-gray-850/30 p-4 min-w-0';
-	const CARD_TITLE = 'text-xs font-medium text-gray-700 dark:text-gray-200';
+	const CARD_TITLE = 'text-sm font-medium text-gray-700 dark:text-gray-200';
 
 	// Token-kind colors: input/cached share a hue (cached = lighter step of
 	// the same ramp), output is distinct
@@ -662,7 +662,7 @@
 			<div class={CARD}>
 				<div class="flex items-center justify-between gap-2 mb-3">
 					<div class={CARD_TITLE}>{$i18n.t('Token Breakdown')}</div>
-					<div class="flex gap-2.5 text-[10px] text-gray-400">
+					<div class="flex gap-2.5 text-xs text-gray-400">
 						<span class="flex items-center gap-1">
 							<span class="size-1.5 rounded-full" style="background-color: {KIND_COLORS.input}"
 							></span>{$i18n.t('Input')}
@@ -683,7 +683,7 @@
 							{@const uncached = Math.max(0, m.input_tokens - m.cached_tokens)}
 							{@const kindTotal = Math.max(1, uncached + m.cached_tokens + m.output_tokens)}
 							<div class="min-w-0">
-								<div class="flex items-center gap-2 text-xs mb-1 min-w-0">
+								<div class="flex items-center gap-2 text-sm mb-1 min-w-0">
 									<span
 										class="size-1.5 rounded-full shrink-0"
 										style="background-color: {modelColorMap.get(m.model_id) || OTHER_COLOR}"
@@ -776,7 +776,7 @@
 					<div class={CARD_TITLE}>
 						{selectedPeriod === '24h' ? $i18n.t('Hourly Usage') : $i18n.t('Daily Usage')}
 					</div>
-					<div class="flex gap-0.5 p-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-[10px]">
+					<div class="flex gap-0.5 p-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-xs">
 						{#each metricOptions as option}
 							<button
 								class="px-2.5 py-1 rounded-full transition font-medium {dailyMetric === option.value
@@ -872,7 +872,7 @@
 							{@const pct = totalModelMessages > 0 ? (model.count / totalModelMessages) * 100 : 0}
 							{@const modelTokens = tokenStats[modelKey(model.model_id, model.base_model_id)]}
 							<tr
-								class="text-xs cursor-pointer hover:bg-gray-100/60 dark:hover:bg-gray-850/60 transition-colors"
+								class="text-sm cursor-pointer hover:bg-gray-100/60 dark:hover:bg-gray-850/60 transition-colors"
 								on:click={() => {
 									selectedModel = { id: model.model_id, name: model.name };
 									showModelModal = true;
@@ -908,7 +908,7 @@
 								<td class="px-3 py-1.5 text-right tabular-nums">
 									<div>{formatNumber(modelTokens?.input_tokens ?? 0)}</div>
 									{#if modelTokens?.cost_breakdown?.input != null}
-										<div class="text-[10px] text-gray-400">
+										<div class="text-[11px] text-gray-400">
 											~{formatCost(modelTokens.cost_breakdown.input, costCurrency)}
 										</div>
 									{/if}
@@ -916,7 +916,7 @@
 								<td class="px-3 py-1.5 text-right tabular-nums">
 									<div>{formatNumber(modelTokens?.cached_tokens ?? 0)}</div>
 									{#if modelTokens?.cost_breakdown?.cached != null}
-										<div class="text-[10px] text-gray-400">
+										<div class="text-[11px] text-gray-400">
 											~{formatCost(modelTokens.cost_breakdown.cached, costCurrency)}
 										</div>
 									{/if}
@@ -924,7 +924,7 @@
 								<td class="px-3 py-1.5 text-right tabular-nums">
 									<div>{formatNumber(modelTokens?.output_tokens ?? 0)}</div>
 									{#if modelTokens?.cost_breakdown?.output != null}
-										<div class="text-[10px] text-gray-400">
+										<div class="text-[11px] text-gray-400">
 											~{formatCost(modelTokens.cost_breakdown.output, costCurrency)}
 										</div>
 									{/if}
@@ -991,7 +991,7 @@
 									<div class="text-sm font-medium text-gray-900 dark:text-white truncate">
 										{user.name || user.email || user.user_id.substring(0, 8)}
 									</div>
-									<div class="text-[11px] text-gray-400 truncate">
+									<div class="text-xs text-gray-400 truncate">
 										{user.count.toLocaleString()}
 										{$i18n.t('messages')} · {formatNumber(user.total_tokens ?? 0)}
 										{$i18n.t('tokens')}
@@ -1001,80 +1001,89 @@
 									<div class="text-sm font-semibold text-gray-900 dark:text-white tabular-nums">
 										{user.cost != null ? `~${formatCost(user.cost, costCurrency)}` : '—'}
 									</div>
-									<div class="text-[10px] text-gray-400">{$i18n.t('cost')}</div>
+									<div class="text-xs text-gray-400">{$i18n.t('cost')}</div>
 								</div>
 							</div>
 							{#if (user.models ?? []).length > 0}
-								<div class="overflow-x-auto scrollbar-hidden">
-									<div class="min-w-[640px]">
-										<div
-											class="flex items-center gap-2 text-[10px] uppercase whitespace-nowrap text-gray-400 mt-2.5 pb-1 border-b border-gray-100 dark:border-gray-850"
-										>
-											<span class="flex-1">{$i18n.t('Model')}</span>
-											<span class="w-12 text-right shrink-0">{$i18n.t('Chats')}</span>
-											<span class="w-16 text-right shrink-0">{$i18n.t('Messages')}</span>
-											<span class="w-14 text-right shrink-0">{$i18n.t('Input')}</span>
-											<span class="w-14 text-right shrink-0">{$i18n.t('Cached')}</span>
-											<span class="w-14 text-right shrink-0">{$i18n.t('Output')}</span>
-											<span class="w-14 text-right shrink-0">{$i18n.t('Tokens')}</span>
-											<span class="w-16 text-right shrink-0">{$i18n.t('Cost')}</span>
-											<span class="w-11 text-right shrink-0">%</span>
-										</div>
-										<div class="flex flex-col">
+								<div class="overflow-x-auto scrollbar-hidden mt-2.5">
+									<table
+										class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto whitespace-nowrap"
+									>
+										<thead class="text-xs text-gray-400 uppercase bg-transparent">
+											<tr class="border-b border-gray-100 dark:border-gray-850">
+												<th scope="col" class="py-1 pr-2 font-medium">{$i18n.t('Model')}</th>
+												<th scope="col" class="py-1 px-2 font-medium text-right"
+													>{$i18n.t('Chats')}</th
+												>
+												<th scope="col" class="py-1 px-2 font-medium text-right"
+													>{$i18n.t('Messages')}</th
+												>
+												<th scope="col" class="py-1 px-2 font-medium text-right"
+													>{$i18n.t('Input')}</th
+												>
+												<th scope="col" class="py-1 px-2 font-medium text-right"
+													>{$i18n.t('Cached')}</th
+												>
+												<th scope="col" class="py-1 px-2 font-medium text-right"
+													>{$i18n.t('Output')}</th
+												>
+												<th scope="col" class="py-1 px-2 font-medium text-right"
+													>{$i18n.t('Tokens')}</th
+												>
+												<th scope="col" class="py-1 px-2 font-medium text-right"
+													>{$i18n.t('Cost')}</th
+												>
+												<th scope="col" class="py-1 pl-2 font-medium text-right">%</th>
+											</tr>
+										</thead>
+										<tbody>
 											{#each user.models ?? [] as m (modelKey(m.model_id, m.base_model_id))}
 												{@const pct = user.count > 0 ? (m.count / user.count) * 100 : 0}
-												<div
-													class="flex items-center gap-2 text-xs py-1 border-b border-gray-100/60 dark:border-gray-850/60 last:border-0 min-w-0"
+												<tr
+													class="border-b border-gray-100/60 dark:border-gray-850/60 last:border-0"
 												>
-													<span
-														class="size-1.5 rounded-full shrink-0"
-														style="background-color: {modelColorMap.get(m.model_id) || OTHER_COLOR}"
-													></span>
-													<span class="flex-1 truncate text-gray-600 dark:text-gray-300">
-														{displayModelName(m.model_id, m.base_model_id)}
-													</span>
-													<span
-														class="w-12 text-right tabular-nums text-gray-500 dark:text-gray-400 shrink-0"
-													>
+													<td class="py-1 pr-2">
+														<div class="flex items-center gap-2 min-w-0 max-w-80">
+															<span
+																class="size-1.5 rounded-full shrink-0"
+																style="background-color: {modelColorMap.get(m.model_id) ||
+																	OTHER_COLOR}"
+															></span>
+															<span class="truncate text-gray-600 dark:text-gray-300">
+																{displayModelName(m.model_id, m.base_model_id)}
+															</span>
+														</div>
+													</td>
+													<td class="py-1 px-2 text-right tabular-nums">
 														{(m.unique_chats ?? 0).toLocaleString()}
-													</span>
-													<span
-														class="w-16 text-right tabular-nums text-gray-500 dark:text-gray-400 shrink-0"
-													>
+													</td>
+													<td class="py-1 px-2 text-right tabular-nums">
 														{m.count.toLocaleString()}
-													</span>
-													<span
-														class="w-14 text-right tabular-nums text-gray-500 dark:text-gray-400 shrink-0"
-													>
+													</td>
+													<td class="py-1 px-2 text-right tabular-nums">
 														{formatNumber(m.input_tokens ?? 0)}
-													</span>
-													<span
-														class="w-14 text-right tabular-nums text-gray-500 dark:text-gray-400 shrink-0"
-													>
+													</td>
+													<td class="py-1 px-2 text-right tabular-nums">
 														{formatNumber(m.cached_tokens ?? 0)}
-													</span>
-													<span
-														class="w-14 text-right tabular-nums text-gray-500 dark:text-gray-400 shrink-0"
-													>
+													</td>
+													<td class="py-1 px-2 text-right tabular-nums">
 														{formatNumber(m.output_tokens ?? 0)}
-													</span>
-													<span
-														class="w-14 text-right tabular-nums text-gray-500 dark:text-gray-400 shrink-0"
-													>
+													</td>
+													<td class="py-1 px-2 text-right tabular-nums">
 														{formatNumber(m.total_tokens ?? 0)}
-													</span>
-													<span
-														class="w-16 text-right tabular-nums text-gray-900 dark:text-white shrink-0"
+													</td>
+													<td
+														class="py-1 px-2 text-right tabular-nums text-gray-900 dark:text-white"
 													>
 														{m.cost != null ? `~${formatCost(m.cost, costCurrency)}` : '—'}
-													</span>
-													<span class="w-11 text-right tabular-nums text-gray-400 shrink-0">
+													</td>
+													<td class="py-1 pl-2 text-right tabular-nums text-gray-400">
 														{pct.toFixed(1)}%
-													</span>
-												</div>
+													</td>
+												</tr>
 											{/each}
-										</div>
-									</div>
+										</tbody>
+									</table>
 								</div>
 							{/if}
 						</div>
