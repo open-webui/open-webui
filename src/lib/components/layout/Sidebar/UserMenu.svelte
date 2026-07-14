@@ -122,37 +122,39 @@
 	<slot />
 
 	<div slot="content">
-		<DropdownMenu className="{className} text-[13px]">
+		<DropdownMenu className="{className} font-sans text-xs">
 			{#if $user}
-				<button
-					class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
-					type="button"
-					on:click={async () => {
-						show = false;
-						await showSettings.set('account');
+				<div>
+					<button
+						class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-xs w-full hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none text-left"
+						type="button"
+						on:click={async () => {
+							show = false;
+							await showSettings.set('account');
 
-						if ($mobile) {
-							await tick();
-							showSidebar.set(false);
-						}
-					}}
-				>
-					<div class="self-center shrink-0 size-4.5 flex items-center justify-center">
-						<img
-							src={`${WEBUI_API_BASE_URL}/users/${$user.id}/profile/image`}
-							alt=""
-							class="size-4.5 rounded-full object-cover"
-						/>
-					</div>
-					<div class="self-center truncate">{$user.name}</div>
-				</button>
+							if ($mobile) {
+								await tick();
+								showSidebar.set(false);
+							}
+						}}
+					>
+						<div class="self-center shrink-0 size-4.5 flex items-center justify-center">
+							<img
+								src={`${WEBUI_API_BASE_URL}/users/${$user.id}/profile/image`}
+								alt=""
+								class="size-4.5 rounded-full object-cover"
+							/>
+						</div>
+						<div class="self-center truncate">{$user.name}</div>
+					</button>
+				</div>
 			{/if}
 
 			{#if profile}
 				{#if $user?.status_emoji || $user?.status_message}
 					<div class="user-menu-status">
 						<button
-							class="w-full h-[1.6875rem] gap-2 rounded-xl px-2 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none text-[13px] flex items-center text-left"
+							class="w-full h-[1.6875rem] gap-2 rounded-xl px-2 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none text-xs flex items-center text-left"
 							type="button"
 							on:click={() => {
 								show = false;
@@ -167,7 +169,7 @@
 
 							<Tooltip
 								content={$user?.status_message}
-								className=" self-center line-clamp-2 flex-1 text-left"
+								className="self-center line-clamp-2 flex-1 text-left"
 							>
 								{$user?.status_message}
 							</Tooltip>
@@ -204,7 +206,7 @@
 				{:else}
 					<div class="user-menu-status">
 						<button
-							class="w-full h-[1.6875rem] gap-2 rounded-xl px-2 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none text-[13px] flex items-center text-left"
+							class="w-full h-[1.6875rem] gap-2 rounded-xl px-2 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none text-xs flex items-center text-left"
 							type="button"
 							on:click={() => {
 								show = false;
@@ -214,7 +216,7 @@
 							<div class="self-center shrink-0 size-4.5 flex items-center justify-center">
 								<FaceSmile className="size-3.5" strokeWidth="1.5" />
 							</div>
-							<div class=" self-center truncate">{$i18n.t('Update your status')}</div>
+							<div class="self-center truncate">{$i18n.t('Update your status')}</div>
 						</button>
 					</div>
 				{/if}
