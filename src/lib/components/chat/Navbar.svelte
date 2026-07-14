@@ -77,8 +77,12 @@
 	aria-label="New Chat"
 />
 
-<nav class="sticky top-0 z-30 w-full pt-0.5 pb-1 -mb-12 flex flex-col items-center drag-region">
-	<div class="flex items-center w-full pl-1.5 pr-1">
+<nav
+	class="sticky top-0 z-30 w-full {$mobile
+		? 'pt-1.5'
+		: 'pt-0.5'} pb-1 -mb-12 flex flex-col items-center drag-region"
+>
+	<div class="flex items-center w-full {$mobile ? 'px-2.5' : 'pl-1.5 pr-1'}">
 		<div
 			id="navbar-bg-gradient-to-b"
 			class="{chat?.id
@@ -89,16 +93,19 @@
 		<div class=" flex max-w-full w-full mx-auto bg-transparent">
 			<div class="flex items-center w-full max-w-full">
 				{#if $mobile && !$showSidebar}
-					<div class="-translate-x-0.5 mr-1 mt-1 self-start flex flex-none items-center">
+					<div class="mr-1 flex flex-none items-center self-center">
 						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
 							<button
-								class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+								id="sidebar-toggle-button"
+								class="flex cursor-pointer rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
 								on:click={() => {
 									showSidebar.set(!$showSidebar);
 								}}
 								aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 							>
-								<Sidebar />
+								<div class="self-center p-1.5">
+									<Sidebar />
+								</div>
 							</button>
 						</Tooltip>
 					</div>

@@ -20,7 +20,6 @@
 		user,
 		MODEL_DOWNLOAD_POOL,
 		models,
-		mobile,
 		temporaryChatEnabled,
 		settings,
 		config
@@ -76,6 +75,7 @@
 	let triggerElement: HTMLElement | null = null;
 	let contentElement: HTMLElement | null = null;
 	let dropdownPosition = { top: 0, left: 0, width: 0 };
+	const fullWidthBreakpoint = 640;
 
 	const portal = (node: HTMLElement) => {
 		document.body.appendChild(node);
@@ -94,6 +94,7 @@
 		const contentHeight = contentRect?.height ?? 0;
 		const spaceBelow = window.innerHeight - rect.bottom - 8;
 		const spaceAbove = rect.top - 8;
+		const fullWidth = window.innerWidth < fullWidthBreakpoint;
 		const resolvedPlacement =
 			placement === 'auto'
 				? contentHeight && spaceBelow < contentHeight && spaceAbove > spaceBelow
@@ -105,8 +106,8 @@
 				resolvedPlacement === 'top' && contentHeight
 					? rect.top - contentHeight - 2
 					: rect.bottom + 2,
-			left: $mobile ? 8 : align === 'end' && contentWidth ? rect.right - contentWidth : rect.left,
-			width: $mobile ? window.innerWidth - 16 : 0
+			left: fullWidth ? 8 : align === 'end' && contentWidth ? rect.right - contentWidth : rect.left,
+			width: fullWidth ? window.innerWidth - 16 : 0
 		};
 	};
 
@@ -641,7 +642,7 @@
 			}}
 		>
 			<span class="min-w-0 flex-1 truncate">{triggerLabel}</span>
-			<ChevronDown className="ml-1.5 size-2.5 shrink-0 self-center" strokeWidth="2.5" />
+			<ChevronDown className="ml-1 size-2.5 shrink-0 self-center" strokeWidth="2.5" />
 		</div>
 	</button>
 
@@ -649,12 +650,12 @@
 		<div
 			use:portal
 			bind:this={contentElement}
-			style="position: fixed; z-index: 9999; top: {dropdownPosition.top}px; left: {dropdownPosition.left}px;{$mobile
+			style="position: fixed; z-index: 9999; top: {dropdownPosition.top}px; left: {dropdownPosition.left}px;{dropdownPosition.width
 				? ` width: ${dropdownPosition.width}px;`
 				: ''}"
 		>
 			<div
-				class="z-40 {$mobile
+				class="z-40 {dropdownPosition.width
 					? `w-full`
 					: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl border border-gray-100 bg-white p-0.5 shadow-lg outline-hidden dark:border-gray-800 dark:bg-gray-850 dark:text-white"
 				transition:flyAndScale
