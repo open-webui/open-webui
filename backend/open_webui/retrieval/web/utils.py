@@ -5,27 +5,19 @@ import socket
 import ssl
 import urllib.parse
 import urllib.request
+from collections.abc import AsyncIterator, Iterator, Sequence
 from datetime import datetime, time, timedelta
 from typing import (
     Any,
-    AsyncIterator,
-    Dict,
-    Iterator,
-    List,
     Literal,
-    Optional,
-    Sequence,
-    Union,
 )
 
 import aiohttp
 import aiohttp.resolver
 import certifi
-import requests
 import urllib3.connection
 import urllib3.connectionpool
 import validators
-from requests.adapters import HTTPAdapter
 from fastapi.concurrency import run_in_threadpool
 from langchain_community.document_loaders import PlaywrightURLLoader, WebBaseLoader
 from langchain_community.document_loaders.base import BaseLoader
@@ -51,6 +43,7 @@ from open_webui.retrieval.loaders.external_web import ExternalWebLoader
 from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
 from open_webui.utils.misc import is_string_allowed
+from requests.adapters import HTTPAdapter
 
 log = logging.getLogger(__name__)
 
@@ -66,7 +59,7 @@ def resolve_hostname(hostname):
     return ipv4_addresses, ipv6_addresses
 
 
-def validate_url(url: Union[str, Sequence[str]]):
+def validate_url(url: str | Sequence[str]):
     if isinstance(url, str):
         if isinstance(validators.url(url), validators.ValidationError):
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
@@ -272,14 +265,14 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         web_paths,
         verify_ssl: bool = True,
         trust_env: bool = False,
-        requests_per_second: Optional[float] = None,
+        requests_per_second: float | None = None,
         continue_on_failure: bool = True,
-        api_key: Optional[str] = None,
-        api_url: Optional[str] = None,
-        timeout: Optional[int] = None,
+        api_key: str | None = None,
+        api_url: str | None = None,
+        timeout: int | None = None,
         mode: Literal['crawl', 'scrape', 'map'] = 'scrape',
-        proxy: Optional[Dict[str, str]] = None,
-        params: Optional[Dict] = None,
+        proxy: dict[str, str] | None = None,
+        params: dict | None = None,
     ):
         proxy_server = proxy.get('server') if proxy else None
         if trust_env and not proxy_server:
@@ -336,14 +329,14 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
 class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
     def __init__(
         self,
-        web_paths: Union[str, List[str]],
+        web_paths: str | list[str],
         api_key: str,
         extract_depth: Literal['basic', 'advanced'] = 'basic',
         continue_on_failure: bool = True,
-        requests_per_second: Optional[float] = None,
+        requests_per_second: float | None = None,
         verify_ssl: bool = True,
         trust_env: bool = False,
-        proxy: Optional[Dict[str, str]] = None,
+        proxy: dict[str, str] | None = None,
     ):
         """Initialize SafeTavilyLoader with rate limiting and SSL verification support.
 
@@ -462,16 +455,16 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
 
     def __init__(
         self,
-        web_paths: List[str],
+        web_paths: list[str],
         verify_ssl: bool = True,
         trust_env: bool = False,
-        requests_per_second: Optional[float] = None,
+        requests_per_second: float | None = None,
         continue_on_failure: bool = True,
         headless: bool = True,
-        remove_selectors: Optional[List[str]] = None,
-        proxy: Optional[Dict[str, str]] = None,
-        playwright_ws_url: Optional[str] = None,
-        playwright_timeout: Optional[int] = 10000,
+        remove_selectors: list[str] | None = None,
+        proxy: dict[str, str] | None = None,
+        playwright_ws_url: str | None = None,
+        playwright_timeout: int | None = 10000,
     ):
         """Initialize with additional safety parameters and remote browser support."""
 
@@ -657,7 +650,7 @@ class SafeWebBaseLoader(WebBaseLoader):
         async with aiohttp.ClientSession(trust_env=self.trust_env, connector=connector) as session:
             for i in range(retries):
                 try:
-                    kwargs: Dict = dict(
+                    kwargs: dict = dict(
                         headers=self.session.headers,
                         cookies=self.session.cookies.get_dict(),
                     )
@@ -681,7 +674,7 @@ class SafeWebBaseLoader(WebBaseLoader):
                         await asyncio.sleep(cooldown * backoff**i)
         raise ValueError('retry count exceeded')
 
-    def _unpack_fetch_results(self, results: Any, urls: List[str], parser: Union[str, None] = None) -> List[Any]:
+    def _unpack_fetch_results(self, results: Any, urls: list[str], parser: str | None = None) -> list[Any]:
         """Unpack fetch results into BeautifulSoup objects."""
         from bs4 import BeautifulSoup
 
@@ -697,7 +690,7 @@ class SafeWebBaseLoader(WebBaseLoader):
             final_results.append(BeautifulSoup(result, parser, **self.bs_kwargs))
         return final_results
 
-    async def ascrape_all(self, urls: List[str], parser: Union[str, None] = None) -> List[Any]:
+    async def ascrape_all(self, urls: list[str], parser: str | None = None) -> list[Any]:
         """Async fetch all urls, then return soups for all results."""
         results = await self.fetch_all(urls)
         return self._unpack_fetch_results(results, urls, parser=parser)
@@ -737,10 +730,21 @@ class SafeWebBaseLoader(WebBaseLoader):
 
 
 def get_web_loader(
-    urls: Union[str, Sequence[str]],
+    urls: str | Sequence[str],
     verify_ssl: bool = True,
     requests_per_second: int = 2,
     trust_env: bool = False,
+    engine: str = None,
+    timeout: str = None,
+    playwright_timeout: int = None,
+    playwright_ws_url: str = None,
+    firecrawl_api_key: str = None,
+    firecrawl_api_url: str = None,
+    firecrawl_timeout: int = None,
+    tavily_api_key: str = None,
+    tavily_extract_depth: str = None,
+    external_url: str = None,
+    external_api_key: str = None,
 ):
     # Check if the URLs are valid
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
@@ -757,13 +761,27 @@ def get_web_loader(
         'trust_env': trust_env,
     }
 
-    if WEB_LOADER_ENGINE.value == '' or WEB_LOADER_ENGINE.value == 'safe_web':
+    web_loader_engine = engine if engine is not None else WEB_LOADER_ENGINE.value
+    web_loader_timeout = timeout if timeout is not None else WEB_LOADER_TIMEOUT.value
+    playwright_timeout_val = playwright_timeout if playwright_timeout is not None else PLAYWRIGHT_TIMEOUT.value
+    playwright_ws_url_val = playwright_ws_url if playwright_ws_url is not None else PLAYWRIGHT_WS_URL.value
+    firecrawl_api_key_val = firecrawl_api_key if firecrawl_api_key is not None else FIRECRAWL_API_KEY.value
+    firecrawl_api_url_val = firecrawl_api_url if firecrawl_api_url is not None else FIRECRAWL_API_BASE_URL.value
+    firecrawl_timeout_val = firecrawl_timeout if firecrawl_timeout is not None else FIRECRAWL_TIMEOUT.value
+    tavily_api_key_val = tavily_api_key if tavily_api_key is not None else TAVILY_API_KEY.value
+    tavily_extract_depth_val = tavily_extract_depth if tavily_extract_depth is not None else TAVILY_EXTRACT_DEPTH.value
+    external_url_val = external_url if external_url is not None else EXTERNAL_WEB_LOADER_URL.value
+    external_api_key_val = external_api_key if external_api_key is not None else EXTERNAL_WEB_LOADER_API_KEY.value
+
+    WebLoaderClass = None
+
+    if web_loader_engine == '' or web_loader_engine == 'safe_web':
         WebLoaderClass = SafeWebBaseLoader
 
         request_kwargs = {}
-        if WEB_LOADER_TIMEOUT.value:
+        if web_loader_timeout:
             try:
-                timeout_value = float(WEB_LOADER_TIMEOUT.value)
+                timeout_value = float(web_loader_timeout)
             except ValueError:
                 timeout_value = None
 
@@ -773,31 +791,31 @@ def get_web_loader(
         if request_kwargs:
             web_loader_args['requests_kwargs'] = request_kwargs
 
-    if WEB_LOADER_ENGINE.value == 'playwright':
+    if web_loader_engine == 'playwright':
         WebLoaderClass = SafePlaywrightURLLoader
-        web_loader_args['playwright_timeout'] = PLAYWRIGHT_TIMEOUT.value
-        if PLAYWRIGHT_WS_URL.value:
-            web_loader_args['playwright_ws_url'] = PLAYWRIGHT_WS_URL.value
+        web_loader_args['playwright_timeout'] = playwright_timeout_val
+        if playwright_ws_url_val:
+            web_loader_args['playwright_ws_url'] = playwright_ws_url_val
 
-    if WEB_LOADER_ENGINE.value == 'firecrawl':
+    if web_loader_engine == 'firecrawl':
         WebLoaderClass = SafeFireCrawlLoader
-        web_loader_args['api_key'] = FIRECRAWL_API_KEY.value
-        web_loader_args['api_url'] = FIRECRAWL_API_BASE_URL.value
-        if FIRECRAWL_TIMEOUT.value:
+        web_loader_args['api_key'] = firecrawl_api_key_val
+        web_loader_args['api_url'] = firecrawl_api_url_val
+        if firecrawl_timeout_val:
             try:
-                web_loader_args['timeout'] = int(FIRECRAWL_TIMEOUT.value)
+                web_loader_args['timeout'] = int(firecrawl_timeout_val)
             except ValueError:
                 pass
 
-    if WEB_LOADER_ENGINE.value == 'tavily':
+    if web_loader_engine == 'tavily':
         WebLoaderClass = SafeTavilyLoader
-        web_loader_args['api_key'] = TAVILY_API_KEY.value
-        web_loader_args['extract_depth'] = TAVILY_EXTRACT_DEPTH.value
+        web_loader_args['api_key'] = tavily_api_key_val
+        web_loader_args['extract_depth'] = tavily_extract_depth_val
 
-    if WEB_LOADER_ENGINE.value == 'external':
+    if web_loader_engine == 'external':
         WebLoaderClass = ExternalWebLoader
-        web_loader_args['external_url'] = EXTERNAL_WEB_LOADER_URL.value
-        web_loader_args['external_api_key'] = EXTERNAL_WEB_LOADER_API_KEY.value
+        web_loader_args['external_url'] = external_url_val
+        web_loader_args['external_api_key'] = external_api_key_val
 
     if WebLoaderClass:
         web_loader = WebLoaderClass(**web_loader_args)
@@ -811,6 +829,6 @@ def get_web_loader(
         return web_loader
     else:
         raise ValueError(
-            f'Invalid WEB_LOADER_ENGINE: {WEB_LOADER_ENGINE.value}. '
+            f'Invalid WEB_LOADER_ENGINE: {web_loader_engine}. '
             "Please set it to 'safe_web', 'playwright', 'firecrawl', or 'tavily'."
         )

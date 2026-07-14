@@ -76,6 +76,17 @@ def get_loader(request, url: str):
             verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
             trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
+            engine=request.app.state.config.WEB_LOADER_ENGINE,
+            timeout=request.app.state.config.WEB_LOADER_TIMEOUT,
+            playwright_timeout=request.app.state.config.PLAYWRIGHT_TIMEOUT,
+            playwright_ws_url=request.app.state.config.PLAYWRIGHT_WS_URL,
+            firecrawl_api_key=request.app.state.config.FIRECRAWL_API_KEY,
+            firecrawl_api_url=request.app.state.config.FIRECRAWL_API_BASE_URL,
+            firecrawl_timeout=request.app.state.config.FIRECRAWL_TIMEOUT,
+            tavily_api_key=request.app.state.config.TAVILY_API_KEY,
+            tavily_extract_depth=request.app.state.config.TAVILY_EXTRACT_DEPTH,
+            external_url=request.app.state.config.EXTERNAL_WEB_LOADER_URL,
+            external_api_key=request.app.state.config.EXTERNAL_WEB_LOADER_API_KEY,
         )
 
 
