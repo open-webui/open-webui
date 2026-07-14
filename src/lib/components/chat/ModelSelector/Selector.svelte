@@ -74,6 +74,7 @@
 	let show = false;
 	let triggerElement: HTMLElement | null = null;
 	let contentElement: HTMLElement | null = null;
+	let panelElement: HTMLElement | null = null;
 	let dropdownPosition = { top: 0, left: 0, maxHeight: undefined as number | undefined };
 	let positionFrame: number | undefined;
 	let settleTimers: number[] = [];
@@ -85,6 +86,19 @@
 				node.remove();
 			}
 		};
+	};
+
+	const measureContent = () => {
+		if (!contentElement) return { width: 0, height: 0 };
+
+		const previousMaxHeight = panelElement?.style.maxHeight;
+		if (panelElement) panelElement.style.maxHeight = '';
+		const rect = contentElement.getBoundingClientRect();
+		if (panelElement && previousMaxHeight !== undefined) {
+			panelElement.style.maxHeight = previousMaxHeight;
+		}
+
+		return { width: rect.width, height: rect.height };
 	};
 
 	const visualViewportRect = () => {
@@ -100,9 +114,7 @@
 	const updatePosition = () => {
 		if (!show || !triggerElement) return;
 		const rect = triggerElement.getBoundingClientRect();
-		const contentRect = contentElement?.getBoundingClientRect();
-		const contentWidth = contentRect?.width ?? 0;
-		const contentHeight = contentRect?.height ?? 0;
+		const { width: contentWidth, height: contentHeight } = measureContent();
 		const viewport = visualViewportRect();
 		const viewportRight = viewport.left + viewport.width;
 		const viewportBottom = viewport.top + viewport.height;
@@ -153,6 +165,11 @@
 		for (const delay of [50, 150, 300]) {
 			settleTimers.push(window.setTimeout(schedulePositionUpdate, delay));
 		}
+	};
+
+	const handleScroll = (event: Event) => {
+		if (event.target instanceof Node && contentElement?.contains(event.target)) return;
+		schedulePositionUpdate();
 	};
 
 	const toggleOpen = async () => {
@@ -550,14 +567,14 @@
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
 
-		window.addEventListener('scroll', schedulePositionUpdate, true);
+		window.addEventListener('scroll', handleScroll, true);
 		window.visualViewport?.addEventListener('resize', scheduleSettledPositionUpdates);
 		window.visualViewport?.addEventListener('scroll', schedulePositionUpdate);
 
 		return () => {
 			if (positionFrame != null) cancelAnimationFrame(positionFrame);
 			for (const timer of settleTimers) window.clearTimeout(timer);
-			window.removeEventListener('scroll', schedulePositionUpdate, true);
+			window.removeEventListener('scroll', handleScroll, true);
 			window.visualViewport?.removeEventListener('resize', scheduleSettledPositionUpdates);
 			window.visualViewport?.removeEventListener('scroll', schedulePositionUpdate);
 		};
@@ -642,7 +659,28 @@
 
 	let listScrollTop = 0;
 	let listContainer;
-	$: listViewportHeight = Math.min(288, Math.max(96, (dropdownPosition.maxHeight ?? 352) - 64));
+	let listViewportHeight = 288;
+
+	const trackListViewport = (node: HTMLElement) => {
+		const updateHeight = () => {
+			listViewportHeight = node.clientHeight || 288;
+		};
+
+		updateHeight();
+
+		if (!('ResizeObserver' in window)) {
+			return { destroy() {} };
+		}
+
+		const observer = new ResizeObserver(updateHeight);
+		observer.observe(node);
+
+		return {
+			destroy() {
+				observer.disconnect();
+			}
+		};
+	};
 
 	$: visibleStart = Math.max(0, Math.floor(listScrollTop / ITEM_HEIGHT) - OVERSCAN);
 	$: visibleEnd = Math.min(
@@ -707,17 +745,17 @@
 		<div
 			use:portal
 			bind:this={contentElement}
-			style="position: fixed; z-index: 9999; top: {dropdownPosition.top}px; left: {dropdownPosition.left}px; {dropdownPosition.maxHeight
-				? `max-height: ${dropdownPosition.maxHeight}px;`
-				: ''}"
+			style="position: fixed; z-index: 9999; top: {dropdownPosition.top}px; left: {dropdownPosition.left}px;"
 		>
 			<div
-				class="z-40 {className} max-w-[calc(100vw-1rem)] justify-start rounded-xl border border-gray-100 bg-white p-0.5 shadow-lg outline-hidden dark:border-gray-800 dark:bg-gray-850 dark:text-white"
+				bind:this={panelElement}
+				class="z-40 {className} max-w-[calc(100vw-1rem)] justify-start rounded-xl border border-gray-100 bg-white p-0.5 shadow-lg outline-hidden dark:border-gray-800 dark:bg-gray-850 dark:text-white flex flex-col overflow-hidden"
+				style={dropdownPosition.maxHeight ? `max-height: ${dropdownPosition.maxHeight}px;` : ''}
 				transition:flyAndScale
 			>
 				<slot>
 					{#if searchEnabled}
-						<div class="my-0.5 flex h-[1.6875rem] items-center gap-2">
+						<div class="my-0.5 flex h-[1.6875rem] shrink-0 items-center gap-2">
 							<Search className="ml-2 size-3.5 shrink-0" strokeWidth="2" />
 
 							<input
@@ -788,7 +826,7 @@
 						</div>
 					{/if}
 
-					<div class="group relative">
+					<div class="group relative flex min-h-0 flex-1 flex-col">
 						{#if filteredItems.length === 0}
 							{#if items.length === 0 && $user?.role === 'admin'}
 								<div class="flex flex-col items-start justify-center py-6 px-4 text-start">
@@ -818,11 +856,12 @@
 						{:else}
 							<!-- svelte-ignore a11y-no-static-element-interactions -->
 							<div
-								class="overflow-y-auto"
-								style="max-height: {listViewportHeight}px;"
+								class="min-h-0 flex-1 overflow-y-auto"
+								style="max-height: 288px;"
 								role="listbox"
 								aria-label={$i18n.t('Available models')}
 								bind:this={listContainer}
+								use:trackListViewport
 								on:scroll={() => {
 									listScrollTop = listContainer.scrollTop;
 								}}
@@ -936,7 +975,7 @@
 					</div>
 
 					{#if showSetDefault}
-						<div class="flex items-center justify-end px-2 py-1 leading-none">
+						<div class="flex shrink-0 items-center justify-end px-2 py-1 leading-none">
 							<button
 								type="button"
 								class="text-[0.65rem] font-normal leading-none text-gray-500 underline-offset-2 transition-colors duration-100 hover:text-gray-700 hover:underline dark:text-gray-500 dark:hover:text-gray-300"
@@ -946,7 +985,7 @@
 							</button>
 						</div>
 					{:else}
-						<div class="pb-1"></div>
+						<div class="shrink-0 pb-1"></div>
 					{/if}
 
 					<div class="hidden w-[42rem]" />
