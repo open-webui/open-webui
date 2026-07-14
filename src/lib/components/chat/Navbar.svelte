@@ -113,7 +113,7 @@
 
 				<div
 					class="flex-1 overflow-hidden max-w-full mt-0.5 py-0.5 pl-0.5 {$showSidebar
-						? 'ml-1'
+						? 'ml-1.5'
 						: ''}"
 				>
 					{#if chat?.id}
