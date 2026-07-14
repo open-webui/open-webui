@@ -8,6 +8,7 @@
 		id: string;
 		name?: string;
 		description?: string;
+		is_active?: boolean;
 	};
 
 	export let skills: Skill[] = [];
@@ -15,11 +16,13 @@
 
 	const i18n = getContext('i18n') as any;
 
-	$: selectedSkills = skills.filter((skill) => selectedSkillIds.includes(skill.id));
-	$: availableSkills = skills.filter((skill) => !selectedSkillIds.includes(skill.id));
+	$: activeSkills = skills.filter((skill) => skill.is_active !== false);
+	$: selectedSkills = activeSkills.filter((skill) => selectedSkillIds.includes(skill.id));
 
-	const selectSkill = (skill: Skill) => {
-		selectedSkillIds = [...selectedSkillIds, skill.id];
+	const toggleSkill = (skill: Skill) => {
+		selectedSkillIds = selectedSkillIds.includes(skill.id)
+			? selectedSkillIds.filter((id) => id !== skill.id)
+			: [...selectedSkillIds, skill.id];
 	};
 </script>
 
@@ -29,14 +32,20 @@
 	</div>
 
 	<div class="flex flex-col mb-1">
-		{#if skills.length > 0}
+		{#if activeSkills.length > 0}
 			<TypeaheadSelector
 				id="model-skills-selector"
-				items={availableSkills}
+				items={activeSkills}
+				selectedIds={selectedSkillIds}
 				className="w-48 max-w-full"
 				placeholder={$i18n.t('Search skills')}
 				on:select={(e) => {
-					selectSkill(e.detail);
+					toggleSkill(e.detail);
+				}}
+				on:enableall={(e) => {
+					selectedSkillIds = [
+						...new Set([...selectedSkillIds, ...e.detail.map((skill) => skill.id)])
+					];
 				}}
 			/>
 
@@ -61,6 +70,18 @@
 						</Tooltip>
 					</div>
 				{/each}
+
+				{#if selectedSkills.length > 0}
+					<button
+						type="button"
+						class="py-0.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+						on:click={() => {
+							selectedSkillIds = [];
+						}}
+					>
+						Disable all
+					</button>
+				{/if}
 			</div>
 		{/if}
 	</div>

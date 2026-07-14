@@ -18,10 +18,11 @@
 	const i18n = getContext('i18n') as any;
 
 	$: selectedTools = tools.filter((tool) => selectedToolIds.includes(tool.id));
-	$: availableTools = tools.filter((tool) => !selectedToolIds.includes(tool.id));
 
-	const selectTool = (tool: Tool) => {
-		selectedToolIds = [...selectedToolIds, tool.id];
+	const toggleTool = (tool: Tool) => {
+		selectedToolIds = selectedToolIds.includes(tool.id)
+			? selectedToolIds.filter((id) => id !== tool.id)
+			: [...selectedToolIds, tool.id];
 	};
 </script>
 
@@ -34,11 +35,15 @@
 		{#if tools.length > 0}
 			<TypeaheadSelector
 				id="model-tools-selector"
-				items={availableTools}
+				items={tools}
+				selectedIds={selectedToolIds}
 				className="w-48 max-w-full"
 				placeholder={$i18n.t('Search tools')}
 				on:select={(e) => {
-					selectTool(e.detail);
+					toggleTool(e.detail);
+				}}
+				on:enableall={(e) => {
+					selectedToolIds = [...new Set([...selectedToolIds, ...e.detail.map((tool) => tool.id)])];
 				}}
 			/>
 
@@ -63,11 +68,25 @@
 						</Tooltip>
 					</div>
 				{/each}
+
+				{#if selectedTools.length > 0}
+					<button
+						type="button"
+						class="py-0.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+						on:click={() => {
+							selectedToolIds = [];
+						}}
+					>
+						Disable all
+					</button>
+				{/if}
 			</div>
 		{/if}
 	</div>
 
 	<div class=" text-xs dark:text-gray-700">
-		{$i18n.t('To select toolkits here, add them to the "Tools" workspace first.')}
+		{$i18n.t(
+			'To select toolkits here, add them to the "Tools" workspace or enable a tool server first.'
+		)}
 	</div>
 </div>

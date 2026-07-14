@@ -15,8 +15,12 @@
 	export let placeholder = '';
 	export let id = 'typeahead-selector';
 	export let className = 'w-full';
+	export let selectedIds: string[] | null = null;
 
-	const dispatch = createEventDispatcher<{ select: Item }>();
+	const dispatch = createEventDispatcher<{
+		select: Item;
+		enableall: Item[];
+	}>();
 	let value = '';
 </script>
 
@@ -26,10 +30,12 @@
 		voices={items}
 		{placeholder}
 		{className}
+		{selectedIds}
 		bind:value
 		on:select={(e) => {
 			dispatch('select', e.detail);
-			value = '';
+			if (selectedIds === null) value = '';
 		}}
+		on:enableall={(e) => dispatch('enableall', e.detail)}
 	/>
 </div>
