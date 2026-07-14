@@ -949,11 +949,7 @@
 			<div>
 				<div class=" py-2 flex justify-center items-center">
 					{#if $user !== undefined && $user !== null}
-						<UserMenu
-							role={$user?.role}
-							profile={$config?.features?.enable_user_status ?? true}
-							showActiveUsers={false}
-						>
+						<UserMenu role={$user?.role} profile={$config?.features?.enable_user_status ?? true}>
 							<button
 								type="button"
 								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
@@ -1569,7 +1565,6 @@
 						<UserMenu
 							role={$user?.role}
 							profile={$config?.features?.enable_user_status ?? true}
-							showActiveUsers={false}
 							className="w-[calc(var(--sidebar-width)-1rem)]"
 						>
 							<button

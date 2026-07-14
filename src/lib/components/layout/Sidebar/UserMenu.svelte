@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onMount, tick } from 'svelte';
+	import { createEventDispatcher, getContext, onMount, tick } from 'svelte';
 
 	import { goto } from '$app/navigation';
 	import { fade, slide } from 'svelte/transition';
@@ -55,6 +55,8 @@
 
 	let showUserStatusModal = false;
 	let shiftKey = false;
+
+	const dispatch = createEventDispatcher();
 
 	const DEFAULT_PINNED_ITEMS = ['notes', 'workspace'];
 
@@ -142,7 +144,27 @@
 								class="size-4.5 rounded-full object-cover"
 							/>
 						</div>
-						<div class="self-center truncate">{$user.name}</div>
+						<div class="self-center min-w-0 flex-1 truncate">{$user.name}</div>
+
+						{#if showActiveUsers && ($config?.features?.enable_public_active_users_count || role === 'admin') && usage?.user_count}
+							<Tooltip
+								content={usage?.model_ids && usage?.model_ids.length > 0
+									? `${$i18n.t('Running')}: ${usage.model_ids.join(', ')} ✨`
+									: $i18n.t('Active Users')}
+							>
+								<div
+									class="ml-auto flex shrink-0 items-center justify-end gap-1 rounded-full px-1.5 py-0.5 text-[11px] leading-none text-gray-500 dark:text-gray-400"
+									on:mouseenter={() => {
+										if ($config?.features?.enable_public_active_users_count || role === 'admin') {
+											getUsageInfo();
+										}
+									}}
+								>
+									<span class="size-1.5 rounded-full bg-green-500" />
+									<span>{usage.user_count}</span>
+								</div>
+							</Tooltip>
+						{/if}
 					</button>
 				</div>
 			{/if}
@@ -217,7 +239,9 @@
 						</button>
 					</div>
 				{/if}
+			{/if}
 
+			{#if profile}
 				<hr class="border-gray-50/30 dark:border-gray-800/30 my-0.5 mx-1 p-0" />
 			{/if}
 
@@ -601,42 +625,6 @@
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</button>
-
-			{#if showActiveUsers && ($config?.features?.enable_public_active_users_count || role === 'admin') && usage}
-				{#if usage?.user_count}
-					<hr class="border-gray-50/30 dark:border-gray-800/30 my-0.5 mx-1 p-0" />
-
-					<Tooltip
-						content={usage?.model_ids && usage?.model_ids.length > 0
-							? `${$i18n.t('Running')}: ${usage.model_ids.join(', ')} ✨`
-							: ''}
-					>
-						<div
-							class="flex rounded-xl px-2 py-0.5 text-[10px] gap-1.5 items-center"
-							on:mouseenter={() => {
-								if ($config?.features?.enable_public_active_users_count || role === 'admin') {
-									getUsageInfo();
-								}
-							}}
-						>
-							<div class=" flex items-center">
-								<span class="relative flex size-1.5">
-									<span class="relative inline-flex rounded-full size-1.5 bg-green-500" />
-								</span>
-							</div>
-
-							<div class=" ">
-								<span class="">
-									{$i18n.t('Active Users')}:
-								</span>
-								<span class="font-normal">
-									{usage?.user_count}
-								</span>
-							</div>
-						</div>
-					</Tooltip>
-				{/if}
-			{/if}
 		</DropdownMenu>
 	</div>
 </Dropdown>
