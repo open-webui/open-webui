@@ -2,7 +2,7 @@
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { mobile, showSettings, showSidebar, user } from '$lib/stores';
+	import { mobile, showSidebar, user } from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
@@ -196,16 +196,7 @@
 
 				{#if $user !== undefined}
 					<div>
-						<UserMenu
-							className="w-[240px]"
-							role={$user?.role}
-							help={true}
-							on:show={(e) => {
-								if (e.detail === 'archived-chat') {
-									showSettings.set('archived_chats');
-								}
-							}}
-						>
+						<UserMenu className="w-[240px]" role={$user?.role} help={true}>
 							<button
 								class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 								aria-label="User Menu"

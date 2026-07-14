@@ -8,7 +8,6 @@
 		user,
 		chats,
 		settings,
-		showSettings,
 		chatId,
 		tags,
 		folders as _folders,
@@ -954,11 +953,6 @@
 							role={$user?.role}
 							profile={$config?.features?.enable_user_status ?? true}
 							showActiveUsers={false}
-							on:show={(e) => {
-								if (e.detail === 'archived-chat') {
-									showSettings.set('archived_chats');
-								}
-							}}
 						>
 							<button
 								type="button"
@@ -1577,11 +1571,6 @@
 							profile={$config?.features?.enable_user_status ?? true}
 							showActiveUsers={false}
 							className="w-[calc(var(--sidebar-width)-1rem)]"
-							on:show={(e) => {
-								if (e.detail === 'archived-chat') {
-									showSettings.set('archived_chats');
-								}
-							}}
 						>
 							<button
 								type="button"
