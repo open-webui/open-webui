@@ -391,7 +391,7 @@
 						class="p-1.5 text-sm font-medium bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition rounded-lg"
 						aria-label={$i18n.t('More options')}
 					>
-						<EllipsisHorizontal className="size-4" />
+						<EllipsisHorizontal className="size-3.5" />
 					</button>
 
 					<div slot="content">
@@ -399,13 +399,13 @@
 							<DropdownSub contentClass="select-none z-50">
 								<button
 									slot="trigger"
-									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer select-none hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
+									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 								>
 									<Download className="size-3.5" strokeWidth="1.5" />
 									<div class="flex items-center">{$i18n.t('Download')}</div>
 								</button>
 								<button
-									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer select-none hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
+									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 									disabled={messages.length === 0}
 									on:click={() => {
 										exportToJson();
@@ -416,7 +416,7 @@
 									</div>
 								</button>
 								<button
-									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer select-none hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
+									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 									disabled={messages.length === 0}
 									on:click={() => {
 										downloadTxt();
@@ -517,7 +517,7 @@
 									showControls = !showControls;
 								}}
 							>
-								<AdjustmentsHorizontal className="size-4" />
+								<AdjustmentsHorizontal className="size-3.5" />
 							</button>
 
 							<div class="flex gap-2 shrink-0">

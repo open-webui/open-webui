@@ -536,55 +536,55 @@
 							class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
 							type="button"
 						>
-							<EllipsisHorizontal className="size-4" />
+							<EllipsisHorizontal className="size-3.5" />
 						</button>
 					</Tooltip>
 
 					<div slot="content">
 						<DropdownMenu className="w-[170px]">
 							<button
-								class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
 								type="button"
 								on:click={() => {
 									enableAllHandler();
 								}}
 							>
-								<CheckCircle className="size-4" />
+								<CheckCircle className="size-3.5" />
 								<div class="flex items-center">{$i18n.t('Enable All')}</div>
 							</button>
 
 							<button
-								class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
 								type="button"
 								on:click={() => {
 									disableAllHandler();
 								}}
 							>
-								<Minus className="size-4" />
+								<Minus className="size-3.5" />
 								<div class="flex items-center">{$i18n.t('Disable All')}</div>
 							</button>
 
 							<hr class="border-gray-100 dark:border-gray-800 my-1" />
 
 							<button
-								class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
 								type="button"
 								on:click={() => {
 									showAllHandler();
 								}}
 							>
-								<Eye className="size-4" />
+								<Eye className="size-3.5" />
 								<div class="flex items-center">{$i18n.t('Show All')}</div>
 							</button>
 
 							<button
-								class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
 								type="button"
 								on:click={() => {
 									hideAllHandler();
 								}}
 							>
-								<EyeSlash className="size-4" />
+								<EyeSlash className="size-3.5" />
 								<div class="flex items-center">{$i18n.t('Hide All')}</div>
 							</button>
 						</DropdownMenu>
@@ -707,7 +707,7 @@
 											viewBox="0 0 24 24"
 											stroke-width="1.5"
 											stroke="currentColor"
-											class="w-4 h-4"
+											class="size-3.5"
 										>
 											<path
 												stroke-linecap="round"

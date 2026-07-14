@@ -1,8 +1,13 @@
 import { get, readonly, writable } from 'svelte/store';
 import { getChatList, getPinnedChatList } from '$lib/apis/chats';
 
-const chatsStore = writable(null);
-const pinnedChatsStore = writable([]);
+type ChatListItem = {
+	id: string;
+	[key: string]: any;
+};
+
+const chatsStore = writable<ChatListItem[] | null>(null);
+const pinnedChatsStore = writable<ChatListItem[]>([]);
 
 export const chats = readonly(chatsStore);
 export const pinnedChats = readonly(pinnedChatsStore);
@@ -32,10 +37,10 @@ export const refreshChatList = async (
 	loadingNextPage = false;
 
 	const [nextChats, nextPinnedChats] = await Promise.all([
-		getChatList(token, 1),
+		getChatList(token, 1) as Promise<ChatListItem[]>,
 		options.refreshPinned && !options.clearPinned
-			? getPinnedChatList(token)
-			: Promise.resolve(undefined)
+			? (getPinnedChatList(token) as Promise<ChatListItem[]>)
+			: Promise.resolve(undefined as ChatListItem[] | undefined)
 	]);
 
 	if (generation !== requestGeneration) {
@@ -66,7 +71,7 @@ export const loadNextChatListPage = async (token: string = ''): Promise<ChatList
 	loadingNextPage = true;
 
 	try {
-		const nextChats = await getChatList(token, nextPage);
+		const nextChats = (await getChatList(token, nextPage)) as ChatListItem[];
 
 		if (generation !== requestGeneration) {
 			return { accepted: false, allLoaded };

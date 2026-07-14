@@ -191,7 +191,7 @@
 				<DropdownMenu className="min-w-[150px] z-[9999999]">
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
 						on:click={() => onSort('name')}
 					>
 						<span class="flex-1 text-left">{$i18n.t('Name')}</span>
@@ -214,7 +214,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
 						on:click={() => onSort('date')}
 					>
 						<span class="flex-1 text-left">{$i18n.t('Date Modified')}</span>
