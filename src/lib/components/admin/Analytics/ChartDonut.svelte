@@ -12,6 +12,8 @@
 	export let otherLabel = 'Other';
 	export let maxSlices = 6;
 	export let valueFormatter: (value: number) => string = (value) => value.toLocaleString();
+	// Compact variant for tight containers (e.g. the chat context panel).
+	export let small = false;
 
 	const OTHER_COLOR = '#898781';
 
@@ -133,13 +135,18 @@
 </script>
 
 {#if slices.length}
-	<div class="flex items-center gap-4">
-		<div class="relative size-36 shrink-0">
+	<div class="flex items-center {small ? 'gap-3' : 'gap-4'}">
+		<div class="relative {small ? 'size-24' : 'size-36'} shrink-0">
 			<canvas bind:this={chartCanvas}></canvas>
 			<div
-				class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-6"
+				class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center {small
+					? 'px-4'
+					: 'px-6'}"
 			>
-				<span class="text-base font-semibold text-gray-900 dark:text-white truncate max-w-full"
+				<span
+					class="{small
+						? 'text-sm'
+						: 'text-base'} font-semibold text-gray-900 dark:text-white truncate max-w-full"
 					>{centerValue}</span
 				>
 				{#if centerLabel}
@@ -154,12 +161,14 @@
 						class="size-2 rounded-full shrink-0"
 						style="background-color: {sliceColor(slice, idx, darkMode)}"
 					></span>
-					<span class="truncate text-gray-600 dark:text-gray-300">{slice.label}</span>
-					<span class="ml-auto shrink-0 text-gray-900 dark:text-white tabular-nums">
+					<span class="flex-1 min-w-0 truncate text-gray-600 dark:text-gray-300"
+						>{slice.label}</span
+					>
+					<span class="shrink-0 text-right text-gray-900 dark:text-white tabular-nums">
 						{valueFormatter(slice.value)}
-						<span class="text-gray-400">
-							({total > 0 ? ((slice.value / total) * 100).toFixed(0) : 0}%)
-						</span>
+					</span>
+					<span class="w-11 shrink-0 text-right text-gray-400 tabular-nums">
+						({total > 0 ? ((slice.value / total) * 100).toFixed(0) : 0}%)
 					</span>
 				</div>
 			{/each}

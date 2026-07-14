@@ -242,16 +242,13 @@
 		return totals;
 	})();
 
+	// Token-type names deliberately stay in English (no i18n) — they're
+	// technical vocabulary, not UI copy.
 	$: contextSlices = [
-		{ label: $i18n.t('Input'), value: sessionUsage.input, color: '#2a78d6', colorDark: '#3987e5' },
-		{ label: $i18n.t('Cached'), value: sessionUsage.cached, color: '#10b981', colorDark: '#34d399' },
-		{ label: $i18n.t('Output'), value: sessionUsage.output, color: '#f59e0b', colorDark: '#fbbf24' },
-		{
-			label: $i18n.t('Reasoning'),
-			value: sessionUsage.reasoning,
-			color: '#8b5cf6',
-			colorDark: '#a78bfa'
-		}
+		{ label: 'Input', value: sessionUsage.input, color: '#2a78d6', colorDark: '#3987e5' },
+		{ label: 'Cached', value: sessionUsage.cached, color: '#10b981', colorDark: '#34d399' },
+		{ label: 'Output', value: sessionUsage.output, color: '#f59e0b', colorDark: '#fbbf24' },
+		{ label: 'Reasoning', value: sessionUsage.reasoning, color: '#8b5cf6', colorDark: '#a78bfa' }
 	].filter((slice) => slice.value > 0);
 
 	const formatCompactTokens = (n: number) =>
@@ -2328,6 +2325,7 @@
 																</div>
 
 																<ChartDonut
+																	small
 																	data={contextSlices}
 																	centerValue={formatCompactTokens(sessionUsage.total)}
 																	centerLabel={$i18n.t('tokens')}
