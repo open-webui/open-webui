@@ -66,7 +66,8 @@
 		getCodeBlockContents,
 		isYoutubeUrl,
 		displayFileHandler,
-		getModelReasoningInfo
+		getModelReasoningInfo,
+		getModelContextWindow
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
 	import { getOutputText } from './Messages/structuredOutput';
@@ -173,12 +174,16 @@
 	// Efforts the provider advertises for the model; null = no
 	// `reasoning` extension, the selector falls back to the full ladder.
 	let availableThinkingEfforts: string[] | null = null;
+	// Context window (tokens) the provider advertises for the model; null =
+	// unknown, the context meter stays hidden.
+	let contextWindow: number | null = null;
 	let _effortModelId: string | null = null;
 	$: {
 		const currentModelId = atSelectedModel?.id ?? selectedModels[0];
 		const currentModel = $models.find((m) => m.id === currentModelId);
 		const reasoning = getModelReasoningInfo(currentModel);
 		availableThinkingEfforts = reasoning.efforts;
+		contextWindow = getModelContextWindow(currentModel);
 		defaultThinkingEffort =
 			currentModel?.info?.params?.reasoning_effort ?? reasoning.default ?? null;
 		// Swapping model drops any per-chat override back to the new
@@ -3349,6 +3354,7 @@
 										bind:thinkingEffort
 										{defaultThinkingEffort}
 										{availableThinkingEfforts}
+										{contextWindow}
 										bind:atSelectedModel
 										bind:showCommands
 										bind:dragged
@@ -3435,6 +3441,7 @@
 									bind:thinkingEffort
 									{defaultThinkingEffort}
 									{availableThinkingEfforts}
+									{contextWindow}
 									bind:atSelectedModel
 									bind:showCommands
 									bind:dragged

@@ -2183,6 +2183,16 @@ export const getModelPricing = (model: any): ModelPricing | null => {
 };
 
 /**
+ * Read the `context_window` vendor extension a provider may attach to its
+ * /v1/models entries (window size in tokens). Returns null when the model
+ * doesn't advertise one — hide context-usage UI then, never guess.
+ */
+export const getModelContextWindow = (model: any): number | null => {
+	const ctx = model?.context_window ?? model?.openai?.context_window ?? null;
+	return typeof ctx === 'number' && ctx > 0 ? ctx : null;
+};
+
+/**
  * Extract token counts from a usage object, preferring the normalized
  * keys the backend guarantees and falling back to the OpenAI names.
  * Missing detail objects mean a count of 0.

@@ -51,6 +51,7 @@
 		getFormattedTime,
 		getUserPosition,
 		getUserTimezone,
+		getUsageTokens,
 		getWeekday
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
@@ -158,6 +159,34 @@
 	let showThinkingMenu = false;
 	$: thinkingEffortOptions = availableThinkingEfforts ?? FALLBACK_THINKING_EFFORTS;
 	$: effectiveThinkingEffort = thinkingEffort ?? defaultThinkingEffort;
+
+	// Context window (tokens) the provider advertises for the selected model:
+	// null = unknown, the context meter stays hidden.
+	export let contextWindow: number | null = null;
+
+	// Context occupancy, Claude Code style: the last completed assistant
+	// response on the current branch resent the whole conversation, so its
+	// usage (prompt + completion tokens) IS the context occupancy. Updates
+	// after each response, not while typing.
+	$: contextUsage = (() => {
+		if (!contextWindow || !history?.currentId) {
+			return null;
+		}
+		let id = history.currentId;
+		while (id) {
+			const m = history.messages?.[id];
+			if (!m) {
+				break;
+			}
+			const { input, output } = getUsageTokens(m.usage);
+			if (m.role === 'assistant' && m.done && m.usage && input > 0) {
+				const used = input + output;
+				return { used, percent: Math.min(100, (used / contextWindow) * 100) };
+			}
+			id = m.parentId;
+		}
+		return null;
+	})();
 
 	export let pendingOAuthTools = [];
 
@@ -2159,6 +2188,36 @@
 														</div>
 													</Dropdown>
 												</div>
+											{/if}
+
+											<!-- Context-window meter (hidden until a response reports usage, or
+											     when the model doesn't advertise a context_window) -->
+											{#if contextUsage && contextWindow}
+												<Tooltip
+													content={`${$i18n.t('Context')}: ${contextUsage.used.toLocaleString()} / ${contextWindow.toLocaleString()} ${$i18n.t('tokens')}`}
+													placement="top"
+													className="flex items-center"
+												>
+													<div class="flex items-center gap-1.5 px-1.5 self-center cursor-default">
+														<div
+															class="w-12 h-1 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden"
+														>
+															<div
+																class="h-full rounded-full {contextUsage.percent >= 90
+																	? 'bg-red-500'
+																	: contextUsage.percent >= 75
+																		? 'bg-amber-500'
+																		: 'bg-gray-500 dark:bg-gray-400'}"
+																style="width: {Math.max(2, contextUsage.percent)}%"
+															></div>
+														</div>
+														<span
+															class="text-[11px] font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap"
+														>
+															{contextUsage.percent < 1 ? '<1' : Math.round(contextUsage.percent)}%
+														</span>
+													</div>
+												</Tooltip>
 											{/if}
 
 											<!-- Terminal Server Selector -->
