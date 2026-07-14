@@ -416,15 +416,14 @@
 			if (paneReady) showControls.set(false);
 		}}
 		collapsible={true}
-		class="z-10 bg-white dark:bg-gray-850"
+		class="z-10 bg-white dark:bg-gray-900"
 	>
 		{#if $showControls}
 			<div class="flex max-h-full min-h-full">
 				<div
 					class="w-full {specialPanel && !$showCallOverlay
 						? ' '
-						: 'bg-white dark:shadow-lg dark:bg-gray-850'} z-40 pointer-events-auto {activeTab ===
-					'files'
+						: 'bg-white dark:bg-gray-900'} z-40 pointer-events-auto {activeTab === 'files'
 						? ''
 						: 'overflow-y-auto'} scrollbar-hidden"
 					id="controls-container"
