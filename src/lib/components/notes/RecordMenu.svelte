@@ -31,40 +31,40 @@
 	<div slot="content">
 		<DropdownMenu className="min-w-[170px] font-primary">
 			<button
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
 				on:click={async () => {
 					onRecord();
 					show = false;
 				}}
 			>
-				<div class=" self-center mr-2">
-					<Mic className="size-4" strokeWidth="2" />
+				<div class="self-center">
+					<Mic className="size-3.5" strokeWidth="2" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Record')}</div>
 			</button>
 
 			<button
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
 				on:click={() => {
 					onCaptureAudio();
 					show = false;
 				}}
 			>
-				<div class=" self-center mr-2">
-					<CursorArrowRays className="size-4" strokeWidth="2" />
+				<div class="self-center">
+					<CursorArrowRays className="size-3.5" strokeWidth="2" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Capture Audio')}</div>
 			</button>
 
 			<button
-				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
 				on:click={() => {
 					onUpload();
 					show = false;
 				}}
 			>
-				<div class=" self-center mr-2">
-					<CloudArrowUp className="size-4" strokeWidth="2" />
+				<div class="self-center">
+					<CloudArrowUp className="size-3.5" strokeWidth="2" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Upload Audio')}</div>
 			</button>

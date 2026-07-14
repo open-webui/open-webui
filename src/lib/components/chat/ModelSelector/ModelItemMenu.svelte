@@ -48,7 +48,7 @@
 			{#if model?.preset || model?.info?.base_model_id ? model?.info?.user_id === $user?.id : $user?.role === 'admin'}
 				<button
 					type="button"
-					class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
+					class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
 					on:click={(e) => {
 						e.stopPropagation();
 						e.preventDefault();
@@ -61,7 +61,7 @@
 						show = false;
 					}}
 				>
-					<Pencil className="size-4" />
+					<Pencil className="size-3.5" />
 
 					<div class="flex items-center">{$i18n.t('Edit')}</div>
 				</button>
@@ -69,7 +69,7 @@
 				{#if $user?.role === 'admin' && model?.owned_by === 'ollama'}
 					<button
 						type="button"
-						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
 						on:click={(e) => {
 							e.stopPropagation();
 							e.preventDefault();
@@ -84,7 +84,7 @@
 							viewBox="0 0 24 24"
 							stroke-width="1.5"
 							stroke="currentColor"
-							class="size-4"
+							class="size-3.5"
 						>
 							<path
 								stroke-linecap="round"
@@ -97,13 +97,13 @@
 					</button>
 				{/if}
 
-				<hr class="border-gray-50 dark:border-gray-800/30 my-1" />
+				<hr class="border-gray-50 dark:border-gray-800/30 mx-1 my-0.5" />
 			{/if}
 
 			<button
 				type="button"
 				aria-pressed={($settings?.pinnedModels ?? []).includes(model?.id)}
-				class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
 				on:click={(e) => {
 					e.stopPropagation();
 					e.preventDefault();
@@ -113,9 +113,9 @@
 				}}
 			>
 				{#if ($settings?.pinnedModels ?? []).includes(model?.id)}
-					<PinSlash />
+					<PinSlash className="size-3.5" />
 				{:else}
-					<Pin />
+					<Pin className="size-3.5" />
 				{/if}
 
 				<div class="flex items-center">
@@ -129,7 +129,7 @@
 
 			<button
 				type="button"
-				class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
 				on:click={(e) => {
 					e.stopPropagation();
 					e.preventDefault();
@@ -138,17 +138,17 @@
 					show = false;
 				}}
 			>
-				<Link />
+				<Link className="size-3.5" />
 
 				<div class="flex items-center">{$i18n.t('Copy Link')}</div>
 			</button>
 
 			{#if $config?.features.enable_community_sharing}
-				<hr class="border-gray-50 dark:border-gray-800/30 my-1" />
+				<hr class="border-gray-50 dark:border-gray-800/30 mx-1 my-0.5" />
 
 				<button
 					type="button"
-					class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2"
+					class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
 					on:click={(e) => {
 						e.stopPropagation();
 						e.preventDefault();
@@ -160,7 +160,7 @@
 						show = false;
 					}}
 				>
-					<GlobeAlt className="size-4" />
+					<GlobeAlt className="size-3.5" />
 
 					<div class="flex items-center">{$i18n.t('Community Reviews')}</div>
 				</button>
