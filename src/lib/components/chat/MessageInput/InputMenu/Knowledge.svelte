@@ -166,9 +166,9 @@
 		{:else}
 			{#each items as item, idx (item.id)}
 				<div
-					class=" px-2.5 py-1 rounded-xl w-full text-left flex justify-between items-center text-sm {idx ===
+					class=" h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[13px] font-normal hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100 {idx ===
 					selectedIdx
-						? ' bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button'
+						? ' bg-gray-50/40 dark:bg-gray-800/40 dark:text-gray-100 selected-command-option-button'
 						: ''}"
 				>
 					<button
@@ -192,7 +192,7 @@
 					>
 						<div class="w-full text-left text-black dark:text-gray-100 flex items-center gap-1">
 							<Tooltip content={$i18n.t('Collection')} placement="top">
-								<Database className="size-4" />
+								<Database className="size-3.5" />
 							</Tooltip>
 
 							<Tooltip
@@ -200,7 +200,7 @@
 								placement="top-start"
 								className="flex flex-1 min-w-0"
 							>
-								<div class="line-clamp-1 flex-1 text-sm">
+								<div class="line-clamp-1 flex-1 text-[13px]">
 									{decodeString(item?.name)}
 								</div>
 							</Tooltip>
@@ -241,7 +241,7 @@
 						{:else}
 							{#each selectedFileItems as file, fileIdx (file.id)}
 								<button
-									class=" px-2.5 py-1 rounded-xl w-full text-left flex justify-between items-center text-sm hover:bg-gray-50 hover:dark:bg-gray-800 hover:dark:text-gray-100"
+									class=" h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[13px] font-normal hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100"
 									type="button"
 									on:click={() => {
 										console.log(file);
@@ -254,11 +254,11 @@
 								>
 									<div class=" flex items-center gap-1.5">
 										<Tooltip content={$i18n.t('Collection')} placement="top">
-											<DocumentPage className="size-4" />
+											<DocumentPage className="size-3.5" />
 										</Tooltip>
 
 										<Tooltip content={decodeString(file?.meta?.name)} placement="top-start">
-											<div class="line-clamp-1 flex-1 text-sm">
+											<div class="line-clamp-1 flex-1 text-[13px]">
 												{decodeString(file?.meta?.name)}
 											</div>
 										</Tooltip>

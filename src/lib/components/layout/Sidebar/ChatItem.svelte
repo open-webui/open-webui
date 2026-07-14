@@ -15,26 +15,22 @@
 		deleteChatById,
 		getAllTags,
 		getChatById,
-		getChatList,
 		getChatListByTagName,
-		getPinnedChatList,
 		updateChatById,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
 	import {
 		chatId,
 		chatTitle as _chatTitle,
-		chats,
 		mobile,
-		pinnedChats,
 		showSidebar,
-		currentChatPage,
 		tags,
 		selectedFolder,
 		activeChatIds,
 		settings,
 		user
 	} from '$lib/stores';
+	import { refreshChatList } from '$lib/stores/chat-list';
 
 	import ChatMenu from './ChatMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -137,9 +133,7 @@
 				_chatTitle.set(title);
 			}
 
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			await pinnedChats.set(await getPinnedChatList(localStorage.token));
+			await refreshChatList(localStorage.token, { refreshPinned: true });
 
 			dispatch('change');
 		}
@@ -165,9 +159,7 @@
 		if (res) {
 			goto(`/c/${res.id}`);
 
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			await pinnedChats.set(await getPinnedChatList(localStorage.token));
+			await refreshChatList(localStorage.token, { refreshPinned: true });
 		}
 	};
 
@@ -231,9 +223,7 @@
 			);
 
 			if (res) {
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
-				await pinnedChats.set(await getPinnedChatList(localStorage.token));
+				await refreshChatList(localStorage.token, { refreshPinned: true });
 
 				dispatch('change');
 

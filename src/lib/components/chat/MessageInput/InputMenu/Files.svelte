@@ -65,9 +65,9 @@
 		<div class="flex flex-col gap-0.5">
 			{#each items as item, idx}
 				<button
-					class=" px-2.5 py-1 rounded-xl w-full text-left flex justify-between items-center text-sm {idx ===
+					class=" h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[13px] font-normal {idx ===
 					selectedIdx
-						? ' bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button'
+						? ' bg-gray-50/40 dark:bg-gray-800/40 dark:text-gray-100 selected-command-option-button'
 						: ''}"
 					type="button"
 					on:click={() => {
@@ -85,7 +85,7 @@
 				>
 					<div class="text-black dark:text-gray-100 flex items-center gap-1.5 overflow-hidden">
 						<Tooltip content={$i18n.t('File')} placement="top">
-							<DocumentPage className="size-4 shrink-0" />
+							<DocumentPage className="size-3.5 shrink-0" />
 						</Tooltip>
 
 						<Tooltip content={item?.name} placement="top-start">

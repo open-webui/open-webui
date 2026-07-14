@@ -4,20 +4,15 @@
 
 	import {
 		chatId,
-		chats,
 		user,
-		settings,
-		scrollPaginationEnabled,
-		currentChatPage,
-		pinnedChats
+		settings
 	} from '$lib/stores';
+	import { refreshChatList } from '$lib/stores/chat-list';
 
 	import {
 		archiveAllChats,
 		deleteAllChats,
 		getAllChats,
-		getChatList,
-		getPinnedChatList,
 		importChats
 	} from '$lib/apis/chats';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
@@ -96,10 +91,7 @@
 			toast.success(`Successfully imported ${res.length} chats.`);
 		}
 
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		pinnedChats.set(await getPinnedChatList(localStorage.token));
-		scrollPaginationEnabled.set(true);
+		await refreshChatList(localStorage.token, { refreshPinned: true });
 	};
 
 	const exportChats = async () => {
@@ -115,10 +107,7 @@
 			toast.error(`${error}`);
 		});
 
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		pinnedChats.set([]);
-		scrollPaginationEnabled.set(true);
+		await refreshChatList(localStorage.token, { clearPinned: true });
 	};
 
 	const deleteAllChatsHandler = async () => {
@@ -127,16 +116,11 @@
 			toast.error(`${error}`);
 		});
 
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		scrollPaginationEnabled.set(true);
+		await refreshChatList(localStorage.token);
 	};
 
 	const handleArchivedChatsChange = async () => {
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-
-		scrollPaginationEnabled.set(true);
+		await refreshChatList(localStorage.token);
 	};
 </script>
 

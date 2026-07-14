@@ -58,8 +58,7 @@ export const chatTitle = writable('');
 export const channels = writable([]);
 export const channelId = writable(null);
 
-export const chats = writable(null);
-export const pinnedChats = writable([]);
+export { chats, pinnedChats } from './chat-list';
 export const pinnedNotes = writable([]);
 export const tags = writable([]);
 export const folders = writable([]);
@@ -122,8 +121,6 @@ export type DesktopEvent = {
 	data?: any;
 };
 export const desktopEvent: Writable<DesktopEvent | null> = writable(null);
-export const scrollPaginationEnabled = writable(false);
-export const currentChatPage = writable(1);
 
 export const isLastActiveTab = writable(true);
 export const playingNotificationSound = writable(false);

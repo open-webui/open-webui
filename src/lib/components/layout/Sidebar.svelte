@@ -18,8 +18,6 @@
 		showArchivedChats,
 		pinnedChats,
 		pinnedNotes,
-		scrollPaginationEnabled,
-		currentChatPage,
 		temporaryChatEnabled,
 		channels,
 		socket,
@@ -31,6 +29,7 @@
 		sidebarWidth,
 		activeChatIds
 	} from '$lib/stores';
+	import { loadNextChatListPage, refreshChatList } from '$lib/stores/chat-list';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -38,9 +37,7 @@
 	$: canImportChats = $user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true);
 
 	import {
-		getChatList,
 		getAllTags,
-		getPinnedChatList,
 		toggleChatPinnedStatusById,
 		getChatById,
 		updateChatFolderIdById,
@@ -97,6 +94,7 @@
 
 	// Pagination variables
 	let chatListLoading = false;
+	let chatListReady = false;
 	let allChatsLoaded = false;
 
 	let showCreateFolderModal = false;
@@ -323,9 +321,8 @@
 	const initChatList = async () => {
 		// Reset pagination variables
 		console.log('initChatList');
-		currentChatPage.set(1);
 		allChatsLoaded = false;
-		scrollPaginationEnabled.set(false);
+		chatListReady = false;
 
 		initFolders();
 		initSharedFolders();
@@ -334,11 +331,6 @@
 				console.log('Init tags');
 				const _tags = await getAllTags(localStorage.token);
 				tags.set(_tags);
-			})(),
-			(async () => {
-				console.log('Init pinned chats');
-				const _pinnedChats = await getPinnedChatList(localStorage.token);
-				pinnedChats.set(_pinnedChats);
 			})(),
 			(async () => {
 				if (
@@ -352,29 +344,20 @@
 			})(),
 			(async () => {
 				console.log('Init chat list');
-				const _chats = await getChatList(localStorage.token, $currentChatPage);
-				await chats.set(_chats);
+				const result = await refreshChatList(localStorage.token, { refreshPinned: true });
+				if (result.accepted) {
+					allChatsLoaded = result.allLoaded;
+					chatListReady = true;
+				}
 			})()
 		]);
-
-		// Enable pagination
-		scrollPaginationEnabled.set(true);
 	};
 
 	const loadMoreChats = async () => {
 		chatListLoading = true;
 
-		currentChatPage.set($currentChatPage + 1);
-
-		let newChatList = [];
-
-		newChatList = await getChatList(localStorage.token, $currentChatPage);
-
-		// once the bottom of the list has been reached (no results) there is no need to continue querying
-		allChatsLoaded = newChatList.length === 0;
-		const existingIds = new Set(($chats ?? []).map((c) => c.id));
-		const uniqueNewChats = newChatList.filter((c) => !existingIds.has(c.id));
-		await chats.set([...($chats ? $chats : []), ...uniqueNewChats]);
+		const result = await loadNextChatListPage(localStorage.token);
+		allChatsLoaded = result.allLoaded;
 
 		chatListLoading = false;
 	};
@@ -1573,7 +1556,7 @@
 									/>
 								{/each}
 
-								{#if $scrollPaginationEnabled && !allChatsLoaded}
+								{#if chatListReady && !allChatsLoaded}
 									<Loader
 										on:visible={(e) => {
 											if (!chatListLoading) {

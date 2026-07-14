@@ -14,7 +14,6 @@
 		archiveChatById,
 		updateChatById,
 		updateChatFolderIdById,
-		getPinnedChatList,
 		getAllTags
 	} from '$lib/apis/chats';
 	import Spinner from '../common/Spinner.svelte';
@@ -28,12 +27,10 @@
 	import {
 		config,
 		user,
-		chats,
 		chatId as currentChatId,
-		pinnedChats,
-		currentChatPage,
 		tags
 	} from '$lib/stores';
+	import { refreshChatList } from '$lib/stores/chat-list';
 	import Messages from '../chat/Messages.svelte';
 	import { goto } from '$app/navigation';
 	import PencilSquare from '../icons/PencilSquare.svelte';
@@ -73,9 +70,7 @@
 	let generating = false;
 
 	const refreshSidebar = async () => {
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		await pinnedChats.set(await getPinnedChatList(localStorage.token));
+		await refreshChatList(localStorage.token, { refreshPinned: true });
 	};
 
 	const cloneChatHandler = async (id) => {
