@@ -15,7 +15,6 @@
 		showSidebar,
 		showSearch,
 		mobile,
-		showArchivedChats,
 		pinnedChats,
 		pinnedNotes,
 		temporaryChatEnabled,
@@ -57,7 +56,6 @@
 	import { createNoteHandler } from '$lib/components/notes/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
-	import ArchivedChatsModal from './ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -704,19 +702,6 @@
 	const isWindows = /Windows/i.test(navigator.userAgent);
 </script>
 
-<ArchivedChatsModal
-	bind:show={$showArchivedChats}
-	onUpdate={async () => {
-		await initChatList();
-	}}
-	onDelete={(id) => {
-		if ($chatId === id) {
-			goto('/');
-			chatId.set('');
-		}
-	}}
-/>
-
 <ChannelModal
 	bind:show={showCreateChannel}
 	onSubmit={async (payload: any) => {
@@ -971,7 +956,7 @@
 							showActiveUsers={false}
 							on:show={(e) => {
 								if (e.detail === 'archived-chat') {
-									showArchivedChats.set(true);
+									showSettings.set('archived_chats');
 								}
 							}}
 						>
@@ -1050,7 +1035,7 @@
 				<a href="/" class="flex flex-1 px-0.5" on:click={newChatHandler}>
 					<div
 						id="sidebar-webui-name"
-						class=" self-center font-normal text-gray-850 dark:text-white "
+						class=" self-center font-normal text-gray-850 dark:text-white"
 					>
 						{$WEBUI_NAME}
 					</div>
@@ -1106,7 +1091,7 @@
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm ">{$i18n.t('New Chat')}</div>
+								<div class=" self-center text-sm">{$i18n.t('New Chat')}</div>
 							</div>
 
 							<HotkeyHint name="newChat" className=" group-hover:visible invisible" />
@@ -1128,7 +1113,7 @@
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm ">{$i18n.t('Search')}</div>
+								<div class=" self-center text-sm">{$i18n.t('Search')}</div>
 							</div>
 							<HotkeyHint name="search" className=" group-hover:visible invisible" />
 						</button>
@@ -1204,7 +1189,7 @@
 										</div>
 
 										<div class="flex self-center translate-y-[0.5px]">
-											<div class=" self-center text-sm ">{$i18n.t(meta.label)}</div>
+											<div class=" self-center text-sm">{$i18n.t(meta.label)}</div>
 										</div>
 									</a>
 								</div>
@@ -1585,7 +1570,7 @@
 				<div
 					class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 				></div>
-				<div class="flex flex-col ">
+				<div class="flex flex-col">
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
 							role={$user?.role}
@@ -1594,7 +1579,7 @@
 							className="w-[calc(var(--sidebar-width)-1rem)]"
 							on:show={(e) => {
 								if (e.detail === 'archived-chat') {
-									showArchivedChats.set(true);
+									showSettings.set('archived_chats');
 								}
 							}}
 						>

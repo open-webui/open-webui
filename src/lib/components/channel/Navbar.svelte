@@ -2,7 +2,7 @@
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { mobile, showArchivedChats, showSidebar, user } from '$lib/stores';
+	import { mobile, showSettings, showSidebar, user } from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
@@ -202,7 +202,7 @@
 							help={true}
 							on:show={(e) => {
 								if (e.detail === 'archived-chat') {
-									showArchivedChats.set(true);
+									showSettings.set('archived_chats');
 								}
 							}}
 						>

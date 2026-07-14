@@ -2,24 +2,14 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import {
-		chatId,
-		user,
-		settings
-	} from '$lib/stores';
+	import { user } from '$lib/stores';
 	import { refreshChatList } from '$lib/stores/chat-list';
 
-	import {
-		archiveAllChats,
-		deleteAllChats,
-		getAllChats,
-		importChats
-	} from '$lib/apis/chats';
+	import { archiveAllChats, deleteAllChats, getAllChats, importChats } from '$lib/apis/chats';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
-	import { onMount, getContext } from 'svelte';
+	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import ArchivedChatsModal from '$lib/components/layout/ArchivedChatsModal.svelte';
 	import SharedChatsModal from '$lib/components/layout/SharedChatsModal.svelte';
 	import FilesModal from '$lib/components/layout/FilesModal.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -33,7 +23,6 @@
 
 	let showArchiveConfirmDialog = false;
 	let showDeleteConfirmDialog = false;
-	let showArchivedChatsModal = false;
 	let showSharedChatsModal = false;
 	let showFilesModal = false;
 
@@ -118,22 +107,8 @@
 
 		await refreshChatList(localStorage.token);
 	};
-
-	const handleArchivedChatsChange = async () => {
-		await refreshChatList(localStorage.token);
-	};
 </script>
 
-<ArchivedChatsModal
-	bind:show={showArchivedChatsModal}
-	onUpdate={handleArchivedChatsChange}
-	onDelete={(id) => {
-		if ($chatId === id) {
-			goto('/');
-			chatId.set('');
-		}
-	}}
-/>
 <SharedChatsModal bind:show={showSharedChatsModal} />
 <FilesModal bind:show={showFilesModal} />
 
@@ -204,21 +179,6 @@
 					</div>
 				</div>
 			{/if}
-
-			<div>
-				<div class="py-0.5 flex w-full justify-between">
-					<div class="self-center text-xs">{$i18n.t('Archived Chats')}</div>
-					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							showArchivedChatsModal = true;
-						}}
-						type="button"
-					>
-						<span class="self-center">{$i18n.t('Manage')}</span>
-					</button>
-				</div>
-			</div>
 
 			<div>
 				<div class="py-0.5 flex w-full justify-between">

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { getContext, onMount, tick } from 'svelte';
+	import { getContext, onMount } from 'svelte';
+	import type { Writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import { config, models, settings, user } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
@@ -13,9 +14,9 @@
 	import Interface from './Settings/Interface.svelte';
 	import Audio from './Settings/Audio.svelte';
 	import DataControls from './Settings/DataControls.svelte';
+	import ArchivedChats from './Settings/ArchivedChats.svelte';
 	import Personalization from './Settings/Personalization.svelte';
 	import Search from '../icons/Search.svelte';
-	import XMark from '../icons/XMark.svelte';
 	import Connections from './Settings/Connections.svelte';
 	import Integrations from './Settings/Integrations.svelte';
 	import DatabaseSettings from '../icons/DatabaseSettings.svelte';
@@ -28,8 +29,10 @@
 	import Face from '../icons/Face.svelte';
 	import AppNotification from '../icons/AppNotification.svelte';
 	import UserBadgeCheck from '../icons/UserBadgeCheck.svelte';
+	import ArchiveBox from '../icons/ArchiveBox.svelte';
+	import ChevronLeft from '../icons/ChevronLeft.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<any> = getContext('i18n');
 
 	export let show: boolean | string = false;
 
@@ -38,10 +41,8 @@
 			selectedTab = show;
 			show = true;
 		}
-		addScrollListener();
 	} else {
 		selectedTab = 'general';
-		removeScrollListener();
 	}
 
 	interface SettingsTab {
@@ -347,8 +348,6 @@
 				'archive chats',
 				'archiveallchats',
 				'archivechats',
-				'archived chats',
-				'archivedchats',
 				'chat activity',
 				'chat history',
 				'chat settings',
@@ -374,6 +373,25 @@
 				'message history',
 				'messagearchive',
 				'messagehistory'
+			]
+		},
+		{
+			id: 'archived_chats',
+			title: 'Archived Chats',
+			keywords: [
+				'archive',
+				'archive chat',
+				'archive chats',
+				'archived',
+				'archived chat',
+				'archived chats',
+				'archivedchat',
+				'archivedchats',
+				'conversation archive',
+				'message archive',
+				'unarchive',
+				'unarchive chat',
+				'unarchive chats'
 			]
 		},
 		{
@@ -476,11 +494,11 @@
 		}
 	];
 
-	let availableSettings = [];
-	let filteredSettings = [];
+	let availableSettings: SettingsTab[] = [];
+	let filteredSettings: string[] = [];
 
 	let search = '';
-	let searchDebounceTimeout;
+	let searchDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	const getAvailableSettings = () => {
 		return allSettings.filter((tab) => {
@@ -513,10 +531,11 @@
 	const setFilteredSettings = () => {
 		filteredSettings = availableSettings
 			.filter((tab) => {
+				const query = search.toLowerCase().trim();
 				return (
-					search === '' ||
-					tab.title.toLowerCase().includes(search.toLowerCase().trim()) ||
-					tab.keywords.some((keyword) => keyword.includes(search.toLowerCase().trim()))
+					query === '' ||
+					tab.title.toLowerCase().includes(query) ||
+					tab.keywords.some((keyword) => keyword.includes(query))
 				);
 			})
 			.map((tab) => tab.id);
@@ -524,6 +543,20 @@
 		if (filteredSettings.length > 0 && !filteredSettings.includes(selectedTab)) {
 			selectedTab = filteredSettings[0];
 		}
+	};
+
+	const saveSettings = async (updated: Record<string, any>) => {
+		console.log(updated);
+		await settings.set({ ...$settings, ...updated });
+		await models.set(await getModels());
+		await updateUserSettings(localStorage.token, { ui: $settings });
+	};
+
+	const getModels = async () => {
+		return await _getModels(
+			localStorage.token,
+			$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
+		);
 	};
 
 	const searchDebounceHandler = () => {
@@ -536,46 +569,14 @@
 		}, 100);
 	};
 
-	const saveSettings = async (updated) => {
-		console.log(updated);
-		await settings.set({ ...$settings, ...updated });
-		await models.set(await getModels());
-		await updateUserSettings(localStorage.token, { ui: $settings });
-	};
-
-	const getModels = async () => {
-		return await _getModels(
-			localStorage.token,
-			$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-		);
-	};
+	const tabButtonClass = (active: boolean) =>
+		`flex items-center gap-1.5 h-7 px-2 md:w-full shrink-0 rounded-lg text-xs text-left transition-colors duration-75 ${
+			active
+				? 'font-medium text-gray-900 dark:text-white bg-gray-100 dark:bg-white/6'
+				: 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+		}`;
 
 	let selectedTab = 'general';
-
-	// Function to handle sideways scrolling
-	const scrollHandler = (event) => {
-		const settingsTabsContainer = document.getElementById('settings-tabs-container');
-		if (settingsTabsContainer) {
-			event.preventDefault(); // Prevent default vertical scrolling
-			settingsTabsContainer.scrollLeft += event.deltaY; // Scroll sideways
-		}
-	};
-
-	const addScrollListener = async () => {
-		await tick();
-		const settingsTabsContainer = document.getElementById('settings-tabs-container');
-		if (settingsTabsContainer) {
-			settingsTabsContainer.addEventListener('wheel', scrollHandler);
-		}
-	};
-
-	const removeScrollListener = async () => {
-		await tick();
-		const settingsTabsContainer = document.getElementById('settings-tabs-container');
-		if (settingsTabsContainer) {
-			settingsTabsContainer.removeEventListener('wheel', scrollHandler);
-		}
-	};
 
 	onMount(() => {
 		availableSettings = getAvailableSettings();
@@ -588,356 +589,279 @@
 	});
 </script>
 
-<Modal size="2xl" bind:show>
-	<div class="text-gray-700 dark:text-gray-100 mx-1">
-		<div class=" flex justify-between dark:text-gray-300 px-4 pt-4 pb-1 md:pb-2">
-			<div class=" text-lg font-normal self-center">{$i18n.t('Settings')}</div>
-			<button
-				aria-label={$i18n.t('Close settings modal')}
-				class="self-center"
-				on:click={() => {
-					show = false;
-				}}
-			>
-				<XMark className="w-5 h-5"></XMark>
-			</button>
-		</div>
+<Modal
+	size="full"
+	className="w-full max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-4 md:mx-0 flex flex-col md:flex-row max-h-[85vh] lg:max-h-[90vh] md:h-[35rem] lg:h-[42rem] xl:h-[46rem] bg-white dark:bg-gray-900 rounded-4xl"
+	bind:show
+>
+	<nav
+		id="settings-tabs-container"
+		class="shrink-0 min-w-0 md:min-h-0 flex md:block border-b md:border-b-0 md:border-r border-gray-200 dark:border-white/6 md:w-[15rem]"
+	>
+		<button
+			class="flex items-center gap-1.5 h-7 px-2 m-1 md:mb-0 md:w-[calc(100%-0.5rem)] shrink-0 rounded-lg text-xs text-gray-400 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
+			type="button"
+			on:click={() => {
+				show = false;
+			}}
+		>
+			<ChevronLeft className="size-3" strokeWidth="2" />
+			<span>{$i18n.t('Back')}</span>
+		</button>
 
-		<div class="flex flex-col md:flex-row w-full pt-1 pb-4">
+		<div
+			class="tabs flex min-w-0 flex-1 overflow-x-auto md:overflow-x-hidden md:overflow-y-auto md:flex-col p-1 pl-0 md:pl-1 gap-px"
+		>
 			<div
-				role="tablist"
-				id="settings-tabs-container"
-				class="tabs flex flex-row overflow-x-auto gap-2 mx-2.5 md:pr-3.5 md:gap-1 md:flex-col flex-1 md:flex-none md:w-47 md:min-h-[min(42rem,calc(100dvh-10rem))] md:max-h-[min(42rem,calc(100dvh-10rem))] dark:text-gray-200 text-sm text-left mb-1 md:mb-0 -translate-y-1"
+				class="hidden md:flex items-center gap-1.5 h-7 px-2 md:w-full shrink-0 rounded-lg text-xs bg-gray-50/70 dark:bg-white/[0.03] mb-2"
 			>
-				<div
-					class="hidden md:flex w-full rounded-xl px-2.5 gap-1.5 bg-gray-100/80 dark:bg-gray-850/80 backdrop-blur-2xl my-0.75 mb-1.25"
-					id="settings-search"
-				>
-					<div class="self-center rounded-l-xl bg-transparent">
-						<Search
-							className="size-3.5"
-							strokeWidth={($settings?.highContrastMode ?? false) ? '3' : '1.5'}
-						/>
-					</div>
-					<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
-					<input
-						class={`w-full py-1 text-sm bg-transparent dark:text-gray-300 outline-hidden
-								${($settings?.highContrastMode ?? false) ? 'placeholder-gray-800' : ''}`}
-						bind:value={search}
-						id="search-input-settings-modal"
-						on:input={searchDebounceHandler}
-						placeholder={$i18n.t('Search')}
+				<div class="self-center rounded-l-xl bg-transparent">
+					<Search
+						className="size-3.5"
+						strokeWidth={($settings?.highContrastMode ?? false) ? '3' : '1.5'}
 					/>
 				</div>
-				{#if filteredSettings.length > 0}
-					{#each filteredSettings as tabId (tabId)}
-						{#if tabId === 'general'}
+				<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
+				<input
+					class={`w-full py-1 text-xs bg-transparent dark:text-gray-300 outline-hidden
+						${($settings?.highContrastMode ?? false) ? 'placeholder-gray-800' : ''}`}
+					bind:value={search}
+					id="search-input-settings-modal"
+					on:input={searchDebounceHandler}
+					placeholder={$i18n.t('Search')}
+				/>
+			</div>
+
+			<span
+				class="hidden md:block text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 mt-1.5 mb-0.5"
+			>
+				{$i18n.t('Personal')}
+			</span>
+
+			{#if filteredSettings.length > 0}
+				{#each filteredSettings as tabId (tabId)}
+					{#if tabId === 'general'}
+						<button
+							role="tab"
+							aria-controls="tab-general"
+							aria-selected={selectedTab === 'general'}
+							class={tabButtonClass(selectedTab === 'general')}
+							on:click={() => {
+								selectedTab = 'general';
+							}}
+						>
+							<SettingsAlt className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('General')}</span>
+						</button>
+					{:else if tabId === 'interface'}
+						<button
+							role="tab"
+							aria-controls="tab-interface"
+							aria-selected={selectedTab === 'interface'}
+							class={tabButtonClass(selectedTab === 'interface')}
+							on:click={() => {
+								selectedTab = 'interface';
+							}}
+						>
+							<AppNotification className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('Interface')}</span>
+						</button>
+					{:else if tabId === 'connections'}
+						{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
 							<button
 								role="tab"
-								aria-controls="tab-general"
-								aria-selected={selectedTab === 'general'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'general'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
+								aria-controls="tab-connections"
+								aria-selected={selectedTab === 'connections'}
+								class={tabButtonClass(selectedTab === 'connections')}
 								on:click={() => {
-									selectedTab = 'general';
+									selectedTab = 'connections';
 								}}
 							>
-								<div class=" self-center mr-2">
-									<SettingsAlt strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('General')}</div>
-							</button>
-						{:else if tabId === 'interface'}
-							<button
-								role="tab"
-								aria-controls="tab-interface"
-								aria-selected={selectedTab === 'interface'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'interface'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'interface';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<AppNotification strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Interface')}</div>
-							</button>
-						{:else if tabId === 'connections'}
-							{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
-								<button
-									role="tab"
-									aria-controls="tab-connections"
-									aria-selected={selectedTab === 'connections'}
-									class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'connections'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-									on:click={() => {
-										selectedTab = 'connections';
-									}}
-								>
-									<div class=" self-center mr-2">
-										<Link strokeWidth="2" />
-									</div>
-									<div class=" self-center">{$i18n.t('Connections')}</div>
-								</button>
-							{/if}
-						{:else if tabId === 'tools'}
-							{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
-								<button
-									role="tab"
-									aria-controls="tab-tools"
-									aria-selected={selectedTab === 'tools'}
-									class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'tools'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-									on:click={() => {
-										selectedTab = 'tools';
-									}}
-								>
-									<div class=" self-center mr-2">
-										<WrenchAlt strokeWidth="2" />
-									</div>
-									<div class=" self-center">{$i18n.t('Integrations')}</div>
-								</button>
-							{/if}
-						{:else if tabId === 'personalization'}
-							<button
-								role="tab"
-								aria-controls="tab-personalization"
-								aria-selected={selectedTab === 'personalization'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'personalization'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'personalization';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<Face strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Personalization')}</div>
-							</button>
-						{:else if tabId === 'audio'}
-							<button
-								role="tab"
-								aria-controls="tab-audio"
-								aria-selected={selectedTab === 'audio'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'audio'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'audio';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<SoundHigh strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Audio')}</div>
-							</button>
-						{:else if tabId === 'data_controls'}
-							<button
-								role="tab"
-								aria-controls="tab-data-controls"
-								aria-selected={selectedTab === 'data_controls'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'data_controls'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'data_controls';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<DatabaseSettings strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Data Controls')}</div>
-							</button>
-						{:else if tabId === 'account'}
-							<button
-								role="tab"
-								aria-controls="tab-account"
-								aria-selected={selectedTab === 'account'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'account'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'account';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<UserCircle strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('Account')}</div>
-							</button>
-						{:else if tabId === 'about'}
-							<button
-								role="tab"
-								aria-controls="tab-about"
-								aria-selected={selectedTab === 'about'}
-								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
-								${
-									selectedTab === 'about'
-										? ($settings?.highContrastMode ?? false)
-											? 'dark:bg-gray-800 bg-gray-200'
-											: ''
-										: ($settings?.highContrastMode ?? false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
-								}`}
-								on:click={() => {
-									selectedTab = 'about';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<InfoCircle strokeWidth="2" />
-								</div>
-								<div class=" self-center">{$i18n.t('About')}</div>
+								<Link className="size-3.5" strokeWidth="2" />
+								<span>{$i18n.t('Connections')}</span>
 							</button>
 						{/if}
-					{/each}
-				{:else}
-					<div class="text-center text-gray-500 mt-4">
-						{$i18n.t('No results found')}
-					</div>
-				{/if}
-				{#if $user?.role === 'admin'}
-					<a
-						href="/admin/settings"
-						draggable="false"
-						class="px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none md:mt-auto flex select-none text-left transition {$settings?.highContrastMode
-							? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-						on:click={async (e) => {
-							e.preventDefault();
-							await goto('/admin/settings');
-							show = false;
-						}}
-					>
-						<div class=" self-center mr-2">
-							<UserBadgeCheck strokeWidth="2" />
-						</div>
-						<div class=" self-center">{$i18n.t('Admin Settings')}</div>
-					</a>
-				{/if}
-			</div>
-			<div
-				class="flex-1 px-3.5 md:pl-0 md:pr-4.5 md:min-h-[min(42rem,calc(100dvh-10rem))] max-h-[min(42rem,calc(100dvh-10rem))] overflow-y-auto"
-			>
-				{#if selectedTab === 'general'}
-					<General
-						{getModels}
-						{saveSettings}
-						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'interface'}
-					<Interface
-						{saveSettings}
-						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'connections'}
-					<Connections
-						saveSettings={async (updated) => {
-							await saveSettings(updated);
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'tools'}
-					<Integrations
-						saveSettings={async (updated) => {
-							await saveSettings(updated);
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'personalization'}
-					<Personalization
-						{saveSettings}
-						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'audio'}
-					<Audio
-						{saveSettings}
-						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'data_controls'}
-					<DataControls {saveSettings} />
-				{:else if selectedTab === 'account'}
-					<Account
-						{saveSettings}
-						saveHandler={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'about'}
-					<About />
-				{/if}
-			</div>
+					{:else if tabId === 'tools'}
+						{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
+							<button
+								role="tab"
+								aria-controls="tab-tools"
+								aria-selected={selectedTab === 'tools'}
+								class={tabButtonClass(selectedTab === 'tools')}
+								on:click={() => {
+									selectedTab = 'tools';
+								}}
+							>
+								<WrenchAlt className="size-3.5" strokeWidth="2" />
+								<span>{$i18n.t('Integrations')}</span>
+							</button>
+						{/if}
+					{:else if tabId === 'personalization'}
+						<button
+							role="tab"
+							aria-controls="tab-personalization"
+							aria-selected={selectedTab === 'personalization'}
+							class={tabButtonClass(selectedTab === 'personalization')}
+							on:click={() => {
+								selectedTab = 'personalization';
+							}}
+						>
+							<Face className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('Personalization')}</span>
+						</button>
+					{:else if tabId === 'audio'}
+						<button
+							role="tab"
+							aria-controls="tab-audio"
+							aria-selected={selectedTab === 'audio'}
+							class={tabButtonClass(selectedTab === 'audio')}
+							on:click={() => {
+								selectedTab = 'audio';
+							}}
+						>
+							<SoundHigh className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('Audio')}</span>
+						</button>
+					{:else if tabId === 'data_controls'}
+						<button
+							role="tab"
+							aria-controls="tab-data-controls"
+							aria-selected={selectedTab === 'data_controls'}
+							class={tabButtonClass(selectedTab === 'data_controls')}
+							on:click={() => {
+								selectedTab = 'data_controls';
+							}}
+						>
+							<DatabaseSettings className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('Data Controls')}</span>
+						</button>
+					{:else if tabId === 'archived_chats'}
+						<button
+							role="tab"
+							aria-controls="tab-archived-chats"
+							aria-selected={selectedTab === 'archived_chats'}
+							class={tabButtonClass(selectedTab === 'archived_chats')}
+							on:click={() => {
+								selectedTab = 'archived_chats';
+							}}
+						>
+							<ArchiveBox className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('Archived Chats')}</span>
+						</button>
+					{:else if tabId === 'account'}
+						<button
+							role="tab"
+							aria-controls="tab-account"
+							aria-selected={selectedTab === 'account'}
+							class={tabButtonClass(selectedTab === 'account')}
+							on:click={() => {
+								selectedTab = 'account';
+							}}
+						>
+							<UserCircle className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('Account')}</span>
+						</button>
+					{:else if tabId === 'about'}
+						<button
+							role="tab"
+							aria-controls="tab-about"
+							aria-selected={selectedTab === 'about'}
+							class={tabButtonClass(selectedTab === 'about')}
+							on:click={() => {
+								selectedTab = 'about';
+							}}
+						>
+							<InfoCircle className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('About')}</span>
+						</button>
+					{/if}
+				{/each}
+			{:else}
+				<div class="text-center text-gray-500 mt-4">
+					{$i18n.t('No results found')}
+				</div>
+			{/if}
+			{#if $user?.role === 'admin'}
+				<span
+					class="hidden md:block text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 mt-2 mb-0.5"
+				>
+					{$i18n.t('Admin')}
+				</span>
+				<a
+					href="/admin/settings"
+					draggable="false"
+					class="flex items-center gap-1.5 h-7 px-2 md:w-full shrink-0 rounded-lg text-xs text-left transition-colors duration-75 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 select-none"
+					on:click={async (e) => {
+						e.preventDefault();
+						await goto('/admin/settings');
+						show = false;
+					}}
+				>
+					<UserBadgeCheck className="size-3.5" strokeWidth="2" />
+					<span>{$i18n.t('Admin Settings')}</span>
+				</a>
+			{/if}
 		</div>
+	</nav>
+
+	<div class="flex-1 overflow-y-auto scrollbar-none min-h-0 p-4 md:px-5">
+		{#if selectedTab === 'general'}
+			<General
+				{getModels}
+				{saveSettings}
+				on:save={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'interface'}
+			<Interface
+				{saveSettings}
+				on:save={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'connections'}
+			<Connections
+				saveSettings={async (updated: Record<string, any>) => {
+					await saveSettings(updated);
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'tools'}
+			<Integrations
+				saveSettings={async (updated: Record<string, any>) => {
+					await saveSettings(updated);
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'personalization'}
+			<Personalization
+				{saveSettings}
+				on:save={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'audio'}
+			<Audio
+				{saveSettings}
+				on:save={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'data_controls'}
+			<DataControls {saveSettings} />
+		{:else if selectedTab === 'archived_chats'}
+			<ArchivedChats />
+		{:else if selectedTab === 'account'}
+			<Account
+				{saveSettings}
+				saveHandler={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
+				}}
+			/>
+		{:else if selectedTab === 'about'}
+			<About />
+		{/if}
 	</div>
 </Modal>
 
