@@ -343,7 +343,11 @@
 									show = false;
 								}}
 							>
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 87.3 78" class="size-3.5 shrink-0">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 87.3 78"
+									class="size-3.5 shrink-0"
+								>
 									<path
 										d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z"
 										fill="#0066da"
