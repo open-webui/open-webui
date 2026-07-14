@@ -78,7 +78,7 @@
 		/>
 
 		<div>
-			<div class="mb-1 text-sm font-medium">{$i18n.t('Config')}</div>
+			<div class="mb-1 text-sm font-normal">{$i18n.t('Config')}</div>
 
 			<div>
 				<div class="py-0.5 flex w-full justify-between">
@@ -117,7 +117,7 @@
 
 		{#if $config?.features.enable_admin_export ?? true}
 			<div>
-				<div class="mb-1 text-sm font-medium">{$i18n.t('Database')}</div>
+				<div class="mb-1 text-sm font-normal">{$i18n.t('Database')}</div>
 
 				<div>
 					<div class="py-0.5 flex w-full justify-between">

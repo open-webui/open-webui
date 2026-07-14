@@ -40,7 +40,7 @@
 <Modal size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4">
-			<div class=" text-lg font-medium self-center font-primary">
+			<div class=" text-lg font-normal self-center ">
 				{$i18n.t('Manage Models')}
 			</div>
 			<button
@@ -64,7 +64,7 @@
 				{:else if selected !== null}
 					<div class=" flex w-full flex-col">
 						<div
-							class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent dark:text-gray-200"
+							class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent dark:text-gray-200"
 						>
 							<button
 								class="min-w-fit p-1.5 {selected === 'ollama'

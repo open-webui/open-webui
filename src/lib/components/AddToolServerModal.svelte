@@ -445,7 +445,7 @@
 <Modal size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-			<h1 class=" text-lg font-medium self-center font-primary">
+			<h1 class=" text-lg font-normal self-center ">
 				{#if edit}
 					{$i18n.t('Edit Connection')}
 				{:else}
@@ -686,13 +686,13 @@
 
 											{#if !oauthClientInfo}
 												<div
-													class="text-xs font-medium px-1.5 rounded-md bg-yellow-500/20 text-yellow-700 dark:text-yellow-200"
+													class="text-xs font-normal px-1.5 rounded-md bg-yellow-500/20 text-yellow-700 dark:text-yellow-200"
 												>
 													{$i18n.t('Not Registered')}
 												</div>
 											{:else}
 												<div
-													class="text-xs font-medium px-1.5 rounded-md bg-green-500/20 text-green-700 dark:text-green-200"
+													class="text-xs font-normal px-1.5 rounded-md bg-green-500/20 text-green-700 dark:text-green-200"
 												>
 													{$i18n.t('Registered')}
 												</div>
@@ -813,7 +813,7 @@
 								>
 									<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
 
-									<div class="text-xs font-medium shrink-0">
+									<div class="text-xs font-normal shrink-0">
 										{$i18n.t('Access')}
 									</div>
 								</button>
@@ -999,24 +999,24 @@
 						<div
 							class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-2xl text-xs px-4 py-3 mb-2 mt-1"
 						>
-							<span class="font-medium">
+							<span class="font-normal">
 								{$i18n.t('Warning')}:
 							</span>
 							{$i18n.t(
 								'MCP support is experimental and its specification changes often, which can lead to incompatibilities. OpenAPI specification support is directly maintained by the Open WebUI team, making it the more reliable option for compatibility.'
 							)}
 
-							<a class="font-medium underline" href="https://docs.openwebui.com/" target="_blank"
+							<a class="font-normal underline" href="https://docs.openwebui.com/" target="_blank"
 								>{$i18n.t('Read more →')}</a
 							>
 						</div>
 					{/if}
 
-					<div class="flex justify-between items-center pt-3 text-sm font-medium">
+					<div class="flex justify-between items-center pt-3 text-sm font-normal">
 						<div>
 							{#if edit}
 								<button
-									class="px-1 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
+									class="px-1 py-1.5 text-sm font-normal text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
 									type="button"
 									on:click={() => {
 										showDeleteConfirmDialog = true;
@@ -1028,7 +1028,7 @@
 						</div>
 
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
+							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
 								? ' cursor-not-allowed'
 								: ''}"
 							type="submit"

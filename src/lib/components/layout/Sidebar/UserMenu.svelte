@@ -653,7 +653,7 @@
 								<span class="">
 									{$i18n.t('Active Users')}:
 								</span>
-								<span class="font-medium">
+								<span class="font-normal">
 									{usage?.user_count}
 								</span>
 							</div>

@@ -761,7 +761,7 @@
 									/>
 								{/if}
 
-								<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
+								<div class=" mt-2 mb-1 flex justify-between text-sm font-normal">
 									<div>
 										<button
 											id="save-new-message-button"
@@ -921,7 +921,7 @@
 
 									{#if messageIndexEdit}
 										<div
-											class="text-sm flex justify-center font-semibold self-center dark:text-gray-100 min-w-fit"
+											class="text-sm flex justify-center font-normal self-center dark:text-gray-100 min-w-fit"
 										>
 											<input
 												id="message-index-input-{message.id}"
@@ -942,13 +942,13 @@
 														messageIndexEdit = false;
 													}
 												}}
-												class="bg-transparent font-semibold self-center dark:text-gray-100 min-w-fit outline-hidden"
+												class="bg-transparent font-normal self-center dark:text-gray-100 min-w-fit outline-hidden"
 											/>/{siblings.length}
 										</div>
 									{:else}
 										<!-- svelte-ignore a11y-no-static-element-interactions -->
 										<div
-											class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
+											class="text-sm tracking-widest font-normal self-center dark:text-gray-100 min-w-fit"
 											on:dblclick={async () => {
 												messageIndexEdit = true;
 

@@ -81,12 +81,12 @@
 		{#if adminConfig !== null}
 			<div class="">
 				<div class="mb-3.5">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2.5">
-						<div class=" mb-1 text-xs font-medium flex space-x-2 items-center">
+						<div class=" mb-1 text-xs font-normal flex space-x-2 items-center">
 							<div>
 								{$i18n.t('Version')}
 							</div>
@@ -125,7 +125,7 @@
 
 							{#if $config?.features?.enable_version_update_check}
 								<button
-									class=" text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
+									class=" text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-normal"
 									type="button"
 									on:click={() => {
 										checkForVersionUpdates();
@@ -149,7 +149,7 @@
 							</div>
 
 							<a
-								class="flex-shrink-0 text-xs font-medium underline"
+								class="flex-shrink-0 text-xs font-normal underline"
 								href="https://docs.openwebui.com/"
 								target="_blank"
 							>
@@ -205,7 +205,7 @@
 											>{$config?.license_metadata?.organization_name}</span
 										>
 										for
-										<span class=" font-medium text-black dark:text-white"
+										<span class=" font-normal text-black dark:text-white"
 											>{$config?.license_metadata?.seats ?? 'Unlimited'} users.</span
 										>
 									</a>
@@ -230,7 +230,7 @@
 							</div>
 
 							<!-- <button
-								class="flex-shrink-0 text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
+								class="flex-shrink-0 text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-normal"
 							>
 								{$i18n.t('Activate')}
 							</button> -->
@@ -239,12 +239,12 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Features')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Features')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-xs font-normal">
 							{$i18n.t('Enable Community Sharing')}
 						</div>
 
@@ -252,13 +252,13 @@
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Enable Message Rating')}</div>
+						<div class=" self-center text-xs font-normal">{$i18n.t('Enable Message Rating')}</div>
 
 						<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-xs font-normal">
 							{$i18n.t('Folders')}
 						</div>
 
@@ -268,7 +268,7 @@
 					{#if adminConfig.ENABLE_FOLDERS}
 						<div class="mb-2.5 w-full justify-between">
 							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
+								<div class=" self-center text-xs font-normal">
 									{$i18n.t('Folder Max File Count')}
 								</div>
 							</div>
@@ -290,7 +290,7 @@
 					{/if}
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-xs font-normal">
 							{$i18n.t('Memories')}
 						</div>
 
@@ -299,7 +299,7 @@
 
 					{#if adminConfig.ENABLE_MEMORIES}
 						<div class="mb-2.5 flex w-full items-center justify-between pr-2 pl-4">
-							<div class=" self-center text-xs font-medium text-gray-500 dark:text-gray-400">
+							<div class=" self-center text-xs font-normal text-gray-500 dark:text-gray-400">
 								{$i18n.t('Memory System Context')}
 							</div>
 
@@ -308,7 +308,7 @@
 					{/if}
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-xs font-normal">
 							{$i18n.t('Notes')}
 						</div>
 
@@ -316,7 +316,7 @@
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-xs font-normal">
 							{$i18n.t('Channels')}
 						</div>
 
@@ -324,7 +324,7 @@
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-xs font-normal">
 							{$i18n.t('Calendar')}
 						</div>
 
@@ -332,7 +332,7 @@
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-xs font-normal">
 							{$i18n.t('Automations')}
 						</div>
 
@@ -340,7 +340,7 @@
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-xs font-normal">
 							{$i18n.t('User Webhooks')}
 						</div>
 
@@ -348,7 +348,7 @@
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-xs font-normal">
 							{$i18n.t('User Status')}
 						</div>
 
@@ -356,7 +356,7 @@
 					</div>
 
 					<div class="mb-2.5">
-						<div class=" self-center text-xs font-medium mb-2">
+						<div class=" self-center text-xs font-normal mb-2">
 							{$i18n.t('Response Watermark')}
 						</div>
 						<Textarea
@@ -367,7 +367,7 @@
 
 					<div class="mb-2.5 w-full justify-between">
 						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('WebUI URL')}</div>
+							<div class=" self-center text-xs font-normal">{$i18n.t('WebUI URL')}</div>
 						</div>
 
 						<div class="flex mt-2 space-x-2">
@@ -390,7 +390,7 @@
 				<Events />
 
 				<div class="mb-3.5">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('UI')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('UI')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
@@ -439,9 +439,9 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-3 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

@@ -337,7 +337,7 @@
 
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] md:max-h-full">
 		<div>
-			<h1 class=" mb-2 text-sm font-medium">{$i18n.t('UI')}</h1>
+			<h1 class=" mb-2 text-sm font-normal">{$i18n.t('UI')}</h1>
 
 			<div>
 				<div class="py-0.5 flex w-full justify-between">
@@ -592,7 +592,7 @@
 				</div>
 			{/if}
 
-			<div class=" my-2 text-sm font-medium">{$i18n.t('Chat')}</div>
+			<div class=" my-2 text-sm font-normal">{$i18n.t('Chat')}</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -1158,7 +1158,7 @@
 				</div>
 			</div>
 
-			<div class=" my-2 text-sm font-medium">{$i18n.t('Input')}</div>
+			<div class=" my-2 text-sm font-normal">{$i18n.t('Input')}</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -1282,7 +1282,7 @@
 				</div>
 			</div>
 
-			<div class=" my-2 text-sm font-medium">{$i18n.t('Artifacts')}</div>
+			<div class=" my-2 text-sm font-normal">{$i18n.t('Artifacts')}</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -1341,7 +1341,7 @@
 				</div>
 			</div>
 
-			<div class=" my-2 text-sm font-medium">{$i18n.t('Voice')}</div>
+			<div class=" my-2 text-sm font-normal">{$i18n.t('Voice')}</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -1381,7 +1381,7 @@
 				</div>
 			</div>
 
-			<div class=" my-2 text-sm font-medium">{$i18n.t('File')}</div>
+			<div class=" my-2 text-sm font-normal">{$i18n.t('File')}</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
@@ -1438,9 +1438,9 @@
 		</div>
 	</div>
 
-	<div class="flex justify-end text-sm font-medium">
+	<div class="flex justify-end text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

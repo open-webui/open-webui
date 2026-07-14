@@ -907,7 +907,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 	}}
 >
 	<div class=" text-sm text-gray-500">
-		{$i18n.t('This will delete')} <span class="  font-semibold">{note.title}</span>.
+		{$i18n.t('This will delete')} <span class="  font-normal">{note.title}</span>.
 	</div>
 </DeleteConfirmDialog>
 
@@ -949,7 +949,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							{/if}
 
 							<input
-								class="w-full text-2xl font-medium bg-transparent outline-hidden"
+								class="w-full text-2xl font-normal bg-transparent outline-hidden"
 								type="text"
 								bind:value={note.title}
 								placeholder={titleGenerating ? $i18n.t('Generating...') : $i18n.t('Title')}
@@ -1140,7 +1140,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							}}
 						>
 							<div
-								class="flex gap-0.5 items-center text-xs font-medium text-gray-500 dark:text-gray-500 w-fit"
+								class="flex gap-0.5 items-center text-xs font-normal text-gray-500 dark:text-gray-500 w-fit"
 							>
 								<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg min-w-fit">
 									<!-- check for same date, yesterday, last week, and other -->

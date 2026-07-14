@@ -41,13 +41,13 @@
 		{#if config}
 			<div>
 				<div class="mb-3.5">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Code Execution')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Code Execution')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2.5">
 						<div class=" flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
+							<div class=" self-center text-xs font-normal">
 								{$i18n.t('Enable Code Execution')}
 							</div>
 
@@ -58,7 +58,7 @@
 					{#if config.ENABLE_CODE_EXECUTION}
 						<div class="mb-2.5">
 							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
+								<div class=" self-center text-xs font-normal">
 									{$i18n.t('Code Execution Engine')}
 								</div>
 								<div class="flex items-center relative">
@@ -89,7 +89,7 @@
 
 						{#if config.CODE_EXECUTION_ENGINE === 'jupyter'}
 							<div class="mb-2.5 flex flex-col gap-1.5 w-full">
-								<div class="text-xs font-medium">
+								<div class="text-xs font-normal">
 									{$i18n.t('Jupyter URL')}
 								</div>
 
@@ -108,7 +108,7 @@
 
 							<div class="mb-2.5 flex flex-col gap-1.5 w-full">
 								<div class=" flex gap-2 w-full items-center justify-between">
-									<div class="text-xs font-medium">
+									<div class="text-xs font-normal">
 										{$i18n.t('Jupyter Auth')}
 									</div>
 
@@ -149,7 +149,7 @@
 							</div>
 
 							<div class="flex gap-2 w-full items-center justify-between">
-								<div class="text-xs font-medium">
+								<div class="text-xs font-normal">
 									{$i18n.t('Code Execution Timeout')}
 								</div>
 
@@ -170,13 +170,13 @@
 				</div>
 
 				<div class="mb-3.5">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Code Interpreter')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Code Interpreter')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2.5">
 						<div class=" flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
+							<div class=" self-center text-xs font-normal">
 								{$i18n.t('Enable Code Interpreter')}
 							</div>
 
@@ -187,7 +187,7 @@
 					{#if config.ENABLE_CODE_INTERPRETER}
 						<div class="mb-2.5">
 							<div class="  flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
+								<div class=" self-center text-xs font-normal">
 									{$i18n.t('Code Interpreter Engine')}
 								</div>
 								<div class="flex items-center relative">
@@ -218,7 +218,7 @@
 
 						{#if config.CODE_INTERPRETER_ENGINE === 'jupyter'}
 							<div class="mb-2.5 flex flex-col gap-1.5 w-full">
-								<div class="text-xs font-medium">
+								<div class="text-xs font-normal">
 									{$i18n.t('Jupyter URL')}
 								</div>
 
@@ -237,7 +237,7 @@
 
 							<div class="mb-2.5 flex flex-col gap-1.5 w-full">
 								<div class="flex gap-2 w-full items-center justify-between">
-									<div class="text-xs font-medium">
+									<div class="text-xs font-normal">
 										{$i18n.t('Jupyter Auth')}
 									</div>
 
@@ -278,7 +278,7 @@
 							</div>
 
 							<div class="flex gap-2 w-full items-center justify-between">
-								<div class="text-xs font-medium">
+								<div class="text-xs font-normal">
 									{$i18n.t('Code Execution Timeout')}
 								</div>
 
@@ -300,7 +300,7 @@
 
 						<div>
 							<div class="py-0.5 w-full">
-								<div class=" mb-2.5 text-xs font-medium">
+								<div class=" mb-2.5 text-xs font-normal">
 									{$i18n.t('Code Interpreter Prompt Template')}
 								</div>
 
@@ -324,9 +324,9 @@
 			</div>
 		{/if}
 	</div>
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-3 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

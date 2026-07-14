@@ -261,7 +261,7 @@ class Tools:
 							>
 								<LockClosed strokeWidth="2.5" className="size-3.5" />
 
-								<div class="text-sm font-medium shrink-0">
+								<div class="text-sm font-normal shrink-0">
 									{$i18n.t('Access')}
 								</div>
 							</button>
@@ -334,16 +334,16 @@ class Tools:
 				<div class="pb-3 flex justify-between">
 					<div class="flex-1 pr-3">
 						<div class="text-xs text-gray-500 line-clamp-2">
-							<span class=" font-semibold dark:text-gray-200">{$i18n.t('Warning:')}</span>
+							<span class=" font-normal dark:text-gray-200">{$i18n.t('Warning:')}</span>
 							{$i18n.t('Tools are a function calling system with arbitrary code execution')} <br />—
-							<span class=" font-medium dark:text-gray-400"
+							<span class=" font-normal dark:text-gray-400"
 								>{$i18n.t(`don't install random tools from sources you don't trust.`)}</span
 							>
 						</div>
 					</div>
 
 					<button
-						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+						class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 						type="submit"
 					>
 						{$i18n.t('Save')}

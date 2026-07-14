@@ -112,7 +112,7 @@
 		<!-- Header -->
 		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
 			<input
-				class="w-full text-lg font-medium bg-transparent outline-hidden font-primary placeholder:text-gray-300 dark:placeholder:text-gray-700"
+				class="w-full text-lg font-normal bg-transparent outline-hidden  placeholder:text-gray-300 dark:placeholder:text-gray-700"
 				type="text"
 				bind:value={name}
 				placeholder={$i18n.t('Automation title')}
@@ -154,7 +154,7 @@
 					{$i18n.t('Cancel')}
 				</button>
 				<button
-					class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 {loading
+					class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 {loading
 						? 'cursor-not-allowed'
 						: ''}"
 					on:click={submitHandler}

@@ -64,7 +64,7 @@
 				/>
 			</svg>
 		</div>
-		<div class=" self-center font-medium text-sm">{$i18n.t('Back')}</div>
+		<div class=" self-center font-normal text-sm">{$i18n.t('Back')}</div>
 	</button>
 
 	<form
@@ -74,7 +74,7 @@
 		}}
 	>
 		<div class=" w-full flex flex-col justify-center">
-			<div class=" text-2xl font-medium font-primary mb-2.5">
+			<div class=" text-2xl font-normal  mb-2.5">
 				{$i18n.t('Create a knowledge base')}
 			</div>
 
@@ -129,7 +129,7 @@
 					type="submit"
 					disabled={loading}
 				>
-					<div class=" self-center font-medium">{$i18n.t('Create Knowledge')}</div>
+					<div class=" self-center font-normal">{$i18n.t('Create Knowledge')}</div>
 
 					{#if loading}
 						<div class="ml-1.5 self-center">

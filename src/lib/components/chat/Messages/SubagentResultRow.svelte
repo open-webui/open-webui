@@ -38,7 +38,7 @@
 		on:click={() => (expanded = !expanded)}
 	>
 		<span class="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0"></span>
-		<span class="text-[0.75rem] font-medium shrink-0">
+		<span class="text-[0.75rem] font-normal shrink-0">
 			{$i18n.t('Background sub-agent finished')}
 		</span>
 		{#if summary}

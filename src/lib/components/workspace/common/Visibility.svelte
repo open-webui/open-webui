@@ -9,7 +9,7 @@
 
 <div class=" rounded-lg flex flex-col gap-2">
 	<div class="">
-		<div class=" text-xs font-medium mb-2.5 text-gray-500">{$i18n.t('Visibility')}</div>
+		<div class=" text-xs font-normal mb-2.5 text-gray-500">{$i18n.t('Visibility')}</div>
 
 		<div class="flex gap-2.5 items-center mb-1">
 			<div>
@@ -51,7 +51,7 @@
 			<div>
 				<select
 					id="models"
-					class="outline-hidden bg-transparent text-sm font-medium block w-fit pr-10 max-w-full placeholder-gray-400"
+					class="outline-hidden bg-transparent text-sm font-normal block w-fit pr-10 max-w-full placeholder-gray-400"
 					value={state === 'private' ? 'private' : 'public'}
 					on:change={(e) => {
 						if (e.target.value === 'public') {
@@ -66,7 +66,7 @@
 					<option class=" text-gray-700" value="private" selected>{$i18n.t('Private')}</option>
 				</select>
 
-				<div class=" text-xs text-gray-400 font-medium">
+				<div class=" text-xs text-gray-400 font-normal">
 					{#if state === 'private'}
 						{$i18n.t('Only invited users can access')}
 					{:else}

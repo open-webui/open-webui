@@ -304,7 +304,7 @@
 <Modal size="lg" bind:show={showEditModal}>
 	<div class="px-5 pt-4 pb-5">
 		<div class="flex justify-between items-center mb-2">
-			<div class="text-lg font-medium">{$i18n.t('Edit Prompt')}</div>
+			<div class="text-lg font-normal">{$i18n.t('Edit Prompt')}</div>
 			<button
 				class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
 				aria-label={$i18n.t('Close')}
@@ -363,7 +363,7 @@
 						type="submit"
 						disabled={loading}
 					>
-						<div class="font-medium">{$i18n.t('Save')}</div>
+						<div class="font-normal">{$i18n.t('Save')}</div>
 						{#if loading}
 							<div class="ml-1.5">
 								<Spinner />
@@ -406,7 +406,7 @@
 				<div class="flex items-center gap-2 shrink-0 justify-end">
 					{#if !disabled}
 						<button
-							class="px-4 py-1 text-sm font-medium bg-black text-white dark:bg-white dark:text-black rounded-full hover:opacity-90 transition shadow-xs"
+							class="px-4 py-1 text-sm font-normal bg-black text-white dark:bg-white dark:text-black rounded-full hover:opacity-90 transition shadow-xs"
 							on:click={() => (showEditModal = true)}
 						>
 							{$i18n.t('Edit')}
@@ -555,7 +555,7 @@
 									on:click={() => (showAccessControlModal = true)}
 								>
 									<LockClosed strokeWidth="2.5" className="size-3.5" />
-									<div class="text-sm font-medium shrink-0">{$i18n.t('Access')}</div>
+									<div class="text-sm font-normal shrink-0">{$i18n.t('Access')}</div>
 								</button>
 							</div>
 						</div>
@@ -598,7 +598,7 @@
 					/>
 					<div class="text-xs text-gray-400 dark:text-gray-500">
 						ⓘ {$i18n.t('Use')}
-						<span class="font-medium text-gray-600 dark:text-gray-300"
+						<span class="font-normal text-gray-600 dark:text-gray-300"
 							>{'{{'}{$i18n.t('variable')}{'}}'}</span
 						>
 						{$i18n.t('for placeholders')}
@@ -612,7 +612,7 @@
 					type="submit"
 					disabled={loading}
 				>
-					<div class="font-medium">{$i18n.t('Save & Create')}</div>
+					<div class="font-normal">{$i18n.t('Save & Create')}</div>
 					{#if loading}
 						<div class="ml-1.5">
 							<Spinner />

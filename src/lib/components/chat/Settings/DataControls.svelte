@@ -169,7 +169,7 @@
 		/>
 
 		<div>
-			<div class="mb-1 text-sm font-medium">{$i18n.t('Chats')}</div>
+			<div class="mb-1 text-sm font-normal">{$i18n.t('Chats')}</div>
 
 			{#if $user?.role === 'admin' || ($user.permissions?.chat?.import ?? true)}
 				<div>
@@ -267,7 +267,7 @@
 		</div>
 
 		<div>
-			<div class="mb-1 text-sm font-medium">{$i18n.t('Files')}</div>
+			<div class="mb-1 text-sm font-normal">{$i18n.t('Files')}</div>
 
 			<div>
 				<div class="py-0.5 flex w-full justify-between">

@@ -309,7 +309,7 @@
 									<button
 										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 										'controls'
-											? 'bg-gray-100/40 dark:bg-gray-800/25 font-medium text-gray-700 dark:text-gray-200'
+											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 										on:click={() => (activeTab = 'controls')}
 									>
@@ -320,7 +320,7 @@
 									<button
 										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 										'files'
-											? 'bg-gray-100/40 dark:bg-gray-800/25 font-medium text-gray-700 dark:text-gray-200'
+											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 										on:click={() => (activeTab = 'files')}
 									>
@@ -331,7 +331,7 @@
 									<button
 										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 										'overview'
-											? 'bg-gray-100/40 dark:bg-gray-800/25 font-medium text-gray-700 dark:text-gray-200'
+											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 										on:click={() => (activeTab = 'overview')}
 									>
@@ -454,7 +454,7 @@
 										<button
 											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 											'controls'
-												? 'bg-gray-100/40 dark:bg-gray-800/25 font-medium text-gray-700 dark:text-gray-200'
+												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 											on:click={() => (activeTab = 'controls')}
 										>
@@ -465,7 +465,7 @@
 										<button
 											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 											'files'
-												? 'bg-gray-100/40 dark:bg-gray-800/25 font-medium text-gray-700 dark:text-gray-200'
+												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 											on:click={() => (activeTab = 'files')}
 										>
@@ -476,7 +476,7 @@
 										<button
 											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 											'overview'
-												? 'bg-gray-100/40 dark:bg-gray-800/25 font-medium text-gray-700 dark:text-gray-200'
+												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 											on:click={() => (activeTab = 'overview')}
 										>

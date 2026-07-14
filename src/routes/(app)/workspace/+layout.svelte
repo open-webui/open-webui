@@ -86,7 +86,7 @@
 
 				<div class="">
 					<div
-						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
+						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
 					>
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
 							<a
@@ -151,7 +151,7 @@
 					</div>
 				</div>
 
-				<!-- <div class="flex items-center text-xl font-medium">{$i18n.t('Workspace')}</div> -->
+				<!-- <div class="flex items-center text-xl font-normal">{$i18n.t('Workspace')}</div> -->
 			</div>
 		</nav>
 

@@ -411,7 +411,7 @@
 <Modal bind:show={showSourceModal} size="sm">
 	<div>
 		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-			<h1 class="text-lg font-medium self-center font-primary">
+			<h1 class="text-lg font-normal self-center ">
 				{editingItem ? $i18n.t('Edit Knowledge Connection') : $i18n.t('Add Knowledge Connection')}
 			</h1>
 
@@ -769,11 +769,11 @@
 							shareUsers={true}
 						/>
 
-						<div class="flex justify-between items-center pt-3 text-sm font-medium">
+						<div class="flex justify-between items-center pt-3 text-sm font-normal">
 							<div></div>
 
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+								class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
 								type="submit"
 								disabled={creating || !sourceFormIsValid() || !testResult?.documents?.length}
 							>
@@ -791,9 +791,9 @@
 <div class="mb-2.5 flex flex-col w-full justify-between text-sm">
 	<div class="flex justify-between items-center mb-1">
 		<div class="flex items-center gap-2">
-			<div class="font-medium">{$i18n.t('External Knowledge Sources')}</div>
+			<div class="font-normal">{$i18n.t('External Knowledge Sources')}</div>
 			<span
-				class="text-[0.65rem] font-medium uppercase px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+				class="text-[0.65rem] font-normal uppercase px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
 				>{$i18n.t('Experimental')}</span
 			>
 		</div>

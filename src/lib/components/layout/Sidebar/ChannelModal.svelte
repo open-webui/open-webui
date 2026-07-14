@@ -141,7 +141,7 @@
 <Modal size="md" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class=" text-lg font-medium self-center">
+			<div class=" text-lg font-normal self-center">
 				{#if edit}
 					{$i18n.t('Edit Channel')}
 				{:else}
@@ -275,10 +275,10 @@
 						</div>
 					{/if}
 
-					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+					<div class="flex justify-end pt-3 text-sm font-normal gap-1.5">
 						{#if edit}
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-black/90 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="px-3.5 py-1.5 text-sm font-normal dark:bg-black dark:hover:bg-black/90 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
 								type="button"
 								on:click={() => {
 									showDeleteConfirmDialog = true;
@@ -289,7 +289,7 @@
 						{/if}
 
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
 								? ' cursor-not-allowed'
 								: ''}"
 							type="submit"

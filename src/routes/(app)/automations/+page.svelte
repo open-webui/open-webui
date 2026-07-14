@@ -236,7 +236,7 @@
 	}}
 >
 	<div class="text-sm text-gray-500 truncate">
-		{$i18n.t('This will delete')} <span class="font-medium">{deleteTarget?.name}</span>.
+		{$i18n.t('This will delete')} <span class="font-normal">{deleteTarget?.name}</span>.
 	</div>
 </DeleteConfirmDialog>
 
@@ -262,7 +262,7 @@
 			<div class="pb-1 px-3 md:px-[18px] pt-2">
 				<div class="flex flex-col gap-1 px-1 mt-1.5 mb-2">
 					<div class="flex justify-between items-center">
-						<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
+						<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
 							{#if $mobile}
 								<Tooltip
 									content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
@@ -281,14 +281,14 @@
 								</Tooltip>
 							{/if}
 							<div>{$i18n.t('Automations')}</div>
-							<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+							<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
 								{total ?? ''}
 							</div>
 						</div>
 
 						<div class="flex w-full justify-end gap-1.5">
 							<button
-								class="px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
+								class="px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-normal text-sm flex items-center"
 								on:click={() => {
 									cloneFrom = null;
 									showCreateModal = true;
@@ -420,7 +420,7 @@
 						<div class="w-full h-full flex flex-col justify-center items-center my-16 mb-24">
 							<div class="max-w-md text-center">
 								<div class="text-3xl mb-3">⚡</div>
-								<div class="text-lg font-medium mb-1">
+								<div class="text-lg font-normal mb-1">
 									{query ? $i18n.t('No results found') : $i18n.t('No automations found')}
 								</div>
 								<div class="text-gray-500 text-center text-xs">

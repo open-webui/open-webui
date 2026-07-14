@@ -37,7 +37,7 @@
 <Modal bind:show size="sm">
 	<div class="flex flex-col h-full">
 		<div class="flex justify-between items-center dark:text-gray-100 px-5 pt-4 pb-1.5">
-			<h1 class="text-lg font-medium self-center font-primary">
+			<h1 class="text-lg font-normal self-center ">
 				{$i18n.t('Attach Webpage')}
 			</h1>
 			<button
@@ -79,7 +79,7 @@
 
 				<div class="flex justify-end gap-2 pt-3 bg-gray-50 dark:bg-gray-900/50">
 					<button
-						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 transition rounded-full"
+						class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 transition rounded-full"
 						type="submit"
 					>
 						{$i18n.t('Add')}

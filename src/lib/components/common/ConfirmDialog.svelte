@@ -123,7 +123,7 @@
 			}}
 		>
 			<div class="px-[1.75rem] py-6 flex flex-col">
-				<div class=" text-lg font-medium dark:text-gray-200 mb-2.5">
+				<div class=" text-lg font-normal dark:text-gray-200 mb-2.5">
 					{#if title !== ''}
 						{title}
 					{:else}
@@ -177,7 +177,7 @@
 
 				<div class="mt-6 flex justify-between gap-1.5">
 					<button
-						class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white font-medium w-full py-2 rounded-3xl transition"
+						class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white font-normal w-full py-2 rounded-3xl transition"
 						on:click={() => {
 							cancelHandler();
 						}}
@@ -186,7 +186,7 @@
 						{cancelLabel}
 					</button>
 					<button
-						class="text-sm bg-gray-900 hover:bg-gray-850 text-gray-100 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800 font-medium w-full py-2 rounded-3xl transition"
+						class="text-sm bg-gray-900 hover:bg-gray-850 text-gray-100 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800 font-normal w-full py-2 rounded-3xl transition"
 						on:click={() => {
 							confirmHandler();
 						}}

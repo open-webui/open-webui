@@ -104,12 +104,12 @@
 		{#if evaluationConfig !== null}
 			<div class="">
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2.5 flex w-full justify-between">
-						<div class=" text-xs font-medium">{$i18n.t('Arena Models')}</div>
+						<div class=" text-xs font-normal">{$i18n.t('Arena Models')}</div>
 
 						<Tooltip content={$i18n.t(`Message rating should be enabled to use this feature`)}>
 							<Switch bind:state={evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS} />
@@ -119,7 +119,7 @@
 
 				{#if evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS}
 					<div class="mb-3">
-						<div class=" mt-0.5 mb-2.5 text-base font-medium flex justify-between items-center">
+						<div class=" mt-0.5 mb-2.5 text-base font-normal flex justify-between items-center">
 							<div>
 								{$i18n.t('Manage')}
 							</div>
@@ -174,9 +174,9 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-3 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

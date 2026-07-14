@@ -359,7 +359,7 @@
 <Modal size="sm" bind:show>
 	<div>
 		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-			<h1 class="text-lg font-medium self-center font-primary">
+			<h1 class="text-lg font-normal self-center ">
 				{#if edit}
 					{$i18n.t('Edit Terminal Connection')}
 				{:else}
@@ -731,7 +731,7 @@
 								</div>
 								<button
 									type="button"
-									class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition"
+									class="px-2 py-1 text-xs font-normal rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition"
 									disabled={refreshing}
 									on:click={refreshHandler}
 								>
@@ -771,7 +771,7 @@
 								>
 									<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
 
-									<div class="text-xs font-medium shrink-0">
+									<div class="text-xs font-normal shrink-0">
 										{$i18n.t('Access')}
 									</div>
 								</button>
@@ -881,11 +881,11 @@
 							</div>
 						</div>
 
-						<div class="flex justify-between items-center pt-3 text-sm font-medium">
+						<div class="flex justify-between items-center pt-3 text-sm font-normal">
 							<div>
 								{#if edit}
 									<button
-										class="px-1 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
+										class="px-1 py-1.5 text-sm font-normal text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
 										type="button"
 										on:click={() => {
 											showDeleteConfirmDialog = true;
@@ -897,7 +897,7 @@
 							</div>
 
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 disabled:opacity-50 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 disabled:opacity-50 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
 								type="submit"
 								disabled={loadingPolicy || !!policyLoadError}
 							>

@@ -64,7 +64,7 @@
 	}
 </script>
 
-<div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-600 dark:text-gray-400">
+<div class="mb-1 flex gap-1 text-xs font-normal items-center text-gray-600 dark:text-gray-400">
 	{#if filteredPrompts.length > 0}
 		<Bolt />
 		{$i18n.t('Suggested')}
@@ -97,7 +97,7 @@
 					<div class="flex flex-col text-left">
 						{#if prompt.title && prompt.title[0] !== ''}
 							<div
-								class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
+								class="font-normal dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
 							>
 								{prompt.title[0]}
 							</div>
@@ -106,7 +106,7 @@
 							</div>
 						{:else}
 							<div
-								class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
+								class="font-normal dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
 							>
 								{prompt.content}
 							</div>

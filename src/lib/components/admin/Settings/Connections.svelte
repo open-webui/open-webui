@@ -219,14 +219,14 @@
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
 		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && connectionsConfig !== null}
 			<div class="mb-3.5">
-				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('General')}</div>
 
 				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				<div class="my-2">
 					<div class="mt-2 space-y-2">
 						<div class="flex justify-between items-center text-sm">
-							<div class="  font-medium">{$i18n.t('OpenAI API')}</div>
+							<div class="  font-normal">{$i18n.t('OpenAI API')}</div>
 
 							<div class="flex items-center">
 								<div class="">
@@ -243,7 +243,7 @@
 						{#if ENABLE_OPENAI_API}
 							<div class="">
 								<div class="flex justify-between items-center">
-									<div class="font-medium text-xs">{$i18n.t('Manage OpenAI API Connections')}</div>
+									<div class="font-normal text-xs">{$i18n.t('Manage OpenAI API Connections')}</div>
 
 									<Tooltip content={$i18n.t(`Add Connection`)}>
 										<button
@@ -292,7 +292,7 @@
 
 				<div class=" my-2">
 					<div class="flex justify-between items-center text-sm mb-2">
-						<div class="  font-medium">{$i18n.t('Ollama API')}</div>
+						<div class="  font-normal">{$i18n.t('Ollama API')}</div>
 
 						<div class="mt-1">
 							<Switch
@@ -307,7 +307,7 @@
 					{#if ENABLE_OLLAMA_API}
 						<div class="">
 							<div class="flex justify-between items-center">
-								<div class="font-medium text-xs">{$i18n.t('Manage Ollama API Connections')}</div>
+								<div class="font-normal text-xs">{$i18n.t('Manage Ollama API Connections')}</div>
 
 								<Tooltip content={$i18n.t(`Add Connection`)}>
 									<button
@@ -350,7 +350,7 @@
 							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
 								{$i18n.t('Trouble accessing Ollama?')}
 								<a
-									class=" text-gray-300 font-medium underline"
+									class=" text-gray-300 font-normal underline"
 									href="https://github.com/open-webui/open-webui#troubleshooting"
 									target="_blank"
 								>
@@ -363,7 +363,7 @@
 
 				<div class="my-2">
 					<div class="flex justify-between items-center text-sm">
-						<div class="  font-medium">{$i18n.t('Direct Connections')}</div>
+						<div class="  font-normal">{$i18n.t('Direct Connections')}</div>
 
 						<div class="flex items-center">
 							<div class="">
@@ -388,7 +388,7 @@
 
 				<div class="my-2">
 					<div class="flex justify-between items-center text-sm">
-						<div class=" text-xs font-medium">{$i18n.t('Cache Base Model List')}</div>
+						<div class=" text-xs font-normal">{$i18n.t('Cache Base Model List')}</div>
 
 						<div class="flex items-center">
 							<div class="">
@@ -418,9 +418,9 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-3 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

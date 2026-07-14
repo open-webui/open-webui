@@ -65,7 +65,7 @@
 	<div>
 		<!-- Header -->
 		<div class="flex justify-between items-center dark:text-gray-100 px-5 pt-4 pb-2">
-			<h3 class="text-base font-medium">{$i18n.t('New Calendar')}</h3>
+			<h3 class="text-base font-normal">{$i18n.t('New Calendar')}</h3>
 			<button
 				class="self-center shrink-0 ml-2"
 				aria-label={$i18n.t('Close')}
@@ -81,7 +81,7 @@
 			<div>
 				<div class="mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
 				<input
-					class="w-full text-sm bg-transparent outline-hidden font-primary placeholder:text-gray-300 dark:placeholder:text-gray-700"
+					class="w-full text-sm bg-transparent outline-hidden  placeholder:text-gray-300 dark:placeholder:text-gray-700"
 					type="text"
 					bind:value={name}
 					placeholder={$i18n.t('Calendar name')}

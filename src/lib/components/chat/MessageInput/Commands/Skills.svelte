@@ -64,7 +64,7 @@
 		const description = escapeTooltipText(skill.description);
 
 		return `<div class="max-w-80 whitespace-normal text-left leading-snug">
-			<span class="break-words font-medium">${name}</span>${description ? `: <span class="break-words opacity-80">${description}</span>` : ''}
+			<span class="break-words font-normal">${name}</span>${description ? `: <span class="break-words opacity-80">${description}</span>` : ''}
 		</div>`;
 	};
 </script>

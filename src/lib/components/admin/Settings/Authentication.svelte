@@ -114,12 +114,12 @@
 	<div class="space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		{#if adminConfig !== null}
 			<div class="mb-3">
-				<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('User Access')}</div>
+				<div class="mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('User Access')}</div>
 
 				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				<div class="  mb-2.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Default User Role')}</div>
+					<div class=" self-center text-xs font-normal">{$i18n.t('Default User Role')}</div>
 					<div class="flex items-center relative">
 						<select
 							class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
@@ -134,7 +134,7 @@
 				</div>
 
 				<div class="  mb-2.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Default Group')}</div>
+					<div class=" self-center text-xs font-normal">{$i18n.t('Default Group')}</div>
 					<div class="flex items-center relative max-w-48">
 						<select
 							class="w-full pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right truncate"
@@ -150,20 +150,20 @@
 				</div>
 
 				<div class=" mb-2.5 flex w-full justify-between pr-2">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Enable New Sign Ups')}</div>
+					<div class=" self-center text-xs font-normal">{$i18n.t('Enable New Sign Ups')}</div>
 
 					<Switch bind:state={adminConfig.ENABLE_SIGNUP} />
 				</div>
 
 				<div class="mb-2.5 flex w-full justify-between pr-2">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Keys')}</div>
+					<div class=" self-center text-xs font-normal">{$i18n.t('Enable API Keys')}</div>
 
 					<Switch bind:state={adminConfig.ENABLE_API_KEYS} />
 				</div>
 
 				{#if adminConfig?.ENABLE_API_KEYS}
 					<div class="mb-2.5 flex w-full justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-xs font-normal">
 							{$i18n.t('API Key Endpoint Restrictions')}
 						</div>
 
@@ -172,7 +172,7 @@
 
 					{#if adminConfig?.ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS}
 						<div class=" flex w-full flex-col pr-2 mb-2.5">
-							<div class=" text-xs font-medium">
+							<div class=" text-xs font-normal">
 								{$i18n.t('Allowed Endpoints')}
 							</div>
 
@@ -187,7 +187,7 @@
 								<a
 									href="https://docs.openwebui.com/reference/api-endpoints"
 									target="_blank"
-									class=" text-gray-300 font-medium underline"
+									class=" text-gray-300 font-normal underline"
 								>
 									{$i18n.t('To learn more about available endpoints, visit our documentation.')}
 								</a>
@@ -198,7 +198,7 @@
 
 				<div class=" mb-2.5 w-full justify-between">
 					<div class="flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('JWT Expiration')}</div>
+						<div class=" self-center text-xs font-normal">{$i18n.t('JWT Expiration')}</div>
 					</div>
 
 					<div class="flex mt-2 space-x-2">
@@ -212,7 +212,7 @@
 
 					<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 						{$i18n.t('Valid time units:')}
-						<span class=" text-gray-300 font-medium"
+						<span class=" text-gray-300 font-normal"
 							>{$i18n.t("'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.")}</span
 						>
 					</div>
@@ -223,7 +223,7 @@
 								class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-3 py-2"
 							>
 								<div>
-									<span class=" font-medium">{$i18n.t('Warning')}:</span>
+									<span class=" font-normal">{$i18n.t('Warning')}:</span>
 									<span
 										><a
 											href="https://docs.openwebui.com/reference/env-configuration#jwt_expires_in"
@@ -237,12 +237,12 @@
 						</div>
 					{/if}
 				</div>
-				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Pending Accounts')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Pending Accounts')}</div>
 
 				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs font-normal">
 						{$i18n.t('Show Admin Details in Account Pending Overlay')}
 					</div>
 
@@ -252,7 +252,7 @@
 				{#if adminConfig.SHOW_ADMIN_DETAILS}
 					<div class="mb-2.5 w-full justify-between">
 						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Admin Contact Email')}</div>
+							<div class=" self-center text-xs font-normal">{$i18n.t('Admin Contact Email')}</div>
 						</div>
 
 						<div class="flex mt-2 space-x-2">
@@ -267,7 +267,7 @@
 				{/if}
 
 				<div class="mb-2.5">
-					<div class=" self-center text-xs font-medium mb-2">
+					<div class=" self-center text-xs font-normal mb-2">
 						{$i18n.t('Pending User Overlay Title')}
 					</div>
 					<Textarea
@@ -279,7 +279,7 @@
 				</div>
 
 				<div class="mb-2.5">
-					<div class=" self-center text-xs font-medium mb-2">
+					<div class=" self-center text-xs font-normal mb-2">
 						{$i18n.t('Pending User Overlay Content')}
 					</div>
 					<Textarea
@@ -295,7 +295,7 @@
 		<div class=" space-y-3">
 			<div class="mt-2 space-y-2 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
-					<div class="  font-medium">{$i18n.t('LDAP')}</div>
+					<div class="  font-normal">{$i18n.t('LDAP')}</div>
 
 					<div class="mt-1">
 						<Switch bind:state={ENABLE_LDAP} />
@@ -306,7 +306,7 @@
 					<div class="flex flex-col gap-1">
 						<div class="flex w-full gap-2">
 							<div class="w-full">
-								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+								<div class=" self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Label')}
 								</div>
 								<input
@@ -320,7 +320,7 @@
 						</div>
 						<div class="flex w-full gap-2">
 							<div class="w-full">
-								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+								<div class=" self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Host')}
 								</div>
 								<input
@@ -331,7 +331,7 @@
 								/>
 							</div>
 							<div class="w-full">
-								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+								<div class=" self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Port')}
 								</div>
 								<Tooltip
@@ -350,7 +350,7 @@
 						</div>
 						<div class="flex w-full gap-2">
 							<div class="w-full">
-								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+								<div class=" self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Application DN')}
 								</div>
 								<Tooltip
@@ -365,7 +365,7 @@
 								</Tooltip>
 							</div>
 							<div class="w-full">
-								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+								<div class=" self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Application DN Password')}
 								</div>
 								<SensitiveInput
@@ -377,7 +377,7 @@
 						</div>
 						<div class="flex w-full gap-2">
 							<div class="w-full">
-								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+								<div class=" self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Attribute for Mail')}
 								</div>
 								<Tooltip
@@ -397,7 +397,7 @@
 						</div>
 						<div class="flex w-full gap-2">
 							<div class="w-full">
-								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+								<div class=" self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Attribute for Username')}
 								</div>
 								<Tooltip
@@ -417,7 +417,7 @@
 						</div>
 						<div class="flex w-full gap-2">
 							<div class="w-full">
-								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+								<div class=" self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Search Base')}
 								</div>
 								<Tooltip content={$i18n.t('The base to search for users')} placement="top-start">
@@ -432,7 +432,7 @@
 						</div>
 						<div class="flex w-full gap-2">
 							<div class="w-full">
-								<div class=" self-center text-xs font-medium min-w-fit mb-1">
+								<div class=" self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Search Filters')}
 								</div>
 								<input
@@ -444,7 +444,7 @@
 						</div>
 						<div class="text-xs text-gray-400 dark:text-gray-500">
 							<a
-								class=" text-gray-300 font-medium underline"
+								class=" text-gray-300 font-normal underline"
 								href="https://ldap.com/ldap-filters/"
 								target="_blank"
 							>
@@ -453,7 +453,7 @@
 						</div>
 						<div>
 							<div class="flex justify-between items-center text-sm">
-								<div class="  font-medium">{$i18n.t('TLS')}</div>
+								<div class="  font-normal">{$i18n.t('TLS')}</div>
 
 								<div class="mt-1">
 									<Switch bind:state={LDAP_SERVER.use_tls} />
@@ -462,7 +462,7 @@
 							{#if LDAP_SERVER.use_tls}
 								<div class="flex w-full gap-2">
 									<div class="w-full">
-										<div class=" self-center text-xs font-medium min-w-fit mb-1 mt-1">
+										<div class=" self-center text-xs font-normal min-w-fit mb-1 mt-1">
 											{$i18n.t('Certificate Path')}
 										</div>
 										<input
@@ -473,7 +473,7 @@
 									</div>
 								</div>
 								<div class="flex justify-between items-center text-xs">
-									<div class=" font-medium">{$i18n.t('Validate certificate')}</div>
+									<div class=" font-normal">{$i18n.t('Validate certificate')}</div>
 
 									<div class="mt-1">
 										<Switch bind:state={LDAP_SERVER.validate_cert} />
@@ -481,7 +481,7 @@
 								</div>
 								<div class="flex w-full gap-2">
 									<div class="w-full">
-										<div class=" self-center text-xs font-medium min-w-fit mb-1">
+										<div class=" self-center text-xs font-normal min-w-fit mb-1">
 											{$i18n.t('Ciphers')}
 										</div>
 										<Tooltip content={$i18n.t('Default to ALL')} placement="top-start">
@@ -502,7 +502,7 @@
 		</div>
 		{#if oauthConfig}
 			<div class="mb-3">
-				<div class="mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('OAuth / OIDC')}</div>
+				<div class="mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('OAuth / OIDC')}</div>
 
 				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
@@ -510,7 +510,7 @@
 					<div class="space-y-3">
 						<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
 							<div class="w-full">
-								<div class="self-center text-xs font-medium min-w-fit mb-1">
+								<div class="self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Provider Name')}
 								</div>
 								<input
@@ -520,7 +520,7 @@
 								/>
 							</div>
 							<div class="w-full">
-								<div class="self-center text-xs font-medium min-w-fit mb-1">
+								<div class="self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Provider URL')}
 								</div>
 								<input
@@ -533,7 +533,7 @@
 
 						<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
 							<div class="w-full">
-								<div class="self-center text-xs font-medium min-w-fit mb-1">
+								<div class="self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Client ID')}
 								</div>
 								<input
@@ -543,7 +543,7 @@
 								/>
 							</div>
 							<div class="w-full">
-								<div class="self-center text-xs font-medium min-w-fit mb-1">
+								<div class="self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Client Secret')}
 								</div>
 								<SensitiveInput
@@ -558,7 +558,7 @@
 
 						<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
 							<div class="w-full">
-								<div class="self-center text-xs font-medium min-w-fit mb-1">
+								<div class="self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Redirect URI')}
 								</div>
 								<input
@@ -568,7 +568,7 @@
 								/>
 							</div>
 							<div class="w-full">
-								<div class="self-center text-xs font-medium min-w-fit mb-1">
+								<div class="self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Scopes')}
 								</div>
 								<input
@@ -581,7 +581,7 @@
 
 						<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
 							<div class="w-full">
-								<div class="self-center text-xs font-medium min-w-fit mb-1">
+								<div class="self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Email Claim')}
 								</div>
 								<input
@@ -591,7 +591,7 @@
 								/>
 							</div>
 							<div class="w-full">
-								<div class="self-center text-xs font-medium min-w-fit mb-1">
+								<div class="self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Username Claim')}
 								</div>
 								<input
@@ -604,7 +604,7 @@
 
 						<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
 							<div class="w-full">
-								<div class="self-center text-xs font-medium min-w-fit mb-1">
+								<div class="self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Picture Claim')}
 								</div>
 								<input
@@ -614,7 +614,7 @@
 								/>
 							</div>
 							<div class="w-full">
-								<div class="self-center text-xs font-medium min-w-fit mb-1">
+								<div class="self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Sub Claim')}
 								</div>
 								<input
@@ -626,28 +626,28 @@
 						</div>
 
 						<div class="flex w-full justify-between pr-2">
-							<div class="self-center text-xs font-medium">
+							<div class="self-center text-xs font-normal">
 								{$i18n.t('Enable OAuth Signup')}
 							</div>
 							<Switch bind:state={oauthConfig.ENABLE_OAUTH_SIGNUP} />
 						</div>
 
 						<div class="flex w-full justify-between pr-2">
-							<div class="self-center text-xs font-medium">
+							<div class="self-center text-xs font-normal">
 								{$i18n.t('Merge Accounts by Email')}
 							</div>
 							<Switch bind:state={oauthConfig.OAUTH_MERGE_ACCOUNTS_BY_EMAIL} />
 						</div>
 
 						<div class="flex w-full justify-between pr-2">
-							<div class="self-center text-xs font-medium">
+							<div class="self-center text-xs font-normal">
 								{$i18n.t('Auto Redirect')}
 							</div>
 							<Switch bind:state={oauthConfig.OAUTH_AUTO_REDIRECT} />
 						</div>
 
 						<div class="w-full">
-							<div class="self-center text-xs font-medium min-w-fit mb-1">
+							<div class="self-center text-xs font-normal min-w-fit mb-1">
 								{$i18n.t('Allowed Domains')}
 							</div>
 							<input
@@ -658,7 +658,7 @@
 						</div>
 
 						<div class="flex w-full justify-between pr-2">
-							<div class="self-center text-xs font-medium">
+							<div class="self-center text-xs font-normal">
 								{$i18n.t('Enable Role Mapping')}
 							</div>
 							<Switch bind:state={oauthConfig.ENABLE_OAUTH_ROLE_MANAGEMENT} />
@@ -667,7 +667,7 @@
 						{#if oauthConfig.ENABLE_OAUTH_ROLE_MANAGEMENT}
 							<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
 								<div class="w-full">
-									<div class="self-center text-xs font-medium min-w-fit mb-1">
+									<div class="self-center text-xs font-normal min-w-fit mb-1">
 										{$i18n.t('Roles Claim')}
 									</div>
 									<input
@@ -677,7 +677,7 @@
 									/>
 								</div>
 								<div class="w-full">
-									<div class="self-center text-xs font-medium min-w-fit mb-1">
+									<div class="self-center text-xs font-normal min-w-fit mb-1">
 										{$i18n.t('Admin Roles')}
 									</div>
 									<input
@@ -689,7 +689,7 @@
 							</div>
 
 							<div class="w-full">
-								<div class="self-center text-xs font-medium min-w-fit mb-1">
+								<div class="self-center text-xs font-normal min-w-fit mb-1">
 									{$i18n.t('Allowed Roles')}
 								</div>
 								<input
@@ -701,7 +701,7 @@
 						{/if}
 
 						<div class="flex w-full justify-between pr-2">
-							<div class="self-center text-xs font-medium">
+							<div class="self-center text-xs font-normal">
 								{$i18n.t('Enable Group Mapping')}
 							</div>
 							<Switch bind:state={oauthConfig.ENABLE_OAUTH_GROUP_MANAGEMENT} />
@@ -709,7 +709,7 @@
 
 						{#if oauthConfig.ENABLE_OAUTH_GROUP_MANAGEMENT}
 							<div class="flex w-full justify-between pr-2">
-								<div class="self-center text-xs font-medium">
+								<div class="self-center text-xs font-normal">
 									{$i18n.t('Auto-Create Groups')}
 								</div>
 								<Switch bind:state={oauthConfig.ENABLE_OAUTH_GROUP_CREATION} />
@@ -717,7 +717,7 @@
 
 							<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
 								<div class="w-full">
-									<div class="self-center text-xs font-medium min-w-fit mb-1">
+									<div class="self-center text-xs font-normal min-w-fit mb-1">
 										{$i18n.t('Group Claim')}
 									</div>
 									<input
@@ -727,7 +727,7 @@
 									/>
 								</div>
 								<div class="w-full">
-									<div class="self-center text-xs font-medium min-w-fit mb-1">
+									<div class="self-center text-xs font-normal min-w-fit mb-1">
 										{$i18n.t('Blocked Groups')}
 									</div>
 									<input
@@ -740,21 +740,21 @@
 						{/if}
 
 						<div class="flex w-full justify-between pr-2">
-							<div class="self-center text-xs font-medium">
+							<div class="self-center text-xs font-normal">
 								{$i18n.t('Update Email')}
 							</div>
 							<Switch bind:state={oauthConfig.OAUTH_UPDATE_EMAIL_ON_LOGIN} />
 						</div>
 
 						<div class="flex w-full justify-between pr-2">
-							<div class="self-center text-xs font-medium">
+							<div class="self-center text-xs font-normal">
 								{$i18n.t('Update Name')}
 							</div>
 							<Switch bind:state={oauthConfig.OAUTH_UPDATE_NAME_ON_LOGIN} />
 						</div>
 
 						<div class="flex w-full justify-between pr-2">
-							<div class="self-center text-xs font-medium">
+							<div class="self-center text-xs font-normal">
 								{$i18n.t('Update Picture')}
 							</div>
 							<Switch bind:state={oauthConfig.OAUTH_UPDATE_PICTURE_ON_LOGIN} />
@@ -765,9 +765,9 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-3 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

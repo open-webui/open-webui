@@ -121,19 +121,19 @@
 
 	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3">
 		<div class="flex justify-between items-center">
-			<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
+			<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
 				<div>
 					{$i18n.t('Groups')}
 				</div>
 
-				<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+				<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
 					{filteredGroups.length}
 				</div>
 			</div>
 
 			<div class="flex w-full justify-end gap-1.5">
 				<button
-					class="px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
+					class="px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-normal text-sm flex items-center"
 					on:click={() => {
 						showAddGroupModal = !showAddGroupModal;
 					}}
@@ -212,7 +212,7 @@
 			<div class="w-full h-full flex flex-col justify-center items-center my-16 mb-24">
 				<div class="max-w-md text-center">
 					<div class="text-3xl mb-3">👥</div>
-					<div class="text-lg font-medium mb-1">{$i18n.t('No groups found')}</div>
+					<div class="text-lg font-normal mb-1">{$i18n.t('No groups found')}</div>
 					<div class="text-gray-500 text-center text-xs">
 						{$i18n.t('Use groups to organize your users and assign permissions.')}
 					</div>
@@ -244,7 +244,7 @@
 			</div>
 
 			<div class="text-left">
-				<div class=" text-sm font-medium">{$i18n.t('Default permissions')}</div>
+				<div class=" text-sm font-normal">{$i18n.t('Default permissions')}</div>
 
 				<div class="flex text-xs mt-0.5">
 					{$i18n.t('applies to all users with the "user" role')}

@@ -46,7 +46,7 @@
 <Modal bind:show>
 	<div class="text-gray-700 dark:text-gray-100 px-5 py-4">
 		<div class="flex justify-between dark:text-gray-300 pb-2">
-			<div class="text-lg font-medium self-center">{$i18n.t('Keyboard Shortcuts')}</div>
+			<div class="text-lg font-normal self-center">{$i18n.t('Keyboard Shortcuts')}</div>
 			<button class="self-center" aria-label={$i18n.t('Close')} on:click={() => (show = false)}>
 				<XMark className={'size-5'} />
 			</button>

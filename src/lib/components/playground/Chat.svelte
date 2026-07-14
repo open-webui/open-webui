@@ -321,7 +321,7 @@
 <Modal size="sm" bind:show={showControls}>
 	<div class="text-gray-700 dark:text-gray-100">
 		<div class="flex justify-between px-4.5 pt-4.5 pb-2">
-			<div class="text-lg font-medium self-center">{$i18n.t('Controls')}</div>
+			<div class="text-lg font-normal self-center">{$i18n.t('Controls')}</div>
 			<button
 				class="self-center"
 				aria-label={$i18n.t('Close')}
@@ -349,7 +349,7 @@
 					grow={true}
 				>
 					<div class="flex gap-2 justify-between items-center">
-						<div class=" shrink-0 font-medium ml-1.5">
+						<div class=" shrink-0 font-normal ml-1.5">
 							{$i18n.t('System Instructions')}
 						</div>
 
@@ -388,7 +388,7 @@
 
 				<Dropdown>
 					<button
-						class="p-1.5 text-sm font-medium bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition rounded-lg"
+						class="p-1.5 text-sm font-normal bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition rounded-lg"
 						aria-label={$i18n.t('More options')}
 					>
 						<EllipsisHorizontal className="size-3.5" />
@@ -473,7 +473,7 @@
 						<div class="shrink-0">
 							<button
 								type="button"
-								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg shrink-0 {($settings?.highContrastMode ??
+								class="px-3.5 py-1.5 text-sm font-normal bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg shrink-0 {($settings?.highContrastMode ??
 								false)
 									? ''
 									: 'outline-hidden'}"
@@ -508,7 +508,7 @@
 							</div>
 
 							<button
-								class="p-1.5 text-sm font-medium bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg {showControls
+								class="p-1.5 text-sm font-normal bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg {showControls
 									? 'text-black dark:text-white'
 									: 'text-gray-500 dark:text-gray-400'}"
 								aria-label={$i18n.t('Controls')}
@@ -524,7 +524,7 @@
 								{#if !loading}
 									<button
 										disabled={message === ''}
-										class="px-3.5 py-1.5 text-sm font-medium disabled:bg-gray-50 dark:disabled:hover:bg-gray-850 disabled:cursor-not-allowed bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
+										class="px-3.5 py-1.5 text-sm font-normal disabled:bg-gray-50 dark:disabled:hover:bg-gray-850 disabled:cursor-not-allowed bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
 										on:click={() => {
 											addHandler();
 											role = role === 'user' ? 'assistant' : 'user';
@@ -534,7 +534,7 @@
 									</button>
 
 									<button
-										class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
+										class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
 										on:click={() => {
 											submitHandler();
 										}}
@@ -543,7 +543,7 @@
 									</button>
 								{:else}
 									<button
-										class="px-3 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-lg"
+										class="px-3 py-1.5 text-sm font-normal bg-gray-300 text-black transition rounded-lg"
 										on:click={() => {
 											stopResponse();
 										}}

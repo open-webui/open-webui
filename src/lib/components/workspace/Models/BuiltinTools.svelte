@@ -68,7 +68,7 @@
 
 <div>
 	<div class="flex w-full justify-between mb-1">
-		<div class="self-center text-xs font-medium text-gray-500">{$i18n.t('Builtin Tools')}</div>
+		<div class="self-center text-xs font-normal text-gray-500">{$i18n.t('Builtin Tools')}</div>
 	</div>
 	<div class="flex items-center mt-2 flex-wrap">
 		{#each allTools as tool}

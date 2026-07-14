@@ -169,7 +169,7 @@
 	<div
 		class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
 	>
-		<div class="flex md:self-center text-lg font-medium px-0.5 gap-2">
+		<div class="flex md:self-center text-lg font-normal px-0.5 gap-2">
 			<div class="flex-shrink-0">
 				{$i18n.t('Users')}
 			</div>
@@ -177,18 +177,18 @@
 			<div>
 				{#if ($config?.license_metadata?.seats ?? null) !== null}
 					{#if total > $config?.license_metadata?.seats}
-						<span class="text-lg font-medium text-red-500"
+						<span class="text-lg font-normal text-red-500"
 							>{total} of {$config?.license_metadata?.seats}
 							<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
 						>
 					{:else}
-						<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
+						<span class="text-lg font-normal text-gray-500 dark:text-gray-300"
 							>{total} of {$config?.license_metadata?.seats}
 							<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
 						>
 					{/if}
 				{:else}
-					<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{total}</span>
+					<span class="text-lg font-normal text-gray-500 dark:text-gray-300">{total}</span>
 				{/if}
 			</div>
 		</div>
@@ -222,7 +222,7 @@
 				<div>
 					<Tooltip content={$i18n.t('Add User')}>
 						<button
-							class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
+							class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-normal text-sm flex items-center space-x-1"
 							on:click={() => {
 								showAddUserModal = !showAddUserModal;
 							}}
@@ -377,7 +377,7 @@
 								/>
 							</button>
 						</td>
-						<td class="px-3 py-1 font-medium text-gray-900 dark:text-white max-w-48">
+						<td class="px-3 py-1 font-normal text-gray-900 dark:text-white max-w-48">
 							<div class="flex items-center gap-2">
 								<ProfilePreview {user} side="right" align="center" sideOffset={6}>
 									<img
@@ -390,7 +390,7 @@
 									/>
 								</ProfilePreview>
 
-								<div class="font-medium truncate">{user.name}</div>
+								<div class="font-normal truncate">{user.name}</div>
 
 								{#if user?.last_active_at && Date.now() / 1000 - user.last_active_at < 180}
 									<div>

@@ -251,7 +251,7 @@
 				<div class="w-full">
 					<div class=" flex w-full mb-4.5 border-b border-gray-200 dark:border-gray-850">
 						<div
-							class="flex gap-2 scrollbar-none overflow-x-auto w-fit text-center font-medium bg-transparent pt-1 text-sm"
+							class="flex gap-2 scrollbar-none overflow-x-auto w-fit text-center font-normal bg-transparent pt-1 text-sm"
 							on:wheel|preventDefault={(e) => {
 								e.currentTarget.scrollLeft += e.deltaY;
 							}}

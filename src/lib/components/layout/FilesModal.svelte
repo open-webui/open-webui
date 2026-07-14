@@ -203,14 +203,14 @@
 <Modal size="xl" bind:show>
 	<div>
 		<div class="flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class="flex items-center gap-2 text-lg font-medium self-center">
+			<div class="flex items-center gap-2 text-lg font-normal self-center">
 				<div>{$i18n.t('Files')}</div>
 				{#if query && files}
-					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
 						{files.length}
 					</div>
 				{:else if fileCount !== null}
-					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
 						{fileCount}
 					</div>
 				{/if}
@@ -281,7 +281,7 @@
 				{#if files !== null}
 					<div class="w-full">
 						{#if files.length > 0}
-							<div class="flex text-xs font-medium mb-1.5">
+							<div class="flex text-xs font-normal mb-1.5">
 								<button
 									class="px-1.5 py-1 cursor-pointer select-none basis-3/5"
 									on:click={() => setSortKey('filename')}

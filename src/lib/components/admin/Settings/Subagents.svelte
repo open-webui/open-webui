@@ -58,7 +58,7 @@
 
 <form class="flex h-full flex-col justify-between text-sm" on:submit|preventDefault={save}>
 	<div class="h-full overflow-y-auto scrollbar-hidden">
-		<div class="mt-0.5 mb-4 text-base font-medium">{$i18n.t('Sub-agents')}</div>
+		<div class="mt-0.5 mb-4 text-base font-normal">{$i18n.t('Sub-agents')}</div>
 
 		{#if loading}
 			<div class="flex justify-center py-8"><Spinner className="size-6" /></div>
@@ -187,9 +187,9 @@
 	</div>
 
 	{#if !loading}
-		<div class="flex justify-end pt-6 text-sm font-medium">
+		<div class="flex justify-end pt-6 text-sm font-normal">
 			<button
-				class="rounded-full bg-black px-3.5 py-1.5 text-sm font-medium text-white transition hover:bg-gray-900 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-gray-100"
+				class="rounded-full bg-black px-3.5 py-1.5 text-sm font-normal text-white transition hover:bg-gray-900 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-gray-100"
 				type="submit"
 				disabled={saving}
 			>

@@ -106,10 +106,10 @@
 	<div>
 		<div class="flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
 			<div class="flex items-center gap-2">
-				<div class="text-lg font-medium">{$i18n.t('Memory')}</div>
+				<div class="text-lg font-normal">{$i18n.t('Memory')}</div>
 
 				{#if !loading}
-					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
 						{memories.length}
 					</div>
 				{/if}
@@ -242,7 +242,7 @@
 				>
 
 				<button
-					class="px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-800 rounded-3xl"
+					class="px-3.5 py-1.5 font-normal hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-800 rounded-3xl"
 					on:click={() => {
 						selectedMemory = null;
 						showMemoryModal = true;

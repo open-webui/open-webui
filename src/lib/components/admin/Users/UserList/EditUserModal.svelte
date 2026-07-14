@@ -69,7 +69,7 @@
 <Modal size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Edit User')}</div>
+			<div class=" text-lg font-normal self-center">{$i18n.t('Edit User')}</div>
 			<button
 				class="self-center"
 				aria-label={$i18n.t('Close')}
@@ -101,7 +101,7 @@
 
 							<div class=" flex-1 min-w-0">
 								<div class="overflow-hidden w-ful mb-2">
-									<div class=" self-center capitalize font-medium truncate">
+									<div class=" self-center capitalize font-normal truncate">
 										{selectedUser.name}
 									</div>
 
@@ -218,9 +218,9 @@
 							</div>
 						</div>
 
-						<div class="flex justify-end pt-3 text-sm font-medium">
+						<div class="flex justify-end pt-3 text-sm font-normal">
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
 								type="submit"
 							>
 								{$i18n.t('Save')}

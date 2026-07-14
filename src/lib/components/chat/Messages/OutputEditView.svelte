@@ -259,7 +259,7 @@
 					<!-- Role label -->
 					<div class="flex items-start pt-1.5">
 						<div
-							class="text-[11px] font-semibold uppercase tracking-wide min-w-[4.5rem] text-gray-400 dark:text-gray-500"
+							class="text-[11px] font-normal uppercase tracking-wide min-w-[4.5rem] text-gray-400 dark:text-gray-500"
 						>
 							{getItemLabel(di)}
 						</div>

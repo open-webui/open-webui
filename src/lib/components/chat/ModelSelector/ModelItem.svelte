@@ -70,7 +70,7 @@
 				{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
 					<Tooltip content={tag.name} className="flex-shrink-0">
 						<div
-							class=" text-xs font-semibold px-1 rounded-sm uppercase bg-gray-500/20 text-gray-700 dark:text-gray-200"
+							class=" text-xs font-normal px-1 rounded-sm uppercase bg-gray-500/20 text-gray-700 dark:text-gray-200"
 						>
 							{tag.name}
 						</div>
@@ -157,7 +157,7 @@
 							<div slot="tooltip" id="tags-{item.model.id}">
 								{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
 									<Tooltip content={tag.name} className="flex-shrink-0">
-										<div class=" text-xs font-medium rounded-sm uppercase text-white">
+										<div class=" text-xs font-normal rounded-sm uppercase text-white">
 											{tag.name}
 										</div>
 									</Tooltip>

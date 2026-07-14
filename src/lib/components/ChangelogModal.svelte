@@ -38,7 +38,7 @@
 <Modal bind:show size="xl">
 	<div class="px-6 pt-5 dark:text-white text-black">
 		<div class="flex justify-between items-start">
-			<h2 class="text-xl font-medium m-0">
+			<h2 class="text-xl font-normal m-0">
 				{$i18n.t("What's New in")}
 				{$WEBUI_NAME}
 				<Confetti x={[-1, -0.25]} y={[0, 0.5]} />
@@ -62,7 +62,7 @@
 				{#if changelog}
 					{#each Object.keys(changelog) as version}
 						<div class=" mb-3 pr-2">
-							<h3 class="font-semibold text-xl mb-1 dark:text-white m-0">
+							<h3 class="font-normal text-xl mb-1 dark:text-white m-0">
 								v{version} - {changelog[version].date}
 							</h3>
 
@@ -71,7 +71,7 @@
 							{#each Object.keys(changelog[version]).filter((section) => section !== 'date') as section}
 								<div class="w-full">
 									<div
-										class="font-semibold uppercase text-xs {section === 'added'
+										class="font-normal uppercase text-xs {section === 'added'
 											? 'bg-blue-500/20 text-blue-700 dark:text-blue-200'
 											: section === 'fixed'
 												? 'bg-green-500/20 text-green-700 dark:text-green-200'
@@ -98,10 +98,10 @@
 				{/if}
 			</div>
 		</div>
-		<div class="flex justify-end pt-3 text-sm font-medium">
+		<div class="flex justify-end pt-3 text-sm font-normal">
 			<button
 				on:click={closeModal}
-				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+				class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			>
 				<span class="relative">{$i18n.t("Okay, Let's Go!")}</span>
 			</button>

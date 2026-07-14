@@ -9,7 +9,7 @@
 </script>
 
 <div class="mt-4">
-	<div class="text-sm font-medium">
+	<div class="text-sm font-normal">
 		{$i18n.t('Follow up')}
 	</div>
 

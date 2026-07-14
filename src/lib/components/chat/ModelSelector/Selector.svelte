@@ -732,7 +732,7 @@
 						{#if filteredItems.length === 0}
 							{#if items.length === 0 && $user?.role === 'admin'}
 								<div class="flex flex-col items-start justify-center py-6 px-4 text-start">
-									<div class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+									<div class="text-sm font-normal text-gray-900 dark:text-gray-100 mb-1">
 										{$i18n.t('No models available')}
 									</div>
 									<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">
@@ -740,7 +740,7 @@
 									</div>
 									<a
 										href="/admin/settings/connections"
-										class="px-4 py-1.5 rounded-xl text-xs font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 transition"
+										class="px-4 py-1.5 rounded-xl text-xs font-normal bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 transition"
 										on:click={() => {
 											show = false;
 										}}

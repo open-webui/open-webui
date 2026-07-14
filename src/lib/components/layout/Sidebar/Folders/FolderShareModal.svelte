@@ -57,7 +57,7 @@
 <Modal size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-3 pb-1">
-			<div class=" text-lg font-medium self-center font-primary">
+			<div class=" text-lg font-normal self-center ">
 				{$i18n.t('Share')}: {folder?.name ?? ''}
 			</div>
 			<button

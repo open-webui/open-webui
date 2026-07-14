@@ -443,7 +443,7 @@
 					/>
 				</svg>
 			</div>
-			<div class=" self-center text-sm font-medium">{$i18n.t('Back')}</div>
+			<div class=" self-center text-sm font-normal">{$i18n.t('Back')}</div>
 		</button>
 	{/if}
 
@@ -636,7 +636,7 @@
 									>
 										<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
 
-										<div class="text-sm font-medium shrink-0">
+										<div class="text-sm font-normal shrink-0">
 											{$i18n.t('Access')}
 										</div>
 									</button>
@@ -645,7 +645,7 @@
 
 							{#if preset}
 								<div class="mb-1">
-									<div class=" text-xs font-medium mb-1 text-gray-500">
+									<div class=" text-xs font-normal mb-1 text-gray-500">
 										{$i18n.t('Base Model (From)')}
 									</div>
 
@@ -666,7 +666,7 @@
 
 							<div class="mb-1">
 								<div class="mb-1 flex w-full justify-between items-center">
-									<div class=" self-center text-xs font-medium text-gray-500">
+									<div class=" self-center text-xs font-normal text-gray-500">
 										{$i18n.t('Description')}
 									</div>
 
@@ -723,14 +723,14 @@
 
 					<div class="my-2">
 						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium text-gray-500">
+							<div class=" self-center text-xs font-normal text-gray-500">
 								{$i18n.t('Model Params')}
 							</div>
 						</div>
 
 						<div class="mt-2">
 							<div class="my-1">
-								<div class=" text-xs font-medium mb-2">{$i18n.t('System Prompt')}</div>
+								<div class=" text-xs font-normal mb-2">{$i18n.t('System Prompt')}</div>
 								<div>
 									<Textarea
 										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
@@ -744,7 +744,7 @@
 							</div>
 
 							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
+								<div class=" self-center text-xs font-normal">
 									{$i18n.t('Advanced Params')}
 								</div>
 
@@ -776,7 +776,7 @@
 					<div class="my-2">
 						<div class="flex w-full justify-between items-center">
 							<div class="flex w-full justify-between items-center">
-								<div class=" self-center text-xs font-medium text-gray-500">
+								<div class=" self-center text-xs font-normal text-gray-500">
 									{$i18n.t('Prompts')}
 								</div>
 
@@ -890,7 +890,7 @@
 
 					<div class="my-4">
 						<div class="flex w-full justify-between mb-1">
-							<div class="self-center text-xs font-medium text-gray-500">
+							<div class="self-center text-xs font-normal text-gray-500">
 								{$i18n.t('TTS Voice')}
 							</div>
 						</div>
@@ -911,7 +911,7 @@
 							type="submit"
 							disabled={loading}
 						>
-							<div class=" self-center font-medium">
+							<div class=" self-center font-normal">
 								{#if edit}
 									{$i18n.t('Save & Update')}
 								{:else}
@@ -929,7 +929,7 @@
 
 					<div class="my-2 text-gray-300 dark:text-gray-700 pb-20">
 						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm font-medium">{$i18n.t('JSON Preview')}</div>
+							<div class=" self-center text-sm font-normal">{$i18n.t('JSON Preview')}</div>
 
 							<button
 								class="p-1 px-3 text-xs flex rounded-sm transition"

@@ -141,7 +141,7 @@
 								>
 									<LockClosed strokeWidth="2.5" className="size-3.5" />
 
-									<div class="text-sm font-medium shrink-0">
+									<div class="text-sm font-normal shrink-0">
 										{$i18n.t('Access')}
 									</div>
 								</button>
@@ -220,7 +220,7 @@
 				<div class="pb-3 flex justify-end">
 					{#if !disabled}
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap"
+							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap"
 							type="submit"
 							disabled={loading}
 						>

@@ -19,7 +19,7 @@
 <Modal bind:show size="md">
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Available Skills')}</div>
+			<div class=" text-lg font-normal self-center">{$i18n.t('Available Skills')}</div>
 			<button
 				class="self-center"
 				aria-label={$i18n.t('Close')}
@@ -33,7 +33,7 @@
 
 		{#if selectedSkills.length > 0}
 			<div class=" flex justify-between dark:text-gray-300 px-5 pb-1">
-				<div class=" text-base font-medium self-center">{$i18n.t('Skills')}</div>
+				<div class=" text-base font-normal self-center">{$i18n.t('Skills')}</div>
 			</div>
 
 			<div class="px-5 pb-5 w-full flex flex-col justify-center">
@@ -41,7 +41,7 @@
 					{#each selectedSkills as skill}
 						<Collapsible buttonClassName="w-full mb-0.5">
 							<div class="truncate">
-								<div class="text-sm font-medium dark:text-gray-100 text-gray-800 truncate">
+								<div class="text-sm font-normal dark:text-gray-100 text-gray-800 truncate">
 									{skill?.name}
 								</div>
 

@@ -40,7 +40,7 @@
 <Modal size="lg" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
-			<div class=" text-lg font-medium self-center capitalize">
+			<div class=" text-lg font-normal self-center capitalize">
 				{$i18n.t('Citations')}
 			</div>
 			<button
@@ -66,7 +66,7 @@
 							selectedCitation = citation;
 						}}
 					>
-						<div class=" font-medium">
+						<div class=" font-normal">
 							{idx + 1}.
 						</div>
 						<div

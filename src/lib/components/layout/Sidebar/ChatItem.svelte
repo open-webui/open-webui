@@ -427,7 +427,7 @@
 	}}
 >
 	<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
-		{$i18n.t('This will delete')} <span class="  font-semibold">{title}</span>.
+		{$i18n.t('This will delete')} <span class="  font-normal">{title}</span>.
 	</div>
 </DeleteConfirmDialog>
 
@@ -562,7 +562,7 @@
 				<div
 					dir="auto"
 					class="text-left self-center overflow-hidden w-full h-[20px] truncate {unread
-						? 'font-medium text-gray-900 dark:text-gray-100'
+						? 'font-normal text-gray-900 dark:text-gray-100'
 						: ''}"
 				>
 					{title}

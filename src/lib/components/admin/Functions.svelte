@@ -285,12 +285,12 @@
 				/>
 
 				<div class="flex justify-between items-center w-full">
-					<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
+					<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
 						<div>
 							{$i18n.t('Functions')}
 						</div>
 
-						<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+						<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
 							{filteredItems.length}
 						</div>
 					</div>
@@ -303,7 +303,7 @@
 									functionsImportInputElement.click();
 								}}
 							>
-								<div class=" self-center font-medium line-clamp-1">
+								<div class=" self-center font-normal line-clamp-1">
 									{$i18n.t('Import')}
 								</div>
 							</button>
@@ -325,7 +325,7 @@
 										}
 									}}
 								>
-									<div class=" self-center font-medium line-clamp-1">
+									<div class=" self-center font-normal line-clamp-1">
 										{$i18n.t('Export')}
 									</div>
 								</button>
@@ -340,7 +340,7 @@
 							}}
 						>
 							<div
-								class="cursor-pointer px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
+								class="cursor-pointer px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-normal text-sm flex items-center"
 							>
 								<Plus className="size-3" strokeWidth="2.5" />
 
@@ -432,7 +432,7 @@
 										<Tooltip content={func.id} placement="top-start">
 											<div class=" flex items-center gap-1.5">
 												<div
-													class=" text-xs font-semibold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+													class=" text-xs font-normal px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 												>
 													{func.type}
 												</div>
@@ -441,7 +441,7 @@
 													{func.name}
 												</div>
 												{#if func?.meta?.manifest?.version}
-													<div class=" text-gray-500 text-xs font-medium shrink-0">
+													<div class=" text-gray-500 text-xs font-normal shrink-0">
 														v{func?.meta?.manifest?.version ?? ''}
 													</div>
 												{/if}
@@ -590,7 +590,7 @@
 				<div class=" w-full h-full flex flex-col justify-center items-center my-16 mb-24">
 					<div class="max-w-md text-center">
 						<div class=" text-3xl mb-3">😕</div>
-						<div class=" text-lg font-medium mb-1">{$i18n.t('No functions found')}</div>
+						<div class=" text-lg font-normal mb-1">{$i18n.t('No functions found')}</div>
 						<div class=" text-gray-500 text-center text-xs">
 							{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 						</div>
@@ -622,7 +622,7 @@
 		}}
 	>
 		<div class=" text-sm text-gray-500 truncate">
-			{$i18n.t('This will delete')} <span class="  font-semibold">{selectedFunction.name}</span>.
+			{$i18n.t('This will delete')} <span class="  font-normal">{selectedFunction.name}</span>.
 		</div>
 	</DeleteConfirmDialog>
 

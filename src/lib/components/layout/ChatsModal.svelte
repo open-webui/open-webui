@@ -93,14 +93,14 @@
 <Modal size="lg" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class="flex items-center gap-2 text-lg font-medium self-center">
+			<div class="flex items-center gap-2 text-lg font-normal self-center">
 				<div>{title}</div>
 				{#if count !== null}
-					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
 						{count}
 					</div>
 				{:else if chatList}
-					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
 						{chatList.length}
 					</div>
 				{/if}
@@ -172,7 +172,7 @@
 				{#if chatList}
 					<div class="w-full">
 						{#if chatList.length > 0}
-							<div class="flex text-xs font-medium mb-1.5">
+							<div class="flex text-xs font-normal mb-1.5">
 								{#if showUserInfo}
 									<div class="px-1.5 py-1 w-32">
 										{$i18n.t('User')}
@@ -240,7 +240,7 @@
 							{#each chatList as chat, idx (chat.id)}
 								{#if (idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)) && chat?.time_range}
 									<div
-										class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
+										class="w-full text-xs text-gray-500 dark:text-gray-500 font-normal {idx === 0
 											? ''
 											: 'pt-5'} pb-2 px-2"
 									>

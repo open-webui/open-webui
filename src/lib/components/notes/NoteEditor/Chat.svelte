@@ -342,7 +342,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 		</button>
 	</div>
 
-	<div class=" font-medium text-base flex items-center gap-1">
+	<div class=" font-normal text-base flex items-center gap-1">
 		<div>
 			{$i18n.t('Chat')}
 		</div>

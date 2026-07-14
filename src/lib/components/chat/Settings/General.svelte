@@ -208,10 +208,10 @@
 <div class="flex flex-col h-full justify-between text-sm" id="tab-general">
 	<div class="  overflow-y-scroll max-h-[28rem] md:max-h-full">
 		<div class="">
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Settings')}</div>
+			<div class=" mb-1 text-sm font-normal">{$i18n.t('WebUI Settings')}</div>
 
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
+				<div class=" self-center text-xs font-normal">{$i18n.t('Theme')}</div>
 				<div class="flex items-center relative">
 					<select
 						class="w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
@@ -233,7 +233,7 @@
 			</div>
 
 			<div class=" flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
+				<div class=" self-center text-xs font-normal">{$i18n.t('Language')}</div>
 				<div class="flex items-center relative">
 					<select
 						class="w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
@@ -259,7 +259,7 @@
 				>
 					Couldn't find your language?
 					<a
-						class="font-medium underline {($settings?.highContrastMode ?? false)
+						class="font-normal underline {($settings?.highContrastMode ?? false)
 							? 'text-gray-700 dark:text-gray-200'
 							: 'text-gray-300'}"
 						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
@@ -272,7 +272,7 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Notifications')}</div>
+					<div class=" self-center text-xs font-normal">{$i18n.t('Notifications')}</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
@@ -297,7 +297,7 @@
 			<hr class="border-gray-100/30 dark:border-gray-850/30 my-3" />
 
 			<div>
-				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
+				<div class=" my-2.5 text-sm font-normal">{$i18n.t('System Prompt')}</div>
 				<Textarea
 					bind:value={system}
 					className={'w-full text-sm outline-hidden resize-vertical' +
@@ -313,9 +313,9 @@
 		{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.params ?? true))}
 			<div class="mt-2 space-y-3 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
-					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
+					<div class="  font-normal">{$i18n.t('Advanced Parameters')}</div>
 					<button
-						class=" text-xs font-medium {($settings?.highContrastMode ?? false)
+						class=" text-xs font-normal {($settings?.highContrastMode ?? false)
 							? 'text-gray-800 dark:text-gray-100'
 							: 'text-gray-400 dark:text-gray-500'}"
 						type="button"
@@ -333,9 +333,9 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-3 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			on:click={() => {
 				saveHandler();
 			}}

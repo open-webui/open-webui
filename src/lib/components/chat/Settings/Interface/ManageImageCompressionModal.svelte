@@ -26,7 +26,7 @@
 <Modal size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-1.5">
-			<h1 class="text-lg font-medium self-center font-primary">
+			<h1 class="text-lg font-normal self-center ">
 				{$i18n.t('Manage')}
 			</h1>
 			<button
@@ -93,9 +93,9 @@
 						</div>
 					</div>
 
-					<div class="flex justify-end text-sm font-medium">
+					<div class="flex justify-end text-sm font-normal">
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 							type="submit"
 						>
 							{$i18n.t('Save')}

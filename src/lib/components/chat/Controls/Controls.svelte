@@ -30,13 +30,13 @@
 	let showAdvancedParams = getOpen('advancedParams');
 
 	const compactSectionButtonClass =
-		'w-full py-1 text-xs font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition cursor-pointer select-none';
+		'w-full py-1 text-xs font-normal text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition cursor-pointer select-none';
 </script>
 
 <div class=" dark:text-white">
 	{#if !embed}
 		<div class=" flex items-center justify-between dark:text-gray-100 mb-2">
-			<div class=" text-md self-center font-primary">{$i18n.t('Controls')}</div>
+			<div class=" text-md self-center ">{$i18n.t('Controls')}</div>
 			<button
 				class="self-center"
 				aria-label={$i18n.t('Close chat controls')}

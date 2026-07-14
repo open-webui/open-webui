@@ -164,13 +164,13 @@
 		{#if servers !== null}
 			<div class="">
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Tools')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Tools')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2.5 flex flex-col w-full justify-between">
 						<div class="flex justify-between items-center mb-0.5">
-							<div class="font-medium">{$i18n.t('External Tool Servers')}</div>
+							<div class="font-normal">{$i18n.t('External Tool Servers')}</div>
 
 							<Tooltip content={$i18n.t(`Add Connection`)}>
 								<button
@@ -215,7 +215,7 @@
 
 					<div class="mt-4 mb-2.5 flex flex-col w-full">
 						<div class="flex justify-between items-center mb-1">
-							<div class="font-medium">{$i18n.t('Open Terminal')}</div>
+							<div class="font-normal">{$i18n.t('Open Terminal')}</div>
 
 							<Tooltip content={$i18n.t('Add Connection')}>
 								<button
@@ -309,7 +309,7 @@
 						</div>
 					</div>
 
-					<div class="mt-8 mb-2.5 text-base font-medium">{$i18n.t('Knowledge')}</div>
+					<div class="mt-8 mb-2.5 text-base font-normal">{$i18n.t('Knowledge')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
@@ -325,9 +325,9 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-3 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

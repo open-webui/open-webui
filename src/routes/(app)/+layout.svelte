@@ -409,7 +409,7 @@
 						>
 							<div class="m-auto pb-44 flex flex-col justify-center">
 								<div class="max-w-md">
-									<div class="text-center dark:text-white text-2xl font-medium z-50">
+									<div class="text-center dark:text-white text-2xl font-normal z-50">
 										{$i18n.t('Important Update')}<br />
 										{$i18n.t('Action Required for Chat Log Storage')}
 									</div>
@@ -418,7 +418,7 @@
 										{$i18n.t(
 											"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through"
 										)}
-										<span class="font-medium dark:text-white"
+										<span class="font-normal dark:text-white"
 											>{$i18n.t('Settings')} > {$i18n.t('Chats')} > {$i18n.t('Import Chats')}</span
 										>. {$i18n.t(
 											'This ensures that your valuable conversations are securely saved to your backend database. Thank you!'
@@ -427,7 +427,7 @@
 
 									<div class=" mt-6 mx-auto relative group w-fit">
 										<button
-											class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 transition font-medium text-sm"
+											class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 transition font-normal text-sm"
 											on:click={async () => {
 												let blob = new Blob([JSON.stringify(localDBChats)], {
 													type: 'application/json'

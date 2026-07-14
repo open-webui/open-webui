@@ -335,13 +335,13 @@
 			}}
 		>
 			<div class=" text-sm text-gray-500 truncate">
-				{$i18n.t('This will delete')} <span class="  font-semibold">{selectedNote.title}</span>.
+				{$i18n.t('This will delete')} <span class="  font-normal">{selectedNote.title}</span>.
 			</div>
 		</DeleteConfirmDialog>
 
 		<div class="flex flex-col gap-1 px-1 mt-1.5 mb-2">
 			<div class="flex justify-between items-center">
-				<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
+				<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
 					{#if $mobile}
 						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
 							<button
@@ -362,14 +362,14 @@
 						{$i18n.t('Notes')}
 					</div>
 
-					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
 						{total ?? ''}
 					</div>
 				</div>
 
 				<div class="flex w-full justify-end gap-1.5">
 					<button
-						class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
+						class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-normal text-sm flex items-center"
 						on:click={async () => {
 							const res = await createNoteHandler(dayjs().format('YYYY-MM-DD'));
 

@@ -35,7 +35,7 @@
 <Modal size="md" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 mb-1.5">
-			<div class=" text-lg font-medium self-center font-primary min-w-0 truncate">
+			<div class=" text-lg font-normal self-center  min-w-0 truncate">
 				{$i18n.t('User Preview')}
 				{#if userName}
 					<span class="text-sm font-normal text-gray-500 ml-1">{userName}</span>
@@ -62,11 +62,11 @@
 				<div class="space-y-2">
 					{#if preview.groups.length > 0}
 						<div>
-							<div class=" mb-2 text-sm font-medium">{$i18n.t('Groups')}</div>
+							<div class=" mb-2 text-sm font-normal">{$i18n.t('Groups')}</div>
 							<div class="flex flex-col w-full">
 								{#each preview.groups as group}
 									<div class="flex w-full justify-between my-1">
-										<div class=" self-center text-xs font-medium">{group.name}</div>
+										<div class=" self-center text-xs font-normal">{group.name}</div>
 									</div>
 								{/each}
 							</div>
@@ -76,7 +76,7 @@
 					{/if}
 
 					<div>
-						<div class=" mb-2 text-sm font-medium">{$i18n.t('Models')}</div>
+						<div class=" mb-2 text-sm font-normal">{$i18n.t('Models')}</div>
 						<div class="flex flex-col w-full">
 							{#if preview.models.items.length === 0}
 								<div class="flex w-full justify-between my-1">
@@ -87,7 +87,7 @@
 							{:else}
 								{#each preview.models.items as model}
 									<div class="flex w-full justify-between my-1">
-										<div class=" self-center text-xs font-medium">{model.name}</div>
+										<div class=" self-center text-xs font-normal">{model.name}</div>
 									</div>
 								{/each}
 
@@ -108,7 +108,7 @@
 					<hr class="border-gray-50 dark:border-gray-850/30 my-1" />
 
 					<div>
-						<div class=" mb-2 text-sm font-medium">{$i18n.t('Knowledge')}</div>
+						<div class=" mb-2 text-sm font-normal">{$i18n.t('Knowledge')}</div>
 						<div class="flex flex-col w-full">
 							{#if preview.knowledge.items.length === 0}
 								<div class="flex w-full justify-between my-1">
@@ -119,7 +119,7 @@
 							{:else}
 								{#each preview.knowledge.items as kb}
 									<div class="flex w-full justify-between my-1">
-										<div class=" self-center text-xs font-medium">{kb.name}</div>
+										<div class=" self-center text-xs font-normal">{kb.name}</div>
 									</div>
 								{/each}
 
@@ -140,7 +140,7 @@
 					<hr class="border-gray-50 dark:border-gray-850/30 my-1" />
 
 					<div>
-						<div class=" mb-2 text-sm font-medium">{$i18n.t('Tools')}</div>
+						<div class=" mb-2 text-sm font-normal">{$i18n.t('Tools')}</div>
 						<div class="flex flex-col w-full">
 							{#if preview.tools.items.length === 0}
 								<div class="flex w-full justify-between my-1">
@@ -151,7 +151,7 @@
 							{:else}
 								{#each preview.tools.items as tool}
 									<div class="flex w-full justify-between my-1">
-										<div class=" self-center text-xs font-medium">{tool.name}</div>
+										<div class=" self-center text-xs font-normal">{tool.name}</div>
 									</div>
 								{/each}
 

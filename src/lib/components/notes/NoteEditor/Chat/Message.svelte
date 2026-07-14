@@ -22,7 +22,7 @@
 
 <div class="flex flex-col gap-1 group">
 	<div class="flex items-center justify-between pt-1">
-		<div class="py-1 text-sm font-semibold uppercase min-w-[6rem] text-left rounded-lg transition">
+		<div class="py-1 text-sm font-normal uppercase min-w-[6rem] text-left rounded-lg transition">
 			{$i18n.t(message.role)}
 		</div>
 

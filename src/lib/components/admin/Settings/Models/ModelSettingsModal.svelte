@@ -166,7 +166,7 @@
 <Modal size="lg" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-			<div class=" text-lg font-medium self-center font-primary">
+			<div class=" text-lg font-normal self-center ">
 				{$i18n.t('Settings')}
 			</div>
 			<button
@@ -191,7 +191,7 @@
 						<div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">
 							<div
 								id="admin-settings-tabs-container"
-								class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
+								class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-normal text-left scrollbar-none"
 							>
 								<button
 									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
@@ -259,7 +259,7 @@
 													showDefaultPromptSuggestions = !showDefaultPromptSuggestions;
 												}}
 											>
-												<div class="text-xs text-gray-500 font-medium">
+												<div class="text-xs text-gray-500 font-normal">
 													{$i18n.t('Prompt Suggestions')}
 												</div>
 												<div>
@@ -296,7 +296,7 @@
 													showDefaultCapabilities = !showDefaultCapabilities;
 												}}
 											>
-												<div class="text-xs text-gray-500 font-medium">
+												<div class="text-xs text-gray-500 font-normal">
 													{$i18n.t('Model Capabilities')}
 												</div>
 												<div>
@@ -352,7 +352,7 @@
 													showDefaultParams = !showDefaultParams;
 												}}
 											>
-												<div class="text-xs text-gray-500 font-medium">
+												<div class="text-xs text-gray-500 font-normal">
 													{$i18n.t('Model Parameters')}
 												</div>
 												<div>
@@ -419,7 +419,7 @@
 									{/if}
 								</div>
 
-								<div class="flex justify-between items-center pt-3 text-sm font-medium gap-1.5">
+								<div class="flex justify-between items-center pt-3 text-sm font-normal gap-1.5">
 									<div>
 										<Tooltip
 											content={$i18n.t('This will delete all models including custom models')}
@@ -436,7 +436,7 @@
 										</Tooltip>
 									</div>
 									<button
-										class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
+										class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
 											? ' cursor-not-allowed'
 											: ''}"
 										type="submit"

@@ -376,13 +376,13 @@
 		<div class=" space-y-2.5 overflow-y-scroll scrollbar-hidden h-full pr-1.5">
 			<div class="">
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2.5 flex flex-col w-full justify-between">
 						<div class="flex w-full justify-between mb-1">
-							<div class="self-center text-xs font-medium">
+							<div class="self-center text-xs font-normal">
 								{$i18n.t('Content Extraction Engine')}
 							</div>
 							<div class="">
@@ -406,7 +406,7 @@
 						{#if RAGConfig.CONTENT_EXTRACTION_ENGINE === ''}
 							<div class="flex w-full mt-1">
 								<div class="flex-1 flex justify-between">
-									<div class=" self-center text-xs font-medium">
+									<div class=" self-center text-xs font-normal">
 										{$i18n.t('PDF Extract Images (OCR)')}
 									</div>
 									<div class="flex items-center relative">
@@ -417,7 +417,7 @@
 
 							<div class="flex w-full mt-2">
 								<div class="flex-1 flex justify-between">
-									<div class=" self-center text-xs font-medium">
+									<div class=" self-center text-xs font-normal">
 										<Tooltip
 											content={$i18n.t(
 												'Page mode creates one document per page. Single mode combines all pages into one document for better chunking across page boundaries.'
@@ -464,7 +464,7 @@
 
 							<div class="flex flex-col gap-2 mt-2">
 								<div class=" flex flex-col w-full justify-between">
-									<div class=" mb-1 text-xs font-medium">
+									<div class=" mb-1 text-xs font-normal">
 										{$i18n.t('Additional Config')}
 									</div>
 									<div class="flex w-full items-center relative">
@@ -485,7 +485,7 @@
 							</div>
 
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
+								<div class="self-center text-xs font-normal">
 									<Tooltip
 										content={$i18n.t(
 											'Significantly improves accuracy by using an LLM to enhance tables, forms, inline math, and layout detection. Will increase latency. Defaults to False.'
@@ -500,7 +500,7 @@
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
+								<div class="self-center text-xs font-normal">
 									<Tooltip
 										content={$i18n.t('Skip the cache and re-run the inference. Defaults to False.')}
 										placement="top-start"
@@ -513,7 +513,7 @@
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
+								<div class="self-center text-xs font-normal">
 									<Tooltip
 										content={$i18n.t(
 											'Force OCR on all pages of the PDF. This can lead to worse results if you have good text in your PDFs. Defaults to False.'
@@ -528,7 +528,7 @@
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
+								<div class="self-center text-xs font-normal">
 									<Tooltip
 										content={$i18n.t(
 											'Whether to paginate the output. Each page will be separated by a horizontal rule and page number. Defaults to False.'
@@ -543,7 +543,7 @@
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
+								<div class="self-center text-xs font-normal">
 									<Tooltip
 										content={$i18n.t(
 											'Strip existing OCR text from the PDF and re-run OCR. Ignored if Force OCR is enabled. Defaults to False.'
@@ -558,7 +558,7 @@
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
+								<div class="self-center text-xs font-normal">
 									<Tooltip
 										content={$i18n.t(
 											'Disable image extraction from the PDF. If Use LLM is enabled, images will be automatically captioned. Defaults to False.'
@@ -573,7 +573,7 @@
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
+								<div class="self-center text-xs font-normal">
 									<Tooltip
 										content={$i18n.t(
 											'Format the lines in the output. Defaults to False. If set to True, the lines will be formatted to detect inline math and styles.'
@@ -588,7 +588,7 @@
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
-								<div class="self-center text-xs font-medium">
+								<div class="self-center text-xs font-normal">
 									<Tooltip
 										content={$i18n.t(
 											"The output format for the text. Can be 'json', 'markdown', or 'html'. Defaults to 'markdown'."
@@ -709,7 +709,7 @@
 
 							<div class="flex flex-col gap-2 mt-2">
 								<div class=" flex flex-col w-full justify-between">
-									<div class=" mb-1 text-xs font-medium">
+									<div class=" mb-1 text-xs font-normal">
 										{$i18n.t('Parameters')}
 									</div>
 									<div class="flex w-full items-center relative">
@@ -735,7 +735,7 @@
 								/>
 							</div>
 							<div class="my-0.5 flex flex-col w-full">
-								<div class=" mb-1 text-xs font-medium">
+								<div class=" mb-1 text-xs font-normal">
 									{$i18n.t('Document Intelligence Model')}
 								</div>
 								<div class="flex w-full">
@@ -761,7 +761,7 @@
 								/>
 							</div>
 							<div class="flex justify-between w-full mt-2 pr-2">
-								<div class="self-center text-xs font-medium">
+								<div class="self-center text-xs font-normal">
 									<Tooltip
 										content={$i18n.t(
 											'Send the PDF as a base64 data URL instead of uploading it first.'
@@ -792,7 +792,7 @@
 							<!-- API Mode Selection -->
 							<div class="flex w-full mt-2">
 								<div class="flex-1 flex justify-between">
-									<div class="self-center text-xs font-medium">
+									<div class="self-center text-xs font-normal">
 										{$i18n.t('API Mode')}
 									</div>
 									<select
@@ -840,7 +840,7 @@
 
 							<div class="flex w-full mt-2">
 								<div class="flex-1 flex justify-between">
-									<div class="self-center text-xs font-medium">
+									<div class="self-center text-xs font-normal">
 										{$i18n.t('API Timeout')}
 									</div>
 									<input
@@ -855,7 +855,7 @@
 
 							<!-- Parameters -->
 							<div class="flex flex-col justify-between w-full mt-2">
-								<div class="text-xs font-medium">
+								<div class="text-xs font-normal">
 									<Tooltip
 										content={$i18n.t(
 											'Advanced parameters for MinerU parsing (enable_ocr, enable_formula, enable_table, language, model_version, page_ranges)'
@@ -876,7 +876,7 @@
 
 							<!-- File Extensions -->
 							<div class="flex flex-col justify-between w-full mt-2">
-								<div class="text-xs font-medium mb-1">
+								<div class="text-xs font-normal mb-1">
 									<Tooltip
 										content={$i18n.t(
 											'Comma-separated list of file extensions MinerU will handle (e.g. pdf, docx, pptx, xlsx)'
@@ -896,7 +896,7 @@
 					</div>
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-xs font-normal">
 							<Tooltip content={$i18n.t('Full Context Mode')} placement="top-start">
 								{$i18n.t('Bypass Embedding and Retrieval')}
 							</Tooltip>
@@ -918,7 +918,7 @@
 
 					{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
+							<div class=" self-center text-xs font-normal">{$i18n.t('Text Splitter')}</div>
 							<div class="flex items-center relative">
 								<select
 									class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
@@ -935,7 +935,7 @@
 
 						{#if RAGConfig.TEXT_SPLITTER === 'token_transformers'}
 							<div class="mb-2.5 flex flex-col w-full justify-between">
-								<div class="self-center text-xs font-medium min-w-fit mb-1 w-full">
+								<div class="self-center text-xs font-normal min-w-fit mb-1 w-full">
 									{$i18n.t('Tokenizer Model')}
 								</div>
 								<div class="self-center w-full">
@@ -951,7 +951,7 @@
 						{/if}
 
 						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
+							<div class=" self-center text-xs font-normal">
 								<Tooltip
 									placement="top-start"
 									content={$i18n.t(
@@ -969,7 +969,7 @@
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" flex gap-1.5 w-full">
 								<div class="  w-full justify-between">
-									<div class="self-center text-xs font-medium min-w-fit mb-1">
+									<div class="self-center text-xs font-normal min-w-fit mb-1">
 										{$i18n.t('Chunk Size')}
 									</div>
 									<div class="self-center">
@@ -985,7 +985,7 @@
 								</div>
 
 								<div class="w-full">
-									<div class=" self-center text-xs font-medium min-w-fit mb-1">
+									<div class=" self-center text-xs font-normal min-w-fit mb-1">
 										{$i18n.t('Chunk Overlap')}
 									</div>
 
@@ -1007,7 +1007,7 @@
 							<div class="  mb-2.5 flex w-full justify-between">
 								<div class=" flex gap-1.5 w-full">
 									<div class="w-full">
-										<div class="self-center text-xs font-medium min-w-fit mb-1">
+										<div class="self-center text-xs font-normal min-w-fit mb-1">
 											<Tooltip
 												placement="top-start"
 												content={$i18n.t(
@@ -1036,13 +1036,13 @@
 
 				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 					<div class="mb-3">
-						<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Embedding')}</div>
+						<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Embedding')}</div>
 
 						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 						<div class="  mb-2.5 flex flex-col w-full justify-between">
 							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
+								<div class=" self-center text-xs font-normal">
 									{$i18n.t('Embedding Model Engine')}
 								</div>
 								<div class="flex items-center relative">
@@ -1124,7 +1124,7 @@
 						</div>
 
 						<div class="  mb-2.5 flex flex-col w-full">
-							<div class=" mb-1 text-xs font-medium">{$i18n.t('Embedding Model')}</div>
+							<div class=" mb-1 text-xs font-normal">{$i18n.t('Embedding Model')}</div>
 
 							<div class="">
 								{#if RAG_EMBEDDING_ENGINE === 'ollama'}
@@ -1191,7 +1191,7 @@
 						</div>
 
 						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
+							<div class=" self-center text-xs font-normal">
 								{$i18n.t('Embedding Batch Size')}
 							</div>
 
@@ -1209,7 +1209,7 @@
 
 						{#if RAG_EMBEDDING_ENGINE === 'ollama' || RAG_EMBEDDING_ENGINE === 'openai' || RAG_EMBEDDING_ENGINE === 'azure_openai'}
 							<div class="  mb-2.5 flex w-full justify-between">
-								<div class="self-center text-xs font-medium">
+								<div class="self-center text-xs font-normal">
 									<Tooltip
 										content={$i18n.t(
 											'Runs embedding tasks concurrently to speed up processing. Turn off if rate limits become an issue.'
@@ -1225,7 +1225,7 @@
 							</div>
 
 							<div class="  mb-2.5 flex w-full justify-between">
-								<div class="self-center text-xs font-medium">
+								<div class="self-center text-xs font-normal">
 									<Tooltip
 										content={$i18n.t(
 											'Limits the number of concurrent embedding requests. Set to 0 for unlimited.'
@@ -1250,13 +1250,13 @@
 				{/if}
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Retrieval')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Retrieval')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Full Context Mode')}</div>
+							<div class=" self-center text-xs font-normal">{$i18n.t('Full Context Mode')}</div>
 							<div class="flex items-center relative">
 								<Tooltip
 									content={RAGConfig.RAG_FULL_CONTEXT
@@ -1274,7 +1274,7 @@
 
 						{#if !RAGConfig.RAG_FULL_CONTEXT}
 							<div class="  mb-2.5 flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">{$i18n.t('Hybrid Search')}</div>
+								<div class=" self-center text-xs font-normal">{$i18n.t('Hybrid Search')}</div>
 								<div class="flex items-center relative">
 									<Switch bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH} />
 								</div>
@@ -1282,7 +1282,7 @@
 
 							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
 								<div class="mb-2.5 flex w-full justify-between">
-									<div class="self-center text-xs font-medium">
+									<div class="self-center text-xs font-normal">
 										{$i18n.t('Enrich Hybrid Search Text')}
 									</div>
 									<div class="flex items-center relative">
@@ -1298,7 +1298,7 @@
 
 								<div class="  mb-2.5 flex flex-col w-full justify-between">
 									<div class="flex w-full justify-between">
-										<div class=" self-center text-xs font-medium">
+										<div class=" self-center text-xs font-normal">
 											{$i18n.t('Reranking Engine')}
 										</div>
 										<div class="flex items-center relative">
@@ -1339,7 +1339,7 @@
 								</div>
 
 								<div class="  mb-2.5 flex flex-col w-full">
-									<div class=" mb-1 text-xs font-medium">{$i18n.t('Reranking Model')}</div>
+									<div class=" mb-1 text-xs font-normal">{$i18n.t('Reranking Model')}</div>
 
 									<div class="">
 										<div class="flex w-full">
@@ -1358,7 +1358,7 @@
 							{/if}
 
 							<div class="  mb-2.5 flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
+								<div class=" self-center text-xs font-normal">
 									{$i18n.t('Reranking Batch Size')}
 								</div>
 
@@ -1375,7 +1375,7 @@
 							</div>
 
 							<div class="  mb-2.5 flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">{$i18n.t('Top K')}</div>
+								<div class=" self-center text-xs font-normal">{$i18n.t('Top K')}</div>
 								<div class="flex items-center relative">
 									<input
 										class="flex-1 w-full text-sm bg-transparent outline-hidden"
@@ -1390,7 +1390,7 @@
 
 							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
 								<div class="mb-2.5 flex w-full justify-between">
-									<div class="self-center text-xs font-medium">{$i18n.t('Top K Reranker')}</div>
+									<div class="self-center text-xs font-normal">{$i18n.t('Top K Reranker')}</div>
 									<div class="flex items-center relative">
 										<input
 											class="flex-1 w-full text-sm bg-transparent outline-hidden"
@@ -1407,7 +1407,7 @@
 							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
 								<div class="  mb-2.5 flex flex-col w-full justify-between">
 									<div class=" flex w-full justify-between">
-										<div class=" self-center text-xs font-medium">
+										<div class=" self-center text-xs font-normal">
 											{$i18n.t('Relevance Threshold')}
 										</div>
 										<div class="flex items-center relative">
@@ -1443,7 +1443,7 @@
 										className="inline-tooltip"
 									>
 										<div class="flex w-full justify-between">
-											<div class=" self-center text-xs font-medium">
+											<div class=" self-center text-xs font-normal">
 												{$i18n.t('BM25 Weight')}
 											</div>
 											<button
@@ -1505,7 +1505,7 @@
 					{/if}
 
 					<div class="  mb-2.5 flex flex-col w-full justify-between">
-						<div class=" mb-1 text-xs font-medium">{$i18n.t('RAG Template')}</div>
+						<div class=" mb-1 text-xs font-normal">{$i18n.t('RAG Template')}</div>
 						<div class="flex w-full items-center relative">
 							<Tooltip
 								content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
@@ -1532,12 +1532,12 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Files')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Files')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Allowed File Extensions')}</div>
+						<div class=" self-center text-xs font-normal">{$i18n.t('Allowed File Extensions')}</div>
 						<div class="flex items-center relative">
 							<Tooltip
 								content={$i18n.t(
@@ -1557,7 +1557,7 @@
 					</div>
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Max Upload Size')}</div>
+						<div class=" self-center text-xs font-normal">{$i18n.t('Max Upload Size')}</div>
 						<div class="flex items-center relative">
 							<Tooltip
 								content={$i18n.t(
@@ -1578,7 +1578,7 @@
 					</div>
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Max Upload Count')}</div>
+						<div class=" self-center text-xs font-normal">{$i18n.t('Max Upload Count')}</div>
 						<div class="flex items-center relative">
 							<Tooltip
 								content={$i18n.t(
@@ -1599,7 +1599,7 @@
 					</div>
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Image Compression Width')}</div>
+						<div class=" self-center text-xs font-normal">{$i18n.t('Image Compression Width')}</div>
 						<div class="flex items-center relative">
 							<Tooltip
 								content={$i18n.t(
@@ -1620,7 +1620,7 @@
 					</div>
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-xs font-normal">
 							{$i18n.t('Image Compression Height')}
 						</div>
 						<div class="flex items-center relative">
@@ -1644,19 +1644,19 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Integration')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Integration')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Google Drive')}</div>
+						<div class=" self-center text-xs font-normal">{$i18n.t('Google Drive')}</div>
 						<div class="flex items-center relative">
 							<Switch bind:state={RAGConfig.ENABLE_GOOGLE_DRIVE_INTEGRATION} />
 						</div>
 					</div>
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('OneDrive')}</div>
+						<div class=" self-center text-xs font-normal">{$i18n.t('OneDrive')}</div>
 						<div class="flex items-center relative">
 							<Switch bind:state={RAGConfig.ENABLE_ONEDRIVE_INTEGRATION} />
 						</div>
@@ -1664,12 +1664,12 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Danger Zone')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Danger Zone')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Reset Upload Directory')}</div>
+						<div class=" self-center text-xs font-normal">{$i18n.t('Reset Upload Directory')}</div>
 						<div class="flex items-center relative">
 							<button
 								class="text-xs"
@@ -1684,7 +1684,7 @@
 					</div>
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-xs font-normal">
 							{$i18n.t('Reset Vector Storage/Knowledge')}
 						</div>
 						<div class="flex items-center relative">
@@ -1700,7 +1700,7 @@
 						</div>
 					</div>
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-xs font-normal">
 							{$i18n.t('Reindex Knowledge Base Vectors')}
 						</div>
 						<div class="flex items-center relative">
@@ -1718,9 +1718,9 @@
 				</div>
 			</div>
 		</div>
-		<div class="flex justify-end pt-3 text-sm font-medium">
+		<div class="flex justify-end pt-3 text-sm font-normal">
 			<button
-				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+				class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 				type="submit"
 			>
 				{$i18n.t('Save')}

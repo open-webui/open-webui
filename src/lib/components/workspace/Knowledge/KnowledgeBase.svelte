@@ -1273,7 +1273,7 @@
 								>
 									<LockClosed strokeWidth="2.5" className="size-3.5" />
 
-									<div class="text-sm font-medium shrink-0">
+									<div class="text-sm font-normal shrink-0">
 										{$i18n.t('Access')}
 									</div>
 								</button>
@@ -1358,7 +1358,7 @@
 					</div>
 
 					<div class="flex flex-col gap-2">
-						<div class="font-medium text-sm">{$i18n.t('Test Query')}</div>
+						<div class="font-normal text-sm">{$i18n.t('Test Query')}</div>
 						<div class="flex gap-2">
 							<input
 								class="w-full text-sm rounded-xl bg-gray-50 dark:bg-gray-850 px-3 py-2 outline-hidden"
@@ -1376,7 +1376,7 @@
 
 					{#if externalTestResult}
 						<div class="rounded-xl bg-gray-50 dark:bg-gray-850 p-3 text-xs">
-							<div class="font-medium mb-2">{$i18n.t('Preview')}</div>
+							<div class="font-normal mb-2">{$i18n.t('Preview')}</div>
 							{#each externalTestResult.documents ?? [] as document, idx}
 								<div class="border-t border-gray-100 dark:border-gray-800 py-2">
 									<div class="line-clamp-4">{document}</div>

@@ -236,13 +236,13 @@
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div class="flex flex-col gap-3">
 			<div>
-				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Speech-to-Text')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Speech-to-Text')}</div>
 
 				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				{#if STT_ENGINE !== 'web'}
 					<div class="mb-2">
-						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Supported MIME Types')}</div>
+						<div class=" mb-1.5 text-xs font-normal">{$i18n.t('Supported MIME Types')}</div>
 						<div class="flex w-full">
 							<div class="flex-1">
 								<input
@@ -258,7 +258,7 @@
 				{/if}
 
 				<div class="mb-2 py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
+					<div class=" self-center text-xs font-normal">{$i18n.t('Speech-to-Text Engine')}</div>
 					<div class="flex items-center relative">
 						<select
 							class="cursor-pointer w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
@@ -292,7 +292,7 @@
 					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div class="mb-2 py-0.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Request Format')}</div>
+						<div class=" self-center text-xs font-normal">{$i18n.t('Request Format')}</div>
 						<div class="flex items-center relative">
 							<select
 								class="cursor-pointer w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
@@ -307,7 +307,7 @@
 					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div>
-						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
+						<div class=" mb-1.5 text-xs font-normal">{$i18n.t('STT Model')}</div>
 						<div class="flex w-full">
 							<div class="flex-1">
 								<input
@@ -333,7 +333,7 @@
 					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div>
-						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
+						<div class=" mb-1.5 text-xs font-normal">{$i18n.t('STT Model')}</div>
 						<div class="flex w-full">
 							<div class="flex-1">
 								<input
@@ -367,7 +367,7 @@
 						<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 						<div>
-							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Azure Region')}</div>
+							<div class=" mb-1.5 text-xs font-normal">{$i18n.t('Azure Region')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input
@@ -380,7 +380,7 @@
 						</div>
 
 						<div>
-							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Language Locales')}</div>
+							<div class=" mb-1.5 text-xs font-normal">{$i18n.t('Language Locales')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input
@@ -393,7 +393,7 @@
 						</div>
 
 						<div>
-							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Endpoint URL')}</div>
+							<div class=" mb-1.5 text-xs font-normal">{$i18n.t('Endpoint URL')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input
@@ -406,7 +406,7 @@
 						</div>
 
 						<div>
-							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Max Speakers')}</div>
+							<div class=" mb-1.5 text-xs font-normal">{$i18n.t('Max Speakers')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input
@@ -435,7 +435,7 @@
 					<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<div>
-						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
+						<div class=" mb-1.5 text-xs font-normal">{$i18n.t('STT Model')}</div>
 						<div class="flex w-full">
 							<div class="flex-1">
 								<input
@@ -461,7 +461,7 @@
 
 					<div>
 						<div class="flex items-center justify-between mb-2">
-							<div class="text-xs font-medium">{$i18n.t('Use Chat Completions API')}</div>
+							<div class="text-xs font-normal">{$i18n.t('Use Chat Completions API')}</div>
 							<label class="relative inline-flex items-center cursor-pointer">
 								<input
 									type="checkbox"
@@ -481,7 +481,7 @@
 					</div>
 				{:else if STT_ENGINE === ''}
 					<div>
-						<div class=" mb-1.5 text-xs font-medium">{$i18n.t('STT Model')}</div>
+						<div class=" mb-1.5 text-xs font-normal">{$i18n.t('STT Model')}</div>
 
 						<div class="flex w-full">
 							<div class="flex-1 mr-2">
@@ -539,12 +539,12 @@
 			</div>
 
 			<div>
-				<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Text-to-Speech')}</div>
+				<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Text-to-Speech')}</div>
 
 				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 				<div class="mb-2 py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
+					<div class=" self-center text-xs font-normal">{$i18n.t('Text-to-Speech Engine')}</div>
 					<div class="flex items-center relative">
 						<select
 							class="w-fit pr-8 cursor-pointer rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
@@ -605,7 +605,7 @@
 						<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 						<div>
-							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Azure Region')}</div>
+							<div class=" mb-1.5 text-xs font-normal">{$i18n.t('Azure Region')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input
@@ -618,7 +618,7 @@
 						</div>
 
 						<div>
-							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Endpoint URL')}</div>
+							<div class=" mb-1.5 text-xs font-normal">{$i18n.t('Endpoint URL')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input
@@ -648,7 +648,7 @@
 				<div class="mb-2">
 					{#if TTS_ENGINE === ''}
 						<div>
-							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Voice')}</div>
+							<div class=" mb-1.5 text-xs font-normal">{$i18n.t('TTS Voice')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
 									<select
@@ -669,7 +669,7 @@
 						</div>
 					{:else if TTS_ENGINE === 'transformers'}
 						<div>
-							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Model')}</div>
+							<div class=" mb-1.5 text-xs font-normal">{$i18n.t('TTS Model')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input
@@ -711,7 +711,7 @@
 					{:else if TTS_ENGINE === 'openai'}
 						<div class=" flex gap-2">
 							<div class="w-full">
-								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Voice')}</div>
+								<div class=" mb-1.5 text-xs font-normal">{$i18n.t('TTS Voice')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
 										<TTSVoiceInput
@@ -724,7 +724,7 @@
 								</div>
 							</div>
 							<div class="w-full">
-								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Model')}</div>
+								<div class=" mb-1.5 text-xs font-normal">{$i18n.t('TTS Model')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
@@ -746,7 +746,7 @@
 
 						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
 							<div class="w-full">
-								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Additional Parameters')}</div>
+								<div class=" mb-1.5 text-xs font-normal">{$i18n.t('Additional Parameters')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
 										<Textarea
@@ -762,7 +762,7 @@
 					{:else if TTS_ENGINE === 'elevenlabs'}
 						<div class=" flex gap-2">
 							<div class="w-full">
-								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Voice')}</div>
+								<div class=" mb-1.5 text-xs font-normal">{$i18n.t('TTS Voice')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
 										<TTSVoiceInput
@@ -775,7 +775,7 @@
 								</div>
 							</div>
 							<div class="w-full">
-								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Model')}</div>
+								<div class=" mb-1.5 text-xs font-normal">{$i18n.t('TTS Model')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
@@ -797,7 +797,7 @@
 					{:else if TTS_ENGINE === 'azure'}
 						<div class=" flex gap-2">
 							<div class="w-full">
-								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Voice')}</div>
+								<div class=" mb-1.5 text-xs font-normal">{$i18n.t('TTS Voice')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
 										<TTSVoiceInput
@@ -810,7 +810,7 @@
 								</div>
 							</div>
 							<div class="w-full">
-								<div class=" mb-1.5 text-xs font-medium">
+								<div class=" mb-1.5 text-xs font-normal">
 									{$i18n.t('Output format')}
 									<a
 										href="https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-text-to-speech?tabs=streaming#audio-outputs"
@@ -834,7 +834,7 @@
 					{:else if TTS_ENGINE === 'mistral'}
 						<div class=" flex gap-2">
 							<div class="w-full">
-								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Voice')}</div>
+								<div class=" mb-1.5 text-xs font-normal">{$i18n.t('TTS Voice')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
 										<TTSVoiceInput
@@ -847,7 +847,7 @@
 								</div>
 							</div>
 							<div class="w-full">
-								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Model')}</div>
+								<div class=" mb-1.5 text-xs font-normal">{$i18n.t('TTS Model')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
@@ -870,7 +870,7 @@
 				</div>
 
 				<div class="pt-0.5 flex w-full justify-between">
-					<div class="self-center text-xs font-medium">{$i18n.t('Response splitting')}</div>
+					<div class="self-center text-xs font-normal">{$i18n.t('Response splitting')}</div>
 					<div class="flex items-center relative">
 						<select
 							class="w-fit pr-8 cursor-pointer rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
@@ -893,9 +893,9 @@
 			</div>
 		</div>
 	</div>
-	<div class="flex justify-end text-sm font-medium">
+	<div class="flex justify-end text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

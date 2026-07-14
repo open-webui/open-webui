@@ -128,7 +128,7 @@
 			}}
 		>
 			<div
-				class="w-full max-w-full font-medium flex items-center gap-1.5 {isExecuting
+				class="w-full max-w-full font-normal flex items-center gap-1.5 {isExecuting
 					? 'shimmer'
 					: ''}"
 			>
@@ -189,7 +189,7 @@
 					{#if args}
 						<div>
 							<div
-								class="text-[10px] uppercase tracking-wider font-medium text-gray-400 dark:text-gray-500 mb-1.5 px-1"
+								class="text-[10px] uppercase tracking-wider font-normal text-gray-400 dark:text-gray-500 mb-1.5 px-1"
 							>
 								{$i18n.t('Input')}
 							</div>
@@ -198,7 +198,7 @@
 								<div class="px-1 space-y-0.5">
 									{#each Object.entries(parsedArgs) as [key, value]}
 										<div class="flex gap-2 text-xs py-0.5">
-											<span class="font-medium text-gray-600 dark:text-gray-400 shrink-0"
+											<span class="font-normal text-gray-600 dark:text-gray-400 shrink-0"
 												>{key}</span
 											>
 											<span class="text-gray-800 dark:text-gray-200 break-all"
@@ -222,7 +222,7 @@
 					{#if isDone && result}
 						<div>
 							<div
-								class="text-[10px] uppercase tracking-wider font-medium text-gray-400 dark:text-gray-500 mb-1.5 px-1"
+								class="text-[10px] uppercase tracking-wider font-normal text-gray-400 dark:text-gray-500 mb-1.5 px-1"
 							>
 								{$i18n.t('Output')}
 							</div>

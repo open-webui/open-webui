@@ -177,11 +177,11 @@
 >
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] md:max-h-full">
 		<div>
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('STT Settings')}</div>
+			<div class=" mb-1 text-sm font-normal">{$i18n.t('STT Settings')}</div>
 
 			{#if $config.audio.stt.engine !== 'web'}
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
+					<div class=" self-center text-xs font-normal">{$i18n.t('Speech-to-Text Engine')}</div>
 					<div class="flex items-center relative">
 						<select
 							class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
@@ -196,7 +196,7 @@
 				</div>
 
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
+					<div class=" self-center text-xs font-normal">{$i18n.t('Language')}</div>
 
 					<div class="flex items-center relative text-xs px-3">
 						<Tooltip
@@ -218,7 +218,7 @@
 			{/if}
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Instant Auto-Send After Voice Transcription')}
 				</div>
 
@@ -241,10 +241,10 @@
 		</div>
 
 		<div>
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('TTS Settings')}</div>
+			<div class=" mb-1 text-sm font-normal">{$i18n.t('TTS Settings')}</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
+				<div class=" self-center text-xs font-normal">{$i18n.t('Text-to-Speech Engine')}</div>
 				<div class="flex items-center relative">
 					<select
 						class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
@@ -260,7 +260,7 @@
 
 			{#if TTSEngine === 'browser-kokoro'}
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Kokoro.js Dtype')}</div>
+					<div class=" self-center text-xs font-normal">{$i18n.t('Kokoro.js Dtype')}</div>
 					<div class="flex items-center relative">
 						<select
 							class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
@@ -279,7 +279,7 @@
 			{/if}
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Auto-Playback Response')}</div>
+				<div class=" self-center text-xs font-normal">{$i18n.t('Auto-Playback Response')}</div>
 
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition"
@@ -299,7 +299,7 @@
 			</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Speech Playback Speed')}</div>
+				<div class=" self-center text-xs font-normal">{$i18n.t('Speech Playback Speed')}</div>
 
 				<div class="flex items-center relative text-xs px-3">
 					<input
@@ -320,7 +320,7 @@
 		{#if TTSEngine === 'browser-kokoro'}
 			{#if TTSModel}
 				<div>
-					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
+					<div class=" mb-2.5 text-sm font-normal">{$i18n.t('Set Voice')}</div>
 					<div class="flex w-full">
 						<div class="flex-1">
 							<input
@@ -341,10 +341,10 @@
 				</div>
 			{:else}
 				<div>
-					<div class=" mb-2.5 text-sm font-medium flex gap-2 items-center">
+					<div class=" mb-2.5 text-sm font-normal flex gap-2 items-center">
 						<Spinner className="size-4" />
 
-						<div class=" text-sm font-medium shimmer">
+						<div class=" text-sm font-normal shimmer">
 							{$i18n.t('Loading Kokoro.js...')}
 							{TTSModelProgress && TTSModelProgress.status === 'progress'
 								? `(${Math.round(TTSModelProgress.progress * 10) / 10}%)`
@@ -359,7 +359,7 @@
 			{/if}
 		{:else if $config.audio.tts.engine === ''}
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
+				<div class=" mb-2.5 text-sm font-normal">{$i18n.t('Set Voice')}</div>
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
@@ -390,7 +390,7 @@
 			</div>
 		{:else if $config.audio.tts.engine !== ''}
 			<div>
-				<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
+				<div class=" mb-2.5 text-sm font-normal">{$i18n.t('Set Voice')}</div>
 				<div class="flex w-full">
 					<div class="flex-1">
 						<input
@@ -412,9 +412,9 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end text-sm font-medium">
+	<div class="flex justify-end text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

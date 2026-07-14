@@ -293,7 +293,7 @@
 		{#if config}
 			<div>
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
@@ -311,7 +311,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Create Image')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Create Image')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
@@ -551,7 +551,7 @@
 							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
 								{$i18n.t('Include `--api` flag when running stable-diffusion-webui')}
 								<a
-									class=" text-gray-300 font-medium"
+									class=" text-gray-300 font-normal"
 									href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734"
 									target="_blank"
 								>
@@ -583,7 +583,7 @@
 							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
 								{$i18n.t('Include `--api-auth` flag when running stable-diffusion-webui')}
 								<a
-									class=" text-gray-300 font-medium"
+									class=" text-gray-300 font-normal"
 									href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/13993"
 									target="_blank"
 								>
@@ -884,7 +884,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Edit Image')}</div>
+					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Edit Image')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
@@ -1272,9 +1272,9 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-3 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
 				? ' cursor-not-allowed'
 				: ''}"
 			type="submit"

@@ -318,7 +318,7 @@
 	<div class="w-full">
 		{#if completed}
 			<div class="px-5.5 py-5">
-				<div class="mb-1 text-xl font-medium">{$i18n.t('Sync Complete!')}</div>
+				<div class="mb-1 text-xl font-normal">{$i18n.t('Sync Complete!')}</div>
 				<div class="mb-3 text-xs text-gray-500">
 					{$i18n.t('Your usage stats have been successfully synced.')}
 				</div>
@@ -336,7 +336,7 @@
 			</div>
 		{:else if error}
 			<div class="px-5.5 py-5">
-				<div class="mb-1 text-xl font-medium">{$i18n.t('Sync Failed')}</div>
+				<div class="mb-1 text-xl font-normal">{$i18n.t('Sync Failed')}</div>
 				<div class="mb-3 text-xs text-gray-500">
 					{errorMessage || $i18n.t('There was an error syncing your stats. Please try again.')}
 				</div>
@@ -355,7 +355,7 @@
 			</div>
 		{:else}
 			<div class="flex justify-between px-5 pt-4 pb-0.5">
-				<div class="text-lg font-medium self-center">{$i18n.t('Sync Usage Stats')}</div>
+				<div class="text-lg font-normal self-center">{$i18n.t('Sync Usage Stats')}</div>
 				<button
 					class="self-center"
 					aria-label={$i18n.t('Close modal')}
@@ -380,7 +380,7 @@
 				</div>
 
 				<div class="mt-3 text-xs text-gray-500">
-					<div class="font-medium text-gray-900 dark:text-gray-100 mb-1">
+					<div class="font-normal text-gray-900 dark:text-gray-100 mb-1">
 						{$i18n.t('What is shared:')}
 					</div>
 					<ul class="list-disc list-inside space-y-0.5 ml-1 mb-2">
@@ -391,7 +391,7 @@
 						<li>{$i18n.t('User ratings (thumbs up/down)')}</li>
 					</ul>
 
-					<div class="font-medium text-gray-900 dark:text-gray-100 mb-1">
+					<div class="font-normal text-gray-900 dark:text-gray-100 mb-1">
 						{$i18n.t('What is NOT shared:')}
 					</div>
 					<ul class="list-disc list-inside space-y-0.5 ml-1">
@@ -465,7 +465,7 @@
 					</div>
 
 					<button
-						class="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 transition disabled:cursor-not-allowed"
+						class="px-4 py-2 rounded-full text-sm font-normal bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 transition disabled:cursor-not-allowed"
 						on:click={() => {
 							if (syncing) {
 								cancelOperation();
@@ -478,7 +478,7 @@
 					</button>
 
 					<button
-						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition-colors rounded-full"
+						class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition-colors rounded-full"
 						on:click={syncStats}
 						disabled={syncing}
 					>

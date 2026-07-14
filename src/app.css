@@ -7,12 +7,6 @@
 }
 
 @font-face {
-	font-family: 'Archivo';
-	src: url('/assets/fonts/Archivo-Variable.ttf');
-	font-display: swap;
-}
-
-@font-face {
 	font-family: 'Mona Sans';
 	src: url('/assets/fonts/Mona-Sans.woff2');
 	font-display: swap;
@@ -95,31 +89,27 @@ textarea::placeholder {
 }
 
 .input-prose {
-	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
+	@apply prose dark:prose-invert prose-headings:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
 }
 
 .input-prose-sm {
-	@apply prose dark:prose-invert prose-headings:font-medium prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-1 whitespace-pre-line text-sm;
+	@apply prose dark:prose-invert prose-headings:font-normal prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-1 whitespace-pre-line text-sm;
 }
 
 .markdown-prose {
-	@apply prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown-prose-sm {
-	@apply text-sm prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-2  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply text-sm prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-normal prose-hr:my-2  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown-prose-xs {
-	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-0.5  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-normal prose-hr:my-0.5  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown a {
 	@apply underline;
-}
-
-.font-primary {
-	font-family: 'Archivo', 'Vazirmatn', sans-serif;
 }
 
 .drag-region {
@@ -673,7 +663,7 @@ input[type='number'] {
 }
 
 .tiptap th {
-	@apply cursor-pointer text-start text-xs text-gray-700 dark:text-gray-400 font-semibold uppercase bg-gray-50 dark:bg-gray-850;
+	@apply cursor-pointer text-start text-xs text-gray-700 dark:text-gray-400 font-normal uppercase bg-gray-50 dark:bg-gray-850;
 }
 
 .tiptap td {

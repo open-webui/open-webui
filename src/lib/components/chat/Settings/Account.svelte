@@ -128,14 +128,14 @@
 	<div class=" overflow-y-scroll max-h-[28rem] md:max-h-full">
 		<div class="space-y-1">
 			<div>
-				<div class="text-base font-medium">{$i18n.t('Your Account')}</div>
+				<div class="text-base font-normal">{$i18n.t('Your Account')}</div>
 
 				<div class="text-xs text-gray-500 mt-0.5">
 					{$i18n.t('Manage your account information.')}
 				</div>
 			</div>
 
-			<!-- <div class=" text-sm font-medium">{$i18n.t('Account')}</div> -->
+			<!-- <div class=" text-sm font-normal">{$i18n.t('Account')}</div> -->
 
 			<div class="flex space-x-5 my-4">
 				<UserProfileImage bind:profileImageUrl user={$user} />
@@ -143,7 +143,7 @@
 				<div class="flex flex-1 flex-col">
 					<div class=" flex-1">
 						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs font-medium">{$i18n.t('Name')}</div>
+							<div class=" mb-1 text-xs font-normal">{$i18n.t('Name')}</div>
 
 							<div class="flex-1">
 								<input
@@ -158,7 +158,7 @@
 						</div>
 
 						<div class="flex flex-col w-full mt-2">
-							<div class=" mb-1 text-xs font-medium">{$i18n.t('Bio')}</div>
+							<div class=" mb-1 text-xs font-normal">{$i18n.t('Bio')}</div>
 
 							<div class="flex-1">
 								<Textarea
@@ -172,7 +172,7 @@
 						</div>
 
 						<div class="flex flex-col w-full mt-2">
-							<div class=" mb-1 text-xs font-medium">{$i18n.t('Gender')}</div>
+							<div class=" mb-1 text-xs font-normal">{$i18n.t('Gender')}</div>
 
 							<div class="flex-1">
 								<select
@@ -210,7 +210,7 @@
 						</div>
 
 						<div class="flex flex-col w-full mt-2">
-							<div class=" mb-1 text-xs font-medium">{$i18n.t('Birth Date')}</div>
+							<div class=" mb-1 text-xs font-normal">{$i18n.t('Birth Date')}</div>
 
 							<div class="flex-1">
 								<input
@@ -230,7 +230,7 @@
 		{#if $config?.features?.enable_user_webhooks && ($user?.role === 'admin' || ($user?.permissions?.features?.webhooks ?? false))}
 			<div class="mt-2">
 				<div class="flex flex-col w-full">
-					<div class=" mb-1 text-xs font-medium">{$i18n.t('Notification Webhook')}</div>
+					<div class=" mb-1 text-xs font-normal">{$i18n.t('Notification Webhook')}</div>
 
 					<div class="flex-1">
 						<input
@@ -256,9 +256,9 @@
 
 		{#if ($config?.features?.enable_api_keys ?? true) && ($user?.role === 'admin' || ($user?.permissions?.features?.api_keys ?? false))}
 			<div class="flex justify-between items-center text-sm mt-2">
-				<div class="  font-medium">{$i18n.t('API keys')}</div>
+				<div class="  font-normal">{$i18n.t('API keys')}</div>
 				<button
-					class=" text-xs font-medium text-gray-500"
+					class=" text-xs font-normal text-gray-500"
 					type="button"
 					on:click={() => {
 						showAPIKeys = !showAPIKeys;
@@ -271,7 +271,7 @@
 					{#if $user?.role === 'admin'}
 						<div class="justify-between w-full mt-2">
 							<div class="flex justify-between w-full">
-								<div class="self-center text-xs font-medium mb-1">{$i18n.t('JWT Token')}</div>
+								<div class="self-center text-xs font-normal mb-1">{$i18n.t('JWT Token')}</div>
 							</div>
 
 							<div class="flex">
@@ -329,7 +329,7 @@
 						<div class="justify-between w-full mt-2">
 							{#if $user?.role === 'admin'}
 								<div class="flex justify-between w-full">
-									<div class="self-center text-xs font-medium mb-1">{$i18n.t('API Key')}</div>
+									<div class="self-center text-xs font-normal mb-1">{$i18n.t('API Key')}</div>
 								</div>
 							{/if}
 							<div class="flex">
@@ -407,7 +407,7 @@
 									</Tooltip>
 								{:else}
 									<button
-										class="flex gap-1.5 items-center font-medium px-3.5 py-1.5 rounded-lg bg-gray-100/70 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-850 transition"
+										class="flex gap-1.5 items-center font-normal px-3.5 py-1.5 rounded-lg bg-gray-100/70 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-850 transition"
 										on:click={() => {
 											createAPIKeyHandler();
 										}}
@@ -425,9 +425,9 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-3 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			on:click={async () => {
 				const res = await submitHandler();
 

@@ -84,7 +84,7 @@
 					}
 				}}
 			>
-				<div class=" self-center font-medium line-clamp-1">
+				<div class=" self-center font-normal line-clamp-1">
 					{$i18n.t('Import')}
 				</div>
 			</button>
@@ -100,14 +100,14 @@
 						saveAs(blob, `prompt-suggestions-export-${Date.now()}.json`);
 					}}
 				>
-					<div class=" self-center font-medium line-clamp-1">
+					<div class=" self-center font-normal line-clamp-1">
 						{$i18n.t('Export')}
 					</div>
 				</button>
 			{/if}
 
 			<button
-				class=" px-1.5 rounded-xl transition font-medium text-sm flex items-center"
+				class=" px-1.5 rounded-xl transition font-normal text-sm flex items-center"
 				type="button"
 				on:click={() => {
 					if (promptSuggestions.length === 0 || promptSuggestions.at(-1).content !== '') {

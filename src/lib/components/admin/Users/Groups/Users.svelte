@@ -248,7 +248,7 @@
 										/>
 									</div>
 								</td>
-								<td class="px-3 py-1 font-medium text-gray-900 dark:text-white max-w-48">
+								<td class="px-3 py-1 font-normal text-gray-900 dark:text-white max-w-48">
 									<Tooltip content={user.email} placement="top-start">
 										<div class="flex items-center">
 											<img
@@ -257,7 +257,7 @@
 												alt="user"
 											/>
 
-											<div class="font-medium truncate">{user.name}</div>
+											<div class="font-normal truncate">{user.name}</div>
 										</div>
 									</Tooltip>
 								</td>

@@ -191,7 +191,7 @@
 		<!-- Header -->
 		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
 			<input
-				class="w-full text-lg bg-transparent outline-hidden font-primary placeholder:text-gray-300 dark:placeholder:text-gray-700"
+				class="w-full text-lg bg-transparent outline-hidden  placeholder:text-gray-300 dark:placeholder:text-gray-700"
 				type="text"
 				bind:value={title}
 				placeholder={$i18n.t('Event title')}

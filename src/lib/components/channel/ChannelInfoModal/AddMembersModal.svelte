@@ -81,9 +81,9 @@
 							<MemberSelector bind:userIds bind:groupIds includeGroups={true} />
 						</div>
 
-						<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+						<div class="flex justify-end pt-3 text-sm font-normal gap-1.5">
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+								class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
 									? ' cursor-not-allowed'
 									: ''}"
 								type="submit"

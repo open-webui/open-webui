@@ -108,7 +108,7 @@
 
 					<button
 						type="button"
-						class="px-3 py-1.5 gap-1 rounded-xl bg-gray-100/50 dark:bg-gray-850/50 text-black dark:text-white transition font-medium text-xs flex items-center justify-center"
+						class="px-3 py-1.5 gap-1 rounded-xl bg-gray-100/50 dark:bg-gray-850/50 text-black dark:text-white transition font-normal text-xs flex items-center justify-center"
 						on:click={createHandler}
 						disabled={isSaving}
 					>
@@ -158,9 +158,9 @@
 						</div>
 					{/if}
 
-					<div class="flex justify-end text-sm font-medium gap-1.5">
+					<div class="flex justify-end text-sm font-normal gap-1.5">
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {isSaving
+							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {isSaving
 								? 'cursor-not-allowed'
 								: ''}"
 							type="submit"

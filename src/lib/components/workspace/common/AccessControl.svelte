@@ -505,7 +505,7 @@
 				>
 					<select
 						id="models"
-						class="outline-none bg-transparent text-sm font-medium block w-fit pr-10 max-w-full placeholder-gray-400"
+						class="outline-none bg-transparent text-sm font-normal block w-fit pr-10 max-w-full placeholder-gray-400"
 						value={!hasPublicReadGrant(accessGrants ?? []) ? 'private' : 'public'}
 						on:change={(e) => {
 							setPublic((e.target as HTMLSelectElement).value === 'public');
@@ -518,7 +518,7 @@
 					</select>
 				</Tooltip>
 
-				<div class=" text-xs text-gray-400 font-medium">
+				<div class=" text-xs text-gray-400 font-normal">
 					{#if !hasPublicReadGrant(accessGrants ?? [])}
 						{$i18n.t('Only select users and groups with permission can access')}
 					{:else}
@@ -544,13 +544,13 @@
 	</div>
 
 	{#if share}
-		<div class="flex items-center justify-between text-xs font-medium text-gray-500 my-1">
+		<div class="flex items-center justify-between text-xs font-normal text-gray-500 my-1">
 			<div>
 				{$i18n.t('Access List')}
 			</div>
 			<div class="flex gap-1">
 				<button
-					class="px-2 py-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition text-xs font-medium flex items-center gap-1"
+					class="px-2 py-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition text-xs font-normal flex items-center gap-1"
 					type="button"
 					on:click={() => {
 						showAddAccessModal = true;

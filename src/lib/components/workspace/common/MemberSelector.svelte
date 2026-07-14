@@ -219,10 +219,10 @@
 											}
 										}}
 									>
-										<div class="px-3 py-1.5 font-medium text-gray-900 dark:text-white flex-1">
+										<div class="px-3 py-1.5 font-normal text-gray-900 dark:text-white flex-1">
 											<div class="flex items-center gap-2">
 												<Tooltip content={group.name} placement="top-start">
-													<div class="font-medium truncate flex items-center gap-1">
+													<div class="font-normal truncate flex items-center gap-1">
 														{group.name} <span class="text-gray-500">{group.member_count}</span>
 													</div>
 												</Tooltip>
@@ -262,7 +262,7 @@
 												}
 											}}
 										>
-											<div class="px-3 py-1.5 font-medium text-gray-900 dark:text-white flex-1">
+											<div class="px-3 py-1.5 font-normal text-gray-900 dark:text-white flex-1">
 												<div class="flex items-center gap-2">
 													<ProfilePreview {user} side="right" align="center" sideOffset={6}>
 														<img
@@ -272,7 +272,7 @@
 														/>
 													</ProfilePreview>
 													<Tooltip content={user.email} placement="top-start">
-														<div class="font-medium truncate">{user.name}</div>
+														<div class="font-normal truncate">{user.name}</div>
 													</Tooltip>
 
 													{#if user?.is_active}

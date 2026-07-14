@@ -382,12 +382,12 @@
 	{#if selectedModelId === null}
 		<div class="flex flex-col gap-1 mt-1.5 mb-2">
 			<div class="flex justify-between items-center">
-				<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
+				<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
 					<div>
 						{$i18n.t('Models')}
 					</div>
 
-					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
 						{filteredModels.length}
 					</div>
 				</div>
@@ -439,7 +439,7 @@
 							{#if modelsImportInProgress}
 								<Spinner className="size-3" />
 							{/if}
-							<div class=" self-center font-medium line-clamp-1">
+							<div class=" self-center font-normal line-clamp-1">
 								{$i18n.t('Import')}
 							</div>
 						</button>
@@ -450,7 +450,7 @@
 								downloadModels(models);
 							}}
 						>
-							<div class=" self-center font-medium line-clamp-1">
+							<div class=" self-center font-normal line-clamp-1">
 								{$i18n.t('Export')}
 							</div>
 						</button>
@@ -463,19 +463,19 @@
 							showManageModal = true;
 						}}
 					>
-						<div class=" self-center font-medium line-clamp-1">
+						<div class=" self-center font-normal line-clamp-1">
 							{$i18n.t('Manage')}
 						</div>
 					</button>
 
 					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black transition font-medium"
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black transition font-normal"
 						type="button"
 						on:click={() => {
 							showConfigModal = true;
 						}}
 					>
-						<div class=" self-center font-medium line-clamp-1">
+						<div class=" self-center font-normal line-clamp-1">
 							{$i18n.t('Settings')}
 						</div>
 					</button>
@@ -640,7 +640,7 @@
 										className=" w-fit"
 										placement="top-start"
 									>
-										<div class="font-medium line-clamp-1 flex items-center gap-2">
+										<div class="font-normal line-clamp-1 flex items-center gap-2">
 											{model.name}
 
 											<Badge
@@ -767,7 +767,7 @@
 					<div class=" w-full h-full flex flex-col justify-center items-center my-16 mb-24">
 						<div class="max-w-md text-center">
 							<div class=" text-3xl mb-3">😕</div>
-							<div class=" text-lg font-medium mb-1">{$i18n.t('No models found')}</div>
+							<div class=" text-lg font-normal mb-1">{$i18n.t('No models found')}</div>
 							<div class=" text-gray-500 text-center text-xs">
 								{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 							</div>

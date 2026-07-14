@@ -224,7 +224,7 @@
 	<div class="overflow-y-scroll scrollbar-hidden h-full">
 		{#if PIPELINES_LIST !== null}
 			<div class="flex w-full justify-between mb-2">
-				<div class=" self-center text-sm font-medium">
+				<div class=" self-center text-sm font-normal">
 					{$i18n.t('Manage Pipelines')}
 				</div>
 			</div>
@@ -257,7 +257,7 @@
 				</div>
 
 				<div class=" my-2">
-					<div class=" mb-2 text-sm font-medium">
+					<div class=" mb-2 text-sm font-normal">
 						{$i18n.t('Upload Pipeline')}
 					</div>
 					<div class="flex w-full">
@@ -271,7 +271,7 @@
 							/>
 
 							<button
-								class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
+								class="w-full text-sm font-normal py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
 								type="button"
 								on:click={() => {
 									document.getElementById('pipelines-upload-input')?.click();
@@ -342,7 +342,7 @@
 				</div>
 
 				<div class=" my-2">
-					<div class=" mb-2 text-sm font-medium">
+					<div class=" mb-2 text-sm font-normal">
 						{$i18n.t('Install from Github URL')}
 					</div>
 					<div class="flex w-full">
@@ -410,9 +410,9 @@
 					</div>
 
 					<div class="mt-2 text-xs text-gray-500">
-						<span class=" font-medium dark:text-gray-200">{$i18n.t('Warning:')}</span>
+						<span class=" font-normal dark:text-gray-200">{$i18n.t('Warning:')}</span>
 						{$i18n.t('Pipelines are a plugin system with arbitrary code execution —')}
-						<span class=" font-medium dark:text-gray-400"
+						<span class=" font-normal dark:text-gray-400"
 							>{$i18n.t("don't fetch random pipelines from sources you don't trust.")}</span
 						>
 					</div>
@@ -423,7 +423,7 @@
 				{#if pipelines !== null}
 					{#if pipelines.length > 0}
 						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm font-medium">
+							<div class=" self-center text-sm font-normal">
 								{$i18n.t('Pipelines Valves')}
 							</div>
 						</div>
@@ -477,7 +477,7 @@
 										{#each Object.keys(valves_spec.properties) as property, idx}
 											<div class=" py-0.5 w-full justify-between">
 												<div class="flex w-full justify-between">
-													<div class=" self-center text-xs font-medium">
+													<div class=" self-center text-xs font-normal">
 														{valves_spec.properties[property].title}
 													</div>
 
@@ -567,9 +567,9 @@
 	</div>
 
 	{#if PIPELINES_LIST !== null && PIPELINES_LIST.length > 0}
-		<div class="flex justify-end pt-3 text-sm font-medium">
+		<div class="flex justify-end pt-3 text-sm font-normal">
 			<button
-				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+				class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 				type="submit"
 			>
 				{$i18n.t('Save')}
