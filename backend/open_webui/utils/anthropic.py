@@ -395,7 +395,9 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
     return openai_payload
 
 
-def convert_openai_to_anthropic_response(openai_response: dict, model: str = '') -> dict:
+def convert_openai_to_anthropic_response(
+    openai_response: dict, model: str = '', input_tokens: int | None = None
+) -> dict:
     """
     Convert a non-streaming OpenAI Chat Completions response to Anthropic Messages format.
     """
@@ -443,8 +445,10 @@ def convert_openai_to_anthropic_response(openai_response: dict, model: str = '')
     # Usage
     openai_usage = openai_response.get('usage', {})
     usage = {
-        'input_tokens': openai_usage.get('prompt_tokens', 0),
-        'output_tokens': openai_usage.get('completion_tokens', 0),
+        'input_tokens': input_tokens
+        if input_tokens is not None
+        else openai_usage.get('input_tokens', openai_usage.get('prompt_tokens', 0)),
+        'output_tokens': openai_usage.get('output_tokens', openai_usage.get('completion_tokens', 0)),
     }
     if 'cache_creation_input_tokens' in openai_usage:
         usage['cache_creation_input_tokens'] = openai_usage['cache_creation_input_tokens']
@@ -463,7 +467,9 @@ def convert_openai_to_anthropic_response(openai_response: dict, model: str = '')
     }
 
 
-async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str = ''):
+async def openai_stream_to_anthropic_stream(
+    openai_stream_generator, model: str = '', input_tokens: int = 0
+):
     """
     Convert an OpenAI SSE streaming response to Anthropic Messages SSE format.
 
@@ -480,7 +486,6 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
     import uuid as _uuid
 
     message_id = f'msg_{_uuid.uuid4().hex[:24]}'
-    input_tokens = 0
     output_tokens = 0
     stop_reason = 'end_turn'
 
@@ -510,7 +515,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
             'model': model,
             'stop_reason': None,
             'stop_sequence': None,
-            'usage': {'input_tokens': 0, 'output_tokens': 0},
+            'usage': {'input_tokens': input_tokens, 'output_tokens': 0},
         },
     }
     yield f'event: message_start\ndata: {json.dumps(message_start)}\n\n'.encode()
@@ -541,8 +546,12 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                 if not choices:
                     # Check for usage in the final chunk
                     if data.get('usage'):
-                        input_tokens = data['usage'].get('prompt_tokens', input_tokens)
-                        output_tokens = data['usage'].get('completion_tokens', output_tokens)
+                        input_tokens = data['usage'].get(
+                            'input_tokens', data['usage'].get('prompt_tokens', input_tokens)
+                        )
+                        output_tokens = data['usage'].get(
+                            'output_tokens', data['usage'].get('completion_tokens', output_tokens)
+                        )
                     continue
 
                 delta = choices[0].get('delta', {})
@@ -551,8 +560,12 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
 
                 # Update usage if present
                 if data.get('usage'):
-                    input_tokens = data['usage'].get('prompt_tokens', input_tokens)
-                    output_tokens = data['usage'].get('completion_tokens', output_tokens)
+                    input_tokens = data['usage'].get(
+                        'input_tokens', data['usage'].get('prompt_tokens', input_tokens)
+                    )
+                    output_tokens = data['usage'].get(
+                        'output_tokens', data['usage'].get('completion_tokens', output_tokens)
+                    )
 
                 # --- Handle text content ---
                 # Anthropic expects text blocks before tool blocks, so skip
