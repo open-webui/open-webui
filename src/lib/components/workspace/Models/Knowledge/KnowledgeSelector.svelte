@@ -155,7 +155,7 @@
 						{/if}
 
 						<div
-							class="h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[13px] hover:bg-gray-50/60 hover:dark:bg-gray-800/60 hover:dark:text-gray-100 selected-command-option-button"
+							class="h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[13px] bg-transparent hover:text-gray-900 dark:hover:text-gray-100 selected-command-option-button"
 						>
 							<button
 								class="w-full flex-1"

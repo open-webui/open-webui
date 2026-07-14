@@ -188,7 +188,7 @@
 							<DropdownMenu className="min-w-[140px] z-[9999999]">
 								<button
 									type="button"
-									class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] transition hover:text-gray-900 dark:hover:text-gray-100"
 									on:click={() => {
 										startRename(file);
 									}}
@@ -198,7 +198,7 @@
 								</button>
 								<button
 									type="button"
-									class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] transition hover:text-gray-900 dark:hover:text-gray-100"
 									on:click={() => {
 										let fileId = file?.id ?? file?.tempId;
 										window.open(`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`, '_blank');
@@ -209,7 +209,7 @@
 								</button>
 								<button
 									type="button"
-									class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] transition hover:text-gray-900 dark:hover:text-gray-100"
 									on:click={() => {
 										onDelete(file?.id ?? file?.tempId);
 									}}

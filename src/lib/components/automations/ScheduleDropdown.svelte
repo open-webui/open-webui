@@ -161,7 +161,7 @@
 	<button
 		type="button"
 		class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition
-			text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5"
+			text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
 	>
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
@@ -284,7 +284,7 @@
 						<button
 							type="button"
 							class="flex-1 py-1 text-xs rounded-xl transition {selectedDays.includes(d.key)
-								? 'bg-gray-50 dark:bg-gray-800 text-black dark:text-gray-100'
+								? 'text-black dark:text-gray-100'
 								: 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'}"
 							on:click={() => {
 								if (selectedDays.includes(d.key)) {

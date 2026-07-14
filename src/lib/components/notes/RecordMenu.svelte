@@ -31,7 +31,7 @@
 	<div slot="content">
 		<DropdownMenu className="min-w-[170px] font-primary">
 			<button
-				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] transition hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={async () => {
 					onRecord();
 					show = false;
@@ -44,7 +44,7 @@
 			</button>
 
 			<button
-				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] transition hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={() => {
 					onCaptureAudio();
 					show = false;
@@ -57,7 +57,7 @@
 			</button>
 
 			<button
-				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] transition hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={() => {
 					onUpload();
 					show = false;

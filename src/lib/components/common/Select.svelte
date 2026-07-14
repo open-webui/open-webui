@@ -29,7 +29,7 @@
 
 	/** CSS classes for each item button */
 	export let itemClass =
-		'flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl';
+		'flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100';
 
 	/** Alignment of the dropdown: 'start' | 'end' */
 	export let align = 'start';

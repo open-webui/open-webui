@@ -1410,7 +1410,7 @@
 
 						<Dropdown align="end">
 							<button
-								class="p-1.5 mr-1 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+								class="p-1.5 mr-1 rounded-xl text-gray-500 bg-transparent hover:text-gray-900 dark:hover:text-gray-100 transition"
 								type="button"
 							>
 								<AdjustmentsHorizontal className="size-3.5" strokeWidth="2" />
@@ -1419,7 +1419,7 @@
 							<div slot="content">
 								<DropdownMenu className="min-w-[180px]">
 									<button
-										class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+										class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
 										type="button"
 										on:click={() => {
 											includeContent = !includeContent;
@@ -1482,8 +1482,8 @@
 							class="flex gap-3 w-fit text-center text-sm rounded-full bg-transparent px-0.5 whitespace-nowrap"
 						>
 							<DropdownOptions
-								align="start"
-								className="flex shrink-0 items-center gap-2 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-850 rounded-xl placeholder-gray-400 outline-hidden focus:outline-hidden"
+								align="end"
+								className="flex h-8 shrink-0 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[13px] font-normal text-gray-700 transition placeholder-gray-400 outline-hidden hover:text-gray-900 focus:outline-hidden dark:text-gray-200 dark:hover:text-gray-100"
 								bind:value={viewOption}
 								items={[
 									{ value: null, label: $i18n.t('All') },
@@ -1500,19 +1500,19 @@
 							/>
 
 							<DropdownOptions
-								align="start"
+								align="end"
 								bind:value={sortKey}
 								placeholder={$i18n.t('Sort')}
 								items={[
 									{ value: 'name', label: $i18n.t('Name') },
-									{ value: 'created_at', label: $i18n.t('Created At') },
-									{ value: 'updated_at', label: $i18n.t('Updated At') }
+									{ value: 'created_at', label: $i18n.t('Created') },
+									{ value: 'updated_at', label: $i18n.t('Updated') }
 								]}
 							/>
 
 							{#if sortKey}
 								<DropdownOptions
-									align="start"
+									align="end"
 									bind:value={direction}
 									items={[
 										{ value: 'asc', label: $i18n.t('Asc') },

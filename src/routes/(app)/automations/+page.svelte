@@ -260,7 +260,7 @@
 	<div class="flex-1 max-h-full overflow-y-auto">
 		{#if loaded}
 			<div class="pb-1 px-3 md:px-[18px] pt-2">
-				<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3">
+				<div class="flex flex-col gap-1 px-1 mt-1.5 mb-2">
 					<div class="flex justify-between items-center">
 						<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
 							{#if $mobile}
@@ -303,11 +303,9 @@
 					</div>
 				</div>
 
-				<div
-					class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30"
-				>
-					<div class="px-3.5 flex flex-1 items-center w-full space-x-2 py-0.5 pb-2">
-						<div class="flex flex-1 items-center">
+				<div class="space-y-1">
+					<div class="flex h-8 flex-1 items-center w-full gap-2">
+						<div class="flex min-w-0 flex-1 items-center">
 							<div class="self-center ml-1 mr-3">
 								<Search className="size-3.5" />
 							</div>
@@ -335,76 +333,83 @@
 								</div>
 							{/if}
 						</div>
-					</div>
 
-					<div class="px-3 flex w-full bg-transparent overflow-x-auto scrollbar-none -mx-1">
 						<div
-							class="flex gap-0.5 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap"
+							class="flex max-w-[55%] shrink-0 overflow-x-auto scrollbar-none"
+							on:wheel={(e) => {
+								if (e.deltaY !== 0) {
+									e.preventDefault();
+									e.currentTarget.scrollLeft += e.deltaY;
+								}
+							}}
 						>
-							<Select
-								bind:value={statusFilter}
-								items={[
-									{ value: 'all', label: $i18n.t('All') },
-									{ value: 'active', label: $i18n.t('Active') },
-									{ value: 'paused', label: $i18n.t('Paused') }
-								]}
-								onChange={() => {
-									page = 1;
-								}}
-								triggerClass="relative w-full flex items-center gap-0.5 px-2.5 py-1.5 bg-gray-50 dark:bg-gray-850 rounded-xl"
+							<div
+								class="flex w-fit gap-0.5 text-center text-sm rounded-full bg-transparent whitespace-nowrap"
 							>
-								<svelte:fragment slot="trigger" let:selectedLabel>
-									<span
-										class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
-									>
-										{selectedLabel}
-									</span>
-									<ChevronDown className="size-3.5" strokeWidth="2.5" />
-								</svelte:fragment>
-
-								<svelte:fragment slot="item" let:item let:selected>
-									{item.label}
-									<div class="ml-auto {selected ? '' : 'invisible'}">
-										<Check />
-									</div>
-								</svelte:fragment>
-							</Select>
-						</div>
-
-						<div class="flex-1"></div>
-
-						<Dropdown align="end">
-							<Tooltip content={$i18n.t('Actions')}>
-								<button
-									class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-									type="button"
-									aria-label={$i18n.t('Actions')}
+								<Select
+									bind:value={statusFilter}
+									align="end"
+									items={[
+										{ value: 'all', label: $i18n.t('All') },
+										{ value: 'active', label: $i18n.t('Active') },
+										{ value: 'paused', label: $i18n.t('Paused') }
+									]}
+									onChange={() => {
+										page = 1;
+									}}
+									triggerClass="relative h-8 w-full flex items-center gap-0.5 px-1.5 py-1.5 bg-transparent rounded-xl text-[13px] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
 								>
-									<EllipsisHorizontal className="size-4" />
-								</button>
-							</Tooltip>
+									<svelte:fragment slot="trigger" let:selectedLabel>
+										<span
+											class="inline-flex h-input w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+										>
+											{selectedLabel}
+										</span>
+										<ChevronDown className="size-3.5" strokeWidth="2.5" />
+									</svelte:fragment>
 
-							<div slot="content">
-								<DropdownMenu className="w-[170px] shadow-sm">
-									<button
-										class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-										type="button"
-										on:click={() => bulkToggleHandler(true)}
-									>
-										<CheckCircle className="size-4" />
-										{$i18n.t('Enable All')}
-									</button>
-									<button
-										class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-										type="button"
-										on:click={() => bulkToggleHandler(false)}
-									>
-										<Minus className="size-4" />
-										{$i18n.t('Disable All')}
-									</button>
-								</DropdownMenu>
+									<svelte:fragment slot="item" let:item let:selected>
+										{item.label}
+										<div class="ml-auto {selected ? '' : 'invisible'}">
+											<Check />
+										</div>
+									</svelte:fragment>
+								</Select>
+
+								<Dropdown align="end">
+									<Tooltip content={$i18n.t('Actions')}>
+										<button
+											class="flex h-8 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[13px] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
+											type="button"
+										>
+											<span>{$i18n.t('Actions')}</span>
+											<ChevronDown className="size-3" strokeWidth="2.5" />
+										</button>
+									</Tooltip>
+
+									<div slot="content">
+										<DropdownMenu className="w-[170px] shadow-sm">
+											<button
+												class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
+												type="button"
+												on:click={() => bulkToggleHandler(true)}
+											>
+												<CheckCircle className="size-3.5" />
+												{$i18n.t('Enable All')}
+											</button>
+											<button
+												class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
+												type="button"
+												on:click={() => bulkToggleHandler(false)}
+											>
+												<Minus className="size-3.5" />
+												{$i18n.t('Disable All')}
+											</button>
+										</DropdownMenu>
+									</div>
+								</Dropdown>
 							</div>
-						</Dropdown>
+						</div>
 					</div>
 
 					{#if automations === null || loading}
@@ -430,10 +435,10 @@
 							</div>
 						</div>
 					{:else}
-						<div class="gap-2 grid my-2 px-3">
+						<div class="gap-y-0.5 grid my-1">
 							{#each automations as automation (automation.id)}
 								<a
-									class="flex space-x-4 text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
+									class="flex space-x-4 text-left w-full px-3 py-2 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 transition rounded-2xl"
 									href={`/automations/${automation.id}`}
 								>
 									<div class="flex-1">
@@ -460,7 +465,7 @@
 											}}
 										>
 											<button
-												class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+												class="self-center w-fit text-sm p-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100 rounded-xl"
 												type="button"
 											>
 												<EllipsisHorizontal className="size-5" />

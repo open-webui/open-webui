@@ -35,7 +35,7 @@
 	<div slot="content">
 		<DropdownMenu className="min-w-[170px]">
 			<button
-				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={() => {
 					editHandler();
 				}}
@@ -59,7 +59,7 @@
 			</button>
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={() => {
 					cloneHandler();
 				}}
@@ -70,7 +70,7 @@
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills_export}
 				<button
-					class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
 					on:click={() => {
 						exportHandler();
 					}}
@@ -83,7 +83,7 @@
 			<hr class="border-gray-50 dark:border-gray-850/30 mx-1 my-0.5" />
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={() => {
 					deleteHandler();
 				}}

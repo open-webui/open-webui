@@ -30,7 +30,7 @@
 	$: loadLocale($i18n.languages);
 
 	import { goto } from '$app/navigation';
-	import { WEBUI_NAME, config, user, pinnedNotes } from '$lib/stores';
+	import { WEBUI_NAME, config, user, pinnedNotes, mobile, showSidebar } from '$lib/stores';
 	import {
 		createNewNote,
 		deleteNoteById,
@@ -47,7 +47,6 @@
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
-	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
@@ -55,6 +54,7 @@
 	import XMark from '../icons/XMark.svelte';
 	import DropdownOptions from '../common/DropdownOptions.svelte';
 	import Loader from '../common/Loader.svelte';
+	import SidebarIcon from '../icons/Sidebar.svelte';
 
 	let loaded = false;
 
@@ -324,7 +324,7 @@
 
 <FilesOverlay show={dragged} />
 
-<div id="notes-container" class="w-full min-h-full h-full px-3 md:px-[18px]">
+<div id="notes-container" class="w-full min-h-full h-full">
 	{#if loaded}
 		<DeleteConfirmDialog
 			bind:show={showDeleteConfirm}
@@ -339,15 +339,31 @@
 			</div>
 		</DeleteConfirmDialog>
 
-		<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3">
+		<div class="flex flex-col gap-1 px-1 mt-1.5 mb-2">
 			<div class="flex justify-between items-center">
 				<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
+					{#if $mobile}
+						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
+							<button
+								id="sidebar-toggle-button"
+								class="cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+								on:click={() => {
+									showSidebar.set(!$showSidebar);
+								}}
+							>
+								<div class="self-center p-1.5">
+									<SidebarIcon />
+								</div>
+							</button>
+						</Tooltip>
+					{/if}
+
 					<div>
 						{$i18n.t('Notes')}
 					</div>
 
 					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
-						{total}
+						{total ?? ''}
 					</div>
 				</div>
 
@@ -364,17 +380,15 @@
 					>
 						<Plus className="size-3" strokeWidth="2.5" />
 
-						<div class=" ml-1 text-xs">{$i18n.t('New Note')}</div>
+						<div class="hidden md:block md:ml-1 text-xs">{$i18n.t('New Note')}</div>
 					</button>
 				</div>
 			</div>
 		</div>
 
-		<div
-			class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30"
-		>
-			<div class="px-3.5 flex flex-1 items-center w-full space-x-2 py-0.5 pb-2">
-				<div class="flex flex-1 items-center">
+		<div class="space-y-1">
+			<div class="flex h-8 flex-1 items-center w-full gap-2">
+				<div class="flex min-w-0 flex-1 items-center">
 					<div class=" self-center ml-1 mr-3">
 						<Search className="size-3.5" />
 					</div>
@@ -399,11 +413,9 @@
 						</div>
 					{/if}
 				</div>
-			</div>
 
-			<div class="px-3 flex justify-between">
 				<div
-					class="flex w-full bg-transparent overflow-x-auto scrollbar-none"
+					class="flex max-w-[55%] shrink-0 overflow-x-auto scrollbar-none"
 					on:wheel={(e) => {
 						if (e.deltaY !== 0) {
 							e.preventDefault();
@@ -412,11 +424,10 @@
 					}}
 				>
 					<div
-						class="flex gap-3 w-fit text-center text-sm rounded-full bg-transparent px-0.5 whitespace-nowrap"
+						class="flex w-fit gap-0.5 text-center text-sm rounded-full bg-transparent whitespace-nowrap"
 					>
 						<DropdownOptions
-							align="start"
-							className="flex shrink-0 items-center gap-2 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-850 rounded-xl placeholder-gray-400 outline-hidden focus:outline-hidden"
+							align="end"
 							bind:value={viewOption}
 							items={[
 								{ value: null, label: $i18n.t('All') },
@@ -434,7 +445,7 @@
 
 						{#if [null, 'shared'].includes(viewOption)}
 							<DropdownOptions
-								align="start"
+								align="end"
 								bind:value={permission}
 								items={[
 									{ value: null, label: $i18n.t('Write') },
@@ -442,25 +453,23 @@
 								]}
 							/>
 						{/if}
-					</div>
-				</div>
 
-				<div class="shrink-0">
-					<DropdownOptions
-						align="start"
-						bind:value={displayOption}
-						items={[
-							{ value: null, label: $i18n.t('List') },
-							{ value: 'grid', label: $i18n.t('Grid') }
-						]}
-						onChange={() => {
-							if (displayOption) {
-								localStorage.noteDisplayOption = displayOption;
-							} else {
-								delete localStorage.noteDisplayOption;
-							}
-						}}
-					/>
+						<DropdownOptions
+							align="end"
+							bind:value={displayOption}
+							items={[
+								{ value: null, label: $i18n.t('List') },
+								{ value: 'grid', label: $i18n.t('Grid') }
+							]}
+							onChange={() => {
+								if (displayOption) {
+									localStorage.noteDisplayOption = displayOption;
+								} else {
+									delete localStorage.noteDisplayOption;
+								}
+							}}
+						/>
+					</div>
 				</div>
 			</div>
 
@@ -468,22 +477,20 @@
 				{#if (items ?? []).length > 0}
 					{@const groupedNotes = groupNotes(items)}
 
-					<div class="@container h-full py-2.5 px-2.5">
+					<div class="@container h-full my-1">
 						<div class="">
 							{#each groupedNotes as [timeRange, notesList], idx}
-								<div
-									class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium px-2.5 pb-2.5"
-								>
+								<div class="w-full text-xs text-gray-500 dark:text-gray-500 px-2.5 pb-2.5">
 									{$i18n.t(timeRange)}
 								</div>
 
 								{#if displayOption === null}
 									<div
-										class="{groupedNotes.length - 1 !== idx ? 'mb-3' : ''} gap-1.5 flex flex-col"
+										class="{groupedNotes.length - 1 !== idx ? 'mb-3' : ''} gap-y-0.5 flex flex-col"
 									>
 										{#each notesList as note, idx (note.id)}
 											<div
-												class=" flex cursor-pointer w-full px-3.5 py-1.5 border border-gray-50 dark:border-gray-850/30 bg-transparent dark:hover:bg-gray-850 hover:bg-white rounded-2xl transition"
+												class="flex cursor-pointer w-full px-3 py-2 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-2xl transition"
 											>
 												<a href={`/notes/${note.id}`} class="w-full flex flex-col justify-between">
 													<div class="flex-1">
@@ -493,9 +500,7 @@
 																className="flex-1"
 																placement="top-start"
 															>
-																<div
-																	class=" text-sm font-medium capitalize flex-1 w-full line-clamp-1"
-																>
+																<div class="text-sm capitalize flex-1 w-full line-clamp-1">
 																	{note.title}
 																</div>
 															</Tooltip>
@@ -555,7 +560,7 @@
 																		}}
 																	>
 																		<button
-																			class="self-center w-fit text-sm p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																			class="self-center w-fit text-sm p-1 text-gray-500 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100 rounded-xl"
 																			type="button"
 																		>
 																			<EllipsisHorizontal className="size-5" />
@@ -577,7 +582,7 @@
 									>
 										{#each notesList as note, idx (note.id)}
 											<div
-												class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 border border-gray-50 dark:border-gray-850/30 bg-transparent dark:hover:bg-gray-850 hover:bg-white rounded-2xl transition"
+												class="flex space-x-4 cursor-pointer w-full px-3 py-2.5 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-2xl transition"
 											>
 												<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 													<a
@@ -588,7 +593,7 @@
 															<div
 																class="  flex items-center gap-2 self-center mb-1 justify-between"
 															>
-																<div class=" font-semibold line-clamp-1 capitalize">
+																<div class="line-clamp-1 capitalize">
 																	{note.title}
 																</div>
 
@@ -625,7 +630,7 @@
 																		}}
 																	>
 																		<button
-																			class="self-center w-fit text-sm p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																			class="self-center w-fit text-sm p-1 text-gray-500 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100 rounded-xl"
 																			type="button"
 																		>
 																			<EllipsisHorizontal className="size-5" />

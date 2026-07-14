@@ -39,7 +39,7 @@
 	<button
 		type="button"
 		class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition
-			text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5"
+			text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
 	>
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
@@ -91,8 +91,8 @@
 			{#each filteredModels as model (model.id)}
 				<button
 					class="h-[1.6875rem] px-2 rounded-xl w-full text-left text-[13px] {model_id === model.id
-						? 'bg-gray-50 dark:bg-gray-800'
-						: ''}"
+						? 'text-gray-900 dark:text-gray-100'
+						: 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100'}"
 					type="button"
 					on:click={() => {
 						model_id = model.id;
