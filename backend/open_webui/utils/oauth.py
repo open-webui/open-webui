@@ -10,7 +10,7 @@ import time
 import urllib
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from types import SimpleNamespace
 from typing import Literal, Optional
 
@@ -86,6 +86,7 @@ from open_webui.retrieval.web.utils import validate_url
 from open_webui.utils.auth import create_token, get_password_hash
 from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration
+from open_webui.utils.oauth_token import _is_oauth_token_refresh_needed
 from open_webui.utils.validate import validate_profile_image_url
 from starlette.responses import RedirectResponse
 
@@ -990,11 +991,7 @@ class OAuthClientManager:
                 log.warning(f'No OAuth session found for user {user_id}, client_id {client_id}')
                 return None
 
-            if (
-                force_refresh
-                or session.expires_at is None
-                or datetime.now() + timedelta(minutes=5) >= datetime.fromtimestamp(session.expires_at)
-            ):
+            if _is_oauth_token_refresh_needed(session, force_refresh):
                 log.debug(f'Token refresh needed for user {user_id}, client_id {session.provider}')
                 refreshed_token = await self._refresh_token(session)
                 if refreshed_token:
@@ -1268,11 +1265,7 @@ class OAuthManager:
                 )
                 return None
 
-            if (
-                force_refresh
-                or session.expires_at is None
-                or datetime.now() + timedelta(minutes=5) >= datetime.fromtimestamp(session.expires_at)
-            ):
+            if _is_oauth_token_refresh_needed(session, force_refresh):
                 log.debug(f'Token refresh needed for user {user_id}, provider {session.provider}')
                 refreshed_token = await self._refresh_token(session)
                 if refreshed_token:
