@@ -554,8 +554,8 @@
 </DeleteConfirmDialog>
 
 <Modal size="xl" bind:show>
-	<div class="py-3 dark:text-gray-300 text-gray-700">
-		<div class="px-4 pb-1.5">
+	<div class="py-2.5 dark:text-gray-300 text-gray-700">
+		<div class="px-3.5 pb-1">
 			<SearchInput
 				bind:value={query}
 				on:input={searchHandler}
@@ -592,7 +592,7 @@
 
 		<!-- <hr class="border-gray-50 dark:border-gray-850/30 my-1" /> -->
 
-		<div class="flex px-4 pb-1">
+		<div class="flex px-3.5 pb-0.5">
 			<div
 				class="flex flex-col overflow-y-auto h-96 md:h-[40rem] max-h-full scrollbar-hidden w-full flex-1 pr-2"
 			>
@@ -602,7 +602,7 @@
 
 				{#each actions as action, idx (action.label)}
 					<button
-						class=" w-full flex items-center rounded-xl text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedIdx ===
+						class=" w-full flex items-center rounded-xl text-sm py-1.5 px-2.5 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedIdx ===
 						idx
 							? 'bg-gray-50 dark:bg-gray-850'
 							: ''}"
@@ -640,7 +640,7 @@
 							<div
 								class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
 									? ''
-									: 'pt-5'} pb-2 px-2"
+									: 'pt-4'} pb-1.5 px-2"
 							>
 								{$i18n.t(chat.time_range)}
 								<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
@@ -666,7 +666,7 @@
 
 						<!-- svelte-ignore a11y-no-static-element-interactions -->
 						<div
-							class="w-full flex justify-between items-center rounded-xl text-sm py-2 pl-3 pr-32 hover:bg-gray-50 dark:hover:bg-gray-850 group/item relative {selectedIdx ===
+							class="w-full flex justify-between items-center rounded-xl text-sm py-1.5 pl-2.5 pr-32 hover:bg-gray-50 dark:hover:bg-gray-850 group/item relative {selectedIdx ===
 							idx + actions.length
 								? 'bg-gray-50 dark:bg-gray-850'
 								: ''}"
