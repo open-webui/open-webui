@@ -58,9 +58,6 @@ async def compact_messages_for_request(
         return messages, previous_summary, False
 
     boundary = _find_compaction_boundary(messages)
-    if boundary is None:
-        return messages, previous_summary, False
-
     compacted_messages = messages[:boundary]
     recent_messages = messages[boundary:]
     if not compacted_messages or not recent_messages:
@@ -243,11 +240,11 @@ def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: 
     return estimated > threshold
 
 
-def _find_compaction_boundary(messages: list[dict]) -> int | None:
+def _find_compaction_boundary(messages: list[dict]) -> int:
     keep_count = max(2, len(messages) * 2 // 5)
     target = max(1, len(messages) - keep_count)
     boundaries = [idx for idx, message in enumerate(messages) if message.get('role') == 'user'][1:]
-    return next((idx for idx in reversed(boundaries) if idx <= target), None)
+    return next((idx for idx in reversed(boundaries) if idx <= target), 0)
 
 
 async def _generate_summary(
