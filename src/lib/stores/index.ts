@@ -88,7 +88,7 @@ export const chatRequestQueues: Writable<
 	Record<string, { id: string; prompt: string; files: any[] }[]>
 > = writable({});
 
-export const sidebarWidth = writable(260);
+export const sidebarWidth = writable(240);
 
 export const showSidebar = writable(false);
 export const showSearch = writable(false);
