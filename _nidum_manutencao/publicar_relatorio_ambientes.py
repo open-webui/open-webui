@@ -51,12 +51,31 @@ def _http(method, url, token, payload=None):
         return 0, "%s: %s" % (type(e).__name__, e)
 
 
+def _parece_html(txt):
+    t = (txt or "").lstrip().lower()
+    return t.startswith("<!doctype") or t.startswith("<html")
+
+
 def main():
     base = os.environ.get("NIDUM_URL", "").rstrip("/")
     token = os.environ.get("NIDUM_TOKEN", "").strip()
     if not base or not token:
         print("ERRO: defina NIDUM_URL e NIDUM_TOKEN antes de rodar. Veja o topo do arquivo.")
         sys.exit(1)
+
+    # checagem previa: a URL aponta mesmo para o ChatND (Open WebUI)?
+    print("Conferindo a URL: %s" % base)
+    st0, body0 = _http("GET", "%s/api/config" % base, token)
+    if _parece_html(body0) or st0 != 200:
+        print("")
+        print("ERRO: essa URL NAO respondeu como o ChatND (recebi HTTP %d%s)." % (
+            st0, ", pagina HTML da Railway" if _parece_html(body0) else ""))
+        print("A NIDUM_URL deve ser o MESMO endereco que voce abre no navegador para usar")
+        print("o ChatND (a barra de endereco), sem barra no final. Ex.: https://chatnd-xxxx.up.railway.app")
+        print("Ajuste e rode de novo:")
+        print('  $env:NIDUM_URL = "https://ENDERECO-REAL-DO-CHATND"')
+        sys.exit(1)
+    print("URL confere (ChatND respondeu).")
 
     with open(CODE_PATH, "r", encoding="ascii") as fh:
         content = fh.read()
@@ -81,18 +100,24 @@ def main():
         st, body = _http("POST", "%s/api/v1/tools/id/%s/update" % (base, TOOL_ID), token, form)
 
     print("HTTP %d" % st)
-    try:
-        j = json.loads(body)
-        print("Resposta: id=%s name=%s" % (j.get("id"), j.get("name")))
-    except Exception:
-        print("Resposta (bruta): %s" % body[:600])
+    ok = False
+    if st == 200 and not _parece_html(body):
+        try:
+            j = json.loads(body)
+            if isinstance(j, dict) and j.get("id"):
+                print("Resposta: id=%s name=%s" % (j.get("id"), j.get("name")))
+                ok = True
+        except Exception:
+            pass
+    if not ok:
+        print("Resposta (bruta): %s" % body[:400])
 
-    if st == 200:
+    if ok:
         print("")
-        print("PRONTO. Agora acople a tool ao motor no proximo passo.")
+        print("PRONTO. Tool publicada de verdade. Agora acople ao motor no proximo passo.")
     else:
         print("")
-        print("Nao publicou. Copie a mensagem acima e me mostre.")
+        print("NAO publicou (resposta nao era a API do ChatND). Copie a mensagem e me mostre.")
         sys.exit(2)
 
 
