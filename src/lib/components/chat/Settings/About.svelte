@@ -45,9 +45,9 @@
 </script>
 
 <div id="tab-about" class="flex flex-col h-full justify-between space-y-3 text-sm">
-	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] md:max-h-full">
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5 space-y-3">
 		<div>
-			<div class=" mb-2.5 text-sm font-normal flex space-x-2 items-center">
+			<div class="text-xs text-gray-400 dark:text-gray-600 mb-2.5 flex space-x-2 items-center">
 				<div>
 					{$WEBUI_NAME}
 					{$i18n.t('Version')}
@@ -101,7 +101,9 @@
 			<hr class=" border-gray-100/30 dark:border-gray-850/30" />
 
 			<div>
-				<div class=" mb-2.5 text-sm font-normal">{$i18n.t('Ollama Version')}</div>
+				<div class="text-xs text-gray-400 dark:text-gray-600 mb-2.5">
+					{$i18n.t('Ollama Version')}
+				</div>
 				<div class="flex w-full">
 					<div class="flex-1 text-xs text-gray-700 dark:text-gray-200">
 						{ollamaVersion ?? 'N/A'}

@@ -577,6 +577,7 @@
 		}`;
 
 	let selectedTab = 'general';
+	$: selectedTabTitle = allSettings.find((tab) => tab.id === selectedTab)?.title ?? 'Settings';
 
 	onMount(() => {
 		availableSettings = getAvailableSettings();
@@ -804,64 +805,70 @@
 		</div>
 	</nav>
 
-	<div class="flex-1 overflow-y-auto scrollbar-none min-h-0 p-4 md:px-5">
-		{#if selectedTab === 'general'}
-			<General
-				{getModels}
-				{saveSettings}
-				on:save={() => {
-					toast.success($i18n.t('Settings saved successfully!'));
-				}}
-			/>
-		{:else if selectedTab === 'interface'}
-			<Interface
-				{saveSettings}
-				on:save={() => {
-					toast.success($i18n.t('Settings saved successfully!'));
-				}}
-			/>
-		{:else if selectedTab === 'connections'}
-			<Connections
-				saveSettings={async (updated: Record<string, any>) => {
-					await saveSettings(updated);
-					toast.success($i18n.t('Settings saved successfully!'));
-				}}
-			/>
-		{:else if selectedTab === 'tools'}
-			<Integrations
-				saveSettings={async (updated: Record<string, any>) => {
-					await saveSettings(updated);
-					toast.success($i18n.t('Settings saved successfully!'));
-				}}
-			/>
-		{:else if selectedTab === 'personalization'}
-			<Personalization
-				{saveSettings}
-				on:save={() => {
-					toast.success($i18n.t('Settings saved successfully!'));
-				}}
-			/>
-		{:else if selectedTab === 'audio'}
-			<Audio
-				{saveSettings}
-				on:save={() => {
-					toast.success($i18n.t('Settings saved successfully!'));
-				}}
-			/>
-		{:else if selectedTab === 'data_controls'}
-			<DataControls {saveSettings} />
-		{:else if selectedTab === 'archived_chats'}
-			<ArchivedChats />
-		{:else if selectedTab === 'account'}
-			<Account
-				{saveSettings}
-				saveHandler={() => {
-					toast.success($i18n.t('Settings saved successfully!'));
-				}}
-			/>
-		{:else if selectedTab === 'about'}
-			<About />
-		{/if}
+	<div class="flex-1 min-h-0 p-4 md:px-5 flex flex-col">
+		<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+			{$i18n.t(selectedTabTitle)}
+		</h2>
+
+		<div class="flex-1 min-h-0 overflow-hidden">
+			{#if selectedTab === 'general'}
+				<General
+					{getModels}
+					{saveSettings}
+					on:save={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'interface'}
+				<Interface
+					{saveSettings}
+					on:save={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'connections'}
+				<Connections
+					saveSettings={async (updated: Record<string, any>) => {
+						await saveSettings(updated);
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'tools'}
+				<Integrations
+					saveSettings={async (updated: Record<string, any>) => {
+						await saveSettings(updated);
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'personalization'}
+				<Personalization
+					{saveSettings}
+					on:save={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'audio'}
+				<Audio
+					{saveSettings}
+					on:save={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'data_controls'}
+				<DataControls {saveSettings} />
+			{:else if selectedTab === 'archived_chats'}
+				<ArchivedChats />
+			{:else if selectedTab === 'account'}
+				<Account
+					{saveSettings}
+					saveHandler={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'about'}
+				<About />
+			{/if}
+		</div>
 	</div>
 </Modal>
 

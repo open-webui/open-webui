@@ -132,8 +132,8 @@
 	}}
 />
 
-<div id="tab-chats" class="flex flex-col h-full justify-between text-sm">
-	<div class="space-y-3 overflow-y-scroll max-h-[28rem] md:max-h-full">
+<div id="tab-chats" class="flex flex-col h-full text-sm">
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5 space-y-3">
 		<input
 			id="chat-import-input"
 			bind:this={chatImportInputElement}
@@ -144,7 +144,7 @@
 		/>
 
 		<div>
-			<div class="mb-1 text-sm font-normal">{$i18n.t('Chats')}</div>
+			<div class="text-xs text-gray-400 dark:text-gray-600 mb-2">{$i18n.t('Chats')}</div>
 
 			{#if $user?.role === 'admin' || ($user.permissions?.chat?.import ?? true)}
 				<div>
@@ -227,7 +227,7 @@
 		</div>
 
 		<div>
-			<div class="mb-1 text-sm font-normal">{$i18n.t('Files')}</div>
+			<div class="text-xs text-gray-400 dark:text-gray-600 mb-2">{$i18n.t('Files')}</div>
 
 			<div>
 				<div class="py-0.5 flex w-full justify-between">

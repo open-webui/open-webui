@@ -173,42 +173,41 @@
 	}}
 />
 
-<div id="tab-archived-chats" class="flex flex-col h-full justify-between text-sm">
-	<div class="space-y-3 overflow-y-scroll max-h-[28rem] md:max-h-full">
+<div id="tab-archived-chats" class="flex flex-col h-full text-sm">
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5">
 		<div>
-			<div class="flex items-center gap-2 text-base font-normal">
-				{$i18n.t('Archived Chats')}
-				<span class="text-base font-normal text-gray-500 dark:text-gray-500">
-					{chatCount ?? ''}
-				</span>
+			<div class="text-xs text-gray-400 dark:text-gray-600 mb-2">
+				{$i18n.t('Conversations')}
+				{#if chatCount !== null}
+					<span>{chatCount}</span>
+				{/if}
 			</div>
 
-			<div class="text-xs text-gray-500 mt-0.5">
-				{$i18n.t('Manage conversations you have archived.')}
+			<div class="py-0.5 flex w-full justify-between">
+				<div class="self-center text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Search')}</div>
+				<div class="flex min-w-0 items-center justify-end gap-1">
+					<input
+						class="w-40 bg-transparent py-1 text-right text-xs outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-600"
+						bind:value={query}
+						on:input={searchHandler}
+						placeholder={$i18n.t('Search')}
+						maxlength="500"
+					/>
+					{#if query}
+						<button
+							class="rounded-sm p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-850"
+							type="button"
+							aria-label={$i18n.t('Clear search')}
+							on:click={() => {
+								query = '';
+								searchHandler();
+							}}
+						>
+							<XMark className="size-3" strokeWidth="2" />
+						</button>
+					{/if}
+				</div>
 			</div>
-		</div>
-
-		<div class="flex items-center gap-2 rounded-xl bg-gray-100 dark:bg-gray-850 px-2">
-			<input
-				class="w-full bg-transparent py-1.5 text-xs outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-600"
-				bind:value={query}
-				on:input={searchHandler}
-				placeholder={$i18n.t('Search Chats')}
-				maxlength="500"
-			/>
-			{#if query}
-				<button
-					class="rounded-full p-1 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800"
-					type="button"
-					aria-label={$i18n.t('Clear search')}
-					on:click={() => {
-						query = '';
-						searchHandler();
-					}}
-				>
-					<XMark className="size-3" strokeWidth="2" />
-				</button>
-			{/if}
 		</div>
 
 		{#if chatList === null}
@@ -222,9 +221,9 @@
 				{$i18n.t('You have no archived conversations.')}
 			</div>
 		{:else}
-			<div class="flex items-center px-1 text-xs text-gray-500 dark:text-gray-500">
+			<div class="mt-3 flex items-center text-xs text-gray-400 dark:text-gray-600">
 				<button
-					class="flex flex-1 items-center gap-1 py-1 text-left"
+					class="flex flex-1 items-center gap-1 py-0.5 text-left"
 					type="button"
 					on:click={() => setSortKey('title')}
 				>
@@ -238,7 +237,7 @@
 					{/if}
 				</button>
 				<button
-					class="hidden w-24 items-center justify-end gap-1 py-1 text-right sm:flex"
+					class="hidden w-24 items-center justify-end gap-1 py-0.5 text-right sm:flex"
 					type="button"
 					on:click={() => setSortKey('updated_at')}
 				>
@@ -253,11 +252,11 @@
 				</button>
 			</div>
 
-			<div class="divide-y divide-gray-50 dark:divide-gray-850/80">
+			<div>
 				{#each chatList as chat (chat.id)}
-					<div class="flex items-center gap-2 py-2 text-xs">
+					<div class="py-0.5 flex w-full justify-between gap-2 text-xs">
 						<a
-							class="min-w-0 flex-1 truncate text-gray-800 hover:text-black dark:text-gray-200 dark:hover:text-white"
+							class="min-w-0 flex-1 self-center truncate text-gray-600 hover:text-black dark:text-gray-400 dark:hover:text-white"
 							href={`/c/${chat.id}`}
 							on:click={(event) => {
 								event.preventDefault();
@@ -267,7 +266,9 @@
 						>
 							{chat?.title}
 						</a>
-						<div class="hidden w-24 shrink-0 justify-end text-gray-500 dark:text-gray-500 sm:flex">
+						<div
+							class="hidden w-24 shrink-0 self-center justify-end text-gray-400 dark:text-gray-600 sm:flex"
+						>
 							{$i18n.t(
 								dayjs(chat?.updated_at * 1000).calendar(null, {
 									sameDay: '[Today]',
@@ -279,10 +280,10 @@
 								})
 							)}
 						</div>
-						<div class="flex shrink-0 items-center text-gray-600 dark:text-gray-300">
+						<div class="flex shrink-0 items-center justify-end text-gray-500 dark:text-gray-500">
 							<Tooltip content={$i18n.t('Unarchive Chat')}>
 								<button
-									class="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850"
+									class="rounded-sm p-1 hover:bg-gray-100 dark:hover:bg-gray-850"
 									type="button"
 									aria-label={$i18n.t('Unarchive Chat')}
 									on:click={() => {
@@ -307,7 +308,7 @@
 							</Tooltip>
 							<Tooltip content={$i18n.t('Delete Chat')}>
 								<button
-									class="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850"
+									class="rounded-sm p-1 hover:bg-gray-100 dark:hover:bg-gray-850"
 									type="button"
 									aria-label={$i18n.t('Delete Chat')}
 									on:click={() => {
@@ -353,10 +354,10 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end gap-1.5 pt-3 text-sm font-normal">
+	<div class="shrink-0 pt-3 flex justify-end gap-1.5 text-sm font-normal">
 		{#if query === ''}
 			<button
-				class="px-3.5 py-1.5 text-sm font-normal hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-full disabled:opacity-50"
+				class="px-3.5 py-1.5 font-normal hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl disabled:opacity-50"
 				disabled={loading || chatCount === 0}
 				type="button"
 				on:click={() => {

@@ -206,9 +206,11 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm" id="tab-general">
-	<div class="  overflow-y-scroll max-h-[28rem] md:max-h-full">
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5">
 		<div class="">
-			<div class=" mb-1 text-sm font-normal">{$i18n.t('WebUI Settings')}</div>
+			<div class="text-xs text-gray-400 dark:text-gray-600 mb-2">
+				{$i18n.t('WebUI Settings')}
+			</div>
 
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-normal">{$i18n.t('Theme')}</div>
@@ -297,7 +299,9 @@
 			<hr class="border-gray-100/30 dark:border-gray-850/30 my-3" />
 
 			<div>
-				<div class=" my-2.5 text-sm font-normal">{$i18n.t('System Prompt')}</div>
+				<div class="text-xs text-gray-400 dark:text-gray-600 my-2.5">
+					{$i18n.t('System Prompt')}
+				</div>
 				<Textarea
 					bind:value={system}
 					className={'w-full text-sm outline-hidden resize-vertical' +
@@ -313,7 +317,9 @@
 		{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.params ?? true))}
 			<div class="mt-2 space-y-3 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
-					<div class="  font-normal">{$i18n.t('Advanced Parameters')}</div>
+					<div class="text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('Advanced Parameters')}
+					</div>
 					<button
 						class=" text-xs font-normal {($settings?.highContrastMode ?? false)
 							? 'text-gray-800 dark:text-gray-100'
@@ -333,7 +339,7 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-normal">
+	<div class="shrink-0 flex justify-end pt-3 text-sm font-normal">
 		<button
 			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			on:click={() => {

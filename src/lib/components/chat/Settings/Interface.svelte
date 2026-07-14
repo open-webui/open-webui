@@ -335,9 +335,9 @@
 		}}
 	/>
 
-	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] md:max-h-full">
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5 space-y-3">
 		<div>
-			<h1 class=" mb-2 text-sm font-normal">{$i18n.t('UI')}</h1>
+			<h3 class="text-xs text-gray-400 dark:text-gray-600 mb-2">{$i18n.t('UI')}</h3>
 
 			<div>
 				<div class="py-0.5 flex w-full justify-between">
@@ -1438,7 +1438,7 @@
 		</div>
 	</div>
 
-	<div class="flex justify-end text-sm font-normal">
+	<div class="shrink-0 flex justify-end text-sm font-normal">
 		<button
 			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
