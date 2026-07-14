@@ -1977,7 +1977,7 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
         return None
 
     return [
-        {k: v for k, v in msg.items() if k in ('role', 'content', 'output', 'files', 'contextSummary')}
+        {k: v for k, v in msg.items() if k in ('id', 'role', 'content', 'output', 'files', 'contextSummary')}
         for msg in db_messages
     ]
 
@@ -2036,6 +2036,7 @@ def strip_compaction_fields(messages: list[dict]) -> list[dict]:
         clean = dict(message)
         clean.pop('contextSummary', None)
         clean.pop('context_summary', None)
+        clean.pop('id', None)
         stripped.append(clean)
     return stripped
 
@@ -2224,7 +2225,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         {
                             k: v
                             for k, v in assistant_message.items()
-                            if k in ('role', 'content', 'output', 'files', 'contextSummary')
+                            if k in ('id', 'role', 'content', 'output', 'files', 'contextSummary')
                         }
                     )
 
