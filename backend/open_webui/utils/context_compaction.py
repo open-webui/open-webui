@@ -115,6 +115,7 @@ async def compact_messages_for_request(
             chat_id,
             checkpoint_message_id,
             {'contextSummary': summary},
+            touch=False,
         )
 
     log.info(
@@ -172,7 +173,9 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
         previous_summary,
         config['prompt_template'],
     )
-    await Chats.upsert_message_to_chat_by_id_and_message_id(chat.id, current_id, {'contextSummary': summary})
+    await Chats.upsert_message_to_chat_by_id_and_message_id(
+        chat.id, current_id, {'contextSummary': summary}, touch=False
+    )
 
     return {
         'ok': True,

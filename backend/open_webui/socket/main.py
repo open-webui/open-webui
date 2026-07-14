@@ -997,6 +997,7 @@ async def get_event_emitter(request_info, update_db=True):
                     {
                         'embeds': embeds,
                     },
+                    touch=False,
                 )
 
             elif event_type == 'files':
@@ -1014,6 +1015,7 @@ async def get_event_emitter(request_info, update_db=True):
                     {
                         'files': files,
                     },
+                    touch=False,
                 )
 
             elif event_type in ('source', 'citation'):
@@ -1033,6 +1035,7 @@ async def get_event_emitter(request_info, update_db=True):
                         {
                             'sources': sources,
                         },
+                        touch=False,
                     )
 
     if 'user_id' in request_info and 'chat_id' in request_info and 'message_id' in request_info:

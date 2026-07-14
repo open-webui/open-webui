@@ -3465,6 +3465,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                     {
                         'selectedModelId': response_data['selected_model_id'],
                     },
+                    touch=False,
                 )
 
             choices = response_data.get('choices', [])
@@ -4061,6 +4062,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         {
                                             'selectedModelId': model_id,
                                         },
+                                        touch=False,
                                     )
                                     await event_emitter(
                                         {
@@ -5261,12 +5263,14 @@ async def streaming_chat_response_handler(response, ctx):
                             metadata['chat_id'],
                             metadata['message_id'],
                             {'done': True, 'usage': usage},
+                            touch=False,
                         )
                     else:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
                             {'done': True},
+                            touch=False,
                         )
 
                 # Send a webhook notification if the user is not active
@@ -5333,6 +5337,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 metadata['chat_id'],
                                 metadata['message_id'],
                                 {'done': True},
+                                touch=False,
                             )
 
                 try:

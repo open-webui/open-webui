@@ -834,7 +834,7 @@ class ChatTable:
             history['messages'][message_id]['statusHistory'] = status_history
 
         chat['history'] = history
-        return await self.update_chat_by_id(id, chat)
+        return await self.update_chat_by_id(id, chat, touch=False)
 
     async def add_message_files_by_id_and_message_id(self, id: str, message_id: str, files: list[dict]) -> list[dict]:
         async with get_async_db_context() as session:
