@@ -109,6 +109,10 @@
 		suggestionsOpen = true;
 		positionPopup();
 	}}
+	on:click={() => {
+		suggestionsOpen = true;
+		positionPopup();
+	}}
 	on:input={() => {
 		suggestionsOpen = true;
 		positionPopup();
@@ -169,6 +173,23 @@
 				<span class="truncate">{voice.id}</span>
 				{#if voice.name && voice.name !== voice.id}
 					<span class="truncate text-gray-500 dark:text-gray-400">{voice.name}</span>
+				{/if}
+				{#if selectedIds !== null && selectedIds.includes(voice.id)}
+					<svg
+						class="h-3.5 w-3.5 shrink-0 text-gray-500 dark:text-gray-400"
+						aria-hidden="true"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke="currentColor"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="3"
+							d="m5 12 4.7 4.5 9.3-9"
+						/>
+					</svg>
 				{/if}
 			</button>
 		{/each}
