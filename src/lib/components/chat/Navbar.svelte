@@ -127,6 +127,7 @@
 							bind:selectedModels
 							showSetDefault={!shareEnabled && !readOnly}
 							disabled={readOnly}
+							triggerClassName="text-[17px]"
 						/>
 					{/if}
 				</div>

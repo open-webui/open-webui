@@ -13,6 +13,7 @@
 	export let disabled = false;
 
 	export let showSetDefault = true;
+	export let triggerClassName = 'text-lg';
 
 	const saveDefaultModel = async () => {
 		const hasEmptyModel = selectedModels.filter((it) => it === '');
@@ -64,6 +65,7 @@
 							model: model
 						}))}
 						{pinModelHandler}
+						{triggerClassName}
 						bind:value={selectedModel}
 					/>
 				</div>
