@@ -1684,6 +1684,16 @@ from open_webui.utils.anthropic import (
 )
 
 
+@app.post('/api/message/count_tokens')
+@app.post('/api/v1/messages/count_tokens')  # Anthropic Messages token-count endpoint
+async def count_message_tokens(
+    request: Request,
+    form_data: dict,
+    user=Depends(get_verified_user),
+):
+    return {'input_tokens': await openai.count_anthropic_tokens(request, form_data, user)}
+
+
 @app.post('/api/message')
 @app.post('/api/v1/messages')  # Anthropic Messages API compatible endpoint
 async def generate_messages(
@@ -1704,9 +1714,15 @@ async def generate_messages(
     Authentication: Supports both standard Authorization header and
     Anthropic's x-api-key header (via middleware translation).
     """
-    # Convert Anthropic payload to OpenAI format
     requested_model = form_data.get('model', '')
+    input_tokens = None
+    try:
+        input_tokens = await openai.count_anthropic_tokens(request, form_data, user)
+    except Exception:
+        # Counting must not turn a compatible generation request into an outage.
+        log.warning('Unable to count Anthropic input tokens for model %s', requested_model, exc_info=True)
 
+    # Convert Anthropic payload to OpenAI format
     openai_payload = convert_anthropic_to_openai_payload(form_data)
 
     # Route through the existing chat_completion handler
