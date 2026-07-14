@@ -457,12 +457,12 @@
 			confirmEdit
 				? ($settings?.highContrastMode ?? false)
 					? 'bg-gray-100 dark:bg-gray-800 selected'
-					: 'bg-gray-100 dark:bg-gray-800/60 selected'
+					: 'bg-gray-100 dark:bg-gray-900 selected'
 				: selected
 					? ($settings?.highContrastMode ?? false)
-						? 'bg-gray-100 dark:bg-gray-800 selected'
-						: 'bg-gray-100 dark:bg-gray-800/60 selected'
-					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-800/40'}  whitespace-nowrap text-ellipsis relative {generating
+						? 'bg-gray-100 dark:bg-gray-900 selected'
+						: 'bg-gray-100 dark:bg-gray-950 selected'
+					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis relative {generating
 				? 'cursor-not-allowed'
 				: ''}"
 		>
@@ -497,12 +497,12 @@
 			confirmEdit
 				? ($settings?.highContrastMode ?? false)
 					? 'bg-gray-100 dark:bg-gray-800 selected'
-					: 'bg-gray-100 dark:bg-gray-800/60 selected'
+					: 'bg-gray-100 dark:bg-gray-900 selected'
 				: selected
 					? ($settings?.highContrastMode ?? false)
-						? 'bg-gray-100 dark:bg-gray-800 selected'
-						: 'bg-gray-100 dark:bg-gray-800/60 selected'
-					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-800/40'}  whitespace-nowrap text-ellipsis"
+						? 'bg-gray-100 dark:bg-gray-900 selected'
+						: 'bg-gray-100 dark:bg-gray-950 selected'
+					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 			href="/c/{id}"
 			on:click={() => {
 				dispatch('select');
@@ -586,12 +586,12 @@
         {id === $chatId || confirmEdit
 				? ($settings?.highContrastMode ?? false)
 					? 'from-gray-100 dark:from-gray-800 selected'
-					: 'from-gray-100 dark:from-gray-800/60 selected'
+					: 'from-gray-100 dark:from-gray-900 selected'
 				: selected
 					? ($settings?.highContrastMode ?? false)
-						? 'from-gray-100 dark:from-gray-800 selected'
-						: 'from-gray-100 dark:from-gray-800/60 selected'
-					: 'invisible group-hover:visible from-gray-100 dark:from-gray-800/40'}
+						? 'from-gray-100 dark:from-gray-900 selected'
+						: 'from-gray-100 dark:from-gray-950 selected'
+					: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
             absolute {className === 'pr-2'
 				? 'right-[8px]'
 				: 'right-1'} top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
