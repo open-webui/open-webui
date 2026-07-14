@@ -17,7 +17,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let className = 'h-full flex pt-12';
+	export let className = 'h-full flex pt-18';
 
 	export let chatId = '';
 	export let user = $_user;
