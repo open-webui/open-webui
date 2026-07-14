@@ -123,11 +123,36 @@
 
 	<div slot="content">
 		<DropdownMenu className="{className} text-[13px]">
+			{#if $user}
+				<button
+					class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
+					type="button"
+					on:click={async () => {
+						show = false;
+						await showSettings.set('account');
+
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
+					}}
+				>
+					<div class="self-center shrink-0 size-4.5 flex items-center justify-center">
+						<img
+							src={`${WEBUI_API_BASE_URL}/users/${$user.id}/profile/image`}
+							alt=""
+							class="size-4.5 rounded-full object-cover"
+						/>
+					</div>
+					<div class="self-center truncate">{$user.name}</div>
+				</button>
+			{/if}
+
 			{#if profile}
 				{#if $user?.status_emoji || $user?.status_message}
 					<div class="user-menu-status">
 						<button
-							class="w-full h-[1.6875rem] gap-2 rounded-xl px-2 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none text-[13px] flex items-center"
+							class="w-full h-[1.6875rem] gap-2 rounded-xl px-2 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none text-[13px] flex items-center text-left"
 							type="button"
 							on:click={() => {
 								show = false;
@@ -135,7 +160,7 @@
 							}}
 						>
 							{#if $user?.status_emoji}
-								<div class=" self-center shrink-0">
+								<div class="self-center shrink-0 size-4.5 flex items-center justify-center">
 									<Emoji className="size-3.5" shortCode={$user?.status_emoji} />
 								</div>
 							{/if}
@@ -179,14 +204,14 @@
 				{:else}
 					<div class="user-menu-status">
 						<button
-							class="w-full h-[1.6875rem] gap-1 rounded-xl px-2 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none text-[13px] flex items-center justify-center"
+							class="w-full h-[1.6875rem] gap-2 rounded-xl px-2 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none text-[13px] flex items-center text-left"
 							type="button"
 							on:click={() => {
 								show = false;
 								showUserStatusModal = true;
 							}}
 						>
-							<div class=" self-center">
+							<div class="self-center shrink-0 size-4.5 flex items-center justify-center">
 								<FaceSmile className="size-3.5" strokeWidth="1.5" />
 							</div>
 							<div class=" self-center truncate">{$i18n.t('Update your status')}</div>
