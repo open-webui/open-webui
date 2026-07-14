@@ -1,9 +1,12 @@
 """
 title: Relatorio de Ambientes Nidum
 author: Nidum
-version: 1.0.1
+version: 1.0.2
 description: Gera o relatorio do motor Identificador de Ambientes no modelo visual aprovado (HTML/CSS -> PDF via WeasyPrint), com foto embutida, selos de severidade, barra de confianca e a identidade Nidum. Devolve link de download nativo. So-ASCII no codigo; o CONTEUDO do PDF tem acentuacao correta (rotulos fixos via entidades HTML; texto do modelo vem acentuado).
 changelog:
+  1.0.2:
+    - Data carimbada pelo servidor (datetime.now) no campo DATA e na parte da data do
+      nome do arquivo. O modelo nao decide mais a data (evita data inventada).
   1.0.1:
     - Remove o cabecalho 'requirements': weasyprint (62.3) e pillow (12.1.1) ja estao
       na imagem (backend/requirements.txt). Evita reinstalacao no load, que estourava o
@@ -19,7 +22,9 @@ import inspect
 import io
 import logging
 import os
+import re
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel
 
@@ -455,20 +460,34 @@ class Tools:
                      __messages__=None, __files__=None):
         import weasyprint
 
-        meta = meta or {}
+        meta = dict(meta or {})
         conf = conf or {}
         qual = qual or {}
         fotos = fotos or []
+
+        # data: carimbada pelo SERVIDOR (o modelo nao decide a data - evita data inventada).
+        agora = datetime.now()
+        data_br = agora.strftime("%d/%m/%Y")
+        data_arq = agora.strftime("%d%m%Y")
+        meta["data"] = data_br
 
         # nome do arquivo: garante padrao minimo e sem underscore solto no final
         nome = str(nome_arquivo or "").strip().rstrip("_").strip()
         if not nome:
             nome = "PLAT_Relatorio"
-        if not nome.lower().endswith(".pdf"):
-            nome_pdf = nome + ".pdf"
-        else:
-            nome_pdf = nome
+        if nome.lower().endswith(".pdf"):
             nome = nome[:-4]
+        # normaliza a data no nome (troca uma sequencia de 8 digitos pela data real;
+        # se nao houver, insere antes do _V<n> ou no fim)
+        if re.search(r"\d{8}", nome):
+            nome = re.sub(r"\d{8}", data_arq, nome, count=1)
+        else:
+            m = re.search(r"(_[vV]\d+)$", nome)
+            if m:
+                nome = nome[:m.start()] + "_" + data_arq + m.group(1)
+            else:
+                nome = nome + "_" + data_arq
+        nome_pdf = nome + ".pdf"
 
         try:
             pct = int(round(float(conf.get("percentual", 0))))
