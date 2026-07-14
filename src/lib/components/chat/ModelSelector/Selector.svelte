@@ -649,7 +649,7 @@
 
 	let listScrollTop = 0;
 	let listContainer;
-	$: listViewportHeight = isSmallViewport ? 120 : 288;
+	$: listViewportHeight = isSmallViewport ? 192 : 288;
 
 	$: visibleStart = Math.max(0, Math.floor(listScrollTop / ITEM_HEIGHT) - OVERSCAN);
 	$: visibleEnd = Math.min(
