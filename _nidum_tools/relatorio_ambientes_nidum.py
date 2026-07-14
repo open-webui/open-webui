@@ -150,6 +150,71 @@ def _img_data_uri(raw, max_w=1000):
         return ""
 
 
+def _raw_de_data_uri(uri):
+    # "data:image/...;base64,XXXX" -> bytes; devolve None se nao for data URI valida.
+    try:
+        if not isinstance(uri, str) or not uri.startswith("data:"):
+            return None
+        _cab, b64 = uri.split(",", 1)
+        return base64.b64decode(b64)
+    except Exception:
+        return None
+
+
+async def _coletar_fotos_do_contexto(messages, files, limite=4):
+    # Coleta as imagens que o usuario enviou na conversa, SEM depender do modelo passar
+    # file_id. Fontes: (1) arquivos anexados (__files__); (2) conteudo multimodal das
+    # mensagens (__messages__, itens image_url com data URI). Devolve data URIs JPEG
+    # ja processadas (Pillow), deduplicadas, na ordem de descoberta.
+    brutos = []
+
+    # 1) arquivos anexados a requisicao
+    for f in (files or []):
+        if not isinstance(f, dict):
+            continue
+        url = f.get("url")
+        raw = _raw_de_data_uri(url) if isinstance(url, str) else None
+        if raw:
+            brutos.append(raw)
+            continue
+        fobj = f.get("file") if isinstance(f.get("file"), dict) else {}
+        fid = f.get("id") or fobj.get("id")
+        ctype = ((fobj.get("meta") or {}).get("content_type") or "") if fobj else ""
+        tipo = (f.get("type") or "").lower()
+        if fid and ("image" in tipo or str(ctype).startswith("image")):
+            raw, _ct = await _ler_bytes(fid)
+            if raw:
+                brutos.append(raw)
+
+    # 2) imagens embutidas nas mensagens (conteudo multimodal), da mais recente p/ a mais antiga
+    for m in reversed(messages or []):
+        if not isinstance(m, dict):
+            continue
+        cont = m.get("content")
+        if isinstance(cont, list):
+            for item in cont:
+                if isinstance(item, dict) and item.get("type") == "image_url":
+                    url = (item.get("image_url") or {}).get("url")
+                    raw = _raw_de_data_uri(url)
+                    if raw:
+                        brutos.append(raw)
+        if len(brutos) >= limite:
+            break
+
+    uris, vistos = [], set()
+    for raw in brutos:
+        chave = (len(raw), raw[:24])
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        uri = _img_data_uri(raw)
+        if uri:
+            uris.append(uri)
+        if len(uris) >= limite:
+            break
+    return uris
+
+
 async def _salvar_e_linkar(data_bytes, filename, content_type, user_id):
     from open_webui.storage.provider import Storage
     from open_webui.models.files import Files, FileForm
@@ -350,6 +415,8 @@ class Tools:
         ajustes_conversa: str = "Nenhum ajuste registrado nesta conversa",
         fotos: list = None,
         __user__: dict = None,
+        __messages__: list = None,
+        __files__: list = None,
     ) -> str:
         """Gera o relatorio do Identificador de Ambientes no modelo visual aprovado (PDF) e devolve o link de download.
 
@@ -365,14 +432,15 @@ class Tools:
         :param confianca_texto: justificativa completa do grau de confianca.
         :param reduzir_incerteza: lista de itens (strings) numerados.
         :param ajustes_conversa: correcoes/adicoes do usuario, ou "Nenhum ajuste registrado nesta conversa".
-        :param fotos: lista de dicts: file_id, legenda. As imagens enviadas pelo usuario (ver pipe).
+        :param fotos: OPCIONAL. Lista de dicts com 'legenda' (as imagens sao coletadas
+            automaticamente da conversa; nao e preciso informar file_id).
         :return: link /api/v1/files/{id}/content para baixar o PDF.
         """
         try:
             return await self._gerar(
                 titulo_humano, nome_arquivo, metadados, diagnostico_resumo, confianca,
                 qualidade_imagem, diagnostico_texto, evidencias, avarias, confianca_texto,
-                reduzir_incerteza, ajustes_conversa, fotos, __user__,
+                reduzir_incerteza, ajustes_conversa, fotos, __user__, __messages__, __files__,
             )
         except Exception as e:
             log.error("relatorio_ambientes: erro: %s", e)
@@ -380,7 +448,8 @@ class Tools:
                     "avise o suporte. (detalhe tecnico registrado no log)")
 
     async def _gerar(self, titulo, nome_arquivo, meta, diag_resumo, conf, qual, diag_texto,
-                     evidencias, avarias, conf_texto, reduzir, ajustes, fotos, __user__):
+                     evidencias, avarias, conf_texto, reduzir, ajustes, fotos, __user__,
+                     __messages__=None, __files__=None):
         import weasyprint
 
         meta = meta or {}
@@ -404,24 +473,28 @@ class Tools:
             pct = 0
         pct = max(0, min(100, pct))
 
-        # fotos embutidas (max 4)
+        # fotos embutidas (max 4): coletadas automaticamente da conversa (nao dependem do
+        # modelo passar file_id). Legendas do modelo (se houver) sao aplicadas em ordem.
         user_id = _get_user_id(__user__)
+        legendas = [(f or {}).get("legenda") for f in fotos if isinstance(f, dict)]
+        uris = await _coletar_fotos_do_contexto(__messages__, __files__, limite=4)
+        # fallback: modelo passou file_id explicito e nada foi coletado do contexto
+        if not uris and fotos:
+            for f in fotos[:4]:
+                fid = (f or {}).get("file_id")
+                if fid:
+                    raw, _ct = await _ler_bytes(fid)
+                    if raw:
+                        u = _img_data_uri(raw)
+                        if u:
+                            uris.append(u)
         blocos_foto = []
-        for i, f in enumerate(fotos[:4], start=1):
-            fid = (f or {}).get("file_id")
-            legenda = _e((f or {}).get("legenda") or ("Foto %d" % i))
-            data_uri = ""
-            if fid:
-                raw, _ct = await _ler_bytes(fid)
-                if raw:
-                    data_uri = _img_data_uri(raw)
-            if data_uri:
-                img = '<img src="%s" alt="Foto %d">' % (data_uri, i)
-            else:
-                img = '<div class="semimg">[ imagem indisponivel ]</div>'
-            blocos_foto.append('<figure class="foto">%s<figcaption>%s</figcaption></figure>' % (img, legenda))
+        for i, uri in enumerate(uris[:4], start=1):
+            leg = legendas[i - 1] if (i - 1) < len(legendas) and legendas[i - 1] else ("Foto %d" % i)
+            img = '<img src="%s" alt="Foto %d">' % (uri, i)
+            blocos_foto.append('<figure class="foto">%s<figcaption>%s</figcaption></figure>' % (img, _e(leg)))
         fotos_html = "".join(blocos_foto) if blocos_foto else '<figure class="foto"><div class="semimg">[ sem foto ]</div></figure>'
-        qtd = len([f for f in fotos if (f or {}).get("file_id")])
+        qtd = len(uris)
         qtd_txt = _e("%d foto(s) recebida(s)." % qtd)
 
         # chips de qualidade
