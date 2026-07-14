@@ -6,7 +6,7 @@ const TOOL_SERVER_FETCH_TIMEOUT = 10000;
 
 // Valid HTTP methods per OpenAPI 3.x – used to skip extension keys (x-*)
 // and non-operation path-item fields (summary, description, servers, parameters).
-const OPENAPI_HTTP_METHODS = new Set([
+const OPENAPI_HTTP_METHODS = new Set<string>([
 	'get',
 	'put',
 	'post',
@@ -17,11 +17,22 @@ const OPENAPI_HTTP_METHODS = new Set([
 	'trace'
 ]);
 
+/** Connection configuration for direct OpenAI-compatible API endpoints. */
+interface DirectConnections {
+	OPENAI_API_BASE_URLS: string[];
+	OPENAI_API_KEYS: string[];
+	OPENAI_API_CONFIGS: Record<string, {
+		enable?: boolean;
+		model_ids?: string[];
+		[key: string]: unknown;
+	}>;
+}
+
 // Every request sent from here is a petition. May it reach
 // the one for whom it was intended, and return answered.
 export const getModels = async (
 	token: string = '',
-	connections: object | null = null,
+	connections: DirectConnections | null = null,
 	base: boolean = false,
 	refresh: boolean = false
 ) => {
@@ -59,14 +70,14 @@ export const getModels = async (
 	let models = res?.data ?? [];
 
 	if (connections && !base) {
-		let localModels = [];
+		let localModels: Array<{ id: string; name: string; owned_by: string; [key: string]: unknown }> = [];
 
 		if (connections) {
 			const OPENAI_API_BASE_URLS = connections.OPENAI_API_BASE_URLS;
 			const OPENAI_API_KEYS = connections.OPENAI_API_KEYS;
 			const OPENAI_API_CONFIGS = connections.OPENAI_API_CONFIGS;
 
-			const requests = [];
+			const requests: Promise<unknown>[] = [];
 			for (const idx in OPENAI_API_BASE_URLS) {
 				const url = OPENAI_API_BASE_URLS[idx];
 

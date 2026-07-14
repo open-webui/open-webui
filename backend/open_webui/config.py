@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-import base64
 import json
 import logging
 import os
 import shutil
 import socket
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
 from pathlib import Path
-from typing import Optional, Union
 from urllib.parse import urlparse
 
-import redis
 import requests
 from authlib.integrations.starlette_client import OAuth
 from pydantic import BaseModel
@@ -25,10 +21,6 @@ from open_webui.env import (
     FRONTEND_BUILD_DIR,
     OFFLINE_MODE,
     OPEN_WEBUI_DIR,
-    REDIS_KEY_PREFIX,
-    REDIS_SENTINEL_HOSTS,
-    REDIS_SENTINEL_PORT,
-    REDIS_URL,
     WEBUI_AUTH,
     WEBUI_FAVICON_URL,
     WEBUI_NAME,

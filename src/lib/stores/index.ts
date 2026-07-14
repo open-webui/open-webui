@@ -1,9 +1,10 @@
 import { APP_NAME } from '$lib/constants';
-import { type Writable, writable } from 'svelte/store';
+import { type Writable, writable, derived } from 'svelte/store';
 import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
 import type { AudioQueue } from '$lib/utils/audio';
+import type { TerminalServer } from '$lib/apis/terminal';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
 
@@ -12,19 +13,23 @@ import emojiShortCodes from '$lib/emoji-shortcodes.json';
 // Backend
 export const WEBUI_NAME = writable(APP_NAME);
 
-export const WEBUI_VERSION = writable(null);
-export const WEBUI_DEPLOYMENT_ID = writable(null);
+export const WEBUI_VERSION = writable<string | null>(null);
+export const WEBUI_DEPLOYMENT_ID = writable<string | null>(null);
 
 export const config: Writable<Config | undefined> = writable(undefined);
 export const user: Writable<SessionUser | undefined> = writable(undefined);
 
+// Derived stores for convenient computed state
+export const isAuthenticated = derived(user, ($user) => $user !== undefined);
+export const isAdmin = derived(user, ($user) => $user?.role === 'admin');
+
 // Electron App
 export const isApp = writable(false);
-export const appInfo = writable(null);
-export const appData = writable(null);
+export const appInfo = writable<Record<string, unknown> | null>(null);
+export const appData = writable<Record<string, unknown> | null>(null);
 
 // Frontend
-export const MODEL_DOWNLOAD_POOL = writable({});
+export const MODEL_DOWNLOAD_POOL = writable<Record<string, unknown>>({});
 
 export const mobile = writable(false);
 
@@ -40,41 +45,52 @@ export const shortCodesToEmojis = writable(
 	Object.entries(emojiShortCodes).reduce((acc, [key, value]) => {
 		if (typeof value === 'string') {
 			acc[value] = key;
-		} else {
+		} else if (Array.isArray(value)) {
 			for (const v of value) {
 				acc[v] = key;
 			}
 		}
 
 		return acc;
-	}, {})
+	}, {} as Record<string, string>)
 );
 
-export const TTSWorker = writable(null);
+export const TTSWorker = writable<Worker | null>(null);
 
 export const chatId = writable('');
 export const chatTitle = writable('');
 
-export const channels = writable([]);
-export const channelId = writable(null);
+export const channels = writable<Channel[]>([]);
+export const channelId = writable<string | null>(null);
 
-export const chats = writable(null);
-export const pinnedChats = writable([]);
-export const pinnedNotes = writable([]);
-export const tags = writable([]);
-export const folders = writable([]);
+export const chats = writable<Chat[] | null>(null);
+export const pinnedChats = writable<Chat[]>([]);
+export const pinnedNotes = writable<Note[]>([]);
+export const tags = writable<Tag[]>([]);
+export const folders = writable<Folder[]>([]);
 
-export const selectedFolder = writable(null);
+export const selectedFolder = writable<Folder | null>(null);
 
 export const models: Writable<Model[]> = writable([]);
 
 export const knowledge: Writable<null | Document[]> = writable(null);
-export const tools = writable(null);
-export const skills = writable(null);
-export const functions = writable(null);
+export const tools = writable<Tool[] | null>(null);
+export const skills = writable<Skill[] | null>(null);
+export const functions = writable<Function[] | null>(null);
 
-export const toolServers = writable([]);
-export const terminalServers = writable([]);
+export const toolServers = writable<ToolServer[]>([]);
+export const terminalServers = writable<TerminalServer[]>([]);
+
+// Minimal type definitions for stores (expanded from API models)
+type ToolServer = { id: string; name: string; url: string; [key: string]: unknown };
+type Chat = { id: string; title: string; [key: string]: unknown };
+type Channel = { id: string; name: string; [key: string]: unknown };
+type Note = { id: string; title: string; [key: string]: unknown };
+type Tag = { id: string; name: string; [key: string]: unknown };
+type Folder = { id: string; name: string; [key: string]: unknown };
+type Tool = { id: string; name: string; [key: string]: unknown };
+type Skill = { id: string; name: string; [key: string]: unknown };
+type Function = { id: string; name: string; [key: string]: unknown };
 
 // Persistent Pyodide worker for code interpreter FS
 export const pyodideWorker: Writable<Worker | null> = writable(null);
@@ -85,7 +101,7 @@ export const settings: Writable<Settings> = writable({});
 
 export const audioQueue = writable<AudioQueue | null>(null);
 export const chatRequestQueues: Writable<
-	Record<string, { id: string; prompt: string; files: any[] }[]>
+	Record<string, { id: string; prompt: string; files: unknown[] }[]>
 > = writable({});
 
 export const sidebarWidth = writable(260);
@@ -107,10 +123,10 @@ export const showFileNavPath: Writable<string | null> = writable(null);
 export const showFileNavDir: Writable<string | null> = writable(null);
 export const selectedTerminalId: Writable<string | null> = writable(null);
 
-export const artifactCode = writable(null);
-export const artifactContents = writable(null);
+export const artifactCode = writable<string | null>(null);
+export const artifactContents = writable<string | null>(null);
 
-export const embed = writable(null);
+export const embed = writable<unknown>(null);
 
 export const temporaryChatEnabled = writable(false);
 
@@ -119,7 +135,7 @@ export const temporaryChatEnabled = writable(false);
 export type DesktopEventFile = { name: string; mimeType: string; dataUrl: string };
 export type DesktopEvent = {
 	type: string;
-	data?: any;
+	data?: unknown;
 };
 export const desktopEvent: Writable<DesktopEvent | null> = writable(null);
 export const scrollPaginationEnabled = writable(false);
@@ -179,8 +195,8 @@ type OllamaModelDetails = {
 };
 
 type Settings = {
-	pinnedModels?: never[];
-	toolServers?: never[];
+	pinnedModels?: string[];
+	toolServers?: string[];
 	detectArtifacts?: boolean;
 	showUpdateToast?: boolean;
 	showChangelog?: boolean;
@@ -191,30 +207,30 @@ type Settings = {
 	notificationSound?: boolean;
 	notificationSoundAlways?: boolean;
 	stylizedPdfExport?: boolean;
-	notifications?: any;
+	notifications?: Record<string, unknown>;
 	imageCompression?: boolean;
-	imageCompressionSize?: any;
+	imageCompressionSize?: number;
 	textScale?: number;
-	widescreenMode?: null;
+	widescreenMode?: boolean | null;
 	largeTextAsFile?: boolean;
 	promptAutocomplete?: boolean;
 	hapticFeedback?: boolean;
-	responseAutoCopy?: any;
+	responseAutoCopy?: boolean;
 	richTextInput?: boolean;
-	params?: any;
-	userLocation?: any;
-	webSearch?: any;
+	params?: Record<string, unknown>;
+	userLocation?: Record<string, unknown>;
+	webSearch?: Record<string, unknown>;
 	memory?: boolean;
 	autoTags?: boolean;
 	autoFollowUps?: boolean;
-	splitLargeChunks?(body: any, splitLargeChunks: any): unknown;
-	backgroundImageUrl?: null;
+	splitLargeChunks?(body: unknown, splitLargeChunks: unknown): unknown;
+	backgroundImageUrl?: string | null;
 	landingPageMode?: string;
 	iframeSandboxAllowForms?: boolean;
 	iframeSandboxAllowSameOrigin?: boolean;
 	scrollOnBranchChange?: boolean;
 	showFilesOnTerminalSelect?: boolean;
-	directConnections?: null;
+	directConnections?: unknown[] | null;
 	chatBubble?: boolean;
 	copyFormatted?: boolean;
 	models?: string[];
@@ -254,8 +270,8 @@ type ModelOptions = {
 };
 
 type AudioSettings = {
-	stt: any;
-	tts: any;
+	stt: Record<string, unknown>;
+	tts: Record<string, unknown>;
 	STTEngine?: string;
 	TTSEngine?: string;
 	speaker?: string;
@@ -278,7 +294,7 @@ type Document = {
 };
 
 type Config = {
-	license_metadata: any;
+	license_metadata: Record<string, unknown> | null;
 	status: boolean;
 	name: string;
 	version: string;
@@ -327,7 +343,7 @@ type PromptSuggestion = {
 };
 
 export type SessionUser = {
-	permissions: any;
+	permissions: Record<string, boolean>;
 	id: string;
 	email: string;
 	name: string;

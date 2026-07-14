@@ -237,8 +237,12 @@ select = [
   "I",    # isort
   "UP",   # pyupgrade
   "C90",  # mccabe
+  "C4",   # flake8-comprehensions
+  "B",    # flake8-bugbear
+  "SIM",  # flake8-simplify
   "Q",    # flake8-quotes
   "ICN",  # flake8-import-conventions
+  "TID",  # flake8-tidy-imports
 ]
 
 # Plugin configs:
@@ -247,3 +251,8 @@ flake8-import-conventions.aliases = { datetime = "dt" }
 flake8-quotes.inline-quotes = "single"
 mccabe.max-complexity = 10
 pydocstyle.convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"backend/open_webui/migrations/*" = ["E501", "B", "SIM", "UP"]
+"backend/open_webui/test/*" = ["B017", "SIM"]
+"__init__.py" = ["F401"]
