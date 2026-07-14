@@ -67,6 +67,13 @@ MODELS_CONFIG_KEYS = {
     'DEFAULT_MODEL_METADATA': 'models.default_metadata',
     'DEFAULT_MODEL_PARAMS': 'models.default_params',
 }
+SUBAGENTS_CONFIG_KEYS = {
+    'ENABLE_SUBAGENTS': 'subagents.enable',
+    'SUBAGENTS_BACKGROUND_ENABLED': 'subagents.background_enabled',
+    'SUBAGENTS_MAX_CONCURRENT': 'subagents.max_concurrent',
+    'SUBAGENTS_MAX_ASYNC': 'subagents.max_async',
+    'SUBAGENTS_SYSTEM_PROMPT': 'subagents.system_prompt',
+}
 
 
 async def get_config_values(key_map: dict[str, str]) -> dict:
@@ -298,10 +305,8 @@ class TerminalServerConnection(BaseModel):
 
     config: dict | None = None
 
-    # Orchestrator policy fields
-    server_type: str | None = None  # "orchestrator", "terminal"
+    server_type: str | None = None
     policy_id: str | None = None
-    policy: dict | None = None  # cached policy data
 
     model_config = ConfigDict(extra='allow')
 
@@ -321,7 +326,9 @@ async def set_terminal_servers_config(
     form_data: TerminalServersConfigForm,
     user=Depends(get_admin_user),
 ):
-    connections = [connection.model_dump() for connection in form_data.TERMINAL_SERVER_CONNECTIONS]
+    connections = [
+        connection.model_dump(exclude={'policy', 'lifecycle'}) for connection in form_data.TERMINAL_SERVER_CONNECTIONS
+    ]
     await Config.upsert({'terminal_server.connections': connections})
 
     await set_terminal_servers(request)
@@ -391,7 +398,7 @@ class TerminalServerPolicyForm(BaseModel):
     key: str | None = ''
     auth_type: str | None = 'bearer'
     policy_id: str
-    policy_data: dict
+    policy_data: dict | None = None
 
 
 class TerminalServerLifecycleForm(BaseModel):
@@ -399,7 +406,7 @@ class TerminalServerLifecycleForm(BaseModel):
     key: str | None = ''
     auth_type: str | None = 'bearer'
     policy_id: str
-    lifecycle_data: dict
+    lifecycle_data: dict | None = None
 
 
 class TerminalServerRefreshForm(BaseModel):
@@ -416,9 +423,7 @@ class TerminalServerRefreshForm(BaseModel):
 async def put_terminal_server_policy(
     request: Request, form_data: TerminalServerPolicyForm, user=Depends(get_admin_user)
 ):
-    """
-    Proxy a policy PUT to an orchestrator terminal server.
-    """
+    """Proxy a policy read or update to an orchestrator terminal server."""
     base_url = (form_data.url or '').rstrip('/')
     if not base_url:
         raise HTTPException(status_code=400, detail='Terminal server URL is required')
@@ -433,8 +438,12 @@ async def put_terminal_server_policy(
             timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
         ) as session:
             policy_url = f'{base_url}/api/v1/policies/{form_data.policy_id}'
-            async with session.put(
-                policy_url, headers=headers, json=form_data.policy_data, ssl=AIOHTTP_CLIENT_SESSION_SSL
+            async with session.request(
+                'GET' if form_data.policy_data is None else 'PUT',
+                policy_url,
+                headers=headers,
+                json=form_data.policy_data,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as resp:
                 if resp.ok:
                     return await resp.json()
@@ -443,17 +452,15 @@ async def put_terminal_server_policy(
     except HTTPException:
         raise
     except Exception as e:
-        log.debug(f'Failed to save policy to terminal server: {e}')
-        raise HTTPException(status_code=400, detail='Failed to save policy to terminal server')
+        log.debug(f'Failed to access policy on terminal server: {e}')
+        raise HTTPException(status_code=400, detail='Failed to access policy on terminal server')
 
 
 @router.post('/terminal_servers/lifecycle')
 async def put_terminal_server_lifecycle(
     request: Request, form_data: TerminalServerLifecycleForm, user=Depends(get_admin_user)
 ):
-    """
-    Proxy a policy lifecycle PUT to an orchestrator terminal server.
-    """
+    """Proxy a lifecycle read or update to an orchestrator terminal server."""
     base_url = (form_data.url or '').rstrip('/')
     if not base_url:
         raise HTTPException(status_code=400, detail='Terminal server URL is required')
@@ -468,7 +475,8 @@ async def put_terminal_server_lifecycle(
             timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
         ) as session:
             lifecycle_url = f'{base_url}/api/v1/policies/{form_data.policy_id}/lifecycle'
-            async with session.put(
+            async with session.request(
+                'GET' if form_data.lifecycle_data is None else 'PUT',
                 lifecycle_url,
                 headers=headers,
                 json=form_data.lifecycle_data,
@@ -481,8 +489,8 @@ async def put_terminal_server_lifecycle(
     except HTTPException:
         raise
     except Exception as e:
-        log.debug(f'Failed to save lifecycle to terminal server: {e}')
-        raise HTTPException(status_code=400, detail='Failed to save lifecycle to terminal server')
+        log.debug(f'Failed to access lifecycle on terminal server: {e}')
+        raise HTTPException(status_code=400, detail='Failed to access lifecycle on terminal server')
 
 
 @router.post('/terminal_servers/refresh')
@@ -750,6 +758,38 @@ async def set_models_config(request: Request, form_data: ModelsConfigForm, user=
             'default_pinned_models': values.get('DEFAULT_PINNED_MODELS'),
             'model_order_count': len(values.get('MODEL_ORDER_LIST') or []),
         },
+    )
+    return values
+
+
+class SubagentsConfigForm(BaseModel):
+    ENABLE_SUBAGENTS: bool
+    SUBAGENTS_BACKGROUND_ENABLED: bool
+    SUBAGENTS_MAX_CONCURRENT: int
+    SUBAGENTS_MAX_ASYNC: int
+    SUBAGENTS_SYSTEM_PROMPT: str
+
+
+@router.get('/subagents', response_model=SubagentsConfigForm)
+async def get_subagents_config(user=Depends(get_admin_user)):
+    return await get_config_values(SUBAGENTS_CONFIG_KEYS)
+
+
+@router.post('/subagents', response_model=SubagentsConfigForm)
+async def set_subagents_config(
+    request: Request,
+    form_data: SubagentsConfigForm,
+    user=Depends(get_admin_user),
+):
+    await Config.upsert(config_updates(form_data.model_dump(), SUBAGENTS_CONFIG_KEYS))
+    values = await get_config_values(SUBAGENTS_CONFIG_KEYS)
+    await publish_event(
+        request,
+        EVENTS.CONFIG_UPDATED,
+        actor=user,
+        subject_id='subagents',
+        subject_type='config',
+        data={'enabled': values.get('ENABLE_SUBAGENTS')},
     )
     return values
 
