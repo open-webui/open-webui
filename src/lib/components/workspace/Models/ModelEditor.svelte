@@ -655,7 +655,6 @@
 											placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
 											searchPlaceholder={$i18n.t('Search a model')}
 											items={getBaseModelItems($models)}
-											className="w-[32rem]"
 											triggerClassName="text-sm"
 											selectionOnly
 											includeHidden={$user?.role === 'admin'}

@@ -52,17 +52,17 @@
 	role="option"
 	aria-selected={isSelected}
 	aria-label={$i18n.t('Select {{modelName}} model', { modelName: item.label })}
-	class="flex group/item w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-[7px] pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer data-highlighted:bg-muted {index ===
+	class="group/item flex h-8 w-full cursor-pointer select-none items-center rounded-xl px-2 text-left text-[13px] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40 {index ===
 		selectedModelIdx && !compareEnabled
-		? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
-		: ''} {isSelected ? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent' : ''}"
+		? 'bg-gray-50/70 dark:bg-gray-800/60'
+		: ''} {isSelected ? 'bg-gray-50/70 dark:bg-gray-800/60' : ''}"
 	data-arrow-selected={index === selectedModelIdx}
 	data-value={item.value}
 	on:click={() => {
 		onClick();
 	}}
 >
-	<div class="flex flex-col flex-1 gap-1.5">
+	<div class="flex flex-1 flex-col gap-1.5 overflow-hidden">
 		<!-- {#if (item?.model?.tags ?? []).length > 0}
 			<div
 				class="flex gap-0.5 self-center items-start h-full w-full translate-y-[0.5px] overflow-x-auto scrollbar-none"
@@ -79,13 +79,13 @@
 			</div>
 		{/if} -->
 
-		<div class="flex items-center gap-2">
+		<div class="flex items-center gap-2 overflow-hidden">
 			<div class="flex items-center min-w-fit">
 				<Tooltip content={$user?.role === 'admin' ? (item?.value ?? '') : ''} placement="top-start">
 					<img
 						src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.model.id}&lang=${$i18n.language}`}
 						alt={$i18n.t('{{modelName}} profile image', { modelName: item.label })}
-						class="rounded-full size-5 flex items-center"
+						class="flex size-4 items-center rounded-full"
 						loading="lazy"
 						on:error={(e) => {
 							e.currentTarget.src = '/favicon.png';
@@ -94,7 +94,7 @@
 				</Tooltip>
 			</div>
 
-			<div class="flex items-center">
+			<div class="flex min-w-0 items-center">
 				<Tooltip content={`${item.label} (${item.value})`} placement="top-start">
 					<div class="line-clamp-1">
 						{item.label}
@@ -102,7 +102,7 @@
 				</Tooltip>
 			</div>
 
-			<div class=" shrink-0 flex items-center gap-2">
+			<div class="flex shrink-0 items-center gap-1.5">
 				{#if item.model.owned_by === 'ollama'}
 					{#if (item.model.ollama?.details?.parameter_size ?? '') !== ''}
 						<div class="flex items-center translate-y-[0.5px]">
@@ -118,7 +118,7 @@
 								}`}
 								className="self-end"
 							>
-								<span class=" text-xs font-medium text-gray-600 dark:text-gray-400 line-clamp-1"
+								<span class="line-clamp-1 text-[11px] font-normal text-gray-500 dark:text-gray-400"
 									>{item.model.ollama?.details?.parameter_size ?? ''}</span
 								>
 							</Tooltip>
@@ -127,7 +127,7 @@
 				{/if}
 
 				{#if item.model.loaded}
-					<div class="flex items-center translate-y-[0.5px] px-0.5">
+					<div class="flex items-center px-0.5">
 						<Tooltip
 							content={item.model.ollama?.expires_at &&
 							new Date(item.model.ollama?.expires_at * 1000) > new Date()
@@ -138,11 +138,11 @@
 							className="self-end"
 						>
 							<div class=" flex items-center">
-								<span class="relative flex size-2">
+								<span class="relative flex size-1.5">
 									<span
 										class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
 									/>
-									<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+									<span class="relative inline-flex size-1.5 rounded-full bg-green-500" />
 								</span>
 							</div>
 						</Tooltip>
@@ -240,7 +240,7 @@
 		</div>
 	</div>
 
-	<div class="ml-auto pl-2 pr-1 flex items-center gap-1.5 shrink-0">
+	<div class="ml-auto flex shrink-0 items-center gap-1.5 pl-2">
 		{#if !selectionOnly && $user?.role === 'admin' && item.model.loaded}
 			<Tooltip
 				content={`${$i18n.t('Eject')}`}

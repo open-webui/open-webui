@@ -13,6 +13,7 @@
 
 	export let showSetDefault = true;
 	export let triggerClassName = 'text-lg';
+	export let className = undefined;
 
 	let compareModels = selectedModels.length > 1;
 
@@ -69,6 +70,7 @@
 						model: model
 					}))}
 					{pinModelHandler}
+					{className}
 					{triggerClassName}
 					{showSetDefault}
 					onSetDefault={saveDefaultModel}

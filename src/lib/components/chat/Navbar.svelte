@@ -96,7 +96,7 @@
 				: 'invisible'} bg-linear-to-b via-40% to-97% from-white/90 via-white/50 to-transparent dark:from-gray-900/90 dark:via-gray-900/50 dark:to-transparent pointer-events-none absolute inset-0 -bottom-10 z-[-1]"
 		></div>
 
-		<div class=" flex max-w-full w-full mx-auto px-1.5 md:px-2 pt-0.5 bg-transparent">
+		<div class=" flex max-w-full w-full mx-auto px-1.5 md:px-2 bg-transparent">
 			<div class="flex items-center w-full max-w-full">
 				{#if $mobile && !$showSidebar}
 					<div
