@@ -46,26 +46,26 @@
 	<div slot="content">
 		<DropdownMenu className="w-[200px] z-999 transition">
 			<button
-				class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
 				type="button"
 				on:click={() => {
 					uploadFilesHandler();
 					show = false;
 				}}
 			>
-				<Clip />
+				<Clip className="size-3.5" />
 				<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
 			</button>
 
 			<button
-				class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
 				type="button"
 				on:click={() => {
 					screenCaptureHandler();
 					show = false;
 				}}
 			>
-				<Camera />
+				<Camera className="size-3.5" />
 				<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
 			</button>
 		</DropdownMenu>

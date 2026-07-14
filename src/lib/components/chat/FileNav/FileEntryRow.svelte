@@ -308,7 +308,7 @@
 				<DropdownMenu className="min-w-[150px] z-[9999999]">
 					<button
 						type="button"
-						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
 						on:click={(e) => {
 							e.stopPropagation();
 							const path =
@@ -322,7 +322,7 @@
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 20 20"
 							fill="currentColor"
-							class="size-4"
+							class="size-3.5"
 						>
 							<path
 								d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
@@ -336,7 +336,7 @@
 
 					<button
 						type="button"
-						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
 						on:click={(e) => {
 							e.stopPropagation();
 							const path =
@@ -348,31 +348,31 @@
 							});
 						}}
 					>
-						<Clipboard className="size-4" strokeWidth="1.5" />
+						<Clipboard className="size-3.5" strokeWidth="1.5" />
 						<div class="flex items-center">{$i18n.t('Copy Path')}</div>
 					</button>
 
 					<button
 						type="button"
-						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
 						on:click={(e) => {
 							e.stopPropagation();
 							startRename();
 						}}
 					>
-						<Pencil className="size-4" strokeWidth="1.5" />
+						<Pencil className="size-3.5" strokeWidth="1.5" />
 						<div class="flex items-center">{$i18n.t('Rename')}</div>
 					</button>
 
 					<button
 						type="button"
-						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition"
 						on:click={(e) => {
 							e.stopPropagation();
 							onDelete(`${currentPath}${entry.name}`, entry.name);
 						}}
 					>
-						<GarbageBin className="size-4" />
+						<GarbageBin className="size-3.5" />
 						<div class="flex items-center">{$i18n.t('Delete')}</div>
 					</button>
 				</DropdownMenu>

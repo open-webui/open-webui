@@ -54,21 +54,21 @@
 			{#if isProduction}
 				<Tooltip content={$i18n.t('Cannot delete the production version')} placement="top">
 					<div
-						class="flex gap-2 items-center px-3 py-1.5 text-sm rounded-xl opacity-40 cursor-not-allowed"
+						class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] opacity-40 cursor-not-allowed"
 					>
-						<GarbageBin />
+						<GarbageBin className="size-3.5" />
 						<div class="flex items-center">{$i18n.t('Delete')}</div>
 					</div>
 				</Tooltip>
 			{:else}
 				<button
-					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+					class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
 					on:click={() => {
 						show = false;
 						showDeleteConfirmDialog = true;
 					}}
 				>
-					<GarbageBin />
+					<GarbageBin className="size-3.5" />
 					<div class="flex items-center">{$i18n.t('Delete')}</div>
 				</button>
 			{/if}

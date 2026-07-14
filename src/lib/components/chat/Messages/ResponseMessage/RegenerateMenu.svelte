@@ -73,7 +73,7 @@
 			</div>
 			<hr class="border-gray-50/30 dark:border-gray-800/30 my-0.5 mx-1" />
 			<button
-				class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
 				on:click={() => {
 					onRegenerate();
 					show = false;
@@ -86,7 +86,7 @@
 					stroke-width="2"
 					aria-hidden="true"
 					stroke="currentColor"
-					class="w-4 h-4"
+					class="size-3.5"
 				>
 					<path
 						stroke-linecap="round"
@@ -98,22 +98,22 @@
 			</button>
 
 			<button
-				class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
 				on:click={() => {
 					onRegenerate($i18n.t('Add Details'));
 				}}
 			>
-				<LineSpace strokeWidth="2" />
+				<LineSpace className="size-3.5" strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('Add Details')}</div>
 			</button>
 
 			<button
-				class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
 				on:click={() => {
 					onRegenerate($i18n.t('More Concise'));
 				}}
 			>
-				<LineSpaceSmaller strokeWidth="2" />
+				<LineSpaceSmaller className="size-3.5" strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('More Concise')}</div>
 			</button>
 		</DropdownMenu>

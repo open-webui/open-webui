@@ -46,23 +46,23 @@
 		<DropdownMenu className="min-w-[170px]">
 			{#if onExport}
 				<button
-					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+					class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
 					on:click={() => {
 						onExport();
 					}}
 				>
-					<Download />
+					<Download className="size-3.5" />
 					<div class="flex items-center">{$i18n.t('Export')}</div>
 				</button>
 			{/if}
 
 			<button
-				class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
 				on:click={() => {
 					dispatch('delete');
 				}}
 			>
-				<GarbageBin />
+				<GarbageBin className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</button>
 		</DropdownMenu>
