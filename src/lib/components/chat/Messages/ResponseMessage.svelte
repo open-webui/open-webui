@@ -890,7 +890,7 @@
 				{#if !edit}
 					<div
 						bind:this={buttonsContainerElement}
-						class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
+						class="flex items-center justify-start overflow-x-auto whitespace-nowrap buttons text-gray-600 dark:text-gray-500 mt-0.5 [&>*]:shrink-0"
 					>
 						{#if message.done || siblings.length > 1}
 							{#if siblings.length > 1}
@@ -1341,7 +1341,8 @@
 												}}
 											>
 												<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
-													<div
+													<button
+														type="button"
 														aria-label={$i18n.t('Regenerate')}
 														class="{isLastMessage
 															? 'visible'
@@ -1362,7 +1363,7 @@
 																d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
 															/>
 														</svg>
-													</div>
+													</button>
 												</Tooltip>
 											</RegenerateMenu>
 										{:else}
@@ -1487,7 +1488,7 @@
 										>
 											<time
 												datetime={new Date(message.timestamp * 1000).toISOString()}
-												class="invisible group-hover:visible ml-1 text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
+												class="invisible group-hover:visible ml-1 shrink-0 whitespace-nowrap text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
 											>
 												{formatMessageTimestamp(message.timestamp * 1000)}
 											</time>

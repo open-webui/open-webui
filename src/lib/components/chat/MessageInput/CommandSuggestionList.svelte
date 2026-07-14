@@ -4,6 +4,7 @@
 	import Models from './Commands/Models.svelte';
 	import Skills from './Commands/Skills.svelte';
 	import Emojis from './Commands/Emojis.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 
 	export let char = '';
 	export let query = '';
@@ -52,10 +53,10 @@
 	}
 </script>
 
-<div
-	class="{(filteredItems ?? []).length > 0
+<DropdownMenu
+	className="{(filteredItems ?? []).length > 0
 		? ''
-		: 'hidden'} rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-72 p-1"
+		: 'hidden'} w-72 font-sans text-xs"
 	id="suggestions-container"
 >
 	<div class="overflow-y-auto scrollbar-thin max-h-60">
@@ -154,4 +155,4 @@
 			/>
 		{/if}
 	</div>
-</div>
+</DropdownMenu>

@@ -75,7 +75,6 @@
 	let triggerElement: HTMLElement | null = null;
 	let contentElement: HTMLElement | null = null;
 	let dropdownPosition = { top: 0, left: 0, maxHeight: undefined as number | undefined };
-	let isSmallViewport = false;
 	let positionFrame: number | undefined;
 	let settleTimers: number[] = [];
 
@@ -96,10 +95,6 @@
 			width: viewport?.width ?? window.innerWidth,
 			height: viewport?.height ?? window.innerHeight
 		};
-	};
-
-	const updateViewportSize = () => {
-		isSmallViewport = (window.visualViewport?.width ?? window.innerWidth) < 640;
 	};
 
 	const updatePosition = () => {
@@ -152,7 +147,6 @@
 	};
 
 	const scheduleSettledPositionUpdates = () => {
-		updateViewportSize();
 		for (const timer of settleTimers) window.clearTimeout(timer);
 		settleTimers = [];
 		schedulePositionUpdate();
@@ -556,7 +550,6 @@
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
 
-		updateViewportSize();
 		window.addEventListener('scroll', schedulePositionUpdate, true);
 		window.visualViewport?.addEventListener('resize', scheduleSettledPositionUpdates);
 		window.visualViewport?.addEventListener('scroll', schedulePositionUpdate);
@@ -649,7 +642,7 @@
 
 	let listScrollTop = 0;
 	let listContainer;
-	$: listViewportHeight = isSmallViewport ? 240 : 288;
+	$: listViewportHeight = Math.min(288, Math.max(96, (dropdownPosition.maxHeight ?? 352) - 64));
 
 	$: visibleStart = Math.max(0, Math.floor(listScrollTop / ITEM_HEIGHT) - OVERSCAN);
 	$: visibleEnd = Math.min(
