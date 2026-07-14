@@ -1,10 +1,13 @@
 """
 title: Relatorio de Ambientes Nidum
 author: Nidum
-version: 1.0.0
+version: 1.0.1
 description: Gera o relatorio do motor Identificador de Ambientes no modelo visual aprovado (HTML/CSS -> PDF via WeasyPrint), com foto embutida, selos de severidade, barra de confianca e a identidade Nidum. Devolve link de download nativo. So-ASCII no codigo; o CONTEUDO do PDF tem acentuacao correta (rotulos fixos via entidades HTML; texto do modelo vem acentuado).
-requirements: weasyprint, pillow
 changelog:
+  1.0.1:
+    - Remove o cabecalho 'requirements': weasyprint (62.3) e pillow (12.1.1) ja estao
+      na imagem (backend/requirements.txt). Evita reinstalacao no load, que estourava o
+      tempo de resposta ao publicar (IncompleteRead).
   1.0.0:
     - Primeira versao. Template derivado de Tec_Modelo_Visual_Relatorio_Ambientes_14072026_V1.
 """
