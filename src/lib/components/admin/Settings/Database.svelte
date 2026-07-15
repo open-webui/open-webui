@@ -50,7 +50,7 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
-	<div class="space-y-3 overflow-y-scroll scrollbar-hidden h-full">
+	<div class="space-y-3 flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5">
 		<input
 			id="config-json-input"
 			hidden

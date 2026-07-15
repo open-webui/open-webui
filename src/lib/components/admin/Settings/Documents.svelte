@@ -373,10 +373,10 @@
 	}}
 >
 	{#if RAGConfig}
-		<div class=" space-y-2.5 overflow-y-scroll scrollbar-hidden h-full pr-1.5">
+		<div class=" space-y-2.5 flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5">
 			<div class="">
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
@@ -1036,7 +1036,7 @@
 
 				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 					<div class="mb-3">
-						<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Embedding')}</div>
+						<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Embedding')}</div>
 
 						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
@@ -1250,7 +1250,7 @@
 				{/if}
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Retrieval')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Retrieval')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
@@ -1532,7 +1532,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Files')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Files')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
@@ -1644,7 +1644,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Integration')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Integration')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
@@ -1664,7 +1664,7 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Danger Zone')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Danger Zone')}</div>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 

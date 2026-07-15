@@ -111,10 +111,10 @@
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={submitHandler}
 >
-	<div class="space-y-3 overflow-y-scroll scrollbar-hidden h-full">
+	<div class="space-y-3 flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5">
 		{#if adminConfig !== null}
 			<div class="mb-3">
-				<div class="mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('User Access')}</div>
+				<div class="mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('User Access')}</div>
 
 				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 
@@ -237,7 +237,7 @@
 						</div>
 					{/if}
 				</div>
-				<div class=" mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Pending Accounts')}</div>
+				<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Pending Accounts')}</div>
 
 				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
@@ -502,7 +502,7 @@
 		</div>
 		{#if oauthConfig}
 			<div class="mb-3">
-				<div class="mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('OAuth / OIDC')}</div>
+				<div class="mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('OAuth / OIDC')}</div>
 
 				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
 

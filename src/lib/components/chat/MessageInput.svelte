@@ -1403,80 +1403,78 @@
 						{/if}
 
 						{#if showStatusPanel}
-							<div class="relative mx-2">
-								<button
-									type="button"
-									class="fixed inset-0 z-40 cursor-default bg-transparent"
-									aria-label={$i18n.t('Close')}
-									on:click={() => {
-										showStatusPanel = false;
-									}}
-								/>
-								<div
-									class="absolute bottom-full right-0 z-50 mb-1 w-80 max-w-[calc(100vw-1.5rem)] rounded-xl border border-gray-100 bg-white p-0.5 text-xs shadow-lg dark:border-gray-800 dark:bg-gray-850 dark:text-white"
-								>
-									<div class="max-h-[70dvh] overflow-y-auto px-1 py-0.5 text-xs">
-										<section>
-											<div class="rounded-xl px-1.5 py-1.5 text-gray-600 dark:text-gray-400">
-												<div class="flex h-5 items-center gap-3">
-													<span class="min-w-0 flex-1 truncate">Context usage</span>
-													<span
-														class="shrink-0 font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
-													>
-														{contextValue}
-													</span>
-												</div>
-												<div
-													class="mt-2 h-px overflow-hidden rounded-full bg-gray-100 dark:bg-white/8"
-												>
-													<div
-														class="h-full rounded-full bg-gray-300 dark:bg-white/20"
-														style={`width: ${contextBarPercent}%`}
-													></div>
-												</div>
-											</div>
+							<div
+								class="mx-1 mb-1 rounded-2xl border border-gray-50 bg-white text-xs dark:border-gray-850 dark:bg-gray-900"
+							>
+								<div class="flex items-center justify-between px-3 py-1.5">
+									<div class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
+										<span>Status</span>
+									</div>
 
-											{#if messageQueue.length}
-												<div
-													class="flex h-7 items-center gap-3 rounded-xl px-1.5 text-gray-600 dark:text-gray-400"
-												>
-													<span class="min-w-0 flex-1 truncate">Queued messages</span>
-													<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
-														{messageQueue.length}
-													</span>
-												</div>
-											{/if}
+									<button
+										type="button"
+										class="text-xs text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+										on:click={() => {
+											showStatusPanel = false;
+										}}
+									>
+										Close
+									</button>
+								</div>
 
-											{#if chatTasks.length}
-												<div
-													class="flex h-7 items-center gap-3 rounded-xl px-1.5 text-gray-600 dark:text-gray-400"
-												>
-													<span class="min-w-0 flex-1 truncate">Tasks</span>
-													<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
-														{chatTasks.length}
-													</span>
-												</div>
-											{/if}
-
-											<div
-												class="flex h-7 items-center gap-3 rounded-xl px-1.5 text-gray-600 dark:text-gray-400"
+								<div class="space-y-0.5 px-3 pb-2">
+									<div class="rounded-xl py-0.5 text-gray-600 dark:text-gray-400">
+										<div class="flex min-h-4 items-center gap-3">
+											<span class="min-w-0 flex-1 truncate">Context usage</span>
+											<span
+												class="shrink-0 font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
 											>
-												<span class="min-w-0 flex-1 truncate">Chat ID</span>
-												{#if chatId}
-													<button
-														type="button"
-														class="min-w-0 max-w-[11rem] truncate font-mono text-[0.625rem] text-gray-400 underline-offset-2 transition-colors duration-75 hover:text-gray-700 hover:underline dark:text-gray-600 dark:hover:text-gray-200"
-														on:click={copyStatusChatId}
-													>
-														{copiedStatusChatId ? $i18n.t('Copied') : chatId}
-													</button>
-												{:else}
-													<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
-														none
-													</span>
-												{/if}
-											</div>
-										</section>
+												{contextValue}
+											</span>
+										</div>
+										<div
+											class="mt-1.5 h-0.5 overflow-hidden rounded-full bg-gray-100 dark:bg-white/8"
+										>
+											<div
+												class="h-full rounded-full bg-gray-300 dark:bg-white/20"
+												style={`width: ${contextBarPercent}%`}
+											></div>
+										</div>
+									</div>
+
+									{#if messageQueue.length}
+										<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
+											<span class="min-w-0 flex-1 truncate">Queued messages</span>
+											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+												{messageQueue.length}
+											</span>
+										</div>
+									{/if}
+
+									{#if chatTasks.length}
+										<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
+											<span class="min-w-0 flex-1 truncate">Tasks</span>
+											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+												{chatTasks.length}
+											</span>
+										</div>
+									{/if}
+
+									<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
+										<span class="min-w-0 flex-1 truncate">Chat ID</span>
+										{#if chatId}
+											<button
+												type="button"
+												class="min-w-0 max-w-[18rem] truncate font-mono text-[0.625rem] text-gray-400 underline-offset-2 transition-colors duration-75 hover:text-gray-700 hover:underline dark:text-gray-600 dark:hover:text-gray-200"
+												on:click={copyStatusChatId}
+											>
+												{copiedStatusChatId ? $i18n.t('Copied') : chatId}
+											</button>
+										{:else}
+											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+												none
+											</span>
+										{/if}
 									</div>
 								</div>
 							</div>

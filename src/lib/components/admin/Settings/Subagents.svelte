@@ -57,8 +57,8 @@
 </script>
 
 <form class="flex h-full flex-col justify-between text-sm" on:submit|preventDefault={save}>
-	<div class="h-full overflow-y-auto scrollbar-hidden">
-		<div class="mt-0.5 mb-4 text-base font-normal">{$i18n.t('Sub-agents')}</div>
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5">
+		<div class="mt-0.5 mb-4 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Sub-agents')}</div>
 
 		{#if loading}
 			<div class="flex justify-center py-8"><Spinner className="size-6" /></div>
