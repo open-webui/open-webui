@@ -21,6 +21,8 @@
 	import Clipboard from '../icons/Clipboard.svelte';
 	import Check from '../icons/Check.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Modal from '../common/Modal.svelte';
+	import PromptEditor from './Prompts/PromptEditor.svelte';
 	import Search from '../icons/Search.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -49,6 +51,7 @@
 	let loading = false;
 
 	let showDeleteConfirm = false;
+	let showCreateModal = false;
 	let deletePrompt = null;
 
 	let tagsContainerElement: HTMLDivElement;
@@ -63,7 +66,9 @@
 			{
 				id: 'prompts-new',
 				label: $i18n.t('Create'),
-				href: '/workspace/prompts/create'
+				onClick: () => {
+					showCreateModal = true;
+				}
 			},
 			{
 				id: 'prompts-import',
@@ -153,6 +158,20 @@
 			},
 			false
 		);
+	};
+
+	const createPromptHandler = async (prompt) => {
+		const res = await createNewPrompt(localStorage.token, prompt).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Prompt created successfully'));
+			showCreateModal = false;
+			page = 1;
+			await getPromptList();
+		}
 	};
 
 	const cloneHandler = async (prompt) => {
@@ -256,6 +275,16 @@
 			{$i18n.t('This will delete')} <span class="  font-normal">{deletePrompt.command}</span>.
 		</div>
 	</DeleteConfirmDialog>
+
+	<Modal bind:show={showCreateModal} size="md">
+		<PromptEditor
+			modal={true}
+			onSubmit={createPromptHandler}
+			onCancel={() => {
+				showCreateModal = false;
+			}}
+		/>
+	</Modal>
 
 	<input
 		id="prompts-import-input"

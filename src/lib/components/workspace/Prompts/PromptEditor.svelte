@@ -34,6 +34,8 @@
 	export let prompt = null;
 	export let clone = false;
 	export let disabled = false;
+	export let modal = false;
+	export let onCancel: Function = () => {};
 
 	const i18n = getContext('i18n');
 
@@ -533,8 +535,27 @@
 	</div>
 {:else}
 	<!-- Create mode: Form -->
-	<div class="w-full max-h-full flex justify-center">
-		<form class="flex flex-col w-full mb-10" on:submit|preventDefault={submitHandler}>
+	<div class="w-full max-h-full">
+		{#if modal}
+			<div class="flex justify-between items-center dark:text-gray-100 px-5 pt-4 pb-2">
+				<h3 class="text-base font-normal">{$i18n.t('Create Prompt')}</h3>
+				<button
+					class="self-center shrink-0 ml-2"
+					aria-label={$i18n.t('Close')}
+					type="button"
+					on:click={() => {
+						onCancel();
+					}}
+				>
+					<XMark className="size-5" />
+				</button>
+			</div>
+		{/if}
+
+		<form
+			class="flex flex-col w-full {modal ? 'px-5 pb-3' : 'mb-10'}"
+			on:submit|preventDefault={submitHandler}
+		>
 			<div class="mb-2">
 				<Tooltip
 					content={`${$i18n.t('Only alphanumeric characters and hyphens are allowed')} - ${$i18n.t('Activate this command by typing "/{{COMMAND}}" to chat input.', { COMMAND: command })}`}
@@ -543,7 +564,7 @@
 					<div class="flex flex-col w-full">
 						<div class="flex items-center">
 							<input
-								class="text-2xl w-full bg-transparent outline-hidden"
+								class="{modal ? 'text-base' : 'text-2xl'} w-full bg-transparent outline-hidden"
 								placeholder={$i18n.t('Name')}
 								bind:value={name}
 								required
@@ -606,9 +627,23 @@
 				</div>
 			</div>
 
-			<div class="my-4 flex justify-end pb-20">
+			<div class="flex justify-end {modal ? 'pt-3 gap-2' : 'my-4 pb-20'}">
+				{#if modal}
+					<button
+						class="px-3 py-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition"
+						type="button"
+						on:click={() => {
+							onCancel();
+						}}
+					>
+						{$i18n.t('Cancel')}
+					</button>
+				{/if}
+
 				<button
-					class="text-sm w-full lg:w-fit px-4 py-2 transition rounded-xl bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black flex w-full justify-center"
+					class="{modal
+						? 'px-3.5 py-1.5 text-sm rounded-full w-fit'
+						: 'text-sm w-full lg:w-fit px-4 py-2 rounded-xl'} transition bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black flex justify-center"
 					type="submit"
 					disabled={loading}
 				>

@@ -232,7 +232,7 @@
 						<Knowledge bind:selectedItems={data.files}>
 							<div slot="label">
 								<div class="flex w-full justify-between">
-									<div class=" mb-2 text-xs text-gray-500">
+									<div class=" text-xs text-gray-500">
 										{$i18n.t('Knowledge')}
 									</div>
 								</div>
