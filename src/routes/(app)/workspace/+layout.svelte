@@ -19,23 +19,15 @@
 	import { getSkillItems } from '$lib/apis/skills';
 	import { getToolList } from '$lib/apis/tools';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Dropdown from '$lib/components/common/Dropdown.svelte';
-	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Sidebar from '$lib/components/icons/Sidebar.svelte';
-	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
-	import DocumentArrowDown from '$lib/components/icons/DocumentArrowDown.svelte';
-	import DocumentArrowUp from '$lib/components/icons/DocumentArrowUp.svelte';
-	import Link from '$lib/components/icons/Link.svelte';
-	import Pencil from '$lib/components/icons/Pencil.svelte';
+	import SplitCreateButton from '$lib/components/common/SplitCreateButton.svelte';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	let loaded = false;
 	let lastPath = '';
 	let activeWorkspaceSection = '';
-	let showCreateMenu = false;
 	let visibleActions = [];
-	let primaryCreateAction = null;
 
 	$: if ($page.url.pathname !== lastPath) {
 		lastPath = $page.url.pathname;
@@ -48,27 +40,8 @@
 
 	$: activeWorkspaceSection = $page.url.pathname.split('/')[2] ?? '';
 	$: visibleActions = $workspaceActions.filter((action) => action.visible ?? true);
-	$: primaryCreateAction =
-		visibleActions.find((action) => action.id.endsWith('-new')) ?? visibleActions[0] ?? null;
 
 	const getCount = (res: any) => res?.total ?? (Array.isArray(res) ? res.length : null);
-
-	const runWorkspaceAction = async (action) => {
-		if (!action) return;
-		if (action.href) {
-			await goto(action.href);
-		} else {
-			await action.onClick?.();
-		}
-	};
-
-	const getActionIcon = (id: string) => {
-		if (id.endsWith('-new')) return Pencil;
-		if (id.endsWith('-import-link')) return Link;
-		if (id.endsWith('-import')) return DocumentArrowUp;
-		if (id.endsWith('-export')) return DocumentArrowDown;
-		return Pencil;
-	};
 
 	const loadWorkspaceCounts = async () => {
 		const canViewModels = $user?.role === 'admin' || $user?.permissions?.workspace?.models;
@@ -168,7 +141,7 @@
 
 				<div class="flex w-full items-center">
 					<div
-						class="flex min-w-0 items-center gap-0.5 md:gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
+						class="flex min-w-0 mr-1.5 items-center gap-0.5 md:gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
 					>
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
 							<a
@@ -257,58 +230,7 @@
 					</div>
 
 					<div class="ml-auto flex shrink-0 items-center gap-1">
-						{#if visibleActions.length}
-							<div
-								class="ml-1 flex overflow-hidden rounded-lg bg-gray-50 text-xs text-gray-900 transition ring-1 ring-gray-200 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800"
-							>
-								<button
-									class="px-2.5 py-1 transition hover:bg-gray-100 dark:hover:bg-gray-800"
-									on:click={() => {
-										runWorkspaceAction(primaryCreateAction);
-									}}
-								>
-									{$i18n.t('Create')}
-								</button>
-
-								<Dropdown bind:show={showCreateMenu} align="end" sideOffset={6}>
-									<button
-										class="flex items-center border-l border-gray-200 px-1.5 py-1 transition hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
-										aria-label={$i18n.t('Open create menu')}
-									>
-										<ChevronDown className="size-2.5" strokeWidth="2.5" />
-									</button>
-
-									<div slot="content">
-										<DropdownMenu className="min-w-[170px]">
-											{#each visibleActions as action (action.id)}
-												{@const Icon = getActionIcon(action.id)}
-												{#if action.href}
-													<a
-														href={action.href}
-														on:click={() => {
-															showCreateMenu = false;
-														}}
-													>
-														<Icon className="size-3.5" />
-														<span class="self-center truncate">{action.label}</span>
-													</a>
-												{:else}
-													<button
-														on:click={async () => {
-															await action.onClick?.();
-															showCreateMenu = false;
-														}}
-													>
-														<Icon className="size-3.5" />
-														<span class="self-center truncate">{action.label}</span>
-													</button>
-												{/if}
-											{/each}
-										</DropdownMenu>
-									</div>
-								</Dropdown>
-							</div>
-						{/if}
+						<SplitCreateButton actions={visibleActions} />
 					</div>
 				</div>
 

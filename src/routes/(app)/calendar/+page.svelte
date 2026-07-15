@@ -15,7 +15,6 @@
 	import CalendarEventModal from '$lib/components/calendar/CalendarEventModal.svelte';
 	import CreateCalendarModal from '$lib/components/calendar/CreateCalendarModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SidebarIcon from '$lib/components/icons/Sidebar.svelte';
 	import Select from '$lib/components/common/Select.svelte';
@@ -331,24 +330,10 @@
 						</Select>
 
 						<button
-							class="ml-1 px-2 py-1.5 text-xs gap-1 rounded-xl bg-black text-white dark:bg-white dark:text-black transition text-sm flex items-center"
+							class="ml-1 rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-900 transition ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800 dark:hover:bg-gray-800"
 							on:click={handleNewEvent}
 						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="2.5"
-								stroke="currentColor"
-								class="size-3"
-								><path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M12 4.5v15m7.5-7.5h-15"
-								/></svg
-							>
-
-							<span class="hidden sm:inline">{$i18n.t('New Event')}</span>
+							{$i18n.t('Create')}
 						</button>
 					</div>
 				</div>

@@ -106,7 +106,7 @@
 		onSubmit={addGroupHandler}
 	/>
 
-	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3">
+	<div class="flex flex-col gap-1 mt-0.5 mb-3">
 		<div class="flex justify-between items-center">
 			<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
 				<div>
@@ -145,8 +145,10 @@
 		</div>
 	</div>
 
-	<div class="space-y-1">
-		<div class="flex h-8 flex-1 items-center w-full gap-2">
+	<div
+		class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30"
+	>
+		<div class="px-2.5 flex h-8 flex-1 items-center w-full gap-2">
 			<div class="flex min-w-0 flex-1">
 				<div class="self-center ml-1 mr-3">
 					<Search className="size-3.5" />
@@ -199,7 +201,7 @@
 		</div>
 
 		{#if filteredGroups.length !== 0}
-			<div class="my-1 grid grid-cols-1 gap-y-0.5">
+			<div class="mt-1 grid grid-cols-1 px-2">
 				{#each filteredGroups as group}
 					<GroupItem {group} {setGroups} {defaultPermissions} />
 				{/each}

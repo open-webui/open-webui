@@ -34,6 +34,7 @@
 	import {
 		createNewNote,
 		deleteNoteById,
+		getNotes,
 		getNoteById,
 		getNoteList,
 		searchNotes,
@@ -46,7 +47,6 @@
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Search from '../icons/Search.svelte';
-	import Plus from '../icons/Plus.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
@@ -55,10 +55,13 @@
 	import DropdownOptions from '../common/DropdownOptions.svelte';
 	import Loader from '../common/Loader.svelte';
 	import SidebarIcon from '../icons/Sidebar.svelte';
+	import SplitCreateButton from '../common/SplitCreateButton.svelte';
 
 	let loaded = false;
 
 	let importFiles = '';
+	let importDocumentFiles: FileList | null = null;
+	let notesImportInputElement: HTMLInputElement;
 	let selectedNote = null;
 	let showDeleteConfirm = false;
 
@@ -79,6 +82,15 @@
 
 	let itemsLoading = false;
 	let allItemsLoaded = false;
+
+	type NoteExportItem = {
+		title?: string;
+		data?: {
+			content?: {
+				md?: string;
+			};
+		};
+	};
 
 	const downloadHandler = async (type) => {
 		// Fetch the full note since the list response may not contain full content
@@ -116,49 +128,76 @@
 		}
 	};
 
-	const inputFilesHandler = async (inputFiles) => {
-		// Check if all the file is a markdown file and extract name and content
+	const inputFilesHandler = async (inputFiles: File[]) => {
+		let imported = false;
 
 		for (const file of inputFiles) {
-			if (file.type !== 'text/markdown') {
-				toast.error($i18n.t('Only markdown files are allowed'));
+			const isSupportedFile =
+				file.type === 'text/markdown' ||
+				file.type === 'text/plain' ||
+				/\.(md|txt)$/i.test(file.name);
+
+			if (!isSupportedFile) {
+				toast.error($i18n.t('Only TXT and Markdown files are allowed'));
 				return;
 			}
 
-			const reader = new FileReader();
-			reader.onload = async (event) => {
-				const content = event.target.result;
-				let name = file.name.replace(/\.md$/, '');
+			const content = await file.text();
+			const name = file.name.replace(/\.(md|txt)$/i, '');
 
-				if (typeof content !== 'string') {
-					toast.error($i18n.t('Invalid file content'));
-					return;
-				}
+			const res = await createNewNote(localStorage.token, {
+				title: name,
+				data: {
+					content: {
+						json: null,
+						html: marked.parse(content ?? ''),
+						md: content
+					}
+				},
+				meta: null,
+				access_grants: []
+			}).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
 
-				// Create a new note with the content
-				const res = await createNewNote(localStorage.token, {
-					title: name,
-					data: {
-						content: {
-							json: null,
-							html: marked.parse(content ?? ''),
-							md: content
-						}
-					},
-					meta: null,
-					access_grants: []
-				}).catch((error) => {
-					toast.error(`${error}`);
-					return null;
-				});
-
-				if (res) {
-					init();
-				}
-			};
-
-			reader.readAsText(file);
+			if (res) {
+				imported = true;
+			}
 		}
+
+		if (imported) {
+			init();
+		}
+	};
+
+	const getNoteExportContent = (notes: NoteExportItem[], type: 'md' | 'txt') => {
+		return notes
+			.map((note) => {
+				const title = note.title ?? $i18n.t('Untitled');
+				const content = note.data?.content?.md ?? '';
+
+				if (type === 'md') {
+					return `# ${title}\n\n${content}`;
+				}
+
+				return `${title}\n\n${content}`;
+			})
+			.join(type === 'md' ? '\n\n---\n\n' : '\n\n-----\n\n');
+	};
+
+	const exportNotes = async (type: 'md' | 'txt') => {
+		const allNotes = await getNotes(localStorage.token, true).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (!allNotes) return;
+
+		const blob = new Blob([getNoteExportContent(allNotes, type)], {
+			type: type === 'md' ? 'text/markdown' : 'text/plain'
+		});
+		saveAs(blob, `notes-export-${Date.now()}.${type}`);
 	};
 
 	const reset = () => {
@@ -326,6 +365,29 @@
 
 <div id="notes-container" class="w-full min-h-full h-full">
 	{#if loaded}
+		<input
+			id="notes-import-input"
+			bind:this={notesImportInputElement}
+			bind:files={importDocumentFiles}
+			type="file"
+			accept=".txt,.md,text/plain,text/markdown"
+			multiple
+			hidden
+			on:change={async () => {
+				if (!importDocumentFiles || importDocumentFiles.length === 0) return;
+
+				try {
+					await inputFilesHandler(Array.from(importDocumentFiles));
+					toast.success($i18n.t('Imported notes successfully'));
+				} catch (error) {
+					toast.error(`${error}`);
+				} finally {
+					importDocumentFiles = null;
+					notesImportInputElement.value = '';
+				}
+			}}
+		/>
+
 		<DeleteConfirmDialog
 			bind:show={showDeleteConfirm}
 			title={$i18n.t('Delete note?')}
@@ -370,20 +432,36 @@
 				</div>
 
 				<div class="ml-auto flex items-center gap-1">
-					<button
-						class="ml-1 px-2 py-1.5 text-xs gap-1 rounded-xl bg-black text-white dark:bg-white dark:text-black transition flex items-center"
-						on:click={async () => {
-							const res = await createNoteHandler(dayjs().format('YYYY-MM-DD'));
+					<SplitCreateButton
+						actions={[
+							{
+								id: 'notes-new',
+								label: $i18n.t('Create'),
+								onClick: async () => {
+									const res = await createNoteHandler(dayjs().format('YYYY-MM-DD'));
 
-							if (res) {
-								goto(`/notes/${res.id}`);
+									if (res) {
+										goto(`/notes/${res.id}`);
+									}
+								}
+							},
+							{
+								id: 'notes-import',
+								label: $i18n.t('Import TXT/MD'),
+								onClick: () => notesImportInputElement?.click()
+							},
+							{
+								id: 'notes-export-md',
+								label: $i18n.t('Export MD'),
+								onClick: () => exportNotes('md')
+							},
+							{
+								id: 'notes-export-txt',
+								label: $i18n.t('Export TXT'),
+								onClick: () => exportNotes('txt')
 							}
-						}}
-					>
-						<Plus className="size-3" strokeWidth="2.5" />
-
-						<div class="hidden md:block md:ml-1 text-xs">{$i18n.t('New Note')}</div>
-					</button>
+						]}
+					/>
 				</div>
 			</div>
 		</div>
@@ -699,14 +777,14 @@
 						</div>
 					</div>
 				{:else}
-					<div class="w-full h-full flex flex-col items-center justify-center">
-						<div class="py-20 text-center">
+					<div class="flex min-h-[calc(100dvh-13rem)] w-full flex-col items-center justify-center">
+						<div class="text-center">
 							<div class=" text-sm text-gray-400 dark:text-gray-600">
 								{$i18n.t('No Notes')}
 							</div>
 
 							<div class="mt-1 text-xs text-gray-300 dark:text-gray-700">
-								{$i18n.t('Create your first note by clicking on the plus button below.')}
+								{$i18n.t('Create your first note from the Create menu.')}
 							</div>
 						</div>
 					</div>

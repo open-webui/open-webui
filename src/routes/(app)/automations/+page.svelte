@@ -6,12 +6,15 @@
 	import { WEBUI_NAME, mobile, showSidebar, user, config } from '$lib/stores';
 
 	import {
+		createAutomation,
 		getAutomationItems,
 		toggleAutomationById,
 		runAutomationById,
 		deleteAutomationById,
+		type AutomationForm,
 		type AutomationResponse
 	} from '$lib/apis/automations';
+	import fileSaver from 'file-saver';
 
 	import AutomationModal from '$lib/components/AutomationModal.svelte';
 	import AutomationMenu from '$lib/components/automations/AutomationMenu.svelte';
@@ -19,7 +22,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
+	import SplitCreateButton from '$lib/components/common/SplitCreateButton.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import SidebarIcon from '$lib/components/icons/Sidebar.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
@@ -32,6 +35,8 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
 	import Minus from '$lib/components/icons/Minus.svelte';
+
+	const { saveAs } = fileSaver;
 
 	const i18n = getContext('i18n');
 
@@ -51,6 +56,8 @@
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	let page = 1;
+	let importFiles: FileList | null = null;
+	let automationsImportInputElement: HTMLInputElement;
 
 	const handleSearchInput = () => {
 		if (!loaded) return;
@@ -157,6 +164,69 @@
 		showCreateModal = true;
 	};
 
+	const getAllAutomations = async () => {
+		let currentPage = 1;
+		let allAutomations: AutomationResponse[] = [];
+		let totalAutomations = 0;
+
+		do {
+			const res = await getAutomationItems(localStorage.token, null, 'all', currentPage);
+			const pageItems = res?.items ?? [];
+			totalAutomations = res?.total ?? pageItems.length;
+			allAutomations = [...allAutomations, ...pageItems];
+			currentPage += 1;
+
+			if (pageItems.length === 0) break;
+		} while (allAutomations.length < totalAutomations);
+
+		return allAutomations;
+	};
+
+	const toAutomationForm = (automation: AutomationResponse): AutomationForm => ({
+		name: automation.name,
+		data: automation.data,
+		meta: automation.meta ?? undefined,
+		is_active: automation.is_active
+	});
+
+	const exportAutomations = async () => {
+		const allAutomations = await getAllAutomations().catch((err) => {
+			toast.error(`${err}`);
+			return null;
+		});
+
+		if (!allAutomations) return;
+
+		const blob = new Blob([JSON.stringify(allAutomations.map(toAutomationForm), null, 2)], {
+			type: 'application/json'
+		});
+		saveAs(blob, `automations-export-${Date.now()}.json`);
+	};
+
+	const importAutomations = async (file: File) => {
+		const text = await file.text();
+		const savedAutomations = JSON.parse(text);
+		const automationItems = Array.isArray(savedAutomations)
+			? savedAutomations
+			: (savedAutomations?.automations ?? []);
+
+		if (!Array.isArray(automationItems)) {
+			throw new Error($i18n.t('Invalid JSON format'));
+		}
+
+		for (const automation of automationItems) {
+			await createAutomation(localStorage.token, {
+				name: automation.name,
+				data: automation.data,
+				meta: automation.meta ?? undefined,
+				is_active: automation.is_active ?? true
+			});
+		}
+
+		page = 1;
+		await getAutomationList();
+	};
+
 	const formatRRule = (rrule: string): string => {
 		// Detect one-time schedule (ONCE)
 		if (rrule.includes('COUNT=1')) {
@@ -240,6 +310,28 @@
 	</div>
 </DeleteConfirmDialog>
 
+<input
+	id="automations-import-input"
+	bind:this={automationsImportInputElement}
+	bind:files={importFiles}
+	type="file"
+	accept=".json"
+	hidden
+	on:change={async () => {
+		if (!importFiles || importFiles.length === 0) return;
+
+		try {
+			await importAutomations(importFiles[0]);
+			toast.success($i18n.t('Imported automations successfully'));
+		} catch (error) {
+			toast.error(`${error}`);
+		} finally {
+			importFiles = null;
+			automationsImportInputElement.value = '';
+		}
+	}}
+/>
+
 <AutomationModal
 	bind:show={showCreateModal}
 	automation={null}
@@ -291,18 +383,28 @@
 						</div>
 
 						<div class="ml-auto flex items-center gap-1">
-							<button
-								class="ml-1 px-2 py-1.5 text-xs gap-1 rounded-xl bg-black text-white dark:bg-white dark:text-black transition flex items-center"
-								on:click={() => {
-									cloneFrom = null;
-									showCreateModal = true;
-								}}
-							>
-								<Plus className="size-3" strokeWidth="2.5" />
-								<div class="hidden md:block md:ml-1 text-xs">
-									{$i18n.t('New Automation')}
-								</div>
-							</button>
+							<SplitCreateButton
+								actions={[
+									{
+										id: 'automations-new',
+										label: $i18n.t('Create'),
+										onClick: () => {
+											cloneFrom = null;
+											showCreateModal = true;
+										}
+									},
+									{
+										id: 'automations-import',
+										label: $i18n.t('Import JSON'),
+										onClick: () => automationsImportInputElement?.click()
+									},
+									{
+										id: 'automations-export',
+										label: $i18n.t('Export JSON'),
+										onClick: exportAutomations
+									}
+								]}
+							/>
 						</div>
 					</div>
 				</div>
@@ -417,11 +519,13 @@
 					</div>
 
 					{#if automations === null || loading}
-						<div class="w-full h-full flex justify-center items-center my-16 mb-24">
+						<div class="flex min-h-[calc(100dvh-13rem)] w-full items-center justify-center">
 							<Spinner className="size-5" />
 						</div>
 					{:else if (automations ?? []).length === 0}
-						<div class="w-full h-full flex flex-col justify-center items-center my-16 mb-24">
+						<div
+							class="flex min-h-[calc(100dvh-13rem)] w-full flex-col items-center justify-center"
+						>
 							<div class="max-w-md text-center">
 								<div class="text-3xl mb-3">⚡</div>
 								<div class="text-lg font-normal mb-1">

@@ -63,7 +63,7 @@
 
 				<div class="">
 					<div
-						class="flex gap-0.5 md:gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
+						class="flex gap-0.5 md:gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent pt-1 touch-auto pointer-events-auto"
 					>
 						<a
 							draggable="false"

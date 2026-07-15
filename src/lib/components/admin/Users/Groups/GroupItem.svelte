@@ -67,7 +67,7 @@
 />
 
 <button
-	class="group flex cursor-pointer text-left w-full px-2.5 py-2 rounded-2xl border-b border-gray-100/60 last:border-b-0 hover:bg-gray-50/70 dark:border-gray-850/60 dark:hover:bg-gray-850/50 transition"
+	class="group flex cursor-pointer text-left w-full px-2.5 py-2 rounded-xl border-b border-gray-100/60 last:border-b-0 hover:bg-gray-50/70 dark:border-gray-850/60 dark:hover:bg-gray-850/50 transition"
 	on:click={() => {
 		showEdit = true;
 	}}

@@ -22,7 +22,9 @@
 
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import ItemMenu from './Knowledge/ItemMenu.svelte';
+	import CreateKnowledgeBase from './Knowledge/CreateKnowledgeBase.svelte';
 	import Badge from '../common/Badge.svelte';
+	import Modal from '../common/Modal.svelte';
 	import Search from '../icons/Search.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -46,6 +48,7 @@
 
 	let loaded = false;
 	let showDeleteConfirm = false;
+	let showCreateModal = false;
 	let tagsContainerElement: HTMLDivElement;
 
 	let selectedItem: KnowledgeListItem | null = null;
@@ -67,7 +70,9 @@
 			{
 				id: 'knowledge-new',
 				label: $i18n.t('Create'),
-				href: '/workspace/knowledge/create'
+				onClick: () => {
+					showCreateModal = true;
+				}
 			}
 		]);
 	}
@@ -196,6 +201,15 @@
 			deleteHandler(selectedItem);
 		}}
 	/>
+
+	<Modal bind:show={showCreateModal} size="sm">
+		<CreateKnowledgeBase
+			modal={true}
+			onBack={() => {
+				showCreateModal = false;
+			}}
+		/>
+	</Modal>
 
 	<div class="space-y-1">
 		<div class="flex h-8 w-full items-center gap-2">
