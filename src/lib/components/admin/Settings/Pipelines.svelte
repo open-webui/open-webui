@@ -20,6 +20,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
+	import AdminSettingSection from './AdminSettingSection.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
@@ -38,24 +39,27 @@
 
 	let valves: any = null;
 	let valves_spec: any = null;
-	let selectedPipelineIdx: number | null = null;
+	let selectedPipelineIdx = 0;
 
 	let pipelineDownloadUrl = '';
 	const inputClass =
 		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const actionButtonClass =
-		'rounded-lg px-2 py-1 text-xs text-gray-500 transition-colors hover:bg-black/5 hover:text-gray-900 disabled:opacity-50 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-white';
-	const iconButtonClass =
-		'flex size-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 disabled:opacity-50 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white';
+		'shrink-0 text-xs text-gray-500 transition-colors hover:text-gray-900 disabled:opacity-50 dark:text-gray-500 dark:hover:text-white';
 	const mutedMessageClass = 'text-xs text-gray-400 dark:text-gray-600';
 
 	const updateHandler = async () => {
+		if (!pipelines) {
+			toast.error($i18n.t('No valves to update'));
+			return;
+		}
+
 		const pipeline = pipelines[selectedPipelineIdx];
 
 		if (pipeline && (pipeline?.valves ?? false)) {
 			for (const property in valves_spec.properties) {
 				if (valves_spec.properties[property]?.type === 'array') {
-					valves[property] = (valves[property] ?? '').split(',').map((v) => v.trim());
+					valves[property] = (valves[property] ?? '').split(',').map((v: string) => v.trim());
 				}
 			}
 
@@ -86,7 +90,11 @@
 		}
 	};
 
-	const getValves = async (idx) => {
+	const getValves = async (idx: number) => {
+		if (!pipelines?.[idx]) {
+			return;
+		}
+
 		valves = null;
 		valves_spec = null;
 
@@ -113,11 +121,12 @@
 		valves = null;
 		valves_spec = null;
 
-		if (PIPELINES_LIST.length > 0) {
+		if ((PIPELINES_LIST ?? []).length > 0) {
 			console.debug(selectedPipelinesUrlIdx);
-			pipelines = await getPipelines(localStorage.token, selectedPipelinesUrlIdx);
+			const loadedPipelines = await getPipelines(localStorage.token, selectedPipelinesUrlIdx);
+			pipelines = loadedPipelines;
 
-			if (pipelines.length > 0) {
+			if (loadedPipelines.length > 0) {
 				selectedPipelineIdx = 0;
 				await getValves(selectedPipelineIdx);
 			}
@@ -186,19 +195,26 @@
 		}
 
 		pipelineFiles = null;
-		const pipelineUploadInputElement = document.getElementById('pipelines-upload-input');
+		const pipelineUploadInputElement = document.getElementById(
+			'pipelines-upload-input'
+		) as HTMLInputElement | null;
 
 		if (pipelineUploadInputElement) {
-			pipelineUploadInputElement.value = null;
+			pipelineUploadInputElement.value = '';
 		}
 
 		uploading = false;
 	};
 
 	const deletePipelineHandler = async () => {
+		const pipeline = pipelines?.[selectedPipelineIdx];
+		if (!pipeline) {
+			return;
+		}
+
 		const res = await deletePipeline(
 			localStorage.token,
-			pipelines[selectedPipelineIdx].id,
+			pipeline.id,
 			selectedPipelinesUrlIdx
 		).catch((error) => {
 			toast.error(`${error}`);
@@ -223,8 +239,9 @@
 		PIPELINES_LIST = await getPipelinesList(localStorage.token);
 		console.log(PIPELINES_LIST);
 
-		if (PIPELINES_LIST.length > 0) {
-			selectedPipelinesUrlIdx = PIPELINES_LIST[0]['idx'].toString();
+		const pipelinesList = PIPELINES_LIST ?? [];
+		if (pipelinesList.length > 0) {
+			selectedPipelinesUrlIdx = pipelinesList[0]['idx'].toString();
 		}
 
 		await setPipelines();
@@ -250,8 +267,11 @@
 					hidden
 				/>
 
-				<div class="flex flex-col gap-2.5">
-					<AdminSettingField label={$i18n.t('Pipeline URL')}>
+				<AdminSettingSection title={$i18n.t('Source')} first>
+					<AdminSettingField
+						label={$i18n.t('Pipeline URL')}
+						description={$i18n.t('Select the Pipelines server to manage.')}
+					>
 						<SettingsSelect
 							bind:value={selectedPipelinesUrlIdx}
 							className="w-full"
@@ -273,7 +293,10 @@
 						</SettingsSelect>
 					</AdminSettingField>
 
-					<AdminSettingField label={$i18n.t('Upload Pipeline')}>
+					<AdminSettingField
+						label={$i18n.t('Upload Pipeline')}
+						description={$i18n.t('Upload a local Python pipeline file to the selected server.')}
+					>
 						<div class="flex gap-2">
 							<button
 								class="h-7 flex-1 rounded-lg border border-dashed border-gray-100/50 bg-transparent px-2 text-left text-xs text-gray-500 transition-colors hover:bg-black/5 hover:text-gray-900 dark:border-white/[0.04] dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-white"
@@ -324,10 +347,15 @@
 							</button>
 						</div>
 					</AdminSettingField>
+				</AdminSettingSection>
 
-					{#if pipelines !== null}
-						{#if pipelines.length > 0}
-							<AdminSettingField label={$i18n.t('Pipeline')}>
+				{#if pipelines !== null}
+					{#if pipelines.length > 0}
+						<AdminSettingSection title={$i18n.t('Pipelines')}>
+							<AdminSettingField
+								label={$i18n.t('Pipeline')}
+								description={$i18n.t('Select an installed pipeline to configure or remove.')}
+							>
 								<div class="flex gap-2">
 									<SettingsSelect
 										bind:value={selectedPipelineIdx}
@@ -356,12 +384,17 @@
 									</button>
 								</div>
 							</AdminSettingField>
+						</AdminSettingSection>
 
+						<AdminSettingSection title={$i18n.t('Valves')}>
 							{#if pipelines[selectedPipelineIdx ?? 0]?.valves}
-								{#if valves}
+								{#if valves && valves_spec}
 									{#each Object.keys(valves_spec.properties) as property}
 										<div>
-											<AdminSettingRow label={valves_spec.properties[property].title}>
+											<AdminSettingRow
+												label={valves_spec.properties[property].title}
+												description={valves_spec.properties[property]?.description ?? ''}
+											>
 												<button
 													class={actionButtonClass}
 													type="button"
@@ -407,22 +440,28 @@
 										</div>
 									{/each}
 								{:else}
-									<Spinner className="size-5" />
+									<div class="flex justify-center py-2">
+										<Spinner className="size-4" />
+									</div>
 								{/if}
 							{:else}
 								<div class={mutedMessageClass}>{$i18n.t('No valves')}</div>
 							{/if}
-						{:else}
-							<div class={mutedMessageClass}>{$i18n.t('Pipelines Not Detected')}</div>
-						{/if}
+						</AdminSettingSection>
 					{:else}
-						<div class="flex justify-center py-4">
-							<Spinner className="size-4" />
-						</div>
+						<AdminSettingSection title={$i18n.t('Pipelines')}>
+							<div class={mutedMessageClass}>{$i18n.t('Pipelines Not Detected')}</div>
+						</AdminSettingSection>
 					{/if}
-				</div>
+				{:else}
+					<div class="flex justify-center py-4">
+						<Spinner className="size-4" />
+					</div>
+				{/if}
 			{:else}
-				<div class={mutedMessageClass}>{$i18n.t('Pipelines Not Detected')}</div>
+				<AdminSettingSection title={$i18n.t('Source')} first>
+					<div class={mutedMessageClass}>{$i18n.t('Pipelines Not Detected')}</div>
+				</AdminSettingSection>
 			{/if}
 		{:else}
 			<div class="flex justify-center h-full">

@@ -154,7 +154,7 @@
 			<div class="text-xs text-gray-400 dark:text-gray-500">
 				{$i18n.t('Created by')}
 				<a class="text-gray-500 dark:text-gray-400" href="https://github.com/tjbck" target="_blank"
-					>Timothy J. Baek</a
+					>Tim J. Baek</a
 				>
 			</div>
 		</UserSettingSection>

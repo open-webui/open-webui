@@ -41,8 +41,6 @@
 	let playbackRate = 1;
 	const inputClass =
 		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
-	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
 	const getVoices = async () => {
 		if (TTSEngine === 'browser-kokoro') {
@@ -80,13 +78,13 @@
 		}
 	};
 
-	const toggleResponseAutoPlayback = async () => {
-		responseAutoPlayback = !responseAutoPlayback;
+	const setResponseAutoPlayback = async (enabled: boolean) => {
+		responseAutoPlayback = enabled;
 		saveSettings({ responseAutoPlayback: responseAutoPlayback });
 	};
 
-	const toggleSpeechAutoSend = async () => {
-		speechAutoSend = !speechAutoSend;
+	const setSpeechAutoSend = async (enabled: boolean) => {
+		speechAutoSend = enabled;
 		saveSettings({ speechAutoSend: speechAutoSend });
 	};
 
@@ -231,17 +229,13 @@
 					'Send transcribed voice input immediately after speech recognition finishes.'
 				)}
 			>
-				<button
-					class={actionButtonClass}
-					on:click={() => {
-						toggleSpeechAutoSend();
+				<Switch
+					state={speechAutoSend}
+					ariaLabel={$i18n.t('Instant Auto-Send After Voice Transcription')}
+					on:change={(event) => {
+						setSpeechAutoSend(event.detail);
 					}}
-					type="button"
-					role="switch"
-					aria-checked={speechAutoSend}
-				>
-					{speechAutoSend === true ? $i18n.t('On') : $i18n.t('Off')}
-				</button>
+				/>
 			</UserSettingRow>
 		</UserSettingSection>
 
@@ -283,17 +277,13 @@
 				label={$i18n.t('Auto-Playback Response')}
 				description={$i18n.t('Play assistant responses aloud automatically.')}
 			>
-				<button
-					class={actionButtonClass}
-					on:click={() => {
-						toggleResponseAutoPlayback();
+				<Switch
+					state={responseAutoPlayback}
+					ariaLabel={$i18n.t('Auto-Playback Response')}
+					on:change={(event) => {
+						setResponseAutoPlayback(event.detail);
 					}}
-					type="button"
-					role="switch"
-					aria-checked={responseAutoPlayback}
-				>
-					{responseAutoPlayback === true ? $i18n.t('On') : $i18n.t('Off')}
-				</button>
+				/>
 			</UserSettingRow>
 
 			<UserSettingRow

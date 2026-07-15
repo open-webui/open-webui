@@ -14,6 +14,7 @@
 	import UserSettingRow from './UserSettingRow.svelte';
 	import UserSettingSection from './UserSettingSection.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 	export let saveSettings: Function;
 	export let getModels: Function;
 
@@ -33,13 +34,14 @@
 	const actionButtonClass =
 		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
-	const toggleNotification = async () => {
-		const permission = await Notification.requestPermission();
+	const setNotificationEnabled = async (enabled: boolean) => {
+		const permission = enabled ? await Notification.requestPermission() : 'granted';
 
 		if (permission === 'granted') {
-			notificationEnabled = !notificationEnabled;
+			notificationEnabled = enabled;
 			saveSettings({ notificationEnabled: notificationEnabled });
 		} else {
+			notificationEnabled = false;
 			toast.error(
 				$i18n.t(
 					'Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.'
@@ -273,17 +275,13 @@
 				label={$i18n.t('Notifications')}
 				description={$i18n.t('Allow browser notifications for completed responses.')}
 			>
-				<button
-					class={actionButtonClass}
-					on:click={() => {
-						toggleNotification();
+				<Switch
+					state={notificationEnabled}
+					ariaLabel={$i18n.t('Notifications')}
+					on:change={(event) => {
+						setNotificationEnabled(event.detail);
 					}}
-					type="button"
-					role="switch"
-					aria-checked={notificationEnabled}
-				>
-					{notificationEnabled === true ? $i18n.t('On') : $i18n.t('Off')}
-				</button>
+				/>
 			</UserSettingRow>
 		</UserSettingSection>
 
