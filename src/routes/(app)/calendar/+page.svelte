@@ -308,8 +308,8 @@
 								{ value: 'month', label: $i18n.t('Month') }
 							]}
 							onChange={() => handleNavigate()}
-							triggerClass="relative flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-gray-850 rounded-xl text-xs"
-							contentClass="rounded-2xl w-40 p-1 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+							triggerClass="relative flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-850 dark:hover:text-white"
+							contentClass="rounded-xl w-28 p-1 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 							align="end"
 						>
 							<svelte:fragment slot="trigger" let:selectedLabel>

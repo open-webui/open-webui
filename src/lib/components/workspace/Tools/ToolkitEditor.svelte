@@ -207,11 +207,11 @@ class Tools:
 	}}
 />
 
-<div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
-	<div class="mx-auto w-full md:px-0 h-full">
+<div class=" flex flex-col justify-between w-full min-w-0 overflow-y-auto overflow-x-hidden h-full">
+	<div class="mx-auto w-full min-w-0 md:px-0 h-full">
 		<form
 			bind:this={formElement}
-			class=" flex flex-col max-h-[100dvh] h-full"
+			class=" flex flex-col min-w-0 max-h-[100dvh] h-full"
 			on:submit|preventDefault={() => {
 				if (edit) {
 					submitHandler();
@@ -220,9 +220,9 @@ class Tools:
 				}
 			}}
 		>
-			<div class="flex flex-col flex-1 overflow-auto h-0 rounded-lg">
+			<div class="flex flex-col flex-1 min-w-0 overflow-auto h-0 rounded-lg">
 				<div class="w-full mb-2 flex flex-col gap-0.5">
-					<div class="flex w-full items-center">
+					<div class="flex w-full min-w-0 items-center">
 						<div class=" shrink-0 mr-2">
 							<Tooltip content={$i18n.t('Back')}>
 								<button
@@ -238,7 +238,7 @@ class Tools:
 							</Tooltip>
 						</div>
 
-						<div class="flex-1">
+						<div class="flex-1 min-w-0">
 							<Tooltip content={$i18n.t('e.g. My Tools')} placement="top-start">
 								<input
 									class="w-full text-2xl bg-transparent outline-hidden"
@@ -268,7 +268,7 @@ class Tools:
 						</div>
 					</div>
 
-					<div class=" flex gap-2 px-1 items-center">
+					<div class=" flex min-w-0 gap-2 px-1 items-center">
 						{#if edit}
 							<div class="text-sm text-gray-500 shrink-0">
 								{id}
@@ -304,7 +304,7 @@ class Tools:
 					</div>
 				</div>
 
-				<div class="mb-2 flex-1 overflow-auto h-0 rounded-lg">
+				<div class="mb-2 flex-1 min-w-0 overflow-auto h-0 rounded-lg">
 					<CodeEditor
 						bind:this={codeEditor}
 						value={content}

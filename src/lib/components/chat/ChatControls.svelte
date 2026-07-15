@@ -340,7 +340,7 @@
 								{/if}
 							</div>
 							<button
-								class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+								class="p-1 rounded-lg text-gray-500 dark:text-gray-400"
 								on:click={() => showControls.set(false)}
 								aria-label={$i18n.t('Close')}
 							>
@@ -485,7 +485,7 @@
 									{/if}
 								</div>
 								<button
-									class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+									class="p-1 rounded-lg text-gray-500 dark:text-gray-400"
 									on:click={() => showControls.set(false)}
 									aria-label={$i18n.t('Close')}
 								>
