@@ -391,13 +391,18 @@
 
 <Modal bind:show={showWebhookModal} size="sm">
 	<div>
-		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-			<h1 class="text-lg font-normal self-center">
+		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
+			<h1 class="text-sm font-medium self-center">
 				{editing ? $i18n.t('Edit webhook') : $i18n.t('Add webhook')}
 			</h1>
 
-			<button class="self-center" aria-label={$i18n.t('Close')} type="button" on:click={resetForm}>
-				<XMark className="size-5" />
+			<button
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				aria-label={$i18n.t('Close')}
+				type="button"
+				on:click={resetForm}
+			>
+				<XMark className="size-4" />
 			</button>
 		</div>
 
@@ -531,7 +536,7 @@
 										{#each targetGroupResults as group}
 											<button
 												type="button"
-												class="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-gray-850"
+												class="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-left hover:bg-gray-50/70 dark:hover:bg-gray-850/50"
 												on:click={() => addTargetGroup(group)}
 											>
 												<span class="truncate">{group.name}</span>
@@ -542,7 +547,7 @@
 										{#each targetUserResults as user}
 											<button
 												type="button"
-												class="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-gray-850"
+												class="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-left hover:bg-gray-50/70 dark:hover:bg-gray-850/50"
 												on:click={() => addTargetUser(user)}
 											>
 												<span class="truncate">
@@ -721,7 +726,7 @@
 					<div class="flex gap-1 items-center">
 						<Tooltip content={$i18n.t('Configure')}>
 							<button
-								class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
+								class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
 								on:click={() => editWebhook(webhook)}
 								type="button"
 							>

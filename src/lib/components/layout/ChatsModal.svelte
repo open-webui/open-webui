@@ -92,21 +92,21 @@
 
 <Modal size="lg" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class="flex items-center gap-2 text-lg font-normal self-center">
+		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+			<div class="flex items-center gap-2 text-sm font-medium self-center">
 				<div>{title}</div>
 				{#if count !== null}
-					<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
+					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
 						{count}
 					</div>
 				{:else if chatList}
-					<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
+					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
 						{chatList.length}
 					</div>
 				{/if}
 			</div>
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={() => {
 					show = false;
 				}}
@@ -115,7 +115,7 @@
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
 					fill="currentColor"
-					class="w-5 h-5"
+					class="size-4"
 				>
 					<path
 						fill-rule="evenodd"
@@ -267,7 +267,7 @@
 								{/if}
 
 								<div
-									class=" w-full flex items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850"
+									class=" w-full flex items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50/70 dark:hover:bg-gray-850/50"
 									draggable="false"
 								>
 									{#if showUserInfo && chat.user_id}

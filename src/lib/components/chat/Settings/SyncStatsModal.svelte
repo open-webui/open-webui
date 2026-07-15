@@ -354,17 +354,17 @@
 				</div>
 			</div>
 		{:else}
-			<div class="flex justify-between px-5 pt-4 pb-0.5">
-				<div class="text-lg font-normal self-center">{$i18n.t('Sync Usage Stats')}</div>
+			<div class="flex justify-between px-4 pt-3 pb-1">
+				<div class="text-sm font-medium self-center">{$i18n.t('Sync Usage Stats')}</div>
 				<button
-					class="self-center"
+					class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 					aria-label={$i18n.t('Close modal')}
 					on:click={() => {
 						show = false;
 					}}
 					disabled={syncing}
 				>
-					<XMark className={'size-5'} />
+					<XMark className={'size-4'} />
 				</button>
 			</div>
 

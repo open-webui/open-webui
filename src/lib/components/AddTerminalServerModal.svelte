@@ -138,13 +138,22 @@
 				if (error?.status !== 404) throw error;
 			}
 
-			const lifecycle = await getOrchestratorLifecycle(localStorage.token, url, key, policyId, auth_type);
+			const lifecycle = await getOrchestratorLifecycle(
+				localStorage.token,
+				url,
+				key,
+				policyId,
+				auth_type
+			);
 			const data = policy?.data ?? {};
 			policyImage = data.image ?? '';
 			policyIdleTimeout = data.idle_timeout_minutes ?? 30;
 			policyStorage = data.storage ? 'persistent' : 'ephemeral';
 			policyStorageSize = data.storage ?? '5Gi';
-			policyEnvPairs = Object.entries(data.env ?? {}).map(([key, value]) => ({ key, value: String(value) }));
+			policyEnvPairs = Object.entries(data.env ?? {}).map(([key, value]) => ({
+				key,
+				value: String(value)
+			}));
 			policyCpu = data.cpu_limit ?? '1';
 			policyMemory = data.memory_limit ?? '1Gi';
 			lifecycleJson = stringifyJson(lifecycle?.data);
@@ -358,8 +367,8 @@
 
 <Modal size="sm" bind:show>
 	<div>
-		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-			<h1 class="text-lg font-normal self-center ">
+		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
+			<h1 class="text-sm font-medium self-center">
 				{#if edit}
 					{$i18n.t('Edit Terminal Connection')}
 				{:else}
@@ -368,13 +377,13 @@
 			</h1>
 
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<XMark className={'size-5'} />
+				<XMark className={'size-4'} />
 			</button>
 		</div>
 
@@ -452,7 +461,7 @@
 
 							<Tooltip content={$i18n.t('Verify Connection')} className="self-end -mb-1">
 								<button
-									class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
+									class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
 									on:click={() => {
 										verifyHandler();
 									}}
@@ -527,7 +536,9 @@
 							{#if loadingPolicy}
 								<div class="mt-2 text-xs text-gray-500">{$i18n.t('Loading policy...')}</div>
 							{:else if policyLoadError}
-								<div class="mt-2 text-xs text-red-600 dark:text-red-400">{$i18n.t('Failed to load policy: {{error}}', { error: policyLoadError })}</div>
+								<div class="mt-2 text-xs text-red-600 dark:text-red-400">
+									{$i18n.t('Failed to load policy: {{error}}', { error: policyLoadError })}
+								</div>
 							{/if}
 
 							<div class="flex gap-2 mt-2">
@@ -715,7 +726,7 @@
 								</div>
 							</div>
 
-								<div class="flex flex-wrap items-center justify-between gap-2 mt-2">
+							<div class="flex flex-wrap items-center justify-between gap-2 mt-2">
 								<div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
 									<label class="flex items-center gap-1.5">
 										<input type="checkbox" bind:checked={refreshOnlyIdle} />
@@ -727,7 +738,9 @@
 									</label>
 								</div>
 								<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-									{$i18n.t('Policy changes apply to newly provisioned terminals. Refresh matching terminals to apply them to existing terminals.')}
+									{$i18n.t(
+										'Policy changes apply to newly provisioned terminals. Refresh matching terminals to apply them to existing terminals.'
+									)}
 								</div>
 								<button
 									type="button"

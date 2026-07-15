@@ -410,13 +410,13 @@
 
 <Modal bind:show={showSourceModal} size="sm">
 	<div>
-		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-			<h1 class="text-lg font-normal self-center">
+		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
+			<h1 class="text-sm font-medium self-center">
 				{editingItem ? $i18n.t('Edit Knowledge Connection') : $i18n.t('Add Knowledge Connection')}
 			</h1>
 
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close')}
 				type="button"
 				on:click={() => {
@@ -424,7 +424,7 @@
 					resetForm();
 				}}
 			>
-				<XMark className="size-5" />
+				<XMark className="size-4" />
 			</button>
 		</div>
 
@@ -724,7 +724,7 @@
 										className="shrink-0 flex items-center mr-1"
 									>
 										<button
-											class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
+											class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
 											type="button"
 											on:click={testSource}
 											disabled={testing}
@@ -841,7 +841,7 @@
 				<div class="flex gap-1 items-center">
 					<Tooltip content={$i18n.t('Configure')}>
 						<button
-							class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+							class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
 							type="button"
 							disabled={!connection}
 							aria-label={$i18n.t('Configure')}

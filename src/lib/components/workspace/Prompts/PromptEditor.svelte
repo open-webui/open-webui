@@ -302,15 +302,15 @@
 
 <!-- Edit Modal -->
 <Modal size="lg" bind:show={showEditModal}>
-	<div class="px-5 pt-4 pb-5">
-		<div class="flex justify-between items-center mb-2">
-			<div class="text-lg font-normal">{$i18n.t('Edit Prompt')}</div>
+	<div class="px-4 pt-3 pb-4">
+		<div class="flex justify-between items-center mb-2 dark:text-gray-100">
+			<div class="text-sm font-medium">{$i18n.t('Edit Prompt')}</div>
 			<button
-				class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+				class="rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close')}
 				on:click={() => (showEditModal = false)}
 			>
-				<XMark className="size-5" />
+				<XMark className="size-4" />
 			</button>
 		</div>
 
