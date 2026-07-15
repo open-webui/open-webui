@@ -788,18 +788,16 @@
 	</div>
 </Modal>
 
-<div class="mb-2.5 flex flex-col w-full justify-between text-sm">
-	<div class="flex justify-between items-center mb-1">
-		<div class="flex items-center gap-2">
-			<div class="font-normal">{$i18n.t('External Knowledge Sources')}</div>
-			<span
-				class="text-[0.65rem] font-normal uppercase px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-				>{$i18n.t('Experimental')}</span
-			>
-		</div>
+<div class="flex w-full flex-col justify-between text-xs">
+	<div class="mb-2 flex items-center justify-between">
+		<div class="text-gray-600 dark:text-gray-400">{$i18n.t('Sources')}</div>
 
 		<Tooltip content={$i18n.t('Add Connection')}>
-			<button class="px-1" on:click={openCreateSource} type="button">
+			<button
+				class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+				on:click={openCreateSource}
+				type="button"
+			>
 				<Plus />
 			</button>
 		</Tooltip>
@@ -821,7 +819,7 @@
 								<DatabaseSettings className="size-4" strokeWidth="1.5" />
 							</Tooltip>
 
-							<div class="outline-hidden w-full bg-transparent text-sm min-w-0 line-clamp-1">
+							<div class="outline-hidden w-full bg-transparent text-xs min-w-0 line-clamp-1">
 								<span>{item.name}</span>
 								{' '}
 								<span class="text-gray-500">
@@ -868,16 +866,14 @@
 			<Spinner />
 		</div>
 	{:else if items.length === 0}
-		<div class="text-xs text-gray-400 dark:text-gray-500">
+		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 			{$i18n.t('No external knowledge sources configured.')}
 		</div>
 	{/if}
 
-	<div class="my-1.5">
-		<div class="text-xs text-gray-500">
-			{$i18n.t(
-				'Create one read-only Knowledge source per external collection. Test must pass before the source is created.'
-			)}
+	{#if items.length === 0}
+		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+			{$i18n.t('Test must pass before a source is created.')}
 		</div>
-	</div>
+	{/if}
 </div>

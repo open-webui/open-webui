@@ -1569,7 +1569,7 @@
 						>
 							<button
 								type="button"
-								class=" flex items-center rounded-xl py-2 px-1 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
+								class=" flex items-center rounded-xl py-1.5 px-1.5 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
 								aria-label={$i18n.t('User menu')}
 							>
 								<div class=" self-center mr-3 relative flex-shrink-0">

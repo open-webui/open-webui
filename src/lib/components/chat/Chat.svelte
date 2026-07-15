@@ -70,6 +70,7 @@
 
 	import {
 		archiveChatById,
+		cloneChatById,
 		compactChatById,
 		createNewChat,
 		deleteChatById,
@@ -2265,6 +2266,53 @@
 		document.getElementById('chat-input')?.focus();
 	};
 
+	const handleForkChat = async () => {
+		if (!$chatId || !history?.currentId) {
+			toast.message($i18n.t('No chat to fork'));
+			return;
+		}
+		if (!($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true))) {
+			toast.error($i18n.t('Access prohibited'));
+			return;
+		}
+
+		const currentMessage = history.messages?.[history.currentId];
+		if (
+			generating ||
+			taskIds?.length ||
+			(currentMessage?.role === 'assistant' && !currentMessage.done)
+		) {
+			toast.warning($i18n.t('Wait for the current response to finish before forking.'));
+			return;
+		}
+
+		const toastId = toast.loading($i18n.t('Forking chat...'));
+
+		try {
+			const result = await cloneChatById(
+				localStorage.token,
+				$chatId,
+				$i18n.t('Clone of {{TITLE}}', {
+					TITLE: $chatTitle || 'Chat'
+				})
+			);
+
+			if (result?.id) {
+				await goto(`/c/${result.id}`);
+				await refreshChatList(localStorage.token, { refreshPinned: true });
+				toast.success($i18n.t('Chat forked'), { id: toastId });
+			} else {
+				toast.error($i18n.t('Failed to fork chat'), { id: toastId });
+			}
+		} catch (error) {
+			toast.error(`${error}`, { id: toastId });
+		} finally {
+			messageInput?.setText('');
+			prompt = '';
+			document.getElementById('chat-input')?.focus();
+		}
+	};
+
 	const submitHandler = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitHandler', userPrompt, $chatId);
 
@@ -2282,6 +2330,10 @@
 		}
 		if (String(userPrompt).trim() === '/status') {
 			handleStatusCommand();
+			return;
+		}
+		if (String(userPrompt).trim() === '/fork') {
+			await handleForkChat();
 			return;
 		}
 
@@ -3451,6 +3503,7 @@
 										{contextUsage}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
+										forkHandler={handleForkChat}
 										toolServers={$toolServers}
 										{generating}
 										{stopResponse}

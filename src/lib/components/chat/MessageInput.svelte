@@ -116,6 +116,7 @@
 	export let stopResponse: Function;
 	export let compactHandler: Function = () => {};
 	export let statusHandler: Function = () => {};
+	export let forkHandler: Function = () => {};
 	export let chatId = '';
 	export let contextUsage = null;
 
@@ -1086,9 +1087,12 @@
 					canCompact: () => !!history?.currentId,
 					compactDisabled: () => isActive,
 					canStatus: () => !!history?.currentId,
+					canFork: () => !!history?.currentId,
+					forkDisabled: () => isActive,
 					contextUsage: () => contextUsage,
 					onCompact: compactHandler,
 					onStatus: statusHandler,
+					onFork: forkHandler,
 					onSelect: (e) => {
 						const { type, data } = e;
 

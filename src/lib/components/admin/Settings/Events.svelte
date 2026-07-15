@@ -412,7 +412,7 @@
 						>
 						<input
 							id="event-webhook-name"
-							class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+							class={`w-full text-xs bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 							type="text"
 							placeholder={$i18n.t('Identity audit')}
 							autocomplete="off"
@@ -431,7 +431,7 @@
 						<div class="flex items-center gap-2">
 							<input
 								id="event-webhook-url"
-								class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+								class={`w-full text-xs bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 								type="url"
 								placeholder="https://example.com/events"
 								autocomplete="off"
@@ -482,7 +482,7 @@
 								<div class="flex flex-wrap gap-1 mb-2">
 									{#each targetGroupIds as id}
 										<div
-											class="flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-850 px-2 py-1 text-xs"
+											class="flex items-center gap-1 rounded-full bg-gray-100 dark:bg-white/[0.03] px-2 py-1 text-xs"
 										>
 											<span class="truncate max-w-36">{selectedGroups[id]?.name ?? id}</span>
 											<span class="text-gray-500">{$i18n.t('group')}</span>
@@ -498,7 +498,7 @@
 
 									{#each targetUserIds as id}
 										<div
-											class="flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-850 px-2 py-1 text-xs"
+											class="flex items-center gap-1 rounded-full bg-gray-100 dark:bg-white/[0.03] px-2 py-1 text-xs"
 										>
 											<span class="truncate max-w-36">{selectedUsers[id]?.name ?? id}</span>
 											<span class="text-gray-500">{$i18n.t('user')}</span>
@@ -516,7 +516,7 @@
 
 							<div class="relative">
 								<input
-									class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+									class={`w-full text-xs bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 									type="text"
 									placeholder={$i18n.t('Search users or groups')}
 									autocomplete="off"
@@ -585,7 +585,7 @@
 								<div class="flex flex-wrap gap-1">
 									{#each form.events as event}
 										<div
-											class="flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-850 px-2 py-1 text-xs"
+											class="flex items-center gap-1 rounded-full bg-gray-100 dark:bg-white/[0.03] px-2 py-1 text-xs"
 										>
 											<span class="font-mono break-all">{event}</span>
 											<button
@@ -602,7 +602,7 @@
 
 							<div class="flex gap-2">
 								<input
-									class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+									class={`w-full flex-1 text-xs bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 									type="text"
 									placeholder={$i18n.t('Search or add pattern')}
 									autocomplete="off"
@@ -689,7 +689,7 @@
 
 <div class="mb-3">
 	<div class="mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Events')}</div>
-	<hr class="border-gray-100/20 dark:border-white/[0.025] my-2" />
+	<hr class="border-gray-100/10 dark:border-white/[0.015] my-2" />
 
 	<div class="mb-2.5 flex flex-col w-full justify-between">
 		<div class="flex justify-between items-center mb-1">

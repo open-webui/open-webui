@@ -44,9 +44,9 @@
 	}}
 >
 	<div class="flex justify-between items-center text-sm">
-		<div class="  font-normal">{$i18n.t('Change Password')}</div>
+		<div class="text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Change Password')}</div>
 		<button
-			class=" text-xs font-normal text-gray-500"
+			class="text-xs font-normal text-gray-500 transition-colors hover:text-gray-700 dark:hover:text-gray-300"
 			type="button"
 			on:click={() => {
 				show = !show;

@@ -592,7 +592,8 @@
 
 <Modal
 	size="full"
-	className="w-full max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-4 md:mx-0 flex flex-col md:flex-row max-h-[85vh] lg:max-h-[90vh] md:h-[35rem] lg:h-[42rem] xl:h-[46rem] bg-white dark:bg-gray-900 rounded-4xl"
+	containerClassName="p-4 sm:p-6 lg:p-8"
+	className="w-full max-w-[88rem] h-[min(50rem,calc(100dvh-4rem))] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-4xl"
 	bind:show
 >
 	<nav
@@ -806,9 +807,11 @@
 	</nav>
 
 	<div class="flex-1 min-h-0 p-4 md:px-5 flex flex-col">
-		<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
-			{$i18n.t(selectedTabTitle)}
-		</h2>
+		{#if selectedTab !== 'account'}
+			<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+				{$i18n.t(selectedTabTitle)}
+			</h2>
+		{/if}
 
 		<div class="flex-1 min-h-0 overflow-hidden">
 			{#if selectedTab === 'general'}

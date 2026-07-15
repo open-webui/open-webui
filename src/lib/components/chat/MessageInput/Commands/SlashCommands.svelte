@@ -12,6 +12,8 @@
 	export let canCompact = false;
 	export let compactDisabled = false;
 	export let canStatus = false;
+	export let canFork = false;
+	export let forkDisabled = false;
 	export let contextPercent = 0;
 
 	let selectedIdx = 0;
@@ -27,6 +29,9 @@
 	$: commandItems = [
 		...(canCompact && 'compact'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'compact' } }]
+			: []),
+		...(canFork && 'fork'.startsWith(query.toLowerCase())
+			? [{ type: 'command', data: { id: 'fork' } }]
 			: []),
 		...(canStatus && 'status'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'status' } }]
@@ -84,6 +89,9 @@
 	export const select = async () => {
 		const item = filteredItems[selectedIdx];
 		if (item?.type === 'command' && item.data?.id === 'compact' && compactDisabled) {
+			return;
+		}
+		if (item?.type === 'command' && item.data?.id === 'fork' && forkDisabled) {
 			return;
 		}
 		if (item) {
@@ -164,6 +172,50 @@
 						<span class="app-muted text-[0.625rem] truncate shrink-0">
 							{contextCirclePercent}% full
 						</span>
+					</span>
+				</button>
+			</Tooltip>
+		{:else if item.data.id === 'fork'}
+			<Tooltip content="Clone this chat into a new copy." placement="top">
+				<button
+					type="button"
+					aria-label="Fork: clone this chat into a new copy."
+					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-xs text-left transition-colors duration-75
+						{commandIdx === selectedIdx ? 'app-interactive-active' : ''} disabled:opacity-50"
+					disabled={forkDisabled}
+					on:mousedown={(e) => e.preventDefault()}
+					on:click={() => {
+						if (!forkDisabled) {
+							onSelect(item);
+						}
+					}}
+					on:mouseenter={() => {
+						selectedIdx = commandIdx;
+					}}
+					on:focus={() => {}}
+					data-selected={commandIdx === selectedIdx}
+				>
+					<span class="app-icon-muted flex items-center justify-center w-4 shrink-0">
+						<svg
+							class="size-3.5"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.8"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+						>
+							<path d="M4 12H9" />
+							<path d="M9 12C12.5 12 12.5 7 16 7H20" />
+							<path d="M17 4L20 7L17 10" />
+							<path d="M9 12C12.5 12 12.5 17 16 17H20" />
+							<path d="M17 14L20 17L17 20" />
+						</svg>
+					</span>
+					<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
+						<span class="truncate">Fork</span>
+						<span class="app-muted text-[0.625rem] truncate shrink-0">Clone chat</span>
 					</span>
 				</button>
 			</Tooltip>

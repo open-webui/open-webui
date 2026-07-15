@@ -284,21 +284,15 @@
 </script>
 
 <form
-	class="flex flex-col h-full justify-between space-y-3 text-sm"
+	class="flex h-full flex-col justify-between text-sm"
 	on:submit|preventDefault={async () => {
 		saveHandler();
 	}}
 >
-	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden pr-2">
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if config}
 			<div>
-				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
-						{$i18n.t('General')}
-					</div>
-
-					<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
-
+				<div class="mb-5">
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
 							<div class="text-xs pr-2">
@@ -312,12 +306,10 @@
 					</div>
 				</div>
 
-				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+				<div class="mb-5">
+					<div class=" mb-2 text-xs text-gray-400 dark:text-gray-600">
 						{$i18n.t('Create Image')}
 					</div>
-
-					<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 					{#if config.ENABLE_IMAGE_GENERATION}
 						<div class="mb-2.5">
@@ -331,7 +323,7 @@
 								<Tooltip content={$i18n.t('Enter Model ID')} placement="top-start">
 									<input
 										list="model-list"
-										class=" text-right text-sm bg-transparent outline-hidden max-w-full w-52"
+										class=" text-right text-xs bg-transparent outline-hidden max-w-full w-52"
 										bind:value={config.IMAGE_GENERATION_MODEL}
 										placeholder={$i18n.t('Select a model')}
 										required
@@ -356,7 +348,7 @@
 
 								<Tooltip content={$i18n.t('Enter Image Size (e.g. 512x512)')} placement="top-start">
 									<input
-										class="  text-right text-sm bg-transparent outline-hidden max-w-full w-52"
+										class="  text-right text-xs bg-transparent outline-hidden max-w-full w-52"
 										placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
 										bind:value={config.IMAGE_SIZE}
 									/>
@@ -378,7 +370,7 @@
 										placement="top-start"
 									>
 										<input
-											class=" text-right text-sm bg-transparent outline-hidden"
+											class=" text-right text-xs bg-transparent outline-hidden"
 											placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
 											bind:value={config.IMAGE_STEPS}
 											required
@@ -410,7 +402,7 @@
 							</div>
 
 							<select
-								class="w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+								class="w-fit pr-8 cursor-pointer rounded-lg px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={config.IMAGE_GENERATION_ENGINE}
 								placeholder={$i18n.t('Select Engine')}
 							>
@@ -434,7 +426,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
-											class="w-full text-sm bg-transparent outline-hidden text-right"
+											class="w-full text-xs bg-transparent outline-hidden text-right"
 											placeholder={$i18n.t('API Base URL')}
 											bind:value={config.IMAGES_OPENAI_API_BASE_URL}
 										/>
@@ -475,7 +467,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
-											class="w-full text-sm bg-transparent outline-hidden text-right"
+											class="w-full text-xs bg-transparent outline-hidden text-right"
 											placeholder={$i18n.t('API Version')}
 											bind:value={config.IMAGES_OPENAI_API_VERSION}
 										/>
@@ -495,7 +487,7 @@
 							<div class="mt-1.5 flex w-full">
 								<div class="flex-1 mr-2">
 									<Textarea
-										className="rounded-lg w-full py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										className="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500"
 										bind:value={config.IMAGES_OPENAI_API_PARAMS}
 										placeholder={$i18n.t('Enter additional parameters in JSON format')}
 										minSize={100}
@@ -515,7 +507,7 @@
 								<div class="flex w-full">
 									<div class="flex-1 mr-2">
 										<input
-											class="w-full text-sm bg-transparent outline-hidden text-right"
+											class="w-full text-xs bg-transparent outline-hidden text-right"
 											placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
 											bind:value={config.AUTOMATIC1111_BASE_URL}
 										/>
@@ -609,7 +601,7 @@
 							<div class="mt-1.5 flex w-full">
 								<div class="flex-1 mr-2">
 									<Textarea
-										className="rounded-lg w-full py-2 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										className="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500"
 										bind:value={config.AUTOMATIC1111_PARAMS}
 										placeholder={$i18n.t('Enter additional parameters in JSON format')}
 										minSize={100}
@@ -629,7 +621,7 @@
 								<div class="flex w-full">
 									<div class="flex-1 mr-2">
 										<input
-											class="w-full text-sm bg-transparent outline-hidden text-right"
+											class="w-full text-xs bg-transparent outline-hidden text-right"
 											placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
 											bind:value={config.COMFYUI_BASE_URL}
 										/>
@@ -759,7 +751,7 @@
 								/>
 								<!-- {#if config.COMFYUI_WORKFLOW}
 									<Textarea
-										class="w-full rounded-lg my-1 py-2 px-3 text-xs bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden disabled:text-gray-600 resize-none"
+										className="my-1 w-full resize-none rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 disabled:text-gray-600 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500"
 										rows="10"
 										bind:value={config.COMFYUI_WORKFLOW}
 										required
@@ -836,7 +828,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
-											class="w-full text-sm bg-transparent outline-hidden text-right"
+											class="w-full text-xs bg-transparent outline-hidden text-right"
 											placeholder={$i18n.t('API Base URL')}
 											bind:value={config.IMAGES_GEMINI_API_BASE_URL}
 										/>
@@ -875,7 +867,7 @@
 								</div>
 
 								<select
-									class="w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+									class="w-fit pr-8 cursor-pointer rounded-lg px-2 text-xs bg-transparent outline-hidden text-right"
 									bind:value={config.IMAGES_GEMINI_ENDPOINT_METHOD}
 									placeholder={$i18n.t('Select Method')}
 								>
@@ -887,12 +879,10 @@
 					{/if}
 				</div>
 
-				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+				<div class="mb-5">
+					<div class=" mb-2 text-xs text-gray-400 dark:text-gray-600">
 						{$i18n.t('Edit Image')}
 					</div>
-
-					<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
@@ -918,7 +908,7 @@
 								<Tooltip content={$i18n.t('Enter Model ID')} placement="top-start">
 									<input
 										list="model-list"
-										class="text-right text-sm bg-transparent outline-hidden max-w-full w-52"
+										class="text-right text-xs bg-transparent outline-hidden max-w-full w-52"
 										bind:value={config.IMAGE_EDIT_MODEL}
 										placeholder={$i18n.t('Select a model')}
 									/>
@@ -942,7 +932,7 @@
 
 								<Tooltip content={$i18n.t('Enter Image Size (e.g. 512x512)')} placement="top-start">
 									<input
-										class="text-right text-sm bg-transparent outline-hidden max-w-full w-52"
+										class="text-right text-xs bg-transparent outline-hidden max-w-full w-52"
 										placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
 										bind:value={config.IMAGE_EDIT_SIZE}
 									/>
@@ -960,7 +950,7 @@
 							</div>
 
 							<select
-								class="w-fit pr-8 cursor-pointer rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+								class="w-fit pr-8 cursor-pointer rounded-lg px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={config.IMAGE_EDIT_ENGINE}
 								placeholder={$i18n.t('Select Engine')}
 							>
@@ -983,7 +973,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
-											class="w-full text-sm bg-transparent outline-hidden text-right"
+											class="w-full text-xs bg-transparent outline-hidden text-right"
 											placeholder={$i18n.t('API Base URL')}
 											bind:value={config.IMAGES_EDIT_OPENAI_API_BASE_URL}
 										/>
@@ -1024,7 +1014,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
-											class="w-full text-sm bg-transparent outline-hidden text-right"
+											class="w-full text-xs bg-transparent outline-hidden text-right"
 											placeholder={$i18n.t('API Version')}
 											bind:value={config.IMAGES_EDIT_OPENAI_API_VERSION}
 										/>
@@ -1044,7 +1034,7 @@
 								<div class="flex w-full">
 									<div class="flex-1 mr-2">
 										<input
-											class="w-full text-sm bg-transparent outline-hidden text-right"
+											class="w-full text-xs bg-transparent outline-hidden text-right"
 											placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
 											bind:value={config.IMAGES_EDIT_COMFYUI_BASE_URL}
 										/>
@@ -1243,7 +1233,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
-											class="w-full text-sm bg-transparent outline-hidden text-right"
+											class="w-full text-xs bg-transparent outline-hidden text-right"
 											placeholder={$i18n.t('API Base URL')}
 											bind:value={config.IMAGES_EDIT_GEMINI_API_BASE_URL}
 										/>
@@ -1278,7 +1268,7 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-normal">
+	<div class="flex justify-end pt-6 text-sm font-normal">
 		<button
 			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
 				? ' cursor-not-allowed'

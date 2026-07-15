@@ -14,16 +14,21 @@
 	export let onUpload: (e: any) => void = () => {};
 	export let onCompact: () => void = () => {};
 	export let onStatus: () => void = () => {};
+	export let onFork: () => void = () => {};
 	export let insertTextHandler: (text: string) => void = () => {};
 	export let canCompact: boolean | (() => boolean) = false;
 	export let compactDisabled: boolean | (() => boolean) = false;
 	export let canStatus: boolean | (() => boolean) = false;
+	export let canFork: boolean | (() => boolean) = false;
+	export let forkDisabled: boolean | (() => boolean) = false;
 	export let contextUsage = null;
 
 	$: compactAvailable = typeof canCompact === 'function' ? canCompact() : canCompact;
 	$: isCompactDisabled =
 		typeof compactDisabled === 'function' ? compactDisabled() : compactDisabled;
 	$: statusAvailable = typeof canStatus === 'function' ? canStatus() : canStatus;
+	$: forkAvailable = typeof canFork === 'function' ? canFork() : canFork;
+	$: isForkDisabled = typeof forkDisabled === 'function' ? forkDisabled() : forkDisabled;
 	$: resolvedContextUsage = typeof contextUsage === 'function' ? contextUsage() : contextUsage;
 	$: contextPercent = Math.max(0, Math.round(resolvedContextUsage?.percent ?? 0));
 
@@ -77,6 +82,8 @@
 					canCompact={compactAvailable}
 					compactDisabled={isCompactDisabled}
 					canStatus={statusAvailable}
+					canFork={forkAvailable}
+					forkDisabled={isForkDisabled}
 					{contextPercent}
 					onSelect={(e) => {
 						const { type, data } = e;
@@ -89,6 +96,9 @@
 						} else if (type === 'command' && data.id === 'status') {
 							insertTextHandler('');
 							onStatus();
+						} else if (type === 'command' && data.id === 'fork') {
+							insertTextHandler('');
+							onFork();
 						} else if (type === 'skill') {
 							command({
 								id: `${data.id}|${data.name}`,
