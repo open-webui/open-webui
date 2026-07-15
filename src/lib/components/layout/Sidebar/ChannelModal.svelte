@@ -13,7 +13,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
+	import XMark from './icons/XMark.svelte';
 	import MemberSelector from '$lib/components/workspace/common/MemberSelector.svelte';
 	import Visibility from '$lib/components/workspace/common/Visibility.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -141,7 +141,7 @@
 <Modal size="md" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
-			<div class=" text-sm font-medium self-center">
+			<div class=" text-sm self-center">
 				{#if edit}
 					{$i18n.t('Edit Channel')}
 				{:else}

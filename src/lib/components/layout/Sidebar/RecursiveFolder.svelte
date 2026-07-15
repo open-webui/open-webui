@@ -30,13 +30,13 @@
 		importChats
 	} from '$lib/apis/chats';
 
-	import ChevronDown from '../../icons/ChevronDown.svelte';
-	import ChevronRight from '../../icons/ChevronRight.svelte';
+	import ChevronDown from './icons/ChevronDown.svelte';
+	import ChevronRight from './icons/ChevronRight.svelte';
 	import Collapsible from '../../common/Collapsible.svelte';
 	import DragGhost from '$lib/components/common/DragGhost.svelte';
 
-	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
-	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import FolderIcon from './icons/Folder.svelte';
+	import MoreHorizontal from './icons/MoreHorizontal.svelte';
 
 	import ChatItem from './ChatItem.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
@@ -507,7 +507,7 @@
 	<DragGhost {x} {y}>
 		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
 			<div class="flex items-center gap-1">
-				<FolderOpen className="size-3.5" strokeWidth="2" />
+				<FolderIcon className="size-3.5" strokeWidth="1.5" />
 				<div class=" text-xs text-white line-clamp-1">
 					{folders[folderId].name}
 				</div>
@@ -592,17 +592,17 @@
 
 						<div class="hidden group-hover:flex transition-all p-[1px]">
 							{#if open}
-								<ChevronDown className=" size-3" strokeWidth="2.5" />
+								<ChevronDown className=" size-3" strokeWidth="1.5" />
 							{:else}
-								<ChevronRight className=" size-3" strokeWidth="2.5" />
+								<ChevronRight className=" size-3" strokeWidth="1.5" />
 							{/if}
 						</div>
 					{:else}
 						<div class="p-[1px]">
 							{#if open}
-								<ChevronDown className=" size-3" strokeWidth="2.5" />
+								<ChevronDown className=" size-3" strokeWidth="1.5" />
 							{:else}
-								<ChevronRight className=" size-3" strokeWidth="2.5" />
+								<ChevronRight className=" size-3" strokeWidth="1.5" />
 							{/if}
 						</div>
 					{/if}
@@ -663,7 +663,7 @@
 							}}
 						>
 							<div class="p-1 dark:hover:bg-gray-850 rounded-lg touch-auto">
-								<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+								<MoreHorizontal className="size-4" strokeWidth="1.5" />
 							</div>
 						</FolderMenu>
 					</button>

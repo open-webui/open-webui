@@ -9,9 +9,10 @@
 
 	import ChatItem from './ChatItem.svelte';
 	import Collapsible from '../../common/Collapsible.svelte';
-	import ChevronDown from '../../icons/ChevronDown.svelte';
-	import ChevronRight from '../../icons/ChevronRight.svelte';
-	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
+	import ChevronDown from './icons/ChevronDown.svelte';
+	import ChevronRight from './icons/ChevronRight.svelte';
+	import Eye from './icons/Eye.svelte';
+	import FolderIcon from './icons/Folder.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	export let folder: any;
@@ -63,13 +64,13 @@
 		>
 			<div class="shrink-0">
 				{#if expanded}
-					<ChevronDown className="size-3" strokeWidth="2.5" />
+					<ChevronDown className="size-3" strokeWidth="1.5" />
 				{:else}
-					<ChevronRight className="size-3" strokeWidth="2.5" />
+					<ChevronRight className="size-3" strokeWidth="1.5" />
 				{/if}
 			</div>
 
-			<FolderOpen className="size-3.5 shrink-0" strokeWidth="2" />
+			<FolderIcon className="size-3.5 shrink-0" strokeWidth="1.5" />
 
 			<div class="flex-1 truncate">
 				{folder.name}
@@ -83,25 +84,7 @@
 
 			{#if !isWritable}
 				<div class="shrink-0 text-[10px] text-gray-400 dark:text-gray-600" title="Read only">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="1.5"
-						stroke="currentColor"
-						class="size-3"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
-						/>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-						/>
-					</svg>
+					<Eye className="size-3" />
 				</div>
 			{/if}
 		</button>

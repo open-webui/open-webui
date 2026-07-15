@@ -6,7 +6,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import PinSlash from '$lib/components/icons/PinSlash.svelte';
+	import PinSlash from './icons/PinSlash.svelte';
 
 	export let model = null;
 	export let shiftKey = false;
@@ -63,7 +63,7 @@
 							}}
 							type="button"
 						>
-							<PinSlash className="size-3.5" strokeWidth="2" />
+							<PinSlash className="size-3.5" strokeWidth="1.5" />
 						</button>
 					</Tooltip>
 				</div>

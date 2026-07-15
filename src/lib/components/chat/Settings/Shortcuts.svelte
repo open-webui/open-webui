@@ -101,7 +101,7 @@
 <div id="tab-shortcuts" class="flex h-full flex-col text-sm">
 	<div class="mb-4 flex items-center justify-between">
 		<h2 class="text-sm font-medium text-gray-900 dark:text-white">
-			{$i18n.t('Keyboard Shortcuts')}
+			{$i18n.t('Keyboard')}
 		</h2>
 
 		<button

@@ -14,20 +14,23 @@
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
-	import Map from '$lib/components/icons/Map.svelte';
-	import Keyboard from '$lib/components/icons/Keyboard.svelte';
-	import Settings from '$lib/components/icons/Settings.svelte';
-	import Code from '$lib/components/icons/Code.svelte';
-	import UserGroup from '$lib/components/icons/UserGroup.svelte';
-	import SignOut from '$lib/components/icons/SignOut.svelte';
-	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
 	import UserStatusModal from './UserStatusModal.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
-	import Note from '$lib/components/icons/Note.svelte';
-	import Pin from '$lib/components/icons/Pin.svelte';
-	import PinSlash from '$lib/components/icons/PinSlash.svelte';
+	import CalendarIcon from './icons/Calendar.svelte';
+	import ClockIcon from './icons/Clock.svelte';
+	import CodeIcon from './icons/Code.svelte';
+	import EmojiFaceIcon from './icons/EmojiFace.svelte';
+	import HelpCircleIcon from './icons/HelpCircle.svelte';
+	import LogOutIcon from './icons/LogOut.svelte';
+	import MapIcon from './icons/Map.svelte';
+	import NotesIcon from './icons/Notes.svelte';
+	import PinIcon from './icons/Pin.svelte';
+	import PinSlashIcon from './icons/PinSlash.svelte';
+	import Settings from '$lib/components/icons/Settings.svelte';
+	import KeyIcon from './icons/Key.svelte';
+	import UserIcon from './icons/User.svelte';
+	import WorkspaceIcon from './icons/Workspace.svelte';
+	import XMarkIcon from './icons/XMark.svelte';
 	import { updateUserStatus, updateUserSettings } from '$lib/apis/users';
 	import { toast } from 'svelte-sonner';
 
@@ -206,7 +209,7 @@
 											}
 										}}
 									>
-										<XMark className="size-3.5 opacity-50" strokeWidth="2" />
+										<XMarkIcon className="size-3.5 opacity-50" strokeWidth="1.5" />
 									</button>
 								</Tooltip>
 							</div>
@@ -223,7 +226,7 @@
 							}}
 						>
 							<div class="self-center shrink-0 size-4.5 flex items-center justify-center">
-								<FaceSmile className="size-3.5" strokeWidth="1.5" />
+								<EmojiFaceIcon className="size-3.5" strokeWidth="1.5" />
 							</div>
 							<div class="self-center truncate">{$i18n.t('Update your status')}</div>
 						</button>
@@ -253,20 +256,7 @@
 						}}
 					>
 						<div class="self-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="1.5"
-								stroke="currentColor"
-								class="size-3.5"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
-								/>
-							</svg>
+							<WorkspaceIcon className="size-3.5" strokeWidth="1.5" />
 						</div>
 						<div class="self-center truncate">{$i18n.t('Workspace')}</div>
 					</a>
@@ -282,9 +272,9 @@
 								on:click|preventDefault|stopPropagation={() => togglePin('workspace')}
 							>
 								{#if isPinned('workspace')}
-									<PinSlash className="size-3.5" strokeWidth="1.5" />
+									<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
 								{:else}
-									<Pin className="size-3.5" strokeWidth="1.5" />
+									<PinIcon className="size-3.5" strokeWidth="1.5" />
 								{/if}
 							</button>
 						</Tooltip>
@@ -310,7 +300,7 @@
 						}}
 					>
 						<div class="self-center">
-							<Note className="size-3.5" strokeWidth="1.5" />
+							<NotesIcon className="size-3.5" strokeWidth="1.5" />
 						</div>
 						<div class="self-center truncate">{$i18n.t('Notes')}</div>
 					</a>
@@ -326,9 +316,9 @@
 								on:click|preventDefault|stopPropagation={() => togglePin('notes')}
 							>
 								{#if isPinned('notes')}
-									<PinSlash className="size-3.5" strokeWidth="1.5" />
+									<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
 								{:else}
-									<Pin className="size-3.5" strokeWidth="1.5" />
+									<PinIcon className="size-3.5" strokeWidth="1.5" />
 								{/if}
 							</button>
 						</Tooltip>
@@ -350,20 +340,7 @@
 						}}
 					>
 						<div class="self-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="1.5"
-								stroke="currentColor"
-								class="size-3.5"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
-								/>
-							</svg>
+							<CalendarIcon className="size-3.5" strokeWidth="1.5" />
 						</div>
 						<div class="self-center truncate">{$i18n.t('Calendar')}</div>
 					</a>
@@ -379,9 +356,9 @@
 								on:click|preventDefault|stopPropagation={() => togglePin('calendar')}
 							>
 								{#if isPinned('calendar')}
-									<PinSlash className="size-3.5" strokeWidth="1.5" />
+									<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
 								{:else}
-									<Pin className="size-3.5" strokeWidth="1.5" />
+									<PinIcon className="size-3.5" strokeWidth="1.5" />
 								{/if}
 							</button>
 						</Tooltip>
@@ -407,20 +384,7 @@
 						}}
 					>
 						<div class="self-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="1.5"
-								stroke="currentColor"
-								class="size-3.5"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-								/>
-							</svg>
+							<ClockIcon className="size-3.5" strokeWidth="1.5" />
 						</div>
 						<div class="self-center truncate">{$i18n.t('Automations')}</div>
 					</a>
@@ -436,9 +400,9 @@
 								on:click|preventDefault|stopPropagation={() => togglePin('automations')}
 							>
 								{#if isPinned('automations')}
-									<PinSlash className="size-3.5" strokeWidth="1.5" />
+									<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
 								{:else}
-									<Pin className="size-3.5" strokeWidth="1.5" />
+									<PinIcon className="size-3.5" strokeWidth="1.5" />
 								{/if}
 							</button>
 						</Tooltip>
@@ -464,7 +428,7 @@
 						}}
 					>
 						<div class="self-center">
-							<Code className="size-3.5" strokeWidth="1.5" />
+							<CodeIcon className="size-3.5" strokeWidth="1.5" />
 						</div>
 						<div class="self-center truncate">{$i18n.t('Playground')}</div>
 					</a>
@@ -480,9 +444,9 @@
 								on:click|preventDefault|stopPropagation={() => togglePin('playground')}
 							>
 								{#if isPinned('playground')}
-									<PinSlash className="size-3.5" strokeWidth="1.5" />
+									<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
 								{:else}
-									<Pin className="size-3.5" strokeWidth="1.5" />
+									<PinIcon className="size-3.5" strokeWidth="1.5" />
 								{/if}
 							</button>
 						</Tooltip>
@@ -507,7 +471,7 @@
 						}}
 					>
 						<div class="self-center">
-							<QuestionMarkCircle className="size-3.5" />
+							<HelpCircleIcon className="size-3.5" />
 						</div>
 						<div class=" self-center truncate">{$i18n.t('Documentation')}</div>
 					</a>
@@ -524,7 +488,7 @@
 						}}
 					>
 						<div class="self-center">
-							<Map className="size-3.5" />
+							<MapIcon className="size-3.5" />
 						</div>
 						<div class=" self-center truncate">{$i18n.t('Releases')}</div>
 					</a>
@@ -545,9 +509,9 @@
 					}}
 				>
 					<div class="self-center">
-						<Keyboard className="size-3.5" />
+						<KeyIcon className="size-3.5" />
 					</div>
-					<div class=" self-center truncate">{$i18n.t('Keyboard Shortcuts')}</div>
+					<div class=" self-center truncate">{$i18n.t('Keyboard')}</div>
 				</button>
 			{/if}
 
@@ -572,7 +536,7 @@
 					}}
 				>
 					<div class="self-center">
-						<UserGroup className="size-3.5" strokeWidth="1.5" />
+						<UserIcon className="size-3.5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
 				</a>
@@ -611,7 +575,7 @@
 				}}
 			>
 				<div class="self-center">
-					<SignOut className="size-3.5" strokeWidth="1.5" />
+					<LogOutIcon className="size-3.5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</button>

@@ -35,15 +35,14 @@
 	import ChatMenu from './ChatMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ShareChatModal from '$lib/components/chat/ShareChatModal.svelte';
-	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import DragGhost from '$lib/components/common/DragGhost.svelte';
-	import Check from '$lib/components/icons/Check.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
-	import Document from '$lib/components/icons/Document.svelte';
-	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import ArchiveIcon from './icons/Archive.svelte';
+	import ChatIcon from './icons/Chat.svelte';
+	import MoreHorizontalIcon from './icons/MoreHorizontal.svelte';
+	import SparklesIcon from './icons/Sparkles.svelte';
+	import TrashIcon from './icons/Trash.svelte';
 	import { generateTitle } from '$lib/apis';
 	import { createMessagesList } from '$lib/utils';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
@@ -435,7 +434,7 @@
 	<DragGhost {x} {y}>
 		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
 			<div class="flex items-center gap-1">
-				<Document className=" size-[18px]" strokeWidth="2" />
+				<ChatIcon className=" size-[18px]" strokeWidth="1.5" />
 				<div class=" text-xs text-white line-clamp-1">
 					{title}
 				</div>
@@ -615,7 +614,7 @@
 								generateTitleHandler();
 							}}
 						>
-							<Sparkles strokeWidth="2" />
+							<SparklesIcon strokeWidth="1.5" />
 						</button>
 					</Tooltip>
 				</div>
@@ -630,7 +629,7 @@
 							}}
 							type="button"
 						>
-							<ArchiveBox className="size-4  translate-y-[0.5px]" strokeWidth="2" />
+							<ArchiveIcon className="size-4  translate-y-[0.5px]" strokeWidth="1.5" />
 						</button>
 					</Tooltip>
 
@@ -643,7 +642,7 @@
 							}}
 							type="button"
 						>
-							<GarbageBin strokeWidth="2" />
+							<TrashIcon strokeWidth="1.5" />
 						</button>
 					</Tooltip>
 				</div>
@@ -679,16 +678,7 @@
 								dispatch('select');
 							}}
 						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-4 h-4"
-							>
-								<path
-									d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-								/>
-							</svg>
+							<MoreHorizontalIcon className="w-4 h-4" />
 						</button>
 					</ChatMenu>
 
@@ -701,16 +691,7 @@
 								showDeleteConfirm = true;
 							}}
 						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-4 h-4"
-							>
-								<path
-									d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-								/>
-							</svg>
+							<MoreHorizontalIcon className="w-4 h-4" />
 						</button>
 					{/if}
 				</div>

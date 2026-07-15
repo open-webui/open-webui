@@ -3,7 +3,7 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
+	import XMark from '../icons/XMark.svelte';
 
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
@@ -111,7 +111,7 @@
 <Modal size="md" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
-			<div class=" text-sm font-medium self-center">
+			<div class=" text-sm self-center">
 				{#if edit}
 					{$i18n.t('Edit Folder')}
 				{:else}

@@ -287,7 +287,7 @@
 		},
 		{
 			id: 'shortcuts',
-			title: 'Keyboard Shortcuts',
+			title: 'Keyboard',
 			keywords: [
 				'commands',
 				'hotkeys',
@@ -904,7 +904,7 @@
 							}}
 						>
 							<Keyboard className="size-3.5" strokeWidth="2" />
-							<span>{$i18n.t('Keyboard Shortcuts')}</span>
+							<span>{$i18n.t('Keyboard')}</span>
 						</button>
 					{:else if tabId === 'connections'}
 						{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}

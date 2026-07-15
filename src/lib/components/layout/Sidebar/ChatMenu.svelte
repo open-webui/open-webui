@@ -7,15 +7,8 @@
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
-	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
-	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Tags from '$lib/components/chat/Tags.svelte';
-	import Share from '$lib/components/icons/Share.svelte';
-	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
-	import Bookmark from '$lib/components/icons/Bookmark.svelte';
-	import BookmarkSlash from '$lib/components/icons/BookmarkSlash.svelte';
 	import {
 		getChatById,
 		getChatPinnedStatusById,
@@ -25,9 +18,16 @@
 	import { createMessagesList } from '$lib/utils';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 	import { downloadChatAsPDF } from '$lib/apis/utils';
-	import Download from '$lib/components/icons/Download.svelte';
-	import Folder from '$lib/components/icons/Folder.svelte';
+	import ArchiveIcon from './icons/Archive.svelte';
+	import CopyIcon from './icons/Copy.svelte';
+	import DownloadIcon from './icons/Download.svelte';
+	import EditPencilIcon from './icons/EditPencil.svelte';
+	import FolderIcon from './icons/Folder.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
+	import PinIcon from './icons/Pin.svelte';
+	import PinSlashIcon from './icons/PinSlash.svelte';
+	import ShareIcon from './icons/Share.svelte';
+	import TrashIcon from './icons/Trash.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -309,7 +309,7 @@
 						shareHandler();
 					}}
 				>
-					<Share className="size-3.5" strokeWidth="1.5" />
+					<ShareIcon className="size-3.5" strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Share')}</div>
 				</button>
 			{/if}
@@ -321,7 +321,7 @@
 						draggable="false"
 						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
 					>
-						<Download className="size-3.5" strokeWidth="1.5" />
+						<DownloadIcon className="size-3.5" strokeWidth="1.5" />
 						<div class="flex items-center">{$i18n.t('Download')}</div>
 					</button>
 
@@ -365,7 +365,7 @@
 					renameHandler();
 				}}
 			>
-				<Pencil className="size-3.5" strokeWidth="1.5" />
+				<EditPencilIcon className="size-3.5" strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Rename')}</div>
 			</button>
 
@@ -380,10 +380,10 @@
 				}}
 			>
 				{#if pinned}
-					<BookmarkSlash className="size-3.5" strokeWidth="1.5" />
+					<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Unpin')}</div>
 				{:else}
-					<Bookmark className="size-3.5" strokeWidth="1.5" />
+					<PinIcon className="size-3.5" strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Pin')}</div>
 				{/if}
 			</button>
@@ -397,7 +397,7 @@
 						cloneChatHandler();
 					}}
 				>
-					<DocumentDuplicate className="size-3.5" strokeWidth="1.5" />
+					<CopyIcon className="size-3.5" strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Clone')}</div>
 				</button>
 			{/if}
@@ -409,7 +409,7 @@
 						draggable="false"
 						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 select-none w-full"
 					>
-						<Folder className="size-3.5" />
+						<FolderIcon className="size-3.5" />
 						<div class="flex items-center">{$i18n.t('Move')}</div>
 					</button>
 
@@ -422,7 +422,7 @@
 							}}
 						>
 							<div class="shrink-0">
-								<Folder className="size-3.5" />
+								<FolderIcon className="size-3.5" />
 							</div>
 
 							<div class="truncate">{folder?.name ?? 'Folder'}</div>
@@ -438,7 +438,7 @@
 					archiveChatHandler();
 				}}
 			>
-				<ArchiveBox className="size-3.5" strokeWidth="1.5" />
+				<ArchiveIcon className="size-3.5" strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Archive')}</div>
 			</button>
 
@@ -449,7 +449,7 @@
 					deleteHandler();
 				}}
 			>
-				<GarbageBin className="size-3.5" strokeWidth="1.5" />
+				<TrashIcon className="size-3.5" strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</button>
 		</DropdownMenu>

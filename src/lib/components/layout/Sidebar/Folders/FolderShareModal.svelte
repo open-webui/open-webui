@@ -4,7 +4,7 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
+	import XMark from '../icons/XMark.svelte';
 	import { getFolderById, updateFolderAccessById } from '$lib/apis/folders';
 	import { user } from '$lib/stores';
 
@@ -57,7 +57,7 @@
 <Modal size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-3 pb-1">
-			<div class=" text-sm font-medium self-center">
+			<div class=" text-sm self-center">
 				{$i18n.t('Share')}: {folder?.name ?? ''}
 			</div>
 			<button

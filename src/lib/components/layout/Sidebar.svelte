@@ -67,15 +67,18 @@
 	import { getChannels, createNewChannel } from '$lib/apis/channels';
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
-	import PencilSquare from '../icons/PencilSquare.svelte';
-	import Search from '../icons/Search.svelte';
 	import SearchModal from './SearchModal.svelte';
 	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
-	import Sidebar from '../icons/Sidebar.svelte';
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 	import PinnedNoteList from './Sidebar/PinnedNoteList.svelte';
-	import Note from '../icons/Note.svelte';
-	import Code from '../icons/Code.svelte';
+	import CalendarIcon from './Sidebar/icons/Calendar.svelte';
+	import ClockIcon from './Sidebar/icons/Clock.svelte';
+	import CodeIcon from './Sidebar/icons/Code.svelte';
+	import EditPencilIcon from './Sidebar/icons/EditPencil.svelte';
+	import NotesIcon from './Sidebar/icons/Notes.svelte';
+	import SearchIcon from './Sidebar/icons/Search.svelte';
+	import Sidebar from '../icons/Sidebar.svelte';
+	import WorkspaceIcon from './Sidebar/icons/Workspace.svelte';
 	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
 
@@ -846,7 +849,7 @@
 							<div
 								class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100/50 dark:group-hover:bg-gray-850/50"
 							>
-								<PencilSquare className="size-4" />
+								<EditPencilIcon className="size-4" />
 							</div>
 						</a>
 					</Tooltip>
@@ -868,7 +871,7 @@
 							<div
 								class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100/50 dark:group-hover:bg-gray-850/50"
 							>
-								<Search className="size-4" />
+								<SearchIcon className="size-4" />
 							</div>
 						</button>
 					</Tooltip>
@@ -895,54 +898,15 @@
 										class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100/50 dark:group-hover:bg-gray-850/50"
 									>
 										{#if itemId === 'notes'}
-											<Note className="size-4" />
+											<NotesIcon className="size-4" />
 										{:else if itemId === 'workspace'}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="size-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
-												/>
-											</svg>
+											<WorkspaceIcon className="size-4" />
 										{:else if itemId === 'automations'}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="size-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-												/>
-											</svg>
+											<ClockIcon className="size-4" />
 										{:else if itemId === 'calendar'}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="size-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
-												/>
-											</svg>
+											<CalendarIcon className="size-4" />
 										{:else if itemId === 'playground'}
-											<Code className="size-4" />
+											<CodeIcon className="size-4" />
 										{/if}
 									</div>
 								</a>
@@ -1087,7 +1051,7 @@
 							aria-label={$i18n.t('New Chat')}
 						>
 							<div class="self-center">
-								<PencilSquare className=" size-4" strokeWidth="2" />
+								<EditPencilIcon className=" size-4" strokeWidth="1.5" />
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
@@ -1109,7 +1073,7 @@
 							aria-label={$i18n.t('Search')}
 						>
 							<div class="self-center">
-								<Search strokeWidth="2" className="size-4" />
+								<SearchIcon strokeWidth="1.5" className="size-4" />
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
@@ -1137,54 +1101,15 @@
 									>
 										<div class="self-center">
 											{#if itemId === 'notes'}
-												<Note className="size-4" strokeWidth="2" />
+												<NotesIcon className="size-4" strokeWidth="1.5" />
 											{:else if itemId === 'workspace'}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="2"
-													stroke="currentColor"
-													class="size-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
-													/>
-												</svg>
+												<WorkspaceIcon className="size-4" strokeWidth="1.5" />
 											{:else if itemId === 'automations'}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="2"
-													stroke="currentColor"
-													class="size-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-													/>
-												</svg>
+												<ClockIcon className="size-4" strokeWidth="1.5" />
 											{:else if itemId === 'calendar'}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="2"
-													stroke="currentColor"
-													class="size-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
-													/>
-												</svg>
+												<CalendarIcon className="size-4" strokeWidth="1.5" />
 											{:else if itemId === 'playground'}
-												<Code className="size-4" strokeWidth="2" />
+												<CodeIcon className="size-4" strokeWidth="1.5" />
 											{/if}
 										</div>
 
