@@ -253,8 +253,8 @@
 				<div class="flex flex-col gap-2.5">
 					<AdminSettingField label={$i18n.t('Pipeline URL')}>
 						<SettingsSelect
-							className="w-full"
 							bind:value={selectedPipelinesUrlIdx}
+							className="w-full"
 							placeholder={$i18n.t('Select a pipeline url')}
 							on:change={async () => {
 								await tick();
@@ -330,8 +330,8 @@
 							<AdminSettingField label={$i18n.t('Pipeline')}>
 								<div class="flex gap-2">
 									<SettingsSelect
-										className="w-full"
 										bind:value={selectedPipelineIdx}
+										className="w-full"
 										placeholder={$i18n.t('Select a pipeline')}
 										on:change={async () => {
 											await tick();

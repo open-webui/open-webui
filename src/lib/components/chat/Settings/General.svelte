@@ -246,7 +246,6 @@
 				<SettingsSelect
 					bind:value={lang}
 					ariaLabel={$i18n.t('Language')}
-					className="w-48"
 					placeholder={$i18n.t('Select a language')}
 					on:change={(e) => {
 						changeLanguage(lang);

@@ -14,8 +14,8 @@
 	<div class="flex-1 mb-2.5 pr-1.5 rounded-lg bg-gray-50 dark:text-gray-300 dark:bg-gray-850">
 		<SettingsSelect
 			bind:value={selectedUrlIdx}
-			placeholder={$i18n.t('Select an Ollama instance')}
 			className="w-full"
+			placeholder={$i18n.t('Select an Ollama instance')}
 			selectClassName="text-sm"
 		>
 			{#each ollamaConfig.OLLAMA_BASE_URLS as url, idx}

@@ -137,7 +137,6 @@
 
 				<AdminSettingRow label={$i18n.t('Default Group')}>
 					<SettingsSelect
-						className="w-fit max-w-48"
 						bind:value={adminConfig.DEFAULT_GROUP_ID}
 						placeholder={$i18n.t('Select a group')}
 					>
@@ -302,10 +301,9 @@
 
 					<AdminSettingField label={$i18n.t('Application DN Password')}>
 						<SensitiveInput
+							variant="settings"
 							placeholder={$i18n.t('Enter Application DN Password')}
 							required={false}
-							outerClassName="flex flex-1"
-							inputClassName={inputClass}
 							bind:value={LDAP_SERVER.app_dn_password}
 						/>
 					</AdminSettingField>
@@ -432,10 +430,9 @@
 
 					<AdminSettingField label={$i18n.t('Client Secret')}>
 						<SensitiveInput
+							variant="settings"
 							placeholder={$i18n.t('Enter Client Secret')}
 							required={false}
-							outerClassName="flex flex-1"
-							inputClassName={inputClass}
 							bind:value={oauthConfig.OAUTH_CLIENT_SECRET}
 						/>
 					</AdminSettingField>

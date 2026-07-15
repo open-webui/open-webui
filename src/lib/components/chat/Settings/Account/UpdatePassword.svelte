@@ -10,8 +10,6 @@
 	let currentPassword = '';
 	let newPassword = '';
 	let newPasswordConfirm = '';
-	const inputClass =
-		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const actionButtonClass =
 		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
@@ -70,7 +68,7 @@
 
 				<div class="flex-1">
 					<SensitiveInput
-						class={inputClass}
+						variant="settings"
 						type="password"
 						bind:value={currentPassword}
 						placeholder={$i18n.t('Enter your current password')}
@@ -87,7 +85,7 @@
 
 				<div class="flex-1">
 					<SensitiveInput
-						class={inputClass}
+						variant="settings"
 						type="password"
 						bind:value={newPassword}
 						placeholder={$i18n.t('Enter your new password')}
@@ -104,7 +102,7 @@
 
 				<div class="flex-1">
 					<SensitiveInput
-						class={inputClass}
+						variant="settings"
 						type="password"
 						bind:value={newPasswordConfirm}
 						placeholder={$i18n.t('Confirm your new password')}

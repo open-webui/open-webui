@@ -448,6 +448,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<SensitiveInput
+											variant="settings"
 											inputClassName="text-right w-full"
 											placeholder={$i18n.t('API Key')}
 											bind:value={config.IMAGES_OPENAI_API_KEY}
@@ -569,6 +570,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<SensitiveInput
+											variant="settings"
 											inputClassName="text-right w-full"
 											placeholder={$i18n.t('Enter api auth string (e.g. username:password)')}
 											bind:value={config.AUTOMATIC1111_API_AUTH}
@@ -672,6 +674,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<SensitiveInput
+											variant="settings"
 											inputClassName="text-right w-full"
 											placeholder={$i18n.t('sk-1234')}
 											bind:value={config.COMFYUI_API_KEY}
@@ -850,6 +853,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<SensitiveInput
+											variant="settings"
 											inputClassName="text-right w-full"
 											placeholder={$i18n.t('API Key')}
 											bind:value={config.IMAGES_GEMINI_API_KEY}
@@ -993,6 +997,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<SensitiveInput
+											variant="settings"
 											inputClassName="text-right w-full"
 											placeholder={$i18n.t('API Key')}
 											bind:value={config.IMAGES_EDIT_OPENAI_API_KEY}
@@ -1083,6 +1088,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<SensitiveInput
+											variant="settings"
 											inputClassName="text-right w-full"
 											placeholder={$i18n.t('sk-1234')}
 											bind:value={config.IMAGES_EDIT_COMFYUI_API_KEY}
@@ -1253,6 +1259,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<SensitiveInput
+											variant="settings"
 											inputClassName="text-right w-full"
 											placeholder={$i18n.t('API Key')}
 											bind:value={config.IMAGES_EDIT_GEMINI_API_KEY}

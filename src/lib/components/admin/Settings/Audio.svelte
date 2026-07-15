@@ -288,7 +288,11 @@
 								required
 							/>
 
-							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={STT_OPENAI_API_KEY} />
+							<SensitiveInput
+								variant="settings"
+								placeholder={$i18n.t('API Key')}
+								bind:value={STT_OPENAI_API_KEY}
+							/>
 						</div>
 					</div>
 
@@ -326,7 +330,11 @@
 				{:else if STT_ENGINE === 'deepgram'}
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
-							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={STT_DEEPGRAM_API_KEY} />
+							<SensitiveInput
+								variant="settings"
+								placeholder={$i18n.t('API Key')}
+								bind:value={STT_DEEPGRAM_API_KEY}
+							/>
 						</div>
 					</div>
 
@@ -358,6 +366,7 @@
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
 							<SensitiveInput
+								variant="settings"
 								placeholder={$i18n.t('API Key')}
 								bind:value={STT_AZURE_API_KEY}
 								required
@@ -434,7 +443,11 @@
 								required
 							/>
 
-							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={STT_MISTRAL_API_KEY} />
+							<SensitiveInput
+								variant="settings"
+								placeholder={$i18n.t('API Key')}
+								bind:value={STT_MISTRAL_API_KEY}
+							/>
 						</div>
 					</div>
 
@@ -596,19 +609,33 @@
 								required
 							/>
 
-							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_OPENAI_API_KEY} />
+							<SensitiveInput
+								variant="settings"
+								placeholder={$i18n.t('API Key')}
+								bind:value={TTS_OPENAI_API_KEY}
+							/>
 						</div>
 					</div>
 				{:else if TTS_ENGINE === 'elevenlabs'}
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
-							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_API_KEY} required />
+							<SensitiveInput
+								variant="settings"
+								placeholder={$i18n.t('API Key')}
+								bind:value={TTS_API_KEY}
+								required
+							/>
 						</div>
 					</div>
 				{:else if TTS_ENGINE === 'azure'}
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
-							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_API_KEY} required />
+							<SensitiveInput
+								variant="settings"
+								placeholder={$i18n.t('API Key')}
+								bind:value={TTS_API_KEY}
+								required
+							/>
 						</div>
 
 						<div>
@@ -651,7 +678,11 @@
 								required
 							/>
 
-							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_MISTRAL_API_KEY} />
+							<SensitiveInput
+								variant="settings"
+								placeholder={$i18n.t('API Key')}
+								bind:value={TTS_MISTRAL_API_KEY}
+							/>
 						</div>
 					</div>
 				{/if}

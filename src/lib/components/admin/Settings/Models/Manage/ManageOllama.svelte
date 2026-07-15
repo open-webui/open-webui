@@ -814,8 +814,8 @@
 						>
 							<SettingsSelect
 								bind:value={deleteModelTag}
-								placeholder={$i18n.t('Select a model')}
 								className="w-full"
+								placeholder={$i18n.t('Select a model')}
 								selectClassName="text-sm"
 							>
 								<option value="" disabled selected>{$i18n.t('Select a model')}</option>

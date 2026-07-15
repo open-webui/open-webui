@@ -19,6 +19,7 @@
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
 
 	const i18n: any = getContext('i18n');
 
@@ -212,13 +213,22 @@
 			</AdminSettingSection>
 
 			<AdminSettingSection title={$i18n.t('Features')}>
-				<AdminSettingRow label={$i18n.t('Enable Community Sharing')}>
+				<AdminSettingRow
+					label={$i18n.t('Community Sharing')}
+					description={$i18n.t('Allow users to share chats with the Open WebUI community.')}
+				>
 					<Switch bind:state={adminConfig.ENABLE_COMMUNITY_SHARING} />
 				</AdminSettingRow>
-				<AdminSettingRow label={$i18n.t('Enable Message Rating')}>
+				<AdminSettingRow
+					label={$i18n.t('Message Rating')}
+					description={$i18n.t('Let users rate assistant responses.')}
+				>
 					<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
 				</AdminSettingRow>
-				<AdminSettingRow label={$i18n.t('Folders')}>
+				<AdminSettingRow
+					label={$i18n.t('Folders')}
+					description={$i18n.t('Allow users to organize chats into folders.')}
+				>
 					<Switch bind:state={adminConfig.ENABLE_FOLDERS} />
 				</AdminSettingRow>
 
@@ -237,37 +247,62 @@
 					</AdminSettingField>
 				{/if}
 
-				<AdminSettingRow label={$i18n.t('Memories')}>
+				<AdminSettingRow
+					label={$i18n.t('Memories')}
+					description={$i18n.t('Allow users to save memories for more personalized responses.')}
+				>
 					<Switch bind:state={adminConfig.ENABLE_MEMORIES} />
 				</AdminSettingRow>
 				{#if adminConfig.ENABLE_MEMORIES}
 					<AdminSettingRow
 						label={$i18n.t('Memory System Context')}
-						labelClassName="pl-4 text-gray-500 dark:text-gray-500"
+						description={$i18n.t('Include saved memories in the system context.')}
+						labelClassName="text-gray-500 dark:text-gray-500"
 					>
 						<Switch bind:state={adminConfig.ENABLE_MEMORY_SYSTEM_CONTEXT} />
 					</AdminSettingRow>
 				{/if}
-				<AdminSettingRow label={$i18n.t('Notes')}>
+				<AdminSettingRow
+					label={$i18n.t('Notes')}
+					description={$i18n.t('Allow users to create and manage notes.')}
+				>
 					<Switch bind:state={adminConfig.ENABLE_NOTES} />
 				</AdminSettingRow>
-				<AdminSettingRow label={$i18n.t('Channels')}>
+				<AdminSettingRow
+					label={$i18n.t('Channels')}
+					description={$i18n.t('Allow users to use channels for shared conversations.')}
+				>
 					<Switch bind:state={adminConfig.ENABLE_CHANNELS} />
 				</AdminSettingRow>
-				<AdminSettingRow label={$i18n.t('Calendar')}>
+				<AdminSettingRow
+					label={$i18n.t('Calendar')}
+					description={$i18n.t('Allow users to access calendar features.')}
+				>
 					<Switch bind:state={adminConfig.ENABLE_CALENDAR} />
 				</AdminSettingRow>
-				<AdminSettingRow label={$i18n.t('Automations')}>
+				<AdminSettingRow
+					label={$i18n.t('Automations')}
+					description={$i18n.t('Allow users to create and run automations.')}
+				>
 					<Switch bind:state={adminConfig.ENABLE_AUTOMATIONS} />
 				</AdminSettingRow>
-				<AdminSettingRow label={$i18n.t('User Webhooks')}>
+				<AdminSettingRow
+					label={$i18n.t('User Webhooks')}
+					description={$i18n.t('Allow users to configure webhooks from their account.')}
+				>
 					<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
 				</AdminSettingRow>
-				<AdminSettingRow label={$i18n.t('User Status')}>
+				<AdminSettingRow
+					label={$i18n.t('User Status')}
+					description={$i18n.t('Show user status information in the app.')}
+				>
 					<Switch bind:state={adminConfig.ENABLE_USER_STATUS} />
 				</AdminSettingRow>
 
-				<AdminSettingField label={$i18n.t('Response Watermark')}>
+				<AdminSettingField
+					label={$i18n.t('Response Watermark')}
+					description={$i18n.t('Append a watermark to assistant responses when configured.')}
+				>
 					<Textarea
 						className={textareaClass}
 						placeholder={$i18n.t('Enter a watermark for the response. Leave empty for none.')}
@@ -294,11 +329,16 @@
 
 			<AdminSettingSection title={$i18n.t('UI')}>
 				<div>
-					<div class="mb-2 flex w-full items-center justify-between">
-						<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Banners')}</div>
+					<div class="mb-2 flex w-full items-start justify-between gap-4">
+						<div class="min-w-0">
+							<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Banners')}</div>
+							<div class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+								{$i18n.t('Create announcements shown to users in the app.')}
+							</div>
+						</div>
 
 						<button
-							class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+							class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
 							type="button"
 							aria-label={$i18n.t('Add banner')}
 							on:click={() => {
@@ -317,16 +357,7 @@
 								}
 							}}
 						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
-								fill="currentColor"
-								class="size-4"
-							>
-								<path
-									d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-								/>
-							</svg>
+							<Plus />
 						</button>
 					</div>
 

@@ -229,6 +229,7 @@
 									<div class="flex w-full">
 										<div class="flex-1">
 											<SensitiveInput
+												variant="settings"
 												placeholder={$i18n.t('Enter Ollama Cloud API Key')}
 												bind:value={webConfig.OLLAMA_CLOUD_WEB_SEARCH_API_KEY}
 											/>
@@ -266,6 +267,7 @@
 									<div class="flex w-full">
 										<div class="flex-1">
 											<SensitiveInput
+												variant="settings"
 												placeholder={$i18n.t('Enter Perplexity API Key')}
 												bind:value={webConfig.PERPLEXITY_API_KEY}
 											/>
@@ -353,6 +355,7 @@
 										</div>
 
 										<SensitiveInput
+											variant="settings"
 											placeholder={$i18n.t('Enter Yacy Password')}
 											bind:value={webConfig.YACY_PASSWORD}
 										/>
@@ -367,6 +370,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Google PSE API Key')}
 										bind:value={webConfig.GOOGLE_PSE_API_KEY}
 									/>
@@ -397,6 +401,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Brave Search API Key')}
 										bind:value={webConfig.BRAVE_SEARCH_API_KEY}
 									/>
@@ -410,6 +415,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Brave Search API Key')}
 										bind:value={webConfig.BRAVE_SEARCH_API_KEY}
 									/>
@@ -443,6 +449,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Kagi Search API Key')}
 										bind:value={webConfig.KAGI_SEARCH_API_KEY}
 									/>
@@ -456,6 +463,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Mojeek Search API Key')}
 										bind:value={webConfig.MOJEEK_SEARCH_API_KEY}
 									/>
@@ -469,6 +477,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Bocha Search API Key')}
 										bind:value={webConfig.BOCHA_SEARCH_API_KEY}
 									/>
@@ -482,6 +491,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Serpstack API Key')}
 										bind:value={webConfig.SERPSTACK_API_KEY}
 									/>
@@ -495,6 +505,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Serper API Key')}
 										bind:value={webConfig.SERPER_API_KEY}
 									/>
@@ -508,6 +519,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter SERPHouse API Key')}
 										bind:value={webConfig.SERPHOUSE_API_KEY}
 									/>
@@ -538,6 +550,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Serply API Key')}
 										bind:value={webConfig.SERPLY_API_KEY}
 									/>
@@ -551,6 +564,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Tavily API Key')}
 										bind:value={webConfig.TAVILY_API_KEY}
 									/>
@@ -564,6 +578,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter SearchApi API Key')}
 										bind:value={webConfig.SEARCHAPI_API_KEY}
 									/>
@@ -594,6 +609,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter SerpApi API Key')}
 										bind:value={webConfig.SERPAPI_API_KEY}
 									/>
@@ -642,6 +658,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Jina API Key')}
 										bind:value={webConfig.JINA_API_KEY}
 									/>
@@ -673,6 +690,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Bing Search V7 Subscription Key')}
 										bind:value={webConfig.BING_SEARCH_V7_SUBSCRIPTION_KEY}
 									/>
@@ -686,6 +704,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Exa API Key')}
 										bind:value={webConfig.EXA_API_KEY}
 									/>
@@ -699,6 +718,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Perplexity API Key')}
 										bind:value={webConfig.PERPLEXITY_API_KEY}
 									/>
@@ -767,6 +787,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Microsoft Web IQ API Key')}
 										bind:value={webConfig.MICROSOFT_WEB_IQ_API_KEY}
 									/>
@@ -794,6 +815,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Sougou Search API sID')}
 										bind:value={webConfig.SOUGOU_API_SID}
 									/>
@@ -806,6 +828,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Sougou Search API SK')}
 										bind:value={webConfig.SOUGOU_API_SK}
 									/>
@@ -837,6 +860,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Firecrawl API Key')}
 										bind:value={webConfig.FIRECRAWL_API_KEY}
 									/>
@@ -886,6 +910,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter External Web Search API Key')}
 										bind:value={webConfig.EXTERNAL_WEB_SEARCH_API_KEY}
 									/>
@@ -917,6 +942,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Yandex Web Search API Key')}
 										bind:value={webConfig.YANDEX_WEB_SEARCH_API_KEY}
 									/>
@@ -951,6 +977,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter You.com API Key')}
 										bind:value={webConfig.YOUCOM_API_KEY}
 									/>
@@ -964,6 +991,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Linkup API Key')}
 										bind:value={webConfig.LINKUP_API_KEY}
 									/>
@@ -1245,6 +1273,7 @@
 								</div>
 
 								<SensitiveInput
+									variant="settings"
 									placeholder={$i18n.t('Enter Firecrawl API Key')}
 									bind:value={webConfig.FIRECRAWL_API_KEY}
 								/>
@@ -1277,6 +1306,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Tavily API Key')}
 										bind:value={webConfig.TAVILY_API_KEY}
 									/>
@@ -1310,6 +1340,7 @@
 									</div>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter Microsoft Web IQ API Key')}
 										bind:value={webConfig.MICROSOFT_WEB_IQ_API_KEY}
 									/>
@@ -1356,6 +1387,7 @@
 								</div>
 
 								<SensitiveInput
+									variant="settings"
 									placeholder={$i18n.t('Enter External Web Loader API Key')}
 									bind:value={webConfig.EXTERNAL_WEB_LOADER_API_KEY}
 								/>

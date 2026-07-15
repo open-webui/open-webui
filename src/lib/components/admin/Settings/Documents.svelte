@@ -451,6 +451,7 @@
 							</div>
 							<div class="my-0.5 flex gap-2 pr-2">
 								<SensitiveInput
+									variant="settings"
 									placeholder={$i18n.t('Enter Datalab Marker API Key')}
 									required={false}
 									bind:value={RAGConfig.DATALAB_MARKER_API_KEY}
@@ -611,6 +612,7 @@
 										bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_URL}
 									/>
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('Enter External Document Loader API Key')}
 										required={false}
 										bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_API_KEY}
@@ -694,6 +696,7 @@
 									bind:value={RAGConfig.DOCLING_SERVER_URL}
 								/>
 								<SensitiveInput
+									variant="settings"
 									placeholder={$i18n.t('Enter Docling API Key')}
 									bind:value={RAGConfig.DOCLING_API_KEY}
 									required={false}
@@ -723,6 +726,7 @@
 									bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT}
 								/>
 								<SensitiveInput
+									variant="settings"
 									placeholder={$i18n.t('Enter Document Intelligence Key')}
 									bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_KEY}
 									required={false}
@@ -750,6 +754,7 @@
 									bind:value={RAGConfig.MISTRAL_OCR_API_BASE_URL}
 								/>
 								<SensitiveInput
+									variant="settings"
 									placeholder={$i18n.t('Enter Mistral API Key')}
 									bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
 								/>
@@ -777,6 +782,7 @@
 									bind:value={RAGConfig.PADDLEOCR_VL_BASE_URL}
 								/>
 								<SensitiveInput
+									variant="settings"
 									placeholder={$i18n.t('Enter PaddleOCR-vl API Token')}
 									bind:value={RAGConfig.PADDLEOCR_VL_TOKEN}
 									required={false}
@@ -826,6 +832,7 @@
 
 							<div class="flex w-full mt-2">
 								<SensitiveInput
+									variant="settings"
 									placeholder={$i18n.t('Enter MinerU API Key')}
 									bind:value={RAGConfig.MINERU_API_KEY}
 								/>
@@ -1076,6 +1083,7 @@
 									/>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('API Key')}
 										bind:value={OpenAIKey}
 										required={false}
@@ -1091,6 +1099,7 @@
 									/>
 
 									<SensitiveInput
+										variant="settings"
 										placeholder={$i18n.t('API Key')}
 										bind:value={OllamaKey}
 										required={false}
@@ -1105,7 +1114,11 @@
 											bind:value={AzureOpenAIUrl}
 											required
 										/>
-										<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={AzureOpenAIKey} />
+										<SensitiveInput
+											variant="settings"
+											placeholder={$i18n.t('API Key')}
+											bind:value={AzureOpenAIKey}
+										/>
 									</div>
 									<div class="flex gap-2">
 										<input
@@ -1331,6 +1344,7 @@
 											/>
 
 											<SensitiveInput
+												variant="settings"
 												placeholder={$i18n.t('API Key')}
 												bind:value={RAGConfig.RAG_EXTERNAL_RERANKER_API_KEY}
 												required={false}

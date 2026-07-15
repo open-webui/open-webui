@@ -360,7 +360,7 @@
 					label={$i18n.t('Set Voice')}
 					description={$i18n.t('Choose the browser voice used for speech output.')}
 				>
-					<SettingsSelect className="w-full" bind:value={voice} ariaLabel={$i18n.t('Voice')}>
+					<SettingsSelect bind:value={voice} className="w-full" ariaLabel={$i18n.t('Voice')}>
 						<option value="" selected={voice !== ''}>{$i18n.t('Default')}</option>
 						{#each voices.filter((v) => nonLocalVoices || v.localService === true) as _voice}
 							<option

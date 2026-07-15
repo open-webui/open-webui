@@ -147,8 +147,8 @@
 					<div class="flex-1">
 						<div class=" text-xs mb-1">{$i18n.t('Local Task Model')}</div>
 						<SettingsSelect
-							className="w-full"
 							bind:value={taskConfig.TASK_MODEL}
+							className="w-full"
 							placeholder={$i18n.t('Select a model')}
 							on:change={() => {
 								if (taskConfig.TASK_MODEL) {
@@ -190,8 +190,8 @@
 					<div class="flex-1">
 						<div class=" text-xs mb-1">{$i18n.t('External Task Model')}</div>
 						<SettingsSelect
-							className="w-full"
 							bind:value={taskConfig.TASK_MODEL_EXTERNAL}
+							className="w-full"
 							placeholder={$i18n.t('Select a model')}
 							on:change={() => {
 								if (taskConfig.TASK_MODEL_EXTERNAL) {

@@ -462,8 +462,8 @@
 									<SettingsSelect
 										id="external-source-provider"
 										bind:value={sourceForm.provider}
-										on:change={updateProvider}
 										className="w-full"
+										on:change={updateProvider}
 										selectClassName="text-sm"
 									>
 										<option value="qdrant">Qdrant</option>

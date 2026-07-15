@@ -173,8 +173,8 @@
 				description={$i18n.t('Choose the gender value stored on your profile.')}
 			>
 				<SettingsSelect
-					className="w-full"
 					bind:value={_gender}
+					className="w-full"
 					ariaLabel={$i18n.t('Gender')}
 					on:change={(e) => {
 						console.log(_gender);
@@ -264,7 +264,7 @@
 								description={$i18n.t('Copy the current session token for authenticated requests.')}
 							>
 								<div class="flex">
-									<SensitiveInput value={localStorage.token} readOnly={true} />
+									<SensitiveInput variant="settings" value={localStorage.token} readOnly={true} />
 
 									<button
 										class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-850 dark:hover:text-gray-300"
@@ -321,7 +321,7 @@
 							>
 								<div class="flex">
 									{#if APIKey}
-										<SensitiveInput value={APIKey} readOnly={true} />
+										<SensitiveInput variant="settings" value={APIKey} readOnly={true} />
 
 										<button
 											class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-850 dark:hover:text-gray-300"

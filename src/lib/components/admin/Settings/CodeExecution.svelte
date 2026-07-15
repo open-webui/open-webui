@@ -108,21 +108,19 @@
 							>
 								{#if config.CODE_EXECUTION_JUPYTER_AUTH === 'password'}
 									<SensitiveInput
+										variant="settings"
 										type="text"
 										placeholder={$i18n.t('Enter Jupyter Password')}
 										bind:value={config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD}
 										autocomplete="off"
-										outerClassName="flex flex-1"
-										inputClassName={inputClass}
 									/>
 								{:else}
 									<SensitiveInput
+										variant="settings"
 										type="text"
 										placeholder={$i18n.t('Enter Jupyter Token')}
 										bind:value={config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN}
 										autocomplete="off"
-										outerClassName="flex flex-1"
-										inputClassName={inputClass}
 									/>
 								{/if}
 							</AdminSettingField>
@@ -199,21 +197,19 @@
 							>
 								{#if config.CODE_INTERPRETER_JUPYTER_AUTH === 'password'}
 									<SensitiveInput
+										variant="settings"
 										type="text"
 										placeholder={$i18n.t('Enter Jupyter Password')}
 										bind:value={config.CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD}
 										autocomplete="off"
-										outerClassName="flex flex-1"
-										inputClassName={inputClass}
 									/>
 								{:else}
 									<SensitiveInput
+										variant="settings"
 										type="text"
 										placeholder={$i18n.t('Enter Jupyter Token')}
 										bind:value={config.CODE_INTERPRETER_JUPYTER_AUTH_TOKEN}
 										autocomplete="off"
-										outerClassName="flex flex-1"
-										inputClassName={inputClass}
 									/>
 								{/if}
 							</AdminSettingField>
