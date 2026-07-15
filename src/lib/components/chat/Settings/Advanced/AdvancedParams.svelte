@@ -57,7 +57,7 @@
 
 <div
 	class={layout === 'grid'
-		? 'grid grid-cols-1 gap-x-5 gap-y-1 pb-safe-bottom text-xs sm:grid-cols-2 xl:grid-cols-3'
+		? 'grid grid-cols-1 gap-x-5 gap-y-1 pb-safe-bottom text-xs sm:grid-cols-2 lg:grid-cols-3'
 		: 'space-y-1 text-xs pb-safe-bottom'}
 >
 	<div>

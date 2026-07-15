@@ -912,7 +912,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 
 <PaneGroup direction="horizontal" class="w-full h-full">
 	<Pane defaultSize={70} minSize={30} class="h-full flex flex-col w-full relative">
-		<div class="relative flex-1 w-full h-full flex justify-center pt-[11px]" id="note-editor">
+		<div class="relative flex-1 w-full h-full flex justify-center pt-2" id="note-editor">
 			{#if loading}
 				<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
 					<div class="m-auto">
@@ -921,7 +921,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				</div>
 			{:else}
 				<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
-					<div class="shrink-0 w-full flex justify-between items-center px-3.5 mb-1.5">
+					<div class="shrink-0 w-full flex justify-between items-center px-2.5 mb-1.5">
 						<div class="w-full min-w-0 flex items-center">
 							{#if $mobile}
 								<Tooltip
@@ -944,7 +944,9 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							{/if}
 
 							<input
-								class="w-full text-2xl font-normal bg-transparent outline-hidden"
+								class="w-full text-sm font-normal bg-transparent outline-hidden {$mobile
+									? 'ml-1'
+									: ''}"
 								type="text"
 								bind:value={note.title}
 								placeholder={titleGenerating ? $i18n.t('Generating...') : $i18n.t('Title')}
@@ -1124,7 +1126,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 						</div>
 					</div>
 
-					<div class="  px-2.5">
+					<div class="  px-1.5">
 						<div
 							class=" flex w-full bg-transparent overflow-x-auto scrollbar-none"
 							on:wheel={(e) => {
@@ -1180,7 +1182,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 					</div>
 
 					<div
-						class=" flex-1 w-full h-full overflow-auto px-3.5 relative"
+						class=" flex-1 w-full h-full overflow-auto px-2.5 relative"
 						id="note-content-container"
 					>
 						{#if editing}

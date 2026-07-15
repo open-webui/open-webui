@@ -27,18 +27,18 @@
 </script>
 
 <div>
-	<div class="flex w-full justify-between mb-1">
+	<div class="flex w-full items-center gap-2 mb-1">
 		<div class=" self-center text-xs text-gray-500">{$i18n.t('Skills')}</div>
-	</div>
 
-	<div class="flex flex-col mb-1">
 		{#if activeSkills.length > 0}
 			<TypeaheadSelector
 				id="model-skills-selector"
 				items={activeSkills}
 				selectedIds={selectedSkillIds}
-				className="w-48 max-w-full"
 				placeholder={$i18n.t('Search skills')}
+				triggerLabel={$i18n.t('Select Skill')}
+				emptyLabel={$i18n.t('No skills found')}
+				variant="dropdown"
 				on:select={(e) => {
 					toggleSkill(e.detail);
 				}}
@@ -48,8 +48,12 @@
 					];
 				}}
 			/>
+		{/if}
+	</div>
 
-			<div class=" flex items-center flex-wrap">
+	<div class="flex flex-col mb-1">
+		{#if activeSkills.length > 0}
+			<div class=" flex items-center flex-wrap mt-1">
 				{#each selectedSkills as skill, skillIdx}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
@@ -79,7 +83,7 @@
 							selectedSkillIds = [];
 						}}
 					>
-						Disable all
+						{$i18n.t('Disable all')}
 					</button>
 				{/if}
 			</div>
