@@ -96,10 +96,10 @@
 
 	const modelAccessClass = (model) => {
 		if (isPublicModel(model)) {
-			return 'text-green-700/50 dark:text-green-300/50';
+			return 'text-[#4f7a5a] dark:text-[#8db395]';
 		}
 		if (isSharedModel(model)) {
-			return 'text-blue-700/50 dark:text-blue-300/50';
+			return 'text-[#4f6f93] dark:text-[#8ba6c6]';
 		}
 		return 'text-gray-500 dark:text-gray-400';
 	};

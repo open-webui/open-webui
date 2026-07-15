@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
-	import { config, user } from '$lib/stores';
+	import { adminUserCount, config, user } from '$lib/stores';
 	import { getContext, onDestroy } from 'svelte';
 
 	import dayjs from 'dayjs';
@@ -15,6 +15,9 @@
 
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import ChatBubbles from '$lib/components/icons/ChatBubbles.svelte';
+	import EditPencil from '$lib/components/icons/EditPencil.svelte';
+	import Eye from '$lib/components/icons/Eye.svelte';
+	import Trash from '$lib/components/icons/Trash.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	import EditUserModal from '$lib/components/admin/Users/UserList/EditUserModal.svelte';
@@ -24,10 +27,11 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	import Plus from '$lib/components/icons/Plus.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Banner from '$lib/components/common/Banner.svelte';
-	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import UserPreviewModal from '$lib/components/admin/UserPreviewModal.svelte';
@@ -80,10 +84,10 @@
 
 	const roleClass = (role) => {
 		if (role === 'admin') {
-			return 'text-blue-700/50 dark:text-blue-300/50';
+			return 'text-[#4f6f93] dark:text-[#8ba6c6]';
 		}
 		if (role === 'user') {
-			return 'text-green-700/50 dark:text-green-300/50';
+			return 'text-[#4f7a5a] dark:text-[#8db395]';
 		}
 		return 'text-gray-500 dark:text-gray-400';
 	};
@@ -100,6 +104,7 @@
 			if (res) {
 				users = res.users;
 				total = res.total;
+				adminUserCount.set(total);
 			}
 		} catch (err) {
 			console.error(err);
@@ -172,72 +177,46 @@
 		<Spinner className="size-5" />
 	</div>
 {:else}
-	<div
-		class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
-	>
-		<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
-			<div class="flex-shrink-0">
-				{$i18n.t('Users')}
-			</div>
-
-			<div>
-				{#if ($config?.license_metadata?.seats ?? null) !== null}
-					{#if total > $config?.license_metadata?.seats}
-						<span class="text-lg font-normal text-red-500"
-							>{total} of {$config?.license_metadata?.seats}
-							<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
-						>
-					{:else}
-						<span class="text-lg font-normal text-gray-500 dark:text-gray-300"
-							>{total} of {$config?.license_metadata?.seats}
-							<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
-						>
-					{/if}
-				{:else}
-					<span class="text-lg font-normal text-gray-500 dark:text-gray-300">{total}</span>
-				{/if}
-			</div>
-		</div>
-
-		<div class="flex gap-1">
-			<div class="flex w-full space-x-2">
-				<div class="flex flex-1">
-					<div class=" self-center ml-1 mr-3">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
-					<input
-						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={query}
-						on:input={handleSearchInput}
-						aria-label={$i18n.t('Search')}
-						placeholder={$i18n.t('Search')}
-					/>
+	<div class="pt-0.5 pb-1 sticky top-0 z-10 bg-white dark:bg-gray-900">
+		<div class="flex h-8 flex-1 items-center w-full gap-2">
+			<div class="flex min-w-0 flex-1 items-center">
+				<div class="self-center ml-1 mr-3">
+					<Search className="size-3.5" />
 				</div>
+				<input
+					class="w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+					bind:value={query}
+					on:input={handleSearchInput}
+					aria-label={$i18n.t('Search')}
+					placeholder={$i18n.t('Search')}
+				/>
 
-				<div>
-					<Tooltip content={$i18n.t('Add User')}>
+				{#if query}
+					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 						<button
-							class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-normal text-sm flex items-center space-x-1"
+							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
-								showAddUserModal = !showAddUserModal;
+								query = '';
+								handleSearchInput();
 							}}
 						>
-							<Plus className="size-3.5" />
+							<XMark className="size-3" strokeWidth="2" />
 						</button>
-					</Tooltip>
-				</div>
+					</div>
+				{/if}
 			</div>
+
+			<Tooltip content={$i18n.t('Add User')}>
+				<button
+					class="p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-normal text-sm flex items-center"
+					on:click={() => {
+						showAddUserModal = !showAddUserModal;
+					}}
+				>
+					<Plus className="size-3.5" />
+				</button>
+			</Tooltip>
 		</div>
 	</div>
 
@@ -247,7 +226,7 @@
 				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
 					<th
 						scope="col"
-						class="px-2.5 py-2 cursor-pointer select-none"
+						class="px-2.5 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('name')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -270,7 +249,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-2.5 py-2 cursor-pointer select-none"
+						class="px-2.5 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('role')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -293,7 +272,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-2.5 py-2 cursor-pointer select-none"
+						class="px-2.5 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('email')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -317,7 +296,7 @@
 
 					<th
 						scope="col"
-						class="px-2.5 py-2 cursor-pointer select-none"
+						class="px-2.5 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('last_active_at')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -341,7 +320,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-2.5 py-2 cursor-pointer select-none"
+						class="px-2.5 py-1.5 cursor-pointer select-none"
 						on:click={() => setSortKey('created_at')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -362,7 +341,7 @@
 						</div>
 					</th>
 
-					<th scope="col" class="px-2.5 py-2 text-right"></th>
+					<th scope="col" class="px-2.5 py-1.5 text-right"></th>
 				</tr>
 			</thead>
 			<tbody class="">
@@ -372,7 +351,7 @@
 							<div class="flex items-center gap-2">
 								<ProfilePreview {user} side="right" align="center" sideOffset={6}>
 									<img
-										class="rounded-full w-6 min-w-6 h-6 object-cover mr-0.5 flex-shrink-0"
+										class="rounded-full w-6 min-w-6 h-6 object-cover flex-shrink-0"
 										src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 										alt="user"
 										on:error={(e) => {
@@ -422,14 +401,14 @@
 								{#if $config.features.enable_admin_chat_access && user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Chats')}>
 										<button
-											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											class="self-center w-fit p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
 											aria-label={$i18n.t('Chats')}
 											on:click={async () => {
 												showUserChatsModal = !showUserChatsModal;
 												selectedUser = user;
 											}}
 										>
-											<ChatBubbles />
+											<ChatBubbles className="size-3.5" />
 										</button>
 									</Tooltip>
 								{/if}
@@ -437,86 +416,42 @@
 								{#if user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Preview Access')}>
 										<button
-											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											class="self-center w-fit p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
 											aria-label={$i18n.t('Preview Access')}
 											on:click={() => {
 												selectedUser = user;
 												showUserPreviewModal = true;
 											}}
 										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
-												/>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-												/>
-											</svg>
+											<Eye className="size-3.5" />
 										</button>
 									</Tooltip>
 								{/if}
 
 								<Tooltip content={$i18n.t('Edit User')}>
 									<button
-										class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										class="self-center w-fit p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
 										aria-label={$i18n.t('Edit User')}
 										on:click={async () => {
 											showEditUserModal = !showEditUserModal;
 											selectedUser = user;
 										}}
 									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke-width="1.5"
-											stroke="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-											/>
-										</svg>
+										<EditPencil className="size-3.5" />
 									</button>
 								</Tooltip>
 
 								{#if user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Delete User')}>
 										<button
-											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											class="self-center w-fit p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
 											aria-label={$i18n.t('Delete User')}
 											on:click={async () => {
 												showDeleteConfirmDialog = true;
 												selectedUser = user;
 											}}
 										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-												/>
-											</svg>
+											<Trash className="size-3.5" />
 										</button>
 									</Tooltip>
 								{/if}
@@ -539,24 +474,48 @@
 
 {#if !$config?.license_metadata}
 	{#if total > 50}
-		<div class="text-sm">
-			<Markdown
-				content={`
-> [!NOTE]
-> # **Hey there! 👋**
->
-> It looks like you have over 50 users, that usually falls under organizational usage.
-> 
-> Open WebUI is completely free to use as-is, with no restrictions or hidden limits, and we'd love to keep it that way. 🌱  
->
-> By supporting the project through sponsorship or an enterprise license, you’re not only helping us stay independent, you’re also helping us ship new features faster, improve stability, and grow the project for the long haul. With an *enterprise license*, you also get additional perks like dedicated support, customization options, and more, all at a fraction of what it would cost to build and maintain internally.  
-> 
-> Your support helps us stay independent and continue building great tools for everyone. 💛
-> 
-> - 👉 **[Click here to learn more about enterprise licensing](https://docs.openwebui.com/enterprise)**
-> - 👉 *[Click here to sponsor the project on GitHub](https://github.com/sponsors/open-webui)*
-`}
-			/>
+		<div class="mt-3 mb-3 pb-1 text-gray-700 dark:text-gray-300">
+			<div class="max-w-3xl text-xs leading-5">
+				<div class="text-gray-900 dark:text-gray-100">
+					{$i18n.t('Running Open WebUI for a team?')}
+				</div>
+				<div class="mt-2 space-y-2">
+					<p>
+						{$i18n.t(
+							'You have more than 50 users, which often means this workspace is supporting organizational use. Open WebUI is free to use as-is, with no restrictions or hidden limits, and we want to keep it that way.'
+						)}
+					</p>
+					<p class="text-gray-500 dark:text-gray-400">
+						{$i18n.t(
+							'By supporting the project through sponsorship or an enterprise license, you help us stay independent, ship new features faster, improve stability, and grow Open WebUI for the long haul.'
+						)}
+					</p>
+					<p class="text-gray-500 dark:text-gray-400">
+						{$i18n.t(
+							'Enterprise licenses also include dedicated support, customization options, and more, at a fraction of the cost of building and maintaining this stack internally.'
+						)}
+					</p>
+				</div>
+
+				<div class="mt-2 flex items-center gap-3">
+					<a
+						class="text-xs text-gray-700 underline transition hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
+						href="https://docs.openwebui.com/enterprise"
+						target="_blank"
+						rel="noreferrer"
+					>
+						{$i18n.t('Enterprise licensing')}
+					</a>
+					<a
+						class="text-xs text-gray-500 underline transition hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-100"
+						href="https://github.com/sponsors/open-webui"
+						target="_blank"
+						rel="noreferrer"
+					>
+						{$i18n.t('Sponsor on GitHub')}
+					</a>
+				</div>
+			</div>
 		</div>
 	{/if}
 {/if}

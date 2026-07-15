@@ -47,10 +47,10 @@
 
 	const roleClass = (role) => {
 		if (role === 'admin') {
-			return 'text-blue-700/50 dark:text-blue-300/50';
+			return 'text-[#4f6f93] dark:text-[#8ba6c6]';
 		}
 		if (role === 'user') {
-			return 'text-green-700/50 dark:text-green-300/50';
+			return 'text-[#4f7a5a] dark:text-[#8db395]';
 		}
 		return 'text-gray-500 dark:text-gray-400';
 	};
@@ -138,7 +138,7 @@
 						<tr class=" border-b-[1.5px] border-gray-50/50 dark:border-gray-800/10">
 							<th
 								scope="col"
-								class="px-2.5 py-2 cursor-pointer text-left w-8"
+								class="px-2.5 py-1.5 cursor-pointer text-left w-8"
 								on:click={() => setSortKey(`group_id:${groupId}`)}
 							>
 								<div class="flex gap-1.5 items-center">
@@ -162,7 +162,7 @@
 
 							<th
 								scope="col"
-								class="px-2.5 py-2 cursor-pointer select-none"
+								class="px-2.5 py-1.5 cursor-pointer select-none"
 								on:click={() => setSortKey('name')}
 							>
 								<div class="flex gap-1.5 items-center">
@@ -185,7 +185,7 @@
 							</th>
 							<th
 								scope="col"
-								class="px-2.5 py-2 cursor-pointer select-none"
+								class="px-2.5 py-1.5 cursor-pointer select-none"
 								on:click={() => setSortKey('role')}
 							>
 								<div class="flex gap-1.5 items-center">
@@ -209,7 +209,7 @@
 
 							<th
 								scope="col"
-								class="px-2.5 py-2 cursor-pointer select-none"
+								class="px-2.5 py-1.5 cursor-pointer select-none"
 								on:click={() => setSortKey('last_active_at')}
 							>
 								<div class="flex gap-1.5 items-center">

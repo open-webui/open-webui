@@ -89,6 +89,7 @@ export const workspaceCounts: Writable<Record<WorkspaceSection, number | null>> 
 	tools: null
 });
 export const workspaceActions: Writable<WorkspaceAction[]> = writable([]);
+export const adminUserCount: Writable<number | null> = writable(null);
 
 export const toolServers = writable([]);
 export const terminalServers = writable([]);

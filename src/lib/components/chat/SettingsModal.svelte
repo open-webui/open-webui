@@ -85,6 +85,45 @@
 	const isAdminTab = (tabId: string) => tabId.startsWith('admin:');
 	const adminTabSegment = (tabId: string) => tabId.replace('admin:', '');
 	const adminTabPanelId = (tabId: string) => `tab-${tabId.replace(':', '-')}`;
+	const personalSettingGroups: Record<string, string> = {
+		general: 'Basics',
+		interface: 'Basics',
+		shortcuts: 'Basics',
+		connections: 'Services',
+		tools: 'Services',
+		personalization: 'Preferences',
+		audio: 'Preferences',
+		data_controls: 'Data',
+		archived_chats: 'Data',
+		account: 'Profile',
+		about: 'Profile'
+	};
+	const adminSettingGroups: Record<string, string> = {
+		'admin:general': 'System',
+		'admin:authentication': 'System',
+		'admin:connections': 'AI',
+		'admin:models': 'AI',
+		'admin:subagents': 'AI',
+		'admin:evaluations': 'Quality',
+		'admin:analytics': 'Quality',
+		'admin:integrations': 'Tools',
+		'admin:documents': 'Tools',
+		'admin:web': 'Tools',
+		'admin:code-execution': 'Tools',
+		'admin:pipelines': 'Tools',
+		'admin:interface': 'Experience',
+		'admin:audio': 'Experience',
+		'admin:images': 'Experience',
+		'admin:db': 'Data'
+	};
+	const settingGroupTitle = (tabId: string) =>
+		(isAdminTab(tabId) ? adminSettingGroups[tabId] : personalSettingGroups[tabId]) ?? 'General';
+	const shouldShowSettingGroup = (tabIds: string[], index: number) =>
+		index === 0 || settingGroupTitle(tabIds[index]) !== settingGroupTitle(tabIds[index - 1]);
+	const settingGroupHeadingClass = (first: boolean) =>
+		`hidden md:block text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 ${
+			first ? 'mt-0.5' : 'mt-2'
+		} mb-0.5`;
 
 	const allSettings: SettingsTab[] = [
 		{
@@ -629,6 +668,11 @@
 			keywords: ['code execution', 'python', 'sandbox', 'compiler', 'jupyter', 'interpreter']
 		},
 		{
+			id: 'admin:pipelines',
+			title: 'Pipelines',
+			keywords: ['pipelines', 'workflows', 'filters', 'valves', 'middleware']
+		},
+		{
 			id: 'admin:interface',
 			title: 'Interface',
 			keywords: ['interface', 'ui', 'appearance', 'banners', 'tasks', 'prompt suggestions', 'tags']
@@ -644,18 +688,11 @@
 			keywords: ['images', 'generation', 'dalle', 'stable diffusion', 'comfyui', 'automatic1111']
 		},
 		{
-			id: 'admin:pipelines',
-			title: 'Pipelines',
-			keywords: ['pipelines', 'workflows', 'filters', 'valves', 'middleware']
-		},
-		{
 			id: 'admin:db',
 			title: 'Database',
 			keywords: ['database', 'export', 'import', 'backup', 'chats', 'users']
 		}
 	];
-	const allKnownSettings = [...allSettings, ...adminSettings];
-
 	let availableSettings: SettingsTab[] = [];
 	let filteredSettings: string[] = [];
 	let filteredPersonalSettings: string[] = [];
@@ -823,7 +860,13 @@
 			</span>
 
 			{#if filteredPersonalSettings.length > 0}
-				{#each filteredPersonalSettings as tabId (tabId)}
+				{#each filteredPersonalSettings as tabId, index (tabId)}
+					{#if shouldShowSettingGroup(filteredPersonalSettings, index)}
+						<span class={settingGroupHeadingClass(index === 0)}>
+							{$i18n.t(settingGroupTitle(tabId))}
+						</span>
+					{/if}
+
 					{#if tabId === 'general'}
 						<button
 							role="tab"
@@ -977,12 +1020,18 @@
 
 			{#if $user?.role === 'admin' && filteredAdminSettings.length > 0}
 				<span
-					class="hidden md:block text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 mt-2 mb-0.5"
+					class="hidden md:block border-t border-gray-300/80 dark:border-white/15 text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 pt-2 mt-2 mb-0.5"
 				>
 					{$i18n.t('Admin')}
 				</span>
 
-				{#each filteredAdminSettings as tabId (tabId)}
+				{#each filteredAdminSettings as tabId, index (tabId)}
+					{#if shouldShowSettingGroup(filteredAdminSettings, index)}
+						<span class={settingGroupHeadingClass(index === 0)}>
+							{$i18n.t(settingGroupTitle(tabId))}
+						</span>
+					{/if}
+
 					{@const tab = adminSettings.find((setting) => setting.id === tabId)}
 					{#if tab}
 						<button

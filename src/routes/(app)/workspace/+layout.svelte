@@ -156,7 +156,7 @@
 								href="/workspace/models"
 							>
 								<span>{$i18n.t('Models')}</span>
-								<span class="text-sm text-gray-500 dark:text-gray-500">
+								<span class="text-sm opacity-60">
 									{formatCount($workspaceCounts.models)}
 								</span>
 							</a>
@@ -173,7 +173,7 @@
 								href="/workspace/knowledge"
 							>
 								<span>{$i18n.t('Knowledge')}</span>
-								<span class="text-sm text-gray-500 dark:text-gray-500">
+								<span class="text-sm opacity-60">
 									{formatCount($workspaceCounts.knowledge)}
 								</span>
 							</a>
@@ -190,7 +190,7 @@
 								href="/workspace/prompts"
 							>
 								<span>{$i18n.t('Prompts')}</span>
-								<span class="text-sm text-gray-500 dark:text-gray-500">
+								<span class="text-sm opacity-60">
 									{formatCount($workspaceCounts.prompts)}
 								</span>
 							</a>
@@ -207,7 +207,7 @@
 								href="/workspace/skills"
 							>
 								<span>{$i18n.t('Skills')}</span>
-								<span class="text-sm text-gray-500 dark:text-gray-500">
+								<span class="text-sm opacity-60">
 									{formatCount($workspaceCounts.skills)}
 								</span>
 							</a>
@@ -224,7 +224,7 @@
 								href="/workspace/tools"
 							>
 								<span>{$i18n.t('Tools')}</span>
-								<span class="text-sm text-gray-500 dark:text-gray-500">
+								<span class="text-sm opacity-60">
 									{formatCount($workspaceCounts.tools)}
 								</span>
 							</a>
