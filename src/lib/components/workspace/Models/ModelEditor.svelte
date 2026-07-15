@@ -447,7 +447,7 @@
 		</button>
 	{/if}
 
-	<div class="w-full max-h-full flex justify-center">
+	<div class="w-full max-h-full flex">
 		<input
 			bind:this={filesInputElement}
 			bind:files={inputFiles}
@@ -527,17 +527,17 @@
 
 		{#if !edit || (edit && model)}
 			<form
-				class="flex flex-col md:flex-row w-full gap-3"
+				class="flex w-full flex-col gap-2.5 md:flex-row"
 				on:submit|preventDefault={() => {
 					submitHandler();
 				}}
 			>
 				<div class="w-full px-1">
-					<div class="flex flex-row gap-3 w-full">
-						<div class="self-start flex justify-center py-1 shrink-0">
+					<div class="flex w-full flex-row gap-2.5">
+						<div class="self-start flex shrink-0 justify-center py-0.5">
 							<div class="self-center group">
 								<button
-									class="relative flex size-14 md:size-16 shrink-0 items-center overflow-hidden rounded-xl {info
+									class="relative flex size-12 shrink-0 items-center overflow-hidden rounded-xl md:size-14 {info
 										.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
 										? 'bg-transparent'
 										: 'bg-gray-50 dark:bg-gray-850'} ring-1 ring-gray-200/70 transition hover:ring-gray-300 dark:ring-white/10 dark:hover:ring-white/20"
@@ -589,7 +589,7 @@
 									></div>
 								</button>
 
-								<div class="mt-1 flex w-full justify-center">
+								<div class="mt-0.5 flex w-full justify-center">
 									<button
 										class="rounded-lg px-1.5 py-0.5 text-[0.6875rem] text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-300"
 										on:click={() => {
@@ -603,12 +603,12 @@
 							</div>
 						</div>
 
-						<div class="flex flex-col w-full flex-1">
-							<div class="flex justify-between items-start gap-3 py-1">
+						<div class="flex w-full flex-1 flex-col">
+							<div class="flex items-start justify-between gap-2.5 py-0.5">
 								<div class=" flex flex-col w-full">
 									<div class="flex-1 w-full">
 										<input
-											class="w-full bg-transparent text-lg font-medium text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-xl"
+											class="w-full bg-transparent text-base font-medium leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
 											placeholder={$i18n.t('Model Name')}
 											bind:value={name}
 											required
@@ -647,7 +647,7 @@
 
 							{#if preset}
 								<div class="mb-1">
-									<div class=" text-xs font-normal mb-1 text-gray-500">
+									<div class="mb-1 text-xs text-gray-400 dark:text-gray-600">
 										{$i18n.t('Base Model (From)')}
 									</div>
 
@@ -657,7 +657,7 @@
 											placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
 											searchPlaceholder={$i18n.t('Search a model')}
 											items={getBaseModelItems($models)}
-											triggerClassName="text-sm"
+											triggerClassName="text-xs"
 											selectionOnly
 											includeHidden={$user?.role === 'admin'}
 											bind:value={info.base_model_id}
@@ -668,12 +668,12 @@
 
 							<div class="mb-1">
 								<div class="mb-1 flex w-full justify-between items-center">
-									<div class=" self-center text-xs font-normal text-gray-500">
+									<div class="self-center text-xs text-gray-400 dark:text-gray-600">
 										{$i18n.t('Description')}
 									</div>
 
 									<button
-										class="p-1 text-xs flex rounded-sm transition"
+										class="text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
 										type="button"
 										aria-pressed={enableDescription ? 'true' : 'false'}
 										aria-label={enableDescription
@@ -693,7 +693,7 @@
 
 								{#if enableDescription}
 									<Textarea
-										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
+										className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
 										placeholder={$i18n.t('Add a short description about what this model does')}
 										bind:value={info.meta.description}
 									/>
@@ -723,19 +723,21 @@
 						</div>
 					</div>
 
-					<div class="my-2">
+					<section class="mt-2.5">
 						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-normal text-gray-500">
+							<div class="mb-2 self-center text-xs text-gray-400 dark:text-gray-600">
 								{$i18n.t('Model Params')}
 							</div>
 						</div>
 
-						<div class="mt-2">
-							<div class="my-1">
-								<div class=" text-xs font-normal mb-2">{$i18n.t('System Prompt')}</div>
+						<div class="space-y-2.5">
+							<div>
+								<div class="mb-1 text-xs text-gray-600 dark:text-gray-400">
+									{$i18n.t('System Prompt')}
+								</div>
 								<div>
 									<Textarea
-										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
+										className="min-h-16 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
 										placeholder={$i18n.t(
 											'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
 										)}
@@ -745,13 +747,13 @@
 								</div>
 							</div>
 
-							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-normal">
+							<div class="flex h-7 w-full justify-between">
+								<div class="self-center text-xs text-gray-600 dark:text-gray-400">
 									{$i18n.t('Advanced Params')}
 								</div>
 
 								<button
-									class="p-1 px-3 text-xs flex rounded-sm transition"
+									class="text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
 									type="button"
 									on:click={() => {
 										showAdvanced = !showAdvanced;
@@ -771,19 +773,19 @@
 								</div>
 							{/if}
 						</div>
-					</div>
+					</section>
 
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
-					<div class="my-2">
+					<section class="my-2.5">
 						<div class="flex w-full justify-between items-center">
 							<div class="flex w-full justify-between items-center">
-								<div class=" self-center text-xs font-normal text-gray-500">
+								<div class="self-center text-xs text-gray-400 dark:text-gray-600">
 									{$i18n.t('Prompts')}
 								</div>
 
 								<button
-									class="p-1 text-xs flex rounded-sm transition"
+									class="text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
 									type="button"
 									on:click={() => {
 										if ((info?.meta?.suggestion_prompts ?? null) === null) {
@@ -805,25 +807,25 @@
 						{#if info?.meta?.suggestion_prompts}
 							<PromptSuggestions bind:promptSuggestions={info.meta.suggestion_prompts} />
 						{/if}
-					</div>
+					</section>
 
-					<div class="my-4">
+					<div class="my-3">
 						<Knowledge bind:selectedItems={knowledge} />
 					</div>
 
-					<div class="my-4">
+					<div class="my-3">
 						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
 					</div>
 
-					<div class="my-4">
+					<div class="my-3">
 						<SkillsSelector bind:selectedSkillIds={skillIds} skills={skillsList} />
 					</div>
 
 					{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0 || ($functions ?? []).filter((func) => func.type === 'action').length > 0}
-						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-4" />
+						<hr class="my-3 border-gray-100/30 dark:border-gray-850/30" />
 
 						{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0}
-							<div class="my-4">
+							<div class="my-3">
 								<FiltersSelector
 									bind:selectedFilterIds={filterIds}
 									filters={($functions ?? []).filter((func) => func.type === 'filter')}
@@ -838,7 +840,7 @@
 							)}
 
 							{#if toggleableFilters.length > 0}
-								<div class="my-4">
+								<div class="my-3">
 									<DefaultFiltersSelector
 										bind:selectedFilterIds={defaultFilterIds}
 										filters={toggleableFilters}
@@ -848,7 +850,7 @@
 						{/if}
 
 						{#if ($functions ?? []).filter((func) => func.type === 'action').length > 0}
-							<div class="my-4">
+							<div class="my-3">
 								<ActionsSelector
 									bind:selectedActionIds={actionIds}
 									actions={($functions ?? []).filter((func) => func.type === 'action')}
@@ -857,9 +859,9 @@
 						{/if}
 					{/if}
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-4" />
+					<hr class="my-3 border-gray-100/30 dark:border-gray-850/30" />
 
-					<div class="my-4">
+					<div class="my-3">
 						<Capabilities bind:capabilities />
 					</div>
 
@@ -872,25 +874,25 @@
 							.map(([key, value]) => key)}
 
 						{#if availableFeatures.length > 0}
-							<div class="my-4">
+							<div class="my-3">
 								<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
 							</div>
 						{/if}
 					{/if}
 
 					{#if capabilities.builtin_tools}
-						<div class="my-4">
+						<div class="my-3">
 							<BuiltinTools bind:builtinTools />
 						</div>
 					{/if}
 
 					{#if capabilities.terminal}
-						<div class="my-4">
+						<div class="my-3">
 							<TerminalSelector bind:terminalId />
 						</div>
 					{/if}
 
-					<div class="my-4">
+					<div class="my-3">
 						<div class="flex w-full justify-between mb-1">
 							<div class="self-center text-xs font-normal text-gray-500">
 								{$i18n.t('TTS Voice')}
@@ -903,7 +905,7 @@
 						/>
 					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-4" />
+					<hr class="my-3 border-gray-100/30 dark:border-gray-850/30" />
 
 					<div class="my-2 flex justify-end">
 						<button
