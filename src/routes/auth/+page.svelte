@@ -167,7 +167,7 @@
 
 	onMount(async () => {
 		const redirectPath = $page.url.searchParams.get('redirect');
-		if ($user !== undefined) {
+		if ($user) {
 			goto(redirectPath || '/');
 		} else {
 			if (redirectPath) {
