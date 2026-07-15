@@ -38,11 +38,11 @@
 </script>
 
 <div
-	class="my-2 flex w-full items-center gap-3 rounded-3xl bg-black/[0.03] px-4 py-3 text-gray-500 dark:bg-white/[0.04] dark:text-gray-400"
+	class="my-2 flex w-full items-start gap-3 rounded-3xl bg-black/[0.03] px-4 py-3 text-gray-500 dark:bg-white/[0.04] dark:text-gray-400"
 >
-	<Info className="size-5 shrink-0 text-gray-400 dark:text-gray-500" strokeWidth="2" />
+	<Info className="mt-0.5 size-5 shrink-0 text-gray-400 dark:text-gray-500" strokeWidth="2" />
 
-	<div class="min-w-0 self-center break-words text-sm">
+	<div class="min-w-0 break-words text-sm leading-6">
 		{message}
 	</div>
 </div>
