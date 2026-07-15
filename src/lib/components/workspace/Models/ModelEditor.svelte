@@ -24,7 +24,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import AccessControl from '../common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
+	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
 	import BuiltinTools from './BuiltinTools.svelte';
@@ -422,42 +422,31 @@
 		shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
 	/>
 
-	{#if onBack}
-		<button
-			class="flex space-x-1"
-			on:click={() => {
-				onBack();
-			}}
-		>
-			<div class=" self-center">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="h-4 w-4"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-			</div>
-			<div class=" self-center text-sm font-normal">{$i18n.t('Back')}</div>
-		</button>
-	{/if}
+	<div class="flex h-full min-h-0 w-full flex-col">
+		{#if onBack}
+			<button
+				class="mb-1 flex h-6 w-fit items-center gap-1 rounded-md px-0.5 text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+				type="button"
+				on:click={() => {
+					onBack();
+				}}
+			>
+				<ChevronLeft className="size-3" strokeWidth="2" />
+				<span>{$i18n.t('Back')}</span>
+			</button>
+		{/if}
 
-	<div class="w-full max-h-full flex">
-		<input
-			bind:this={filesInputElement}
-			bind:files={inputFiles}
-			type="file"
-			hidden
-			accept="image/*"
-			on:change={() => {
-				let reader = new FileReader();
-				reader.onload = (event) => {
-					let originalImageUrl = `${event.target?.result}`;
+		<div class="min-h-0 w-full flex-1 overflow-y-auto pr-1 scrollbar-hover">
+			<input
+				bind:this={filesInputElement}
+				bind:files={inputFiles}
+				type="file"
+				hidden
+				accept="image/*"
+				on:change={() => {
+					let reader = new FileReader();
+					reader.onload = (event) => {
+						let originalImageUrl = `${event.target?.result}`;
 
 					// For animated formats (gif, webp), skip resizing to preserve animation
 					const fileType = (inputFiles[0] as any)?.['type'];
@@ -533,11 +522,11 @@
 				}}
 			>
 				<div class="w-full px-1">
-					<div class="flex w-full flex-row gap-2.5">
-						<div class="self-start flex shrink-0 justify-center py-0.5">
-							<div class="self-center group">
+					<div class="flex w-full flex-col gap-3">
+						<div class="flex w-full min-w-0 items-center gap-3 py-0.5">
+							<div class="flex min-w-0 flex-1 items-center gap-3">
 								<button
-									class="relative flex size-12 shrink-0 items-center overflow-hidden rounded-xl md:size-14 {info
+									class="group relative flex size-12 shrink-0 items-center overflow-hidden rounded-xl md:size-14 {info
 										.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
 										? 'bg-transparent'
 										: 'bg-gray-50 dark:bg-gray-850'} ring-1 ring-gray-200/70 transition hover:ring-gray-300 dark:ring-white/10 dark:hover:ring-white/20"
@@ -589,145 +578,118 @@
 									></div>
 								</button>
 
-								<div class="mt-0.5 flex w-full justify-center">
-									<button
-										class="rounded-lg px-1.5 py-0.5 text-[0.6875rem] text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-300"
-										on:click={() => {
-											info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
-										}}
-										type="button"
-									>
-										{$i18n.t('Reset Image')}</button
-									>
-								</div>
-							</div>
-						</div>
-
-						<div class="flex w-full flex-1 flex-col">
-							<div class="flex items-start justify-between gap-2.5 py-0.5">
-								<div class=" flex flex-col w-full">
-									<div class="flex-1 w-full">
+								<div class="min-w-0 flex-1">
+									<div class="flex min-w-0 items-center gap-2">
 										<input
-											class="w-full bg-transparent text-base font-medium leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
+											class="min-w-0 flex-1 bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
 											placeholder={$i18n.t('Model Name')}
 											bind:value={name}
 											required
 										/>
+
+										<button
+											class="flex h-7 shrink-0 items-center gap-1 rounded-lg bg-gray-50 px-2 text-xs text-gray-700 transition hover:bg-gray-100 dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.06]"
+											type="button"
+											on:click={() => {
+												showAccessControlModal = true;
+											}}
+										>
+											<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
+
+											<div class="font-normal shrink-0">
+												{$i18n.t('Access')}
+											</div>
+										</button>
 									</div>
 
-									<div class="flex-1 w-full">
-										<div>
-											<input
-												class="w-full bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
-												placeholder={$i18n.t('Model ID')}
-												bind:value={id}
-												disabled={edit}
-												required
-											/>
-										</div>
-									</div>
-								</div>
-
-								<div class="shrink-0">
-									<button
-										class="flex h-7 shrink-0 items-center gap-1 rounded-lg bg-gray-50 px-2 text-xs text-gray-700 transition hover:bg-gray-100 dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.06]"
-										type="button"
-										on:click={() => {
-											showAccessControlModal = true;
-										}}
-									>
-										<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
-
-										<div class="font-normal shrink-0">
-											{$i18n.t('Access')}
-										</div>
-									</button>
-								</div>
-							</div>
-
-							{#if preset}
-								<div class="mb-1">
-									<div class="mb-1 text-xs text-gray-400 dark:text-gray-600">
-										{$i18n.t('Base Model (From)')}
-									</div>
-
-									<div>
-										<ModelSelector
-											id="workspace-base-model"
-											placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
-											searchPlaceholder={$i18n.t('Search a model')}
-											items={getBaseModelItems($models)}
-											triggerClassName="text-xs"
-											selectionOnly
-											includeHidden={$user?.role === 'admin'}
-											bind:value={info.base_model_id}
-										/>
-									</div>
-								</div>
-							{/if}
-
-							<div class="mb-1">
-								<div class="mb-1 flex w-full justify-between items-center">
-									<div class="self-center text-xs text-gray-400 dark:text-gray-600">
-										{$i18n.t('Description')}
-									</div>
-
-									<button
-										class="text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
-										type="button"
-										aria-pressed={enableDescription ? 'true' : 'false'}
-										aria-label={enableDescription
-											? $i18n.t('Custom description enabled')
-											: $i18n.t('Default description enabled')}
-										on:click={() => {
-											enableDescription = !enableDescription;
-										}}
-									>
-										{#if !enableDescription}
-											<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-										{:else}
-											<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-										{/if}
-									</button>
-								</div>
-
-								{#if enableDescription}
-									<Textarea
-										className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
-										placeholder={$i18n.t('Add a short description about what this model does')}
-										bind:value={info.meta.description}
-									/>
-								{/if}
-							</div>
-
-							<div class="w-full mb-1 max-w-full">
-								<div class="">
-									<Tags
-										tags={info?.meta?.tags ?? []}
-										{suggestionTags}
-										on:delete={(e) => {
-											const tagName = e.detail;
-											info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
-										}}
-										on:add={(e) => {
-											const tagName = e.detail;
-											if (!(info?.meta?.tags ?? null)) {
-												info.meta.tags = [{ name: tagName }];
-											} else {
-												info.meta.tags = [...info.meta.tags, { name: tagName }];
-											}
-										}}
+									<input
+										class="block w-full bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
+										placeholder={$i18n.t('Model ID')}
+										bind:value={id}
+										disabled={edit}
+										required
 									/>
 								</div>
 							</div>
 						</div>
+
+						{#if preset}
+							<div>
+								<div class="mb-1 text-xs text-gray-400 dark:text-gray-600">
+									{$i18n.t('Base Model (From)')}
+								</div>
+
+								<ModelSelector
+									id="workspace-base-model"
+									placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
+									searchPlaceholder={$i18n.t('Search a model')}
+									items={getBaseModelItems($models)}
+									triggerClassName="text-xs"
+									selectionOnly
+									includeHidden={$user?.role === 'admin'}
+									bind:value={info.base_model_id}
+								/>
+							</div>
+						{/if}
+
+						<div>
+							<div class="mb-1 flex w-full items-center justify-between">
+								<div class="self-center text-xs text-gray-400 dark:text-gray-600">
+									{$i18n.t('Description')}
+								</div>
+
+								<button
+									class="text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+									type="button"
+									aria-pressed={enableDescription ? 'true' : 'false'}
+									aria-label={enableDescription
+										? $i18n.t('Custom description enabled')
+										: $i18n.t('Default description enabled')}
+									on:click={() => {
+										enableDescription = !enableDescription;
+									}}
+								>
+									{#if !enableDescription}
+										<span>{$i18n.t('Default')}</span>
+									{:else}
+										<span>{$i18n.t('Custom')}</span>
+									{/if}
+								</button>
+							</div>
+
+							{#if enableDescription}
+								<Textarea
+									className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+									placeholder={$i18n.t('Add a short description about what this model does')}
+									minSize={32}
+									bind:value={info.meta.description}
+								/>
+							{/if}
+						</div>
+
+						<div class="w-full max-w-full">
+							<Tags
+								tags={info?.meta?.tags ?? []}
+								{suggestionTags}
+								on:delete={(e) => {
+									const tagName = e.detail;
+									info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
+								}}
+								on:add={(e) => {
+									const tagName = e.detail;
+									if (!(info?.meta?.tags ?? null)) {
+										info.meta.tags = [{ name: tagName }];
+									} else {
+										info.meta.tags = [...info.meta.tags, { name: tagName }];
+									}
+								}}
+							/>
+						</div>
 					</div>
 
 					<section class="mt-2.5">
-						<div class="flex w-full justify-between">
-							<div class="mb-2 self-center text-xs text-gray-400 dark:text-gray-600">
-								{$i18n.t('Model Params')}
-							</div>
+						<div class="mb-2 text-xs text-gray-400 dark:text-gray-600">
+							{$i18n.t('Model Params')}
 						</div>
 
 						<div class="space-y-2.5">
@@ -737,11 +699,12 @@
 								</div>
 								<div>
 									<Textarea
-										className="min-h-16 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+										className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
 										placeholder={$i18n.t(
 											'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
 										)}
-										rows={4}
+										rows={2}
+										minSize={48}
 										bind:value={system}
 									/>
 								</div>
@@ -760,16 +723,16 @@
 									}}
 								>
 									{#if showAdvanced}
-										<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
+										<span>{$i18n.t('Hide')}</span>
 									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Show')}</span>
+										<span>{$i18n.t('Show')}</span>
 									{/if}
 								</button>
 							</div>
 
 							{#if showAdvanced}
 								<div class="my-2">
-									<AdvancedParams admin={true} custom={true} bind:params />
+									<AdvancedParams admin={true} custom={true} layout="grid" bind:params />
 								</div>
 							{/if}
 						</div>
@@ -778,30 +741,28 @@
 					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
 
 					<section class="my-2.5">
-						<div class="flex w-full justify-between items-center">
-							<div class="flex w-full justify-between items-center">
-								<div class="self-center text-xs text-gray-400 dark:text-gray-600">
-									{$i18n.t('Prompts')}
-								</div>
-
-								<button
-									class="text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
-									type="button"
-									on:click={() => {
-										if ((info?.meta?.suggestion_prompts ?? null) === null) {
-											info.meta.suggestion_prompts = [{ content: '', title: ['', ''] }];
-										} else {
-											info.meta.suggestion_prompts = null;
-										}
-									}}
-								>
-									{#if (info?.meta?.suggestion_prompts ?? null) === null}
-										<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-									{/if}
-								</button>
+						<div class="flex w-full items-center justify-between">
+							<div class="self-center text-xs text-gray-400 dark:text-gray-600">
+								{$i18n.t('Prompts')}
 							</div>
+
+							<button
+								class="text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+								type="button"
+								on:click={() => {
+									if ((info?.meta?.suggestion_prompts ?? null) === null) {
+										info.meta.suggestion_prompts = [{ content: '', title: ['', ''] }];
+									} else {
+										info.meta.suggestion_prompts = null;
+									}
+								}}
+							>
+								{#if (info?.meta?.suggestion_prompts ?? null) === null}
+									<span>{$i18n.t('Default')}</span>
+								{:else}
+									<span>{$i18n.t('Custom')}</span>
+								{/if}
+							</button>
 						</div>
 
 						{#if info?.meta?.suggestion_prompts}
@@ -965,5 +926,6 @@
 				</div>
 			</form>
 		{/if}
+		</div>
 	</div>
 {/if}

@@ -11,6 +11,7 @@
 
 	export let admin = false;
 	export let custom = false;
+	export let layout: 'stack' | 'grid' = 'stack';
 
 	const defaultParams = {
 		// Advanced
@@ -54,7 +55,11 @@
 	}
 </script>
 
-<div class=" space-y-1 text-xs pb-safe-bottom">
+<div
+	class={layout === 'grid'
+		? 'grid grid-cols-1 gap-x-5 gap-y-1 pb-safe-bottom text-xs sm:grid-cols-2 xl:grid-cols-3'
+		: 'space-y-1 text-xs pb-safe-bottom'}
+>
 	<div>
 		<Tooltip
 			content={$i18n.t(
