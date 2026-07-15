@@ -921,7 +921,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				</div>
 			{:else}
 				<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
-					<div class="shrink-0 w-full flex justify-between items-center px-2.5 mb-1.5">
+					<div class="shrink-0 w-full flex justify-between items-center px-2.5 mb-0.5">
 						<div class="w-full min-w-0 flex items-center">
 							{#if $mobile}
 								<Tooltip
