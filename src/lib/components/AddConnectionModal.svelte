@@ -59,6 +59,11 @@
 	let loading = false;
 	let showDeleteConfirmDialog = false;
 
+	const highContrastInputClass =
+		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const highContrastSelectClass =
+		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
+
 	const verifyOllamaHandler = async () => {
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
@@ -313,7 +318,7 @@
 								<div class="flex-1">
 									<input
 										id="url-input"
-										class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 										type="text"
 										bind:value={url}
 										placeholder={$i18n.t('API Base URL')}
@@ -383,7 +388,7 @@
 									<div class="flex-shrink-0 self-start">
 										<select
 											id="select-bearer-or-session"
-											class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full text-sm pr-5 ${($settings?.highContrastMode ?? false) ? highContrastSelectClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 dark:bg-gray-900'}`}
 											bind:value={auth_type}
 										>
 											<option value="none">{$i18n.t('None')}</option>
@@ -481,7 +486,7 @@
 										)}
 									>
 										<input
-											class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											type="text"
 											id="prefix-id-input"
 											bind:value={prefixId}
@@ -529,7 +534,7 @@
 									<div class="flex-1">
 										<input
 											id="api-version-input"
-											class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											type="text"
 											bind:value={apiVersion}
 											placeholder={$i18n.t('API Version')}
@@ -639,11 +644,7 @@
 						<div class="flex items-center">
 							<label class="sr-only" for="add-model-id-input">{$i18n.t('Add a model ID')}</label>
 							<input
-								class="w-full py-1 text-sm rounded-lg bg-transparent {modelId
-									? ''
-									: 'text-gray-500'} {($settings?.highContrastMode ?? false)
-									? 'dark:placeholder:text-gray-100 placeholder:text-gray-700'
-									: 'placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden'}"
+								class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : `rounded-lg bg-transparent py-1 placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden ${modelId ? '' : 'text-gray-500'}`}`}
 								bind:value={modelId}
 								id="add-model-id-input"
 								placeholder={$i18n.t('Add a model ID')}

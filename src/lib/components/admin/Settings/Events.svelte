@@ -51,6 +51,9 @@
 		events: ['*'] as string[]
 	};
 
+	const highContrastInputClass =
+		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+
 	$: events = eventItems.map((item) => item.event);
 	$: eventDetails = Object.fromEntries(eventItems.map((item) => [item.event, item]));
 	$: eventFilter = pattern.trim().toLowerCase().replace(/\*$/, '');
@@ -417,7 +420,7 @@
 						>
 						<input
 							id="event-webhook-name"
-							class={`w-full text-xs bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+							class={`w-full text-xs ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 							type="text"
 							placeholder={$i18n.t('Identity audit')}
 							autocomplete="off"
@@ -436,7 +439,7 @@
 						<div class="flex items-center gap-2">
 							<input
 								id="event-webhook-url"
-								class={`w-full text-xs bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+								class={`w-full text-xs ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 								type="url"
 								placeholder="https://example.com/events"
 								autocomplete="off"
@@ -521,7 +524,7 @@
 
 							<div class="relative">
 								<input
-									class={`w-full text-xs bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+									class={`w-full text-xs ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 									type="text"
 									placeholder={$i18n.t('Search users or groups')}
 									autocomplete="off"
@@ -607,7 +610,7 @@
 
 							<div class="flex gap-2">
 								<input
-									class={`w-full flex-1 text-xs bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+									class={`w-full flex-1 text-xs font-mono ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 									type="text"
 									placeholder={$i18n.t('Search or add pattern')}
 									autocomplete="off"

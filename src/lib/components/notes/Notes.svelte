@@ -729,12 +729,12 @@
 					</div>
 				{:else}
 					<div class="flex min-h-[calc(100dvh-13rem)] w-full flex-col items-center justify-center">
-						<div class="text-center">
-							<div class=" text-sm text-gray-400 dark:text-gray-600">
+						<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
+							<div class="mb-1.5 text-sm">
 								{$i18n.t('No Notes')}
 							</div>
 
-							<div class="mt-1 text-xs text-gray-300 dark:text-gray-700">
+							<div class="text-xs leading-5 text-gray-500">
 								{$i18n.t('Create your first note from the Create menu.')}
 							</div>
 						</div>

@@ -52,6 +52,9 @@
 
 	const i18n: Writable<any> = getContext('i18n');
 
+	const highContrastInputClass =
+		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+
 	export let show: boolean | string | SettingsModalRequest = false;
 	let modalShow = false;
 	let lastShow: boolean | string | SettingsModalRequest = false;
@@ -851,8 +854,7 @@
 			</div>
 			<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
 			<input
-				class={`w-full py-1 text-xs bg-transparent dark:text-gray-300 outline-hidden
-							${($settings?.highContrastMode ?? false) ? 'placeholder-gray-800' : ''}`}
+				class={`w-full text-xs ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent py-1 outline-hidden dark:text-gray-300'}`}
 				bind:value={search}
 				id="search-input-settings-modal"
 				on:input={searchDebounceHandler}

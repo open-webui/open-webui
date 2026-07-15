@@ -37,7 +37,7 @@
 			<div class="self-center shrink-0">
 				<img
 					src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
-					class=" size-5 rounded-full -translate-x-[0.5px]"
+					class=" size-4 rounded-full"
 					alt="logo"
 					on:error={(e) => {
 						e.currentTarget.src = '/favicon.png';
@@ -46,7 +46,7 @@
 			</div>
 
 			<div class="flex self-center translate-y-[0.5px]">
-				<div class=" self-center text-sm line-clamp-1">
+				<div class=" self-center text-[13px] leading-5 line-clamp-1">
 					{model?.name ?? model.id}
 				</div>
 			</div>

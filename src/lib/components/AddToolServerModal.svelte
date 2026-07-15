@@ -70,6 +70,11 @@
 	let showAccessControlModal = false;
 	let showDeleteConfirmDialog = false;
 
+	const highContrastInputClass =
+		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const highContrastSelectClass =
+		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
+
 	const registerOAuthClientHandler = async () => {
 		if (url === '') {
 			toast.error($i18n.t('Please enter a valid URL'));
@@ -543,7 +548,7 @@
 								<div class="flex flex-1 items-center">
 									<input
 										id="enter-name"
-										class={`w-full flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										class={`w-full flex-1 text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 										type="text"
 										bind:value={name}
 										placeholder={$i18n.t('Enter name')}
@@ -565,7 +570,7 @@
 									<div class="flex flex-1 items-center">
 										<input
 											id="enter-id"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full flex-1 text-sm font-mono ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											type="text"
 											bind:value={id}
 											placeholder="auto"
@@ -587,7 +592,7 @@
 							<div class="flex-1">
 								<input
 									id="description"
-									class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+									class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 									type="text"
 									bind:value={description}
 									placeholder={$i18n.t('Enter description')}
@@ -609,7 +614,7 @@
 								<div class="flex flex-1 items-center">
 									<input
 										id="api-base-url"
-										class={`w-full flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										class={`w-full flex-1 text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 										type="text"
 										bind:value={url}
 										placeholder={$i18n.t('API Base URL')}
@@ -705,7 +710,7 @@
 									<div class="flex-shrink-0 self-start">
 										<select
 											id="select-bearer-or-session"
-											class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full text-sm pr-5 ${($settings?.highContrastMode ?? false) ? highContrastSelectClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 dark:bg-gray-900'}`}
 											bind:value={auth_type}
 										>
 											<option value="none">{$i18n.t('None')}</option>
@@ -768,7 +773,7 @@
 												/>
 												<div class="flex flex-1 items-center">
 													<input
-														class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+														class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 														type="text"
 														bind:value={oauthServerUrl}
 														placeholder={$i18n.t('OAuth Server URL')}
@@ -832,7 +837,7 @@
 											<div class="flex-shrink-0 self-start">
 												<select
 													id="select-bearer-or-session"
-													class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+													class={`w-full text-sm pr-5 ${($settings?.highContrastMode ?? false) ? highContrastSelectClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 dark:bg-gray-900'}`}
 													bind:value={spec_type}
 												>
 													<option value="url">{$i18n.t('URL')}</option>
@@ -847,7 +852,7 @@
 															>{$i18n.t('openapi.json URL or Path')}</label
 														>
 														<input
-															class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+															class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 															type="text"
 															id="url-or-path"
 															bind:value={path}
@@ -862,7 +867,7 @@
 													>
 														<label for="url-or-path" class="sr-only">{$i18n.t('JSON Spec')}</label>
 														<textarea
-															class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-black dark:text-white'}`}
+															class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-black dark:text-white'}`}
 															bind:value={spec}
 															placeholder={$i18n.t('JSON Spec')}
 															autocomplete="off"
@@ -901,7 +906,7 @@
 										<div class="flex flex-1 items-center">
 											<input
 												id="oauth-scope"
-												class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 												type="text"
 												bind:value={oauthScope}
 												placeholder={$i18n.t('Use discovered scopes')}
@@ -922,7 +927,7 @@
 										<div class="flex flex-1 items-center">
 											<select
 												id="oauth-resource-parameter"
-												class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												class={`w-full text-sm pr-5 ${($settings?.highContrastMode ?? false) ? highContrastSelectClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 dark:bg-gray-900'}`}
 												bind:value={oauthResourceParameter}
 											>
 												<option value="auto">{$i18n.t('Automatic')}</option>
@@ -970,14 +975,14 @@
 							<div class="flex flex-col w-full mt-2">
 								<label
 									for="function-name-filter-list"
-									class={`mb-1 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100 placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-gray-500'}`}
+									class={`mb-1 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 									>{$i18n.t('Function Name Filter List')}</label
 								>
 
 								<div class="flex-1">
 									<input
 										id="function-name-filter-list"
-										class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 										type="text"
 										bind:value={functionNameFilterList}
 										placeholder={$i18n.t('Enter function name filter list (e.g. func1, !func2)')}

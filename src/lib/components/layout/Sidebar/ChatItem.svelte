@@ -38,11 +38,11 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import DragGhost from '$lib/components/common/DragGhost.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import ArchiveIcon from './icons/Archive.svelte';
 	import ChatIcon from './icons/Chat.svelte';
 	import MoreHorizontalIcon from './icons/MoreHorizontal.svelte';
 	import SparklesIcon from './icons/Sparkles.svelte';
-	import TrashIcon from './icons/Trash.svelte';
+	import ArchiveBoxIcon from '$lib/components/icons/ArchiveBox.svelte';
+	import GarbageBinIcon from '$lib/components/icons/GarbageBin.svelte';
 	import { generateTitle } from '$lib/apis';
 	import { createMessagesList } from '$lib/utils';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
@@ -106,6 +106,7 @@
 		id !== $chatId &&
 		!$activeChatIds.has(id) &&
 		(effectiveReadAt === null || (updatedAt !== null && updatedAt > effectiveReadAt));
+	$: showInlineActions = id === $chatId || confirmEdit || mouseOver || selected;
 
 	const loadChat = async () => {
 		if (!chat) {
@@ -454,12 +455,12 @@
 			id="sidebar-chat-item"
 			class=" w-full flex justify-between rounded-xl px-2 py-[6px] {id === $chatId || confirmEdit
 				? ($settings?.highContrastMode ?? false)
-					? 'bg-gray-100 dark:bg-gray-800 selected'
-					: 'bg-gray-100 dark:bg-gray-900 selected'
+					? 'bg-black/[0.035] dark:bg-white/[0.06] selected'
+					: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
 				: selected
 					? ($settings?.highContrastMode ?? false)
-						? 'bg-gray-100 dark:bg-gray-900 selected'
-						: 'bg-gray-100 dark:bg-gray-900 selected'
+						? 'bg-black/[0.035] dark:bg-white/[0.055] selected'
+						: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
 					: 'hover:bg-gray-50 dark:hover:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-900'}  whitespace-nowrap text-ellipsis relative transition {generating
 				? 'cursor-not-allowed'
 				: ''}"
@@ -493,12 +494,12 @@
 			id="sidebar-chat-item"
 			class=" w-full flex justify-between rounded-xl px-2 py-[6px] {id === $chatId || confirmEdit
 				? ($settings?.highContrastMode ?? false)
-					? 'bg-gray-100 dark:bg-gray-800 selected'
-					: 'bg-gray-100 dark:bg-gray-900 selected'
+					? 'bg-black/[0.035] dark:bg-white/[0.06] selected'
+					: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
 				: selected
 					? ($settings?.highContrastMode ?? false)
-						? 'bg-gray-100 dark:bg-gray-900 selected'
-						: 'bg-gray-100 dark:bg-gray-900 selected'
+						? 'bg-black/[0.035] dark:bg-white/[0.055] selected'
+						: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
 					: ' hover:bg-gray-50 dark:hover:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-900'}  whitespace-nowrap text-ellipsis transition"
 			href="/c/{id}"
 			on:click={() => {
@@ -560,14 +561,14 @@
 					dir="auto"
 					class="text-left self-center overflow-hidden w-full h-[20px] truncate {unread
 						? 'font-normal text-gray-800 dark:text-gray-200'
-						: ''}"
+						: ''} {showInlineActions && !readonly ? 'pr-12' : ''}"
 				>
 					{title}
 				</div>
 			</div>
 
 			<!-- Time ago indicator -->
-			{#if (updatedAt ?? createdAt) && !mouseOver}
+			{#if (updatedAt ?? createdAt) && !showInlineActions}
 				<div class="shrink-0 self-center text-[10px] text-gray-400 dark:text-gray-500 pl-2">
 					{formatTimeAgo(updatedAt ?? createdAt)}
 				</div>
@@ -579,21 +580,11 @@
 	{#if !readonly}
 		<div
 			id="sidebar-chat-item-menu"
-			class="
-        {id === $chatId || confirmEdit
-				? ($settings?.highContrastMode ?? false)
-					? 'from-gray-100 dark:from-gray-800 selected'
-					: 'from-gray-100 dark:from-gray-900 selected'
-				: selected
-					? ($settings?.highContrastMode ?? false)
-						? 'from-gray-100 dark:from-gray-900 selected'
-						: 'from-gray-100 dark:from-gray-900 selected'
-					: 'invisible group-hover:visible from-gray-50 dark:from-gray-900'}
-            absolute {className === 'pr-2'
+			class="{showInlineActions
+				? 'selected'
+				: 'invisible group-hover:visible'} absolute {className === 'pr-2'
 				? 'right-[8px]'
-				: 'right-1'} top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
-
-              to-transparent"
+				: 'right-1'} inset-y-0 mr-1.5 flex items-center"
 			on:mouseenter={(e) => {
 				mouseOver = true;
 			}}
@@ -607,7 +598,7 @@
 				>
 					<Tooltip content={$i18n.t('Generate')}>
 						<button
-							class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
+							class="flex size-5 items-center justify-center self-center dark:hover:text-white transition disabled:cursor-not-allowed"
 							id="generate-title-button"
 							disabled={generating}
 							on:click={() => {
@@ -622,14 +613,14 @@
 				<div class=" flex items-center self-center space-x-1.5">
 					<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 						<button
-							class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
+							class="flex size-5 items-center justify-center self-center dark:hover:text-white transition disabled:cursor-not-allowed"
 							disabled={archiving}
 							on:click={() => {
 								archiveChatHandler(id);
 							}}
 							type="button"
 						>
-							<ArchiveIcon className="size-4 translate-y-[0.5px]" strokeWidth="1.5" />
+							<ArchiveBoxIcon className="size-3.5" strokeWidth="1.7" />
 						</button>
 					</Tooltip>
 
@@ -642,7 +633,7 @@
 							}}
 							type="button"
 						>
-							<TrashIcon strokeWidth="1.5" />
+							<GarbageBinIcon className="size-3.5" strokeWidth="1.7" />
 						</button>
 					</Tooltip>
 				</div>
@@ -673,12 +664,12 @@
 					>
 						<button
 							aria-label="Chat Menu"
-							class=" self-center dark:hover:text-white transition m-0"
+							class="flex size-5 items-center justify-center self-center dark:hover:text-white transition m-0"
 							on:click={() => {
 								dispatch('select');
 							}}
 						>
-							<MoreHorizontalIcon className="w-4 h-4" />
+							<MoreHorizontalIcon className="size-3.5" strokeWidth="2" />
 						</button>
 					</ChatMenu>
 
@@ -691,7 +682,7 @@
 								showDeleteConfirm = true;
 							}}
 						>
-							<MoreHorizontalIcon className="w-4 h-4" />
+							<MoreHorizontalIcon className="size-3.5" strokeWidth="2" />
 						</button>
 					{/if}
 				</div>

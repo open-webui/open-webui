@@ -28,6 +28,8 @@
 		'w-full resize-vertical rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const compactSystemPromptTextareaClass =
 		'w-full resize-vertical appearance-none bg-transparent text-sm outline-hidden focus:bg-transparent disabled:bg-transparent dark:text-gray-300';
+	const highContrastSelectClass =
+		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
 
 	const toggleNotification = async () => {
 		const permission = await Notification.requestPermission();
@@ -223,9 +225,7 @@
 				<div class=" self-center text-xs font-normal">{$i18n.t('Theme')}</div>
 				<div class="flex items-center relative">
 					<select
-						class="w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
-							? ''
-							: 'outline-hidden'}"
+						class={`w-fit pr-8 text-xs text-right ${$settings.highContrastMode ? highContrastSelectClass : 'rounded-sm bg-transparent px-2 py-2 outline-hidden'}`}
 						bind:value={selectedTheme}
 						placeholder={$i18n.t('Select a theme')}
 						on:change={() => themeChangeHandler(selectedTheme)}
@@ -245,9 +245,7 @@
 				<div class=" self-center text-xs font-normal">{$i18n.t('Language')}</div>
 				<div class="flex items-center relative">
 					<select
-						class="w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
-							? ''
-							: 'outline-hidden'}"
+						class={`w-fit pr-8 text-xs text-right ${$settings.highContrastMode ? highContrastSelectClass : 'rounded-sm bg-transparent px-2 py-2 outline-hidden'}`}
 						bind:value={lang}
 						placeholder={$i18n.t('Select a language')}
 						on:change={(e) => {

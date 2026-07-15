@@ -18,7 +18,7 @@
 	import { createMessagesList } from '$lib/utils';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 	import { downloadChatAsPDF } from '$lib/apis/utils';
-	import ArchiveIcon from './icons/Archive.svelte';
+	import ArchiveBoxIcon from '$lib/components/icons/ArchiveBox.svelte';
 	import CopyIcon from './icons/Copy.svelte';
 	import DownloadIcon from './icons/Download.svelte';
 	import EditPencilIcon from './icons/EditPencil.svelte';
@@ -438,7 +438,7 @@
 					archiveChatHandler();
 				}}
 			>
-				<ArchiveIcon className="size-3.5" strokeWidth="1.5" />
+				<ArchiveBoxIcon className="size-3.5" strokeWidth="1.7" />
 				<div class="flex items-center">{$i18n.t('Archive')}</div>
 			</button>
 

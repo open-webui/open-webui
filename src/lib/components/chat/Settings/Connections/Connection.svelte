@@ -19,6 +19,9 @@
 	export let config = {};
 
 	let showConfigModal = false;
+
+	const highContrastInputClass =
+		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 </script>
 
 <AddConnectionModal
@@ -58,7 +61,7 @@
 		<div class="flex w-full gap-2">
 			<div class="flex-1 relative">
 				<input
-					class={`w-full bg-transparent ${($settings?.highContrastMode ?? false) ? '' : 'outline-hidden'} ${pipeline ? 'pr-8' : ''}`}
+					class={`w-full ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden'} ${pipeline ? 'pr-8' : ''}`}
 					placeholder={$i18n.t('API Base URL')}
 					bind:value={url}
 					autocomplete="off"

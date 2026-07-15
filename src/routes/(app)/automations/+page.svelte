@@ -527,12 +527,11 @@
 						<div
 							class="flex min-h-[calc(100dvh-13rem)] w-full flex-col items-center justify-center"
 						>
-							<div class="max-w-md text-center">
-								<div class="text-3xl mb-3">⚡</div>
-								<div class="text-lg font-normal mb-1">
+							<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
+								<div class="mb-1.5 text-sm">
 									{query ? $i18n.t('No results found') : $i18n.t('No automations found')}
 								</div>
-								<div class="text-gray-500 text-center text-xs">
+								<div class="text-center text-xs leading-5 text-gray-500">
 									{query
 										? $i18n.t(
 												'Try adjusting your search or filter to find what you are looking for.'

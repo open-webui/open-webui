@@ -61,6 +61,11 @@
 	let loadingPolicy = false;
 	let policyLoadError = '';
 
+	const highContrastInputClass =
+		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const highContrastSelectClass =
+		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
+
 	const stringifyJson = (value: object | null | undefined) => {
 		return JSON.stringify(value && Object.keys(value).length ? value : {}, null, 2);
 	};
@@ -404,7 +409,7 @@
 								<div class="flex flex-1 items-center">
 									<input
 										id="terminal-name"
-										class={`w-full flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										class={`w-full flex-1 text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 										type="text"
 										bind:value={name}
 										placeholder={$i18n.t('My Terminal')}
@@ -425,7 +430,7 @@
 									<div class="flex flex-1 items-center">
 										<input
 											id="terminal-id"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full flex-1 text-sm font-mono ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											type="text"
 											bind:value={id}
 											placeholder="auto"
@@ -449,7 +454,7 @@
 								<div class="flex flex-1 items-center">
 									<input
 										id="terminal-url"
-										class={`w-full flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										class={`w-full flex-1 text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 										type="text"
 										bind:value={url}
 										placeholder="http://localhost:9900"
@@ -523,7 +528,7 @@
 									<div class="flex flex-1 items-center">
 										<input
 											id="policy-id"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full flex-1 text-sm font-mono ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											type="text"
 											bind:value={policyId}
 											placeholder="python-ds"
@@ -554,7 +559,7 @@
 									<div class="flex flex-1 items-center">
 										<input
 											id="policy-image"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full flex-1 text-sm font-mono ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											type="text"
 											bind:value={policyImage}
 											placeholder="ghcr.io/open-webui/open-terminal:latest"
@@ -576,7 +581,7 @@
 									<div class="flex flex-1 items-center">
 										<input
 											id="policy-cpu"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full flex-1 text-sm font-mono ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											type="text"
 											bind:value={policyCpu}
 											placeholder="1"
@@ -595,7 +600,7 @@
 									<div class="flex flex-1 items-center">
 										<input
 											id="policy-memory"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full flex-1 text-sm font-mono ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											type="text"
 											bind:value={policyMemory}
 											placeholder="1Gi"
@@ -617,7 +622,7 @@
 									<div class="flex gap-2">
 										<div class="flex-shrink-0 self-start">
 											<select
-												class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												class={`w-full text-sm pr-5 ${($settings?.highContrastMode ?? false) ? highContrastSelectClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 dark:bg-gray-900'}`}
 												bind:value={policyStorage}
 											>
 												<option value="ephemeral">{$i18n.t('Ephemeral')}</option>
@@ -628,7 +633,7 @@
 											<div class="flex flex-1 items-center">
 												<input
 													id="policy-storage-size"
-													class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+													class={`w-full flex-1 text-sm font-mono ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 													type="text"
 													bind:value={policyStorageSize}
 													placeholder="5Gi"
@@ -651,7 +656,7 @@
 									<div class="flex flex-1 items-center">
 										<input
 											id="idle-timeout"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full flex-1 text-sm font-mono ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											type="number"
 											min="0"
 											bind:value={policyIdleTimeout}
@@ -683,13 +688,13 @@
 									{#each policyEnvPairs as pair, idx}
 										<div class="flex gap-1.5 mb-1">
 											<input
-												class={`flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												class={`flex-1 text-sm font-mono ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 												type="text"
 												bind:value={pair.key}
 												placeholder="KEY"
 											/>
 											<input
-												class={`flex-[2] text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												class={`flex-[2] text-sm font-mono ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 												type="text"
 												bind:value={pair.value}
 												placeholder="value"
@@ -718,7 +723,7 @@
 									</div>
 									<textarea
 										id="lifecycle-json"
-										class={`w-full min-h-24 resize-y text-xs bg-transparent font-mono rounded-lg p-2 border border-gray-200 dark:border-gray-800 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										class={`w-full min-h-24 resize-y text-xs font-mono ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'rounded-lg border border-gray-200 bg-transparent p-2 outline-hidden placeholder:text-gray-300 dark:border-gray-800 dark:placeholder:text-gray-700'}`}
 										bind:value={lifecycleJson}
 										spellcheck="false"
 										placeholder={`{\n  "reset": {\n    "schedule": "@weekly",\n    "timezone": "UTC"\n  }\n}`}
@@ -804,7 +809,7 @@
 													>{$i18n.t('openapi.json URL or Path')}</label
 												>
 												<input
-													class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+													class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 													type="text"
 													id="openapi-path"
 													bind:value={path}
@@ -844,7 +849,7 @@
 								<div class="flex gap-2">
 									<div class="flex-shrink-0 self-start">
 										<select
-											class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full text-sm pr-5 ${($settings?.highContrastMode ?? false) ? highContrastSelectClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 dark:bg-gray-900'}`}
 											bind:value={auth_type}
 										>
 											<option value="none">{$i18n.t('None')}</option>

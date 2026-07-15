@@ -67,7 +67,7 @@
 			data-id={note.id}
 		>
 			<a
-				class="grow flex items-center gap-2.5 text-sm"
+				class="grow flex items-center gap-2.5 text-[13px] leading-5"
 				href={`/notes/${note.id}`}
 				on:click={() => {
 					selectedChatId = null;

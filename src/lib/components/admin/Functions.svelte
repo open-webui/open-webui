@@ -19,7 +19,6 @@
 		toggleGlobalById
 	} from '$lib/apis/functions';
 
-	import Download from '../icons/Download.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	import { getModels } from '$lib/apis';
@@ -32,15 +31,14 @@
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Search from '../icons/Search.svelte';
-	import Plus from '../icons/Plus.svelte';
 	import XMark from '../icons/XMark.svelte';
-	import AddFunctionMenu from './Functions/AddFunctionMenu.svelte';
 	import ImportModal from '../ImportModal.svelte';
 	import ViewSelector from '../workspace/common/ViewSelector.svelte';
 	import TagSelector from '../workspace/common/TagSelector.svelte';
 	import CommunityDiscover from '../workspace/common/CommunityDiscover.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
 	import Spinner from '../common/Spinner.svelte';
+	import SplitCreateButton from '../common/SplitCreateButton.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -76,6 +74,20 @@
 		searchDebounceTimer = setTimeout(() => {
 			setFilteredItems();
 		}, 300);
+	};
+
+	const downloadFunctions = async () => {
+		const _functions = await exportFunctions(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (_functions) {
+			let blob = new Blob([JSON.stringify(_functions)], {
+				type: 'application/json'
+			});
+			saveAs(blob, `functions-export-${Date.now()}.json`);
+		}
 	};
 
 	$: if (functions && selectedType !== undefined && viewOption !== undefined) {
@@ -269,7 +281,7 @@
 
 {#if loaded}
 	<div class="px-4.5 w-full">
-		<div class="flex flex-col gap-1 px-1 mt-2.5 mb-2">
+		<div class="flex flex-col gap-1 px-1 mt-0.5 mb-1">
 			<div class="flex justify-between items-center mb-1 w-full">
 				<input
 					id="documents-import-input"
@@ -285,68 +297,45 @@
 				/>
 
 				<div class="flex justify-between items-center w-full">
-					<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
+					<div class="flex items-center md:self-center text-sm font-normal px-0.5 gap-1.5 shrink-0">
 						<div>
 							{$i18n.t('Functions')}
 						</div>
 
-						<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
+						<div class="text-sm font-normal text-gray-500 dark:text-gray-500 opacity-60">
 							{filteredItems.length}
 						</div>
 					</div>
 
-					<div class="flex w-full justify-end gap-1.5">
-						{#if $user?.role === 'admin'}
-							<button
-								class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-								on:click={() => {
-									functionsImportInputElement.click();
-								}}
-							>
-								<div class=" self-center font-normal line-clamp-1">
-									{$i18n.t('Import')}
-								</div>
-							</button>
-
-							{#if functions.length}
-								<button
-									class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-									on:click={async () => {
-										const _functions = await exportFunctions(localStorage.token).catch((error) => {
-											toast.error(`${error}`);
-											return null;
-										});
-
-										if (_functions) {
-											let blob = new Blob([JSON.stringify(_functions)], {
-												type: 'application/json'
-											});
-											saveAs(blob, `functions-export-${Date.now()}.json`);
-										}
-									}}
-								>
-									<div class=" self-center font-normal line-clamp-1">
-										{$i18n.t('Export')}
-									</div>
-								</button>
-							{/if}
-						{/if}
-						<AddFunctionMenu
-							createHandler={() => {
-								goto('/admin/functions/create');
-							}}
-							importFromLinkHandler={() => {
-								showImportModal = true;
-							}}
-						>
-							<div
-								class="cursor-pointer px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-normal text-sm flex items-center"
-							>
-								<Plus className="size-3" strokeWidth="2.5" />
-
-								<div class=" hidden md:block md:ml-1 text-xs">{$i18n.t('New Function')}</div>
-							</div>
-						</AddFunctionMenu>
+					<div class="flex w-full justify-end">
+						<SplitCreateButton
+							actions={[
+								{
+									id: 'functions-new',
+									label: $i18n.t('Create'),
+									href: '/admin/functions/create'
+								},
+								{
+									id: 'functions-import-link',
+									label: $i18n.t('Import From Link'),
+									onClick: () => {
+										showImportModal = true;
+									}
+								},
+								{
+									id: 'functions-import',
+									label: $i18n.t('Import JSON'),
+									onClick: () => functionsImportInputElement?.click(),
+									visible: $user?.role === 'admin'
+								},
+								{
+									id: 'functions-export',
+									label: $i18n.t('Export JSON'),
+									onClick: downloadFunctions,
+									visible: $user?.role === 'admin' && functions.length > 0
+								}
+							]}
+						/>
 					</div>
 				</div>
 			</div>

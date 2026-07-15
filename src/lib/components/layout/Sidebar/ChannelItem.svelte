@@ -11,9 +11,9 @@
 
 	import ChannelModal from './ChannelModal.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
-	import HashtagIcon from './icons/Hashtag.svelte';
-	import LockIcon from './icons/Lock.svelte';
-	import SettingsIcon from './icons/Settings.svelte';
+	import HashtagIcon from '$lib/components/icons/Hashtag.svelte';
+	import LockIcon from '$lib/components/icons/Lock.svelte';
+	import EditPencilIcon from './icons/EditPencil.svelte';
 	import UserIcon from './icons/User.svelte';
 	import XMarkIcon from './icons/XMark.svelte';
 
@@ -144,9 +144,9 @@
 				{:else}
 					<div class=" size-4 justify-center flex items-center ml-1">
 						{#if isPublicChannel(channel)}
-							<HashtagIcon className="size-3.5" strokeWidth="1.5" />
+							<HashtagIcon className="size-3" strokeWidth="1.8" />
 						{:else}
-							<LockIcon className="size-[15px]" strokeWidth="1.5" />
+							<LockIcon className="size-3.5" strokeWidth="1.7" />
 						{/if}
 					</div>
 				{/if}
@@ -242,7 +242,7 @@
 					showEditChannelModal = true;
 				}}
 			>
-				<SettingsIcon className="size-3.5" />
+				<EditPencilIcon className="size-3.5" />
 			</button>
 		</div>
 	{/if}

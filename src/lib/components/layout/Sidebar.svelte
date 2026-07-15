@@ -996,7 +996,7 @@
 			? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-50/70 dark:bg-gray-950/70'} z-50`
 			: ' bg-transparent z-0 '} {$isApp
 			? `ml-[4.5rem] md:ml-0 `
-			: ' transition-all duration-300 '} shrink-0 text-gray-700 dark:text-gray-300 text-sm fixed top-0 left-0 overflow-x-hidden
+			: ' transition-all duration-300 '} shrink-0 text-gray-700 dark:text-gray-300 text-[13px] leading-5 fixed top-0 left-0 overflow-x-hidden
         "
 		transition:slide={{ duration: 250, axis: 'x' }}
 		data-state={$showSidebar}
@@ -1077,12 +1077,12 @@
 							on:click={newChatHandler}
 							aria-label={$i18n.t('New Chat')}
 						>
-							<div class="self-center">
+							<div class="self-center flex size-4 shrink-0 items-center justify-center">
 								<EditPencilIcon className=" size-4" strokeWidth="1.5" />
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm">{$i18n.t('New Chat')}</div>
+								<div class=" self-center text-[13px] leading-5">{$i18n.t('New Chat')}</div>
 							</div>
 
 							<HotkeyHint name="newChat" className=" group-hover:visible invisible" />
@@ -1099,12 +1099,12 @@
 							draggable="false"
 							aria-label={$i18n.t('Search')}
 						>
-							<div class="self-center">
+							<div class="self-center flex size-4 shrink-0 items-center justify-center">
 								<SearchIcon strokeWidth="1.5" className="size-4" />
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm">{$i18n.t('Search')}</div>
+								<div class=" self-center text-[13px] leading-5">{$i18n.t('Search')}</div>
 							</div>
 							<HotkeyHint name="search" className=" group-hover:visible invisible" />
 						</button>
@@ -1131,7 +1131,7 @@
 										draggable="false"
 										aria-label={$i18n.t(meta.label)}
 									>
-										<div class="self-center">
+										<div class="self-center flex size-4 shrink-0 items-center justify-center">
 											{#if itemId === 'notes'}
 												<NotesIcon className="size-4" strokeWidth="1.5" />
 											{:else if itemId === 'workspace'}
@@ -1146,7 +1146,7 @@
 										</div>
 
 										<div class="flex self-center translate-y-[0.5px]">
-											<div class=" self-center text-sm">{$i18n.t(meta.label)}</div>
+											<div class=" self-center text-[13px] leading-5">{$i18n.t(meta.label)}</div>
 										</div>
 									</a>
 								</div>
