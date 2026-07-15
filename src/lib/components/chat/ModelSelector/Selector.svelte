@@ -755,8 +755,8 @@
 			>
 				<slot>
 					{#if searchEnabled}
-						<div class="my-0.5 flex h-[1.6875rem] shrink-0 items-center gap-2">
-							<Search className="ml-2 size-3.5 shrink-0" strokeWidth="2" />
+						<div class="my-0.5 flex ml-2 mr-0.5 h-[1.6875rem] shrink-0 items-center gap-2">
+							<Search className=" size-3.5 shrink-0" strokeWidth="2" />
 
 							<input
 								id="model-search-input"
