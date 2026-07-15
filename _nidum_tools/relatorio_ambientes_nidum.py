@@ -1,9 +1,11 @@
 """
 title: Relatorio de Ambientes Nidum
 author: Nidum
-version: 1.1.0
+version: 1.1.1
 description: Gera o relatorio do motor Identificador de Ambientes no modelo visual aprovado (HTML/CSS -> PDF via WeasyPrint), com foto embutida, selos de severidade, barra de confianca e a identidade Nidum. Devolve link de download nativo. So-ASCII no codigo; o CONTEUDO do PDF tem acentuacao correta (rotulos fixos via entidades HTML; texto do modelo vem acentuado).
 changelog:
+  1.1.1:
+    - Aumenta o espaco horizontal entre a foto e a coluna de texto (gap 14 -> 34px).
   1.1.0:
     - Secao "Material analisado": coluna de qualidade reestruturada (rotulos + espacamento)
       para preencher melhor o espaco ao lado da foto. Novo campo "Dimensao estimada do
@@ -318,7 +320,7 @@ h1{font-size:22px;color:var(--escuro);margin:14px 0 3px;font-weight:600;}
 section{margin-bottom:24px;}
 h2{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--terracota);font-weight:700;padding-bottom:5px;border-bottom:1px solid var(--areia);margin-bottom:10px;}
 p{margin-bottom:9px;}
-.fotos{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;}
+.fotos{display:flex;gap:34px;align-items:flex-start;flex-wrap:wrap;}
 .foto{width:270px;}
 .foto img{width:100%;border:1px solid var(--pedra);}
 .foto .semimg{width:100%;height:170px;background:var(--areia);display:flex;align-items:center;justify-content:center;color:var(--pedra);font-size:11px;border:1px solid var(--pedra);}
