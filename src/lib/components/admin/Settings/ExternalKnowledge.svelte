@@ -411,7 +411,7 @@
 <Modal bind:show={showSourceModal} size="sm">
 	<div>
 		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-			<h1 class="text-lg font-normal self-center ">
+			<h1 class="text-lg font-normal self-center">
 				{editingItem ? $i18n.t('Edit Knowledge Connection') : $i18n.t('Add Knowledge Connection')}
 			</h1>
 
@@ -790,7 +790,14 @@
 
 <div class="flex w-full flex-col justify-between text-xs">
 	<div class="mb-2 flex items-center justify-between">
-		<div class="text-gray-600 dark:text-gray-400">{$i18n.t('Sources')}</div>
+		<div class="flex items-center gap-2 leading-none text-gray-600 dark:text-gray-400">
+			<div>{$i18n.t('External Knowledge Sources')}</div>
+			<span
+				class="inline-flex items-center text-[0.625rem] font-normal uppercase leading-none text-gray-400 dark:text-gray-600"
+			>
+				{$i18n.t('Experimental')}
+			</span>
+		</div>
 
 		<Tooltip content={$i18n.t('Add Connection')}>
 			<button
