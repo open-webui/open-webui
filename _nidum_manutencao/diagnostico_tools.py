@@ -73,9 +73,16 @@ def main():
         print("  is_active: %s" % info.get("is_active"))
     print("")
 
-    # TOOLS
-    st, body = _get("%s/api/v1/tools" % base, token)
-    tools = _lista(body) if st == 200 else []
+    # TOOLS (a rota certa tem barra final; tenta variantes e mostra o status)
+    tools = []
+    for rota in ("/api/v1/tools/", "/api/v1/tools/list", "/api/v1/tools"):
+        st, body = _get(base + rota, token)
+        parsed = _lista(body) if st == 200 else []
+        print("[debug] GET %s -> HTTP %s | itens: %d" % (rota, st, len(parsed)))
+        if parsed:
+            tools = parsed
+            break
+    print("")
     by_id = {str(t.get("id")): t for t in tools}
     for tid in TOOLS:
         print("=== TOOL: %s ===" % tid)
