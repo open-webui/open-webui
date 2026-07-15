@@ -98,6 +98,9 @@
 				{readOnly}
 				{editCodeBlock}
 				{topPadding}
+				on:openSourcePanel={(e) => {
+					dispatch('openSourcePanel', e.detail);
+				}}
 			/>
 		{:else}
 			{#key messageId}
@@ -123,6 +126,9 @@
 					{readOnly}
 					{editCodeBlock}
 					{topPadding}
+					on:openSourcePanel={(e) => {
+						dispatch('openSourcePanel', e.detail);
+					}}
 				/>
 			{/key}
 		{/if}

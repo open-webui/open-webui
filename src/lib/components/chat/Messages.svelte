@@ -542,6 +542,9 @@
 								{readOnly}
 								{editCodeBlock}
 								{topPadding}
+								on:openSourcePanel={(e) => {
+									dispatch('openSourcePanel', e.detail);
+								}}
 							/>
 						{/each}
 					</ul>

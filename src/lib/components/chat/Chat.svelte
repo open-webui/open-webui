@@ -102,6 +102,7 @@
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/chat/Navbar.svelte';
+	import SourcePanel from '$lib/components/chat/SourcePanel.svelte';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -122,6 +123,7 @@
 	const eventTarget = new EventTarget();
 	let controlPane: Pane | undefined;
 	let controlPaneComponent: ChatControls | undefined;
+	let sourcePanelTarget: any = null;
 
 	let messageInput: MessageInput | undefined;
 	let messagesRef: Messages | undefined;
@@ -3417,6 +3419,9 @@
 										topPadding={true}
 										bottomPadding={files.length > 0}
 										{onSelect}
+										on:openSourcePanel={(e) => {
+											sourcePanelTarget = e.detail;
+										}}
 									/>
 								</div>
 							</div>
@@ -3559,28 +3564,53 @@
 					</div>
 				</Pane>
 
-				<ChatControls
-					bind:this={controlPaneComponent}
-					bind:history
-					bind:chatFiles
-					bind:params
-					bind:files
-					bind:pane={controlPane}
-					chatId={$chatId}
-					modelId={selectedModelIds?.at(0) ?? null}
-					models={selectedModelIds.reduce((a, e, i, arr) => {
-						const model = $models.find((m) => m.id === e);
-						if (model) {
-							return [...a, model];
-						}
-						return a;
-					}, [])}
-					submitPrompt={submitHandler}
-					{stopResponse}
-					{showMessage}
-					{eventTarget}
-					{codeInterpreterEnabled}
-				/>
+				{#if sourcePanelTarget}
+					<PaneResizer
+						class="relative z-20 flex items-center justify-center border-l border-gray-50 transition hover:border-gray-200 dark:border-gray-850/30 dark:hover:border-gray-800"
+					>
+						<div
+							class="absolute -bottom-0 -left-1.5 -right-1.5 -top-0 z-20 cursor-col-resize bg-transparent"
+						/>
+					</PaneResizer>
+					<Pane
+						defaultSize={35}
+						minSize={25}
+						maxSize={50}
+						class="z-10 h-full min-w-0 bg-white dark:bg-gray-850"
+					>
+						<SourcePanel
+							target={sourcePanelTarget}
+							onClose={() => {
+								sourcePanelTarget = null;
+							}}
+						/>
+					</Pane>
+				{/if}
+
+				{#if $showControls}
+					<ChatControls
+						bind:this={controlPaneComponent}
+						bind:history
+						bind:chatFiles
+						bind:params
+						bind:files
+						bind:pane={controlPane}
+						chatId={$chatId}
+						modelId={selectedModelIds?.at(0) ?? null}
+						models={selectedModelIds.reduce((a, e, i, arr) => {
+							const model = $models.find((m) => m.id === e);
+							if (model) {
+								return [...a, model];
+							}
+							return a;
+						}, [])}
+						submitPrompt={submitHandler}
+						{stopResponse}
+						{showMessage}
+						{eventTarget}
+						{codeInterpreterEnabled}
+					/>
+				{/if}
 			</PaneGroup>
 		</div>
 	{:else if loading}

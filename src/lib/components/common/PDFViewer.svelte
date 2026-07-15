@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 	import panzoom, { type PanZoom } from 'panzoom';
 	import Spinner from './Spinner.svelte';
@@ -7,7 +7,10 @@
 	export let url: string | null = null;
 	export let data: ArrayBuffer | Uint8Array | null = null;
 	export let className = 'w-full h-[70vh]';
+	export let initialPage: number | null = null;
+	export let scrollRequestId = 0;
 
+	let containerElement: HTMLDivElement;
 	let outerContainer: HTMLDivElement;
 	let sceneElement: HTMLDivElement;
 	let loading = true;
@@ -16,10 +19,18 @@
 	let pzInstance: PanZoom | null = null;
 	let zoomLevel = 1;
 	let rerenderTimer: ReturnType<typeof setTimeout> | null = null;
+	let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+	let resizeObserver: ResizeObserver | null = null;
 	let lastRenderedZoom = 1;
+	let lastScrolledPage: number | null = null;
+	let lastScrollRequestId = 0;
+	let lastContainerWidth = 0;
 
 	// Keep a reference to TextLayer instances so we can update/cancel them
 	let textLayerInstances: any[] = [];
+
+	const getContainerWidth = () =>
+		containerElement?.getBoundingClientRect().width || outerContainer?.clientWidth || 800;
 
 	const initPanzoom = () => {
 		if (pzInstance) {
@@ -84,12 +95,30 @@
 		}
 	};
 
+	const scrollToPage = async (page: number | null, requestId = scrollRequestId) => {
+		if (!sceneElement || !outerContainer || !page) return;
+
+		await tick();
+
+		const pageIndex = Math.max(
+			0,
+			Math.min(page - 1, sceneElement.querySelectorAll('[data-page-number]').length - 1)
+		);
+		const pageElement = sceneElement.querySelectorAll('[data-page-number]')[pageIndex];
+
+		if (pageElement) {
+			pageElement.scrollIntoView({ block: 'start' });
+			lastScrolledPage = page;
+			lastScrollRequestId = requestId;
+		}
+	};
+
 	// Re-render existing canvases at a new zoom level (preserves panzoom transform)
 	const rerenderPages = async (forZoom: number) => {
 		if (!pdfDoc || !sceneElement) return;
 		const pdfjs = await import('pdfjs-dist');
 		const dpr = window.devicePixelRatio || 1;
-		const containerWidth = outerContainer?.clientWidth || 800;
+		const containerWidth = getContainerWidth();
 
 		const pageWrappers = sceneElement.querySelectorAll('.pdf-page-wrapper');
 
@@ -112,10 +141,14 @@
 			const wrapper = pageWrappers[i] as HTMLElement;
 			// Update the CSS custom property so textLayer dimensions resolve correctly
 			wrapper.style.setProperty('--scale-factor', String(cssViewport.scale));
+			wrapper.style.width = `${Math.round(cssScale * viewport.width)}px`;
+			wrapper.style.height = `${Math.round(cssScale * viewport.height)}px`;
 
 			const canvas = wrapper.querySelector('canvas')!;
 			canvas.width = scaledViewport.width;
 			canvas.height = scaledViewport.height;
+			canvas.style.width = `${Math.round(cssScale * viewport.width)}px`;
+			canvas.style.height = `${Math.round(cssScale * viewport.height)}px`;
 
 			const ctx = canvas.getContext('2d');
 			if (ctx) {
@@ -138,6 +171,11 @@
 			}
 		}
 		lastRenderedZoom = forZoom;
+		lastContainerWidth = containerWidth;
+
+		if (Math.abs(getContainerWidth() - containerWidth) >= 2) {
+			scheduleResizeRender();
+		}
 	};
 
 	const renderAllPages = async () => {
@@ -162,7 +200,7 @@
 			const viewport = page.getViewport({ scale: 1 });
 
 			// Scale to fit container width
-			const containerWidth = outerContainer?.clientWidth || 800;
+			const containerWidth = getContainerWidth();
 			const cssScale = containerWidth / viewport.width;
 			const renderScale = cssScale * dpr;
 			const scaledViewport = page.getViewport({ scale: renderScale });
@@ -171,6 +209,7 @@
 			// Create page wrapper (positioned container for canvas + text layer)
 			const wrapper = document.createElement('div');
 			wrapper.className = 'pdf-page-wrapper';
+			wrapper.dataset.pageNumber = `${i}`;
 			wrapper.style.position = 'relative';
 			wrapper.style.width = `${Math.round(cssScale * viewport.width)}px`;
 			wrapper.style.height = `${Math.round(cssScale * viewport.height)}px`;
@@ -217,7 +256,22 @@
 		}
 
 		lastRenderedZoom = 1;
+		lastContainerWidth = getContainerWidth();
 		initPanzoom();
+		await scrollToPage(initialPage);
+	};
+
+	const scheduleResizeRender = () => {
+		if (!pdfDoc || !containerElement) return;
+
+		const width = getContainerWidth();
+		if (!width || Math.abs(width - lastContainerWidth) < 2) return;
+
+		if (resizeTimer) clearTimeout(resizeTimer);
+		resizeTimer = setTimeout(() => {
+			resizeTimer = null;
+			rerenderPages(zoomLevel);
+		}, 150);
 	};
 
 	const loadPdf = async () => {
@@ -249,12 +303,30 @@
 		}
 	};
 
-	onMount(() => {
+	onMount(async () => {
 		loadPdf();
+
+		await tick();
+		if (containerElement) {
+			resizeObserver = new ResizeObserver(scheduleResizeRender);
+			resizeObserver.observe(containerElement);
+		}
 	});
+
+	$: if (
+		!loading &&
+		!error &&
+		pdfDoc &&
+		initialPage &&
+		(initialPage !== lastScrolledPage || scrollRequestId !== lastScrollRequestId)
+	) {
+		scrollToPage(initialPage);
+	}
 
 	onDestroy(() => {
 		if (rerenderTimer) clearTimeout(rerenderTimer);
+		if (resizeTimer) clearTimeout(resizeTimer);
+		resizeObserver?.disconnect();
 		pzInstance?.dispose();
 		for (const tl of textLayerInstances) {
 			try {
@@ -269,7 +341,7 @@
 	});
 </script>
 
-<div class="relative {className}">
+<div class="relative min-w-0 overflow-hidden {className}" bind:this={containerElement}>
 	{#if loading}
 		<div class="absolute inset-0 flex items-center justify-center">
 			<Spinner className="size-5" />
@@ -280,7 +352,7 @@
 		</div>
 	{/if}
 
-	<div class="overflow-y-auto h-full" bind:this={outerContainer}>
+	<div class="overflow-y-auto overflow-x-hidden h-full w-full min-w-0" bind:this={outerContainer}>
 		<div bind:this={sceneElement} class="w-full"></div>
 	</div>
 
