@@ -270,6 +270,13 @@
 		});
 	};
 
+	const getMentionText = ({ node, suggestion }) => {
+		const id = node.attrs.id ?? '';
+		const label = node.attrs.label ?? id;
+		const char = id.includes('|') ? '$' : (suggestion?.char ?? '@');
+		return `${char}${label}`;
+	};
+
 	export let onSelectionUpdate = (e) => {};
 
 	export let id = '';
@@ -455,9 +462,6 @@
 		if (text === '') {
 			editor.commands.clearContent();
 		} else {
-			// Regex to find serialized mention tags: <@id>, <#id>, <$id|label>
-			const mentionReG = /<([@#$])([\w.\-:/]+)(?:\|([^>]*))?>/g;
-
 			// Convert each line to a <p>, replacing mention tags with proper
 			// TipTap mention spans that the editor's DOMParser will recognise.
 			const lines = text.split('\n');
@@ -470,10 +474,14 @@
 					const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 					// Now replace the escaped mention patterns back into real spans
 					const withMentions = escaped.replace(
-						/&lt;([@#$])([\w.\-:/]+)(?:\|([^&]*?))?&gt;/g,
-						(_, ch, id, label) => {
-							const display = label?.length ? label : id;
-							return `<span class="mention" data-type="mention" data-id="${id}" data-label="${display}" data-mention-suggestion-char="${ch}">${ch}${display}</span>`;
+						/&lt;([@#$])([\w.\-:/]+)(?:\|([^&]*?))?&gt;|&lt;\/([\w.\-:/]+)\|([^&]*?)&gt;/g,
+						(_, ch, id, label, slashSkillId, slashSkillLabel) => {
+							const mentionChar = ch || '$';
+							const mentionId = id || slashSkillId;
+							const display = (label || slashSkillLabel)?.length
+								? label || slashSkillLabel
+								: mentionId;
+							return `<span class="mention" data-type="mention" data-id="${mentionId}" data-label="${display}" data-mention-suggestion-char="${mentionChar}">${mentionChar}${display}</span>`;
 						}
 					);
 					return `<p>${withMentions}</p>`;
@@ -782,6 +790,12 @@
 					? [
 							Mention.configure({
 								HTMLAttributes: { class: 'mention' },
+								renderText: getMentionText,
+								renderHTML: ({ options, node, suggestion }) => [
+									'span',
+									options.HTMLAttributes,
+									getMentionText({ node, suggestion })
+								],
 								suggestions: suggestions
 							})
 						]
