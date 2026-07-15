@@ -1,9 +1,15 @@
 """
 title: Relatorio de Ambientes Nidum
 author: Nidum
-version: 1.1.2
+version: 1.2.0
 description: Gera o relatorio do motor Identificador de Ambientes no modelo visual aprovado (HTML/CSS -> PDF via WeasyPrint), com foto embutida, selos de severidade, barra de confianca e a identidade Nidum. Devolve link de download nativo. So-ASCII no codigo; o CONTEUDO do PDF tem acentuacao correta (rotulos fixos via entidades HTML; texto do modelo vem acentuado).
 changelog:
+  1.2.0:
+    - Tolerancia de formato nos parametros compostos (metadados, confianca, qualidade,
+      evidencias, avarias, reduzir_incerteza, fotos): aceita objeto OU texto JSON, pois
+      no function calling nativo o modelo as vezes envia strings JSON. Elimina as
+      re-tentativas narradas no chat.
+    - Mensagem de erro volta a ser amigavel (detalhe tecnico so no log do servidor).
   1.1.1:
     - Aumenta o espaco horizontal entre a foto e a coluna de texto (gap 14 -> 34px).
   1.1.0:
@@ -26,6 +32,7 @@ import base64
 import html as _html
 import inspect
 import io
+import json
 import logging
 import os
 import re
@@ -98,6 +105,36 @@ def _fontes_css():
         _font_face("Ibrand.ttf", "Ibrand", 400),
     ]
     return "".join(r for r in regras if r)
+
+
+# --------------------------------------------------------------------------- params
+def _obj(x):
+    # No modo Native, o modelo as vezes envia parametros compostos como TEXTO JSON.
+    # Aceita os dois formatos: devolve o objeto (dict/list) ou o valor original.
+    if isinstance(x, str):
+        s = x.strip()
+        if s.startswith("{") or s.startswith("["):
+            try:
+                return json.loads(s)
+            except Exception:
+                return x
+    return x
+
+
+def _dict_param(x):
+    x = _obj(x)
+    return x if isinstance(x, dict) else {}
+
+
+def _lista_param(x):
+    x = _obj(x)
+    if x is None:
+        return []
+    if isinstance(x, str):
+        return [x] if x.strip() else []
+    if isinstance(x, (list, tuple)):
+        return list(x)
+    return [x]
 
 
 # --------------------------------------------------------------------------- user/io
@@ -474,19 +511,22 @@ class Tools:
         except Exception as e:
             import traceback
             log.error("relatorio_ambientes: erro: %s\n%s", e, traceback.format_exc())
-            return ("Nao consegui gerar o relatorio agora. DETALHE TECNICO: %s: %s. "
-                    "(Diagnostico temporario - avise o suporte com esta mensagem.)"
-                    % (type(e).__name__, str(e)[:400]))
+            return ("Nao consegui gerar o relatorio agora. Tente novamente; se persistir, "
+                    "avise o suporte. (detalhe tecnico registrado no log do servidor)")
 
     async def _gerar(self, titulo, nome_arquivo, meta, diag_resumo, conf, qual, diag_texto,
                      evidencias, avarias, conf_texto, reduzir, ajustes, dimensao, fotos, __user__,
                      __messages__=None, __files__=None):
         import weasyprint
 
-        meta = dict(meta or {})
-        conf = conf or {}
-        qual = qual or {}
-        fotos = fotos or []
+        # tolerancia de formato: aceita objetos OU texto JSON (modo Native)
+        meta = dict(_dict_param(meta))
+        conf = _dict_param(conf)
+        qual = _dict_param(qual)
+        evidencias = _lista_param(evidencias)
+        avarias = [a for a in (_obj(x) for x in _lista_param(avarias)) if isinstance(a, dict)]
+        reduzir = _lista_param(reduzir)
+        fotos = [f for f in (_obj(x) for x in _lista_param(fotos)) if isinstance(f, dict)]
 
         # data: carimbada pelo SERVIDOR (o modelo nao decide a data - evita data inventada).
         agora = datetime.now()
