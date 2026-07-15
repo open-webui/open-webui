@@ -78,7 +78,7 @@
 							}}
 						>
 							<div class=" self-center p-1.5">
-								<Sidebar />
+								<Sidebar className="size-4" />
 							</div>
 						</button>
 					</Tooltip>

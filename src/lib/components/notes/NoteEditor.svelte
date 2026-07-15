@@ -924,27 +924,23 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 					<div class="shrink-0 w-full flex justify-between items-center px-3.5 mb-1.5">
 						<div class="w-full min-w-0 flex items-center">
 							{#if $mobile}
-								<div
-									class="{$showSidebar
-										? 'md:hidden pl-0.5'
-										: ''} flex flex-none items-center pr-1 -translate-x-1"
+								<Tooltip
+									content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 								>
-									<Tooltip
-										content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+									<button
+										id="sidebar-toggle-button"
+										class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+										aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+										type="button"
+										on:click={() => {
+											showSidebar.set(!$showSidebar);
+										}}
 									>
-										<button
-											id="sidebar-toggle-button"
-											class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
-											on:click={() => {
-												showSidebar.set(!$showSidebar);
-											}}
-										>
-											<div class=" self-center p-1.5">
-												<Sidebar />
-											</div>
-										</button>
-									</Tooltip>
-								</div>
+										<div class=" self-center p-1.5">
+											<Sidebar className="size-4" />
+										</div>
+									</button>
+								</Tooltip>
 							{/if}
 
 							<input

@@ -7,7 +7,7 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
-	import { WEBUI_NAME, showSidebar } from '$lib/stores';
+	import { WEBUI_NAME, mobile, showSidebar } from '$lib/stores';
 
 	import {
 		updateAutomationById,
@@ -25,6 +25,7 @@
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import SidebarIcon from '$lib/components/icons/Sidebar.svelte';
 
 	import ScheduleDropdown from '$lib/components/automations/ScheduleDropdown.svelte';
 	import ModelDropdown from '$lib/components/automations/ModelDropdown.svelte';
@@ -222,7 +223,24 @@
 		<!-- Header Segment (Shrink-0 so it doesn't compress) -->
 		<div class="flex items-start justify-between gap-4 shrink-0 mb-0.5">
 			<div class="flex-1 min-w-0">
-				<div class="flex items-center gap-1.5 mb-1.5">
+				<div class="flex items-center gap-0.5 md:gap-1.5 mb-1.5">
+					{#if $mobile}
+						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
+							<button
+								id="sidebar-toggle-button"
+								class="cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+								aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+								on:click={() => {
+									showSidebar.set(!$showSidebar);
+								}}
+								type="button"
+							>
+								<div class="self-center p-1.5">
+									<SidebarIcon className="size-4" />
+								</div>
+							</button>
+						</Tooltip>
+					{/if}
 					<Tooltip content={$i18n.t('Back')}>
 						<button
 							class="text-sm p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition"

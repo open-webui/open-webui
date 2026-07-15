@@ -556,10 +556,10 @@
 				<Dropdown align="end">
 					<Tooltip content={$i18n.t('Actions')}>
 						<button
-							class="flex h-8 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[13px] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
+							class="flex h-8 min-w-0 max-w-28 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[13px] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
 							type="button"
 						>
-							<span>{$i18n.t('Actions')}</span>
+							<span class="min-w-0 truncate">{$i18n.t('Actions')}</span>
 							<ChevronDown className="size-3" strokeWidth="2.5" />
 						</button>
 					</Tooltip>
@@ -634,7 +634,7 @@
 								}
 							}}
 						>
-							<div class="flex group/item gap-3.5 w-full">
+							<div class="flex group/item min-w-0 gap-3.5 w-full">
 								<div class="self-center pl-0.5">
 									<div class="flex bg-white rounded-2xl">
 										<div
@@ -658,18 +658,22 @@
 
 								<div class=" shrink-0 flex w-full min-w-0 flex-1 pr-1 self-center">
 									<div class="flex h-full w-full flex-1 flex-col justify-start self-center group">
-										<div class="flex-1 w-full">
-											<div class="flex items-center justify-between w-full">
-												<Tooltip content={model.name} className=" w-fit" placement="top-start">
+										<div class="min-w-0 flex-1 w-full">
+											<div class="flex min-w-0 items-center justify-between w-full gap-2">
+												<Tooltip
+													content={model.name}
+													className="min-w-0 flex-1"
+													placement="top-start"
+												>
 													<a
-														class=" font-normal line-clamp-1 hover:underline capitalize"
+														class="font-normal line-clamp-1 hover:underline capitalize"
 														href={`/?models=${encodeURIComponent(model.id)}`}
 													>
 														{model.name}
 													</a>
 												</Tooltip>
 
-												<div class="flex items-center gap-1">
+												<div class="flex shrink-0 items-center gap-1">
 													{#if !model.write_access}
 														<div>
 															<Badge type="muted" content={$i18n.t('Read Only')} />
@@ -786,7 +790,7 @@
 												</div>
 											</div>
 
-											<div class=" flex gap-1 pr-2 -mt-1 items-center">
+											<div class="flex min-w-0 gap-1 pr-2 -mt-1 items-center">
 												<Tooltip
 													content={model?.user?.email ?? $i18n.t('Deleted User')}
 													className="flex shrink-0"
@@ -801,15 +805,15 @@
 													</div>
 												</Tooltip>
 
-												<div>·</div>
+												<div class="shrink-0">·</div>
 
 												<Tooltip
 													content={marked.parse(model?.meta?.description ?? model.id)}
-													className=" w-fit text-left"
+													className="min-w-0 text-left"
 													placement="top-start"
 												>
-													<div class="flex gap-1 text-xs overflow-hidden">
-														<div class="line-clamp-1">
+													<div class="flex min-w-0 gap-1 text-xs overflow-hidden">
+														<div class="line-clamp-1 min-w-0">
 															{#if (model?.meta?.description ?? '').trim()}
 																{model?.meta?.description}
 															{:else}

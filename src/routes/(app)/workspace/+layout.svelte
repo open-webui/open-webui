@@ -61,7 +61,7 @@
 			: ''} max-w-full"
 	>
 		<nav class="   px-1.5 pt-0.5 backdrop-blur-xl drag-region select-none">
-			<div class=" flex items-center gap-1">
+			<div class=" flex items-center gap-0.5 md:gap-1">
 				{#if $mobile}
 					<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
 						<Tooltip
@@ -77,7 +77,7 @@
 								}}
 							>
 								<div class=" self-center p-1.5">
-									<Sidebar />
+									<Sidebar className="size-4" />
 								</div>
 							</button>
 						</Tooltip>
@@ -86,7 +86,7 @@
 
 				<div class="">
 					<div
-						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
+						class="flex gap-0.5 md:gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
 					>
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
 							<a

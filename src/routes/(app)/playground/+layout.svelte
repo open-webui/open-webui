@@ -1,13 +1,11 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, showSidebar, functions, mobile } from '$lib/stores';
+	import { getContext } from 'svelte';
+	import { WEBUI_NAME, showSidebar, mobile } from '$lib/stores';
 	import { page } from '$app/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Sidebar from '$lib/components/icons/Sidebar.svelte';
 
 	const i18n = getContext('i18n');
-
-	onMount(async () => {});
 </script>
 
 <svelte:head>
@@ -21,10 +19,10 @@
 		? 'md:max-w-[calc(100%-var(--sidebar-width))]'
 		: ''} max-w-full"
 >
-	<nav class="   px-2.5 backdrop-blur-xl w-full drag-region select-none">
-		<div class=" flex items-center">
+	<nav class="   px-1.5 pt-0.5 backdrop-blur-xl drag-region select-none">
+		<div class=" flex items-center gap-0.5 md:gap-1">
 			{#if $mobile}
-				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
+				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
 					<Tooltip
 						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 						interactive={true}
@@ -32,21 +30,22 @@
 						<button
 							id="sidebar-toggle-button"
 							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 							on:click={() => {
 								showSidebar.set(!$showSidebar);
 							}}
 						>
 							<div class=" self-center p-1.5">
-								<Sidebar />
+								<Sidebar className="size-4" />
 							</div>
 						</button>
 					</Tooltip>
 				</div>
 			{/if}
 
-			<div class=" flex w-full">
+			<div class="">
 				<div
-					class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent pt-1"
+					class="flex gap-0.5 md:gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
 				>
 					<a
 						draggable="false"

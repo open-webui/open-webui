@@ -35,12 +35,12 @@
 	<div
 		class=" flex flex-col h-screen max-h-[100dvh] flex-1 transition-width duration-200 ease-in-out {$showSidebar
 			? 'md:max-w-[calc(100%-var(--sidebar-width))]'
-			: ''}  w-full max-w-full"
+			: 'md:max-w-[calc(100%-42px)]'}  w-full max-w-full"
 	>
 		<nav class="  px-1.5 pt-0.5 backdrop-blur-xl drag-region select-none">
-			<div class=" flex items-center gap-1">
+			<div class=" flex items-center gap-0.5 md:gap-1">
 				{#if $mobile}
-					<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
+					<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
 						<Tooltip
 							content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 							interactive={true}
@@ -48,21 +48,22 @@
 							<button
 								id="sidebar-toggle-button"
 								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+								aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 								on:click={() => {
 									showSidebar.set(!$showSidebar);
 								}}
 							>
 								<div class=" self-center p-1.5">
-									<Sidebar />
+									<Sidebar className="size-4" />
 								</div>
 							</button>
 						</Tooltip>
 					</div>
 				{/if}
 
-				<div class=" flex w-full">
+				<div class="">
 					<div
-						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent pt-1"
+						class="flex gap-0.5 md:gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
 					>
 						<a
 							draggable="false"

@@ -260,35 +260,39 @@
 	<div class="flex-1 max-h-full overflow-y-auto">
 		{#if loaded}
 			<div class="pb-1 px-3 md:px-[18px] pt-2">
-				<div class="flex flex-col gap-1 px-1 mt-1.5 mb-2">
-					<div class="flex justify-between items-center">
-						<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
-							{#if $mobile}
-								<Tooltip
-									content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+				<div class="flex items-center gap-0.5 md:gap-1 mb-2">
+					{#if $mobile}
+						<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
+							<Tooltip
+								content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+								interactive={true}
+							>
+								<button
+									id="sidebar-toggle-button"
+									class="cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+									on:click={() => {
+										showSidebar.set(!$showSidebar);
+									}}
 								>
-									<button
-										id="sidebar-toggle-button"
-										class="cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-										on:click={() => {
-											showSidebar.set(!$showSidebar);
-										}}
-									>
-										<div class="self-center p-1.5">
-											<SidebarIcon />
-										</div>
-									</button>
-								</Tooltip>
-							{/if}
-							<div>{$i18n.t('Automations')}</div>
-							<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
+									<div class="self-center p-1.5">
+										<SidebarIcon className="size-4" />
+									</div>
+								</button>
+							</Tooltip>
+						</div>
+					{/if}
+
+					<div class="flex w-full items-center">
+						<div class="flex items-center gap-1 py-1 min-w-0">
+							<span class="min-w-fit px-1 text-sm select-none">{$i18n.t('Automations')}</span>
+							<span class="text-xs text-gray-500 dark:text-gray-500">
 								{total ?? ''}
-							</div>
+							</span>
 						</div>
 
-						<div class="flex w-full justify-end gap-1.5">
+						<div class="ml-auto flex items-center gap-1">
 							<button
-								class="px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-normal text-sm flex items-center"
+								class="ml-1 px-2 py-1.5 text-xs gap-1 rounded-xl bg-black text-white dark:bg-white dark:text-black transition flex items-center"
 								on:click={() => {
 									cloneFrom = null;
 									showCreateModal = true;

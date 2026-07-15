@@ -230,7 +230,7 @@
 	{#if loaded}
 		<!-- Top Navbar — spans above sidebar and calendar -->
 		<nav class="px-3 pt-2 pb-2 backdrop-blur-xl drag-region select-none shrink-0">
-			<div class="flex items-center gap-1">
+			<div class="flex items-center gap-0.5 md:gap-1">
 				{#if $mobile}
 					<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
 						<Tooltip
@@ -243,7 +243,7 @@
 								on:click={() => showSidebar.set(!$showSidebar)}
 							>
 								<div class="self-center p-1.5">
-									<SidebarIcon />
+									<SidebarIcon className="size-4" />
 								</div>
 							</button>
 						</Tooltip>

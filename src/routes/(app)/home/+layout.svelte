@@ -37,7 +37,7 @@
 							}}
 						>
 							<div class=" self-center p-1.5">
-								<Sidebar />
+								<Sidebar className="size-4" />
 							</div>
 						</button>
 					</Tooltip>
@@ -46,7 +46,7 @@
 
 			<div class=" flex w-full">
 				<div
-					class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent pt-1"
+					class="flex gap-0.5 md:gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent pt-1"
 				>
 					<a
 						class="min-w-fit p-1.5 {$page.url.pathname.includes('/home/notes')

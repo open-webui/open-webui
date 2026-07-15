@@ -821,7 +821,7 @@
 								alt=""
 							/>
 
-							<Sidebar className="size-4.5 hidden group-hover:flex" />
+							<Sidebar className="size-4 hidden group-hover:flex" />
 						</div>
 					</button>
 				</Tooltip>
@@ -1054,7 +1054,7 @@
 						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 					>
 						<div class=" self-center">
-							<Sidebar className="size-4.5" />
+							<Sidebar className="size-4" />
 						</div>
 					</button>
 				</Tooltip>
