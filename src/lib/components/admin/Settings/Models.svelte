@@ -14,6 +14,7 @@
 		getBaseModels,
 		toggleModelById,
 		updateModelById,
+		updateModelAccessGrants,
 		importModels
 	} from '$lib/apis/models';
 	import { copyToClipboard } from '$lib/utils';
@@ -80,6 +81,18 @@
 		return (model?.access_grants ?? []).some(
 			(g) => g.principal_type === 'user' && g.principal_id === '*' && g.permission === 'read'
 		);
+	};
+
+	const isSharedModel = (model) => (model?.access_grants ?? []).length > 0 && !isPublicModel(model);
+
+	const modelAccessBadge = (model) => {
+		if (isPublicModel(model)) {
+			return { type: 'success', content: $i18n.t('Public') };
+		}
+		if (isSharedModel(model)) {
+			return { type: 'info', content: $i18n.t('Shared') };
+		}
+		return { type: 'muted', content: $i18n.t('Private') };
 	};
 
 	$: if (models) {
@@ -295,6 +308,43 @@
 						name: model.id
 					})
 		);
+	};
+
+	const toggleModelPrivacyHandler = async (model) => {
+		const nextAccessGrants = isPublicModel(model)
+			? []
+			: [
+					...(model?.access_grants ?? []),
+					{
+						principal_type: 'user',
+						principal_id: '*',
+						permission: 'read'
+					}
+				];
+
+		const res = await updateModelAccessGrants(
+			localStorage.token,
+			model.id,
+			model.name,
+			nextAccessGrants
+		).catch(() => null);
+
+		if (res) {
+			models = models.map((m) =>
+				m.id === model.id ? { ...m, access_grants: res.access_grants ?? nextAccessGrants } : m
+			);
+			_models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
+			toast.success(
+				isPublicModel({ access_grants: nextAccessGrants })
+					? $i18n.t('Model is now public')
+					: $i18n.t('Model is now private')
+			);
+		}
 	};
 
 	const copyLinkHandler = async (model) => {
@@ -662,22 +712,8 @@
 												</span>
 
 												<Badge
-													type={(model?.access_grants ?? []).some(
-														(g) =>
-															g.principal_type === 'user' &&
-															g.principal_id === '*' &&
-															g.permission === 'read'
-													)
-														? 'success'
-														: 'muted'}
-													content={(model?.access_grants ?? []).some(
-														(g) =>
-															g.principal_type === 'user' &&
-															g.principal_id === '*' &&
-															g.permission === 'read'
-													)
-														? $i18n.t('Public')
-														: $i18n.t('Private')}
+													type={modelAccessBadge(model).type}
+													content={modelAccessBadge(model).content}
 												/>
 											</div>
 										</Tooltip>
@@ -733,6 +769,9 @@
 										}}
 										hideHandler={() => {
 											hideModelHandler(model);
+										}}
+										privacyHandler={() => {
+											toggleModelPrivacyHandler(model);
 										}}
 										pinModelHandler={() => {
 											pinModelHandler(model.id);

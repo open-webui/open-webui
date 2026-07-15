@@ -14,6 +14,8 @@
 	import ArrowUpCircle from '$lib/components/icons/ArrowUpCircle.svelte';
 	import Pin from '$lib/components/icons/Pin.svelte';
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
+	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 
 	import { config, settings } from '$lib/stores';
 	import Link from '$lib/components/icons/Link.svelte';
@@ -25,6 +27,7 @@
 
 	export let exportHandler: Function;
 	export let hideHandler: Function;
+	export let privacyHandler: Function;
 	export let pinModelHandler: Function;
 	export let copyLinkHandler: Function;
 	export let cloneHandler: Function;
@@ -32,6 +35,11 @@
 	export let onClose: Function;
 
 	let show = false;
+
+	const isPublicModel = (model) =>
+		(model?.access_grants ?? []).some(
+			(g) => g.principal_type === 'user' && g.principal_id === '*' && g.permission === 'read'
+		);
 </script>
 
 <Dropdown
@@ -96,6 +104,27 @@
 						{$i18n.t('Show Model')}
 					{:else}
 						{$i18n.t('Hide Model')}
+					{/if}
+				</div>
+			</button>
+
+			<button
+				class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
+				on:click={() => {
+					privacyHandler();
+				}}
+			>
+				{#if isPublicModel(model)}
+					<LockClosed className="size-3.5" />
+				{:else}
+					<GlobeAlt className="size-3.5" />
+				{/if}
+
+				<div class="flex items-center">
+					{#if isPublicModel(model)}
+						{$i18n.t('Make Private')}
+					{:else}
+						{$i18n.t('Make Public')}
 					{/if}
 				</div>
 			</button>

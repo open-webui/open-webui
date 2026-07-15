@@ -426,27 +426,14 @@
 	}
 
 	onMount(async () => {
-		console.log('AccessControl mounted', { accessGrants, accessControl });
 		const res = await getGroups(localStorage.token, true).catch((error) => {
 			console.error(error);
 			return [];
 		});
 
-		console.log('getGroups res', res);
-
 		groups = [...groups, ...res].filter(
 			(g, index, self) => index === self.findIndex((t) => t.id === g.id)
 		);
-	});
-
-	$: console.log('AccessControl state', {
-		accessGrants,
-		readGroupIds,
-		writeGroupIds,
-		selectedUserIds,
-		groups,
-		accessGroups,
-		selectedUsers
 	});
 </script>
 
@@ -458,11 +445,11 @@
 	onAdd={handleAddAccess}
 />
 
-<div class=" rounded-lg flex flex-col gap-1">
-	<div class="py-2">
-		<div class="flex gap-2.5 items-center">
+<div class="rounded-lg flex flex-col gap-1">
+	<div class="py-1.5">
+		<div class="flex gap-2 items-center">
 			<div>
-				<div class=" p-2 bg-black/5 dark:bg-white/5 rounded-full">
+				<div class="p-2 bg-black/5 dark:bg-white/5 rounded-full">
 					{#if !hasPublicReadGrant(accessGrants ?? [])}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -470,7 +457,7 @@
 							viewBox="0 0 24 24"
 							stroke-width="1.5"
 							stroke="currentColor"
-							class="w-5 h-5"
+							class="size-4.5"
 						>
 							<path
 								stroke-linecap="round"
@@ -485,7 +472,7 @@
 							viewBox="0 0 24 24"
 							stroke-width="1.5"
 							stroke="currentColor"
-							class="w-5 h-5"
+							class="size-4.5"
 						>
 							<path
 								stroke-linecap="round"
@@ -505,7 +492,7 @@
 				>
 					<select
 						id="models"
-						class="outline-none bg-transparent text-sm font-normal block w-fit pr-10 max-w-full placeholder-gray-400"
+						class="outline-none bg-transparent text-sm font-normal block w-fit pr-8 max-w-full placeholder-gray-400"
 						value={!hasPublicReadGrant(accessGrants ?? []) ? 'private' : 'public'}
 						on:change={(e) => {
 							setPublic((e.target as HTMLSelectElement).value === 'public');
@@ -529,7 +516,7 @@
 		</div>
 
 		{#if hasPublicReadGrant(accessGrants ?? []) && accessRoles.includes('write')}
-			<div class="flex w-full justify-between mt-2 ml-0.5">
+			<div class="flex w-full justify-between mt-1.5 ml-0.5">
 				<div class="self-center text-xs">
 					{$i18n.t('Allow public write access')}
 				</div>
@@ -544,7 +531,7 @@
 	</div>
 
 	{#if share}
-		<div class="flex items-center justify-between text-xs font-normal text-gray-500 my-1">
+		<div class="flex items-center justify-between text-xs font-normal text-gray-500 my-0.5">
 			<div>
 				{$i18n.t('Access List')}
 			</div>
@@ -563,11 +550,11 @@
 		</div>
 
 		<!-- List -->
-		<div class="flex flex-col gap-2">
+		<div class="flex flex-col gap-1">
 			<!-- Groups -->
 			{#each accessGroups as group}
-				<div class="flex items-center gap-3 justify-between text-sm w-full transition pb-1">
-					<div class="flex items-center gap-2 w-full flex-1">
+				<div class="flex items-center gap-2 justify-between text-sm w-full transition pb-1">
+					<div class="flex items-center gap-2 min-w-0 flex-1">
 						<!-- Placeholder for group icon vs user icon -->
 						<div
 							class="size-5 rounded-full bg-gray-100 dark:bg-gray-850 flex items-center justify-center text-xs"
@@ -583,11 +570,11 @@
 						</div>
 					</div>
 
-					<div class="w-full flex justify-end items-center gap-2">
+					<div class="flex justify-end items-center gap-1.5 shrink-0">
 						{#if accessRoles.includes('write')}
 							<select
 								aria-label={$i18n.t('Access level')}
-								class="bg-transparent text-sm"
+								class="bg-transparent text-sm outline-none"
 								value={writeGroupIds.includes(group.id) ? 'write' : 'read'}
 								on:change={(e) => {
 									if (
@@ -606,7 +593,7 @@
 						{/if}
 
 						<button
-							class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							class="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 							type="button"
 							on:click={() => {
 								removePrincipal('group', group.id);
@@ -622,26 +609,26 @@
 			{#if shareUsers}
 				{#each selectedUsers as user}
 					<div
-						class="flex items-center gap-3 justify-between text-sm w-full transition border-b border-gray-50 dark:border-gray-850 pb-2 last:border-0"
+						class="flex items-center gap-2 justify-between text-sm w-full transition border-b border-gray-50 dark:border-gray-850 pb-1.5 last:border-0"
 					>
-						<div class="flex items-center gap-2 w-full flex-1">
+						<div class="flex items-center gap-2 min-w-0 flex-1">
 							<img
 								class="rounded-full size-5 object-cover"
 								src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 								alt={user.name ?? user.id}
 							/>
-							<div class="w-full">
+							<div class="min-w-0 flex-1">
 								<Tooltip content={user.email} placement="top-start">
 									<div class="truncate text-sm">{user.name ?? user.id}</div>
 								</Tooltip>
 							</div>
 						</div>
 
-						<div class="w-full flex justify-end items-center gap-2">
+						<div class="flex justify-end items-center gap-1.5 shrink-0">
 							{#if accessRoles.includes('write')}
 								<select
 									aria-label={$i18n.t('Access level')}
-									class="bg-transparent text-sm"
+									class="bg-transparent text-sm outline-none"
 									value={writeUserIds.includes(user.id) ? 'write' : 'read'}
 									on:change={(e) => {
 										if (
@@ -660,7 +647,7 @@
 							{/if}
 
 							<button
-								class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+								class="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 								type="button"
 								on:click={() => {
 									removePrincipal('user', user.id);
@@ -674,7 +661,7 @@
 			{/if}
 
 			{#if !hasPublicReadGrant(accessGrants ?? []) && accessGroups.length === 0 && selectedUsers.length === 0}
-				<div class="text-xs text-gray-500 text-center py-4">
+				<div class="text-xs text-gray-500 text-center py-3">
 					{$i18n.t('No access grants. Private to you.')}
 				</div>
 			{/if}
