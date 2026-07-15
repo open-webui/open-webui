@@ -24,6 +24,11 @@
 
 	let showAdvanced = false;
 
+	const systemPromptTextareaClass =
+		'w-full resize-vertical rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const compactSystemPromptTextareaClass =
+		'w-full resize-vertical appearance-none bg-transparent text-sm outline-hidden focus:bg-transparent disabled:bg-transparent dark:text-gray-300';
+
 	const toggleNotification = async () => {
 		const permission = await Notification.requestPermission();
 
@@ -306,7 +311,9 @@
 				</div>
 				<Textarea
 					bind:value={system}
-					className="w-full resize-vertical appearance-none bg-transparent text-sm outline-hidden focus:bg-transparent disabled:bg-transparent dark:text-gray-300"
+					className={($settings?.highContrastMode ?? false)
+						? systemPromptTextareaClass
+						: compactSystemPromptTextareaClass}
 					rows="4"
 					placeholder={$i18n.t('Enter system prompt here')}
 				/>
