@@ -712,14 +712,6 @@
 											>
 												{model.name}
 
-												<span class=" line-clamp-1 text-gray-500">
-													{!!model?.meta?.description
-														? model?.meta?.description
-														: model?.ollama?.digest
-															? `${model.id} (${model?.ollama?.digest})`
-															: model.id}
-												</span>
-
 												<span
 													class="shrink-0 text-[11px] font-normal leading-4 {modelAccessClass(
 														model
