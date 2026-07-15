@@ -1,14 +1,18 @@
+import asyncio
 import logging
 import time
+from open_webui.models.groups import Groups
 from typing import Any, Optional
 from urllib.parse import quote
 
 import jwt
 from open_webui.env import (
+    ENABLE_FORWARD_USER_INFO_HEADER_USER_GROUPS,
     FORWARD_USER_INFO_HEADER_JWT,
     FORWARD_USER_INFO_HEADER_JWT_EXPIRES_SECONDS,
     FORWARD_USER_INFO_HEADER_JWT_SECRET,
     FORWARD_USER_INFO_HEADER_USER_EMAIL,
+    FORWARD_USER_INFO_HEADER_USER_GROUPS,
     FORWARD_USER_INFO_HEADER_USER_ID,
     FORWARD_USER_INFO_HEADER_USER_NAME,
     FORWARD_USER_INFO_HEADER_USER_ROLE,
@@ -17,7 +21,20 @@ from open_webui.env import (
 log = logging.getLogger(__name__)
 
 
-def _mint_forward_user_jwt(user: Any) -> str:
+def _get_user_groups_sync(user_id: str) -> list[str]:
+    """Synchronously fetch all group names that the user belongs to."""
+    async def _async_get():
+        groups = await Groups.get_groups_by_member_id(user_id)
+        return [group.name for group in groups]
+
+    # Starting a new event loop to avoid blocking the existing one
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(_async_get())
+    finally:
+        loop.close()
+
+def _mint_forward_user_jwt(user: Any, groups: list[str] = []) -> str:
     now = int(time.time())
     payload = {
         'sub': str(user.id),
@@ -28,6 +45,10 @@ def _mint_forward_user_jwt(user: Any) -> str:
         'iat': now,
         'exp': now + FORWARD_USER_INFO_HEADER_JWT_EXPIRES_SECONDS,
     }
+
+    if groups:
+        payload['groups'] = groups
+
     return jwt.encode(payload, FORWARD_USER_INFO_HEADER_JWT_SECRET, algorithm='HS256')
 
 
@@ -40,9 +61,15 @@ def include_user_info_headers(headers: dict, user: Optional[Any] = None) -> dict
     if user is None:
         return headers
 
+    additional_headers = {}
+
+    if ENABLE_FORWARD_USER_INFO_HEADER_USER_GROUPS:
+        groups = _get_user_groups_sync(user.id)
+        additional_headers[FORWARD_USER_INFO_HEADER_USER_GROUPS] = ','.join(groups)
+
     if FORWARD_USER_INFO_HEADER_JWT_SECRET:
         try:
-            token = _mint_forward_user_jwt(user)
+            token = _mint_forward_user_jwt(user, groups)
             return {**headers, FORWARD_USER_INFO_HEADER_JWT: token}
         except Exception:
             log.exception(
@@ -56,6 +83,7 @@ def include_user_info_headers(headers: dict, user: Optional[Any] = None) -> dict
         FORWARD_USER_INFO_HEADER_USER_ID: user.id,
         FORWARD_USER_INFO_HEADER_USER_EMAIL: user.email.strip(),
         FORWARD_USER_INFO_HEADER_USER_ROLE: user.role,
+        **additional_headers,
     }
 
 
