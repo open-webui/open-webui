@@ -112,9 +112,9 @@
 						saveAs(blob, `config-${Date.now()}.json`);
 					}}
 					type="button"
-					>
-						{$i18n.t('Export')}
-					</button>
+				>
+					{$i18n.t('Export')}
+				</button>
 			</AdminSettingRow>
 		</AdminSettingSection>
 

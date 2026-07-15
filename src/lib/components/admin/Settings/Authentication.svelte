@@ -281,7 +281,7 @@
 			</AdminSettingRow>
 
 			{#if ENABLE_LDAP}
-				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 					<AdminSettingField
 						label={$i18n.t('Label')}
 						description={$i18n.t('Display name for this LDAP connection.')}
@@ -295,7 +295,7 @@
 					</AdminSettingField>
 				</div>
 
-				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 					<AdminSettingField
 						label={$i18n.t('Host')}
 						description={$i18n.t('LDAP server hostname or IP address.')}
@@ -308,10 +308,7 @@
 						/>
 					</AdminSettingField>
 
-					<AdminSettingField
-						label={$i18n.t('Port')}
-						description={$i18n.t('LDAP server port.')}
-					>
+					<AdminSettingField label={$i18n.t('Port')} description={$i18n.t('LDAP server port.')}>
 						<Tooltip
 							placement="top-start"
 							content={$i18n.t('Default to 389 or 636 if TLS is enabled')}
@@ -327,7 +324,7 @@
 					</AdminSettingField>
 				</div>
 
-				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 					<AdminSettingField
 						label={$i18n.t('Application DN')}
 						description={$i18n.t('Bind DN used for directory search.')}
@@ -357,7 +354,7 @@
 					</AdminSettingField>
 				</div>
 
-				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 					<AdminSettingField
 						label={$i18n.t('Attribute for Mail')}
 						description={$i18n.t('LDAP attribute used as the user email address.')}
@@ -473,7 +470,7 @@
 
 		{#if oauthConfig}
 			<AdminSettingSection title={$i18n.t('OAuth / OIDC')}>
-				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 					<AdminSettingField
 						label={$i18n.t('Provider Name')}
 						description={$i18n.t('Display name shown for the OAuth provider.')}
@@ -497,7 +494,7 @@
 					</AdminSettingField>
 				</div>
 
-				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 					<AdminSettingField
 						label={$i18n.t('Client ID')}
 						description={$i18n.t('OAuth client identifier from the provider.')}
@@ -522,7 +519,7 @@
 					</AdminSettingField>
 				</div>
 
-				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 					<AdminSettingField
 						label={$i18n.t('Redirect URI')}
 						description={$i18n.t('Callback URI registered with the provider.')}
@@ -546,7 +543,7 @@
 					</AdminSettingField>
 				</div>
 
-				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 					<AdminSettingField
 						label={$i18n.t('Email Claim')}
 						description={$i18n.t('Claim used as the user email address.')}
@@ -570,7 +567,7 @@
 					</AdminSettingField>
 				</div>
 
-				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 					<AdminSettingField
 						label={$i18n.t('Picture Claim')}
 						description={$i18n.t('Claim used as the profile picture URL.')}
@@ -630,7 +627,7 @@
 				</AdminSettingRow>
 
 				{#if oauthConfig.ENABLE_OAUTH_ROLE_MANAGEMENT}
-					<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 						<AdminSettingField
 							label={$i18n.t('Roles Claim')}
 							description={$i18n.t('Claim containing provider roles.')}
@@ -681,7 +678,7 @@
 						<Switch bind:state={oauthConfig.ENABLE_OAUTH_GROUP_CREATION} />
 					</AdminSettingRow>
 
-					<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 						<AdminSettingField
 							label={$i18n.t('Group Claim')}
 							description={$i18n.t('Claim containing provider groups.')}
