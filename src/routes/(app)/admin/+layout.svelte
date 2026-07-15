@@ -2,7 +2,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { WEBUI_NAME, config, mobile, showSidebar, user } from '$lib/stores';
+	import { WEBUI_NAME, config, mobile, showSettings, showSidebar, user } from '$lib/stores';
 	import { page } from '$app/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
@@ -105,7 +105,11 @@
 							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/settings')
 								? ''
 								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-							href="/admin/settings">{$i18n.t('Settings')}</a
+							href="/admin/settings"
+							on:click={(event) => {
+								event.preventDefault();
+								showSettings.set('admin:general');
+							}}>{$i18n.t('Settings')}</a
 						>
 					</div>
 				</div>

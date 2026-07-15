@@ -56,6 +56,7 @@
 	let localDBChats = [];
 
 	let version;
+	let handledSettingsUrl = '';
 
 	const clearChatInputStorage = () => {
 		const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
@@ -192,6 +193,34 @@
 	const setTools = async () => {
 		const toolsData = await getTools(localStorage.token);
 		tools.set(toolsData);
+	};
+
+	const openSettingsFromUrl = async () => {
+		const requestedSettings = $page.url.searchParams.get('settings');
+		if (!requestedSettings) {
+			return;
+		}
+
+		const urlKey = `${$page.url.pathname}${$page.url.search}${$page.url.hash}`;
+		if (handledSettingsUrl === urlKey) {
+			return;
+		}
+		handledSettingsUrl = urlKey;
+
+		showSettings.set(
+			requestedSettings.startsWith('admin:') && $user?.role !== 'admin'
+				? 'general'
+				: requestedSettings
+		);
+
+		const params = new URLSearchParams($page.url.searchParams);
+		params.delete('settings');
+		const query = params.toString();
+		await goto(`${$page.url.pathname}${query ? `?${query}` : ''}${$page.url.hash}`, {
+			replaceState: true,
+			noScroll: true,
+			keepFocus: true
+		});
 	};
 
 	onMount(async () => {
@@ -366,6 +395,10 @@
 
 		loaded = true;
 	});
+
+	$: if (loaded) {
+		void openSettingsFromUrl();
+	}
 
 	const checkForVersionUpdates = async () => {
 		version = await getVersionUpdates(localStorage.token).catch((error) => {

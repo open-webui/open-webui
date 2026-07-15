@@ -1,11 +1,10 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import { config, models, settings, user } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
-	import { getModels as _getModels } from '$lib/apis';
-	import { goto } from '$app/navigation';
+	import { getBackendConfig, getModels as _getModels } from '$lib/apis';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
@@ -29,10 +28,25 @@
 	import WrenchAlt from '../icons/WrenchAlt.svelte';
 	import Face from '../icons/Face.svelte';
 	import AppNotification from '../icons/AppNotification.svelte';
-	import UserBadgeCheck from '../icons/UserBadgeCheck.svelte';
 	import ArchiveBox from '../icons/ArchiveBox.svelte';
 	import ChevronLeft from '../icons/ChevronLeft.svelte';
 	import Keyboard from '../icons/Keyboard.svelte';
+	import AdminTabIcon from '$lib/components/admin/Settings/AdminTabIcon.svelte';
+	import AdminGeneral from '$lib/components/admin/Settings/General.svelte';
+	import AdminAuthentication from '$lib/components/admin/Settings/Authentication.svelte';
+	import AdminConnections from '$lib/components/admin/Settings/Connections.svelte';
+	import AdminModels from '$lib/components/admin/Settings/Models.svelte';
+	import AdminSubagents from '$lib/components/admin/Settings/Subagents.svelte';
+	import AdminEvaluations from '$lib/components/admin/Settings/Evaluations.svelte';
+	import AdminIntegrations from '$lib/components/admin/Settings/Integrations.svelte';
+	import AdminDocuments from '$lib/components/admin/Settings/Documents.svelte';
+	import AdminWebSearch from '$lib/components/admin/Settings/WebSearch.svelte';
+	import AdminCodeExecution from '$lib/components/admin/Settings/CodeExecution.svelte';
+	import AdminInterface from '$lib/components/admin/Settings/Interface.svelte';
+	import AdminAudio from '$lib/components/admin/Settings/Audio.svelte';
+	import AdminImages from '$lib/components/admin/Settings/Images.svelte';
+	import AdminPipelines from '$lib/components/admin/Settings/Pipelines.svelte';
+	import AdminDatabase from '$lib/components/admin/Settings/Database.svelte';
 
 	const i18n: Writable<any> = getContext('i18n');
 
@@ -66,6 +80,10 @@
 		title: string;
 		keywords: string[];
 	}
+
+	const isAdminTab = (tabId: string) => tabId.startsWith('admin:');
+	const adminTabSegment = (tabId: string) => tabId.replace('admin:', '');
+	const adminTabPanelId = (tabId: string) => `tab-${tabId.replace(':', '-')}`;
 
 	const allSettings: SettingsTab[] = [
 		{
@@ -525,14 +543,123 @@
 		}
 	];
 
+	const adminSettings: SettingsTab[] = [
+		{
+			id: 'admin:general',
+			title: 'General',
+			keywords: ['general', 'admin', 'settings', 'version', 'update', 'community', 'channels']
+		},
+		{
+			id: 'admin:authentication',
+			title: 'Authentication',
+			keywords: [
+				'authentication',
+				'auth',
+				'login',
+				'signup',
+				'ldap',
+				'oauth',
+				'oidc',
+				'sso',
+				'roles'
+			]
+		},
+		{
+			id: 'admin:connections',
+			title: 'Connections',
+			keywords: [
+				'connections',
+				'ollama',
+				'openai',
+				'api',
+				'base url',
+				'direct connections',
+				'proxy'
+			]
+		},
+		{
+			id: 'admin:models',
+			title: 'Models',
+			keywords: [
+				'models',
+				'pull',
+				'delete',
+				'create',
+				'edit',
+				'modelfile',
+				'gguf',
+				'import',
+				'export'
+			]
+		},
+		{
+			id: 'admin:subagents',
+			title: 'Sub-agents',
+			keywords: ['sub-agents', 'subagents', 'delegation', 'background', 'agents']
+		},
+		{
+			id: 'admin:evaluations',
+			title: 'Evaluations',
+			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard', 'preference']
+		},
+		{
+			id: 'admin:integrations',
+			title: 'Integrations',
+			keywords: ['tools', 'integrations', 'plugins', 'extensions', 'functions', 'openapi', 'server']
+		},
+		{
+			id: 'admin:documents',
+			title: 'Documents',
+			keywords: ['documents', 'files', 'rag', 'knowledge', 'upload', 'embedding', 'vector db']
+		},
+		{
+			id: 'admin:web',
+			title: 'Web Search',
+			keywords: ['web search', 'google', 'bing', 'duckduckgo', 'serp', 'searxng', 'tavily', 'exa']
+		},
+		{
+			id: 'admin:code-execution',
+			title: 'Code Execution',
+			keywords: ['code execution', 'python', 'sandbox', 'compiler', 'jupyter', 'interpreter']
+		},
+		{
+			id: 'admin:interface',
+			title: 'Interface',
+			keywords: ['interface', 'ui', 'appearance', 'banners', 'tasks', 'prompt suggestions', 'tags']
+		},
+		{
+			id: 'admin:audio',
+			title: 'Audio',
+			keywords: ['audio', 'voice', 'speech', 'tts', 'stt', 'whisper', 'deepgram', 'azure']
+		},
+		{
+			id: 'admin:images',
+			title: 'Images',
+			keywords: ['images', 'generation', 'dalle', 'stable diffusion', 'comfyui', 'automatic1111']
+		},
+		{
+			id: 'admin:pipelines',
+			title: 'Pipelines',
+			keywords: ['pipelines', 'workflows', 'filters', 'valves', 'middleware']
+		},
+		{
+			id: 'admin:db',
+			title: 'Database',
+			keywords: ['database', 'export', 'import', 'backup', 'chats', 'users']
+		}
+	];
+	const allKnownSettings = [...allSettings, ...adminSettings];
+
 	let availableSettings: SettingsTab[] = [];
 	let filteredSettings: string[] = [];
+	let filteredPersonalSettings: string[] = [];
+	let filteredAdminSettings: string[] = [];
 
 	let search = '';
 	let searchDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	const getAvailableSettings = () => {
-		return allSettings.filter((tab) => {
+		const personalSettings = allSettings.filter((tab) => {
 			if (tab.id === 'connections') {
 				return $config?.features?.enable_direct_connections;
 			}
@@ -557,6 +684,8 @@
 
 			return true;
 		});
+
+		return $user?.role === 'admin' ? [...personalSettings, ...adminSettings] : personalSettings;
 	};
 
 	const setFilteredSettings = () => {
@@ -570,8 +699,12 @@
 				);
 			})
 			.map((tab) => tab.id);
+		filteredPersonalSettings = filteredSettings.filter((tabId) => !isAdminTab(tabId));
+		filteredAdminSettings = filteredSettings.filter((tabId) => isAdminTab(tabId));
 
-		if (filteredSettings.length > 0 && !filteredSettings.includes(selectedTab)) {
+		if ($user?.role !== 'admin' && isAdminTab(selectedTab)) {
+			selectedTab = 'general';
+		} else if (filteredSettings.length > 0 && !filteredSettings.includes(selectedTab)) {
 			selectedTab = filteredSettings[0];
 		}
 	};
@@ -588,6 +721,12 @@
 			localStorage.token,
 			$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 		);
+	};
+
+	const adminConfigSaveHandler = async () => {
+		toast.success($i18n.t('Settings saved successfully!'));
+		await tick();
+		await config.set(await getBackendConfig());
 	};
 
 	const searchDebounceHandler = () => {
@@ -608,7 +747,10 @@
 		}`;
 
 	let selectedTab = 'general';
-	$: selectedTabTitle = allSettings.find((tab) => tab.id === selectedTab)?.title ?? 'Settings';
+	$: if ($user?.role !== 'admin' && isAdminTab(selectedTab)) {
+		selectedTab = 'general';
+	}
+	$: selectedTabTitle = allKnownSettings.find((tab) => tab.id === selectedTab)?.title ?? 'Settings';
 
 	onMount(() => {
 		availableSettings = getAvailableSettings();
@@ -624,12 +766,12 @@
 <Modal
 	size="full"
 	containerClassName="p-4 sm:p-6 lg:p-8"
-	className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] !max-w-[76rem] h-[min(50rem,calc(100dvh-4rem))] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-4xl"
+	className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] !max-w-[80rem] h-[min(54rem,calc(100dvh-4rem))] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-4xl"
 	bind:show={modalShow}
 >
 	<nav
 		id="settings-tabs-container"
-		class="shrink-0 min-w-0 md:min-h-0 flex md:block border-b md:border-b-0 md:border-r border-gray-100/30 dark:border-white/[0.02] md:w-[15rem]"
+		class="shrink-0 min-w-0 md:min-h-0 flex md:flex-col border-b md:border-b-0 md:border-r border-gray-100/30 dark:border-white/[0.02] md:w-[15rem]"
 	>
 		<button
 			class="flex items-center gap-1.5 h-7 px-2 m-1 md:mb-0 md:w-[calc(100%-0.5rem)] shrink-0 rounded-lg text-xs text-gray-400 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
@@ -643,36 +785,36 @@
 		</button>
 
 		<div
-			class="tabs flex min-w-0 flex-1 overflow-x-auto md:overflow-x-hidden md:overflow-y-auto md:flex-col p-1 pl-0 md:pl-1 gap-px"
+			class="hidden md:flex items-center gap-1.5 h-7 px-2 mx-1 mt-1 mb-2 shrink-0 rounded-lg text-xs bg-gray-50/70 dark:bg-white/[0.03]"
 		>
-			<div
-				class="hidden md:flex items-center gap-1.5 h-7 px-2 md:w-full shrink-0 rounded-lg text-xs bg-gray-50/70 dark:bg-white/[0.03] mb-2"
-			>
-				<div class="self-center rounded-l-xl bg-transparent">
-					<Search
-						className="size-3.5"
-						strokeWidth={($settings?.highContrastMode ?? false) ? '3' : '1.5'}
-					/>
-				</div>
-				<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
-				<input
-					class={`w-full py-1 text-xs bg-transparent dark:text-gray-300 outline-hidden
-						${($settings?.highContrastMode ?? false) ? 'placeholder-gray-800' : ''}`}
-					bind:value={search}
-					id="search-input-settings-modal"
-					on:input={searchDebounceHandler}
-					placeholder={$i18n.t('Search')}
+			<div class="self-center rounded-l-xl bg-transparent">
+				<Search
+					className="size-3.5"
+					strokeWidth={($settings?.highContrastMode ?? false) ? '3' : '1.5'}
 				/>
 			</div>
+			<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
+			<input
+				class={`w-full py-1 text-xs bg-transparent dark:text-gray-300 outline-hidden
+							${($settings?.highContrastMode ?? false) ? 'placeholder-gray-800' : ''}`}
+				bind:value={search}
+				id="search-input-settings-modal"
+				on:input={searchDebounceHandler}
+				placeholder={$i18n.t('Search')}
+			/>
+		</div>
 
+		<div
+			class="tabs flex min-w-0 flex-1 min-h-0 overflow-x-auto md:overflow-x-hidden md:overflow-y-auto md:flex-col p-1 pl-0 md:pl-1 gap-px"
+		>
 			<span
 				class="hidden md:block text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 mt-1.5 mb-0.5"
 			>
 				{$i18n.t('Personal')}
 			</span>
 
-			{#if filteredSettings.length > 0}
-				{#each filteredSettings as tabId (tabId)}
+			{#if filteredPersonalSettings.length > 0}
+				{#each filteredPersonalSettings as tabId (tabId)}
 					{#if tabId === 'general'}
 						<button
 							role="tab"
@@ -822,30 +964,38 @@
 						</button>
 					{/if}
 				{/each}
-			{:else}
-				<div class="text-center text-gray-500 mt-4">
-					{$i18n.t('No results found')}
-				</div>
 			{/if}
-			{#if $user?.role === 'admin'}
+
+			{#if $user?.role === 'admin' && filteredAdminSettings.length > 0}
 				<span
 					class="hidden md:block text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 mt-2 mb-0.5"
 				>
 					{$i18n.t('Admin')}
 				</span>
-				<a
-					href="/admin/settings"
-					draggable="false"
-					class="flex items-center gap-1.5 h-7 px-2 md:w-full shrink-0 rounded-lg text-xs text-left transition-colors duration-75 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 select-none"
-					on:click={async (e) => {
-						e.preventDefault();
-						await goto('/admin/settings');
-						show = false;
-					}}
-				>
-					<UserBadgeCheck className="size-3.5" strokeWidth="2" />
-					<span>{$i18n.t('Admin Settings')}</span>
-				</a>
+
+				{#each filteredAdminSettings as tabId (tabId)}
+					{@const tab = adminSettings.find((setting) => setting.id === tabId)}
+					{#if tab}
+						<button
+							role="tab"
+							aria-controls={adminTabPanelId(tab.id)}
+							aria-selected={selectedTab === tab.id}
+							class={tabButtonClass(selectedTab === tab.id)}
+							on:click={() => {
+								selectedTab = tab.id;
+							}}
+						>
+							<AdminTabIcon id={adminTabSegment(tab.id)} className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t(tab.title)}</span>
+						</button>
+					{/if}
+				{/each}
+			{/if}
+
+			{#if filteredSettings.length === 0}
+				<div class="px-2 py-1 text-xs text-gray-400 dark:text-gray-600">
+					{$i18n.t('No matches')}
+				</div>
 			{/if}
 		</div>
 	</nav>
@@ -916,6 +1066,60 @@
 				/>
 			{:else if selectedTab === 'about'}
 				<About />
+			{:else if selectedTab === 'admin:general'}
+				<AdminGeneral saveHandler={adminConfigSaveHandler} />
+			{:else if selectedTab === 'admin:authentication'}
+				<AdminAuthentication />
+			{:else if selectedTab === 'admin:connections'}
+				<AdminConnections
+					on:save={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'admin:models'}
+				<AdminModels />
+			{:else if selectedTab === 'admin:subagents'}
+				<AdminSubagents />
+			{:else if selectedTab === 'admin:evaluations'}
+				<AdminEvaluations />
+			{:else if selectedTab === 'admin:integrations'}
+				<AdminIntegrations {saveSettings} />
+			{:else if selectedTab === 'admin:documents'}
+				<AdminDocuments on:save={adminConfigSaveHandler} />
+			{:else if selectedTab === 'admin:web'}
+				<AdminWebSearch saveHandler={adminConfigSaveHandler} />
+			{:else if selectedTab === 'admin:code-execution'}
+				<AdminCodeExecution saveHandler={adminConfigSaveHandler} />
+			{:else if selectedTab === 'admin:interface'}
+				<AdminInterface
+					on:save={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'admin:audio'}
+				<AdminAudio
+					saveHandler={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'admin:images'}
+				<AdminImages
+					on:save={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'admin:db'}
+				<AdminDatabase
+					saveHandler={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'admin:pipelines'}
+				<AdminPipelines
+					saveHandler={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
 			{/if}
 		</div>
 	</div>
