@@ -34,7 +34,6 @@
 	import {
 		createNewNote,
 		deleteNoteById,
-		getNotes,
 		getNoteById,
 		getNoteList,
 		searchNotes,
@@ -83,15 +82,6 @@
 	let itemsLoading = false;
 	let allItemsLoaded = false;
 
-	type NoteExportItem = {
-		title?: string;
-		data?: {
-			content?: {
-				md?: string;
-			};
-		};
-	};
-
 	const downloadHandler = async (type) => {
 		// Fetch the full note since the list response may not contain full content
 		const note = await getNoteById(localStorage.token, selectedNote.id).catch((error) => {
@@ -138,7 +128,7 @@
 				/\.(md|txt)$/i.test(file.name);
 
 			if (!isSupportedFile) {
-				toast.error($i18n.t('Only TXT and Markdown files are allowed'));
+				toast.error('Only txt and md files are allowed');
 				return;
 			}
 
@@ -169,35 +159,6 @@
 		if (imported) {
 			init();
 		}
-	};
-
-	const getNoteExportContent = (notes: NoteExportItem[], type: 'md' | 'txt') => {
-		return notes
-			.map((note) => {
-				const title = note.title ?? $i18n.t('Untitled');
-				const content = note.data?.content?.md ?? '';
-
-				if (type === 'md') {
-					return `# ${title}\n\n${content}`;
-				}
-
-				return `${title}\n\n${content}`;
-			})
-			.join(type === 'md' ? '\n\n---\n\n' : '\n\n-----\n\n');
-	};
-
-	const exportNotes = async (type: 'md' | 'txt') => {
-		const allNotes = await getNotes(localStorage.token, true).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (!allNotes) return;
-
-		const blob = new Blob([getNoteExportContent(allNotes, type)], {
-			type: type === 'md' ? 'text/markdown' : 'text/plain'
-		});
-		saveAs(blob, `notes-export-${Date.now()}.${type}`);
 	};
 
 	const reset = () => {
@@ -317,15 +278,15 @@
 		dragged = false;
 	};
 
-	const onDrop = async (e) => {
+	const onDrop = async (e: DragEvent) => {
 		e.preventDefault();
 		console.log(e);
 
 		if (e.dataTransfer?.files) {
-			const inputFiles = Array.from(e.dataTransfer?.files);
+			const inputFiles = Array.from(e.dataTransfer.files) as File[];
 			if (inputFiles && inputFiles.length > 0) {
 				console.log(inputFiles);
-				inputFilesHandler(inputFiles);
+				await inputFilesHandler(inputFiles);
 			}
 		}
 
@@ -447,18 +408,8 @@
 							},
 							{
 								id: 'notes-import',
-								label: $i18n.t('Import TXT/MD'),
+								label: $i18n.t('Import txt/md'),
 								onClick: () => notesImportInputElement?.click()
-							},
-							{
-								id: 'notes-export-md',
-								label: $i18n.t('Export MD'),
-								onClick: () => exportNotes('md')
-							},
-							{
-								id: 'notes-export-txt',
-								label: $i18n.t('Export TXT'),
-								onClick: () => exportNotes('txt')
 							}
 						]}
 					/>
