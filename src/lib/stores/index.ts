@@ -72,6 +72,24 @@ export const tools = writable(null);
 export const skills = writable(null);
 export const functions = writable(null);
 
+export type WorkspaceSection = 'models' | 'knowledge' | 'prompts' | 'skills' | 'tools';
+export type WorkspaceAction = {
+	id: string;
+	label: string;
+	href?: string;
+	onClick?: () => void | Promise<void>;
+	visible?: boolean;
+};
+
+export const workspaceCounts: Writable<Record<WorkspaceSection, number | null>> = writable({
+	models: null,
+	knowledge: null,
+	prompts: null,
+	skills: null,
+	tools: null
+});
+export const workspaceActions: Writable<WorkspaceAction[]> = writable([]);
+
 export const toolServers = writable([]);
 export const terminalServers = writable([]);
 

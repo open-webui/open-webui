@@ -1,24 +1,106 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import {
 		WEBUI_NAME,
 		config,
 		showSidebar,
-		functions,
 		user,
 		mobile,
-		models,
-		knowledge,
-		tools
+		workspaceActions,
+		workspaceCounts
 	} from '$lib/stores';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { getModelItems } from '$lib/apis/models';
+	import { searchKnowledgeBases } from '$lib/apis/knowledge';
+	import { getPromptItems } from '$lib/apis/prompts';
+	import { getSkillItems } from '$lib/apis/skills';
+	import { getToolList } from '$lib/apis/tools';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Sidebar from '$lib/components/icons/Sidebar.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import DocumentArrowDown from '$lib/components/icons/DocumentArrowDown.svelte';
+	import DocumentArrowUp from '$lib/components/icons/DocumentArrowUp.svelte';
+	import Link from '$lib/components/icons/Link.svelte';
+	import Pencil from '$lib/components/icons/Pencil.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	let loaded = false;
+	let lastPath = '';
+	let activeWorkspaceSection = '';
+	let showCreateMenu = false;
+	let visibleActions = [];
+	let primaryCreateAction = null;
+
+	$: if ($page.url.pathname !== lastPath) {
+		lastPath = $page.url.pathname;
+		workspaceActions.set([]);
+	}
+
+	$: if (loaded && $page.url.pathname.startsWith('/workspace')) {
+		loadWorkspaceCounts();
+	}
+
+	$: activeWorkspaceSection = $page.url.pathname.split('/')[2] ?? '';
+	$: visibleActions = $workspaceActions.filter((action) => action.visible ?? true);
+	$: primaryCreateAction =
+		visibleActions.find((action) => action.id.endsWith('-new')) ?? visibleActions[0] ?? null;
+
+	const getCount = (res: any) => res?.total ?? (Array.isArray(res) ? res.length : null);
+
+	const runWorkspaceAction = async (action) => {
+		if (!action) return;
+		if (action.href) {
+			await goto(action.href);
+		} else {
+			await action.onClick?.();
+		}
+	};
+
+	const getActionIcon = (id: string) => {
+		if (id.endsWith('-new')) return Pencil;
+		if (id.endsWith('-import-link')) return Link;
+		if (id.endsWith('-import')) return DocumentArrowUp;
+		if (id.endsWith('-export')) return DocumentArrowDown;
+		return Pencil;
+	};
+
+	const loadWorkspaceCounts = async () => {
+		const canViewModels = $user?.role === 'admin' || $user?.permissions?.workspace?.models;
+		const canViewKnowledge = $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge;
+		const canViewPrompts = $user?.role === 'admin' || $user?.permissions?.workspace?.prompts;
+		const canViewSkills = $user?.role === 'admin' || $user?.permissions?.workspace?.skills;
+		const canViewTools =
+			$config?.features?.enable_plugins &&
+			($user?.role === 'admin' || $user?.permissions?.workspace?.tools);
+
+		const [modelRes, knowledgeRes, promptRes, skillRes, toolRes] = await Promise.all([
+			canViewModels
+				? getModelItems(localStorage.token, null, null, null, null, null, 1).catch(() => null)
+				: null,
+			canViewKnowledge
+				? searchKnowledgeBases(localStorage.token, null, null, 1, null).catch(() => null)
+				: null,
+			canViewPrompts
+				? getPromptItems(localStorage.token, null, null, null, null, null, 1).catch(() => null)
+				: null,
+			canViewSkills ? getSkillItems(localStorage.token, null, null, 1).catch(() => null) : null,
+			canViewTools ? getToolList(localStorage.token).catch(() => null) : null
+		]);
+
+		workspaceCounts.set({
+			models: getCount(modelRes),
+			knowledge: getCount(knowledgeRes),
+			prompts: getCount(promptRes),
+			skills: getCount(skillRes),
+			tools: getCount(toolRes)
+		});
+	};
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
@@ -91,62 +173,141 @@
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
 							<a
 								draggable="false"
-								aria-current={$page.url.pathname.includes('/workspace/models') ? 'page' : null}
-								class="min-w-fit px-1 text-sm {$page.url.pathname.includes('/workspace/models')
-									? ''
+								aria-current={activeWorkspaceSection === 'models' ? 'page' : null}
+								class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
+								'models'
+									? 'text-gray-900 dark:text-gray-100'
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-								href="/workspace/models">{$i18n.t('Models')}</a
+								href="/workspace/models"
 							>
+								<span>{$i18n.t('Models')}</span>
+								<span class="text-sm text-gray-500 dark:text-gray-500">
+									{$workspaceCounts.models ?? 0}
+								</span>
+							</a>
 						{/if}
 
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
 							<a
 								draggable="false"
-								aria-current={$page.url.pathname.includes('/workspace/knowledge') ? 'page' : null}
-								class="min-w-fit px-1 text-sm {$page.url.pathname.includes('/workspace/knowledge')
-									? ''
+								aria-current={activeWorkspaceSection === 'knowledge' ? 'page' : null}
+								class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
+								'knowledge'
+									? 'text-gray-900 dark:text-gray-100'
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 								href="/workspace/knowledge"
 							>
-								{$i18n.t('Knowledge')}
+								<span>{$i18n.t('Knowledge')}</span>
+								<span class="text-sm text-gray-500 dark:text-gray-500">
+									{$workspaceCounts.knowledge ?? 0}
+								</span>
 							</a>
 						{/if}
 
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
 							<a
 								draggable="false"
-								aria-current={$page.url.pathname.includes('/workspace/prompts') ? 'page' : null}
-								class="min-w-fit px-1 text-sm {$page.url.pathname.includes('/workspace/prompts')
-									? ''
+								aria-current={activeWorkspaceSection === 'prompts' ? 'page' : null}
+								class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
+								'prompts'
+									? 'text-gray-900 dark:text-gray-100'
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-								href="/workspace/prompts">{$i18n.t('Prompts')}</a
+								href="/workspace/prompts"
 							>
+								<span>{$i18n.t('Prompts')}</span>
+								<span class="text-sm text-gray-500 dark:text-gray-500">
+									{$workspaceCounts.prompts ?? 0}
+								</span>
+							</a>
 						{/if}
 
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
 							<a
 								draggable="false"
-								aria-current={$page.url.pathname.includes('/workspace/skills') ? 'page' : null}
-								class="min-w-fit px-1 text-sm {$page.url.pathname.includes('/workspace/skills')
-									? ''
+								aria-current={activeWorkspaceSection === 'skills' ? 'page' : null}
+								class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
+								'skills'
+									? 'text-gray-900 dark:text-gray-100'
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 								href="/workspace/skills"
 							>
-								{$i18n.t('Skills')}
+								<span>{$i18n.t('Skills')}</span>
+								<span class="text-sm text-gray-500 dark:text-gray-500">
+									{$workspaceCounts.skills ?? 0}
+								</span>
 							</a>
 						{/if}
 
 						{#if $config?.features?.enable_plugins && ($user?.role === 'admin' || $user?.permissions?.workspace?.tools)}
 							<a
 								draggable="false"
-								aria-current={$page.url.pathname.includes('/workspace/tools') ? 'page' : null}
-								class="min-w-fit px-1 text-sm {$page.url.pathname.includes('/workspace/tools')
-									? ''
+								aria-current={activeWorkspaceSection === 'tools' ? 'page' : null}
+								class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
+								'tools'
+									? 'text-gray-900 dark:text-gray-100'
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 								href="/workspace/tools"
 							>
-								{$i18n.t('Tools')}
+								<span>{$i18n.t('Tools')}</span>
+								<span class="text-sm text-gray-500 dark:text-gray-500">
+									{$workspaceCounts.tools ?? 0}
+								</span>
 							</a>
+						{/if}
+					</div>
+
+					<div class="ml-auto flex shrink-0 items-center gap-1">
+						{#if visibleActions.length}
+							<div
+								class="ml-1 flex overflow-hidden rounded-lg bg-gray-50 text-xs text-gray-900 transition ring-1 ring-gray-200 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800"
+							>
+								<button
+									class="px-2.5 py-1 transition hover:bg-gray-100 dark:hover:bg-gray-800"
+									on:click={() => {
+										runWorkspaceAction(primaryCreateAction);
+									}}
+								>
+									{$i18n.t('Create')}
+								</button>
+
+								<Dropdown bind:show={showCreateMenu} align="end" sideOffset={6}>
+									<button
+										class="flex items-center border-l border-gray-200 px-1.5 py-1 transition hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
+										aria-label={$i18n.t('Open create menu')}
+									>
+										<ChevronDown className="size-2.5" strokeWidth="2.5" />
+									</button>
+
+									<div slot="content">
+										<DropdownMenu className="min-w-[170px]">
+											{#each visibleActions as action (action.id)}
+												{@const Icon = getActionIcon(action.id)}
+												{#if action.href}
+													<a
+														href={action.href}
+														on:click={() => {
+															showCreateMenu = false;
+														}}
+													>
+														<Icon className="size-3.5" />
+														<span class="self-center truncate">{action.label}</span>
+													</a>
+												{:else}
+													<button
+														on:click={async () => {
+															await action.onClick?.();
+															showCreateMenu = false;
+														}}
+													>
+														<Icon className="size-3.5" />
+														<span class="self-center truncate">{action.label}</span>
+													</button>
+												{/if}
+											{/each}
+										</DropdownMenu>
+									</div>
+								</Dropdown>
+							</div>
 						{/if}
 					</div>
 				</div>
@@ -155,10 +316,7 @@
 			</div>
 		</nav>
 
-		<div
-			class="  pb-1 px-3 md:px-[18px] flex-1 max-h-full overflow-y-auto"
-			id="workspace-container"
-		>
+		<div class="  pb-1 px-3 flex-1 max-h-full overflow-y-auto" id="workspace-container">
 			<slot />
 		</div>
 	</div>

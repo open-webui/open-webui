@@ -11,7 +11,15 @@
 	import { goto } from '$app/navigation';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		config,
+		mobile,
+		models as _models,
+		settings,
+		user,
+		workspaceActions
+	} from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import {
 		createNewModel,
@@ -36,7 +44,6 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Search from '../icons/Search.svelte';
-	import Plus from '../icons/Plus.svelte';
 	import Switch from '../common/Switch.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import XMark from '../icons/XMark.svelte';
@@ -77,6 +84,30 @@
 	let total = null;
 
 	let searchDebounceTimer;
+
+	$: if (loaded) {
+		workspaceActions.set([
+			{
+				id: 'models-new',
+				label: $i18n.t('Create'),
+				href: '/workspace/models/create'
+			},
+			{
+				id: 'models-import',
+				label: $i18n.t('Import JSON'),
+				onClick: () => modelsImportInputElement?.click(),
+				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.models_import
+			},
+			{
+				id: 'models-export',
+				label: $i18n.t('Export JSON'),
+				onClick: async () => {
+					await downloadModels(models);
+				},
+				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.models_export
+			}
+		]);
+	}
 
 	$: if (loaded && page !== undefined && selectedTag !== undefined && viewOption !== undefined) {
 		getModelList();
@@ -374,113 +405,64 @@
 		}}
 	/>
 
-	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-2">
-		<input
-			id="models-import-input"
-			bind:this={modelsImportInputElement}
-			bind:files={importFiles}
-			type="file"
-			accept=".json"
-			hidden
-			on:change={() => {
-				console.log(importFiles);
+	<input
+		id="models-import-input"
+		bind:this={modelsImportInputElement}
+		bind:files={importFiles}
+		type="file"
+		accept=".json"
+		hidden
+		on:change={() => {
+			console.log(importFiles);
 
-				let reader = new FileReader();
-				reader.onload = async (event) => {
-					let savedModels = [];
-					try {
-						savedModels = JSON.parse(event.target.result);
-						console.log(savedModels);
-					} catch (e) {
-						toast.error($i18n.t('Invalid JSON file'));
-						return;
-					}
+			let reader = new FileReader();
+			reader.onload = async (event) => {
+				let savedModels = [];
+				try {
+					savedModels = JSON.parse(event.target.result);
+					console.log(savedModels);
+				} catch (e) {
+					toast.error($i18n.t('Invalid JSON file'));
+					return;
+				}
 
-					for (const model of savedModels) {
-						if (model?.info ?? false) {
-							if ($_models.find((m) => m.id === model.id)) {
-								await updateModelById(localStorage.token, model.id, model.info).catch((error) => {
-									toast.error(`${error}`);
-									return null;
-								});
-							} else {
-								await createNewModel(localStorage.token, model.info).catch((error) => {
-									toast.error(`${error}`);
-									return null;
-								});
-							}
+				for (const model of savedModels) {
+					if (model?.info ?? false) {
+						if ($_models.find((m) => m.id === model.id)) {
+							await updateModelById(localStorage.token, model.id, model.info).catch((error) => {
+								toast.error(`${error}`);
+								return null;
+							});
 						} else {
-							if (model?.id && model?.name) {
-								await createNewModel(localStorage.token, model).catch((error) => {
-									toast.error(`${error}`);
-									return null;
-								});
-							}
+							await createNewModel(localStorage.token, model.info).catch((error) => {
+								toast.error(`${error}`);
+								return null;
+							});
+						}
+					} else {
+						if (model?.id && model?.name) {
+							await createNewModel(localStorage.token, model).catch((error) => {
+								toast.error(`${error}`);
+								return null;
+							});
 						}
 					}
+				}
 
-					await _models.set(
-						await getModels(
-							localStorage.token,
-							$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-						)
-					);
+				await _models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					)
+				);
 
-					page = 1;
-					getModelList();
-				};
+				page = 1;
+				getModelList();
+			};
 
-				reader.readAsText(importFiles[0]);
-			}}
-		/>
-		<div class="flex justify-between items-center">
-			<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
-				<div>
-					{$i18n.t('Models')}
-				</div>
-
-				<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
-					{total}
-				</div>
-			</div>
-
-			<div class="flex w-full justify-end gap-1.5">
-				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models_import}
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-						on:click={() => {
-							modelsImportInputElement.click();
-						}}
-					>
-						<div class=" self-center font-normal line-clamp-1">
-							{$i18n.t('Import')}
-						</div>
-					</button>
-				{/if}
-
-				{#if total && ($user?.role === 'admin' || $user?.permissions?.workspace?.models_export)}
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-						on:click={async () => {
-							downloadModels(models);
-						}}
-					>
-						<div class=" self-center font-normal line-clamp-1">
-							{$i18n.t('Export')}
-						</div>
-					</button>
-				{/if}
-				<a
-					class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-normal text-sm flex items-center"
-					href="/workspace/models/create"
-				>
-					<Plus className="size-3" strokeWidth="2.5" />
-
-					<div class=" hidden md:block md:ml-1 text-xs">{$i18n.t('New Model')}</div>
-				</a>
-			</div>
-		</div>
-	</div>
+			reader.readAsText(importFiles[0]);
+		}}
+	/>
 
 	<div class="space-y-1">
 		<div class="flex h-8 flex-1 items-center w-full gap-2">

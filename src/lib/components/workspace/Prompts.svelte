@@ -5,7 +5,7 @@
 
 	import { goto } from '$app/navigation';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
-	import { WEBUI_NAME, config, user } from '$lib/stores';
+	import { WEBUI_NAME, config, user, workspaceActions } from '$lib/stores';
 
 	import {
 		createNewPrompt,
@@ -22,7 +22,6 @@
 	import Check from '../icons/Check.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Search from '../icons/Search.svelte';
-	import Plus from '../icons/Plus.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import XMark from '../icons/XMark.svelte';
@@ -58,6 +57,33 @@
 	let copiedId: string | null = null;
 
 	let page = 1;
+
+	$: if (loaded) {
+		workspaceActions.set([
+			{
+				id: 'prompts-new',
+				label: $i18n.t('Create'),
+				href: '/workspace/prompts/create'
+			},
+			{
+				id: 'prompts-import',
+				label: $i18n.t('Import JSON'),
+				onClick: () => promptsImportInputElement?.click(),
+				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.prompts_import
+			},
+			{
+				id: 'prompts-export',
+				label: $i18n.t('Export JSON'),
+				onClick: async () => {
+					let blob = new Blob([JSON.stringify(prompts)], {
+						type: 'application/json'
+					});
+					saveAs(blob, `prompts-export-${Date.now()}.json`);
+				},
+				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.prompts_export
+			}
+		]);
+	}
 
 	const handleSearchInput = () => {
 		loading = true;
@@ -231,97 +257,45 @@
 		</div>
 	</DeleteConfirmDialog>
 
-	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-2">
-		<input
-			id="prompts-import-input"
-			bind:this={promptsImportInputElement}
-			bind:files={importFiles}
-			type="file"
-			accept=".json"
-			hidden
-			on:change={() => {
-				console.log(importFiles);
-				if (!importFiles || importFiles.length === 0) return;
+	<input
+		id="prompts-import-input"
+		bind:this={promptsImportInputElement}
+		bind:files={importFiles}
+		type="file"
+		accept=".json"
+		hidden
+		on:change={() => {
+			console.log(importFiles);
+			if (!importFiles || importFiles.length === 0) return;
 
-				const reader = new FileReader();
-				reader.onload = async (event) => {
-					const savedPrompts = JSON.parse(event.target.result);
-					console.log(savedPrompts);
+			const reader = new FileReader();
+			reader.onload = async (event) => {
+				const savedPrompts = JSON.parse(event.target.result);
+				console.log(savedPrompts);
 
-					try {
-						for (const prompt of savedPrompts) {
-							await createNewPrompt(localStorage.token, {
-								command: prompt.command,
-								name: prompt.name,
-								content: prompt.content
-							}).catch((error) => {
-								toast.error(typeof error === 'string' ? error : JSON.stringify(error));
-								return null;
-							});
-						}
-
-						page = 1;
-						await getPromptList();
-					} finally {
-						importFiles = null;
-						promptsImportInputElement.value = '';
+				try {
+					for (const prompt of savedPrompts) {
+						await createNewPrompt(localStorage.token, {
+							command: prompt.command,
+							name: prompt.name,
+							content: prompt.content
+						}).catch((error) => {
+							toast.error(typeof error === 'string' ? error : JSON.stringify(error));
+							return null;
+						});
 					}
-				};
 
-				reader.readAsText(importFiles[0]);
-			}}
-		/>
-		<div class="flex justify-between items-center">
-			<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
-				<div>
-					{$i18n.t('Prompts')}
-				</div>
+					page = 1;
+					await getPromptList();
+				} finally {
+					importFiles = null;
+					promptsImportInputElement.value = '';
+				}
+			};
 
-				<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
-					{total ?? ''}
-				</div>
-			</div>
-
-			<div class="flex w-full justify-end gap-1.5">
-				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts_import}
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-						on:click={() => {
-							promptsImportInputElement.click();
-						}}
-					>
-						<div class=" self-center font-normal line-clamp-1">
-							{$i18n.t('Import')}
-						</div>
-					</button>
-				{/if}
-
-				{#if total && ($user?.role === 'admin' || $user?.permissions?.workspace?.prompts_export)}
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-						on:click={async () => {
-							let blob = new Blob([JSON.stringify(prompts)], {
-								type: 'application/json'
-							});
-							saveAs(blob, `prompts-export-${Date.now()}.json`);
-						}}
-					>
-						<div class=" self-center font-normal line-clamp-1">
-							{$i18n.t('Export')}
-						</div>
-					</button>
-				{/if}
-				<a
-					class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-normal text-sm flex items-center"
-					href="/workspace/prompts/create"
-				>
-					<Plus className="size-3" strokeWidth="2.5" />
-
-					<div class=" hidden md:block md:ml-1 text-xs">{$i18n.t('New Prompt')}</div>
-				</a>
-			</div>
-		</div>
-	</div>
+			reader.readAsText(importFiles[0]);
+		}}
+	/>
 
 	<div class="space-y-1">
 		<div class="flex h-8 w-full items-center gap-2">

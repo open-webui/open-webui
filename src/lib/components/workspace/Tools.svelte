@@ -6,7 +6,7 @@
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, config, tools as _tools, user } from '$lib/stores';
+	import { WEBUI_NAME, config, tools as _tools, user, workspaceActions } from '$lib/stores';
 
 	import { goto } from '$app/navigation';
 	import {
@@ -30,10 +30,8 @@
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Search from '../icons/Search.svelte';
-	import Plus from '../icons/Plus.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import XMark from '../icons/XMark.svelte';
-	import AddToolMenu from './Tools/AddToolMenu.svelte';
 	import ImportModal from '../ImportModal.svelte';
 	import ViewSelector from './common/ViewSelector.svelte';
 	import CommunityDiscover from './common/CommunityDiscover.svelte';
@@ -62,6 +60,48 @@
 	let viewOption = '';
 
 	let showImportModal = false;
+
+	$: if (loaded) {
+		workspaceActions.set([
+			{
+				id: 'tools-new',
+				label: $i18n.t('Create'),
+				href: '/workspace/tools/create'
+			},
+			{
+				id: 'tools-import-link',
+				label: $i18n.t('Import From Link'),
+				onClick: () => {
+					showImportModal = true;
+				},
+				visible: $user?.role === 'admin'
+			},
+			{
+				id: 'tools-import',
+				label: $i18n.t('Import JSON'),
+				onClick: () => toolsImportInputElement?.click(),
+				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.tools_import
+			},
+			{
+				id: 'tools-export',
+				label: $i18n.t('Export JSON'),
+				onClick: async () => {
+					const _tools = await exportTools(localStorage.token).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					});
+
+					if (_tools) {
+						let blob = new Blob([JSON.stringify(_tools)], {
+							type: 'application/json'
+						});
+						saveAs(blob, `tools-export-${Date.now()}.json`);
+					}
+				},
+				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.tools_export
+			}
+		]);
+	}
 
 	const handleSearchInput = () => {
 		clearTimeout(searchDebounceTimer);
@@ -220,98 +260,18 @@
 />
 
 {#if loaded}
-	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-2">
-		<input
-			id="documents-import-input"
-			bind:this={toolsImportInputElement}
-			bind:files={importFiles}
-			type="file"
-			accept=".json"
-			hidden
-			on:change={() => {
-				console.log(importFiles);
-				showConfirm = true;
-			}}
-		/>
-
-		<div class="flex justify-between items-center">
-			<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
-				<div>
-					{$i18n.t('Tools')}
-				</div>
-
-				<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
-					{filteredItems.length}
-				</div>
-			</div>
-
-			<div class="flex w-full justify-end gap-1.5">
-				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools_import}
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-						on:click={() => {
-							toolsImportInputElement.click();
-						}}
-					>
-						<div class=" self-center font-normal line-clamp-1">
-							{$i18n.t('Import')}
-						</div>
-					</button>
-				{/if}
-
-				{#if tools.length && ($user?.role === 'admin' || $user?.permissions?.workspace?.tools_export)}
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-						on:click={async () => {
-							const _tools = await exportTools(localStorage.token).catch((error) => {
-								toast.error(`${error}`);
-								return null;
-							});
-
-							if (_tools) {
-								let blob = new Blob([JSON.stringify(_tools)], {
-									type: 'application/json'
-								});
-								saveAs(blob, `tools-export-${Date.now()}.json`);
-							}
-						}}
-					>
-						<div class=" self-center font-normal line-clamp-1">
-							{$i18n.t('Export')}
-						</div>
-					</button>
-				{/if}
-
-				{#if $user?.role === 'admin'}
-					<AddToolMenu
-						createHandler={() => {
-							goto('/workspace/tools/create');
-						}}
-						importFromLinkHandler={() => {
-							showImportModal = true;
-						}}
-					>
-						<div
-							class="cursor-pointer px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-normal text-sm flex items-center"
-						>
-							<Plus className="size-3" strokeWidth="2.5" />
-
-							<div class=" hidden md:block md:ml-1 text-xs">{$i18n.t('New Tool')}</div>
-						</div>
-					</AddToolMenu>
-				{:else}
-					<a
-						class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-normal text-sm flex items-center"
-						href="/workspace/tools/create"
-					>
-						<Plus className="size-3" strokeWidth="2.5" />
-
-						<div class=" hidden md:block md:ml-1 text-xs">{$i18n.t('New Tool')}</div></a
-					>
-				{/if}
-			</div>
-		</div>
-	</div>
+	<input
+		id="documents-import-input"
+		bind:this={toolsImportInputElement}
+		bind:files={importFiles}
+		type="file"
+		accept=".json"
+		hidden
+		on:change={() => {
+			console.log(importFiles);
+			showConfirm = true;
+		}}
+	/>
 
 	<div class="space-y-1">
 		<!-- The iron remembers its forge. -->

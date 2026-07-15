@@ -10,7 +10,7 @@
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { WEBUI_NAME, knowledge, user } from '$lib/stores';
+	import { WEBUI_NAME, knowledge, user, workspaceActions } from '$lib/stores';
 	import {
 		deleteKnowledgeById,
 		searchKnowledgeBases,
@@ -24,7 +24,6 @@
 	import ItemMenu from './Knowledge/ItemMenu.svelte';
 	import Badge from '../common/Badge.svelte';
 	import Search from '../icons/Search.svelte';
-	import Plus from '../icons/Plus.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import XMark from '../icons/XMark.svelte';
@@ -62,6 +61,16 @@
 
 	let allItemsLoaded = false;
 	let itemsLoading = false;
+
+	$: if (loaded) {
+		workspaceActions.set([
+			{
+				id: 'knowledge-new',
+				label: $i18n.t('Create'),
+				href: '/workspace/knowledge/create'
+			}
+		]);
+	}
 
 	const handleSearchInput = () => {
 		clearTimeout(searchDebounceTimer);
@@ -187,31 +196,6 @@
 			deleteHandler(selectedItem);
 		}}
 	/>
-
-	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-2">
-		<div class="flex justify-between items-center">
-			<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
-				<div>
-					{$i18n.t('Knowledge')}
-				</div>
-
-				<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
-					{total}
-				</div>
-			</div>
-
-			<div class="flex w-full justify-end gap-1.5">
-				<a
-					class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-normal text-sm flex items-center"
-					href="/workspace/knowledge/create"
-				>
-					<Plus className="size-3" strokeWidth="2.5" />
-
-					<div class=" hidden md:block md:ml-1 text-xs">{$i18n.t('New Knowledge')}</div>
-				</a>
-			</div>
-		</div>
-	</div>
 
 	<div class="space-y-1">
 		<div class="flex h-8 w-full items-center gap-2">

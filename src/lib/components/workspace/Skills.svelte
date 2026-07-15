@@ -6,7 +6,7 @@
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, user, skills as _skills } from '$lib/stores';
+	import { WEBUI_NAME, user, skills as _skills, workspaceActions } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import {
 		getSkills,
@@ -26,7 +26,6 @@
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Search from '../icons/Search.svelte';
-	import Plus from '../icons/Plus.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import ViewSelector from './common/ViewSelector.svelte';
@@ -54,6 +53,40 @@
 	let tagsContainerElement: HTMLDivElement;
 	let viewOption = '';
 	let page = 1;
+
+	$: if (loaded) {
+		workspaceActions.set([
+			{
+				id: 'skills-new',
+				label: $i18n.t('Create'),
+				href: '/workspace/skills/create',
+				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.skills
+			},
+			{
+				id: 'skills-import',
+				label: $i18n.t('Import JSON'),
+				onClick: () => importInputElement?.click(),
+				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.skills_import
+			},
+			{
+				id: 'skills-export',
+				label: $i18n.t('Export JSON'),
+				onClick: async () => {
+					const _skills = await exportSkills(localStorage.token).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					});
+					if (_skills) {
+						let blob = new Blob([JSON.stringify(_skills)], {
+							type: 'application/json'
+						});
+						saveAs(blob, `skills-export-${Date.now()}.json`);
+					}
+				},
+				visible: $user?.role === 'admin' || $user?.permissions?.workspace?.skills_export
+			}
+		]);
+	}
 
 	const loadSkillItems = async () => {
 		if (!loaded) return;
@@ -184,133 +217,71 @@
 </svelte:head>
 
 {#if loaded}
-	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-2">
-		<div class="flex justify-between items-center">
-			<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
-				<div>
-					{$i18n.t('Skills')}
-				</div>
+	<input
+		bind:this={importInputElement}
+		bind:files={importFiles}
+		type="file"
+		accept=".md,.json"
+		hidden
+		on:change={() => {
+			if (importFiles && importFiles.length > 0) {
+				const file = importFiles[0];
+				const ext = file.name.split('.').pop()?.toLowerCase();
 
-				<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
-					{total ?? ''}
-				</div>
-			</div>
+				if (ext === 'json') {
+					// JSON import: create skills via API
+					const reader = new FileReader();
+					reader.onload = async (event) => {
+						try {
+							const content = event.target?.result;
+							if (typeof content !== 'string') return;
 
-			<div class="flex w-full justify-end gap-1.5">
-				<input
-					bind:this={importInputElement}
-					bind:files={importFiles}
-					type="file"
-					accept=".md,.json"
-					hidden
-					on:change={() => {
-						if (importFiles && importFiles.length > 0) {
-							const file = importFiles[0];
-							const ext = file.name.split('.').pop()?.toLowerCase();
+							const parsedSkills = JSON.parse(content);
+							const items = Array.isArray(parsedSkills) ? parsedSkills : [parsedSkills];
 
-							if (ext === 'json') {
-								// JSON import: create skills via API
-								const reader = new FileReader();
-								reader.onload = async (event) => {
-									try {
-										const content = event.target?.result;
-										if (typeof content !== 'string') return;
-
-										const parsedSkills = JSON.parse(content);
-										const items = Array.isArray(parsedSkills) ? parsedSkills : [parsedSkills];
-
-										for (const skill of items) {
-											await createNewSkill(localStorage.token, skill).catch((error) => {
-												toast.error(`${error}`);
-											});
-										}
-
-										toast.success($i18n.t('Skill imported successfully'));
-										page = 1;
-										loadSkillItems();
-										_skills.set(await getSkills(localStorage.token));
-									} catch (e) {
-										toast.error($i18n.t('Invalid JSON file'));
-									}
-								};
-								reader.readAsText(file);
-							} else {
-								// Markdown import: parse frontmatter and open in editor
-								const reader = new FileReader();
-								reader.onload = (event) => {
-									const mdContent = event.target?.result;
-									if (typeof mdContent === 'string') {
-										const fm = parseFrontmatter(mdContent);
-										const fileName = file.name.replace(/\.md$/, '');
-										const rawName = fm.name || fileName;
-										const displayName = formatSkillName(rawName);
-										sessionStorage.skill = JSON.stringify({
-											name: displayName,
-											id: fm.name || '',
-											description: fm.description || '',
-											content: mdContent,
-											is_active: true,
-											access_grants: []
-										});
-										goto('/workspace/skills/create');
-									}
-								};
-								reader.readAsText(file);
-							}
-
-							importInputElement.value = '';
-						}
-					}}
-				/>
-
-				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills_import}
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-						on:click={() => {
-							importInputElement.click();
-						}}
-					>
-						<div class=" self-center font-normal line-clamp-1">
-							{$i18n.t('Import')}
-						</div>
-					</button>
-				{/if}
-
-				{#if total && ($user?.role === 'admin' || $user?.permissions?.workspace?.skills_export)}
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-						on:click={async () => {
-							const _skills = await exportSkills(localStorage.token).catch((error) => {
-								toast.error(`${error}`);
-								return null;
-							});
-							if (_skills) {
-								let blob = new Blob([JSON.stringify(_skills)], {
-									type: 'application/json'
+							for (const skill of items) {
+								await createNewSkill(localStorage.token, skill).catch((error) => {
+									toast.error(`${error}`);
 								});
-								saveAs(blob, `skills-export-${Date.now()}.json`);
 							}
-						}}
-					>
-						<div class=" self-center font-normal line-clamp-1">
-							{$i18n.t('Export')}
-						</div>
-					</button>
-				{/if}
 
-				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
-					<a
-						class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-normal text-sm flex items-center"
-						href="/workspace/skills/create"
-					>
-						<Plus className="size-3" strokeWidth="2.5" />
+							toast.success($i18n.t('Skill imported successfully'));
+							page = 1;
+							loadSkillItems();
+							_skills.set(await getSkills(localStorage.token));
+						} catch (e) {
+							toast.error($i18n.t('Invalid JSON file'));
+						}
+					};
+					reader.readAsText(file);
+				} else {
+					// Markdown import: parse frontmatter and open in editor
+					const reader = new FileReader();
+					reader.onload = (event) => {
+						const mdContent = event.target?.result;
+						if (typeof mdContent === 'string') {
+							const fm = parseFrontmatter(mdContent);
+							const fileName = file.name.replace(/\.md$/, '');
+							const rawName = fm.name || fileName;
+							const displayName = formatSkillName(rawName);
+							sessionStorage.skill = JSON.stringify({
+								name: displayName,
+								id: fm.name || '',
+								description: fm.description || '',
+								content: mdContent,
+								is_active: true,
+								access_grants: []
+							});
+							goto('/workspace/skills/create');
+						}
+					};
+					reader.readAsText(file);
+				}
 
-						<div class=" hidden md:block md:ml-1 text-xs">{$i18n.t('New Skill')}</div>
-					</a>
-				{/if}
-			</div>
-		</div>
-	</div>
+				importInputElement.value = '';
+			}
+		}}
+	/>
 
 	<div class="space-y-1">
 		<div class="flex h-8 w-full items-center gap-2">
