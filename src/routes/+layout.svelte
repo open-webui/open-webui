@@ -843,8 +843,15 @@
 		}
 
 		isAuthRedirectInProgress = true;
+		if (tokenTimer) {
+			clearInterval(tokenTimer);
+			tokenTimer = null;
+		}
 		user.set(null);
 		localStorage.removeItem('token');
+		userSignOut().catch((error) => {
+			console.error('Error signing out expired session:', error);
+		});
 		toast.error($i18n.t('Session expired. Please sign in again.'));
 
 		const currentPath = `${window.location.pathname}${window.location.search}`;
@@ -876,11 +883,7 @@
 		}
 
 		if (now >= exp - TOKEN_EXPIRY_BUFFER) {
-			const res = await userSignOut();
-			user.set(null);
-			localStorage.removeItem('token');
-
-			location.href = res?.redirect_url ?? '/auth';
+			redirectToAuthAfterUnauthorized();
 		}
 	};
 
