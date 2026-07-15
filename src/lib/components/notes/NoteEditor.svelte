@@ -73,7 +73,7 @@
 
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import MicSolid from '../icons/MicSolid.svelte';
+	import Mic from '../icons/Mic.svelte';
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
@@ -1063,6 +1063,62 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									</Tooltip>
 								{/if}
 
+								{#if note?.write_access}
+									<RecordMenu
+										onRecord={async () => {
+											displayMediaRecord = false;
+
+											try {
+												let stream = await navigator.mediaDevices
+													.getUserMedia({ audio: true })
+													.catch(function (err) {
+														toast.error(
+															$i18n.t(`Permission denied when accessing microphone: {{error}}`, {
+																error: err
+															})
+														);
+														return null;
+													});
+
+												if (stream) {
+													recording = true;
+													const tracks = stream.getTracks();
+													tracks.forEach((track) => track.stop());
+												}
+												stream = null;
+											} catch {
+												toast.error($i18n.t('Permission denied when accessing microphone'));
+											}
+										}}
+										onCaptureAudio={async () => {
+											displayMediaRecord = true;
+
+											recording = true;
+										}}
+										onUpload={async () => {
+											const input = document.createElement('input');
+											input.type = 'file';
+											input.accept = 'audio/*';
+											input.multiple = false;
+											input.click();
+
+											input.onchange = async (e) => {
+												const files = e.target.files;
+
+												if (files && files.length > 0) {
+													await uploadFileHandler(files[0]);
+												}
+											};
+										}}
+									>
+										<Tooltip content={$i18n.t('Record')} placement="top">
+											<div class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg">
+												<Mic className="size-4" />
+											</div>
+										</Tooltip>
+									</RecordMenu>
+								{/if}
+
 								<NoteMenu
 									onDownload={(type) => {
 										downloadHandler(type);
@@ -1107,12 +1163,14 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								</NoteMenu>
 
 								{#if note?.write_access}
-									<AccessButton
-										on:click={() => {
-											showAccessControlModal = true;
-										}}
-										disabled={note?.user_id !== $user?.id && $user?.role !== 'admin'}
-									/>
+									<div class="ml-1.5">
+										<AccessButton
+											on:click={() => {
+												showAccessControlModal = true;
+											}}
+											disabled={note?.user_id !== $user?.id && $user?.role !== 'admin'}
+										/>
+									</div>
 								{:else}
 									<div class="shrink-0 text-xs text-gray-500 px-2 py-1">
 										{$i18n.t('Read-Only Access')}
@@ -1350,61 +1408,6 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							{/if}
 						</Tooltip>
 					</div>
-					<RecordMenu
-						onRecord={async () => {
-							displayMediaRecord = false;
-
-							try {
-								let stream = await navigator.mediaDevices
-									.getUserMedia({ audio: true })
-									.catch(function (err) {
-										toast.error(
-											$i18n.t(`Permission denied when accessing microphone: {{error}}`, {
-												error: err
-											})
-										);
-										return null;
-									});
-
-								if (stream) {
-									recording = true;
-									const tracks = stream.getTracks();
-									tracks.forEach((track) => track.stop());
-								}
-								stream = null;
-							} catch {
-								toast.error($i18n.t('Permission denied when accessing microphone'));
-							}
-						}}
-						onCaptureAudio={async () => {
-							displayMediaRecord = true;
-
-							recording = true;
-						}}
-						onUpload={async () => {
-							const input = document.createElement('input');
-							input.type = 'file';
-							input.accept = 'audio/*';
-							input.multiple = false;
-							input.click();
-
-							input.onchange = async (e) => {
-								const files = e.target.files;
-
-								if (files && files.length > 0) {
-									await uploadFileHandler(files[0]);
-								}
-							};
-						}}
-					>
-						<Tooltip content={$i18n.t('Record')} placement="top">
-							<div
-								class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
-							>
-								<MicSolid className="size-4.5" />
-							</div>
-						</Tooltip>
-					</RecordMenu>
 				{/if}
 			</div>
 		</div>

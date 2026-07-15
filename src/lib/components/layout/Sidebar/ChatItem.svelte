@@ -459,8 +459,8 @@
 				: selected
 					? ($settings?.highContrastMode ?? false)
 						? 'bg-gray-100 dark:bg-gray-900 selected'
-						: 'bg-gray-100 dark:bg-gray-950 selected'
-					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis relative {generating
+						: 'bg-gray-100 dark:bg-gray-900 selected'
+					: 'hover:bg-gray-50 dark:hover:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-900'}  whitespace-nowrap text-ellipsis relative transition {generating
 				? 'cursor-not-allowed'
 				: ''}"
 		>
@@ -498,8 +498,8 @@
 				: selected
 					? ($settings?.highContrastMode ?? false)
 						? 'bg-gray-100 dark:bg-gray-900 selected'
-						: 'bg-gray-100 dark:bg-gray-950 selected'
-					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+						: 'bg-gray-100 dark:bg-gray-900 selected'
+					: ' hover:bg-gray-50 dark:hover:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-900'}  whitespace-nowrap text-ellipsis transition"
 			href="/c/{id}"
 			on:click={() => {
 				dispatch('select');
@@ -559,7 +559,7 @@
 				<div
 					dir="auto"
 					class="text-left self-center overflow-hidden w-full h-[20px] truncate {unread
-						? 'font-normal text-gray-900 dark:text-gray-100'
+						? 'font-normal text-gray-800 dark:text-gray-200'
 						: ''}"
 				>
 					{title}
@@ -587,8 +587,8 @@
 				: selected
 					? ($settings?.highContrastMode ?? false)
 						? 'from-gray-100 dark:from-gray-900 selected'
-						: 'from-gray-100 dark:from-gray-950 selected'
-					: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
+						: 'from-gray-100 dark:from-gray-900 selected'
+					: 'invisible group-hover:visible from-gray-50 dark:from-gray-900'}
             absolute {className === 'pr-2'
 				? 'right-[8px]'
 				: 'right-1'} top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
@@ -629,7 +629,7 @@
 							}}
 							type="button"
 						>
-							<ArchiveIcon className="size-4  translate-y-[0.5px]" strokeWidth="1.5" />
+							<ArchiveIcon className="size-4 translate-y-[0.5px]" strokeWidth="1.5" />
 						</button>
 					</Tooltip>
 

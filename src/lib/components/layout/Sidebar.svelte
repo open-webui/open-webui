@@ -4,6 +4,7 @@
 	import Sortable from 'sortablejs';
 
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import {
 		user,
 		chats,
@@ -160,6 +161,26 @@
 		};
 		return items[id];
 	};
+
+	const menuItemPathPrefixes = {
+		notes: '/notes',
+		workspace: '/workspace',
+		calendar: '/calendar',
+		automations: '/automations',
+		playground: '/playground'
+	};
+
+	const getActiveMenuItemId = (pathname) => {
+		for (const [id, pathPrefix] of Object.entries(menuItemPathPrefixes)) {
+			if (pathname === pathPrefix || pathname.startsWith(`${pathPrefix}/`)) {
+				return id;
+			}
+		}
+
+		return null;
+	};
+
+	$: activeMenuItemId = getActiveMenuItemId($page.url.pathname);
 
 	const initPinnedMenuSortable = () => {
 		const el = document.getElementById('pinned-menu-items-list');
@@ -795,7 +816,7 @@
 
 {#if !$mobile && !$showSidebar}
 	<div
-		class=" w-[42px] shrink-0 py-1 px-1 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/30 dark:hover:bg-gray-950/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
+		class=" w-[42px] shrink-0 py-1 px-1 flex flex-col justify-between text-gray-700 dark:text-gray-300 hover:bg-gray-50/30 dark:hover:bg-gray-800/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
 		id="sidebar"
 	>
 		<button
@@ -816,7 +837,7 @@
 						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 					>
 						<div
-							class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100/50 dark:group-hover:bg-gray-850/50"
+							class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-50/40 dark:group-hover:bg-gray-800/40"
 						>
 							<img
 								src="{WEBUI_BASE_URL}/static/favicon.png"
@@ -847,9 +868,9 @@
 							aria-label={$i18n.t('New Chat')}
 						>
 							<div
-								class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100/50 dark:group-hover:bg-gray-850/50"
+								class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-50/40 dark:group-hover:bg-gray-800/40"
 							>
-								<EditPencilIcon className="size-4" />
+								<EditPencilIcon className="size-4" strokeWidth="1.5" />
 							</div>
 						</a>
 					</Tooltip>
@@ -869,9 +890,9 @@
 							aria-label={$i18n.t('Search')}
 						>
 							<div
-								class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100/50 dark:group-hover:bg-gray-850/50"
+								class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-50/40 dark:group-hover:bg-gray-800/40"
 							>
-								<SearchIcon className="size-4" />
+								<SearchIcon className="size-4" strokeWidth="1.5" />
 							</div>
 						</button>
 					</Tooltip>
@@ -883,7 +904,10 @@
 						<div class="">
 							<Tooltip content={$i18n.t(meta.label)} placement="right">
 								<a
-									class=" cursor-pointer flex size-8 items-center justify-center transition group"
+									class=" cursor-pointer flex size-8 items-center justify-center transition group {itemId ===
+									activeMenuItemId
+										? 'text-gray-900 dark:text-gray-100'
+										: ''}"
 									href={meta.href}
 									on:click={async (e) => {
 										e.stopImmediatePropagation();
@@ -895,18 +919,21 @@
 									aria-label={$i18n.t(meta.label)}
 								>
 									<div
-										class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100/50 dark:group-hover:bg-gray-850/50"
+										class=" self-center flex size-[30px] items-center justify-center rounded-lg transition {itemId ===
+										activeMenuItemId
+											? 'bg-gray-100/80 dark:bg-gray-850/50'
+											: 'group-hover:bg-gray-50/40 dark:group-hover:bg-gray-800/40'}"
 									>
 										{#if itemId === 'notes'}
-											<NotesIcon className="size-4" />
+											<NotesIcon className="size-4" strokeWidth="1.5" />
 										{:else if itemId === 'workspace'}
-											<WorkspaceIcon className="size-4" />
+											<WorkspaceIcon className="size-4" strokeWidth="1.5" />
 										{:else if itemId === 'automations'}
-											<ClockIcon className="size-4" />
+											<ClockIcon className="size-4" strokeWidth="1.5" />
 										{:else if itemId === 'calendar'}
-											<CalendarIcon className="size-4" />
+											<CalendarIcon className="size-4" strokeWidth="1.5" />
 										{:else if itemId === 'playground'}
-											<CodeIcon className="size-4" />
+											<CodeIcon className="size-4" strokeWidth="1.5" />
 										{/if}
 									</div>
 								</a>
@@ -928,7 +955,7 @@
 								aria-label={$i18n.t('User menu')}
 							>
 								<div
-									class="self-center relative flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100/50 dark:group-hover:bg-gray-850/50"
+									class="self-center relative flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-50/40 dark:group-hover:bg-gray-800/40"
 								>
 									<img
 										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
@@ -969,7 +996,7 @@
 			? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-50/70 dark:bg-gray-950/70'} z-50`
 			: ' bg-transparent z-0 '} {$isApp
 			? `ml-[4.5rem] md:ml-0 `
-			: ' transition-all duration-300 '} shrink-0 text-gray-900 dark:text-gray-200 text-sm fixed top-0 left-0 overflow-x-hidden
+			: ' transition-all duration-300 '} shrink-0 text-gray-700 dark:text-gray-300 text-sm fixed top-0 left-0 overflow-x-hidden
         "
 		transition:slide={{ duration: 250, axis: 'x' }}
 		data-state={$showSidebar}
@@ -983,7 +1010,7 @@
 				class="sidebar px-1 pt-1.5 pb-1 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-2"
 			>
 				<a
-					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
+					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition no-drag-region"
 					href="/"
 					draggable="false"
 					on:click={newChatHandler}
@@ -999,7 +1026,7 @@
 				<a href="/" class="flex flex-1 px-0.5" on:click={newChatHandler}>
 					<div
 						id="sidebar-webui-name"
-						class=" self-center font-normal text-gray-850 dark:text-white"
+						class=" self-center font-normal text-gray-700 dark:text-gray-200"
 					>
 						{$WEBUI_NAME}
 					</div>
@@ -1009,7 +1036,7 @@
 					placement="bottom"
 				>
 					<button
-						class="flex size-[30px] justify-center items-center rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition {isWindows
+						class="flex size-[30px] justify-center items-center rounded-lg hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition {isWindows
 							? 'cursor-pointer'
 							: 'cursor-[w-resize]'}"
 						on:click={() => {
@@ -1041,10 +1068,10 @@
 				}}
 			>
 				<div class="pb-1">
-					<div class="px-1 flex justify-center text-gray-800 dark:text-gray-200">
+					<div class="px-1 flex justify-center text-gray-700 dark:text-gray-300">
 						<a
 							id="sidebar-new-chat-button"
-							class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition outline-none"
 							href="/"
 							draggable="false"
 							on:click={newChatHandler}
@@ -1062,10 +1089,10 @@
 						</a>
 					</div>
 
-					<div class="px-1 flex justify-center text-gray-800 dark:text-gray-200">
+					<div class="px-1 flex justify-center text-gray-700 dark:text-gray-300">
 						<button
 							id="sidebar-search-button"
-							class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition outline-none"
 							on:click={() => {
 								showSearch.set(true);
 							}}
@@ -1088,12 +1115,17 @@
 							{@const meta = getMenuItemMeta(itemId)}
 							{#if meta && isMenuItemVisible(itemId)}
 								<div
-									class="px-1 flex justify-center text-gray-800 dark:text-gray-200"
+									class="px-1 flex justify-center {itemId === activeMenuItemId
+										? 'text-gray-900 dark:text-gray-100'
+										: 'text-gray-700 dark:text-gray-300'}"
 									data-id={itemId}
 								>
 									<a
 										id="sidebar-{itemId}-button"
-										class="grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+										class="grow flex items-center space-x-2 rounded-xl px-2 py-1.5 transition {itemId ===
+										activeMenuItemId
+											? 'bg-gray-100/80 dark:bg-gray-850/50'
+											: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"
 										href={meta.href}
 										on:click={itemClickHandler}
 										draggable="false"
@@ -1371,7 +1403,7 @@
 									name={$i18n.t('Pinned')}
 								>
 									<div
-										class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900 text-gray-900 dark:text-gray-200"
+										class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900 text-gray-700 dark:text-gray-300"
 									>
 										{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
 											<ChatItem
@@ -1504,7 +1536,7 @@
 						>
 							<button
 								type="button"
-								class=" flex items-center rounded-xl py-1.5 px-1.5 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
+								class=" flex items-center rounded-xl py-1.5 px-1.5 w-full hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
 								aria-label={$i18n.t('User menu')}
 							>
 								<div class=" self-center mr-3 relative flex-shrink-0">
