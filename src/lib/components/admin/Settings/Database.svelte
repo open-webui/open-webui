@@ -15,7 +15,7 @@
 	export let saveHandler: Function;
 
 	const actionButtonClass =
-		'rounded-md px-1.5 py-0.5 text-xs text-gray-500 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-white';
+		'px-0.5 text-xs text-gray-500 underline-offset-2 transition-colors hover:text-gray-900 hover:underline dark:text-gray-500 dark:hover:text-white';
 
 	const exportAllUserChats = async () => {
 		let blob = new Blob([JSON.stringify(await getAllUserChats(localStorage.token))], {
@@ -77,42 +77,36 @@
 		/>
 
 		<div class="flex w-full flex-col gap-2.5">
-			<div class="flex items-center gap-2">
-				<div class="w-24 shrink-0 text-xs text-gray-600 dark:text-gray-400">
-					{$i18n.t('Config')}
-				</div>
-				<div class="flex flex-wrap items-center gap-1">
-					<button
-						class={actionButtonClass}
-						on:click={() => {
-							document.getElementById('config-json-input')?.click();
-						}}
-						type="button"
-					>
-						{$i18n.t('Import')}
-					</button>
+			<div class="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+				<span class="mr-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Config')}</span>
+				<button
+					class={actionButtonClass}
+					on:click={() => {
+						document.getElementById('config-json-input')?.click();
+					}}
+					type="button"
+				>
+					{$i18n.t('Import')}
+				</button>
 
-					<button
-						class={actionButtonClass}
-						on:click={async () => {
-							const config = await exportConfig(localStorage.token);
-							const blob = new Blob([JSON.stringify(config)], {
-								type: 'application/json'
-							});
-							saveAs(blob, `config-${Date.now()}.json`);
-						}}
-						type="button"
-					>
-						{$i18n.t('Export')}
-					</button>
-				</div>
+				<button
+					class={actionButtonClass}
+					on:click={async () => {
+						const config = await exportConfig(localStorage.token);
+						const blob = new Blob([JSON.stringify(config)], {
+							type: 'application/json'
+						});
+						saveAs(blob, `config-${Date.now()}.json`);
+					}}
+					type="button"
+				>
+					{$i18n.t('Export')}
+				</button>
 			</div>
 
 			{#if $config?.features.enable_admin_export ?? true}
-				<div class="flex items-center gap-2">
-					<div class="w-24 shrink-0 text-xs text-gray-600 dark:text-gray-400">
-						{$i18n.t('Database')}
-					</div>
+				<div class="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+					<span class="mr-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Export')}</span>
 					<button
 						class={actionButtonClass}
 						on:click={() => {
@@ -122,25 +116,15 @@
 						}}
 						type="button"
 					>
-						{$i18n.t('Download')}
+						{$i18n.t('Database')}
 					</button>
-				</div>
 
-				<div class="flex items-center gap-2">
-					<div class="w-24 shrink-0 text-xs text-gray-600 dark:text-gray-400">
-						{$i18n.t('All chats')}
-					</div>
 					<button class={actionButtonClass} on:click={exportAllUserChats} type="button">
-						{$i18n.t('Export')}
+						{$i18n.t('All chats')}
 					</button>
-				</div>
 
-				<div class="flex items-center gap-2">
-					<div class="w-24 shrink-0 text-xs text-gray-600 dark:text-gray-400">
-						{$i18n.t('Users')}
-					</div>
 					<button class={actionButtonClass} on:click={exportUsers} type="button">
-						{$i18n.t('Export')}
+						{$i18n.t('Users')}
 					</button>
 				</div>
 			{/if}
