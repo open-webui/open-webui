@@ -792,7 +792,7 @@
 
 {#if !$mobile && !$showSidebar}
 	<div
-		class=" pt-[7px] pb-2 px-2 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/30 dark:hover:bg-gray-950/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
+		class=" w-[42px] py-1 px-1 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/30 dark:hover:bg-gray-950/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
 		id="sidebar"
 	>
 		<button
@@ -801,18 +801,20 @@
 				showSidebar.set(!$showSidebar);
 			}}
 		>
-			<div class="pb-1.5">
+			<div class="pb-1">
 				<Tooltip
 					content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 					placement="right"
 				>
 					<button
-						class="flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group {isWindows
+						class="flex size-8.5 items-center justify-center transition group {isWindows
 							? 'cursor-pointer'
 							: 'cursor-[e-resize]'}"
 						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 					>
-						<div class=" self-center flex items-center justify-center size-9">
+						<div
+							class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100/50 dark:group-hover:bg-gray-850/50"
+						>
 							<img
 								src="{WEBUI_BASE_URL}/static/favicon.png"
 								class="sidebar-new-chat-icon size-5 rounded-full group-hover:hidden"
@@ -825,11 +827,11 @@
 				</Tooltip>
 			</div>
 
-			<div class="-mt-[0.5px]">
+			<div class="-gap-0.5">
 				<div class="">
 					<Tooltip content={$i18n.t('New Chat')} placement="right">
 						<a
-							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							class=" cursor-pointer flex size-8 items-center justify-center transition group"
 							href="/"
 							draggable="false"
 							on:click={async (e) => {
@@ -841,7 +843,9 @@
 							}}
 							aria-label={$i18n.t('New Chat')}
 						>
-							<div class=" self-center flex items-center justify-center size-9">
+							<div
+								class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100/50 dark:group-hover:bg-gray-850/50"
+							>
 								<PencilSquare className="size-4" />
 							</div>
 						</a>
@@ -851,7 +855,7 @@
 				<div>
 					<Tooltip content={$i18n.t('Search')} placement="right">
 						<button
-							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							class=" cursor-pointer flex size-8 items-center justify-center transition group"
 							on:click={(e) => {
 								e.stopImmediatePropagation();
 								e.preventDefault();
@@ -861,7 +865,9 @@
 							draggable="false"
 							aria-label={$i18n.t('Search')}
 						>
-							<div class=" self-center flex items-center justify-center size-9">
+							<div
+								class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100/50 dark:group-hover:bg-gray-850/50"
+							>
 								<Search className="size-4" />
 							</div>
 						</button>
@@ -874,7 +880,7 @@
 						<div class="">
 							<Tooltip content={$i18n.t(meta.label)} placement="right">
 								<a
-									class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+									class=" cursor-pointer flex size-8 items-center justify-center transition group"
 									href={meta.href}
 									on:click={async (e) => {
 										e.stopImmediatePropagation();
@@ -885,7 +891,9 @@
 									draggable="false"
 									aria-label={$i18n.t(meta.label)}
 								>
-									<div class=" self-center flex items-center justify-center size-9">
+									<div
+										class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100/50 dark:group-hover:bg-gray-850/50"
+									>
 										{#if itemId === 'notes'}
 											<Note className="size-4" />
 										{:else if itemId === 'workspace'}
@@ -947,15 +955,17 @@
 
 		<div>
 			<div>
-				<div class=" py-2 flex justify-center items-center">
+				<div class=" flex justify-center items-center">
 					{#if $user !== undefined && $user !== null}
 						<UserMenu role={$user?.role} profile={$config?.features?.enable_user_status ?? true}>
 							<button
 								type="button"
-								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								class=" cursor-pointer flex size-8.5 items-center justify-center transition group"
 								aria-label={$i18n.t('User menu')}
 							>
-								<div class="self-center relative">
+								<div
+									class="self-center relative flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100/50 dark:group-hover:bg-gray-850/50"
+								>
 									<img
 										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
 										class="size-5.5 object-cover rounded-full"
@@ -1035,7 +1045,7 @@
 					placement="bottom"
 				>
 					<button
-						class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition {isWindows
+						class="flex size-[30px] justify-center items-center rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition {isWindows
 							? 'cursor-pointer'
 							: 'cursor-[w-resize]'}"
 						on:click={() => {
@@ -1043,7 +1053,7 @@
 						}}
 						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 					>
-						<div class=" self-center p-1.5">
+						<div class=" self-center">
 							<Sidebar className="size-4.5" />
 						</div>
 					</button>

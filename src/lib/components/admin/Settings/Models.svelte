@@ -31,15 +31,13 @@
 	import { toast } from 'svelte-sonner';
 	import Badge from '$lib/components/common/Badge.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import ModelSettingsModal from './Models/ModelSettingsModal.svelte';
-	import Wrench from '$lib/components/icons/Wrench.svelte';
-	import Download from '$lib/components/icons/Download.svelte';
 	import ManageModelsModal from './Models/ManageModelsModal.svelte';
 	import ModelMenu from '$lib/components/admin/Settings/Models/ModelMenu.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
 	import Minus from '$lib/components/icons/Minus.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
@@ -58,6 +56,7 @@
 	let modelsImportInProgress = false;
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
+	let tagsContainerElement: HTMLDivElement;
 
 	let models = null;
 
@@ -380,316 +379,334 @@
 
 {#if models !== null}
 	{#if selectedModelId === null}
-		<div class="flex flex-col gap-1 mt-1.5 mb-2">
-			<div class="flex justify-between items-center">
-				<div
-					class="flex items-center md:self-center text-xs text-gray-400 dark:text-gray-600 px-0.5 gap-1.5 shrink-0"
-				>
-					<div>{filteredModels.length}</div>
-				</div>
+		<div class="flex h-full min-h-0 flex-col text-sm">
+			<div class="flex items-center justify-between mb-2">
+				<h2 class="text-sm font-medium text-gray-900 dark:text-white">
+					{$i18n.t('Models')}
+					<span class="ml-2 font-normal text-gray-500 dark:text-gray-500">
+						{filteredModels.length}
+					</span>
+				</h2>
 
-				<div class="flex w-full justify-end gap-1.5">
+				<div class="flex items-center gap-2">
 					{#if $user?.role === 'admin'}
-						<input
-							id="models-import-input"
-							bind:this={modelsImportInputElement}
-							bind:files={importFiles}
-							type="file"
-							accept=".json"
-							hidden
-							on:change={() => {
-								if (importFiles.length > 0) {
-									const reader = new FileReader();
-									reader.onload = async (event) => {
-										modelsImportInProgress = true;
-
-										try {
-											const models = JSON.parse(String(event.target.result));
-											const res = await importModels(localStorage.token, models);
-
-											if (res) {
-												toast.success($i18n.t('Models imported successfully'));
-												await init();
-											} else {
-												toast.error($i18n.t('Failed to import models'));
-											}
-										} catch (e) {
-											toast.error(e?.detail ?? $i18n.t('Invalid JSON file'));
-											console.error(e);
-										}
-
-										modelsImportInProgress = false;
-									};
-									reader.readAsText(importFiles[0]);
-								}
-							}}
-						/>
-
 						<button
-							class="flex text-xs items-center space-x-1 px-2.5 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 dark:text-gray-200 transition"
+							type="button"
+							class="text-[0.625rem] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-30 disabled:pointer-events-none"
 							disabled={modelsImportInProgress}
 							on:click={() => {
-								modelsImportInputElement.click();
+								modelsImportInputElement?.click();
 							}}
 						>
-							{#if modelsImportInProgress}
-								<Spinner className="size-3" />
-							{/if}
-							<div class=" self-center font-normal line-clamp-1">
-								{$i18n.t('Import')}
-							</div>
+							{$i18n.t('Import')}
 						</button>
-
 						<button
-							class="flex text-xs items-center space-x-1 px-2.5 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 dark:text-gray-200 transition"
-							on:click={async () => {
-								downloadModels(models);
+							type="button"
+							class="text-[0.625rem] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100"
+							on:click={() => {
+								downloadModels(models ?? []);
 							}}
 						>
-							<div class=" self-center font-normal line-clamp-1">
-								{$i18n.t('Export')}
-							</div>
+							{$i18n.t('Export')}
 						</button>
 					{/if}
-
 					<button
-						class="flex text-xs items-center space-x-1 px-2.5 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 dark:text-gray-200 transition"
 						type="button"
+						class="text-[0.625rem] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100"
 						on:click={() => {
 							showManageModal = true;
 						}}
 					>
-						<div class=" self-center font-normal line-clamp-1">
-							{$i18n.t('Manage')}
-						</div>
+						{$i18n.t('Manage')}
 					</button>
-
 					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black transition font-normal"
 						type="button"
+						class="text-[0.625rem] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100"
 						on:click={() => {
 							showConfigModal = true;
 						}}
 					>
-						<div class=" self-center font-normal line-clamp-1">
-							{$i18n.t('Settings')}
-						</div>
+						{$i18n.t('Settings')}
 					</button>
 				</div>
 			</div>
-		</div>
 
-		<div class="py-1">
-			<div class="flex flex-1 items-center w-full space-x-2 py-0.5 pb-2">
-				<div class="flex flex-1 items-center">
-					<div class=" self-center ml-1 mr-3">
-						<Search className="size-3.5" />
-					</div>
-					<input
-						class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={searchValue}
-						placeholder={$i18n.t('Search Models')}
-					/>
-					{#if searchValue}
-						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
-							<button
-								class="p-0.5 rounded-sm hover:bg-black/5 dark:hover:bg-white/5 transition"
-								on:click={() => {
-									searchValue = '';
-								}}
-							>
-								<XMark className="size-3" strokeWidth="2" />
-							</button>
+			{#if $user?.role === 'admin'}
+				<input
+					id="models-import-input"
+					bind:this={modelsImportInputElement}
+					bind:files={importFiles}
+					type="file"
+					accept=".json"
+					hidden
+					on:change={() => {
+						if (importFiles.length > 0) {
+							const reader = new FileReader();
+							reader.onload = async (event) => {
+								modelsImportInProgress = true;
+
+								try {
+									const models = JSON.parse(String(event.target.result));
+									const res = await importModels(localStorage.token, models);
+
+									if (res) {
+										toast.success($i18n.t('Models imported successfully'));
+										await init();
+									} else {
+										toast.error($i18n.t('Failed to import models'));
+									}
+								} catch (e) {
+									toast.error(e?.detail ?? $i18n.t('Invalid JSON file'));
+									console.error(e);
+								}
+
+								modelsImportInProgress = false;
+							};
+							reader.readAsText(importFiles[0]);
+						}
+					}}
+				/>
+			{/if}
+
+			<div class="flex min-h-0 flex-1 flex-col space-y-1">
+				<div class="flex h-8 shrink-0 items-center w-full gap-2">
+					<div class="flex min-w-0 flex-1 items-center">
+						<div class=" self-center ml-1 mr-3">
+							<Search className="size-3.5" />
 						</div>
-					{/if}
-				</div>
-			</div>
-
-			<div class="flex w-full items-center bg-transparent overflow-x-auto scrollbar-none">
-				<div
-					class="flex gap-0.5 w-fit text-center text-sm rounded-full bg-transparent whitespace-nowrap"
-				>
-					<AdminViewSelector bind:value={viewOption} />
-					{#if (tags ?? []).length > 0}
-						<TagSelector
-							bind:value={selectedTag}
-							items={tags.map((tag) => ({ value: tag, label: tag }))}
-							onChange={async () => {
-								currentPage = 1;
-								await init();
-							}}
+						<input
+							class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
+							bind:value={searchValue}
+							placeholder={$i18n.t('Search Models')}
 						/>
-					{/if}
+						{#if searchValue}
+							<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+								<button
+									class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+									aria-label={$i18n.t('Clear search')}
+									on:click={() => {
+										searchValue = '';
+									}}
+								>
+									<XMark className="size-3" strokeWidth="2" />
+								</button>
+							</div>
+						{/if}
+					</div>
+
+					<div
+						class="flex max-w-[60%] shrink-0 items-center gap-1 overflow-x-auto scrollbar-none"
+						bind:this={tagsContainerElement}
+						on:wheel={(e) => {
+							if (e.deltaY !== 0) {
+								e.preventDefault();
+								e.currentTarget.scrollLeft += e.deltaY;
+							}
+						}}
+					>
+						<div
+							class="flex w-fit gap-0.5 text-center text-sm rounded-full bg-transparent whitespace-nowrap"
+						>
+							<AdminViewSelector bind:value={viewOption} align="end" />
+
+							{#if (tags ?? []).length > 0}
+								<TagSelector
+									bind:value={selectedTag}
+									align="end"
+									items={tags.map((tag) => {
+										return { value: tag, label: tag };
+									})}
+									onChange={async () => {
+										currentPage = 1;
+										await init();
+									}}
+								/>
+							{/if}
+						</div>
+
+						<Dropdown align="end">
+							<Tooltip content={$i18n.t('Actions')}>
+								<button
+									class="flex h-8 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[13px] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
+									type="button"
+								>
+									<span>{$i18n.t('Actions')}</span>
+									<ChevronDown className="size-3" strokeWidth="2.5" />
+								</button>
+							</Tooltip>
+
+							<div slot="content">
+								<DropdownMenu className="w-[170px] shadow-sm">
+									<button
+										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
+										type="button"
+										on:click={() => {
+											enableAllHandler();
+										}}
+									>
+										<CheckCircle className="size-3.5" />
+										<div class="flex items-center">{$i18n.t('Enable All')}</div>
+									</button>
+
+									<button
+										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
+										type="button"
+										on:click={() => {
+											disableAllHandler();
+										}}
+									>
+										<Minus className="size-3.5" />
+										<div class="flex items-center">{$i18n.t('Disable All')}</div>
+									</button>
+
+									<hr class="mx-1 my-0.5 border-gray-100 dark:border-gray-800" />
+
+									<button
+										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
+										type="button"
+										on:click={() => {
+											showAllHandler();
+										}}
+									>
+										<Eye className="size-3.5" />
+										<div class="flex items-center">{$i18n.t('Show All')}</div>
+									</button>
+
+									<button
+										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
+										type="button"
+										on:click={() => {
+											hideAllHandler();
+										}}
+									>
+										<EyeSlash className="size-3.5" />
+										<div class="flex items-center">{$i18n.t('Hide All')}</div>
+									</button>
+								</DropdownMenu>
+							</div>
+						</Dropdown>
+					</div>
 				</div>
 
-				<div class="flex-1"></div>
-
-				<Dropdown>
-					<Tooltip content={$i18n.t('Actions')}>
-						<button
-							class="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
-							type="button"
-						>
-							<EllipsisHorizontal className="size-3.5" />
-						</button>
-					</Tooltip>
-
-					<div slot="content">
-						<DropdownMenu className="w-[170px]">
-							<button
-								class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
-								type="button"
-								on:click={() => {
-									enableAllHandler();
-								}}
+				<div
+					class="my-0.5 min-h-0 flex-1 space-y-px {filteredModels.length > 0
+						? 'overflow-y-auto scrollbar-hover pr-1.5'
+						: 'overflow-hidden'}"
+					id="model-list"
+				>
+					{#if filteredModels.length > 0}
+						{#each filteredModels.slice((currentPage - 1) * perPage, currentPage * perPage) as model, modelIdx (`${model.id}-${modelIdx}`)}
+							<div
+								class="flex cursor-pointer transition w-full px-2 py-1 rounded-xl hover:bg-gray-50/70 dark:hover:bg-gray-850/50 {model
+									?.meta?.hidden
+									? 'opacity-50 dark:opacity-50'
+									: ''}"
+								id="model-item-{model.id}"
 							>
-								<CheckCircle className="size-3.5" />
-								<div class="flex items-center">{$i18n.t('Enable All')}</div>
-							</button>
-
-							<button
-								class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
-								type="button"
-								on:click={() => {
-									disableAllHandler();
-								}}
-							>
-								<Minus className="size-3.5" />
-								<div class="flex items-center">{$i18n.t('Disable All')}</div>
-							</button>
-
-							<hr class="border-gray-100/20 dark:border-white/[0.02] my-1" />
-
-							<button
-								class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
-								type="button"
-								on:click={() => {
-									showAllHandler();
-								}}
-							>
-								<Eye className="size-3.5" />
-								<div class="flex items-center">{$i18n.t('Show All')}</div>
-							</button>
-
-							<button
-								class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
-								type="button"
-								on:click={() => {
-									hideAllHandler();
-								}}
-							>
-								<EyeSlash className="size-3.5" />
-								<div class="flex items-center">{$i18n.t('Hide All')}</div>
-							</button>
-						</DropdownMenu>
-					</div>
-				</Dropdown>
-			</div>
-
-			<div class="my-2" id="model-list">
-				{#if filteredModels.length > 0}
-					{#each filteredModels.slice((currentPage - 1) * perPage, currentPage * perPage) as model, modelIdx (`${model.id}-${modelIdx}`)}
-						<div
-							class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition {model
-								?.meta?.hidden
-								? 'opacity-50 dark:opacity-50'
-								: ''}"
-							id="model-item-{model.id}"
-						>
-							<button
-								class=" flex flex-1 text-left space-x-3.5 cursor-pointer w-full"
-								type="button"
-								on:click={() => {
-									selectedModelId = model.id;
-								}}
-							>
-								<div class=" self-center w-9">
-									<div
-										class=" rounded-full object-cover {(model?.is_active ?? true)
-											? ''
-											: 'opacity-50 dark:opacity-50'} "
-									>
-										<img
-											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}`}
-											alt="modelfile profile"
-											class=" rounded-full w-full h-auto object-cover"
-											on:error={(e) => {
-												e.target.src = '/favicon.png';
-											}}
-										/>
-									</div>
-								</div>
-
-								<div
-									class=" flex-1 self-center {(model?.is_active ?? true) ? '' : 'text-gray-500'}"
+								<button
+									class="flex group/item gap-2.5 w-full min-w-0 flex-1 text-left cursor-pointer"
+									type="button"
+									on:click={() => {
+										selectedModelId = model.id;
+									}}
 								>
-									<Tooltip
-										content={marked.parse(
-											!!model?.meta?.description
-												? model?.meta?.description
-												: model?.ollama?.digest
-													? `${model?.ollama?.digest} **(${model?.ollama?.modified_at})**`
-													: model.id
-										)}
-										className=" w-fit"
-										placement="top-start"
-									>
-										<div class="font-normal line-clamp-1 flex items-center gap-2">
-											{model.name}
-
-											<Badge
-												type={(model?.access_grants ?? []).some(
-													(g) =>
-														g.principal_type === 'user' &&
-														g.principal_id === '*' &&
-														g.permission === 'read'
-												)
-													? 'success'
-													: 'muted'}
-												content={(model?.access_grants ?? []).some(
-													(g) =>
-														g.principal_type === 'user' &&
-														g.principal_id === '*' &&
-														g.permission === 'read'
-												)
-													? $i18n.t('Public')
-													: $i18n.t('Private')}
-											/>
+									<div class="self-center">
+										<div class="flex bg-white rounded-xl">
+											<div
+												class="{(model?.is_active ?? true)
+													? ''
+													: 'opacity-50 dark:opacity-50'} bg-transparent rounded-xl"
+											>
+												<img
+													src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
+													alt="modelfile profile"
+													class=" rounded-xl size-8 object-cover"
+													loading="lazy"
+													decoding="async"
+													on:error={(e) => {
+														e.target.src = '/favicon.png';
+													}}
+												/>
+											</div>
 										</div>
-									</Tooltip>
-									<div
-										class=" text-xs overflow-hidden text-ellipsis line-clamp-1 flex items-center gap-1 text-gray-500"
-									>
-										<span class=" line-clamp-1">
-											{!!model?.meta?.description
-												? model?.meta?.description
-												: model?.ollama?.digest
-													? `${model.id} (${model?.ollama?.digest})`
-													: model.id}
-										</span>
 									</div>
-								</div>
-							</button>
-							<div class="flex flex-row gap-0.5 items-center self-center">
-								{#if shiftKey}
-									<Tooltip content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}>
-										<button
-											class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-											type="button"
-											on:click={() => {
-												hideModelHandler(model);
-											}}
+
+									<div
+										class="shrink-0 flex w-full min-w-0 flex-1 pr-1 self-center {(model?.is_active ??
+										true)
+											? ''
+											: 'text-gray-500'}"
+									>
+										<Tooltip
+											content={marked.parse(
+												!!model?.meta?.description
+													? model?.meta?.description
+													: model?.ollama?.digest
+														? `${model?.ollama?.digest} **(${model?.ollama?.modified_at})**`
+														: model.id
+											)}
+											className=" w-fit"
+											placement="top-start"
 										>
-											{#if model?.meta?.hidden}
-												<EyeSlash />
-											{:else}
-												<Eye />
-											{/if}
-										</button>
-									</Tooltip>
-								{:else}
+											<div
+												class="text-[13px] leading-4 font-normal line-clamp-1 flex items-center gap-1.5"
+											>
+												{model.name}
+
+												<Badge
+													type={(model?.access_grants ?? []).some(
+														(g) =>
+															g.principal_type === 'user' &&
+															g.principal_id === '*' &&
+															g.permission === 'read'
+													)
+														? 'success'
+														: 'muted'}
+													content={(model?.access_grants ?? []).some(
+														(g) =>
+															g.principal_type === 'user' &&
+															g.principal_id === '*' &&
+															g.permission === 'read'
+													)
+														? $i18n.t('Public')
+														: $i18n.t('Private')}
+												/>
+											</div>
+										</Tooltip>
+										<div
+											class="text-[11px] leading-3 overflow-hidden text-ellipsis line-clamp-1 flex items-center gap-1 text-gray-500"
+										>
+											<span class=" line-clamp-1">
+												{!!model?.meta?.description
+													? model?.meta?.description
+													: model?.ollama?.digest
+														? `${model.id} (${model?.ollama?.digest})`
+														: model.id}
+											</span>
+										</div>
+									</div>
+								</button>
+								<div class="flex flex-row gap-0.5 items-center self-center">
+									{#if shiftKey}
+										<Tooltip content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}>
+											<button
+												class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+												type="button"
+												on:click={() => {
+													hideModelHandler(model);
+												}}
+											>
+												{#if model?.meta?.hidden}
+													<EyeSlash />
+												{:else}
+													<Eye />
+												{/if}
+											</button>
+										</Tooltip>
+									{/if}
+
 									<button
-										class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 										type="button"
 										on:click={() => {
 											selectedModelId = model.id;
@@ -753,28 +770,28 @@
 											/>
 										</Tooltip>
 									</div>
-								{/if}
+								</div>
+							</div>
+						{/each}
+					{:else}
+						<div class="flex h-full w-full items-center justify-center py-10">
+							<div class="max-w-md text-center">
+								<div class="mb-2 text-xl">😕</div>
+								<div class="mb-1 text-sm text-gray-700 dark:text-gray-300">
+									{$i18n.t('No models found')}
+								</div>
+								<div class=" text-gray-500 text-center text-xs">
+									{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
+								</div>
 							</div>
 						</div>
-					{/each}
-				{:else}
-					<div class=" w-full h-full flex flex-col justify-center items-center my-16 mb-24">
-						<div class="max-w-md text-center">
-							<div class="mb-2 text-xl">😕</div>
-							<div class="mb-1 text-sm text-gray-700 dark:text-gray-300">
-								{$i18n.t('No models found')}
-							</div>
-							<div class=" text-gray-500 text-center text-xs">
-								{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
-							</div>
-						</div>
-					</div>
+					{/if}
+				</div>
+
+				{#if filteredModels.length > perPage}
+					<Pagination bind:page={currentPage} count={filteredModels.length} {perPage} />
 				{/if}
 			</div>
-
-			{#if filteredModels.length > perPage}
-				<Pagination bind:page={currentPage} count={filteredModels.length} {perPage} />
-			{/if}
 		</div>
 	{:else}
 		<ModelEditor
