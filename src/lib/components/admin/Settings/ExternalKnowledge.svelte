@@ -460,7 +460,7 @@
 								<div class="flex flex-1 items-center">
 									<select
 										id="external-source-provider"
-										class="w-full text-sm bg-transparent outline-hidden"
+										class="w-full rounded-lg border border-gray-100/50 !bg-gray-50/40 px-2 py-1.5 text-sm text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 										bind:value={sourceForm.provider}
 										on:change={updateProvider}
 									>

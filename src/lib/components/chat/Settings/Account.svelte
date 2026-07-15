@@ -17,6 +17,7 @@
 	import UserProfileImage from './Account/UserProfileImage.svelte';
 	import UserSettingField from './UserSettingField.svelte';
 	import UserSettingRow from './UserSettingRow.svelte';
+	import UserSettingSelect from './UserSettingSelect.svelte';
 	import UserSettingSection from './UserSettingSection.svelte';
 
 	const i18n = getContext('i18n');
@@ -171,10 +172,10 @@
 				label={$i18n.t('Gender')}
 				description={$i18n.t('Choose the gender value stored on your profile.')}
 			>
-				<select
-					class={inputClass}
+				<UserSettingSelect
+					className="w-full"
 					bind:value={_gender}
-					aria-label={$i18n.t('Gender')}
+					ariaLabel={$i18n.t('Gender')}
 					on:change={(e) => {
 						console.log(_gender);
 
@@ -190,7 +191,7 @@
 					<option value="male">{$i18n.t('Male')}</option>
 					<option value="female">{$i18n.t('Female')}</option>
 					<option value="custom">{$i18n.t('Custom')}</option>
-				</select>
+				</UserSettingSelect>
 
 				{#if _gender === 'custom'}
 					<input

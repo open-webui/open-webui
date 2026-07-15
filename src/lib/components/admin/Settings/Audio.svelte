@@ -267,7 +267,7 @@
 					</div>
 					<div class="flex items-center relative">
 						<select
-							class="cursor-pointer w-fit pr-8 rounded-lg px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+							class="cursor-pointer w-fit pr-8 rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 							bind:value={STT_ENGINE}
 							placeholder={$i18n.t('Select an engine')}
 						>
@@ -285,7 +285,7 @@
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
 							<input
-								class="flex-1 w-full bg-transparent outline-hidden"
+								class="flex-1 w-full border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 								placeholder={$i18n.t('API Base URL')}
 								bind:value={STT_OPENAI_API_BASE_URL}
 								required
@@ -301,7 +301,7 @@
 						</div>
 						<div class="flex items-center relative">
 							<select
-								class="cursor-pointer w-fit pr-8 rounded-lg px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+								class="cursor-pointer w-fit pr-8 rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 								bind:value={STT_OPENAI_API_REQUEST_FORMAT}
 							>
 								<option value="multipart">{$i18n.t('Multipart Upload')}</option>
@@ -434,7 +434,7 @@
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
 							<input
-								class="flex-1 w-full bg-transparent outline-hidden"
+								class="flex-1 w-full border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 								placeholder={$i18n.t('API Base URL')}
 								bind:value={STT_MISTRAL_API_BASE_URL}
 								required
@@ -563,7 +563,7 @@
 					</div>
 					<div class="flex items-center relative">
 						<select
-							class="w-fit pr-8 cursor-pointer rounded-lg px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+							class="w-fit pr-8 cursor-pointer rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 							bind:value={TTS_ENGINE}
 							placeholder={$i18n.t('Select a mode')}
 							on:change={async (e) => {
@@ -597,7 +597,7 @@
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
 							<input
-								class="flex-1 w-full bg-transparent outline-hidden"
+								class="flex-1 w-full border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 								placeholder={$i18n.t('API Base URL')}
 								bind:value={TTS_OPENAI_API_BASE_URL}
 								required
@@ -652,7 +652,7 @@
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
 							<input
-								class="flex-1 w-full bg-transparent outline-hidden"
+								class="flex-1 w-full border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 								placeholder={$i18n.t('API Base URL')}
 								bind:value={TTS_MISTRAL_API_BASE_URL}
 								required
@@ -913,7 +913,7 @@
 					</div>
 					<div class="flex items-center relative">
 						<select
-							class="w-fit pr-8 cursor-pointer rounded-lg px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+							class="w-fit pr-8 cursor-pointer rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 							aria-label={$i18n.t('Select how to split message text for TTS requests')}
 							bind:value={TTS_SPLIT_ON}
 						>

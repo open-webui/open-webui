@@ -25,7 +25,7 @@
 	const inlineInputClass =
 		'w-fit h-7 rounded-lg border border-transparent bg-transparent px-2 text-xs text-gray-600 outline-hidden transition-colors hover:bg-black/5 focus:border-blue-400 dark:text-gray-400 dark:hover:bg-white/5 dark:focus:border-blue-500';
 	const selectClass =
-		'cursor-pointer bg-transparent text-xs text-gray-600 outline-hidden dark:text-gray-400';
+		'h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 pe-8 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
 
 	const submitHandler = async () => {
 		const res = await setCodeExecutionConfig(localStorage.token, config);

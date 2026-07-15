@@ -60,7 +60,7 @@
 
 			<div class="flex flex-row flex-1 gap-2 items-start">
 				<select
-					class="w-fit capitalize rounded-xl text-xs bg-transparent outline-hidden pl-1 pr-5"
+					class="w-fit capitalize rounded-xl text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 pl-1 pr-5"
 					bind:value={banner.type}
 					required
 				>
@@ -72,7 +72,7 @@
 				</select>
 
 				<Textarea
-					className="mr-2 text-xs w-full bg-transparent outline-hidden resize-none"
+					className="mr-2 text-xs w-full border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 resize-none"
 					placeholder={$i18n.t('Content')}
 					bind:value={banner.content}
 					maxSize={100}

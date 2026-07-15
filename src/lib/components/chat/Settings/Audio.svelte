@@ -10,6 +10,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import UserSettingField from './UserSettingField.svelte';
 	import UserSettingRow from './UserSettingRow.svelte';
+	import UserSettingSelect from './UserSettingSelect.svelte';
 	import UserSettingSection from './UserSettingSection.svelte';
 	const dispatch = createEventDispatcher();
 
@@ -40,8 +41,6 @@
 	let playbackRate = 1;
 	const inputClass =
 		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
-	const selectClass =
-		'h-7 w-fit min-w-28 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-right text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
 	const actionButtonClass =
 		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
@@ -193,15 +192,14 @@
 					label={$i18n.t('Speech-to-Text Engine')}
 					description={$i18n.t('Choose the engine used to transcribe voice input.')}
 				>
-					<select
-						class={selectClass}
+					<UserSettingSelect
 						bind:value={STTEngine}
-						aria-label={$i18n.t('Speech-to-Text Engine')}
+						ariaLabel={$i18n.t('Speech-to-Text Engine')}
 						placeholder={$i18n.t('Select an engine')}
 					>
 						<option value="">{$i18n.t('Default')}</option>
 						<option value="web">{$i18n.t('Web API')}</option>
-					</select>
+					</UserSettingSelect>
 				</UserSettingRow>
 
 				<UserSettingRow
@@ -252,15 +250,14 @@
 				label={$i18n.t('Text-to-Speech Engine')}
 				description={$i18n.t('Choose the engine used to read assistant responses aloud.')}
 			>
-				<select
-					class={selectClass}
+				<UserSettingSelect
 					bind:value={TTSEngine}
-					aria-label={$i18n.t('Text-to-Speech Engine')}
+					ariaLabel={$i18n.t('Text-to-Speech Engine')}
 					placeholder={$i18n.t('Select an engine')}
 				>
 					<option value="">{$i18n.t('Default')}</option>
 					<option value="browser-kokoro">{$i18n.t('Kokoro.js (Browser)')}</option>
-				</select>
+				</UserSettingSelect>
 			</UserSettingRow>
 
 			{#if TTSEngine === 'browser-kokoro'}
@@ -268,10 +265,9 @@
 					label={$i18n.t('Kokoro.js Dtype')}
 					description={$i18n.t('Select the local model precision used by Kokoro.js.')}
 				>
-					<select
-						class={selectClass}
+					<UserSettingSelect
 						bind:value={TTSEngineConfig.dtype}
-						aria-label={$i18n.t('Kokoro.js Dtype')}
+						ariaLabel={$i18n.t('Kokoro.js Dtype')}
 						placeholder={$i18n.t('Select dtype')}
 					>
 						<option value="" disabled selected>{$i18n.t('Select dtype')}</option>
@@ -279,7 +275,7 @@
 						<option value="fp16">fp16</option>
 						<option value="q8">q8</option>
 						<option value="q4">q4</option>
-					</select>
+					</UserSettingSelect>
 				</UserSettingRow>
 			{/if}
 
@@ -364,7 +360,7 @@
 					label={$i18n.t('Set Voice')}
 					description={$i18n.t('Choose the browser voice used for speech output.')}
 				>
-					<select class={inputClass} bind:value={voice} aria-label={$i18n.t('Voice')}>
+					<UserSettingSelect className="w-full" bind:value={voice} ariaLabel={$i18n.t('Voice')}>
 						<option value="" selected={voice !== ''}>{$i18n.t('Default')}</option>
 						{#each voices.filter((v) => nonLocalVoices || v.localService === true) as _voice}
 							<option
@@ -373,7 +369,7 @@
 								selected={voice === _voice.name}>{_voice.name}</option
 							>
 						{/each}
-					</select>
+					</UserSettingSelect>
 				</UserSettingField>
 				<UserSettingRow
 					label={$i18n.t('Allow non-local voices')}

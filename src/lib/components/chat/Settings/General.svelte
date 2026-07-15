@@ -13,6 +13,7 @@
 	import UserSettingField from './UserSettingField.svelte';
 	import UserSettingRow from './UserSettingRow.svelte';
 	import UserSettingSection from './UserSettingSection.svelte';
+	import UserSettingSelect from './UserSettingSelect.svelte';
 	export let saveSettings: Function;
 	export let getModels: Function;
 
@@ -29,8 +30,6 @@
 
 	const systemPromptTextareaClass =
 		'w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
-	const selectClass =
-		'h-7 w-fit min-w-28 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-right text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
 	const actionButtonClass =
 		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
@@ -224,9 +223,9 @@
 				label={$i18n.t('Theme')}
 				description={$i18n.t('Choose the color theme used by the interface.')}
 			>
-				<select
-					class={selectClass}
+				<UserSettingSelect
 					bind:value={selectedTheme}
+					ariaLabel={$i18n.t('Theme')}
 					placeholder={$i18n.t('Select a theme')}
 					on:change={() => themeChangeHandler(selectedTheme)}
 				>
@@ -237,16 +236,17 @@
 					{#if $config?.features?.enable_easter_eggs}
 						<option value="her">🌷 Her</option>
 					{/if}
-				</select>
+				</UserSettingSelect>
 			</UserSettingRow>
 
 			<UserSettingRow
 				label={$i18n.t('Language')}
 				description={$i18n.t('Choose the language used for interface text.')}
 			>
-				<select
-					class={selectClass}
+				<UserSettingSelect
 					bind:value={lang}
+					ariaLabel={$i18n.t('Language')}
+					className="w-48"
 					placeholder={$i18n.t('Select a language')}
 					on:change={(e) => {
 						changeLanguage(lang);
@@ -255,7 +255,7 @@
 					{#each languages as language}
 						<option value={language['code']}>{language['title']}</option>
 					{/each}
-				</select>
+				</UserSettingSelect>
 			</UserSettingRow>
 			{#if $i18n.language === 'en-US' && !($config?.license_metadata ?? false)}
 				<div class="-mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">

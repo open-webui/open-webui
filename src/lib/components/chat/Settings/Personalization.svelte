@@ -16,7 +16,9 @@
 	import UserSettingSection from './UserSettingSection.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
 	import Trash from '$lib/components/icons/Trash.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -34,8 +36,6 @@
 	let showClearConfirmDialog = false;
 	let showDeleteConfirm = false;
 	let query = '';
-	const inputClass =
-		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const actionButtonClass =
 		'shrink-0 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
@@ -145,54 +145,13 @@
 
 			{#if enableMemory}
 				<div>
-					<div class="mb-2 flex items-center justify-between">
+					<div class="mb-1 flex items-center">
 						<div class="text-xs text-gray-600 dark:text-gray-400">
 							{$i18n.t('Saved Memories')}
 							{#if !loadingMemories}
 								<span class="ml-1 text-gray-400 dark:text-gray-600">{memories.length}</span>
 							{/if}
 						</div>
-
-						<Dropdown align="end">
-							<Tooltip content={$i18n.t('Actions')}>
-								<button
-									class="flex h-7 items-center gap-1.5 rounded-lg bg-transparent px-1.5 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
-									type="button"
-								>
-									<span>{$i18n.t('Actions')}</span>
-									<ChevronDown className="size-3" strokeWidth="2.5" />
-								</button>
-							</Tooltip>
-
-							<div slot="content">
-								<DropdownMenu className="w-[170px] shadow-sm">
-									<button
-										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
-										disabled={loadingMemories}
-										type="button"
-										on:click={() => {
-											selectedMemory = null;
-											showMemoryModal = true;
-										}}
-									>
-										<Plus className="size-3.5 shrink-0" strokeWidth="1.5" />
-										<div class="min-w-0 flex-1 truncate text-left">{$i18n.t('Add Memory')}</div>
-									</button>
-
-									<button
-										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
-										disabled={loadingMemories || memories.length === 0}
-										type="button"
-										on:click={() => {
-											showClearConfirmDialog = true;
-										}}
-									>
-										<Trash className="size-3.5 shrink-0" strokeWidth="1.5" />
-										<div class="min-w-0 flex-1 truncate text-left">{$i18n.t('Clear memory')}</div>
-									</button>
-								</DropdownMenu>
-							</div>
-						</Dropdown>
 					</div>
 
 					{#if loadingMemories}
@@ -200,28 +159,76 @@
 							<Spinner className="size-4" />
 						</div>
 					{:else}
-						{#if memories.length > 0}
-							<div class="mb-2 flex items-center gap-2">
-								<input
-									class={inputClass}
-									bind:value={query}
-									placeholder={$i18n.t('Search Memories')}
-									maxlength="500"
-								/>
+						<div class="mb-2 flex min-w-0 items-center justify-between gap-3">
+							{#if memories.length > 0}
+								<div class="flex min-w-0 flex-1 items-center gap-2">
+									<Search className="size-3.5 shrink-0 text-gray-400 dark:text-gray-600" />
+									<input
+										data-settings-search
+										class="min-w-0 flex-1 bg-transparent py-0.5 text-xs text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+										bind:value={query}
+										placeholder={$i18n.t('Search Memories')}
+										maxlength="500"
+									/>
+									{#if query}
+										<div class="shrink-0">
+											<button
+												class="rounded-lg p-0.5 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+												type="button"
+												aria-label={$i18n.t('Clear search')}
+												on:click={() => {
+													query = '';
+												}}
+											>
+												<XMark className="size-3" strokeWidth="2" />
+											</button>
+										</div>
+									{/if}
+								</div>
+							{:else}
+								<div class="min-w-0 flex-1"></div>
+							{/if}
 
-								{#if query}
+							<Dropdown align="end">
+								<Tooltip content={$i18n.t('Actions')}>
 									<button
+										class="flex h-7 items-center gap-1.5 rounded-lg bg-transparent px-1.5 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
 										type="button"
-										class={actionButtonClass}
-										on:click={() => {
-											query = '';
-										}}
 									>
-										{$i18n.t('Clear')}
+										<span>{$i18n.t('Actions')}</span>
+										<ChevronDown className="size-3" strokeWidth="2.5" />
 									</button>
-								{/if}
-							</div>
-						{/if}
+								</Tooltip>
+
+								<div slot="content">
+									<DropdownMenu className="w-[170px] shadow-sm">
+										<button
+											class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
+											type="button"
+											on:click={() => {
+												selectedMemory = null;
+												showMemoryModal = true;
+											}}
+										>
+											<Plus className="size-3.5 shrink-0" strokeWidth="1.5" />
+											<div class="min-w-0 flex-1 truncate text-left">{$i18n.t('Add Memory')}</div>
+										</button>
+
+										<button
+											class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
+											disabled={memories.length === 0}
+											type="button"
+											on:click={() => {
+												showClearConfirmDialog = true;
+											}}
+										>
+											<Trash className="size-3.5 shrink-0" strokeWidth="1.5" />
+											<div class="min-w-0 flex-1 truncate text-left">{$i18n.t('Clear memory')}</div>
+										</button>
+									</DropdownMenu>
+								</div>
+							</Dropdown>
+						</div>
 
 						{#if sortedMemories.length === 0}
 							<div class="min-h-16 text-[0.6875rem] text-gray-400 dark:text-gray-600">

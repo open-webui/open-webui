@@ -387,7 +387,7 @@
 							</div>
 							<div class="">
 								<select
-									class="w-fit pr-8 rounded-lg px-2 text-xs bg-transparent outline-hidden text-right"
+									class="w-fit pr-8 rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 									bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
 								>
 									<option value="">{$i18n.t('Default')}</option>
@@ -429,7 +429,7 @@
 									</div>
 									<div class="">
 										<select
-											class="w-fit pr-8 rounded-lg px-2 text-xs bg-transparent outline-hidden text-right"
+											class="w-fit pr-8 rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 											bind:value={RAGConfig.PDF_LOADER_MODE}
 										>
 											<option value="page">{$i18n.t('Page')}</option>
@@ -448,7 +448,7 @@
 									className="w-full"
 								>
 									<input
-										class="flex-1 w-full text-xs bg-transparent outline-hidden"
+										class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 										placeholder={$i18n.t('Enter Datalab Marker API Base URL')}
 										bind:value={RAGConfig.DATALAB_MARKER_API_BASE_URL}
 									/>
@@ -601,7 +601,7 @@
 								</div>
 								<div class="">
 									<select
-										class="w-fit pr-8 rounded-lg px-2 text-xs bg-transparent outline-hidden text-right"
+										class="w-fit pr-8 rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 										bind:value={RAGConfig.DATALAB_MARKER_OUTPUT_FORMAT}
 									>
 										<option value="markdown">{$i18n.t('Markdown')}</option>
@@ -614,7 +614,7 @@
 							<div class="my-0.5 flex flex-col gap-2 pr-2">
 								<div class="flex gap-2">
 									<input
-										class="flex-1 w-full text-xs bg-transparent outline-hidden"
+										class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 										placeholder={$i18n.t('Enter External Document Loader URL')}
 										bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_URL}
 									/>
@@ -688,7 +688,7 @@
 							<div class="flex w-full mt-1">
 								<div class="flex-1 mr-2">
 									<input
-										class="flex-1 w-full text-xs bg-transparent outline-hidden"
+										class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 										placeholder={$i18n.t('Enter Tika Server URL')}
 										bind:value={RAGConfig.TIKA_SERVER_URL}
 									/>
@@ -697,7 +697,7 @@
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<input
-									class="flex-1 w-full text-xs bg-transparent outline-hidden"
+									class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 									placeholder={$i18n.t('Enter Docling Server URL')}
 									bind:value={RAGConfig.DOCLING_SERVER_URL}
 								/>
@@ -726,7 +726,7 @@
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<input
-									class="flex-1 w-full text-xs bg-transparent outline-hidden"
+									class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 									placeholder={$i18n.t('Enter Document Intelligence Endpoint')}
 									bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT}
 								/>
@@ -743,7 +743,7 @@
 								<div class="flex w-full">
 									<div class="flex-1 mr-2">
 										<input
-											class="flex-1 w-full text-xs bg-transparent outline-hidden"
+											class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 											placeholder={$i18n.t('Enter Document Intelligence Model')}
 											bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_MODEL}
 										/>
@@ -753,7 +753,7 @@
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<input
-									class="flex-1 w-full text-xs bg-transparent outline-hidden"
+									class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 									placeholder={$i18n.t('Enter Mistral API Base URL')}
 									bind:value={RAGConfig.MISTRAL_OCR_API_BASE_URL}
 								/>
@@ -780,7 +780,7 @@
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'paddleocr_vl'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<input
-									class="flex-1 w-full text-xs bg-transparent outline-hidden"
+									class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 									placeholder={$i18n.t('Enter PaddleOCR-vl API Base URL')}
 									bind:value={RAGConfig.PADDLEOCR_VL_BASE_URL}
 								/>
@@ -798,7 +798,7 @@
 										{$i18n.t('API Mode')}
 									</div>
 									<select
-										class="w-fit pr-8 rounded-lg px-2 text-xs bg-transparent outline-hidden"
+										class="w-fit pr-8 rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 										bind:value={RAGConfig.MINERU_API_MODE}
 										on:change={() => {
 											// Auto-update URL when switching modes if it's empty or matches the opposite mode's default
@@ -825,7 +825,7 @@
 							<!-- API URL -->
 							<div class="flex w-full mt-2">
 								<input
-									class="flex-1 w-full text-xs bg-transparent outline-hidden"
+									class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 									placeholder={RAGConfig.MINERU_API_MODE === 'cloud'
 										? $i18n.t('https://mineru.net/api/v4')
 										: $i18n.t('http://localhost:8000')}
@@ -846,7 +846,7 @@
 										{$i18n.t('API Timeout')}
 									</div>
 									<input
-										class="w-16 text-xs bg-transparent outline-hidden text-right"
+										class="w-16 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 										type="number"
 										min="1"
 										bind:value={RAGConfig.MINERU_API_TIMEOUT}
@@ -890,7 +890,7 @@
 									</Tooltip>
 								</div>
 								<input
-									class="flex-1 w-full text-xs bg-transparent outline-hidden"
+									class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 									placeholder={$i18n.t('pdf, docx, pptx, xlsx')}
 									bind:value={RAGConfig.MINERU_FILE_EXTENSIONS}
 								/>
@@ -926,7 +926,7 @@
 							</div>
 							<div class="flex items-center relative">
 								<select
-									class="w-fit pr-8 rounded-lg px-2 text-xs bg-transparent outline-hidden text-right"
+									class="w-fit pr-8 rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 									bind:value={RAGConfig.TEXT_SPLITTER}
 								>
 									<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
@@ -1056,7 +1056,7 @@
 								</div>
 								<div class="flex items-center relative">
 									<select
-										class="w-fit pr-8 rounded-lg px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+										class="w-fit pr-8 rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 										bind:value={RAG_EMBEDDING_ENGINE}
 										placeholder={$i18n.t('Select an embedding model engine')}
 										on:change={(e) => {
@@ -1082,7 +1082,7 @@
 							{#if RAG_EMBEDDING_ENGINE === 'openai'}
 								<div class="my-0.5 flex gap-2 pr-2">
 									<input
-										class="flex-1 w-full text-xs bg-transparent outline-hidden"
+										class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 										placeholder={$i18n.t('API Base URL')}
 										bind:value={OpenAIUrl}
 										required
@@ -1097,7 +1097,7 @@
 							{:else if RAG_EMBEDDING_ENGINE === 'ollama'}
 								<div class="my-0.5 flex gap-2 pr-2">
 									<input
-										class="flex-1 w-full text-xs bg-transparent outline-hidden"
+										class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 										placeholder={$i18n.t('API Base URL')}
 										bind:value={OllamaUrl}
 										required
@@ -1113,7 +1113,7 @@
 								<div class="my-0.5 flex flex-col gap-2 pr-2 w-full">
 									<div class="flex gap-2">
 										<input
-											class="flex-1 w-full text-xs bg-transparent outline-hidden"
+											class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 											placeholder={$i18n.t('API Base URL')}
 											bind:value={AzureOpenAIUrl}
 											required
@@ -1122,7 +1122,7 @@
 									</div>
 									<div class="flex gap-2">
 										<input
-											class="flex-1 w-full text-xs bg-transparent outline-hidden"
+											class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 											placeholder={$i18n.t('Version')}
 											bind:value={AzureOpenAIVersion}
 											required
@@ -1142,7 +1142,7 @@
 									<div class="flex w-full">
 										<div class="flex-1 mr-2">
 											<input
-												class="flex-1 w-full text-xs bg-transparent outline-hidden"
+												class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 												bind:value={RAG_EMBEDDING_MODEL}
 												placeholder={$i18n.t('Set embedding model')}
 												required
@@ -1153,7 +1153,7 @@
 									<div class="flex w-full">
 										<div class="flex-1 mr-2">
 											<input
-												class="flex-1 w-full text-xs bg-transparent outline-hidden"
+												class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 												placeholder={$i18n.t('Set embedding model (e.g. {{model}})', {
 													model: RAG_EMBEDDING_MODEL.slice(-40)
 												})}
@@ -1318,7 +1318,7 @@
 										</div>
 										<div class="flex items-center relative">
 											<select
-												class="w-fit pr-8 rounded-lg px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+												class="w-fit pr-8 rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 												bind:value={RAGConfig.RAG_RERANKING_ENGINE}
 												placeholder={$i18n.t('Select a reranking model engine')}
 												on:change={(e) => {
@@ -1338,7 +1338,7 @@
 									{#if RAGConfig.RAG_RERANKING_ENGINE === 'external'}
 										<div class="my-0.5 flex gap-2 pr-2">
 											<input
-												class="flex-1 w-full text-xs bg-transparent outline-hidden"
+												class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 												placeholder={$i18n.t('API Base URL')}
 												bind:value={RAGConfig.RAG_EXTERNAL_RERANKER_URL}
 												required
@@ -1362,7 +1362,7 @@
 										<div class="flex w-full">
 											<div class="flex-1 mr-2">
 												<input
-													class="flex-1 w-full text-xs bg-transparent outline-hidden"
+													class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 													placeholder={$i18n.t('Set reranking model (e.g. {{model}})', {
 														model: 'BAAI/bge-reranker-v2-m3'
 													})}
@@ -1397,7 +1397,7 @@
 								</div>
 								<div class="flex items-center relative">
 									<input
-										class="flex-1 w-full text-xs bg-transparent outline-hidden"
+										class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 										type="number"
 										placeholder={$i18n.t('Enter Top K')}
 										bind:value={RAGConfig.TOP_K}
@@ -1414,7 +1414,7 @@
 									</div>
 									<div class="flex items-center relative">
 										<input
-											class="flex-1 w-full text-xs bg-transparent outline-hidden"
+											class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 											type="number"
 											placeholder={$i18n.t('Enter Top K Reranker')}
 											bind:value={RAGConfig.TOP_K_RERANKER}
@@ -1433,7 +1433,7 @@
 										</div>
 										<div class="flex items-center relative">
 											<input
-												class="flex-1 w-full text-xs bg-transparent outline-hidden"
+												class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 												type="number"
 												step="0.01"
 												placeholder={$i18n.t('Enter Score')}
@@ -1572,7 +1572,7 @@
 								placement="top-start"
 							>
 								<input
-									class="flex-1 w-full text-xs bg-transparent outline-hidden"
+									class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 									type="text"
 									placeholder={$i18n.t('e.g. pdf, docx, txt')}
 									bind:value={RAGConfig.ALLOWED_FILE_EXTENSIONS}
@@ -1594,7 +1594,7 @@
 								placement="top-start"
 							>
 								<input
-									class="flex-1 w-full text-xs bg-transparent outline-hidden"
+									class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 									type="number"
 									placeholder={$i18n.t('Leave empty for unlimited')}
 									bind:value={RAGConfig.FILE_MAX_SIZE}
@@ -1617,7 +1617,7 @@
 								placement="top-start"
 							>
 								<input
-									class="flex-1 w-full text-xs bg-transparent outline-hidden"
+									class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 									type="number"
 									placeholder={$i18n.t('Leave empty for unlimited')}
 									bind:value={RAGConfig.FILE_MAX_COUNT}
@@ -1640,7 +1640,7 @@
 								placement="top-start"
 							>
 								<input
-									class="flex-1 w-full text-xs bg-transparent outline-hidden"
+									class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 									type="number"
 									placeholder={$i18n.t('Leave empty for no compression')}
 									bind:value={RAGConfig.FILE_IMAGE_COMPRESSION_WIDTH}
@@ -1663,7 +1663,7 @@
 								placement="top-start"
 							>
 								<input
-									class="flex-1 w-full text-xs bg-transparent outline-hidden"
+									class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 									type="number"
 									placeholder={$i18n.t('Leave empty for no compression')}
 									bind:value={RAGConfig.FILE_IMAGE_COMPRESSION_HEIGHT}

@@ -455,7 +455,7 @@
 							{$i18n.t('Send events for')}
 						</div>
 						<select
-							class="text-xs bg-transparent outline-hidden text-gray-700 dark:text-gray-300"
+							class="rounded-lg border border-gray-100/50 !bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 							bind:value={targetMode}
 						>
 							<option value="all">{$i18n.t('All users and system events')}</option>

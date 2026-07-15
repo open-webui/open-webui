@@ -325,7 +325,7 @@
 								<Tooltip content={$i18n.t('Enter Model ID')} placement="top-start">
 									<input
 										list="model-list"
-										class=" text-right text-xs bg-transparent outline-hidden max-w-full w-52"
+										class=" text-right text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 max-w-full w-52"
 										bind:value={config.IMAGE_GENERATION_MODEL}
 										placeholder={$i18n.t('Select a model')}
 										required
@@ -350,7 +350,7 @@
 
 								<Tooltip content={$i18n.t('Enter Image Size (e.g. 512x512)')} placement="top-start">
 									<input
-										class="  text-right text-xs bg-transparent outline-hidden max-w-full w-52"
+										class="  text-right text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 max-w-full w-52"
 										placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
 										bind:value={config.IMAGE_SIZE}
 									/>
@@ -372,7 +372,7 @@
 										placement="top-start"
 									>
 										<input
-											class=" text-right text-xs bg-transparent outline-hidden"
+											class=" text-right text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 											placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
 											bind:value={config.IMAGE_STEPS}
 											required
@@ -404,7 +404,7 @@
 							</div>
 
 							<select
-								class="w-fit pr-8 cursor-pointer rounded-lg px-2 text-xs bg-transparent outline-hidden text-right"
+								class="w-fit pr-8 cursor-pointer rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 								bind:value={config.IMAGE_GENERATION_ENGINE}
 								placeholder={$i18n.t('Select Engine')}
 							>
@@ -428,7 +428,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
-											class="w-full text-xs bg-transparent outline-hidden text-right"
+											class="w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 											placeholder={$i18n.t('API Base URL')}
 											bind:value={config.IMAGES_OPENAI_API_BASE_URL}
 										/>
@@ -469,7 +469,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
-											class="w-full text-xs bg-transparent outline-hidden text-right"
+											class="w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 											placeholder={$i18n.t('API Version')}
 											bind:value={config.IMAGES_OPENAI_API_VERSION}
 										/>
@@ -509,7 +509,7 @@
 								<div class="flex w-full">
 									<div class="flex-1 mr-2">
 										<input
-											class="w-full text-xs bg-transparent outline-hidden text-right"
+											class="w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 											placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
 											bind:value={config.AUTOMATIC1111_BASE_URL}
 										/>
@@ -623,7 +623,7 @@
 								<div class="flex w-full">
 									<div class="flex-1 mr-2">
 										<input
-											class="w-full text-xs bg-transparent outline-hidden text-right"
+											class="w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 											placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
 											bind:value={config.COMFYUI_BASE_URL}
 										/>
@@ -786,7 +786,7 @@
 												<div class="">
 													<Tooltip content={$i18n.t('Input Key (e.g. text, unet_name, steps)')}>
 														<input
-															class="py-1 w-24 text-xs bg-transparent outline-hidden"
+															class="py-1 w-24 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 															placeholder={$i18n.t('Key')}
 															bind:value={node.key}
 															required
@@ -802,7 +802,7 @@
 														placement="top-start"
 													>
 														<input
-															class="w-full py-1 text-xs bg-transparent outline-hidden"
+															class="w-full py-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 															placeholder={$i18n.t('Node Ids')}
 															bind:value={node.node_ids}
 														/>
@@ -830,7 +830,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
-											class="w-full text-xs bg-transparent outline-hidden text-right"
+											class="w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 											placeholder={$i18n.t('API Base URL')}
 											bind:value={config.IMAGES_GEMINI_API_BASE_URL}
 										/>
@@ -869,7 +869,7 @@
 								</div>
 
 								<select
-									class="w-fit pr-8 cursor-pointer rounded-lg px-2 text-xs bg-transparent outline-hidden text-right"
+									class="w-fit pr-8 cursor-pointer rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 									bind:value={config.IMAGES_GEMINI_ENDPOINT_METHOD}
 									placeholder={$i18n.t('Select Method')}
 								>
@@ -910,7 +910,7 @@
 								<Tooltip content={$i18n.t('Enter Model ID')} placement="top-start">
 									<input
 										list="model-list"
-										class="text-right text-xs bg-transparent outline-hidden max-w-full w-52"
+										class="text-right text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 max-w-full w-52"
 										bind:value={config.IMAGE_EDIT_MODEL}
 										placeholder={$i18n.t('Select a model')}
 									/>
@@ -934,7 +934,7 @@
 
 								<Tooltip content={$i18n.t('Enter Image Size (e.g. 512x512)')} placement="top-start">
 									<input
-										class="text-right text-xs bg-transparent outline-hidden max-w-full w-52"
+										class="text-right text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 max-w-full w-52"
 										placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
 										bind:value={config.IMAGE_EDIT_SIZE}
 									/>
@@ -952,7 +952,7 @@
 							</div>
 
 							<select
-								class="w-fit pr-8 cursor-pointer rounded-lg px-2 text-xs bg-transparent outline-hidden text-right"
+								class="w-fit pr-8 cursor-pointer rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 								bind:value={config.IMAGE_EDIT_ENGINE}
 								placeholder={$i18n.t('Select Engine')}
 							>
@@ -975,7 +975,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
-											class="w-full text-xs bg-transparent outline-hidden text-right"
+											class="w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 											placeholder={$i18n.t('API Base URL')}
 											bind:value={config.IMAGES_EDIT_OPENAI_API_BASE_URL}
 										/>
@@ -1016,7 +1016,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
-											class="w-full text-xs bg-transparent outline-hidden text-right"
+											class="w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 											placeholder={$i18n.t('API Version')}
 											bind:value={config.IMAGES_EDIT_OPENAI_API_VERSION}
 										/>
@@ -1036,7 +1036,7 @@
 								<div class="flex w-full">
 									<div class="flex-1 mr-2">
 										<input
-											class="w-full text-xs bg-transparent outline-hidden text-right"
+											class="w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 											placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
 											bind:value={config.IMAGES_EDIT_COMFYUI_BASE_URL}
 										/>
@@ -1191,7 +1191,7 @@
 												<div class="">
 													<Tooltip content={$i18n.t('Input Key (e.g. text, unet_name, steps)')}>
 														<input
-															class="py-1 w-24 text-xs bg-transparent outline-hidden"
+															class="py-1 w-24 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 															placeholder={$i18n.t('Key')}
 															bind:value={node.key}
 															required
@@ -1207,7 +1207,7 @@
 														placement="top-start"
 													>
 														<input
-															class="w-full py-1 text-xs bg-transparent outline-hidden"
+															class="w-full py-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 															placeholder={$i18n.t('Node Ids')}
 															bind:value={node.node_ids}
 														/>
@@ -1235,7 +1235,7 @@
 								<div class="flex w-full">
 									<div class="flex-1">
 										<input
-											class="w-full text-xs bg-transparent outline-hidden text-right"
+											class="w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 											placeholder={$i18n.t('API Base URL')}
 											bind:value={config.IMAGES_EDIT_GEMINI_API_BASE_URL}
 										/>

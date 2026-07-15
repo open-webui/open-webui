@@ -199,7 +199,7 @@
 						</div>
 						<div class="flex items-center relative">
 							<select
-								class="w-fit pr-8 rounded-lg px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+								class="w-fit pr-8 rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 								bind:value={webConfig.WEB_SEARCH_ENGINE}
 								placeholder={$i18n.t('Select a engine')}
 								required
@@ -1152,7 +1152,7 @@
 						</div>
 						<div class="flex items-center relative">
 							<select
-								class="w-fit pr-8 rounded-lg px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+								class="w-fit pr-8 rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
 								bind:value={webConfig.WEB_LOADER_ENGINE}
 								placeholder={$i18n.t('Select a engine')}
 							>
@@ -1171,7 +1171,7 @@
 							</div>
 							<div class="flex items-center relative">
 								<input
-									class="flex-1 w-full text-xs bg-transparent outline-hidden"
+									class="flex-1 w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 									placeholder={$i18n.t('Timeout')}
 									bind:value={webConfig.WEB_LOADER_TIMEOUT}
 								/>
@@ -1386,7 +1386,7 @@
 						</div>
 						<div class="flex items-center relative">
 							<input
-								class="flex-1 w-full rounded-lg text-xs bg-transparent outline-hidden"
+								class="flex-1 w-full rounded-lg text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 								type="text"
 								placeholder={$i18n.t('Enter language codes')}
 								bind:value={webConfig.YOUTUBE_LOADER_LANGUAGE}
@@ -1401,7 +1401,7 @@
 						</div>
 						<div class="flex items-center relative">
 							<input
-								class="flex-1 w-full rounded-lg text-xs bg-transparent outline-hidden"
+								class="flex-1 w-full rounded-lg text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 								type="text"
 								placeholder={$i18n.t('Enter proxy URL (e.g. https://user:password@host:port)')}
 								bind:value={webConfig.YOUTUBE_LOADER_PROXY_URL}

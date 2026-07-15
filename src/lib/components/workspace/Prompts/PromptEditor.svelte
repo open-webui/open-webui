@@ -308,7 +308,7 @@
 <Modal size="lg" bind:show={showEditModal}>
 	<div class="px-4 pt-3 pb-4">
 		<div class="flex justify-between items-center mb-2 dark:text-gray-100">
-			<div class="text-sm font-medium">{$i18n.t('Edit Prompt')}</div>
+			<div class="text-xs">{$i18n.t('Edit Prompt')}</div>
 			<button
 				class="rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close')}
@@ -326,7 +326,7 @@
 
 				<div class="mt-1">
 					<Textarea
-						className="text-sm w-full bg-transparent outline-hidden overflow-y-hidden resize-none"
+						className="text-xs w-full bg-transparent outline-hidden overflow-y-hidden resize-none"
 						placeholder={$i18n.t('Write a summary in 50 words that summarizes {{topic}}.')}
 						bind:value={content}
 						aria-label={$i18n.t('Prompt Content')}
@@ -340,7 +340,7 @@
 				<div class="text-gray-500 text-xs">{$i18n.t('Commit Message')} ({$i18n.t('optional')})</div>
 				<div class="mt-1">
 					<input
-						class="text-sm w-full bg-transparent outline-hidden"
+						class="w-full bg-transparent text-xs outline-hidden"
 						placeholder={$i18n.t('Describe what changed...')}
 						aria-label={$i18n.t('Commit Message')}
 						bind:value={commitMessage}
@@ -355,13 +355,13 @@
 						bind:checked={isProduction}
 						class="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
 					/>
-					<span class="text-sm text-gray-700 dark:text-gray-300"
+					<span class="text-xs text-gray-700 dark:text-gray-300"
 						>{$i18n.t('Set as Production')}</span
 					>
 				</label>
 				<div>
 					<button
-						class="text-sm px-4 py-2 transition rounded-full {loading
+						class="px-3 py-1.5 text-xs transition rounded-full {loading
 							? 'cursor-not-allowed bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
 							: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex justify-center"
 						type="submit"
@@ -387,14 +387,14 @@
 		<div class="flex items-start justify-between gap-4 shrink-0">
 			<div class="min-w-0 flex-1">
 				<input
-					class="text-2xl w-full bg-transparent outline-hidden"
+					class="w-full bg-transparent text-sm outline-hidden"
 					placeholder={$i18n.t('Prompt Name')}
 					bind:value={name}
 					on:input={debouncedSaveMetadata}
 					{disabled}
 				/>
 
-				<div class="flex items-center gap-0.5 text-sm text-gray-500 w-full flex-1">
+				<div class="flex w-full flex-1 items-center gap-0.5 text-xs text-gray-500">
 					<span>/</span>
 					<input
 						class="bg-transparent outline-hidden"
@@ -410,13 +410,13 @@
 				<div class="flex items-center gap-2 shrink-0 justify-end">
 					{#if !disabled}
 						<button
-							class="px-4 py-1 text-sm font-normal bg-black text-white dark:bg-white dark:text-black rounded-full hover:opacity-90 transition shadow-xs"
+							class="flex shrink-0 items-center rounded-lg bg-gray-50 px-2 py-1 text-xs text-gray-900 ring-1 ring-gray-200 transition hover:bg-gray-100 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800 dark:hover:bg-gray-800"
 							on:click={() => (showEditModal = true)}
 						>
 							{$i18n.t('Edit')}
 						</button>
 
-							<AccessButton on:click={() => (showAccessControlModal = true)} />
+						<AccessButton on:click={() => (showAccessControlModal = true)} />
 					{:else}
 						<span class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full"
 							>{$i18n.t('Read Only')}</span
@@ -424,7 +424,7 @@
 					{/if}
 				</div>
 
-				<div class="mt-1.5">
+				<div>
 					<Tooltip content={$i18n.t('Click to copy ID')}>
 						<button
 							class="text-xs text-gray-500 font-mono px-2 py-1 rounded-lg cursor-pointer hover:underline transition"
@@ -458,9 +458,9 @@
 			</div>
 		</div>
 
-		<div class="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden pb-6">
+		<div class="flex flex-1 flex-col gap-3 overflow-hidden pb-4 md:flex-row">
 			<!-- Desktop History Sidebar -->
-			<div class="hidden md:flex md:flex-col w-72 shrink-0 overflow-hidden">
+			<div class="hidden w-64 shrink-0 overflow-hidden md:flex md:flex-col">
 				<div class="flex-1 overflow-y-auto">
 					{@render historySection()}
 				</div>
@@ -474,9 +474,7 @@
 							{$i18n.t('Prompt Content')}
 						</div>
 						{#if selectedHistoryEntry}
-							<span
-								class="text-xs text-gray-500 font-mono bg-gray-100 dark:bg-gray-800 px-1.5 rounded"
-							>
+							<span class="px-1 font-mono text-xs text-gray-500">
 								{selectedHistoryEntry.id.slice(0, 7)}
 							</span>
 						{/if}
@@ -519,9 +517,7 @@
 						</button>
 					</div>
 					<!-- Scrollable content -->
-					<div
-						class="bg-gray-50 dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-100/50 dark:border-gray-850/50 h-full overflow-y-auto"
-					>
+					<div class="h-full overflow-y-auto rounded-lg bg-transparent px-1 py-1">
 						<pre class="text-xs whitespace-pre-wrap font-mono pr-8">{selectedHistoryEntry?.snapshot
 								?.content || content}</pre>
 					</div>
@@ -534,7 +530,7 @@
 	<div class="w-full max-h-full {modal ? 'h-full flex flex-col' : ''}">
 		{#if modal}
 			<div class="flex justify-between items-center dark:text-gray-100 px-5 pt-4 pb-2">
-				<h3 class="text-base font-normal">{$i18n.t('Create Prompt')}</h3>
+				<h3 class="text-sm">{$i18n.t('Create Prompt')}</h3>
 				<button
 					class="self-center shrink-0 ml-2"
 					aria-label={$i18n.t('Close')}
@@ -560,7 +556,7 @@
 					<div class="flex flex-col w-full">
 						<div class="flex items-center">
 							<input
-								class="{modal ? 'text-base' : 'text-2xl'} w-full bg-transparent outline-hidden"
+								class="w-full bg-transparent text-sm outline-hidden"
 								placeholder={$i18n.t('Name')}
 								bind:value={name}
 								required
@@ -568,7 +564,7 @@
 							<div class="self-center shrink-0">
 								<AccessButton on:click={() => (showAccessControlModal = true)} />
 							</div>
-							</div>
+						</div>
 						<div class="flex gap-0.5 items-center text-xs text-gray-500">
 							<div>/</div>
 							<input
@@ -601,14 +597,14 @@
 				<div class={modal ? 'mt-1 flex-1 min-h-0 flex flex-col' : 'mt-1'}>
 					{#if modal}
 						<textarea
-							class="text-sm w-full flex-1 min-h-0 bg-transparent outline-hidden resize-none"
+							class="w-full flex-1 min-h-0 resize-none bg-transparent text-xs outline-hidden"
 							placeholder={$i18n.t('Write a summary in 50 words that summarizes {{topic}}.')}
 							bind:value={content}
 							required
 						></textarea>
 					{:else}
 						<Textarea
-							className="text-sm w-full bg-transparent outline-hidden overflow-y-hidden resize-none"
+							className="text-xs w-full bg-transparent outline-hidden overflow-y-hidden resize-none"
 							placeholder={$i18n.t('Write a summary in 50 words that summarizes {{topic}}.')}
 							bind:value={content}
 							rows={6}
@@ -640,8 +636,8 @@
 
 				<button
 					class="{modal
-						? 'px-3.5 py-1.5 text-sm rounded-full w-fit'
-						: 'text-sm w-full lg:w-fit px-4 py-2 rounded-xl'} transition bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black flex justify-center"
+						? 'px-3.5 py-1.5 text-xs rounded-full w-fit'
+						: 'text-xs w-full lg:w-fit px-4 py-2 rounded-xl'} transition bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black flex justify-center"
 					type="submit"
 					disabled={loading}
 				>
@@ -669,10 +665,10 @@
 					<div class="flex">
 						<!-- Content -->
 						<button
-							class="flex-1 text-left px-3.5 py-2 mb-1 rounded-2xl transition group
+							class="mb-0.5 flex-1 rounded-lg px-2 py-1.5 text-left transition group
 								{selectedHistoryEntry?.id === entry.id
-								? 'bg-gray-100/50 dark:bg-gray-850/50'
-								: 'hover:bg-gray-100/50 dark:hover:bg-gray-850/50'}"
+								? 'bg-gray-50/60 dark:bg-white/[0.03]'
+								: 'hover:bg-gray-50/60 dark:hover:bg-white/[0.03]'}"
 							on:click={() => (selectedHistoryEntry = entry)}
 						>
 							<!-- Commit Message -->

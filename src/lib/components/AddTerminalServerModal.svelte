@@ -62,7 +62,7 @@
 	const inputClass =
 		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const selectClass =
-		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
+		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 pe-8 py-1.5 text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
 
 	const stringifyJson = (value: object | null | undefined) => {
 		return JSON.stringify(value && Object.keys(value).length ? value : {}, null, 2);
@@ -601,10 +601,7 @@
 									</div>
 									<div class="flex gap-2">
 										<div class="flex-shrink-0 self-start">
-											<select
-												class={`w-full text-sm pr-5 ${selectClass}`}
-												bind:value={policyStorage}
-											>
+											<select class={`w-full text-sm ${selectClass}`} bind:value={policyStorage}>
 												<option value="ephemeral">{$i18n.t('Ephemeral')}</option>
 												<option value="persistent">{$i18n.t('Persistent')}</option>
 											</select>
@@ -816,7 +813,7 @@
 
 								<div class="flex gap-2">
 									<div class="flex-shrink-0 self-start">
-										<select class={`w-full text-sm pr-5 ${selectClass}`} bind:value={auth_type}>
+										<select class={`w-full text-sm ${selectClass}`} bind:value={auth_type}>
 											<option value="none">{$i18n.t('None')}</option>
 											<option value="bearer">{$i18n.t('Bearer')}</option>
 											{#if !direct}

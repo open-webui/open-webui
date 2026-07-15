@@ -72,7 +72,7 @@
 	const inputClass =
 		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const selectClass =
-		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
+		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 pe-8 py-1.5 text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
 
 	const registerOAuthClientHandler = async () => {
 		if (url === '') {
@@ -694,7 +694,7 @@
 									<div class="flex-shrink-0 self-start">
 										<select
 											id="select-bearer-or-session"
-											class={`w-full text-sm pr-5 ${selectClass}`}
+											class={`w-full text-sm ${selectClass}`}
 											bind:value={auth_type}
 										>
 											<option value="none">{$i18n.t('None')}</option>
@@ -812,7 +812,7 @@
 											<div class="flex-shrink-0 self-start">
 												<select
 													id="select-bearer-or-session"
-													class={`w-full text-sm pr-5 ${selectClass}`}
+													class={`w-full text-sm ${selectClass}`}
 													bind:value={spec_type}
 												>
 													<option value="url">{$i18n.t('URL')}</option>
@@ -894,7 +894,7 @@
 										<div class="flex flex-1 items-center">
 											<select
 												id="oauth-resource-parameter"
-												class={`w-full text-sm pr-5 ${selectClass}`}
+												class={`w-full text-sm ${selectClass}`}
 												bind:value={oauthResourceParameter}
 											>
 												<option value="auto">{$i18n.t('Automatic')}</option>

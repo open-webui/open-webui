@@ -812,7 +812,7 @@
 							class="flex-1 mr-2 pr-1.5 rounded-lg bg-gray-50 dark:text-gray-300 dark:bg-gray-850"
 						>
 							<select
-								class="w-full py-2 px-4 text-sm outline-hidden bg-transparent"
+								class="w-full py-2 px-4 text-sm outline-hidden border border-gray-100/50 !bg-gray-50/40 dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
 								bind:value={deleteModelTag}
 								placeholder={$i18n.t('Select a model')}
 							>
