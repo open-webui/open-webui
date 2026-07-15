@@ -15,12 +15,12 @@
 </svelte:head>
 
 <div
-	class=" flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+	class="flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 		? 'md:max-w-[calc(100%-var(--sidebar-width))]'
 		: ''} max-w-full"
 >
-	<nav class="   px-1.5 pt-0.5 backdrop-blur-xl drag-region select-none">
-		<div class=" flex items-center gap-0.5 md:gap-1">
+	<nav class="pb-1 px-2.5 pt-2 backdrop-blur-xl drag-region select-none">
+		<div class="flex items-center gap-0.5 md:gap-1">
 			{#if $mobile}
 				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
 					<Tooltip
@@ -43,13 +43,15 @@
 				</div>
 			{/if}
 
-			<div class="">
+			<div class="flex w-full items-center">
 				<div
-					class="flex gap-0.5 md:gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
+					class="flex min-w-0 items-center gap-0.5 md:gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
 				>
 					<a
 						draggable="false"
-						class="min-w-fit p-1.5 {['/playground', '/playground/'].includes($page.url.pathname)
+						class="min-w-fit px-1 text-sm {['/playground', '/playground/'].includes(
+							$page.url.pathname
+						)
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 						href="/playground">{$i18n.t('Chat')}</a
@@ -64,7 +66,7 @@
 
 					<a
 						draggable="false"
-						class="min-w-fit p-1.5 {$page.url.pathname.includes('/playground/completions')
+						class="min-w-fit px-1 text-sm {$page.url.pathname.includes('/playground/completions')
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 						href="/playground/completions">{$i18n.t('Completions')}</a
@@ -72,7 +74,7 @@
 
 					<a
 						draggable="false"
-						class="min-w-fit p-1.5 {$page.url.pathname.includes('/playground/images')
+						class="min-w-fit px-1 text-sm {$page.url.pathname.includes('/playground/images')
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
 						href="/playground/images">{$i18n.t('Images')}</a
