@@ -1,9 +1,13 @@
 """
 title: Relatorio de Ambientes Nidum
 author: Nidum
-version: 1.0.2
+version: 1.1.0
 description: Gera o relatorio do motor Identificador de Ambientes no modelo visual aprovado (HTML/CSS -> PDF via WeasyPrint), com foto embutida, selos de severidade, barra de confianca e a identidade Nidum. Devolve link de download nativo. So-ASCII no codigo; o CONTEUDO do PDF tem acentuacao correta (rotulos fixos via entidades HTML; texto do modelo vem acentuado).
 changelog:
+  1.1.0:
+    - Secao "Material analisado": coluna de qualidade reestruturada (rotulos + espacamento)
+      para preencher melhor o espaco ao lado da foto. Novo campo "Dimensao estimada do
+      objeto" (parametro dimensao_estimada).
   1.0.2:
     - Data carimbada pelo servidor (datetime.now) no campo DATA e na parte da data do
       nome do arquivo. O modelo nao decide mais a data (evita data inventada).
@@ -319,9 +323,13 @@ p{margin-bottom:9px;}
 .foto img{width:100%;border:1px solid var(--pedra);}
 .foto .semimg{width:100%;height:170px;background:var(--areia);display:flex;align-items:center;justify-content:center;color:var(--pedra);font-size:11px;border:1px solid var(--pedra);}
 .foto figcaption{font-size:10px;color:var(--musgo);margin-top:5px;}
-.qualidade{flex:1;min-width:200px;}
-.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px;}
-.chip{font-size:10px;padding:3px 9px;border-radius:12px;background:#F5F2EB;border:1px solid var(--areia);color:var(--escuro);}
+.qualidade{flex:1;min-width:220px;padding-top:2px;}
+.qbloco{margin-bottom:18px;}
+.qrot{display:block;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--pedra);margin-bottom:7px;}
+.qval{font-size:14px;font-weight:600;color:var(--escuro);line-height:1.4;}
+.qobs{font-size:9.5px;color:var(--pedra);margin-top:2px;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;}
+.chip{font-size:10px;padding:4px 10px;border-radius:12px;background:#F5F2EB;border:1px solid var(--areia);color:var(--escuro);}
 .chip b{color:var(--musgo);font-weight:700;}
 .evidencias{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;margin-top:6px;}
 .evidencia{font-size:11.5px;padding-left:13px;position:relative;}
@@ -368,8 +376,15 @@ td{padding:7px 8px;border-bottom:1px solid var(--areia);vertical-align:top;}
   <div class="fotos">
     [[FOTOS]]
     <div class="qualidade">
-      <p style="font-size:11.5px">[[QTD_FOTOS]]</p>
-      <div class="chips">[[CHIPS]]</div>
+      <div class="qbloco">
+        <span class="qrot">Qualidade da imagem</span>
+        <div class="chips">[[CHIPS]]</div>
+      </div>
+      <div class="qbloco">
+        <span class="qrot">Dimens&atilde;o estimada do objeto</span>
+        <div class="qval">[[DIMENSAO]]</div>
+      </div>
+      <p class="qobs">[[QTD_FOTOS]]</p>
     </div>
   </div>
 </section>
@@ -421,6 +436,7 @@ class Tools:
         confianca_texto: str,
         reduzir_incerteza: list,
         ajustes_conversa: str = "Nenhum ajuste registrado nesta conversa",
+        dimensao_estimada: str = "Nao estimavel sem referencia de escala",
         fotos: list = None,
         __user__: dict = None,
         __messages__: list = None,
@@ -440,6 +456,8 @@ class Tools:
         :param confianca_texto: justificativa completa do grau de confianca.
         :param reduzir_incerteza: lista de itens (strings) numerados.
         :param ajustes_conversa: correcoes/adicoes do usuario, ou "Nenhum ajuste registrado nesta conversa".
+        :param dimensao_estimada: dimensao estimada do objeto/material (ex.: "aprox. 60 x 40 cm"
+            ou "Nao estimavel sem referencia de escala" quando a foto nao permite).
         :param fotos: OPCIONAL. Lista de dicts com 'legenda' (as imagens sao coletadas
             automaticamente da conversa; nao e preciso informar file_id).
         :return: link /api/v1/files/{id}/content para baixar o PDF.
@@ -448,7 +466,8 @@ class Tools:
             return await self._gerar(
                 titulo_humano, nome_arquivo, metadados, diagnostico_resumo, confianca,
                 qualidade_imagem, diagnostico_texto, evidencias, avarias, confianca_texto,
-                reduzir_incerteza, ajustes_conversa, fotos, __user__, __messages__, __files__,
+                reduzir_incerteza, ajustes_conversa, dimensao_estimada, fotos, __user__,
+                __messages__, __files__,
             )
         except Exception as e:
             log.error("relatorio_ambientes: erro: %s", e)
@@ -456,7 +475,7 @@ class Tools:
                     "avise o suporte. (detalhe tecnico registrado no log)")
 
     async def _gerar(self, titulo, nome_arquivo, meta, diag_resumo, conf, qual, diag_texto,
-                     evidencias, avarias, conf_texto, reduzir, ajustes, fotos, __user__,
+                     evidencias, avarias, conf_texto, reduzir, ajustes, dimensao, fotos, __user__,
                      __messages__=None, __files__=None):
         import weasyprint
 
@@ -559,6 +578,7 @@ class Tools:
             "[[FOTOS]]": fotos_html,
             "[[QTD_FOTOS]]": qtd_txt,
             "[[CHIPS]]": chips,
+            "[[DIMENSAO]]": _e(dimensao or "Nao estimavel sem referencia de escala"),
             "[[DIAG_TEXTO]]": _e(diag_texto),
             "[[EVIDENCIAS]]": evid_html,
             "[[AVARIAS]]": avarias_html,
