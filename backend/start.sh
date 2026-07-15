@@ -99,6 +99,12 @@ fi
 PYTHON_CMD=$(command -v python3 || command -v python)
 UVICORN_WORKERS="${UVICORN_WORKERS:-1}"
 
+# WebSocket per-message-deflate (RFC 7692): zlib-compresses every outgoing
+# frame, which is a per-event CPU cost on the event loop. Deployments that
+# stream heavily behind a reverse proxy can set
+# WEBSOCKET_PER_MESSAGE_DEFLATE=false to disable it.
+WEBSOCKET_PER_MESSAGE_DEFLATE="${WEBSOCKET_PER_MESSAGE_DEFLATE:-true}"
+
 if [[ "$#" -gt 0 ]]; then
   ARGS=("$@")
 else
@@ -110,4 +116,5 @@ exec env WEBUI_SECRET_KEY="${WEBUI_SECRET_KEY:-}" \
     --host "$HOST" \
     --port "$PORT" \
     --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-*}" \
+    --ws-per-message-deflate "$WEBSOCKET_PER_MESSAGE_DEFLATE" \
     "${ARGS[@]}"

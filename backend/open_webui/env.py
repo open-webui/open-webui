@@ -487,6 +487,11 @@ try:
 except ValueError:
     WEBSOCKET_SERVER_PING_INTERVAL = 25
 
+# Controls uvicorn's WebSocket per-message-deflate (RFC 7692). Compressing
+# every outgoing frame is a per-event CPU cost on the event loop; deployments
+# that stream heavily behind a reverse proxy may want to disable it.
+WEBSOCKET_PER_MESSAGE_DEFLATE = os.getenv('WEBSOCKET_PER_MESSAGE_DEFLATE', 'True').lower() == 'true'
+
 WEBSOCKET_EVENT_CALLER_TIMEOUT = os.getenv('WEBSOCKET_EVENT_CALLER_TIMEOUT', '')
 
 if WEBSOCKET_EVENT_CALLER_TIMEOUT == '':
