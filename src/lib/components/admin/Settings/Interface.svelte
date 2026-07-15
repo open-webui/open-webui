@@ -108,9 +108,11 @@
 	>
 		<div class="  flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5">
 			<div class="mb-3.5">
-				<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Tasks')}</div>
+				<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+					{$i18n.t('Tasks')}
+				</div>
 
-				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+				<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 				<div class=" mb-2 font-normal flex items-center">
 					<div class=" text-xs mr-1">{$i18n.t('Task Model')}</div>
@@ -224,7 +226,7 @@
 					</div>
 				</div>
 
-				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-3" />
+				<hr class=" border-gray-100/20 dark:border-white/[0.025] my-3" />
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
 					<div class=" self-center text-xs font-normal">
@@ -298,7 +300,7 @@
 					</div>
 				{/if}
 
-				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-3" />
+				<hr class=" border-gray-100/20 dark:border-white/[0.025] my-3" />
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
 					<div class=" self-center text-xs font-normal">

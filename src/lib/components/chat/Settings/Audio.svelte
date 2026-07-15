@@ -319,7 +319,7 @@
 			</div>
 		</div>
 
-		<hr class=" border-gray-100/30 dark:border-gray-850/30" />
+		<hr class=" border-gray-100/20 dark:border-white/[0.025]" />
 
 		{#if TTSEngine === 'browser-kokoro'}
 			{#if TTSModel}

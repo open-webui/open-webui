@@ -114,9 +114,11 @@
 	<div class="space-y-3 flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5">
 		{#if adminConfig !== null}
 			<div class="mb-3">
-				<div class="mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('User Access')}</div>
+				<div class="mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+					{$i18n.t('User Access')}
+				</div>
 
-				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
+				<hr class="border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 				<div class="  mb-2.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-normal">{$i18n.t('Default User Role')}</div>
@@ -237,9 +239,11 @@
 						</div>
 					{/if}
 				</div>
-				<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Pending Accounts')}</div>
+				<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+					{$i18n.t('Pending Accounts')}
+				</div>
 
-				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+				<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 				<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 					<div class=" self-center text-xs font-normal">
@@ -502,9 +506,11 @@
 		</div>
 		{#if oauthConfig}
 			<div class="mb-3">
-				<div class="mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('OAuth / OIDC')}</div>
+				<div class="mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+					{$i18n.t('OAuth / OIDC')}
+				</div>
 
-				<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
+				<hr class="border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 				<div class="pr-1.5">
 					<div class="space-y-3">

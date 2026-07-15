@@ -98,7 +98,7 @@
 		</div>
 
 		{#if ollamaVersion}
-			<hr class=" border-gray-100/30 dark:border-gray-850/30" />
+			<hr class=" border-gray-100/20 dark:border-white/[0.025]" />
 
 			<div>
 				<div class="text-xs text-gray-400 dark:text-gray-600 mb-2.5">
@@ -112,7 +112,7 @@
 			</div>
 		{/if}
 
-		<hr class=" border-gray-100/30 dark:border-gray-850/30" />
+		<hr class=" border-gray-100/20 dark:border-white/[0.025]" />
 
 		{#if $config?.license_metadata}
 			<div class="mb-2 text-xs">

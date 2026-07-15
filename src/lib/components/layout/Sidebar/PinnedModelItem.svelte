@@ -29,7 +29,7 @@
 		}}
 	>
 		<a
-			class="grow flex items-center space-x-2.5 rounded-xl px-2.5 py-[7px] group-hover:bg-gray-100 dark:group-hover:bg-gray-900 transition"
+			class="grow flex items-center space-x-2 rounded-xl px-2 py-[7px] group-hover:bg-gray-100 dark:group-hover:bg-gray-900 transition"
 			href="/?model={model?.id}"
 			on:click={onClick}
 			draggable="false"
@@ -46,7 +46,7 @@
 			</div>
 
 			<div class="flex self-center translate-y-[0.5px]">
-				<div class=" self-center text-sm  line-clamp-1">
+				<div class=" self-center text-sm line-clamp-1">
 					{model?.name ?? model.id}
 				</div>
 			</div>

@@ -219,9 +219,11 @@
 	<div class=" flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5">
 		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && connectionsConfig !== null}
 			<div class="mb-3.5">
-				<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('General')}</div>
+				<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+					{$i18n.t('General')}
+				</div>
 
-				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+				<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 				<div class="my-2">
 					<div class="mt-2 space-y-2">
@@ -384,7 +386,7 @@
 					</div>
 				</div>
 
-				<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+				<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 				<div class="my-2">
 					<div class="flex justify-between items-center text-sm">

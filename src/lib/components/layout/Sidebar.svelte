@@ -1006,7 +1006,7 @@
 				: 'invisible'}"
 		>
 			<div
-				class="sidebar px-1.5 pt-1.5 pb-1 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-2"
+				class="sidebar px-1 pt-1.5 pb-1 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-2"
 			>
 				<a
 					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
@@ -1067,10 +1067,10 @@
 				}}
 			>
 				<div class="pb-1">
-					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+					<div class="px-1 flex justify-center text-gray-800 dark:text-gray-200">
 						<a
 							id="sidebar-new-chat-button"
-							class="group grow flex items-center space-x-2.5 rounded-xl px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 							href="/"
 							draggable="false"
 							on:click={newChatHandler}
@@ -1088,10 +1088,10 @@
 						</a>
 					</div>
 
-					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+					<div class="px-1 flex justify-center text-gray-800 dark:text-gray-200">
 						<button
 							id="sidebar-search-button"
-							class="group grow flex items-center space-x-2.5 rounded-xl px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 							on:click={() => {
 								showSearch.set(true);
 							}}
@@ -1114,12 +1114,12 @@
 							{@const meta = getMenuItemMeta(itemId)}
 							{#if meta && isMenuItemVisible(itemId)}
 								<div
-									class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200"
+									class="px-1 flex justify-center text-gray-800 dark:text-gray-200"
 									data-id={itemId}
 								>
 									<a
 										id="sidebar-{itemId}-button"
-										class="grow flex items-center space-x-2.5 rounded-xl px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+										class="grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 										href={meta.href}
 										on:click={itemClickHandler}
 										draggable="false"
@@ -1556,7 +1556,7 @@
 				</SidebarSection>
 			</div>
 
-			<div class="px-1.5 pt-1 pb-1.5 sticky bottom-0 z-10 -mt-2 sidebar">
+			<div class="px-1 pt-1 pb-1.5 sticky bottom-0 z-10 -mt-2 sidebar">
 				<div
 					class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 				></div>
@@ -1569,7 +1569,7 @@
 						>
 							<button
 								type="button"
-								class=" flex items-center rounded-xl py-2 px-1.5 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
+								class=" flex items-center rounded-xl py-2 px-1 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
 								aria-label={$i18n.t('User menu')}
 							>
 								<div class=" self-center mr-3 relative flex-shrink-0">

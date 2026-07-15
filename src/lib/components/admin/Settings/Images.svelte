@@ -293,9 +293,11 @@
 		{#if config}
 			<div>
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('General')}
+					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
@@ -311,9 +313,11 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Create Image')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('Create Image')}
+					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 					{#if config.ENABLE_IMAGE_GENERATION}
 						<div class="mb-2.5">
@@ -884,9 +888,11 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Edit Image')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('Edit Image')}
+					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">

@@ -484,7 +484,7 @@
 		</div>
 
 		<div
-			class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30"
+			class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/20 dark:border-white/[0.025]"
 		>
 			<div class="px-3.5 flex flex-1 items-center w-full space-x-2 py-0.5 pb-2">
 				<div class="flex flex-1 items-center">
@@ -564,7 +564,7 @@
 								<div class="flex items-center">{$i18n.t('Disable All')}</div>
 							</button>
 
-							<hr class="border-gray-100 dark:border-gray-800 my-1" />
+							<hr class="border-gray-100/40 dark:border-white/[0.03] my-1" />
 
 							<button
 								class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"

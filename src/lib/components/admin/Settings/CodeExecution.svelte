@@ -41,9 +41,11 @@
 		{#if config}
 			<div>
 				<div class="mb-3.5">
-					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Code Execution')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('Code Execution')}
+					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 					<div class="mb-2.5">
 						<div class=" flex w-full justify-between">
@@ -170,9 +172,11 @@
 				</div>
 
 				<div class="mb-3.5">
-					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Code Interpreter')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('Code Interpreter')}
+					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 					<div class="mb-2.5">
 						<div class=" flex w-full justify-between">
@@ -296,7 +300,7 @@
 							</div>
 						{/if}
 
-						<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
+						<hr class="border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 						<div>
 							<div class="py-0.5 w-full">

@@ -597,7 +597,7 @@
 >
 	<nav
 		id="settings-tabs-container"
-		class="shrink-0 min-w-0 md:min-h-0 flex md:block border-b md:border-b-0 md:border-r border-gray-200 dark:border-white/6 md:w-[15rem]"
+		class="shrink-0 min-w-0 md:min-h-0 flex md:block border-b md:border-b-0 md:border-r border-gray-100/30 dark:border-white/[0.02] md:w-[15rem]"
 	>
 		<button
 			class="flex items-center gap-1.5 h-7 px-2 m-1 md:mb-0 md:w-[calc(100%-0.5rem)] shrink-0 rounded-lg text-xs text-gray-400 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"

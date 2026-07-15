@@ -392,7 +392,7 @@
 <Modal bind:show={showWebhookModal} size="sm">
 	<div>
 		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-			<h1 class="text-lg font-normal self-center ">
+			<h1 class="text-lg font-normal self-center">
 				{editing ? $i18n.t('Edit webhook') : $i18n.t('Add webhook')}
 			</h1>
 
@@ -688,8 +688,8 @@
 />
 
 <div class="mb-3">
-	<div class="mt-0.5 mb-2.5 text-base font-normal">{$i18n.t('Events')}</div>
-	<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
+	<div class="mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Events')}</div>
+	<hr class="border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 	<div class="mb-2.5 flex flex-col w-full justify-between">
 		<div class="flex justify-between items-center mb-1">

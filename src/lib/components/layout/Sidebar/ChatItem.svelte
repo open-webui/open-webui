@@ -453,8 +453,7 @@
 	{#if confirmEdit}
 		<div
 			id="sidebar-chat-item"
-			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
-			confirmEdit
+			class=" w-full flex justify-between rounded-xl px-2 py-[6px] {id === $chatId || confirmEdit
 				? ($settings?.highContrastMode ?? false)
 					? 'bg-gray-100 dark:bg-gray-800 selected'
 					: 'bg-gray-100 dark:bg-gray-900 selected'
@@ -493,8 +492,7 @@
 	{:else}
 		<a
 			id="sidebar-chat-item"
-			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
-			confirmEdit
+			class=" w-full flex justify-between rounded-xl px-2 py-[6px] {id === $chatId || confirmEdit
 				? ($settings?.highContrastMode ?? false)
 					? 'bg-gray-100 dark:bg-gray-800 selected'
 					: 'bg-gray-100 dark:bg-gray-900 selected'

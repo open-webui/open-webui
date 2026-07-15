@@ -376,9 +376,11 @@
 		<div class=" space-y-2.5 flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5">
 			<div class="">
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('General')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('General')}
+					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 					<div class="mb-2.5 flex flex-col w-full justify-between">
 						<div class="flex w-full justify-between mb-1">
@@ -1036,9 +1038,11 @@
 
 				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 					<div class="mb-3">
-						<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Embedding')}</div>
+						<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+							{$i18n.t('Embedding')}
+						</div>
 
-						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+						<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 						<div class="  mb-2.5 flex flex-col w-full justify-between">
 							<div class="flex w-full justify-between">
@@ -1250,9 +1254,11 @@
 				{/if}
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Retrieval')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('Retrieval')}
+					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 					{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
 						<div class="  mb-2.5 flex w-full justify-between">
@@ -1532,9 +1538,11 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Files')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('Files')}
+					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-normal">{$i18n.t('Allowed File Extensions')}</div>
@@ -1644,9 +1652,11 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Integration')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('Integration')}
+					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-normal">{$i18n.t('Google Drive')}</div>
@@ -1664,9 +1674,11 @@
 				</div>
 
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Danger Zone')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('Danger Zone')}
+					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-normal">{$i18n.t('Reset Upload Directory')}</div>

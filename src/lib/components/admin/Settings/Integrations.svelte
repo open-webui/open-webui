@@ -164,9 +164,11 @@
 		{#if servers !== null}
 			<div class="">
 				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Tools')}</div>
+					<div class=" mt-0.5 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('Tools')}
+					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 					<div class="mb-2.5 flex flex-col w-full justify-between">
 						<div class="flex justify-between items-center mb-0.5">
@@ -309,9 +311,11 @@
 						</div>
 					</div>
 
-					<div class="mt-8 mb-2.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Knowledge')}</div>
+					<div class="mt-8 mb-2.5 text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('Knowledge')}
+					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+					<hr class=" border-gray-100/20 dark:border-white/[0.025] my-2" />
 
 					<ExternalKnowledge />
 				</div>
