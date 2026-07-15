@@ -32,7 +32,7 @@
 	import TerminalSelector from './TerminalSelector.svelte';
 	import TTSVoiceInput from './TTSVoiceInput.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
-	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import AccessButton from '$lib/components/common/AccessButton.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -587,19 +587,11 @@
 											required
 										/>
 
-										<button
-											class="flex h-7 shrink-0 items-center gap-1 rounded-lg bg-gray-50 px-2 text-xs text-gray-700 transition hover:bg-gray-100 dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.06]"
-											type="button"
+										<AccessButton
 											on:click={() => {
 												showAccessControlModal = true;
 											}}
-										>
-											<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
-
-											<div class="font-normal shrink-0">
-												{$i18n.t('Access')}
-											</div>
-										</button>
+										/>
 									</div>
 
 									<input

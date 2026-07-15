@@ -9,7 +9,7 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
-	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import {
@@ -775,19 +775,12 @@
 							</button>
 
 							{#if !direct}
-								<button
-									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 object-cover rounded-full flex gap-1 items-center mt-2"
-									type="button"
+								<AccessButton
+									className="mt-2"
 									on:click={() => {
 										showAccessControlModal = true;
 									}}
-								>
-									<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
-
-									<div class="text-xs font-normal shrink-0">
-										{$i18n.t('Access')}
-									</div>
-								</button>
+								/>
 							{/if}
 						</div>
 

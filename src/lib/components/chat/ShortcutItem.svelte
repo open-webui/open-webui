@@ -2,14 +2,21 @@
 	import { getContext, onMount } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import Tooltip from '../common/Tooltip.svelte';
-	import { shortcuts } from '$lib/shortcuts';
+	import { formatChord, isConfigurableShortcut, keybindings, shortcuts } from '$lib/shortcuts';
+	import type { Shortcut } from '$lib/shortcuts';
 
 	type ShortcutDefinition = NonNullable<(typeof shortcuts)[keyof typeof shortcuts]>;
+	type I18nStore = Writable<{
+		t: (key: string, options?: Record<string, unknown>) => string;
+	}>;
 
+	export let id: Shortcut | undefined = undefined;
 	export let shortcut: ShortcutDefinition;
 	export let isMac: boolean;
+	export let compact = false;
+	export let keysOnly = false;
 
-	const i18n: Writable<any> = getContext('i18n');
+	const i18n: I18nStore = getContext('i18n');
 	let keyboardLayoutMap: Map<string, string> | undefined;
 
 	onMount(async () => {
@@ -87,24 +94,49 @@
 			.map(formatKey)
 			.join(isMac ? '' : ' + ');
 	}
+
+	function displayKeys(): string {
+		if (id && isConfigurableShortcut(id)) {
+			return formatChord($keybindings[id]) || $i18n.t('Unassigned');
+		}
+		return formatKeys(shortcut.keys);
+	}
 </script>
 
-<div class="flex min-h-8 w-full items-center gap-3 px-1 py-1.5">
-	<div class="min-w-0 flex-1 text-[0.71875rem] leading-tight text-gray-700 dark:text-gray-300">
-		{#if shortcut.tooltip}
-			<Tooltip content={$i18n.t(shortcut.tooltip)}>
-				<span class="inline-flex max-w-full items-baseline gap-1">
-					<span class="truncate whitespace-pre-line">{$i18n.t(shortcut.name)}</span>
-					<span class="text-[0.625rem] text-gray-400 dark:text-gray-600">*</span>
-				</span>
-			</Tooltip>
-		{:else}
-			<span class="whitespace-pre-line">{$i18n.t(shortcut.name)}</span>
-		{/if}
-	</div>
+{#if keysOnly}
 	<span
 		class="inline-flex min-h-[1.125rem] max-w-[9.5rem] shrink-0 items-center justify-center rounded-full bg-gray-100 px-[0.4375rem] py-0.5 text-center text-[0.625rem] font-medium leading-none text-gray-500 dark:bg-white/6 dark:text-gray-400"
 	>
-		{formatKeys(shortcut.keys)}
+		{displayKeys()}
 	</span>
-</div>
+{:else}
+	<div
+		class={compact
+			? 'min-w-0 flex-1 text-[0.71875rem] leading-tight text-gray-700 dark:text-gray-300'
+			: 'flex min-h-8 w-full items-center gap-3 px-1 py-1.5'}
+	>
+		<div
+			class={compact
+				? ''
+				: 'min-w-0 flex-1 text-[0.71875rem] leading-tight text-gray-700 dark:text-gray-300'}
+		>
+			{#if shortcut.tooltip}
+				<Tooltip content={$i18n.t(shortcut.tooltip)}>
+					<span class="inline-flex max-w-full items-baseline gap-1">
+						<span class="truncate whitespace-pre-line">{$i18n.t(shortcut.name)}</span>
+						<span class="text-[0.625rem] text-gray-400 dark:text-gray-600">*</span>
+					</span>
+				</Tooltip>
+			{:else}
+				<span class="whitespace-pre-line">{$i18n.t(shortcut.name)}</span>
+			{/if}
+		</div>
+		{#if !compact}
+			<span
+				class="inline-flex min-h-[1.125rem] max-w-[9.5rem] shrink-0 items-center justify-center rounded-full bg-gray-100 px-[0.4375rem] py-0.5 text-center text-[0.625rem] font-medium leading-none text-gray-500 dark:bg-white/6 dark:text-gray-400"
+			>
+				{displayKeys()}
+			</span>
+		{/if}
+	</div>
+{/if}

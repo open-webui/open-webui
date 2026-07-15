@@ -48,6 +48,9 @@
 		is_production?: boolean;
 	};
 
+	export let showCreateOnMount = false;
+	export let createModalCloseHref = '';
+
 	let shiftKey = false;
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
@@ -188,6 +191,15 @@
 		showCreateModal = true;
 	};
 
+	const closeCreateModal = async () => {
+		showCreateModal = false;
+		createPrompt = null;
+
+		if (createModalCloseHref) {
+			await goto(createModalCloseHref);
+		}
+	};
+
 	const createPromptHandler = async (prompt: PromptDraft) => {
 		const res = await createNewPrompt(localStorage.token, prompt).catch((error) => {
 			toast.error(`${error}`);
@@ -196,10 +208,9 @@
 
 		if (res) {
 			toast.success($i18n.t('Prompt created successfully'));
-			showCreateModal = false;
-			createPrompt = null;
 			page = 1;
 			await getPromptList();
+			await closeCreateModal();
 		}
 	};
 
@@ -274,6 +285,8 @@
 			const prompt = JSON.parse(sessionStorage.prompt);
 			sessionStorage.removeItem('prompt');
 			openCreateModal(toPromptDraft(prompt));
+		} else if (showCreateOnMount) {
+			openCreateModal();
 		}
 
 		const onKeyDown = (event: KeyboardEvent) => {
@@ -329,7 +342,11 @@
 		</div>
 	</DeleteConfirmDialog>
 
-	<Modal bind:show={showCreateModal} size="md">
+	<Modal
+		bind:show={showCreateModal}
+		size="full"
+		className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] !max-w-[80rem] h-[min(54rem,calc(100dvh-4rem))] max-h-[calc(100dvh-4rem)] flex flex-col bg-white dark:bg-gray-900 rounded-4xl"
+	>
 		{#key createPrompt}
 			<PromptEditor
 				modal={true}
@@ -337,8 +354,7 @@
 				clone={createPrompt !== null}
 				onSubmit={createPromptHandler}
 				onCancel={() => {
-					showCreateModal = false;
-					createPrompt = null;
+					closeCreateModal();
 				}}
 			/>
 		{/key}

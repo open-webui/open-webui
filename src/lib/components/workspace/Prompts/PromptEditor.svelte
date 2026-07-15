@@ -6,7 +6,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import { toast } from 'svelte-sonner';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
@@ -416,13 +416,7 @@
 							{$i18n.t('Edit')}
 						</button>
 
-						<button
-							class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2.5 py-1 rounded-full flex gap-1.5 items-center text-sm border border-gray-100 dark:border-gray-800"
-							on:click={() => (showAccessControlModal = true)}
-						>
-							<LockClosed strokeWidth="2.5" className="size-3.5" />
-							{$i18n.t('Access')}
-						</button>
+							<AccessButton on:click={() => (showAccessControlModal = true)} />
 					{:else}
 						<span class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full"
 							>{$i18n.t('Read Only')}</span
@@ -537,7 +531,7 @@
 	</div>
 {:else}
 	<!-- Create mode: Form -->
-	<div class="w-full max-h-full">
+	<div class="w-full max-h-full {modal ? 'h-full flex flex-col' : ''}">
 		{#if modal}
 			<div class="flex justify-between items-center dark:text-gray-100 px-5 pt-4 pb-2">
 				<h3 class="text-base font-normal">{$i18n.t('Create Prompt')}</h3>
@@ -555,10 +549,10 @@
 		{/if}
 
 		<form
-			class="flex flex-col w-full {modal ? 'px-5 pb-3' : 'mb-10'}"
+			class="flex flex-col w-full {modal ? 'px-5 pb-3 flex-1 min-h-0' : 'mb-10'}"
 			on:submit|preventDefault={submitHandler}
 		>
-			<div class="mb-2">
+			<div class="mb-2 shrink-0">
 				<Tooltip
 					content={`${$i18n.t('Only alphanumeric characters and hyphens are allowed')} - ${$i18n.t('Activate this command by typing "/{{COMMAND}}" to chat input.', { COMMAND: command })}`}
 					placement="bottom-start"
@@ -572,16 +566,9 @@
 								required
 							/>
 							<div class="self-center shrink-0">
-								<button
-									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-									type="button"
-									on:click={() => (showAccessControlModal = true)}
-								>
-									<LockClosed strokeWidth="2.5" className="size-3.5" />
-									<div class="text-sm font-normal shrink-0">{$i18n.t('Access')}</div>
-								</button>
+								<AccessButton on:click={() => (showAccessControlModal = true)} />
 							</div>
-						</div>
+							</div>
 						<div class="flex gap-0.5 items-center text-xs text-gray-500">
 							<div>/</div>
 							<input
@@ -609,16 +596,25 @@
 				</Tooltip>
 			</div>
 
-			<div class="my-2">
+			<div class={modal ? 'my-2 flex-1 min-h-0 flex flex-col' : 'my-2'}>
 				<div class="text-gray-500 text-xs">{$i18n.t('Prompt Content')}</div>
-				<div class="mt-1">
-					<Textarea
-						className="text-sm w-full bg-transparent outline-hidden overflow-y-hidden resize-none"
-						placeholder={$i18n.t('Write a summary in 50 words that summarizes {{topic}}.')}
-						bind:value={content}
-						rows={6}
-						required
-					/>
+				<div class={modal ? 'mt-1 flex-1 min-h-0 flex flex-col' : 'mt-1'}>
+					{#if modal}
+						<textarea
+							class="text-sm w-full flex-1 min-h-0 bg-transparent outline-hidden resize-none"
+							placeholder={$i18n.t('Write a summary in 50 words that summarizes {{topic}}.')}
+							bind:value={content}
+							required
+						></textarea>
+					{:else}
+						<Textarea
+							className="text-sm w-full bg-transparent outline-hidden overflow-y-hidden resize-none"
+							placeholder={$i18n.t('Write a summary in 50 words that summarizes {{topic}}.')}
+							bind:value={content}
+							rows={6}
+							required
+						/>
+					{/if}
 					<div class="text-xs text-gray-400 dark:text-gray-500">
 						ⓘ {$i18n.t('Use')}
 						<span class="font-normal text-gray-600 dark:text-gray-300"
@@ -629,7 +625,7 @@
 				</div>
 			</div>
 
-			<div class="flex justify-end {modal ? 'pt-3 gap-2' : 'my-4 pb-20'}">
+			<div class="flex justify-end {modal ? 'pt-3 gap-2 shrink-0' : 'my-4 pb-20'}">
 				{#if modal}
 					<button
 						class="px-3 py-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition"

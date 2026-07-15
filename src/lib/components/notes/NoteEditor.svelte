@@ -80,7 +80,7 @@
 
 	import Calendar from '../icons/Calendar.svelte';
 	import Users from '../icons/Users.svelte';
-	import LockClosed from '../icons/LockClosed.svelte';
+	import AccessButton from '../common/AccessButton.svelte';
 
 	import Image from '../common/Image.svelte';
 	import FileItem from '../common/FileItem.svelte';
@@ -996,7 +996,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								</div>
 							{/if}
 
-							<div class="flex items-center gap-0.5 shrink-0 translate-x-1">
+							<div class="flex items-center gap-0.5 shrink-0">
 								{#if note?.write_access}
 									{#if editor}
 										<div>
@@ -1107,16 +1107,12 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								</NoteMenu>
 
 								{#if note?.write_access}
-									<button
-										class="shrink-0 bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2.5 py-1 rounded-full flex gap-1.5 items-center text-sm"
+									<AccessButton
 										on:click={() => {
 											showAccessControlModal = true;
 										}}
 										disabled={note?.user_id !== $user?.id && $user?.role !== 'admin'}
-									>
-										<LockClosed strokeWidth="2.5" className="size-3.5" />
-										{$i18n.t('Access')}
-									</button>
+									/>
 								{:else}
 									<div class="shrink-0 text-xs text-gray-500 px-2 py-1">
 										{$i18n.t('Read-Only Access')}

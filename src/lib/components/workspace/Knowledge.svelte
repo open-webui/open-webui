@@ -46,6 +46,9 @@
 		};
 	};
 
+	export let showCreateOnMount = false;
+	export let createModalCloseHref = '';
+
 	let loaded = false;
 	let showDeleteConfirm = false;
 	let showCreateModal = false;
@@ -162,6 +165,14 @@
 		}
 	};
 
+	const closeCreateModal = async () => {
+		showCreateModal = false;
+
+		if (createModalCloseHref) {
+			await goto(createModalCloseHref);
+		}
+	};
+
 	const exportHandler = async (item: KnowledgeListItem) => {
 		try {
 			const blob = await exportKnowledgeById(localStorage.token, item.id);
@@ -185,6 +196,10 @@
 		viewOption = localStorage?.workspaceViewOption || '';
 		sourceOption = localStorage?.workspaceKnowledgeSourceOption || '';
 		loaded = true;
+
+		if (showCreateOnMount) {
+			showCreateModal = true;
+		}
 	});
 </script>
 
@@ -202,11 +217,15 @@
 		}}
 	/>
 
-	<Modal bind:show={showCreateModal} size="sm">
+	<Modal
+		bind:show={showCreateModal}
+		size="full"
+		className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] !max-w-[80rem] h-[min(54rem,calc(100dvh-4rem))] max-h-[calc(100dvh-4rem)] flex flex-col bg-white dark:bg-gray-900 rounded-4xl"
+	>
 		<CreateKnowledgeBase
 			modal={true}
 			onBack={() => {
-				showCreateModal = false;
+				closeCreateModal();
 			}}
 		/>
 	</Modal>
