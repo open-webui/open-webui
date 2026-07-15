@@ -95,6 +95,7 @@ def get_custom_headers(custom_headers: dict, user=None, metadata: dict = None, r
         '{{USER_ROLE}}': (user.role if user else '') or '',
         '{{USER_AGENT}}': user_agent,
     }
+    template_vars.update({token.lower(): value for token, value in template_vars.items()})
 
     parsed_headers = {}
     for key, value in custom_headers.items():
