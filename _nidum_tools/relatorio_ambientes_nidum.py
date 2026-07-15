@@ -1,7 +1,7 @@
 """
 title: Relatorio de Ambientes Nidum
 author: Nidum
-version: 1.1.1
+version: 1.1.2
 description: Gera o relatorio do motor Identificador de Ambientes no modelo visual aprovado (HTML/CSS -> PDF via WeasyPrint), com foto embutida, selos de severidade, barra de confianca e a identidade Nidum. Devolve link de download nativo. So-ASCII no codigo; o CONTEUDO do PDF tem acentuacao correta (rotulos fixos via entidades HTML; texto do modelo vem acentuado).
 changelog:
   1.1.1:
@@ -472,9 +472,11 @@ class Tools:
                 __messages__, __files__,
             )
         except Exception as e:
-            log.error("relatorio_ambientes: erro: %s", e)
-            return ("Nao consegui gerar o relatorio agora. Tente novamente; se persistir, "
-                    "avise o suporte. (detalhe tecnico registrado no log)")
+            import traceback
+            log.error("relatorio_ambientes: erro: %s\n%s", e, traceback.format_exc())
+            return ("Nao consegui gerar o relatorio agora. DETALHE TECNICO: %s: %s. "
+                    "(Diagnostico temporario - avise o suporte com esta mensagem.)"
+                    % (type(e).__name__, str(e)[:400]))
 
     async def _gerar(self, titulo, nome_arquivo, meta, diag_resumo, conf, qual, diag_texto,
                      evidencias, avarias, conf_texto, reduzir, ajustes, dimensao, fotos, __user__,
