@@ -45,6 +45,8 @@
 </script>
 
 <div id="tab-about" class="flex flex-col h-full justify-between space-y-3 text-sm">
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('About')}</h2>
+
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 space-y-3">
 		<div>
 			<div class="text-xs text-gray-400 dark:text-gray-600 mb-2.5 flex space-x-2 items-center">

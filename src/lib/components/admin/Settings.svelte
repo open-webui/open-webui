@@ -307,8 +307,6 @@
 		}, 100);
 	};
 
-	$: selectedTabTitle = allSettings.find((tab) => tab.id === selectedTab)?.title ?? 'Settings';
-
 	const tabButtonClass = (active) =>
 		`flex items-center gap-1.5 h-7 px-2 lg:w-full shrink-0 rounded-lg text-xs text-left transition-colors duration-75 select-none ${
 			active
@@ -394,12 +392,6 @@
 
 	<div class="flex-1 min-h-0 p-4 lg:px-5 flex flex-col">
 		<div class="w-full h-full min-h-0 flex flex-col">
-			{#if selectedTab !== 'models'}
-				<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
-					{$i18n.t(selectedTabTitle)}
-				</h2>
-			{/if}
-
 			<div class="flex-1 min-h-0 overflow-hidden">
 				{#if selectedTab === 'general'}
 					<General

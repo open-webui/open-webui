@@ -750,7 +750,6 @@
 	$: if ($user?.role !== 'admin' && isAdminTab(selectedTab)) {
 		selectedTab = 'general';
 	}
-	$: selectedTabTitle = allKnownSettings.find((tab) => tab.id === selectedTab)?.title ?? 'Settings';
 
 	onMount(() => {
 		availableSettings = getAvailableSettings();
@@ -1001,12 +1000,6 @@
 	</nav>
 
 	<div class="flex-1 min-h-0 p-4 md:px-5 flex flex-col">
-		{#if selectedTab !== 'account' && selectedTab !== 'admin:models'}
-			<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
-				{$i18n.t(selectedTabTitle)}
-			</h2>
-		{/if}
-
 		<div class="flex-1 min-h-0 overflow-hidden">
 			{#if selectedTab === 'general'}
 				<General

@@ -206,6 +206,8 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm" id="tab-general">
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('General')}</h2>
+
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		<div class="">
 			<div class="text-xs text-gray-400 dark:text-gray-600 mb-2">

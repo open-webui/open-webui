@@ -1,16 +1,10 @@
 <script>
 	import { toast } from 'svelte-sonner';
-	import dayjs from 'dayjs';
-	import relativeTime from 'dayjs/plugin/relativeTime';
-	dayjs.extend(relativeTime);
-
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { WEBUI_NAME, config, user, showSidebar, knowledge } from '$lib/stores';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { user } from '$lib/stores';
 
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import UsersSolid from '$lib/components/icons/UsersSolid.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
@@ -22,11 +16,7 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import Select from '$lib/components/common/Select.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
-	import {
-		getUserDefaultPermissions,
-		getAllUsers,
-		updateUserDefaultPermissions
-	} from '$lib/apis/users';
+	import { getUserDefaultPermissions, updateUserDefaultPermissions } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
@@ -146,16 +136,14 @@
 		</div>
 	</div>
 
-	<div
-		class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30"
-	>
-		<div class="flex items-center w-full space-x-2 py-0.5 px-3.5">
-			<div class="flex flex-1">
+	<div class="space-y-1">
+		<div class="flex h-8 flex-1 items-center w-full gap-2">
+			<div class="flex min-w-0 flex-1">
 				<div class="self-center ml-1 mr-3">
 					<Search className="size-3.5" />
 				</div>
 				<input
-					class="w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
+					class="w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
 					aria-label={$i18n.t('Search Groups')}
 					placeholder={$i18n.t('Search Groups')}
@@ -203,7 +191,7 @@
 		</div>
 
 		{#if filteredGroups.length !== 0}
-			<div class="my-2 px-3 grid grid-cols-1 gap-1">
+			<div class="my-1 gap-x-2 gap-y-0.5 grid lg:grid-cols-2">
 				{#each filteredGroups as group}
 					<GroupItem {group} {setGroups} {defaultPermissions} />
 				{/each}
@@ -232,7 +220,7 @@
 	{/if}
 
 	<button
-		class="flex items-center justify-between rounded-lg w-full transition mt-4"
+		class="flex items-center justify-between rounded-2xl w-full transition mt-2 px-2.5 py-2 hover:bg-gray-50/70 dark:hover:bg-gray-850/50"
 		aria-haspopup="dialog"
 		on:click={() => {
 			showDefaultPermissionsModal = true;

@@ -307,6 +307,8 @@
 		dispatch('save');
 	}}
 >
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Interface')}</h2>
+
 	<input
 		bind:this={filesInputElement}
 		bind:files={inputFiles}

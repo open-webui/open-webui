@@ -527,20 +527,20 @@
 
 		{#if !edit || (edit && model)}
 			<form
-				class="flex flex-col md:flex-row w-full gap-3 md:gap-6"
+				class="flex flex-col md:flex-row w-full gap-3"
 				on:submit|preventDefault={() => {
 					submitHandler();
 				}}
 			>
 				<div class="w-full px-1">
-					<div class="flex flex-row gap-4 md:gap-6 w-full">
-						<div class="self-start flex justify-center my-2 shrink-0">
-							<div class="self-center">
+					<div class="flex flex-row gap-3 w-full">
+						<div class="self-start flex justify-center py-1 shrink-0">
+							<div class="self-center group">
 								<button
-									class="rounded-2xl flex shrink-0 items-center {info.meta.profile_image_url !==
-									`${WEBUI_BASE_URL}/static/favicon.png`
+									class="relative flex size-14 md:size-16 shrink-0 items-center overflow-hidden rounded-xl {info
+										.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
 										? 'bg-transparent'
-										: 'bg-white'} shadow-xl group relative"
+										: 'bg-gray-50 dark:bg-gray-850'} ring-1 ring-gray-200/70 transition hover:ring-gray-300 dark:ring-white/10 dark:hover:ring-white/20"
 									type="button"
 									aria-label={$i18n.t('Upload profile image')}
 									on:click={() => {
@@ -551,26 +551,28 @@
 										<img
 											src={info.meta.profile_image_url}
 											alt="model profile"
-											class="rounded-xl size-20 md:size-48 object-cover shrink-0"
+											class="size-full object-cover"
 										/>
 									{:else}
 										<img
 											src="{WEBUI_BASE_URL}/static/favicon.png"
 											alt="model profile"
-											class=" rounded-xl size-20 md:size-48 object-cover shrink-0"
+											class="size-full object-cover"
 										/>
 									{/if}
 
-									<div class="absolute bottom-0 right-0 z-10">
-										<div class="m-1.5">
+									<div
+										class="absolute bottom-0 right-0 z-10 opacity-0 transition group-hover:opacity-100"
+									>
+										<div class="m-1">
 											<div
-												class="shadow-xl p-1 rounded-full border-2 border-white bg-gray-800 text-white group-hover:bg-gray-600 transition dark:border-black dark:bg-white dark:group-hover:bg-gray-200 dark:text-black"
+												class="rounded-full bg-gray-900 p-1 text-white shadow-sm transition dark:bg-white dark:text-black"
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
 													viewBox="0 0 16 16"
 													fill="currentColor"
-													class="size-5"
+													class="size-3"
 												>
 													<path
 														fill-rule="evenodd"
@@ -583,13 +585,13 @@
 									</div>
 
 									<div
-										class="absolute top-0 bottom-0 left-0 right-0 bg-white dark:bg-black rounded-lg opacity-0 group-hover:opacity-20 transition"
+										class="absolute inset-0 bg-white opacity-0 transition group-hover:opacity-20 dark:bg-black"
 									></div>
 								</button>
 
-								<div class="flex w-full mt-1 justify-end">
+								<div class="mt-1 flex w-full justify-center">
 									<button
-										class="px-2 py-1 text-gray-500 rounded-lg text-xs"
+										class="rounded-lg px-1.5 py-0.5 text-[0.6875rem] text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-300"
 										on:click={() => {
 											info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
 										}}
@@ -602,11 +604,11 @@
 						</div>
 
 						<div class="flex flex-col w-full flex-1">
-							<div class="flex justify-between items-start my-2">
+							<div class="flex justify-between items-start gap-3 py-1">
 								<div class=" flex flex-col w-full">
 									<div class="flex-1 w-full">
 										<input
-											class="text-3xl w-full bg-transparent outline-hidden"
+											class="w-full bg-transparent text-lg font-medium text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-xl"
 											placeholder={$i18n.t('Model Name')}
 											bind:value={name}
 											required
@@ -616,7 +618,7 @@
 									<div class="flex-1 w-full">
 										<div>
 											<input
-												class="text-xs w-full bg-transparent outline-hidden"
+												class="w-full bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
 												placeholder={$i18n.t('Model ID')}
 												bind:value={id}
 												disabled={edit}
@@ -628,7 +630,7 @@
 
 								<div class="shrink-0">
 									<button
-										class="bg-gray-50 shrink-0 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+										class="flex h-7 shrink-0 items-center gap-1 rounded-lg bg-gray-50 px-2 text-xs text-gray-700 transition hover:bg-gray-100 dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.06]"
 										type="button"
 										on:click={() => {
 											showAccessControlModal = true;
@@ -636,7 +638,7 @@
 									>
 										<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
 
-										<div class="text-sm font-normal shrink-0">
+										<div class="font-normal shrink-0">
 											{$i18n.t('Access')}
 										</div>
 									</button>

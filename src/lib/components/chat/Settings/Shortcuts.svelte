@@ -39,6 +39,10 @@
 </script>
 
 <div id="tab-shortcuts" class="flex h-full flex-col text-sm">
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+		{$i18n.t('Keyboard Shortcuts')}
+	</h2>
+
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		<div class="flex items-center gap-2 px-1 pb-1">
 			<span class="flex-1 text-[0.625rem] font-medium text-gray-400 dark:text-gray-600">
