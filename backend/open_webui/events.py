@@ -38,6 +38,9 @@ class EventDefinition(BaseModel):
             object.__setattr__(self, 'message', title)
         return self
 
+    # Add a field for user_id with default 'unknown' to prevent null crashes
+    user_id: str = 'unknown'
+
 
 class EventDefinitions(BaseModel):
     model_config = ConfigDict(frozen=True)
