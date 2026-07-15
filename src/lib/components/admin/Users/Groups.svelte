@@ -6,15 +6,10 @@
 	import { user } from '$lib/stores';
 
 	import Plus from '$lib/components/icons/Plus.svelte';
-	import UsersSolid from '$lib/components/icons/UsersSolid.svelte';
-	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import EditGroupModal from './Groups/EditGroupModal.svelte';
 	import GroupItem from './Groups/GroupItem.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
-	import Check from '$lib/components/icons/Check.svelte';
-	import Select from '$lib/components/common/Select.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
 	import { getUserDefaultPermissions, updateUserDefaultPermissions } from '$lib/apis/users';
 
@@ -25,12 +20,6 @@
 	let groups = [];
 
 	let query = '';
-	let sortBy = 'members';
-
-	const sortItems = [
-		{ value: 'name', label: $i18n.t('Name') },
-		{ value: 'members', label: $i18n.t('Members') }
-	];
 
 	$: filteredGroups = groups
 		.filter((group) => {
@@ -43,12 +32,7 @@
 			}
 		})
 		.sort((a, b) => {
-			if (sortBy === 'name') {
-				return a.name.localeCompare(b.name);
-			} else if (sortBy === 'members') {
-				return (b.member_count ?? 0) - (a.member_count ?? 0);
-			}
-			return 0;
+			return (b.member_count ?? 0) - (a.member_count ?? 0) || a.name.localeCompare(b.name);
 		});
 
 	let defaultPermissions = {};
@@ -123,6 +107,18 @@
 
 			<div class="flex w-full justify-end gap-1.5">
 				<button
+					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+					aria-haspopup="dialog"
+					on:click={() => {
+						showDefaultPermissionsModal = true;
+					}}
+				>
+					<div class="self-center font-normal line-clamp-1">
+						{$i18n.t('Default permissions')}
+					</div>
+				</button>
+
+				<button
 					class="px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-normal text-sm flex items-center"
 					on:click={() => {
 						showAddGroupModal = !showAddGroupModal;
@@ -162,36 +158,10 @@
 					</div>
 				{/if}
 			</div>
-
-			<Select
-				bind:value={sortBy}
-				items={sortItems}
-				placeholder={$i18n.t('Sort by')}
-				triggerClass="relative flex items-center gap-0.5 px-2.5 py-1.5 text-sm bg-gray-50 dark:bg-gray-850 rounded-xl shrink-0"
-				align="end"
-			>
-				<svelte:fragment slot="trigger" let:selectedLabel>
-					<span
-						class="inline-flex h-input px-0.5 outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
-					>
-						{selectedLabel}
-					</span>
-					<ChevronDown className="size-3.5" strokeWidth="2.5" />
-				</svelte:fragment>
-
-				<svelte:fragment slot="item" let:item let:selected>
-					{item.label}
-					{#if selected}
-						<div class="ml-auto">
-							<Check />
-						</div>
-					{/if}
-				</svelte:fragment>
-			</Select>
 		</div>
 
 		{#if filteredGroups.length !== 0}
-			<div class="my-1 gap-x-2 gap-y-0.5 grid lg:grid-cols-2">
+			<div class="my-1 grid grid-cols-1 gap-y-0.5">
 				{#each filteredGroups as group}
 					<GroupItem {group} {setGroups} {defaultPermissions} />
 				{/each}
@@ -218,30 +188,4 @@
 			onSubmit={updateDefaultPermissionsHandler}
 		/>
 	{/if}
-
-	<button
-		class="flex items-center justify-between rounded-2xl w-full transition mt-2 px-2.5 py-2 hover:bg-gray-50/70 dark:hover:bg-gray-850/50"
-		aria-haspopup="dialog"
-		on:click={() => {
-			showDefaultPermissionsModal = true;
-		}}
-	>
-		<div class="flex items-center gap-2.5">
-			<div class="p-1.5 bg-black/5 dark:bg-white/10 rounded-full">
-				<UsersSolid className="size-4" />
-			</div>
-
-			<div class="text-left">
-				<div class=" text-sm font-normal">{$i18n.t('Default permissions')}</div>
-
-				<div class="flex text-xs mt-0.5">
-					{$i18n.t('applies to all users with the "user" role')}
-				</div>
-			</div>
-		</div>
-
-		<div>
-			<ChevronRight strokeWidth="2.5" />
-		</div>
-	</button>
 {/if}

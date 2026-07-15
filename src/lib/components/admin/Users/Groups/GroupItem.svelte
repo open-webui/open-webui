@@ -19,6 +19,9 @@
 	export let setGroups = () => {};
 
 	let showEdit = false;
+	$: hasCustomPermissions =
+		group?.permissions &&
+		Object.keys(group.permissions).some((key) => group.permissions[key] !== undefined);
 
 	const updateHandler = async (_group) => {
 		const res = await updateGroupById(localStorage.token, group.id, _group).catch((error) => {
@@ -63,33 +66,58 @@
 />
 
 <button
-	class="flex space-x-4 cursor-pointer text-left w-full px-2.5 py-1.5 rounded-2xl hover:bg-gray-50/70 dark:hover:bg-gray-850/50 transition"
+	class="group flex cursor-pointer text-left w-full px-2.5 py-2.5 rounded-2xl hover:bg-gray-50/70 dark:hover:bg-gray-850/50 transition"
 	on:click={() => {
 		showEdit = true;
 	}}
 >
 	<div class="w-full">
-		<div class="flex items-center justify-between">
-			<div class="flex-1 min-w-0 pl-1">
-				<div class="flex items-center gap-1.5">
-					<div class="text-sm font-normal line-clamp-1">{group.name}</div>
-				</div>
-
-				<div class="flex items-center gap-1.5 px-1 line-clamp-1">
-					<div class="text-xs text-gray-500 shrink-0">
-						{$i18n.t('{{COUNT}} members', { COUNT: group?.member_count ?? 0 })}
+		<div class="flex items-center gap-3">
+			<div class="flex min-w-0 flex-1 flex-col gap-0.5 pl-1">
+				<div class="flex min-w-0 items-center gap-2">
+					<div class="text-sm font-normal line-clamp-1 text-gray-900 dark:text-gray-100">
+						{group.name}
 					</div>
 
-					{#if group?.description}
-						<div class="text-xs overflow-hidden text-ellipsis line-clamp-1">
+					<div
+						class="shrink-0 rounded-md bg-gray-500/10 px-1.5 py-0.5 text-[11px] font-normal leading-none text-gray-600 dark:text-gray-300"
+					>
+						{$i18n.t('{{COUNT}} members', { COUNT: group?.member_count ?? 0 })}
+					</div>
+				</div>
+
+				<div class="flex min-w-0 items-center gap-1.5 px-1 text-xs text-gray-500">
+					<div class="line-clamp-1 min-w-0">
+						{#if group?.description}
 							{group.description}
-						</div>
-					{/if}
+						{:else}
+							{$i18n.t('No description')}
+						{/if}
+					</div>
+
+					<div class="shrink-0 text-gray-300 dark:text-gray-700">/</div>
+
+					<div class="shrink-0">
+						{#if hasCustomPermissions}
+							{$i18n.t('Custom permissions')}
+						{:else}
+							{$i18n.t('Default permissions')}
+						{/if}
+					</div>
 				</div>
 			</div>
 
-			<div class="flex self-center ml-2 p-1.5 dark:text-gray-300">
-				<Pencil className="size-3.5" />
+			<div class="flex shrink-0 items-center gap-1.5">
+				<div
+					class="hidden text-xs text-gray-500 transition group-hover:text-gray-700 dark:group-hover:text-gray-300 sm:block"
+				>
+					{$i18n.t('Edit')}
+				</div>
+				<div
+					class="flex self-center p-1.5 text-gray-500 transition group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-100"
+				>
+					<Pencil className="size-3.5" />
+				</div>
 			</div>
 		</div>
 	</div>
