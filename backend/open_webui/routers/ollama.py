@@ -313,6 +313,16 @@ async def update_config(
             'ollama.api_configs': api_configs,
         }
     )
+
+    await get_all_models.cache.clear()
+    request.app.state.BASE_MODELS = []
+    request.app.state.OLLAMA_MODELS = {}
+    models = getattr(request.app.state, 'MODELS', None)
+    if hasattr(models, 'clear'):
+        models.clear()
+    else:
+        request.app.state.MODELS = {}
+
     await publish_event(
         request,
         EVENTS.MODEL_PROVIDER_CONFIG_UPDATED,

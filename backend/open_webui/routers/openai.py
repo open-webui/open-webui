@@ -418,6 +418,16 @@ async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depe
             'openai.api_configs': api_configs,
         }
     )
+
+    await get_all_models.cache.clear()
+    request.app.state.BASE_MODELS = []
+    request.app.state.OPENAI_MODELS = {}
+    models = getattr(request.app.state, 'MODELS', None)
+    if hasattr(models, 'clear'):
+        models.clear()
+    else:
+        request.app.state.MODELS = {}
+
     await publish_event(
         request,
         EVENTS.MODEL_PROVIDER_CONFIG_UPDATED,
@@ -636,6 +646,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 
     enable_openai_api, api_base_urls, _, api_configs = await get_openai_runtime_config()
     if not enable_openai_api:
+        request.app.state.OPENAI_MODELS = {}
         return {'data': []}
 
     responses = await get_all_models_responses(request, user=user)
@@ -1192,6 +1203,9 @@ async def generate_chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
+    if not await Config.get('openai.enable'):
+        raise HTTPException(status_code=503, detail='OpenAI API is disabled')
+
     # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
