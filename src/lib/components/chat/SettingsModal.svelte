@@ -3,6 +3,7 @@
 	import type { Writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import { config, models, settings, user } from '$lib/stores';
+	import type { SettingsModalRequest } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { getBackendConfig, getModels as _getModels } from '$lib/apis';
 
@@ -51,13 +52,20 @@
 
 	const i18n: Writable<any> = getContext('i18n');
 
-	export let show: boolean | string = false;
+	export let show: boolean | string | SettingsModalRequest = false;
 	let modalShow = false;
-	let lastShow: boolean | string = false;
+	let lastShow: boolean | string | SettingsModalRequest = false;
+	let tabState: Record<string, unknown> | null = null;
 
 	$: if (show !== lastShow) {
 		lastShow = show;
-		if (typeof show === 'string') {
+		if (show && typeof show === 'object') {
+			selectedTab = show.tab;
+			tabState = show.state ?? null;
+			show = true;
+			lastShow = true;
+			modalShow = true;
+		} else if (typeof show === 'string') {
 			selectedTab = show;
 			show = true;
 			lastShow = true;
@@ -66,6 +74,7 @@
 			modalShow = show;
 			if (!show) {
 				selectedTab = 'general';
+				tabState = null;
 			}
 		}
 	}
@@ -74,6 +83,7 @@
 		show = false;
 		lastShow = false;
 		selectedTab = 'general';
+		tabState = null;
 	}
 
 	interface SettingsTab {
@@ -1130,7 +1140,7 @@
 					}}
 				/>
 			{:else if selectedTab === 'admin:models'}
-				<AdminModels />
+				<AdminModels bind:tabState />
 			{:else if selectedTab === 'admin:subagents'}
 				<AdminSubagents />
 			{:else if selectedTab === 'admin:evaluations'}

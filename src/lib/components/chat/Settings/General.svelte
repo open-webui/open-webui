@@ -306,10 +306,7 @@
 				</div>
 				<Textarea
 					bind:value={system}
-					className={'w-full text-sm outline-hidden resize-vertical' +
-						($settings.highContrastMode
-							? ' p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-transparent text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 overflow-y-hidden'
-							: '  dark:text-gray-300 ')}
+					className="w-full resize-vertical appearance-none bg-transparent text-sm outline-hidden focus:bg-transparent disabled:bg-transparent dark:text-gray-300"
 					rows="4"
 					placeholder={$i18n.t('Enter system prompt here')}
 				/>

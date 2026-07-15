@@ -111,9 +111,14 @@ export const chatRequestQueues: Writable<
 
 export const sidebarWidth = writable(245);
 
+export type SettingsModalRequest = {
+	tab: string;
+	state?: Record<string, unknown> | null;
+};
+
 export const showSidebar = writable(false);
 export const showSearch = writable(false);
-export const showSettings: Writable<boolean | string> = writable(false);
+export const showSettings: Writable<boolean | string | SettingsModalRequest> = writable(false);
 export const showChangelog = writable(false);
 
 export const showControls = writable(false);

@@ -6,7 +6,7 @@
 	import { onMount, getContext, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
+	import { config, models as _models, settings, user } from '$lib/stores';
 	import {
 		createNewModel,
 		deleteAllModels,
@@ -18,7 +18,6 @@
 		importModels
 	} from '$lib/apis/models';
 	import { copyToClipboard } from '$lib/utils';
-	import { page } from '$app/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 
 	import { getModels } from '$lib/apis';
@@ -53,6 +52,8 @@
 
 	let shiftKey = false;
 
+	export let tabState: Record<string, unknown> | null = null;
+
 	let modelsImportInProgress = false;
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
@@ -72,6 +73,11 @@
 	let viewOption = ''; // '' = All, 'enabled', 'disabled', 'visible', 'hidden'
 	let tags: string[] = [];
 	let selectedTag = '';
+
+	$: if (typeof tabState?.id === 'string' && tabState.id) {
+		selectedModelId = tabState.id;
+		tabState = null;
+	}
 
 	const perPage = 30;
 	let currentPage = 1;
@@ -399,11 +405,6 @@
 
 	onMount(async () => {
 		await init();
-		const id = $page.url.searchParams.get('id');
-
-		if (id) {
-			selectedModelId = id;
-		}
 
 		const onKeyDown = (event) => {
 			if (event.key === 'Shift') {
