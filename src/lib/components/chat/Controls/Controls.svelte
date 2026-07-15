@@ -36,7 +36,7 @@
 <div class=" dark:text-white">
 	{#if !embed}
 		<div class=" flex items-center justify-between dark:text-gray-100 mb-2">
-			<div class=" text-md self-center ">{$i18n.t('Controls')}</div>
+			<div class=" text-md self-center">{$i18n.t('Controls')}</div>
 			<button
 				class="self-center"
 				aria-label={$i18n.t('Close chat controls')}
@@ -114,9 +114,7 @@
 					<div class="pt-1 pb-1" slot="content">
 						<textarea
 							bind:value={params.system}
-							class="w-full text-xs outline-hidden resize-vertical {$settings.highContrastMode
-								? 'border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 px-2 py-1.5'
-								: 'py-1 bg-transparent'}"
+							class="w-full resize-vertical appearance-none bg-transparent py-1 text-xs outline-hidden focus:bg-transparent disabled:bg-transparent"
 							rows="3"
 							placeholder={$i18n.t('Enter system prompt')}
 						/>
