@@ -26,7 +26,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	let loading = false;
 
@@ -616,16 +616,11 @@
 						</div>
 
 						{#if config.COMFYUI_WORKFLOW}
-							<div class="mb-2.5">
-								<div class="flex w-full justify-between items-center">
-									<div class="text-xs pr-2 shrink-0">
-										<div class="">
-											{$i18n.t('ComfyUI Workflow Nodes')}
-										</div>
-									</div>
-								</div>
-
-								<div class="mt-1 text-xs flex flex-col gap-1.5">
+							<AdminSettingField
+								label={$i18n.t('ComfyUI Workflow Nodes')}
+								description={$i18n.t('Map workflow node inputs used for image generation.')}
+							>
+								<div class="flex flex-col gap-1.5 text-xs">
 									{#each REQUIRED_WORKFLOW_NODES as node}
 										<div class="flex w-full flex-col">
 											<div class="shrink-0">
@@ -638,7 +633,7 @@
 												<div class="">
 													<Tooltip content={$i18n.t('Input Key (e.g. text, unet_name, steps)')}>
 														<input
-															class="py-1 w-24 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
+															class="{inputClass} w-24"
 															placeholder={$i18n.t('Key')}
 															bind:value={node.key}
 															required
@@ -654,7 +649,7 @@
 														placement="top-start"
 													>
 														<input
-															class="w-full py-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
+															class={inputClass}
 															placeholder={$i18n.t('Node Ids')}
 															bind:value={node.node_ids}
 														/>
@@ -668,7 +663,7 @@
 								<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
 									{$i18n.t('*Prompt node ID(s) are required for image generation')}
 								</div>
-							</div>
+							</AdminSettingField>
 						{/if}
 					{:else if config?.IMAGE_GENERATION_ENGINE === 'gemini'}
 						<AdminSettingField
@@ -749,11 +744,11 @@
 							</AdminSettingField>
 
 							<AdminSettingField label={$i18n.t('Image Size')}>
-									<input
+								<input
 									class={inputClass}
 									placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
 									bind:value={config.IMAGE_EDIT_SIZE}
-									/>
+								/>
 							</AdminSettingField>
 						</div>
 					{/if}
@@ -796,35 +791,35 @@
 									placeholder={$i18n.t('Enter URL (e.g. http://127.0.0.1:7860/)')}
 									bind:value={config.IMAGES_EDIT_COMFYUI_BASE_URL}
 								/>
-									<button
+								<button
 									class="shrink-0 text-gray-400 transition-colors hover:text-gray-900 dark:text-gray-600 dark:hover:text-white"
-										type="button"
-										aria-label="verify connection"
-										on:click={async () => {
-											await updateConfigHandler();
-											const res = await verifyConfigUrl(localStorage.token).catch((error) => {
-												toast.error(`${error}`);
-												return null;
-											});
+									type="button"
+									aria-label="verify connection"
+									on:click={async () => {
+										await updateConfigHandler();
+										const res = await verifyConfigUrl(localStorage.token).catch((error) => {
+											toast.error(`${error}`);
+											return null;
+										});
 
-											if (res) {
-												toast.success($i18n.t('Server connection verified'));
-											}
-										}}
+										if (res) {
+											toast.success($i18n.t('Server connection verified'));
+										}
+									}}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										class="w-4 h-4"
 									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									</button>
+										<path
+											fill-rule="evenodd"
+											d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								</button>
 							</div>
 						</AdminSettingField>
 
@@ -855,12 +850,14 @@
 										e.target.value = null;
 									};
 
-								reader.readAsText(file);
-							}}
-						/>
+									reader.readAsText(file);
+								}}
+							/>
 							<AdminSettingRow
 								label={$i18n.t('ComfyUI Workflow')}
-								description={$i18n.t('Upload a workflow.json file exported as API format from ComfyUI.')}
+								description={$i18n.t(
+									'Upload a workflow.json file exported as API format from ComfyUI.'
+								)}
 							>
 								<div class="flex items-center justify-end gap-2">
 									{#if config.IMAGES_EDIT_COMFYUI_WORKFLOW}
@@ -906,16 +903,11 @@
 						</div>
 
 						{#if config.IMAGES_EDIT_COMFYUI_WORKFLOW}
-							<div class="mb-2.5">
-								<div class="flex w-full justify-between items-center">
-									<div class="text-xs pr-2 shrink-0">
-										<div class="">
-											{$i18n.t('ComfyUI Workflow Nodes')}
-										</div>
-									</div>
-								</div>
-
-								<div class="mt-1 text-xs flex flex-col gap-1.5">
+							<AdminSettingField
+								label={$i18n.t('ComfyUI Workflow Nodes')}
+								description={$i18n.t('Map workflow node inputs used for image edits.')}
+							>
+								<div class="flex flex-col gap-1.5 text-xs">
 									{#each REQUIRED_EDIT_WORKFLOW_NODES as node}
 										<div class="flex w-full flex-col">
 											<div class="shrink-0">
@@ -928,7 +920,7 @@
 												<div class="">
 													<Tooltip content={$i18n.t('Input Key (e.g. text, unet_name, steps)')}>
 														<input
-															class="py-1 w-24 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
+															class="{inputClass} w-24"
 															placeholder={$i18n.t('Key')}
 															bind:value={node.key}
 															required
@@ -944,7 +936,7 @@
 														placement="top-start"
 													>
 														<input
-															class="w-full py-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
+															class={inputClass}
 															placeholder={$i18n.t('Node Ids')}
 															bind:value={node.node_ids}
 														/>
@@ -958,49 +950,26 @@
 								<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
 									{$i18n.t('*Prompt node ID(s) are required for image generation')}
 								</div>
-							</div>
+							</AdminSettingField>
 						{/if}
 					{:else if config?.IMAGE_EDIT_ENGINE === 'gemini'}
-						<div class="mb-2.5">
-							<div class="flex w-full justify-between items-center">
-								<div class="text-xs pr-2 shrink-0">
-									<div class="">
-										{$i18n.t('Gemini Base URL')}
-									</div>
-								</div>
+						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+							<AdminSettingField label={$i18n.t('Base URL')}>
+								<input
+									class={inputClass}
+									placeholder={$i18n.t('API Base URL')}
+									bind:value={config.IMAGES_EDIT_GEMINI_API_BASE_URL}
+								/>
+							</AdminSettingField>
 
-								<div class="flex w-full">
-									<div class="flex-1">
-										<input
-											class="w-full text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
-											placeholder={$i18n.t('API Base URL')}
-											bind:value={config.IMAGES_EDIT_GEMINI_API_BASE_URL}
-										/>
-									</div>
-								</div>
-							</div>
-						</div>
-
-						<div class="mb-2.5">
-							<div class="flex w-full justify-between items-center">
-								<div class="text-xs pr-2 shrink-0">
-									<div class="">
-										{$i18n.t('Gemini API Key')}
-									</div>
-								</div>
-
-								<div class="flex w-full">
-									<div class="flex-1">
-										<SensitiveInput
-											variant="settings"
-											inputClassName="text-right w-full"
-											placeholder={$i18n.t('API Key')}
-											bind:value={config.IMAGES_EDIT_GEMINI_API_KEY}
-											required={true}
-										/>
-									</div>
-								</div>
-							</div>
+							<AdminSettingField label={$i18n.t('API Key')}>
+								<SensitiveInput
+									variant="settings"
+									placeholder={$i18n.t('API Key')}
+									bind:value={config.IMAGES_EDIT_GEMINI_API_KEY}
+									required={true}
+								/>
+							</AdminSettingField>
 						</div>
 					{/if}
 				</AdminSettingSection>
