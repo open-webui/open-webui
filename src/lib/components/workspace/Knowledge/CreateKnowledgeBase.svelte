@@ -51,7 +51,7 @@
 	};
 </script>
 
-<div class="w-full max-h-full {modal ? 'h-full flex flex-col' : ''}">
+<div class="w-full max-h-full">
 	{#if modal}
 		<div class="flex justify-between items-center dark:text-gray-100 px-5 pt-4 pb-2">
 			<h3 class="text-base font-normal">{$i18n.t('Create a knowledge base')}</h3>
@@ -92,25 +92,29 @@
 	{/if}
 
 	<form
-		class="flex flex-col {modal ? 'px-5 pb-3 flex-1 min-h-0' : 'max-w-lg mx-auto mt-10 mb-10'}"
+		class="flex flex-col {modal ? 'px-5 pb-3' : 'max-w-lg mx-auto mt-10 mb-10'}"
 		on:submit|preventDefault={() => {
 			submitHandler();
 		}}
 	>
-		<div class="w-full flex flex-col {modal ? 'flex-1 min-h-0' : 'justify-center'}">
+		<div class="w-full flex flex-col {modal ? '' : 'justify-center'}">
 			{#if !modal}
 				<div class=" text-2xl font-normal mb-2.5">
 					{$i18n.t('Create a knowledge base')}
 				</div>
 			{/if}
 
-			<div class="w-full flex flex-col gap-2.5 {modal ? 'flex-1 min-h-0' : ''}">
-				<div class="w-full shrink-0">
-					<div class=" text-sm mb-2">{$i18n.t('What are you working on?')}</div>
+			<div class="w-full flex flex-col gap-2.5">
+				<div class="w-full">
+					<div class="{modal ? 'text-xs text-gray-500' : 'text-sm'} mb-2">
+						{$i18n.t('What are you working on?')}
+					</div>
 
 					<div class="w-full mt-1">
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							class={modal
+								? 'w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'
+								: 'w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden'}
 							type="text"
 							bind:value={name}
 							placeholder={$i18n.t('Name your knowledge base')}
@@ -119,15 +123,17 @@
 					</div>
 				</div>
 
-				<div class={modal ? 'flex-1 min-h-0 flex flex-col' : ''}>
-					<div class="text-sm mb-2">{$i18n.t('What are you trying to achieve?')}</div>
+				<div>
+					<div class="{modal ? 'text-xs text-gray-500' : 'text-sm'} mb-2">
+						{$i18n.t('What are you trying to achieve?')}
+					</div>
 
-					<div class="w-full mt-1 {modal ? 'flex-1 min-h-0 flex' : ''}">
+					<div class="w-full mt-1">
 						<textarea
-							class="w-full {modal
-								? 'flex-1 min-h-0'
-								: ''} resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-							rows="4"
+							class={modal
+								? 'w-full resize-none text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'
+								: 'w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden'}
+							rows={modal ? 6 : 4}
 							bind:value={description}
 							placeholder={$i18n.t('Describe your knowledge base and objectives')}
 							required
@@ -137,7 +143,7 @@
 			</div>
 		</div>
 
-		<div class="mt-2 shrink-0">
+		<div class="mt-2">
 			<AccessControl
 				bind:accessGrants
 				accessRoles={['read', 'write']}
@@ -148,7 +154,7 @@
 			/>
 		</div>
 
-		<div class="flex justify-end {modal ? 'pt-3 gap-2 shrink-0' : 'mt-2'}">
+		<div class="flex justify-end {modal ? 'pt-3 gap-2' : 'mt-2'}">
 			{#if modal}
 				<button
 					class="px-3 py-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition"

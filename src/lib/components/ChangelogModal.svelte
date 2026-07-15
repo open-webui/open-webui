@@ -1,7 +1,7 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
 
-	import { onMount, getContext } from 'svelte';
+	import { getContext } from 'svelte';
 
 	import { WEBUI_NAME, config, settings } from '$lib/stores';
 
@@ -16,7 +16,15 @@
 
 	export let show = false;
 
-	let changelog = null;
+	type ChangelogEntry = {
+		raw?: string;
+	};
+	type ChangelogVersion = {
+		date: string;
+		[section: string]: string | ChangelogEntry[];
+	};
+
+	let changelog: Record<string, ChangelogVersion> | null = null;
 	let error = false;
 
 	const init = async () => {
@@ -41,18 +49,36 @@
 		init();
 	}
 
-	const formatDate = (date) => {
+	const formatDate = (date: string) => {
 		if (!date) {
 			return '';
 		}
 
 		const [year, month, day] = date.split('-');
-		const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+		const months = [
+			'Jan',
+			'Feb',
+			'Mar',
+			'Apr',
+			'May',
+			'Jun',
+			'Jul',
+			'Aug',
+			'Sep',
+			'Oct',
+			'Nov',
+			'Dec'
+		];
 		const monthIndex = Number(month) - 1;
 
 		return year && monthIndex >= 0 && monthIndex < months.length && day
 			? `${months[monthIndex]} ${Number(day)}, ${year}`
 			: date;
+	};
+
+	const getSectionEntries = (version: string, section: string) => {
+		const entries = changelog?.[version]?.[section];
+		return Array.isArray(entries) ? entries : [];
 	};
 </script>
 
@@ -62,15 +88,18 @@
 	className="bg-white dark:bg-gray-900 rounded-3xl overflow-hidden"
 	containerClassName="p-3"
 >
-	<div class="flex max-h-[78vh] flex-col">
-		<div class="flex shrink-0 items-start justify-between gap-4 px-4 pb-3 pt-4 dark:text-white text-black">
+	<div class="flex max-h-[58vh] flex-col">
+		<div
+			class="flex shrink-0 items-start justify-between gap-4 px-4 pb-2.5 pt-3.5 dark:text-white text-black"
+		>
 			<div class="min-w-0">
-				<h2 class="m-0 truncate text-base font-medium">
-					{$i18n.t("What's New in")} {$WEBUI_NAME}
+				<h2 class="m-0 truncate text-base font-normal">
+					{$i18n.t("What's New in")}
+					{$WEBUI_NAME}
 				</h2>
 				<div class="mt-1 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
 					<span>{$i18n.t('Release Notes')}</span>
-					<span class="h-1 w-1 rounded-full bg-gray-300 dark:bg-gray-700" />
+					<span class="h-1 w-1 rounded-full bg-gray-300 dark:bg-gray-700"></span>
 					<span>v{WEBUI_VERSION}</span>
 				</div>
 			</div>
@@ -84,22 +113,24 @@
 			</button>
 		</div>
 
-		<div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-gray-700 scrollbar-hidden dark:text-gray-100">
+		<div
+			class="min-h-0 flex-1 overflow-y-auto px-4 py-2 text-gray-700 scrollbar-hidden dark:text-gray-100"
+		>
 			{#if changelog}
-				<div class="space-y-6">
+				<div class="space-y-4">
 					{#each Object.keys(changelog) as version}
 						<section class="pr-1">
-							<div class="mb-3">
-								<h3 class="m-0 text-sm font-semibold text-gray-950 dark:text-white">v{version}</h3>
+							<div class="mb-2">
+								<h3 class="m-0 text-sm font-normal text-gray-950 dark:text-white">v{version}</h3>
 								<div class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-500">
 									{formatDate(changelog[version].date)}
 								</div>
 							</div>
 
 							{#each Object.keys(changelog[version]).filter((section) => section !== 'date') as section}
-								<div class="mb-4 w-full">
+								<div class="mb-3 w-full">
 									<div
-										class="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide {section ===
+										class="mb-2 text-[0.6875rem] font-normal uppercase tracking-wide {section ===
 										'added'
 											? 'text-blue-600 dark:text-blue-300'
 											: section === 'fixed'
@@ -114,14 +145,15 @@
 									</div>
 
 									<div class="space-y-2 text-[0.8125rem] leading-relaxed">
-										{#each changelog[version][section] as entry}
+										{#each getSectionEntries(version, section) as entry}
 											<div class="flex gap-2.5">
 												<span
 													class="mt-[0.6em] h-1 w-1 shrink-0 rounded-full bg-gray-300 dark:bg-gray-700"
-												/>
+												></span>
 												<div
-													class="min-w-0 markdown-prose-sm !max-w-none !text-[0.8125rem] text-gray-600 dark:text-gray-300 [&_*]:!my-0"
+													class="min-w-0 markdown-prose-sm !max-w-none !text-[0.8125rem] text-gray-600 dark:text-gray-300 [&_*]:!my-0 [&_b]:!font-normal [&_strong]:!font-normal"
 												>
+													<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 													{@html DOMPurify.sanitize(entry?.raw)}
 												</div>
 											</div>
@@ -142,24 +174,26 @@
 							error = false;
 							init();
 						}}
-						class="text-sm font-medium text-gray-700 transition hover:text-black dark:text-gray-300 dark:hover:text-white"
+						class="text-sm font-normal text-gray-700 transition hover:text-black dark:text-gray-300 dark:hover:text-white"
 					>
 						{$i18n.t('Retry')}
 					</button>
 				</div>
 			{:else}
-				<div class="flex items-center justify-center py-16 text-sm text-gray-400 dark:text-gray-500">
+				<div
+					class="flex items-center justify-center py-16 text-sm text-gray-400 dark:text-gray-500"
+				>
 					{$i18n.t('Loading release notes...')}
 				</div>
 			{/if}
 		</div>
 
-		<div class="flex shrink-0 justify-end px-4 pb-4 pt-2 text-sm">
+		<div class="flex shrink-0 justify-end px-4 pb-3.5 pt-1.5 text-sm">
 			<button
 				on:click={closeModal}
-				class="font-medium text-gray-600 transition hover:text-gray-950 dark:text-gray-400 dark:hover:text-white"
+				class="font-normal text-gray-600 transition hover:text-gray-950 dark:text-gray-400 dark:hover:text-white"
 			>
-				<span class="relative">{$i18n.t('Done')}</span>
+				<span class="relative">{$i18n.t("Okay, Let's Go!")}</span>
 			</button>
 		</div>
 	</div>
