@@ -2709,6 +2709,7 @@ async def query_knowledge_files(
                 queries=[query],
                 embedding_function=embedding_function,
                 k=count,
+                user=acting_user,
             )
 
             if query_results and 'documents' in query_results:

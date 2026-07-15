@@ -1,9 +1,14 @@
+import asyncio
 import logging
 from typing import List, Optional, Tuple
 from urllib.parse import quote
 
 import requests
-from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, REQUESTS_VERIFY
+from open_webui.env import (
+    ENABLE_FORWARD_USER_INFO_HEADERS,
+    RAG_EXTERNAL_RERANKER_API_AUTH_TYPE,
+    REQUESTS_VERIFY,
+)
 from open_webui.retrieval.models.base_reranker import BaseReranker
 from open_webui.utils.headers import include_user_info_headers
 
@@ -38,9 +43,32 @@ class ExternalReranker(BaseReranker):
             log.info(f'ExternalReranker:predict:model {self.model}')
             log.info(f'ExternalReranker:predict:query {query}')
 
+            api_key = self.api_key
+            if RAG_EXTERNAL_RERANKER_API_AUTH_TYPE == 'system_oauth' and user is not None:
+                # Mirrors the embedding connection's system_oauth auth type.
+                # predict() runs in a worker thread (asyncio.to_thread), so a
+                # private event loop is safe for the async token lookup.
+                # Lazy import: retrieval.utils would be a circular import here.
+                from open_webui.retrieval.utils import get_system_oauth_access_token
+
+                access_token = None
+                try:
+                    access_token = asyncio.run(get_system_oauth_access_token(user))
+                except Exception as e:
+                    log.error(f'Error resolving system OAuth token for reranking: {e}')
+
+                if access_token:
+                    api_key = access_token
+                else:
+                    log.warning(
+                        'RAG_EXTERNAL_RERANKER_API_AUTH_TYPE=system_oauth but no OAuth '
+                        f'token available for user {user.id}; falling back to the '
+                        'static RAG_EXTERNAL_RERANKER_API_KEY'
+                    )
+
             headers = {
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {self.api_key}',
+                'Authorization': f'Bearer {api_key}',
             }
 
             if ENABLE_FORWARD_USER_INFO_HEADERS and user:
