@@ -10,6 +10,9 @@
 	import EditGroupModal from './Groups/EditGroupModal.svelte';
 	import GroupItem from './Groups/GroupItem.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
+	import Select from '$lib/components/common/Select.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
 	import { getUserDefaultPermissions, updateUserDefaultPermissions } from '$lib/apis/users';
 
@@ -20,6 +23,12 @@
 	let groups = [];
 
 	let query = '';
+	let sortBy = 'members';
+
+	const sortItems = [
+		{ value: 'members', label: $i18n.t('Members') },
+		{ value: 'name', label: $i18n.t('Name') }
+	];
 
 	$: filteredGroups = groups
 		.filter((group) => {
@@ -32,6 +41,10 @@
 			}
 		})
 		.sort((a, b) => {
+			if (sortBy === 'name') {
+				return a.name.localeCompare(b.name);
+			}
+
 			return (b.member_count ?? 0) - (a.member_count ?? 0) || a.name.localeCompare(b.name);
 		});
 
@@ -158,6 +171,31 @@
 					</div>
 				{/if}
 			</div>
+
+			<Select
+				bind:value={sortBy}
+				items={sortItems}
+				placeholder={$i18n.t('Sort')}
+				triggerClass="relative h-8 shrink-0 flex items-center gap-1 px-1.5 py-1.5 bg-transparent rounded-xl text-[13px] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
+				labelClass="inline-flex h-input outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+				align="end"
+			>
+				<svelte:fragment slot="trigger" let:selectedLabel>
+					<span
+						class="inline-flex h-input outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+					>
+						{selectedLabel}
+					</span>
+					<ChevronDown className="size-3.5" strokeWidth="2.5" />
+				</svelte:fragment>
+
+				<svelte:fragment slot="item" let:item let:selected>
+					{item.label}
+					<div class="ml-auto {selected ? '' : 'invisible'}">
+						<Check />
+					</div>
+				</svelte:fragment>
+			</Select>
 		</div>
 
 		{#if filteredGroups.length !== 0}

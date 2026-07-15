@@ -7,21 +7,22 @@
 
 	import { deleteGroupById, updateGroupById } from '$lib/apis/groups';
 
-	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import EditGroupModal from './EditGroupModal.svelte';
 
 	export let group = {
+		id: '',
 		name: 'Admins',
-		user_ids: [1, 2, 3]
+		description: '',
+		permissions: {},
+		user_ids: [1, 2, 3],
+		member_count: 0
 	};
 	export let defaultPermissions = {};
 
 	export let setGroups = () => {};
 
 	let showEdit = false;
-	$: hasCustomPermissions =
-		group?.permissions &&
-		Object.keys(group.permissions).some((key) => group.permissions[key] !== undefined);
+	$: hasCustomPermissions = Object.keys(group?.permissions ?? {}).length > 0;
 
 	const updateHandler = async (_group) => {
 		const res = await updateGroupById(localStorage.token, group.id, _group).catch((error) => {
@@ -66,7 +67,7 @@
 />
 
 <button
-	class="group flex cursor-pointer text-left w-full px-2.5 py-2.5 rounded-2xl hover:bg-gray-50/70 dark:hover:bg-gray-850/50 transition"
+	class="group flex cursor-pointer text-left w-full px-2.5 py-2 rounded-2xl border-b border-gray-100/60 last:border-b-0 hover:bg-gray-50/70 dark:border-gray-850/60 dark:hover:bg-gray-850/50 transition"
 	on:click={() => {
 		showEdit = true;
 	}}
@@ -86,7 +87,7 @@
 					</div>
 				</div>
 
-				<div class="flex min-w-0 items-center gap-1.5 px-1 text-xs text-gray-500">
+				<div class="flex min-w-0 items-center gap-1.5 text-xs text-gray-500">
 					<div class="line-clamp-1 min-w-0">
 						{#if group?.description}
 							{group.description}
@@ -101,23 +102,16 @@
 						{#if hasCustomPermissions}
 							{$i18n.t('Custom permissions')}
 						{:else}
-							{$i18n.t('Default permissions')}
+							{$i18n.t('Uses defaults')}
 						{/if}
 					</div>
 				</div>
 			</div>
 
-			<div class="flex shrink-0 items-center gap-1.5">
-				<div
-					class="hidden text-xs text-gray-500 transition group-hover:text-gray-700 dark:group-hover:text-gray-300 sm:block"
-				>
-					{$i18n.t('Edit')}
-				</div>
-				<div
-					class="flex self-center p-1.5 text-gray-500 transition group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-100"
-				>
-					<Pencil className="size-3.5" />
-				</div>
+			<div
+				class="shrink-0 px-1.5 text-xs text-gray-500 transition group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200"
+			>
+				{$i18n.t('Edit')}
 			</div>
 		</div>
 	</div>
