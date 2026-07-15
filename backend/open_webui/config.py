@@ -953,6 +953,12 @@ ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = (
     os.getenv('ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS', 'False').lower() == 'true'
 )
 
+DOCLING_SERVE_TIMEOUT = (
+    int(os.environ.get("DOCLING_SERVE_TIMEOUT")) if os.environ.get("DOCLING_SERVE_TIMEOUT") else None
+)
+
+DOCLING_JSON_CHUNK_MODE = os.environ.get("DOCLING_JSON_CHUNK_MODE", "chunk")
+
 RAG_FULL_CONTEXT = os.getenv('RAG_FULL_CONTEXT', 'False').lower() == 'true'
 
 RAG_FILE_MAX_COUNT = int(os.getenv('RAG_FILE_MAX_COUNT')) if os.getenv('RAG_FILE_MAX_COUNT') else None
@@ -2821,6 +2827,8 @@ DEFAULT_CONFIG = {
     'rag.docling_server_url': DOCLING_SERVER_URL,
     'rag.docling_api_key': DOCLING_API_KEY,
     'rag.docling_params': DOCLING_PARAMS,
+    'rag.docling_serve_timeout': DOCLING_SERVE_TIMEOUT,
+    'rag.DOCLING_JSON_CHUNK_MODE': DOCLING_JSON_CHUNK_MODE,
     'rag.document_intelligence_endpoint': DOCUMENT_INTELLIGENCE_ENDPOINT,
     'rag.document_intelligence_key': DOCUMENT_INTELLIGENCE_KEY,
     'rag.document_intelligence_model': DOCUMENT_INTELLIGENCE_MODEL,

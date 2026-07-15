@@ -171,7 +171,7 @@
 			toast.error($i18n.t('Tika Server URL required.'));
 			return;
 		}
-		if (RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' && RAGConfig.DOCLING_SERVER_URL === '') {
+		if ((RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' || RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling_json') && RAGConfig.DOCLING_SERVER_URL === '') {
 			toast.error($i18n.t('Docling Server URL required.'));
 			return;
 		}
@@ -394,6 +394,7 @@
 									<option value="external">{$i18n.t('External')}</option>
 									<option value="tika">{$i18n.t('Tika')}</option>
 									<option value="docling">{$i18n.t('Docling')}</option>
+									<option value="docling_json">{$i18n.t('Docling (JSON)')}</option>
 									<option value="datalab_marker">{$i18n.t('Datalab Marker API')}</option>
 									<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
 									<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
@@ -694,7 +695,7 @@
 									/>
 								</div>
 							</div>
-						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
+						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' || RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling_json'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<input
 									class="flex-1 w-full text-xs bg-transparent outline-hidden"
@@ -723,6 +724,26 @@
 									</div>
 								</div>
 							</div>
+
+							{#if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling_json'}
+								<div class="mb-2.5 flex flex-col w-full justify-between">
+									<div class="flex w-full justify-between mb-1">
+										<div class="self-center text-xs font-medium">
+											{$i18n.t('Chunk mode')}
+										</div>
+										<div class="">
+											<select
+												bind:value={RAGConfig.DOCLING_JSON_CHUNK_MODE}
+												class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+											>
+												<option value="chunk">{$i18n.t('Chunk')}</option>
+												<option value="page">{$i18n.t('Page')}</option>
+												<option value="item">{$i18n.t('Item')}</option>
+											</select>
+										</div>
+									</div>
+								</div>
+							{/if}
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<input
