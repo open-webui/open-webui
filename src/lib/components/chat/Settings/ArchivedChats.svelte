@@ -193,22 +193,18 @@
 	</div>
 
 	<div class="flex h-7 shrink-0 items-center w-full gap-2">
-		<div
-			class="flex min-w-0 flex-1 items-center rounded-lg bg-gray-50/70 px-2 dark:bg-white/[0.03]"
-		>
-			<div class="mr-2 self-center text-gray-400 dark:text-gray-600">
-				<Search className="size-3.5" />
-			</div>
+		<div class="flex min-w-0 flex-1 items-center gap-2">
+			<Search className="size-3.5 shrink-0 text-gray-400 dark:text-gray-600" />
 			<input
 				data-settings-search
-				class="w-full bg-transparent py-1 text-xs text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+				class="min-w-0 flex-1 bg-transparent py-0.5 text-xs text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
 				bind:value={query}
 				on:input={searchHandler}
 				placeholder={$i18n.t('Search')}
 				maxlength="500"
 			/>
 			{#if query}
-				<div class="self-center pl-1.5">
+				<div class="shrink-0">
 					<button
 						class="rounded-lg p-0.5 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
 						type="button"
