@@ -121,7 +121,7 @@
 	const shouldShowSettingGroup = (tabIds: string[], index: number) =>
 		index === 0 || settingGroupTitle(tabIds[index]) !== settingGroupTitle(tabIds[index - 1]);
 	const settingGroupHeadingClass = (first: boolean) =>
-		`hidden md:block text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 ${
+		`hidden md:block shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 ${
 			first ? 'mt-0.5' : 'mt-2'
 		} mb-0.5`;
 
@@ -789,7 +789,7 @@
 	const tabButtonClass = (active: boolean) =>
 		`flex items-center gap-1.5 h-7 px-2 md:w-full shrink-0 rounded-lg text-xs text-left transition-colors duration-75 ${
 			active
-				? 'font-medium text-gray-900 dark:text-white bg-gray-100 dark:bg-white/6'
+				? 'font-medium text-gray-900 dark:text-white bg-gray-50 dark:bg-white/[0.04]'
 				: 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
 		}`;
 
@@ -1019,9 +1019,10 @@
 			{/if}
 
 			{#if $user?.role === 'admin' && filteredAdminSettings.length > 0}
-				<span
-					class="hidden md:block border-t border-gray-300/80 dark:border-white/15 text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 pt-2 mt-2 mb-0.5"
-				>
+				<div
+					class="hidden md:block shrink-0 self-stretch h-px mx-1 my-2 bg-gray-100/40 dark:bg-white/[0.025]"
+				></div>
+				<span class="hidden md:block text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 mb-0.5">
 					{$i18n.t('Admin')}
 				</span>
 

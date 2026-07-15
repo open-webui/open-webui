@@ -31,7 +31,7 @@
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { config } from '$lib/stores';
+	import { adminFeedbackCount, config } from '$lib/stores';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Select from '$lib/components/common/Select.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -90,6 +90,7 @@
 			if (res) {
 				items = res.items;
 				total = res.total;
+				adminFeedbackCount.set(total);
 			}
 		} catch (err) {
 			console.error(err);
@@ -216,27 +217,61 @@
 		<Spinner className="size-5" />
 	</div>
 {:else}
-	<div class="flex flex-col gap-1 mt-0.5 mb-3">
-		<div class="flex justify-between items-center">
-			<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
-				<div>
-					{$i18n.t('Feedback History')}
+	<div class="space-y-1">
+		{#if modelIds.length > 0 || total > 0}
+			<div class="flex h-8 flex-1 items-center w-full gap-2">
+				<div
+					class="flex min-w-0 flex-1 bg-transparent overflow-x-auto scrollbar-none"
+					on:wheel={(e) => {
+						if (e.deltaY !== 0) {
+							e.preventDefault();
+							e.currentTarget.scrollLeft += e.deltaY;
+						}
+					}}
+				>
+					{#if modelIds.length > 0}
+						<div
+							class="flex gap-0.5 w-fit text-center text-sm rounded-full bg-transparent whitespace-nowrap"
+						>
+							<Select
+								bind:value={selectedModelId}
+								items={[
+									{ value: '', label: $i18n.t('All') },
+									...modelIds.map((mid) => ({ value: mid, label: mid }))
+								]}
+								placeholder={$i18n.t('All')}
+								triggerClass="relative w-full flex items-center gap-0.5 px-2.5 py-1.5 bg-transparent rounded-xl text-[13px] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
+								onChange={() => {
+									page = 1;
+									getFeedbacks();
+								}}
+							>
+								<svelte:fragment slot="trigger" let:selectedLabel>
+									<span
+										class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+									>
+										{selectedLabel}
+									</span>
+									<ChevronDown className="size-3.5" strokeWidth="2.5" />
+								</svelte:fragment>
+
+								<svelte:fragment slot="item" let:item let:selected>
+									{item.label}
+									<div class="ml-auto {selected ? '' : 'invisible'}">
+										<Check />
+									</div>
+								</svelte:fragment>
+							</Select>
+						</div>
+					{/if}
 				</div>
 
-				<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
-					{total}
-				</div>
-			</div>
-
-			<div class="flex w-full justify-end gap-1.5">
 				{#if total > 0}
 					<Dropdown align="end">
 						<button
-							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
+							class="flex h-8 shrink-0 items-center gap-1 px-2 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 dark:text-gray-200 transition text-xs"
 						>
-							<div class="self-center font-normal line-clamp-1">
-								{$i18n.t('Export')}
-							</div>
+							{$i18n.t('Export')}
 							<ChevronDown className="size-3" strokeWidth="2.5" />
 						</button>
 
@@ -262,59 +297,9 @@
 					</Dropdown>
 				{/if}
 			</div>
-		</div>
-	</div>
-
-	<div
-		class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30"
-	>
-		{#if modelIds.length > 0}
-			<div
-				class="px-2.5 flex w-full bg-transparent overflow-x-auto scrollbar-none mb-1"
-				on:wheel={(e) => {
-					if (e.deltaY !== 0) {
-						e.preventDefault();
-						e.currentTarget.scrollLeft += e.deltaY;
-					}
-				}}
-			>
-				<div
-					class="flex gap-0.5 w-fit text-center text-sm rounded-full bg-transparent whitespace-nowrap"
-				>
-					<Select
-						bind:value={selectedModelId}
-						items={[
-							{ value: '', label: $i18n.t('All') },
-							...modelIds.map((mid) => ({ value: mid, label: mid }))
-						]}
-						placeholder={$i18n.t('All')}
-						triggerClass="relative w-full flex items-center gap-0.5 px-2.5 py-1.5 bg-gray-50 dark:bg-gray-850 rounded-xl"
-						onChange={() => {
-							page = 1;
-							getFeedbacks();
-						}}
-					>
-						<svelte:fragment slot="trigger" let:selectedLabel>
-							<span
-								class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
-							>
-								{selectedLabel}
-							</span>
-							<ChevronDown className="size-3.5" strokeWidth="2.5" />
-						</svelte:fragment>
-
-						<svelte:fragment slot="item" let:item let:selected>
-							{item.label}
-							<div class="ml-auto {selected ? '' : 'invisible'}">
-								<Check />
-							</div>
-						</svelte:fragment>
-					</Select>
-				</div>
-			</div>
 		{/if}
 
-		<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full px-2">
+		<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 			{#if (items ?? []).length === 0}
 				<div class="w-full h-full flex flex-col justify-center items-center my-16 mb-24">
 					<div class="max-w-md text-center">

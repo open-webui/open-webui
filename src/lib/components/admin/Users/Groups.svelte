@@ -3,7 +3,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { user } from '$lib/stores';
+	import { adminGroupCount, user } from '$lib/stores';
 
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
@@ -55,6 +55,7 @@
 
 	const setGroups = async () => {
 		groups = await getGroups(localStorage.token);
+		adminGroupCount.set(groups.length);
 	};
 
 	const addGroupHandler = async (group) => {
@@ -65,7 +66,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Group created successfully'));
-			groups = await getGroups(localStorage.token);
+			await setGroups();
 		}
 	};
 
@@ -106,50 +107,9 @@
 		onSubmit={addGroupHandler}
 	/>
 
-	<div class="flex flex-col gap-1 mt-0.5 mb-3">
-		<div class="flex justify-between items-center">
-			<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
-				<div>
-					{$i18n.t('Groups')}
-				</div>
-
-				<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
-					{filteredGroups.length}
-				</div>
-			</div>
-
-			<div class="flex w-full justify-end gap-1.5">
-				<button
-					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
-					aria-haspopup="dialog"
-					on:click={() => {
-						showDefaultPermissionsModal = true;
-					}}
-				>
-					<div class="self-center font-normal line-clamp-1">
-						{$i18n.t('Default permissions')}
-					</div>
-				</button>
-
-				<button
-					class="px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-normal text-sm flex items-center"
-					on:click={() => {
-						showAddGroupModal = !showAddGroupModal;
-					}}
-				>
-					<Plus className="size-3" strokeWidth="2.5" />
-
-					<div class="hidden md:block md:ml-1 text-xs">{$i18n.t('New Group')}</div>
-				</button>
-			</div>
-		</div>
-	</div>
-
-	<div
-		class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30"
-	>
-		<div class="px-2.5 flex h-8 flex-1 items-center w-full gap-2">
-			<div class="flex min-w-0 flex-1">
+	<div class="space-y-1">
+		<div class="flex h-8 flex-1 items-center w-full gap-2">
+			<div class="flex min-w-0 flex-1 items-center">
 				<div class="self-center ml-1 mr-3">
 					<Search className="size-3.5" />
 				</div>
@@ -198,10 +158,30 @@
 					</div>
 				</svelte:fragment>
 			</Select>
+
+			<button
+				class="flex h-8 shrink-0 items-center px-2 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 dark:text-gray-200 transition text-xs"
+				aria-haspopup="dialog"
+				on:click={() => {
+					showDefaultPermissionsModal = true;
+				}}
+			>
+				{$i18n.t('Default permissions')}
+			</button>
+
+			<button
+				class="h-8 shrink-0 p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition font-normal text-sm flex items-center"
+				aria-label={$i18n.t('New Group')}
+				on:click={() => {
+					showAddGroupModal = !showAddGroupModal;
+				}}
+			>
+				<Plus className="size-3.5" strokeWidth="2.5" />
+			</button>
 		</div>
 
 		{#if filteredGroups.length !== 0}
-			<div class="mt-1 grid grid-cols-1 px-2">
+			<div class="mt-1 grid grid-cols-1">
 				{#each filteredGroups as group}
 					<GroupItem {group} {setGroups} {defaultPermissions} />
 				{/each}

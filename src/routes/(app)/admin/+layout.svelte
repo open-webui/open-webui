@@ -2,40 +2,15 @@
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import {
-		WEBUI_NAME,
-		adminUserCount,
-		config,
-		mobile,
-		showSettings,
-		showSidebar,
-		user
-	} from '$lib/stores';
+	import { WEBUI_NAME, config, mobile, showSettings, showSidebar, user } from '$lib/stores';
 	import { page } from '$app/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	import Sidebar from '$lib/components/icons/Sidebar.svelte';
-	import { formatNumber } from '$lib/utils';
-	import { getUsers } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
-	$: usersCountVisible = $page.url.pathname.includes('/admin');
-	$: usersTabSelected = $page.url.pathname.includes('/admin/users');
-	$: usersSeatLimit = $config?.license_metadata?.seats ?? null;
-	$: usersCountExceeded =
-		usersCountVisible && usersSeatLimit !== null && ($adminUserCount ?? 0) > usersSeatLimit;
-	$: if (loaded && usersCountVisible) {
-		loadUserCount();
-	}
-
-	const loadUserCount = async () => {
-		const res = await getUsers(localStorage.token, undefined, 'created_at', 'asc', 1).catch(
-			() => null
-		);
-		adminUserCount.set(res?.total ?? null);
-	};
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
@@ -92,26 +67,10 @@
 					>
 						<a
 							draggable="false"
-							class="min-w-fit p-1.5 flex items-center gap-1.5 {$page.url.pathname.includes(
-								'/admin/users'
-							)
+							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/users')
 								? ''
 								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-							href="/admin"
-							><span>{$i18n.t('Users')}</span>
-							{#if usersCountVisible}
-								<span
-									class="text-sm {usersCountExceeded
-										? `text-red-500 ${usersTabSelected ? '' : 'opacity-50'}`
-										: 'opacity-60'}"
-								>
-									{#if usersSeatLimit !== null}
-										{formatNumber($adminUserCount ?? 0)} of {formatNumber(usersSeatLimit)}
-									{:else}
-										{formatNumber($adminUserCount ?? 0)}
-									{/if}
-								</span>
-							{/if}</a
+							href="/admin">{$i18n.t('Users')}</a
 						>
 
 						<a
