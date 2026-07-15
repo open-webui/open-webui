@@ -11,7 +11,6 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
-	import { goto } from '$app/navigation';
 
 	import { deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
 	import { unloadModel } from '$lib/apis';
@@ -22,7 +21,8 @@
 		models,
 		temporaryChatEnabled,
 		settings,
-		config
+		config,
+		showSettings
 	} from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { capitalizeFirstLetter, sanitizeResponseContent, splitStream } from '$lib/utils';
@@ -789,9 +789,9 @@
 								}}
 							/>
 
-							{#if modelFilterItems.length > 0 || multipleEnabled}
+							{#if modelFilterItems.length > 0 || (multipleEnabled && items.length > 0)}
 								<div class="flex min-w-0 shrink-0 items-center gap-0.5">
-									{#if multipleEnabled}
+									{#if multipleEnabled && items.length > 0}
 										<Tooltip content={$i18n.t('Compare')}>
 											<button
 												type="button"
@@ -829,22 +829,27 @@
 					<div class="group relative flex min-h-0 flex-1 flex-col">
 						{#if filteredItems.length === 0}
 							{#if items.length === 0 && $user?.role === 'admin'}
-								<div class="flex flex-col items-start justify-center py-6 px-4 text-start">
-									<div class="text-sm font-normal text-gray-900 dark:text-gray-100 mb-1">
+								<div
+									class="my-2 flex w-full flex-col items-start justify-center px-4 py-3 text-start"
+								>
+									<div
+										class="mb-0.5 text-xs font-normal leading-4 text-gray-800 dark:text-gray-100"
+									>
 										{$i18n.t('No models available')}
 									</div>
-									<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+									<div class="w-full text-[11px] leading-3.5 text-gray-500 dark:text-gray-400">
 										{$i18n.t('Connect to an AI provider to start chatting')}
 									</div>
-									<a
-										href="/admin/settings/connections"
-										class="px-4 py-1.5 rounded-xl text-xs font-normal bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 transition"
+									<button
+										type="button"
+										class="mt-3 rounded-lg px-0 py-1 text-[11px] font-normal leading-none text-gray-600 underline-offset-2 transition-colors duration-100 hover:text-gray-800 hover:underline focus:outline-hidden focus:underline dark:text-gray-300 dark:hover:text-gray-100"
 										on:click={() => {
 											show = false;
+											showSettings.set('admin:connections');
 										}}
 									>
 										{$i18n.t('Manage Connections')}
-									</a>
+									</button>
 								</div>
 							{:else}
 								<div class="">
