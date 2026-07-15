@@ -12,7 +12,20 @@
 
 	export let onSelect: (e: any) => void = () => {};
 	export let onUpload: (e: any) => void = () => {};
+	export let onCompact: () => void = () => {};
+	export let onStatus: () => void = () => {};
 	export let insertTextHandler: (text: string) => void = () => {};
+	export let canCompact: boolean | (() => boolean) = false;
+	export let compactDisabled: boolean | (() => boolean) = false;
+	export let canStatus: boolean | (() => boolean) = false;
+	export let contextUsage = null;
+
+	$: compactAvailable = typeof canCompact === 'function' ? canCompact() : canCompact;
+	$: isCompactDisabled =
+		typeof compactDisabled === 'function' ? compactDisabled() : compactDisabled;
+	$: statusAvailable = typeof canStatus === 'function' ? canStatus() : canStatus;
+	$: resolvedContextUsage = typeof contextUsage === 'function' ? contextUsage() : contextUsage;
+	$: contextPercent = Math.max(0, Math.round(resolvedContextUsage?.percent ?? 0));
 
 	let suggestionElement: any = null;
 	let filteredItems: any[] = [];
@@ -61,11 +74,21 @@
 					bind:this={suggestionElement}
 					{query}
 					bind:filteredItems
+					canCompact={compactAvailable}
+					compactDisabled={isCompactDisabled}
+					canStatus={statusAvailable}
+					{contextPercent}
 					onSelect={(e) => {
 						const { type, data } = e;
 
 						if (type === 'prompt') {
 							insertTextHandler(data.content);
+						} else if (type === 'command' && data.id === 'compact') {
+							insertTextHandler('');
+							onCompact();
+						} else if (type === 'command' && data.id === 'status') {
+							insertTextHandler('');
+							onStatus();
 						} else if (type === 'skill') {
 							command({
 								id: `${data.id}|${data.name}`,

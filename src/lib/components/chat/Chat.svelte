@@ -70,6 +70,7 @@
 
 	import {
 		archiveChatById,
+		compactChatById,
 		createNewChat,
 		deleteChatById,
 		getAllTags,
@@ -150,6 +151,94 @@
 	} else {
 		selectedModelIds = selectedModels;
 	}
+	let serverContextUsage = null;
+	let contextUsage = null;
+
+	const estimateTokens = (value) => {
+		if (value === null || value === undefined || value === '') {
+			return 0;
+		}
+		if (typeof value !== 'string') {
+			try {
+				value = JSON.stringify(value);
+			} catch {
+				value = String(value);
+			}
+		}
+		return Math.max(1, Math.floor(value.length / 4));
+	};
+
+	const estimateMessagesTokens = (messages) =>
+		messages.reduce((total, message) => {
+			let next = total + 4 + estimateTokens(message.content);
+			next += estimateTokens(message.output);
+			next += estimateTokens(message.tool_calls);
+			next += estimateTokens(message.files);
+			return next;
+		}, 0);
+
+	const getContextThreshold = () => {
+		const chatThreshold = Number(params?.compact_token_threshold);
+		if (Number.isFinite(chatThreshold) && chatThreshold > 0) {
+			return chatThreshold;
+		}
+
+		const modelId = atSelectedModel?.id ?? selectedModels.find((id) => id);
+		const model = $models.find((item) => item.id === modelId);
+		const threshold = Number(model?.info?.params?.compact_token_threshold);
+		return Number.isFinite(threshold) && threshold > 0 ? threshold : 80000;
+	};
+
+	const getContextUsage = () => {
+		if (!history?.currentId) {
+			return null;
+		}
+
+		const messages = createMessagesList(history, history.currentId);
+		const threshold = getContextThreshold();
+		const systemTokens = estimateTokens($settings?.system ?? '');
+		let estimatedTokens = systemTokens;
+		let hasUsageCheckpoint = false;
+		let summary = '';
+		let startIdx = 0;
+
+		for (let idx = 0; idx < messages.length; idx += 1) {
+			const value = messages[idx]?.contextSummary ?? messages[idx]?.context_summary;
+			if (typeof value === 'string' && value.trim()) {
+				summary = value;
+				startIdx = idx;
+			}
+		}
+
+		const activeMessages = messages.slice(startIdx);
+
+		for (let idx = activeMessages.length - 1; idx >= 0; idx -= 1) {
+			const usage = activeMessages[idx]?.usage ?? activeMessages[idx]?.info?.usage;
+			const inputTokens = usage?.input_tokens ?? usage?.prompt_tokens;
+			if (inputTokens) {
+				hasUsageCheckpoint = true;
+				estimatedTokens =
+					Number(inputTokens || 0) +
+					Number(usage.output_tokens ?? usage.completion_tokens ?? 0) +
+					estimateMessagesTokens(activeMessages.slice(idx + 1));
+				break;
+			}
+		}
+
+		if (!hasUsageCheckpoint) {
+			estimatedTokens += estimateTokens(summary) + estimateMessagesTokens(activeMessages);
+		}
+
+		return {
+			tokens: estimatedTokens,
+			estimated_tokens: estimatedTokens,
+			threshold,
+			percent: threshold > 0 ? Math.max(0, Math.round((estimatedTokens / threshold) * 100)) : 0,
+			source: 'estimated'
+		};
+	};
+
+	$: contextUsage = getContextUsage() ?? serverContextUsage;
 
 	let selectedToolIds = [];
 	let selectedSkillIds = [];
@@ -1635,6 +1724,7 @@
 
 				// Load tasks from chat-level DB field
 				chatTasks = chat?.tasks ?? [];
+				serverContextUsage = chat?.context_usage ?? null;
 
 				autoScroll = true;
 				await tick();
@@ -2122,6 +2212,59 @@
 		await sendMessage(history, userMessageId);
 	};
 
+	const handleManualCompact = async () => {
+		if (!$chatId || !history?.currentId) {
+			toast.message($i18n.t('No chat to compact'));
+			return;
+		}
+
+		const currentMessage = history.messages?.[history.currentId];
+		if (
+			generating ||
+			taskIds?.length ||
+			(currentMessage?.role === 'assistant' && !currentMessage.done)
+		) {
+			toast.warning($i18n.t('Wait for the current response to finish before compacting.'));
+			return;
+		}
+
+		const model = atSelectedModel?.id ?? selectedModels.find((modelId) => modelId);
+		const toastId = toast.loading($i18n.t('Compacting context...'));
+
+		try {
+			const result = await compactChatById(localStorage.token, $chatId, model);
+			serverContextUsage = result?.context_usage ?? serverContextUsage;
+
+			if (result?.compacted) {
+				toast.success($i18n.t('Context compacted'), { id: toastId });
+			} else {
+				const skippedReason =
+					result?.reason === 'too_short'
+						? $i18n.t('Chat is too short to compact')
+						: result?.reason === 'empty'
+							? $i18n.t('No chat to compact')
+							: $i18n.t('Nothing to compact');
+				toast.message(skippedReason, { id: toastId });
+			}
+
+			await loadChat();
+		} catch (error) {
+			const message = error?.detail ?? error?.message ?? $i18n.t('Context compaction failed');
+			toast.error(message, { id: toastId });
+		} finally {
+			messageInput?.setText('');
+			prompt = '';
+			document.getElementById('chat-input')?.focus();
+		}
+	};
+
+	const handleStatusCommand = () => {
+		messageInput?.showStatus();
+		messageInput?.setText('');
+		prompt = '';
+		document.getElementById('chat-input')?.focus();
+	};
+
 	const submitHandler = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitHandler', userPrompt, $chatId);
 
@@ -2131,6 +2274,15 @@
 
 		if (!equal(selectedModels, _selectedModels)) {
 			selectedModels = _selectedModels;
+		}
+
+		if (String(userPrompt).trim() === '/compact') {
+			await handleManualCompact();
+			return;
+		}
+		if (String(userPrompt).trim() === '/status') {
+			handleStatusCommand();
+			return;
 		}
 
 		if (pendingOAuthTools.length > 0) {
@@ -3295,6 +3447,10 @@
 										bind:atSelectedModel
 										bind:showCommands
 										bind:dragged
+										chatId={$chatId}
+										{contextUsage}
+										compactHandler={handleManualCompact}
+										statusHandler={handleStatusCommand}
 										toolServers={$toolServers}
 										{generating}
 										{stopResponse}

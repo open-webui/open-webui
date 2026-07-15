@@ -114,6 +114,10 @@
 
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
+	export let compactHandler: Function = () => {};
+	export let statusHandler: Function = () => {};
+	export let chatId = '';
+	export let contextUsage = null;
 
 	export let autoScroll = false;
 	export let generating = false;
@@ -132,6 +136,7 @@
 		(taskIds && taskIds.length > 0) ||
 		(history.currentId && history.messages[history.currentId]?.done != true) ||
 		generating;
+	$: canCompact = !!history?.currentId;
 
 	export let prompt = '';
 	export let files = [];
@@ -163,6 +168,8 @@
 	let inputVariableValues = {};
 
 	let showValvesModal = false;
+	let showStatusPanel = false;
+	let copiedStatusChatId = false;
 	let selectedValvesType = 'tool'; // 'tool' or 'function'
 	let selectedValvesItemId = null;
 	let integrationsMenuCloseOnOutsideClick = true;
@@ -363,6 +370,36 @@
 			if (cb) await cb(text);
 		}
 	};
+
+	export const showStatus = async () => {
+		showStatusPanel = true;
+		await tick();
+		document.getElementById('chat-input')?.focus();
+	};
+
+	const formatTokenCount = (value: number) => {
+		if (value >= 1_000_000) return `${trimNumber(value / 1_000_000)}m`;
+		if (value >= 1_000) return `${trimNumber(value / 1_000)}k`;
+		return String(value ?? 0);
+	};
+
+	const trimNumber = (value: number) =>
+		value >= 10 ? String(Math.round(value)) : value.toFixed(1).replace(/\.0$/, '');
+
+	const copyStatusChatId = async () => {
+		if (!chatId) return;
+		await navigator.clipboard.writeText(chatId);
+		copiedStatusChatId = true;
+		setTimeout(() => {
+			copiedStatusChatId = false;
+		}, 1600);
+	};
+
+	$: contextPercent = Math.max(0, Math.round(contextUsage?.percent ?? 0));
+	$: contextValue = contextUsage
+		? `${contextPercent}% ${formatTokenCount(contextUsage.estimated_tokens || contextUsage.tokens)}/${formatTokenCount(contextUsage.threshold)}`
+		: $i18n.t('unknown');
+	$: contextBarPercent = Math.min(contextPercent, 100);
 
 	const getCommand = () => {
 		const chatInput = document.getElementById('chat-input');
@@ -1046,6 +1083,12 @@
 				char: '/',
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
+					canCompact: () => !!history?.currentId,
+					compactDisabled: () => isActive,
+					canStatus: () => !!history?.currentId,
+					contextUsage: () => contextUsage,
+					onCompact: compactHandler,
+					onStatus: statusHandler,
 					onSelect: (e) => {
 						const { type, data } = e;
 
@@ -1356,6 +1399,86 @@
 										onDelete={onQueueDelete}
 									/>
 								{/each}
+							</div>
+						{/if}
+
+						{#if showStatusPanel}
+							<div class="relative mx-2">
+								<button
+									type="button"
+									class="fixed inset-0 z-40 cursor-default bg-transparent"
+									aria-label={$i18n.t('Close')}
+									on:click={() => {
+										showStatusPanel = false;
+									}}
+								/>
+								<div
+									class="absolute bottom-full right-0 z-50 mb-1 w-80 max-w-[calc(100vw-1.5rem)] rounded-xl border border-gray-100 bg-white p-0.5 text-xs shadow-lg dark:border-gray-800 dark:bg-gray-850 dark:text-white"
+								>
+									<div class="max-h-[70dvh] overflow-y-auto px-1 py-0.5 text-xs">
+										<section>
+											<div class="rounded-xl px-1.5 py-1.5 text-gray-600 dark:text-gray-400">
+												<div class="flex h-5 items-center gap-3">
+													<span class="min-w-0 flex-1 truncate">Context usage</span>
+													<span
+														class="shrink-0 font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
+													>
+														{contextValue}
+													</span>
+												</div>
+												<div
+													class="mt-2 h-px overflow-hidden rounded-full bg-gray-100 dark:bg-white/8"
+												>
+													<div
+														class="h-full rounded-full bg-gray-300 dark:bg-white/20"
+														style={`width: ${contextBarPercent}%`}
+													></div>
+												</div>
+											</div>
+
+											{#if messageQueue.length}
+												<div
+													class="flex h-7 items-center gap-3 rounded-xl px-1.5 text-gray-600 dark:text-gray-400"
+												>
+													<span class="min-w-0 flex-1 truncate">Queued messages</span>
+													<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+														{messageQueue.length}
+													</span>
+												</div>
+											{/if}
+
+											{#if chatTasks.length}
+												<div
+													class="flex h-7 items-center gap-3 rounded-xl px-1.5 text-gray-600 dark:text-gray-400"
+												>
+													<span class="min-w-0 flex-1 truncate">Tasks</span>
+													<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+														{chatTasks.length}
+													</span>
+												</div>
+											{/if}
+
+											<div
+												class="flex h-7 items-center gap-3 rounded-xl px-1.5 text-gray-600 dark:text-gray-400"
+											>
+												<span class="min-w-0 flex-1 truncate">Chat ID</span>
+												{#if chatId}
+													<button
+														type="button"
+														class="min-w-0 max-w-[11rem] truncate font-mono text-[0.625rem] text-gray-400 underline-offset-2 transition-colors duration-75 hover:text-gray-700 hover:underline dark:text-gray-600 dark:hover:text-gray-200"
+														on:click={copyStatusChatId}
+													>
+														{copiedStatusChatId ? $i18n.t('Copied') : chatId}
+													</button>
+												{:else}
+													<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+														none
+													</span>
+												{/if}
+											</div>
+										</section>
+									</div>
+								</div>
 							</div>
 						{/if}
 

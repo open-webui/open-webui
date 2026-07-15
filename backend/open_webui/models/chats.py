@@ -176,6 +176,7 @@ class ChatResponse(BaseModel):
 
     tasks: list | None = None
     summary: str | None = None
+    context_usage: dict | None = None
 
 
 class ChatTitleIdResponse(BaseModel):

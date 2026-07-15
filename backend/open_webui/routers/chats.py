@@ -37,7 +37,7 @@ from open_webui.tasks import has_active_tasks, stop_item_tasks
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.context_compaction import compact_chat_branch
+from open_webui.utils.context_compaction import compact_chat_branch, get_chat_context_usage
 from open_webui.utils.misc import get_message_list
 from open_webui.utils.models import get_all_models
 from pydantic import BaseModel
@@ -1157,6 +1157,7 @@ async def compact_chat_by_id(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No model found for context compaction.')
 
     result = await compact_chat_branch(request, user, chat, model_id, request.app.state.MODELS)
+    result['context_usage'] = await get_chat_context_usage(chat, model_id)
     if result.get('compacted'):
         await publish_event(
             request,
@@ -1203,7 +1204,9 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSess
                         chat = candidate
 
     if chat:
-        return ChatResponse(**chat.model_dump())
+        data = ChatResponse(**chat.model_dump()).model_dump()
+        data['context_usage'] = await get_chat_context_usage(chat)
+        return data
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 

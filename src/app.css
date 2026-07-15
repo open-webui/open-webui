@@ -68,6 +68,18 @@ code {
 	font-family: 'InstrumentSerif', sans-serif;
 }
 
+.app-muted {
+	@apply text-gray-500 dark:text-gray-400;
+}
+
+.app-icon-muted {
+	@apply text-gray-500 dark:text-gray-400;
+}
+
+.app-interactive-active {
+	@apply bg-gray-50/40 dark:bg-gray-800/40;
+}
+
 .marked a {
 	@apply underline;
 }
