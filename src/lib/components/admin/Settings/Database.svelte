@@ -9,13 +9,16 @@
 	import { getAllUserChats } from '$lib/apis/chats';
 	import { getAllUsers } from '$lib/apis/users';
 	import { exportConfig, importConfig } from '$lib/apis/configs';
+	import AdminSettingRow from './AdminSettingRow.svelte';
+	import AdminSettingSection from './AdminSettingSection.svelte';
 
 	const i18n: any = getContext('i18n');
 
 	export let saveHandler: Function;
 
+	let configImportInputElement: HTMLInputElement;
 	const actionButtonClass =
-		'px-0.5 text-xs text-gray-500 underline-offset-2 transition-colors hover:text-gray-900 hover:underline dark:text-gray-500 dark:hover:text-white';
+		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
 	const exportAllUserChats = async () => {
 		let blob = new Blob([JSON.stringify(await getAllUserChats(localStorage.token))], {
@@ -54,6 +57,7 @@
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		<input
 			id="config-json-input"
+			bind:this={configImportInputElement}
 			hidden
 			type="file"
 			accept=".json"
@@ -78,19 +82,26 @@
 			}}
 		/>
 
-		<div class="flex w-full flex-col gap-2.5">
-			<div class="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-				<span class="mr-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Config')}</span>
+		<AdminSettingSection title={$i18n.t('Config')} first>
+			<AdminSettingRow
+				label={$i18n.t('Import Config')}
+				description={$i18n.t('Import admin configuration from a JSON export file.')}
+			>
 				<button
 					class={actionButtonClass}
 					on:click={() => {
-						document.getElementById('config-json-input')?.click();
+						configImportInputElement.click();
 					}}
 					type="button"
 				>
 					{$i18n.t('Import')}
 				</button>
+			</AdminSettingRow>
 
+			<AdminSettingRow
+				label={$i18n.t('Export Config')}
+				description={$i18n.t('Download the current admin configuration as JSON.')}
+			>
 				<button
 					class={actionButtonClass}
 					on:click={async () => {
@@ -101,14 +112,18 @@
 						saveAs(blob, `config-${Date.now()}.json`);
 					}}
 					type="button"
-				>
-					{$i18n.t('Export')}
-				</button>
-			</div>
+					>
+						{$i18n.t('Export')}
+					</button>
+			</AdminSettingRow>
+		</AdminSettingSection>
 
-			{#if $config?.features.enable_admin_export ?? true}
-				<div class="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-					<span class="mr-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Export')}</span>
+		{#if $config?.features.enable_admin_export ?? true}
+			<AdminSettingSection title={$i18n.t('Export')}>
+				<AdminSettingRow
+					label={$i18n.t('Database')}
+					description={$i18n.t('Download the application database when supported.')}
+				>
 					<button
 						class={actionButtonClass}
 						on:click={() => {
@@ -120,16 +135,26 @@
 					>
 						{$i18n.t('Database')}
 					</button>
+				</AdminSettingRow>
 
+				<AdminSettingRow
+					label={$i18n.t('All Chats')}
+					description={$i18n.t("Download every user's chat history as JSON.")}
+				>
 					<button class={actionButtonClass} on:click={exportAllUserChats} type="button">
-						{$i18n.t('All chats')}
+						{$i18n.t('Export')}
 					</button>
+				</AdminSettingRow>
 
+				<AdminSettingRow
+					label={$i18n.t('Users')}
+					description={$i18n.t('Download all users as CSV.')}
+				>
 					<button class={actionButtonClass} on:click={exportUsers} type="button">
-						{$i18n.t('Users')}
+						{$i18n.t('Export')}
 					</button>
-				</div>
-			{/if}
-		</div>
+				</AdminSettingRow>
+			</AdminSettingSection>
+		{/if}
 	</div>
 </div>
