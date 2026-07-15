@@ -5,6 +5,8 @@
 
 	import { goto } from '$app/navigation';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_NAME, config, user, workspaceActions } from '$lib/stores';
 
 	import {
@@ -35,9 +37,20 @@
 	import Switch from '../common/Switch.svelte';
 	import Pagination from '../common/Pagination.svelte';
 
+	type PromptDraft = {
+		id?: string;
+		name: string;
+		command: string;
+		content: string;
+		tags: string[];
+		access_grants: any[];
+		commit_message?: string;
+		is_production?: boolean;
+	};
+
 	let shiftKey = false;
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Writable<i18nType>>('i18n');
 	let promptsImportInputElement: HTMLInputElement;
 	let loaded = false;
 
@@ -52,6 +65,7 @@
 
 	let showDeleteConfirm = false;
 	let showCreateModal = false;
+	let createPrompt: PromptDraft | null = null;
 	let deletePrompt = null;
 
 	let tagsContainerElement: HTMLDivElement;
@@ -67,6 +81,7 @@
 				id: 'prompts-new',
 				label: $i18n.t('Create'),
 				onClick: () => {
+					createPrompt = null;
 					showCreateModal = true;
 				}
 			},
@@ -160,7 +175,20 @@
 		);
 	};
 
-	const createPromptHandler = async (prompt) => {
+	const toPromptDraft = (prompt: any): PromptDraft => ({
+		name: prompt.name || prompt.title || 'Prompt',
+		command: prompt.command || '',
+		content: prompt.content || '',
+		tags: prompt.tags || [],
+		access_grants: prompt.access_grants !== undefined ? prompt.access_grants : []
+	});
+
+	const openCreateModal = (prompt: PromptDraft | null = null) => {
+		createPrompt = prompt;
+		showCreateModal = true;
+	};
+
+	const createPromptHandler = async (prompt: PromptDraft) => {
 		const res = await createNewPrompt(localStorage.token, prompt).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -169,6 +197,7 @@
 		if (res) {
 			toast.success($i18n.t('Prompt created successfully'));
 			showCreateModal = false;
+			createPrompt = null;
 			page = 1;
 			await getPromptList();
 		}
@@ -183,8 +212,7 @@
 			: clonedPrompt.command;
 		clonedPrompt.command = slugify(`${baseCommand} clone`);
 
-		sessionStorage.prompt = JSON.stringify(clonedPrompt);
-		goto('/workspace/prompts/create');
+		openCreateModal(toPromptDraft(clonedPrompt));
 	};
 
 	const exportHandler = async (prompt) => {
@@ -224,13 +252,37 @@
 		viewOption = localStorage?.workspaceViewOption || '';
 		loaded = true;
 
-		const onKeyDown = (event) => {
+		const onMessage = async (event: MessageEvent) => {
+			if (
+				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
+					event.origin
+				)
+			) {
+				return;
+			}
+
+			openCreateModal(toPromptDraft(JSON.parse(event.data)));
+		};
+
+		window.addEventListener('message', onMessage);
+
+		if (window.opener ?? false) {
+			window.opener.postMessage('loaded', '*');
+		}
+
+		if (sessionStorage.prompt) {
+			const prompt = JSON.parse(sessionStorage.prompt);
+			sessionStorage.removeItem('prompt');
+			openCreateModal(toPromptDraft(prompt));
+		}
+
+		const onKeyDown = (event: KeyboardEvent) => {
 			if (event.key === 'Shift') {
 				shiftKey = true;
 			}
 		};
 
-		const onKeyUp = (event) => {
+		const onKeyUp = (event: KeyboardEvent) => {
 			if (event.key === 'Shift') {
 				shiftKey = false;
 			}
@@ -246,6 +298,7 @@
 
 		return () => {
 			clearTimeout(searchDebounceTimer);
+			window.removeEventListener('message', onMessage);
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
 			window.removeEventListener('blur', onBlur);
@@ -277,13 +330,18 @@
 	</DeleteConfirmDialog>
 
 	<Modal bind:show={showCreateModal} size="md">
-		<PromptEditor
-			modal={true}
-			onSubmit={createPromptHandler}
-			onCancel={() => {
-				showCreateModal = false;
-			}}
-		/>
+		{#key createPrompt}
+			<PromptEditor
+				modal={true}
+				prompt={createPrompt}
+				clone={createPrompt !== null}
+				onSubmit={createPromptHandler}
+				onCancel={() => {
+					showCreateModal = false;
+					createPrompt = null;
+				}}
+			/>
+		{/key}
 	</Modal>
 
 	<input

@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount, tick, getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import { toast } from 'svelte-sonner';
@@ -31,13 +33,13 @@
 
 	export let onSubmit: Function;
 	export let edit = false;
-	export let prompt = null;
+	export let prompt: any = null;
 	export let clone = false;
 	export let disabled = false;
 	export let modal = false;
 	export let onCancel: Function = () => {};
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	let loading = false;
 	let showEditModal = false;

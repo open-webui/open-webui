@@ -111,9 +111,9 @@
 
 {#if loaded}
 	<div
-		class="flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+		class="flex flex-col flex-1 min-w-0 w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 			? 'md:max-w-[calc(100%-var(--sidebar-width))]'
-			: ''} max-w-full"
+			: 'md:max-w-[calc(100%-42px)]'} max-w-full"
 	>
 		<nav class="pb-1 px-2.5 pt-2 backdrop-blur-xl drag-region select-none">
 			<div class="flex items-center gap-0.5 md:gap-1">
@@ -238,7 +238,10 @@
 			</div>
 		</nav>
 
-		<div class="  pb-1 px-3 flex-1 max-h-full overflow-y-auto" id="workspace-container">
+		<div
+			class="  pb-1 px-3 flex-1 min-w-0 max-h-full overflow-y-auto overflow-x-hidden"
+			id="workspace-container"
+		>
 			<slot />
 		</div>
 	</div>
