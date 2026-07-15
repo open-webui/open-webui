@@ -7,6 +7,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import { settings } from '$lib/stores';
 
 	const dispatch = createEventDispatcher();
 
@@ -19,6 +20,12 @@
 	let content = '';
 	let type = 'user';
 	let path = '';
+	const inputClass =
+		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const textareaClass =
+		'w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const actionButtonClass =
+		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
 	$: edit = !!memory?.id;
 	$: if (show) {
@@ -51,9 +58,9 @@
 	};
 </script>
 
-<Modal bind:show size="sm">
+<Modal bind:show size="sm" className="bg-white dark:bg-gray-900 rounded-4xl">
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+		<div class=" flex justify-between text-gray-900 dark:text-white px-4 pt-3 pb-1">
 			<div class=" text-sm font-medium self-center">
 				{#if edit}
 					{$i18n.t('Edit Memory')}
@@ -69,16 +76,18 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-5 pb-4 md:space-x-4 dark:text-gray-200">
+		<div
+			class="flex flex-col md:flex-row w-full px-5 pb-4 md:space-x-4 text-gray-600 dark:text-gray-400"
+		>
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form class="flex flex-col w-full" on:submit|preventDefault={submitHandler}>
 					<div class="px-1">
 						<div class="flex w-full justify-between items-center mb-1.5">
-							<div class="text-xs text-gray-500">{$i18n.t('Type')}</div>
+							<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Type')}</div>
 
 							<button
 								type="button"
-								class="text-xs text-gray-700 dark:text-gray-300"
+								class={actionButtonClass}
 								on:click={() => {
 									type = type === 'user' ? 'context' : 'user';
 								}}
@@ -93,16 +102,15 @@
 
 						<textarea
 							bind:value={content}
-							class="bg-transparent w-full text-sm outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+							class={textareaClass}
 							rows="6"
-							style="resize: vertical;"
 							placeholder={type === 'user'
 								? $i18n.t('Add a preference, fact, or instruction about you')
 								: $i18n.t('Add durable context for future chats')}
 						/>
 
 						<div class="flex flex-col w-full mt-1.5">
-							<label for="memory-path" class="mb-0.5 text-xs text-gray-500">
+							<label for="memory-path" class="mb-1 text-xs text-gray-600 dark:text-gray-400">
 								{$i18n.t('Path')}
 								<span class="opacity-50">({$i18n.t('optional')})</span>
 							</label>
@@ -110,7 +118,7 @@
 							<input
 								id="memory-path"
 								bind:value={path}
-								class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+								class={inputClass}
 								placeholder={$i18n.t('Path')}
 								autocomplete="off"
 							/>

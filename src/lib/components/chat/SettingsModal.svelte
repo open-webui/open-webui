@@ -52,9 +52,6 @@
 
 	const i18n: Writable<any> = getContext('i18n');
 
-	const highContrastInputClass =
-		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
-
 	export let show: boolean | string | SettingsModalRequest = false;
 	let modalShow = false;
 	let lastShow: boolean | string | SettingsModalRequest = false;
@@ -847,14 +844,12 @@
 			class="hidden md:flex items-center gap-1.5 h-7 px-2 mx-1 mt-1 mb-0.5 shrink-0 rounded-lg text-xs bg-gray-50/70 dark:bg-white/[0.03]"
 		>
 			<div class="self-center rounded-l-xl bg-transparent">
-				<Search
-					className="size-3.5"
-					strokeWidth={($settings?.highContrastMode ?? false) ? '3' : '1.5'}
-				/>
+				<Search className="size-3.5" strokeWidth="1.5" />
 			</div>
 			<label class="sr-only" for="search-input-settings-modal">{$i18n.t('Search')}</label>
 			<input
-				class={`w-full text-xs ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent py-1 outline-hidden dark:text-gray-300'}`}
+				data-settings-search
+				class="w-full text-xs bg-transparent py-1 outline-hidden dark:text-gray-300"
 				bind:value={search}
 				id="search-input-settings-modal"
 				on:input={searchDebounceHandler}
@@ -863,7 +858,7 @@
 		</div>
 
 		<div
-			class="tabs flex min-w-0 flex-1 min-h-0 overflow-x-auto md:overflow-x-hidden md:overflow-y-auto md:flex-col p-1 pl-0 md:pl-1 gap-px"
+			class="tabs scrollbar-none flex min-w-0 flex-1 min-h-0 overflow-x-auto md:overflow-x-hidden md:overflow-y-auto md:flex-col p-1 pl-0 md:pl-1 gap-px"
 		>
 			<span
 				class="hidden md:block text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 mt-1.5 mb-0.5"
@@ -1191,26 +1186,3 @@
 		</div>
 	</div>
 </Modal>
-
-<style>
-	input::-webkit-outer-spin-button,
-	input::-webkit-inner-spin-button {
-		/* display: none; <- Crashes Chrome on hover */
-		-webkit-appearance: none;
-		margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
-	}
-
-	.tabs::-webkit-scrollbar {
-		display: none; /* for Chrome, Safari and Opera */
-	}
-
-	.tabs {
-		-ms-overflow-style: none; /* IE and Edge */
-		scrollbar-width: none; /* Firefox */
-	}
-
-	input[type='number'] {
-		appearance: textfield;
-		-moz-appearance: textfield; /* Firefox */
-	}
-</style>

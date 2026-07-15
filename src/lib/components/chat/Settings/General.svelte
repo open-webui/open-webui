@@ -10,6 +10,9 @@
 
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import UserSettingField from './UserSettingField.svelte';
+	import UserSettingRow from './UserSettingRow.svelte';
+	import UserSettingSection from './UserSettingSection.svelte';
 	export let saveSettings: Function;
 	export let getModels: Function;
 
@@ -25,11 +28,11 @@
 	let showAdvanced = false;
 
 	const systemPromptTextareaClass =
-		'w-full resize-vertical rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
-	const compactSystemPromptTextareaClass =
-		'w-full resize-vertical appearance-none bg-transparent text-sm outline-hidden focus:bg-transparent disabled:bg-transparent dark:text-gray-300';
-	const highContrastSelectClass =
-		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
+		'w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const selectClass =
+		'h-7 w-fit min-w-28 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-right text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
+	const actionButtonClass =
+		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
 	const toggleNotification = async () => {
 		const permission = await Notification.requestPermission();
@@ -216,59 +219,49 @@
 	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('General')}</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
-		<div class="">
-			<div class="text-xs text-gray-400 dark:text-gray-600 mb-2">
-				{$i18n.t('WebUI Settings')}
-			</div>
-
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-normal">{$i18n.t('Theme')}</div>
-				<div class="flex items-center relative">
-					<select
-						class={`w-fit pr-8 text-xs text-right ${$settings.highContrastMode ? highContrastSelectClass : 'rounded-sm bg-transparent px-2 py-2 outline-hidden'}`}
-						bind:value={selectedTheme}
-						placeholder={$i18n.t('Select a theme')}
-						on:change={() => themeChangeHandler(selectedTheme)}
-					>
-						<option value="system">⚙️ {$i18n.t('System')}</option>
-						<option value="dark">🌑 {$i18n.t('Dark')}</option>
-						<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
-						<option value="light">☀️ {$i18n.t('Light')}</option>
-						{#if $config?.features?.enable_easter_eggs}
-							<option value="her">🌷 Her</option>
-						{/if}
-					</select>
-				</div>
-			</div>
-
-			<div class=" flex w-full justify-between">
-				<div class=" self-center text-xs font-normal">{$i18n.t('Language')}</div>
-				<div class="flex items-center relative">
-					<select
-						class={`w-fit pr-8 text-xs text-right ${$settings.highContrastMode ? highContrastSelectClass : 'rounded-sm bg-transparent px-2 py-2 outline-hidden'}`}
-						bind:value={lang}
-						placeholder={$i18n.t('Select a language')}
-						on:change={(e) => {
-							changeLanguage(lang);
-						}}
-					>
-						{#each languages as language}
-							<option value={language['code']}>{language['title']}</option>
-						{/each}
-					</select>
-				</div>
-			</div>
-			{#if $i18n.language === 'en-US' && !($config?.license_metadata ?? false)}
-				<div
-					class="mb-2 text-xs {($settings?.highContrastMode ?? false)
-						? 'text-gray-800 dark:text-gray-100'
-						: 'text-gray-400 dark:text-gray-500'}"
+		<UserSettingSection title={$i18n.t('WebUI Settings')} first>
+			<UserSettingRow
+				label={$i18n.t('Theme')}
+				description={$i18n.t('Choose the color theme used by the interface.')}
+			>
+				<select
+					class={selectClass}
+					bind:value={selectedTheme}
+					placeholder={$i18n.t('Select a theme')}
+					on:change={() => themeChangeHandler(selectedTheme)}
 				>
+					<option value="system">⚙️ {$i18n.t('System')}</option>
+					<option value="dark">🌑 {$i18n.t('Dark')}</option>
+					<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
+					<option value="light">☀️ {$i18n.t('Light')}</option>
+					{#if $config?.features?.enable_easter_eggs}
+						<option value="her">🌷 Her</option>
+					{/if}
+				</select>
+			</UserSettingRow>
+
+			<UserSettingRow
+				label={$i18n.t('Language')}
+				description={$i18n.t('Choose the language used for interface text.')}
+			>
+				<select
+					class={selectClass}
+					bind:value={lang}
+					placeholder={$i18n.t('Select a language')}
+					on:change={(e) => {
+						changeLanguage(lang);
+					}}
+				>
+					{#each languages as language}
+						<option value={language['code']}>{language['title']}</option>
+					{/each}
+				</select>
+			</UserSettingRow>
+			{#if $i18n.language === 'en-US' && !($config?.license_metadata ?? false)}
+				<div class="-mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 					Couldn't find your language?
 					<a
-						class="font-normal underline {($settings?.highContrastMode ?? false)
-							? 'text-gray-700 dark:text-gray-200'
-							: 'text-gray-300'}"
+						class="font-normal underline text-gray-400 dark:text-gray-600"
 						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
 						target="_blank"
 					>
@@ -277,69 +270,55 @@
 				</div>
 			{/if}
 
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-normal">{$i18n.t('Notifications')}</div>
-
-					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleNotification();
-						}}
-						type="button"
-						role="switch"
-						aria-checked={notificationEnabled}
-					>
-						{#if notificationEnabled === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-		</div>
+			<UserSettingRow
+				label={$i18n.t('Notifications')}
+				description={$i18n.t('Allow browser notifications for completed responses.')}
+			>
+				<button
+					class={actionButtonClass}
+					on:click={() => {
+						toggleNotification();
+					}}
+					type="button"
+					role="switch"
+					aria-checked={notificationEnabled}
+				>
+					{notificationEnabled === true ? $i18n.t('On') : $i18n.t('Off')}
+				</button>
+			</UserSettingRow>
+		</UserSettingSection>
 
 		{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.system_prompt ?? true))}
-			<hr class="border-gray-100/20 dark:border-white/[0.025] my-3" />
-
-			<div>
-				<div class="text-xs text-gray-400 dark:text-gray-600 my-2.5">
-					{$i18n.t('System Prompt')}
-				</div>
-				<Textarea
-					bind:value={system}
-					className={($settings?.highContrastMode ?? false)
-						? systemPromptTextareaClass
-						: compactSystemPromptTextareaClass}
-					rows="4"
-					placeholder={$i18n.t('Enter system prompt here')}
-				/>
-			</div>
+			<UserSettingSection title={$i18n.t('System Prompt')}>
+				<UserSettingField description={$i18n.t('Set the default system prompt for new chats.')}>
+					<Textarea
+						bind:value={system}
+						className={systemPromptTextareaClass}
+						rows="4"
+						placeholder={$i18n.t('Enter system prompt here')}
+					/>
+				</UserSettingField>
+			</UserSettingSection>
 		{/if}
 
 		{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.params ?? true))}
-			<div class="mt-2 space-y-3 pr-1.5">
-				<div class="flex justify-between items-center text-sm">
-					<div class="text-xs text-gray-400 dark:text-gray-600">
-						{$i18n.t('Advanced Parameters')}
-					</div>
+			<UserSettingSection title={$i18n.t('Advanced Parameters')}>
+				<UserSettingRow description={$i18n.t('Show or hide custom generation parameters.')}>
+					<span slot="label">{$i18n.t('Model parameters')}</span>
 					<button
-						class=" text-xs font-normal {($settings?.highContrastMode ?? false)
-							? 'text-gray-800 dark:text-gray-100'
-							: 'text-gray-400 dark:text-gray-500'}"
+						class={actionButtonClass}
 						type="button"
 						aria-expanded={showAdvanced}
 						on:click={() => {
 							showAdvanced = !showAdvanced;
 						}}>{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}</button
 					>
-				</div>
+				</UserSettingRow>
 
 				{#if showAdvanced}
 					<AdvancedParams admin={$user?.role === 'admin'} custom={true} bind:params />
 				{/if}
-			</div>
+			</UserSettingSection>
 		{/if}
 	</div>
 

@@ -355,7 +355,10 @@ Based on the user's instruction, update and enhance the existing notes or select
 				position="top"
 				className="inline-block"
 			>
-				<span class="text-gray-500 text-sm">({$i18n.t('Experimental')})</span>
+				<span
+					class="inline-flex items-center text-[0.625rem] font-normal uppercase leading-none text-gray-400 dark:text-gray-600"
+					>{$i18n.t('Experimental')}</span
+				>
 			</Tooltip>
 		</div>
 	</div>

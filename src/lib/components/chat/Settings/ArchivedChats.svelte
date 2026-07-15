@@ -181,7 +181,7 @@
 />
 
 <div id="tab-archived-chats" class="flex flex-col h-full text-sm">
-	<div class="flex items-center justify-between mb-2">
+	<div class="mb-3 flex items-center justify-between">
 		<h2 class="text-sm font-medium text-gray-900 dark:text-white">
 			{$i18n.t('Archived Chats')}
 			{#if chatCount !== null}
@@ -192,22 +192,25 @@
 		</h2>
 	</div>
 
-	<div class="flex h-8 shrink-0 items-center w-full gap-2">
-		<div class="flex min-w-0 flex-1 items-center">
-			<div class=" self-center ml-1 mr-3">
+	<div class="flex h-7 shrink-0 items-center w-full gap-2">
+		<div
+			class="flex min-w-0 flex-1 items-center rounded-lg bg-gray-50/70 px-2 dark:bg-white/[0.03]"
+		>
+			<div class="mr-2 self-center text-gray-400 dark:text-gray-600">
 				<Search className="size-3.5" />
 			</div>
 			<input
-				class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
+				data-settings-search
+				class="w-full bg-transparent py-1 text-xs text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
 				bind:value={query}
 				on:input={searchHandler}
 				placeholder={$i18n.t('Search')}
 				maxlength="500"
 			/>
 			{#if query}
-				<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+				<div class="self-center pl-1.5">
 					<button
-						class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+						class="rounded-lg p-0.5 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
 						type="button"
 						aria-label={$i18n.t('Clear search')}
 						on:click={() => {
@@ -224,7 +227,7 @@
 		<Dropdown align="end">
 			<Tooltip content={$i18n.t('Actions')}>
 				<button
-					class="flex h-8 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[13px] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
+					class="flex h-7 items-center gap-1.5 rounded-lg bg-transparent px-1.5 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
 					type="button"
 				>
 					<span>{$i18n.t('Actions')}</span>
@@ -235,7 +238,7 @@
 			<div slot="content">
 				<DropdownMenu className="w-[170px] shadow-sm">
 					<button
-						class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
+						class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
 						disabled={loading || chatCount === 0}
 						type="button"
 						on:click={() => {
@@ -251,7 +254,7 @@
 					</button>
 
 					<button
-						class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
+						class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
 						disabled={loading || chatCount === 0}
 						type="button"
 						on:click={exportChatsHandler}
@@ -264,7 +267,7 @@
 		</Dropdown>
 	</div>
 
-	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover px-2 pr-1.5">
+	<div class="mt-3 flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if chatList === null}
 			<div class="flex min-h-20 items-center justify-center">
 				<Spinner className="size-5" />
@@ -276,7 +279,7 @@
 				{$i18n.t('You have no archived conversations.')}
 			</div>
 		{:else}
-			<div class="flex items-center text-xs text-gray-400 dark:text-gray-600">
+			<div class="flex items-center px-1 text-xs text-gray-400 dark:text-gray-600">
 				<button
 					class="flex flex-1 items-center gap-1 py-0.5 text-left"
 					type="button"
@@ -309,7 +312,7 @@
 
 			<div>
 				{#each chatList as chat (chat.id)}
-					<div class="py-0.5 flex w-full justify-between gap-2 text-xs">
+					<div class="flex w-full justify-between gap-2 px-1 py-1 text-xs">
 						<a
 							class="min-w-0 flex-1 self-center truncate text-gray-600 hover:text-black dark:text-gray-400 dark:hover:text-white"
 							href={`/c/${chat.id}`}
@@ -338,7 +341,7 @@
 						<div class="flex shrink-0 items-center justify-end text-gray-500 dark:text-gray-500">
 							<Tooltip content={$i18n.t('Unarchive Chat')}>
 								<button
-									class="rounded-sm p-1 hover:bg-gray-100 dark:hover:bg-gray-850"
+									class="rounded-lg p-1 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
 									type="button"
 									aria-label={$i18n.t('Unarchive Chat')}
 									on:click={() => {
@@ -350,7 +353,7 @@
 							</Tooltip>
 							<Tooltip content={$i18n.t('Delete Chat')}>
 								<button
-									class="rounded-sm p-1 hover:bg-gray-100 dark:hover:bg-gray-850"
+									class="rounded-lg p-1 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
 									type="button"
 									aria-label={$i18n.t('Delete Chat')}
 									on:click={() => {

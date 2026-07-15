@@ -8,7 +8,6 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { settings } from '$lib/stores';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Minus from '$lib/components/icons/Minus.svelte';
@@ -70,9 +69,9 @@
 	let showAccessControlModal = false;
 	let showDeleteConfirmDialog = false;
 
-	const highContrastInputClass =
+	const inputClass =
 		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
-	const highContrastSelectClass =
+	const selectClass =
 		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
 
 	const registerOAuthClientHandler = async () => {
@@ -538,17 +537,13 @@
 						<div class="flex gap-2">
 							<div class="flex flex-col flex-1">
 								<div class="flex justify-between mb-0.5">
-									<label
-										for="enter-name"
-										class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>{$i18n.t('Name')}</label
-									>
+									<label for="enter-name" class={`text-xs text-gray-500`}>{$i18n.t('Name')}</label>
 								</div>
 
 								<div class="flex flex-1 items-center">
 									<input
 										id="enter-name"
-										class={`w-full flex-1 text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										class={`w-full flex-1 text-sm ${inputClass}`}
 										type="text"
 										bind:value={name}
 										placeholder={$i18n.t('Enter name')}
@@ -559,9 +554,7 @@
 							{#if !direct}
 								<div class="flex flex-col flex-1">
 									<div class="flex justify-between mb-0.5">
-										<label
-											for="enter-id"
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										<label for="enter-id" class={`text-xs text-gray-500`}
 											>{$i18n.t('ID')}
 											{#if type !== 'mcp'}<span class="opacity-50">({$i18n.t('optional')})</span
 												>{/if}</label
@@ -570,7 +563,7 @@
 									<div class="flex flex-1 items-center">
 										<input
 											id="enter-id"
-											class={`w-full flex-1 text-sm font-mono ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full flex-1 text-sm font-mono ${inputClass}`}
 											type="text"
 											bind:value={id}
 											placeholder="auto"
@@ -583,16 +576,14 @@
 						</div>
 
 						<div class="flex flex-col w-full mt-1 mb-1.5">
-							<label
-								for="description"
-								class={`mb-0.5 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+							<label for="description" class={`mb-0.5 text-xs text-gray-500`}
 								>{$i18n.t('Description')}</label
 							>
 
 							<div class="flex-1">
 								<input
 									id="description"
-									class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+									class={`w-full text-sm ${inputClass}`}
 									type="text"
 									bind:value={description}
 									placeholder={$i18n.t('Enter description')}
@@ -604,17 +595,13 @@
 						<div class="flex gap-2">
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between mb-0.5">
-									<label
-										for="api-base-url"
-										class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>{$i18n.t('URL')}</label
-									>
+									<label for="api-base-url" class={`text-xs text-gray-500`}>{$i18n.t('URL')}</label>
 								</div>
 
 								<div class="flex flex-1 items-center">
 									<input
 										id="api-base-url"
-										class={`w-full flex-1 text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										class={`w-full flex-1 text-sm ${inputClass}`}
 										type="text"
 										bind:value={url}
 										placeholder={$i18n.t('API Base URL')}
@@ -661,10 +648,7 @@
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between items-center">
 									<div class="flex gap-2 items-center">
-										<div
-											for="select-bearer-or-session"
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
+										<div for="select-bearer-or-session" class={`text-xs text-gray-500`}>
 											{$i18n.t('Auth')}
 										</div>
 									</div>
@@ -710,7 +694,7 @@
 									<div class="flex-shrink-0 self-start">
 										<select
 											id="select-bearer-or-session"
-											class={`w-full text-sm pr-5 ${($settings?.highContrastMode ?? false) ? highContrastSelectClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 dark:bg-gray-900'}`}
+											class={`w-full text-sm pr-5 ${selectClass}`}
 											bind:value={auth_type}
 										>
 											<option value="none">{$i18n.t('None')}</option>
@@ -736,26 +720,20 @@
 												required={false}
 											/>
 										{:else if auth_type === 'none'}
-											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-											>
+											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
 												{$i18n.t('No authentication')}
 											</div>
 										{:else if auth_type === 'session'}
-											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-											>
+											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
 												{$i18n.t('Forwards system user session credentials to authenticate')}
 											</div>
 										{:else if auth_type === 'system_oauth'}
-											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-											>
+											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
 												{$i18n.t('Forwards system user OAuth access token to authenticate')}
 											</div>
 										{:else if auth_type === 'oauth_2.1'}
 											<div
-												class={`flex items-center text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												class={`flex items-center text-xs self-center translate-y-[1px] text-gray-500`}
 											>
 												{$i18n.t('Uses OAuth 2.1 Dynamic Client Registration')}
 											</div>
@@ -773,7 +751,7 @@
 												/>
 												<div class="flex flex-1 items-center">
 													<input
-														class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+														class={`w-full text-sm ${inputClass}`}
 														type="text"
 														bind:value={oauthServerUrl}
 														placeholder={$i18n.t('OAuth Server URL')}
@@ -824,10 +802,7 @@
 									<div class="flex flex-col w-full">
 										<div class="flex justify-between items-center mb-0.5">
 											<div class="flex gap-2 items-center">
-												<div
-													for="select-bearer-or-session"
-													class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-												>
+												<div for="select-bearer-or-session" class={`text-xs text-gray-500`}>
 													{$i18n.t('OpenAPI Spec')}
 												</div>
 											</div>
@@ -837,7 +812,7 @@
 											<div class="flex-shrink-0 self-start">
 												<select
 													id="select-bearer-or-session"
-													class={`w-full text-sm pr-5 ${($settings?.highContrastMode ?? false) ? highContrastSelectClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 dark:bg-gray-900'}`}
+													class={`w-full text-sm pr-5 ${selectClass}`}
 													bind:value={spec_type}
 												>
 													<option value="url">{$i18n.t('URL')}</option>
@@ -852,7 +827,7 @@
 															>{$i18n.t('openapi.json URL or Path')}</label
 														>
 														<input
-															class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+															class={`w-full text-sm ${inputClass}`}
 															type="text"
 															id="url-or-path"
 															bind:value={path}
@@ -862,12 +837,10 @@
 														/>
 													</div>
 												{:else if spec_type === 'json'}
-													<div
-														class={`text-xs w-full self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-													>
+													<div class={`text-xs w-full self-center translate-y-[1px] text-gray-500`}>
 														<label for="url-or-path" class="sr-only">{$i18n.t('JSON Spec')}</label>
 														<textarea
-															class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-black dark:text-white'}`}
+															class={`w-full text-sm ${inputClass}`}
 															bind:value={spec}
 															placeholder={$i18n.t('JSON Spec')}
 															autocomplete="off"
@@ -880,9 +853,7 @@
 										</div>
 
 										{#if ['', 'url'].includes(spec_type)}
-											<div
-												class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-											>
+											<div class={`text-xs mt-1 text-gray-500`}>
 												{$i18n.t(`WebUI will make requests to "{{url}}"`, {
 													url: path.includes('://')
 														? path
@@ -897,16 +868,14 @@
 							{#if type === 'mcp' && ['oauth_2.1', 'oauth_2.1_static'].includes(auth_type)}
 								<div class="flex gap-2 mt-2">
 									<div class="flex flex-col w-full">
-										<label
-											for="oauth-scope"
-											class={`mb-0.5 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										<label for="oauth-scope" class={`mb-0.5 text-xs text-gray-500`}
 											>{$i18n.t('OAuth Scopes')}</label
 										>
 
 										<div class="flex flex-1 items-center">
 											<input
 												id="oauth-scope"
-												class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												class={`w-full text-sm ${inputClass}`}
 												type="text"
 												bind:value={oauthScope}
 												placeholder={$i18n.t('Use discovered scopes')}
@@ -918,16 +887,14 @@
 
 								<div class="flex gap-2 mt-2">
 									<div class="flex flex-col w-full">
-										<label
-											for="oauth-resource-parameter"
-											class={`mb-0.5 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										<label for="oauth-resource-parameter" class={`mb-0.5 text-xs text-gray-500`}
 											>{$i18n.t('OAuth Resource Parameter')}</label
 										>
 
 										<div class="flex flex-1 items-center">
 											<select
 												id="oauth-resource-parameter"
-												class={`w-full text-sm pr-5 ${($settings?.highContrastMode ?? false) ? highContrastSelectClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 dark:bg-gray-900'}`}
+												class={`w-full text-sm pr-5 ${selectClass}`}
 												bind:value={oauthResourceParameter}
 											>
 												<option value="auto">{$i18n.t('Automatic')}</option>
@@ -945,8 +912,7 @@
 										<label
 											for="headers-input"
 											class={`mb-0.5 text-xs text-gray-500
-									${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
-											>{$i18n.t('Headers')}</label
+									`}>{$i18n.t('Headers')}</label
 										>
 
 										<div class="flex-1">
@@ -973,16 +939,14 @@
 							<hr class=" border-gray-100/50 dark:border-gray-700/10 my-2.5 w-full" />
 
 							<div class="flex flex-col w-full mt-2">
-								<label
-									for="function-name-filter-list"
-									class={`mb-1 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+								<label for="function-name-filter-list" class={`mb-1 text-xs text-gray-500`}
 									>{$i18n.t('Function Name Filter List')}</label
 								>
 
 								<div class="flex-1">
 									<input
 										id="function-name-filter-list"
-										class={`w-full text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										class={`w-full text-sm ${inputClass}`}
 										type="text"
 										bind:value={functionNameFilterList}
 										placeholder={$i18n.t('Enter function name filter list (e.g. func1, !func2)')}

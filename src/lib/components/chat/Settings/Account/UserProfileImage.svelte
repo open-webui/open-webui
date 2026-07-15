@@ -82,7 +82,7 @@
 />
 
 {#if variant === 'account'}
-	<div class="mb-6 flex items-center gap-4">
+	<div class="mb-2 flex items-center gap-4">
 		<button
 			class="group relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100
 			ring-1 ring-gray-200 transition-all duration-200 hover:ring-2 hover:ring-gray-300 dark:bg-white/8 dark:ring-white/10 dark:hover:ring-white/20"
@@ -122,12 +122,10 @@
 		</button>
 
 		<div class="flex flex-col gap-1">
-			<span class="text-sm font-medium text-gray-900 dark:text-white"
-				>{displayName || user?.name}</span
-			>
+			<span class="text-xs text-gray-600 dark:text-gray-400">{displayName || user?.name}</span>
 			<div class="flex flex-wrap items-center gap-2">
 				<button
-					class="text-[0.6875rem] text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:hover:text-gray-300"
+					class="text-[0.6875rem] text-gray-500 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 					type="button"
 					on:click={() => {
 						profileImageInputElement.click();
@@ -135,7 +133,7 @@
 				>
 				<span class="text-[0.6875rem] text-gray-300 dark:text-gray-700">·</span>
 				<button
-					class="text-[0.6875rem] text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:hover:text-gray-300"
+					class="text-[0.6875rem] text-gray-500 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 					type="button"
 					on:click={async () => {
 						profileImageUrl = `${WEBUI_BASE_URL}/user.png`;
@@ -143,7 +141,7 @@
 				>
 				<span class="text-[0.6875rem] text-gray-300 dark:text-gray-700">·</span>
 				<button
-					class="text-[0.6875rem] text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:hover:text-gray-300"
+					class="text-[0.6875rem] text-gray-500 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 					type="button"
 					on:click={async () => {
 						if (canvasPixelTest()) {
@@ -162,7 +160,7 @@
 				>
 				<span class="text-[0.6875rem] text-gray-300 dark:text-gray-700">·</span>
 				<button
-					class="text-[0.6875rem] text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:hover:text-gray-300"
+					class="text-[0.6875rem] text-gray-500 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 					type="button"
 					on:click={async () => {
 						const url = await getGravatarUrl(localStorage.token, user?.email);
@@ -215,7 +213,7 @@
 			>
 
 			<button
-				class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg py-0.5 opacity-0 group-hover:opacity-100 transition-all"
+				class="rounded-lg py-0.5 text-center text-xs text-gray-600 opacity-0 transition-all group-hover:opacity-100 dark:text-gray-400"
 				type="button"
 				on:click={async () => {
 					if (canvasPixelTest()) {
@@ -234,7 +232,7 @@
 			>
 
 			<button
-				class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg py-0.5 opacity-0 group-hover:opacity-100 transition-all"
+				class="rounded-lg py-0.5 text-center text-xs text-gray-600 opacity-0 transition-all group-hover:opacity-100 dark:text-gray-400"
 				type="button"
 				on:click={async () => {
 					const url = await getGravatarUrl(localStorage.token, user?.email);

@@ -105,7 +105,7 @@
 		</h2>
 
 		<button
-			class="text-[0.625rem] text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-300"
+			class="text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
 			on:click={resetBindings}
 		>
 			{$i18n.t('Reset Defaults')}
@@ -114,21 +114,17 @@
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		<div class="flex items-center gap-2 px-1 pb-1">
-			<span class="flex-1 text-[0.625rem] font-medium text-gray-400 dark:text-gray-600">
+			<span class="flex-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
 				{$i18n.t('Command')}
 			</span>
-			<span
-				class="w-[9.5rem] shrink-0 text-right text-[0.625rem] font-medium text-gray-400 dark:text-gray-600"
-			>
+			<span class="w-[9.5rem] shrink-0 text-right text-[0.625rem] text-gray-400 dark:text-gray-600">
 				{$i18n.t('Key')}
 			</span>
 		</div>
 
 		{#each Object.entries(categorizedShortcuts) as [category, items], categoryIndex}
 			<div class={categoryIndex > 0 ? 'mt-3' : ''}>
-				<div
-					class="px-1 pb-0.5 pt-1 text-[0.625rem] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-600"
-				>
+				<div class="px-1 pb-0.5 pt-1 text-xs text-gray-400 dark:text-gray-600">
 					{$i18n.t(category)}
 				</div>
 				<div class="divide-y divide-gray-100/70 dark:divide-white/[0.03]">

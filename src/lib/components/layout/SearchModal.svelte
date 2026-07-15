@@ -28,8 +28,8 @@
 	import { refreshChatList } from '$lib/stores/chat-list';
 	import Messages from '../chat/Messages.svelte';
 	import { goto } from '$app/navigation';
-	import PencilSquare from '../icons/PencilSquare.svelte';
-	import PageEdit from '../icons/PageEdit.svelte';
+	import EditPencilIcon from './Sidebar/icons/EditPencil.svelte';
+	import NotesIcon from './Sidebar/icons/Notes.svelte';
 
 	import ChatMenu from './Sidebar/ChatMenu.svelte';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
@@ -251,7 +251,7 @@
 				show = false;
 				onClose();
 			},
-			icon: PencilSquare
+			icon: EditPencilIcon
 		}
 	];
 
@@ -508,7 +508,7 @@
 								show = false;
 								onClose();
 							},
-							icon: PageEdit
+							icon: NotesIcon
 						}
 					]
 				: [])

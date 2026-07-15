@@ -5,6 +5,7 @@
 
 	import { exportChatStats, exportSingleChatStats, downloadChatStats } from '$lib/apis/chats';
 	import { getVersion } from '$lib/apis';
+	import { settings } from '$lib/stores';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -314,7 +315,7 @@
 	};
 </script>
 
-<Modal bind:show size="md">
+<Modal bind:show size="md" className="bg-white dark:bg-gray-900 rounded-4xl">
 	<div class="w-full">
 		{#if completed}
 			<div class="px-5.5 py-5">
@@ -380,7 +381,7 @@
 				</div>
 
 				<div class="mt-3 text-xs text-gray-500">
-					<div class="font-normal text-gray-900 dark:text-gray-100 mb-1">
+					<div class="mb-1 font-normal text-gray-600 dark:text-gray-400">
 						{$i18n.t('What is shared:')}
 					</div>
 					<ul class="list-disc list-inside space-y-0.5 ml-1 mb-2">
@@ -391,7 +392,7 @@
 						<li>{$i18n.t('User ratings (thumbs up/down)')}</li>
 					</ul>
 
-					<div class="font-normal text-gray-900 dark:text-gray-100 mb-1">
+					<div class="mb-1 font-normal text-gray-600 dark:text-gray-400">
 						{$i18n.t('What is NOT shared:')}
 					</div>
 					<ul class="list-disc list-inside space-y-0.5 ml-1">
@@ -452,7 +453,7 @@
 					</div>
 				{/if}
 
-				<div class="mt-5 flex justify-between items-center gap-2">
+				<div class="mt-4 flex items-center justify-between gap-2">
 					<div class="text-xs text-gray-400 text-center mr-auto">
 						<button
 							class="hover:underline px-2"
@@ -465,7 +466,7 @@
 					</div>
 
 					<button
-						class="px-4 py-2 rounded-full text-sm font-normal bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 transition disabled:cursor-not-allowed"
+						class="rounded-full bg-gray-100 px-4 py-2 text-sm font-normal text-gray-600 transition hover:bg-gray-200 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
 						on:click={() => {
 							if (syncing) {
 								cancelOperation();

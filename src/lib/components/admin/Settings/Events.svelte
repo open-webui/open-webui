@@ -51,7 +51,7 @@
 		events: ['*'] as string[]
 	};
 
-	const highContrastInputClass =
+	const inputClass =
 		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 
 	$: events = eventItems.map((item) => item.event);
@@ -392,7 +392,7 @@
 	});
 </script>
 
-<Modal bind:show={showWebhookModal} size="sm">
+<Modal bind:show={showWebhookModal} size="sm" className="bg-white dark:bg-gray-900 rounded-4xl">
 	<div>
 		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
 			<h1 class="text-sm font-medium self-center">
@@ -413,14 +413,12 @@
 			<form class="flex flex-col w-full" on:submit|preventDefault={saveWebhook}>
 				<div class="flex gap-3">
 					<div class="flex flex-col w-full">
-						<label
-							for="event-webhook-name"
-							class={`text-xs mb-0.5 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+						<label for="event-webhook-name" class={`text-xs mb-0.5 text-gray-500`}
 							>{$i18n.t('Name')}</label
 						>
 						<input
 							id="event-webhook-name"
-							class={`w-full text-xs ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+							class={`w-full text-xs ${inputClass}`}
 							type="text"
 							placeholder={$i18n.t('Identity audit')}
 							autocomplete="off"
@@ -431,15 +429,13 @@
 
 				<div class="flex gap-3 mt-2">
 					<div class="flex flex-col w-full">
-						<label
-							for="event-webhook-url"
-							class={`text-xs mb-0.5 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+						<label for="event-webhook-url" class={`text-xs mb-0.5 text-gray-500`}
 							>{$i18n.t('URL')}</label
 						>
 						<div class="flex items-center gap-2">
 							<input
 								id="event-webhook-url"
-								class={`w-full text-xs ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+								class={`w-full text-xs ${inputClass}`}
 								type="url"
 								placeholder="https://example.com/events"
 								autocomplete="off"
@@ -455,9 +451,7 @@
 
 				<div class="mt-3">
 					<div class="flex justify-between items-center gap-3">
-						<div
-							class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-						>
+						<div class={`text-xs text-gray-500`}>
 							{$i18n.t('Send events for')}
 						</div>
 						<select
@@ -524,7 +518,8 @@
 
 							<div class="relative">
 								<input
-									class={`w-full text-xs ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+									data-settings-search
+									class={`w-full text-xs ${inputClass}`}
 									type="text"
 									placeholder={$i18n.t('Search users or groups')}
 									autocomplete="off"
@@ -571,9 +566,7 @@
 
 				<div class="mt-3">
 					<div class="flex justify-between items-center">
-						<label
-							for="event-webhook-all-events"
-							class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+						<label for="event-webhook-all-events" class={`text-xs text-gray-500`}
 							>{$i18n.t('Events')}</label
 						>
 						<label class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
@@ -610,7 +603,7 @@
 
 							<div class="flex gap-2">
 								<input
-									class={`w-full flex-1 text-xs font-mono ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+									class={`w-full flex-1 text-xs font-mono ${inputClass}`}
 									type="text"
 									placeholder={$i18n.t('Search or add pattern')}
 									autocomplete="off"
