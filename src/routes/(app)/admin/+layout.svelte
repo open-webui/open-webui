@@ -35,9 +35,9 @@
 	<div
 		class=" flex flex-col h-screen max-h-[100dvh] flex-1 transition-width duration-200 ease-in-out {$showSidebar
 			? 'md:max-w-[calc(100%-var(--sidebar-width))]'
-			: ' md:max-w-[calc(100%-49px)]'}  w-full max-w-full"
+			: ''}  w-full max-w-full"
 	>
-		<nav class="   px-2.5 backdrop-blur-xl drag-region select-none">
+		<nav class="  px-1.5 pt-0.5 backdrop-blur-xl drag-region select-none">
 			<div class=" flex items-center gap-1">
 				{#if $mobile}
 					<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
