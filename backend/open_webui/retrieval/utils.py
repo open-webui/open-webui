@@ -33,6 +33,7 @@ from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
     ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS,
     OFFLINE_MODE,
+    RAG_OPENAI_API_AUTH_TYPE,
 )
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.chats import Chats
@@ -1163,6 +1164,34 @@ def get_embedding_function(
         raise ValueError(f'Unknown embedding engine: {embedding_engine}')
 
 
+async def get_system_oauth_access_token(user: UserModel) -> Union[str, None]:
+    """Resolve the user's SSO OAuth access token for embedding requests.
+
+    Mirrors the `system_oauth` auth type of chat connections, but without a
+    request context: the most recently updated non-MCP OAuth session for the
+    user is looked up in the DB and refreshed by the OAuthManager if expired.
+    """
+    try:
+        # Lazy imports: main imports the retrieval router which imports this
+        # module, so a top-level import would be circular.
+        from open_webui.main import oauth_manager
+        from open_webui.models.oauth_sessions import OAuthSessions
+
+        sessions = await OAuthSessions.get_sessions_by_user_id(user.id)
+        sessions = sorted(
+            [s for s in sessions if not (s.provider or '').startswith('mcp:')],
+            key=lambda s: s.updated_at or 0,
+            reverse=True,
+        )
+        for session in sessions:
+            token = await oauth_manager.get_oauth_token(user.id, session.id)
+            if token and token.get('access_token'):
+                return token['access_token']
+    except Exception as e:
+        log.error(f'Error resolving system OAuth token for embeddings (user {user.id}): {e}')
+    return None
+
+
 async def generate_embeddings(
     engine: str,
     model: str,
@@ -1173,6 +1202,16 @@ async def generate_embeddings(
     url = kwargs.get('url', '')
     key = kwargs.get('key', '')
     user = kwargs.get('user')
+
+    if engine == 'openai' and RAG_OPENAI_API_AUTH_TYPE == 'system_oauth' and user is not None:
+        access_token = await get_system_oauth_access_token(user)
+        if access_token:
+            key = access_token
+        else:
+            log.warning(
+                f'RAG_OPENAI_API_AUTH_TYPE=system_oauth but no OAuth token available '
+                f'for user {user.id}; falling back to the static RAG_OPENAI_API_KEY'
+            )
 
     if prefix is not None and RAG_EMBEDDING_PREFIX_FIELD_NAME is None:
         if isinstance(text, list):
