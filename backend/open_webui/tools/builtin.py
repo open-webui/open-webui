@@ -2580,6 +2580,7 @@ async def query_knowledge_files(
         from open_webui.models.files import Files
         from open_webui.models.knowledge import Knowledges
         from open_webui.models.notes import Notes
+        from open_webui.models.users import Users
         from open_webui.retrieval.external import retrieve_external_knowledge
         from open_webui.retrieval.utils import query_collection
 
@@ -2587,9 +2588,18 @@ async def query_knowledge_files(
         user_role = __user__.get('role', 'user')
         user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
 
-        embedding_function = __request__.app.state.EMBEDDING_FUNCTION
-        if not embedding_function:
+        base_embedding_function = __request__.app.state.EMBEDDING_FUNCTION
+        if not base_embedding_function:
             return json.dumps({'error': 'Embedding function not configured'})
+
+        # Bind the acting user so query_collection's embedding call can resolve
+        # their SSO OAuth token (RAG_OPENAI_API_AUTH_TYPE=system_oauth).
+        # query_collection has no user parameter; without this the static
+        # RAG_OPENAI_API_KEY is sent and an OAuth-only gateway returns 401.
+        acting_user = await Users.get_user_by_id(user_id)
+
+        async def embedding_function(query, prefix=None, user=None):
+            return await base_embedding_function(query, prefix=prefix, user=user or acting_user)
 
         collection_names = []
         external_knowledges = []
@@ -2775,12 +2785,17 @@ async def query_knowledge_bases(
         import heapq
 
         from open_webui.models.knowledge import Knowledges
+        from open_webui.models.users import Users
         from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
         from open_webui.routers.knowledge import KNOWLEDGE_BASES_COLLECTION
 
         user_id = __user__.get('id')
         user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
-        query_embedding = await __request__.app.state.EMBEDDING_FUNCTION(query)
+        # Pass the acting user so system_oauth embedding auth can resolve their
+        # OAuth token; otherwise the static key is sent and OAuth-only gateways 401.
+        query_embedding = await __request__.app.state.EMBEDDING_FUNCTION(
+            query, user=await Users.get_user_by_id(user_id)
+        )
 
         # Min-heap of (distance, knowledge_base_id) - only holds top `count` results
         top_results_heap = []
