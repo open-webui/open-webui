@@ -691,8 +691,7 @@
 									</div>
 
 									<div
-										class="shrink-0 flex w-full min-w-0 flex-1 pr-1 self-center {(model?.is_active ??
-										true)
+										class="flex min-w-0 flex-1 pr-1 self-center {(model?.is_active ?? true)
 											? ''
 											: 'text-gray-500'}"
 									>
@@ -704,13 +703,13 @@
 														? `${model?.ollama?.digest} **(${model?.ollama?.modified_at})**`
 														: model.id
 											)}
-											className=" w-fit"
+											className="min-w-0 flex-1"
 											placement="top-start"
 										>
 											<div
-												class="text-[13px] leading-4 font-normal line-clamp-1 flex items-center gap-1.5"
+												class="flex min-w-0 items-center gap-1.5 text-[13px] font-normal leading-4"
 											>
-												{model.name}
+												<span class="min-w-0 truncate">{model.name}</span>
 
 												<span
 													class="shrink-0 text-[11px] font-normal leading-4 {modelAccessClass(
@@ -723,7 +722,7 @@
 										</Tooltip>
 									</div>
 								</button>
-								<div class="flex flex-row gap-0.5 items-center self-center">
+								<div class="flex shrink-0 flex-row gap-0.5 items-center self-center">
 									{#if shiftKey}
 										<Tooltip content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}>
 											<button

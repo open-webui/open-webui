@@ -106,15 +106,16 @@
 		}
 	});
 
-	// Convert TipTap mention spans -> <@id>
+	// Convert TipTap mention spans -> serialized mention tags.
 	turndownService.addRule('mentions', {
 		filter: (node) => node.nodeName === 'SPAN' && node.getAttribute('data-type') === 'mention',
 		replacement: (_content, node: HTMLElement) => {
 			const id = node.getAttribute('data-id') || '';
 			// TipTap stores the trigger char in data-mention-suggestion-char (usually "@")
 			const ch = node.getAttribute('data-mention-suggestion-char') || '@';
-			// Emit <@id> style, e.g. <@llama3.2:latest>
-			return `<${ch}${id}>`;
+			// Skills are always serialized as <$id|label>, even when selected from "/".
+			const mentionChar = id.includes('|') ? '$' : ch;
+			return `<${mentionChar}${id}>`;
 		}
 	});
 
