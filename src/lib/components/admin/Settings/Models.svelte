@@ -653,6 +653,14 @@
 											>
 												{model.name}
 
+												<span class=" line-clamp-1 text-gray-500">
+													{!!model?.meta?.description
+														? model?.meta?.description
+														: model?.ollama?.digest
+															? `${model.id} (${model?.ollama?.digest})`
+															: model.id}
+												</span>
+
 												<Badge
 													type={(model?.access_grants ?? []).some(
 														(g) =>
@@ -673,17 +681,6 @@
 												/>
 											</div>
 										</Tooltip>
-										<div
-											class="text-[11px] leading-3 overflow-hidden text-ellipsis line-clamp-1 flex items-center gap-1 text-gray-500"
-										>
-											<span class=" line-clamp-1">
-												{!!model?.meta?.description
-													? model?.meta?.description
-													: model?.ollama?.digest
-														? `${model.id} (${model?.ollama?.digest})`
-														: model.id}
-											</span>
-										</div>
 									</div>
 								</button>
 								<div class="flex flex-row gap-0.5 items-center self-center">
