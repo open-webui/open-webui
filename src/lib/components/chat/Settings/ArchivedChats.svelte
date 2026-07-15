@@ -22,11 +22,15 @@
 	import { chatId, showSettings } from '$lib/stores';
 	import { refreshChatList } from '$lib/stores/chat-list';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Loader from '$lib/components/common/Loader.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
 	import Trash from '$lib/components/icons/Trash.svelte';
 	import UndoAction from '$lib/components/icons/UndoAction.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -176,46 +180,90 @@
 />
 
 <div id="tab-archived-chats" class="flex flex-col h-full text-sm">
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
-		{$i18n.t('Archived Chats')}
-	</h2>
+	<div class="flex items-center justify-between mb-2">
+		<h2 class="text-sm font-medium text-gray-900 dark:text-white">
+			{$i18n.t('Archived Chats')}
+			{#if chatCount !== null}
+				<span class="ml-2 font-normal text-gray-500 dark:text-gray-500">
+					{chatCount}
+				</span>
+			{/if}
+		</h2>
+	</div>
 
-	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
-		<div>
-			<div class="text-xs text-gray-400 dark:text-gray-600 mb-2">
-				{$i18n.t('Conversations')}
-				{#if chatCount !== null}
-					<span>{chatCount}</span>
-				{/if}
+	<div class="flex h-8 shrink-0 items-center w-full gap-2">
+		<div class="flex min-w-0 flex-1 items-center">
+			<div class=" self-center ml-1 mr-3">
+				<Search className="size-3.5" />
 			</div>
-
-			<div class="py-0.5 flex w-full justify-between">
-				<div class="self-center text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Search')}</div>
-				<div class="flex min-w-0 items-center justify-end gap-1">
-					<input
-						class="w-40 bg-transparent py-1 text-right text-xs outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-600"
-						bind:value={query}
-						on:input={searchHandler}
-						placeholder={$i18n.t('Search')}
-						maxlength="500"
-					/>
-					{#if query}
-						<button
-							class="rounded-sm p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-850"
-							type="button"
-							aria-label={$i18n.t('Clear search')}
-							on:click={() => {
-								query = '';
-								searchHandler();
-							}}
-						>
-							<XMark className="size-3" strokeWidth="2" />
-						</button>
-					{/if}
+			<input
+				class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
+				bind:value={query}
+				on:input={searchHandler}
+				placeholder={$i18n.t('Search')}
+				maxlength="500"
+			/>
+			{#if query}
+				<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+					<button
+						class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+						type="button"
+						aria-label={$i18n.t('Clear search')}
+						on:click={() => {
+							query = '';
+							searchHandler();
+						}}
+					>
+						<XMark className="size-3" strokeWidth="2" />
+					</button>
 				</div>
-			</div>
+			{/if}
 		</div>
 
+		<Dropdown align="end">
+			<Tooltip content={$i18n.t('Actions')}>
+				<button
+					class="flex h-8 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[13px] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
+					type="button"
+				>
+					<span>{$i18n.t('Actions')}</span>
+					<ChevronDown className="size-3" strokeWidth="2.5" />
+				</button>
+			</Tooltip>
+
+			<div slot="content">
+				<DropdownMenu className="w-[170px] shadow-sm">
+					<button
+						class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
+						disabled={loading || chatCount === 0}
+						type="button"
+						on:click={() => {
+							showUnarchiveAllConfirmDialog = true;
+						}}
+					>
+						{#if loading}
+							<Spinner className="size-3.5" />
+						{:else}
+							<UndoAction className="size-3.5" strokeWidth="1.5" />
+						{/if}
+						<div class="flex items-center">{$i18n.t('Unarchive All')}</div>
+					</button>
+
+					<button
+						class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
+						disabled={loading || chatCount === 0}
+						type="button"
+						on:click={exportChatsHandler}
+					>
+						<Download className="size-3.5" strokeWidth="1.5" />
+						<div class="flex items-center">{$i18n.t('Export')}</div>
+					</button>
+				</DropdownMenu>
+			</div>
+		</Dropdown>
+	</div>
+
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover px-2 pr-1.5">
 		{#if chatList === null}
 			<div class="flex min-h-20 items-center justify-center">
 				<Spinner className="size-5" />
@@ -227,7 +275,7 @@
 				{$i18n.t('You have no archived conversations.')}
 			</div>
 		{:else}
-			<div class="mt-3 flex items-center text-xs text-gray-400 dark:text-gray-600">
+			<div class="flex items-center text-xs text-gray-400 dark:text-gray-600">
 				<button
 					class="flex flex-1 items-center gap-1 py-0.5 text-left"
 					type="button"
@@ -331,34 +379,6 @@
 					</div>
 				</Loader>
 			{/if}
-		{/if}
-	</div>
-
-	<div class="shrink-0 pt-3 flex justify-end gap-1.5 text-sm font-normal">
-		{#if query === ''}
-			<button
-				class="px-3.5 py-1.5 font-normal hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl disabled:opacity-50"
-				disabled={loading || chatCount === 0}
-				type="button"
-				on:click={() => {
-					showUnarchiveAllConfirmDialog = true;
-				}}
-			>
-				{#if loading}
-					<Spinner className="size-4" />
-				{:else}
-					{$i18n.t('Unarchive All')}
-				{/if}
-			</button>
-
-			<button
-				class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full disabled:opacity-50"
-				disabled={loading || chatCount === 0}
-				type="button"
-				on:click={exportChatsHandler}
-			>
-				{$i18n.t('Export')}
-			</button>
 		{/if}
 	</div>
 </div>

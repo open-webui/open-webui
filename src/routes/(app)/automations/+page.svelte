@@ -259,8 +259,8 @@
 >
 	<div class="flex-1 max-h-full overflow-y-auto">
 		{#if loaded}
-			<div class="pb-1 px-3 md:px-[18px] pt-2">
-				<div class="flex items-center gap-0.5 md:gap-1 mb-2">
+			<div class="pb-1 px-2.5 pt-2">
+				<div class="flex items-center gap-0.5 md:gap-1 mb-1">
 					{#if $mobile}
 						<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
 							<Tooltip

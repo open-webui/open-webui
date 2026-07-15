@@ -340,7 +340,7 @@
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full relative">
-		<div class=" flex flex-col h-full px-3.5">
+		<div class=" flex flex-col h-full px-2.5">
 			<div class="flex w-full items-center gap-1.5">
 				<Collapsible
 					className="w-full flex-1"
