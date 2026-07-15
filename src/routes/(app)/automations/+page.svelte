@@ -285,7 +285,7 @@
 					<div class="flex w-full items-center">
 						<div class="flex items-center gap-1 py-1 min-w-0">
 							<span class="min-w-fit px-1 text-sm select-none">{$i18n.t('Automations')}</span>
-							<span class="text-xs text-gray-500 dark:text-gray-500">
+							<span class="text-sm text-gray-500 dark:text-gray-500">
 								{total ?? ''}
 							</span>
 						</div>
