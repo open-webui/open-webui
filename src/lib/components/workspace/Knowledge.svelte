@@ -297,11 +297,10 @@
 
 		{#if items !== null && total !== null}
 			{#if (items ?? []).length !== 0}
-				<!-- The Aleph dreams itself into being, and the void learns its own name -->
-				<div class="my-1 grid grid-cols-1 lg:grid-cols-2 gap-x-2 gap-y-0.5">
+				<div class="my-1 grid grid-cols-1 gap-x-2 gap-y-0.5 lg:grid-cols-2">
 					{#each items as item}
 						<button
-							class="flex space-x-4 cursor-pointer text-left w-full px-2.5 py-1.5 transition rounded-2xl hover:bg-gray-50/70 dark:hover:bg-gray-850/50"
+							class="flex w-full cursor-pointer rounded-xl px-2 py-1 text-left transition hover:bg-gray-50/60 dark:hover:bg-gray-850/40"
 							on:click={() => {
 								if (item?.meta?.document) {
 									toast.error(
@@ -314,9 +313,9 @@
 								}
 							}}
 						>
-							<div class=" w-full">
-								<div class=" self-center flex-1 justify-between">
-									<div class="flex items-center justify-between -my-1 h-8">
+							<div class="w-full min-w-0">
+								<div class="flex-1 self-center justify-between">
+									<div class="flex h-7 items-center justify-between">
 										<div class=" flex gap-2 items-center justify-between w-full">
 											{#if item?.meta?.source === 'external'}
 												<div>
@@ -360,14 +359,14 @@
 										{/if}
 									</div>
 
-									<div class=" flex items-center gap-1 justify-between px-1.5">
+									<div class="flex items-center justify-between gap-2 px-0.5">
 										<Tooltip content={item?.description ?? item.name}>
-											<div class=" flex items-center gap-2">
-												<div class=" text-sm font-normal line-clamp-1 capitalize">{item.name}</div>
+											<div class="flex min-w-0 items-center gap-2">
+												<div class="line-clamp-1 text-sm font-normal capitalize">{item.name}</div>
 											</div>
 										</Tooltip>
 
-										<div class="flex items-center gap-2 shrink-0">
+										<div class="flex shrink-0 items-center gap-2">
 											<Tooltip content={dayjs(item.updated_at * 1000).format('LLLL')}>
 												<div class=" text-xs text-gray-500 line-clamp-1 hidden sm:block">
 													{$i18n.t('Updated')}

@@ -20,6 +20,7 @@
 	import WebSearch from './Settings/WebSearch.svelte';
 
 	import Evaluations from './Settings/Evaluations.svelte';
+	import Analytics from './Analytics.svelte';
 	import CodeExecution from './Settings/CodeExecution.svelte';
 	import Integrations from './Settings/Integrations.svelte';
 	import Subagents from './Settings/Subagents.svelte';
@@ -42,6 +43,7 @@
 			'models',
 			'subagents',
 			'evaluations',
+			'analytics',
 			'integrations',
 			'documents',
 			'web',
@@ -156,6 +158,12 @@
 			title: 'Evaluations',
 			route: '/admin/settings/evaluations',
 			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard', 'preference']
+		},
+		{
+			id: 'analytics',
+			title: 'Analytics',
+			route: '/admin/settings/analytics',
+			keywords: ['analytics', 'usage', 'stats', 'dashboard', 'models', 'users', 'messages']
 		},
 		{
 			id: 'integrations',
@@ -289,6 +297,10 @@
 	const setFilteredSettings = () => {
 		filteredSettings = allSettings.filter((tab) => {
 			const searchTerm = search.toLowerCase().trim();
+			if (tab.id === 'analytics' && !($config?.features.enable_admin_analytics ?? true)) {
+				return false;
+			}
+
 			return (
 				search === '' ||
 				tab.title.toLowerCase().includes(searchTerm) ||
@@ -367,6 +379,7 @@
 			<!-- {$i18n.t('Models')} -->
 			<!-- {$i18n.t('Sub-agents')} -->
 			<!-- {$i18n.t('Evaluations')} -->
+			<!-- {$i18n.t('Analytics')} -->
 			<!-- {$i18n.t('Integrations')} -->
 			<!-- {$i18n.t('Documents')} -->
 			<!-- {$i18n.t('Web Search')} -->
@@ -416,6 +429,8 @@
 					<Subagents />
 				{:else if selectedTab === 'evaluations'}
 					<Evaluations />
+				{:else if selectedTab === 'analytics'}
+					<Analytics />
 				{:else if selectedTab === 'integrations'}
 					<Integrations />
 				{:else if selectedTab === 'documents'}

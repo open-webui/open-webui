@@ -21,6 +21,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Sidebar from '$lib/components/icons/Sidebar.svelte';
 	import SplitCreateButton from '$lib/components/common/SplitCreateButton.svelte';
+	import { formatNumber } from '$lib/utils';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -42,6 +43,7 @@
 	$: visibleActions = $workspaceActions.filter((action) => action.visible ?? true);
 
 	const getCount = (res: any) => res?.total ?? (Array.isArray(res) ? res.length : null);
+	const formatCount = (count: number | null) => formatNumber(count ?? 0);
 
 	const loadWorkspaceCounts = async () => {
 		const canViewModels = $user?.role === 'admin' || $user?.permissions?.workspace?.models;
@@ -155,7 +157,7 @@
 							>
 								<span>{$i18n.t('Models')}</span>
 								<span class="text-sm text-gray-500 dark:text-gray-500">
-									{$workspaceCounts.models ?? 0}
+									{formatCount($workspaceCounts.models)}
 								</span>
 							</a>
 						{/if}
@@ -172,7 +174,7 @@
 							>
 								<span>{$i18n.t('Knowledge')}</span>
 								<span class="text-sm text-gray-500 dark:text-gray-500">
-									{$workspaceCounts.knowledge ?? 0}
+									{formatCount($workspaceCounts.knowledge)}
 								</span>
 							</a>
 						{/if}
@@ -189,7 +191,7 @@
 							>
 								<span>{$i18n.t('Prompts')}</span>
 								<span class="text-sm text-gray-500 dark:text-gray-500">
-									{$workspaceCounts.prompts ?? 0}
+									{formatCount($workspaceCounts.prompts)}
 								</span>
 							</a>
 						{/if}
@@ -206,7 +208,7 @@
 							>
 								<span>{$i18n.t('Skills')}</span>
 								<span class="text-sm text-gray-500 dark:text-gray-500">
-									{$workspaceCounts.skills ?? 0}
+									{formatCount($workspaceCounts.skills)}
 								</span>
 							</a>
 						{/if}
@@ -223,7 +225,7 @@
 							>
 								<span>{$i18n.t('Tools')}</span>
 								<span class="text-sm text-gray-500 dark:text-gray-500">
-									{$workspaceCounts.tools ?? 0}
+									{formatCount($workspaceCounts.tools)}
 								</span>
 							</a>
 						{/if}

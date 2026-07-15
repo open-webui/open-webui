@@ -469,18 +469,17 @@
 				<Spinner className="size-5" />
 			</div>
 		{:else if (prompts ?? []).length !== 0}
-			<!-- Before they call, I will answer; while they are yet speaking, I will hear. -->
-			<div class="gap-x-2 gap-y-0.5 grid my-1 lg:grid-cols-2">
+			<div class="my-1 grid gap-x-2 gap-y-0.5 lg:grid-cols-2">
 				{#each prompts as prompt (prompt.id)}
 					<a
-						class="flex space-x-4 cursor-pointer text-left w-full px-2.5 py-1.5 transition rounded-2xl hover:bg-gray-50/70 dark:hover:bg-gray-850/50"
+						class="flex w-full cursor-pointer rounded-xl px-2 py-1 text-left transition hover:bg-gray-50/60 dark:hover:bg-gray-850/40"
 						href={`/workspace/prompts/${prompt.id}`}
 					>
-						<div class=" flex flex-col flex-1 space-x-4 cursor-pointer w-full pl-1">
+						<div class="flex w-full min-w-0 flex-1 cursor-pointer flex-col pl-0.5">
 							<div class="flex items-center justify-between w-full mb-0.5">
-								<div class="flex items-center gap-2">
-									<div class="font-normal line-clamp-1 capitalize">{prompt.name}</div>
-									<div class="text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
+								<div class="flex min-w-0 items-center gap-2">
+									<div class="line-clamp-1 text-sm font-normal capitalize">{prompt.name}</div>
+									<div class="line-clamp-1 overflow-hidden text-ellipsis text-xs text-gray-500">
 										/{prompt.command}
 									</div>
 								</div>
@@ -489,13 +488,13 @@
 								{/if}
 							</div>
 
-							<div class="flex gap-1 text-xs">
+							<div class="flex min-w-0 gap-1 text-xs text-gray-500">
 								<Tooltip
 									content={prompt?.user?.email ?? $i18n.t('Deleted User')}
 									className="flex shrink-0"
 									placement="top-start"
 								>
-									<div class="shrink-0 text-gray-500">
+									<div class="shrink-0">
 										{$i18n.t('By {{name}}', {
 											name: capitalizeFirstLetter(
 												prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
@@ -519,7 +518,7 @@
 							{#if shiftKey}
 								<Tooltip content={$i18n.t('Delete')}>
 									<button
-										class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white"
 										type="button"
 										aria-label={$i18n.t('Delete')}
 										on:click={() => {
@@ -532,7 +531,7 @@
 							{:else}
 								<Tooltip content={$i18n.t('Copy Prompt')}>
 									<button
-										class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white"
 										type="button"
 										aria-label={$i18n.t('Copy Prompt')}
 										on:click={(e) => {
@@ -568,10 +567,10 @@
 									onClose={() => {}}
 								>
 									<button
-										class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white"
 										type="button"
 									>
-										<EllipsisHorizontal className="size-5" />
+										<EllipsisHorizontal className="size-4" />
 									</button>
 								</PromptMenu>
 

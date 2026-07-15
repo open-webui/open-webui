@@ -1,5 +1,6 @@
 <script lang="ts">
 	import CodeBracket from '$lib/components/icons/CodeBracket.svelte';
+	import BarsArrowUp from '$lib/components/icons/BarsArrowUp.svelte';
 	import Computer from '$lib/components/icons/Computer.svelte';
 	import Database from '$lib/components/icons/Database.svelte';
 	import Document from '$lib/components/icons/Document.svelte';
@@ -66,6 +67,8 @@
 		<path stroke-linecap="round" stroke-linejoin="round" d="M12 20V4" />
 		<path stroke-linecap="round" stroke-linejoin="round" d="M19 20v-7" />
 	</svg>
+{:else if id === 'analytics'}
+	<BarsArrowUp {className} {strokeWidth} />
 {:else if id === 'integrations'}
 	<WrenchAlt {className} {strokeWidth} />
 {:else if id === 'documents'}

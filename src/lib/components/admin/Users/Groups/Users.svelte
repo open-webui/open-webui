@@ -16,7 +16,6 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
-	import Badge from '$lib/components/common/Badge.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
@@ -44,6 +43,16 @@
 			direction = 'asc';
 		}
 		page = 1;
+	};
+
+	const roleClass = (role) => {
+		if (role === 'admin') {
+			return 'text-blue-700/50 dark:text-blue-300/50';
+		}
+		if (role === 'user') {
+			return 'text-green-700/50 dark:text-green-300/50';
+		}
+		return 'text-gray-500 dark:text-gray-400';
 	};
 
 	const getUserList = async () => {
@@ -154,12 +163,12 @@
 							<th
 								scope="col"
 								class="px-2.5 py-2 cursor-pointer select-none"
-								on:click={() => setSortKey('role')}
+								on:click={() => setSortKey('name')}
 							>
 								<div class="flex gap-1.5 items-center">
-									{$i18n.t('Role')}
+									{$i18n.t('Name')}
 
-									{#if orderBy === 'role'}
+									{#if orderBy === 'name'}
 										<span class="font-normal"
 											>{#if direction === 'asc'}
 												<ChevronUp className="size-2" />
@@ -177,12 +186,12 @@
 							<th
 								scope="col"
 								class="px-2.5 py-2 cursor-pointer select-none"
-								on:click={() => setSortKey('name')}
+								on:click={() => setSortKey('role')}
 							>
 								<div class="flex gap-1.5 items-center">
-									{$i18n.t('Name')}
+									{$i18n.t('Role')}
 
-									{#if orderBy === 'name'}
+									{#if orderBy === 'role'}
 										<span class="font-normal"
 											>{#if direction === 'asc'}
 												<ChevronUp className="size-2" />
@@ -236,23 +245,11 @@
 										/>
 									</div>
 								</td>
-								<td class="px-3 py-1 min-w-[7rem] w-28">
-									<div class=" translate-y-0.5">
-										<Badge
-											type={user.role === 'admin'
-												? 'info'
-												: user.role === 'user'
-													? 'success'
-													: 'muted'}
-											content={$i18n.t(user.role)}
-										/>
-									</div>
-								</td>
 								<td class="px-3 py-1 font-normal text-gray-900 dark:text-white max-w-48">
 									<Tooltip content={user.email} placement="top-start">
-										<div class="flex items-center">
+										<div class="flex items-center gap-2">
 											<img
-												class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
+												class="rounded-full w-6 h-6 object-cover flex-shrink-0"
 												src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 												alt="user"
 											/>
@@ -260,6 +257,11 @@
 											<div class="font-normal truncate">{user.name}</div>
 										</div>
 									</Tooltip>
+								</td>
+								<td class="px-3 py-1 min-w-[5rem] w-20">
+									<span class="text-xs font-normal leading-4 capitalize {roleClass(user.role)}">
+										{$i18n.t(user.role)}
+									</span>
 								</td>
 
 								<td class=" px-3 py-1">

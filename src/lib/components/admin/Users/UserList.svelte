@@ -23,7 +23,6 @@
 
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
-	import Badge from '$lib/components/common/Badge.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
@@ -77,6 +76,16 @@
 			orderBy = key;
 			direction = 'asc';
 		}
+	};
+
+	const roleClass = (role) => {
+		if (role === 'admin') {
+			return 'text-blue-700/50 dark:text-blue-300/50';
+		}
+		if (role === 'user') {
+			return 'text-green-700/50 dark:text-green-300/50';
+		}
+		return 'text-gray-500 dark:text-gray-400';
 	};
 
 	const getUserList = async () => {
@@ -239,12 +248,12 @@
 					<th
 						scope="col"
 						class="px-2.5 py-2 cursor-pointer select-none"
-						on:click={() => setSortKey('role')}
+						on:click={() => setSortKey('name')}
 					>
 						<div class="flex gap-1.5 items-center">
-							{$i18n.t('Role')}
+							{$i18n.t('Name')}
 
-							{#if orderBy === 'role'}
+							{#if orderBy === 'name'}
 								<span class="font-normal"
 									>{#if direction === 'asc'}
 										<ChevronUp className="size-2" />
@@ -262,12 +271,12 @@
 					<th
 						scope="col"
 						class="px-2.5 py-2 cursor-pointer select-none"
-						on:click={() => setSortKey('name')}
+						on:click={() => setSortKey('role')}
 					>
 						<div class="flex gap-1.5 items-center">
-							{$i18n.t('Name')}
+							{$i18n.t('Role')}
 
-							{#if orderBy === 'name'}
+							{#if orderBy === 'role'}
 								<span class="font-normal"
 									>{#if direction === 'asc'}
 										<ChevronUp className="size-2" />
@@ -359,21 +368,6 @@
 			<tbody class="">
 				{#each users as user (user.id)}
 					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
-						<td class="px-3 py-1 min-w-[7rem] w-28">
-							<button
-								class=" translate-y-0.5"
-								aria-label={$i18n.t('Change User Role')}
-								on:click={() => {
-									selectedUser = user;
-									showEditUserModal = !showEditUserModal;
-								}}
-							>
-								<Badge
-									type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
-									content={$i18n.t(user.role)}
-								/>
-							</button>
-						</td>
 						<td class="px-3 py-1 font-normal text-gray-900 dark:text-white max-w-48">
 							<div class="flex items-center gap-2">
 								<ProfilePreview {user} side="right" align="center" sideOffset={6}>
@@ -400,6 +394,18 @@
 									</div>
 								{/if}
 							</div>
+						</td>
+						<td class="px-3 py-1 min-w-[5rem] w-20">
+							<button
+								class="text-xs font-normal leading-4 capitalize transition {roleClass(user.role)}"
+								aria-label={$i18n.t('Change User Role')}
+								on:click={() => {
+									selectedUser = user;
+									showEditUserModal = !showEditUserModal;
+								}}
+							>
+								{$i18n.t(user.role)}
+							</button>
 						</td>
 						<td class=" px-3 py-1 max-w-48 truncate"> {user.email} </td>
 

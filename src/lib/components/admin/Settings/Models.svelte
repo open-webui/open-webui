@@ -30,7 +30,6 @@
 
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
 	import { toast } from 'svelte-sonner';
-	import Badge from '$lib/components/common/Badge.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ModelSettingsModal from './Models/ModelSettingsModal.svelte';
 	import ManageModelsModal from './Models/ManageModelsModal.svelte';
@@ -85,14 +84,24 @@
 
 	const isSharedModel = (model) => (model?.access_grants ?? []).length > 0 && !isPublicModel(model);
 
-	const modelAccessBadge = (model) => {
+	const modelAccessLabel = (model) => {
 		if (isPublicModel(model)) {
-			return { type: 'success', content: $i18n.t('Public') };
+			return $i18n.t('Public');
 		}
 		if (isSharedModel(model)) {
-			return { type: 'info', content: $i18n.t('Shared') };
+			return $i18n.t('Shared');
 		}
-		return { type: 'muted', content: $i18n.t('Private') };
+		return $i18n.t('Private');
+	};
+
+	const modelAccessClass = (model) => {
+		if (isPublicModel(model)) {
+			return 'text-green-700/50 dark:text-green-300/50';
+		}
+		if (isSharedModel(model)) {
+			return 'text-blue-700/50 dark:text-blue-300/50';
+		}
+		return 'text-gray-500 dark:text-gray-400';
 	};
 
 	$: if (models) {
@@ -670,7 +679,7 @@
 												<img
 													src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
 													alt="modelfile profile"
-													class=" rounded-xl size-8 object-cover"
+													class=" rounded-xl size-7 object-cover"
 													loading="lazy"
 													decoding="async"
 													on:error={(e) => {
@@ -711,10 +720,13 @@
 															: model.id}
 												</span>
 
-												<Badge
-													type={modelAccessBadge(model).type}
-													content={modelAccessBadge(model).content}
-												/>
+												<span
+													class="shrink-0 text-[11px] font-normal leading-4 {modelAccessClass(
+														model
+													)}"
+												>
+													{modelAccessLabel(model)}
+												</span>
 											</div>
 										</Tooltip>
 									</div>

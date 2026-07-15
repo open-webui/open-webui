@@ -38,6 +38,7 @@
 	import AdminModels from '$lib/components/admin/Settings/Models.svelte';
 	import AdminSubagents from '$lib/components/admin/Settings/Subagents.svelte';
 	import AdminEvaluations from '$lib/components/admin/Settings/Evaluations.svelte';
+	import AdminAnalytics from '$lib/components/admin/Analytics.svelte';
 	import AdminIntegrations from '$lib/components/admin/Settings/Integrations.svelte';
 	import AdminDocuments from '$lib/components/admin/Settings/Documents.svelte';
 	import AdminWebSearch from '$lib/components/admin/Settings/WebSearch.svelte';
@@ -603,6 +604,11 @@
 			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard', 'preference']
 		},
 		{
+			id: 'admin:analytics',
+			title: 'Analytics',
+			keywords: ['analytics', 'usage', 'stats', 'dashboard', 'models', 'users', 'messages']
+		},
+		{
 			id: 'admin:integrations',
 			title: 'Integrations',
 			keywords: ['tools', 'integrations', 'plugins', 'extensions', 'functions', 'openapi', 'server']
@@ -692,6 +698,10 @@
 		filteredSettings = availableSettings
 			.filter((tab) => {
 				const query = search.toLowerCase().trim();
+				if (tab.id === 'admin:analytics' && !($config?.features.enable_admin_analytics ?? true)) {
+					return false;
+				}
+
 				return (
 					query === '' ||
 					tab.title.toLowerCase().includes(query) ||
@@ -784,7 +794,7 @@
 		</button>
 
 		<div
-			class="hidden md:flex items-center gap-1.5 h-7 px-2 mx-1 mt-1 mb-2 shrink-0 rounded-lg text-xs bg-gray-50/70 dark:bg-white/[0.03]"
+			class="hidden md:flex items-center gap-1.5 h-7 px-2 mx-1 mt-1 mb-0.5 shrink-0 rounded-lg text-xs bg-gray-50/70 dark:bg-white/[0.03]"
 		>
 			<div class="self-center rounded-l-xl bg-transparent">
 				<Search
@@ -1075,6 +1085,8 @@
 				<AdminSubagents />
 			{:else if selectedTab === 'admin:evaluations'}
 				<AdminEvaluations />
+			{:else if selectedTab === 'admin:analytics'}
+				<AdminAnalytics />
 			{:else if selectedTab === 'admin:integrations'}
 				<AdminIntegrations {saveSettings} />
 			{:else if selectedTab === 'admin:documents'}

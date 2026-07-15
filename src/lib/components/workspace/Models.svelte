@@ -601,13 +601,13 @@
 
 		{#if models !== null}
 			{#if (models ?? []).length !== 0}
-				<div class="my-1 gap-x-2 gap-y-0.5 grid lg:grid-cols-2" id="model-list">
+				<div class="my-1 grid gap-x-2 gap-y-0.5 lg:grid-cols-2" id="model-list">
 					{#each models as model (model.id)}
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<div
-							class="flex transition w-full px-2.5 py-1.5 rounded-2xl {model.write_access
-								? 'cursor-pointer hover:bg-gray-50/70 dark:hover:bg-gray-850/50'
+							class="flex w-full rounded-xl px-2 py-1 transition {model.write_access
+								? 'cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-850/40'
 								: ''}"
 							id="model-item-{model.id}"
 							on:click={() => {
@@ -616,18 +616,18 @@
 								}
 							}}
 						>
-							<div class="flex group/item min-w-0 gap-3.5 w-full">
-								<div class="self-center pl-0.5">
-									<div class="flex bg-white rounded-2xl">
+							<div class="flex group/item min-w-0 gap-2.5 w-full">
+								<div class="self-center">
+									<div class="flex">
 										<div
 											class="{model.is_active
 												? ''
-												: 'opacity-50 dark:opacity-50'} bg-transparent rounded-2xl"
+												: 'opacity-50 dark:opacity-50'} bg-transparent rounded-xl"
 										>
 											<img
 												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
 												alt="modelfile profile"
-												class=" rounded-2xl size-12 object-cover"
+												class="size-8 rounded-xl object-cover"
 												loading="lazy"
 												decoding="async"
 												on:error={(e) => {
@@ -638,7 +638,7 @@
 									</div>
 								</div>
 
-								<div class=" shrink-0 flex w-full min-w-0 flex-1 pr-1 self-center">
+								<div class="flex min-w-0 w-full flex-1 self-center pr-1">
 									<div class="flex h-full w-full flex-1 flex-col justify-start self-center group">
 										<div class="min-w-0 flex-1 w-full">
 											<div class="flex min-w-0 items-center justify-between w-full gap-2">
@@ -648,7 +648,7 @@
 													placement="top-start"
 												>
 													<a
-														class="font-normal line-clamp-1 hover:underline capitalize"
+														class="line-clamp-1 text-sm font-normal capitalize hover:underline"
 														href={`/?models=${encodeURIComponent(model.id)}`}
 													>
 														{model.name}
@@ -669,7 +669,7 @@
 																	content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}
 																>
 																	<button
-																		class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																		class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-white dark:hover:bg-white/5"
 																		type="button"
 																		aria-label={model?.meta?.hidden
 																			? $i18n.t('Show')
@@ -689,7 +689,7 @@
 
 																<Tooltip content={$i18n.t('Delete')}>
 																	<button
-																		class="self-center w-fit text-sm p-1.5 dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																		class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-white dark:hover:bg-white/5"
 																		type="button"
 																		aria-label={$i18n.t('Delete')}
 																		on:click={(e) => {
@@ -735,9 +735,9 @@
 																	onClose={() => {}}
 																>
 																	<div
-																		class="self-center w-fit p-1 text-sm dark:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																		class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-white dark:hover:bg-white/5"
 																	>
-																		<EllipsisHorizontal className="size-5" />
+																		<EllipsisHorizontal className="size-4" />
 																	</div>
 																</ModelMenu>
 															{/if}
@@ -772,13 +772,13 @@
 												</div>
 											</div>
 
-											<div class="flex min-w-0 gap-1 pr-2 -mt-1 items-center">
+											<div class="flex min-w-0 items-center gap-1 pr-2 text-xs text-gray-500">
 												<Tooltip
 													content={model?.user?.email ?? $i18n.t('Deleted User')}
 													className="flex shrink-0"
 													placement="top-start"
 												>
-													<div class="shrink-0 text-gray-500 text-xs">
+													<div class="shrink-0">
 														{$i18n.t('By {{name}}', {
 															name: capitalizeFirstLetter(
 																model?.user?.name ?? model?.user?.email ?? $i18n.t('Deleted User')
@@ -794,7 +794,7 @@
 													className="min-w-0 text-left"
 													placement="top-start"
 												>
-													<div class="flex min-w-0 gap-1 text-xs overflow-hidden">
+													<div class="flex min-w-0 gap-1 overflow-hidden">
 														<div class="line-clamp-1 min-w-0">
 															{#if (model?.meta?.description ?? '').trim()}
 																{model?.meta?.description}

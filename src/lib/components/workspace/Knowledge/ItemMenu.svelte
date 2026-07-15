@@ -29,7 +29,7 @@
 	<Tooltip content={$i18n.t('More')}>
 		<slot
 			><button
-				class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+				class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white"
 				type="button"
 				aria-label={$i18n.t('More Options')}
 				on:click={(e) => {
@@ -37,7 +37,7 @@
 					show = true;
 				}}
 			>
-				<EllipsisHorizontal className="size-5" />
+				<EllipsisHorizontal className="size-4" />
 			</button>
 		</slot>
 	</Tooltip>

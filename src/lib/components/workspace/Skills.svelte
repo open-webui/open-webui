@@ -343,23 +343,23 @@
 				<Spinner className="size-5" />
 			</div>
 		{:else if (filteredItems ?? []).length !== 0}
-			<div class="my-1 gap-x-2 gap-y-0.5 grid lg:grid-cols-2">
+			<div class="my-1 grid gap-x-2 gap-y-0.5 lg:grid-cols-2">
 				{#each filteredItems as skill}
 					<Tooltip content={skill?.description ?? skill?.id}>
 						<div
-							class="flex space-x-4 text-left w-full px-2.5 py-1.5 transition rounded-2xl {skill.write_access
-								? 'cursor-pointer hover:bg-gray-50/70 dark:hover:bg-gray-850/50'
+							class="flex w-full rounded-xl px-2 py-1 text-left transition {skill.write_access
+								? 'cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-850/40'
 								: 'cursor-not-allowed opacity-60'}"
 						>
 							{#if skill.write_access}
 								<a
-									class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
+									class="flex w-full min-w-0 flex-1 cursor-pointer"
 									href={`/workspace/skills/edit?id=${encodeURIComponent(skill.id)}`}
 								>
-									<div class="flex items-center text-left">
-										<div class=" flex-1 self-center">
+									<div class="flex min-w-0 items-center text-left">
+										<div class="min-w-0 flex-1 self-center">
 											<Tooltip content={skill.id} placement="top-start">
-												<div class="flex items-center gap-2">
+												<div class="flex min-w-0 items-center gap-2">
 													<div class="line-clamp-1 text-sm">
 														{skill.name}
 													</div>
@@ -369,7 +369,7 @@
 												</div>
 											</Tooltip>
 											<div class="px-0.5">
-												<div class="text-xs text-gray-500 shrink-0">
+												<div class="shrink-0 text-xs text-gray-500">
 													<Tooltip
 														content={skill?.user?.email ?? $i18n.t('Deleted User')}
 														className="flex shrink-0"
@@ -387,12 +387,12 @@
 									</div>
 								</a>
 							{:else}
-								<div class=" flex flex-1 space-x-3.5 w-full">
-									<div class="flex items-center text-left w-full">
-										<div class="flex-1 self-center w-full">
+								<div class="flex w-full min-w-0 flex-1">
+									<div class="flex w-full min-w-0 items-center text-left">
+										<div class="w-full min-w-0 flex-1 self-center">
 											<div class="flex items-center justify-between w-full gap-2">
 												<Tooltip content={skill.id} placement="top-start">
-													<div class="flex items-center gap-2">
+													<div class="flex min-w-0 items-center gap-2">
 														<div class="line-clamp-1 text-sm">
 															{skill.name}
 														</div>
@@ -404,7 +404,7 @@
 												<Badge type="muted" content={$i18n.t('Read Only')} />
 											</div>
 											<div class="px-0.5">
-												<div class="text-xs text-gray-500 shrink-0">
+												<div class="shrink-0 text-xs text-gray-500">
 													<Tooltip
 														content={skill?.user?.email ?? $i18n.t('Deleted User')}
 														className="flex shrink-0"
@@ -427,7 +427,7 @@
 									{#if shiftKey}
 										<Tooltip content={$i18n.t('Delete')}>
 											<button
-												class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+												class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white"
 												type="button"
 												aria-label={$i18n.t('Delete')}
 												on:click={() => {
@@ -455,10 +455,10 @@
 											onClose={() => {}}
 										>
 											<button
-												class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+												class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white"
 												type="button"
 											>
-												<EllipsisHorizontal className="size-5" />
+												<EllipsisHorizontal className="size-4" />
 											</button>
 										</SkillMenu>
 									{/if}

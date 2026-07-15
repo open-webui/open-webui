@@ -18,7 +18,7 @@
 </script>
 
 {#if loaded}
-	<div class="w-full h-full pb-2 px-3">
+	<div class="w-full h-full pb-2">
 		<Dashboard />
 	</div>
 {/if}

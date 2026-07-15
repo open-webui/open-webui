@@ -21,6 +21,7 @@
 	} from '$lib/apis/chats';
 	import { chatId, showSettings } from '$lib/stores';
 	import { refreshChatList } from '$lib/stores/chat-list';
+	import { formatNumber } from '$lib/utils';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
@@ -185,7 +186,7 @@
 			{$i18n.t('Archived Chats')}
 			{#if chatCount !== null}
 				<span class="ml-2 font-normal text-gray-500 dark:text-gray-500">
-					{chatCount}
+					{formatNumber(chatCount)}
 				</span>
 			{/if}
 		</h2>

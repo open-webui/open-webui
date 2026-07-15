@@ -230,13 +230,10 @@
 	}
 </script>
 
-<!-- Header with title and period selector -->
-<div
-	class="pt-0.5 pb-1 gap-1 flex flex-row justify-between items-center sticky top-0 z-10 bg-white dark:bg-gray-900"
->
-	<div class="text-lg font-normal px-0.5 shrink-0">
+<div class="flex items-center justify-between mb-2 gap-2">
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white shrink-0">
 		{$i18n.t('Analytics')}
-	</div>
+	</h2>
 	<div class="flex items-center gap-2 flex-wrap justify-end min-w-0">
 		{#if groups.length > 0}
 			<select

@@ -34,9 +34,9 @@ import { decode } from 'html-entities';
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const formatNumber = (num: number): string => {
-	return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(
-		num
-	);
+	return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 })
+		.format(num)
+		.toLowerCase();
 };
 
 function escapeRegExp(string: string): string {

@@ -11,6 +11,7 @@
 
 	import { deleteChatById } from '$lib/apis/chats';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { formatNumber } from '$lib/utils';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -97,11 +98,11 @@
 				<div>{title}</div>
 				{#if count !== null}
 					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
-						{count}
+						{formatNumber(count)}
 					</div>
 				{:else if chatList}
 					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
-						{chatList.length}
+						{formatNumber(chatList.length)}
 					</div>
 				{/if}
 			</div>
