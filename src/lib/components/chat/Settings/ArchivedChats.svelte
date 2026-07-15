@@ -243,11 +243,11 @@
 						}}
 					>
 						{#if loading}
-							<Spinner className="size-3.5" />
+							<Spinner className="size-3.5 shrink-0" />
 						{:else}
-							<UndoAction className="size-3.5" strokeWidth="1.5" />
+							<UndoAction className="size-3.5 shrink-0" strokeWidth="1.5" />
 						{/if}
-						<div class="flex items-center">{$i18n.t('Unarchive All')}</div>
+						<div class="min-w-0 flex-1 truncate text-left">{$i18n.t('Unarchive All')}</div>
 					</button>
 
 					<button
@@ -256,8 +256,8 @@
 						type="button"
 						on:click={exportChatsHandler}
 					>
-						<Download className="size-3.5" strokeWidth="1.5" />
-						<div class="flex items-center">{$i18n.t('Export')}</div>
+						<Download className="size-3.5 shrink-0" strokeWidth="1.5" />
+						<div class="min-w-0 flex-1 truncate text-left">{$i18n.t('Export')}</div>
 					</button>
 				</DropdownMenu>
 			</div>
