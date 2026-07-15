@@ -3,6 +3,7 @@
 	const i18n = getContext('i18n');
 
 	import ManageOllama from './ManageOllama.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	export let ollamaConfig = null;
 
@@ -11,15 +12,16 @@
 
 {#if ollamaConfig}
 	<div class="flex-1 mb-2.5 pr-1.5 rounded-lg bg-gray-50 dark:text-gray-300 dark:bg-gray-850">
-		<select
-			class="w-full py-2 px-4 text-sm outline-hidden border border-gray-100/50 !bg-gray-50/40 dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
+		<SettingsSelect
 			bind:value={selectedUrlIdx}
 			placeholder={$i18n.t('Select an Ollama instance')}
+			className="w-full"
+			selectClassName="text-sm"
 		>
 			{#each ollamaConfig.OLLAMA_BASE_URLS as url, idx}
 				<option value={idx}>{url}</option>
 			{/each}
-		</select>
+		</SettingsSelect>
 	</div>
 
 	<div>

@@ -19,6 +19,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import CodeEditorModal from '$lib/components/common/CodeEditorModal.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -403,8 +404,7 @@
 								</div>
 							</div>
 
-							<select
-								class="w-fit pr-8 cursor-pointer rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
+							<SettingsSelect
 								bind:value={config.IMAGE_GENERATION_ENGINE}
 								placeholder={$i18n.t('Select Engine')}
 							>
@@ -412,7 +412,7 @@
 								<option value="comfyui">{$i18n.t('ComfyUI')}</option>
 								<option value="automatic1111">{$i18n.t('Automatic1111')}</option>
 								<option value="gemini">{$i18n.t('Gemini')}</option>
-							</select>
+							</SettingsSelect>
 						</div>
 					</div>
 
@@ -868,14 +868,13 @@
 									</div>
 								</div>
 
-								<select
-									class="w-fit pr-8 cursor-pointer rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
+								<SettingsSelect
 									bind:value={config.IMAGES_GEMINI_ENDPOINT_METHOD}
 									placeholder={$i18n.t('Select Method')}
 								>
 									<option value="predict">predict</option>
 									<option value="generateContent">generateContent</option>
-								</select>
+								</SettingsSelect>
 							</div>
 						</div>
 					{/if}
@@ -951,15 +950,14 @@
 								</div>
 							</div>
 
-							<select
-								class="w-fit pr-8 cursor-pointer rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
+							<SettingsSelect
 								bind:value={config.IMAGE_EDIT_ENGINE}
 								placeholder={$i18n.t('Select Engine')}
 							>
 								<option value="openai">{$i18n.t('Default (Open AI)')}</option>
 								<option value="comfyui">{$i18n.t('ComfyUI')}</option>
 								<option value="gemini">{$i18n.t('Gemini')}</option>
-							</select>
+							</SettingsSelect>
 						</div>
 					</div>
 

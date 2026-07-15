@@ -21,6 +21,7 @@
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -266,18 +267,14 @@
 						{$i18n.t('Speech-to-Text Engine')}
 					</div>
 					<div class="flex items-center relative">
-						<select
-							class="cursor-pointer w-fit pr-8 rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
-							bind:value={STT_ENGINE}
-							placeholder={$i18n.t('Select an engine')}
-						>
+						<SettingsSelect bind:value={STT_ENGINE} placeholder={$i18n.t('Select an engine')}>
 							<option value="">{$i18n.t('Whisper (Local)')}</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
 							<option value="web">{$i18n.t('Web API')}</option>
 							<option value="deepgram">{$i18n.t('Deepgram')}</option>
 							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
 							<option value="mistral">{$i18n.t('MistralAI')}</option>
-						</select>
+						</SettingsSelect>
 					</div>
 				</div>
 
@@ -300,13 +297,10 @@
 							{$i18n.t('Request Format')}
 						</div>
 						<div class="flex items-center relative">
-							<select
-								class="cursor-pointer w-fit pr-8 rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
-								bind:value={STT_OPENAI_API_REQUEST_FORMAT}
-							>
+							<SettingsSelect bind:value={STT_OPENAI_API_REQUEST_FORMAT}>
 								<option value="multipart">{$i18n.t('Multipart Upload')}</option>
 								<option value="json">{$i18n.t('JSON Base64')}</option>
-							</select>
+							</SettingsSelect>
 						</div>
 					</div>
 
@@ -562,8 +556,7 @@
 						{$i18n.t('Text-to-Speech Engine')}
 					</div>
 					<div class="flex items-center relative">
-						<select
-							class="w-fit pr-8 cursor-pointer rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
+						<SettingsSelect
 							bind:value={TTS_ENGINE}
 							placeholder={$i18n.t('Select a mode')}
 							on:change={async (e) => {
@@ -589,7 +582,7 @@
 							<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
 							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
 							<option value="mistral">{$i18n.t('MistralAI')}</option>
-						</select>
+						</SettingsSelect>
 					</div>
 				</div>
 
@@ -671,10 +664,7 @@
 							</div>
 							<div class="flex w-full">
 								<div class="flex-1">
-									<select
-										class="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
-										bind:value={TTS_VOICE}
-									>
+									<SettingsSelect bind:value={TTS_VOICE} className="w-full">
 										<option value="" selected={TTS_VOICE !== ''}>{$i18n.t('Default')}</option>
 										{#each voices as voice}
 											<option
@@ -683,7 +673,7 @@
 												selected={TTS_VOICE === voice.voiceURI}>{voice.name}</option
 											>
 										{/each}
-									</select>
+									</SettingsSelect>
 								</div>
 							</div>
 						</div>
@@ -912,8 +902,7 @@
 						{$i18n.t('Response splitting')}
 					</div>
 					<div class="flex items-center relative">
-						<select
-							class="w-fit pr-8 cursor-pointer rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
+						<SettingsSelect
 							aria-label={$i18n.t('Select how to split message text for TTS requests')}
 							bind:value={TTS_SPLIT_ON}
 						>
@@ -922,7 +911,7 @@
 									>{$i18n.t(split.charAt(0).toUpperCase() + split.slice(1))}</option
 								>
 							{/each}
-						</select>
+						</SettingsSelect>
 					</div>
 				</div>
 				<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">

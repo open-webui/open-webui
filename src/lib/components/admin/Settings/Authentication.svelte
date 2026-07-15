@@ -21,6 +21,7 @@
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	const i18n: any = getContext('i18n');
 
@@ -49,8 +50,6 @@
 		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const textareaClass =
 		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
-	const selectClass =
-		'h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 pe-8 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
 
 	const updateLdapServerHandler = async () => {
 		await updateLdapConfig(localStorage.token, ENABLE_LDAP);
@@ -126,20 +125,19 @@
 		{#if adminConfig !== null}
 			<AdminSettingSection title={$i18n.t('User Access')} first>
 				<AdminSettingRow label={$i18n.t('Default User Role')}>
-					<select
-						class={`${selectClass} pr-8 text-right`}
+					<SettingsSelect
 						bind:value={adminConfig.DEFAULT_USER_ROLE}
 						placeholder={$i18n.t('Select a role')}
 					>
 						<option value="pending">{$i18n.t('pending')}</option>
 						<option value="user">{$i18n.t('user')}</option>
 						<option value="admin">{$i18n.t('admin')}</option>
-					</select>
+					</SettingsSelect>
 				</AdminSettingRow>
 
 				<AdminSettingRow label={$i18n.t('Default Group')}>
-					<select
-						class={`${selectClass} max-w-48 truncate pr-8 text-right`}
+					<SettingsSelect
+						className="w-fit max-w-48"
 						bind:value={adminConfig.DEFAULT_GROUP_ID}
 						placeholder={$i18n.t('Select a group')}
 					>
@@ -147,7 +145,7 @@
 						{#each groups as group}
 							<option value={group.id}>{group.name}</option>
 						{/each}
-					</select>
+					</SettingsSelect>
 				</AdminSettingRow>
 
 				<AdminSettingRow label={$i18n.t('Enable New Sign Ups')}>

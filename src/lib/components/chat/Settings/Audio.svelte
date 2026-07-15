@@ -10,7 +10,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import UserSettingField from './UserSettingField.svelte';
 	import UserSettingRow from './UserSettingRow.svelte';
-	import UserSettingSelect from './UserSettingSelect.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 	import UserSettingSection from './UserSettingSection.svelte';
 	const dispatch = createEventDispatcher();
 
@@ -192,14 +192,14 @@
 					label={$i18n.t('Speech-to-Text Engine')}
 					description={$i18n.t('Choose the engine used to transcribe voice input.')}
 				>
-					<UserSettingSelect
+					<SettingsSelect
 						bind:value={STTEngine}
 						ariaLabel={$i18n.t('Speech-to-Text Engine')}
 						placeholder={$i18n.t('Select an engine')}
 					>
 						<option value="">{$i18n.t('Default')}</option>
 						<option value="web">{$i18n.t('Web API')}</option>
-					</UserSettingSelect>
+					</SettingsSelect>
 				</UserSettingRow>
 
 				<UserSettingRow
@@ -250,14 +250,14 @@
 				label={$i18n.t('Text-to-Speech Engine')}
 				description={$i18n.t('Choose the engine used to read assistant responses aloud.')}
 			>
-				<UserSettingSelect
+				<SettingsSelect
 					bind:value={TTSEngine}
 					ariaLabel={$i18n.t('Text-to-Speech Engine')}
 					placeholder={$i18n.t('Select an engine')}
 				>
 					<option value="">{$i18n.t('Default')}</option>
 					<option value="browser-kokoro">{$i18n.t('Kokoro.js (Browser)')}</option>
-				</UserSettingSelect>
+				</SettingsSelect>
 			</UserSettingRow>
 
 			{#if TTSEngine === 'browser-kokoro'}
@@ -265,7 +265,7 @@
 					label={$i18n.t('Kokoro.js Dtype')}
 					description={$i18n.t('Select the local model precision used by Kokoro.js.')}
 				>
-					<UserSettingSelect
+					<SettingsSelect
 						bind:value={TTSEngineConfig.dtype}
 						ariaLabel={$i18n.t('Kokoro.js Dtype')}
 						placeholder={$i18n.t('Select dtype')}
@@ -275,7 +275,7 @@
 						<option value="fp16">fp16</option>
 						<option value="q8">q8</option>
 						<option value="q4">q4</option>
-					</UserSettingSelect>
+					</SettingsSelect>
 				</UserSettingRow>
 			{/if}
 
@@ -360,7 +360,7 @@
 					label={$i18n.t('Set Voice')}
 					description={$i18n.t('Choose the browser voice used for speech output.')}
 				>
-					<UserSettingSelect className="w-full" bind:value={voice} ariaLabel={$i18n.t('Voice')}>
+					<SettingsSelect className="w-full" bind:value={voice} ariaLabel={$i18n.t('Voice')}>
 						<option value="" selected={voice !== ''}>{$i18n.t('Default')}</option>
 						{#each voices.filter((v) => nonLocalVoices || v.localService === true) as _voice}
 							<option
@@ -369,7 +369,7 @@
 								selected={voice === _voice.name}>{_voice.name}</option
 							>
 						{/each}
-					</UserSettingSelect>
+					</SettingsSelect>
 				</UserSettingField>
 				<UserSettingRow
 					label={$i18n.t('Allow non-local voices')}

@@ -11,6 +11,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -145,8 +146,8 @@
 				<div class=" mb-2.5 flex w-full gap-2">
 					<div class="flex-1">
 						<div class=" text-xs mb-1">{$i18n.t('Local Task Model')}</div>
-						<select
-							class="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+						<SettingsSelect
+							className="w-full"
 							bind:value={taskConfig.TASK_MODEL}
 							placeholder={$i18n.t('Select a model')}
 							on:change={() => {
@@ -183,13 +184,13 @@
 									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
 								</option>
 							{/each}
-						</select>
+						</SettingsSelect>
 					</div>
 
 					<div class="flex-1">
 						<div class=" text-xs mb-1">{$i18n.t('External Task Model')}</div>
-						<select
-							class="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+						<SettingsSelect
+							className="w-full"
 							bind:value={taskConfig.TASK_MODEL_EXTERNAL}
 							placeholder={$i18n.t('Select a model')}
 							on:change={() => {
@@ -226,7 +227,7 @@
 									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
 								</option>
 							{/each}
-						</select>
+						</SettingsSelect>
 					</div>
 				</div>
 

@@ -24,6 +24,7 @@
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import { settings } from '$lib/stores';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -454,14 +455,11 @@
 						<div class={`text-xs text-gray-500`}>
 							{$i18n.t('Send events for')}
 						</div>
-						<select
-							class="rounded-lg border border-gray-100/50 !bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
-							bind:value={targetMode}
-						>
+						<SettingsSelect bind:value={targetMode}>
 							<option value="all">{$i18n.t('All users and system events')}</option>
 							<option value="system">{$i18n.t('System events only')}</option>
 							<option value="selected">{$i18n.t('Specific users or groups')}</option>
-						</select>
+						</SettingsSelect>
 					</div>
 
 					<div class="mt-1 text-xs text-gray-500">

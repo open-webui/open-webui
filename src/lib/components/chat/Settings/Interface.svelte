@@ -109,9 +109,9 @@
 	const settingRowClass = 'flex items-center justify-between gap-2.5';
 	const settingLabelClass = 'min-w-0 text-xs text-gray-600 dark:text-gray-400';
 	const settingControlClass = 'flex shrink-0 items-center justify-end gap-1.5';
-	const sectionHeadingClass = 'mt-2 text-xs text-gray-400 dark:text-gray-600';
+	const sectionHeadingClass = 'mt-4 text-xs text-gray-400 dark:text-gray-600';
 	const firstSectionHeadingClass = 'text-xs text-gray-400 dark:text-gray-600';
-	const settingDescriptionClass = '-mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600';
+	const settingDescriptionClass = 'mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600';
 	const actionButtonClass =
 		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
@@ -1229,7 +1229,7 @@
 						{$i18n.t('Floating Quick Actions')}
 					</label>
 
-					<div class="flex shrink-0 items-center gap-3">
+					<div class={settingControlClass}>
 						{#if showFloatingActionButtons}
 							<button
 								class={actionButtonClass}
@@ -1546,7 +1546,7 @@
 						{$i18n.t('Image Compression')}
 					</div>
 
-					<div class="flex shrink-0 items-center gap-3">
+					<div class={settingControlClass}>
 						{#if imageCompression}
 							<button
 								class={actionButtonClass}

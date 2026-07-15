@@ -21,6 +21,7 @@
 		updateExternalKnowledgeConnection,
 		updateExternalKnowledgeSource
 	} from '$lib/apis/knowledge';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -458,16 +459,17 @@
 									>
 								</div>
 								<div class="flex flex-1 items-center">
-									<select
+									<SettingsSelect
 										id="external-source-provider"
-										class="w-full rounded-lg border border-gray-100/50 !bg-gray-50/40 px-2 py-1.5 text-sm text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 										bind:value={sourceForm.provider}
 										on:change={updateProvider}
+										className="w-full"
+										selectClassName="text-sm"
 									>
 										<option value="qdrant">Qdrant</option>
 										<option value="milvus">Milvus</option>
 										<option value="pgvector">pgvector</option>
-									</select>
+									</SettingsSelect>
 								</div>
 							</div>
 						</div>

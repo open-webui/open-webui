@@ -28,6 +28,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -386,10 +387,7 @@
 								{$i18n.t('Content Extraction Engine')}
 							</div>
 							<div class="">
-								<select
-									class="w-fit pr-8 rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
-									bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
-								>
+								<SettingsSelect bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}>
 									<option value="">{$i18n.t('Default')}</option>
 									<option value="external">{$i18n.t('External')}</option>
 									<option value="tika">{$i18n.t('Tika')}</option>
@@ -399,7 +397,7 @@
 									<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
 									<option value="paddleocr_vl">{$i18n.t('PaddleOCR-vl')}</option>
 									<option value="mineru">{$i18n.t('MinerU')}</option>
-								</select>
+								</SettingsSelect>
 							</div>
 						</div>
 
@@ -428,13 +426,10 @@
 										</Tooltip>
 									</div>
 									<div class="">
-										<select
-											class="w-fit pr-8 rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
-											bind:value={RAGConfig.PDF_LOADER_MODE}
-										>
+										<SettingsSelect bind:value={RAGConfig.PDF_LOADER_MODE}>
 											<option value="page">{$i18n.t('Page')}</option>
 											<option value="single">{$i18n.t('Single')}</option>
-										</select>
+										</SettingsSelect>
 									</div>
 								</div>
 							</div>
@@ -600,14 +595,11 @@
 									</Tooltip>
 								</div>
 								<div class="">
-									<select
-										class="w-fit pr-8 rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
-										bind:value={RAGConfig.DATALAB_MARKER_OUTPUT_FORMAT}
-									>
+									<SettingsSelect bind:value={RAGConfig.DATALAB_MARKER_OUTPUT_FORMAT}>
 										<option value="markdown">{$i18n.t('Markdown')}</option>
 										<option value="json">{$i18n.t('JSON')}</option>
 										<option value="html">{$i18n.t('HTML')}</option>
-									</select>
+									</SettingsSelect>
 								</div>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external'}
@@ -797,8 +789,7 @@
 									<div class="self-center text-xs text-gray-600 dark:text-gray-400">
 										{$i18n.t('API Mode')}
 									</div>
-									<select
-										class="w-fit pr-8 rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300"
+									<SettingsSelect
 										bind:value={RAGConfig.MINERU_API_MODE}
 										on:change={() => {
 											// Auto-update URL when switching modes if it's empty or matches the opposite mode's default
@@ -818,7 +809,7 @@
 									>
 										<option value="local">{$i18n.t('local')}</option>
 										<option value="cloud">{$i18n.t('cloud')}</option>
-									</select>
+									</SettingsSelect>
 								</div>
 							</div>
 
@@ -925,16 +916,13 @@
 								{$i18n.t('Text Splitter')}
 							</div>
 							<div class="flex items-center relative">
-								<select
-									class="w-fit pr-8 rounded-lg px-2 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
-									bind:value={RAGConfig.TEXT_SPLITTER}
-								>
+								<SettingsSelect bind:value={RAGConfig.TEXT_SPLITTER}>
 									<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
 									<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
 									<option value="token_transformers">
 										{$i18n.t('Token')} ({$i18n.t('Transformers')})
 									</option>
-								</select>
+								</SettingsSelect>
 							</div>
 						</div>
 
@@ -1055,8 +1043,7 @@
 									{$i18n.t('Embedding Model Engine')}
 								</div>
 								<div class="flex items-center relative">
-									<select
-										class="w-fit pr-8 rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
+									<SettingsSelect
 										bind:value={RAG_EMBEDDING_ENGINE}
 										placeholder={$i18n.t('Select an embedding model engine')}
 										on:change={(e) => {
@@ -1075,7 +1062,7 @@
 										<option value="ollama">{$i18n.t('Ollama')}</option>
 										<option value="openai">{$i18n.t('OpenAI')}</option>
 										<option value="azure_openai">{$i18n.t('Azure OpenAI')}</option>
-									</select>
+									</SettingsSelect>
 								</div>
 							</div>
 
@@ -1317,8 +1304,7 @@
 											{$i18n.t('Reranking Engine')}
 										</div>
 										<div class="flex items-center relative">
-											<select
-												class="w-fit pr-8 rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
+											<SettingsSelect
 												bind:value={RAGConfig.RAG_RERANKING_ENGINE}
 												placeholder={$i18n.t('Select a reranking model engine')}
 												on:change={(e) => {
@@ -1331,7 +1317,7 @@
 											>
 												<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
 												<option value="external">{$i18n.t('External')}</option>
-											</select>
+											</SettingsSelect>
 										</div>
 									</div>
 

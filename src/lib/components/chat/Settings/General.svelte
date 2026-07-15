@@ -13,7 +13,7 @@
 	import UserSettingField from './UserSettingField.svelte';
 	import UserSettingRow from './UserSettingRow.svelte';
 	import UserSettingSection from './UserSettingSection.svelte';
-	import UserSettingSelect from './UserSettingSelect.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 	export let saveSettings: Function;
 	export let getModels: Function;
 
@@ -223,7 +223,7 @@
 				label={$i18n.t('Theme')}
 				description={$i18n.t('Choose the color theme used by the interface.')}
 			>
-				<UserSettingSelect
+				<SettingsSelect
 					bind:value={selectedTheme}
 					ariaLabel={$i18n.t('Theme')}
 					placeholder={$i18n.t('Select a theme')}
@@ -236,14 +236,14 @@
 					{#if $config?.features?.enable_easter_eggs}
 						<option value="her">🌷 Her</option>
 					{/if}
-				</UserSettingSelect>
+				</SettingsSelect>
 			</UserSettingRow>
 
 			<UserSettingRow
 				label={$i18n.t('Language')}
 				description={$i18n.t('Choose the language used for interface text.')}
 			>
-				<UserSettingSelect
+				<SettingsSelect
 					bind:value={lang}
 					ariaLabel={$i18n.t('Language')}
 					className="w-48"
@@ -255,7 +255,7 @@
 					{#each languages as language}
 						<option value={language['code']}>{language['title']}</option>
 					{/each}
-				</UserSettingSelect>
+				</SettingsSelect>
 			</UserSettingRow>
 			{#if $i18n.language === 'en-US' && !($config?.license_metadata ?? false)}
 				<div class="-mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">

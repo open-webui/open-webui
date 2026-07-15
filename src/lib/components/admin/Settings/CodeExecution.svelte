@@ -10,6 +10,7 @@
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	const i18n: any = getContext('i18n');
 
@@ -24,8 +25,6 @@
 		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const inlineInputClass =
 		'w-fit h-7 rounded-lg border border-transparent bg-transparent px-2 text-xs text-gray-600 outline-hidden transition-colors hover:bg-black/5 focus:border-blue-400 dark:text-gray-400 dark:hover:bg-white/5 dark:focus:border-blue-500';
-	const selectClass =
-		'h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 pe-8 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
 
 	const submitHandler = async () => {
 		const res = await setCodeExecutionConfig(localStorage.token, config);
@@ -67,8 +66,7 @@
 								)
 							: ''}
 					>
-						<select
-							class={selectClass}
+						<SettingsSelect
 							bind:value={config.CODE_EXECUTION_ENGINE}
 							placeholder={$i18n.t('Select a engine')}
 							required
@@ -77,7 +75,7 @@
 							{#each engines as engine}
 								<option value={engine}>{engine}{engine === 'jupyter' ? ' (Legacy)' : ''}</option>
 							{/each}
-						</select>
+						</SettingsSelect>
 					</AdminSettingRow>
 
 					{#if config.CODE_EXECUTION_ENGINE === 'jupyter'}
@@ -92,15 +90,14 @@
 						</AdminSettingField>
 
 						<AdminSettingRow label={$i18n.t('Jupyter Auth')}>
-							<select
-								class={selectClass}
+							<SettingsSelect
 								bind:value={config.CODE_EXECUTION_JUPYTER_AUTH}
 								placeholder={$i18n.t('Select an auth method')}
 							>
 								<option selected value="">{$i18n.t('None')}</option>
 								<option value="token">{$i18n.t('Token')}</option>
 								<option value="password">{$i18n.t('Password')}</option>
-							</select>
+							</SettingsSelect>
 						</AdminSettingRow>
 
 						{#if config.CODE_EXECUTION_JUPYTER_AUTH}
@@ -160,8 +157,7 @@
 								)
 							: ''}
 					>
-						<select
-							class={selectClass}
+						<SettingsSelect
 							bind:value={config.CODE_INTERPRETER_ENGINE}
 							placeholder={$i18n.t('Select a engine')}
 							required
@@ -170,7 +166,7 @@
 							{#each engines as engine}
 								<option value={engine}>{engine}{engine === 'jupyter' ? ' (Legacy)' : ''}</option>
 							{/each}
-						</select>
+						</SettingsSelect>
 					</AdminSettingRow>
 
 					{#if config.CODE_INTERPRETER_ENGINE === 'jupyter'}
@@ -185,15 +181,14 @@
 						</AdminSettingField>
 
 						<AdminSettingRow label={$i18n.t('Jupyter Auth')}>
-							<select
-								class={selectClass}
+							<SettingsSelect
 								bind:value={config.CODE_INTERPRETER_JUPYTER_AUTH}
 								placeholder={$i18n.t('Select an auth method')}
 							>
 								<option selected value="">{$i18n.t('None')}</option>
 								<option value="token">{$i18n.t('Token')}</option>
 								<option value="password">{$i18n.t('Password')}</option>
-							</select>
+							</SettingsSelect>
 						</AdminSettingRow>
 
 						{#if config.CODE_INTERPRETER_JUPYTER_AUTH}

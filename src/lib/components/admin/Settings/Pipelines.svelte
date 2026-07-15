@@ -20,6 +20,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -42,8 +43,6 @@
 	let pipelineDownloadUrl = '';
 	const inputClass =
 		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
-	const selectClass =
-		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 pe-8 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
 	const actionButtonClass =
 		'rounded-lg px-2 py-1 text-xs text-gray-500 transition-colors hover:bg-black/5 hover:text-gray-900 disabled:opacity-50 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-white';
 	const iconButtonClass =
@@ -253,8 +252,8 @@
 
 				<div class="flex flex-col gap-2.5">
 					<AdminSettingField label={$i18n.t('Pipeline URL')}>
-						<select
-							class={selectClass}
+						<SettingsSelect
+							className="w-full"
 							bind:value={selectedPipelinesUrlIdx}
 							placeholder={$i18n.t('Select a pipeline url')}
 							on:change={async () => {
@@ -271,7 +270,7 @@
 									>{pipelines.url}</option
 								>
 							{/each}
-						</select>
+						</SettingsSelect>
 					</AdminSettingField>
 
 					<AdminSettingField label={$i18n.t('Upload Pipeline')}>
@@ -330,8 +329,8 @@
 						{#if pipelines.length > 0}
 							<AdminSettingField label={$i18n.t('Pipeline')}>
 								<div class="flex gap-2">
-									<select
-										class={selectClass}
+									<SettingsSelect
+										className="w-full"
 										bind:value={selectedPipelineIdx}
 										placeholder={$i18n.t('Select a pipeline')}
 										on:change={async () => {
@@ -344,7 +343,7 @@
 												{pipeline.name} ({pipeline.type ?? 'pipe'})
 											</option>
 										{/each}
-									</select>
+									</SettingsSelect>
 
 									<button
 										class={actionButtonClass}
@@ -379,13 +378,13 @@
 											{#if (valves[property] ?? null) !== null}
 												<div class="mt-1">
 													{#if valves_spec.properties[property]?.enum ?? null}
-														<select class={selectClass} bind:value={valves[property]}>
+														<SettingsSelect bind:value={valves[property]} className="w-full">
 															{#each valves_spec.properties[property].enum as option}
 																<option value={option} selected={option === valves[property]}>
 																	{option}
 																</option>
 															{/each}
-														</select>
+														</SettingsSelect>
 													{:else if (valves_spec.properties[property]?.type ?? null) === 'boolean'}
 														<AdminSettingRow
 															label={valves[property] ? $i18n.t('Enabled') : $i18n.t('Disabled')}

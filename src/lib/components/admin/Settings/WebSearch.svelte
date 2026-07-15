@@ -8,6 +8,7 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -198,8 +199,7 @@
 							{$i18n.t('Web Search Engine')}
 						</div>
 						<div class="flex items-center relative">
-							<select
-								class="w-fit pr-8 rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
+							<SettingsSelect
 								bind:value={webConfig.WEB_SEARCH_ENGINE}
 								placeholder={$i18n.t('Select a engine')}
 								required
@@ -214,7 +214,7 @@
 										<option value={engine}>{engine}</option>
 									{/if}
 								{/each}
-							</select>
+							</SettingsSelect>
 						</div>
 					</div>
 
@@ -731,14 +731,14 @@
 									<div class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1">
 										{$i18n.t('Perplexity Search Context Usage')}
 									</div>
-									<select
-										class="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+									<SettingsSelect
 										bind:value={webConfig.PERPLEXITY_SEARCH_CONTEXT_USAGE}
+										className="w-full"
 									>
 										<option value="low">{$i18n.t('Low')}</option>
 										<option value="medium">{$i18n.t('Medium')}</option>
 										<option value="high">{$i18n.t('High')}</option>
-									</select>
+									</SettingsSelect>
 								</div>
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'microsoft_web_iq'}
@@ -992,10 +992,7 @@
 
 									<div class="flex w-full">
 										<div class="flex-1">
-											<select
-												class="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
-												bind:value={webConfig.DDGS_BACKEND}
-											>
+											<SettingsSelect bind:value={webConfig.DDGS_BACKEND} className="w-full">
 												<option value="auto">{$i18n.t('Auto (Random)')}</option>
 												<option value="bing">{$i18n.t('Bing')}</option>
 												<option value="brave">{$i18n.t('Brave')}</option>
@@ -1006,7 +1003,7 @@
 												<option value="wikipedia">{$i18n.t('Wikipedia')}</option>
 												<option value="yahoo">{$i18n.t('Yahoo')}</option>
 												<option value="yandex">{$i18n.t('Yandex')}</option>
-											</select>
+											</SettingsSelect>
 										</div>
 									</div>
 								</div>
@@ -1151,8 +1148,7 @@
 							{$i18n.t('Web Loader Engine')}
 						</div>
 						<div class="flex items-center relative">
-							<select
-								class="w-fit pr-8 rounded-lg px-2 p-1 text-xs border border-gray-100/50 !bg-gray-50/40 outline-hidden dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 text-right"
+							<SettingsSelect
 								bind:value={webConfig.WEB_LOADER_ENGINE}
 								placeholder={$i18n.t('Select a engine')}
 							>
@@ -1160,7 +1156,7 @@
 								{#each webLoaderEngines as engine}
 									<option value={engine}>{engine}</option>
 								{/each}
-							</select>
+							</SettingsSelect>
 						</div>
 					</div>
 
