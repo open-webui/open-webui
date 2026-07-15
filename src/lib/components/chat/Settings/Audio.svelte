@@ -175,7 +175,7 @@
 		dispatch('save');
 	}}
 >
-	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5 space-y-3">
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 space-y-3">
 		<div>
 			<div class="text-xs text-gray-400 dark:text-gray-600 mb-2">
 				{$i18n.t('STT Settings')}

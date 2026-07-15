@@ -76,7 +76,7 @@
 		updateHandler();
 	}}
 >
-	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5">
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if config !== null}
 			<div class="">
 				<div class="pr-1.5">

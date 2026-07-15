@@ -30,7 +30,6 @@
 		tags,
 		banners,
 		showSettings,
-		showShortcuts,
 		showChangelog,
 		temporaryChatEnabled,
 		toolServers,
@@ -281,12 +280,11 @@
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.SHOW_SHORTCUTS])) {
 					console.log('Shortcut triggered: SHOW_SHORTCUTS');
 					event.preventDefault();
-					showShortcuts.set(!$showShortcuts);
+					showSettings.set('shortcuts');
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.CLOSE_MODAL])) {
 					console.log('Shortcut triggered: CLOSE_MODAL');
 					event.preventDefault();
 					showSettings.set(false);
-					showShortcuts.set(false);
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.OPEN_MODEL_SELECTOR])) {
 					console.log('Shortcut triggered: OPEN_MODEL_SELECTOR');
 					event.preventDefault();

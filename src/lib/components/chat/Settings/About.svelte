@@ -45,7 +45,7 @@
 </script>
 
 <div id="tab-about" class="flex flex-col h-full justify-between space-y-3 text-sm">
-	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5 space-y-3">
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 space-y-3">
 		<div>
 			<div class="text-xs text-gray-400 dark:text-gray-600 mb-2.5 flex space-x-2 items-center">
 				<div>

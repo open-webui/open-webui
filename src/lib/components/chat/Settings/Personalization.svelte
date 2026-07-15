@@ -29,7 +29,7 @@
 		dispatch('save');
 	}}
 >
-	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 -mr-1.5 py-1">
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5 py-1">
 		<div>
 			<div class="flex items-center justify-between mb-1">
 				<Tooltip

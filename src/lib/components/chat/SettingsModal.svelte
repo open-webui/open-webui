@@ -12,6 +12,7 @@
 	import About from './Settings/About.svelte';
 	import General from './Settings/General.svelte';
 	import Interface from './Settings/Interface.svelte';
+	import Shortcuts from './Settings/Shortcuts.svelte';
 	import Audio from './Settings/Audio.svelte';
 	import DataControls from './Settings/DataControls.svelte';
 	import ArchivedChats from './Settings/ArchivedChats.svelte';
@@ -31,17 +32,32 @@
 	import UserBadgeCheck from '../icons/UserBadgeCheck.svelte';
 	import ArchiveBox from '../icons/ArchiveBox.svelte';
 	import ChevronLeft from '../icons/ChevronLeft.svelte';
+	import Keyboard from '../icons/Keyboard.svelte';
 
 	const i18n: Writable<any> = getContext('i18n');
 
 	export let show: boolean | string = false;
+	let modalShow = false;
+	let lastShow: boolean | string = false;
 
-	$: if (show) {
+	$: if (show !== lastShow) {
+		lastShow = show;
 		if (typeof show === 'string') {
 			selectedTab = show;
 			show = true;
+			lastShow = true;
+			modalShow = true;
+		} else {
+			modalShow = show;
+			if (!show) {
+				selectedTab = 'general';
+			}
 		}
-	} else {
+	}
+
+	$: if (!modalShow && show !== false) {
+		show = false;
+		lastShow = false;
 		selectedTab = 'general';
 	}
 
@@ -209,6 +225,21 @@
 				'whats new',
 				'websearchinchat',
 				'web search in chat'
+			]
+		},
+		{
+			id: 'shortcuts',
+			title: 'Keyboard Shortcuts',
+			keywords: [
+				'commands',
+				'hotkeys',
+				'keyboard',
+				'keyboard shortcuts',
+				'keybindings',
+				'keys',
+				'shortcut',
+				'shortcuts',
+				'show shortcuts'
 			]
 		},
 		{
@@ -593,8 +624,8 @@
 <Modal
 	size="full"
 	containerClassName="p-4 sm:p-6 lg:p-8"
-	className="w-full max-w-[88rem] h-[min(50rem,calc(100dvh-4rem))] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-4xl"
-	bind:show
+	className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] !max-w-[76rem] h-[min(50rem,calc(100dvh-4rem))] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-4xl"
+	bind:show={modalShow}
 >
 	<nav
 		id="settings-tabs-container"
@@ -667,6 +698,19 @@
 						>
 							<AppNotification className="size-3.5" strokeWidth="2" />
 							<span>{$i18n.t('Interface')}</span>
+						</button>
+					{:else if tabId === 'shortcuts'}
+						<button
+							role="tab"
+							aria-controls="tab-shortcuts"
+							aria-selected={selectedTab === 'shortcuts'}
+							class={tabButtonClass(selectedTab === 'shortcuts')}
+							on:click={() => {
+								selectedTab = 'shortcuts';
+							}}
+						>
+							<Keyboard className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('Keyboard Shortcuts')}</span>
 						</button>
 					{:else if tabId === 'connections'}
 						{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
@@ -829,6 +873,8 @@
 						toast.success($i18n.t('Settings saved successfully!'));
 					}}
 				/>
+			{:else if selectedTab === 'shortcuts'}
+				<Shortcuts />
 			{:else if selectedTab === 'connections'}
 				<Connections
 					saveSettings={async (updated: Record<string, any>) => {
