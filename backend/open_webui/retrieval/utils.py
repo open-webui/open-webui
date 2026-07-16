@@ -1167,6 +1167,27 @@ def get_embedding_function(
         raise ValueError(f'Unknown embedding engine: {embedding_engine}')
 
 
+# Token resolution is cached briefly and serialized per user. A document
+# upload embeds many batches concurrently; letting each batch call
+# oauth_manager.get_oauth_token() in parallel fires simultaneous refreshes
+# with the SAME refresh token (OAuthManager._refresh_token has no concurrency
+# protection). IdPs that rotate refresh tokens treat the reuse as theft and
+# revoke the grant; OWUI then deletes the session — which also breaks chat's
+# system_oauth for that user. One resolution per user per TTL window keeps
+# the session healthy. Any token get_oauth_token returns is valid for at
+# least ~5 minutes (its refresh window), so a 60s cache is always safe.
+_SYSTEM_OAUTH_TOKEN_CACHE_TTL = 60  # seconds
+_system_oauth_token_cache: dict[str, tuple[str, float]] = {}
+_system_oauth_token_locks: dict[str, tuple[object, asyncio.Lock]] = {}
+
+
+def _get_cached_system_oauth_token(user_id: str) -> Union[str, None]:
+    cached = _system_oauth_token_cache.get(user_id)
+    if cached and cached[1] > time.monotonic():
+        return cached[0]
+    return None
+
+
 async def get_system_oauth_access_token(user: UserModel) -> Union[str, None]:
     """Resolve the user's SSO OAuth access token for embedding requests.
 
@@ -1174,25 +1195,48 @@ async def get_system_oauth_access_token(user: UserModel) -> Union[str, None]:
     request context: the most recently updated non-MCP OAuth session for the
     user is looked up in the DB and refreshed by the OAuthManager if expired.
     """
-    try:
-        # Lazy imports: main imports the retrieval router which imports this
-        # module, so a top-level import would be circular.
-        from open_webui.main import oauth_manager
-        from open_webui.models.oauth_sessions import OAuthSessions
+    access_token = _get_cached_system_oauth_token(user.id)
+    if access_token:
+        return access_token
 
-        sessions = await OAuthSessions.get_sessions_by_user_id(user.id)
-        sessions = sorted(
-            [s for s in sessions if not (s.provider or '').startswith('mcp:')],
-            key=lambda s: s.updated_at or 0,
-            reverse=True,
-        )
-        for session in sessions:
-            token = await oauth_manager.get_oauth_token(user.id, session.id)
-            if token and token.get('access_token'):
-                return token['access_token']
-    except Exception as e:
-        log.error(f'Error resolving system OAuth token for embeddings (user {user.id}): {e}')
-    return None
+    # Per-user, per-loop lock: embedding calls all run on the main loop; the
+    # external reranker resolves inside its own asyncio.run() loop, and an
+    # asyncio.Lock cannot be shared across loops — there the cache alone
+    # dedups. Stale foreign-loop entries are replaced rather than awaited.
+    loop = asyncio.get_running_loop()
+    entry = _system_oauth_token_locks.get(user.id)
+    if entry is None or entry[0] is not loop:
+        entry = (loop, asyncio.Lock())
+        _system_oauth_token_locks[user.id] = entry
+
+    async with entry[1]:
+        access_token = _get_cached_system_oauth_token(user.id)
+        if access_token:
+            return access_token
+        try:
+            # Lazy imports: main imports the retrieval router which imports this
+            # module, so a top-level import would be circular.
+            from open_webui.main import oauth_manager
+            from open_webui.models.oauth_sessions import OAuthSessions
+
+            sessions = await OAuthSessions.get_sessions_by_user_id(user.id)
+            sessions = sorted(
+                [s for s in sessions if not (s.provider or '').startswith('mcp:')],
+                key=lambda s: s.updated_at or 0,
+                reverse=True,
+            )
+            for session in sessions:
+                token = await oauth_manager.get_oauth_token(user.id, session.id)
+                if token and token.get('access_token'):
+                    access_token = token['access_token']
+                    _system_oauth_token_cache[user.id] = (
+                        access_token,
+                        time.monotonic() + _SYSTEM_OAUTH_TOKEN_CACHE_TTL,
+                    )
+                    return access_token
+        except Exception as e:
+            log.error(f'Error resolving system OAuth token for embeddings (user {user.id}): {e}')
+        return None
 
 
 async def generate_embeddings(
