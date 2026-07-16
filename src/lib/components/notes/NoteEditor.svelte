@@ -91,7 +91,7 @@
 	import ArrowUturnLeft from '../icons/ArrowUturnLeft.svelte';
 	import ArrowUturnRight from '../icons/ArrowUturnRight.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
-	import AdjustmentsHorizontalOutline from '../icons/AdjustmentsHorizontalOutline.svelte';
+	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
 
 	export let id: null | string = null;
 
@@ -1002,14 +1002,14 @@ ${content}
 									{/if}
 								{/if}
 
-								<Tooltip content={$i18n.t('Controls')} placement="top">
+								<Tooltip content={$i18n.t('Chat')} placement="top">
 									<button
 										type="button"
 										class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg"
-										aria-label={$i18n.t('Controls')}
+										aria-label={$i18n.t('Chat')}
 										on:click={openNoteChat}
 									>
-										<AdjustmentsHorizontalOutline className="size-4" />
+										<ChatBubbleOval className="size-4" strokeWidth="1.8" />
 									</button>
 								</Tooltip>
 
