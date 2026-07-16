@@ -41,6 +41,7 @@ from open_webui.env import (
     REDIS_KEY_PREFIX,
 )
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.tools import Tools
@@ -606,7 +607,8 @@ async def get_builtin_tools(
     ):
         builtin_functions.extend([search_web, fetch_url])
 
-    # Add image generation/edit tools if builtin category enabled AND enabled globally AND model has image_generation capability
+    # Add image generation/edit tools if builtin category enabled,
+    # globally enabled, and allowed by model capability.
     if (
         is_builtin_tool_enabled('image_generation')
         and config.get('image_generation.enable')
@@ -624,7 +626,8 @@ async def get_builtin_tools(
     ):
         builtin_functions.append(edit_image)
 
-    # Add code interpreter tool if builtin category enabled AND enabled globally AND model has code_interpreter capability
+    # Add code interpreter tool if builtin category enabled,
+    # globally enabled, and allowed by model capability.
     if (
         is_builtin_tool_enabled('code_interpreter')
         and config.get('code_interpreter.enable')
@@ -634,8 +637,17 @@ async def get_builtin_tools(
     ):
         builtin_functions.append(execute_code)
 
+    metadata = extra_params.get('__metadata__') or {}
+    chat_id = metadata.get('chat_id') or ''
+    chat = None
+    if chat_id and not chat_id.startswith(('local:', 'channel:')):
+        chat = await Chats.get_chat_by_id(chat_id)
+
     # Notes tools - search, view, create, and update user's notes
-    if is_builtin_tool_enabled('notes') and config.get('notes.enable') and await has_user_permission('notes'):
+    if (
+        (chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note')
+        or (is_builtin_tool_enabled('notes') and config.get('notes.enable') and await has_user_permission('notes'))
+    ):
         builtin_functions.extend([search_notes, view_note, write_note, replace_note_content, replace_note_text])
 
     # Channels tools - search channels and messages

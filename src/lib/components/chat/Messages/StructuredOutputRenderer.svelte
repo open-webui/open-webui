@@ -57,7 +57,7 @@
 				/>
 			</div>
 		{:else}
-			<div class="whitespace-pre-wrap text-sm">{displayItem.text}</div>
+			<div class="whitespace-pre-wrap text-[0.9375rem]">{displayItem.text}</div>
 		{/if}
 	{:else if displayItem.type === 'detail_group'}
 		<ConsecutiveDetailsGroup

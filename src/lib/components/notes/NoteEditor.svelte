@@ -193,7 +193,7 @@
 						token: localStorage.token
 					}
 				});
-				$socket?.on('note-events', noteEventHandler);
+				$socket?.on('events:note', noteEventHandler);
 			}
 		} else {
 			goto('/');
@@ -829,7 +829,7 @@ ${content}
 
 	onDestroy(() => {
 		console.log('destroy');
-		$socket?.off('note-events', noteEventHandler);
+		$socket?.off('events:note', noteEventHandler);
 
 		const dropzoneElement = document.getElementById('note-editor');
 

@@ -580,7 +580,7 @@ async def update_note_by_id(
         note.is_pinned = note.id in pinned_note_ids
 
         await sio.emit(
-            'note-events',
+            'events:note',
             note.model_dump(),
             to=f'note:{note.id}',
         )

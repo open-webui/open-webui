@@ -311,7 +311,7 @@
 			</div>
 		{/if}
 		{#if extracted.plainContent}
-			<div class="whitespace-pre-wrap text-sm">{extracted.plainContent}</div>
+			<div class="whitespace-pre-wrap text-[0.9375rem]">{extracted.plainContent}</div>
 		{/if}
 	{/if}
 </div>

@@ -2523,10 +2523,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     )
     available_skills = []
     view_skill_ids = []
+    chat = None
+    if metadata.get('chat_id') and not metadata['chat_id'].startswith(('local:', 'channel:')):
+        chat = await Chats.get_chat_by_id(metadata['chat_id'])
     use_builtin_tools = (
-        bool(metadata.get('session_id'))
-        and metadata.get('params', {}).get('function_calling') != 'legacy'
-        and (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('builtin_tools', True)
+        (chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note')
+        or (
+            bool(metadata.get('session_id'))
+            and metadata.get('params', {}).get('function_calling') != 'legacy'
+            and (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('builtin_tools', True)
+        )
     )
 
     if skill_ids:

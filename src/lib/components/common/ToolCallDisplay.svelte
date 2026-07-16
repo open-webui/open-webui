@@ -38,7 +38,7 @@
 
 	$: if (!open) expandedResult = false;
 	export let buttonClassName =
-		'w-fit py-1 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
+		'w-fit py-1 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
 
 	const componentId = id || uuidv4();
 
