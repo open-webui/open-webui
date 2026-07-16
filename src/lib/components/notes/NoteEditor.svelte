@@ -143,22 +143,10 @@
 	let noteChatCreating = false;
 
 	let selectedContent = null;
-	let noteChatFiles = [];
 	let noteAttachmentFiles = [];
 	let pendingNoteEvent = null;
 	let pendingNoteEventTimer = null;
 	let lastLocalContentChangeAt = 0;
-	$: {
-		const seen = new Set();
-		noteChatFiles = note
-			? (note?.data?.files ?? files ?? []).filter((file) => {
-					const key = `${file?.type ?? ''}:${file?.id ?? file?.url ?? file?.name ?? ''}`;
-					if (seen.has(key)) return false;
-					seen.add(key);
-					return true;
-				})
-			: [];
-	}
 	$: noteAttachmentFiles = (files ?? []).filter(
 		(file) => file?.type !== 'image' && !(file?.content_type ?? '').startsWith('image/')
 	);
@@ -1482,7 +1470,6 @@ ${content}
 				chatIdProp={noteChatId ?? ''}
 				embeddedChats={noteChats}
 				embeddedDraftKey={noteChatDraftKey}
-				initialFiles={noteChatFiles}
 				selectedText={selectedContent?.text ?? ''}
 				onInsertToNote={insertHandler}
 				onNewEmbeddedChat={createNoteChat}
