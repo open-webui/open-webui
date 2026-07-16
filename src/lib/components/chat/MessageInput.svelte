@@ -1408,9 +1408,7 @@
 						{/if}
 
 						{#if showStatusPanel}
-							<div
-								class="mx-1 mb-1 rounded-2xl border border-gray-50 bg-white text-xs dark:border-gray-850 dark:bg-gray-900"
-							>
+							<div class="mx-1 rounded-2xl bg-white text-xs dark:bg-gray-900">
 								<div class="flex items-center justify-between px-3 py-1.5">
 									<div class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
 										<span>Status</span>

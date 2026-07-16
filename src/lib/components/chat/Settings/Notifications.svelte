@@ -248,7 +248,9 @@
 								.filter((event) => target.events.includes(event.event))
 								.map((event) => event.label)
 								.join(', ')}
-							<div class="notification-target-row">
+							<div
+								class="flex items-center gap-3 border-b border-gray-100/50 px-1 py-1.5 last:border-b-0 dark:border-white/[0.03]"
+							>
 								<div class="min-w-0 flex-1">
 									<div class="flex min-w-0 items-center gap-2">
 										<span class="truncate text-[0.71875rem] text-gray-700 dark:text-gray-300">
@@ -429,21 +431,3 @@
 		</div>
 	</div>
 </Modal>
-
-<style>
-	.notification-target-row {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 0.375rem 0.25rem;
-		border-bottom: 1px solid rgb(229 231 235 / 0.7);
-	}
-
-	.notification-target-row:last-child {
-		border-bottom: none;
-	}
-
-	:global(.dark) .notification-target-row {
-		border-bottom-color: rgb(255 255 255 / 0.06);
-	}
-</style>
