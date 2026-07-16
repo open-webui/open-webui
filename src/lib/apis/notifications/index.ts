@@ -3,15 +3,22 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 export type NotificationTarget = {
 	id: string;
 	type: 'webhook';
-	name: string;
+	is_default?: boolean;
 	enabled: boolean;
 	events: string[];
 	delivery: 'away' | 'always';
 	config: {
 		url?: string;
+		url_masked?: string;
 	};
 	created_at?: number;
 	updated_at?: number;
+};
+
+export type NotificationEvent = {
+	event: string;
+	label: string;
+	description?: string;
 };
 
 const jsonRequest = async (url: string, token: string, method = 'GET', body?: object) => {
@@ -43,12 +50,14 @@ const jsonRequest = async (url: string, token: string, method = 'GET', body?: ob
 	return res;
 };
 
-export const getNotificationEvents = async (token: string) =>
-	jsonRequest(`${WEBUI_API_BASE_URL}/notifications/events`, token);
+export const getNotificationEvents = async (token: string): Promise<NotificationEvent[]> => {
+	const data = await jsonRequest(`${WEBUI_API_BASE_URL}/notifications/events`, token);
+	return data?.events ?? data ?? [];
+};
 
 export const getNotificationTargets = async (
 	token: string
-): Promise<{ targets: NotificationTarget[]; default_target_id: string | null }> =>
+): Promise<{ targets: NotificationTarget[] }> =>
 	jsonRequest(`${WEBUI_API_BASE_URL}/notifications/targets`, token);
 
 export const createNotificationTarget = async (

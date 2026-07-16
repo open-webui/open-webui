@@ -51,7 +51,6 @@ from open_webui.utils.models import (
     get_all_models,
     get_filtered_models,
 )
-from open_webui.utils.webhook import post_webhook
 from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -915,7 +914,6 @@ async def get_pinned_channel_messages(
 
 
 async def send_notification(request, channel, message, active_user_ids, db=None):
-    name = request.app.state.WEBUI_NAME
     webui_url = await Config.get('webui.url')
     enable_user_webhooks = await Config.get('ui.enable_user_webhooks')
 
@@ -923,23 +921,28 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
 
     # Batch fetch channel members in 1 query (fixes N+1)
     member_ids = {m.user_id for m in await Channels.get_members_by_channel_id(channel.id, db=db)}
+    url = f'{webui_url}/channels/{channel.id}'
 
     for u in users:
         if (u.id not in active_user_ids) and u.id in member_ids:
             if enable_user_webhooks and u.settings:
-                webhook_url = u.settings.ui.get('notifications', {}).get('webhook_url', None)
-                if webhook_url:
-                    await post_webhook(
-                        name,
-                        webhook_url,
-                        f'#{channel.name} - {webui_url}/channels/{channel.id}\n\n{message.content}',
-                        {
-                            'action': 'channel',
-                            'message': message.content,
-                            'title': channel.name,
-                            'url': f'{webui_url}/channels/{channel.id}',
-                        },
-                    )
+                await publish_event(
+                    request,
+                    EVENTS.CHANNEL_MESSAGE,
+                    subject_id=channel.id,
+                    subject_type='channel',
+                    data={
+                        'user_id': u.id,
+                        'channel_id': channel.id,
+                        'message_id': message.id,
+                        'sender_id': message.user_id,
+                        'message': f'#{channel.name} - {url}\n\n{message.content}',
+                        'content_preview': message.content[:300],
+                        'title': channel.name,
+                        'url': url,
+                    },
+                    message=channel.name,
+                )
 
     return True
 

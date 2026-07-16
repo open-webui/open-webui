@@ -264,6 +264,11 @@ class EventDefinitions(BaseModel):
         description='A channel member active state was updated.',
         message='Channel member active updated',
     )
+    CHANNEL_MESSAGE: EventDefinition = EventDefinition(
+        name='channel.message',
+        description='A channel message was posted.',
+        message='Channel message',
+    )
     CHANNEL_WEBHOOK_CREATED: EventDefinition = EventDefinition(
         name='channel.webhook.created',
         description='A channel incoming webhook was created.',
@@ -572,6 +577,11 @@ class EventDefinitions(BaseModel):
         description='A calendar event RSVP was updated.',
         message='Calendar Event rsvp updated',
     )
+    CALENDAR_ALERT: EventDefinition = EventDefinition(
+        name='calendar.alert',
+        description='A calendar event alert was triggered.',
+        message='Calendar alert',
+    )
     AUTOMATION_CREATED: EventDefinition = EventDefinition(
         name='automation.created', description='An automation was created.', message='Automation created'
     )
@@ -641,7 +651,12 @@ EVENT_DEFINITIONS = tuple(getattr(EVENTS, field_name) for field_name in EventDef
 EVENT_DEFINITIONS_BY_NAME = {definition.name: definition for definition in EVENT_DEFINITIONS}
 EVENT_CATALOG = tuple(definition.name for definition in EVENT_DEFINITIONS)
 EVENT_CATALOG_SET = set(EVENT_CATALOG)
-CHAT_NOTIFICATION_EVENTS = (EVENTS.CHAT_FINISHED.name, EVENTS.CHAT_FAILED.name)
+NOTIFICATION_EVENTS = (
+    EVENTS.CHAT_FINISHED.name,
+    EVENTS.CHAT_FAILED.name,
+    EVENTS.CHANNEL_MESSAGE.name,
+    EVENTS.CALENDAR_ALERT.name,
+)
 
 
 def get_event_catalog() -> list[dict[str, str]]:
@@ -1048,7 +1063,7 @@ def schedule_notification_dispatch(app: Any, event: Event) -> None:
 
 class NotificationEventSink:
     async def handle_event(self, app: Any, event: Event, request: Any | None = None) -> None:
-        if event.event in CHAT_NOTIFICATION_EVENTS:
+        if event.event in NOTIFICATION_EVENTS:
             schedule_notification_dispatch(app, event)
 
 

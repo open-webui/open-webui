@@ -25,7 +25,6 @@
 	let notificationEnabled = false;
 	let notificationSound = true;
 	let targets: NotificationTarget[] = [];
-	let defaultTargetId: string | null = null;
 	let events: { event: string; label: string; description?: string }[] = [
 		{
 			event: 'chat.finished',
@@ -93,7 +92,6 @@
 			}
 			if (targetResult.status === 'fulfilled') {
 				targets = targetResult.value.targets ?? [];
-				defaultTargetId = targetResult.value.default_target_id ?? null;
 			} else {
 				toast.error(`${targetResult.reason}`);
 			}
@@ -139,7 +137,7 @@
 		try {
 			const id = form.id.trim();
 			const payload: Partial<NotificationTarget> = {
-				...(id ? { id, name: id } : {}),
+				...(id ? { id } : {}),
 				type: 'webhook',
 				enabled: form.enabled,
 				events: form.events,
@@ -259,7 +257,7 @@
 										<span class="shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600">
 											{$i18n.t('Webhook')}
 										</span>
-										{#if target.id === defaultTargetId}
+										{#if target.is_default}
 											<span class="shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600">
 												{$i18n.t('Default')}
 											</span>
@@ -268,7 +266,7 @@
 									<div
 										class="truncate text-[0.625rem] leading-tight text-gray-400 dark:text-gray-600"
 									>
-										{target.config?.url}
+										{target.config?.url_masked}
 									</div>
 									<div
 										class="truncate text-[0.625rem] leading-tight text-gray-400 dark:text-gray-600"
@@ -290,7 +288,7 @@
 									>
 										{$i18n.t('Send Test')}
 									</button>
-									{#if target.id !== defaultTargetId}
+									{#if !target.is_default}
 										<button
 											class="text-[0.625rem] text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:hover:text-gray-300"
 											type="button"
@@ -342,15 +340,6 @@
 		<h2 class="mb-3 text-sm font-medium text-gray-900 dark:text-white">
 			{editingId ? $i18n.t('Edit') : $i18n.t('Add Notification Target')}
 		</h2>
-
-		<div class="mb-2 flex gap-1">
-			<button
-				class="h-7 rounded-md bg-gray-200/60 px-2 text-xs text-gray-900 transition-colors dark:bg-white/10 dark:text-white"
-				type="button"
-			>
-				{$i18n.t('Webhook')}
-			</button>
-		</div>
 
 		<div class="text-[0.625rem] text-gray-400 dark:text-gray-600">
 			{$i18n.t('Target ID for notify')}
