@@ -1018,7 +1018,6 @@ ${content}
 									onDelete={() => {
 										showDeleteConfirm = true;
 									}}
-									onChat={openNoteChat}
 									isPinned={$pinnedNotes.some((n) => n.id === note.id)}
 									onPin={async () => {
 										await toggleNotePinnedStatusById(localStorage.token, note.id);

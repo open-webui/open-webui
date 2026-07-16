@@ -11,7 +11,6 @@
 	import Link from '$lib/components/icons/Link.svelte';
 	import Pin from '$lib/components/icons/Pin.svelte';
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
-	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -22,7 +21,6 @@
 	export let onDelete = () => {};
 	export let onPin = null;
 	export let isPinned = false;
-	export let onChat = null;
 
 	export let onCopyLink = null;
 	export let onCopyToClipboard = null;
@@ -42,19 +40,6 @@
 
 	<div slot="content">
 		<DropdownMenu className="min-w-[180px]">
-			{#if onChat}
-				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
-					on:click={() => {
-						onChat();
-						show = false;
-					}}
-				>
-					<ChatBubbleOval className="size-3.5" strokeWidth="2" />
-					<div class="flex items-center">{$i18n.t('Chat with note')}</div>
-				</button>
-			{/if}
-
 			<DropdownSub contentClass="select-none z-50">
 				<button
 					slot="trigger"
