@@ -30,6 +30,7 @@
 	import WrenchAlt from '../icons/WrenchAlt.svelte';
 	import Face from '../icons/Face.svelte';
 	import AppNotification from '../icons/AppNotification.svelte';
+	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 	import ArchiveBox from '../icons/ArchiveBox.svelte';
 	import ChevronLeft from '../icons/ChevronLeft.svelte';
 	import Keyboard from '../icons/Keyboard.svelte';
@@ -914,7 +915,7 @@
 								selectedTab = 'interface';
 							}}
 						>
-							<AppNotification className="size-3.5" strokeWidth="2" />
+							<AdjustmentsHorizontal className="size-3.5" strokeWidth="2" />
 							<span>{$i18n.t('Interface')}</span>
 						</button>
 					{:else if tabId === 'notifications'}

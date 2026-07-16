@@ -42,10 +42,15 @@ def _normalize_target(target: dict[str, Any], existing: dict[str, Any] | None = 
     validate_url(url)
     config['url'] = url
 
-    events = target.get('events', existing.get('events') or sorted(VALID_EVENTS))
-    events = [str(event) for event in events if str(event) in VALID_EVENTS]
-    if not events:
-        raise ValueError('At least one notification event is required')
+    events = target['events'] if 'events' in target else existing.get('events', [])
+    if events is None:
+        events = []
+    if not isinstance(events, list):
+        raise ValueError('events must be a list')
+    events = [str(event) for event in events]
+    unsupported = [event for event in events if event not in VALID_EVENTS]
+    if unsupported:
+        raise ValueError(f'unsupported notification event: {unsupported[0]}')
 
     delivery = str(target.get('delivery') or existing.get('delivery') or 'away')
     if delivery not in VALID_DELIVERY:
@@ -83,7 +88,11 @@ async def _load_notifications(user_id: str) -> dict[str, Any]:
     targets = notifications.get('targets')
 
     if not isinstance(targets, list) or not targets:
-        legacy_url = str(settings.get('ui', {}).get('notifications', {}).get('webhook_url') or '').strip()
+        legacy_url = str(
+            notifications.get('webhook_url')
+            or settings.get('ui', {}).get('notifications', {}).get('webhook_url')
+            or ''
+        ).strip()
         if legacy_url:
             target = _normalize_target(
                 {
@@ -96,7 +105,7 @@ async def _load_notifications(user_id: str) -> dict[str, Any]:
                     'config': {'url': legacy_url},
                 }
             )
-            notifications = {'targets': [target], 'default_target_id': DEFAULT_TARGET_ID}
+            notifications = {**notifications, 'targets': [target], 'default_target_id': DEFAULT_TARGET_ID}
             await Users.update_user_settings_by_id(user_id, {'notifications': notifications})
     else:
         notifications['targets'] = [target for target in targets if isinstance(target, dict)]

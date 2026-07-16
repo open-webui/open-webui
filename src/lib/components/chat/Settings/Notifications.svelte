@@ -4,11 +4,9 @@
 	import { toast } from 'svelte-sonner';
 
 	import { config, settings, user } from '$lib/stores';
+	import Modal from '$lib/components/common/Modal.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
-	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
-	import UserSettingField from './UserSettingField.svelte';
-	import UserSettingRow from './UserSettingRow.svelte';
-	import UserSettingSection from './UserSettingSection.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
 	import {
 		createNotificationTarget,
 		deleteNotificationTarget,
@@ -26,40 +24,54 @@
 
 	let notificationEnabled = false;
 	let notificationSound = true;
-	let notificationSoundAlways = false;
 	let targets: NotificationTarget[] = [];
 	let defaultTargetId: string | null = null;
-	let events: { event: string; label: string }[] = [];
-	let loading = false;
-	let editingTarget: NotificationTarget | null = null;
-	let targetName = 'Webhook';
-	let targetUrl = '';
-	let targetEnabled = true;
-	let targetDelivery: 'away' | 'always' = 'away';
-	let targetEvents = ['chat.finished', 'chat.failed'];
-
-	const inputClass =
-		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
-	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-50';
+	let events: { event: string; label: string; description?: string }[] = [
+		{
+			event: 'chat.finished',
+			label: 'Chat finished',
+			description: 'A chat run finished successfully.'
+		},
+		{ event: 'chat.failed', label: 'Chat failed', description: 'A chat run failed.' }
+	];
+	let loadingTargets = false;
+	let savingTarget = false;
+	let editingId: string | null = null;
+	let formOpen = false;
+	let form = {
+		id: '',
+		url: '',
+		enabled: true,
+		events: [] as string[],
+		delivery: 'away' as 'away' | 'always'
+	};
+	let loadedTargets = false;
 
 	$: canUseWebhooks =
 		($config?.features as any)?.enable_user_webhooks &&
 		($user?.role === 'admin' || ($user?.permissions?.features?.webhooks ?? false));
 
-	const setNotificationEnabled = async (enabled: boolean) => {
-		const permission = enabled ? await Notification.requestPermission() : 'granted';
+	$: if (canUseWebhooks && !loadedTargets) {
+		void loadTargets();
+	}
 
-		if (permission === 'granted') {
-			notificationEnabled = enabled;
-			saveSettings({ notificationEnabled });
+	const toggleNotifications = async () => {
+		if (!notificationEnabled) {
+			const permission =
+				'Notification' in window ? await Notification.requestPermission() : 'denied';
+			if (permission === 'granted') {
+				notificationEnabled = true;
+				saveSettings({ notificationEnabled });
+			} else {
+				toast.error(
+					$i18n.t(
+						'Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.'
+					)
+				);
+			}
 		} else {
 			notificationEnabled = false;
-			toast.error(
-				$i18n.t(
-					'Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.'
-				)
-			);
+			saveSettings({ notificationEnabled });
 		}
 	};
 
@@ -68,75 +80,110 @@
 			return;
 		}
 
-		loading = true;
+		loadingTargets = true;
+		loadedTargets = true;
 		try {
-			events = await getNotificationEvents(localStorage.token);
-			const response = await getNotificationTargets(localStorage.token);
-			targets = response.targets ?? [];
-			defaultTargetId = response.default_target_id ?? null;
+			const [eventResult, targetResult] = await Promise.allSettled([
+				getNotificationEvents(localStorage.token),
+				getNotificationTargets(localStorage.token)
+			]);
+
+			if (eventResult.status === 'fulfilled' && eventResult.value?.length) {
+				events = eventResult.value;
+			}
+			if (targetResult.status === 'fulfilled') {
+				targets = targetResult.value.targets ?? [];
+				defaultTargetId = targetResult.value.default_target_id ?? null;
+			} else {
+				toast.error(`${targetResult.reason}`);
+			}
 		} catch (error) {
 			toast.error(`${error}`);
 		} finally {
-			loading = false;
+			loadingTargets = false;
 		}
 	};
 
-	const resetForm = () => {
-		editingTarget = null;
-		targetName = 'Webhook';
-		targetUrl = '';
-		targetEnabled = true;
-		targetDelivery = 'away';
-		targetEvents = ['chat.finished', 'chat.failed'];
+	const openNewTarget = () => {
+		editingId = null;
+		formOpen = true;
+		form = {
+			id: '',
+			url: '',
+			enabled: true,
+			events: [],
+			delivery: 'away'
+		};
 	};
 
-	const editTarget = (target: NotificationTarget) => {
-		editingTarget = target;
-		targetName = target.name;
-		targetUrl = '';
-		targetEnabled = target.enabled;
-		targetDelivery = target.delivery;
-		targetEvents = [...target.events];
+	const openEditTarget = (target: NotificationTarget) => {
+		editingId = target.id;
+		formOpen = true;
+		form = {
+			id: target.id,
+			url: '',
+			enabled: target.enabled,
+			events: [...target.events],
+			delivery: target.delivery
+		};
+	};
+
+	const toggleFormEvent = (event: string) => {
+		form.events = form.events.includes(event)
+			? form.events.filter((item) => item !== event)
+			: [...form.events, event];
 	};
 
 	const saveTarget = async () => {
+		savingTarget = true;
 		try {
+			const id = form.id.trim();
 			const payload: Partial<NotificationTarget> = {
+				...(id ? { id, name: id } : {}),
 				type: 'webhook',
-				name: targetName,
-				enabled: targetEnabled,
-				events: targetEvents,
-				delivery: targetDelivery,
-				config: targetUrl ? { url: targetUrl } : {}
+				enabled: form.enabled,
+				events: form.events,
+				delivery: form.delivery,
+				...(form.url.trim() ? { config: { url: form.url.trim() } } : {})
 			};
 
-			if (editingTarget) {
-				await updateNotificationTarget(localStorage.token, editingTarget.id, payload);
+			if (editingId) {
+				await updateNotificationTarget(localStorage.token, editingId, payload);
 			} else {
 				await createNotificationTarget(localStorage.token, payload);
 			}
 
+			await loadTargets();
+			formOpen = false;
 			toast.success($i18n.t('Settings saved successfully!'));
-			resetForm();
+		} catch (error) {
+			toast.error(`${error}`);
+		} finally {
+			savingTarget = false;
+		}
+	};
+
+	const patchTarget = async (target: NotificationTarget, patch: Partial<NotificationTarget>) => {
+		try {
+			await updateNotificationTarget(localStorage.token, target.id, patch);
 			await loadTargets();
 		} catch (error) {
 			toast.error(`${error}`);
 		}
 	};
 
-	const toggleEvent = (event: string) => {
-		if (targetEvents.includes(event)) {
-			targetEvents = targetEvents.filter((item) => item !== event);
-		} else {
-			targetEvents = [...targetEvents, event];
+	const sendTest = async (target: NotificationTarget) => {
+		try {
+			await testNotificationTarget(localStorage.token, target.id);
+			toast.success($i18n.t('Test notification sent.'));
+		} catch (error) {
+			toast.error(`${error}`);
 		}
 	};
 
 	onMount(async () => {
 		notificationEnabled = $settings.notificationEnabled ?? false;
 		notificationSound = $settings?.notificationSound ?? true;
-		notificationSoundAlways = $settings?.notificationSoundAlways ?? false;
-		await loadTargets();
 	});
 </script>
 
@@ -146,24 +193,25 @@
 			{$i18n.t('Notifications')}
 		</h2>
 
-		<UserSettingSection title={$i18n.t('Local Notifications')} first>
-			<UserSettingRow
-				label={$i18n.t('Browser Notifications')}
-				description={$i18n.t('Allow browser notifications for completed responses.')}
-			>
+		<div class="flex flex-col gap-2.5">
+			<label class="flex cursor-pointer items-center justify-between">
+				<span class="text-xs text-gray-600 dark:text-gray-400">
+					{$i18n.t('Browser Notifications')}
+				</span>
 				<Switch
 					state={notificationEnabled}
 					ariaLabel={$i18n.t('Browser Notifications')}
-					on:change={(event) => {
-						setNotificationEnabled(event.detail);
-					}}
+					on:change={toggleNotifications}
 				/>
-			</UserSettingRow>
+			</label>
+			<p class="-mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+				{$i18n.t('Allow browser notifications for completed responses.')}
+			</p>
 
-			<UserSettingRow
-				label={$i18n.t('Notification Sound')}
-				description={$i18n.t('Play a sound when new chat activity arrives.')}
-			>
+			<label class="flex cursor-pointer items-center justify-between">
+				<span class="text-xs text-gray-600 dark:text-gray-400">
+					{$i18n.t('Notification Sound')}
+				</span>
 				<Switch
 					bind:state={notificationSound}
 					ariaLabel={$i18n.t('Notification Sound')}
@@ -171,175 +219,242 @@
 						saveSettings({ notificationSound });
 					}}
 				/>
-			</UserSettingRow>
+			</label>
 
-			{#if notificationSound}
-				<UserSettingRow
-					label={$i18n.t('Always Play Notification Sound')}
-					description={$i18n.t('Play notification sounds even when the app is focused.')}
-				>
-					<Switch
-						bind:state={notificationSoundAlways}
-						ariaLabel={$i18n.t('Always Play Notification Sound')}
-						on:change={() => {
-							saveSettings({ notificationSoundAlways });
-						}}
-					/>
-				</UserSettingRow>
-			{/if}
-		</UserSettingSection>
+			{#if canUseWebhooks}
+				<div class="mt-3 flex items-center justify-between">
+					<span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+						{$i18n.t('Notification Targets')}
+					</span>
+					<button
+						class="flex h-6 w-6 items-center justify-center rounded-lg text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+						type="button"
+						on:click={openNewTarget}
+						title={$i18n.t('Add Notification Target')}
+						aria-label={$i18n.t('Add Notification Target')}
+					>
+						<Plus className="size-3.5" strokeWidth="2" />
+					</button>
+				</div>
 
-		{#if canUseWebhooks}
-			<UserSettingSection title={$i18n.t('Webhook Targets')}>
-				{#if loading}
-					<div class="text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Loading...')}</div>
-				{:else if targets.length === 0}
-					<div class="text-xs text-gray-400 dark:text-gray-600">
+				{#if loadingTargets}
+					<p class="text-[0.6875rem] text-gray-400 dark:text-gray-600">{$i18n.t('Loading...')}</p>
+				{:else if !targets.length}
+					<p class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 						{$i18n.t('No notification targets configured.')}
-					</div>
+					</p>
 				{:else}
-					<div class="flex flex-col gap-2">
+					<div class="flex flex-col">
 						{#each targets as target}
-							<div
-								class="rounded-lg border border-gray-100/70 p-2.5 text-xs dark:border-white/[0.06]"
-							>
-								<div class="flex items-center justify-between gap-3">
-									<div class="min-w-0">
-										<div class="truncate font-medium text-gray-700 dark:text-gray-300">
-											{target.name}
-											{#if target.id === defaultTargetId}
-												<span class="ml-1 text-gray-400 dark:text-gray-600"
-													>{$i18n.t('Default')}</span
-												>
-											{/if}
-										</div>
-										<div class="truncate text-gray-400 dark:text-gray-600">
-											{target.config?.url}
-										</div>
+							{@const alertLabels = events
+								.filter((event) => target.events.includes(event.event))
+								.map((event) => event.label)
+								.join(', ')}
+							<div class="notification-target-row">
+								<div class="min-w-0 flex-1">
+									<div class="flex min-w-0 items-center gap-2">
+										<span class="truncate text-[0.71875rem] text-gray-700 dark:text-gray-300">
+											{target.id}
+										</span>
+										<span class="shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600">
+											{$i18n.t('Webhook')}
+										</span>
+										{#if target.id === defaultTargetId}
+											<span class="shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600">
+												{$i18n.t('Default')}
+											</span>
+										{/if}
 									</div>
-
-									<Switch
-										state={target.enabled}
-										ariaLabel={$i18n.t('Enabled')}
-										on:change={async (event) => {
-											await updateNotificationTarget(localStorage.token, target.id, {
-												enabled: event.detail
-											});
-											await loadTargets();
-										}}
-									/>
+									<div
+										class="truncate text-[0.625rem] leading-tight text-gray-400 dark:text-gray-600"
+									>
+										{target.config?.url}
+									</div>
+									<div
+										class="truncate text-[0.625rem] leading-tight text-gray-400 dark:text-gray-600"
+									>
+										{alertLabels || $i18n.t('No chat alerts')}
+										{#if target.events.length}
+											&middot; {target.delivery === 'away'
+												? $i18n.t('Only when away')
+												: $i18n.t('Always')}
+										{/if}
+									</div>
 								</div>
 
-								<div class="mt-2 flex flex-wrap gap-2 text-gray-400 dark:text-gray-600">
-									<span
-										>{target.delivery === 'always'
-											? $i18n.t('Always')
-											: $i18n.t('Only when away')}</span
-									>
-									<span>{target.events.join(', ')}</span>
-								</div>
-
-								<div class="mt-2 flex flex-wrap gap-3">
+								<div class="flex shrink-0 items-center gap-2">
 									<button
-										class={actionButtonClass}
+										class="text-[0.625rem] text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:hover:text-gray-300"
 										type="button"
-										on:click={async () => {
-											await testNotificationTarget(localStorage.token, target.id);
-											toast.success($i18n.t('Test notification sent.'));
-										}}>{$i18n.t('Test')}</button
+										on:click={() => sendTest(target)}
 									>
+										{$i18n.t('Send Test')}
+									</button>
+									{#if target.id !== defaultTargetId}
+										<button
+											class="text-[0.625rem] text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:hover:text-gray-300"
+											type="button"
+											on:click={async () => {
+												await setDefaultNotificationTarget(localStorage.token, target.id);
+												await loadTargets();
+											}}
+										>
+											{$i18n.t('Make Default')}
+										</button>
+									{/if}
 									<button
-										class={actionButtonClass}
+										class="text-[0.625rem] text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:hover:text-gray-300"
 										type="button"
-										on:click={() => editTarget(target)}>{$i18n.t('Edit')}</button
+										on:click={() => openEditTarget(target)}
 									>
+										{$i18n.t('Edit')}
+									</button>
 									<button
-										class={actionButtonClass}
-										type="button"
-										disabled={target.id === defaultTargetId}
-										on:click={async () => {
-											await setDefaultNotificationTarget(localStorage.token, target.id);
-											await loadTargets();
-										}}>{$i18n.t('Make Default')}</button
-									>
-									<button
-										class={actionButtonClass}
+										class="text-[0.625rem] text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:hover:text-gray-300"
 										type="button"
 										on:click={async () => {
 											await deleteNotificationTarget(localStorage.token, target.id);
 											await loadTargets();
-										}}>{$i18n.t('Remove')}</button
+										}}
 									>
+										{$i18n.t('Remove')}
+									</button>
+								</div>
+
+								<div class="flex w-9 shrink-0 justify-end">
+									<Switch
+										state={target.enabled}
+										ariaLabel={$i18n.t('Enabled')}
+										on:change={(event) => patchTarget(target, { enabled: event.detail })}
+									/>
 								</div>
 							</div>
 						{/each}
 					</div>
 				{/if}
-			</UserSettingSection>
-
-			<UserSettingSection title={editingTarget ? $i18n.t('Edit Target') : $i18n.t('Add Target')}>
-				<UserSettingField label={$i18n.t('Name')}>
-					<input class={inputClass} type="text" bind:value={targetName} />
-				</UserSettingField>
-
-				<UserSettingField
-					label={$i18n.t('Webhook URL')}
-					description={editingTarget
-						? $i18n.t('Leave blank to keep the current webhook URL.')
-						: $i18n.t('Send chat notifications to this webhook URL.')}
-				>
-					<input
-						class={inputClass}
-						type="url"
-						bind:value={targetUrl}
-						placeholder={editingTarget
-							? editingTarget.config?.url
-							: $i18n.t('Enter your webhook URL')}
-					/>
-				</UserSettingField>
-
-				<UserSettingRow label={$i18n.t('Enabled')}>
-					<Switch bind:state={targetEnabled} ariaLabel={$i18n.t('Enabled')} />
-				</UserSettingRow>
-
-				<UserSettingField label={$i18n.t('Delivery')}>
-					<SettingsSelect bind:value={targetDelivery} ariaLabel={$i18n.t('Delivery')}>
-						<option value="away">{$i18n.t('Only when away')}</option>
-						<option value="always">{$i18n.t('Always')}</option>
-					</SettingsSelect>
-				</UserSettingField>
-
-				<UserSettingField label={$i18n.t('Events')}>
-					<div class="flex flex-col gap-1.5">
-						{#each events as item}
-							<label class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-								<input
-									type="checkbox"
-									checked={targetEvents.includes(item.event)}
-									on:change={() => toggleEvent(item.event)}
-								/>
-								<span>{$i18n.t(item.label)}</span>
-							</label>
-						{/each}
-					</div>
-				</UserSettingField>
-
-				<div class="flex justify-end gap-3">
-					{#if editingTarget}
-						<button class={actionButtonClass} type="button" on:click={resetForm}
-							>{$i18n.t('Cancel')}</button
-						>
-					{/if}
-					<button
-						class="rounded-full bg-black px-3.5 py-1.5 text-sm font-normal text-white transition hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-gray-100"
-						type="button"
-						disabled={!editingTarget && !targetUrl}
-						on:click={saveTarget}
-					>
-						{editingTarget ? $i18n.t('Save') : $i18n.t('Add')}
-					</button>
-				</div>
-			</UserSettingSection>
-		{/if}
+			{/if}
+		</div>
 	</div>
 </div>
+
+<Modal size="sm" bind:show={formOpen}>
+	<div class="p-4">
+		<h2 class="mb-3 text-sm font-medium text-gray-900 dark:text-white">
+			{editingId ? $i18n.t('Edit') : $i18n.t('Add Notification Target')}
+		</h2>
+
+		<div class="mb-2 flex gap-1">
+			<button
+				class="h-7 rounded-md bg-gray-200/60 px-2 text-xs text-gray-900 transition-colors dark:bg-white/10 dark:text-white"
+				type="button"
+			>
+				{$i18n.t('Webhook')}
+			</button>
+		</div>
+
+		<div class="text-[0.625rem] text-gray-400 dark:text-gray-600">
+			{$i18n.t('Target ID for notify')}
+		</div>
+		<input
+			bind:value={form.id}
+			placeholder={$i18n.t('Target ID')}
+			autocomplete="off"
+			spellcheck="false"
+			class="block w-full bg-transparent py-0.5 font-mono text-[0.8125rem] text-gray-700 outline-none placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+		/>
+
+		<div class="mt-2 text-[0.625rem] text-gray-400 dark:text-gray-600">
+			{$i18n.t('Webhook')}
+		</div>
+		<input
+			type="url"
+			bind:value={form.url}
+			placeholder={editingId
+				? $i18n.t('Keep current webhook URL')
+				: 'https://hooks.slack.com/services/...'}
+			autocomplete="off"
+			spellcheck="false"
+			class="block w-full bg-transparent py-0.5 font-mono text-[0.8125rem] text-gray-700 outline-none placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+		/>
+
+		<div class="mt-3 mb-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
+			{$i18n.t('Automatic Events')}
+		</div>
+		<div class="flex flex-wrap gap-1">
+			{#each events as event}
+				<button
+					class="h-6 rounded-md px-2 text-[0.6875rem] transition-colors {form.events.includes(
+						event.event
+					)
+						? 'bg-gray-200/60 text-gray-900 dark:bg-white/10 dark:text-white'
+						: 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}"
+					type="button"
+					on:click={() => toggleFormEvent(event.event)}
+				>
+					{event.label}
+				</button>
+			{/each}
+		</div>
+
+		{#if form.events.length}
+			<div class="mt-3 mb-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
+				{$i18n.t('Automatic Delivery')}
+			</div>
+			<div class="flex gap-1">
+				{#each ['away', 'always'] as mode}
+					<button
+						class="h-6 rounded-md px-2 text-[0.6875rem] transition-colors {form.delivery === mode
+							? 'bg-gray-200/60 text-gray-900 dark:bg-white/10 dark:text-white'
+							: 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}"
+						type="button"
+						on:click={() => (form.delivery = mode as 'away' | 'always')}
+					>
+						{mode === 'away' ? $i18n.t('Only when away') : $i18n.t('Always')}
+					</button>
+				{/each}
+			</div>
+		{/if}
+
+		<p class="mt-3 text-[0.625rem] text-gray-400 dark:text-gray-600">
+			{$i18n.t(
+				'The notify tool always sends to an enabled target, regardless of automatic event settings.'
+			)}
+		</p>
+
+		<div class="mt-4 flex justify-end gap-3">
+			<button
+				class="text-[0.8125rem] text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:hover:text-gray-300"
+				type="button"
+				on:click={() => (formOpen = false)}
+			>
+				{$i18n.t('Cancel')}
+			</button>
+			<button
+				class="text-[0.8125rem] text-gray-700 transition-colors duration-100 hover:text-gray-900 disabled:opacity-30 dark:text-gray-300 dark:hover:text-white"
+				type="button"
+				on:click={saveTarget}
+				disabled={savingTarget || (!editingId && !form.url.trim())}
+			>
+				{savingTarget ? $i18n.t('Saving...') : $i18n.t('Save')}
+			</button>
+		</div>
+	</div>
+</Modal>
+
+<style>
+	.notification-target-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.375rem 0.25rem;
+		border-bottom: 1px solid rgb(229 231 235 / 0.7);
+	}
+
+	.notification-target-row:last-child {
+		border-bottom: none;
+	}
+
+	:global(.dark) .notification-target-row {
+		border-bottom-color: rgb(255 255 255 / 0.06);
+	}
+</style>
