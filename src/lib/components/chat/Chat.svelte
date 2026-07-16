@@ -123,7 +123,7 @@
 	export let embeddedTitle = '';
 	export let embeddedChats = [];
 	export let embeddedDraftKey = '';
-	export let initialFiles = [];
+	export let suggestedPrompts = [];
 	export let selectedText = '';
 	export let onInsertToNote: ((content: string) => void) | null = null;
 	export let onCloseEmbedded: (() => void) | null = null;
@@ -137,12 +137,6 @@
 	let loading = true;
 	$: chatContainerId = embedded ? 'note-chat-container' : 'chat-container';
 	$: messageInputDropzoneId = embedded ? 'note-chat-input-dropzone' : 'chat-pane';
-	const embeddedSuggestedPrompts = [
-		'Enhance this note and update it.',
-		'Summarize this note.',
-		'Extract action items from this note.',
-		'Rewrite the selected text.'
-	];
 
 	const eventTarget = new EventTarget();
 	let controlPane: Pane | undefined;
@@ -369,7 +363,6 @@
 	let chatFiles = [];
 	let files = [];
 	let params = {};
-	let attachedFilesKey = '';
 	let loadedChatIdProp = '';
 	let currentDraftKey = '';
 
@@ -381,18 +374,6 @@
 			seen.add(key);
 			return true;
 		});
-	};
-	const applyInitialFiles = () => {
-		if (!embedded || !initialFiles?.length) return;
-
-		const key = JSON.stringify(
-			initialFiles.map((file) => `${file?.type ?? ''}:${file?.id ?? file?.url ?? file?.name ?? ''}`)
-		);
-		if (key === attachedFilesKey) return;
-
-		files = mergeFiles(files, initialFiles);
-		chatFiles = mergeFiles(chatFiles, initialFiles);
-		attachedFilesKey = key;
 	};
 	const withSelectedText = (text: string) =>
 		embedded && selectedText?.trim()
@@ -407,10 +388,6 @@
 			...data
 		});
 	};
-
-	$: if (embedded && !loading) {
-		applyInitialFiles();
-	}
 
 	$: if (chatIdProp && chatIdProp !== loadedChatIdProp) {
 		noteChatDebug('chatIdProp changed; loading linked chat', {
@@ -549,7 +526,6 @@
 		await setDefaults();
 		loading = false;
 		await tick();
-		applyInitialFiles();
 		document.getElementById('chat-input')?.focus();
 	};
 
@@ -2727,7 +2703,6 @@
 				params = structuredClone(createdChat?.chat?.params ?? {});
 				delete params.note_id;
 				chatFiles = mergeFiles(chatFiles, createdChat?.chat?.files ?? []);
-				applyInitialFiles();
 				await onSelectEmbeddedChat?.(_chatId);
 			} else if ($temporaryChatEnabled) {
 				_chatId = `local:${$socket?.id}`;
@@ -3846,27 +3821,29 @@
 							{/if}
 						{:else if embedded}
 							<div class="flex h-full min-h-0 flex-col justify-end">
-								<div class="flex flex-1 items-end px-5 pb-8">
-									<div class="w-full">
-										<div class="mb-2 text-[12px] text-gray-300 dark:text-gray-700">
-											{$i18n.t('Suggested prompts')}
-										</div>
-										<div class="flex flex-col">
-											{#each embeddedSuggestedPrompts as suggestion}
-												<button
-													type="button"
-													class="flex min-h-8 w-full items-center justify-between py-1 text-left text-[13px] leading-5 text-gray-500 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
-													on:click={async () => {
-														await tick();
-														await submitHandler(withSelectedText(suggestion));
-													}}
-												>
-													<span class="min-w-0 truncate">{$i18n.t(suggestion)}</span>
-												</button>
-											{/each}
+								{#if suggestedPrompts.length > 0}
+									<div class="flex flex-1 items-end px-5 pb-8">
+										<div class="w-full">
+											<div class="mb-2 text-[12px] text-gray-300 dark:text-gray-700">
+												{$i18n.t('Suggested prompts')}
+											</div>
+											<div class="flex flex-col">
+												{#each suggestedPrompts as suggestion}
+													<button
+														type="button"
+														class="flex min-h-8 w-full items-center justify-between py-1 text-left text-[13px] leading-5 text-gray-500 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+														on:click={async () => {
+															await tick();
+															await submitHandler(withSelectedText(suggestion));
+														}}
+													>
+														<span class="min-w-0 truncate">{suggestion}</span>
+													</button>
+												{/each}
+											</div>
 										</div>
 									</div>
-								</div>
+								{/if}
 								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
 									<MessageInput
 										bind:this={messageInput}

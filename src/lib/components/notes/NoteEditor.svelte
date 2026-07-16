@@ -144,12 +144,19 @@
 
 	let selectedContent = null;
 	let noteAttachmentFiles = [];
+	let noteChatSuggestedPrompts = [];
 	let pendingNoteEvent = null;
 	let pendingNoteEventTimer = null;
 	let lastLocalContentChangeAt = 0;
 	$: noteAttachmentFiles = (files ?? []).filter(
 		(file) => file?.type !== 'image' && !(file?.content_type ?? '').startsWith('image/')
 	);
+	$: noteChatSuggestedPrompts = [
+		$i18n.t('Enhance this note and update it.'),
+		$i18n.t('Summarize this note.'),
+		$i18n.t('Extract action items from this note.'),
+		$i18n.t('Rewrite the selected text.')
+	];
 
 	let showDeleteConfirm = false;
 	let showAccessControlModal = false;
@@ -1470,6 +1477,7 @@ ${content}
 				chatIdProp={noteChatId ?? ''}
 				embeddedChats={noteChats}
 				embeddedDraftKey={noteChatDraftKey}
+				suggestedPrompts={noteChatSuggestedPrompts}
 				selectedText={selectedContent?.text ?? ''}
 				onInsertToNote={insertHandler}
 				onNewEmbeddedChat={createNoteChat}
