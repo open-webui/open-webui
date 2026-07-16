@@ -13,7 +13,7 @@
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import HashtagIcon from '$lib/components/icons/Hashtag.svelte';
 	import LockIcon from '$lib/components/icons/Lock.svelte';
-	import EditPencilIcon from './icons/EditPencil.svelte';
+	import SettingsIcon from '$lib/components/icons/Settings.svelte';
 	import UserIcon from './icons/User.svelte';
 	import XMarkIcon from './icons/XMark.svelte';
 
@@ -242,7 +242,7 @@
 					showEditChannelModal = true;
 				}}
 			>
-				<EditPencilIcon className="size-3.5" />
+				<SettingsIcon className="size-3.5" strokeWidth="1.5" />
 			</button>
 		</div>
 	{/if}

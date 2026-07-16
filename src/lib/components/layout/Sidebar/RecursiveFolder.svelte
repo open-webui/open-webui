@@ -666,8 +666,10 @@
 								showCreateSubFolderModal = true;
 							}}
 						>
-							<div class="p-1 dark:hover:bg-gray-850 rounded-lg touch-auto">
-								<MoreHorizontal className="size-4" strokeWidth="1.5" />
+							<div
+								class="flex size-5 items-center justify-center self-center dark:hover:text-white transition m-0 touch-auto"
+							>
+								<MoreHorizontal className="size-3.5" strokeWidth="2" />
 							</div>
 						</FolderMenu>
 					</button>
