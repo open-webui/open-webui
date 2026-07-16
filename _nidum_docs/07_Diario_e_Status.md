@@ -61,9 +61,9 @@ Quando ela crescer, **o gargalo será esse, não o reranker**. Não foi tratado.
   corrigindo a etiqueta malformada `[Acervos . <caminho de pasta>]`, que era **ensinada**
   por uma instrução da v1.18.0 (refletir a pasta na etiqueta), agora **removida**.
 
-### Resultado medido — banco de perguntas na 1.26.0 com `r=0`: **17 OK / 2 PARCIAL / 0 FALHOU**
+### Resultado medido — banco de perguntas na 1.26.0 com `r=0`: **18 OK / 1 PARCIAL / 0 FALHOU**
 
-Subiu de **14 OK/18** (rodada 1.23.0) para **17 OK/19**, **zero FALHOU**. Config:
+Subiu de **14 OK/18** (rodada 1.23.0) para **18 OK/19**, **zero FALHOU**. Config:
 `Top K=24 · Reclass.=24 · r=0 · híbrida ON · enriquecimento ON · bge-reranker-base ·
 BM25 0,5 · BASE=ACERVOS+FONTE · MAX_DOCS_INTEIROS=0 · TOP_K_DOCUMENTOS=0`, wrapper
 `chatnd`, **usuário comum** (não-admin — importante: admin pula a checagem de acesso).
@@ -85,17 +85,35 @@ ata **abaixo de 0,1**; numa pergunta **curta e sobre o documento** ("resuma o do
 caminho de pasta, P8 e P15 rotulando `[Fonte]` para conteúdo dos Acervos) vieram
 limpas. A regra de **etiqueta por citação** e o **formato fechado** (1.25.0) pegaram.
 
-**Sobraram 2 PARCIAL:**
+**Sobrou 1 PARCIAL:**
 - **P10** — etiqueta residual: rotulou `[Fonte]` mas cita **também** a Convergência CVI
   (Acervos) no fecho; deveria ser `[Fonte + Acervos]`. A regra manda contar **tudo** que
   foi citado; ele contou só a citação principal.
-- **P8 — regressão real (investigar, sem urgência):** antes listava as quatro questões
-  em aberto da CVI de 08/06; agora **acha a fonte certa mas não acha o trecho** ("o
-  documento foi cortado antes dessa seção") e oferece a CVI de 23/06. Suspeitas: **(a)**
-  efeito colateral do `r=0` (mais candidatos disputando as 24 vagas); **(b)** o fim do
-  documento inteiro (`MAX_DOCS_INTEIROS=0`) — antes a CVI podia entrar **inteira**, agora
-  depende do **chunk certo** ser recuperado. É 1 de 19 e **a resposta é honesta** (não
-  inventa, nomeia a lacuna, oferece alternativa) — por isso não é urgente.
+
+**A P8 era suspeita de regressão e NÃO é — virou OK.** Uma rodada respondeu que "o
+documento foi cortado antes dessa seção" e ofereceu a CVI de 23/06. **Re-testada duas
+vezes, acertou nas duas:** *sem data* → `[Fonte + Acervos]` com o **mapa das três
+convergências** (21/05, 08/06, 23/06) e as questões de cada uma; *com data* →
+`[Acervos]` com **as quatro questões em aberto** do CVI 08/06, como na linha de base.
+**Foi variação de rodada, não padrão.**
+
+> **Hipótese investigada e DESCARTADA por teste — não reabrir:** *"a expansão de datas
+> (1.26.0) envenena o reranker"*. O raciocínio era plausível: a query expandida fica com
+> metade do texto em variantes de data, o reranker é um cross-encoder **semântico** e vê
+> a query inteira, então os chunks com a **data** (o cabeçalho) superariam o chunk com o
+> **conteúdo** (as quatro questões, no fim do documento) — o que casaria com o sintoma
+> *"cortado antes dessa seção"*. **O teste matou a hipótese:** a pergunta **com data** foi
+> a **mais precisa** das duas; se houvesse poluição, seria a **pior**.
+> **Consequência: multi-query NÃO implementado.** Era o plano B combinado
+> (`queries=[original, expandida]`, merge pelo maior score por chunk), mas custa **~2×
+> latência** e o gatilho — regressão comprovada — **não existe**. Só reabrir com **padrão
+> reproduzível**.
+
+**Lição de método (a mais cara desta rodada):** uma rodada não é evidência. Eu teorizei
+sobre a causa de uma falha que **não se reproduzia** — e a teoria era boa o bastante para
+custar 2× de latência em produção. O banco existe justamente para separar **padrão** de
+**ruído**, e só faz isso se a gente **re-testar antes de teorizar**. Duas perguntas ao
+ChatND custaram um minuto e pouparam uma mudança de arquitetura.
 
 ### Pendências anotadas (sem urgência)
 1. **A valve `FUNDADORES_SEMPRE` tem nome enganoso desde a 1.21.0.** Ela não faz mais
