@@ -936,6 +936,7 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
                         'channel_id': channel.id,
                         'message_id': message.id,
                         'sender_id': message.user_id,
+                        'content': message.content,
                         'message': f'#{channel.name} - {url}\n\n{message.content}',
                         'content_preview': message.content[:300],
                         'title': channel.name,

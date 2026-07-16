@@ -659,7 +659,8 @@ async def _check_calendar_alerts(app) -> None:
                 data={
                     **alert_data,
                     'user_id': event.user_id,
-                    'message': f'{event.title} — starting {time_str}',
+                    'starts_in': time_str,
+                    'message': f'{event.title}: starting {time_str}',
                 },
                 message=event.title,
             )

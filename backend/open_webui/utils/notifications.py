@@ -16,9 +16,13 @@ from open_webui.utils.webhook import post_webhook
 VALID_EVENTS = set(NOTIFICATION_EVENTS)
 LEGACY_EVENTS = {'chat.finished', 'chat.failed'}
 VALID_DELIVERY = {'away', 'always'}
+CHAT_FINISHED_EVENT = 'chat.finished'
+CHAT_FAILED_EVENT = 'chat.failed'
 CHANNEL_MESSAGE_EVENT = 'channel.message'
+CALENDAR_ALERT_EVENT = 'calendar.alert'
 
 DEFAULT_TARGET_ID = 'webhook'
+DESCRIPTION_DEFAULT = object()
 log = logging.getLogger(__name__)
 
 
@@ -239,13 +243,104 @@ def _find_target(notifications: dict[str, Any], target: str = '') -> dict[str, A
     return None
 
 
-async def _send_webhook(app_name: str, target: dict[str, Any], message: str, data: dict[str, Any], title: str = ''):
+async def _send_webhook(
+    app_name: str,
+    target: dict[str, Any],
+    message: str,
+    data: dict[str, Any],
+    title: str = '',
+    description: str | None | object = DESCRIPTION_DEFAULT,
+):
     url = str((target.get('config') or {}).get('url') or '').strip()
     if not url:
         raise ValueError('Webhook URL is required')
-    ok = await post_webhook(app_name, url, title or message, data, description=message if title else None)
+    if description is DESCRIPTION_DEFAULT:
+        description = message if title else None
+    ok = await post_webhook(app_name, url, title or message, data, description=description)
     if not ok:
         raise ValueError('Webhook delivery failed')
+
+
+def _notification_webhook_content(event: Any) -> tuple[str, str, dict[str, Any], str | None]:
+    data = event.data or {}
+
+    if event.event == CHAT_FINISHED_EVENT:
+        title = str(data.get('title') or event.message or 'Chat finished')
+        content = str(data.get('message') or '')
+        url = str(data.get('url') or '')
+        chat_id = str(data.get('chat_id') or '')
+        if chat_id and url.endswith(f'/c/{chat_id}'):
+            url = f'{url[: -len(f"/c/{chat_id}")].rstrip("/")}/{chat_id}'
+        body = '\n'.join(part for part in (content, url) if part)
+        return (
+            title,
+            body,
+            {
+                'action': 'chat',
+                'message': content,
+                'title': title,
+                'url': url,
+            },
+            body,
+        )
+
+    if event.event == CHAT_FAILED_EVENT:
+        title = str(event.message or 'Chat failed')
+        content = str(data.get('message') or '')
+        url = str(data.get('url') or '')
+        chat_id = str(data.get('chat_id') or '')
+        if chat_id and url.endswith(f'/c/{chat_id}'):
+            url = f'{url[: -len(f"/c/{chat_id}")].rstrip("/")}/{chat_id}'
+        body = '\n'.join(part for part in (content, url) if part)
+        return (
+            title,
+            body,
+            {
+                'action': 'chat_failed',
+                'message': content,
+                'title': title,
+                'url': url,
+            },
+            body,
+        )
+
+    if event.event == CHANNEL_MESSAGE_EVENT:
+        channel_name = str(data.get('title') or event.message or 'Channel')
+        content = str(data.get('content') or data.get('message') or '')
+        url = str(data.get('url') or '')
+        body = '\n'.join(part for part in (content, url) if part)
+        return (
+            f'#{channel_name}',
+            body,
+            {
+                'action': 'channel',
+                'message': content,
+                'title': channel_name,
+                'url': url,
+            },
+            body,
+        )
+
+    if event.event == CALENDAR_ALERT_EVENT:
+        title = str(data.get('title') or event.message or 'Calendar alert')
+        starts_in = str(data.get('starts_in') or '')
+        message = f'{title}: starting {starts_in}'.strip()
+        return (
+            '',
+            message,
+            {
+                'action': 'calendar_alert',
+                'title': title,
+                'minutes_until': data.get('minutes_until'),
+                'event_id': data.get('event_id') or (event.subject or {}).get('id'),
+            },
+            None,
+        )
+
+    definition = EVENT_DEFINITIONS_BY_NAME.get(event.event)
+    title = event.message or (definition.message if definition else event.event)
+    message = str(data.get('message') or data.get('preview') or data.get('content_preview') or title)
+    return str(title), message, event.model_dump(), message if title else None
 
 
 async def test_target(user_id: str, target_id: str, app_name: str = 'Open WebUI') -> dict[str, Any]:
@@ -257,7 +352,7 @@ async def test_target(user_id: str, target_id: str, app_name: str = 'Open WebUI'
         app_name,
         target,
         'This is a test notification from Open WebUI.',
-        {'event': 'notification.test', 'action': 'test', 'user_id': user_id},
+        {'action': 'test', 'user_id': user_id},
         'Test notification',
     )
     return {'ok': True}
@@ -276,7 +371,7 @@ async def notify_target(
         app_name,
         item,
         message,
-        {'event': 'notification.manual', 'action': 'notify', 'user_id': user_id, 'message': message, 'title': title},
+        {'action': 'notify', 'user_id': user_id, 'message': message, 'title': title},
         title or 'Notification',
     )
     return {'ok': True, 'target_id': item.get('id')}
@@ -302,15 +397,7 @@ async def dispatch_notification_event(app: Any, event: Any) -> None:
                 if target.get('delivery', 'away') == 'away' and is_active:
                     continue
 
-                data = event.model_dump()
-                definition = EVENT_DEFINITIONS_BY_NAME.get(event.event)
-                title = event.message or (definition.message if definition else event.event)
-                message = str(
-                    (event.data or {}).get('message')
-                    or (event.data or {}).get('preview')
-                    or (event.data or {}).get('content_preview')
-                    or title
-                )
-                await _send_webhook(app_name, target, message, data, title)
+                title, message, data, description = _notification_webhook_content(event)
+                await _send_webhook(app_name, target, message, data, title, description=description)
         except Exception:
             log.exception('Notification delivery failed for user %s and event %s', user_id, event.event)
