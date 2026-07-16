@@ -100,6 +100,7 @@ from open_webui.retrieval.web.mojeek import search_mojeek
 from open_webui.retrieval.web.ollama import search_ollama_cloud
 from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.perplexity_search import search_perplexity_search
+from open_webui.retrieval.web.search1api import search_search1api
 from open_webui.retrieval.web.searchapi import search_searchapi
 from open_webui.retrieval.web.searxng import search_searxng
 from open_webui.retrieval.web.serpapi import search_serpapi
@@ -359,6 +360,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'RAG_RERANKING_MODEL': 'rag.reranking_model',
     'RAG_TEMPLATE': 'rag.template',
     'RELEVANCE_THRESHOLD': 'rag.relevance_threshold',
+    'SEARCH1API_API_KEY': 'web.search.search1api_api_key',
     'SEARCHAPI_API_KEY': 'web.search.searchapi_api_key',
     'SEARCHAPI_ENGINE': 'web.search.searchapi_engine',
     'SEARXNG_LANGUAGE': 'web.search.searxng_language',
@@ -719,6 +721,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'SERPLY_API_KEY': config.SERPLY_API_KEY,
             'DDGS_BACKEND': config.DDGS_BACKEND,
             'TAVILY_API_KEY': config.TAVILY_API_KEY,
+            'SEARCH1API_API_KEY': config.SEARCH1API_API_KEY,
             'SEARCHAPI_API_KEY': config.SEARCHAPI_API_KEY,
             'SEARCHAPI_ENGINE': config.SEARCHAPI_ENGINE,
             'SERPAPI_API_KEY': config.SERPAPI_API_KEY,
@@ -797,6 +800,7 @@ class WebConfig(BaseModel):
     SERPLY_API_KEY: str | None = None
     DDGS_BACKEND: str | None = None
     TAVILY_API_KEY: str | None = None
+    SEARCH1API_API_KEY: str | None = None
     SEARCHAPI_API_KEY: str | None = None
     SEARCHAPI_ENGINE: str | None = None
     SERPAPI_API_KEY: str | None = None
@@ -1266,6 +1270,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.SERPLY_API_KEY = form_data.web.SERPLY_API_KEY
         config.DDGS_BACKEND = form_data.web.DDGS_BACKEND
         config.TAVILY_API_KEY = form_data.web.TAVILY_API_KEY
+        config.SEARCH1API_API_KEY = form_data.web.SEARCH1API_API_KEY
         config.SEARCHAPI_API_KEY = form_data.web.SEARCHAPI_API_KEY
         config.SEARCHAPI_ENGINE = form_data.web.SEARCHAPI_ENGINE
         config.SERPAPI_API_KEY = form_data.web.SERPAPI_API_KEY
@@ -1415,6 +1420,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'SERPHOUSE_DOMAIN': config.SERPHOUSE_DOMAIN,
             'SERPLY_API_KEY': config.SERPLY_API_KEY,
             'TAVILY_API_KEY': config.TAVILY_API_KEY,
+            'SEARCH1API_API_KEY': config.SEARCH1API_API_KEY,
             'SEARCHAPI_API_KEY': config.SEARCHAPI_API_KEY,
             'SEARCHAPI_ENGINE': config.SEARCHAPI_ENGINE,
             'SERPAPI_API_KEY': config.SERPAPI_API_KEY,
@@ -2363,6 +2369,16 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             )
         else:
             raise Exception('No EXA_API_KEY found in environment variables')
+    elif engine == 'search1api':
+        if config.SEARCH1API_API_KEY:
+            return await search_search1api(
+                config.SEARCH1API_API_KEY,
+                query,
+                config.WEB_SEARCH_RESULT_COUNT,
+                config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception('No SEARCH1API_API_KEY found in environment variables')
     elif engine == 'searchapi':
         if config.SEARCHAPI_API_KEY:
             return await asyncio.to_thread(

@@ -28,6 +28,7 @@
 		'serper',
 		'serphouse',
 		'serply',
+		'search1api',
 		'searchapi',
 		'serpapi',
 		'duckduckgo',
@@ -552,6 +553,19 @@
 									<SensitiveInput
 										placeholder={$i18n.t('Enter Tavily API Key')}
 										bind:value={webConfig.TAVILY_API_KEY}
+									/>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'search1api'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Search1API API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Search1API API Key')}
+										bind:value={webConfig.SEARCH1API_API_KEY}
 									/>
 								</div>
 							</div>
