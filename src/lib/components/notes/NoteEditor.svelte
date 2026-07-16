@@ -75,6 +75,7 @@
 	import { deleteChatById } from '$lib/apis/chats';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
+	import FileItem from '../common/FileItem.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Mic from '../icons/Mic.svelte';
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
@@ -143,6 +144,7 @@
 
 	let selectedContent = null;
 	let noteChatFiles = [];
+	let noteAttachmentFiles = [];
 	let pendingNoteEvent = null;
 	let pendingNoteEventTimer = null;
 	let lastLocalContentChangeAt = 0;
@@ -157,6 +159,9 @@
 				})
 			: [];
 	}
+	$: noteAttachmentFiles = (files ?? []).filter(
+		(file) => file?.type !== 'image' && !(file?.content_type ?? '').startsWith('image/')
+	);
 
 	let showDeleteConfirm = false;
 	let showAccessControlModal = false;
@@ -540,7 +545,9 @@ ${content}
 			note.data.files = null;
 		}
 
-		editor.storage.files = files;
+		if (editor) {
+			editor.storage.files = files;
+		}
 
 		changeDebounceHandler();
 
@@ -623,7 +630,9 @@ ${content}
 						};
 						files = [...files, fileItem];
 						note.data.files = files;
-						editor.storage.files = files;
+						if (editor) {
+							editor.storage.files = files;
+						}
 
 						changeDebounceHandler();
 						resolve(fileItem);
@@ -871,9 +880,9 @@ ${content}
 			note.access_grants = _note.access_grants;
 		}
 
-		if (_note.data && _note.data.files) {
-			files = _note.data.files;
-			note.data.files = files;
+		if (_note.data && 'files' in _note.data) {
+			files = _note.data.files ?? [];
+			note.data.files = files.length > 0 ? files : null;
 		}
 
 		if (_note.data?.content) {
@@ -1301,14 +1310,42 @@ ${content}
 					</div>
 
 					<div
-						class=" flex-1 w-full h-full overflow-auto px-2.5 relative"
+						class=" flex-1 w-full h-full overflow-auto px-2.5 relative flex flex-col"
 						id="note-content-container"
 					>
+						{#if noteAttachmentFiles.length > 0}
+							<div class="shrink-0 flex flex-wrap gap-1.5 px-0.5 pt-1.5 pb-2">
+								{#each noteAttachmentFiles as file, fileIdx (file?.id ?? file?.itemId ?? file?.url ?? fileIdx)}
+									<FileItem
+										item={file}
+										name={file.name}
+										type={file.type}
+										size={file?.size}
+										loading={file.status === 'uploading'}
+										dismissible={versionIdx === null && note?.write_access}
+										edit={true}
+										small={true}
+										modal={['file', 'collection'].includes(file?.type)}
+										className="w-56 max-w-full"
+										colorClassName="bg-gray-50/60 dark:bg-white/[0.03] border border-gray-100/80 dark:border-white/5"
+										on:dismiss={() => {
+											files = files.filter((item) => item !== file);
+											note.data.files = files.length > 0 ? files : null;
+											if (editor) {
+												editor.storage.files = files;
+											}
+											changeDebounceHandler();
+										}}
+									/>
+								{/each}
+							</div>
+						{/if}
+
 						<RichTextInput
 							bind:this={inputElement}
 							bind:editor
 							id={`note-${note.id}`}
-							className="input-prose-sm px-0.5 h-[calc(100%-2rem)]"
+							className="input-prose-sm px-0.5 flex-1 min-h-[12rem]"
 							json={true}
 							bind:value={note.data.content.json}
 							html={editorHtml}
@@ -1353,7 +1390,7 @@ ${content}
 										return null;
 									});
 
-									if (fileItem.type === 'image') {
+									if (fileItem?.type === 'image') {
 										// If the file is an image, insert it directly
 										currentEditor
 											.chain()
