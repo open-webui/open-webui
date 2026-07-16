@@ -376,7 +376,7 @@
 				>
 					{#if message.timestamp}
 						<Tooltip
-							className="flex self-center"
+							className="flex self-center mr-1"
 							content={formatMessageTimestampFull(message.timestamp * 1000)}
 							placement="bottom"
 						>

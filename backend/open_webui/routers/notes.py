@@ -47,35 +47,6 @@ def _truncate_note_data(data: Optional[dict], max_length: int = 1000) -> Optiona
     return {'content': {'md': md[:max_length]}}
 
 
-async def _normalize_note_chat_payload(chat: ChatResponse, note_id: str, db: AsyncSession) -> ChatResponse:
-    payload = {**(chat.chat or {})}
-    params = {**(payload.get('params') or {})}
-    changed = False
-
-    if params.pop('note_id', None) is not None:
-        changed = True
-
-    system = (
-        f'You are chatting with note {note_id}. Use view_note with this note id to read the current note. '
-        'For edits, use replace_note_content for whole-note changes or replace_note_text '
-        'for targeted exact text replacement.'
-    )
-    if params.get('system') != system:
-        params['system'] = system
-        changed = True
-
-    if payload.pop('system', None) is not None:
-        changed = True
-
-    payload['params'] = params
-    if changed:
-        updated_chat = await Chats.update_chat_by_id(chat.id, payload, db=db, touch=False)
-        if updated_chat:
-            return updated_chat
-
-    return chat
-
-
 ############################
 # GetNotes
 ############################
@@ -369,7 +340,33 @@ async def get_note_chat_by_id(
     chat = await Chats.get_internal_chat_by_note_id(note.id, user.id, db=db)
     if chat:
         log.info('[note-chat] reusing hidden chat note_id=%s chat_id=%s user_id=%s', note.id, chat.id, user.id)
-        return await _normalize_note_chat_payload(chat, note.id, db)
+        payload = {**(chat.chat or {})}
+        params = {**(payload.get('params') or {})}
+        changed = False
+
+        if params.pop('note_id', None) is not None:
+            changed = True
+
+        system = (
+            f'You are chatting with note {note.id}. '
+            'Use view_note with this note id to read the current note. '
+            'For edits, use replace_note_content for whole-note changes or replace_note_text '
+            'for targeted exact text replacement.'
+        )
+        if params.get('system') != system:
+            params['system'] = system
+            changed = True
+
+        if payload.pop('system', None) is not None:
+            changed = True
+
+        payload['params'] = params
+        if changed:
+            updated_chat = await Chats.update_chat_by_id(chat.id, payload, db=db, touch=False)
+            if updated_chat:
+                return updated_chat
+
+        return chat
 
     chat_id = str(uuid4())
     chat = await Chats.insert_new_chat(
@@ -382,7 +379,8 @@ async def get_note_chat_by_id(
                 'models': [''],
                 'params': {
                     'system': (
-                        f'You are chatting with note {note.id}. Use view_note with this note id to read the current note. '
+                        f'You are chatting with note {note.id}. '
+                        'Use view_note with this note id to read the current note. '
                         'For edits, use replace_note_content for whole-note changes or replace_note_text '
                         'for targeted exact text replacement.'
                     )
@@ -435,7 +433,35 @@ async def get_note_chats_by_id(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     chats = await Chats.get_internal_chats_by_note_id(note.id, user.id, db=db)
-    return [await _normalize_note_chat_payload(chat, note.id, db) for chat in chats]
+    normalized_chats = []
+    for chat in chats:
+        payload = {**(chat.chat or {})}
+        params = {**(payload.get('params') or {})}
+        changed = False
+
+        if params.pop('note_id', None) is not None:
+            changed = True
+
+        system = (
+            f'You are chatting with note {note.id}. '
+            'Use view_note with this note id to read the current note. '
+            'For edits, use replace_note_content for whole-note changes or replace_note_text '
+            'for targeted exact text replacement.'
+        )
+        if params.get('system') != system:
+            params['system'] = system
+            changed = True
+
+        if payload.pop('system', None) is not None:
+            changed = True
+
+        payload['params'] = params
+        if changed:
+            chat = await Chats.update_chat_by_id(chat.id, payload, db=db, touch=False) or chat
+
+        normalized_chats.append(chat)
+
+    return normalized_chats
 
 
 @router.post('/{id}/chat', response_model=ChatResponse)
@@ -480,7 +506,8 @@ async def create_note_chat_by_id(
                 'models': [''],
                 'params': {
                     'system': (
-                        f'You are chatting with note {note.id}. Use view_note with this note id to read the current note. '
+                        f'You are chatting with note {note.id}. '
+                        'Use view_note with this note id to read the current note. '
                         'For edits, use replace_note_content for whole-note changes or replace_note_text '
                         'for targeted exact text replacement.'
                     )
