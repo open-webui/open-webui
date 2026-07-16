@@ -372,17 +372,19 @@
 				<div
 					class=" flex {($settings?.chatBubble ?? true)
 						? 'justify-end'
-						: ''}  text-gray-600 dark:text-gray-500"
+						: 'items-center'}  text-gray-600 dark:text-gray-500"
 				>
 					{#if message.timestamp}
 						<Tooltip
-							className="flex self-center mr-1"
+							className="flex self-center {($settings?.chatBubble ?? true) ? 'mr-1' : 'order-last'}"
 							content={formatMessageTimestampFull(message.timestamp * 1000)}
 							placement="bottom"
 						>
 							<time
 								datetime={new Date(message.timestamp * 1000).toISOString()}
-								class="invisible group-hover:visible mr-1 text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
+								class="invisible group-hover:visible {($settings?.chatBubble ?? true)
+									? 'mr-1'
+									: 'ml-1 shrink-0 whitespace-nowrap'} text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
 							>
 								{formatMessageTimestamp(message.timestamp * 1000)}
 							</time>
