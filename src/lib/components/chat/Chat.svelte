@@ -3841,9 +3841,9 @@
 							{/if}
 						{:else if embedded}
 							<div class="flex h-full min-h-0 flex-col justify-end">
-								<div class="flex flex-1 items-end px-5 pb-3">
+								<div class="flex flex-1 items-end px-5 pb-8">
 									<div class="w-full">
-										<div class="mb-2 text-[12px] text-gray-400 dark:text-gray-500">
+										<div class="mb-2 text-[12px] text-gray-300 dark:text-gray-700">
 											{$i18n.t('Suggested prompts')}
 										</div>
 										<div class="flex flex-col">
