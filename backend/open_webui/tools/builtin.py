@@ -12,7 +12,7 @@ import asyncio
 import json
 import logging
 import time
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import Request
 
@@ -1511,6 +1511,43 @@ async def delegate_task(
         task,
         context,
         background,
+        request=__request__,
+        user_data=__user__ or {},
+        metadata=__metadata__ or {},
+        parent_chat_id=__chat_id__ or '',
+        parent_message_id=__message_id__,
+    )
+
+
+async def timer(
+    prompt: str,
+    at: str,
+    cancel_on: list[Literal['chat.read', 'chat.user_message']] | None = None,
+    __request__: Request = None,
+    __user__: dict = None,
+    __metadata__: dict = None,
+    __chat_id__: str = None,
+    __message_id__: str = None,
+) -> str:
+    """
+    Set a one-shot timer for this chat.
+
+    :param prompt: The prompt to send back into this chat when the timer fires
+    :param at: Relative time like 10s, 5m, 1h, 2d, or a timezone-aware RFC 3339 timestamp
+    :param cancel_on: Optional events that cancel the timer before it fires
+    :return: JSON status with the scheduled time, or an error string
+    """
+    if __request__ is None:
+        return 'Error: request context not available.'
+    if getattr(__request__.state, 'internal', False) is True:
+        return 'Error: timers cannot be set from internal chats.'
+
+    from open_webui.utils.timers import create_timer
+
+    return await create_timer(
+        prompt=prompt,
+        at=at,
+        cancel_on=cancel_on,
         request=__request__,
         user_data=__user__ or {},
         metadata=__metadata__ or {},

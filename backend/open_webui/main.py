@@ -1389,6 +1389,15 @@ async def chat_completion(
                                 'content_preview': user_message.get('content', '')[:300],
                             },
                         )
+                        if not getattr(request.state, 'internal', False) and not (
+                            user_message.get('meta') or {}
+                        ).get('internal'):
+                            try:
+                                from open_webui.utils.timers import cancel_timers_for_chat
+
+                                await cancel_timers_for_chat(chat_id, 'chat.user_message')
+                            except Exception:
+                                log.exception('Failed to cancel chat.user_message timers for chat %s', chat_id)
 
                         # Link grandparent → user message (childrenIds)
                         grandparent_id = user_message.get('parentId')
@@ -1607,9 +1616,9 @@ async def chat_completion(
                     and getattr(request.state, 'internal', False) is not True
                     and not await has_active_tasks(request.app.state.redis, chat_id)
                 ):
-                    from open_webui.utils.subagents import process_pending_subagent_results
+                    from open_webui.utils.subagents import process_pending_internal_messages
 
-                    await process_pending_subagent_results(
+                    await process_pending_internal_messages(
                         request,
                         chat_id,
                         user.id,
@@ -1626,7 +1635,7 @@ async def chat_completion(
                         },
                     )
             except Exception:
-                log.exception('Failed to process pending sub-agent results for chat %s', metadata.get('chat_id'))
+                log.exception('Failed to process pending internal messages for chat %s', metadata.get('chat_id'))
 
     # Fan out: one task per model
     if metadata.get('session_id') and metadata.get('chat_id'):

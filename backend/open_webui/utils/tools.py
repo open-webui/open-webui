@@ -82,6 +82,7 @@ from open_webui.tools.builtin import (
     search_memories,
     search_notes,
     search_web,
+    timer,
     toggle_automation,
     update_automation,
     update_calendar_event,
@@ -574,7 +575,7 @@ async def get_builtin_tools(
         and getattr(request.state, 'internal', False) is not True
         and getattr(request.state, 'direct', False) is not True
     ):
-        builtin_functions.append(delegate_task)
+        builtin_functions.extend([delegate_task, timer])
 
     # Add memory tools when memory is enabled and the model allows this builtin category.
     if (

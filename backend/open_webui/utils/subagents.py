@@ -67,7 +67,7 @@ def _build_request(source: Request, user_id: str, *, internal: bool) -> Request:
     return request
 
 
-async def process_pending_subagent_results(
+async def process_pending_internal_messages(
     source_request: Request,
     parent_chat_id: str,
     user_id: str,
@@ -92,40 +92,74 @@ async def process_pending_subagent_results(
             message
             for message in messages.values()
             if message.get('role') == 'user'
-            and (message.get('meta') or {}).get('async_subagent_result') is True
             and not message.get('childrenIds')
+            and (
+                (message.get('meta') or {}).get('async_subagent_result') is True
+                or (
+                    (message.get('meta') or {}).get('internal') is True
+                    and (message.get('meta') or {}).get('type') == 'timer'
+                )
+            )
         ]
         if not pending:
             return
 
         first = pending[0]
+        first_meta = first.get('meta') or {}
+        kind = 'subagent' if first_meta.get('async_subagent_result') is True else 'timer'
         parent_id = first.get('parentId')
+        if kind == 'timer' and first_meta.get('timer_id'):
+            timer = await Chats.get_chat_by_id(first_meta['timer_id'])
+            run = {**run, **(((timer.meta or {}).get('run') if timer else None) or {})}
         model_id = first.get('model') or run['model_id']
-        batch = [
-            message
-            for message in pending
-            if message.get('parentId') == parent_id and (message.get('model') or model_id) == model_id
-        ]
+        if kind == 'timer':
+            batch = [
+                message
+                for message in pending
+                if message.get('parentId') == parent_id
+                and (message.get('model') or model_id) == model_id
+                and (message.get('meta') or {}).get('internal') is True
+                and (message.get('meta') or {}).get('type') == 'timer'
+            ]
+        else:
+            batch = [
+                message
+                for message in pending
+                if message.get('parentId') == parent_id
+                and (message.get('model') or model_id) == model_id
+                and (message.get('meta') or {}).get('async_subagent_result') is True
+            ]
         combined_content = '\n\n'.join(message.get('content', '') for message in batch if message.get('content'))
-        delegation_ids = [
-            message['meta']['delegation_id'] for message in batch if (message.get('meta') or {}).get('delegation_id')
-        ]
-        subagent_chat_ids = [
-            message['meta']['subagent_chat_id']
-            for message in batch
-            if (message.get('meta') or {}).get('subagent_chat_id')
-        ]
-        combined_meta = {'async_subagent_result': True}
-        if len(delegation_ids) == 1:
-            combined_meta['delegation_id'] = delegation_ids[0]
-        elif delegation_ids:
-            combined_meta['delegation_ids'] = delegation_ids
-        if len(subagent_chat_ids) == 1:
-            combined_meta['subagent_chat_id'] = subagent_chat_ids[0]
-        elif subagent_chat_ids:
-            combined_meta['subagent_chat_ids'] = subagent_chat_ids
+        if kind == 'timer':
+            timer_ids = [message['meta']['timer_id'] for message in batch if (message.get('meta') or {}).get('timer_id')]
+            combined_meta = {'internal': True, 'type': 'timer'}
+            if len(timer_ids) == 1:
+                combined_meta['timer_id'] = timer_ids[0]
+            elif timer_ids:
+                combined_meta['timer_ids'] = timer_ids
+        else:
+            delegation_ids = [
+                message['meta']['delegation_id']
+                for message in batch
+                if (message.get('meta') or {}).get('delegation_id')
+            ]
+            subagent_chat_ids = [
+                message['meta']['subagent_chat_id']
+                for message in batch
+                if (message.get('meta') or {}).get('subagent_chat_id')
+            ]
+            combined_meta = {'async_subagent_result': True}
+            if len(delegation_ids) == 1:
+                combined_meta['delegation_id'] = delegation_ids[0]
+            elif delegation_ids:
+                combined_meta['delegation_ids'] = delegation_ids
+            if len(subagent_chat_ids) == 1:
+                combined_meta['subagent_chat_id'] = subagent_chat_ids[0]
+            elif subagent_chat_ids:
+                combined_meta['subagent_chat_ids'] = subagent_chat_ids
 
-        reuse_message = len(batch) == 1 and not (first.get('meta') or {}).get('async_subagent_pending')
+        pending_flag = 'timer_pending' if kind == 'timer' else 'async_subagent_pending'
+        reuse_message = len(batch) == 1 and not (first.get('meta') or {}).get(pending_flag)
         user_message_id = first['id'] if reuse_message else str(uuid4())
         if not reuse_message:
             removed_ids = {message['id'] for message in batch}
@@ -211,12 +245,13 @@ async def process_pending_subagent_results(
             'id': assistant_message_id,
             'parent_id': parent_id,
             'user_message': user_message,
-            'session_id': run.get('session_id') or f'subagent-result:{parent_chat_id}',
+            'session_id': run.get('session_id') or f'{kind}-result:{parent_chat_id}',
             'background_tasks': {},
             'tool_ids': run.get('tool_ids') or [],
             'skill_ids': run.get('skill_ids') or [],
             'filter_ids': run.get('filter_ids') or [],
             'features': run.get('features') or {},
+            'files': run.get('files') or [],
             'variables': run.get('variables') or {},
         }
         if run.get('terminal_id'):
@@ -582,7 +617,7 @@ async def delegate(
                 room=f'user:{user.id}',
             )
         if not await has_active_tasks(request.app.state.redis, parent_chat_id):
-            await process_pending_subagent_results(request, parent_chat_id, user.id, run)
+            await process_pending_internal_messages(request, parent_chat_id, user.id, run)
         if cancelled:
             raise asyncio.CancelledError
         return result

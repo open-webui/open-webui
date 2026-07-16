@@ -529,6 +529,12 @@ async def chat_events(sid, data):
 
     if event_type == 'last_read_at':
         await Chats.update_chat_last_read_at_by_id(data['chat_id'], user['id'])
+        try:
+            from open_webui.utils.timers import cancel_timers_for_chat
+
+            await cancel_timers_for_chat(data['chat_id'], 'chat.read')
+        except Exception:
+            log.exception('Failed to cancel chat.read timers for chat %s', data.get('chat_id'))
 
 
 def normalize_document_id(document_id: str) -> str:

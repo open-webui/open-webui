@@ -22,14 +22,6 @@
 	import SubagentResultRow from './SubagentResultRow.svelte';
 
 	const i18n = getContext('i18n');
-	type SubagentResult = {
-		async_subagent_result: true;
-		delegation_id?: string;
-		delegation_ids?: string[];
-		subagent_chat_id?: string;
-		subagent_chat_ids?: string[];
-	};
-
 	export let user;
 
 	export let chatId;
@@ -62,7 +54,7 @@
 	let editScrollContainer: HTMLDivElement;
 
 	let message = structuredClone(history.messages[messageId]);
-	let subagentResult: SubagentResult | undefined;
+	let timerExpanded = false;
 	$: if (history.messages) {
 		const source = history.messages[messageId];
 		if (source) {
@@ -73,8 +65,6 @@
 			}
 		}
 	}
-	$: subagentResult = message?.meta?.async_subagent_result ? message.meta : undefined;
-
 	const copyToClipboard = async (text) => {
 		const res = await _copyToClipboard(text);
 		if (res) {
@@ -143,7 +133,7 @@
 	id="message-{message.id}"
 	style="scroll-margin-top: 3rem;"
 >
-	{#if !($settings?.chatBubble ?? true) && !subagentResult}
+	{#if !($settings?.chatBubble ?? true) && !message?.meta?.async_subagent_result && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
 		<div class={`shrink-0 ltr:mr-2 rtl:ml-2 hidden @lg:flex mt-0.5`}>
 			<ProfileImage
 				src={user?.id
@@ -153,8 +143,13 @@
 			/>
 		</div>
 	{/if}
-	<div class="flex-auto w-0 max-w-full {subagentResult ? '' : 'pl-1'}">
-		{#if !($settings?.chatBubble ?? true) && !subagentResult}
+	<div
+		class="flex-auto w-0 max-w-full {message?.meta?.async_subagent_result ||
+		(message?.meta?.internal === true && message?.meta?.type === 'timer')
+			? ''
+			: 'pl-1'}"
+	>
+		{#if !($settings?.chatBubble ?? true) && !message?.meta?.async_subagent_result && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
 			<div>
 				<Name>
 					{#if message.user}
@@ -335,8 +330,53 @@
 						</div>
 					</div>
 				</div>
-			{:else if subagentResult}
-				<SubagentResultRow content={message.content} result={subagentResult} />
+			{:else if message?.meta?.internal === true && message?.meta?.type === 'timer'}
+				<div class="flex justify-start">
+					<div
+						class="w-full max-w-3xl rounded-xl border border-gray-100 bg-gray-50/70 px-3 py-2 text-gray-700 dark:border-gray-800 dark:bg-gray-900/60 dark:text-gray-300"
+					>
+						<button
+							type="button"
+							class="flex w-full items-center justify-between gap-3 text-left"
+							aria-expanded={timerExpanded}
+							on:click={() => {
+								timerExpanded = !timerExpanded;
+							}}
+						>
+							<span class="text-xs font-medium text-gray-500 dark:text-gray-400">{$i18n.t('Timer')}</span>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="2"
+								stroke="currentColor"
+								class="size-3.5 shrink-0 text-gray-400 transition-transform dark:text-gray-600 {timerExpanded
+									? 'rotate-180'
+									: ''}"
+							>
+								<path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+							</svg>
+						</button>
+						{#if timerExpanded}
+							<div class="mt-2 text-sm">
+								{#if $settings?.renderMarkdownInUserMessages ?? true}
+									<Markdown
+										id={`${chatId}-${message.id}`}
+										content={message.content}
+										{editCodeBlock}
+										{topPadding}
+									/>
+								{:else}
+									<div class="whitespace-pre-wrap" dir={$settings?.chatDirection ?? 'auto'}>
+										{message.content}
+									</div>
+								{/if}
+							</div>
+						{/if}
+					</div>
+				</div>
+			{:else if message?.meta?.async_subagent_result}
+				<SubagentResultRow content={message.content} result={message.meta} />
 			{:else if message.content !== ''}
 				<div class="w-full">
 					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
@@ -371,7 +411,7 @@
 				</div>
 			{/if}
 
-			{#if edit !== true && !subagentResult}
+			{#if edit !== true && !message?.meta?.async_subagent_result && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
 				<div
 					class=" flex {($settings?.chatBubble ?? true)
 						? 'justify-end'

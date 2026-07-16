@@ -7,6 +7,7 @@ Follows the utils/<feature>.py pattern (cf. utils/channels.py, utils/task.py).
 The scheduler_worker_loop handles all time-based background work:
   - Automation execution (claim_due → execute)
   - Calendar event alerts (upcoming events → socket + webhook notifications)
+  - One-shot chat timers
 
 Environment:
     SCHEDULER_POLL_INTERVAL             – seconds between polls (default: 10)
@@ -190,8 +191,18 @@ async def scheduler_worker_loop(app) -> None:
     SCHEDULER_POLL_INTERVAL env var (default: 10 seconds).
     """
     log.info(f'Scheduler worker started (poll interval: {SCHEDULER_POLL_INTERVAL}s)')
+
     while True:
         try:
+            # ── Timers ──
+            try:
+                from open_webui.utils.timers import claim_due_timers, execute_due_timer
+
+                for timer_id, claim_id in await claim_due_timers(int(time.time_ns()), limit=10):
+                    asyncio.create_task(execute_due_timer(app, timer_id, claim_id))
+            except Exception:
+                log.exception('Scheduler: timer error')
+
             # ── Automations ──
             if await Config.get('automations.enable'):
                 try:
