@@ -4,7 +4,7 @@
 fastapi==0.136.3
 uvicorn[standard]==0.41.0
 pydantic==2.13.4
-python-multipart==0.0.27
+python-multipart==0.0.31
 itsdangerous==2.2.0
 
 python-socketio==5.16.2
@@ -16,7 +16,7 @@ PyJWT[crypto]==2.13.0
 authlib==1.7.2
 
 requests==2.34.2
-aiohttp==3.13.5 # do not update to 3.13.3 - broken
+aiohttp==3.14.1 # do not update to 3.13.3 - broken
 async-timeout
 aiocache
 aiofiles
@@ -43,7 +43,7 @@ asgiref==3.11.1
 mcp==1.27.2
 openai
 
-langchain==1.2.10
+langchain==1.3.9
 langchain-community==0.4.2
 langchain-classic==1.0.7
 langchain-text-splitters==1.1.2
