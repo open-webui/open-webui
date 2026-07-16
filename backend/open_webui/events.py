@@ -23,7 +23,7 @@ DEFAULT_WEBHOOK_ID = 'default'
 
 
 class EventDefinition(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    # frozen=True removed to allow setting defaults in model_validator
 
     name: str
     description: str | None = None
@@ -33,9 +33,9 @@ class EventDefinition(BaseModel):
     def defaults(self) -> 'EventDefinition':
         title = self.name.replace('.', ' ').replace('_', ' ').title()
         if self.description is None:
-            object.__setattr__(self, 'description', f'{title}.')
+            self.description = f'{title}.'
         if self.message is None:
-            object.__setattr__(self, 'message', title)
+            self.message = title
         return self
 
 
