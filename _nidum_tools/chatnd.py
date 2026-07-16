@@ -1,9 +1,16 @@
 """
 title: ChatND
 author: Nidum
-version: 1.26.0
+version: 1.27.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum. Na rota de imagem, gera a imagem via Gemini (motor oculto). O usuario nao escolhe o motor.
 changelog:
+  1.27.0:
+    - LOG DA QUERY DE BUSCA (antes/depois da expansao de datas). Sem ele nao da para
+      saber se _expandir_datas rodou - so restava deduzir pelo resultado, e o resultado
+      engana: o BM25 poe o documento no POOL DE CANDIDATOS, mas quem decide o score
+      final e o reranker (cross-encoder semantico, que ignora o token 13072026) e o
+      RELEVANCE_THRESHOLD, que corta antes de qualquer coisa aparecer no log.
+      Diagnostico so com log, nunca por deducao.
   1.26.0:
     - NORMALIZACAO DE DATAS NA BUSCA (causa provada da Q14, nao era ruido nem falta de
       vaga). A pergunta diz "13/07"; o arquivo e BRA_AtadeReuniaoCoautores_13072026.md e
@@ -1080,7 +1087,21 @@ class Pipe:
         # NOTA: as variantes NUMERICAS so casam o nome do arquivo se a valve do Admin
         # "Enriquecer o texto da pesquisa hibrida" estiver LIGADA (e ela que poe o
         # filename tokenizado no texto do BM25). Sem ela, so a variante por extenso paga.
+        # Log da query de busca (antes/depois): sem isto nao da para saber se a
+        # expansao rodou - a alternativa e deduzir pelo resultado, que e justamente o
+        # que confunde (o BM25 poe a ata no pool; o reranker decide se ela fica).
+        _antes = texto
         texto = _expandir_datas(texto)
+        if texto != _antes:
+            log.info(
+                "chatnd: busca -> datas EXPANDIDAS | antes=%r | depois=%r",
+                (_antes or "")[:200], (texto or "")[:400],
+            )
+        else:
+            log.info(
+                "chatnd: busca -> sem data na pergunta (nada a expandir) | query=%r",
+                (texto or "")[:200],
+            )
         # UMA chamada com TODAS as colecoes -> o corte do k e GLOBAL, por score do
         # reranker (comparavel entre colecoes por ser cross-encoder). Antes usavamos
         # get_sources_from_items, que itera item a item (utils.py: "for item in items")
