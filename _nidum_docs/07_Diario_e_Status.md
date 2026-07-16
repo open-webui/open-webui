@@ -116,18 +116,70 @@ custar 2× de latência em produção. O banco existe justamente para separar **
 ChatND custaram um minuto e pouparam uma mudança de arquitetura.
 
 ### Pendências anotadas (sem urgência)
-1. **A valve `FUNDADORES_SEMPRE` tem nome enganoso desde a 1.21.0.** Ela não faz mais
-   "sempre" — o piso virou **âncora de exceção** (só em pedido fundacional explícito ou
-   busca vazia). O nome mente para quem for mexer. **Renomear quando não estivermos
-   mexendo em produção** (é valve persistida: renomear exige cuidado com o valor salvo).
-2. **O piso injeta 120k mesmo com `pri` legítimo.** Agora que os **trechos entram
-   sempre**, avaliar se o piso ainda precisa do **documento inteiro** (v29+v30, ~60k cada)
-   ou se basta **empurrar os fundadores no ranking** — que é o que o `pri` já faz. É a
-   mesma dívida do "documento inteiro", entrando pela porta do piso.
+1. ~~**A valve `FUNDADORES_SEMPRE` tem nome enganoso desde a 1.21.0.**~~ ✅ **RESOLVIDA na
+   1.28.0** — virou duas valves honestas (ver abaixo).
+2. ~~**O piso injeta 120k mesmo com `pri` legítimo.**~~ ✅ **RESOLVIDA na 1.28.0** — o ramo
+   do gatilho nasce **desligado** (ver abaixo).
 3. **O `chatnd` não mostra Origens ao usuário.** Lacuna de **auditabilidade** para um bot
    institucional: a resposta cita o documento no texto, mas o usuário não vê a lista de
    fontes recuperadas (o wrapper `Nidum 1.0 - Documentos` mostra). Sem poder conferir a
    origem, a etiqueta vira promessa em vez de prova.
+
+### 1.28.0 — o piso dos Fundadores, e a medição que fechou o caso
+
+A governança reordenou a prioridade: **as perguntas dos coautores são cada vez mais sobre
+o operacional do SharePoint e cada vez menos sobre os fundadores. A Fonte é âncora, não
+protagonista.** Isso mudou o peso da dívida do piso — e a medição mostrou que a dívida era
+maior do que a gente supunha.
+
+**A prova, medida em produção antes do deploy.** Pergunta: *"A decisão de 13/07 está
+alinhada com o combinado?"* — **100% operacional**, sobre uma ata:
+
+```
+trechos:20 chunk(s)/42589 chars | inteiros:desligado | fundadores:120000 chars (piso ON) | usado:162589/200000
+```
+
+**120.000 chars de v29+v30 injetados numa pergunta sobre ata, só porque a palavra
+"alinhada" contém `alinhad`.** E o dado decisivo: nessa mesma busca, os chunks da FONTE
+pontuaram **0,0048 / 0,0034 / 0,00028**. Ou seja: **o reranker já tinha dito, com todas as
+letras, que a Fonte não tinha nada a ver com a pergunta — e o piso passou por cima.** Não
+é só "gatilho frouxo": é o piso **anulando o julgamento do rankeador** que passamos dois
+dias afinando. O abafamento que a 1.21.0/1.23.0 eliminaram estava voltando **pela porta
+dos fundamentos**.
+
+**"Depois" esperado** (conferir no log após publicar): `fundadores:0 chars (piso off)` e
+`usado ~42k/200000`.
+
+**O conserto:** uma valve que fazia duas coisas vira **duas valves honestas** —
+`FUNDADORES_INTEIROS_SE_GATILHO` (**default False**, aposenta os 120k por gatilho) e
+`ANCORA_FUNDADORES_SE_BUSCA_VAZIA` (**default True**, preserva a rede de segurança de
+quando a busca volta vazia). São coisas sem relação: uma é **escolha de política**, a
+outra é **sintoma de recuperação falha**. O log passa a nomear o ramo
+(`piso gatilho|busca-vazia|off`) — **`busca-vazia` recorrente é alarme**, e o `ON` antigo
+escondia isso atrás de uma palavra só.
+
+> **Política registrada (governança):** o fundador deve ser **achado pela busca** quando a
+> pergunta remete à Fonte — **não injetado à força** por substring. Evidência de que
+> funciona: P9–P13 (as 5 fundadoras do banco) dão **OK**, com o v30 entrando por
+> **relevância**.
+
+**O que NÃO foi construído, de propósito:** a "segunda busca restrita à FONTE" que
+garantiria fundadores nos trechos. Sem evidência de que precisa. *(Lição da P8, aplicada
+no mesmo dia: não fabricar máquina contra problema não comprovado. Se o banco regredir com
+o gatilho off, aí se constrói — com evidência.)*
+
+**Correção de rota registrada:** a proposta inicial era *"o `pri` empurra os fundadores no
+ranking em vez de anexar inteiros"*. Isso seria **no-op**: o `pri` reordena `ordem`, que
+alimenta `escolhidos` (documentos **inteiros**) — lista **morta** desde a 1.24.0
+(`MAX_DOCS_INTEIROS=0`). Os **trechos** vêm de `sources` (a busca), que o `pri` **não
+toca**. Comentário do código corrigido junto: ele ainda descrevia o comportamento da
+v1.12.0.
+
+⚠️ **Migração de valve persistida (fazer no painel, não tem automático):** valve é salva
+no banco e o default do código **só vale na primeira carga**. O valor antigo de
+`FUNDADORES_SEMPRE` fica **órfão e é ignorado em silêncio**. Se alguém o tivesse em
+`False`, a âncora **religaria sozinha**. **Antes** de publicar, anote o valor atual;
+**depois**, confira `GATILHO=off` / `ANCORA=on` e **salve de propósito**.
 
 ---
 

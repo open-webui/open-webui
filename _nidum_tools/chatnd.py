@@ -1,9 +1,32 @@
 """
 title: ChatND
 author: Nidum
-version: 1.27.0
+version: 1.28.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum. Na rota de imagem, gera a imagem via Gemini (motor oculto). O usuario nao escolhe o motor.
 changelog:
+  1.28.0:
+    - PISO DOS FUNDADORES: uma valve que fazia DUAS coisas vira DUAS valves honestas.
+      FUNDADORES_SEMPRE (nome que mente desde a 1.21.0: nao e "sempre", e condicional)
+      ligava, no mesmo booleano, dois comportamentos sem relacao:
+        (a) 'pri' disparou -> anexa v29+v30 INTEIROS (120000 chars = 60% do orcamento);
+        (b) a busca voltou VAZIA -> ancora nos fundadores (rede de seguranca).
+      Agora: FUNDADORES_INTEIROS_SE_GATILHO (default False, APOSENTA (a)) e
+      ANCORA_FUNDADORES_SE_BUSCA_VAZIA (default True, PRESERVA (b)). Cada nome diz
+      QUANDO e O QUE. Da para medir uma coisa por vez no banco de perguntas.
+    - POR QUE APOSENTAR (a): os gatilhos do _docs_prioritarios sao SUBSTRING FROUXA
+      ("alinhad", "filosofia"). "A decisao de 13/07 esta ALINHADA com o combinado?" e
+      pergunta 100% operacional e injetava 120000 chars de v29+v30 - o mesmo abafamento
+      que a 1.21.0/1.23.0 eliminaram, voltando pela porta dos fundamentos. Politica da
+      governanca: os fundadores devem ser ACHADOS PELA BUSCA quando a pergunta remete a
+      Fonte, nao injetados a forca por substring. Evidencia: P9-P13 (as 5 fundadoras do
+      banco) dao OK e o v30 entra por RELEVANCIA.
+    - NAO foi construida a "segunda busca restrita a FONTE" que garantiria fundadores
+      nos trechos: sem evidencia de que precisa. Se o banco regredir com o gatilho off,
+      constroi-se com evidencia. (Licao da P8: nao fabricar maquina contra problema nao
+      comprovado.)
+    - MIGRACAO DE VALVE PERSISTIDA: ver o bloco MIGRACAO no Valves. O valor antigo de
+      FUNDADORES_SEMPRE fica ORFAO no banco e e IGNORADO em silencio - CONFIRA O PAINEL
+      apos publicar.
   1.27.0:
     - LOG DA QUERY DE BUSCA (antes/depois da expansao de datas). Sem ele nao da para
       saber se _expandir_datas rodou - so restava deduzir pelo resultado, e o resultado
@@ -927,10 +950,18 @@ def _nomes_fundadores(nomes):
 
 
 def _docs_prioritarios(texto, nomes):
-    # Quando o pedido cita os Documentos Fundadores ou um cotejo de alinhamento
-    # (Intencao Reta / "esta Nidum" / Fonte / v29 / v30), forca esses documentos
-    # para o INICIO da injecao. (O piso garantido de v1.12.0 cuida dos casos sem
-    # gatilho: fundadores sempre entram, mas ao FINAL, com orcamento reservado.)
+    # Detecta pedido que CITA os Documentos Fundadores ou pede cotejo de alinhamento
+    # (Intencao Reta / "esta Nidum" / Fonte / v29 / v30).
+    #
+    # CUIDADO AO LER: hoje isto quase nao tem efeito, apesar do nome "prioritarios".
+    # O 'pri' reordena 'ordem', que alimenta 'escolhidos' = a lista de DOCUMENTOS
+    # INTEIROS - e ela esta MORTA desde a 1.24.0 (MAX_DOCS_INTEIROS=0 -> o laco nunca
+    # escolhe nada). Os TRECHOS vem de 'sources' (a busca), que o 'pri' NAO TOCA.
+    # Ou seja: "empurrar no ranking" hoje e NO-OP. O unico efeito real que restava era
+    # abrir o ramo do piso por gatilho - desligado por default na 1.28.0 (substring
+    # frouxa: "alinhad"/"filosofia" disparavam em pergunta operacional e injetavam
+    # 120000 chars de v29+v30). A funcao fica porque religar o inteiro (valve > 0) faz
+    # ela voltar a valer, e porque o gatilho continua disponivel atras da valve.
     t = (texto or "").lower()
 
     quer_v30 = ("v30" in t) or ("versao 30" in t) or ("vers\u00e3o 30" in t)
@@ -1037,11 +1068,42 @@ class Pipe:
         MAX_CHARS_TOTAL: int = Field(default=200000)
         MOSTRAR_ROTA: bool = Field(default=False)
         TRIADE_ATIVA: bool = Field(default=True)
-        # v1.12.0 - piso garantido dos Documentos Fundadores na rota documentos/
-        # arquivo. Se True, v30/v29 SEMPRE entram no contexto (apos os ranqueados),
-        # cada um com ate FUNDADORES_MAX_CHARS caracteres reservados do orcamento.
-        FUNDADORES_SEMPRE: bool = Field(default=True)
+        # FUNDADORES - duas valves, dois comportamentos SEM RELACAO entre si (1.28.0).
+        # Antes era UMA valve (FUNDADORES_SEMPRE) ligando as duas coisas de uma vez, com
+        # um nome que MENTIA: desde a 1.21.0 o piso nao e "sempre", e condicional. Nome e
+        # comentario errados custam caro - quem chega depois le e acredita.
+        #
+        # (a) GATILHO: o pedido parece fundacional (_docs_prioritarios: v29/v30/"documento
+        # fundador"/"alinhad"/"filosofia"/...) -> anexa v29+v30 INTEIROS.
+        # NASCE DESLIGADA e a intencao e que continue. Motivo: os gatilhos sao SUBSTRING
+        # FROUXA. "A decisao de 13/07 esta ALINHADA com o combinado?" - pergunta 100%
+        # operacional - disparava e injetava 120000 chars (2 x 60000 = 60% do orcamento de
+        # 200000) de v29+v30, abafando a ata. E o mesmo abafamento que a 1.21.0/1.23.0
+        # eliminaram, voltando pela porta dos fundamentos. POLITICA (governanca): os
+        # fundadores devem ser ACHADOS PELA BUSCA quando a pergunta remete a Fonte - nao
+        # injetados a forca. Evidencia de que da certo: P9-P13 (as 5 fundadoras do banco)
+        # dao OK e o v30 entra por RELEVANCIA. Religar so com o banco mostrando regressao.
+        FUNDADORES_INTEIROS_SE_GATILHO: bool = Field(default=False)
+        # (b) ANCORA: a BUSCA voltou VAZIA (sources vazio) -> ancora nos fundadores em vez
+        # de responder sem base nenhuma. Rede de seguranca, nao regra: so dispara quando
+        # NAO HA alternativa, entao custa zero no caso normal. Nao confundir com (a):
+        # 'not sources' e "a recuperacao falhou", nao "a pergunta e fundacional".
+        ANCORA_FUNDADORES_SE_BUSCA_VAZIA: bool = Field(default=True)
+        # Teto por documento fundador injetado (vale para os dois casos acima).
         FUNDADORES_MAX_CHARS: int = Field(default=60000)
+        # -------------------------------------------------------------------------
+        # MIGRACAO (1.28.0) - LEIA ANTES DE PUBLICAR. As valves sao PERSISTIDAS NO BANCO:
+        # o default do codigo so vale na PRIMEIRA carga. Ao trocar FUNDADORES_SEMPRE por
+        # estas duas, o valor salvo do nome antigo fica ORFAO no banco (nenhum campo o le)
+        # e e IGNORADO EM SILENCIO - as novas assumem os defaults acima.
+        # RISCO CONCRETO: se alguem tinha FUNDADORES_SEMPRE=False (piso desligado), a
+        # ANCORA_FUNDADORES_SE_BUSCA_VAZIA nasce True e o piso RELIGA sozinho - o oposto
+        # do que a pessoa escolheu, e sem aviso.
+        # O QUE FAZER: no painel do wrapper, ANTES de publicar, anote o valor atual de
+        # FUNDADORES_SEMPRE; DEPOIS de publicar, confira que as duas novas estao como voce
+        # quer (esperado: GATILHO=off, ANCORA=on) e salve DE PROPOSITO, mesmo que ja
+        # parecam certas. Nao existe migracao automatica - o Open WebUI nao renomeia valve.
+        # -------------------------------------------------------------------------
         # v1.12.0 - atalho: saudacao trivial em conversa nova vai direto p/ rapido.
         ATALHO_SAUDACAO: bool = Field(default=True)
 
@@ -1219,20 +1281,24 @@ class Pipe:
             if mapa.get(nome):
                 escolhidos.append(nome)
 
-        # 3) PISO CONDICIONAL dos Fundadores (ANCORA DE EXCECAO, nao regra). NAO os
-        # forcamos SEMPRE: o piso incondicional reservava ~60k chars p/ v29+v30 em
-        # TODA pergunta e ABAFAVA atas/operacional (a maior parte da base NAO e Fonte).
-        # Agora so entram quando o pedido e fundacional (pri disparou por
-        # v29/v30/Fonte/filosofia) OU a busca nao trouxe NENHUM documento (escolhidos
-        # vazio -> fallback de ancoragem). Perguntas com match especifico (atas,
-        # convergencias) deixam de ser sufocadas por v30/v29. Numa fundadora, o v30
-        # entra pela RELEVANCIA (nos escolhidos), nao pelo piso.
-        # SINAL: 'not sources' (a BUSCA nao achou nada), nao 'not escolhidos'. Com o
-        # documento inteiro desligado (MAX_DOCS_INTEIROS=0), 'escolhidos' e SEMPRE
-        # vazio - o sinal antigo faria o piso disparar em TODA pergunta, reacendendo o
-        # abafamento pela porta dos fundos. 'not sources' e a semantica correta de
-        # ancora de fallback: so quando a recuperacao voltou vazia.
-        forcar_fundadores = self.valves.FUNDADORES_SEMPRE and (bool(pri) or not sources)
+        # 3) FUNDADORES - DOIS caminhos independentes, cada um com sua valve (1.28.0).
+        # Antes eram um booleano so ('FUNDADORES_SEMPRE and (pri or not sources)'), o que
+        # impedia ate de MEDIR um sem matar o outro.
+        #
+        # (a) GATILHO (default OFF): pedido "fundacional" pelo _docs_prioritarios. Off
+        #     porque o gatilho e substring frouxa ("alinhad", "filosofia") e injetava
+        #     120000 chars de v29+v30 em pergunta operacional - o abafamento que a
+        #     1.21.0/1.23.0 mataram, voltando pela porta dos fundamentos. A politica e:
+        #     fundador entra pela BUSCA (por relevancia), nao a forca.
+        # (b) ANCORA (default ON): a busca voltou VAZIA. Rede de seguranca - sem ela a
+        #     resposta sairia sem base nenhuma. So dispara quando nao ha alternativa.
+        #
+        # SINAL de (b) e 'not sources' (a BUSCA nao achou nada), NAO 'not escolhidos':
+        # com MAX_DOCS_INTEIROS=0, 'escolhidos' e SEMPRE vazio e o sinal antigo faria a
+        # ancora disparar em TODA pergunta, reacendendo o abafamento por baixo.
+        por_gatilho = bool(pri) and self.valves.FUNDADORES_INTEIROS_SE_GATILHO
+        por_busca_vazia = (not sources) and self.valves.ANCORA_FUNDADORES_SE_BUSCA_VAZIA
+        forcar_fundadores = por_gatilho or por_busca_vazia
         fund = _nomes_fundadores(nomes) if forcar_fundadores else []
         if forcar_fundadores and not fund:
             log.warning(
@@ -1299,11 +1365,19 @@ class Pipe:
             if not escolhidos
             else "%d chars (%d doc(s))" % (total, len(escolhidos))
         )
+        # O piso diz QUAL ramo disparou, nao so ON/off: 'gatilho' e 'busca-vazia' tem
+        # causas e consequencias diferentes (um e escolha de politica, o outro e sintoma
+        # de recuperacao falha). 'busca-vazia' recorrente no log e ALARME - quer dizer
+        # que a busca esta voltando sem nada e o pipe esta ancorando no fallback.
+        piso_txt = (
+            "gatilho" if por_gatilho
+            else "busca-vazia" if por_busca_vazia
+            else "off"
+        )
         log.info(
             "chatnd: contexto -> trechos:%d chunk(s)/%d chars | inteiros:%s | "
             "fundadores:%d chars (piso %s) | usado:%d/%d (sobra %d)",
-            n_chunks, reserva_trechos, inteiros_txt, reserva,
-            "ON" if forcar_fundadores else "off",
+            n_chunks, reserva_trechos, inteiros_txt, reserva, piso_txt,
             usado, self.valves.MAX_CHARS_TOTAL,
             max(self.valves.MAX_CHARS_TOTAL - usado, 0),
         )
