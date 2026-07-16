@@ -39,9 +39,6 @@
 	let defaultModelId = '';
 	let showUsername = false;
 
-	let notificationSound = true;
-	let notificationSoundAlways = false;
-
 	let highContrastMode = false;
 
 	let detectArtifacts = true;
@@ -260,9 +257,6 @@
 		userLocation = $settings?.userLocation ?? false;
 		showChatTitleInTab = $settings?.showChatTitleInTab ?? true;
 
-		notificationSound = $settings?.notificationSound ?? true;
-		notificationSoundAlways = $settings?.notificationSoundAlways ?? false;
-
 		iframeSandboxAllowSameOrigin = $settings?.iframeSandboxAllowSameOrigin ?? false;
 		iframeSandboxAllowForms = $settings?.iframeSandboxAllowForms ?? false;
 
@@ -475,52 +469,6 @@
 					{$i18n.t('Use the active chat title as the browser tab title.')}
 				</p>
 			</div>
-
-			<div>
-				<div class={settingRowClass}>
-					<div id="notification-sound-label" class={settingLabelClass}>
-						{$i18n.t('Notification Sound')}
-					</div>
-
-					<div class={settingControlClass}>
-						<Switch
-							ariaLabelledbyId="notification-sound-label"
-							tooltip={true}
-							bind:state={notificationSound}
-							on:change={() => {
-								saveSettings({ notificationSound });
-							}}
-						/>
-					</div>
-				</div>
-				<p class={settingDescriptionClass}>
-					{$i18n.t('Play a sound when new chat activity arrives.')}
-				</p>
-			</div>
-
-			{#if notificationSound}
-				<div>
-					<div class={settingRowClass}>
-						<div id="play-notification-sound-label" class={settingLabelClass}>
-							{$i18n.t('Always Play Notification Sound')}
-						</div>
-
-						<div class={settingControlClass}>
-							<Switch
-								ariaLabelledbyId="play-notification-sound-label"
-								tooltip={true}
-								bind:state={notificationSoundAlways}
-								on:change={() => {
-									saveSettings({ notificationSoundAlways });
-								}}
-							/>
-						</div>
-					</div>
-					<p class={settingDescriptionClass}>
-						{$i18n.t('Play notification sounds even when the app is focused.')}
-					</p>
-				</div>
-			{/if}
 
 			<div>
 				<div id="allow-user-location-label" class={settingRowClass}>

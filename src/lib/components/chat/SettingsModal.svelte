@@ -12,6 +12,7 @@
 	import About from './Settings/About.svelte';
 	import General from './Settings/General.svelte';
 	import Interface from './Settings/Interface.svelte';
+	import Notifications from './Settings/Notifications.svelte';
 	import Shortcuts from './Settings/Shortcuts.svelte';
 	import Audio from './Settings/Audio.svelte';
 	import DataControls from './Settings/DataControls.svelte';
@@ -98,6 +99,7 @@
 	const personalSettingGroups: Record<string, string> = {
 		general: 'Basics',
 		interface: 'Basics',
+		notifications: 'Basics',
 		shortcuts: 'Basics',
 		connections: 'Services',
 		tools: 'Services',
@@ -153,7 +155,6 @@
 				'keepalive',
 				'keep alive',
 				'languages',
-				'notifications',
 				'requestmode',
 				'request mode',
 				'systemparameters',
@@ -293,6 +294,22 @@
 				'whats new',
 				'websearchinchat',
 				'web search in chat'
+			]
+		},
+		{
+			id: 'notifications',
+			title: 'Notifications',
+			keywords: [
+				'browser notifications',
+				'browsernotifications',
+				'chat failed',
+				'chat finished',
+				'notification sound',
+				'notifications',
+				'notify',
+				'webhook',
+				'webhook notifications',
+				'webhooks'
 			]
 		},
 		{
@@ -900,6 +917,19 @@
 							<AppNotification className="size-3.5" strokeWidth="2" />
 							<span>{$i18n.t('Interface')}</span>
 						</button>
+					{:else if tabId === 'notifications'}
+						<button
+							role="tab"
+							aria-controls="tab-notifications"
+							aria-selected={selectedTab === 'notifications'}
+							class={tabButtonClass(selectedTab === 'notifications')}
+							on:click={() => {
+								selectedTab = 'notifications';
+							}}
+						>
+							<AppNotification className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('Notifications')}</span>
+						</button>
 					{:else if tabId === 'shortcuts'}
 						<button
 							role="tab"
@@ -1083,6 +1113,8 @@
 						toast.success($i18n.t('Settings saved successfully!'));
 					}}
 				/>
+			{:else if selectedTab === 'notifications'}
+				<Notifications {saveSettings} />
 			{:else if selectedTab === 'shortcuts'}
 				<Shortcuts />
 			{:else if selectedTab === 'connections'}
@@ -1119,7 +1151,6 @@
 				<ArchivedChats />
 			{:else if selectedTab === 'account'}
 				<Account
-					{saveSettings}
 					saveHandler={() => {
 						toast.success($i18n.t('Settings saved successfully!'));
 					}}

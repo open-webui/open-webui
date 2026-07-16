@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { getLanguages, changeLanguage } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
@@ -14,7 +13,6 @@
 	import UserSettingRow from './UserSettingRow.svelte';
 	import UserSettingSection from './UserSettingSection.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
-	import Switch from '$lib/components/common/Switch.svelte';
 	export let saveSettings: Function;
 	export let getModels: Function;
 
@@ -24,7 +22,6 @@
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
 	let lang = $i18n.language;
-	let notificationEnabled = false;
 	let system = '';
 
 	let showAdvanced = false;
@@ -33,22 +30,6 @@
 		'w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const actionButtonClass =
 		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
-
-	const setNotificationEnabled = async (enabled: boolean) => {
-		const permission = enabled ? await Notification.requestPermission() : 'granted';
-
-		if (permission === 'granted') {
-			notificationEnabled = enabled;
-			saveSettings({ notificationEnabled: notificationEnabled });
-		} else {
-			notificationEnabled = false;
-			toast.error(
-				$i18n.t(
-					'Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.'
-				)
-			);
-		}
-	};
 
 	let params = {
 		// Advanced
@@ -138,7 +119,6 @@
 			languages = languages.filter((l) => l.code !== 'dg-DG');
 		}
 
-		notificationEnabled = $settings.notificationEnabled ?? false;
 		system = $settings.system ?? '';
 
 		params = { ...params, ...$settings.params };
@@ -270,19 +250,6 @@
 					</a>
 				</div>
 			{/if}
-
-			<UserSettingRow
-				label={$i18n.t('Notifications')}
-				description={$i18n.t('Allow browser notifications for completed responses.')}
-			>
-				<Switch
-					state={notificationEnabled}
-					ariaLabel={$i18n.t('Notifications')}
-					on:change={(event) => {
-						setNotificationEnabled(event.detail);
-					}}
-				/>
-			</UserSettingRow>
 		</UserSettingSection>
 
 		{#if $user?.role === 'admin' || (($user?.permissions.chat?.controls ?? true) && ($user?.permissions.chat?.system_prompt ?? true))}

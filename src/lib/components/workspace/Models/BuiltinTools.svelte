@@ -31,6 +31,10 @@
 			label: $i18n.t('Channels'),
 			description: $i18n.t('Search channels and channel messages')
 		},
+		notifications: {
+			label: $i18n.t('Notifications'),
+			description: $i18n.t('Send notifications to configured webhook targets')
+		},
 		web_search: {
 			label: $i18n.t('Web Search'),
 			description: $i18n.t('Search the web and fetch URLs')

@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 
-	import { user, config, settings } from '$lib/stores';
+	import { user, config } from '$lib/stores';
 	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -23,7 +23,6 @@
 	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
-	export let saveSettings: Function;
 
 	let profileImageUrl = '';
 	let name = '';
@@ -33,7 +32,6 @@
 	let gender = '';
 	let dateOfBirth = '';
 
-	let webhookUrl = '';
 	let showAPIKeys = false;
 
 	let JWTTokenCopied = false;
@@ -53,15 +51,6 @@
 			if (profileImageUrl === generateInitialsImage($user?.name) || profileImageUrl === '') {
 				profileImageUrl = generateInitialsImage(name);
 			}
-		}
-
-		if (webhookUrl !== $settings?.notifications?.webhook_url) {
-			saveSettings({
-				notifications: {
-					...$settings.notifications,
-					webhook_url: webhookUrl
-				}
-			});
 		}
 
 		const updatedUser = await updateUserProfile(localStorage.token, {
@@ -112,8 +101,6 @@
 
 			dateOfBirth = user?.date_of_birth ?? '';
 		}
-
-		webhookUrl = $settings?.notifications?.webhook_url ?? '';
 
 		// Only fetch API key if the feature is enabled and user has permission
 		if (
@@ -218,24 +205,6 @@
 				/>
 			</UserSettingField>
 		</UserSettingSection>
-
-		{#if $config?.features?.enable_user_webhooks && ($user?.role === 'admin' || ($user?.permissions?.features?.webhooks ?? false))}
-			<UserSettingSection title={$i18n.t('Notifications')}>
-				<UserSettingField
-					label={$i18n.t('Notification Webhook')}
-					description={$i18n.t('Send account notifications to this webhook URL.')}
-				>
-					<input
-						class={inputClass}
-						type="url"
-						placeholder={$i18n.t('Enter your webhook URL')}
-						aria-label={$i18n.t('Notification Webhook')}
-						bind:value={webhookUrl}
-						required
-					/>
-				</UserSettingField>
-			</UserSettingSection>
-		{/if}
 
 		{#if $config?.features.enable_login_form && $config?.features.enable_password_change_form}
 			<UserSettingSection title={$i18n.t('Password')}>
