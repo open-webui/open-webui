@@ -114,7 +114,7 @@ textarea::-webkit-scrollbar-corner {
 }
 
 .input-prose {
-	@apply prose dark:prose-invert prose-headings:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
+	@apply prose dark:prose-invert !text-[0.9375rem] prose-headings:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
 }
 
 .input-prose-sm {
