@@ -83,6 +83,7 @@
 			profile_image_url: `${WEBUI_BASE_URL}/static/favicon.png`,
 			description: '',
 			suggestion_prompts: null,
+			available_reasoning_effort: null as string | null,
 			tags: []
 		},
 		params: {
@@ -724,7 +725,13 @@
 
 							{#if showAdvanced}
 								<div class="my-2">
-									<AdvancedParams admin={true} custom={true} layout="grid" bind:params />
+									<AdvancedParams
+										admin={true}
+										custom={true}
+										layout="grid"
+										bind:params
+										bind:meta={info.meta}
+									/>
 								</div>
 							{/if}
 						</div>

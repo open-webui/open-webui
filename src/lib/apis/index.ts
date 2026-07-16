@@ -1753,6 +1753,7 @@ export interface ModelMeta {
 	description?: string;
 	capabilities?: object;
 	profile_image_url?: string;
+	available_reasoning_effort?: string | null;
 }
 
 export interface ModelParams {}
