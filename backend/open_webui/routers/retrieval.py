@@ -1689,6 +1689,7 @@ def save_docs_to_vector_db(
                 chunk_size=config.CHUNK_SIZE,
                 chunk_overlap=config.CHUNK_OVERLAP,
                 add_start_index=True,
+                disallowed_special=(),
             )
             docs = text_splitter.split_documents(docs)
         elif config.TEXT_SPLITTER == 'token_transformers':
