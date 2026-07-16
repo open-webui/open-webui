@@ -202,6 +202,7 @@ class SharingPermissions(BaseModel):
 
 class AccessGrantsPermissions(BaseModel):
     allow_users: bool = True
+    allow_groups: bool = True
 
 
 class ChatPermissions(BaseModel):
