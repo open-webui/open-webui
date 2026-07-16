@@ -1,9 +1,21 @@
 """
 title: ChatND
 author: Nidum
-version: 1.23.0
+version: 1.24.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum. Na rota de imagem, gera a imagem via Gemini (motor oculto). O usuario nao escolhe o motor.
 changelog:
+  1.24.0:
+    - MAX_DOCS_INTEIROS=0 DESLIGA DE VERDADE (bug do 1.23.0). O bump do 'pri' religava
+      por baixo: max_docs = min(max(0, len(pri)+1), 4) = 3 -> injetava 3 documentos
+      INTEIROS (v30+v29+1) mesmo com a valve em 0. Evidencia do log de producao:
+      trechos:20/40151 chars | inteiros:"desligado" | fundadores:0 | usado:200000/
+      200000 (sobra 0) -> 200000-40151-0 = 159849 chars de inteiro que "nao existiam".
+      Guard: so bumpa se max_docs > 0.
+    - LOG HONESTO: 'inteiros' passa a reportar o que ACONTECEU (escolhidos/total), nao
+      a valve. A versao anterior lia a valve e MENTIA ("desligado" com 159849 chars
+      dentro) - foi o log que fez a conta nao fechar no diagnostico.
+    - (Contexto: 'piso ON' com 'fundadores:0 chars' estava CORRETO - o pri levava
+      v30/v29 ao topo, eles entravam como INTEIRO, extras ficava vazio, reserva 0.)
   1.23.0:
     - BUSCA EM UMA CHAMADA SO, COM CORTE GLOBAL DO k. get_sources_from_items itera item
       a item e faz UMA chamada POR COLECAO, com k proprio cada (log real: dois "hybrid
@@ -993,7 +1005,13 @@ class Pipe:
             ordem = pri + [n for n in ordem if n not in pri]
 
         max_docs = self.valves.MAX_DOCS_INTEIROS
-        if pri:
+        # GUARD: com MAX_DOCS_INTEIROS=0 o inteiro fica DESLIGADO de verdade. Sem o
+        # 'max_docs > 0', o bump do 'pri' religava por baixo - max(0, len(pri)+1) = 3 -
+        # e injetava 3 documentos inteiros (v30+v29+1) mesmo com a valve em 0. Foi o
+        # que estourou o orcamento (159849 chars de inteiro + 40151 de trechos = 200000,
+        # sobra 0) enquanto o log dizia "desligado". Se o inteiro estiver ligado (>0),
+        # um pedido fundacional explicito continua podendo abrir vaga extra (ate 4).
+        if pri and max_docs > 0:
             max_docs = min(max(max_docs, len(pri) + 1), 4)
 
         # 2) ranqueados (e prioritarios) com o orcamento principal
@@ -1075,9 +1093,13 @@ class Pipe:
         # (0 doc(s))' como ruido constante. Religando a valve, o campo volta a informar.
         n_chunks = sum(len(s.get("document") or []) for s in (sources or []))
         usado = total + reserva_trechos + reserva
+        # O log reporta o que ACONTECEU (escolhidos/total), nunca a valve. A versao
+        # anterior olhava a valve e MENTIU: dizia "desligado" enquanto 159849 chars de
+        # documento inteiro entravam pelo bump do 'pri'. Log que mente custa caro - foi
+        # ele que fez a conta "nao fechar" no diagnostico.
         inteiros_txt = (
-            "desligado (MAX_DOCS_INTEIROS=0)"
-            if self.valves.MAX_DOCS_INTEIROS <= 0
+            "desligado"
+            if not escolhidos
             else "%d chars (%d doc(s))" % (total, len(escolhidos))
         )
         log.info(
