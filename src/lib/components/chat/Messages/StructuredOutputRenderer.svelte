@@ -38,24 +38,26 @@
 {#each displayItems as displayItem (displayItem.id)}
 	{#if displayItem.type === 'message'}
 		{#if renderMarkdown}
-			<Markdown
-				id={`${id}-${displayItem.id}`}
-				content={formatMessageContent(displayItem.text)}
-				{model}
-				{save}
-				{preview}
-				{done}
-				{editCodeBlock}
-				{topPadding}
-				{sourceIds}
-				{onSourceClick}
-				{onTaskClick}
-				{onSave}
-				{onUpdate}
-				{onPreview}
-			/>
+			<div class="markdown-prose">
+				<Markdown
+					id={`${id}-${displayItem.id}`}
+					content={formatMessageContent(displayItem.text)}
+					{model}
+					{save}
+					{preview}
+					{done}
+					{editCodeBlock}
+					{topPadding}
+					{sourceIds}
+					{onSourceClick}
+					{onTaskClick}
+					{onSave}
+					{onUpdate}
+					{onPreview}
+				/>
+			</div>
 		{:else}
-			<div class="whitespace-pre-wrap">{displayItem.text}</div>
+			<div class="whitespace-pre-wrap text-sm">{displayItem.text}</div>
 		{/if}
 	{:else if displayItem.type === 'detail_group'}
 		<ConsecutiveDetailsGroup
@@ -63,7 +65,7 @@
 			tokens={displayItem.tokens}
 			messageDone={done}
 		>
-			<div slot="content" class="space-y-1">
+			<div slot="content" class="space-y-2">
 				{#each displayItem.tokens as detailToken, detailIndex}
 					{#if detailToken.attributes?.type === 'tool_calls'}
 						<ToolCallDisplay
@@ -72,7 +74,7 @@
 							resultContent={detailToken.text}
 							grouped={true}
 							open={$settings?.expandDetails ?? false}
-							className="w-full space-y-1"
+							className="w-full space-y-2"
 						/>
 					{:else if detailToken.text?.length > 0}
 						<Collapsible
@@ -80,15 +82,17 @@
 							open={$settings?.expandDetails ?? false}
 							attributes={getDetailAttributes(detailToken)}
 							messageDone={done}
-							className="w-full space-y-1"
+							className="w-full space-y-2"
 						>
 							<div class="mb-1.5" slot="content">
-								<Markdown
-									id={`${id}-${displayItem.id}-${detailIndex}-detail`}
-									content={detailToken.text}
-									{done}
-									{editCodeBlock}
-								/>
+								<div class="markdown-prose">
+									<Markdown
+										id={`${id}-${displayItem.id}-${detailIndex}-detail`}
+										content={detailToken.text}
+										{done}
+										{editCodeBlock}
+									/>
+								</div>
 							</div>
 						</Collapsible>
 					{:else}
@@ -98,7 +102,7 @@
 							disabled={true}
 							attributes={getDetailAttributes(detailToken)}
 							messageDone={done}
-							className="w-full space-y-1"
+							className="w-full space-y-2"
 						/>
 					{/if}
 				{/each}
@@ -112,7 +116,7 @@
 				attributes={detailToken.attributes}
 				resultContent={detailToken.text}
 				open={$settings?.expandDetails ?? false}
-				className="w-full space-y-1"
+				className="w-full space-y-2"
 			/>
 		{:else if detailToken.text?.length > 0}
 			<Collapsible
@@ -120,15 +124,17 @@
 				open={$settings?.expandDetails ?? false}
 				attributes={getDetailAttributes(detailToken)}
 				messageDone={done}
-				className="w-full space-y-1"
+				className="w-full space-y-2"
 			>
 				<div class="mb-1.5" slot="content">
-					<Markdown
-						id={`${id}-${displayItem.id}-detail`}
-						content={detailToken.text}
-						{done}
-						{editCodeBlock}
-					/>
+					<div class="markdown-prose">
+						<Markdown
+							id={`${id}-${displayItem.id}-detail`}
+							content={detailToken.text}
+							{done}
+							{editCodeBlock}
+						/>
+					</div>
 				</div>
 			</Collapsible>
 		{:else}
@@ -138,7 +144,7 @@
 				disabled={true}
 				attributes={getDetailAttributes(detailToken)}
 				messageDone={done}
-				className="w-full space-y-1"
+				className="w-full space-y-2"
 			/>
 		{/if}
 	{/if}

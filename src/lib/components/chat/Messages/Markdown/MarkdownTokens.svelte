@@ -98,6 +98,9 @@
 	};
 
 	$: displayTokens = getDisplayTokens(tokens);
+	$: singlePlainBlock =
+		displayTokens.length === 1 &&
+		(displayTokens[0]?.type === 'paragraph' || displayTokens[0]?.type === 'text');
 
 	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
 		console.log('Exporting table to CSV');
@@ -141,7 +144,7 @@
 <!-- {JSON.stringify(tokens)} -->
 {#each displayTokens as token, tokenIdx (tokenIdx)}
 	{#if token.type === 'hr'}
-		<hr class=" border-gray-100/30 dark:border-gray-850/30" />
+		<hr class="border-gray-50 dark:border-gray-850/30" />
 	{:else if token.type === 'heading'}
 		<svelte:element this={headerComponent(token.depth)} dir="auto">
 			<MarkdownInlineTokens
@@ -385,7 +388,7 @@
 							resultContent={getDetailTextContent(detailToken)}
 							grouped={true}
 							open={$settings?.expandDetails ?? false}
-							className="w-full space-y-1"
+							className="w-full space-y-2"
 						/>
 					{:else if textContent.length > 0}
 						<Collapsible
@@ -393,7 +396,7 @@
 							open={$settings?.expandDetails ?? false}
 							attributes={detailToken?.attributes}
 							messageDone={done}
-							className="w-full space-y-1"
+							className="w-full space-y-2"
 							dir="auto"
 						>
 							<div class="mb-1.5" slot="content">
@@ -416,7 +419,7 @@
 							disabled={true}
 							attributes={detailToken?.attributes}
 							messageDone={done}
-							className="w-full space-y-1"
+							className="w-full space-y-2"
 							dir="auto"
 						/>
 					{/if}
@@ -433,7 +436,7 @@
 				attributes={token.attributes}
 				resultContent={getDetailTextContent(token)}
 				open={$settings?.expandDetails ?? false}
-				className="w-full space-y-1"
+				className="w-full space-y-2"
 			/>
 		{:else if textContent.length > 0}
 			<Collapsible
@@ -441,7 +444,7 @@
 				open={$settings?.expandDetails ?? false}
 				attributes={token?.attributes}
 				messageDone={done}
-				className="w-full space-y-1"
+				className="w-full space-y-2"
 				dir="auto"
 			>
 				<div class=" mb-1.5" slot="content">
@@ -464,7 +467,7 @@
 				disabled={true}
 				attributes={token?.attributes}
 				messageDone={done}
-				className="w-full space-y-1"
+				className="w-full space-y-2"
 				dir="auto"
 			/>
 		{/if}
@@ -495,7 +498,7 @@
 				/>
 			</span>
 		{:else}
-			<p dir="auto">
+			<p dir="auto" class={singlePlainBlock ? '!my-0' : ''}>
 				<MarkdownInlineTokens
 					id={`${id}-${tokenIdx}-p`}
 					tokens={token.tokens ?? []}
@@ -507,7 +510,7 @@
 		{/if}
 	{:else if token.type === 'text'}
 		{#if top}
-			<p>
+			<p class={singlePlainBlock ? '!my-0' : ''}>
 				{#if token.tokens}
 					<MarkdownInlineTokens
 						id={`${id}-${tokenIdx}-t`}
@@ -551,7 +554,7 @@
 			{onSourceClick}
 		/>
 	{:else if token.type === 'space'}
-		<div class="my-2" />
+		<!-- skip -->
 	{:else}
 		{console.log('Unknown token', token)}
 	{/if}

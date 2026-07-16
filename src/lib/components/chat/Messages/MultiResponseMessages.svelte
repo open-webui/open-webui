@@ -405,11 +405,13 @@
 									{$i18n.t('Merged Response')}
 								</Name>
 
-								<div class="mt-1 markdown-prose w-full min-w-full">
+								<div class="mt-1 w-full min-w-full">
 									{#if (message?.content ?? '') === ''}
 										<Skeleton />
 									{:else}
-										<Markdown id={`merged`} content={message.content ?? ''} />
+										<div class="markdown-prose">
+											<Markdown id={`merged`} content={message.content ?? ''} />
+										</div>
 									{/if}
 								</div>
 

@@ -47,14 +47,6 @@ def _truncate_note_data(data: Optional[dict], max_length: int = 1000) -> Optiona
     return {'content': {'md': md[:max_length]}}
 
 
-def _note_chat_system_prompt(note_id: str) -> str:
-    return (
-        f'You are chatting with note {note_id}. Use view_note with this note id to read the current note. '
-        'For edits, use replace_note_content for whole-note changes or replace_note_text '
-        'for targeted exact text replacement.'
-    )
-
-
 async def _normalize_note_chat_payload(chat: ChatResponse, note_id: str, db: AsyncSession) -> ChatResponse:
     payload = {**(chat.chat or {})}
     params = {**(payload.get('params') or {})}
@@ -63,7 +55,11 @@ async def _normalize_note_chat_payload(chat: ChatResponse, note_id: str, db: Asy
     if params.pop('note_id', None) is not None:
         changed = True
 
-    system = _note_chat_system_prompt(note_id)
+    system = (
+        f'You are chatting with note {note_id}. Use view_note with this note id to read the current note. '
+        'For edits, use replace_note_content for whole-note changes or replace_note_text '
+        'for targeted exact text replacement.'
+    )
     if params.get('system') != system:
         params['system'] = system
         changed = True
@@ -375,7 +371,6 @@ async def get_note_chat_by_id(
         log.info('[note-chat] reusing hidden chat note_id=%s chat_id=%s user_id=%s', note.id, chat.id, user.id)
         return await _normalize_note_chat_payload(chat, note.id, db)
 
-    meta = {'internal': True, 'type': 'note', 'note_id': note.id}
     chat_id = str(uuid4())
     chat = await Chats.insert_new_chat(
         chat_id,
@@ -385,18 +380,123 @@ async def get_note_chat_by_id(
                 'id': chat_id,
                 'title': 'Chat',
                 'models': [''],
-                'params': {'system': _note_chat_system_prompt(note.id)},
+                'params': {
+                    'system': (
+                        f'You are chatting with note {note.id}. Use view_note with this note id to read the current note. '
+                        'For edits, use replace_note_content for whole-note changes or replace_note_text '
+                        'for targeted exact text replacement.'
+                    )
+                },
                 'history': {'messages': {}, 'currentId': None},
                 'messages': [],
                 'tags': [],
             }
         ),
         db=db,
-        internal_meta=meta,
+        internal_meta={'internal': True, 'type': 'note', 'note_id': note.id},
     )
     if not chat:
         log.error('[note-chat] failed creating hidden chat note_id=%s user_id=%s', note.id, user.id)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
+
+    log.info('[note-chat] created hidden chat note_id=%s chat_id=%s user_id=%s', note.id, chat.id, user.id)
+    return chat
+
+
+@router.get('/{id}/chats', response_model=list[ChatResponse])
+async def get_note_chats_by_id(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', await Config.get('user.permissions'), db=db
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    note = await Notes.get_note_by_id(id, db=db)
+    if not note:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if user.role != 'admin' and (
+        user.id != note.user_id
+        and not await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='note',
+            resource_id=note.id,
+            permission='read',
+            db=db,
+        )
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
+    chats = await Chats.get_internal_chats_by_note_id(note.id, user.id, db=db)
+    return [await _normalize_note_chat_payload(chat, note.id, db) for chat in chats]
+
+
+@router.post('/{id}/chat', response_model=ChatResponse)
+async def create_note_chat_by_id(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', await Config.get('user.permissions'), db=db
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    note = await Notes.get_note_by_id(id, db=db)
+    if not note:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if user.role != 'admin' and (
+        user.id != note.user_id
+        and not await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='note',
+            resource_id=note.id,
+            permission='read',
+            db=db,
+        )
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
+    chat_id = str(uuid4())
+    chat = await Chats.insert_new_chat(
+        chat_id,
+        user.id,
+        ChatForm(
+            chat={
+                'id': chat_id,
+                'title': 'Chat',
+                'models': [''],
+                'params': {
+                    'system': (
+                        f'You are chatting with note {note.id}. Use view_note with this note id to read the current note. '
+                        'For edits, use replace_note_content for whole-note changes or replace_note_text '
+                        'for targeted exact text replacement.'
+                    )
+                },
+                'history': {'messages': {}, 'currentId': None},
+                'messages': [],
+                'tags': [],
+            }
+        ),
+        db=db,
+        internal_meta={'internal': True, 'type': 'note', 'note_id': note.id},
+    )
+    if not chat:
+        log.error('[note-chat] failed creating hidden chat note_id=%s user_id=%s', note.id, user.id)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
+
     log.info('[note-chat] created hidden chat note_id=%s chat_id=%s user_id=%s', note.id, chat.id, user.id)
     return chat
 

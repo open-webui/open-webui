@@ -283,31 +283,35 @@
 			onPreview={previewHandler}
 		/>
 	{:else if $settings?.renderMarkdownInAssistantMessages ?? true}
-		<Markdown
-			{id}
-			content={formatMessageContent(content)}
-			{model}
-			{save}
-			{preview}
-			{done}
-			{editCodeBlock}
-			{topPadding}
-			{sourceIds}
-			{onSourceClick}
-			{onTaskClick}
-			{onSave}
-			onUpdate={markdownUpdateHandler}
-			onPreview={previewHandler}
-		/>
+		<div class="markdown-prose">
+			<Markdown
+				{id}
+				content={formatMessageContent(content)}
+				{model}
+				{save}
+				{preview}
+				{done}
+				{editCodeBlock}
+				{topPadding}
+				{sourceIds}
+				{onSourceClick}
+				{onTaskClick}
+				{onSave}
+				onUpdate={markdownUpdateHandler}
+				onPreview={previewHandler}
+			/>
+		</div>
 	{:else}
 		{@const extracted = extractDetailsBlocks(content)}
 
 		{#if extracted.detailsContent}
 			<!-- Render structural blocks (tool calls, reasoning, etc.) through Markdown -->
-			<Markdown {id} content={extracted.detailsContent} {done} />
+			<div class="markdown-prose">
+				<Markdown {id} content={extracted.detailsContent} {done} />
+			</div>
 		{/if}
 		{#if extracted.plainContent}
-			<div class="whitespace-pre-wrap">{extracted.plainContent}</div>
+			<div class="whitespace-pre-wrap text-sm">{extracted.plainContent}</div>
 		{/if}
 	{/if}
 </div>

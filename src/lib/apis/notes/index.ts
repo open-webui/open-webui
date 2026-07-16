@@ -254,6 +254,62 @@ export const getNoteChatById = async (token: string, id: string) => {
 	return res;
 };
 
+export const getNoteChatsById = async (token: string, id: string) => {
+	let error = null;
+	const url = `${WEBUI_API_BASE_URL}/notes/${id}/chats`;
+
+	const res = await fetch(url, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const createNoteChatById = async (token: string, id: string) => {
+	let error = null;
+	const url = `${WEBUI_API_BASE_URL}/notes/${id}/chat`;
+
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const updateNoteById = async (token: string, id: string, note: NoteItem) => {
 	let error = null;
 

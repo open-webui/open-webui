@@ -144,12 +144,12 @@
 	style="scroll-margin-top: 3rem;"
 >
 	{#if !($settings?.chatBubble ?? true) && !subagentResult}
-		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 mt-1`}>
+		<div class={`shrink-0 ltr:mr-2 rtl:ml-2 mt-0.5`}>
 			<ProfileImage
 				src={user?.id
 					? `${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`
 					: `${WEBUI_BASE_URL}/static/favicon.png`}
-				className={'size-8 user-message-profile-image'}
+				className={'size-7 user-message-profile-image'}
 			/>
 		</div>
 	{/if}
@@ -169,7 +169,7 @@
 			</div>
 		{/if}
 
-		<div class="chat-{message.role} w-full min-w-full markdown-prose">
+		<div class="chat-{message.role} w-full min-w-full">
 			{#if edit !== true}
 				{#if message.files}
 					<div
@@ -271,7 +271,7 @@
 						<textarea
 							id="message-edit-{message.id}"
 							bind:this={messageEditTextAreaElement}
-							class=" bg-transparent outline-hidden w-full resize-none"
+							class=" bg-transparent outline-hidden w-full resize-none text-sm"
 							bind:value={editedContent}
 							on:input={(e) => {
 								const messagesContainer = document.getElementById('messages-container');
@@ -349,14 +349,16 @@
 						>
 							{#if message.content}
 								{#if $settings?.renderMarkdownInUserMessages ?? true}
-									<Markdown
-										id={`${chatId}-${message.id}`}
-										content={message.content}
-										{editCodeBlock}
-										{topPadding}
-									/>
+									<div class="markdown-prose">
+										<Markdown
+											id={`${chatId}-${message.id}`}
+											content={message.content}
+											{editCodeBlock}
+											{topPadding}
+										/>
+									</div>
 								{:else}
-									<div class="whitespace-pre-wrap" dir={$settings?.chatDirection ?? 'auto'}>
+									<div class="whitespace-pre-wrap text-sm" dir={$settings?.chatDirection ?? 'auto'}>
 										{message.content}
 									</div>
 								{/if}

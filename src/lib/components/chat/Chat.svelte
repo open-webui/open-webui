@@ -107,6 +107,8 @@
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import WebSearchConfirmDialog from '../common/ConfirmDialog.svelte';
+	import Dropdown from '../common/Dropdown.svelte';
+	import DropdownMenu from '../common/DropdownMenu.svelte';
 	import Placeholder from './Placeholder.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
@@ -116,14 +118,25 @@
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
 	import XMark from '../icons/XMark.svelte';
+	import EditPencilIcon from '../layout/Sidebar/icons/EditPencil.svelte';
+	import ChevronRight from '../icons/ChevronRight.svelte';
+	import EmbeddedChatHistoryItem from './EmbeddedChatHistoryItem.svelte';
 
 	export let chatIdProp = '';
 	export let embedded = false;
 	export let embeddedTitle = '';
+	export let embeddedChats = [];
+	export let embeddedDraftKey = '';
 	export let initialFiles = [];
 	export let selectedText = '';
 	export let onInsertToNote: ((content: string) => void) | null = null;
 	export let onCloseEmbedded: (() => void) | null = null;
+	export let onNewEmbeddedChat: (() => void | Promise<void>) | null = null;
+	export let onCreateEmbeddedChat: (() => any | Promise<any>) | null = null;
+	export let onSelectEmbeddedChat: ((chatId: string) => void | Promise<void>) | null = null;
+	export let onDeleteEmbeddedChat: ((chatId: string) => void | Promise<void>) | null = null;
+	export let onEmbeddedChatTitle: ((chatId: string, title: string) => void | Promise<void>) | null =
+		null;
 
 	let loading = true;
 	$: chatContainerId = embedded ? 'note-chat-container' : 'chat-container';
@@ -133,6 +146,9 @@
 		'Extract action items from this note.',
 		'Rewrite the selected text.'
 	];
+	let showEmbeddedChatHistory = false;
+	let embeddedChatOptionsId = '';
+	let deletingEmbeddedChatId = '';
 
 	const eventTarget = new EventTarget();
 	let controlPane: Pane | undefined;
@@ -278,10 +294,7 @@
 	};
 
 	$: contextUsage = getContextUsage() ?? serverContextUsage;
-	$: embeddedHeaderTitle =
-		embeddedTitle ||
-		($chatTitle && !$chatTitle.startsWith('Chat:') ? $chatTitle : '') ||
-		$i18n.t('Chat');
+	$: embeddedHeaderTitle = embeddedTitle || $chatTitle || $i18n.t('Chat');
 
 	let selectedToolIds = [];
 	let selectedSkillIds = [];
@@ -364,12 +377,12 @@
 	let params = {};
 	let appliedInitialFilesKey = '';
 	let loadedChatIdProp = '';
+	let loadedEmbeddedDraftKey = '';
 
-	const fileKey = (file) => `${file?.type ?? ''}:${file?.id ?? file?.url ?? file?.name ?? ''}`;
 	const mergeFiles = (current, incoming) => {
 		const seen = new Set();
 		return [...(incoming ?? []), ...(current ?? [])].filter((file) => {
-			const key = fileKey(file);
+			const key = `${file?.type ?? ''}:${file?.id ?? file?.url ?? file?.name ?? ''}`;
 			if (seen.has(key)) return false;
 			seen.add(key);
 			return true;
@@ -378,7 +391,9 @@
 	const applyInitialFiles = () => {
 		if (!embedded || !initialFiles?.length) return;
 
-		const key = JSON.stringify(initialFiles.map(fileKey));
+		const key = JSON.stringify(
+			initialFiles.map((file) => `${file?.type ?? ''}:${file?.id ?? file?.url ?? file?.name ?? ''}`)
+		);
 		if (key === appliedInitialFilesKey) return;
 
 		files = mergeFiles(files, initialFiles);
@@ -389,10 +404,6 @@
 		embedded && selectedText?.trim()
 			? `${text}\n\nSelected note text:\n${selectedText.trim()}`
 			: text;
-	const submitEmbeddedPrompt = async (text: string) => {
-		await tick();
-		await submitHandler(withSelectedText(text));
-	};
 	const noteChatDebug = (message: string, data: Record<string, unknown> = {}) => {
 		if (!embedded) return;
 		console.info('[note-chat]', message, {
@@ -413,6 +424,12 @@
 		});
 		loadedChatIdProp = chatIdProp;
 		navigateHandler();
+	}
+
+	$: if (embedded && embeddedDraftKey && embeddedDraftKey !== loadedEmbeddedDraftKey) {
+		noteChatDebug('embedded draft requested', { embeddedDraftKey });
+		loadedEmbeddedDraftKey = embeddedDraftKey;
+		initEmbeddedDraft();
 	}
 
 	let saveControlsTimer;
@@ -500,6 +517,46 @@
 				activeChatId: $chatId
 			});
 		}
+	};
+
+	const initEmbeddedDraft = async () => {
+		clearTimeout(saveControlsTimer);
+		await saveControls();
+
+		if ($chatId && !$temporaryChatEnabled) {
+			updateLastReadAt($chatId);
+		}
+
+		loading = true;
+		loadedChatIdProp = '';
+		chat = null;
+		tags = [];
+		taskIds = null;
+		chatTasks = [];
+		serverContextUsage = null;
+		history = {
+			messages: {},
+			currentId: null
+		};
+		params = {};
+		chatFiles = [];
+		files = [];
+		selectedToolIds = [];
+		selectedSkillIds = [];
+		selectedFilterIds = [];
+		webSearchEnabled = false;
+		imageGenerationEnabled = false;
+		codeInterpreterEnabled = false;
+		prompt = '';
+		messageInput?.setText('');
+		await chatId.set('');
+		await chatTitle.set('');
+
+		await setDefaults();
+		loading = false;
+		await tick();
+		applyInitialFiles();
+		document.getElementById('chat-input')?.focus();
 	};
 
 	const onSelect = async (e) => {
@@ -888,6 +945,9 @@
 					message.favorite = data.favorite;
 				} else if (type === 'chat:title') {
 					chatTitle.set(data);
+					if (embedded && $chatId) {
+						await onEmbeddedChatTitle?.($chatId, data);
+					}
 					await refreshChatList(localStorage.token);
 				} else if (type === 'chat:tags') {
 					chat = await getChatById(localStorage.token, $chatId);
@@ -2655,9 +2715,26 @@
 		}
 		history = history;
 
-		// New chat — backend generates the chat_id on first request
+		// Empty embedded drafts create their backing chat only when the first message is sent.
 		if (!_chatId) {
-			if ($temporaryChatEnabled) {
+			if (embedded && onCreateEmbeddedChat) {
+				const createdChat = await onCreateEmbeddedChat();
+				if (!createdChat?.id) {
+					toast.error($i18n.t('Failed to create chat'));
+					return;
+				}
+
+				chat = createdChat;
+				_chatId = createdChat.id;
+				loadedChatIdProp = _chatId;
+				await chatId.set(_chatId);
+				await chatTitle.set(createdChat?.chat?.title ?? createdChat?.title ?? $i18n.t('Chat'));
+
+				params = structuredClone(createdChat?.chat?.params ?? {});
+				delete params.note_id;
+				chatFiles = mergeFiles(chatFiles, createdChat?.chat?.files ?? []);
+				applyInitialFiles();
+			} else if ($temporaryChatEnabled) {
 				_chatId = `local:${$socket?.id}`;
 				await chatId.set(_chatId);
 			}
@@ -2954,7 +3031,11 @@
 				...(continueResponse ? { assistant_message_id: responseMessageId } : {}),
 
 				background_tasks: {
-					...(!$temporaryChatEnabled && !_chatId && (userMessage?.parentId ?? null) === null
+					...(!$temporaryChatEnabled &&
+					(!_chatId ||
+						(embedded &&
+							(userMessage?.parentId ?? null) === null &&
+							createMessagesList(_history, responseMessageId).length === 2))
 						? {
 								title_generation: $settings?.title?.auto ?? true,
 								tags_generation: $settings?.autoTags ?? true
@@ -3540,13 +3621,88 @@
 						<div
 							class="h-10 shrink-0 flex items-center justify-between gap-2 border-b border-gray-50/80 px-3 text-gray-700 dark:border-gray-850/40 dark:text-gray-200"
 						>
-							<div class="min-w-0 truncate text-[13px] font-medium">
-								{embeddedHeaderTitle}
+							<div class="flex min-w-0 items-center gap-2">
+								<Dropdown
+									bind:show={showEmbeddedChatHistory}
+									align="start"
+									sideOffset={6}
+									closeOnOutsideClick={embeddedChatOptionsId === ''}
+									onOpenChange={(state) => {
+										if (!state) embeddedChatOptionsId = '';
+									}}
+								>
+									<button
+										type="button"
+										class="group flex min-w-0 items-center gap-1 text-[13px] font-normal text-gray-600 transition hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+										aria-label={$i18n.t('Chat history')}
+									>
+										<span class="min-w-0 truncate">{embeddedHeaderTitle}</span>
+										<ChevronRight
+											className="size-3.5 shrink-0 text-gray-400/70 opacity-0 transition-opacity group-hover:opacity-100 dark:text-gray-500/70"
+											strokeWidth="2"
+										/>
+									</button>
+
+									<div slot="content">
+										<DropdownMenu
+											className="min-w-56 max-w-72 max-h-80 overflow-y-auto scrollbar-hidden"
+										>
+											{#if onNewEmbeddedChat && Object.keys(history?.messages ?? {}).length > 0 && !loading}
+												<button
+													type="button"
+													class="text-left"
+													on:click={async () => {
+														showEmbeddedChatHistory = false;
+														await onNewEmbeddedChat?.();
+													}}
+												>
+													<EditPencilIcon className="size-3.5" strokeWidth="1.5" />
+													<span class="min-w-0 truncate">{$i18n.t('New chat')}</span>
+												</button>
+												<hr class="border-gray-100/70 dark:border-gray-800/60" />
+											{/if}
+											{#if embeddedChats.length > 0}
+												{#each embeddedChats as item}
+													<EmbeddedChatHistoryItem
+														{item}
+														title={item?.id === $chatId
+															? embeddedHeaderTitle
+															: item?.title || item?.chat?.title || $i18n.t('Chat')}
+														selected={item.id === $chatId}
+														deleting={deletingEmbeddedChatId === item.id}
+														onSelect={async () => {
+															showEmbeddedChatHistory = false;
+															await onSelectEmbeddedChat?.(item.id);
+														}}
+														onDelete={async (id) => {
+															if (!id || deletingEmbeddedChatId) return;
+
+															deletingEmbeddedChatId = id;
+															embeddedChatOptionsId = '';
+															try {
+																await onDeleteEmbeddedChat?.(id);
+															} finally {
+																deletingEmbeddedChatId = '';
+															}
+														}}
+														onMenuOpenChange={(id, state) => {
+															embeddedChatOptionsId = state ? id : '';
+														}}
+													/>
+												{/each}
+											{:else}
+												<div class="px-2 py-1.5 text-[13px] text-gray-400 dark:text-gray-500">
+													{$i18n.t('No chat history')}
+												</div>
+											{/if}
+										</DropdownMenu>
+									</div>
+								</Dropdown>
 							</div>
 							<Tooltip content={$i18n.t('Close')} placement="bottom">
 								<button
 									type="button"
-									class="rounded-md p-1 text-gray-500 transition hover:bg-black/5 hover:text-gray-900 dark:hover:bg-white/5 dark:hover:text-white"
+									class="rounded-md p-1 text-gray-500 transition hover:text-gray-900 dark:hover:text-white"
 									on:click={() => onCloseEmbedded?.()}
 									aria-label={$i18n.t('Close')}
 								>
@@ -3610,13 +3766,12 @@
 										toast.success($i18n.t('Conversation saved successfully'));
 									}
 								} catch (error) {
-									console.error('Error saving conversation:', error);
+									console.error('Failed to save temporary chat:', error);
 									toast.error($i18n.t('Failed to save conversation'));
 								}
 							}}
 						/>
 					{/if}
-
 					<div id="chat-pane" class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
 						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
 							<div
@@ -3768,7 +3923,10 @@
 												<button
 													type="button"
 													class="flex min-h-8 w-full items-center justify-between py-1 text-left text-[13px] leading-5 text-gray-500 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
-													on:click={() => submitEmbeddedPrompt(suggestion)}
+													on:click={async () => {
+														await tick();
+														await submitHandler(withSelectedText(suggestion));
+													}}
 												>
 													<span class="min-w-0 truncate">{$i18n.t(suggestion)}</span>
 												</button>

@@ -63,13 +63,16 @@
 
 	import {
 		deleteNoteById,
+		createNoteChatById,
 		getNoteById,
 		getNoteChatById,
+		getNoteChatsById,
 		updateNoteById,
 		updateNoteAccessGrants,
 		toggleNotePinnedStatusById,
 		getPinnedNoteList
 	} from '$lib/apis/notes';
+	import { deleteChatById } from '$lib/apis/chats';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -134,8 +137,23 @@
 	let showNoteChat = false;
 	let noteChatId = null;
 	let noteChatLoading = false;
+	let noteChats = [];
+	let noteChatDraftKey = '';
+	let noteChatCreating = false;
 
 	let selectedContent = null;
+	let noteChatFiles = [];
+	$: {
+		const seen = new Set();
+		noteChatFiles = note
+			? (note?.data?.files ?? files ?? []).filter((file) => {
+					const key = `${file?.type ?? ''}:${file?.id ?? file?.url ?? file?.name ?? ''}`;
+					if (seen.has(key)) return false;
+					seen.add(key);
+					return true;
+				})
+			: [];
+	}
 
 	let showDeleteConfirm = false;
 	let showAccessControlModal = false;
@@ -540,20 +558,6 @@ ${content}
 		});
 	};
 
-	const noteChatFileKey = (file) =>
-		`${file?.type ?? ''}:${file?.id ?? file?.url ?? file?.name ?? ''}`;
-	const getNoteChatFiles = () => {
-		if (!note) return [];
-
-		const seen = new Set();
-		return (note?.data?.files ?? files ?? []).filter((file) => {
-			const key = noteChatFileKey(file);
-			if (seen.has(key)) return false;
-			seen.add(key);
-			return true;
-		});
-	};
-
 	const openNoteChat = async () => {
 		console.info('[note-chat] open requested', {
 			noteId: note?.id,
@@ -569,6 +573,12 @@ ${content}
 			toast.error(`${error}`);
 			return null;
 		});
+		const chats = chat
+			? await getNoteChatsById(localStorage.token, note.id).catch((error) => {
+					console.error('[note-chat] history failed', { noteId: note?.id, error });
+					return null;
+				})
+			: null;
 		noteChatLoading = false;
 
 		if (chat?.id) {
@@ -579,10 +589,82 @@ ${content}
 				hasChatPayload: !!chat.chat
 			});
 			noteChatId = chat.id;
+			noteChats = chats ?? [chat];
 			showNoteChat = true;
 		} else {
 			console.warn('[note-chat] open returned no chat id', { noteId: note.id, chat });
 		}
+	};
+
+	const createNoteChat = async () => {
+		if (!note?.id || noteChatLoading) return;
+
+		noteChatId = null;
+		noteChatDraftKey = `${Date.now()}`;
+		showNoteChat = true;
+	};
+
+	const createNoteChatOnFirstMessage = async () => {
+		if (!note?.id || noteChatCreating) return null;
+
+		noteChatCreating = true;
+		try {
+			const chat = await createNoteChatById(localStorage.token, note.id).catch((error) => {
+				console.error('[note-chat] create failed', { noteId: note?.id, error });
+				toast.error(`${error}`);
+				return null;
+			});
+			const chats = chat
+				? await getNoteChatsById(localStorage.token, note.id).catch((error) => {
+						console.error('[note-chat] history failed', { noteId: note?.id, error });
+						return null;
+					})
+				: null;
+
+			if (chat?.id) {
+				noteChatId = chat.id;
+				noteChatDraftKey = '';
+				noteChats = chats ?? [chat, ...noteChats.filter((item) => item.id !== chat.id)];
+				showNoteChat = true;
+			}
+
+			return chat;
+		} finally {
+			noteChatCreating = false;
+		}
+	};
+
+	const deleteNoteChat = async (chatId) => {
+		if (!note?.id || !chatId) return;
+
+		const deleted = await deleteChatById(localStorage.token, chatId).catch((error) => {
+			console.error('[note-chat] delete failed', { noteId: note?.id, chatId, error });
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (!deleted) return;
+
+		let chats =
+			(await getNoteChatsById(localStorage.token, note.id).catch((error) => {
+				console.error('[note-chat] history failed', { noteId: note?.id, error });
+				return null;
+			})) ?? [];
+
+		if (noteChatId === chatId) {
+			let nextChat = chats[0];
+			if (!nextChat) {
+				nextChat = await getNoteChatById(localStorage.token, note.id).catch((error) => {
+					console.error('[note-chat] recreate failed after delete', { noteId: note?.id, error });
+					toast.error(`${error}`);
+					return null;
+				});
+				chats = nextChat ? [nextChat] : [];
+			}
+			noteChatId = nextChat?.id ?? null;
+		}
+
+		noteChats = chats;
 	};
 
 	const downloadHandler = async (type) => {
@@ -1241,13 +1323,36 @@ ${content}
 			<div class="flex h-full items-center justify-center">
 				<Spinner className="size-5" />
 			</div>
-		{:else if noteChatId}
+		{:else if noteChatId || noteChatDraftKey}
 			<Chat
 				embedded={true}
-				chatIdProp={noteChatId}
-				initialFiles={getNoteChatFiles()}
+				chatIdProp={noteChatId ?? ''}
+				embeddedChats={noteChats}
+				embeddedDraftKey={noteChatDraftKey}
+				initialFiles={noteChatFiles}
 				selectedText={selectedContent?.text ?? ''}
 				onInsertToNote={insertHandler}
+				onNewEmbeddedChat={createNoteChat}
+				onCreateEmbeddedChat={createNoteChatOnFirstMessage}
+				onSelectEmbeddedChat={(chatId) => {
+					if (!chatId || chatId === noteChatId) return;
+					noteChatId = chatId;
+				}}
+				onDeleteEmbeddedChat={deleteNoteChat}
+				onEmbeddedChatTitle={(chatId, title) => {
+					noteChats = noteChats.map((chat) =>
+						chat.id === chatId
+							? {
+									...chat,
+									title,
+									chat: {
+										...(chat.chat ?? {}),
+										title
+									}
+								}
+							: chat
+					);
+				}}
 				onCloseEmbedded={() => {
 					showNoteChat = false;
 				}}
