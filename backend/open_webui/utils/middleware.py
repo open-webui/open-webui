@@ -136,11 +136,25 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
-async def publish_chat_finished_event(request: Request, user: UserModel, metadata: dict, title: str, content: str):
+def _last_output_text(output: list | None) -> str:
+    for item in reversed(output or []):
+        if item.get('type') != 'message':
+            continue
+        parts = item.get('content') or []
+        text = ''.join(str(part.get('text') or '') for part in parts if part.get('type') == 'output_text')
+        if text:
+            return text
+    return ''
+
+
+async def publish_chat_finished_event(
+    request: Request, user: UserModel, metadata: dict, title: str, content: str, output: list | None = None
+):
     chat_id = metadata.get('chat_id')
     if getattr(request.state, 'internal', False) is True or not chat_id or chat_id.startswith(('channel:', 'local:')):
         return
 
+    content = content or _last_output_text(output)
     webui_url = await Config.get('webui.url')
     await publish_event(
         request,
@@ -2578,12 +2592,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 files = [*(files or []), *note_files]
 
     use_builtin_tools = (
-        (chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note')
-        or (
-            bool(metadata.get('session_id'))
-            and metadata.get('params', {}).get('function_calling') != 'legacy'
-            and (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('builtin_tools', True)
-        )
+        chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note'
+    ) or (
+        bool(metadata.get('session_id'))
+        and metadata.get('params', {}).get('function_calling') != 'legacy'
+        and (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('builtin_tools', True)
     )
 
     if skill_ids:
@@ -3610,7 +3623,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                             },
                         )
 
-                    await publish_chat_finished_event(request, user, metadata, title, content)
+                    await publish_chat_finished_event(request, user, metadata, title, content, response_output)
 
                     ctx['assistant_message'] = {
                         'content': content,
@@ -5339,7 +5352,7 @@ async def streaming_chat_response_handler(response, ctx):
                             touch=False,
                         )
 
-                await publish_chat_finished_event(request, user, metadata, title, content)
+                await publish_chat_finished_event(request, user, metadata, title, content, output)
 
                 await event_emitter(
                     {

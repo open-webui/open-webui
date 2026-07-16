@@ -100,6 +100,7 @@ class ChatMessage(Base):
     files = Column(JSON, nullable=True)
     sources = Column(JSON, nullable=True)
     embeds = Column(JSON, nullable=True)
+    meta = Column(JSON, nullable=True)
 
     # Status
     done = Column(Boolean, default=True)
@@ -142,6 +143,7 @@ class ChatMessageModel(BaseModel):
     files: Optional[list] = None
     sources: Optional[list] = None
     embeds: Optional[list] = None
+    meta: Optional[dict] = None
     done: bool = True
     status_history: Optional[list] = None
     error: Optional[dict | str] = None
@@ -192,6 +194,8 @@ class ChatMessageTable:
                     existing.sources = data.get('sources')
                 if 'embeds' in data:
                     existing.embeds = data.get('embeds')
+                if 'meta' in data:
+                    existing.meta = data.get('meta')
                 if 'done' in data:
                     existing.done = data.get('done', True)
                 if 'status_history' in data or 'statusHistory' in data:
@@ -225,6 +229,7 @@ class ChatMessageTable:
                     files=data.get('files'),
                     sources=data.get('sources'),
                     embeds=data.get('embeds'),
+                    meta=data.get('meta'),
                     done=data.get('done', True),
                     status_history=data.get('status_history') or data.get('statusHistory'),
                     error=data.get('error'),

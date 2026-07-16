@@ -21,6 +21,7 @@ from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chat, ChatForm, Chats
 from open_webui.models.users import UserModel, Users
 from open_webui.tasks import has_active_tasks
+from open_webui.utils.misc import get_message_list
 
 log = logging.getLogger(__name__)
 
@@ -148,7 +149,7 @@ async def create_timer(
             'parent_chat_id': parent_chat_id,
             'parent_message_id': parent_message_id,
             'timer_at': due_at,
-            'timer_status': 'pending',
+            'status': 'pending',
             'timer_model_id': model_id,
             'timer_task_message_id': user_message_id,
             'cancel_on': selected_events,
@@ -175,7 +176,7 @@ async def claim_due_timers(now_ns: int, limit: int = 10) -> list[tuple[str, str]
             select(Chat)
             .where(Chat.meta['internal'].as_boolean().is_(True))
             .where(Chat.meta['type'].as_string() == 'timer')
-            .where(Chat.meta['timer_status'].as_string() == 'pending')
+            .where(Chat.meta['status'].as_string() == 'pending')
         )
         if db.bind.dialect.name == 'postgresql':
             stmt = stmt.with_for_update(skip_locked=True)
@@ -194,7 +195,7 @@ async def claim_due_timers(now_ns: int, limit: int = 10) -> list[tuple[str, str]
             claim_id = str(uuid4())
             row.meta = {
                 **(row.meta or {}),
-                'timer_status': 'running',
+                'status': 'running',
                 'timer_started_at': now_ns,
                 'timer_claim_id': claim_id,
             }
@@ -211,7 +212,7 @@ async def cancel_timers_for_chat(parent_chat_id: str, event: Literal['chat.read'
             .where(Chat.meta['internal'].as_boolean().is_(True))
             .where(Chat.meta['type'].as_string() == 'timer')
             .where(Chat.meta['parent_chat_id'].as_string() == parent_chat_id)
-            .where(Chat.meta['timer_status'].as_string() == 'pending')
+            .where(Chat.meta['status'].as_string() == 'pending')
         )
         now_ns = int(time.time_ns())
         for row in result.scalars().all():
@@ -220,7 +221,7 @@ async def cancel_timers_for_chat(parent_chat_id: str, event: Literal['chat.read'
                 continue
             row.meta = {
                 **meta,
-                'timer_status': 'cancelled',
+                'status': 'cancelled',
                 'timer_cancelled_at': now_ns,
                 'timer_cancelled_by': event,
             }
@@ -232,13 +233,13 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
     lock = _timer_locks.setdefault(timer_id, asyncio.Lock())
     async with lock:
         from open_webui.socket.main import sio
-        from open_webui.utils.subagents import _parent_locks, process_pending_internal_messages
+        from open_webui.utils.subagents import _parent_locks
 
         timer = await Chats.get_chat_by_id(timer_id)
         if not timer:
             return
         meta = timer.meta or {}
-        if meta.get('timer_status') != 'running':
+        if meta.get('status') != 'running':
             return
         if claim_id is not None and meta.get('timer_claim_id') != claim_id:
             return
@@ -246,24 +247,24 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
         parent_chat_id = meta.get('parent_chat_id') or ''
         parent = await Chats.get_chat_by_id_and_user_id(parent_chat_id, timer.user_id)
         if not parent:
-            await _set_timer_status(timer_id, 'error', timer_error='parent chat no longer exists')
+            await _set_timer_state(timer_id, 'error', timer_error='parent chat no longer exists')
             return
 
         prompt_message_id = meta.get('timer_task_message_id')
         prompt_message = await Chats.get_message_by_id_and_message_id(timer_id, prompt_message_id)
         if not prompt_message:
-            await _set_timer_status(timer_id, 'error', timer_error='timer task message is missing')
+            await _set_timer_state(timer_id, 'error', timer_error='timer task message is missing')
             return
 
         user = await Users.get_user_by_id(timer.user_id)
         if not user:
-            await _set_timer_status(timer_id, 'error', timer_error='timer user no longer exists')
+            await _set_timer_state(timer_id, 'error', timer_error='timer user no longer exists')
             return
 
         run = meta.get('run') or {}
         model_id = run.get('model_id') or meta.get('timer_model_id')
         if not model_id:
-            await _set_timer_status(timer_id, 'error', timer_error='model context is missing')
+            await _set_timer_state(timer_id, 'error', timer_error='model context is missing')
             return
 
         prompt = prompt_message.get('content') or ''
@@ -273,6 +274,10 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
             )
 
         user_message_id = str(uuid4())
+        assistant_message_id = str(uuid4())
+        user_message = None
+        assistant_message = None
+        message_list = []
         parent_lock = _parent_locks.setdefault(parent_chat_id, asyncio.Lock())
         async with parent_lock:
             async with get_async_db() as db:
@@ -282,7 +287,19 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
                 result = await db.execute(stmt)
                 parent = result.scalar_one_or_none()
                 if not parent:
-                    await _set_timer_status(timer_id, 'error', timer_error='parent chat no longer exists')
+                    await _set_timer_state(timer_id, 'error', timer_error='parent chat no longer exists')
+                    return
+                if await has_active_tasks(app.state.redis, parent_chat_id):
+                    timer_row = await db.get(Chat, timer_id)
+                    if timer_row:
+                        timer_row.meta = {
+                            **(timer_row.meta or {}),
+                            'status': 'pending',
+                            'timer_claim_id': None,
+                            'timer_started_at': None,
+                        }
+                        timer_row.updated_at = int(time.time())
+                    await db.commit()
                     return
 
                 parent_chat = copy.deepcopy(parent.chat or {})
@@ -298,74 +315,106 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
                     if done_assistants
                     else meta.get('parent_message_id')
                 )
-                pending_meta = {'internal': True, 'type': 'timer', 'timer_id': timer_id}
-                if await has_active_tasks(app.state.redis, parent_chat_id):
-                    pending_meta['timer_pending'] = True
+                message_list = get_message_list(messages, parent_id)
 
                 user_message = {
                     'id': user_message_id,
                     'parentId': parent_id,
-                    'childrenIds': [],
+                    'childrenIds': [assistant_message_id],
                     'role': 'user',
                     'content': prompt,
                     'model': model_id,
-                    'meta': pending_meta,
+                    'meta': {'internal': True, 'type': 'timer', 'timer_id': timer_id},
+                    'timestamp': int(time.time()),
+                }
+                assistant_message = {
+                    'id': assistant_message_id,
+                    'parentId': user_message_id,
+                    'childrenIds': [],
+                    'role': 'assistant',
+                    'content': '',
+                    'done': False,
+                    'model': model_id,
                     'timestamp': int(time.time()),
                 }
                 messages[user_message_id] = user_message
+                messages[assistant_message_id] = assistant_message
                 if parent_id and parent_id in messages:
                     children = messages[parent_id].setdefault('childrenIds', [])
                     if user_message_id not in children:
                         children.append(user_message_id)
 
                 parent.chat = parent_chat
+                history['currentId'] = assistant_message_id
                 parent.updated_at = int(time.time())
                 timer_row = await db.get(Chat, timer_id)
                 if timer_row:
                     timer_row.meta = {
                         **(timer_row.meta or {}),
-                        'timer_status': 'dispatched',
-                        'timer_dispatched_at': int(time.time_ns()),
+                        'status': 'completed',
+                        'timer_completed_at': int(time.time_ns()),
                     }
                     timer_row.updated_at = int(time.time())
                 await db.commit()
             await ChatMessages.upsert_message(user_message_id, parent_chat_id, timer.user_id, user_message)
+            await ChatMessages.upsert_message(assistant_message_id, parent_chat_id, timer.user_id, assistant_message)
 
-        if user_message['meta'].get('timer_pending') is True:
-            await sio.emit(
-                'events',
-                {
-                    'chat_id': parent_chat_id,
-                    'message_id': user_message_id,
-                    'data': {'type': 'chat:reload'},
-                },
-                room=f'user:{timer.user_id}',
-            )
-        elif not await has_active_tasks(app.state.redis, parent_chat_id):
-            request = Request(
-                {
-                    'type': 'http',
-                    'asgi': {'version': '3.0', 'spec_version': '2.0'},
-                    'method': 'POST',
-                    'path': '/api/v1/timers/internal',
-                    'query_string': b'',
-                    'headers': Headers({}).raw,
-                    'client': ('127.0.0.1', 0),
-                    'server': ('127.0.0.1', 80),
-                    'scheme': 'http',
-                    'app': app,
-                }
-            )
-            request.state.token = None
-            request.state.enable_api_keys = False
-            await process_pending_internal_messages(request, parent_chat_id, user.id, run)
+        await sio.emit(
+            'events',
+            {
+                'chat_id': parent_chat_id,
+                'message_id': assistant_message_id,
+                'data': {'type': 'chat:reload'},
+            },
+            room=f'user:{timer.user_id}',
+        )
+        form_data = {
+            'model': model_id,
+            'messages': [
+                *([{'role': 'system', 'content': run.get('system_prompt')}] if run.get('system_prompt') else []),
+                *message_list,
+                {'role': 'user', 'content': prompt},
+            ],
+            'stream': True,
+            'chat_id': parent_chat_id,
+            'id': assistant_message_id,
+            'parent_id': user_message.get('parentId'),
+            'user_message': user_message,
+            'session_id': run.get('session_id') or f'timer:{parent_chat_id}',
+            'background_tasks': {},
+            'tool_ids': run.get('tool_ids') or [],
+            'skill_ids': run.get('skill_ids') or [],
+            'filter_ids': run.get('filter_ids') or [],
+            'features': run.get('features') or {},
+            'files': run.get('files') or [],
+            'variables': run.get('variables') or {},
+        }
+        if run.get('terminal_id'):
+            form_data['terminal_id'] = run['terminal_id']
+        request = Request(
+            {
+                'type': 'http',
+                'asgi': {'version': '3.0', 'spec_version': '2.0'},
+                'method': 'POST',
+                'path': '/api/v1/timers/internal',
+                'query_string': b'',
+                'headers': Headers({}).raw,
+                'client': ('127.0.0.1', 0),
+                'server': ('127.0.0.1', 80),
+                'scheme': 'http',
+                'app': app,
+            }
+        )
+        request.state.token = None
+        request.state.enable_api_keys = False
+        await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 
 
-async def _set_timer_status(timer_id: str, status: str, **fields) -> None:
+async def _set_timer_state(timer_id: str, status: str, **fields) -> None:
     async with get_async_db() as db:
         row = await db.get(Chat, timer_id)
         if not row:
             return
-        row.meta = {**(row.meta or {}), 'timer_status': status, **fields}
+        row.meta = {**(row.meta or {}), 'status': status, **fields}
         row.updated_at = int(time.time())
         await db.commit()

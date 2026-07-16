@@ -101,13 +101,18 @@ async def process_pending_internal_messages(
             pending = [
                 message
                 for message in messages.values()
+                for meta in [message.get('meta') or {}]
                 if message.get('role') == 'user'
                 and not message.get('childrenIds')
                 and (
-                    (message.get('meta') or {}).get('async_subagent_result') is True
+                    (
+                        meta.get('internal') is True
+                        and meta.get('type') == 'subagent'
+                        and meta.get('status') in (None, 'pending')
+                    )
                     or (
-                        (message.get('meta') or {}).get('internal') is True
-                        and (message.get('meta') or {}).get('type') == 'timer'
+                        meta.get('internal') is True
+                        and meta.get('type') == 'timer'
                     )
                 )
             ]
@@ -116,7 +121,7 @@ async def process_pending_internal_messages(
 
             first = pending[0]
             first_meta = first.get('meta') or {}
-            kind = 'subagent' if first_meta.get('async_subagent_result') is True else 'timer'
+            kind = 'timer' if first_meta.get('internal') is True and first_meta.get('type') == 'timer' else 'subagent'
             parent_id = first.get('parentId')
             if kind == 'timer' and first_meta.get('timer_id'):
                 timer = await Chats.get_chat_by_id(first_meta['timer_id'])
@@ -128,9 +133,16 @@ async def process_pending_internal_messages(
                 batch = [
                     message
                     for message in pending
+                    for meta in [message.get('meta') or {}]
                     if message.get('parentId') == parent_id
                     and (message.get('model') or model_id) == model_id
-                    and (message.get('meta') or {}).get('async_subagent_result') is True
+                    and (
+                        (
+                            meta.get('internal') is True
+                            and meta.get('type') == 'subagent'
+                            and meta.get('status') in (None, 'pending')
+                        )
+                    )
                 ]
             combined_content = '\n\n'.join(message.get('content', '') for message in batch if message.get('content'))
             if kind == 'timer':
@@ -153,7 +165,7 @@ async def process_pending_internal_messages(
                     for message in batch
                     if (message.get('meta') or {}).get('subagent_chat_id')
                 ]
-                combined_meta = {'async_subagent_result': True}
+                combined_meta = {'internal': True, 'type': 'subagent'}
                 if len(delegation_ids) == 1:
                     combined_meta['delegation_id'] = delegation_ids[0]
                 elif delegation_ids:
@@ -163,8 +175,7 @@ async def process_pending_internal_messages(
                 elif subagent_chat_ids:
                     combined_meta['subagent_chat_ids'] = subagent_chat_ids
 
-            pending_flag = 'timer_pending' if kind == 'timer' else 'async_subagent_pending'
-            reuse_message = len(batch) == 1 and not (first.get('meta') or {}).get(pending_flag)
+            reuse_message = len(batch) == 1 and (first.get('meta') or {}).get('status') != 'pending'
             user_message_id = first['id'] if reuse_message else str(uuid4())
             removed_ids = set()
             if not reuse_message:
@@ -564,7 +575,8 @@ async def delegate(
 
         pending_message_id = str(uuid4())
         pending_meta = {
-            'async_subagent_result': True,
+            'internal': True,
+            'type': 'subagent',
             'delegation_id': delegation_id,
             'subagent_chat_id': chat_id,
         }
@@ -587,7 +599,7 @@ async def delegate(
                     raise asyncio.CancelledError
                 return result
             if await has_active_tasks(request.app.state.redis, parent_chat_id):
-                pending_message['meta']['async_subagent_pending'] = True
+                pending_message['meta']['status'] = 'pending'
             updated_chat = copy.deepcopy(parent.chat)
             updated_history = updated_chat.setdefault('history', {})
             updated_messages = updated_history.setdefault('messages', {})
@@ -604,7 +616,7 @@ async def delegate(
                 data=pending_message,
             )
 
-        if pending_message['meta'].get('async_subagent_pending') is True:
+        if pending_message['meta'].get('status') == 'pending':
             from open_webui.socket.main import sio
 
             await sio.emit(
