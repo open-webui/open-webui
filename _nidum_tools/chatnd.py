@@ -1,9 +1,32 @@
 """
 title: ChatND
 author: Nidum
-version: 1.25.0
+version: 1.26.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum. Na rota de imagem, gera a imagem via Gemini (motor oculto). O usuario nao escolhe o motor.
 changelog:
+  1.26.0:
+    - NORMALIZACAO DE DATAS NA BUSCA (causa provada da Q14, nao era ruido nem falta de
+      vaga). A pergunta diz "13/07"; o arquivo e BRA_AtadeReuniaoCoautores_13072026.md e
+      o corpo diz "13 de julho de 2026". O BM25 nao casa tokens de formatos diferentes e
+      o denso ignora datas -> com r=0.1 sobravam 4 chunks (todos MKT_Convergencia) e a
+      ata ficava de fora por SCORE, com 20 vagas livres. _expandir_datas() (PURA) detecta
+      a data em qualquer formato (barras, pontos, hifens, compacta, ISO, por extenso,
+      abreviada) e ANEXA as demais variantes a string de BUSCA.
+    - Aplicada no _buscar_sources, NAO no _texto_de_busca: este ultimo tambem alimenta a
+      rota de IMAGEM (injetaria datas em prompt de imagem) e o _docs_prioritarios (o
+      gatilho do piso). Assim so a query de busca muda; a pergunta que vai ao modelo, a
+      rota de imagem e o piso ficam intactos.
+    - Ano ausente: heuristica de data PASSADA (ata e evento que ja aconteceu) - se DD/MM
+      cai depois de hoje, usa o ano anterior. Ano explicito na pergunta sempre vence.
+      Brasil: DD/MM sempre (ISO reconhecida a parte). Data impossivel nao expande.
+      Idempotente.
+    - DEPENDE DA VALVE do Admin "Enriquecer o texto da pesquisa hibrida": e ela que poe
+      o filename TOKENIZADO no texto do BM25 (get_enriched_texts: replace('_',' ') e
+      repete 2x). Sem ela, as variantes NUMERICAS nao tem o que casar (13072026 so
+      existe no nome do arquivo) e so a variante por extenso paga. As duas sao as metades
+      da mesma ponte. A valve e de tempo de CONSULTA - nao exige reindexar.
+    - teste_datas.py: 18 casos puros (inclui o caso real da Q14). Nao pode viver no
+      teste_freios.py da esteira (outro repo; chatnd.py depende do open_webui).
   1.25.0:
     - ETIQUETA PELO QUE FOI CITADO, nao pelo que foi RECUPERADO (banco 1.23.0: as 3
       PARCIAL eram etiqueta, deterministicas). Com a FONTE injetando 10 chunks em TODA
@@ -236,6 +259,7 @@ changelog:
 # Apenas ASCII no codigo, de proposito (evita corrupcao em copy-paste).
 
 import asyncio
+import datetime
 import json
 import logging
 import re
@@ -445,6 +469,131 @@ def _normalizar_ascii(texto):
         .lower()
         .strip()
     )
+
+
+# --- NORMALIZACAO DE DATAS NA BUSCA -----------------------------------------------
+# Causa provada da Q14: a pergunta diz "13/07"; o arquivo se chama
+# BRA_AtadeReuniaoCoautores_13072026.md e o corpo diz "13 de julho de 2026". O BM25 nao
+# casa tokens de formatos diferentes e o denso ignora datas -> a ata ficava de fora por
+# score, com vagas sobrando. Nao era ruido nem falta de vaga: era FORMATO DE DATA.
+# Solucao: detectar a data e ANEXAR as demais variantes a string usada na BUSCA.
+_MES_NUM = {
+    "janeiro": 1, "jan": 1, "fevereiro": 2, "fev": 2, "marco": 3, "mar": 3,
+    "abril": 4, "abr": 4, "maio": 5, "mai": 5, "junho": 6, "jun": 6,
+    "julho": 7, "jul": 7, "agosto": 8, "ago": 8, "setembro": 9, "set": 9,
+    "outubro": 10, "out": 10, "novembro": 11, "nov": 11, "dezembro": 12, "dez": 12,
+}
+_MES_EXTENSO = {
+    1: "janeiro", 2: "fevereiro", 3: "marco", 4: "abril", 5: "maio", 6: "junho",
+    7: "julho", 8: "agosto", 9: "setembro", 10: "outubro", 11: "novembro",
+    12: "dezembro",
+}
+_MES_ABREV = {
+    1: "jan", 2: "fev", 3: "mar", 4: "abr", 5: "mai", 6: "jun",
+    7: "jul", 8: "ago", 9: "set", 10: "out", 11: "nov", 12: "dez",
+}
+_RE_DATA_ISO = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
+_RE_DATA_COMPACTA = re.compile(r"\b(\d{2})(\d{2})(\d{4})\b")
+_RE_DATA_SEP = re.compile(r"\b(\d{1,2})[/.\-](\d{1,2})(?:[/.\-](\d{2,4}))?\b")
+_RE_DATA_EXTENSO = re.compile(
+    r"\b(\d{1,2})\s+de\s+([a-zA-ZÀ-ſ]+)\.?(?:\s+de\s+(\d{2,4}))?\b"
+)
+_RE_DATA_ABREV = re.compile(r"\b(\d{1,2})[/\s]([a-zA-Z]{3})\.?(?:[/\s](\d{2,4}))?\b")
+
+
+def _ano_de_2_digitos(a):
+    a = int(a)
+    return a + 2000 if a < 100 else a
+
+
+def _ano_inferido(dia, mes, hoje):
+    # Ano ausente -> heuristica de data PASSADA: ata e evento que JA aconteceu. Se
+    # DD/MM cai DEPOIS de hoje, quase certamente e do ano anterior.
+    #   hoje 16/07/2026: "13/07" -> 2026 (3 dias atras); "13/12" -> 2025.
+    for ano in (hoje.year, hoje.year - 1):
+        try:
+            if datetime.date(ano, mes, dia) <= hoje:
+                return ano
+        except ValueError:
+            continue
+    return hoje.year
+
+
+def _datas_no_texto(texto, hoje):
+    # PURA. Devolve [(dia, mes, ano)] das datas VALIDAS achadas. Brasil: DD/MM sempre
+    # (a ISO AAAA-MM-DD e reconhecida a parte). Data impossivel (32/13, 31/02) e
+    # descartada - nao expande.
+    achadas = []
+
+    def _add(dia, mes, ano):
+        try:
+            dia, mes = int(dia), int(mes)
+        except (TypeError, ValueError):
+            return
+        if not (1 <= mes <= 12 and 1 <= dia <= 31):
+            return
+        ano = _ano_de_2_digitos(ano) if ano else _ano_inferido(dia, mes, hoje)
+        try:
+            datetime.date(ano, mes, dia)
+        except ValueError:
+            return
+        if (dia, mes, ano) not in achadas:
+            achadas.append((dia, mes, ano))
+
+    t = texto or ""
+    for m in _RE_DATA_ISO.finditer(t):
+        _add(m.group(3), m.group(2), m.group(1))
+    for m in _RE_DATA_COMPACTA.finditer(t):
+        _add(m.group(1), m.group(2), m.group(3))
+    for m in _RE_DATA_SEP.finditer(t):
+        _add(m.group(1), m.group(2), m.group(3))
+    for m in _RE_DATA_EXTENSO.finditer(t):
+        mes = _MES_NUM.get(_normalizar_ascii(m.group(2)))
+        if mes:
+            _add(m.group(1), mes, m.group(3))
+    for m in _RE_DATA_ABREV.finditer(t):
+        mes = _MES_NUM.get(_normalizar_ascii(m.group(2)))
+        if mes:
+            _add(m.group(1), mes, m.group(3))
+    return achadas
+
+
+def _variantes_de_data(dia, mes, ano):
+    # Os formatos que a base usa: nome de arquivo (13072026), corpo por extenso,
+    # ISO, e as pontuacoes usuais.
+    return [
+        "%02d/%02d/%04d" % (dia, mes, ano),
+        "%02d-%02d-%04d" % (dia, mes, ano),
+        "%02d.%02d.%04d" % (dia, mes, ano),
+        "%02d%02d%04d" % (dia, mes, ano),
+        "%04d-%02d-%02d" % (ano, mes, dia),
+        "%d de %s de %d" % (dia, _MES_EXTENSO[mes], ano),
+        "%d %s %d" % (dia, _MES_ABREV[mes], ano),
+    ]
+
+
+def _expandir_datas(texto, hoje=None):
+    """
+    PURA. Detecta datas (barras, pontos, hifens, compacta, ISO, por extenso e
+    abreviada) e ANEXA as demais variantes ao texto usado na BUSCA - para o BM25 casar
+    o NOME do arquivo (13072026) e o CORPO ("13 de julho de 2026"), qualquer que seja o
+    formato da pergunta. NUNCA altera a pergunta que vai ao modelo (por isso mora no
+    _buscar_sources, e nao no _texto_de_busca - que tambem alimenta a rota de imagem e
+    o gatilho do piso). Idempotente: variante ja presente nao e repetida. Sem data no
+    texto -> devolve o texto intacto.
+    """
+    if not texto:
+        return texto
+    hoje = hoje or datetime.date.today()
+    alvo = _normalizar_ascii(texto)
+    extras = []
+    for dia, mes, ano in _datas_no_texto(texto, hoje):
+        for v in _variantes_de_data(dia, mes, ano):
+            if _normalizar_ascii(v) not in alvo and v not in extras:
+                extras.append(v)
+    if not extras:
+        return texto
+    return texto + " " + " ".join(extras)
 
 
 def _e_saudacao_trivial(messages):
@@ -923,6 +1072,15 @@ class Pipe:
         return [b.strip() for b in re.split(r"[,\s]+", raw) if b.strip()]
 
     async def _buscar_sources(self, request, user, texto):
+        # NORMALIZACAO DE DATAS: a pergunta diz "13/07", o arquivo se chama
+        # ..._13072026.md e o corpo diz "13 de julho de 2026" - o BM25 nao casa esses
+        # tokens e o denso ignora datas (causa provada da Q14). Expande a data em todas
+        # as variantes ANTES de buscar. So a string de BUSCA muda: a pergunta que vai ao
+        # modelo e o gatilho do piso (_docs_prioritarios) ficam intactos.
+        # NOTA: as variantes NUMERICAS so casam o nome do arquivo se a valve do Admin
+        # "Enriquecer o texto da pesquisa hibrida" estiver LIGADA (e ela que poe o
+        # filename tokenizado no texto do BM25). Sem ela, so a variante por extenso paga.
+        texto = _expandir_datas(texto)
         # UMA chamada com TODAS as colecoes -> o corte do k e GLOBAL, por score do
         # reranker (comparavel entre colecoes por ser cross-encoder). Antes usavamos
         # get_sources_from_items, que itera item a item (utils.py: "for item in items")
