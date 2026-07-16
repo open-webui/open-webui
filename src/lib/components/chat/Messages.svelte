@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 	import { config, settings, user as _user, mobile, temporaryChatEnabled } from '$lib/stores';
-	import { refreshChatList } from '$lib/stores/chat-list';
+	import { refreshChatList } from '$lib/stores/chatList';
 	import { tick, getContext, onMount, onDestroy, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 

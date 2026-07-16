@@ -20,7 +20,7 @@
 		unarchiveAllChats
 	} from '$lib/apis/chats';
 	import { chatId, showSettings } from '$lib/stores';
-	import { refreshChatList } from '$lib/stores/chat-list';
+	import { refreshChatList } from '$lib/stores/chatList';
 	import { formatNumber } from '$lib/utils';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';

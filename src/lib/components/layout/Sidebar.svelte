@@ -28,7 +28,7 @@
 		sidebarWidth,
 		activeChatIds
 	} from '$lib/stores';
-	import { loadNextChatListPage, refreshChatList } from '$lib/stores/chat-list';
+	import { loadNextChatListPage, refreshChatList } from '$lib/stores/chatList';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
