@@ -523,24 +523,6 @@ async def delegate(
         except Exception as exc:
             result = {'status': 'error', 'summary': '', 'error': str(exc)}
 
-        parent = await Chats.get_chat_by_id_and_user_id(parent_chat_id, user.id)
-        if not parent:
-            if cancelled:
-                raise asyncio.CancelledError
-            return result
-
-        history = copy.deepcopy(parent.chat.get('history') or {})
-        messages = history.setdefault('messages', {})
-        done_assistants = [
-            message
-            for message in messages.values()
-            if message.get('role') == 'assistant' and message.get('done') is not False
-        ]
-        result_parent_id = (
-            max(done_assistants, key=lambda message: message.get('timestamp', 0)).get('id')
-            if done_assistants
-            else parent_message_id
-        )
         duration = f'{time.time() - started_at:.1f}s'
         lines = [
             f'[ASYNC SUBAGENT COMPLETE - {delegation_id}]',
@@ -582,7 +564,7 @@ async def delegate(
         }
         pending_message = {
             'id': pending_message_id,
-            'parentId': result_parent_id,
+            'parentId': None,
             'childrenIds': [],
             'role': 'user',
             'content': '\n'.join(lines),
@@ -593,22 +575,43 @@ async def delegate(
 
         lock = _parent_locks.setdefault(parent_chat_id, asyncio.Lock())
         async with lock:
-            parent = await Chats.get_chat_by_id_and_user_id(parent_chat_id, user.id)
-            if not parent:
-                if cancelled:
-                    raise asyncio.CancelledError
-                return result
-            if await has_active_tasks(request.app.state.redis, parent_chat_id):
-                pending_message['meta']['status'] = 'pending'
-            updated_chat = copy.deepcopy(parent.chat)
-            updated_history = updated_chat.setdefault('history', {})
-            updated_messages = updated_history.setdefault('messages', {})
-            updated_messages[pending_message_id] = pending_message
-            if result_parent_id and result_parent_id in updated_messages:
-                children = updated_messages[result_parent_id].setdefault('childrenIds', [])
-                if pending_message_id not in children:
-                    children.append(pending_message_id)
-            await Chats.update_chat_by_id(parent_chat_id, updated_chat)
+            async with get_async_db() as db:
+                stmt = select(Chat).where(Chat.id == parent_chat_id, Chat.user_id == user.id)
+                if db.bind.dialect.name == 'postgresql':
+                    stmt = stmt.with_for_update()
+                result_row = await db.execute(stmt)
+                parent = result_row.scalar_one_or_none()
+                if not parent:
+                    if cancelled:
+                        raise asyncio.CancelledError
+                    return result
+
+                updated_chat = copy.deepcopy(parent.chat or {})
+                updated_history = updated_chat.setdefault('history', {})
+                updated_messages = updated_history.setdefault('messages', {})
+                done_assistants = [
+                    message
+                    for message in updated_messages.values()
+                    if message.get('role') == 'assistant' and message.get('done') is not False
+                ]
+                result_parent_id = (
+                    max(done_assistants, key=lambda message: message.get('timestamp', 0)).get('id')
+                    if done_assistants
+                    else parent_message_id
+                )
+                pending_message['parentId'] = result_parent_id
+                if await has_active_tasks(request.app.state.redis, parent_chat_id):
+                    pending_message['meta']['status'] = 'pending'
+                updated_messages[pending_message_id] = pending_message
+                if result_parent_id and result_parent_id in updated_messages:
+                    children = updated_messages[result_parent_id].setdefault('childrenIds', [])
+                    if pending_message_id not in children:
+                        children.append(pending_message_id)
+                updated_history['messages'] = updated_messages
+                parent.chat = {**(parent.chat or {}), **updated_chat, 'history': updated_history}
+                parent.updated_at = int(time.time())
+                await db.commit()
+
             await ChatMessages.upsert_message(
                 message_id=pending_message_id,
                 chat_id=parent_chat_id,
