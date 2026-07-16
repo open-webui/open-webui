@@ -273,7 +273,7 @@ def _notification_webhook_content(event: Any) -> tuple[str, str, dict[str, Any],
             url = f'{url[: -len(f"/c/{chat_id}")].rstrip("/")}/{chat_id}'
         body = '\n'.join(part for part in (content, url) if part)
         return (
-            title,
+            f'**{title}**',
             body,
             {
                 'action': 'chat',
@@ -293,7 +293,7 @@ def _notification_webhook_content(event: Any) -> tuple[str, str, dict[str, Any],
             url = f'{url[: -len(f"/c/{chat_id}")].rstrip("/")}/{chat_id}'
         body = '\n'.join(part for part in (content, url) if part)
         return (
-            title,
+            f'**{title}**',
             body,
             {
                 'action': 'chat_failed',
@@ -310,7 +310,7 @@ def _notification_webhook_content(event: Any) -> tuple[str, str, dict[str, Any],
         url = str(data.get('url') or '')
         body = '\n'.join(part for part in (content, url) if part)
         return (
-            f'#{channel_name}',
+            f'**#{channel_name}**',
             body,
             {
                 'action': 'channel',
@@ -324,7 +324,7 @@ def _notification_webhook_content(event: Any) -> tuple[str, str, dict[str, Any],
     if event.event == CALENDAR_ALERT_EVENT:
         title = str(data.get('title') or event.message or 'Calendar alert')
         starts_in = str(data.get('starts_in') or '')
-        message = f'{title}: starting {starts_in}'.strip()
+        message = f'**{title}**\nstarting {starts_in}'.strip()
         return (
             '',
             message,
