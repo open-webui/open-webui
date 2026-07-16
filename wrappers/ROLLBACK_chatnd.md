@@ -9,6 +9,15 @@ No painel, **copie e salve localmente** o estado atual, antes de colar qualquer 
 2. **Valor atual da valve** — Admin → Functions → ChatND → Valves → **`BASE_CONHECIMENTO_ID`** → anote o valor (hoje deve ser só `9ce06025-7b38-4b73-b225-b22932e6e73a`, a ACERVOS).
 3. **System prompt atual do wrapper** — Workspace → Models → **`nidum-10---documentos`** → System Prompt → cole o texto num arquivo local `prompt_ANTES.md`.
 
+## ⚠️ Valves que exigem ação MANUAL (o código não consegue mudar sozinho)
+O Open WebUI **persiste o valor das valves no banco** — mudar o *default* no código **não altera** uma instalação que já tem valor salvo. Depois de republicar, confira em **Admin → Functions → ChatND → Valves**:
+
+| Valve | Valor certo | Por quê |
+|---|---|---|
+| `BASE_CONHECIMENTO_ID` | `9ce06025-…,705ca6ca-…` | as **duas** coleções (ACERVOS,FONTE) |
+| `TOP_K_DOCUMENTOS` | **`0`** | 0 = **herda o Top K do Admin**. Se ficar em `10`, ele **sobrepõe o Admin em silêncio** (foi o que aconteceu: Admin em 24, pipe usando 10) |
+| `MAX_DOCS_INTEIROS` | **`0`** | documento inteiro **aposentado** (competia com a busca e estourava o orçamento). `>0` religa |
+
 ## Onde pegar a versão anterior do `chatnd.py` (git, alternativa)
 A última versão mergeada antes deste pacote está em `origin/main` (era **1.18.0**):
 ```bash
