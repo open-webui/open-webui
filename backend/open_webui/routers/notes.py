@@ -579,9 +579,17 @@ async def update_note_by_id(
         pinned_note_ids = await Notes.get_pinned_note_ids(user.id, db=db)
         note.is_pinned = note.id in pinned_note_ids
 
+        event_data = note.model_dump()
+        if form_data.data is not None:
+            event_data['data'] = {
+                key: note.data.get(key)
+                for key in form_data.data.keys()
+                if note.data is not None and key in note.data
+            }
+
         await sio.emit(
             'events:note',
-            note.model_dump(),
+            event_data,
             to=f'note:{note.id}',
         )
 
