@@ -1014,7 +1014,7 @@ ${content}
 				</div>
 			{:else}
 				<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
-					<div class="shrink-0 w-full flex justify-between items-center px-2.5 mb-0.5">
+					<div class="shrink-0 w-full flex justify-between items-center px-3">
 						<div class="w-full min-w-0 flex items-center">
 							{#if $mobile}
 								<Tooltip
@@ -1305,7 +1305,7 @@ ${content}
 					</div>
 
 					<div
-						class=" flex-1 w-full h-full overflow-auto px-2.5 relative flex flex-col"
+						class=" flex-1 w-full h-full overflow-auto px-3 relative flex flex-col"
 						id="note-content-container"
 					>
 						{#if noteAttachmentFiles.length > 0}
