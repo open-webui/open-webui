@@ -836,6 +836,9 @@
 				await loadChat();
 				return;
 			}
+			if (type === 'chat:list') {
+				return;
+			}
 			let message = history.messages[event.message_id];
 
 			if (message) {

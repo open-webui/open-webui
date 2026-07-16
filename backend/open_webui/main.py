@@ -260,6 +260,15 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
+async def emit_chat_list_event(metadata: dict, chat_id: str):
+    if not chat_id or chat_id.startswith(('channel:', 'local:')):
+        return
+
+    event_emitter = await get_event_emitter(metadata, update_db=False)
+    if event_emitter:
+        await event_emitter({'type': 'chat:list', 'data': {'chat_id': chat_id}})
+
+
 class SPAStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
         try:
@@ -1279,6 +1288,7 @@ async def chat_completion(
                         subject_id=chat_id,
                         data={'title': 'New Chat'},
                     )
+                    await emit_chat_list_event(metadata, chat_id)
                     if user_message_id:
                         await publish_event(
                             request,
@@ -1380,6 +1390,7 @@ async def chat_completion(
                             user_message['id'],
                             user_message,
                         )
+                        await emit_chat_list_event({**metadata, 'message_id': user_message['id']}, chat_id)
                         await publish_event(
                             request,
                             EVENTS.MESSAGE_CREATED,

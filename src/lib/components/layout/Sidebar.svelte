@@ -368,6 +368,9 @@
 				console.log('Init chat list');
 				const result = await refreshChatList(localStorage.token, { refreshPinned: true });
 				if (result.accepted) {
+					await Promise.all(
+						Object.values(folderRegistry).map((folder: any) => folder?.setFolderItems?.())
+					);
 					allChatsLoaded = result.allLoaded;
 					chatListReady = true;
 				}
