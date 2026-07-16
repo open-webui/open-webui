@@ -1,9 +1,30 @@
 """
 title: ChatND
 author: Nidum
-version: 1.22.0
+version: 1.23.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum. Na rota de imagem, gera a imagem via Gemini (motor oculto). O usuario nao escolhe o motor.
 changelog:
+  1.23.0:
+    - BUSCA EM UMA CHAMADA SO, COM CORTE GLOBAL DO k. get_sources_from_items itera item
+      a item e faz UMA chamada POR COLECAO, com k proprio cada (log real: dois "hybrid
+      search ... in 1 collections", 10 resultados cada). Resultado: FONTE e ACERVOS NAO
+      competiam - a FONTE injetava k chunks em TODA pergunta (Quadro_de_Pessoas, Cartao
+      CNPJ, v29 numa pergunta de ata) = abafamento de volta + etiqueta [Fonte] errada.
+      Agora _buscar_sources chama query_collection UMA vez com todas as colecoes ->
+      merge_and_sort_query_results(k) = corte GLOBAL por score do reranker (comparavel
+      entre colecoes, cross-encoder). Bonus: query_collection le TODO o resto do Admin
+      por dentro - zero duplicacao. Controle de acesso preservado com
+      filter_accessible_collections (query_collection nao checa permissao).
+    - DOCUMENTO INTEIRO APOSENTADO: MAX_DOCS_INTEIROS default 0. Competia com a busca
+      afinada e estourou o orcamento (inteiros:159011 chars/3 docs -> 200000/200000,
+      sobra 0). Codigo mantido atras da valve: >0 religa se o banco mostrar regressao.
+    - PISO: sinal muda de 'not escolhidos' para 'not sources'. Com o inteiro desligado,
+      'escolhidos' e sempre vazio e o sinal antigo dispararia o piso em TODA pergunta.
+      'not sources' e a semantica certa: ancora so quando a busca voltou vazia.
+    - LOG do orcamento reescrito para o fluxo novo: trechos:N chunk(s)/N chars |
+      inteiros:desligado | fundadores:N chars (piso ON/off) | usado:N/N (sobra N).
+    - DOC: TOP_K_DOCUMENTOS e PERSISTIDA no banco - mudar o default nao afeta quem ja
+      tem valor salvo. Se o painel mostrar 10 (sobrepondo o Admin), ZERE A MAO.
   1.22.0:
     - O PIPE PARA DE DESCARTAR O RESULTADO DO RERANKER (causa raiz). _contexto_documento
       usava a busca so para RANQUEAR documentos e injetava o top-2 INTEIRO, jogando fora
@@ -193,7 +214,7 @@ import unicodedata
 from pydantic import BaseModel, Field
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.models.users import Users
-from open_webui.retrieval.utils import get_sources_from_items
+from open_webui.retrieval.utils import query_collection, filter_accessible_collections
 from open_webui.utils.plugin import load_tool_module_by_id
 
 log = logging.getLogger("chatnd")
@@ -815,8 +836,18 @@ class Pipe:
         # SOBREPOE o Admin (override consciente). Antes o default 10 sobrepunha o
         # Admin em silencio: os demais parametros (hybrid, reranker, BM25, k_reranker,
         # relevancia) ja vinham do Admin, e so o k divergia.
+        # ATENCAO: o Open WebUI PERSISTE o valor da valve no banco - mudar este default
+        # NAO altera uma instalacao que ja tem valor salvo. Se o painel mostrar 10,
+        # ZERE A MAO: Admin -> Functions -> ChatND -> Valves -> TOP_K_DOCUMENTOS = 0.
         TOP_K_DOCUMENTOS: int = Field(default=0)
-        MAX_DOCS_INTEIROS: int = Field(default=2)
+        # 0 = injecao de DOCUMENTO INTEIRO DESLIGADA (default). Era 2 (e ia a 4 com
+        # gatilho): competia com a busca afinada (hybrid+reranker+BM25), abafava atas e
+        # estourou o orcamento (log real: inteiros:159011 chars em 3 docs -> 200000/
+        # 200000, sobra 0, com v29/v30 inteiros comendo tudo). Com os TRECHOS entrando
+        # sempre, ficou redundante. O codigo continua aqui: >0 religa (ex.: se o banco
+        # de perguntas mostrar regressao em pedido de inventario) - de preferencia com
+        # cap por tamanho. Persistida no banco: para religar/desligar, mexa no painel.
+        MAX_DOCS_INTEIROS: int = Field(default=0)
         MAX_CHARS_TOTAL: int = Field(default=200000)
         MOSTRAR_ROTA: bool = Field(default=False)
         TRIADE_ATIVA: bool = Field(default=True)
@@ -862,32 +893,48 @@ class Pipe:
         return [b.strip() for b in re.split(r"[,\s]+", raw) if b.strip()]
 
     async def _buscar_sources(self, request, user, texto):
-        items = [
-            {"type": "collection", "id": bid, "name": bid}
-            for bid in self._bases()
-        ]
+        # UMA chamada com TODAS as colecoes -> o corte do k e GLOBAL, por score do
+        # reranker (comparavel entre colecoes por ser cross-encoder). Antes usavamos
+        # get_sources_from_items, que itera item a item (utils.py: "for item in items")
+        # e faz UMA chamada POR COLECAO, com k proprio cada: a FONTE injetava k chunks
+        # em TODA pergunta, sem competir com os ACERVOS (era o abafamento de volta, e a
+        # etiqueta [Fonte] errada). query_collection repassa todas as colecoes de uma
+        # vez e faz merge_and_sort_query_results(k) = corte global. Bonus: ele le TODO o
+        # resto do Admin por dentro (hybrid, RERANKING_FUNCTION, TOP_K_RERANKER,
+        # RELEVANCE_THRESHOLD, HYBRID_BM25_WEIGHT) - zero duplicacao de parametro.
+        bases = self._bases()
+        if user:
+            # query_collection NAO checa permissao (o get_sources_from_items checava).
+            # Preserva o controle de acesso por usuario: so consulta o que ele pode ler.
+            bases = sorted(await filter_accessible_collections(set(bases), user))
+        if not bases:
+            log.warning("chatnd: nenhuma colecao de conhecimento acessivel a este usuario")
+            return []
         cfg = request.app.state.config
-        reranking_function = None
-        if request.app.state.RERANKING_FUNCTION:
-            reranking_function = lambda query, documents: request.app.state.RERANKING_FUNCTION(
-                query, documents, user=user
-            )
-        return await get_sources_from_items(
-            request=request,
-            items=items,
+        resultado = await query_collection(
+            request,
+            collection_names=bases,
             queries=[texto],
             embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
                 query, prefix=prefix, user=user
             ),
             k=self.valves.TOP_K_DOCUMENTOS or cfg.TOP_K,
-            reranking_function=reranking_function,
-            k_reranker=cfg.TOP_K_RERANKER,
-            r=cfg.RELEVANCE_THRESHOLD,
-            hybrid_bm25_weight=cfg.HYBRID_BM25_WEIGHT,
-            hybrid_search=cfg.ENABLE_RAG_HYBRID_SEARCH,
-            full_context=cfg.RAG_FULL_CONTEXT,
-            user=user,
         )
+        # Adapta o retorno cru ({documents, metadatas, distances}) para o formato
+        # "sources" que _montar_contexto/_contexto_documento consomem.
+        docs = (resultado or {}).get("documents") or []
+        metas = (resultado or {}).get("metadatas") or []
+        if not docs or not docs[0]:
+            return []
+        src = {
+            "source": {"name": "Base institucional Nidum"},
+            "document": docs[0],
+            "metadata": (metas[0] if metas else []),
+        }
+        distancias = (resultado or {}).get("distances") or []
+        if distancias:
+            src["distances"] = distancias[0]
+        return [src]
 
     async def _contexto_documento(self, request, user, texto):
         # Recupera trechos (hybrid + reranker, config do Admin) e monta o contexto com
@@ -965,7 +1012,12 @@ class Pipe:
         # vazio -> fallback de ancoragem). Perguntas com match especifico (atas,
         # convergencias) deixam de ser sufocadas por v30/v29. Numa fundadora, o v30
         # entra pela RELEVANCIA (nos escolhidos), nao pelo piso.
-        forcar_fundadores = self.valves.FUNDADORES_SEMPRE and (bool(pri) or not escolhidos)
+        # SINAL: 'not sources' (a BUSCA nao achou nada), nao 'not escolhidos'. Com o
+        # documento inteiro desligado (MAX_DOCS_INTEIROS=0), 'escolhidos' e SEMPRE
+        # vazio - o sinal antigo faria o piso disparar em TODA pergunta, reacendendo o
+        # abafamento pela porta dos fundos. 'not sources' e a semantica correta de
+        # ancora de fallback: so quando a recuperacao voltou vazia.
+        forcar_fundadores = self.valves.FUNDADORES_SEMPRE and (bool(pri) or not sources)
         fund = _nomes_fundadores(nomes) if forcar_fundadores else []
         if forcar_fundadores and not fund:
             log.warning(
@@ -1017,13 +1069,23 @@ class Pipe:
                     + conteudo
                 )
 
-        # Vigia do orcamento: quanto dos MAX_CHARS_TOTAL foi usado e quanto sobra.
+        # Vigia do orcamento. O log diz a verdade do fluxo ATUAL: os TRECHOS sao o
+        # canal principal (quantos chunks e quantos chars), e o documento inteiro
+        # aparece como 'desligado' quando a valve e 0 - em vez de repetir 'inteiros:0
+        # (0 doc(s))' como ruido constante. Religando a valve, o campo volta a informar.
+        n_chunks = sum(len(s.get("document") or []) for s in (sources or []))
         usado = total + reserva_trechos + reserva
+        inteiros_txt = (
+            "desligado (MAX_DOCS_INTEIROS=0)"
+            if self.valves.MAX_DOCS_INTEIROS <= 0
+            else "%d chars (%d doc(s))" % (total, len(escolhidos))
+        )
         log.info(
-            "chatnd: contexto -> inteiros:%d chars (%d doc(s)) | trechos:%d | "
-            "fundadores:%d | usado:%d/%d (sobra %d)",
-            total, len(escolhidos), reserva_trechos, reserva, usado,
-            self.valves.MAX_CHARS_TOTAL,
+            "chatnd: contexto -> trechos:%d chunk(s)/%d chars | inteiros:%s | "
+            "fundadores:%d chars (piso %s) | usado:%d/%d (sobra %d)",
+            n_chunks, reserva_trechos, inteiros_txt, reserva,
+            "ON" if forcar_fundadores else "off",
+            usado, self.valves.MAX_CHARS_TOTAL,
             max(self.valves.MAX_CHARS_TOTAL - usado, 0),
         )
 
