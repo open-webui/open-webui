@@ -712,8 +712,6 @@ ${content}
 				: null;
 
 			if (chat?.id) {
-				noteChatId = chat.id;
-				noteChatDraftKey = '';
 				noteChats = chats ?? [chat, ...noteChats.filter((item) => item.id !== chat.id)];
 				showNoteChat = true;
 			}
@@ -1440,6 +1438,7 @@ ${content}
 				onSelectEmbeddedChat={(chatId) => {
 					if (!chatId || chatId === noteChatId) return;
 					noteChatId = chatId;
+					noteChatDraftKey = '';
 				}}
 				onDeleteEmbeddedChat={deleteNoteChat}
 				onEmbeddedChatTitle={(chatId, title) => {
