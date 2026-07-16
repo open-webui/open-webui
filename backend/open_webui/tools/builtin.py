@@ -49,11 +49,40 @@ from open_webui.routers.memories import (
     add_memory as _add_memory,
 )
 from open_webui.routers.retrieval import search_web as _search_web
+from open_webui.events import EVENTS, publish_event
+from open_webui.socket.main import sio
 from open_webui.utils.sanitize import sanitize_code
 
 log = logging.getLogger(__name__)
 
 MAX_KNOWLEDGE_BASE_SEARCH_ITEMS = 10_000
+
+
+async def _has_write_access_to_note(note, user_id: str) -> bool:
+    if note.user_id == user_id:
+        return True
+
+    from open_webui.models.access_grants import AccessGrants
+
+    user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
+    return await AccessGrants.has_access(
+        user_id=user_id,
+        resource_type='note',
+        resource_id=note.id,
+        permission='write',
+        user_group_ids=set(user_group_ids),
+    )
+
+
+async def _emit_note_updated(request: Request, user: dict, note) -> None:
+    await sio.emit('note-events', note.model_dump(), to=f'note:{note.id}')
+    await publish_event(
+        request,
+        EVENTS.NOTE_UPDATED,
+        actor=user,
+        subject_id=note.id,
+        data={'title': note.title},
+    )
 
 
 async def _has_read_access_to_file(
@@ -1155,23 +1184,21 @@ async def replace_note_content(
         if not note:
             return json.dumps({'error': 'Note not found'})
 
-        # Check write permission
         user_id = __user__.get('id')
-        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
-
-        from open_webui.models.access_grants import AccessGrants
-
-        if note.user_id != user_id and not await AccessGrants.has_access(
-            user_id=user_id,
-            resource_type='note',
-            resource_id=note.id,
-            permission='write',
-            user_group_ids=set(user_group_ids),
-        ):
+        if not await _has_write_access_to_note(note, user_id):
             return json.dumps({'error': 'Write access denied'})
 
-        # Build update form
-        update_data = {'data': {'content': {'md': content}}}
+        update_data = {
+            'data': {
+                **(note.data or {}),
+                'content': {
+                    **((note.data or {}).get('content') or {}),
+                    'json': None,
+                    'html': '',
+                    'md': content,
+                },
+            }
+        }
         if title:
             update_data['title'] = title
 
@@ -1180,6 +1207,8 @@ async def replace_note_content(
 
         if not updated_note:
             return json.dumps({'error': 'Failed to update note'})
+
+        await _emit_note_updated(__request__, __user__, updated_note)
 
         return json.dumps(
             {
@@ -1192,6 +1221,88 @@ async def replace_note_content(
         )
     except Exception as e:
         log.exception(f'replace_note_content error: {e}')
+        return json.dumps({'error': str(e)})
+
+
+async def replace_note_text(
+    note_id: str,
+    target_text: str,
+    replacement_text: str,
+    title: Optional[str] = None,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    Replace an exact text span in a note when it occurs exactly once.
+
+    :param note_id: The ID of the note to update
+    :param target_text: Exact text to replace
+    :param replacement_text: Replacement text
+    :param title: Optional new title for the note
+    :return: JSON with success status or a clear match-count error
+    """
+    if __request__ is None:
+        return json.dumps({'error': 'Request context not available'})
+
+    if not __user__:
+        return json.dumps({'error': 'User context not available'})
+
+    try:
+        from open_webui.models.notes import NoteUpdateForm
+
+        note = await Notes.get_note_by_id(note_id)
+        if not note:
+            return json.dumps({'error': 'Note not found'})
+
+        user_id = __user__.get('id')
+        if not await _has_write_access_to_note(note, user_id):
+            return json.dumps({'error': 'Write access denied'})
+
+        if target_text == '':
+            return json.dumps({'error': 'target_text must not be empty'})
+
+        content = ((note.data or {}).get('content') or {}).get('md') or ''
+        match_count = content.count(target_text)
+        if match_count != 1:
+            return json.dumps(
+                {
+                    'error': 'target_text must occur exactly once',
+                    'match_count': match_count,
+                },
+                ensure_ascii=False,
+            )
+
+        update_data = {
+            'data': {
+                **(note.data or {}),
+                'content': {
+                    **((note.data or {}).get('content') or {}),
+                    'json': None,
+                    'html': '',
+                    'md': content.replace(target_text, replacement_text, 1),
+                },
+            }
+        }
+        if title:
+            update_data['title'] = title
+
+        updated_note = await Notes.update_note_by_id(note_id, NoteUpdateForm(**update_data))
+        if not updated_note:
+            return json.dumps({'error': 'Failed to update note'})
+
+        await _emit_note_updated(__request__, __user__, updated_note)
+
+        return json.dumps(
+            {
+                'status': 'success',
+                'id': updated_note.id,
+                'title': updated_note.title,
+                'updated_at': updated_note.updated_at,
+            },
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        log.exception(f'replace_note_text error: {e}')
         return json.dumps({'error': str(e)})
 
 

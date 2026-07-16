@@ -23,10 +23,10 @@
 
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
-	import { compressImage, copyToClipboard, splitStream, convertHeicToJpeg } from '$lib/utils';
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { compressImage, copyToClipboard, convertHeicToJpeg } from '$lib/utils';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { getFileById, uploadFile } from '$lib/apis/files';
-	import { chatCompletion, generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 
 	import {
 		config,
@@ -42,8 +42,7 @@
 
 	import { downloadPdf } from './utils';
 
-	import Controls from './NoteEditor/Controls.svelte';
-	import Chat from './NoteEditor/Chat.svelte';
+	import Chat from '$lib/components/chat/Chat.svelte';
 
 	import NotePanel from '$lib/components/notes/NotePanel.svelte';
 	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
@@ -65,6 +64,7 @@
 	import {
 		deleteNoteById,
 		getNoteById,
+		getNoteChatById,
 		updateNoteById,
 		updateNoteAccessGrants,
 		toggleNotePinnedStatusById,
@@ -76,28 +76,18 @@
 	import Mic from '../icons/Mic.svelte';
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
 
-	import Calendar from '../icons/Calendar.svelte';
-	import Users from '../icons/Users.svelte';
 	import AccessButton from '../common/AccessButton.svelte';
 
-	import Image from '../common/Image.svelte';
-	import FileItem from '../common/FileItem.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import RecordMenu from './RecordMenu.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
-	import SparklesSolid from '../icons/SparklesSolid.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	import Bars3BottomLeft from '../icons/Bars3BottomLeft.svelte';
 	import ArrowUturnLeft from '../icons/ArrowUturnLeft.svelte';
 	import ArrowUturnRight from '../icons/ArrowUturnRight.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
-	import ArrowRight from '../icons/ArrowRight.svelte';
-	import Cog6 from '../icons/Cog6.svelte';
-	import AiMenu from './AIMenu.svelte';
 	import AdjustmentsHorizontalOutline from '../icons/AdjustmentsHorizontalOutline.svelte';
 
 	export let id: null | string = null;
@@ -131,7 +121,6 @@
 		);
 
 	let files = [];
-	let messages = [];
 
 	let wordCount = 0;
 	let charCount = 0;
@@ -142,8 +131,9 @@
 	let recording = false;
 	let displayMediaRecord = false;
 
-	let showPanel = false;
-	let selectedPanel = 'chat';
+	let showNoteChat = false;
+	let noteChatId = null;
+	let noteChatLoading = false;
 
 	let selectedContent = null;
 
@@ -156,11 +146,6 @@
 
 	let dragged = false;
 	let loading = false;
-
-	let editing = false;
-	let streaming = false;
-
-	let stopResponseFlag = false;
 
 	let inputElement = null;
 
@@ -175,8 +160,6 @@
 			toast.error(`${error}`);
 			return null;
 		});
-
-		messages = [];
 
 		if (res) {
 			note = res;
@@ -248,11 +231,6 @@
 		}
 		return false;
 	}
-
-	const onEdited = async () => {
-		if (!editor) return;
-		editor.commands.setContent(note.data.content.html);
-	};
 
 	const generateTitleHandler = async () => {
 		const content = note.data.content.md;
@@ -326,34 +304,6 @@ ${content}
 		titleGenerating = false;
 		await tick();
 		changeDebounceHandler();
-	};
-
-	async function enhanceNoteHandler() {
-		if (selectedModelId === '') {
-			toast.error($i18n.t('Please select a model.'));
-			return;
-		}
-
-		const model = $models
-			.filter((model) => model.id === selectedModelId && !(model?.info?.meta?.hidden ?? false))
-			.find((model) => model.id === selectedModelId);
-
-		if (!model) {
-			selectedModelId = '';
-			return;
-		}
-
-		editing = true;
-		await enhanceCompletionHandler(model);
-		editing = false;
-
-		onEdited();
-		versionIdx = null;
-	}
-
-	const stopResponseHandler = async () => {
-		stopResponseFlag = true;
-		console.log('stopResponse', stopResponseFlag);
 	};
 
 	function setContentByVersion(versionIdx) {
@@ -432,13 +382,6 @@ ${content}
 		}
 
 		files = [...files, fileItem];
-
-		// open the settings panel if it is not open
-		selectedPanel = 'settings';
-
-		if (!showPanel) {
-			showPanel = true;
-		}
 
 		try {
 			// If the file is an audio file, provide the language for STT.
@@ -597,6 +540,51 @@ ${content}
 		});
 	};
 
+	const noteChatFileKey = (file) =>
+		`${file?.type ?? ''}:${file?.id ?? file?.url ?? file?.name ?? ''}`;
+	const getNoteChatFiles = () => {
+		if (!note) return [];
+
+		const seen = new Set();
+		return (note?.data?.files ?? files ?? []).filter((file) => {
+			const key = noteChatFileKey(file);
+			if (seen.has(key)) return false;
+			seen.add(key);
+			return true;
+		});
+	};
+
+	const openNoteChat = async () => {
+		console.info('[note-chat] open requested', {
+			noteId: note?.id,
+			alreadyLoading: noteChatLoading,
+			currentChatId: noteChatId,
+			sidebarOpen: showNoteChat
+		});
+		if (!note?.id || noteChatLoading) return;
+
+		noteChatLoading = true;
+		const chat = await getNoteChatById(localStorage.token, note.id).catch((error) => {
+			console.error('[note-chat] open failed', { noteId: note?.id, error });
+			toast.error(`${error}`);
+			return null;
+		});
+		noteChatLoading = false;
+
+		if (chat?.id) {
+			console.info('[note-chat] open resolved', {
+				noteId: note.id,
+				chatId: chat.id,
+				title: chat.title,
+				hasChatPayload: !!chat.chat
+			});
+			noteChatId = chat.id;
+			showNoteChat = true;
+		} else {
+			console.warn('[note-chat] open returned no chat id', { noteId: note.id, chat });
+		}
+	};
+
 	const downloadHandler = async (type) => {
 		console.log('downloadHandler', type);
 		if (type === 'txt') {
@@ -627,113 +615,6 @@ ${content}
 		} else {
 			toast.error($i18n.t('Failed to delete note'));
 		}
-	};
-
-	const scrollToBottom = () => {
-		const element = document.getElementById('note-content-container');
-
-		if (element) {
-			element.scrollTop = element?.scrollHeight;
-		}
-	};
-
-	const enhanceCompletionHandler = async (model) => {
-		stopResponseFlag = false;
-		let enhancedContent = {
-			json: null,
-			html: '',
-			md: ''
-		};
-
-		const systemPrompt = `Enhance existing notes using additional context provided from audio transcription or uploaded file content in the content's primary language. Your task is to make the notes more useful and comprehensive by incorporating relevant information from the provided context.
-
-Input will be provided within <notes> and <context> XML tags, providing a structure for the existing notes and context respectively.
-
-# Output Format
-
-Provide the enhanced notes in markdown format. Use markdown syntax for headings, lists, task lists ([ ]) where tasks or checklists are strongly implied, and emphasis to improve clarity and presentation. Ensure that all integrated content from the context is accurately reflected. Return only the markdown formatted note.
-`;
-
-		const [res, controller] = await chatCompletion(
-			localStorage.token,
-			{
-				model: model.id,
-				stream: true,
-				messages: [
-					{
-						role: 'system',
-						content: systemPrompt
-					},
-					{
-						role: 'user',
-						content:
-							`<notes>${note.data.content.md}</notes>` +
-							(files && files.length > 0
-								? `\n<context>${files.map((file) => `${file.name}: ${file?.file?.data?.content ?? 'Could not extract content'}\n`).join('')}</context>`
-								: '')
-					}
-				]
-			},
-			`${WEBUI_BASE_URL}/api`
-		);
-
-		await tick();
-
-		streaming = true;
-
-		if (res && res.ok) {
-			const reader = res.body
-				.pipeThrough(new TextDecoderStream())
-				.pipeThrough(splitStream('\n'))
-				.getReader();
-
-			while (true) {
-				const { value, done } = await reader.read();
-				if (done || stopResponseFlag) {
-					if (stopResponseFlag) {
-						controller.abort('User: Stop Response');
-					}
-
-					editing = false;
-					streaming = false;
-					break;
-				}
-
-				try {
-					let lines = value.split('\n');
-
-					for (const line of lines) {
-						if (line !== '') {
-							console.log(line);
-							if (line === 'data: [DONE]') {
-								console.log(line);
-							} else {
-								let data = JSON.parse(line.replace(/^data: /, ''));
-								console.log(data);
-
-								if (data.choices && data.choices.length > 0) {
-									const choice = data.choices[0];
-									if (choice.delta && choice.delta.content) {
-										enhancedContent.md += choice.delta.content;
-										enhancedContent.html = marked.parse(enhancedContent.md);
-
-										note.data.content.md = enhancedContent.md;
-										note.data.content.html = enhancedContent.html;
-										note.data.content.json = null;
-
-										scrollToBottom();
-									}
-								}
-							}
-						}
-					}
-				} catch (error) {
-					console.log(error);
-				}
-			}
-		}
-
-		streaming = false;
 	};
 
 	const onDragOver = (e) => {
@@ -798,6 +679,18 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		if (_note.data && _note.data.files) {
 			files = _note.data.files;
 			note.data.files = files;
+		}
+
+		if (_note.data?.content) {
+			note.data.content = {
+				...note.data.content,
+				..._note.data.content
+			};
+			if (editor) {
+				editor.commands.setContent(
+					_note.data.content.html || marked.parse(_note.data.content.md ?? '')
+				);
+			}
 		}
 
 		if (_note.title && _note.title) {
@@ -1025,43 +918,18 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 											</div>
 										</div>
 									{/if}
-
-									<Tooltip placement="top" content={$i18n.t('Chat')} className="cursor-pointer">
-										<button
-											class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
-											on:click={() => {
-												if (showPanel && selectedPanel === 'chat') {
-													showPanel = false;
-												} else {
-													if (!showPanel) {
-														showPanel = true;
-													}
-													selectedPanel = 'chat';
-												}
-											}}
-										>
-											<ChatBubbleOval />
-										</button>
-									</Tooltip>
-
-									<Tooltip placement="top" content={$i18n.t('Controls')} className="cursor-pointer">
-										<button
-											class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
-											on:click={() => {
-												if (showPanel && selectedPanel === 'settings') {
-													showPanel = false;
-												} else {
-													if (!showPanel) {
-														showPanel = true;
-													}
-													selectedPanel = 'settings';
-												}
-											}}
-										>
-											<AdjustmentsHorizontalOutline />
-										</button>
-									</Tooltip>
 								{/if}
+
+								<Tooltip content={$i18n.t('Controls')} placement="top">
+									<button
+										type="button"
+										class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg"
+										aria-label={$i18n.t('Controls')}
+										on:click={openNoteChat}
+									>
+										<AdjustmentsHorizontalOutline className="size-4" />
+									</button>
+								</Tooltip>
 
 								{#if note?.write_access}
 									<RecordMenu
@@ -1150,6 +1018,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									onDelete={() => {
 										showDeleteConfirm = true;
 									}}
+									onChat={openNoteChat}
 									isPinned={$pinnedNotes.some((n) => n.id === note.id)}
 									onPin={async () => {
 										await toggleNotePinnedStatusById(localStorage.token, note.id);
@@ -1239,14 +1108,6 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 						class=" flex-1 w-full h-full overflow-auto px-2.5 relative"
 						id="note-content-container"
 					>
-						{#if editing}
-							<div
-								class="w-full h-full fixed top-0 left-0 {streaming
-									? ''
-									: ' backdrop-blur-xs  bg-white/10 dark:bg-gray-900/10'} flex items-center justify-center z-10 cursor-not-allowed"
-							></div>
-						{/if}
-
 						<RichTextInput
 							bind:this={inputElement}
 							bind:editor
@@ -1264,7 +1125,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							image={true}
 							{files}
 							placeholder={$i18n.t('Write something...')}
-							editable={versionIdx === null && !editing && note?.write_access}
+							editable={versionIdx === null && note?.write_access}
 							onSelectionUpdate={({ editor }) => {
 								const { from, to } = editor.state.selection;
 								const selectedText = editor.state.doc.textBetween(from, to, ' ');
@@ -1349,126 +1210,47 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				</div>
 			{/if}
 		</div>
-		<div class="absolute z-50 bottom-0 right-0 p-3.5 flex select-none">
-			<div class="flex flex-col gap-2 justify-end">
-				{#if recording}
-					<div class="flex-1 w-full">
-						<VoiceRecording
-							bind:recording
-							className="p-1 w-full max-w-full"
-							transcribe={false}
-							displayMedia={displayMediaRecord}
-							echoCancellation={false}
-							noiseSuppression={false}
-							onCancel={() => {
-								recording = false;
-								displayMediaRecord = false;
-							}}
-							onConfirm={(data) => {
-								if (data?.file) {
-									uploadFileHandler(data?.file);
-								}
-
-								recording = false;
-								displayMediaRecord = false;
-							}}
-						/>
-					</div>
-				{:else}
-					<div
-						class="cursor-pointer flex gap-0.5 rounded-full border border-gray-50 dark:border-gray-850/30 dark:bg-gray-850 transition shadow-xl"
-					>
-						<Tooltip content={$i18n.t('AI')} placement="top">
-							{#if editing}
-								<button
-									class="p-2 flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0"
-									on:click={() => {
-										stopResponseHandler();
-									}}
-									type="button"
-								>
-									<Spinner className="size-5" />
-								</button>
-							{:else}
-								<AiMenu
-									onEdit={() => {
-										enhanceNoteHandler();
-									}}
-									onChat={() => {
-										showPanel = true;
-										selectedPanel = 'chat';
-									}}
-								>
-									<div
-										class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
-									>
-										<SparklesSolid />
-									</div>
-								</AiMenu>
-							{/if}
-						</Tooltip>
-					</div>
-				{/if}
-			</div>
-		</div>
-	</Pane>
-	<NotePanel bind:show={showPanel}>
-		{#if selectedPanel === 'chat'}
-			<Chat
-				bind:show={showPanel}
-				bind:selectedModelId
-				bind:messages
-				bind:note
-				bind:editing
-				bind:streaming
-				bind:stopResponseFlag
-				{editor}
-				{inputElement}
-				{selectedContent}
-				{files}
-				onInsert={insertHandler}
-				onStop={stopResponseHandler}
-				{onEdited}
-				insertNoteHandler={() => {
-					insertNoteVersion(note);
-				}}
-				scrollToBottomHandler={scrollToBottom}
-			/>
-		{:else if selectedPanel === 'settings'}
-			<Controls
-				bind:show={showPanel}
-				bind:selectedModelId
-				bind:files
-				onUpdate={(updatedFiles) => {
-					files = updatedFiles;
-					note.data.files = files.length > 0 ? files : null;
-
-					if (editor) {
-						editor.storage.files = files;
-						const fileIds = new Set(files.map((file) => file.id));
-						const ranges = [];
-
-						editor.state.doc.descendants((node, pos) => {
-							const src = node.attrs.src;
-							if (
-								node.type.name === 'image' &&
-								src?.startsWith('data://') &&
-								!fileIds.has(src.slice('data://'.length))
-							) {
-								ranges.push([pos, pos + node.nodeSize]);
+		{#if recording}
+			<div class="absolute z-50 bottom-0 right-0 p-3.5 flex select-none">
+				<div class="flex-1 w-full">
+					<VoiceRecording
+						bind:recording
+						className="p-1 w-full max-w-full"
+						transcribe={false}
+						displayMedia={displayMediaRecord}
+						echoCancellation={false}
+						noiseSuppression={false}
+						onCancel={() => {
+							recording = false;
+							displayMediaRecord = false;
+						}}
+						onConfirm={(data) => {
+							if (data?.file) {
+								uploadFileHandler(data?.file);
 							}
-						});
 
-						if (ranges.length > 0) {
-							let transaction = editor.state.tr;
-							ranges.reverse().forEach(([from, to]) => {
-								transaction = transaction.delete(from, to);
-							});
-							editor.view.dispatch(transaction);
-						}
-					}
-
-					changeDebounceHandler();
+							recording = false;
+							displayMediaRecord = false;
+						}}
+					/>
+				</div>
+			</div>
+		{/if}
+	</Pane>
+	<NotePanel bind:show={showNoteChat}>
+		{#if noteChatLoading}
+			<div class="flex h-full items-center justify-center">
+				<Spinner className="size-5" />
+			</div>
+		{:else if noteChatId}
+			<Chat
+				embedded={true}
+				chatIdProp={noteChatId}
+				initialFiles={getNoteChatFiles()}
+				selectedText={selectedContent?.text ?? ''}
+				onInsertToNote={insertHandler}
+				onCloseEmbedded={() => {
+					showNoteChat = false;
 				}}
 			/>
 		{/if}

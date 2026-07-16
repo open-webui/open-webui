@@ -55,6 +55,7 @@
 	export let codeInterpreterEnabled = false;
 
 	export let pane: Pane | null = null;
+	export let containerId = 'chat-container';
 
 	let largeScreen = false;
 	let dragged = false;
@@ -159,7 +160,7 @@
 
 	export const openPane = () => {
 		if (parseInt(localStorage?.chatControlsSize)) {
-			const container = document.getElementById('chat-container');
+			const container = document.getElementById(containerId);
 			let size = Math.floor(
 				(parseInt(localStorage?.chatControlsSize) / container.clientWidth) * 100
 			);
@@ -218,7 +219,7 @@
 				paneReady = true;
 			}, 0);
 
-			const container = document.getElementById('chat-container') as HTMLElement;
+			const container = document.getElementById(containerId) as HTMLElement;
 			if (!container) return;
 
 			minSize = Math.floor((350 / container.clientWidth) * 100);
@@ -407,7 +408,7 @@
 				if (size < minSize) {
 					localStorage.chatControlsSize = 0;
 				} else {
-					const container = document.getElementById('chat-container');
+					const container = document.getElementById(containerId);
 					localStorage.chatControlsSize = Math.floor((size / 100) * container.clientWidth);
 				}
 			}

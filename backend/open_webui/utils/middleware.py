@@ -1881,6 +1881,7 @@ def apply_params_to_form_data(form_data, model):
         'reasoning_tags': list,
         'compact_token_threshold': int,
         'system': str,
+        'note_id': str,
     }
 
     for key in list(params.keys()):

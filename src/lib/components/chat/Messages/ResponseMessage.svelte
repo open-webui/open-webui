@@ -166,6 +166,7 @@
 	export let readOnly = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
+	export let onInsertToNote: ((content: string) => void) | null = null;
 
 	let citationsElement: HTMLDivElement;
 
@@ -1050,6 +1051,22 @@
 										</svg>
 									</button>
 								</Tooltip>
+
+								{#if onInsertToNote && visibleResponseContent}
+									<Tooltip content={$i18n.t('Insert into note')} placement="bottom">
+										<button
+											aria-label={$i18n.t('Insert into note')}
+											class="{isLastMessage || ($settings?.highContrastMode ?? false)
+												? 'visible'
+												: 'invisible group-hover:visible'} rounded-lg px-2 py-1.5 text-xs text-gray-500 transition hover:bg-black/5 hover:text-black dark:hover:bg-white/5 dark:hover:text-white"
+											on:click={() => {
+												onInsertToNote?.(visibleResponseContent);
+											}}
+										>
+											{$i18n.t('Insert')}
+										</button>
+									</Tooltip>
+								{/if}
 
 								{#if !readOnly && ($user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true))}
 									<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">

@@ -49,6 +49,7 @@
 	export let autoScroll;
 
 	export let onSelect = (e) => {};
+	export let onInsertToNote: ((content: string) => void) | null = null;
 
 	export let messagesCount: number | null = 8;
 	let messagesLoading = false;
@@ -542,6 +543,7 @@
 								{readOnly}
 								{editCodeBlock}
 								{topPadding}
+								{onInsertToNote}
 							/>
 						{/each}
 					</ul>

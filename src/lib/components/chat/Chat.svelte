@@ -115,10 +115,24 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
+	import XMark from '../icons/XMark.svelte';
 
 	export let chatIdProp = '';
+	export let embedded = false;
+	export let embeddedTitle = '';
+	export let initialFiles = [];
+	export let selectedText = '';
+	export let onInsertToNote: ((content: string) => void) | null = null;
+	export let onCloseEmbedded: (() => void) | null = null;
 
 	let loading = true;
+	$: chatContainerId = embedded ? 'note-chat-container' : 'chat-container';
+	const embeddedSuggestedPrompts = [
+		'Enhance this note and update it.',
+		'Summarize this note.',
+		'Extract action items from this note.',
+		'Rewrite the selected text.'
+	];
 
 	const eventTarget = new EventTarget();
 	let controlPane: Pane | undefined;
@@ -154,6 +168,30 @@
 	}
 	let serverContextUsage = null;
 	let contextUsage = null;
+
+	const getAvailableModelIds = () =>
+		$models.filter((m) => !(m?.info?.meta?.hidden ?? false)).map((m) => m.id);
+	const getDefaultModelIds = () =>
+		$config?.default_models ? $config.default_models.split(',') : [];
+	const normalizeSelectedModels = (modelIds = []) => {
+		const availableModels = getAvailableModelIds();
+		const defaultModels = getDefaultModelIds();
+		let normalized = (modelIds ?? []).filter(
+			(modelId) => modelId && availableModels.includes(modelId)
+		);
+
+		if (normalized.length === 0 && $settings?.models?.length) {
+			normalized = $settings.models.filter((modelId) => availableModels.includes(modelId));
+		}
+		if (normalized.length === 0 && defaultModels.length > 0) {
+			normalized = defaultModels.filter((modelId) => availableModels.includes(modelId));
+		}
+		if (normalized.length === 0) {
+			normalized = availableModels.length > 0 ? [availableModels[0]] : [''];
+		}
+
+		return normalized;
+	};
 
 	const estimateTokens = (value) => {
 		if (value === null || value === undefined || value === '') {
@@ -240,6 +278,10 @@
 	};
 
 	$: contextUsage = getContextUsage() ?? serverContextUsage;
+	$: embeddedHeaderTitle =
+		embeddedTitle ||
+		($chatTitle && !$chatTitle.startsWith('Chat:') ? $chatTitle : '') ||
+		$i18n.t('Chat');
 
 	let selectedToolIds = [];
 	let selectedSkillIds = [];
@@ -320,8 +362,56 @@
 	let chatFiles = [];
 	let files = [];
 	let params = {};
+	let appliedInitialFilesKey = '';
+	let loadedChatIdProp = '';
 
-	$: if (chatIdProp) {
+	const fileKey = (file) => `${file?.type ?? ''}:${file?.id ?? file?.url ?? file?.name ?? ''}`;
+	const mergeFiles = (current, incoming) => {
+		const seen = new Set();
+		return [...(incoming ?? []), ...(current ?? [])].filter((file) => {
+			const key = fileKey(file);
+			if (seen.has(key)) return false;
+			seen.add(key);
+			return true;
+		});
+	};
+	const applyInitialFiles = () => {
+		if (!embedded || !initialFiles?.length) return;
+
+		const key = JSON.stringify(initialFiles.map(fileKey));
+		if (key === appliedInitialFilesKey) return;
+
+		files = mergeFiles(files, initialFiles);
+		chatFiles = mergeFiles(chatFiles, initialFiles);
+		appliedInitialFilesKey = key;
+	};
+	const withSelectedText = (text: string) =>
+		embedded && selectedText?.trim()
+			? `${text}\n\nSelected note text:\n${selectedText.trim()}`
+			: text;
+	const submitEmbeddedPrompt = async (text: string) => {
+		await tick();
+		await submitHandler(withSelectedText(text));
+	};
+	const noteChatDebug = (message: string, data: Record<string, unknown> = {}) => {
+		if (!embedded) return;
+		console.info('[note-chat]', message, {
+			chatIdProp,
+			activeChatId: $chatId,
+			loading,
+			...data
+		});
+	};
+
+	$: if (embedded && !loading) {
+		applyInitialFiles();
+	}
+
+	$: if (chatIdProp && chatIdProp !== loadedChatIdProp) {
+		noteChatDebug('chatIdProp changed; loading linked chat', {
+			previousChatIdProp: loadedChatIdProp
+		});
+		loadedChatIdProp = chatIdProp;
 		navigateHandler();
 	}
 
@@ -332,9 +422,11 @@
 	}
 
 	const navigateHandler = async () => {
+		noteChatDebug('navigateHandler start');
 		// Mark the outgoing chat as read before loading the new one.
 		// $chatId still holds the previous chat here — loadChat() updates it.
 		if ($chatId && $chatId !== chatIdProp && !$temporaryChatEnabled) {
+			noteChatDebug('marking outgoing chat read', { outgoingChatId: $chatId });
 			updateLastReadAt($chatId);
 		}
 
@@ -356,9 +448,12 @@
 			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
 		);
 
-		if (chatIdProp && (await loadChat())) {
+		const loaded = chatIdProp ? await loadChat() : false;
+		noteChatDebug('loadChat completed inside navigateHandler', { loaded });
+		if (loaded) {
 			await tick();
 			loading = false;
+			noteChatDebug('embedded chat loading false');
 			window.setTimeout(() => scrollToBottom(), 0);
 
 			await tick();
@@ -396,8 +491,14 @@
 
 			const chatInput = document.getElementById('chat-input');
 			chatInput?.focus();
-		} else {
+		} else if (!embedded) {
 			await goto('/');
+		} else {
+			loading = false;
+			console.warn('[note-chat] embedded load failed; clearing spinner', {
+				chatIdProp,
+				activeChatId: $chatId
+			});
 		}
 	};
 
@@ -1548,7 +1649,7 @@
 		await showCallOverlay.set(false);
 		await showArtifacts.set(false);
 
-		if ($page.url.pathname.includes('/c/')) {
+		if (!embedded && $page.url.pathname.includes('/c/')) {
 			window.history.replaceState(history.state, '', `/`);
 		}
 
@@ -1676,27 +1777,53 @@
 	};
 
 	const loadChat = async () => {
+		noteChatDebug('loadChat start');
 		// chatIdProp is empty for chats started from the home page (URL set via replaceState)
 		chatId.set(chatIdProp || $chatId);
+		noteChatDebug('loadChat set active chat id');
 
 		if ($temporaryChatEnabled) {
+			noteChatDebug('loadChat disabling temporary chat');
 			temporaryChatEnabled.set(false);
 		}
 
 		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
-			await goto('/');
+			console.error('[note-chat] getChatById failed', {
+				chatIdProp,
+				activeChatId: $chatId,
+				error
+			});
+			if (!embedded) {
+				await goto('/');
+			}
 			return null;
+		});
+		noteChatDebug('getChatById completed', {
+			found: !!chat,
+			chatId: chat?.id,
+			hasChatPayload: !!chat?.chat,
+			title: chat?.title
 		});
 
 		if (chat) {
 			tags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
+				console.warn('[note-chat] getTagsById failed; continuing without tags', {
+					chatIdProp,
+					activeChatId: $chatId,
+					error
+				});
 				return [];
 			});
+			noteChatDebug('getTagsById completed', { tagCount: tags?.length ?? 0 });
 
 			const chatContent = chat.chat;
 
 			if (chatContent) {
-				console.log(chatContent);
+				noteChatDebug('chat payload found', {
+					models: chatContent?.models,
+					hasHistory: !!chatContent?.history,
+					messageCount: Object.keys(chatContent?.history?.messages ?? {}).length
+				});
 
 				selectedModels =
 					(chatContent?.models ?? undefined) !== undefined
@@ -1705,6 +1832,13 @@
 
 				if (!($user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true))) {
 					selectedModels = selectedModels.length > 0 ? [selectedModels[0]] : [''];
+				}
+				if (
+					selectedModels.length === 0 ||
+					(selectedModels.length === 1 && selectedModels[0] === '')
+				) {
+					selectedModels = normalizeSelectedModels(selectedModels);
+					noteChatDebug('normalized empty selected models after load', { selectedModels });
 				}
 
 				oldSelectedModelIds = structuredClone(selectedModels);
@@ -1721,6 +1855,7 @@
 				chatTitle.set(chatContent.title);
 
 				params = structuredClone(chatContent?.params ?? {});
+				delete params.note_id;
 				chatFiles = structuredClone(chatContent?.files ?? []);
 
 				// Load tasks from chat-level DB field
@@ -1748,13 +1883,25 @@
 				// If the response is already done, remaining tasks are just background
 				// work (follow-ups, title gen) that shouldn't block the input.
 				const activeTaskIds = taskIds;
+				const currentMessage = history.currentId ? history.messages[history.currentId] : null;
 				const pendingTaskIds = await getTaskIdsByChatId(localStorage.token, $chatId)
 					.then((res) => res?.task_ids ?? [])
-					.catch(() => []);
+					.catch((error) => {
+						console.warn('[note-chat] getTaskIdsByChatId failed; continuing without tasks', {
+							chatIdProp,
+							activeChatId: $chatId,
+							error
+						});
+						return [];
+					});
+				noteChatDebug('task reconciliation completed', {
+					pendingTaskCount: pendingTaskIds.length,
+					hasCurrentMessage: !!currentMessage
+				});
 				if (taskIds !== activeTaskIds) {
+					noteChatDebug('task ids changed during load; aborting stale load');
 					return;
 				}
-				const currentMessage = history.currentId ? history.messages[history.currentId] : null;
 				const responseComplete = currentMessage?.role === 'assistant' && currentMessage?.done;
 
 				if (pendingTaskIds.length > 0 && !responseComplete) {
@@ -1771,9 +1918,18 @@
 
 				return true;
 			} else {
+				console.warn('[note-chat] chat response missing chat payload', {
+					chatIdProp,
+					activeChatId: $chatId,
+					chat
+				});
 				return null;
 			}
 		}
+		console.warn('[note-chat] no chat returned from getChatById', {
+			chatIdProp,
+			activeChatId: $chatId
+		});
 	};
 
 	const scrollToBottom = async (behavior = 'auto') => {
@@ -2298,8 +2454,10 @@
 			);
 
 			if (result?.id) {
-				await goto(`/c/${result.id}`);
-				await refreshChatList(localStorage.token, { refreshPinned: true });
+				if (!embedded) {
+					await goto(`/c/${result.id}`);
+					await refreshChatList(localStorage.token, { refreshPinned: true });
+				}
 				toast.success($i18n.t('Chat forked'), { id: toastId });
 			} else {
 				toast.error($i18n.t('Failed to fork chat'), { id: toastId });
@@ -2857,7 +3015,7 @@
 				// and causing spurious toast notifications / state duplication).
 				if (res.chat_id && $chatId !== res.chat_id && $chatId === _chatId) {
 					await chatId.set(res.chat_id);
-					if (!$temporaryChatEnabled) {
+					if (!$temporaryChatEnabled && !embedded) {
 						window.history.replaceState(history.state, '', `/c/${res.chat_id}`);
 						await refreshChatList(localStorage.token);
 
@@ -3134,11 +3292,15 @@
 			_chatId = chat.id;
 			await chatId.set(_chatId);
 
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			if (!embedded) {
+				window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			}
 
 			await tick();
 
-			await refreshChatList(localStorage.token);
+			if (!embedded) {
+				await refreshChatList(localStorage.token);
+			}
 
 			selectedFolder.set(null);
 		} else {
@@ -3340,14 +3502,17 @@
 />
 
 <div
-	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+	class="{embedded
+		? 'h-full'
+		: 'h-screen max-h-[100dvh]'} transition-width duration-200 ease-in-out {$showSidebar &&
+	!embedded
 		? '  md:max-w-[calc(100%-var(--sidebar-width))]'
 		: ' '} w-full max-w-full flex flex-col"
-	id="chat-container"
+	id={chatContainerId}
 >
 	{#if !loading}
 		<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
-			{#if $selectedFolder && $selectedFolder?.meta?.background_image_url}
+			{#if !embedded && $selectedFolder && $selectedFolder?.meta?.background_image_url}
 				<div
 					class="absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
 					style="background-image: url({$selectedFolder?.meta?.background_image_url})  "
@@ -3356,7 +3521,7 @@
 				<div
 					class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
 				/>
-			{:else if $settings?.backgroundImageUrl ?? $config?.license_metadata?.background_image_url ?? null}
+			{:else if !embedded && ($settings?.backgroundImageUrl ?? $config?.license_metadata?.background_image_url ?? null)}
 				<div
 					class="absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
 					style="background-image: url({$settings?.backgroundImageUrl ??
@@ -3371,66 +3536,86 @@
 			<PaneGroup direction="horizontal" class="w-full h-full">
 				<Pane defaultSize={50} minSize={30} class="h-full flex relative max-w-full flex-col">
 					<FilesOverlay show={dragged} />
-					<Navbar
-						bind:this={navbarElement}
-						{readOnly}
-						chat={{
-							id: $chatId,
-							chat: {
-								title: $chatTitle,
-								models: selectedModels,
-								system: $settings.system ?? undefined,
-								params: params,
-								history: history,
-								timestamp: Date.now()
-							}
-						}}
-						{history}
-						title={$chatTitle}
-						shareEnabled={!!history.currentId}
-						{initNewChat}
-						scrollToTop={!isNearTop ? scrollToTop : null}
-						{archiveChatHandler}
-						{deleteChatHandler}
-						{moveChatHandler}
-						onSaveTempChat={async () => {
-							try {
-								if (!history?.currentId || !Object.keys(history.messages).length) {
-									toast.error($i18n.t('No conversation to save'));
-									return;
+					{#if embedded}
+						<div
+							class="h-10 shrink-0 flex items-center justify-between gap-2 border-b border-gray-50/80 px-3 text-gray-700 dark:border-gray-850/40 dark:text-gray-200"
+						>
+							<div class="min-w-0 truncate text-[13px] font-medium">
+								{embeddedHeaderTitle}
+							</div>
+							<Tooltip content={$i18n.t('Close')} placement="bottom">
+								<button
+									type="button"
+									class="rounded-md p-1 text-gray-500 transition hover:bg-black/5 hover:text-gray-900 dark:hover:bg-white/5 dark:hover:text-white"
+									on:click={() => onCloseEmbedded?.()}
+									aria-label={$i18n.t('Close')}
+								>
+									<XMark className="size-4" strokeWidth="2" />
+								</button>
+							</Tooltip>
+						</div>
+					{:else}
+						<Navbar
+							bind:this={navbarElement}
+							{readOnly}
+							chat={{
+								id: $chatId,
+								chat: {
+									title: $chatTitle,
+									models: selectedModels,
+									system: $settings.system ?? undefined,
+									params: params,
+									history: history,
+									timestamp: Date.now()
 								}
-								const messages = createMessagesList(history, history.currentId);
-								const title =
-									messages.find((m) => m.role === 'user')?.content ?? $i18n.t('New Chat');
+							}}
+							{history}
+							title={$chatTitle}
+							shareEnabled={!!history.currentId}
+							{initNewChat}
+							scrollToTop={!isNearTop ? scrollToTop : null}
+							{archiveChatHandler}
+							{deleteChatHandler}
+							{moveChatHandler}
+							onSaveTempChat={async () => {
+								try {
+									if (!history?.currentId || !Object.keys(history.messages).length) {
+										toast.error($i18n.t('No conversation to save'));
+										return;
+									}
+									const messages = createMessagesList(history, history.currentId);
+									const title =
+										messages.find((m) => m.role === 'user')?.content ?? $i18n.t('New Chat');
 
-								const savedChat = await createNewChat(
-									localStorage.token,
-									{
-										id: uuidv4(),
-										title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
-										models: selectedModels,
-										params: params,
-										history: history,
-										messages: messages,
-										timestamp: Date.now()
-									},
-									null
-								);
+									const savedChat = await createNewChat(
+										localStorage.token,
+										{
+											id: uuidv4(),
+											title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
+											models: selectedModels,
+											params: params,
+											history: history,
+											messages: messages,
+											timestamp: Date.now()
+										},
+										null
+									);
 
-								if (savedChat) {
-									temporaryChatEnabled.set(false);
-									chatId.set(savedChat.id);
-									await refreshChatList(localStorage.token);
+									if (savedChat) {
+										temporaryChatEnabled.set(false);
+										chatId.set(savedChat.id);
+										await refreshChatList(localStorage.token);
 
-									await goto(`/c/${savedChat.id}`);
-									toast.success($i18n.t('Conversation saved successfully'));
+										await goto(`/c/${savedChat.id}`);
+										toast.success($i18n.t('Conversation saved successfully'));
+									}
+								} catch (error) {
+									console.error('Error saving conversation:', error);
+									toast.error($i18n.t('Failed to save conversation'));
 								}
-							} catch (error) {
-								console.error('Error saving conversation:', error);
-								toast.error($i18n.t('Failed to save conversation'));
-							}
-						}}
-					/>
+							}}
+						/>
+					{/if}
 
 					<div id="chat-pane" class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
 						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
@@ -3458,6 +3643,7 @@
 										}}
 										bind:selectedModels
 										{atSelectedModel}
+										className={embedded ? 'h-full flex pt-4' : 'h-full flex pt-18'}
 										{sendMessage}
 										{showMessage}
 										{submitMessage}
@@ -3466,9 +3652,10 @@
 										{mergeResponses}
 										{chatActionHandler}
 										{addMessages}
-										topPadding={true}
+										topPadding={!embedded}
 										bottomPadding={files.length > 0}
 										{onSelect}
+										{onInsertToNote}
 									/>
 								</div>
 							</div>
@@ -3557,7 +3744,7 @@
 											if (e.detail || files.length > 0) {
 												await tick();
 
-												submitHandler(e.detail);
+												submitHandler(withSelectedText(e.detail));
 											}
 										}}
 									/>
@@ -3569,6 +3756,68 @@
 									</div>
 								</div>
 							{/if}
+						{:else if embedded}
+							<div class="flex h-full min-h-0 flex-col justify-end">
+								<div class="flex flex-1 items-end px-5 pb-3">
+									<div class="w-full">
+										<div class="mb-2 text-[12px] text-gray-400 dark:text-gray-500">
+											{$i18n.t('Suggested prompts')}
+										</div>
+										<div class="flex flex-col">
+											{#each embeddedSuggestedPrompts as suggestion}
+												<button
+													type="button"
+													class="flex min-h-8 w-full items-center justify-between py-1 text-left text-[13px] leading-5 text-gray-500 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+													on:click={() => submitEmbeddedPrompt(suggestion)}
+												>
+													<span class="min-w-0 truncate">{$i18n.t(suggestion)}</span>
+												</button>
+											{/each}
+										</div>
+									</div>
+								</div>
+								<div class="pb-2 z-10">
+									<MessageInput
+										bind:this={messageInput}
+										{history}
+										{taskIds}
+										bind:selectedModels
+										bind:files
+										bind:prompt
+										bind:autoScroll
+										bind:selectedToolIds
+										bind:selectedSkillIds
+										bind:selectedFilterIds
+										bind:imageGenerationEnabled
+										bind:codeInterpreterEnabled
+										{pendingOAuthTools}
+										bind:webSearchEnabled
+										bind:atSelectedModel
+										bind:showCommands
+										bind:dragged
+										chatId={$chatId}
+										{contextUsage}
+										compactHandler={handleManualCompact}
+										statusHandler={handleStatusCommand}
+										forkHandler={handleForkChat}
+										toolServers={$toolServers}
+										{generating}
+										{stopResponse}
+										{createMessagePair}
+										{onUpload}
+										messageQueue={$chatRequestQueues[$chatId] ?? []}
+										{chatTasks}
+										onWebSearchToggle={handleWebSearchToggle}
+										on:submit={async (e) => {
+											clearDraft($chatId);
+											if (e.detail || files.length > 0) {
+												await tick();
+												submitHandler(withSelectedText(e.detail));
+											}
+										}}
+									/>
+								</div>
+							</div>
 						{:else}
 							<div class="flex items-center h-full">
 								<Placeholder
@@ -3603,7 +3852,7 @@
 										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
-											submitHandler(e.detail);
+											submitHandler(withSelectedText(e.detail));
 										}
 									}}
 								/>
@@ -3612,28 +3861,31 @@
 					</div>
 				</Pane>
 
-				<ChatControls
-					bind:this={controlPaneComponent}
-					bind:history
-					bind:chatFiles
-					bind:params
-					bind:files
-					bind:pane={controlPane}
-					chatId={$chatId}
-					modelId={selectedModelIds?.at(0) ?? null}
-					models={selectedModelIds.reduce((a, e, i, arr) => {
-						const model = $models.find((m) => m.id === e);
-						if (model) {
-							return [...a, model];
-						}
-						return a;
-					}, [])}
-					submitPrompt={submitHandler}
-					{stopResponse}
-					{showMessage}
-					{eventTarget}
-					{codeInterpreterEnabled}
-				/>
+				{#if !embedded}
+					<ChatControls
+						bind:this={controlPaneComponent}
+						bind:history
+						bind:chatFiles
+						bind:params
+						bind:files
+						bind:pane={controlPane}
+						chatId={$chatId}
+						modelId={selectedModelIds?.at(0) ?? null}
+						models={selectedModelIds.reduce((a, e, i, arr) => {
+							const model = $models.find((m) => m.id === e);
+							if (model) {
+								return [...a, model];
+							}
+							return a;
+						}, [])}
+						submitPrompt={submitHandler}
+						{stopResponse}
+						{showMessage}
+						{eventTarget}
+						{codeInterpreterEnabled}
+						containerId={chatContainerId}
+					/>
+				{/if}
 			</PaneGroup>
 		</div>
 	{:else if loading}

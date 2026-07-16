@@ -122,7 +122,7 @@ textarea::-webkit-scrollbar-corner {
 }
 
 .markdown-prose {
-	@apply prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply prose dark:prose-invert max-w-none break-words font-normal leading-relaxed prose-p:my-0 prose-p:font-normal prose-p:leading-relaxed prose-headings:my-1 prose-headings:font-normal prose-headings:leading-snug prose-strong:font-medium prose-code:before:content-none prose-code:after:content-none prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 prose-li:font-normal prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-blockquote:font-normal prose-hr:my-4 prose-img:my-1 [&>:first-child]:mt-0 [&>:last-child]:mb-0;
 }
 
 .markdown-prose-sm {
