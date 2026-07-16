@@ -11,6 +11,7 @@ The scheduler_worker_loop handles all time-based background work:
 
 Environment:
     SCHEDULER_POLL_INTERVAL             – seconds between polls (default: 10)
+    TIMER_POLL_INTERVAL                 – seconds between timer polls (default: 1)
     CALENDAR_ALERT_LOOKAHEAD_MINUTES   – default alert window (default: 5)
 """
 
@@ -43,6 +44,7 @@ from starlette.datastructures import Headers
 log = logging.getLogger(__name__)
 
 SCHEDULER_POLL_INTERVAL = int(os.getenv('SCHEDULER_POLL_INTERVAL', os.getenv('AUTOMATION_POLL_INTERVAL', '10')))
+TIMER_POLL_INTERVAL = int(os.getenv('TIMER_POLL_INTERVAL', '1'))
 CALENDAR_ALERT_LOOKAHEAD_MINUTES = int(os.getenv('CALENDAR_ALERT_LOOKAHEAD_MINUTES', '10'))
 
 
@@ -190,10 +192,15 @@ async def scheduler_worker_loop(app) -> None:
     Runs on every instance. Poll interval is configurable via
     SCHEDULER_POLL_INTERVAL env var (default: 10 seconds).
     """
-    log.info(f'Scheduler worker started (poll interval: {SCHEDULER_POLL_INTERVAL}s)')
+    log.info(
+        f'Scheduler worker started (timer poll interval: {TIMER_POLL_INTERVAL}s, '
+        f'scheduler poll interval: {SCHEDULER_POLL_INTERVAL}s)'
+    )
+    next_scheduler_poll = 0.0
 
     while True:
         try:
+            now = time.monotonic()
             # ── Timers ──
             try:
                 from open_webui.utils.timers import claim_due_timers, execute_due_timer
@@ -202,6 +209,12 @@ async def scheduler_worker_loop(app) -> None:
                     asyncio.create_task(execute_due_timer(app, timer_id, claim_id))
             except Exception:
                 log.exception('Scheduler: timer error')
+
+            if now < next_scheduler_poll:
+                await asyncio.sleep(max(1, TIMER_POLL_INTERVAL))
+                continue
+            # Jitter to spread automation/calendar load across instances; timers keep a tight poll.
+            next_scheduler_poll = now + SCHEDULER_POLL_INTERVAL + random.uniform(0, 2)
 
             # ── Automations ──
             if await Config.get('automations.enable'):
@@ -225,8 +238,7 @@ async def scheduler_worker_loop(app) -> None:
         except Exception:
             log.exception('Scheduler worker error')
 
-        # Jitter to spread load across instances
-        await asyncio.sleep(SCHEDULER_POLL_INTERVAL + random.uniform(0, 2))
+        await asyncio.sleep(max(1, TIMER_POLL_INTERVAL))
 
 
 ##########################

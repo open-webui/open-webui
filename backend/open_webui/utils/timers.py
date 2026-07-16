@@ -275,45 +275,61 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
         user_message_id = str(uuid4())
         parent_lock = _parent_locks.setdefault(parent_chat_id, asyncio.Lock())
         async with parent_lock:
-            parent = await Chats.get_chat_by_id_and_user_id(parent_chat_id, timer.user_id)
-            if not parent:
-                await _set_timer_status(timer_id, 'error', timer_error='parent chat no longer exists')
-                return
-            parent_chat = copy.deepcopy(parent.chat or {})
-            history = parent_chat.setdefault('history', {})
-            messages = history.setdefault('messages', {})
-            done_assistants = [
-                message
-                for message in messages.values()
-                if message.get('role') == 'assistant' and message.get('done') is not False
-            ]
-            parent_id = (
-                max(done_assistants, key=lambda message: message.get('timestamp', 0)).get('id')
-                if done_assistants
-                else meta.get('parent_message_id')
-            )
-            pending_meta = {'internal': True, 'type': 'timer', 'timer_id': timer_id}
-            if await has_active_tasks(app.state.redis, parent_chat_id):
-                pending_meta['timer_pending'] = True
+            async with get_async_db() as db:
+                stmt = select(Chat).where(Chat.id == parent_chat_id, Chat.user_id == timer.user_id)
+                if db.bind.dialect.name == 'postgresql':
+                    stmt = stmt.with_for_update()
+                result = await db.execute(stmt)
+                parent = result.scalar_one_or_none()
+                if not parent:
+                    await _set_timer_status(timer_id, 'error', timer_error='parent chat no longer exists')
+                    return
 
-            user_message = {
-                'id': user_message_id,
-                'parentId': parent_id,
-                'childrenIds': [],
-                'role': 'user',
-                'content': prompt,
-                'model': model_id,
-                'meta': pending_meta,
-                'timestamp': int(time.time()),
-            }
-            messages[user_message_id] = user_message
-            if parent_id and parent_id in messages:
-                children = messages[parent_id].setdefault('childrenIds', [])
-                if user_message_id not in children:
-                    children.append(user_message_id)
-            await Chats.update_chat_by_id(parent_chat_id, parent_chat)
+                parent_chat = copy.deepcopy(parent.chat or {})
+                history = parent_chat.setdefault('history', {})
+                messages = history.setdefault('messages', {})
+                done_assistants = [
+                    message
+                    for message in messages.values()
+                    if message.get('role') == 'assistant' and message.get('done') is not False
+                ]
+                parent_id = (
+                    max(done_assistants, key=lambda message: message.get('timestamp', 0)).get('id')
+                    if done_assistants
+                    else meta.get('parent_message_id')
+                )
+                pending_meta = {'internal': True, 'type': 'timer', 'timer_id': timer_id}
+                if await has_active_tasks(app.state.redis, parent_chat_id):
+                    pending_meta['timer_pending'] = True
+
+                user_message = {
+                    'id': user_message_id,
+                    'parentId': parent_id,
+                    'childrenIds': [],
+                    'role': 'user',
+                    'content': prompt,
+                    'model': model_id,
+                    'meta': pending_meta,
+                    'timestamp': int(time.time()),
+                }
+                messages[user_message_id] = user_message
+                if parent_id and parent_id in messages:
+                    children = messages[parent_id].setdefault('childrenIds', [])
+                    if user_message_id not in children:
+                        children.append(user_message_id)
+
+                parent.chat = parent_chat
+                parent.updated_at = int(time.time())
+                timer_row = await db.get(Chat, timer_id)
+                if timer_row:
+                    timer_row.meta = {
+                        **(timer_row.meta or {}),
+                        'timer_status': 'dispatched',
+                        'timer_dispatched_at': int(time.time_ns()),
+                    }
+                    timer_row.updated_at = int(time.time())
+                await db.commit()
             await ChatMessages.upsert_message(user_message_id, parent_chat_id, timer.user_id, user_message)
-            await _set_timer_status(timer_id, 'dispatched', timer_dispatched_at=int(time.time_ns()))
 
         if user_message['meta'].get('timer_pending') is True:
             await sio.emit(
