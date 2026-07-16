@@ -13,6 +13,56 @@
 
 ---
 
+## Sessão 2026-07-16 — ChatND 1.26.0: busca por data em qualquer formato
+
+**16/07/2026 — ChatND 1.26.0: busca por data em qualquer formato.**
+Causa da Q14 isolada: **a pergunta dizia "13/07", o arquivo dizia "13072026"**.
+Provado por **dois testes na 1.25.0** com a valve de enriquecimento **ON** —
+*"reunião de 13/07"* **não achou** a ata; *"documento 13072026"* **achou e resumiu**.
+A **única variável foi o token**. Solução: `_expandir_datas()` gera as variantes
+dentro do `_buscar_sources`.
+
+**Por que o formato quebrava a busca (em linguagem simples):** a busca por palavra
+(BM25) casa **token a token** — para ela, "13/07" e "13072026" são palavras
+diferentes, sem parentesco. E a busca semântica entende **assunto**, não
+**calendário**: ela não sabe que "13 de julho de 2026" é a mesma coisa que "13/07".
+Com as duas cegas para a data, a ata ficava de fora **por pontuação**, com vagas
+sobrando — não era ruído nem falta de espaço.
+
+**Onde a expansão mora — e por que não no `_texto_de_busca`:** ela ficou dentro do
+`_buscar_sources`. O `_texto_de_busca` também alimenta a **rota de imagem** (injetaria
+variantes de data em prompt de imagem) e o **gatilho do piso** dos fundadores. Assim,
+**só a consulta de busca muda**; a pergunta que vai ao modelo fica intacta.
+
+**Dependência que não pode ser esquecida:** a 1.26.0 **depende** da valve
+*"Enriquecer o texto da pesquisa híbrida"* estar **ON** — é ela que põe o **nome do
+arquivo** (tokenizado) no texto que o BM25 enxerga. Sem ela, o token `13072026` **não
+existe em nenhum texto pesquisável** e só a variante por extenso paga. **Duas metades
+da mesma ponte.** Desligar a valve regride a busca por data **sem que o sintoma aponte
+para o toggle**.
+
+**Também confirmado:** a valve age **em tempo de consulta** — **não exige reindexar**.
+Os mesmos trechos subiram de 0,669/0,409/0,242/0,213 (OFF) para 0,847/0,528/0,426/0,344
+(ON), sem tocar na base.
+
+**Dívida anotada:** o índice BM25 é **reconstruído do zero, com a coleção inteira, a
+cada pergunta** (`BM25Retriever.from_texts`, `retrieval/utils.py:382`). **Irrelevante
+com 86 documentos** — é parte dos ~7s atuais —, mas **escala com o tamanho da base**.
+Quando ela crescer, **o gargalo será esse, não o reranker**. Não foi tratado.
+
+**Também nesta sessão (1.24.0 e 1.25.0, no mesmo republish):**
+- **1.24.0** — `MAX_DOCS_INTEIROS=0` passa a **desligar de verdade**: o bump por pedido
+  fundacional religava a injeção de documento inteiro por baixo (3 documentos, 159.849
+  de 200.000 caracteres) **enquanto o log dizia "desligado"**. O log passou a reportar
+  **o que aconteceu**, nunca a valve — foi ele que escondeu o bug por uma rodada.
+- **1.25.0** — a **etiqueta** passa a refletir **o que foi citado**, não o que entrou no
+  contexto (o contexto não discrimina: a Fonte entrava em toda pergunta). Formato virou
+  **lista fechada** — `[Fonte] | [Acervos] | [Fonte + Acervos] | [Fora do acervo]` —
+  corrigindo a etiqueta malformada `[Acervos . <caminho de pasta>]`, que era **ensinada**
+  por uma instrução da v1.18.0 (refletir a pasta na etiqueta), agora **removida**.
+
+---
+
 ## Sessão 2026-07-10 — Versionamento do código e das docs no Git (fonte da verdade)
 
 **Regra permanente adotada:** o **Git é a fonte da verdade do código**. A plataforma
@@ -153,9 +203,12 @@ de B e C+D.
 
 ---
 
-## Estado atual (2026-06-30)
+## Estado atual (2026-07-16)
 
 ### ✅ Pronto e em produção
+- **Busca por data:** **resolvida na 1.26.0** — a pergunta acha o documento em qualquer
+  formato de data (por extenso, barras, pontos, hífens, compacto, ISO, abreviado).
+  **⚠️ Dependente da valve *"Enriquecer o texto da pesquisa híbrida"* estar ON.**
 - **Plataforma base:** Open WebUI 0.9.6 (fork) no Railway, domínio `chatnd.nidumbrasil.com.br`, com SSL. Login com aprovação manual.
 - **ChatND (roteador) v1.10.0:** classificação + 6 rotas; RAG modo documento-inteiro; geração de arquivos e imagens; voz da tríade.
 - **Ferramenta de arquivos v2.1.0:** PPTX/PDF/DOCX/XLSX/HTML/Deck on-brand (paleta + Maxima Nouva + Ibrand + logos).
