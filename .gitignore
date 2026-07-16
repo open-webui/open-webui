@@ -311,3 +311,5 @@ cypress/videos
 cypress/screenshots
 .vscode/settings.json
 .cptr
+
+backend/.venv_ojtest/

@@ -651,6 +651,34 @@
 					message.content += data.content;
 				} else if (type === 'chat:message' || type === 'replace') {
 					message.content = data.content;
+					// Keep the rendered output blob in sync with the updated
+					// content (Update Chat Message By Id API, issue #26952). The UI
+					// renders output[].content[].text in preference to content, so a
+					// live update must also rewrite the message-type output parts.
+					if (Array.isArray(message.output)) {
+						let synced = false;
+						const nextOutput = message.output.map((item) => {
+							if (
+								item &&
+								item.type === 'message' &&
+								Array.isArray(item.content)
+							) {
+								synced = true;
+								return {
+									...item,
+									content: item.content.map((part) =>
+										part && 'text' in part
+											? { ...part, text: data.content }
+											: part
+									)
+								};
+							}
+							return item;
+						});
+						if (synced) {
+							message.output = nextOutput;
+						}
+					}
 				} else if (type === 'chat:message:files' || type === 'files') {
 					message.files = data.files;
 				} else if (type === 'chat:message:tasks') {

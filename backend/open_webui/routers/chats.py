@@ -1281,6 +1281,36 @@ async def update_chat_message_by_id(
         },
     )
 
+    # Keep the rendered chat state in sync with the updated content.
+    # The UI renders message.output[].content[].text in preference to
+    # message.content (see getOutputText / ResponseMessage), so a message that
+    # already carries an `output` blob would otherwise keep rendering the stale
+    # original text after a successful Update Chat Message By Id API call.
+    # Replace the text of every `output` item whose type is `message` so the
+    # rendered (and reloaded) UI reflects the updated content.
+    updated_message = chat.chat.get('history', {}).get('messages', {}).get(message_id)
+    if updated_message and isinstance(updated_message.get('output'), list):
+        new_output = []
+        for item in updated_message['output']:
+            if (
+                isinstance(item, dict)
+                and item.get('type') == 'message'
+                and isinstance(item.get('content'), list)
+            ):
+                item = {
+                    **item,
+                    'content': [
+                        {**part, 'text': form_data.content}
+                        if isinstance(part, dict) and 'text' in part
+                        else part
+                        for part in item['content']
+                    ],
+                }
+            new_output.append(item)
+        if new_output:
+            updated_message['output'] = new_output
+            chat = await Chats.update_chat_by_id(id, chat.chat)
+
     event_emitter = await get_event_emitter(
         {
             'user_id': chat.user_id,
