@@ -2708,13 +2708,13 @@
 		}
 		history = history;
 
-			// Empty embedded drafts create their backing chat only when the first message is sent.
-			if (!_chatId) {
-				if (embedded && onCreateEmbeddedChat) {
-					const createdChat = await onCreateEmbeddedChat();
-					if (!createdChat?.id) {
-						toast.error($i18n.t('Failed to create chat'));
-						return;
+		// Empty embedded drafts create their backing chat only when the first message is sent.
+		if (!_chatId) {
+			if (embedded && onCreateEmbeddedChat) {
+				const createdChat = await onCreateEmbeddedChat();
+				if (!createdChat?.id) {
+					toast.error($i18n.t('Failed to create chat'));
+					return;
 				}
 
 				chat = createdChat;
@@ -2723,12 +2723,12 @@
 				await chatId.set(_chatId);
 				await chatTitle.set(createdChat?.chat?.title ?? createdChat?.title ?? $i18n.t('Chat'));
 
-					params = structuredClone(createdChat?.chat?.params ?? {});
-					delete params.note_id;
-					chatFiles = mergeFiles(chatFiles, createdChat?.chat?.files ?? []);
-					applyInitialFiles();
-					await onSelectEmbeddedChat?.(_chatId);
-				} else if ($temporaryChatEnabled) {
+				params = structuredClone(createdChat?.chat?.params ?? {});
+				delete params.note_id;
+				chatFiles = mergeFiles(chatFiles, createdChat?.chat?.files ?? []);
+				applyInitialFiles();
+				await onSelectEmbeddedChat?.(_chatId);
+			} else if ($temporaryChatEnabled) {
 				_chatId = `local:${$socket?.id}`;
 				await chatId.set(_chatId);
 			}

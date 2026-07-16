@@ -348,13 +348,9 @@ async def get_note_chat_by_id(
             changed = True
 
         system = (
-            f'CONTEXT:
-Current note id: {note.id}
-'
-            'This chat is attached to the current note.
-'
-            'For edit requests like make this concise, rewrite, enhance, shorten, or update: call view_note then replace_note_content.
-'
+            f'CONTEXT:\nCurrent note id: {note.id}\n'
+            'This chat is attached to the current note.\n'
+            'For edit requests like make this concise, rewrite, enhance, shorten, or update: call view_note then replace_note_content.\n'
             'Do not say an edit is done unless replace_note_content succeeds.'
         )
         if params.get('system') != system:
@@ -383,14 +379,10 @@ Current note id: {note.id}
                 'models': [''],
                 'params': {
                     'system': (
-                        f'CONTEXT:
-Current note id: {note.id}
-'
-            'This chat is attached to the current note.
-'
-            'For edit requests like make this concise, rewrite, enhance, shorten, or update: call view_note then replace_note_content.
-'
-            'Do not say an edit is done unless replace_note_content succeeds.'
+                        f'CONTEXT:\nCurrent note id: {note.id}\n'
+                        'This chat is attached to the current note.\n'
+                        'For edit requests like make this concise, rewrite, enhance, shorten, or update: call view_note then replace_note_content.\n'
+                        'Do not say an edit is done unless replace_note_content succeeds.'
                     )
                 },
                 'history': {'messages': {}, 'currentId': None},
@@ -451,13 +443,9 @@ async def get_note_chats_by_id(
             changed = True
 
         system = (
-            f'CONTEXT:
-Current note id: {note.id}
-'
-            'This chat is attached to the current note.
-'
-            'For edit requests like make this concise, rewrite, enhance, shorten, or update: call view_note then replace_note_content.
-'
+            f'CONTEXT:\nCurrent note id: {note.id}\n'
+            'This chat is attached to the current note.\n'
+            'For edit requests like make this concise, rewrite, enhance, shorten, or update: call view_note then replace_note_content.\n'
             'Do not say an edit is done unless replace_note_content succeeds.'
         )
         if params.get('system') != system:
@@ -518,14 +506,10 @@ async def create_note_chat_by_id(
                 'models': [''],
                 'params': {
                     'system': (
-                        f'CONTEXT:
-Current note id: {note.id}
-'
-            'This chat is attached to the current note.
-'
-            'For edit requests like make this concise, rewrite, enhance, shorten, or update: call view_note then replace_note_content.
-'
-            'Do not say an edit is done unless replace_note_content succeeds.'
+                        f'CONTEXT:\nCurrent note id: {note.id}\n'
+                        'This chat is attached to the current note.\n'
+                        'For edit requests like make this concise, rewrite, enhance, shorten, or update: call view_note then replace_note_content.\n'
+                        'Do not say an edit is done unless replace_note_content succeeds.'
                     )
                 },
                 'history': {'messages': {}, 'currentId': None},
