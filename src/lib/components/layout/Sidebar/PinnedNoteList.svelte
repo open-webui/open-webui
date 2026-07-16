@@ -79,7 +79,7 @@
 				draggable="false"
 			>
 				<div class="self-center">
-					<NotesIcon className="size-4" strokeWidth="1.5" />
+					<NotesIcon className="size-3.5" strokeWidth="1.5" />
 				</div>
 				<div class="flex-1 text-ellipsis line-clamp-1">
 					{note.title}

@@ -598,7 +598,11 @@
 							{/if}
 						</div>
 					{:else}
-						<div class="p-[1px]">
+						<div class="flex group-hover:hidden transition-all">
+							<FolderIcon className="size-3.5" strokeWidth="1.5" />
+						</div>
+
+						<div class="hidden group-hover:flex transition-all p-[1px]">
 							{#if open}
 								<ChevronDown className=" size-3" strokeWidth="1.5" />
 							{:else}
