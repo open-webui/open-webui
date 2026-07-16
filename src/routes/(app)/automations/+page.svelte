@@ -546,17 +546,19 @@
 						<div class="gap-y-0.5 grid my-1">
 							{#each automations as automation (automation.id)}
 								<a
-									class="flex space-x-4 text-left w-full px-3 py-2 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 transition rounded-2xl"
+									class="group flex min-h-10 w-full items-center gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-gray-50 focus:bg-gray-50 dark:hover:bg-gray-900 dark:focus:bg-gray-900"
 									href={`/automations/${automation.id}`}
 								>
-									<div class="flex-1">
-										<div class="line-clamp-1 text-sm">{automation.name}</div>
-										<div class="text-xs text-gray-500 line-clamp-1">
+									<div class="min-w-0 flex-1">
+										<div class="truncate text-[13px] leading-5 text-gray-800 dark:text-gray-200">
+											{automation.name}
+										</div>
+										<div class="truncate text-[11px] leading-4 text-gray-500 dark:text-gray-500">
 											{formatRRule(automation.data.rrule)}
 										</div>
 									</div>
 
-									<div class="flex flex-row gap-0.5 self-center">
+									<div class="flex shrink-0 flex-row items-center gap-0.5 self-center">
 										<AutomationMenu
 											editHandler={() => {
 												goto(`/automations/${automation.id}`);
@@ -573,14 +575,16 @@
 											}}
 										>
 											<button
-												class="self-center w-fit text-sm p-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100 rounded-xl"
+												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 												type="button"
+												aria-label={$i18n.t('Automation Menu')}
 											>
-												<EllipsisHorizontal className="size-5" />
+												<EllipsisHorizontal className="size-4" />
 											</button>
 										</AutomationMenu>
 
 										<button
+											class="flex h-6 items-center"
 											on:click={(e) => {
 												e.stopPropagation();
 												e.preventDefault();

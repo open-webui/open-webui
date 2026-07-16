@@ -521,87 +521,85 @@
 									>
 										{#each notesList as note, idx (note.id)}
 											<div
-												class="flex cursor-pointer w-full px-3 py-2 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-2xl transition"
+												class="group flex min-h-8 w-full items-center gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-gray-50 focus-within:bg-gray-50 dark:hover:bg-gray-900 dark:focus-within:bg-gray-900"
 											>
-												<a href={`/notes/${note.id}`} class="w-full flex flex-col justify-between">
-													<div class="flex-1">
-														<div class="  flex items-center gap-2 self-center justify-between">
-															<Tooltip
-																content={note.title}
-																className="flex-1"
-																placement="top-start"
-															>
-																<div class="text-sm capitalize flex-1 w-full line-clamp-1">
-																	{note.title}
-																</div>
-															</Tooltip>
-
-															<div class="flex shrink-0 items-center text-xs gap-2.5">
-																<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
-																	<div>
-																		{dayjs(note.updated_at / 1000000).fromNow()}
-																	</div>
-																</Tooltip>
-																<Tooltip
-																	content={note?.user?.email ?? $i18n.t('Deleted User')}
-																	className="flex shrink-0"
-																	placement="top-start"
-																>
-																	<div class="shrink-0 text-gray-500">
-																		{$i18n.t('By {{name}}', {
-																			name: capitalizeFirstLetter(
-																				note?.user?.name ??
-																					note?.user?.email ??
-																					$i18n.t('Deleted User')
-																			)
-																		})}
-																	</div>
-																</Tooltip>
-
-																<div>
-																	<NoteMenu
-																		onDownload={(type) => {
-																			selectedNote = note;
-
-																			downloadHandler(type);
-																		}}
-																		onCopyLink={async () => {
-																			const baseUrl = window.location.origin;
-																			const res = await copyToClipboard(
-																				`${baseUrl}/notes/${note.id}`
-																			);
-
-																			if (res) {
-																				toast.success($i18n.t('Copied link to clipboard'));
-																			} else {
-																				toast.error($i18n.t('Failed to copy link'));
-																			}
-																		}}
-																		onDelete={() => {
-																			selectedNote = note;
-																			showDeleteConfirm = true;
-																		}}
-																		isPinned={note.is_pinned ?? false}
-																		onPin={async () => {
-																			await toggleNotePinnedStatusById(localStorage.token, note.id);
-																			pinnedNotes.set(
-																				await getPinnedNoteList(localStorage.token).catch(() => [])
-																			);
-																			init();
-																		}}
-																	>
-																		<button
-																			class="self-center w-fit text-sm p-1 text-gray-500 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100 rounded-xl"
-																			type="button"
-																		>
-																			<EllipsisHorizontal className="size-5" />
-																		</button>
-																	</NoteMenu>
-																</div>
-															</div>
+												<a
+													href={`/notes/${note.id}`}
+													class="flex min-w-0 flex-1 items-center gap-3"
+												>
+													<Tooltip
+														content={note.title}
+														className="min-w-0 flex-1"
+														placement="top-start"
+													>
+														<div
+															class="truncate text-[13px] leading-5 text-gray-800 dark:text-gray-200"
+														>
+															{note.title}
 														</div>
+													</Tooltip>
+
+													<div
+														class="hidden shrink-0 items-center gap-2 text-[11px] leading-5 text-gray-500 dark:text-gray-500 sm:flex"
+													>
+														<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
+															<div>{dayjs(note.updated_at / 1000000).fromNow()}</div>
+														</Tooltip>
+
+														<Tooltip
+															content={note?.user?.email ?? $i18n.t('Deleted User')}
+															className="flex min-w-0 shrink"
+															placement="top-start"
+														>
+															<div class="flex min-w-0 items-center gap-2">
+																<span class="text-gray-300 dark:text-gray-700">·</span>
+																<span class="max-w-28 truncate">
+																	{capitalizeFirstLetter(
+																		note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
+																	)}
+																</span>
+															</div>
+														</Tooltip>
 													</div>
 												</a>
+
+												<NoteMenu
+													onDownload={(type) => {
+														selectedNote = note;
+
+														downloadHandler(type);
+													}}
+													onCopyLink={async () => {
+														const baseUrl = window.location.origin;
+														const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
+
+														if (res) {
+															toast.success($i18n.t('Copied link to clipboard'));
+														} else {
+															toast.error($i18n.t('Failed to copy link'));
+														}
+													}}
+													onDelete={() => {
+														selectedNote = note;
+														showDeleteConfirm = true;
+													}}
+													isPinned={note.is_pinned ?? false}
+													onPin={async () => {
+														await toggleNotePinnedStatusById(localStorage.token, note.id);
+														pinnedNotes.set(
+															await getPinnedNoteList(localStorage.token).catch(() => [])
+														);
+														init();
+													}}
+												>
+													<button
+														class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+														type="button"
+														aria-label={$i18n.t('Note Menu')}
+													>
+														<EllipsisHorizontal className="size-4" />
+													</button>
+												</NoteMenu>
 											</div>
 										{/each}
 									</div>
@@ -613,96 +611,91 @@
 									>
 										{#each notesList as note, idx (note.id)}
 											<div
-												class="flex space-x-4 cursor-pointer w-full px-3 py-2.5 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-2xl transition"
+												class="group flex min-h-32 w-full flex-col rounded-lg bg-gray-50/40 p-2.5 text-left transition hover:bg-gray-100/60 focus-within:bg-gray-100/60 dark:bg-gray-900/30 dark:hover:bg-gray-900 dark:focus-within:bg-gray-900"
 											>
-												<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-													<a
-														href={`/notes/${note.id}`}
-														class="w-full -translate-y-0.5 flex flex-col justify-between"
+												<div class="flex items-start gap-2">
+													<a href={`/notes/${note.id}`} class="min-w-0 flex-1">
+														<Tooltip content={note.title} placement="top-start">
+															<div
+																class="truncate text-[13px] leading-5 text-gray-800 dark:text-gray-200"
+															>
+																{note.title}
+															</div>
+														</Tooltip>
+													</a>
+
+													<NoteMenu
+														onDownload={(type) => {
+															selectedNote = note;
+
+															downloadHandler(type);
+														}}
+														onCopyLink={async () => {
+															const baseUrl = window.location.origin;
+															const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
+
+															if (res) {
+																toast.success($i18n.t('Copied link to clipboard'));
+															} else {
+																toast.error($i18n.t('Failed to copy link'));
+															}
+														}}
+														onDelete={() => {
+															selectedNote = note;
+															showDeleteConfirm = true;
+														}}
+														isPinned={note.is_pinned ?? false}
+														onPin={async () => {
+															await toggleNotePinnedStatusById(localStorage.token, note.id);
+															pinnedNotes.set(
+																await getPinnedNoteList(localStorage.token).catch(() => [])
+															);
+															init();
+														}}
 													>
-														<div class="flex-1">
-															<div
-																class="  flex items-center gap-2 self-center mb-1 justify-between"
-															>
-																<div class="line-clamp-1 capitalize">
-																	{note.title}
-																</div>
+														<button
+															class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+															type="button"
+															aria-label={$i18n.t('Note Menu')}
+														>
+															<EllipsisHorizontal className="size-4" />
+														</button>
+													</NoteMenu>
+												</div>
 
-																<div>
-																	<NoteMenu
-																		onDownload={(type) => {
-																			selectedNote = note;
+												<a href={`/notes/${note.id}`} class="mt-1 flex min-h-0 flex-1 flex-col">
+													<div
+														class="line-clamp-3 text-xs leading-5 text-gray-500 dark:text-gray-500"
+													>
+														{#if note.data?.content?.md}
+															{note.data?.content?.md}
+														{:else}
+															{$i18n.t('No content')}
+														{/if}
+													</div>
 
-																			downloadHandler(type);
-																		}}
-																		onCopyLink={async () => {
-																			const baseUrl = window.location.origin;
-																			const res = await copyToClipboard(
-																				`${baseUrl}/notes/${note.id}`
-																			);
-
-																			if (res) {
-																				toast.success($i18n.t('Copied link to clipboard'));
-																			} else {
-																				toast.error($i18n.t('Failed to copy link'));
-																			}
-																		}}
-																		onDelete={() => {
-																			selectedNote = note;
-																			showDeleteConfirm = true;
-																		}}
-																		isPinned={note.is_pinned ?? false}
-																		onPin={async () => {
-																			await toggleNotePinnedStatusById(localStorage.token, note.id);
-																			pinnedNotes.set(
-																				await getPinnedNoteList(localStorage.token).catch(() => [])
-																			);
-																			init();
-																		}}
-																	>
-																		<button
-																			class="self-center w-fit text-sm p-1 text-gray-500 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100 rounded-xl"
-																			type="button"
-																		>
-																			<EllipsisHorizontal className="size-5" />
-																		</button>
-																	</NoteMenu>
-																</div>
-															</div>
-
-															<div
-																class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-3 min-h-10"
-															>
-																{#if note.data?.content?.md}
-																	{note.data?.content?.md}
-																{:else}
-																	{$i18n.t('No content')}
-																{/if}
-															</div>
-														</div>
-
-														<div class=" text-xs px-0.5 w-full flex justify-between items-center">
-															<div>
+													<div
+														class="mt-auto flex w-full items-center justify-between gap-2 pt-3 text-[11px] leading-4 text-gray-500 dark:text-gray-500"
+													>
+														<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
+															<div class="shrink-0">
 																{dayjs(note.updated_at / 1000000).fromNow()}
 															</div>
-															<Tooltip
-																content={note?.user?.email ?? $i18n.t('Deleted User')}
-																className="flex shrink-0"
-																placement="top-start"
-															>
-																<div class="shrink-0 text-gray-500">
-																	{$i18n.t('By {{name}}', {
-																		name: capitalizeFirstLetter(
-																			note?.user?.name ??
-																				note?.user?.email ??
-																				$i18n.t('Deleted User')
-																		)
-																	})}
-																</div>
-															</Tooltip>
-														</div>
-													</a>
-												</div>
+														</Tooltip>
+
+														<Tooltip
+															content={note?.user?.email ?? $i18n.t('Deleted User')}
+															className="min-w-0"
+															placement="top-start"
+														>
+															<div class="truncate">
+																{capitalizeFirstLetter(
+																	note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
+																)}
+															</div>
+														</Tooltip>
+													</div>
+												</a>
 											</div>
 										{/each}
 									</div>
