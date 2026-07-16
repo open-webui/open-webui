@@ -542,23 +542,22 @@
 													<div
 														class="hidden shrink-0 items-center gap-2 text-[11px] leading-5 text-gray-500 dark:text-gray-500 sm:flex"
 													>
-														<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
-															<div>{dayjs(note.updated_at / 1000000).fromNow()}</div>
-														</Tooltip>
-
 														<Tooltip
 															content={note?.user?.email ?? $i18n.t('Deleted User')}
 															className="flex min-w-0 shrink"
 															placement="top-start"
 														>
-															<div class="flex min-w-0 items-center gap-2">
-																<span class="text-gray-300 dark:text-gray-700">·</span>
-																<span class="max-w-28 truncate">
-																	{capitalizeFirstLetter(
-																		note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
-																	)}
-																</span>
+															<div class="max-w-28 truncate">
+																{capitalizeFirstLetter(
+																	note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
+																)}
 															</div>
+														</Tooltip>
+
+														<span class="text-gray-300 dark:text-gray-700">·</span>
+
+														<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
+															<div>{dayjs(note.updated_at / 1000000).fromNow()}</div>
 														</Tooltip>
 													</div>
 												</a>
@@ -677,12 +676,6 @@
 													<div
 														class="mt-auto flex w-full items-center justify-between gap-2 pt-3 text-[11px] leading-4 text-gray-500 dark:text-gray-500"
 													>
-														<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
-															<div class="shrink-0">
-																{dayjs(note.updated_at / 1000000).fromNow()}
-															</div>
-														</Tooltip>
-
 														<Tooltip
 															content={note?.user?.email ?? $i18n.t('Deleted User')}
 															className="min-w-0"
@@ -692,6 +685,14 @@
 																{capitalizeFirstLetter(
 																	note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
 																)}
+															</div>
+														</Tooltip>
+
+														<span class="text-gray-300 dark:text-gray-700">·</span>
+
+														<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
+															<div class="shrink-0">
+																{dayjs(note.updated_at / 1000000).fromNow()}
 															</div>
 														</Tooltip>
 													</div>

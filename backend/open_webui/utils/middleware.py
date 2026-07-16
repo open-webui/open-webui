@@ -5342,14 +5342,12 @@ async def streaming_chat_response_handler(response, ctx):
                             metadata['chat_id'],
                             metadata['message_id'],
                             {'done': True, 'usage': usage},
-                            touch=False,
                         )
                     else:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
                             {'done': True},
-                            touch=False,
                         )
 
                 await publish_chat_finished_event(request, user, metadata, title, content, output)
