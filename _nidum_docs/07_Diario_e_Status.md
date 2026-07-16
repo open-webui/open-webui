@@ -76,6 +76,87 @@ O desenho inicial rebaixava "fora de contexto" para Haiku. **O Davi recusou — 
 
 **E o carimbo `Última verificação: <data>`** que a `03` passou a ter: ele **não impede** o apodrecimento — **deixa ele visível**. Era exatamente o que a doc antiga não tinha: ela mentia com autoridade e **sem data**, então ninguém tinha como saber que estava velha.
 
+## Sessão 2026-07-16 (tarde) — Levantamento do estado real e corte de código morto
+
+**Corte MEDIDO, não suposto.** Registro do método, porque ele é o ponto: nenhuma linha
+foi removida por "parecer complexa" ou por argumento de arquitetura. Foi removida porque
+**o painel provou que estava morta e o banco provou que ninguém sentia falta.**
+
+### As duas ferramentas que estavam mortas — e ninguém notou
+
+| Ferramenta | Linhas | Evidência **de produção** |
+|---|---|---|
+| `nidum_fonte_quadro_de_pessoas.py` | **1.286** | Instalada como Tool, **anexada a nenhum modelo** → nunca disparou |
+| `roteador_semantico_da_fonte_nidum.py` | **1.544** | Function *enabled*, mas a valve **`api_key` VAZIA** → `if not api_key: return body` (linha 1517). Carregava em toda mensagem, **nunca agiu** |
+
+**A prova não foi argumento — foi o presente:** o sistema que o banco de perguntas mediu
+em **18/19** já era o sistema **sem elas**. Depois do corte, **P9/P10/P13 rodaram com as
+duas fora: todas OK, comportamento idêntico** — `[Fonte]` e `[Fonte + Acervos]`, citando
+v29/v30 com versão, e a **P13 avisou sozinha que a v31 é rascunho**. Zero regressão.
+
+> **O achado do painel que justificou o delete (não só o disable):** as valves do roteador
+> mostravam **`Enabled: Ativado`** e **`Api Key: vazia`**. **Duas luzes verdes e nada
+> acontecendo.** É uma **bomba de efeito retardado**: bastaria alguém preencher a chave
+> "para testar" e um `FONTE_INDEX` **congelado em 2026-06-27** voltaria a injetar
+> *"RESPOSTA OFICIAL DO ENGINE… entregue sem resumir"* **por fora da busca** — sem
+> reranker, sem citação, sem etiqueta. Desabilitar não bastava.
+
+### O que o `quadro_de_pessoas` fazia que a busca não faz melhor
+
+**Uma coisa: determinismo do roster.** E não compensava, por três motivos, em ordem de
+peso: (1) **estava morto e ninguém notou** — se a garantia importasse na prática, a falta
+teria aparecido; (2) o determinismo dele era sobre **dado congelado** — *um LLM lendo o
+`.md` de hoje erra menos que um dicionário certíssimo sobre ontem*; (3) o conteúdo **já
+está na base**, atualizado a cada 6 h pela esteira, com citação e etiqueta
+(`FONTE/Nidum_Quadro_de_Pessoas.md`, `FONTE/Grupo_Nidum_Estrutura_e_Direcionamento.md`).
+
+### Estado do corte
+
+- ✅ **`nidum_fonte_quadro_de_pessoas`** — deletado do painel (Tools: 8 → 7) **e removido
+  do repo** nesta branch.
+- ⏸️ **`roteador_semantico`** — **desabilitado** no painel; **delete pendente do aval do
+  Thiago**: é **filter global** e toca as conversas do **Chico**. **Fica no repo até lá** —
+  não se remove do Git código que ainda está instalado em produção.
+
+### Fronteira do Chico (validada)
+
+A doutrina do Chico vive **nas tools dele** (`Chico - A Fonte`, `Convergir`,
+`Convergências`), **não** no `chatnd.py`. Portanto **arrancar a doutrina do pipe não o
+afeta**. O **único acoplamento real** é o **roteamento**: o modelo Chico usa o `chatnd`
+como *base model*, então mudar as categorias muda para qual motor as mensagens dele vão.
+
+### Volume do Railway: 87% → 21%
+
+Causa: **cache de modelos**, não upload. Dois rerankers baixados no mesmo dia
+(`bge-reranker-v2-m3` ~2,2 GB, órfão; `bge-reranker-base` ~1,1 GB, o ativo). Caminho
+provado: `Dockerfile:95` `SENTENCE_TRANSFORMERS_HOME="/app/backend/data/cache/embedding/models"`
+— e `/app/backend/data` **é o volume**. `du` depois da limpeza: **cache 3,2G · vector_db
+277M · uploads 159M · lost+found 16K**. Regras novas registradas no `HIGIENE.md` da
+esteira.
+
+### 🔎 Achado novo: `STORAGE_PROVIDER=s3` **não** tira os arquivos do disco
+
+Investigando por que existem **159M de `uploads/` locais** com o S3 ligado, o código
+respondeu (`storage/provider.py`):
+
+```python
+def upload_file(self, file, filename, tags):
+    """Handles uploading of the file to S3 storage."""
+    contents, file_path = LocalStorageProvider.upload_file(file, filename, tags)  # grava LOCAL
+    self.s3_client.upload_file(file_path, self.bucket_name, s3_key)               # e sobe pro R2
+```
+
+**`s3` significa "disco E R2", não "R2 em vez do disco".** O `get_file` também **baixa do
+R2 para o disco**. O disco é uma **cópia permanente de tudo que passa** — e cresce para
+sempre. **Isto corrige o que eu havia escrito**: a conclusão de que "os uploads estão no
+R2, não no disco" estava **errada**.
+
+**O que salva o desenho:** o `delete_file` do S3 provider tem `# Always delete from local
+storage` → apaga **os dois**. Ou seja, **a exclusão pela API limpa vínculo, embeddings,
+banco, blob no R2 e a cópia local** — cinco coisas. **Reforça, agora com evidência nova,
+que lifecycle rule no bucket é a ferramenta errada**: ela apagaria só o blob do R2 e
+deixaria de pé o registro, os embeddings **e a cópia local**.
+
 ## Sessão 2026-07-16 — ChatND 1.26.0: busca por data em qualquer formato
 
 **16/07/2026 — ChatND 1.26.0: busca por data em qualquer formato.**
