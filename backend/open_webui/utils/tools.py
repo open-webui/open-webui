@@ -73,7 +73,6 @@ from open_webui.tools.builtin import (
     read_memory_path,
     replace_memory_content,
     replace_note_content,
-    replace_note_text,
     search_calendar_events,
     search_channel_messages,
     search_channels,
@@ -644,11 +643,10 @@ async def get_builtin_tools(
         chat = await Chats.get_chat_by_id(chat_id)
 
     # Notes tools - search, view, create, and update user's notes
-    if (
-        (chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note')
-        or (is_builtin_tool_enabled('notes') and config.get('notes.enable') and await has_user_permission('notes'))
+    if (chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note') or (
+        is_builtin_tool_enabled('notes') and config.get('notes.enable') and await has_user_permission('notes')
     ):
-        builtin_functions.extend([search_notes, view_note, write_note, replace_note_content, replace_note_text])
+        builtin_functions.extend([search_notes, view_note, write_note, replace_note_content])
 
     # Channels tools - search channels and messages
     if is_builtin_tool_enabled('channels') and config.get('channels.enable') and await has_user_permission('channels'):

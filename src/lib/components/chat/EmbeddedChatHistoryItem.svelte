@@ -21,14 +21,16 @@
 	let showMenu = false;
 </script>
 
-<button
-	type="button"
-	class="group/item flex h-8 w-full cursor-pointer select-none items-center rounded-xl px-2 text-left text-[13px] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40 {selected
+<div
+	class="group/item flex h-[1.6875rem] w-full cursor-pointer select-none items-center rounded-xl px-2 text-left text-[13px] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40 [&_button:hover]:bg-transparent! dark:[&_button:hover]:bg-transparent! {selected
 		? 'bg-gray-50/70 dark:bg-gray-800/60'
 		: ''}"
-	on:click={() => onSelect(item.id)}
 >
-	<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+	<button
+		type="button"
+		class="flex h-full min-w-0 flex-1 items-center gap-2 overflow-hidden p-0 text-left outline-hidden"
+		on:click={() => onSelect(item.id)}
+	>
 		<div class="min-w-0 truncate">{title}</div>
 
 		{#if selected}
@@ -36,9 +38,13 @@
 				{$i18n.t('Current')}
 			</div>
 		{/if}
-	</div>
+	</button>
 
-	<div class="ml-auto flex shrink-0 items-center gap-1.5 pl-2">
+	<div
+		class="{showMenu
+			? 'visible'
+			: 'invisible group-hover/item:visible'} ml-auto flex shrink-0 items-center gap-1.5 pl-2"
+	>
 		<Dropdown
 			bind:show={showMenu}
 			align="end"
@@ -52,7 +58,7 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('More Options')}
-					class="flex"
+					class="flex size-5 items-center justify-center self-center transition dark:hover:text-white"
 					on:click={(e) => {
 						e.preventDefault();
 						e.stopPropagation();
@@ -85,4 +91,4 @@
 			</div>
 		</Dropdown>
 	</div>
-</button>
+</div>

@@ -107,8 +107,6 @@
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import WebSearchConfirmDialog from '../common/ConfirmDialog.svelte';
-	import Dropdown from '../common/Dropdown.svelte';
-	import DropdownMenu from '../common/DropdownMenu.svelte';
 	import Placeholder from './Placeholder.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
@@ -118,9 +116,7 @@
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
 	import XMark from '../icons/XMark.svelte';
-	import EditPencilIcon from '../layout/Sidebar/icons/EditPencil.svelte';
-	import ChevronRight from '../icons/ChevronRight.svelte';
-	import EmbeddedChatHistoryItem from './EmbeddedChatHistoryItem.svelte';
+	import EmbeddedChatHistoryDropdown from './EmbeddedChatHistoryDropdown.svelte';
 
 	export let chatIdProp = '';
 	export let embedded = false;
@@ -146,9 +142,6 @@
 		'Extract action items from this note.',
 		'Rewrite the selected text.'
 	];
-	let showEmbeddedChatHistory = false;
-	let embeddedChatOptionsId = '';
-	let deletingEmbeddedChatId = '';
 
 	const eventTarget = new EventTarget();
 	let controlPane: Pane | undefined;
@@ -402,7 +395,7 @@
 	};
 	const withSelectedText = (text: string) =>
 		embedded && selectedText?.trim()
-			? `${text}\n\nSelected note text:\n${selectedText.trim()}`
+			? `${text}\n\nSelected note text for replace_note_content operations:\n${selectedText.trim()}`
 			: text;
 	const noteChatDebug = (message: string, data: Record<string, unknown> = {}) => {
 		if (!embedded) return;
@@ -3622,82 +3615,16 @@
 							class="h-10 shrink-0 flex items-center justify-between gap-2 border-b border-gray-50/80 px-3 text-gray-700 dark:border-gray-850/40 dark:text-gray-200"
 						>
 							<div class="flex min-w-0 items-center gap-2">
-								<Dropdown
-									bind:show={showEmbeddedChatHistory}
-									align="start"
-									sideOffset={6}
-									closeOnOutsideClick={embeddedChatOptionsId === ''}
-									onOpenChange={(state) => {
-										if (!state) embeddedChatOptionsId = '';
-									}}
-								>
-									<button
-										type="button"
-										class="group flex min-w-0 items-center gap-1 text-[13px] font-normal text-gray-600 transition hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-										aria-label={$i18n.t('Chat history')}
-									>
-										<span class="min-w-0 truncate">{embeddedHeaderTitle}</span>
-										<ChevronRight
-											className="size-3.5 shrink-0 text-gray-400/70 opacity-0 transition-opacity group-hover:opacity-100 dark:text-gray-500/70"
-											strokeWidth="2"
-										/>
-									</button>
-
-									<div slot="content">
-										<DropdownMenu
-											className="min-w-56 max-w-72 max-h-80 overflow-y-auto scrollbar-hidden"
-										>
-											{#if onNewEmbeddedChat && Object.keys(history?.messages ?? {}).length > 0 && !loading}
-												<button
-													type="button"
-													class="text-left"
-													on:click={async () => {
-														showEmbeddedChatHistory = false;
-														await onNewEmbeddedChat?.();
-													}}
-												>
-													<EditPencilIcon className="size-3.5" strokeWidth="1.5" />
-													<span class="min-w-0 truncate">{$i18n.t('New chat')}</span>
-												</button>
-												<hr class="border-gray-100/70 dark:border-gray-800/60" />
-											{/if}
-											{#if embeddedChats.length > 0}
-												{#each embeddedChats as item}
-													<EmbeddedChatHistoryItem
-														{item}
-														title={item?.id === $chatId
-															? embeddedHeaderTitle
-															: item?.title || item?.chat?.title || $i18n.t('Chat')}
-														selected={item.id === $chatId}
-														deleting={deletingEmbeddedChatId === item.id}
-														onSelect={async () => {
-															showEmbeddedChatHistory = false;
-															await onSelectEmbeddedChat?.(item.id);
-														}}
-														onDelete={async (id) => {
-															if (!id || deletingEmbeddedChatId) return;
-
-															deletingEmbeddedChatId = id;
-															embeddedChatOptionsId = '';
-															try {
-																await onDeleteEmbeddedChat?.(id);
-															} finally {
-																deletingEmbeddedChatId = '';
-															}
-														}}
-														onMenuOpenChange={(id, state) => {
-															embeddedChatOptionsId = state ? id : '';
-														}}
-													/>
-												{/each}
-											{:else}
-												<div class="px-2 py-1.5 text-[13px] text-gray-400 dark:text-gray-500">
-													{$i18n.t('No chat history')}
-												</div>
-											{/if}
-										</DropdownMenu>
-									</div>
-								</Dropdown>
+								<EmbeddedChatHistoryDropdown
+									title={embeddedHeaderTitle}
+									chats={embeddedChats}
+									canCreateNew={!!onNewEmbeddedChat &&
+										Object.keys(history?.messages ?? {}).length > 0}
+									{loading}
+									onNewChat={onNewEmbeddedChat}
+									onSelectChat={onSelectEmbeddedChat}
+									onDeleteChat={onDeleteEmbeddedChat}
+								/>
 							</div>
 							<Tooltip content={$i18n.t('Close')} placement="bottom">
 								<button

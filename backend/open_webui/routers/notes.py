@@ -348,10 +348,9 @@ async def get_note_chat_by_id(
             changed = True
 
         system = (
-            f'You are chatting with note {note.id}. '
-            'Use view_note with this note id to read the current note. '
-            'For edits, use replace_note_content for whole-note changes or replace_note_text '
-            'for targeted exact text replacement.'
+            f'Note id: {note.id}. '
+            'Use view_note before reading or editing. '
+            'Use replace_note_content with content for whole-note updates or operations for selected/range updates.'
         )
         if params.get('system') != system:
             params['system'] = system
@@ -379,10 +378,9 @@ async def get_note_chat_by_id(
                 'models': [''],
                 'params': {
                     'system': (
-                        f'You are chatting with note {note.id}. '
-                        'Use view_note with this note id to read the current note. '
-                        'For edits, use replace_note_content for whole-note changes or replace_note_text '
-                        'for targeted exact text replacement.'
+                        f'Note id: {note.id}. '
+                        'Use view_note before reading or editing. '
+                        'Use replace_note_content with content for whole-note updates or operations for selected/range updates.'
                     )
                 },
                 'history': {'messages': {}, 'currentId': None},
@@ -443,10 +441,9 @@ async def get_note_chats_by_id(
             changed = True
 
         system = (
-            f'You are chatting with note {note.id}. '
-            'Use view_note with this note id to read the current note. '
-            'For edits, use replace_note_content for whole-note changes or replace_note_text '
-            'for targeted exact text replacement.'
+            f'Note id: {note.id}. '
+            'Use view_note before reading or editing. '
+            'Use replace_note_content with content for whole-note updates or operations for selected/range updates.'
         )
         if params.get('system') != system:
             params['system'] = system
@@ -506,10 +503,9 @@ async def create_note_chat_by_id(
                 'models': [''],
                 'params': {
                     'system': (
-                        f'You are chatting with note {note.id}. '
-                        'Use view_note with this note id to read the current note. '
-                        'For edits, use replace_note_content for whole-note changes or replace_note_text '
-                        'for targeted exact text replacement.'
+                        f'Note id: {note.id}. '
+                        'Use view_note before reading or editing. '
+                        'Use replace_note_content with content for whole-note updates or operations for selected/range updates.'
                     )
                 },
                 'history': {'messages': {}, 'currentId': None},

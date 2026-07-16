@@ -143,6 +143,9 @@
 
 	let selectedContent = null;
 	let noteChatFiles = [];
+	let pendingNoteEvent = null;
+	let pendingNoteEventTimer = null;
+	let lastLocalContentChangeAt = 0;
 	$: {
 		const seen = new Set();
 		noteChatFiles = note
@@ -186,15 +189,14 @@
 			}
 			files = res.data.files || [];
 
-			if (note?.write_access) {
-				$socket?.emit('join-note', {
-					note_id: id,
-					auth: {
-						token: localStorage.token
-					}
-				});
-				$socket?.on('events:note', noteEventHandler);
-			}
+			$socket?.emit('join-note', {
+				note_id: id,
+				auth: {
+					token: localStorage.token
+				}
+			});
+			$socket?.off('events:note', noteEventHandler);
+			$socket?.on('events:note', noteEventHandler);
 		} else {
 			goto('/');
 			return;
@@ -225,6 +227,94 @@
 				pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
 			}
 		}, 200);
+	};
+
+	const applyExternalNoteContent = async (_note) => {
+		const incomingContent = _note.data?.content;
+		const contentLength = incomingContent?.md?.length ?? incomingContent?.html?.length ?? 0;
+
+		console.info('[note-chat] external note event apply requested', {
+			noteId: _note.id,
+			eventUpdatedAt: _note.updated_at,
+			currentUpdatedAt: note?.updated_at,
+			editorPresent: !!editor,
+			contentLength
+		});
+
+		if (_note.updated_at && note?.updated_at && _note.updated_at < note.updated_at) {
+			console.info('[note-chat] external note event skipped', {
+				noteId: _note.id,
+				reason: 'stale',
+				eventUpdatedAt: _note.updated_at,
+				currentUpdatedAt: note.updated_at,
+				contentLength
+			});
+			return false;
+		}
+
+		const elapsed = Date.now() - lastLocalContentChangeAt;
+		if (elapsed < 800) {
+			pendingNoteEvent = _note;
+			if (pendingNoteEventTimer) {
+				clearTimeout(pendingNoteEventTimer);
+			}
+			pendingNoteEventTimer = setTimeout(async () => {
+				const event = pendingNoteEvent;
+				pendingNoteEvent = null;
+				if (event) {
+					await applyExternalNoteContent(event);
+				}
+			}, 850 - elapsed);
+
+			console.info('[note-chat] external note event deferred', {
+				noteId: _note.id,
+				reason: 'local-edit-settling',
+				eventUpdatedAt: _note.updated_at,
+				contentLength
+			});
+			return false;
+		}
+
+		note.data.content = {
+			...note.data.content,
+			...incomingContent
+		};
+		if (_note.updated_at) {
+			note.updated_at = _note.updated_at;
+		}
+
+		if (!editor) {
+			console.info('[note-chat] external note event applied', {
+				noteId: _note.id,
+				reason: 'no-editor',
+				eventUpdatedAt: _note.updated_at,
+				contentLength
+			});
+			return true;
+		}
+
+		const selection = editor.state.selection;
+		editor.commands.setContent(incomingContent.html || marked.parse(incomingContent.md ?? ''));
+		await tick();
+
+		const docSize = editor.state.doc.content.size;
+		const from = Math.min(selection.from, docSize);
+		const to = Math.min(selection.to, docSize);
+		if (from < to) {
+			editor.commands.setTextSelection({ from, to });
+			const text = editor.state.doc.textBetween(from, to, ' ');
+			selectedContent = text ? { text, from, to } : null;
+		} else {
+			selectedContent = null;
+		}
+
+		console.info('[note-chat] external note event applied', {
+			noteId: _note.id,
+			reason: 'content',
+			eventUpdatedAt: _note.updated_at,
+			contentLength
+		});
+		return true;
 	};
 
 	$: if (id) {
@@ -754,6 +844,17 @@ ${content}
 		console.log('noteEventHandler', _note);
 		if (_note.id !== id) return;
 
+		if (_note.updated_at && note?.updated_at && _note.updated_at < note.updated_at) {
+			console.info('[note-chat] external note event skipped', {
+				noteId: _note.id,
+				reason: 'stale-event',
+				eventUpdatedAt: _note.updated_at,
+				currentUpdatedAt: note.updated_at,
+				contentLength: _note.data?.content?.md?.length ?? _note.data?.content?.html?.length ?? 0
+			});
+			return;
+		}
+
 		if (_note.access_grants && _note.access_grants !== note.access_grants) {
 			note.access_grants = _note.access_grants;
 		}
@@ -764,22 +865,20 @@ ${content}
 		}
 
 		if (_note.data?.content) {
-			note.data.content = {
-				...note.data.content,
-				..._note.data.content
-			};
-			if (editor) {
-				editor.commands.setContent(
-					_note.data.content.html || marked.parse(_note.data.content.md ?? '')
-				);
-			}
+			await applyExternalNoteContent(_note);
 		}
 
 		if (_note.title && _note.title) {
 			note.title = _note.title;
 		}
 
-		editor.storage.files = files;
+		if (_note.updated_at) {
+			note.updated_at = _note.updated_at;
+		}
+
+		if (editor) {
+			editor.storage.files = files;
+		}
 		await tick();
 
 		for (const file of files) {
@@ -830,6 +929,9 @@ ${content}
 	onDestroy(() => {
 		console.log('destroy');
 		$socket?.off('events:note', noteEventHandler);
+		if (pendingNoteEventTimer) {
+			clearTimeout(pendingNoteEventTimer);
+		}
 
 		const dropzoneElement = document.getElementById('note-editor');
 
@@ -945,11 +1047,11 @@ ${content}
 
 							{#if titleInputFocused && !titleGenerating}
 								<div
-									class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px] pl-2"
+									class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px] pl-2 pr-0.5"
 								>
 									<Tooltip content={$i18n.t('Generate')}>
 										<button
-											class=" self-center dark:hover:text-white transition"
+											class="flex size-5 items-center justify-center self-center dark:hover:text-white transition disabled:cursor-not-allowed"
 											id="generate-title-button"
 											disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
 												titleGenerating}
@@ -965,7 +1067,7 @@ ${content}
 												titleInputFocused = false;
 											}}
 										>
-											<Sparkles strokeWidth="2" />
+											<Sparkles strokeWidth="1.5" />
 										</button>
 									</Tooltip>
 								</div>
@@ -1222,6 +1324,7 @@ ${content}
 								}
 							}}
 							onChange={(content) => {
+								lastLocalContentChangeAt = Date.now();
 								note.data.content.html = content.html;
 								note.data.content.md = content.md;
 
