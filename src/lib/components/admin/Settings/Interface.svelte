@@ -13,6 +13,7 @@
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
+	import { config as appConfig } from '$lib/stores';
 
 	const dispatch = createEventDispatcher();
 
@@ -51,6 +52,17 @@
 			updateTaskConfig(localStorage.token, taskConfig),
 			updateChatConfig(localStorage.token, chatConfig)
 		]);
+		appConfig.update((current) =>
+			current
+				? {
+						...current,
+						features: {
+							...current.features,
+							enable_context_compaction: chatConfig.ENABLE_CONTEXT_COMPACTION
+						}
+					}
+				: current
+		);
 	};
 
 	let workspaceModels: any[] = [];

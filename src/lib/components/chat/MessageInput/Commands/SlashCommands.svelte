@@ -15,6 +15,7 @@
 	export let canFork = false;
 	export let forkDisabled = false;
 	export let contextPercent = 0;
+	export let contextHasThreshold = false;
 
 	let selectedIdx = 0;
 	export let filteredItems = [];
@@ -23,7 +24,9 @@
 	let skills = [];
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
-	$: contextCirclePercent = Math.min(Math.max(0, Math.round(contextPercent)), 100);
+	$: contextCirclePercent = contextHasThreshold
+		? Math.min(Math.max(0, Math.round(contextPercent)), 100)
+		: 0;
 	$: contextCircleOffset = 50.27 * (1 - contextCirclePercent / 100);
 
 	$: commandItems = [
@@ -144,34 +147,38 @@
 					data-selected={commandIdx === selectedIdx}
 				>
 					<span class="app-icon-muted flex items-center justify-center w-4 shrink-0">
-						<svg class="size-3.5 -rotate-90" viewBox="0 0 20 20" aria-hidden="true">
-							<circle
-								cx="10"
-								cy="10"
-								r="8"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								class="opacity-20"
-							/>
-							<circle
-								cx="10"
-								cy="10"
-								r="8"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-dasharray="50.27"
-								style={`stroke-dashoffset: ${contextCircleOffset};`}
-							/>
-						</svg>
+						{#if contextHasThreshold}
+							<svg class="size-3.5 -rotate-90" viewBox="0 0 20 20" aria-hidden="true">
+								<circle
+									cx="10"
+									cy="10"
+									r="8"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									class="opacity-20"
+								/>
+								<circle
+									cx="10"
+									cy="10"
+									r="8"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-dasharray="50.27"
+									style={`stroke-dashoffset: ${contextCircleOffset};`}
+								/>
+							</svg>
+						{/if}
 					</span>
 					<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
 						<span class="truncate">Compact</span>
-						<span class="app-muted text-[0.625rem] truncate shrink-0">
-							{contextCirclePercent}% full
-						</span>
+						{#if contextHasThreshold}
+							<span class="app-muted text-[0.625rem] truncate shrink-0">
+								{contextCirclePercent}% full
+							</span>
+						{/if}
 					</span>
 				</button>
 			</Tooltip>

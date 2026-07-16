@@ -220,6 +220,8 @@
 			return next;
 		}, 0);
 
+	$: contextCompactionEnabled = Boolean($config?.features?.enable_context_compaction);
+
 	const getContextThreshold = () => {
 		const chatThreshold = Number(params?.compact_token_threshold);
 		if (Number.isFinite(chatThreshold) && chatThreshold > 0) {
@@ -229,7 +231,7 @@
 		const modelId = atSelectedModel?.id ?? selectedModels.find((id) => id);
 		const model = $models.find((item) => item.id === modelId);
 		const threshold = Number(model?.info?.params?.compact_token_threshold);
-		return Number.isFinite(threshold) && threshold > 0 ? threshold : 80000;
+		return Number.isFinite(threshold) && threshold > 0 ? threshold : null;
 	};
 
 	const getContextUsage = () => {
@@ -238,7 +240,9 @@
 		}
 
 		const messages = createMessagesList(history, history.currentId);
-		const threshold = getContextThreshold();
+		const threshold = contextCompactionEnabled
+			? (getContextThreshold() ?? serverContextUsage?.threshold ?? null)
+			: null;
 		const systemTokens = estimateTokens($settings?.system ?? '');
 		let estimatedTokens = systemTokens;
 		let hasUsageCheckpoint = false;
@@ -276,12 +280,12 @@
 			tokens: estimatedTokens,
 			estimated_tokens: estimatedTokens,
 			threshold,
-			percent: threshold > 0 ? Math.max(0, Math.round((estimatedTokens / threshold) * 100)) : 0,
+			percent: threshold > 0 ? Math.max(0, Math.round((estimatedTokens / threshold) * 100)) : null,
 			source: 'estimated'
 		};
 	};
 
-	$: contextUsage = getContextUsage() ?? serverContextUsage;
+	$: contextUsage = getContextUsage() ?? (contextCompactionEnabled ? serverContextUsage : null);
 	$: embeddedHeaderTitle = embeddedTitle || $chatTitle || $i18n.t('Chat');
 
 	let selectedToolIds = [];
@@ -2400,6 +2404,11 @@
 	};
 
 	const handleManualCompact = async () => {
+		if (!contextCompactionEnabled) {
+			toast.message($i18n.t('Context compaction is disabled'));
+			return;
+		}
+
 		if (!$chatId || !history?.currentId) {
 			toast.message($i18n.t('No chat to compact'));
 			return;
@@ -2430,7 +2439,9 @@
 						? $i18n.t('Chat is too short to compact')
 						: result?.reason === 'empty'
 							? $i18n.t('No chat to compact')
-							: $i18n.t('Nothing to compact');
+							: result?.reason === 'disabled'
+								? $i18n.t('Context compaction is disabled')
+								: $i18n.t('Nothing to compact');
 				toast.message(skippedReason, { id: toastId });
 			}
 
@@ -3751,6 +3762,7 @@
 										dropzoneId={messageInputDropzoneId}
 										chatId={$chatId}
 										{contextUsage}
+										{contextCompactionEnabled}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
 										forkHandler={handleForkChat}
@@ -3866,6 +3878,7 @@
 										dropzoneId={messageInputDropzoneId}
 										chatId={$chatId}
 										{contextUsage}
+										{contextCompactionEnabled}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
 										forkHandler={handleForkChat}

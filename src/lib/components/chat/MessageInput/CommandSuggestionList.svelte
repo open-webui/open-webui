@@ -30,7 +30,10 @@
 	$: forkAvailable = typeof canFork === 'function' ? canFork() : canFork;
 	$: isForkDisabled = typeof forkDisabled === 'function' ? forkDisabled() : forkDisabled;
 	$: resolvedContextUsage = typeof contextUsage === 'function' ? contextUsage() : contextUsage;
-	$: contextPercent = Math.max(0, Math.round(resolvedContextUsage?.percent ?? 0));
+	$: contextHasThreshold = Number(resolvedContextUsage?.threshold) > 0;
+	$: contextPercent = contextHasThreshold
+		? Math.max(0, Math.round(resolvedContextUsage?.percent ?? 0))
+		: null;
 
 	let suggestionElement: any = null;
 	let filteredItems: any[] = [];
@@ -85,6 +88,7 @@
 					canFork={forkAvailable}
 					forkDisabled={isForkDisabled}
 					{contextPercent}
+					{contextHasThreshold}
 					onSelect={(e) => {
 						const { type, data } = e;
 

@@ -121,6 +121,7 @@
 	export let forkHandler: Function = () => {};
 	export let chatId = '';
 	export let contextUsage = null;
+	export let contextCompactionEnabled = false;
 
 	export let autoScroll = false;
 	export let generating = false;
@@ -389,6 +390,79 @@
 	const trimNumber = (value: number) =>
 		value >= 10 ? String(Math.round(value)) : value.toFixed(1).replace(/\.0$/, '');
 
+	const estimateTokens = (value) => {
+		if (value === null || value === undefined || value === '') {
+			return 0;
+		}
+		if (typeof value !== 'string') {
+			try {
+				value = JSON.stringify(value);
+			} catch {
+				value = String(value);
+			}
+		}
+		return Math.max(1, Math.floor(value.length / 4));
+	};
+
+	const estimateMessagesTokens = (messages) =>
+		messages.reduce((total, message) => {
+			let next = total + 4 + estimateTokens(message.content);
+			next += estimateTokens(message.output);
+			next += estimateTokens(message.tool_calls);
+			next += estimateTokens(message.files);
+			return next;
+		}, 0);
+
+	const getLocalContextUsage = () => {
+		if (!history?.currentId) {
+			return null;
+		}
+
+		const messages = createMessagesList(history, history.currentId);
+		if (!messages.length) {
+			return null;
+		}
+
+		let summary = '';
+		let startIdx = 0;
+		for (let idx = 0; idx < messages.length; idx += 1) {
+			const value = messages[idx]?.contextSummary ?? messages[idx]?.context_summary;
+			if (typeof value === 'string' && value.trim()) {
+				summary = value;
+				startIdx = idx;
+			}
+		}
+
+		const activeMessages = messages.slice(startIdx);
+		let estimatedTokens = estimateTokens($settings?.system ?? '');
+		let hasUsageCheckpoint = false;
+
+		for (let idx = activeMessages.length - 1; idx >= 0; idx -= 1) {
+			const usage = activeMessages[idx]?.usage ?? activeMessages[idx]?.info?.usage;
+			const inputTokens = usage?.input_tokens ?? usage?.prompt_tokens;
+			if (inputTokens) {
+				hasUsageCheckpoint = true;
+				estimatedTokens =
+					Number(inputTokens || 0) +
+					Number(usage.output_tokens ?? usage.completion_tokens ?? 0) +
+					estimateMessagesTokens(activeMessages.slice(idx + 1));
+				break;
+			}
+		}
+
+		if (!hasUsageCheckpoint) {
+			estimatedTokens += estimateTokens(summary) + estimateMessagesTokens(activeMessages);
+		}
+
+		return {
+			tokens: estimatedTokens,
+			estimated_tokens: estimatedTokens,
+			threshold: null,
+			percent: null,
+			source: 'estimated'
+		};
+	};
+
 	const copyStatusChatId = async () => {
 		if (!chatId) return;
 		await navigator.clipboard.writeText(chatId);
@@ -398,11 +472,18 @@
 		}, 1600);
 	};
 
-	$: contextPercent = Math.max(0, Math.round(contextUsage?.percent ?? 0));
-	$: contextValue = contextUsage
-		? `${contextPercent}% ${formatTokenCount(contextUsage.estimated_tokens || contextUsage.tokens)}/${formatTokenCount(contextUsage.threshold)}`
+	$: statusContextUsage = contextUsage ?? getLocalContextUsage();
+	$: contextHasThreshold = Number(statusContextUsage?.threshold) > 0;
+	$: contextPercent = contextHasThreshold
+		? Math.max(0, Math.round(statusContextUsage?.percent ?? 0))
+		: null;
+	$: contextTokens = formatTokenCount(statusContextUsage?.estimated_tokens || statusContextUsage?.tokens || 0);
+	$: contextValue = statusContextUsage
+		? contextHasThreshold
+			? `${contextPercent}% ${contextTokens}/${formatTokenCount(statusContextUsage.threshold)}`
+			: `${contextTokens} ${$i18n.t('tokens')}`
 		: $i18n.t('unknown');
-	$: contextBarPercent = Math.min(contextPercent, 100);
+	$: contextBarPercent = contextHasThreshold ? Math.min(contextPercent, 100) : 0;
 
 	const getCommand = () => {
 		const chatInput = document.getElementById('chat-input');
@@ -1086,12 +1167,12 @@
 				char: '/',
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
-					canCompact: () => !!history?.currentId,
+					canCompact: () => !!history?.currentId && contextCompactionEnabled,
 					compactDisabled: () => isActive,
 					canStatus: () => !!history?.currentId,
 					canFork: () => !!history?.currentId,
 					forkDisabled: () => isActive,
-					contextUsage: () => contextUsage,
+					contextUsage: () => statusContextUsage,
 					onCompact: compactHandler,
 					onStatus: statusHandler,
 					onFork: forkHandler,
@@ -1436,14 +1517,16 @@
 												{contextValue}
 											</span>
 										</div>
-										<div
-											class="mt-1.5 h-0.5 overflow-hidden rounded-full bg-gray-100 dark:bg-white/8"
-										>
+										{#if contextHasThreshold}
 											<div
-												class="h-full rounded-full bg-gray-300 dark:bg-white/20"
-												style={`width: ${contextBarPercent}%`}
-											></div>
-										</div>
+												class="mt-1.5 h-0.5 overflow-hidden rounded-full bg-gray-100 dark:bg-white/8"
+											>
+												<div
+													class="h-full rounded-full bg-gray-300 dark:bg-white/20"
+													style={`width: ${contextBarPercent}%`}
+												></div>
+											</div>
+										{/if}
 									</div>
 
 									{#if messageQueue.length}

@@ -145,6 +145,8 @@ async def compact_messages_for_request(
 
 async def compact_chat_branch(request, user, chat: Any, model_id: str, models: dict) -> dict:
     config = await _load_config()
+    if not config['enable']:
+        return {'ok': True, 'compacted': False, 'reason': 'disabled'}
 
     history = (chat.chat or {}).get('history') or {}
     current_id = history.get('currentId')
@@ -225,6 +227,9 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
         return None
 
     config = await _load_config()
+    if not config['enable']:
+        return None
+
     params = ((chat.chat or {}).get('params') or {}).copy()
     if model_id:
         params['model'] = model_id

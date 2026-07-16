@@ -666,6 +666,21 @@
 			keywords: ['sub-agents', 'subagents', 'delegation', 'background', 'agents']
 		},
 		{
+			id: 'admin:interface',
+			title: 'Interface',
+			keywords: ['interface', 'ui', 'appearance', 'banners', 'tasks', 'prompt suggestions', 'tags']
+		},
+		{
+			id: 'admin:audio',
+			title: 'Audio',
+			keywords: ['audio', 'voice', 'speech', 'tts', 'stt', 'whisper', 'deepgram', 'azure']
+		},
+		{
+			id: 'admin:images',
+			title: 'Images',
+			keywords: ['images', 'generation', 'dalle', 'stable diffusion', 'comfyui', 'automatic1111']
+		},
+		{
 			id: 'admin:evaluations',
 			title: 'Evaluations',
 			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard', 'preference']
@@ -700,21 +715,7 @@
 			title: 'Pipelines',
 			keywords: ['pipelines', 'workflows', 'filters', 'valves', 'middleware']
 		},
-		{
-			id: 'admin:interface',
-			title: 'Interface',
-			keywords: ['interface', 'ui', 'appearance', 'banners', 'tasks', 'prompt suggestions', 'tags']
-		},
-		{
-			id: 'admin:audio',
-			title: 'Audio',
-			keywords: ['audio', 'voice', 'speech', 'tts', 'stt', 'whisper', 'deepgram', 'azure']
-		},
-		{
-			id: 'admin:images',
-			title: 'Images',
-			keywords: ['images', 'generation', 'dalle', 'stable diffusion', 'comfyui', 'automatic1111']
-		},
+
 		{
 			id: 'admin:db',
 			title: 'Database',
