@@ -280,8 +280,8 @@
 />
 
 {#if loaded}
-	<div class="px-4.5 w-full">
-		<div class="flex flex-col gap-1 px-1 mt-0.5 mb-1">
+	<div class="px-2.5 w-full">
+		<div class="flex flex-col gap-1 px-1 mt-0.5">
 			<div class="flex justify-between items-center mb-1 w-full">
 				<input
 					id="documents-import-input"
