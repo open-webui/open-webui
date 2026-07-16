@@ -65,7 +65,7 @@
 			tokens={displayItem.tokens}
 			messageDone={done}
 		>
-			<div slot="content" class="space-y-2">
+			<div slot="content">
 				{#each displayItem.tokens as detailToken, detailIndex}
 					{#if detailToken.attributes?.type === 'tool_calls'}
 						<ToolCallDisplay
@@ -74,7 +74,8 @@
 							resultContent={detailToken.text}
 							grouped={true}
 							open={$settings?.expandDetails ?? false}
-							className="w-full space-y-2"
+							className="w-full"
+							buttonClassName="w-fit py-0.5 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
 						/>
 					{:else if detailToken.text?.length > 0}
 						<Collapsible
@@ -82,7 +83,8 @@
 							open={$settings?.expandDetails ?? false}
 							attributes={getDetailAttributes(detailToken)}
 							messageDone={done}
-							className="w-full space-y-2"
+							className="w-full"
+							buttonClassName="w-fit py-0.5 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
 						>
 							<div class="mb-1.5" slot="content">
 								<div class="markdown-prose">
@@ -102,7 +104,8 @@
 							disabled={true}
 							attributes={getDetailAttributes(detailToken)}
 							messageDone={done}
-							className="w-full space-y-2"
+							className="w-full"
+							buttonClassName="w-fit py-0.5 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
 						/>
 					{/if}
 				{/each}

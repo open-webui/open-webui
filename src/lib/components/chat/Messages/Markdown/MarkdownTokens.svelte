@@ -377,7 +377,7 @@
 			messageDone={done}
 			{allowEmbeds}
 		>
-			<div slot="content" class="space-y-1">
+			<div slot="content">
 				{#each token.items as detailToken, detailIdx}
 					{@const textContent = getDetailTextContent(detailToken)}
 
@@ -388,7 +388,8 @@
 							resultContent={getDetailTextContent(detailToken)}
 							grouped={true}
 							open={$settings?.expandDetails ?? false}
-							className="w-full space-y-2"
+							className="w-full"
+							buttonClassName="w-fit py-0.5 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
 						/>
 					{:else if textContent.length > 0}
 						<Collapsible
@@ -396,7 +397,8 @@
 							open={$settings?.expandDetails ?? false}
 							attributes={detailToken?.attributes}
 							messageDone={done}
-							className="w-full space-y-2"
+							className="w-full"
+							buttonClassName="w-fit py-0.5 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
 							dir="auto"
 						>
 							<div class="mb-1.5" slot="content">
@@ -419,7 +421,8 @@
 							disabled={true}
 							attributes={detailToken?.attributes}
 							messageDone={done}
-							className="w-full space-y-2"
+							className="w-full"
+							buttonClassName="w-fit py-0.5 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
 							dir="auto"
 						/>
 					{/if}
