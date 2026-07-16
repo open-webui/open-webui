@@ -20,6 +20,12 @@ changelog:
       valve (ex.: "9ce06025...,705ca6ca..."). Retrocompativel (1 id = lista de 1).
     - COMPANION coerente: _injetar_contexto alinhado ao esquema de ETIQUETA DE ORIGEM
       por prefixo do trecho ([Fonte]/[Acervos]/[Fonte + Acervos]) do wrapper.
+    - PISO DOS FUNDADORES CONDICIONAL (consolida a 1.19.0, agora aposentada). Era
+      INCONDICIONAL: reservava ~60k chars p/ v29+v30 em TODA pergunta -> abafava
+      atas/operacional (a maior parte da base NAO e Fonte). Agora e ANCORA DE EXCECAO:
+      forcar_fundadores = FUNDADORES_SEMPRE and (bool(pri) or not escolhidos) - so em
+      pedido fundacional explicito OU busca vazia. CRITICO junto com o BASE: sem isso,
+      reabrir o pool das duas colecoes reacenderia o abafamento.
   1.20.0:
     - ROTULO HONESTO + CITACAO COM VERSAO (companion da Parte 1; alinha o pipe ao
       system prompt novo do wrapper nidum-10---documentos, ver
@@ -911,16 +917,6 @@ class Pipe:
         if pri:
             ordem = pri + [n for n in ordem if n not in pri]
 
-        # piso: quais fundadores garantir ao final
-        fund = []
-        if self.valves.FUNDADORES_SEMPRE:
-            fund = _nomes_fundadores(nomes)
-            if not fund:
-                log.warning(
-                    "chatnd: FUNDADORES_SEMPRE ativo mas nenhum arquivo com "
-                    "'fundador'/'v29'/'v30' no nome foi encontrado na base"
-                )
-
         max_docs = self.valves.MAX_DOCS_INTEIROS
         if pri:
             max_docs = min(max(max_docs, len(pri) + 1), 4)
@@ -933,7 +929,21 @@ class Pipe:
             if mapa.get(nome):
                 escolhidos.append(nome)
 
-        # 3) fundadores de piso = os que ficaram fora dos escolhidos
+        # 3) PISO CONDICIONAL dos Fundadores (ANCORA DE EXCECAO, nao regra). NAO os
+        # forcamos SEMPRE: o piso incondicional reservava ~60k chars p/ v29+v30 em
+        # TODA pergunta e ABAFAVA atas/operacional (a maior parte da base NAO e Fonte).
+        # Agora so entram quando o pedido e fundacional (pri disparou por
+        # v29/v30/Fonte/filosofia) OU a busca nao trouxe NENHUM documento (escolhidos
+        # vazio -> fallback de ancoragem). Perguntas com match especifico (atas,
+        # convergencias) deixam de ser sufocadas por v30/v29. Numa fundadora, o v30
+        # entra pela RELEVANCIA (nos escolhidos), nao pelo piso.
+        forcar_fundadores = self.valves.FUNDADORES_SEMPRE and (bool(pri) or not escolhidos)
+        fund = _nomes_fundadores(nomes) if forcar_fundadores else []
+        if forcar_fundadores and not fund:
+            log.warning(
+                "chatnd: piso de Fundadores acionado, mas nenhum arquivo com "
+                "'fundador'/'v29'/'v30' no nome foi encontrado na base"
+            )
         extras = [n for n in fund if n not in escolhidos and mapa.get(n)]
         reserva = sum(
             min(len(mapa[n]), self.valves.FUNDADORES_MAX_CHARS) for n in extras
