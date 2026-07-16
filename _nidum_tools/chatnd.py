@@ -1,9 +1,25 @@
 """
 title: ChatND
 author: Nidum
-version: 1.21.0
+version: 1.22.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum. Na rota de imagem, gera a imagem via Gemini (motor oculto). O usuario nao escolhe o motor.
 changelog:
+  1.22.0:
+    - O PIPE PARA DE DESCARTAR O RESULTADO DO RERANKER (causa raiz). _contexto_documento
+      usava a busca so para RANQUEAR documentos e injetava o top-2 INTEIRO, jogando fora
+      os trechos recuperados: um documento fora do top-2 sumia mesmo tendo sido
+      recuperado (ex.: "resuma a reuniao de 13/07" trazia Brandbook + Convergencia e
+      perdia a ata; com "coautores" a ata subia ao top-2 e aparecia - dai a dependencia
+      de vocabulario). Agora os TRECHOS entram SEMPRE, alem dos inteiros. ORCAMENTO: os
+      trechos sao prioritarios (reservados); quem e cortado por falta de espaco e o
+      DOCUMENTO INTEIRO, nunca o trecho. log.info do orcamento (inteiros/trechos/
+      fundadores/usado/sobra de MAX_CHARS_TOTAL).
+    - TOP_K_DOCUMENTOS default 0 = HERDA o Top K do Admin (cfg.TOP_K). Era 10 e
+      sobrepunha o Admin em silencio (unico parametro duplicado: hybrid, reranker,
+      BM25, k_reranker e relevancia ja vinham do Admin). >0 = override consciente.
+    - Divida anotada em _contexto_documento: a injecao de documento INTEIRO compete com
+      a busca afinada e e resquicio de quando a recuperacao era ruim; revisar DEPOIS do
+      banco de perguntas.
   1.21.0:
     - ROTEADOR ACIONA DOCUMENTOS EM PERGUNTA COM DATA/REUNIAO. O classificador (LLM)
       decidia por vocabulario: "reuniao de coautores 13/07" ia p/ documentos, mas
@@ -795,7 +811,11 @@ class Pipe:
         BASE_CONHECIMENTO_ID: str = Field(
             default="f2c8a48c-59f5-4c93-bd5c-b3d9516d7451"
         )
-        TOP_K_DOCUMENTOS: int = Field(default=10)
+        # 0 = HERDA o Top K do Admin (cfg.TOP_K) - e o default. Qualquer valor > 0
+        # SOBREPOE o Admin (override consciente). Antes o default 10 sobrepunha o
+        # Admin em silencio: os demais parametros (hybrid, reranker, BM25, k_reranker,
+        # relevancia) ja vinham do Admin, e so o k divergia.
+        TOP_K_DOCUMENTOS: int = Field(default=0)
         MAX_DOCS_INTEIROS: int = Field(default=2)
         MAX_CHARS_TOTAL: int = Field(default=200000)
         MOSTRAR_ROTA: bool = Field(default=False)
@@ -870,9 +890,17 @@ class Pipe:
         )
 
     async def _contexto_documento(self, request, user, texto):
-        # Recupera trechos so para RANQUEAR os documentos mais relevantes;
-        # depois injeta o(s) documento(s) INTEIRO(S), evitando respostas
-        # fragmentadas/incompletas em perguntas do tipo "liste todos".
+        # Recupera trechos (hybrid + reranker, config do Admin) e monta o contexto com
+        # DUAS camadas: (1) o(s) documento(s) INTEIRO(S) mais bem ranqueados - evita
+        # resposta fragmentada em "liste todos"; (2) os TRECHOS recuperados, que agora
+        # entram SEMPRE (antes eram descartados, e um documento fora do top-N sumia).
+        #
+        # DIVIDA TECNICA (revisar DEPOIS do banco de perguntas - nao mexer agora):
+        # a injecao de DOCUMENTO INTEIRO (top MAX_DOCS_INTEIROS) COMPETE com a busca
+        # que acabamos de afinar (hybrid + reranker + BM25) e e resquicio de quando a
+        # recuperacao era ruim. Com os trechos preservados, talvez ela nao se justifique
+        # mais - ou justifique so em pedidos de inventario. Medir com o banco antes de
+        # decidir; se sair, libera ate 200k de orcamento e simplifica esta funcao.
         #
         # v1.12.0 - ORDEM E ORCAMENTO:
         #   1. Prioritarios por gatilho (usuario citou v29/v30/alinhamento): TOPO.
@@ -949,9 +977,21 @@ class Pipe:
             min(len(mapa[n]), self.valves.FUNDADORES_MAX_CHARS) for n in extras
         )
 
+        # TRECHOS recuperados: entram SEMPRE, alem dos documentos inteiros. Antes eram
+        # DESCARTADOS (o pipe usava a busca so para ranquear documentos e injetava o
+        # top-N inteiro) - um documento fora do top-N sumia mesmo tendo sido recuperado
+        # (ex.: a ata em 3o lugar, atras do Brandbook e de uma Convergencia). Isso
+        # jogava fora o trabalho do reranker e fazia a resposta depender de vocabulario.
+        # ORCAMENTO: os trechos sao PRIORITARIOS - reservamos o tamanho deles e, se
+        # faltar espaco, quem e cortado e o DOCUMENTO INTEIRO, nunca o trecho.
+        trechos = _montar_contexto(sources) or ""
+        reserva_trechos = len(trechos)
+
         blocos = []
         total = 0
-        limite_principal = max(self.valves.MAX_CHARS_TOTAL - reserva, 0)
+        limite_principal = max(
+            self.valves.MAX_CHARS_TOTAL - reserva - reserva_trechos, 0
+        )
         for nome in escolhidos:
             conteudo = mapa.get(nome) or ""
             restante = limite_principal - total
@@ -963,6 +1003,11 @@ class Pipe:
             )
             total += len(trecho)
 
+        if trechos:
+            blocos.append(
+                "--- Trechos recuperados da base (busca) ---\n" + trechos
+            )
+
         for nome in extras:
             conteudo = (mapa.get(nome) or "")[: self.valves.FUNDADORES_MAX_CHARS]
             if conteudo:
@@ -971,6 +1016,16 @@ class Pipe:
                     + " (Documento Fundador - referencia permanente) ---\n"
                     + conteudo
                 )
+
+        # Vigia do orcamento: quanto dos MAX_CHARS_TOTAL foi usado e quanto sobra.
+        usado = total + reserva_trechos + reserva
+        log.info(
+            "chatnd: contexto -> inteiros:%d chars (%d doc(s)) | trechos:%d | "
+            "fundadores:%d | usado:%d/%d (sobra %d)",
+            total, len(escolhidos), reserva_trechos, reserva, usado,
+            self.valves.MAX_CHARS_TOTAL,
+            max(self.valves.MAX_CHARS_TOTAL - usado, 0),
+        )
 
         if not blocos:
             return _montar_contexto(sources)
