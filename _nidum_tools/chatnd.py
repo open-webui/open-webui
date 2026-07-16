@@ -1,9 +1,35 @@
 """
 title: ChatND
 author: Nidum
-version: 1.28.0
+version: 1.29.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum. Na rota de imagem, gera a imagem via Gemini (motor oculto). O usuario nao escolhe o motor.
 changelog:
+  1.29.0:
+    - DOUTRINA MORTA ARRANCADA (nao desligada). Remove o ramo "pedido fundacional ->
+      injeta v29+v30 INTEIROS": a valve FUNDADORES_INTEIROS_SE_GATILHO, o _docs_
+      prioritarios inteiro (47 linhas), o guard do bump e a reordenacao por gatilho.
+      Sobra UMA regra de fundadores, e ela e rede de seguranca, nao politica:
+      ANCORA_FUNDADORES_SE_BUSCA_VAZIA (a busca voltou vazia -> ancora).
+    - RISCO ZERO, e a prova nao e argumento: o ramo ja estava desligado (valve False) e
+      o 'pri' so tinha 3 consumidores, os TRES mortos - a reordenacao e o guard
+      alimentavam 'escolhidos', que e sempre vazio com MAX_DOCS_INTEIROS=0. Remover
+      codigo que nao roda nao muda comportamento. Medicao que fechou: P9-P13 (as 5
+      fundadoras do banco) passam SEM o ramo, citando o Documento Fundador com versao.
+    - POR QUE ERA DOUTRINA: decidia por SUBSTRING ("alinhad", "filosofia") e passava por
+      cima do rankeador. Numa pergunta operacional ("a decisao de 13/07 esta alinhada?")
+      injetava 120000 chars enquanto o reranker pontuava a Fonte a 0,0048/0,0034/0,00028
+      - o rankeador JA dizia que a Fonte nao tinha a ver, e o ramo ignorava.
+    - MUDANCA LATENTE, declarada: se alguem religar MAX_DOCS_INTEIROS > 0, os documentos
+      inteiros voltam SEM reordenacao por gatilho - entram na ordem da BUSCA, que e a
+      ordem que o rankeador mediu. Isso e melhora, nao perda: a ordem passa a vir de
+      quem mede relevancia, nao de quem casa substring.
+    - LOG: 'piso gatilho|busca-vazia|off' vira 'piso busca-vazia|off' - o ramo que
+      sumiu do codigo sumiu do log junto. Log que anuncia caminho inexistente e o mesmo
+      erro que o log que dizia "desligado" enquanto injetava 159849 chars.
+    - MANTIDOS: _nomes_fundadores (a ancora usa), FUNDADORES_MAX_CHARS (teto por
+      documento ancorado) e MAX_DOCS_INTEIROS (a maquina de documento inteiro segue
+      dormente, revivel por valve). A triade NAO foi tocada - ela esta VIVA e e outra
+      conversa (ver A2 do levantamento).
   1.28.0:
     - PISO DOS FUNDADORES: uma valve que fazia DUAS coisas vira DUAS valves honestas.
       FUNDADORES_SEMPRE (nome que mente desde a 1.21.0: nao e "sempre", e condicional)
@@ -949,52 +975,6 @@ def _nomes_fundadores(nomes):
     return out
 
 
-def _docs_prioritarios(texto, nomes):
-    # Detecta pedido que CITA os Documentos Fundadores ou pede cotejo de alinhamento
-    # (Intencao Reta / "esta Nidum" / Fonte / v29 / v30).
-    #
-    # CUIDADO AO LER: hoje isto quase nao tem efeito, apesar do nome "prioritarios".
-    # O 'pri' reordena 'ordem', que alimenta 'escolhidos' = a lista de DOCUMENTOS
-    # INTEIROS - e ela esta MORTA desde a 1.24.0 (MAX_DOCS_INTEIROS=0 -> o laco nunca
-    # escolhe nada). Os TRECHOS vem de 'sources' (a busca), que o 'pri' NAO TOCA.
-    # Ou seja: "empurrar no ranking" hoje e NO-OP. O unico efeito real que restava era
-    # abrir o ramo do piso por gatilho - desligado por default na 1.28.0 (substring
-    # frouxa: "alinhad"/"filosofia" disparavam em pergunta operacional e injetavam
-    # 120000 chars de v29+v30). A funcao fica porque religar o inteiro (valve > 0) faz
-    # ela voltar a valer, e porque o gatilho continua disponivel atras da valve.
-    t = (texto or "").lower()
-
-    quer_v30 = ("v30" in t) or ("versao 30" in t) or ("vers\u00e3o 30" in t)
-    quer_v29 = ("v29" in t) or ("versao 29" in t) or ("vers\u00e3o 29" in t)
-    quer_fund = "documento fundador" in t or "documentos fundadores" in t
-    quer_fonte = any(
-        k in t
-        for k in [
-            "intencao reta", "inten\u00e7\u00e3o reta", "esta nidum", "est\u00e1 nidum",
-            "alinhad", "filosofia", "fonte da nidum", "principios da nidum",
-            "princ\u00edpios da nidum", "espirito da nidum", "esp\u00edrito da nidum",
-        ]
-    )
-    pri = []
-    if quer_v30 or quer_fund or quer_fonte:
-        n = (
-            _achar_nome(nomes, "fundador", "v30")
-            or _achar_nome(nomes, "fundador", "30")
-            or _achar_nome(nomes, "v30")
-        )
-        if n:
-            pri.append(n)
-    if quer_v29 or quer_fund or quer_fonte:
-        n = (
-            _achar_nome(nomes, "fundador", "v29")
-            or _achar_nome(nomes, "fundador", "29")
-            or _achar_nome(nomes, "v29")
-        )
-        if n and n not in pri:
-            pri.append(n)
-    return pri
-
-
 # Cabecalho de rastreabilidade que a esteira grava no topo de cada .md:
 #   <!-- origem: sharepoint:... | pasta: 3 - Acervos Institucionais/Juridico | ... -->
 # Extrai o campo 'pasta' (caminho da pasta de origem) quando o trecho o traz.
@@ -1073,17 +1053,6 @@ class Pipe:
         # um nome que MENTIA: desde a 1.21.0 o piso nao e "sempre", e condicional. Nome e
         # comentario errados custam caro - quem chega depois le e acredita.
         #
-        # (a) GATILHO: o pedido parece fundacional (_docs_prioritarios: v29/v30/"documento
-        # fundador"/"alinhad"/"filosofia"/...) -> anexa v29+v30 INTEIROS.
-        # NASCE DESLIGADA e a intencao e que continue. Motivo: os gatilhos sao SUBSTRING
-        # FROUXA. "A decisao de 13/07 esta ALINHADA com o combinado?" - pergunta 100%
-        # operacional - disparava e injetava 120000 chars (2 x 60000 = 60% do orcamento de
-        # 200000) de v29+v30, abafando a ata. E o mesmo abafamento que a 1.21.0/1.23.0
-        # eliminaram, voltando pela porta dos fundamentos. POLITICA (governanca): os
-        # fundadores devem ser ACHADOS PELA BUSCA quando a pergunta remete a Fonte - nao
-        # injetados a forca. Evidencia de que da certo: P9-P13 (as 5 fundadoras do banco)
-        # dao OK e o v30 entra por RELEVANCIA. Religar so com o banco mostrando regressao.
-        FUNDADORES_INTEIROS_SE_GATILHO: bool = Field(default=False)
         # (b) ANCORA: a BUSCA voltou VAZIA (sources vazio) -> ancora nos fundadores em vez
         # de responder sem base nenhuma. Rede de seguranca, nao regra: so dispara quando
         # NAO HA alternativa, entao custa zero no caso normal. Nao confundir com (a):
@@ -1258,22 +1227,12 @@ class Pipe:
 
         nomes = list(mapa.keys())
 
-        # 1) prioritarios por gatilho -> topo (comportamento anterior mantido)
-        pri = _docs_prioritarios(texto, nomes)
-        if pri:
-            ordem = pri + [n for n in ordem if n not in pri]
-
+        # DOCUMENTO INTEIRO: so entra se a valve MAX_DOCS_INTEIROS for > 0 (default 0 =
+        # desligado). A ordem e a da BUSCA (relevancia) - nao ha mais reordenacao por
+        # gatilho de palavra: ver 1.29.0. Se religar a valve, os documentos entram na
+        # ordem em que o rankeador os colocou, que e a ordem que ele mediu.
         max_docs = self.valves.MAX_DOCS_INTEIROS
-        # GUARD: com MAX_DOCS_INTEIROS=0 o inteiro fica DESLIGADO de verdade. Sem o
-        # 'max_docs > 0', o bump do 'pri' religava por baixo - max(0, len(pri)+1) = 3 -
-        # e injetava 3 documentos inteiros (v30+v29+1) mesmo com a valve em 0. Foi o
-        # que estourou o orcamento (159849 chars de inteiro + 40151 de trechos = 200000,
-        # sobra 0) enquanto o log dizia "desligado". Se o inteiro estiver ligado (>0),
-        # um pedido fundacional explicito continua podendo abrir vaga extra (ate 4).
-        if pri and max_docs > 0:
-            max_docs = min(max(max_docs, len(pri) + 1), 4)
 
-        # 2) ranqueados (e prioritarios) com o orcamento principal
         escolhidos = []
         for nome in ordem:
             if len(escolhidos) >= max_docs:
@@ -1281,24 +1240,24 @@ class Pipe:
             if mapa.get(nome):
                 escolhidos.append(nome)
 
-        # 3) FUNDADORES - DOIS caminhos independentes, cada um com sua valve (1.28.0).
-        # Antes eram um booleano so ('FUNDADORES_SEMPRE and (pri or not sources)'), o que
-        # impedia ate de MEDIR um sem matar o outro.
+        # ANCORA DOS FUNDADORES - rede de seguranca, e SO ISSO (1.29.0).
+        # Dispara quando a BUSCA VOLTOU VAZIA: sem ela a resposta sairia sem base
+        # nenhuma. So age quando NAO HA alternativa, entao custa zero no caso normal.
         #
-        # (a) GATILHO (default OFF): pedido "fundacional" pelo _docs_prioritarios. Off
-        #     porque o gatilho e substring frouxa ("alinhad", "filosofia") e injetava
-        #     120000 chars de v29+v30 em pergunta operacional - o abafamento que a
-        #     1.21.0/1.23.0 mataram, voltando pela porta dos fundamentos. A politica e:
-        #     fundador entra pela BUSCA (por relevancia), nao a forca.
-        # (b) ANCORA (default ON): a busca voltou VAZIA. Rede de seguranca - sem ela a
-        #     resposta sairia sem base nenhuma. So dispara quando nao ha alternativa.
+        # O outro ramo - "pedido fundacional -> injeta v29+v30 INTEIROS" - foi REMOVIDO
+        # na 1.29.0, nao apenas desligado. Ele era doutrina disfarcada de recuperacao:
+        # decidia por SUBSTRING ("alinhad", "filosofia") e passava por cima do rankeador.
+        # Medicao que encerrou o assunto: numa pergunta operacional ("a decisao de 13/07
+        # esta alinhada?") ele injetava 120000 chars enquanto o reranker pontuava a Fonte
+        # a 0,0048/0,0034/0,00028 - ou seja, o rankeador JA dizia que a Fonte nao tinha a
+        # ver, e o ramo passava por cima. E as 5 fundadoras do banco (P9-P13) passam SEM
+        # ele, citando o Documento Fundador com versao: a busca acha os fundadores
+        # sozinha, por relevancia. Peso morto medido, nao suposto.
         #
-        # SINAL de (b) e 'not sources' (a BUSCA nao achou nada), NAO 'not escolhidos':
-        # com MAX_DOCS_INTEIROS=0, 'escolhidos' e SEMPRE vazio e o sinal antigo faria a
+        # SINAL e 'not sources' (a BUSCA nao achou nada), NAO 'not escolhidos': com
+        # MAX_DOCS_INTEIROS=0, 'escolhidos' e SEMPRE vazio e o sinal antigo faria a
         # ancora disparar em TODA pergunta, reacendendo o abafamento por baixo.
-        por_gatilho = bool(pri) and self.valves.FUNDADORES_INTEIROS_SE_GATILHO
-        por_busca_vazia = (not sources) and self.valves.ANCORA_FUNDADORES_SE_BUSCA_VAZIA
-        forcar_fundadores = por_gatilho or por_busca_vazia
+        forcar_fundadores = (not sources) and self.valves.ANCORA_FUNDADORES_SE_BUSCA_VAZIA
         fund = _nomes_fundadores(nomes) if forcar_fundadores else []
         if forcar_fundadores and not fund:
             log.warning(
@@ -1365,15 +1324,11 @@ class Pipe:
             if not escolhidos
             else "%d chars (%d doc(s))" % (total, len(escolhidos))
         )
-        # O piso diz QUAL ramo disparou, nao so ON/off: 'gatilho' e 'busca-vazia' tem
-        # causas e consequencias diferentes (um e escolha de politica, o outro e sintoma
-        # de recuperacao falha). 'busca-vazia' recorrente no log e ALARME - quer dizer
-        # que a busca esta voltando sem nada e o pipe esta ancorando no fallback.
-        piso_txt = (
-            "gatilho" if por_gatilho
-            else "busca-vazia" if por_busca_vazia
-            else "off"
-        )
+        # Sobrou UM ramo (1.29.0), e ele e sintoma, nao politica: 'busca-vazia'
+        # recorrente no log e ALARME - quer dizer que a busca esta voltando sem nada e o
+        # pipe esta ancorando no fallback. O nome fica no log em vez de um 'ON' generico
+        # justamente para o alarme ser legivel.
+        piso_txt = "busca-vazia" if forcar_fundadores else "off"
         log.info(
             "chatnd: contexto -> trechos:%d chunk(s)/%d chars | inteiros:%s | "
             "fundadores:%d chars (piso %s) | usado:%d/%d (sobra %d)",
