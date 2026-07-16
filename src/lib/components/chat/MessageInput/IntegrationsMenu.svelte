@@ -95,10 +95,17 @@
 			for (const serverIdx in $toolServers) {
 				const server = $toolServers[serverIdx];
 				if (server.info) {
-					tools[`direct_server:${serverIdx}`] = {
+					// Use the server's stable backend-assigned id (falls back to its
+					// index only when the backend itself had no better id to give),
+					// rather than this component's own local array position, so the
+					// selection key stays correct even if $toolServers is ever
+					// re-fetched or re-ordered between opening this menu and the
+					// message actually being sent.
+					const stableId = server?.id ?? serverIdx;
+					tools[`direct_server:${stableId}`] = {
 						name: server?.info?.title ?? server.url,
 						description: server.info.description ?? '',
-						enabled: selectedToolIds.includes(`direct_server:${serverIdx}`)
+						enabled: selectedToolIds.includes(`direct_server:${stableId}`)
 					};
 				}
 			}
