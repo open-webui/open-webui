@@ -331,49 +331,38 @@
 					</div>
 				</div>
 			{:else if message?.meta?.internal === true && message?.meta?.type === 'timer'}
-				<div class="flex justify-start">
-					<div
-						class="w-full max-w-3xl rounded-xl border border-gray-100 bg-gray-50/70 px-3 py-2 text-gray-700 dark:border-gray-800 dark:bg-gray-900/60 dark:text-gray-300"
+				<div class="w-full min-w-0">
+					<button
+						type="button"
+						class="flex w-full min-w-0 items-center gap-2 text-left text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+						aria-expanded={timerExpanded}
+						on:click={() => {
+							timerExpanded = !timerExpanded;
+						}}
 					>
-						<button
-							type="button"
-							class="flex w-full items-center justify-between gap-3 text-left"
-							aria-expanded={timerExpanded}
-							on:click={() => {
-								timerExpanded = !timerExpanded;
-							}}
+						<span class="shrink-0 text-[0.75rem] font-medium">{$i18n.t('Timer')}</span>
+						<span class="min-w-0 flex-1 truncate text-[0.75rem]">{message.content}</span>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="2"
+							stroke="currentColor"
+							class="size-3 shrink-0 text-gray-400 transition-transform duration-150 dark:text-gray-600 {timerExpanded
+								? 'rotate-180'
+								: ''}"
 						>
-							<span class="text-xs font-medium text-gray-500 dark:text-gray-400">{$i18n.t('Timer')}</span>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="2"
-								stroke="currentColor"
-								class="size-3.5 shrink-0 text-gray-400 transition-transform dark:text-gray-600 {timerExpanded
-									? 'rotate-180'
-									: ''}"
-							>
-								<path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-							</svg>
-						</button>
-						{#if timerExpanded}
-							<div class="mt-2 text-sm">
-								{#if $settings?.renderMarkdownInUserMessages ?? true}
-									<Markdown
-										id={`${chatId}-${message.id}`}
-										content={message.content}
-										{editCodeBlock}
-										{topPadding}
-									/>
-								{:else}
-									<div class="whitespace-pre-wrap" dir={$settings?.chatDirection ?? 'auto'}>
-										{message.content}
-									</div>
-								{/if}
-							</div>
-						{/if}
-					</div>
+							<path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+						</svg>
+					</button>
+					{#if timerExpanded}
+						<div
+							class="mt-2 ml-3 whitespace-pre-wrap break-words border-l border-gray-100 pl-3 text-[0.78125rem] leading-relaxed text-gray-600 dark:border-white/10 dark:text-gray-400"
+							dir={$settings?.chatDirection ?? 'auto'}
+						>
+							{message.content}
+						</div>
+					{/if}
 				</div>
 			{:else if message?.meta?.async_subagent_result}
 				<SubagentResultRow content={message.content} result={message.meta} />
