@@ -507,6 +507,7 @@
 	let showInputModal = false;
 
 	export let dragged = false;
+	export let dropzoneId = 'chat-pane';
 	let shiftKey = false;
 
 	let user = null;
@@ -1216,7 +1217,7 @@
 			await tick();
 			if (isDestroyed) return;
 
-			dropzoneElement = document.getElementById('chat-pane');
+			dropzoneElement = document.getElementById(dropzoneId);
 			if (dropzoneElement) {
 				dropzoneElement.addEventListener('dragover', onDragOver, true);
 				dropzoneElement.addEventListener('drop', onDrop, true);

@@ -11,6 +11,7 @@
 	import Link from '$lib/components/icons/Link.svelte';
 	import Pin from '$lib/components/icons/Pin.svelte';
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
+	import CloudArrowUp from '$lib/components/icons/CloudArrowUp.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -21,6 +22,7 @@
 	export let onDelete = () => {};
 	export let onPin = null;
 	export let isPinned = false;
+	export let onUploadFiles = null;
 
 	export let onCopyLink = null;
 	export let onCopyToClipboard = null;
@@ -76,6 +78,19 @@
 					<div class="flex items-center line-clamp-1">{$i18n.t('PDF document (.pdf)')}</div>
 				</button>
 			</DropdownSub>
+
+			{#if onUploadFiles}
+				<button
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
+					on:click={() => {
+						onUploadFiles();
+						show = false;
+					}}
+				>
+					<CloudArrowUp className="size-3.5" strokeWidth="2" />
+					<div class="flex items-center">{$i18n.t('Upload files')}</div>
+				</button>
+			{/if}
 
 			{#if onCopyLink || onCopyToClipboard}
 				<DropdownSub contentClass="select-none z-50">

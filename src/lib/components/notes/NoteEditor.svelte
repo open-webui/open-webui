@@ -648,6 +648,20 @@ ${content}
 		});
 	};
 
+	const uploadNoteFilesHandler = () => {
+		const input = document.createElement('input');
+		input.type = 'file';
+		input.multiple = true;
+		input.click();
+
+		input.onchange = async () => {
+			const inputFiles = Array.from(input.files ?? []);
+			if (inputFiles.length > 0) {
+				await inputFilesHandler(inputFiles);
+			}
+		};
+	};
+
 	const openNoteChat = async () => {
 		console.info('[note-chat] open requested', {
 			noteId: note?.id,
@@ -1170,6 +1184,7 @@ ${content}
 								{/if}
 
 								<NoteMenu
+									onUploadFiles={note?.write_access ? uploadNoteFilesHandler : null}
 									onDownload={(type) => {
 										downloadHandler(type);
 									}}

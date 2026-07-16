@@ -136,6 +136,7 @@
 
 	let loading = true;
 	$: chatContainerId = embedded ? 'note-chat-container' : 'chat-container';
+	$: messageInputDropzoneId = embedded ? 'note-chat-input-dropzone' : 'chat-pane';
 	const embeddedSuggestedPrompts = [
 		'Enhance this note and update it.',
 		'Summarize this note.',
@@ -3750,7 +3751,10 @@
 									</div>
 								</div>
 							{:else}
-								<div class=" pb-2 {dragged ? 'z-0' : 'z-10'}">
+								<div
+									id={embedded ? messageInputDropzoneId : undefined}
+									class=" pb-2 {dragged ? 'z-0' : 'z-10'}"
+								>
 									<MessageInput
 										bind:this={messageInput}
 										{history}
@@ -3769,6 +3773,7 @@
 										bind:atSelectedModel
 										bind:showCommands
 										bind:dragged
+										dropzoneId={messageInputDropzoneId}
 										chatId={$chatId}
 										{contextUsage}
 										compactHandler={handleManualCompact}
@@ -3862,7 +3867,7 @@
 										</div>
 									</div>
 								</div>
-								<div class="pb-2 z-10">
+								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
 									<MessageInput
 										bind:this={messageInput}
 										{history}
@@ -3881,6 +3886,7 @@
 										bind:atSelectedModel
 										bind:showCommands
 										bind:dragged
+										dropzoneId={messageInputDropzoneId}
 										chatId={$chatId}
 										{contextUsage}
 										compactHandler={handleManualCompact}
