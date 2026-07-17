@@ -3077,6 +3077,19 @@ async def create_automation(
         except ValueError as e:
             return json.dumps({'error': f'Invalid schedule: {e}'})
 
+        # Enforce AUTOMATION_MAX_COUNT / AUTOMATION_MIN_INTERVAL (same as API)
+        from open_webui.utils.automations import AutomationLimitError, enforce_automation_limits
+
+        try:
+            await enforce_automation_limits(
+                user_role=user.role,
+                user_id=user_id,
+                rrule_str=rrule,
+                is_create=True,
+            )
+        except AutomationLimitError as e:
+            return json.dumps({'error': e.message})
+
         tz = user.timezone
         form = AutomationForm(
             name=name,
@@ -3157,6 +3170,19 @@ async def update_automation(
                 validate_rrule(new_rrule, tz=user.timezone if user else None)
             except ValueError as e:
                 return json.dumps({'error': f'Invalid schedule: {e}'})
+
+        # Enforce AUTOMATION_MIN_INTERVAL (same as API)
+        from open_webui.utils.automations import AutomationLimitError, enforce_automation_limits
+
+        try:
+            await enforce_automation_limits(
+                user_role=user.role if user else __user__.get('role', 'user'),
+                user_id=user_id,
+                rrule_str=new_rrule,
+                is_create=False,
+            )
+        except AutomationLimitError as e:
+            return json.dumps({'error': e.message})
 
         tz = user.timezone if user else None
         form = AutomationForm(
