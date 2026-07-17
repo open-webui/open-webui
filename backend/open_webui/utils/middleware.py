@@ -4223,36 +4223,43 @@ async def streaming_chat_response_handler(response, ctx):
                                     delta_tool_calls = delta.get('tool_calls', None)
                                     if delta_tool_calls:
                                         for delta_tool_call in delta_tool_calls:
-                                            tool_call_index = delta_tool_call.get('index')
+                                            # Some OpenAI-compatible providers (e.g. vLLM, Ollama's
+                                            # OpenAI-compat endpoint) omit `index` on tool_calls deltas,
+                                            # unlike OpenAI's own API which always populates it. Default
+                                            # to 0 (single, non-parallel tool call is the common case)
+                                            # instead of silently dropping the delta — otherwise the
+                                            # tool call is never accumulated, never dispatched, and the
+                                            # chat hangs with no error. Mirrors the same fallback already
+                                            # used for Ollama/Anthropic payloads elsewhere in the codebase
+                                            # (see convert_ollama_tool_call_to_openai in response.py).
+                                            tool_call_index = delta_tool_call.get('index', 0)
 
-                                            if tool_call_index is not None:
-                                                # Check if the tool call already exists
-                                                current_response_tool_call = None
-                                                for response_tool_call in response_tool_calls:
-                                                    if response_tool_call.get('index') == tool_call_index:
-                                                        current_response_tool_call = response_tool_call
-                                                        break
+                                            # Check if the tool call already exists
+                                            current_response_tool_call = None
+                                            for response_tool_call in response_tool_calls:
+                                                if response_tool_call.get('index') == tool_call_index:
+                                                    current_response_tool_call = response_tool_call
+                                                    break
 
-                                                if current_response_tool_call is None:
-                                                    # Add the new tool call
-                                                    delta_tool_call.setdefault('function', {})
-                                                    delta_tool_call['function'].setdefault('name', '')
-                                                    delta_tool_call['function'].setdefault('arguments', '')
-                                                    response_tool_calls.append(delta_tool_call)
-                                                else:
-                                                    # Update the existing tool call
-                                                    delta_name = delta_tool_call.get('function', {}).get('name')
-                                                    delta_arguments = delta_tool_call.get('function', {}).get(
-                                                        'arguments'
+                                            if current_response_tool_call is None:
+                                                # Add the new tool call
+                                                delta_tool_call = {**delta_tool_call, 'index': tool_call_index}
+                                                delta_tool_call.setdefault('function', {})
+                                                delta_tool_call['function'].setdefault('name', '')
+                                                delta_tool_call['function'].setdefault('arguments', '')
+                                                response_tool_calls.append(delta_tool_call)
+                                            else:
+                                                # Update the existing tool call
+                                                delta_name = delta_tool_call.get('function', {}).get('name')
+                                                delta_arguments = delta_tool_call.get('function', {}).get('arguments')
+
+                                                if delta_name:
+                                                    current_response_tool_call['function']['name'] = delta_name
+
+                                                if delta_arguments:
+                                                    current_response_tool_call['function']['arguments'] += (
+                                                        delta_arguments
                                                     )
-
-                                                    if delta_name:
-                                                        current_response_tool_call['function']['name'] = delta_name
-
-                                                    if delta_arguments:
-                                                        current_response_tool_call['function']['arguments'] += (
-                                                            delta_arguments
-                                                        )
 
                                         # Emit pending tool calls in real-time
                                         if response_tool_calls:
