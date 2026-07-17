@@ -513,7 +513,7 @@
 							role="button"
 							tabindex="0"
 							aria-label={$i18n.t('Open automation')}
-							class="group flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-left transition"
+							class="group flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 text-left transition"
 							on:click={() => {
 								goto(`/automations/${automation.id}`);
 							}}
