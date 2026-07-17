@@ -1078,7 +1078,15 @@ async def transcribe(request: Request, file_path: str, metadata: Optional[dict] 
 
     results = []
     try:
-        tasks = [transcription_handler(request, chunk_path, metadata, user) for chunk_path in chunk_paths]
+        # Wrap transcription handler to tag each result with its chunk path,
+        # so we can reorder results back to chronological order regardless of
+        # which chunk finishes first.
+        async def transcribe_with_path(chunk_path):
+            result = await transcription_handler(request, chunk_path, metadata, user)
+            result['chunk_path'] = chunk_path
+            return result
+
+        tasks = [transcribe_with_path(chunk_path) for chunk_path in chunk_paths]
         for coro in asyncio.as_completed(tasks):
             try:
                 results.append(await coro)
@@ -1097,6 +1105,12 @@ async def transcribe(request: Request, file_path: str, metadata: Optional[dict] 
                     os.remove(chunk_path)
                 except Exception:
                     pass
+
+    # Sort results by chunk index to preserve chronological order.
+    # asyncio.as_completed() yields in completion order, which is non-deterministic
+    # when per-chunk transcription times vary. Reassemble in chunk_paths order.
+    chunk_index = {path: idx for idx, path in enumerate(chunk_paths)}
+    results.sort(key=lambda r: chunk_index.get(r.get('chunk_path', ''), 0))
 
     return {
         'text': ' '.join([result['text'] for result in results]),
