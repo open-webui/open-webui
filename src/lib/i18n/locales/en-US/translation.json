@@ -2331,6 +2331,7 @@
 	"Top": "",
 	"Top K": "",
 	"Top K Reranker": "",
+	"top_k must be a whole number between {{min}} and {{max}}.": "",
 	"Transformers": "",
 	"Trouble accessing Ollama?": "",
 	"Trust Proxy Environment": "",
