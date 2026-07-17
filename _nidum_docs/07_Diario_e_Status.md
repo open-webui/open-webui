@@ -151,6 +151,51 @@ nem os 3 projetos do Railway).
 **Nenhuma linha saiu por "parecer complexa".** Saíram porque quatro fontes independentes —
 log, código, banco de perguntas e pessoas — disseram a mesma coisa.
 
+### A doutrina, que eram DUAS coisas — e só uma era doutrina
+
+**Eu havia listado a tríade ao lado do piso dos fundadores como "doutrina codificada, candidata a corte". Errei** — são coisas de naturezas diferentes, e tratá-las igual teria cortado a errada. O Davi separou as duas, e a separação estava certa.
+
+**A1 — o piso do gatilho: código morto, arrancado.** Virou a 1.29.0 (ver a sessão da noite).
+
+#### A2 — a tríade: **investigada e MANTIDA por decisão** — não reabrir como "doutrina esquecida"
+
+**Ela está VIVA.** Prova: log de produção `chatnd: roteador -> documentos (classificador='documentos | triade')`, e a valve `TRIADE_ATIVA` **Ativado** no painel.
+
+**O que ela é:** não é texto colado em toda resposta. É um **pedido de estrutura, condicionado, decidido por um juiz**. O classificador só acrescenta `| triade` **se** o pedido for sobre **movimento, relação, geração ou transformação** — e **explicitamente NÃO** para **inventário, definição ou fato**. Se marcar, injeta-se o `VOZ_TRIADE` (**704 chars**) pedindo Fonte/Forma/Fluxo — e o próprio texto manda *"deixe a tríade RESPIRAR… NUNCA como três seções fixas carimbadas"*.
+
+**Por que ela NÃO é o piso:**
+
+| | Piso dos fundadores (**removido**) | Tríade (**mantida**) |
+|---|---|---|
+| Decidia por | **substring** (`alinhad`) | **um juiz avaliando o pedido** |
+| Passava por cima de | **o rankeador** (injetava a Fonte a 0,0048) | **nada** — não toca a busca |
+| Custo quando dispara | **120.000 chars** | **704 chars** (**170× menos**) |
+| Afetava | **o que o modelo VÊ** (conteúdo) | **como o modelo ESCREVE** (forma) |
+| Podia responder errado? | **sim** — abafava a ata | **não** — não muda o que foi recuperado |
+
+**A tríade é instrução de voz** — da mesma família de *"responda em português"* ou *"cite a fonte com a versão"*. Não decide **o que é verdade**; decide **como organizar a explicação**. **O piso decidia o que o modelo lia; a tríade decide como ele escreve o que leu.**
+
+> **Decisão do Davi, registrada:** *"a tríade não toca o dia a dia por desenho, e é o único lugar onde está escrito que a Nidum tem uma voz. **Deve soar Nidum**."* **Mantida por decisão, não por inércia.** A queixa original — *"os fundadores poluem o dia a dia"* — era sobre **o piso**, e o piso foi arrancado.
+
+**Enxugamento proposto por mim e CANCELADO — o motivo importa mais que o resultado.** Propus condensar a regra da tríade no classificador alegando **1.247 caracteres (31% do prompt)**. **São 518 (13%)** — meu script quebrou o prompt por `". "` e capturou frases vizinhas. **Inflei 2,4×, e a aprovação veio em cima desse número.** Corrigido, o ganho seria ~60 tokens. E encurtar prompt **não é remover código morto — é mudar comportamento**; **o banco não mede isto** (ele mede *"a fonte foi citada?"*, não *"soa Nidum?"*).
+
+> **Se reabrirem, o instrumento não é o banco** — são duas sondas no log: *"como os ecossistemas da Nidum se relacionam para gerar regeneração?"* **tem** que sair `| triade`; *"quais são os ecossistemas da Nidum?"* **não pode**.
+
+### 🏛️ Decisão da governança — o ChatND será o **chat único** dos colaboradores
+
+**Tomada em 16/07/2026**, registrada para a reforma ser executada contra um alvo escrito. **O desenho:** institucional **e** assistente geral na **mesma ferramenta**.
+
+| A pergunta é… | Vai para |
+|---|---|
+| **fora** do contexto Nidum | **Sonnet + web** (rota `geral`) |
+| **do** contexto Nidum | **Sonnet + base**, sem web (rota `documentos`) |
+
+> ⚠️ **Correção de percurso registrada:** esta decisão nasceu com **Haiku** na rota de fora. **O Davi recusou e foi medir** — `gpt-5-mini` errou as definições de SPE **e** SCP e construiu duas páginas em cima do erro, num tema que é **da ata de 08/07**. **Virou Sonnet.** Detalhe na sessão da noite.
+
+> ⚠️ **O risco arquitetural, registrado antes de implementar:** a decisão põe **todo o peso numa única classificação** — *"isto é sobre a Nidum?"*. Antes, errar entre `rapido` e `diaadia` era inofensivo. No desenho novo, errar entre "fora" e "Nidum" significa **o bot responder sobre a Nidum de cabeça** — e, com a web, **buscado no Google sobre uma empresa homônima**. **E já havia prova de que essa fronteira é o ponto fraco:** o bug da Q14 obrigou a criar o guarda `_tem_marca_temporal`.
+>
+> **Consequência de projeto:** a binária tem que ser **enviesada — na dúvida, base.** Falso positivo = ~1 s de busca desperdiçada; falso negativo = resposta inventada sobre a Nidum. **A assimetria decide o default.** **Foi este parágrafo que virou as duas travas determinísticas da 1.31.0.**
+
 ### Fronteira do Chico (validada)
 
 A doutrina do Chico vive **nas tools dele** (`Chico - A Fonte`, `Convergir`,
