@@ -709,11 +709,12 @@
 										<div class="flex min-w-0 items-center gap-2 overflow-hidden">
 											<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
 												<Tooltip content={model.name} className="min-w-0" placement="top-start">
-													<div
+													<a
+														href={`/?model=${encodeURIComponent(model.id)}`}
 														class="truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
 													>
 														{model.name}
-													</div>
+													</a>
 												</Tooltip>
 
 												<div

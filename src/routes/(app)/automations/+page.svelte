@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount, onDestroy, getContext } from 'svelte';
 
+	import dayjs from '$lib/dayjs';
+	import relativeTime from 'dayjs/plugin/relativeTime';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { WEBUI_NAME, user, config } from '$lib/stores';
@@ -36,6 +38,8 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
 	import Minus from '$lib/components/icons/Minus.svelte';
+
+	dayjs.extend(relativeTime);
 
 	const { saveAs } = fileSaver;
 
@@ -195,6 +199,12 @@
 			name: `${automation.name} (Clone)`
 		};
 		showCreateModal = true;
+	};
+
+	const formatLastRun = (automation: AutomationResponse): string => {
+		return automation.last_run_at
+			? dayjs(automation.last_run_at / 1000000).fromNow()
+			: $i18n.t('Never');
 	};
 
 	const getAllAutomations = async () => {
@@ -513,7 +523,7 @@
 							role="button"
 							tabindex="0"
 							aria-label={$i18n.t('Open automation')}
-							class="group flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 text-left transition"
+							class="group flex min-h-8 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-xl px-2 py-1 text-left"
 							on:click={() => {
 								goto(`/automations/${automation.id}`);
 							}}
@@ -524,17 +534,42 @@
 								}
 							}}
 						>
-							<div class="min-w-0 flex-1">
-								<Tooltip content={automation.name} placement="top-start">
-									<div
-										class="truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
-									>
-										{automation.name}
+							<div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+								<div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+									<div class="flex min-w-0 items-center gap-2 overflow-hidden">
+										<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+											<Tooltip content={automation.name} className="min-w-0" placement="top-start">
+												<div
+													class="truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+												>
+													{automation.name}
+												</div>
+											</Tooltip>
+
+											<Tooltip
+												content={automation.last_run_at
+													? dayjs(automation.last_run_at / 1000000).format('LLLL')
+													: $i18n.t('Never')}
+											>
+												<div
+													class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+												>
+													{formatLastRun(automation)}
+												</div>
+											</Tooltip>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<div
+								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
+							>
+								<Tooltip content={formatRRule(automation.data.rrule)} className="min-w-0">
+									<div class="truncate">
+										{formatRRule(automation.data.rrule)}
 									</div>
 								</Tooltip>
-								<div class="truncate text-[11px] leading-4 text-gray-500 dark:text-gray-500">
-									{formatRRule(automation.data.rrule)}
-								</div>
 							</div>
 
 							<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
