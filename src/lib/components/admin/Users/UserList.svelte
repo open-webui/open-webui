@@ -176,7 +176,7 @@
 		<Spinner className="size-5" />
 	</div>
 {:else}
-	<div class="pt-0.5 pb-1 sticky top-0 z-10 bg-white dark:bg-gray-900">
+	<div class="pt-0.5 sticky top-0 z-10 bg-white dark:bg-gray-900">
 		<div class="flex h-8 flex-1 items-center w-full gap-2">
 			<div class="flex min-w-0 flex-1 items-center">
 				<div class="self-center ml-1 mr-3">
@@ -223,7 +223,7 @@
 				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
 					<th
 						scope="col"
-						class="px-2.5 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-1.5 font-normal cursor-pointer select-none"
 						on:click={() => setSortKey('name')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -246,7 +246,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-2.5 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-1.5 font-normal cursor-pointer select-none"
 						on:click={() => setSortKey('role')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -269,7 +269,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-2.5 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-1.5 font-normal cursor-pointer select-none"
 						on:click={() => setSortKey('email')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -293,7 +293,7 @@
 
 					<th
 						scope="col"
-						class="px-2.5 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-1.5 font-normal cursor-pointer select-none"
 						on:click={() => setSortKey('last_active_at')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -317,7 +317,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-2.5 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-1.5 font-normal cursor-pointer select-none"
 						on:click={() => setSortKey('created_at')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -338,7 +338,7 @@
 						</div>
 					</th>
 
-					<th scope="col" class="px-2.5 py-1.5 text-right"></th>
+					<th scope="col" class="px-2.5 py-1.5 font-normal text-right"></th>
 				</tr>
 			</thead>
 			<tbody class="">
