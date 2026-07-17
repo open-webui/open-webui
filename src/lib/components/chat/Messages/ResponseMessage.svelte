@@ -395,12 +395,13 @@
 
 		if (!editedOutput && editTextAreaElement) {
 			const messagesContainer = document.getElementById('messages-container');
-			const savedScrollTop = messagesContainer?.scrollTop;
+			const savedScrollTop = messagesContainer?.scrollTop ?? 0;
 
 			editTextAreaElement.style.height = '';
 			editTextAreaElement.style.height = `${editTextAreaElement.scrollHeight}px`;
 
 			if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
+			editTextAreaElement?.focus({ preventScroll: true });
 		}
 	};
 
@@ -740,10 +741,11 @@
 										bind:value={editedContent}
 										on:input={(e) => {
 											const messagesContainer = document.getElementById('messages-container');
-											const savedScrollTop = messagesContainer?.scrollTop;
+											const savedScrollTop = messagesContainer?.scrollTop ?? 0;
+											const textarea = e.currentTarget;
 
-											e.target.style.height = '';
-											e.target.style.height = `${e.target.scrollHeight}px`;
+											textarea.style.height = '';
+											textarea.style.height = `${textarea.scrollHeight}px`;
 
 											if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
 										}}
@@ -759,14 +761,14 @@
 												document.getElementById('confirm-edit-message-button')?.click();
 											}
 										}}
-									/>
+									></textarea>
 								{/if}
 
-								<div class=" mt-2 mb-1 flex justify-between text-sm font-normal">
+								<div class=" mt-2 -mx-1 flex justify-between text-sm font-normal">
 									<div>
 										<button
 											id="save-new-message-button"
-											class="px-3.5 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+											class="px-2.5 py-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 											on:click={() => {
 												saveAsCopyHandler();
 											}}
@@ -778,7 +780,7 @@
 									<div class="flex space-x-1.5">
 										<button
 											id="close-edit-message-button"
-											class="px-3.5 py-1.5 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+											class="px-2.5 py-1 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
 											on:click={() => {
 												cancelEditMessage();
 											}}
@@ -788,7 +790,7 @@
 
 										<button
 											id="confirm-edit-message-button"
-											class="px-3.5 py-1.5 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+											class="px-2.5 py-1 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
 											on:click={() => {
 												editMessageConfirmHandler();
 											}}
