@@ -504,7 +504,7 @@
 		{:else if (prompts ?? []).length !== 0}
 			<div class="my-1">
 				<div
-					class="flex w-full items-center gap-2 px-2 pb-0.5 text-xs text-gray-400 dark:text-gray-600"
+					class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-600"
 				>
 					<button
 						class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
@@ -575,39 +575,21 @@
 												/{prompt.command}
 											</div>
 
-											{#if !prompt.write_access}
-												<Badge type="muted" content={$i18n.t('Read Only')} />
-											{/if}
-										</div>
-
-										<div
-											class="hidden max-w-44 shrink-0 truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
-										>
-											<Tooltip
-												content={prompt?.user?.email ?? $i18n.t('Deleted User')}
-												className="min-w-0"
-												placement="top-start"
-											>
-												<div class="truncate">
-													{capitalizeFirstLetter(
-														prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
-													)}
-												</div>
-											</Tooltip>
-										</div>
-
-										<div class="shrink-0">
 											<Tooltip
 												content={dayjs((prompt.updated_at ?? prompt.created_at) * 1000).format(
 													'LLLL'
 												)}
 											>
 												<div
-													class="min-w-0 truncate text-right text-xs text-gray-400 dark:text-gray-600"
+													class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
 												>
 													{dayjs((prompt.updated_at ?? prompt.created_at) * 1000).fromNow()}
 												</div>
 											</Tooltip>
+
+											{#if !prompt.write_access}
+												<Badge type="muted" content={$i18n.t('Read Only')} />
+											{/if}
 										</div>
 									</div>
 
@@ -622,6 +604,23 @@
 									{/if}
 								</div>
 							</div>
+
+							<div
+								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
+							>
+								<Tooltip
+									content={prompt?.user?.email ?? $i18n.t('Deleted User')}
+									className="min-w-0"
+									placement="top-start"
+								>
+									<div class="truncate">
+										{capitalizeFirstLetter(
+											prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
+										)}
+									</div>
+								</Tooltip>
+							</div>
+
 							<div class="ml-2 flex shrink-0 flex-row items-center self-center">
 								{#if shiftKey}
 									<Tooltip content={$i18n.t('Delete')}>

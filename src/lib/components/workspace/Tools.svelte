@@ -1,7 +1,11 @@
 <script lang="ts">
+	import dayjs from 'dayjs';
+	import relativeTime from 'dayjs/plugin/relativeTime';
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
+
+	dayjs.extend(relativeTime);
 
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
@@ -36,6 +40,8 @@
 	import ViewSelector from './common/ViewSelector.svelte';
 	import CommunityDiscover from './common/CommunityDiscover.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
+	import ChevronDown from '../icons/ChevronDown.svelte';
+	import ChevronUp from '../icons/ChevronUp.svelte';
 
 	let shiftKey = false;
 	let loaded = false;
@@ -58,6 +64,9 @@
 
 	let tagsContainerElement: HTMLDivElement;
 	let viewOption = '';
+	let sortKey = 'updated_at';
+	let sortDirection = 'desc';
+	let openToolMenuId: string | null = null;
 
 	let showImportModal = false;
 
@@ -110,12 +119,17 @@
 		}, 300);
 	};
 
-	$: if (tools && viewOption !== undefined) {
+	$: if (
+		tools &&
+		viewOption !== undefined &&
+		sortKey !== undefined &&
+		sortDirection !== undefined
+	) {
 		setFilteredItems();
 	}
 
 	const setFilteredItems = () => {
-		filteredItems = tools.filter((t) => {
+		const filtered = tools.filter((t) => {
 			if (query === '' && viewOption === '') return true;
 			const lowerQuery = query.toLowerCase();
 			return (
@@ -128,6 +142,33 @@
 					(viewOption === 'shared' && t.user_id !== $user?.id))
 			);
 		});
+
+		filteredItems = [...filtered].sort((a, b) => {
+			const direction = sortDirection === 'asc' ? 1 : -1;
+
+			if (sortKey === 'name') {
+				return direction * (a.name ?? '').localeCompare(b.name ?? '');
+			}
+
+			return direction * ((a.updated_at ?? 0) - (b.updated_at ?? 0));
+		});
+	};
+
+	const setSortKey = (key: string) => {
+		if (sortKey === key) {
+			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortKey = key;
+			sortDirection = key === 'updated_at' ? 'desc' : 'asc';
+		}
+	};
+
+	const openTool = (tool) => {
+		goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
+	};
+
+	const shouldIgnoreRowClick = (target: EventTarget | null) => {
+		return target instanceof Element && !!target.closest('button, a, input, [role="menu"]');
 	};
 
 	const shareHandler = async (tool) => {
@@ -329,127 +370,173 @@
 		</div>
 
 		{#if (filteredItems ?? []).length !== 0}
-			<div class="my-1 grid gap-x-2 gap-y-0.5 lg:grid-cols-2">
-				{#each filteredItems as tool}
-					<Tooltip content={tool?.meta?.description ?? tool?.id}>
+			<div class="my-1">
+				<div
+					class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-600"
+				>
+					<button
+						class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
+						type="button"
+						on:click={() => setSortKey('name')}
+					>
+						{$i18n.t('Title')}
+						{#if sortKey === 'name'}
+							{#if sortDirection === 'asc'}
+								<ChevronUp className="size-2" />
+							{:else}
+								<ChevronDown className="size-2" />
+							{/if}
+						{/if}
+					</button>
+
+					<div class="hidden w-44 shrink-0 md:block"></div>
+
+					<button
+						class="flex w-36 shrink-0 items-center justify-end gap-1 py-0.5 text-right"
+						type="button"
+						on:click={() => setSortKey('updated_at')}
+					>
+						{$i18n.t('Updated at')}
+						{#if sortKey === 'updated_at'}
+							{#if sortDirection === 'asc'}
+								<ChevronUp className="size-2" />
+							{:else}
+								<ChevronDown className="size-2" />
+							{/if}
+						{/if}
+					</button>
+				</div>
+
+				<div class="grid gap-y-0.5">
+					{#each filteredItems as tool}
 						<div
-							class="flex w-full rounded-xl px-2 py-1 text-left transition {tool.write_access
-								? 'cursor-pointer hover:bg-gray-50/60 dark:hover:bg-gray-850/40'
+							class="group flex min-h-8 w-full items-center gap-2 overflow-hidden rounded-xl px-2 py-1 text-left {tool.write_access
+								? 'cursor-pointer'
 								: 'cursor-not-allowed opacity-60'}"
+							role="button"
+							tabindex={tool.write_access ? 0 : -1}
+							on:click={(e) => {
+								if (!tool.write_access || shouldIgnoreRowClick(e.target)) return;
+								openTool(tool);
+							}}
+							on:keydown={(e) => {
+								if (!tool.write_access || e.currentTarget !== e.target) return;
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									openTool(tool);
+								}
+							}}
 						>
-							{#if tool.write_access}
-								<a
-									class="flex w-full min-w-0 flex-1 cursor-pointer"
-									href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
-								>
-									<div class="flex min-w-0 items-center text-left">
-										<div class="min-w-0 flex-1 self-center">
-											<Tooltip content={tool.id} placement="top-start">
-												<div class="flex min-w-0 items-center gap-2">
-													<div class="line-clamp-1 text-sm">
-														{tool.name}
-													</div>
-													{#if tool?.meta?.manifest?.version}
-														<div class=" text-gray-500 text-xs font-normal shrink-0">
-															v{tool?.meta?.manifest?.version ?? ''}
-														</div>
-													{/if}
+							<div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+								<div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+									<div class="flex min-w-0 items-center gap-2 overflow-hidden">
+										<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+											<Tooltip content={tool.id} className="min-w-0" placement="top-start">
+												<div
+													class="truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+												>
+													{tool.name}
 												</div>
 											</Tooltip>
-											<div class="px-0.5">
-												<div class="shrink-0 text-xs text-gray-500">
-													<Tooltip
-														content={tool?.user?.email ?? $i18n.t('Deleted User')}
-														className="flex shrink-0"
-														placement="top-start"
-													>
-														{$i18n.t('By {{name}}', {
-															name: capitalizeFirstLetter(
-																tool?.user?.name ?? tool?.user?.email ?? $i18n.t('Deleted User')
-															)
-														})}
-													</Tooltip>
+
+											{#if tool?.meta?.manifest?.version}
+												<div
+													class="min-w-0 max-w-[40%] shrink-0 truncate text-[11px] leading-5 text-gray-500"
+												>
+													v{tool?.meta?.manifest?.version ?? ''}
 												</div>
-											</div>
-										</div>
-									</div>
-								</a>
-							{:else}
-								<div class="flex w-full min-w-0 flex-1">
-									<div class="flex w-full min-w-0 items-center text-left">
-										<div class="w-full min-w-0 flex-1 self-center">
-											<div class="flex items-center justify-between w-full gap-2">
-												<Tooltip content={tool.id} placement="top-start">
-													<div class="flex min-w-0 items-center gap-2">
-														<div class="line-clamp-1 text-sm">
-															{tool.name}
-														</div>
-														{#if tool?.meta?.manifest?.version}
-															<div class=" text-gray-500 text-xs font-normal shrink-0">
-																v{tool?.meta?.manifest?.version ?? ''}
-															</div>
-														{/if}
-													</div>
-												</Tooltip>
+											{/if}
+
+											<Tooltip content={dayjs(tool.updated_at * 1000).format('LLLL')}>
+												<div
+													class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+												>
+													{dayjs(tool.updated_at * 1000).fromNow()}
+												</div>
+											</Tooltip>
+
+											{#if !tool.write_access}
 												<Badge type="muted" content={$i18n.t('Read Only')} />
-											</div>
-											<div class="px-0.5">
-												<div class="shrink-0 text-xs text-gray-500">
-													<Tooltip
-														content={tool?.user?.email ?? $i18n.t('Deleted User')}
-														className="flex shrink-0"
-														placement="top-start"
-													>
-														{$i18n.t('By {{name}}', {
-															name: capitalizeFirstLetter(
-																tool?.user?.name ?? tool?.user?.email ?? $i18n.t('Deleted User')
-															)
-														})}
-													</Tooltip>
-												</div>
-											</div>
+											{/if}
 										</div>
 									</div>
+
+									{#if tool?.meta?.description}
+										<Tooltip
+											content={tool?.meta?.description}
+											className="min-w-0"
+											placement="top-start"
+										>
+											<div
+												class="mt-0.5 truncate text-[0.6875rem] leading-4 text-gray-400 dark:text-gray-600"
+											>
+												{tool?.meta?.description}
+											</div>
+										</Tooltip>
+									{/if}
 								</div>
-							{/if}
+							</div>
+
+							<div
+								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
+							>
+								<Tooltip
+									content={tool?.user?.email ?? $i18n.t('Deleted User')}
+									className="min-w-0"
+									placement="top-start"
+								>
+									<div class="truncate">
+										{capitalizeFirstLetter(
+											tool?.user?.name ?? tool?.user?.email ?? $i18n.t('Deleted User')
+										)}
+									</div>
+								</Tooltip>
+							</div>
+
 							{#if tool.write_access}
-								<div class="flex flex-row gap-0.5 self-center">
+								<div class="ml-2 flex shrink-0 flex-row items-center self-center">
 									{#if shiftKey}
 										<Tooltip content={$i18n.t('Delete')}>
 											<button
-												class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white"
+												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 												type="button"
 												aria-label={$i18n.t('Delete')}
-												on:click={() => {
+												on:click={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
 													deleteHandler(tool);
 												}}
 											>
-												<GarbageBin />
+												<GarbageBin className="size-4" />
 											</button>
 										</Tooltip>
 									{:else}
 										{#if tool?.meta?.manifest?.funding_url ?? false}
 											<Tooltip content="Support">
 												<button
-													class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white"
+													class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 													type="button"
 													aria-label={$i18n.t('Support')}
-													on:click={() => {
+													on:click={(e) => {
+														e.preventDefault();
+														e.stopPropagation();
 														selectedTool = tool;
 														showManifestModal = true;
 													}}
 												>
-													<Heart />
+													<Heart className="size-4" />
 												</button>
 											</Tooltip>
 										{/if}
 
 										<Tooltip content={$i18n.t('Valves')}>
 											<button
-												class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white"
+												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 												type="button"
 												aria-label={$i18n.t('Valves')}
-												on:click={() => {
+												on:click={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
 													selectedTool = tool;
 													showValvesModal = true;
 												}}
@@ -476,38 +563,49 @@
 											</button>
 										</Tooltip>
 
-										<ToolMenu
-											editHandler={() => {
-												goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
-											}}
-											shareHandler={() => {
-												shareHandler(tool);
-											}}
-											cloneHandler={() => {
-												cloneHandler(tool);
-											}}
-											exportHandler={() => {
-												exportHandler(tool);
-											}}
-											deleteHandler={async () => {
-												selectedTool = tool;
-												showDeleteConfirm = true;
-											}}
-											onClose={() => {}}
-										>
-											<button
-												class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white"
-												type="button"
+										<div class="ml-0.5 flex shrink-0 flex-row items-center self-center">
+											<ToolMenu
+												show={openToolMenuId === tool.id}
+												editHandler={() => {
+													goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
+												}}
+												shareHandler={() => {
+													shareHandler(tool);
+												}}
+												cloneHandler={() => {
+													cloneHandler(tool);
+												}}
+												exportHandler={() => {
+													exportHandler(tool);
+												}}
+												deleteHandler={async () => {
+													selectedTool = tool;
+													showDeleteConfirm = true;
+												}}
+												onClose={() => {
+													openToolMenuId = null;
+												}}
 											>
-												<EllipsisHorizontal className="size-4" />
-											</button>
-										</ToolMenu>
+												<button
+													class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+													type="button"
+													aria-label={$i18n.t('Tool Menu')}
+													on:click={(e) => {
+														e.preventDefault();
+														e.stopPropagation();
+														openToolMenuId = openToolMenuId === tool.id ? null : tool.id;
+													}}
+												>
+													<EllipsisHorizontal className="size-4" />
+												</button>
+											</ToolMenu>
+										</div>
 									{/if}
 								</div>
 							{/if}
 						</div>
-					</Tooltip>
-				{/each}
+					{/each}
+				</div>
 			</div>
 		{:else}
 			<div class=" w-full h-full flex flex-col justify-center items-center my-16 mb-24">
