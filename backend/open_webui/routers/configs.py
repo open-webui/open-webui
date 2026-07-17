@@ -10,6 +10,11 @@ from mcp.shared.auth import OAuthMetadata
 from open_webui.config import BannerModel
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
 from open_webui.events import EVENTS, publish_event
+from open_webui.integrations.langfuse.connections import (
+    langfuse_basic_auth_header,
+    merge_langfuse_connection_secrets,
+    redact_langfuse_connections_for_response,
+)
 from open_webui.models.config import Config
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -393,6 +398,117 @@ async def verify_terminal_server_connection(
         log.debug(f'Failed to connect to the terminal server: {e}')
 
     raise HTTPException(status_code=400, detail='Failed to connect to the terminal server')
+
+
+class LangfuseConnection(BaseModel):
+    id: str | None = ''
+    name: str | None = ''
+    url: str
+    public_key: str | None = ''
+    secret_key: str | None = ''
+    enabled: bool | None = True
+
+    model_config = ConfigDict(extra='allow')
+
+
+class LangfuseConfigForm(BaseModel):
+    LANGFUSE_CONNECTIONS: list[LangfuseConnection]
+    LANGFUSE_PROMPT_CACHE_TTL: int | None = 300
+
+
+@router.get('/langfuse')
+async def get_langfuse_config(request: Request, user=Depends(get_admin_user)):
+    connections = await Config.get('langfuse.connections')
+    ttl = await Config.get('langfuse.prompt_cache_ttl')
+    return {
+        'LANGFUSE_CONNECTIONS': redact_langfuse_connections_for_response(connections),
+        'LANGFUSE_PROMPT_CACHE_TTL': ttl if ttl is not None else 300,
+    }
+
+
+@router.post('/langfuse')
+async def set_langfuse_config(
+    request: Request,
+    form_data: LangfuseConfigForm,
+    user=Depends(get_admin_user),
+):
+    existing = await Config.get('langfuse.connections') or []
+    connections = merge_langfuse_connection_secrets(
+        [connection.model_dump() for connection in form_data.LANGFUSE_CONNECTIONS],
+        existing,
+    )
+
+    ttl = form_data.LANGFUSE_PROMPT_CACHE_TTL
+    if ttl is not None and ttl < 0:
+        raise HTTPException(status_code=400, detail='LANGFUSE_PROMPT_CACHE_TTL must be non-negative')
+
+    updates = {'langfuse.connections': connections}
+    if ttl is not None:
+        updates['langfuse.prompt_cache_ttl'] = ttl
+
+    await Config.upsert(updates)
+
+    await publish_event(
+        request,
+        EVENTS.CONFIG_LANGFUSE_UPDATED,
+        actor=user,
+        subject_id='langfuse',
+        subject_type='config',
+        data={'count': len(connections), 'prompt_cache_ttl': ttl},
+    )
+
+    return {
+        'LANGFUSE_CONNECTIONS': redact_langfuse_connections_for_response(connections),
+        'LANGFUSE_PROMPT_CACHE_TTL': ttl if ttl is not None else await Config.get('langfuse.prompt_cache_ttl'),
+    }
+
+
+@router.post('/langfuse/verify')
+async def verify_langfuse_connection(
+    request: Request, form_data: LangfuseConnection, user=Depends(get_admin_user)
+):
+    """
+    Verify Langfuse credentials by calling the public API.
+
+    Returns ``{status: true}`` when GET {url}/api/public/projects succeeds.
+    """
+    base_url = (form_data.url or '').rstrip('/')
+    public_key = (form_data.public_key or '').strip()
+    secret_key = (form_data.secret_key or '').strip()
+
+    if not base_url:
+        raise HTTPException(status_code=400, detail='Langfuse URL is required')
+    if not public_key or not secret_key:
+        if form_data.id:
+            existing = await Config.get('langfuse.connections') or []
+            match = next((c for c in existing if c.get('id') == form_data.id), None)
+            if match:
+                public_key = public_key or (match.get('public_key') or '').strip()
+                secret_key = secret_key or (match.get('secret_key') or '').strip()
+
+    if not public_key or not secret_key:
+        raise HTTPException(status_code=400, detail='Langfuse public and secret keys are required')
+
+    headers = langfuse_basic_auth_header(public_key, secret_key)
+
+    try:
+        async with aiohttp.ClientSession(
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+        ) as session:
+            async with session.get(
+                f'{base_url}/api/public/projects',
+                headers=headers,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as resp:
+                if resp.ok:
+                    return {'status': True}
+                detail = await resp.text()
+                log.debug('Langfuse verify failed (%s): %s', resp.status, detail)
+    except Exception as e:
+        log.debug('Failed to connect to Langfuse: %s', e)
+
+    raise HTTPException(status_code=400, detail='Failed to connect to Langfuse')
 
 
 class TerminalServerPolicyForm(BaseModel):

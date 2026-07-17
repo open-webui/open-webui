@@ -80,6 +80,11 @@ class EventDefinitions(BaseModel):
         description='Terminal server configuration was updated.',
         message='Config Terminal Servers updated',
     )
+    CONFIG_LANGFUSE_UPDATED: EventDefinition = EventDefinition(
+        name='config.langfuse.updated',
+        description='Langfuse configuration was updated.',
+        message='Config Langfuse updated',
+    )
     CONFIG_CODE_EXECUTION_UPDATED: EventDefinition = EventDefinition(
         name='config.code_execution.updated',
         description='Code execution configuration was updated.',

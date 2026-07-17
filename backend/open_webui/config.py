@@ -393,6 +393,16 @@ except Exception:
     TERMINAL_PROXY_HEADERS = {}
 
 ####################################
+# LANGFUSE
+####################################
+
+langfuse_connections = json.loads(os.getenv('LANGFUSE_CONNECTIONS', '[]'))
+
+LANGFUSE_CONNECTIONS = langfuse_connections
+
+LANGFUSE_PROMPT_CACHE_TTL = int(os.getenv('LANGFUSE_PROMPT_CACHE_TTL', '300'))
+
+####################################
 # Code Interpreter
 ####################################
 
@@ -2769,6 +2779,8 @@ DEFAULT_CONFIG = {
     'tool_server.connections': TOOL_SERVER_CONNECTIONS,
     'oauth.client.timeout': OAUTH_CLIENT_TIMEOUT,
     'terminal_server.connections': TERMINAL_SERVER_CONNECTIONS,
+    'langfuse.connections': LANGFUSE_CONNECTIONS,
+    'langfuse.prompt_cache_ttl': LANGFUSE_PROMPT_CACHE_TTL,
     'code_execution.enable': ENABLE_CODE_EXECUTION,
     'code_execution.engine': CODE_EXECUTION_ENGINE,
     'code_execution.jupyter.url': CODE_EXECUTION_JUPYTER_URL,
