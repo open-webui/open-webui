@@ -38,7 +38,21 @@ changelog:
       temporal e sem termo canonico ("como funciona o EGP aqui?") ainda depende so do
       classificador. Continua no teste, visivel.
   1.33.0:
-    - FATIA B - CONSERTA A REGRESSAO DA Q12: tira o catch-all do 'geral'. Ele abria com
+    - CORRECAO DESTA ENTRADA (escrita na 1.34.0): a linha abaixo dizia "CONSERTA A
+      REGRESSAO DA Q12". NAO CONSERTOU. Republicada e testada, a Q12 continuou indo para
+      'geral' com o MESMO veredito no log (classificador='geral'). O texto original fica
+      abaixo, sem edicao, porque foi o que se publicou - mas a promessa era FALSA e nao
+      pode ficar de pe: daqui a tres meses alguem le "conserta a Q12", conclui que ja foi
+      resolvido e procura o bug em outro lugar.
+      O QUE A 1.33.0 FEZ DE VERDADE: o 'geral' virou LISTA FECHADA, o que e mais honesto
+      e menos arriscado do que reivindicar "TUDO que nao e sobre a Nidum". Nao fez mal, e
+      NAO era a causa. Quem conserta a Q12 e a 1.34.0 (termos canonicos).
+      POR QUE A PROMESSA ERA FALSA: ela veio de uma TEORIA minha sobre o texto do prompt
+      ("catch-all vence regra de desempate"), plausivel e NAO TESTADA. A comparacao lado a
+      lado dos dois prompts a demoliu: o 'diaadia' da 1.26.0 JA CONTINHA "conversa geral"
+      e "organizacao de ideias" - se a Q12 casasse com isso, teria ido para 'diaadia' em
+      1.26.0 tambem. Nao foi. "Ficar sem caixa" nunca explicou nada.
+    - [texto original, publicado] FATIA B - CONSERTA A REGRESSAO DA Q12: tira o catch-all do 'geral'. Ele abria com
       "TUDO que NAO e sobre a Nidum" e voltou a ser LISTA FECHADA, com o dominio
       explicito (mundo, atualidades, tecnologia, direito em geral, trabalho pessoal).
     - A REGRESSAO, provada por Davi com as duas rodadas: "O que significa 'fazer da casa
