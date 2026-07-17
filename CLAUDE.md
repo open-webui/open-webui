@@ -75,42 +75,58 @@ configuracao de infraestrutura (env vars, storage, banco):
 7. Atualize tambem `_nidum_docs/07_Diario_e_Status.md` a cada sessao relevante
    (acrescentando, nunca apagando o historico).
 
-## REGRA DO CLASSIFICADOR: catch-all vence regra de desempate
+## REGRA DO CLASSIFICADOR: teoria sobre prompt e HIPOTESE, nao diagnostico
 
-**Ao escrever ou reescrever o prompt do CLASSIFICADOR: NUNCA defina uma categoria pelo
-COMPLEMENTO de outra.** Nada de "TUDO que NAO e sobre a Nidum", "qualquer coisa que nao
-seja X", "o resto". **Descreva cada categoria pelo que ELA E** - uma lista fechada do que
-cai nela.
+**Ao mexer no prompt do CLASSIFICADOR para consertar um roteamento errado: voce esta
+formulando uma HIPOTESE. Trate como hipotese - teste antes de dizer que consertou, e
+antes de escrever "conserta X" em changelog.**
 
-POR QUE (aprendido quebrando producao em 16/07/2026):
+POR QUE ISTO E REGRA (aprendido errando tres vezes, 16-17/07/2026):
 
-A REGRA DE DESEMPATE deste prompt ("na duvida entre 'geral' e 'documentos', SEMPRE
-'documentos'") e a protecao mais importante que existe aqui: e ela que impede pergunta
-institucional de ser respondida sem base - ou, com a web ligada, pelo Google, sobre uma
-empresa homonima.
+Explicar o comportamento de um LLM com uma teoria sobre o TEXTO do prompt e sedutor: a
+teoria e sempre elegante, sempre plausivel, e voce nunca consegue perguntar ao modelo se
+ela esta certa. O placar real deste projeto:
 
-    MAS REGRA DE DESEMPATE SO FUNCIONA QUANDO HA DUVIDA.
+  1. "a expansao de datas envenena o reranker"        -> REFUTADA por teste
+  2. "o catch-all do 'geral' quebrou a Q12"           -> REFUTADA por teste
+  3. "a poluicao vem do historico (3 mensagens)"      -> confirmada, e por OUTRO
+                                                         mecanismo, nao pelo que eu previa
 
-Uma categoria definida pelo complemento de outra ("TUDO que NAO e X") NUNCA DEIXA RESTO.
-Ela absorve todo caso que o juiz nao reconhece - e o juiz nao hesita, porque a definicao
-ja lhe deu a resposta. A regra de desempate fica no prompt, intacta, e NUNCA E
-CONSULTADA. Ela vive do resto, e o catch-all nao deixa resto.
+Duas de tres teorias sobre prompt/recuperacao, refutadas. E a #2 foi escrita como REGRA
+neste arquivo, com caso concreto e tudo, ANTES de ser testada - e o changelog da 1.33.0
+dizia "CONSERTA A REGRESSAO DA Q12". Nao consertava.
 
-O CASO CONCRETO: na fusao 6->4 (1.31.0), 'rapido'/'diaadia'/'raciocinio' - que eram
-LISTAS FECHADAS ("saudacoes, traducoes curtas"; "conversa geral, redacao, analise comum";
-"decisoes complexas, trade-offs") - viraram 'geral', aberto com "TUDO que NAO e sobre a
-Nidum". A pergunta "o que significa 'fazer da casa um ninho'?" (frase LITERAL do
-Documento Fundador) ia para 'documentos' na 1.26.0 e citava o v30. Na 1.31.0 foi para
-'geral' e respondeu de cabeca, sem fonte. O gpt-5-mini nao sabe que a frase e da Nidum -
-logo ela e "tudo que nao e sobre a Nidum", e a definicao mandava.
+COMO A #2 MORREU - o metodo que vale mais que a regra: Davi pediu os dois prompts LADO A
+LADO (1.26.0, quando funcionava; 1.33.0, quando falhava). A comparacao mostrou que o
+'diaadia' da 1.26.0 JA CONTINHA "conversa geral" e "organizacao de ideias". Se a pergunta
+casasse com isso, teria ido para 'diaadia' na 1.26.0 tambem. NAO FOI. A teoria do "ficar
+sem caixa" nunca explicou nada - a caixa existia desde sempre.
 
-Antes: a frase nao casava com NENHUMA lista -> ficava sem caixa -> o desempate acordava.
-Depois: a frase TINHA caixa -> nenhuma duvida -> o desempate nunca rodou.
+A CAUSA REAL, e ela e simples: o gpt-5-mini NAO SABE que "fazer da casa um ninho" e frase
+do Documento Fundador. Para ele e metafora comum em portugues.
 
-O TESTE PARA QUEM FOR ESCREVER: leia a definicao de cada categoria e pergunte "existe
-pergunta que nao casa com nenhuma?". Se a resposta for NAO, a regra de desempate esta
-morta e voce nao vai perceber - o prompt continua bonito, o sintoma aparece semanas
-depois, numa pergunta real, e parece "o modelo errou".
+    NENHUMA REDACAO DE PROMPT CONSERTA DESCONHECIMENTO. SO INFORMACAO CONSERTA.
+
+Por isso a solucao nao foi redigir melhor: foi DAR A INFORMACAO (valve TERMOS_CANONICOS,
+1.34.0) - no prompt, para o juiz aprender, e numa TRAVA deterministica, para funcionar
+quando ele erra mesmo assim.
+
+O QUE FAZER NA PRATICA, quando o roteamento errar:
+  - Primeiro o LOG: 'classificador=<saida>' diz se o juiz DECIDIU, se o parse nao casou
+    (o laco nao tem else - fica o valor inicial, calado) ou se houve excecao. Sao tres
+    bugs diferentes com o mesmo sintoma.
+  - Depois pergunte: "o modelo SABE o que precisa saber para acertar?" Se a resposta for
+    nao, redigir melhor nao vai ajudar - falta informacao, nao clareza.
+  - So entao teorize sobre o texto. E rode a pergunta ANTES e DEPOIS. Sem o depois, voce
+    nao consertou: voce escreveu.
+  - E NAO escreva "conserta X" em changelog antes de ter o depois. Changelog errado nao e
+    imprecisao - e pista falsa para o proximo, que vai procurar o bug em outro lugar.
+
+SOBRE O CATCH-ALL, o que sobrou: nao ha prova de que ele causa o problema, mas ha razao
+para nao usar. "geral: TUDO que NAO e sobre a Nidum" faz o juiz decidir por eliminacao,
+com base no que ELE reconhece como sendo da Nidum - e ele nao conhece o vocabulario da
+casa. LISTA FECHADA e mais honesta: descreve o que a categoria E. Isso e higiene, nao
+conserto - a 1.33.0 fez, e nao mudou nada.
 
 ## Regras invioaveis do codigo
 
