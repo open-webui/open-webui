@@ -673,7 +673,7 @@
 							<div
 								class="group flex min-h-8 w-full items-center gap-2 overflow-hidden rounded-xl px-2 py-1 text-left {model.write_access
 									? 'cursor-pointer'
-									: ''}"
+									: ''} {model?.meta?.hidden ? 'opacity-50 dark:opacity-50' : ''}"
 								id="model-item-{model.id}"
 								role="button"
 								tabindex={model.write_access ? 0 : -1}
