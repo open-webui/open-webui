@@ -533,37 +533,39 @@
 								<div
 									class="flex w-full items-center gap-2 px-2 pb-2 text-xs text-gray-400 dark:text-gray-600"
 								>
-									<button
-										class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
-										type="button"
-										on:click={() => setSortKey('name')}
-									>
-										{$i18n.t('Title')}
-										{#if sortKey === 'name'}
-											{#if sortDirection === 'asc'}
-												<ChevronUp className="size-2" />
-											{:else}
-												<ChevronDown className="size-2" />
+									<div class="flex min-w-0 flex-1 items-center gap-3">
+										<button
+											class="flex min-w-0 items-center gap-1 py-0.5 text-left"
+											type="button"
+											on:click={() => setSortKey('name')}
+										>
+											{$i18n.t('Title')}
+											{#if sortKey === 'name'}
+												{#if sortDirection === 'asc'}
+													<ChevronUp className="size-2" />
+												{:else}
+													<ChevronDown className="size-2" />
+												{/if}
 											{/if}
-										{/if}
-									</button>
+										</button>
+
+										<button
+											class="flex shrink-0 items-center gap-1 py-0.5 text-left"
+											type="button"
+											on:click={() => setSortKey('updated_at')}
+										>
+											{$i18n.t('Updated at')}
+											{#if sortKey === 'updated_at'}
+												{#if sortDirection === 'asc'}
+													<ChevronUp className="size-2" />
+												{:else}
+													<ChevronDown className="size-2" />
+												{/if}
+											{/if}
+										</button>
+									</div>
 
 									<div class="hidden w-44 shrink-0 md:block"></div>
-
-									<button
-										class="flex w-36 shrink-0 items-center justify-end gap-1 py-0.5 text-right"
-										type="button"
-										on:click={() => setSortKey('updated_at')}
-									>
-										{$i18n.t('Updated at')}
-										{#if sortKey === 'updated_at'}
-											{#if sortDirection === 'asc'}
-												<ChevronUp className="size-2" />
-											{:else}
-												<ChevronDown className="size-2" />
-											{/if}
-										{/if}
-									</button>
 								</div>
 							{/if}
 
@@ -586,11 +588,7 @@
 												}}
 											>
 												<div class="flex min-w-0 flex-1 items-center gap-2">
-													<Tooltip
-														content={note.title}
-														className="min-w-0 flex-1"
-														placement="top-start"
-													>
+													<Tooltip content={note.title} className="min-w-0" placement="top-start">
 														<div
 															dir="auto"
 															class="h-[20px] truncate text-[13px] leading-5 text-gray-800 hover:underline dark:text-gray-200"
@@ -599,8 +597,18 @@
 														</div>
 													</Tooltip>
 
+													<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
+														<div
+															class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+														>
+															{dayjs(note.updated_at / 1000000).fromNow()}
+														</div>
+													</Tooltip>
+												</div>
+
+												<div class="ml-2 flex shrink-0 items-center justify-end gap-2">
 													<div
-														class="hidden w-44 shrink-0 truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
+														class="hidden max-w-44 shrink-0 truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
 													>
 														<Tooltip
 															content={note?.user?.email ?? $i18n.t('Deleted User')}
@@ -615,18 +623,6 @@
 														</Tooltip>
 													</div>
 
-													<div class="w-28 shrink-0">
-														<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
-															<div
-																class="min-w-0 truncate text-right text-xs text-gray-400 dark:text-gray-600"
-															>
-																{dayjs(note.updated_at / 1000000).fromNow()}
-															</div>
-														</Tooltip>
-													</div>
-												</div>
-
-												<div class="flex shrink-0 items-center justify-end">
 													<NoteMenu
 														show={openNoteMenuId === note.id}
 														onDownload={(type) => {
