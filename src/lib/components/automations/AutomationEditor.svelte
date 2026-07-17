@@ -291,7 +291,7 @@
 		</div>
 	</div>
 
-	<hr class="h-px my-1.5 border-0 bg-gray-100 dark:bg-gray-850" />
+	<hr class="my-1.5 border-gray-50/60 dark:border-gray-850/25" />
 
 	<div class="px-4 py-2">
 		<div class="mb-2 text-[11px] text-gray-400 dark:text-gray-500">{$i18n.t('Prompt')}</div>
@@ -302,7 +302,7 @@
 		</div>
 	</div>
 
-	<hr class="h-px my-1.5 border-0 bg-gray-100 dark:bg-gray-850" />
+	<hr class="my-1.5 border-gray-50/60 dark:border-gray-850/25" />
 
 	<div class="px-4 py-2">
 		<div class="mb-1 text-[11px] text-gray-400 dark:text-gray-500">{$i18n.t('Runs')}</div>
