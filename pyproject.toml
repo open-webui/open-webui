@@ -218,6 +218,10 @@ dev = [
     "ruff>=0.15.5",
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["backend/open_webui/test"]
+asyncio_mode = "auto"
+
 [tool.black]
 line-length = 120
 skip-string-normalization = true

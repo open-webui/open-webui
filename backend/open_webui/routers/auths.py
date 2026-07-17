@@ -84,6 +84,15 @@ log = logging.getLogger(__name__)
 # who exceed their allotted rate against this gate.
 signin_rate_limiter = RateLimiter(redis_client=get_redis_client(), limit=5 * 3, window=60 * 3)
 
+# Serializes trusted-header auto-registration within this process. Without
+# it, concurrent sign-in requests for the same not-yet-registered email can
+# all pass the `get_user_by_email()` check before any of them finishes
+# creating the account, each spawning its own `user`/`auth` row for the same
+# email (see #27117). This only closes the race within a single worker
+# process; multi-worker/multi-replica deployments still need a DB-level
+# uniqueness guarantee, which is tracked separately.
+trusted_header_signup_lock = asyncio.Lock()
+
 ADMIN_CONFIG_KEYS = {
     'SHOW_ADMIN_DETAILS': 'auth.admin.show',
     'ADMIN_EMAIL': 'auth.admin.email',
@@ -681,14 +690,21 @@ async def signin(
                 pass
 
         if not await Users.get_user_by_email(email.lower(), db=db):
-            await signup_handler(
-                request,
-                email,
-                str(uuid.uuid4()),
-                name,
-                db=db,
-                source='trusted_header',
-            )
+            # Serialize account creation and re-check inside the lock: a
+            # concurrent request may have already created this user while we
+            # were waiting for it. Without the re-check, every request that
+            # queued up behind the lock would create its own duplicate
+            # account once it acquired it.
+            async with trusted_header_signup_lock:
+                if not await Users.get_user_by_email(email.lower(), db=db):
+                    await signup_handler(
+                        request,
+                        email,
+                        str(uuid.uuid4()),
+                        name,
+                        db=db,
+                        source='trusted_header',
+                    )
 
         user = await Auths.authenticate_user_by_email(email, db=db)
         if user:
