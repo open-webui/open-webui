@@ -14,8 +14,12 @@ import aiohttp
 from aiocache import cached
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, ConfigDict, validator
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from open_webui.config import UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event, publish_model_provider_request_failed
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
@@ -25,7 +29,6 @@ from open_webui.env import (
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     MODELS_CACHE_TTL,
 )
-from open_webui.events import EVENTS, publish_event, publish_model_provider_request_failed
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
@@ -43,8 +46,6 @@ from open_webui.utils.payload import (
 )
 from open_webui.utils.session_pool import cleanup_response, get_session, stream_wrapper
 from open_webui.utils.system_prompt import resolve_model_system_prompt
-from pydantic import BaseModel, ConfigDict, validator
-from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 

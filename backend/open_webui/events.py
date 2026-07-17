@@ -8,10 +8,9 @@ import uuid
 from types import SimpleNamespace
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-
 from open_webui.env import ENABLE_PLUGINS, VERSION
 from open_webui.models.config import Config
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from open_webui.retrieval.web.utils import validate_url
 from open_webui.utils.webhook import post_webhook
 

@@ -3,7 +3,7 @@ import inspect
 import json
 import logging
 import sys
-from collections.abc import AsyncGenerator, Generator, Iterator
+from typing import AsyncGenerator, Generator, Iterator
 
 from fastapi import (
     Request,

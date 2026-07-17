@@ -17,7 +17,7 @@ from open_webui.models.config import Config
 from open_webui.models.model_system_prompt_binding import ModelSystemPromptBindings
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers
-from open_webui.utils.system_prompt_cache import clear_system_prompt_cache
+from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.oauth import (
     OAuthClientInformationFull,
     apply_connection_oauth_options,
@@ -28,6 +28,7 @@ from open_webui.utils.oauth import (
     recover_static_oauth_client_metadata,
     resolve_oauth_client_info,
 )
+from open_webui.utils.system_prompt_cache import clear_system_prompt_cache
 from open_webui.utils.tools import (
     bearer_auth_header,
     get_tool_server_data,
