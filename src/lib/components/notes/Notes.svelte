@@ -691,7 +691,7 @@
 													<a href={`/notes/${note.id}`} class="min-w-0 flex-1">
 														<Tooltip content={note.title} placement="top-start">
 															<div
-																class="truncate text-[13px] leading-5 text-gray-800 dark:text-gray-200"
+																class="truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
 															>
 																{note.title}
 															</div>
