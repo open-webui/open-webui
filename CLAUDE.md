@@ -75,6 +75,43 @@ configuracao de infraestrutura (env vars, storage, banco):
 7. Atualize tambem `_nidum_docs/07_Diario_e_Status.md` a cada sessao relevante
    (acrescentando, nunca apagando o historico).
 
+## REGRA DO CLASSIFICADOR: catch-all vence regra de desempate
+
+**Ao escrever ou reescrever o prompt do CLASSIFICADOR: NUNCA defina uma categoria pelo
+COMPLEMENTO de outra.** Nada de "TUDO que NAO e sobre a Nidum", "qualquer coisa que nao
+seja X", "o resto". **Descreva cada categoria pelo que ELA E** - uma lista fechada do que
+cai nela.
+
+POR QUE (aprendido quebrando producao em 16/07/2026):
+
+A REGRA DE DESEMPATE deste prompt ("na duvida entre 'geral' e 'documentos', SEMPRE
+'documentos'") e a protecao mais importante que existe aqui: e ela que impede pergunta
+institucional de ser respondida sem base - ou, com a web ligada, pelo Google, sobre uma
+empresa homonima.
+
+    MAS REGRA DE DESEMPATE SO FUNCIONA QUANDO HA DUVIDA.
+
+Uma categoria definida pelo complemento de outra ("TUDO que NAO e X") NUNCA DEIXA RESTO.
+Ela absorve todo caso que o juiz nao reconhece - e o juiz nao hesita, porque a definicao
+ja lhe deu a resposta. A regra de desempate fica no prompt, intacta, e NUNCA E
+CONSULTADA. Ela vive do resto, e o catch-all nao deixa resto.
+
+O CASO CONCRETO: na fusao 6->4 (1.31.0), 'rapido'/'diaadia'/'raciocinio' - que eram
+LISTAS FECHADAS ("saudacoes, traducoes curtas"; "conversa geral, redacao, analise comum";
+"decisoes complexas, trade-offs") - viraram 'geral', aberto com "TUDO que NAO e sobre a
+Nidum". A pergunta "o que significa 'fazer da casa um ninho'?" (frase LITERAL do
+Documento Fundador) ia para 'documentos' na 1.26.0 e citava o v30. Na 1.31.0 foi para
+'geral' e respondeu de cabeca, sem fonte. O gpt-5-mini nao sabe que a frase e da Nidum -
+logo ela e "tudo que nao e sobre a Nidum", e a definicao mandava.
+
+Antes: a frase nao casava com NENHUMA lista -> ficava sem caixa -> o desempate acordava.
+Depois: a frase TINHA caixa -> nenhuma duvida -> o desempate nunca rodou.
+
+O TESTE PARA QUEM FOR ESCREVER: leia a definicao de cada categoria e pergunte "existe
+pergunta que nao casa com nenhuma?". Se a resposta for NAO, a regra de desempate esta
+morta e voce nao vai perceber - o prompt continua bonito, o sintoma aparece semanas
+depois, numa pergunta real, e parece "o modelo errou".
+
 ## Regras invioaveis do codigo
 
 - `_nidum_tools/*.py` (pipe e tool): APENAS ASCII (sem bullets unicode, travessoes
