@@ -13,7 +13,90 @@
 
 ---
 
+## Sessão 2026-07-17 (noite) — A teoria do catch-all foi demolida, e a demolição vale mais que o conserto
+
+**A fatia B (1.33.0) foi ao ar e NÃO consertou a Q12.** Mesma pergunta, mesmo veredito:
+
+```
+13:41:05.752 | chatnd: roteador -> geral (classificador='geral')
+```
+
+**Tirar o catch-all não bastou.** A teoria da entrada abaixo — escrita com confiança,
+virada em **regra no `CLAUDE.md`** e em **changelog** — **estava errada**.
+
+### O que a matou: a comparação lado a lado
+
+O Davi pediu os dois prompts **na íntegra**: 1.26.0 (funcionava) e 1.33.0 (falhava). A
+comparação levou dez segundos e derrubou tudo:
+
+```
+1.26.0  diaadia: conversa geral, redacao, organizacao de ideias, analise comum, ...
+1.33.0  geral:   ..., conversa geral, redacao, organizacao de ideias, ...
+```
+
+> **O `diaadia` de 1.26.0 já continha o suposto culpado.** Se *"o que significa fazer da
+> casa um ninho?"* casasse com *"conversa geral"*, teria ido para `diaadia` **em 1.26.0
+> também**. **Não foi.**
+
+**"Ficar sem caixa" nunca explicou nada — a caixa existia desde sempre.** O catch-all pode
+ter piorado; **não era a causa**.
+
+### A causa real, e ela é simples
+
+**O `gpt-5-mini` não sabe que *"fazer da casa um ninho"* é frase do Documento Fundador.**
+Para ele é metáfora comum em português.
+
+> ### **Nenhuma redação de prompt conserta desconhecimento. Só informação conserta.**
+
+Por isso a solução (**1.34.0**) não foi **redigir melhor** — foi **dar a informação**: a
+valve `TERMOS_CANONICOS`, **no prompt** (para o juiz aprender) **e** numa **trava
+determinística** (para funcionar quando ele erra mesmo assim).
+
+### 📊 O padrão que se repete — e ele é meu
+
+| # | Minha teoria | Veredito |
+|---|---|---|
+| 1 | *"a expansão de datas envenena o reranker"* | **refutada por teste** |
+| 2 | *"o catch-all do `geral` quebrou a Q12"* | **refutada por teste** |
+| 3 | *"a poluição vem do histórico"* | **confirmada — por outro mecanismo**; eu mesmo corrigi a atribuição |
+
+**Duas de três teorias sobre prompt/recuperação, refutadas.** E a **#2 virou regra no
+`CLAUDE.md` e changelog dizendo "CONSERTA" — antes de ser testada.**
+
+> **O Davi enquadrou melhor do que eu faria:** *"não é demérito — é o valor de sempre medir
+> antes"*. **As três foram pegas.** Nenhuma virou dívida silenciosa, porque todas passaram
+> por medição. **O problema nunca foi formular hipótese — foi escrever "conserta" antes de
+> ter o depois.**
+
+**A regra do `CLAUDE.md` foi reescrita** (a anterior ensinava a teoria demolida):
+
+> **Teoria sobre prompt é HIPÓTESE, não diagnóstico.** Antes de teorizar sobre o texto,
+> pergunte: **"o modelo SABE o que precisa saber para acertar?"** Se não, redigir melhor
+> não ajuda — **falta informação, não clareza**. E **não escreva "conserta X" em changelog
+> antes de ter o depois**.
+
+### O changelog da 1.33.0 foi corrigido — sem apagar
+
+Ele dizia *"FATIA B — CONSERTA A REGRESSÃO DA Q12"*, **e está publicado**. Como você disse:
+**daqui a três meses alguém lê, conclui que já foi resolvido e procura o bug em outro
+lugar.** A ressalva entrou **acima** do original, que ficou marcado como *"[texto original,
+publicado]"* — **primeiro a correção, depois o que estava escrito**.
+
+**O que a 1.33.0 fez de verdade:** o `geral` virou **lista fechada** — mais honesto, e
+**não era a causa**. **Higiene, não conserto.**
+
+---
+
 ## Sessão 2026-07-17 — A fatia 1 quebrou a Q12, e o culpado é uma frase que eu escrevi
+
+> ## 🧨 A TEORIA DESTA ENTRADA FOI REFUTADA
+>
+> O diagnóstico abaixo — *"o catch-all quebrou a Q12"* — **está errado**. A demolição está
+> na entrada acima (17/07, noite). Ele virou a fatia B (1.33.0), que **foi ao ar e não
+> consertou nada**.
+>
+> **O texto fica** porque foi o que se pensou — e porque a sequência **teoria → regra →
+> changelog → refutação** é o registro que importa. Apagar deixaria só o final bonito.
 
 **Regressão provada pelo Davi, com as duas rodadas lado a lado.** Mesma pergunta —
 **Q12: *"O que significa 'fazer da casa um ninho'?"*** — comportamento oposto:
@@ -23,7 +106,7 @@
 | **1.26.0** | `documentos` | `[Fonte + Acervos]`, **citando o v30** na abertura (*"Uma casa é uma estrutura… Um ninho é uma estrutura a serviço da vida"*) |
 | **1.31.0** | **`geral`** | **de cabeça, sem etiqueta, sem fonte** — plausível e inventada |
 
-### A causa: **transformei uma lista fechada num catch-all**
+### ~~A causa: transformei uma lista fechada num catch-all~~ — ❌ **REFUTADO** (ver 17/07 noite)
 
 ```
 1.26.0   rapido:     saudacoes, perguntas triviais, traducoes curtas, ...
@@ -42,7 +125,9 @@ nenhuma**. Ficava **sem caixa** → a **regra de desempate acordava** → `docum
 da Nidum — para ele é uma metáfora comum em português. Logo ela **é** *"tudo que não é
 sobre a Nidum"*, e a definição **manda**.
 
-> ### **Regra de desempate só funciona quando há dúvida — e catch-all não deixa dúvida.**
+> ### ~~Regra de desempate só funciona quando há dúvida — e catch-all não deixa dúvida.~~
+> ❌ **A frase é verdadeira em tese e NÃO era o que acontecia aqui.** O teste refutou: a Q12
+> continuou em `geral` depois de o catch-all sair. Ver 17/07 (noite).
 >
 > A régua (*"na dúvida, `documentos`"*) continuou no prompt, intacta, **e nunca foi
 > consultada**. Ela vive do resto; o catch-all não deixa resto. **Virou regra no
