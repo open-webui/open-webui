@@ -96,3 +96,18 @@ def set_cached_system_prompt(
 
 def invalidate_system_prompt_cache(model_id: str) -> None:
     SYSTEM_PROMPT_CACHE.invalidate(model_id)
+
+
+def binding_cache_ttl_seconds(binding, default_ttl: int) -> int:
+    return binding.cache_ttl_seconds or default_ttl
+
+
+def is_binding_db_cache_warm(binding, *, default_ttl: int) -> bool:
+    """Return True when binding DB cache fields hold a non-expired prompt."""
+    if not binding.cached_content:
+        return False
+    if binding.cached_at is None:
+        return False
+
+    ttl = binding_cache_ttl_seconds(binding, default_ttl)
+    return (time.time() - binding.cached_at) < ttl

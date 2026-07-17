@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.integrations.langfuse.connections import get_connection_by_id
+from open_webui.integrations.langfuse.connections import (
+    get_connection_by_id,
+    list_enabled_connections,
+    redact_langfuse_connections_for_response,
+)
 from open_webui.integrations.langfuse.provider import LangfusePromptError, LangfusePromptProvider
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
@@ -29,6 +33,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 router = APIRouter()
 
 PAGE_SIZE = 20
+
+LANGFUSE_IDENTITY_FIELDS = (
+    'connection_id',
+    'external_name',
+    'external_label',
+    'external_version',
+)
 
 
 class CreateSystemPromptVersionForm(BaseModel):
@@ -152,31 +163,88 @@ async def _mirror_params_system(
         )
 
 
+def _cleared_langfuse_binding_fields() -> dict[str, None]:
+    return {
+        'connection_id': None,
+        'external_name': None,
+        'external_label': None,
+        'external_version': None,
+        'cached_content': None,
+        'cached_version': None,
+        'cached_at': None,
+        'cache_ttl_seconds': None,
+    }
+
+
 async def _ensure_local_binding(
     model_id: str,
     active_version_id: str,
     db: AsyncSession,
 ) -> ModelSystemPromptBindingModel:
-    binding = await ModelSystemPromptBindings.get_by_model_id(model_id, db=db)
-    if binding:
-        await ModelSystemPromptBindings.update_source(model_id, 'local', db=db)
-        updated = await ModelSystemPromptBindings.update_active_version(
-            model_id,
-            active_version_id,
-            db=db,
-        )
-        if not updated:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT(),
-            )
-        return updated
-
     return await ModelSystemPromptBindings.upsert(
         model_id=model_id,
         source='local',
         active_version_id=active_version_id,
+        **_cleared_langfuse_binding_fields(),
         db=db,
+    )
+
+
+async def _get_enabled_langfuse_connection_or_404(connection_id: str) -> dict[str, Any]:
+    connection = await get_connection_by_id(connection_id)
+    if not connection or not connection.get('enabled', True):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Langfuse connection not found',
+        )
+    return connection
+
+
+async def _authorize_langfuse_connection_for_model(
+    model: ModelModel,
+    user,
+    db: AsyncSession,
+    connection_id: str,
+    binding: ModelSystemPromptBindingModel | None,
+    *,
+    configure: bool = False,
+) -> None:
+    """Authorize Langfuse connection access in model context.
+
+    Read-only users may only use the model's bound connection (or admin).
+    Write holders may browse any enabled connection while configuring.
+    """
+    if user.role == 'admin':
+        return
+
+    if binding and binding.connection_id == connection_id:
+        return
+
+    if configure and await _has_model_write_access(model, user, db):
+        return
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+    )
+
+
+def _langfuse_identity_changed(
+    binding: ModelSystemPromptBindingModel | None,
+    *,
+    connection_id: str | None,
+    external_name: str | None,
+    external_label: str | None,
+    external_version: str | None,
+) -> bool:
+    if not binding:
+        return True
+
+    return (
+        connection_id != binding.connection_id
+        or external_name != binding.external_name
+        or external_label != binding.external_label
+        or external_version != binding.external_version
     )
 
 
@@ -227,12 +295,7 @@ async def _preview_langfuse_prompt(
     external_label: str | None,
     external_version: str | None,
 ) -> LangfusePromptActionResponse:
-    connection = await get_connection_by_id(connection_id)
-    if not connection or not connection.get('enabled', True):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Langfuse connection is missing or disabled',
-        )
+    connection = await _get_enabled_langfuse_connection_or_404(connection_id)
 
     provider = LangfusePromptProvider()
     try:
@@ -402,28 +465,73 @@ async def patch_model_system_prompt_binding(
     source = form_data.source or (binding.source if binding else 'local')
     active_version_id = binding.active_version_id if binding else None
 
+    if source == 'local':
+        updated = await ModelSystemPromptBindings.upsert(
+            model_id=model.id,
+            source='local',
+            active_version_id=active_version_id,
+            **_cleared_langfuse_binding_fields(),
+            db=db,
+        )
+        invalidate_system_prompt_cache(model.id)
+        return updated
+
+    connection_id = (
+        form_data.connection_id
+        if form_data.connection_id is not None
+        else (binding.connection_id if binding else None)
+    )
+    external_name = (
+        form_data.external_name
+        if form_data.external_name is not None
+        else (binding.external_name if binding else None)
+    )
+    external_label = (
+        form_data.external_label
+        if form_data.external_label is not None
+        else (binding.external_label if binding else None)
+    )
+    external_version = (
+        form_data.external_version
+        if form_data.external_version is not None
+        else (binding.external_version if binding else None)
+    )
+    cache_ttl_seconds = (
+        form_data.cache_ttl_seconds
+        if form_data.cache_ttl_seconds is not None
+        else (binding.cache_ttl_seconds if binding else None)
+    )
+
+    if connection_id:
+        await _authorize_langfuse_connection_for_model(
+            model,
+            user,
+            db,
+            connection_id,
+            binding,
+            configure=True,
+        )
+
+    identity_changed = _langfuse_identity_changed(
+        binding,
+        connection_id=connection_id,
+        external_name=external_name,
+        external_label=external_label,
+        external_version=external_version,
+    )
+
     updated = await ModelSystemPromptBindings.upsert(
         model_id=model.id,
         source=source,
         active_version_id=active_version_id,
-        connection_id=form_data.connection_id
-        if form_data.connection_id is not None
-        else (binding.connection_id if binding else None),
-        external_name=form_data.external_name
-        if form_data.external_name is not None
-        else (binding.external_name if binding else None),
-        external_label=form_data.external_label
-        if form_data.external_label is not None
-        else (binding.external_label if binding else None),
-        external_version=form_data.external_version
-        if form_data.external_version is not None
-        else (binding.external_version if binding else None),
-        cached_content=binding.cached_content if binding else None,
-        cached_version=binding.cached_version if binding else None,
-        cached_at=binding.cached_at if binding else None,
-        cache_ttl_seconds=form_data.cache_ttl_seconds
-        if form_data.cache_ttl_seconds is not None
-        else (binding.cache_ttl_seconds if binding else None),
+        connection_id=connection_id,
+        external_name=external_name,
+        external_label=external_label,
+        external_version=external_version,
+        cached_content=None if identity_changed else (binding.cached_content if binding else None),
+        cached_version=None if identity_changed else (binding.cached_version if binding else None),
+        cached_at=None if identity_changed else (binding.cached_at if binding else None),
+        cache_ttl_seconds=cache_ttl_seconds,
         db=db,
     )
     invalidate_system_prompt_cache(model.id)
@@ -477,12 +585,112 @@ async def preview_langfuse_system_prompt(
         binding,
         form_data,
     )
+    await _authorize_langfuse_connection_for_model(
+        model,
+        user,
+        db,
+        connection_id,
+        binding,
+        configure=True,
+    )
     return await _preview_langfuse_prompt(
         connection_id,
         external_name,
         external_label=external_label,
         external_version=external_version,
     )
+
+
+@router.get('/system-prompt/langfuse/connections')
+async def list_model_langfuse_connections(
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """List enabled Langfuse connections for model editor (redacted, model read access)."""
+    model = await _get_model_or_404(id, db)
+    await _require_model_read_access(model, user, db)
+
+    connections = await list_enabled_connections()
+    return {
+        'connections': redact_langfuse_connections_for_response(connections),
+    }
+
+
+@router.get('/system-prompt/langfuse/prompts')
+async def list_model_langfuse_prompts(
+    id: str,
+    connection_id: str,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=1, le=100),
+    name: str | None = None,
+    label: str | None = None,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Proxy Langfuse prompt list scoped to model access."""
+    model = await _get_model_or_404(id, db)
+    await _require_model_read_access(model, user, db)
+
+    binding = await ModelSystemPromptBindings.get_by_model_id(model.id, db=db)
+    await _authorize_langfuse_connection_for_model(
+        model,
+        user,
+        db,
+        connection_id,
+        binding,
+        configure=True,
+    )
+
+    connection = await _get_enabled_langfuse_connection_or_404(connection_id)
+    provider = LangfusePromptProvider()
+    try:
+        return await provider.list_prompts(
+            connection,
+            page=page,
+            limit=limit,
+            name=name,
+            label=label,
+        )
+    except LangfusePromptError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.get('/system-prompt/langfuse/prompts/{prompt_name:path}')
+async def get_model_langfuse_prompt(
+    id: str,
+    prompt_name: str,
+    connection_id: str,
+    label: str | None = None,
+    version: str | None = None,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Proxy Langfuse prompt fetch scoped to model access."""
+    model = await _get_model_or_404(id, db)
+    await _require_model_read_access(model, user, db)
+
+    binding = await ModelSystemPromptBindings.get_by_model_id(model.id, db=db)
+    await _authorize_langfuse_connection_for_model(
+        model,
+        user,
+        db,
+        connection_id,
+        binding,
+        configure=True,
+    )
+
+    connection = await _get_enabled_langfuse_connection_or_404(connection_id)
+    provider = LangfusePromptProvider()
+    try:
+        return await provider.get_prompt(
+            connection,
+            prompt_name,
+            label=label,
+            version=version,
+        )
+    except LangfusePromptError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
 @router.post('/system-prompt/detach', response_model=DetachSystemPromptResponse)

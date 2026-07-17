@@ -6,11 +6,20 @@ from typing import Any
 from urllib.parse import quote
 
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
-from open_webui.integrations.langfuse.connections import langfuse_basic_auth_header
+from open_webui.integrations.langfuse.connections import get_connection_by_id, langfuse_basic_auth_header
 from open_webui.integrations.system_prompt.factory import SystemPromptProviderBase
+from open_webui.models.config import Config
+from open_webui.models.model_system_prompt_binding import ModelSystemPromptBindingModel
 from open_webui.utils.session_pool import cleanup_response, get_session
+from open_webui.utils.system_prompt_cache import (
+    binding_cache_ttl_seconds,
+    is_binding_db_cache_warm,
+    set_cached_system_prompt,
+)
 
 log = logging.getLogger(__name__)
+
+DEFAULT_LANGFUSE_CACHE_TTL_SECONDS = 300
 
 
 class LangfusePromptError(Exception):
@@ -27,6 +36,67 @@ class LangfusePromptResult:
 
 
 class LangfusePromptProvider(SystemPromptProviderBase):
+    async def resolve_content(
+        self,
+        binding: ModelSystemPromptBindingModel,
+        *,
+        mirror: str | None = None,
+        metadata: dict | None = None,
+        model_id: str | None = None,
+    ) -> str | None:
+        if model_id is None:
+            model_id = binding.model_id
+
+        default_ttl = await _get_default_cache_ttl_seconds()
+
+        if is_binding_db_cache_warm(binding, default_ttl=default_ttl):
+            from open_webui.utils.system_prompt import _langfuse_metadata
+
+            ttl = binding_cache_ttl_seconds(binding, default_ttl)
+            set_cached_system_prompt(
+                model_id,
+                binding.cached_content,
+                ttl_seconds=ttl,
+                prompt_name=binding.external_name,
+                prompt_version=binding.cached_version,
+                cached_at=binding.cached_at,
+            )
+            if metadata is not None:
+                metadata.update(_langfuse_metadata(binding))
+            return binding.cached_content
+
+        try:
+            content, prompt_version = await self.fetch_prompt_for_binding(binding)
+            from open_webui.utils.system_prompt import (
+                _langfuse_metadata,
+                _persist_langfuse_cache,
+            )
+
+            await _persist_langfuse_cache(
+                model_id,
+                binding,
+                content,
+                prompt_version=prompt_version,
+                default_ttl=default_ttl,
+            )
+            if metadata is not None:
+                metadata.update(_langfuse_metadata(binding, prompt_version=prompt_version))
+            return content
+        except Exception:
+            log.exception(
+                'Failed to fetch Langfuse system prompt for model %s (connection=%s, name=%s)',
+                model_id,
+                binding.connection_id,
+                binding.external_name,
+            )
+            if binding.cached_content:
+                from open_webui.utils.system_prompt import _langfuse_metadata
+
+                if metadata is not None:
+                    metadata.update(_langfuse_metadata(binding))
+                return binding.cached_content
+            return mirror
+
     async def list_prompts(
         self,
         connection: dict[str, Any],
@@ -140,6 +210,26 @@ class LangfusePromptProvider(SystemPromptProviderBase):
 
         return self._parse_prompt_payload(data, expected_name=name)
 
+    async def fetch_prompt_for_binding(
+        self,
+        binding: ModelSystemPromptBindingModel,
+    ) -> tuple[str, str | None]:
+        if not binding.connection_id or not binding.external_name:
+            raise LangfusePromptError('Langfuse binding is missing connection_id or external_name')
+
+        connection = await get_connection_by_id(binding.connection_id)
+        if not connection or not connection.get('enabled', True):
+            raise LangfusePromptError('Langfuse connection is missing or disabled')
+
+        result = await self.fetch_prompt(
+            connection,
+            binding.external_name,
+            label=binding.external_label,
+            version=binding.external_version,
+        )
+        version = str(result.version) if result.version is not None else None
+        return result.content, version
+
     @staticmethod
     def _parse_prompt_payload(data: dict[str, Any], *, expected_name: str) -> LangfusePromptResult:
         prompt_type = data.get('type') or 'text'
@@ -161,3 +251,8 @@ class LangfusePromptProvider(SystemPromptProviderBase):
         )
 
     # future: emit_trace
+
+
+async def _get_default_cache_ttl_seconds() -> int:
+    ttl = await Config.get('langfuse.prompt_cache_ttl')
+    return ttl if ttl is not None else DEFAULT_LANGFUSE_CACHE_TTL_SECONDS

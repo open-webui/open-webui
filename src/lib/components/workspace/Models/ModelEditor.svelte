@@ -35,8 +35,11 @@
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import ModelSystemPromptPanel from './ModelSystemPromptPanel.svelte';
 	import ModelSystemPromptLangfusePanel from './ModelSystemPromptLangfusePanel.svelte';
-	import { createModelSystemPromptVersion, type ModelSystemPromptBinding } from '$lib/apis/models/systemPrompt';
-	import { getLangfuseConnections } from '$lib/apis/langfuse';
+	import {
+		createModelSystemPromptVersion,
+		getModelLangfuseConnections,
+		type ModelSystemPromptBinding
+	} from '$lib/apis/models/systemPrompt';
 
 	const i18n = getContext('i18n');
 
@@ -115,9 +118,14 @@
 		await localSystemPromptPanel?.reload();
 	};
 
-	const loadLangfuseConnections = async () => {
+	const loadLangfuseConnections = async (modelId: string) => {
+		if (!modelId) {
+			langfuseConnectionsAvailable = false;
+			return;
+		}
+
 		try {
-			const res = await getLangfuseConnections(localStorage.token);
+			const res = await getModelLangfuseConnections(localStorage.token, modelId);
 			langfuseConnectionsAvailable = (res.connections?.length ?? 0) > 0;
 		} catch (error) {
 			console.error('Failed to load Langfuse connections:', error);
@@ -368,10 +376,6 @@
 	};
 
 	onMount(async () => {
-		if (edit) {
-			await loadLangfuseConnections();
-		}
-
 		await tools.set((await getTools(localStorage.token).catch(() => null)) ?? []);
 		skillsList = (await getSkills(localStorage.token).catch(() => null)) ?? [];
 		if (!$functions) {
@@ -405,6 +409,10 @@
 			await tick();
 
 			id = model.id;
+
+			if (edit) {
+				await loadLangfuseConnections(id);
+			}
 
 			enableDescription = model?.meta?.description !== null;
 

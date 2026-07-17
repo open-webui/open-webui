@@ -15,6 +15,8 @@ class LocalSystemPromptProvider(SystemPromptProviderBase):
         binding: ModelSystemPromptBindingModel,
         *,
         mirror: str | None = None,
+        metadata: dict | None = None,
+        model_id: str | None = None,
     ) -> str | None:
         if binding.active_version_id:
             version = await ModelSystemPromptVersions.get_version_by_id(binding.active_version_id)

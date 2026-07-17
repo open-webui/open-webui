@@ -3,9 +3,22 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
+from open_webui.models.model_system_prompt_binding import ModelSystemPromptBindingModel
+
 
 class SystemPromptProviderBase(ABC):
     """Base interface for system prompt source backends."""
+
+    @abstractmethod
+    async def resolve_content(
+        self,
+        binding: ModelSystemPromptBindingModel,
+        *,
+        mirror: str | None = None,
+        metadata: dict | None = None,
+        model_id: str | None = None,
+    ) -> str | None:
+        raise NotImplementedError
 
     @abstractmethod
     async def list_prompts(

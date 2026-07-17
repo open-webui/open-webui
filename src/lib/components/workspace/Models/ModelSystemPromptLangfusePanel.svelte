@@ -11,18 +11,15 @@
 	import { formatDate } from '$lib/utils';
 	import {
 		getModelSystemPromptBinding,
+		getModelLangfuseConnections,
+		getModelLangfusePrompts,
 		patchModelSystemPromptBinding,
 		syncModelSystemPromptFromLangfuse,
 		previewModelSystemPromptFromLangfuse,
 		detachModelSystemPromptToLocal,
 		type ModelSystemPromptBinding
 	} from '$lib/apis/models/systemPrompt';
-	import {
-		getLangfuseConnections,
-		getLangfusePrompts,
-		type LangfuseConnection,
-		type LangfusePromptSummary
-	} from '$lib/apis/langfuse';
+	import type { LangfuseConnection, LangfusePromptSummary } from '$lib/apis/langfuse';
 
 	dayjs.extend(localizedFormat);
 
@@ -118,7 +115,9 @@
 
 		promptsLoading = true;
 		try {
-			const res = await getLangfusePrompts(localStorage.token, connectionId, { limit: 100 });
+			const res = await getModelLangfusePrompts(localStorage.token, modelId, connectionId, {
+				limit: 100
+			});
 			promptSuggestions = res.data ?? [];
 		} catch (error) {
 			console.error('Failed to load Langfuse prompts:', error);
@@ -131,7 +130,7 @@
 		if (!modelId) return;
 
 		try {
-			const res = await getLangfuseConnections(localStorage.token);
+			const res = await getModelLangfuseConnections(localStorage.token, modelId);
 			connections = res.connections ?? [];
 		} catch (error) {
 			console.error('Failed to load Langfuse connections:', error);

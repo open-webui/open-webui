@@ -53,6 +53,7 @@ const authHeaders = (token: string): Record<string, string> => ({
 	authorization: `Bearer ${token}`
 });
 
+/** Admin-only global browse — use model-scoped helpers in `$lib/apis/models/systemPrompt` for model editors. */
 export const getLangfuseConnections = async (
 	token: string
 ): Promise<{ connections: LangfuseConnection[] }> => {

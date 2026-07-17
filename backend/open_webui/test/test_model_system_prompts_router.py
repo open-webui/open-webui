@@ -385,6 +385,341 @@ async def test_detach_creates_local_version_and_mirrors():
     mock_invalidate.assert_called_once_with('test-model')
 
 
+@pytest.mark.asyncio
+async def test_authorize_langfuse_connection_read_only_bound():
+    model = _make_model()
+    user = _make_user(user_id='reader-id')
+    binding = SimpleNamespace(connection_id='bound-conn')
+
+    with patch(
+        'open_webui.routers.model_system_prompts.AccessGrants.has_access',
+        new_callable=AsyncMock,
+        return_value=True,
+    ):
+        await router_module._authorize_langfuse_connection_for_model(
+            model,
+            user,
+            AsyncMock(),
+            'bound-conn',
+            binding,
+            configure=False,
+        )
+
+
+@pytest.mark.asyncio
+async def test_authorize_langfuse_connection_read_only_rejects_arbitrary():
+    model = _make_model()
+    user = _make_user(user_id='reader-id')
+    binding = SimpleNamespace(connection_id='bound-conn')
+
+    with patch(
+        'open_webui.routers.model_system_prompts.AccessGrants.has_access',
+        new_callable=AsyncMock,
+        return_value=True,
+    ):
+        with pytest.raises(HTTPException) as exc:
+            await router_module._authorize_langfuse_connection_for_model(
+                model,
+                user,
+                AsyncMock(),
+                'other-conn',
+                binding,
+                configure=False,
+            )
+
+    assert exc.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_authorize_langfuse_connection_write_can_configure():
+    model = _make_model()
+    user = _make_user(user_id='editor-id')
+
+    with patch(
+        'open_webui.routers.model_system_prompts.AccessGrants.has_access',
+        new_callable=AsyncMock,
+        side_effect=lambda **kwargs: kwargs['permission'] == 'write',
+    ):
+        await router_module._authorize_langfuse_connection_for_model(
+            model,
+            user,
+            AsyncMock(),
+            'new-conn',
+            None,
+            configure=True,
+        )
+
+
+@pytest.mark.asyncio
+async def test_preview_rejects_arbitrary_connection_for_read_only():
+    model = _make_model()
+    user = _make_user(user_id='reader-id')
+    db = AsyncMock()
+    binding = SimpleNamespace(
+        connection_id='bound-conn',
+        external_name='bound-prompt',
+        external_label=None,
+        external_version=None,
+    )
+
+    with (
+        patch(
+            'open_webui.routers.model_system_prompts._get_model_or_404',
+            new_callable=AsyncMock,
+            return_value=model,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._require_model_read_access',
+            new_callable=AsyncMock,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts.ModelSystemPromptBindings.get_by_model_id',
+            new_callable=AsyncMock,
+            return_value=binding,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._has_model_write_access',
+            new_callable=AsyncMock,
+            return_value=False,
+        ),
+    ):
+        with pytest.raises(HTTPException) as exc:
+            await router_module.preview_langfuse_system_prompt(
+                id='test-model',
+                form_data=router_module.LangfusePromptPreviewForm(
+                    connection_id='other-conn',
+                    external_name='secret-prompt',
+                ),
+                user=user,
+                db=db,
+            )
+
+    assert exc.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_preview_allows_bound_connection_for_read_only():
+    model = _make_model()
+    user = _make_user(user_id='reader-id')
+    db = AsyncMock()
+    binding = SimpleNamespace(
+        connection_id='bound-conn',
+        external_name='bound-prompt',
+        external_label=None,
+        external_version=None,
+    )
+    preview = router_module.LangfusePromptActionResponse(
+        content='cached prompt',
+        prompt_name='bound-prompt',
+        prompt_version='1',
+    )
+
+    with (
+        patch(
+            'open_webui.routers.model_system_prompts._get_model_or_404',
+            new_callable=AsyncMock,
+            return_value=model,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._require_model_read_access',
+            new_callable=AsyncMock,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts.ModelSystemPromptBindings.get_by_model_id',
+            new_callable=AsyncMock,
+            return_value=binding,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._preview_langfuse_prompt',
+            new_callable=AsyncMock,
+            return_value=preview,
+        ) as mock_preview,
+    ):
+        result = await router_module.preview_langfuse_system_prompt(
+            id='test-model',
+            form_data=router_module.LangfusePromptPreviewForm(
+                connection_id='bound-conn',
+                external_name='bound-prompt',
+            ),
+            user=user,
+            db=db,
+        )
+
+    assert result.content == 'cached prompt'
+    mock_preview.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_ensure_local_binding_clears_langfuse_fields():
+    db = AsyncMock()
+    binding = SimpleNamespace(model_id='test-model', source='local', active_version_id='version-1')
+
+    with patch(
+        'open_webui.routers.model_system_prompts.ModelSystemPromptBindings.upsert',
+        new_callable=AsyncMock,
+        return_value=binding,
+    ) as mock_upsert:
+        result = await router_module._ensure_local_binding('test-model', 'version-1', db)
+
+    assert result.source == 'local'
+    kwargs = mock_upsert.await_args.kwargs
+    assert kwargs['source'] == 'local'
+    assert kwargs['active_version_id'] == 'version-1'
+    assert kwargs['connection_id'] is None
+    assert kwargs['external_name'] is None
+    assert kwargs['cached_content'] is None
+    assert kwargs['cached_at'] is None
+
+
+@pytest.mark.asyncio
+async def test_patch_binding_clears_cache_when_identity_changes():
+    model = _make_model()
+    user = _make_user()
+    db = AsyncMock()
+    binding = SimpleNamespace(
+        source='langfuse',
+        active_version_id=None,
+        connection_id='conn-1',
+        external_name='old-prompt',
+        external_label='production',
+        external_version=None,
+        cached_content='stale content',
+        cached_version='3',
+        cached_at=123,
+        cache_ttl_seconds=300,
+    )
+    updated = SimpleNamespace(model_id='test-model', source='langfuse', cached_content=None)
+
+    with (
+        patch(
+            'open_webui.routers.model_system_prompts._get_model_or_404',
+            new_callable=AsyncMock,
+            return_value=model,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._require_model_write_access',
+            new_callable=AsyncMock,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts.ModelSystemPromptBindings.get_by_model_id',
+            new_callable=AsyncMock,
+            return_value=binding,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._authorize_langfuse_connection_for_model',
+            new_callable=AsyncMock,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts.ModelSystemPromptBindings.upsert',
+            new_callable=AsyncMock,
+            return_value=updated,
+        ) as mock_upsert,
+        patch(
+            'open_webui.routers.model_system_prompts.invalidate_system_prompt_cache',
+        ),
+    ):
+        await router_module.patch_model_system_prompt_binding(
+            id='test-model',
+            form_data=router_module.PatchSystemPromptBindingForm(
+                external_name='new-prompt',
+            ),
+            user=user,
+            db=db,
+        )
+
+    kwargs = mock_upsert.await_args.kwargs
+    assert kwargs['external_name'] == 'new-prompt'
+    assert kwargs['cached_content'] is None
+    assert kwargs['cached_version'] is None
+    assert kwargs['cached_at'] is None
+
+
+@pytest.mark.asyncio
+async def test_patch_binding_to_local_clears_langfuse_fields():
+    model = _make_model()
+    user = _make_user()
+    db = AsyncMock()
+    binding = SimpleNamespace(
+        source='langfuse',
+        active_version_id='version-1',
+        connection_id='conn-1',
+        external_name='lf-prompt',
+        external_label=None,
+        external_version=None,
+        cached_content='cached',
+        cached_version='1',
+        cached_at=123,
+        cache_ttl_seconds=300,
+    )
+    updated = SimpleNamespace(model_id='test-model', source='local')
+
+    with (
+        patch(
+            'open_webui.routers.model_system_prompts._get_model_or_404',
+            new_callable=AsyncMock,
+            return_value=model,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._require_model_write_access',
+            new_callable=AsyncMock,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts.ModelSystemPromptBindings.get_by_model_id',
+            new_callable=AsyncMock,
+            return_value=binding,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts.ModelSystemPromptBindings.upsert',
+            new_callable=AsyncMock,
+            return_value=updated,
+        ) as mock_upsert,
+        patch(
+            'open_webui.routers.model_system_prompts.invalidate_system_prompt_cache',
+        ),
+    ):
+        await router_module.patch_model_system_prompt_binding(
+            id='test-model',
+            form_data=router_module.PatchSystemPromptBindingForm(source='local'),
+            user=user,
+            db=db,
+        )
+
+    kwargs = mock_upsert.await_args.kwargs
+    assert kwargs['source'] == 'local'
+    assert kwargs['connection_id'] is None
+    assert kwargs['external_name'] is None
+    assert kwargs['cached_content'] is None
+
+
+@pytest.mark.asyncio
+async def test_list_model_langfuse_prompts_requires_model_read():
+    model = _make_model()
+    user = _make_user(user_id='other-user')
+    db = AsyncMock()
+
+    with (
+        patch(
+            'open_webui.routers.model_system_prompts._get_model_or_404',
+            new_callable=AsyncMock,
+            return_value=model,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._require_model_read_access',
+            new_callable=AsyncMock,
+            side_effect=HTTPException(status_code=401, detail='denied'),
+        ),
+    ):
+        with pytest.raises(HTTPException) as exc:
+            await router_module.list_model_langfuse_prompts(
+                id='test-model',
+                connection_id='conn-1',
+                user=user,
+                db=db,
+            )
+
+    assert exc.value.status_code == 401
+
+
 def test_router_paths_and_no_collision_with_model_update():
     paths = {route.path for route in router_module.router.routes if hasattr(route, 'path')}
 
@@ -396,6 +731,9 @@ def test_router_paths_and_no_collision_with_model_update():
         '/system-prompt/active',
         '/system-prompt/langfuse/sync',
         '/system-prompt/langfuse/preview',
+        '/system-prompt/langfuse/connections',
+        '/system-prompt/langfuse/prompts',
+        '/system-prompt/langfuse/prompts/{prompt_name:path}',
         '/system-prompt/detach',
     }
     assert '/model/update' not in paths

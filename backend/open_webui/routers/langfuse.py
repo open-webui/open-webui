@@ -9,14 +9,14 @@ from open_webui.integrations.langfuse.connections import (
     redact_langfuse_connections_for_response,
 )
 from open_webui.integrations.langfuse.provider import LangfusePromptError, LangfusePromptProvider
-from open_webui.utils.auth import get_verified_user
+from open_webui.utils.auth import get_admin_user
 
 router = APIRouter()
 
 
 @router.get('/connections')
-async def list_langfuse_connections(user=Depends(get_verified_user)):
-    """List enabled Langfuse connections without secret keys."""
+async def list_langfuse_connections(user=Depends(get_admin_user)):
+    """List enabled Langfuse connections without secret keys (admin-only global browse)."""
     connections = await list_enabled_connections()
     return {
         'connections': redact_langfuse_connections_for_response(connections),
@@ -30,9 +30,9 @@ async def list_langfuse_prompts(
     limit: int = Query(default=50, ge=1, le=100),
     name: str | None = None,
     label: str | None = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_admin_user),
 ):
-    """Proxy Langfuse prompt list for an enabled connection."""
+    """Proxy Langfuse prompt list for an enabled connection (admin-only global browse)."""
     connection = await _get_enabled_connection_or_404(connection_id)
     provider = LangfusePromptProvider()
     try:
@@ -53,9 +53,9 @@ async def get_langfuse_prompt(
     prompt_name: str,
     label: str | None = None,
     version: str | None = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_admin_user),
 ):
-    """Proxy Langfuse prompt fetch for an enabled connection."""
+    """Proxy Langfuse prompt fetch for an enabled connection (admin-only global browse)."""
     connection = await _get_enabled_connection_or_404(connection_id)
     provider = LangfusePromptProvider()
     try:

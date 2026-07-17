@@ -1,4 +1,11 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import type {
+	LangfuseConnection,
+	LangfusePromptOptions,
+	LangfusePromptResponse,
+	LangfusePromptsOptions,
+	LangfusePromptsResponse
+} from '$lib/apis/langfuse';
 
 export type ModelSystemPromptSource = 'local' | 'langfuse';
 
@@ -393,6 +400,130 @@ export const previewModelSystemPromptFromLangfuse = async (
 				authorization: `Bearer ${token}`
 			},
 			body: JSON.stringify(form)
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getModelLangfuseConnections = async (
+	token: string,
+	modelId: string
+): Promise<{ connections: LangfuseConnection[] }> => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	searchParams.append('id', modelId);
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/models/system-prompt/langfuse/connections?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res ?? { connections: [] };
+};
+
+export const getModelLangfusePrompts = async (
+	token: string,
+	modelId: string,
+	connectionId: string,
+	opts: LangfusePromptsOptions = {}
+): Promise<LangfusePromptsResponse> => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	searchParams.append('id', modelId);
+	searchParams.append('connection_id', connectionId);
+	if (opts.page != null) searchParams.append('page', String(opts.page));
+	if (opts.limit != null) searchParams.append('limit', String(opts.limit));
+	if (opts.name) searchParams.append('name', opts.name);
+	if (opts.label) searchParams.append('label', opts.label);
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/models/system-prompt/langfuse/prompts?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res ?? { data: [] };
+};
+
+export const getModelLangfusePrompt = async (
+	token: string,
+	modelId: string,
+	connectionId: string,
+	name: string,
+	opts: LangfusePromptOptions = {}
+): Promise<LangfusePromptResponse> => {
+	let error = null;
+
+	const searchParams = new URLSearchParams();
+	searchParams.append('id', modelId);
+	searchParams.append('connection_id', connectionId);
+	if (opts.label) searchParams.append('label', opts.label);
+	if (opts.version) searchParams.append('version', opts.version);
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/models/system-prompt/langfuse/prompts/${encodeURIComponent(name)}?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
 		}
 	)
 		.then(async (res) => {
