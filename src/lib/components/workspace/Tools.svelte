@@ -494,7 +494,7 @@
 							</div>
 
 							{#if tool.write_access}
-								<div class="ml-2 flex shrink-0 flex-row items-center self-center">
+								<div class="ml-2 flex shrink-0 flex-row items-center gap-1.5 self-center">
 									{#if shiftKey}
 										<Tooltip content={$i18n.t('Delete')}>
 											<button
@@ -563,43 +563,41 @@
 											</button>
 										</Tooltip>
 
-										<div class="ml-0.5 flex shrink-0 flex-row items-center self-center">
-											<ToolMenu
-												show={openToolMenuId === tool.id}
-												editHandler={() => {
-													goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
-												}}
-												shareHandler={() => {
-													shareHandler(tool);
-												}}
-												cloneHandler={() => {
-													cloneHandler(tool);
-												}}
-												exportHandler={() => {
-													exportHandler(tool);
-												}}
-												deleteHandler={async () => {
-													selectedTool = tool;
-													showDeleteConfirm = true;
-												}}
-												onClose={() => {
-													openToolMenuId = null;
+										<ToolMenu
+											show={openToolMenuId === tool.id}
+											editHandler={() => {
+												goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
+											}}
+											shareHandler={() => {
+												shareHandler(tool);
+											}}
+											cloneHandler={() => {
+												cloneHandler(tool);
+											}}
+											exportHandler={() => {
+												exportHandler(tool);
+											}}
+											deleteHandler={async () => {
+												selectedTool = tool;
+												showDeleteConfirm = true;
+											}}
+											onClose={() => {
+												openToolMenuId = null;
+											}}
+										>
+											<button
+												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+												type="button"
+												aria-label={$i18n.t('Tool Menu')}
+												on:click={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													openToolMenuId = openToolMenuId === tool.id ? null : tool.id;
 												}}
 											>
-												<button
-													class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
-													type="button"
-													aria-label={$i18n.t('Tool Menu')}
-													on:click={(e) => {
-														e.preventDefault();
-														e.stopPropagation();
-														openToolMenuId = openToolMenuId === tool.id ? null : tool.id;
-													}}
-												>
-													<EllipsisHorizontal className="size-4" />
-												</button>
-											</ToolMenu>
-										</div>
+												<EllipsisHorizontal className="size-4" />
+											</button>
+										</ToolMenu>
 									{/if}
 								</div>
 							{/if}

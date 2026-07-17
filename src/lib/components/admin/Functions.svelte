@@ -570,7 +570,7 @@
 									</Tooltip>
 								</div>
 
-								<div class="ml-2 flex shrink-0 flex-row items-center self-center">
+								<div class="ml-2 flex shrink-0 flex-row items-center gap-1.5 self-center">
 									{#if shiftKey}
 										<Tooltip content={$i18n.t('Delete')}>
 											<button
@@ -639,78 +639,74 @@
 											</button>
 										</Tooltip>
 
-										<div class="ml-0.5 flex shrink-0 flex-row items-center gap-1.5 self-center">
-											<FunctionMenu
-												{func}
-												show={openFunctionMenuId === func.id}
-												editHandler={() => {
-													goto(`/admin/functions/edit?id=${encodeURIComponent(func.id)}`);
-												}}
-												shareHandler={() => {
-													shareHandler(func);
-												}}
-												cloneHandler={() => {
-													cloneHandler(func);
-												}}
-												exportHandler={() => {
-													exportHandler(func);
-												}}
-												deleteHandler={async () => {
-													selectedFunction = func;
-													showDeleteConfirm = true;
-												}}
-												toggleGlobalHandler={() => {
-													if (['filter', 'action'].includes(func.type)) {
-														toggleGlobalHandler(func);
-													}
-												}}
-												onClose={() => {
-													openFunctionMenuId = null;
-												}}
-											>
-												<button
-													class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
-													type="button"
-													aria-label={$i18n.t('Function Menu')}
-													on:click={(e) => {
-														e.preventDefault();
-														e.stopPropagation();
-														openFunctionMenuId = openFunctionMenuId === func.id ? null : func.id;
-													}}
-												>
-													<EllipsisHorizontal className="size-4" />
-												</button>
-											</FunctionMenu>
-
+										<FunctionMenu
+											{func}
+											show={openFunctionMenuId === func.id}
+											editHandler={() => {
+												goto(`/admin/functions/edit?id=${encodeURIComponent(func.id)}`);
+											}}
+											shareHandler={() => {
+												shareHandler(func);
+											}}
+											cloneHandler={() => {
+												cloneHandler(func);
+											}}
+											exportHandler={() => {
+												exportHandler(func);
+											}}
+											deleteHandler={async () => {
+												selectedFunction = func;
+												showDeleteConfirm = true;
+											}}
+											toggleGlobalHandler={() => {
+												if (['filter', 'action'].includes(func.type)) {
+													toggleGlobalHandler(func);
+												}
+											}}
+											onClose={() => {
+												openFunctionMenuId = null;
+											}}
+										>
 											<button
-												class="flex h-6 items-center"
+												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 												type="button"
+												aria-label={$i18n.t('Function Menu')}
 												on:click={(e) => {
-													e.stopPropagation();
 													e.preventDefault();
+													e.stopPropagation();
+													openFunctionMenuId = openFunctionMenuId === func.id ? null : func.id;
 												}}
 											>
-												<Tooltip
-													content={func.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}
-												>
-													<Switch
-														bind:state={func.is_active}
-														on:change={async () => {
-															toggleFunctionById(localStorage.token, func.id);
-															models.set(
-																await getModels(
-																	localStorage.token,
-																	$config?.features?.enable_direct_connections &&
-																		($settings?.directConnections ?? null),
-																	false,
-																	true
-																)
-															);
-														}}
-													/>
-												</Tooltip>
+												<EllipsisHorizontal className="size-4" />
 											</button>
-										</div>
+										</FunctionMenu>
+
+										<button
+											class="flex h-6 items-center"
+											type="button"
+											on:click={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+											}}
+										>
+											<Tooltip content={func.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+												<Switch
+													bind:state={func.is_active}
+													on:change={async () => {
+														toggleFunctionById(localStorage.token, func.id);
+														models.set(
+															await getModels(
+																localStorage.token,
+																$config?.features?.enable_direct_connections &&
+																	($settings?.directConnections ?? null),
+																false,
+																true
+															)
+														);
+													}}
+												/>
+											</Tooltip>
+										</button>
 									{/if}
 								</div>
 							</div>
