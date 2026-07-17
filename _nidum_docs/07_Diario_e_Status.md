@@ -56,11 +56,25 @@ O desenho inicial rebaixava "fora de contexto" para Haiku. **O Davi recusou — 
 1. **Custo da fatia 3: eu disse "o pipe teria que carregar as páginas".** Errado — **para mais**. O `SearchResult` já traz `snippet`, e o próprio fork tem o caminho que usa só isso (`BYPASS_WEB_SEARCH_WEB_LOADER`). **Não há scraping: ~30–40 linhas, não 300.**
 2. **A regra da tríade no classificador: eu disse 1.247 caracteres (31% do prompt).** São **518 (13%)**. Meu script quebrou o prompt por `". "` e capturou frases vizinhas. **Inflei 2,4×** — e a aprovação do enxugamento veio em cima desse número. **Cancelado.**
 
-### A ironia que fecha a sessão
+### 📌 O achado da semana virou REGRA no `CLAUDE.md` — não ficou como anedota
 
-**A doc `03_Arquitetura`, que eu reescrevi do zero HOJE para consertar apodrecimento, descrevia 6 rotas — e a fatia 1 faz 4. Ela apodreceu antes de mergear.**
+**A doc `03_Arquitetura`, reescrita do zero HOJE para consertar apodrecimento, descrevia 6 rotas — e a fatia 1 fez 4. Ela apodreceu antes de mergear.** Em horas.
 
-Não é acidente: é a prova de que **doc que descreve produção tem que mergear junto com o deploy**, não antes. Por isso ela agora leva um aviso no topo dizendo **que descreve a 1.31.0 e que pode não estar publicada** — aviso que sai quando o publish acontecer. **O carimbo de data não impede o apodrecimento; ele o deixa visível.**
+**Isso não é ironia — é diagnóstico.** É a prova de que o apodrecimento das docs **não era falta de disciplina**. Havia uma regra no `CLAUDE.md`, obrigatória, e ela era:
+
+> *"Atualize `Documentacao_ChatND_Nidum.html` na **MESMA sessão da alteração**"*
+
+**"Alteração" não é "deploy".** Aqui pipe/tools vão por **API, manualmente** — **mergear na `main` não publica**. Então a doc atualizada "na mesma sessão da alteração" fica **certa sobre algo que ainda não existe** e **errada sobre o que está no ar**.
+
+> ### **O problema não era ninguém seguir a regra. Era segui-la.**
+
+**A regra nova, escrita no `CLAUDE.md`** (onde regras moram e são lidas toda sessão, não aqui — diário é log, e regra que mora em log é anedota bem escrita):
+
+> **Doc que descreve PRODUÇÃO mergeia junto com o DEPLOY — nunca antes.**
+> Doc de **decisão** (este diário, o `08_Decisoes`) mergeia quando a decisão é tomada — **decisão não espera deploy: ela É o registro de que se decidiu.**
+> **Na dúvida:** *"isto fica falso se o publish não acontecer?"* Se sim, espera o deploy.
+
+**E o carimbo `Última verificação: <data>`** que a `03` passou a ter: ele **não impede** o apodrecimento — **deixa ele visível**. Era exatamente o que a doc antiga não tinha: ela mentia com autoridade e **sem data**, então ninguém tinha como saber que estava velha.
 
 ## Sessão 2026-07-16 — ChatND 1.26.0: busca por data em qualquer formato
 

@@ -15,7 +15,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 .nvmrc
-CLAUDE.md
+# CLAUDE.md: o upstream (open-webui) ignora este arquivo por ser config local de
+# dev. NO FORK ELE E VERSIONADO DE PROPOSITO (16/07/2026): aqui ele carrega as
+# INSTRUCOES DO PROJETO Nidum - convencoes, regras de cautela e a REGRA DA DOC.
+# Fora do Git, elas viviam so na maquina do Davi: quem clonasse o repo rodaria o
+# Code sem as regras. NAO reintroduzir no proximo rebase do upstream.
 # C extensions
 *.so
 
