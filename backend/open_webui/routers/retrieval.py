@@ -85,6 +85,7 @@ from open_webui.retrieval.web.bing import search_bing
 from open_webui.retrieval.web.bocha import search_bocha
 from open_webui.retrieval.web.brave import search_brave
 from open_webui.retrieval.web.brave_llm_context import search_brave_llm_context
+from open_webui.retrieval.web.keenable import search_keenable
 from open_webui.retrieval.web.duckduckgo import search_duckduckgo
 from open_webui.retrieval.web.exa import search_exa
 from open_webui.retrieval.web.external import search_external
@@ -256,6 +257,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'BOCHA_SEARCH_API_KEY': 'web.search.bocha_search_api_key',
     'BRAVE_SEARCH_API_KEY': 'web.search.brave_search_api_key',
     'BRAVE_SEARCH_CONTEXT_TOKENS': 'web.search.brave_search_context_tokens',
+    'KEENABLE_SEARCH_API_KEY': 'web.search.keenable_search_api_key',
     'BYPASS_EMBEDDING_AND_RETRIEVAL': 'rag.bypass_embedding_and_retrieval',
     'BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL': 'web.search.bypass_embedding_and_retrieval',
     'BYPASS_WEB_SEARCH_WEB_LOADER': 'web.search.bypass_web_loader',
@@ -708,6 +710,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'GOOGLE_PSE_ENGINE_ID': config.GOOGLE_PSE_ENGINE_ID,
             'BRAVE_SEARCH_API_KEY': config.BRAVE_SEARCH_API_KEY,
             'BRAVE_SEARCH_CONTEXT_TOKENS': config.BRAVE_SEARCH_CONTEXT_TOKENS,
+            'KEENABLE_SEARCH_API_KEY': config.KEENABLE_SEARCH_API_KEY,
             'KAGI_SEARCH_API_KEY': config.KAGI_SEARCH_API_KEY,
             'MOJEEK_SEARCH_API_KEY': config.MOJEEK_SEARCH_API_KEY,
             'BOCHA_SEARCH_API_KEY': config.BOCHA_SEARCH_API_KEY,
@@ -786,6 +789,7 @@ class WebConfig(BaseModel):
     GOOGLE_PSE_ENGINE_ID: str | None = None
     BRAVE_SEARCH_API_KEY: str | None = None
     BRAVE_SEARCH_CONTEXT_TOKENS: int | None = None
+    KEENABLE_SEARCH_API_KEY: str | None = None
     KAGI_SEARCH_API_KEY: str | None = None
     MOJEEK_SEARCH_API_KEY: str | None = None
     BOCHA_SEARCH_API_KEY: str | None = None
@@ -1255,6 +1259,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.BRAVE_SEARCH_API_KEY = form_data.web.BRAVE_SEARCH_API_KEY
         if form_data.web.BRAVE_SEARCH_CONTEXT_TOKENS is not None:
             config.BRAVE_SEARCH_CONTEXT_TOKENS = form_data.web.BRAVE_SEARCH_CONTEXT_TOKENS
+        config.KEENABLE_SEARCH_API_KEY = form_data.web.KEENABLE_SEARCH_API_KEY
         config.KAGI_SEARCH_API_KEY = form_data.web.KAGI_SEARCH_API_KEY
         config.MOJEEK_SEARCH_API_KEY = form_data.web.MOJEEK_SEARCH_API_KEY
         config.BOCHA_SEARCH_API_KEY = form_data.web.BOCHA_SEARCH_API_KEY
@@ -1405,6 +1410,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'GOOGLE_PSE_ENGINE_ID': config.GOOGLE_PSE_ENGINE_ID,
             'BRAVE_SEARCH_API_KEY': config.BRAVE_SEARCH_API_KEY,
             'BRAVE_SEARCH_CONTEXT_TOKENS': config.BRAVE_SEARCH_CONTEXT_TOKENS,
+            'KEENABLE_SEARCH_API_KEY': config.KEENABLE_SEARCH_API_KEY,
             'KAGI_SEARCH_API_KEY': config.KAGI_SEARCH_API_KEY,
             'MOJEEK_SEARCH_API_KEY': config.MOJEEK_SEARCH_API_KEY,
             'BOCHA_SEARCH_API_KEY': config.BOCHA_SEARCH_API_KEY,
@@ -2256,6 +2262,14 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             )
         else:
             raise Exception('No BRAVE_SEARCH_API_KEY found in environment variables')
+    elif engine == 'keenable':
+        # Keyless by default; an optional API key raises rate limits.
+        return await search_keenable(
+            config.KEENABLE_SEARCH_API_KEY,
+            query,
+            config.WEB_SEARCH_RESULT_COUNT,
+            config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
     elif engine == 'kagi':
         if config.KAGI_SEARCH_API_KEY:
             return await asyncio.to_thread(

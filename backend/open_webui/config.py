@@ -1193,6 +1193,8 @@ BRAVE_SEARCH_API_KEY = os.getenv('BRAVE_SEARCH_API_KEY', '')
 
 BRAVE_SEARCH_CONTEXT_TOKENS = int(os.getenv('BRAVE_SEARCH_CONTEXT_TOKENS', '8192'))
 
+KEENABLE_SEARCH_API_KEY = os.getenv('KEENABLE_SEARCH_API_KEY', '')
+
 KAGI_SEARCH_API_KEY = os.getenv('KAGI_SEARCH_API_KEY', '')
 
 MOJEEK_SEARCH_API_KEY = os.getenv('MOJEEK_SEARCH_API_KEY', '')
@@ -2897,6 +2899,7 @@ DEFAULT_CONFIG = {
     'web.search.google_pse_engine_id': GOOGLE_PSE_ENGINE_ID,
     'web.search.brave_search_api_key': BRAVE_SEARCH_API_KEY,
     'web.search.brave_search_context_tokens': BRAVE_SEARCH_CONTEXT_TOKENS,
+    'web.search.keenable_search_api_key': KEENABLE_SEARCH_API_KEY,
     'web.search.kagi_search_api_key': KAGI_SEARCH_API_KEY,
     'web.search.mojeek_search_api_key': MOJEEK_SEARCH_API_KEY,
     'web.search.bocha_search_api_key': BOCHA_SEARCH_API_KEY,
