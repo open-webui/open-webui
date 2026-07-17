@@ -2,7 +2,6 @@
 
 import time
 import uuid
-from typing import Optional
 
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.models.users import UserResponse, Users
@@ -35,7 +34,7 @@ class ModelSystemPromptVersionModel(BaseModel):
     id: str
     model_id: str
     content: str
-    commit_message: Optional[str] = None
+    commit_message: str | None = None
     user_id: str
     created_at: int
 
@@ -45,7 +44,7 @@ class ModelSystemPromptVersionModel(BaseModel):
 class ModelSystemPromptVersionResponse(ModelSystemPromptVersionModel):
     """Response model with user info."""
 
-    user: Optional[UserResponse] = None
+    user: UserResponse | None = None
 
 
 class ModelSystemPromptVersionsTable:
@@ -54,9 +53,9 @@ class ModelSystemPromptVersionsTable:
         model_id: str,
         content: str,
         user_id: str,
-        commit_message: Optional[str] = None,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[ModelSystemPromptVersionModel]:
+        commit_message: str | None = None,
+        db: AsyncSession | None = None,
+    ) -> ModelSystemPromptVersionModel | None:
         """Create a new version entry for a model system prompt."""
         async with get_async_db_context(db) as db:
             version = ModelSystemPromptVersion(
@@ -77,7 +76,7 @@ class ModelSystemPromptVersionsTable:
         model_id: str,
         limit: int = 50,
         offset: int = 0,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> list[ModelSystemPromptVersionResponse]:
         """Get all versions for a model, ordered by created_at desc."""
         async with get_async_db_context(db) as db:
@@ -105,8 +104,8 @@ class ModelSystemPromptVersionsTable:
     async def get_version_by_id(
         self,
         version_id: str,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[ModelSystemPromptVersionModel]:
+        db: AsyncSession | None = None,
+    ) -> ModelSystemPromptVersionModel | None:
         """Get a specific version entry by ID."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
@@ -120,8 +119,8 @@ class ModelSystemPromptVersionsTable:
     async def get_latest_version(
         self,
         model_id: str,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[ModelSystemPromptVersionModel]:
+        db: AsyncSession | None = None,
+    ) -> ModelSystemPromptVersionModel | None:
         """Get the most recent version for a model."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
@@ -138,7 +137,7 @@ class ModelSystemPromptVersionsTable:
     async def get_version_count(
         self,
         model_id: str,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> int:
         """Get the number of versions for a model."""
         async with get_async_db_context(db) as db:
@@ -152,13 +151,11 @@ class ModelSystemPromptVersionsTable:
     async def delete_versions_by_model_id(
         self,
         model_id: str,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> bool:
         """Delete all versions for a model."""
         async with get_async_db_context(db) as db:
-            await db.execute(
-                delete(ModelSystemPromptVersion).filter(ModelSystemPromptVersion.model_id == model_id)
-            )
+            await db.execute(delete(ModelSystemPromptVersion).filter(ModelSystemPromptVersion.model_id == model_id))
             await db.commit()
             return True
 
@@ -166,13 +163,11 @@ class ModelSystemPromptVersionsTable:
         self,
         version_id: str,
         model_id: str,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> bool:
         """Delete a version entry scoped to the authorized model."""
         async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(ModelSystemPromptVersion).filter_by(id=version_id, model_id=model_id)
-            )
+            result = await db.execute(select(ModelSystemPromptVersion).filter_by(id=version_id, model_id=model_id))
             entry = result.scalars().first()
             if not entry:
                 return False

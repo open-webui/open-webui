@@ -67,6 +67,7 @@ def setup_function():
 
 @pytest.mark.asyncio
 async def test_openai_router_injects_langfuse_prompt_when_params_empty():
+    # Arrange
     request = _make_request()
     user = _make_user()
     model = _make_empty_params_model()
@@ -84,6 +85,7 @@ async def test_openai_router_injects_langfuse_prompt_when_params_empty():
     session = MagicMock()
     session.request = AsyncMock(side_effect=fake_request)
 
+    # Act
     with (
         patch('open_webui.routers.openai.Config.get', new_callable=AsyncMock, return_value=True),
         patch('open_webui.routers.openai.Models.get_model_by_id', new_callable=AsyncMock, return_value=model),
@@ -107,11 +109,13 @@ async def test_openai_router_injects_langfuse_prompt_when_params_empty():
             user=user,
         )
 
+    # Assert
     assert _system_message_content(captured_payload) == LANGFUSE_CACHED_PROMPT
 
 
 @pytest.mark.asyncio
 async def test_ollama_router_injects_langfuse_prompt_when_params_empty():
+    # Arrange
     request = _make_request()
     user = _make_user()
     model = _make_empty_params_model()
@@ -121,6 +125,7 @@ async def test_ollama_router_injects_langfuse_prompt_when_params_empty():
         captured_payload.update(json.loads(kwargs['payload']))
         return JSONResponse({'message': {'content': 'ok'}})
 
+    # Act
     with (
         patch('open_webui.routers.ollama.Config.get', new_callable=AsyncMock) as mock_config_get,
         patch('open_webui.routers.ollama.Models.get_model_by_id', new_callable=AsyncMock, return_value=model),
@@ -149,11 +154,13 @@ async def test_ollama_router_injects_langfuse_prompt_when_params_empty():
             user=user,
         )
 
+    # Assert
     assert _system_message_content(captured_payload) == LANGFUSE_CACHED_PROMPT
 
 
 @pytest.mark.asyncio
 async def test_ollama_openai_proxy_injects_langfuse_prompt_when_params_empty():
+    # Arrange
     request = _make_request()
     user = _make_user()
     model = _make_empty_params_model()
@@ -163,6 +170,7 @@ async def test_ollama_openai_proxy_injects_langfuse_prompt_when_params_empty():
         captured_payload.update(json.loads(kwargs['payload']))
         return JSONResponse({'choices': [{'message': {'content': 'ok'}}]})
 
+    # Act
     with (
         patch('open_webui.routers.ollama.Config.get', new_callable=AsyncMock) as mock_config_get,
         patch('open_webui.routers.ollama.Models.get_model_by_id', new_callable=AsyncMock, return_value=model),
@@ -190,11 +198,13 @@ async def test_ollama_openai_proxy_injects_langfuse_prompt_when_params_empty():
             user=user,
         )
 
+    # Assert
     assert _system_message_content(captured_payload) == LANGFUSE_CACHED_PROMPT
 
 
 @pytest.mark.asyncio
 async def test_functions_gate_injects_langfuse_prompt_when_params_empty():
+    # Arrange
     from open_webui.functions import generate_function_chat_completion
 
     request = _make_request()
@@ -208,6 +218,7 @@ async def test_functions_gate_injects_langfuse_prompt_when_params_empty():
 
     function_module = SimpleNamespace(pipe=fake_pipe, UserValves=SimpleNamespace)
 
+    # Act
     with (
         patch('open_webui.functions.BYPASS_MODEL_ACCESS_CONTROL', True),
         patch('open_webui.functions.Models.get_model_by_id', new_callable=AsyncMock, return_value=model),
@@ -230,4 +241,5 @@ async def test_functions_gate_injects_langfuse_prompt_when_params_empty():
             user=user,
         )
 
+    # Assert
     assert _system_message_content(captured_body) == LANGFUSE_CACHED_PROMPT

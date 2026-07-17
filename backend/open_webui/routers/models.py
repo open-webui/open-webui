@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import base64
 import io
-import json
 import logging
 import posixpath
-from typing import Optional
 from urllib.parse import unquote
 
 from fastapi import (
@@ -20,8 +17,8 @@ from fastapi import (
 from fastapi.responses import RedirectResponse, StreamingResponse
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.events import EVENTS, publish_event
 from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_ALLOWED_MIME_TYPES
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
@@ -30,7 +27,6 @@ from open_webui.models.models import (
     ModelAccessListResponse,
     ModelAccessResponse,
     ModelForm,
-    ModelListResponse,
     ModelMeta,
     ModelModel,
     ModelParams,
@@ -521,15 +517,10 @@ async def sync_models(
 ):
     sync_model_ids = [model.id for model in form_data.models]
     new_model_ids = set(sync_model_ids)
-    existing_ids_before_sync = {
-        model.id for model in await Models.get_all_models(db=db)
-    }
-    existing_models = (
-        await Models.get_models_by_ids(sync_model_ids, db=db) if sync_model_ids else []
-    )
+    existing_ids_before_sync = {model.id for model in await Models.get_all_models(db=db)}
+    existing_models = await Models.get_models_by_ids(sync_model_ids, db=db) if sync_model_ids else []
     previous_systems = {
-        existing_model.id: get_params_system(existing_model.params)
-        for existing_model in existing_models
+        existing_model.id: get_params_system(existing_model.params) for existing_model in existing_models
     }
 
     models = await Models.sync_models(user.id, form_data.models, db=db)

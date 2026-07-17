@@ -2,7 +2,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from open_webui.utils import model_system_prompt_sync as sync_module
 
 
@@ -38,6 +37,7 @@ def _make_binding(source: str = 'local', active_version_id: str | None = 'ver-1'
 )
 @pytest.mark.asyncio
 async def test_skip_unchanged_including_empty_and_none(previous, new):
+    # Act
     with patch(
         'open_webui.utils.model_system_prompt_sync.ModelSystemPromptBindings.get_by_model_id',
         new_callable=AsyncMock,
@@ -50,12 +50,14 @@ async def test_skip_unchanged_including_empty_and_none(previous, new):
             AsyncMock(),
         )
 
+    # Assert
     assert result is None
     mock_binding.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_skip_when_binding_source_is_langfuse():
+    # Act
     with (
         patch(
             'open_webui.utils.model_system_prompt_sync.ModelSystemPromptBindings.get_by_model_id',
@@ -75,15 +77,18 @@ async def test_skip_when_binding_source_is_langfuse():
             AsyncMock(),
         )
 
+    # Assert
     assert result is None
     mock_create.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_skip_when_active_version_content_matches_new():
+    # Arrange
     binding = _make_binding(active_version_id='ver-active')
     active = _make_version(version_id='ver-active', content='already active')
 
+    # Act
     with (
         patch(
             'open_webui.utils.model_system_prompt_sync.ModelSystemPromptBindings.get_by_model_id',
@@ -108,15 +113,18 @@ async def test_skip_when_active_version_content_matches_new():
             AsyncMock(),
         )
 
+    # Assert
     assert result is None
     mock_create.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_change_creates_version_and_sets_local_binding():
+    # Arrange
     created = _make_version(version_id='ver-new', content='updated prompt')
     db = AsyncMock()
 
+    # Act
     with (
         patch(
             'open_webui.utils.model_system_prompt_sync.ModelSystemPromptBindings.get_by_model_id',
@@ -148,6 +156,7 @@ async def test_change_creates_version_and_sets_local_binding():
             commit_message='import',
         )
 
+    # Assert
     assert result is created
     mock_create.assert_awaited_once_with(
         model_id='model-1',
@@ -161,9 +170,11 @@ async def test_change_creates_version_and_sets_local_binding():
 
 @pytest.mark.asyncio
 async def test_no_binding_creates_first_version():
+    # Arrange
     created = _make_version(version_id='ver-1', content='first prompt')
     db = AsyncMock()
 
+    # Act
     with (
         patch(
             'open_webui.utils.model_system_prompt_sync.ModelSystemPromptBindings.get_by_model_id',
@@ -189,12 +200,14 @@ async def test_no_binding_creates_first_version():
             db,
         )
 
+    # Assert
     assert result is created
     mock_create.assert_awaited_once()
     mock_ensure.assert_awaited_once_with('model-1', 'ver-1', db=db)
 
 
 def test_normalize_system_content_empty_to_none():
+    # Arrange / Act / Assert
     assert sync_module.normalize_system_content('') is None
     assert sync_module.normalize_system_content('   ') is None
     assert sync_module.normalize_system_content(None) is None
@@ -202,6 +215,7 @@ def test_normalize_system_content_empty_to_none():
 
 
 def test_system_content_for_version_stores_empty_string():
+    # Arrange / Act / Assert
     assert sync_module.system_content_for_version(None) == ''
     assert sync_module.system_content_for_version('') == ''
     assert sync_module.system_content_for_version('hello') == 'hello'

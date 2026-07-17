@@ -5,7 +5,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from open_webui.models.model_system_prompt_binding import (
     BindingVersionConflictError,
     ModelSystemPromptBindings,
@@ -38,12 +37,14 @@ async def _mock_db_context(db):
 
 @pytest.mark.asyncio
 async def test_update_cache_fields_preserves_updated_at():
+    # Arrange
     binding = _make_binding(updated_at=100)
     db = AsyncMock()
     db.get = AsyncMock(return_value=binding)
     db.commit = AsyncMock()
     db.refresh = AsyncMock()
 
+    # Act
     with patch(
         'open_webui.models.model_system_prompt_binding.get_async_db_context',
         side_effect=_mock_db_context,
@@ -57,6 +58,7 @@ async def test_update_cache_fields_preserves_updated_at():
             db=db,
         )
 
+    # Assert
     assert binding.updated_at == 100
     assert binding.cached_content == 'fresh content'
     assert binding.cached_version == '2'
@@ -67,12 +69,14 @@ async def test_update_cache_fields_preserves_updated_at():
 
 @pytest.mark.asyncio
 async def test_upsert_still_bumps_updated_at():
+    # Arrange
     binding = _make_binding(updated_at=100)
     db = AsyncMock()
     db.get = AsyncMock(return_value=binding)
     db.commit = AsyncMock()
     db.refresh = AsyncMock()
 
+    # Act
     with (
         patch(
             'open_webui.models.model_system_prompt_binding.get_async_db_context',
@@ -91,6 +95,7 @@ async def test_upsert_still_bumps_updated_at():
             db=db,
         )
 
+    # Assert
     assert binding.updated_at == 500
     assert result.updated_at == 500
 
@@ -98,6 +103,7 @@ async def test_upsert_still_bumps_updated_at():
 @pytest.mark.asyncio
 async def test_cache_persist_then_upsert_with_same_expected_updated_at():
     """Chat-path cache persist must not invalidate PATCH optimistic locking."""
+    # Arrange
     from open_webui.utils.system_prompt import _persist_langfuse_cache
 
     binding = _make_binding(
@@ -118,6 +124,7 @@ async def test_cache_persist_then_upsert_with_same_expected_updated_at():
     db.commit = AsyncMock()
     db.refresh = AsyncMock()
 
+    # Act
     with (
         patch(
             'open_webui.models.model_system_prompt_binding.get_async_db_context',
@@ -148,16 +155,19 @@ async def test_cache_persist_then_upsert_with_same_expected_updated_at():
             db=db,
         )
 
+    # Assert
     assert result is not None
     assert stored.updated_at != 100
 
 
 @pytest.mark.asyncio
 async def test_upsert_raises_conflict_when_expected_updated_at_stale():
+    # Arrange
     binding = _make_binding(updated_at=200)
     db = AsyncMock()
     db.get = AsyncMock(return_value=binding)
 
+    # Act
     with patch(
         'open_webui.models.model_system_prompt_binding.get_async_db_context',
         side_effect=_mock_db_context,
@@ -172,4 +182,5 @@ async def test_upsert_raises_conflict_when_expected_updated_at_stale():
                 db=db,
             )
 
+    # Assert
     assert exc.value.current_updated_at == 200

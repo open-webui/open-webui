@@ -6,16 +6,16 @@ Create Date: 2026-07-17 21:00:00.000000
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 from open_webui.migrations.util import get_existing_tables
 
 revision: str = 'a9b8c7d6e5f4'
-down_revision: Union[str, None] = 'f8e7d6c5b4a3'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = 'f8e7d6c5b4a3'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

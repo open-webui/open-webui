@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
@@ -9,13 +11,23 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import { verifyLangfuseConnection } from '$lib/apis/configs';
 
-	const i18n = getContext<any>('i18n');
+	type LangfuseConnectionForm = {
+		id?: string;
+		name?: string;
+		url?: string;
+		public_key?: string;
+		secret_key?: string;
+		secret_key_set?: boolean;
+		enabled?: boolean;
+	};
+
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	export let show = false;
 	export let edit = false;
-	export let connection: any = null;
+	export let connection: LangfuseConnectionForm | null = null;
 
-	export let onSubmit: Function = () => {};
+	export let onSubmit: (connection: LangfuseConnectionForm) => void = () => {};
 	export let onDelete: () => void = () => {};
 
 	let id = '';

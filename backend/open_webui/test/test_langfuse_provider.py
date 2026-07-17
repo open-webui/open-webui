@@ -1,7 +1,6 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from open_webui.integrations.langfuse.provider import LangfusePromptError, LangfusePromptProvider
 
 
@@ -30,6 +29,7 @@ def _mock_response(*, ok: bool = True, status: int = 200, payload=None, text: st
 
 @pytest.mark.asyncio
 async def test_get_prompt_text_ok(connection):
+    # Arrange
     provider = LangfusePromptProvider()
     response = _mock_response(
         payload={
@@ -43,16 +43,21 @@ async def test_get_prompt_text_ok(connection):
     session = MagicMock()
     session.get = AsyncMock(return_value=response)
 
-    with patch(
-        'open_webui.integrations.langfuse.provider.get_session',
-        new_callable=AsyncMock,
-        return_value=session,
-    ), patch(
-        'open_webui.integrations.langfuse.provider.cleanup_response',
-        new_callable=AsyncMock,
+    # Act
+    with (
+        patch(
+            'open_webui.integrations.langfuse.provider.get_session',
+            new_callable=AsyncMock,
+            return_value=session,
+        ),
+        patch(
+            'open_webui.integrations.langfuse.provider.cleanup_response',
+            new_callable=AsyncMock,
+        ),
     ):
         result = await provider.fetch_prompt(connection, 'movie-critic', label='production')
 
+    # Assert
     assert result.content == 'You are a critic of {{movie}}'
     assert result.version == 3
     assert result.type == 'text'
@@ -64,6 +69,7 @@ async def test_get_prompt_text_ok(connection):
 
 @pytest.mark.asyncio
 async def test_get_prompt_empty_content_rejected(connection):
+    # Arrange
     provider = LangfusePromptProvider()
     response = _mock_response(
         payload={
@@ -76,13 +82,17 @@ async def test_get_prompt_empty_content_rejected(connection):
     session = MagicMock()
     session.get = AsyncMock(return_value=response)
 
-    with patch(
-        'open_webui.integrations.langfuse.provider.get_session',
-        new_callable=AsyncMock,
-        return_value=session,
-    ), patch(
-        'open_webui.integrations.langfuse.provider.cleanup_response',
-        new_callable=AsyncMock,
+    # Act / Assert
+    with (
+        patch(
+            'open_webui.integrations.langfuse.provider.get_session',
+            new_callable=AsyncMock,
+            return_value=session,
+        ),
+        patch(
+            'open_webui.integrations.langfuse.provider.cleanup_response',
+            new_callable=AsyncMock,
+        ),
     ):
         with pytest.raises(LangfusePromptError, match='must not be empty'):
             await provider.fetch_prompt(connection, 'empty-prompt')
@@ -90,6 +100,7 @@ async def test_get_prompt_empty_content_rejected(connection):
 
 @pytest.mark.asyncio
 async def test_get_prompt_upstream_error_is_sanitized(connection):
+    # Arrange
     provider = LangfusePromptProvider()
     response = _mock_response(
         ok=False,
@@ -99,23 +110,29 @@ async def test_get_prompt_upstream_error_is_sanitized(connection):
     session = MagicMock()
     session.get = AsyncMock(return_value=response)
 
-    with patch(
-        'open_webui.integrations.langfuse.provider.get_session',
-        new_callable=AsyncMock,
-        return_value=session,
-    ), patch(
-        'open_webui.integrations.langfuse.provider.cleanup_response',
-        new_callable=AsyncMock,
+    # Act
+    with (
+        patch(
+            'open_webui.integrations.langfuse.provider.get_session',
+            new_callable=AsyncMock,
+            return_value=session,
+        ),
+        patch(
+            'open_webui.integrations.langfuse.provider.cleanup_response',
+            new_callable=AsyncMock,
+        ),
     ):
         with pytest.raises(LangfusePromptError, match='HTTP 502') as exc:
             await provider.fetch_prompt(connection, 'movie-critic')
 
+    # Assert
     assert 'stack trace' not in str(exc.value)
     assert 'api keys' not in str(exc.value)
 
 
 @pytest.mark.asyncio
 async def test_get_prompt_chat_rejected(connection):
+    # Arrange
     provider = LangfusePromptProvider()
     response = _mock_response(
         payload={
@@ -128,13 +145,17 @@ async def test_get_prompt_chat_rejected(connection):
     session = MagicMock()
     session.get = AsyncMock(return_value=response)
 
-    with patch(
-        'open_webui.integrations.langfuse.provider.get_session',
-        new_callable=AsyncMock,
-        return_value=session,
-    ), patch(
-        'open_webui.integrations.langfuse.provider.cleanup_response',
-        new_callable=AsyncMock,
+    # Act / Assert
+    with (
+        patch(
+            'open_webui.integrations.langfuse.provider.get_session',
+            new_callable=AsyncMock,
+            return_value=session,
+        ),
+        patch(
+            'open_webui.integrations.langfuse.provider.cleanup_response',
+            new_callable=AsyncMock,
+        ),
     ):
         with pytest.raises(LangfusePromptError, match='chat prompts are not supported'):
             await provider.fetch_prompt(connection, 'chat-prompt')

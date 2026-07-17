@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from open_webui.constants import ERROR_MESSAGES
@@ -45,7 +45,7 @@ LANGFUSE_IDENTITY_FIELDS = (
 
 class CreateSystemPromptVersionForm(BaseModel):
     content: str
-    commit_message: Optional[str] = None
+    commit_message: str | None = None
     set_active: bool = True
 
 
@@ -569,14 +569,10 @@ async def patch_model_system_prompt_binding(
         return updated
 
     connection_id = (
-        form_data.connection_id
-        if form_data.connection_id is not None
-        else (binding.connection_id if binding else None)
+        form_data.connection_id if form_data.connection_id is not None else (binding.connection_id if binding else None)
     )
     external_name = (
-        form_data.external_name
-        if form_data.external_name is not None
-        else (binding.external_name if binding else None)
+        form_data.external_name if form_data.external_name is not None else (binding.external_name if binding else None)
     )
     external_label = (
         form_data.external_label

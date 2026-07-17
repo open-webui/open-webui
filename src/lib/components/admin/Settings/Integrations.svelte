@@ -140,9 +140,13 @@
 	};
 
 	const saveLangfuseConfig = async () => {
-		const payloadConnections = langfuseConnections.map(({ secret_key_set, ...connection }) => ({
-			...connection,
-			secret_key: connection.secret_key ?? ''
+		const payloadConnections = langfuseConnections.map((connection) => ({
+			id: connection.id,
+			name: connection.name,
+			url: connection.url,
+			public_key: connection.public_key,
+			secret_key: connection.secret_key ?? '',
+			enabled: connection.enabled
 		}));
 
 		const res = await setLangfuseConfig(localStorage.token, {

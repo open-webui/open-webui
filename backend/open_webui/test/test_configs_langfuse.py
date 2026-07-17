@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
-
 from open_webui.routers import configs as configs_module
 from open_webui.utils.auth import get_admin_user
 
@@ -17,14 +16,17 @@ def _regular_user():
 
 
 def test_get_admin_user_rejects_non_admin():
+    # Act
     with pytest.raises(HTTPException) as exc:
         get_admin_user(_regular_user())
 
+    # Assert
     assert exc.value.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_get_langfuse_config_redacts_secrets():
+    # Arrange
     request = MagicMock()
     stored_connections = [
         {
@@ -43,9 +45,11 @@ async def test_get_langfuse_config_redacts_secrets():
             return 600
         return None
 
+    # Act
     with patch.object(configs_module.Config, 'get', side_effect=fake_config_get):
         result = await configs_module.get_langfuse_config(request, user=_admin_user())
 
+    # Assert
     assert result['LANGFUSE_PROMPT_CACHE_TTL'] == 600
     assert result['LANGFUSE_CONNECTIONS'][0]['secret_key'] == ''
     assert result['LANGFUSE_CONNECTIONS'][0]['secret_key_set'] is True
@@ -54,6 +58,7 @@ async def test_get_langfuse_config_redacts_secrets():
 
 @pytest.mark.asyncio
 async def test_get_langfuse_config_defaults_ttl_when_missing():
+    # Arrange
     request = MagicMock()
 
     async def fake_config_get(key):
@@ -63,15 +68,18 @@ async def test_get_langfuse_config_defaults_ttl_when_missing():
             return None
         return None
 
+    # Act
     with patch.object(configs_module.Config, 'get', side_effect=fake_config_get):
         result = await configs_module.get_langfuse_config(request, user=_admin_user())
 
+    # Assert
     assert result['LANGFUSE_PROMPT_CACHE_TTL'] == 300
     assert result['LANGFUSE_CONNECTIONS'] == []
 
 
 @pytest.mark.asyncio
 async def test_set_langfuse_config_persists_and_redacts():
+    # Arrange
     request = MagicMock()
     existing = [{'id': 'conn-1', 'secret_key': 'stored-secret'}]
     upsert_mock = AsyncMock()
@@ -83,6 +91,7 @@ async def test_set_langfuse_config_persists_and_redacts():
             return 300
         return None
 
+    # Act
     with (
         patch.object(configs_module.Config, 'get', side_effect=fake_config_get),
         patch.object(configs_module.Config, 'upsert', upsert_mock),
@@ -105,6 +114,7 @@ async def test_set_langfuse_config_persists_and_redacts():
             user=_admin_user(),
         )
 
+    # Assert
     upsert_mock.assert_awaited_once()
     updates = upsert_mock.await_args.args[0]
     assert updates['langfuse.prompt_cache_ttl'] == 900
@@ -116,8 +126,10 @@ async def test_set_langfuse_config_persists_and_redacts():
 
 @pytest.mark.asyncio
 async def test_set_langfuse_config_rejects_negative_ttl():
+    # Arrange
     request = MagicMock()
 
+    # Act
     with pytest.raises(HTTPException) as exc:
         await configs_module.set_langfuse_config(
             request,
@@ -128,11 +140,13 @@ async def test_set_langfuse_config_rejects_negative_ttl():
             user=_admin_user(),
         )
 
+    # Assert
     assert exc.value.status_code == 400
 
 
 @pytest.mark.asyncio
 async def test_set_langfuse_config_blocks_orphaned_connection_removal():
+    # Arrange
     request = MagicMock()
     existing = [
         {
@@ -150,6 +164,7 @@ async def test_set_langfuse_config_blocks_orphaned_connection_removal():
             return existing
         return None
 
+    # Act
     with (
         patch.object(configs_module.Config, 'get', side_effect=fake_config_get),
         patch.object(
@@ -169,6 +184,7 @@ async def test_set_langfuse_config_blocks_orphaned_connection_removal():
                 user=_admin_user(),
             )
 
+    # Assert
     assert exc.value.status_code == 400
     assert exc.value.detail['blocked_connections'][0]['connection_id'] == 'conn-bound'
     assert exc.value.detail['blocked_connections'][0]['bound_models'] == 2
@@ -176,6 +192,7 @@ async def test_set_langfuse_config_blocks_orphaned_connection_removal():
 
 @pytest.mark.asyncio
 async def test_set_langfuse_config_blocks_orphaned_connection_disable():
+    # Arrange
     request = MagicMock()
     existing = [
         {
@@ -193,6 +210,7 @@ async def test_set_langfuse_config_blocks_orphaned_connection_disable():
             return existing
         return None
 
+    # Act
     with (
         patch.object(configs_module.Config, 'get', side_effect=fake_config_get),
         patch.object(
@@ -221,14 +239,17 @@ async def test_set_langfuse_config_blocks_orphaned_connection_disable():
                 user=_admin_user(),
             )
 
+    # Assert
     assert exc.value.status_code == 400
     assert exc.value.detail['blocked_connections'][0]['action'] == 'disabled'
 
 
 @pytest.mark.asyncio
 async def test_verify_langfuse_connection_requires_url():
+    # Arrange
     request = MagicMock()
 
+    # Act
     with pytest.raises(HTTPException) as exc:
         await configs_module.verify_langfuse_connection(
             request,
@@ -236,5 +257,6 @@ async def test_verify_langfuse_connection_requires_url():
             user=_admin_user(),
         )
 
+    # Assert
     assert exc.value.status_code == 400
     assert 'URL is required' in exc.value.detail

@@ -5,7 +5,6 @@ import hashlib
 import json
 import logging
 import re
-from typing import Optional
 from urllib.parse import quote, urlparse
 
 import aiohttp
@@ -22,7 +21,6 @@ from open_webui.config import (
     CACHE_DIR,
 )
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.events import EVENTS, publish_event, publish_model_provider_request_failed
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
@@ -33,13 +31,13 @@ from open_webui.env import (
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     MODELS_CACHE_TTL,
 )
-from open_webui.internal.db import get_async_session
+from open_webui.events import EVENTS, publish_event, publish_model_provider_request_failed
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel
-from open_webui.utils.access_control import check_model_access, has_connection_access, has_permission
+from open_webui.utils.access_control import check_model_access, has_permission
 from open_webui.utils.anthropic import get_anthropic_models, is_anthropic_url
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
@@ -51,14 +49,13 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
 )
-from open_webui.utils.system_prompt import resolve_model_system_prompt
 from open_webui.utils.session_pool import (
     cleanup_response,
     get_session,
     stream_wrapper,
 )
+from open_webui.utils.system_prompt import resolve_model_system_prompt
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -1240,9 +1237,7 @@ async def generate_chat_completion(
 
         params = model_info.params.model_dump()
 
-        system = await resolve_model_system_prompt(
-            model_info, metadata, user, bypass=bypass_system_prompt
-        )
+        system = await resolve_model_system_prompt(model_info, metadata, user, bypass=bypass_system_prompt)
         if system:
             payload = await apply_system_prompt_to_body(system, payload, metadata, user)
         if params:

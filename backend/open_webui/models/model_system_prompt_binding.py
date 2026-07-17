@@ -1,7 +1,7 @@
 """Per-model system prompt source binding and Langfuse cache."""
 
 import time
-from typing import Literal, Optional
+from typing import Literal
 
 from open_webui.internal.db import Base, get_async_db_context
 from pydantic import BaseModel, ConfigDict
@@ -43,16 +43,16 @@ class ModelSystemPromptBinding(Base):
 class ModelSystemPromptBindingModel(BaseModel):
     model_id: str
     source: SystemPromptSource
-    active_version_id: Optional[str] = None
-    connection_id: Optional[str] = None
-    external_name: Optional[str] = None
-    external_label: Optional[str] = None
-    external_version: Optional[str] = None
-    cached_content: Optional[str] = None
-    cached_version: Optional[str] = None
-    cached_at: Optional[int] = None
-    cache_ttl_seconds: Optional[int] = None
-    updated_at: Optional[int] = None
+    active_version_id: str | None = None
+    connection_id: str | None = None
+    external_name: str | None = None
+    external_label: str | None = None
+    external_version: str | None = None
+    cached_content: str | None = None
+    cached_version: str | None = None
+    cached_at: int | None = None
+    cache_ttl_seconds: int | None = None
+    updated_at: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -61,7 +61,7 @@ class ModelSystemPromptBindingsTable:
     async def count_by_connection_id(
         self,
         connection_id: str,
-        db: Optional[AsyncSession] = None,
+        db: AsyncSession | None = None,
     ) -> int:
         """Count langfuse bindings referencing a connection."""
         async with get_async_db_context(db) as db:
@@ -79,8 +79,8 @@ class ModelSystemPromptBindingsTable:
     async def get_by_model_id(
         self,
         model_id: str,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[ModelSystemPromptBindingModel]:
+        db: AsyncSession | None = None,
+    ) -> ModelSystemPromptBindingModel | None:
         """Get the binding for a model, if any."""
         async with get_async_db_context(db) as db:
             binding = await db.get(ModelSystemPromptBinding, model_id)
@@ -92,17 +92,17 @@ class ModelSystemPromptBindingsTable:
         self,
         model_id: str,
         source: SystemPromptSource,
-        active_version_id: Optional[str] = None,
-        connection_id: Optional[str] = None,
-        external_name: Optional[str] = None,
-        external_label: Optional[str] = None,
-        external_version: Optional[str] = None,
-        cached_content: Optional[str] = None,
-        cached_version: Optional[str] = None,
-        cached_at: Optional[int] = None,
-        cache_ttl_seconds: Optional[int] = None,
-        expected_updated_at: Optional[int] = None,
-        db: Optional[AsyncSession] = None,
+        active_version_id: str | None = None,
+        connection_id: str | None = None,
+        external_name: str | None = None,
+        external_label: str | None = None,
+        external_version: str | None = None,
+        cached_content: str | None = None,
+        cached_version: str | None = None,
+        cached_at: int | None = None,
+        cache_ttl_seconds: int | None = None,
+        expected_updated_at: int | None = None,
+        db: AsyncSession | None = None,
     ) -> ModelSystemPromptBindingModel:
         """Create or replace binding fields for a model."""
         async with get_async_db_context(db) as db:
@@ -151,9 +151,9 @@ class ModelSystemPromptBindingsTable:
     async def update_active_version(
         self,
         model_id: str,
-        active_version_id: Optional[str],
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[ModelSystemPromptBindingModel]:
+        active_version_id: str | None,
+        db: AsyncSession | None = None,
+    ) -> ModelSystemPromptBindingModel | None:
         """Update the active local version pointer."""
         async with get_async_db_context(db) as db:
             binding = await db.get(ModelSystemPromptBinding, model_id)
@@ -170,8 +170,8 @@ class ModelSystemPromptBindingsTable:
         self,
         model_id: str,
         source: SystemPromptSource,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[ModelSystemPromptBindingModel]:
+        db: AsyncSession | None = None,
+    ) -> ModelSystemPromptBindingModel | None:
         """Update the prompt source mode."""
         async with get_async_db_context(db) as db:
             binding = await db.get(ModelSystemPromptBinding, model_id)
@@ -188,12 +188,12 @@ class ModelSystemPromptBindingsTable:
         self,
         model_id: str,
         *,
-        cached_content: Optional[str] = None,
-        cached_version: Optional[str] = None,
-        cached_at: Optional[int] = None,
-        cache_ttl_seconds: Optional[int] = None,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[ModelSystemPromptBindingModel]:
+        cached_content: str | None = None,
+        cached_version: str | None = None,
+        cached_at: int | None = None,
+        cache_ttl_seconds: int | None = None,
+        db: AsyncSession | None = None,
+    ) -> ModelSystemPromptBindingModel | None:
         """Update Langfuse cache fields on an existing binding."""
         async with get_async_db_context(db) as db:
             binding = await db.get(ModelSystemPromptBinding, model_id)
@@ -212,12 +212,12 @@ class ModelSystemPromptBindingsTable:
         self,
         model_id: str,
         *,
-        connection_id: Optional[str] = None,
-        external_name: Optional[str] = None,
-        external_label: Optional[str] = None,
-        external_version: Optional[str] = None,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[ModelSystemPromptBindingModel]:
+        connection_id: str | None = None,
+        external_name: str | None = None,
+        external_label: str | None = None,
+        external_version: str | None = None,
+        db: AsyncSession | None = None,
+    ) -> ModelSystemPromptBindingModel | None:
         """Update Langfuse external reference fields on an existing binding."""
         async with get_async_db_context(db) as db:
             binding = await db.get(ModelSystemPromptBinding, model_id)

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from open_webui.models.model_system_prompt_binding import (
     ModelSystemPromptBindingModel,

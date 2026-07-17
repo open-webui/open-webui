@@ -8,17 +8,16 @@ Create Date: 2026-06-17 00:50:51.477073
 
 import json
 import time
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
-
 # revision identifiers, used by Alembic.
 revision: str = '3ff2c63645b8'
-down_revision: Union[str, None] = '461111b60977'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = '461111b60977'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 # Maps every dot-notation blob path to its legacy env/config key name.

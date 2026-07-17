@@ -39,7 +39,11 @@ async def get_connection_by_id(connection_id: str) -> dict[str, Any] | None:
     if not connection_id:
         return None
     return next(
-        (connection for connection in await get_langfuse_connections_with_secrets() if connection.get('id') == connection_id),
+        (
+            connection
+            for connection in await get_langfuse_connections_with_secrets()
+            if connection.get('id') == connection_id
+        ),
         None,
     )
 
@@ -47,9 +51,7 @@ async def get_connection_by_id(connection_id: str) -> dict[str, Any] | None:
 async def list_enabled_connections() -> list[dict[str, Any]]:
     """Return enabled Langfuse connections with secrets (for server-side API calls)."""
     return [
-        connection
-        for connection in await get_langfuse_connections_with_secrets()
-        if connection.get('enabled', True)
+        connection for connection in await get_langfuse_connections_with_secrets() if connection.get('enabled', True)
     ]
 
 

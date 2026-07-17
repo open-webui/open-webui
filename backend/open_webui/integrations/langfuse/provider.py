@@ -41,6 +41,103 @@ class LangfusePromptResult:
 
 
 class LangfusePromptProvider(SystemPromptProviderBase):
+    @staticmethod
+    def _attach_metadata(
+        binding: ModelSystemPromptBindingModel,
+        metadata: dict | None,
+        *,
+        prompt_version: int | str | None = None,
+    ) -> None:
+        if metadata is None:
+            return
+        from open_webui.utils.system_prompt import _langfuse_metadata
+
+        if prompt_version is None:
+            metadata.update(_langfuse_metadata(binding))
+        else:
+            metadata.update(_langfuse_metadata(binding, prompt_version=prompt_version))
+
+    def _serve_memory_cache(
+        self,
+        model_id: str,
+        binding: ModelSystemPromptBindingModel,
+        metadata: dict | None,
+    ) -> str | None:
+        cached = get_cached_system_prompt(model_id)
+        if not cached or not cached.content:
+            return None
+        self._attach_metadata(binding, metadata, prompt_version=cached.prompt_version)
+        return cached.content
+
+    def _serve_warm_db_cache(
+        self,
+        model_id: str,
+        binding: ModelSystemPromptBindingModel,
+        metadata: dict | None,
+        *,
+        default_ttl: int,
+    ) -> str | None:
+        if not is_binding_db_cache_warm(binding, default_ttl=default_ttl):
+            return None
+        ttl = binding_cache_ttl_seconds(binding, default_ttl)
+        set_cached_system_prompt(
+            model_id,
+            binding.cached_content,
+            ttl_seconds=ttl,
+            prompt_name=binding.external_name,
+            prompt_version=binding.cached_version,
+            cached_at=binding.cached_at,
+        )
+        self._attach_metadata(binding, metadata)
+        return binding.cached_content
+
+    async def _fetch_under_lock(
+        self,
+        model_id: str,
+        binding: ModelSystemPromptBindingModel,
+        *,
+        mirror: str | None,
+        metadata: dict | None,
+        default_ttl: int,
+    ) -> str | None:
+        cached_content = self._serve_memory_cache(model_id, binding, metadata)
+        if cached_content is not None:
+            return cached_content
+
+        if is_system_prompt_fetch_backoff_active(model_id) and not binding.cached_content:
+            return mirror
+
+        try:
+            content, prompt_version = await self.fetch_prompt_for_binding(binding)
+            from open_webui.utils.system_prompt import _persist_langfuse_cache
+
+            await _persist_langfuse_cache(
+                model_id,
+                binding,
+                content,
+                prompt_version=prompt_version,
+                default_ttl=default_ttl,
+            )
+            self._attach_metadata(binding, metadata, prompt_version=prompt_version)
+            return content
+        except Exception:
+            log.exception(
+                'Failed to fetch Langfuse system prompt for model %s (connection=%s, name=%s)',
+                model_id,
+                binding.connection_id,
+                binding.external_name,
+            )
+            record_system_prompt_fetch_failure(model_id)
+            if not binding.cached_content:
+                return mirror
+            serve_stale_system_prompt_from_binding(
+                model_id,
+                binding,
+                default_ttl=default_ttl,
+            )
+            self._attach_metadata(binding, metadata)
+            return binding.cached_content
+
     async def resolve_content(
         self,
         binding: ModelSystemPromptBindingModel,
@@ -54,83 +151,31 @@ class LangfusePromptProvider(SystemPromptProviderBase):
 
         default_ttl = await _get_default_cache_ttl_seconds()
 
-        cached = get_cached_system_prompt(model_id)
-        if cached and cached.content:
-            from open_webui.utils.system_prompt import _langfuse_metadata
+        cached_content = self._serve_memory_cache(model_id, binding, metadata)
+        if cached_content is not None:
+            return cached_content
 
-            if metadata is not None:
-                metadata.update(_langfuse_metadata(binding, prompt_version=cached.prompt_version))
-            return cached.content
-
-        if is_binding_db_cache_warm(binding, default_ttl=default_ttl):
-            from open_webui.utils.system_prompt import _langfuse_metadata
-
-            ttl = binding_cache_ttl_seconds(binding, default_ttl)
-            set_cached_system_prompt(
-                model_id,
-                binding.cached_content,
-                ttl_seconds=ttl,
-                prompt_name=binding.external_name,
-                prompt_version=binding.cached_version,
-                cached_at=binding.cached_at,
-            )
-            if metadata is not None:
-                metadata.update(_langfuse_metadata(binding))
-            return binding.cached_content
+        db_content = self._serve_warm_db_cache(
+            model_id,
+            binding,
+            metadata,
+            default_ttl=default_ttl,
+        )
+        if db_content is not None:
+            return db_content
 
         if is_system_prompt_fetch_backoff_active(model_id) and not binding.cached_content:
             return mirror
 
         fetch_lock = await acquire_system_prompt_fetch_lock(model_id)
         async with fetch_lock:
-            cached = get_cached_system_prompt(model_id)
-            if cached and cached.content:
-                from open_webui.utils.system_prompt import _langfuse_metadata
-
-                if metadata is not None:
-                    metadata.update(_langfuse_metadata(binding, prompt_version=cached.prompt_version))
-                return cached.content
-
-            if is_system_prompt_fetch_backoff_active(model_id) and not binding.cached_content:
-                return mirror
-
-            try:
-                content, prompt_version = await self.fetch_prompt_for_binding(binding)
-                from open_webui.utils.system_prompt import (
-                    _langfuse_metadata,
-                    _persist_langfuse_cache,
-                )
-
-                await _persist_langfuse_cache(
-                    model_id,
-                    binding,
-                    content,
-                    prompt_version=prompt_version,
-                    default_ttl=default_ttl,
-                )
-                if metadata is not None:
-                    metadata.update(_langfuse_metadata(binding, prompt_version=prompt_version))
-                return content
-            except Exception:
-                log.exception(
-                    'Failed to fetch Langfuse system prompt for model %s (connection=%s, name=%s)',
-                    model_id,
-                    binding.connection_id,
-                    binding.external_name,
-                )
-                record_system_prompt_fetch_failure(model_id)
-                if binding.cached_content:
-                    from open_webui.utils.system_prompt import _langfuse_metadata
-
-                    serve_stale_system_prompt_from_binding(
-                        model_id,
-                        binding,
-                        default_ttl=default_ttl,
-                    )
-                    if metadata is not None:
-                        metadata.update(_langfuse_metadata(binding))
-                    return binding.cached_content
-                return mirror
+            return await self._fetch_under_lock(
+                model_id,
+                binding,
+                mirror=mirror,
+                metadata=metadata,
+                default_ttl=default_ttl,
+            )
 
     async def list_prompts(
         self,
@@ -165,9 +210,7 @@ class LangfusePromptProvider(SystemPromptProviderBase):
         )
         try:
             if not response.ok:
-                raise LangfusePromptError(
-                    f'Langfuse list prompts failed (HTTP {response.status})'
-                )
+                raise LangfusePromptError(f'Langfuse list prompts failed (HTTP {response.status})')
             return await response.json()
         finally:
             await cleanup_response(response)
@@ -234,9 +277,7 @@ class LangfusePromptProvider(SystemPromptProviderBase):
         )
         try:
             if not response.ok:
-                raise LangfusePromptError(
-                    f'Langfuse get prompt failed (HTTP {response.status})'
-                )
+                raise LangfusePromptError(f'Langfuse get prompt failed (HTTP {response.status})')
             data = await response.json()
         finally:
             await cleanup_response(response)
