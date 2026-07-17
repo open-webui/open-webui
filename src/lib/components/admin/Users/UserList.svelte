@@ -176,7 +176,7 @@
 		<Spinner className="size-5" />
 	</div>
 {:else}
-	<div class="pt-0.5 sticky top-0 z-10 bg-white dark:bg-gray-900">
+	<div class="sticky top-0 z-10 bg-white dark:bg-gray-900">
 		<div class="flex h-8 flex-1 items-center w-full gap-2">
 			<div class="flex min-w-0 flex-1 items-center">
 				<div class="self-center ml-1 mr-3">

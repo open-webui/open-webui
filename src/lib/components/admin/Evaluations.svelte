@@ -91,7 +91,7 @@
 					? ''
 					: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			>
-				<div class=" self-center">{$i18n.t('Leaderboard')}</div>
+				<div class="self-center">{$i18n.t('Leaderboard')}</div>
 				{#if formattedLeaderboardCount !== null}
 					<div class="self-center text-sm opacity-60">
 						{formattedLeaderboardCount}
@@ -108,7 +108,7 @@
 					? ''
 					: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			>
-				<div class=" self-center">{$i18n.t('Feedback')}</div>
+				<div class="self-center">{$i18n.t('Feedback')}</div>
 				{#if formattedFeedbackCount !== null}
 					<div class="self-center text-sm opacity-60">
 						{formattedFeedbackCount}

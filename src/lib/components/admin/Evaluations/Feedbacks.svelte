@@ -217,7 +217,7 @@
 		<Spinner className="size-5" />
 	</div>
 {:else}
-	<div class="space-y-1">
+	<div>
 		{#if modelIds.length > 0 || total > 0}
 			<div class="flex h-8 flex-1 items-center w-full gap-2">
 				<div
@@ -318,7 +318,7 @@
 						<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
 							<th
 								scope="col"
-								class="px-2.5 py-2 cursor-pointer select-none w-3"
+								class="px-2.5 py-2 font-normal cursor-pointer select-none w-3"
 								on:click={() => setSortKey('user')}
 							>
 								<div class="flex gap-1.5 items-center justify-end">
@@ -341,7 +341,7 @@
 
 							<th
 								scope="col"
-								class="px-2.5 py-2 cursor-pointer select-none"
+								class="px-2.5 py-2 font-normal cursor-pointer select-none"
 								on:click={() => setSortKey('model_id')}
 							>
 								<div class="flex gap-1.5 items-center">
@@ -364,7 +364,7 @@
 
 							<th
 								scope="col"
-								class="px-2.5 py-2 text-right cursor-pointer select-none w-fit"
+								class="px-2.5 py-2 font-normal text-right cursor-pointer select-none w-fit"
 								on:click={() => setSortKey('rating')}
 							>
 								<div class="flex gap-1.5 items-center justify-end">
@@ -387,7 +387,7 @@
 
 							<th
 								scope="col"
-								class="px-2.5 py-2 text-right cursor-pointer select-none w-0"
+								class="px-2.5 py-2 font-normal text-right cursor-pointer select-none w-0"
 								on:click={() => setSortKey('updated_at')}
 							>
 								<div class="flex gap-1.5 items-center justify-end">
@@ -408,7 +408,11 @@
 								</div>
 							</th>
 
-							<th scope="col" class="px-2.5 py-2 text-right cursor-pointer select-none w-0"> </th>
+							<th
+								scope="col"
+								class="px-2.5 py-2 font-normal text-right cursor-pointer select-none w-0"
+							>
+							</th>
 						</tr>
 					</thead>
 					<tbody class="">

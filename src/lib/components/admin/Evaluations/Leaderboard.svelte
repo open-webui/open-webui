@@ -122,8 +122,8 @@
 
 <ModelModal bind:show={showModal} model={selectedModel} onClose={closeModal} />
 
-<div class="space-y-1">
-	<div class="pt-0.5 pb-1 sticky top-0 z-10 bg-white dark:bg-gray-900">
+<div>
+	<div class="sticky top-0 z-10 bg-white dark:bg-gray-900">
 		<div class="flex h-8 flex-1 items-center w-full gap-2">
 			<div class="flex min-w-0 flex-1 items-center">
 				<div class="self-center ml-1 mr-3">
@@ -177,7 +177,7 @@
 						{#each [{ key: 'rating', label: 'RK', class: 'w-3' }, { key: 'name', label: 'Model', class: '' }, { key: 'rating', label: 'Rating', class: 'text-right w-fit' }, { key: 'won', label: 'Won', class: 'text-right w-5' }, { key: 'lost', label: 'Lost', class: 'text-right w-5' }] as col}
 							<th
 								scope="col"
-								class="px-2.5 py-2 cursor-pointer select-none {col.class}"
+								class="px-2.5 py-2 font-normal cursor-pointer select-none {col.class}"
 								on:click={() => toggleSort(col.key)}
 							>
 								<div

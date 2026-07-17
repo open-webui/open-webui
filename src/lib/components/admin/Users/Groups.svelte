@@ -110,66 +110,68 @@
 		onSubmit={addGroupHandler}
 	/>
 
-	<div class="space-y-1">
-		<div class="flex h-8 flex-1 items-center w-full gap-2">
-			<div class="flex min-w-0 flex-1 items-center">
-				<div class="self-center ml-1 mr-3">
-					<Search className="size-3.5" />
+	<div>
+		<div class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+			<div class="flex h-8 flex-1 items-center w-full gap-2">
+				<div class="flex min-w-0 flex-1 items-center">
+					<div class="self-center ml-1 mr-3">
+						<Search className="size-3.5" />
+					</div>
+					<input
+						class="w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+						bind:value={query}
+						aria-label={$i18n.t('Search Groups')}
+						placeholder={$i18n.t('Search Groups')}
+					/>
+					{#if query}
+						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+							<button
+								class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								aria-label={$i18n.t('Clear search')}
+								on:click={() => {
+									query = '';
+								}}
+							>
+								<XMark className="size-3" strokeWidth="2" />
+							</button>
+						</div>
+					{/if}
 				</div>
-				<input
-					class="w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-					bind:value={query}
-					aria-label={$i18n.t('Search Groups')}
-					placeholder={$i18n.t('Search Groups')}
-				/>
-				{#if query}
-					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
-						<button
-							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							aria-label={$i18n.t('Clear search')}
-							on:click={() => {
-								query = '';
-							}}
+
+				<Select
+					bind:value={sortBy}
+					items={sortItems}
+					placeholder={$i18n.t('Sort')}
+					triggerClass="relative h-8 shrink-0 flex items-center gap-1 px-1.5 py-1.5 bg-transparent rounded-xl text-[13px] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
+					labelClass="inline-flex h-input outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+					align="end"
+				>
+					<svelte:fragment slot="trigger" let:selectedLabel>
+						<span
+							class="inline-flex h-input outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
 						>
-							<XMark className="size-3" strokeWidth="2" />
-						</button>
-					</div>
-				{/if}
+							{selectedLabel}
+						</span>
+						<ChevronDown className="size-3.5" strokeWidth="2.5" />
+					</svelte:fragment>
+
+					<svelte:fragment slot="item" let:item let:selected>
+						{item.label}
+						<div class="ml-auto {selected ? '' : 'invisible'}">
+							<Check />
+						</div>
+					</svelte:fragment>
+				</Select>
+
+				<button
+					class="ml-1 shrink-0 rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-900 transition ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800 dark:hover:bg-gray-800"
+					on:click={() => {
+						showAddGroupModal = !showAddGroupModal;
+					}}
+				>
+					{$i18n.t('New Group')}
+				</button>
 			</div>
-
-			<Select
-				bind:value={sortBy}
-				items={sortItems}
-				placeholder={$i18n.t('Sort')}
-				triggerClass="relative h-8 shrink-0 flex items-center gap-1 px-1.5 py-1.5 bg-transparent rounded-xl text-[13px] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
-				labelClass="inline-flex h-input outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
-				align="end"
-			>
-				<svelte:fragment slot="trigger" let:selectedLabel>
-					<span
-						class="inline-flex h-input outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
-					>
-						{selectedLabel}
-					</span>
-					<ChevronDown className="size-3.5" strokeWidth="2.5" />
-				</svelte:fragment>
-
-				<svelte:fragment slot="item" let:item let:selected>
-					{item.label}
-					<div class="ml-auto {selected ? '' : 'invisible'}">
-						<Check />
-					</div>
-				</svelte:fragment>
-			</Select>
-
-			<button
-				class="ml-1 shrink-0 rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-900 transition ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800 dark:hover:bg-gray-800"
-				on:click={() => {
-					showAddGroupModal = !showAddGroupModal;
-				}}
-			>
-				{$i18n.t('New Group')}
-			</button>
 		</div>
 
 		{#if filteredGroups.length !== 0}
