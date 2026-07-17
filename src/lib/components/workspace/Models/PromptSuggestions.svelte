@@ -22,6 +22,23 @@
 		});
 	};
 
+	const autosize = (node: HTMLTextAreaElement) => {
+		const resize = () => {
+			node.style.height = 'auto';
+			node.style.height = `${node.scrollHeight}px`;
+		};
+
+		resize();
+		node.addEventListener('input', resize);
+
+		return {
+			update: resize,
+			destroy() {
+				node.removeEventListener('input', resize);
+			}
+		};
+	};
+
 	$: if (promptSuggestions) {
 		setPromptSuggestions();
 	}
@@ -155,10 +172,11 @@
 							placement="top-start"
 						>
 							<textarea
-								class="min-h-5 w-full resize-none bg-transparent text-[13px] leading-5 text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-200 dark:placeholder:text-gray-700"
+								class="min-h-5 w-full resize-none overflow-hidden bg-transparent text-[13px] leading-5 text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-200 dark:placeholder:text-gray-700"
 								placeholder={$i18n.t('Content')}
 								aria-label={$i18n.t('Content')}
 								rows="1"
+								use:autosize={prompt.content}
 								bind:value={prompt.content}
 							/>
 						</Tooltip>
