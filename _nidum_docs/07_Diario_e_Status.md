@@ -75,6 +75,64 @@ determinística** (para funcionar quando ele erra mesmo assim).
 > não ajuda — **falta informação, não clareza**. E **não escreva "conserta X" em changelog
 > antes de ter o depois**.
 
+### ✅ A Q12 virou na 1.34.0 — e o **como** confirma a tese em cheio
+
+```
+14:14:06.761 | chatnd: roteador -> documentos (classificador='documentos')
+14:14:06.788 | busca -> sem data na pergunta | query="O que significa 'fazer da casa um ninho'?"
+```
+
+**Resposta:** `[Fonte]`, citando o **Documento Fundador v30** com a distinção casa/ninho.
+Os chunks do v30 pontuaram **0,966 / 0,962 / 0,959**.
+
+> ### 🎯 **Não foi a trava. Foi o classificador — e isso é o resultado, não um detalhe.**
+>
+> **A trava 3 não disparou**: não há `trava 'termo canonico'` no log. **O juiz decidiu
+> `documentos` sozinho**, porque a 1.34.0 pôs os termos **no prompt dele**.
+>
+> **A metade do prompt bastou.** Informar que *"fazer da casa um ninho"* é vocabulário da
+> Nidum resolveu — e a trava ficou de **rede**, sem ser usada.
+
+**A tese está confirmada pelo mecanismo, não só pelo resultado:**
+
+> ### **Nenhuma redação conserta desconhecimento. Só informação conserta.**
+>
+> **Não era clareza — era falta de dado.** Duas tentativas de *redigir melhor* falharam
+> (1.31.0, 1.33.0). Uma de **informar** funcionou, de primeira.
+
+| | O que faz | Disparou? |
+|---|---|---|
+| **Prompt** | **ensina** o juiz — ele reconhece o vocabulário e generaliza para paráfrase | ✅ **resolveu sozinho** |
+| **Trava** | **reconhece** a citação literal, determinística | ❌ **não precisou** |
+
+> ⚠️ **A trava está NÃO EXERCITADA em produção.** Tem 24 casos de teste e **zero disparos
+> reais**. **Não é motivo para removê-la** — ela existe para quando o juiz falhar, e o juiz
+> falhou duas vezes esta semana. **Mas é motivo para não confiá-la como se estivesse
+> provada.** Se um dia disparar, o log diz: `trava 'termo canonico' -> geral vira
+> documentos`.
+
+### 📌 A sequência completa — é ela o registro, não o conserto
+
+| # | O que eu disse | Como acabou |
+|---|---|---|
+| 1 | *"a expansão de datas envenena o reranker"* | **refutada** — a pergunta **com** data foi a mais precisa |
+| 2 | *"o catch-all quebrou a Q12"* | **refutada** — o `diaadia` de 1.26.0 já tinha o suposto culpado |
+| 3 | *"a poluição vem do histórico"* | **certa, por outro mecanismo** — corrigi a atribuição |
+| ✅ | *"o modelo não SABE que a frase é da Nidum"* | **confirmada, e de primeira** |
+
+**Três teorias sobre o texto do prompt. Duas refutadas.** A que funcionou **não era sobre
+texto** — era sobre **o que o modelo tem em mãos**. E veio de uma pergunta, não de uma
+ideia:
+
+> ### **"O modelo SABE o que precisa saber para acertar?"**
+>
+> Teria matado a teoria #2 em um minuto. **Virou procedimento no `CLAUDE.md`.**
+
+**E generaliza para fora do classificador.** A higiene dizia *"0 órfãos"* porque **não
+sabia** que existiam 236 arquivos — nenhuma melhoria de relatório consertaria isso;
+**faltava a paginação**. Mesma família: ***"não entendeu"* se conserta escrevendo; *"não
+sabia"*, não.**
+
 ### O changelog da 1.33.0 foi corrigido — sem apagar
 
 Ele dizia *"FATIA B — CONSERTA A REGRESSÃO DA Q12"*, **e está publicado**. Como você disse:
