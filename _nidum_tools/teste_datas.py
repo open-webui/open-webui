@@ -89,6 +89,42 @@ def main():
     ok &= check("expandir 2x nao duplica variantes", uma == duas)
     ok &= check("cada variante aparece 1x", duas.count("13072026") == 1)
 
+    print("== FONTE: expandir SO a pergunta atual, nao o historico (1.32.0) ==")
+    # O caso REAL medido em producao: o texto de busca junta as 3 ultimas mensagens do
+    # usuario, e a expansao varria as tres - trazendo data de pergunta ANTIGA.
+    # 'busca' = o que vai ao BM25 (3 msgs); 'atual' = so a pergunta de agora.
+    busca = ("Quais os assuntos da reuniao de coautores de 25/12/2027? "
+             "O que a reuniao de 13/07 decidiu sobre marketing?")
+    atual = "O que a reuniao de 13/07 decidiu sobre marketing?"
+
+    sem_fonte = C._expandir_datas(busca, HOJE)
+    com_fonte = C._expandir_datas(busca, HOJE, fonte=atual)
+
+    ok &= check("SEM fonte (o bug): expande a data ANTIGA (25/12/2027)",
+                "25122027" in sem_fonte)
+    ok &= check("COM fonte: NAO expande a data antiga",
+                "25122027" not in com_fonte)
+    ok &= check("COM fonte: expande a data ATUAL (13/07)",
+                "13072026" in com_fonte)
+    ok &= check("COM fonte: o texto de BUSCA continua inteiro (as 3 msgs, para follow-up)",
+                "25/12/2027" in com_fonte and "13/07" in com_fonte)
+
+    # A garantia que impede a correcao de virar regressao: quem NAO passa fonte tem o
+    # comportamento de antes, byte a byte. Os casos acima dependem disso.
+    ok &= check("fonte=None == comportamento original",
+                C._expandir_datas(busca, HOJE, fonte=None) == sem_fonte)
+
+    # O ponto do conserto: pergunta atual sem data nao expande NADA, por mais datas que
+    # o historico tenha. E o caso do follow-up que muda de assunto.
+    ok &= check("pergunta atual SEM data -> nao expande (mesmo com datas no historico)",
+                C._expandir_datas(busca, HOJE, fonte="e os outros?") == busca)
+
+    # fonte="" e FALSY mas NAO e None: tem que procurar em "", nao cair no texto. Se a
+    # implementacao usasse 'fonte or texto', este caso expandiria tudo - e o bug voltaria
+    # calado sempre que a ultima mensagem fosse vazia (ex.: so um anexo, sem texto).
+    ok &= check("fonte='' (falsy, nao None) -> nao expande; nao cai no texto",
+                C._expandir_datas(busca, HOJE, fonte="") == busca)
+
     print("\nRESULTADO: " + ("NORMALIZACAO DE DATAS OK" if ok else "HOUVE FALHA"))
     return 0 if ok else 1
 
