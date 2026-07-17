@@ -26,7 +26,6 @@
 
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
-	import Plus from '$lib/components/icons/Plus.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
@@ -207,16 +206,14 @@
 				{/if}
 			</div>
 
-			<Tooltip content={$i18n.t('Add User')}>
-				<button
-					class="p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-normal text-sm flex items-center"
-					on:click={() => {
-						showAddUserModal = !showAddUserModal;
-					}}
-				>
-					<Plus className="size-3.5" />
-				</button>
-			</Tooltip>
+			<button
+				class="ml-1 shrink-0 rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-900 transition ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800 dark:hover:bg-gray-800"
+				on:click={() => {
+					showAddUserModal = !showAddUserModal;
+				}}
+			>
+				{$i18n.t('Add User')}
+			</button>
 		</div>
 	</div>
 
@@ -351,7 +348,7 @@
 							<div class="flex items-center gap-2">
 								<ProfilePreview {user} side="right" align="center" sideOffset={6}>
 									<img
-										class="rounded-full w-6 min-w-6 h-6 object-cover flex-shrink-0"
+										class="rounded-full size-5.5 object-cover flex-shrink-0"
 										src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 										alt="user"
 										on:error={(e) => {

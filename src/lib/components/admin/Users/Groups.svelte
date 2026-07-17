@@ -5,7 +5,6 @@
 
 	import { adminGroupCount, user } from '$lib/stores';
 
-	import Plus from '$lib/components/icons/Plus.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import EditGroupModal from './Groups/EditGroupModal.svelte';
 	import GroupItem from './Groups/GroupItem.svelte';
@@ -164,13 +163,12 @@
 			</Select>
 
 			<button
-				class="h-8 shrink-0 p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition font-normal text-sm flex items-center"
-				aria-label={$i18n.t('New Group')}
+				class="ml-1 shrink-0 rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-900 transition ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800 dark:hover:bg-gray-800"
 				on:click={() => {
 					showAddGroupModal = !showAddGroupModal;
 				}}
 			>
-				<Plus className="size-3.5" strokeWidth="2.5" />
+				{$i18n.t('New Group')}
 			</button>
 		</div>
 
