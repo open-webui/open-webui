@@ -763,8 +763,6 @@
 															</div>
 														</Tooltip>
 
-														<span class="text-gray-300 dark:text-gray-700">·</span>
-
 														<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
 															<div class="shrink-0">
 																{dayjs(note.updated_at / 1000000).fromNow()}
