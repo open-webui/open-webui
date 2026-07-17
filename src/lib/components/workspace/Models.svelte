@@ -25,6 +25,7 @@
 	import {
 		createNewModel,
 		deleteModelById,
+		getModelById,
 		getModelItems as getWorkspaceModels,
 		getModelTags,
 		toggleModelById,
@@ -196,7 +197,11 @@
 		);
 	};
 
+	const getFullModel = async (model) =>
+		(await getModelById(localStorage.token, model.id).catch(() => null)) ?? model;
+
 	const cloneModelHandler = async (model) => {
+		model = await getFullModel(model);
 		sessionStorage.model = JSON.stringify({
 			...model,
 			id: `${model.id}-clone`,
@@ -209,13 +214,14 @@
 		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
 
 		const url = 'https://openwebui.com';
+		const fullModel = getFullModel(model);
 
 		const tab = await window.open(`${url}/post?type=model`, '_blank');
 
-		const messageHandler = (event) => {
+		const messageHandler = async (event) => {
 			if (event.origin !== url) return;
 			if (event.data === 'loaded') {
-				tab.postMessage(JSON.stringify(model), '*');
+				tab.postMessage(JSON.stringify(await fullModel), '*');
 				window.removeEventListener('message', messageHandler);
 			}
 		};
@@ -224,25 +230,27 @@
 	};
 
 	const hideModelHandler = async (model) => {
-		model.meta = {
-			...model.meta,
-			hidden: !(model?.meta?.hidden ?? false)
+		const updatedModel = {
+			...model,
+			meta: {
+				...model.meta,
+				hidden: !(model?.meta?.hidden ?? false)
+			}
 		};
 
-		console.log(model);
-
-		const res = await updateModelById(localStorage.token, model.id, model);
+		const res = await updateModelById(localStorage.token, updatedModel.id, updatedModel);
 
 		if (res) {
+			models = models.map((model) => (model.id === updatedModel.id ? updatedModel : model));
 			toast.success(
 				$i18n.t(`Model {{name}} is now {{status}}`, {
-					name: model.id,
-					status: model.meta.hidden ? 'hidden' : 'visible'
+					name: updatedModel.id,
+					status: updatedModel.meta.hidden ? 'hidden' : 'visible'
 				})
 			);
 
 			page = 1;
-			getModelList();
+			await getModelList();
 		}
 
 		await _models.set(
@@ -265,6 +273,7 @@
 	};
 
 	const downloadModels = async (models) => {
+		models = await Promise.all(models.map(getFullModel));
 		let blob = new Blob([JSON.stringify(models)], {
 			type: 'application/json'
 		});
@@ -272,6 +281,7 @@
 	};
 
 	const exportModelHandler = async (model) => {
+		model = await getFullModel(model);
 		let blob = new Blob([JSON.stringify([model])], {
 			type: 'application/json'
 		});

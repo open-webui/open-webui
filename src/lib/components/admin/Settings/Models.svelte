@@ -7,12 +7,13 @@
 	import { onMount, onDestroy, getContext, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { config, models as _models, settings, user } from '$lib/stores';
+	import { config, models as _models, settings, showSettings, user } from '$lib/stores';
 	import {
 		createNewModel,
 		deleteAllModels,
 		getBaseModelTags,
 		getBaseModels,
+		getModelById,
 		toggleModelById,
 		updateModelById,
 		updateModelAccessGrants,
@@ -228,6 +229,7 @@
 	};
 
 	const downloadModels = async (models) => {
+		models = await Promise.all(models.map(getFullModel));
 		let blob = new Blob([JSON.stringify(models)], {
 			type: 'application/json'
 		});
@@ -483,22 +485,30 @@
 	};
 
 	const hideModelHandler = async (model) => {
-		model.meta = {
-			...model.meta,
-			hidden: !(model?.meta?.hidden ?? false)
+		const updatedModel = {
+			...model,
+			meta: {
+				...model.meta,
+				hidden: !(model?.meta?.hidden ?? false)
+			}
 		};
 
-		console.debug(model);
-
-		upsertModelHandler(model, { meta: model.meta }, false);
+		await upsertModelHandler(updatedModel, { meta: updatedModel.meta }, false);
+		models = models.map((model) => (model.id === updatedModel.id ? updatedModel : model));
+		_models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 
 		toast.success(
-			model.meta.hidden
+			updatedModel.meta.hidden
 				? $i18n.t(`Model {{name}} is now hidden`, {
-						name: model.id
+						name: updatedModel.id
 					})
 				: $i18n.t(`Model {{name}} is now visible`, {
-						name: model.id
+						name: updatedModel.id
 					})
 		);
 	};
@@ -551,17 +561,25 @@
 		}
 	};
 
+	const getFullModel = async (model) =>
+		workspaceModels.some((workspaceModel) => workspaceModel.id === model.id)
+			? ((await getModelById(localStorage.token, model.id).catch(() => null)) ?? model)
+			: model;
+
 	const cloneHandler = async (model) => {
+		model = await getFullModel(model);
 		sessionStorage.model = JSON.stringify({
 			...model,
 			base_model_id: model.id,
 			id: `${model.id}-clone`,
 			name: `${model.name} (Clone)`
 		});
-		goto('/workspace/models/create');
+		showSettings.set(false);
+		await goto('/workspace/models/create');
 	};
 
 	const exportModelHandler = async (model) => {
+		model = await getFullModel(model);
 		let blob = new Blob([JSON.stringify([model])], {
 			type: 'application/json'
 		});
