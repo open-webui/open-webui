@@ -150,6 +150,7 @@
 	import Typography from '@tiptap/extension-typography';
 	import Highlight from '@tiptap/extension-highlight';
 	import Code from '@tiptap/extension-code';
+	import Italic from '@tiptap/extension-italic';
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 
 	// WORKAROUND: TipTap's default Code mark input rule regex captures the
@@ -166,6 +167,16 @@
 					type: this.type
 				})
 			];
+		}
+	});
+
+	// Prompt inputs need literal asterisks preserved, while toolbar-applied italic should still work.
+	const PromptItalic = Italic.extend({
+		addInputRules() {
+			return [];
+		},
+		addPasteRules() {
+			return [];
 		}
 	});
 
@@ -748,6 +759,7 @@
 				StarterKit.configure({
 					link: link,
 					code: false, // Disabled in favor of FixedCode (see workaround above)
+					...(messageInput ? { italic: false } : {}),
 					// When rich text is on, ListKit + CodeBlockLowlight provide these.
 					// Disable StarterKit's equivalents to avoid duplicate extension names.
 					...(richText
@@ -766,6 +778,7 @@
 					...(richText ? {} : { strike: false })
 				}),
 				FixedCode,
+				...(messageInput ? [PromptItalic] : []),
 				...(dragHandle ? [ListItemDragHandle] : []),
 				Placeholder.configure({ placeholder: () => _placeholder, showOnlyWhenEditable: false }),
 				SelectionDecoration,
