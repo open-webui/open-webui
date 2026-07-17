@@ -1,9 +1,42 @@
 """
 title: ChatND
 author: Nidum
-version: 1.33.0
+version: 1.34.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum. Na rota de imagem, gera a imagem via Gemini (motor oculto). O usuario nao escolhe o motor.
 changelog:
+  1.34.0:
+    - TERMOS CANONICOS (trava 3 + prompt), em valve. E a admissao de que o prompt NAO
+      resolve isto: a Q12 ("o que significa 'fazer da casa um ninho'?" - frase LITERAL do
+      Documento Fundador) foi para 'geral' na 1.31.0 E na 1.33.0, com o MESMO veredito no
+      log (classificador='geral' = decisao dele, nao excecao, nao falha de parse).
+    - POR QUE NAO E MAQUINA CONTRA HIPOTESE (a condicao que o Davi impos, e que foi
+      cumprida): problema comprovado DUAS vezes; conserto de prompt tentado e FALHO. A
+      trava nao adivinha - reconhece CITACAO LITERAL da Fonte.
+    - A TEORIA QUE EU TINHA (catch-all) NAO ERA A CAUSA. Ver o diario: o 'diaadia' da
+      1.26.0 JA CONTINHA "conversa geral" e "organizacao de ideias" - se a Q12 casasse
+      com isso, teria ido para 'diaadia' em 1.26.0 tambem. Nao foi. "Ficar sem caixa"
+      nunca explicou nada. A causa real e mais simples: o gpt-5-mini NAO SABE que a frase
+      e da Nidum, e NENHUMA REDACAO CONSERTA DESCONHECIMENTO - so informacao conserta.
+    - DUAS FRENTES: a TRAVA pega a citacao literal (deterministica, funciona quando o
+      juiz erra - inclusive quando erra com confianca, que e o caso); o BLOCO NO PROMPT
+      ensina o juiz e cobre a PARAFRASE ("transformar o lar num ninho"), que a trava nao
+      alcanca. Nenhuma das duas cobre sozinha o que as duas cobrem juntas.
+    - SEPARADOR ';' E NAO ',': um dos termos E "fonte, forma e fluxo" - COM VIRGULAS.
+      Numa valve separada por virgula (como a BASE_CONHECIMENTO_ID), viraria tres termos
+      e "fonte" sozinho dispararia em "qual a fonte dessa informacao?" - em quase tudo. O
+      separador nao e estilo: e o que impede a lista de se autodestruir. (Achado pelo
+      Davi antes de eu escrever.)
+    - FALSOS POSITIVOS ESPERADOS E ACEITOS, com o custo VISIVEL no teste_travas como
+      casos que PASSAM: "ninho", "regeneracao", "ecossistema" e "coautor" sao portugues
+      comum, e o ChatND agora e assistente geral - "vi um ninho de passarinho" vai para a
+      base e volta '[Fora do acervo]'. Mantidos pela ASSIMETRIA (falso positivo custa uma
+      resposta sem graca; falso negativo custa doutrina inventada). Se um dia incomodar,
+      o teste ja diz QUAIS perguntas doem.
+    - Valve editavel no painel, SEM republish. Termo novo entra na valve + UMA pergunta
+      no banco: sem a pergunta, ninguem descobre quando a lista envelhecer.
+    - O BURACO ENCOLHEU, NAO FECHOU: pergunta institucional sem "Nidum", sem marca
+      temporal e sem termo canonico ("como funciona o EGP aqui?") ainda depende so do
+      classificador. Continua no teste, visivel.
   1.33.0:
     - FATIA B - CONSERTA A REGRESSAO DA Q12: tira o catch-all do 'geral'. Ele abria com
       "TUDO que NAO e sobre a Nidum" e voltou a ser LISTA FECHADA, com o dominio
@@ -1152,6 +1185,77 @@ def _menciona_nidum(texto):
     return bool(_RE_MENCIONA_NIDUM.search(_normalizar_ascii(texto or "")))
 
 
+# SEPARADOR DA VALVE DE TERMOS: PONTO E VIRGULA, nao virgula. Um dos termos canonicos E
+# "fonte, forma e fluxo" - COM VIRGULAS. Numa valve separada por virgula (como a
+# BASE_CONHECIMENTO_ID faz), ele viraria TRES termos, e "fonte" sozinho dispararia em
+# "qual a fonte dessa informacao?" - ou seja, em quase tudo. O separador nao e detalhe de
+# estilo: e o que impede a lista de se autodestruir. Nenhum termo do vocabulario da Nidum
+# contem ';'.
+_SEP_TERMOS = ";"
+
+
+def _termos_canonicos(valve_txt):
+    # PURA. Le a valve e devolve a lista NORMALIZADA (sem acento, minuscula, sem espaco
+    # sobrando). Termo VAZIO e descartado: sem isso, "a;; b" ou uma valve com ';' no fim
+    # gerariam um termo "" - e "" casa com QUALQUER texto, mandando tudo para a base.
+    out = []
+    for t in (valve_txt or "").split(_SEP_TERMOS):
+        t = _normalizar_ascii(t).strip()
+        if t and t not in out:
+            out.append(t)
+    return out
+
+
+def _menciona_termo_canonico(texto, valve_txt):
+    # PURA. True se o texto cita ALGUM termo do vocabulario proprio da Nidum.
+    #
+    # POR QUE EXISTE - e por que NAO e adivinhacao: o gpt-5-mini NAO SABE que "fazer da
+    # casa um ninho" e frase do Documento Fundador; para ele e uma metafora comum em
+    # portugues. NENHUMA REDACAO DE PROMPT CONSERTA DESCONHECIMENTO - so informacao
+    # conserta. Duas tentativas pelo prompt (1.31.0 e 1.33.0) falharam com a MESMA
+    # pergunta e o MESMO veredito no log (classificador='geral' = decisao, nao excecao).
+    # A trava nao adivinha: reconhece CITACAO LITERAL da Fonte.
+    #
+    # Limite de palavra nas duas pontas, como no \bnidum\b. Plural nao e inferido - entra
+    # na valve como termo proprio (ninho; ninhos), porque inferir plural em portugues e
+    # onde a trava viraria palpite.
+    #
+    # FALSOS POSITIVOS SAO ESPERADOS E ACEITOS, e o custo esta VISIVEL no teste_travas:
+    # "ninho", "regeneracao", "ecossistema" e "coautor" sao portugues comum. "Vi um ninho
+    # de passarinho no quintal" vai para a base e volta '[Fora do acervo]' - resposta pior
+    # que a natural, num chat que agora e assistente geral. Mantidos pela ASSIMETRIA:
+    # falso positivo custa uma resposta sem graca; falso negativo custa doutrina inventada
+    # sobre a Nidum, com cara de fundamentada.
+    alvo = _normalizar_ascii(texto or "")
+    if not alvo:
+        return False
+    for t in _termos_canonicos(valve_txt):
+        if re.search(r"\b" + re.escape(t) + r"\b", alvo):
+            return True
+    return False
+
+
+def _bloco_termos_no_prompt(valve_txt):
+    # PURA. Monta o trecho que ENSINA o classificador. A trava (acima) pega a citacao
+    # LITERAL; este bloco cobre a PARAFRASE ("transformar o lar num ninho"), que a trava
+    # nao alcanca. As duas frentes cobrem o que nenhuma cobre sozinha.
+    #
+    # Precisa ser montado em tempo de execucao: o CLASSIFICADOR e constante de MODULO e a
+    # lista vem de VALVE - editavel no painel, sem republish.
+    termos = _termos_canonicos(valve_txt)
+    if not termos:
+        return ""
+    return (
+        "\nVOCABULARIO PROPRIO DA NIDUM (informacao, nao regra de estilo): os termos "
+        "abaixo sao expressoes da Fonte institucional da Nidum. Voce nao os conhece de "
+        "fora - eles PARECEM portugues comum e nao sao. Pergunta que cita um deles, ou "
+        "uma PARAFRASE proxima, e 'documentos', mesmo que a frase pareca filosofica, "
+        "generica ou sem relacao com a Nidum: " + "; ".join(termos) + ".\n"
+        "Ex.: 'o que significa fazer da casa um ninho?' e 'documentos', nao 'geral' - "
+        "e uma frase LITERAL do Documento Fundador."
+    )
+
+
 class Pipe:
     class Valves(BaseModel):
         ROUTER_MODEL: str = Field(default="gpt-5-mini")
@@ -1217,6 +1321,22 @@ class Pipe:
         # -------------------------------------------------------------------------
         # v1.12.0 - atalho: saudacao trivial em conversa nova vai direto p/ rapido.
         ATALHO_SAUDACAO: bool = Field(default=True)
+        # VOCABULARIO PROPRIO DA NIDUM - alimenta a TRAVA 3 e o prompt do classificador.
+        # SEPARADOR: PONTO E VIRGULA. Nao trocar por virgula: "fonte, forma e fluxo" tem
+        # virgulas e viraria tres termos - e "fonte" sozinho dispararia em quase tudo
+        # ("qual a fonte dessa informacao?"). Ver _SEP_TERMOS.
+        # Plural entra como termo proprio (ninho; ninhos) - a trava nao infere plural.
+        # Editavel no painel, SEM republish. Termo novo entra aqui + UMA pergunta no
+        # banco: sem a pergunta, ninguem descobre quando a lista envelhecer.
+        TERMOS_CANONICOS: str = Field(
+            default=(
+                "intencao reta; fazer da casa um ninho; fonte, forma e fluxo; "
+                "obras de arte habitaveis; coautor; coautores; convergencia; "
+                "comunidades vivas; fazendas vivas; ecossistema; instante absoluto; "
+                "organismo vivo; empresa viva; regeneracao; ninho; ninhos; "
+                "inteligencia hibrida"
+            )
+        )
 
     def __init__(self):
         self.valves = self.Valves()
@@ -1236,7 +1356,15 @@ class Pipe:
         payload = {
             "model": self.valves.ROUTER_MODEL,
             "messages": [
-                {"role": "system", "content": CLASSIFICADOR},
+                {
+                    "role": "system",
+                    # O vocabulario vem da VALVE, entao o prompt e montado aqui, e nao
+                    # na constante de modulo. A trava pega a citacao literal; este bloco
+                    # ensina o juiz e cobre a PARAFRASE, que a trava nao alcanca.
+                    "content": CLASSIFICADOR + _bloco_termos_no_prompt(
+                        self.valves.TERMOS_CANONICOS
+                    ),
+                },
                 {"role": "user", "content": transcript},
             ],
             "stream": False,
@@ -1999,6 +2127,17 @@ class Pipe:
         if categoria == "geral" and _menciona_nidum(texto):
             categoria = "documentos"
             log.info("chatnd: trava 'menciona Nidum' -> geral vira documentos")
+
+        # TRAVA 3 (1.34.0) - VOCABULARIO PROPRIO DA NIDUM. Existe porque o classificador
+        # NAO SABE que "fazer da casa um ninho" e frase do Documento Fundador - e nenhuma
+        # redacao de prompt conserta desconhecimento. Provado duas vezes com a MESMA
+        # pergunta (Q12): 1.31.0 e 1.33.0, log identico (classificador='geral' = decisao
+        # dele, nao excecao). Nao adivinha: reconhece citacao LITERAL da Fonte.
+        if categoria == "geral" and _menciona_termo_canonico(
+            texto, self.valves.TERMOS_CANONICOS
+        ):
+            categoria = "documentos"
+            log.info("chatnd: trava 'termo canonico' -> geral vira documentos")
 
         log.info(
             "chatnd: roteador -> %s (classificador=%r)", categoria, saida or "(atalho)"

@@ -86,6 +86,68 @@ def main():
                 C._tem_marca_temporal("o de 8 de junho de 2026") is True)
     ok &= check("'bom dia' -> False", C._tem_marca_temporal("bom dia") is False)
 
+    print("== TRAVA 3: _menciona_termo_canonico (vocabulario proprio da Nidum) ==")
+    V = C.Pipe().valves.TERMOS_CANONICOS
+    termos = C._termos_canonicos(V)
+
+    # O SEPARADOR e o que impede a lista de se autodestruir: "fonte, forma e fluxo" tem
+    # VIRGULAS. Numa valve separada por virgula, viraria tres termos - e "fonte" sozinho
+    # dispararia em "qual a fonte dessa informacao?", ou seja, em quase tudo.
+    ok &= check("separador ';': 'fonte, forma e fluxo' fica INTEIRO",
+                "fonte, forma e fluxo" in termos)
+    ok &= check("separador ';': 'fonte' NAO virou termo sozinho", "fonte" not in termos)
+    ok &= check("'qual a fonte dessa informacao?' -> False (o pior falso positivo, evitado)",
+                C._menciona_termo_canonico("qual a fonte dessa informacao?", V) is False)
+
+    # O caso que motivou a trava: falhou DUAS vezes pelo prompt (1.31.0 e 1.33.0), com o
+    # mesmo veredito no log (classificador='geral' = decisao dele, nao excecao).
+    ok &= check("Q12: 'o que significa fazer da casa um ninho?' -> True",
+                C._menciona_termo_canonico("o que significa fazer da casa um ninho?", V) is True)
+    ok &= check("acento normalizado: 'Convergência' casa 'convergencia'",
+                C._menciona_termo_canonico("o que foi a Convergência de junho?", V) is True)
+    ok &= check("caixa ignorada: 'INTENÇÃO RETA' -> True",
+                C._menciona_termo_canonico("me explica a INTENÇÃO RETA", V) is True)
+    ok &= check("termo no meio da frase -> True",
+                C._menciona_termo_canonico("como as comunidades vivas se organizam?", V) is True)
+    ok &= check("limite de palavra: 'ninhosdemarimbondo' -> False",
+                C._menciona_termo_canonico("ninhosdemarimbondo", V) is False)
+    ok &= check("valve vazia -> False (nao casa tudo)",
+                C._menciona_termo_canonico("fazer da casa um ninho", "") is False)
+    ok &= check("texto vazio -> False", C._menciona_termo_canonico("", V) is False)
+    ok &= check("None nao explode -> False", C._menciona_termo_canonico(None, V) is False)
+
+    # Termo VAZIO casaria com QUALQUER texto e mandaria TUDO para a base. Entra por um
+    # ';' a mais no fim da lista - digitado no painel, sem ninguem perceber.
+    ok &= check("valve 'a;; b' -> nao gera termo vazio", "" not in C._termos_canonicos("a;; b"))
+    ok &= check("valve 'ninho;' -> nao gera termo vazio", "" not in C._termos_canonicos("ninho;"))
+
+    print("== TRAVA 3: FALSOS POSITIVOS ESPERADOS E ACEITOS (o custo, visivel) ==")
+    # Estes NAO sao bugs - sao o PRECO da assimetria, aceito de olhos abertos. 'ninho',
+    # 'regeneracao', 'ecossistema' e 'coautor' sao PORTUGUES COMUM, e o ChatND agora e
+    # assistente geral: cada um custa uma resposta '[Fora do acervo]' onde havia de ser
+    # resposta normal. Passam de proposito, para o custo ficar VISIVEL - se um dia
+    # incomodar, o teste ja diz exatamente quais perguntas doem.
+    ok &= check("CUSTO: 'vi um ninho de passarinho no quintal' -> vai para a base",
+                C._menciona_termo_canonico("vi um ninho de passarinho no quintal", V) is True)
+    ok &= check("CUSTO: 'o que e regeneracao celular?' -> vai para a base",
+                C._menciona_termo_canonico("o que e regeneracao celular?", V) is True)
+    ok &= check("CUSTO: 'o ecossistema de startups brasileiro' -> vai para a base",
+                C._menciona_termo_canonico("o ecossistema de startups brasileiro", V) is True)
+    ok &= check("CUSTO: 'quem e o coautor daquele livro?' -> vai para a base",
+                C._menciona_termo_canonico("quem e o coautor daquele livro?", V) is True)
+    # O contraponto que justifica o preco: conversa comum SEM termo segue em 'geral'.
+    ok &= check("conversa comum sem termo -> False (a trava nao pega tudo)",
+                C._menciona_termo_canonico("me ajude a escrever um email", V) is False)
+    ok &= check("'qual a populacao de Americana-SP?' -> False",
+                C._menciona_termo_canonico("qual a populacao de Americana-SP?", V) is False)
+
+    print("== O BLOCO QUE ENSINA O CLASSIFICADOR (a frente da parafrase) ==")
+    bloco = C._bloco_termos_no_prompt(V)
+    ok &= check("cita os termos", "fazer da casa um ninho" in bloco)
+    ok &= check("diz que e INFORMACAO, nao regra de estilo", "informacao" in bloco)
+    ok &= check("valve vazia -> bloco vazio (nao polui o prompt a toa)",
+                C._bloco_termos_no_prompt("") == "")
+
     print("== AS DUAS JUNTAS: o que a fronteira resgata ==")
     # Simula a decisao do roteador SEM chamar o classificador: dado que o LLM
     # devolveu 'geral' (o caso ruim), as travas corrigem?
@@ -94,6 +156,8 @@ def main():
         if cat == "geral" and C._tem_marca_temporal(texto):
             cat = "documentos"
         if cat == "geral" and C._menciona_nidum(texto):
+            cat = "documentos"
+        if cat == "geral" and C._menciona_termo_canonico(texto, V):
             cat = "documentos"
         return cat
 
@@ -107,8 +171,14 @@ def main():
     # sem marca temporal depende SO do classificador. Ex.: "como funciona o EGP
     # aqui?". Esta linha existe para o buraco ficar VISIVEL no teste, e nao ser
     # descoberto por acidente em producao.
-    ok &= check("BURACO CONHECIDO: 'como funciona o EGP aqui?' -> geral (so o "
-                "classificador salva; as travas nao alcancam)",
+    # O caso que motivou a trava 3: falhava DUAS vezes pelo prompt, agora e resgatado.
+    ok &= check("Q12 RESGATADA pela trava 3: 'fazer da casa um ninho' -> documentos",
+                resgata("o que significa fazer da casa um ninho?") == "documentos")
+    # O BURACO QUE SOBRA, e ele encolheu mas nao fechou: pergunta institucional sem a
+    # palavra 'Nidum', sem marca temporal e sem termo canonico depende SO do
+    # classificador. Fica visivel aqui, e nao descoberto em producao.
+    ok &= check("BURACO CONHECIDO: 'como funciona o EGP aqui?' -> geral (nenhuma trava "
+                "alcanca; so o classificador salva)",
                 resgata("como funciona o EGP aqui?") == "geral")
     ok &= check("conversa comum continua em geral",
                 resgata("me ajude a escrever um email de agradecimento") == "geral")
