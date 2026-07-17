@@ -721,6 +721,9 @@ async def update_model_by_id(
     if 'base_model_id' not in form_data.model_fields_set:
         form_data.base_model_id = model.base_model_id
 
+    if 'profile_image_url' not in form_data.meta.model_fields_set:
+        form_data.meta.profile_image_url = model.meta.profile_image_url
+
     form_data.access_grants = await filter_allowed_access_grants(
         await Config.get('user.permissions'),
         user.id,
