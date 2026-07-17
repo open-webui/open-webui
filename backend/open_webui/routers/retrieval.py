@@ -518,6 +518,12 @@ async def update_embedding_config(request: Request, form_data: EmbeddingModelUpd
     log.info(f'Updating embedding model: {config.RAG_EMBEDDING_MODEL} to {form_data.RAG_EMBEDDING_MODEL}')
     await unload_embedding_model(request)
     try:
+        if form_data.RAG_EMBEDDING_ENGINE == 'ollama' and not await Config.get('ollama.enable'):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.OLLAMA_API_DISABLED,
+            )
+
         config.RAG_EMBEDDING_ENGINE = form_data.RAG_EMBEDDING_ENGINE
         config.RAG_EMBEDDING_MODEL = form_data.RAG_EMBEDDING_MODEL.strip()
         config.RAG_EMBEDDING_BATCH_SIZE = form_data.RAG_EMBEDDING_BATCH_SIZE

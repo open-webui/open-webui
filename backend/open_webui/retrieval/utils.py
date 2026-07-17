@@ -25,6 +25,7 @@ from open_webui.config import (
     RAG_EMBEDDING_QUERY_PREFIX,
     VECTOR_DB,
 )
+from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
     AIOHTTP_CLIENT_SESSION_SSL,
@@ -1181,6 +1182,9 @@ async def generate_embeddings(
             text = f'{prefix}{text}'
 
     if engine == 'ollama':
+        if not await Config.get('ollama.enable'):
+            raise ValueError(ERROR_MESSAGES.OLLAMA_API_DISABLED)
+
         embeddings = await agenerate_ollama_batch_embeddings(
             **{
                 'model': model,
