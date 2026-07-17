@@ -51,6 +51,7 @@
 
 	let showDeleteConfirm = false;
 	let deleteTarget: AutomationResponse | null = null;
+	let openAutomationMenuId: string | null = null;
 
 	let query = '';
 	let statusFilter = 'all';
@@ -545,21 +546,37 @@
 					{:else}
 						<div class="gap-y-0.5 grid my-1">
 							{#each automations as automation (automation.id)}
-								<a
-									class="group flex min-h-10 w-full items-center gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-gray-50 focus:bg-gray-50 dark:hover:bg-gray-900 dark:focus:bg-gray-900"
-									href={`/automations/${automation.id}`}
+								<div
+									role="button"
+									tabindex="0"
+									aria-label={$i18n.t('Open automation')}
+									class="group flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-gray-50 focus:bg-gray-50 dark:hover:bg-gray-900 dark:focus:bg-gray-900"
+									on:click={() => {
+										goto(`/automations/${automation.id}`);
+									}}
+									on:keydown={(e) => {
+										if (e.key === 'Enter' || e.key === ' ') {
+											e.preventDefault();
+											goto(`/automations/${automation.id}`);
+										}
+									}}
 								>
 									<div class="min-w-0 flex-1">
-										<div class="truncate text-[13px] leading-5 text-gray-800 dark:text-gray-200">
-											{automation.name}
-										</div>
+										<Tooltip content={automation.name} placement="top-start">
+											<div
+												class="truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+											>
+												{automation.name}
+											</div>
+										</Tooltip>
 										<div class="truncate text-[11px] leading-4 text-gray-500 dark:text-gray-500">
 											{formatRRule(automation.data.rrule)}
 										</div>
 									</div>
 
-									<div class="flex shrink-0 flex-row items-center gap-0.5 self-center">
+									<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
 										<AutomationMenu
+											show={openAutomationMenuId === automation.id}
 											editHandler={() => {
 												goto(`/automations/${automation.id}`);
 											}}
@@ -573,11 +590,20 @@
 												deleteTarget = automation;
 												showDeleteConfirm = true;
 											}}
+											onClose={() => {
+												openAutomationMenuId = null;
+											}}
 										>
 											<button
 												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 												type="button"
 												aria-label={$i18n.t('Automation Menu')}
+												on:click={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													openAutomationMenuId =
+														openAutomationMenuId === automation.id ? null : automation.id;
+												}}
 											>
 												<EllipsisHorizontal className="size-4" />
 											</button>
@@ -585,6 +611,7 @@
 
 										<button
 											class="flex h-6 items-center"
+											type="button"
 											on:click={(e) => {
 												e.stopPropagation();
 												e.preventDefault();
@@ -602,7 +629,7 @@
 											</Tooltip>
 										</button>
 									</div>
-								</a>
+								</div>
 							{/each}
 						</div>
 
