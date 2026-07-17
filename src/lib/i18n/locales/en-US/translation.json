@@ -2232,6 +2232,7 @@
 	"System Instructions": "",
 	"System Prompt": "",
 	"System prompt binding was modified elsewhere. Refreshed to the latest state.": "",
+	"System prompt content cannot be empty.": "",
 	"System prompt is managed by Langfuse. Detach to edit locally.": "",
 	"Table": "",
 	"Tag": "",

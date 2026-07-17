@@ -29,6 +29,7 @@ class LocalSystemPromptProvider(SystemPromptProviderBase):
 
         content = mirror
         prompt_version: str | None = None
+        version = None
 
         if binding.active_version_id:
             version = await ModelSystemPromptVersions.get_version_by_id(binding.active_version_id)
@@ -36,14 +37,15 @@ class LocalSystemPromptProvider(SystemPromptProviderBase):
                 content = version.content
                 prompt_version = binding.active_version_id
 
-        ttl = binding_cache_ttl_seconds(binding, DEFAULT_LOCAL_CACHE_TTL_SECONDS)
-        if ttl > 0 and model_id:
-            set_cached_system_prompt(
-                model_id,
-                content if content is not None else '',
-                ttl_seconds=ttl,
-                prompt_version=prompt_version,
-            )
+        if version is not None:
+            ttl = binding_cache_ttl_seconds(binding, DEFAULT_LOCAL_CACHE_TTL_SECONDS)
+            if ttl > 0 and model_id:
+                set_cached_system_prompt(
+                    model_id,
+                    content if content is not None else '',
+                    ttl_seconds=ttl,
+                    prompt_version=prompt_version,
+                )
 
         return content
 

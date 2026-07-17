@@ -2251,6 +2251,7 @@
 	"System Instructions": "Системные инструкции",
 	"System Prompt": "Системный промпт",
 	"System prompt binding was modified elsewhere. Refreshed to the latest state.": "Привязка системного промпта была изменена в другом месте. Состояние обновлено.",
+	"System prompt content cannot be empty.": "Содержимое системного промпта не может быть пустым.",
 	"System prompt is managed by Langfuse. Detach to edit locally.": "Системный промпт управляется Langfuse. Отключите от Langfuse для локального редактирования.",
 	"Table": "",
 	"Tag": "Тег",

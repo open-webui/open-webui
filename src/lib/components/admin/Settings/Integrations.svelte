@@ -150,8 +150,19 @@
 		saveTerminalServers();
 	};
 
-	const saveLangfuseConfig = async () => {
-		const payloadConnections = langfuseConnections.map((connection) => ({
+	const buildLangfuseConnectionLabels = (connections: LangfuseConnection[]) =>
+		Object.fromEntries(
+			connections
+				.filter((connection): connection is LangfuseConnection & { id: string } =>
+					Boolean(connection.id)
+				)
+				.map((connection) => [connection.id, connection.name || connection.url])
+		);
+
+	const saveLangfuseConfig = async (connections: LangfuseConnection[] = langfuseConnections) => {
+		const connectionLabels = buildLangfuseConnectionLabels(langfuseConnections);
+
+		const payloadConnections = connections.map((connection) => ({
 			id: connection.id,
 			name: connection.name,
 			url: connection.url,
@@ -168,15 +179,15 @@
 				err,
 				(key, options) => $i18n.t(key, options),
 				{
-					connectionLabel: (connectionId) => {
-						const connection = langfuseConnections.find((item) => item.id === connectionId);
-						return connection?.name || connection?.url;
-					}
+					connectionLabel: (connectionId) => connectionLabels[connectionId]
 				}
 			);
 
 			if (description) {
-				toast.error(title, { description });
+				toast.error(title, {
+					description,
+					classes: { description: 'whitespace-pre-line' }
+				});
 			} else {
 				toast.error(title);
 			}
@@ -187,6 +198,8 @@
 			toast.success($i18n.t('Langfuse configuration saved'));
 			if (res?.LANGFUSE_CONNECTIONS) {
 				langfuseConnections = res.LANGFUSE_CONNECTIONS as LangfuseConnection[];
+			} else {
+				langfuseConnections = connections;
 			}
 			if (typeof res?.LANGFUSE_PROMPT_CACHE_TTL === 'number') {
 				langfusePromptCacheTtl = res.LANGFUSE_PROMPT_CACHE_TTL;
@@ -210,8 +223,7 @@
 	};
 
 	const removeLangfuseConnection = (idx: number) => {
-		langfuseConnections = langfuseConnections.filter((_, i) => i !== idx);
-		saveLangfuseConfig();
+		saveLangfuseConfig(langfuseConnections.filter((_, i) => i !== idx));
 	};
 
 	onMount(async () => {
