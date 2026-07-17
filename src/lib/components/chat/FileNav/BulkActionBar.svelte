@@ -2,11 +2,13 @@
 	import { getContext } from 'svelte';
 	import GarbageBin from '../../icons/GarbageBin.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
+	import Spinner from '../../common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let count: number = 0;
 	export let hasFiles: boolean = false;
+	export let downloading: boolean = false;
 
 	export let onDelete: () => void = () => {};
 	export let onDownload: () => void = () => {};
@@ -40,25 +42,30 @@
 		</button>
 	</Tooltip>
 
-	<Tooltip content={$i18n.t('Download')}>
+	<Tooltip content={$i18n.t(downloading ? 'Preparing download' : 'Download')}>
 		<button
 			class="p-1 rounded transition text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400"
 			on:click={onDownload}
-			aria-label={$i18n.t('Download')}
+			disabled={downloading}
+			aria-label={$i18n.t(downloading ? 'Preparing download' : 'Download')}
 		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 20 20"
-				fill="currentColor"
-				class="size-3.5"
-			>
-				<path
-					d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
-				/>
-				<path
-					d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
-				/>
-			</svg>
+			{#if downloading}
+				<Spinner className="size-3.5" />
+			{:else}
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="size-3.5"
+				>
+					<path
+						d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
+					/>
+					<path
+						d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
+					/>
+				</svg>
+			{/if}
 		</button>
 	</Tooltip>
 

@@ -10,6 +10,7 @@
 	import GarbageBin from '../../icons/GarbageBin.svelte';
 	import Pencil from '../../icons/Pencil.svelte';
 	import Clipboard from '../../icons/Clipboard.svelte';
+	import Spinner from '../../common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -23,6 +24,7 @@
 	export let onDelete: (path: string, name: string) => void = () => {};
 	export let onMove: (source: string, destFolder: string) => void = () => {};
 	export let onRename: (oldPath: string, newName: string) => void = () => {};
+	export let downloading: boolean = false;
 
 	// ── Selection ─────────────────────────────────────────────────────────
 	export let selected: boolean = false;
@@ -140,6 +142,7 @@
 			? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-400 dark:ring-blue-500 ring-inset'
 			: ''}"
 		role={entry.type === 'directory' ? 'button' : undefined}
+		aria-busy={downloading}
 		on:dragover={(e) => {
 			if (entry.type !== 'directory') return;
 			if (!e.dataTransfer?.types.includes('application/x-terminal-file-move')) return;
@@ -257,6 +260,9 @@
 					/>
 				</svg>
 			{/if}
+			{#if downloading}
+				<Spinner className="size-3.5 shrink-0" />
+			{/if}
 			{#if renaming}
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
 				<input
@@ -318,21 +324,28 @@
 									: `${currentPath}${entry.name}`;
 							onDownload(path);
 						}}
+						disabled={downloading}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="size-4"
-						>
-							<path
-								d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
-							/>
-							<path
-								d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
-							/>
-						</svg>
-						<div class="flex items-center">{$i18n.t('Download')}</div>
+						{#if downloading}
+							<Spinner className="size-4" />
+						{:else}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="size-4"
+							>
+								<path
+									d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
+								/>
+								<path
+									d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
+								/>
+							</svg>
+						{/if}
+						<div class="flex items-center">
+							{$i18n.t(downloading ? 'Preparing download' : 'Download')}
+						</div>
 					</button>
 
 					<button

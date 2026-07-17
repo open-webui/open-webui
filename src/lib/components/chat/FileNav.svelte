@@ -43,6 +43,7 @@
 	import FilePreview from './FileNav/FilePreview.svelte';
 	import FileEntryRow from './FileNav/FileEntryRow.svelte';
 	import BulkActionBar from './FileNav/BulkActionBar.svelte';
+	import { withDownloadLock } from './FileNav/downloadState';
 	import PortList from './FileNav/PortList.svelte';
 	import PortPreview from './FileNav/PortPreview.svelte';
 	import XTerminal from './XTerminal.svelte';
@@ -94,6 +95,9 @@
 	let entries: FileEntry[] = [];
 	let loading = false;
 	let error: string | null = null;
+	let downloadingPaths = new Set<string>();
+	let bulkDownloading = false;
+	const isDownloading = (path: string | null) => path !== null && downloadingPaths.has(path);
 
 	// ── Sort state ──────────────────────────────────────────────────────
 	type SortMode = 'name' | 'date';
@@ -525,18 +529,25 @@
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 
-		// Directories end with '/' — download as ZIP archive
-		const isDir = path.endsWith('/');
-		const result = isDir
-			? await archiveFromTerminal(terminal.url, terminal.key, [path.replace(/\/$/, '')])
-			: await downloadFileBlob(terminal.url, terminal.key, path, chatId ?? undefined);
-		if (!result) return;
-		const url = URL.createObjectURL(result.blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = result.filename;
-		a.click();
-		URL.revokeObjectURL(url);
+		await withDownloadLock(
+			downloadingPaths,
+			path,
+			() => (downloadingPaths = new Set(downloadingPaths)),
+			async () => {
+				// Directories end with '/' — download as ZIP archive
+				const isDir = path.endsWith('/');
+				const result = isDir
+					? await archiveFromTerminal(terminal.url, terminal.key, [path.replace(/\/$/, '')])
+					: await downloadFileBlob(terminal.url, terminal.key, path, chatId ?? undefined);
+				if (!result) return;
+				const url = URL.createObjectURL(result.blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = result.filename;
+				a.click();
+				URL.revokeObjectURL(url);
+			}
+		);
 	};
 
 	// ── Drag-and-drop upload ─────────────────────────────────────────────
@@ -785,26 +796,31 @@
 
 	const bulkDownload = async () => {
 		const terminal = selectedTerminal;
-		if (!terminal) return;
+		if (!terminal || bulkDownloading) return;
 
 		const paths = [...selectedEntries].map((p) => p.replace(/\/$/, ''));
 		if (paths.length === 0) return;
 
-		// Single file (not dir) — use the regular downloadFile path
-		if (paths.length === 1 && ![...selectedEntries][0].endsWith('/')) {
-			await downloadFile([...selectedEntries][0]);
-			return;
-		}
+		bulkDownloading = true;
+		try {
+			// Single file (not dir) — use the regular downloadFile path
+			if (paths.length === 1 && ![...selectedEntries][0].endsWith('/')) {
+				await downloadFile([...selectedEntries][0]);
+				return;
+			}
 
-		// Archive everything into a single ZIP
-		const result = await archiveFromTerminal(terminal.url, terminal.key, paths);
-		if (!result) return;
-		const url = URL.createObjectURL(result.blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = result.filename;
-		a.click();
-		URL.revokeObjectURL(url);
+			// Archive everything into a single ZIP
+			const result = await archiveFromTerminal(terminal.url, terminal.key, paths);
+			if (!result) return;
+			const url = URL.createObjectURL(result.blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = result.filename;
+			a.click();
+			URL.revokeObjectURL(url);
+		} finally {
+			bulkDownloading = false;
+		}
 	};
 
 	// Escape to clear selection
@@ -1259,23 +1275,28 @@
 				<Tooltip content={$i18n.t('Download')}>
 					<button
 						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-						on:click={() => downloadFile(selectedFile)}
-						aria-label={$i18n.t('Download')}
+						on:click={() => selectedFile && downloadFile(selectedFile)}
+						disabled={isDownloading(selectedFile)}
+						aria-label={$i18n.t(isDownloading(selectedFile) ? 'Preparing download' : 'Download')}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.5"
-							class="size-3.5"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-							/>
-						</svg>
+						{#if isDownloading(selectedFile)}
+							<Spinner className="size-3.5" />
+						{:else}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.5"
+								class="size-3.5"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+								/>
+							</svg>
+						{/if}
 					</button>
 				</Tooltip>
 			</FileNavToolbar>
@@ -1285,6 +1306,7 @@
 				<BulkActionBar
 					count={selectedCount}
 					hasFiles={hasSelectedFiles}
+					downloading={bulkDownloading}
 					onDelete={() => {
 						deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
 						showDeleteConfirm = true;
@@ -1434,6 +1456,11 @@
 									selectedPaths={selectedEntries}
 									onOpen={openEntry}
 									onDownload={downloadFile}
+									downloading={downloadingPaths.has(
+										entry.type === 'directory'
+											? `${currentPath}${entry.name}/`
+											: `${currentPath}${entry.name}`
+									)}
 									onDelete={requestDelete}
 									onMove={handleMove}
 									onRename={handleRename}
