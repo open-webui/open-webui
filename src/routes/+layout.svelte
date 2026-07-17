@@ -1311,6 +1311,14 @@
 	/>
 </svelte:head>
 
+<!-- a11y: skip-to-content link (WCAG 2.4.1 Bypass Blocks). Visually hidden until focused; first element in the tab order so keyboard users can jump past the sidebar. Targets the #main-content landmark rendered by the (app) layout. -->
+<a
+	href="#main-content"
+	class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-lg dark:focus:bg-gray-800 dark:focus:text-gray-100"
+>
+	{$i18n.t('Skip to main content')}
+</a>
+
 {#if showRefresh}
 	<div class=" py-5">
 		<Spinner className="size-5" />
