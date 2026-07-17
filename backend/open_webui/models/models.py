@@ -143,6 +143,17 @@ class ModelForm(BaseModel):
 
 
 class ModelsTable:
+    async def _delete_system_prompt_artifacts_for_model(
+        self,
+        model_id: str,
+        db: AsyncSession,
+    ) -> None:
+        from open_webui.models.model_system_prompt_binding import ModelSystemPromptBindings
+        from open_webui.models.model_system_prompt_version import ModelSystemPromptVersions
+
+        await ModelSystemPromptBindings.delete_by_model_id(model_id, db=db)
+        await ModelSystemPromptVersions.delete_versions_by_model_id(model_id, db=db)
+
     async def _get_access_grants(self, model_id: str, db: AsyncSession | None = None) -> list[AccessGrantModel]:
         return await AccessGrants.get_grants_by_resource('model', model_id, db=db)
 
@@ -525,6 +536,7 @@ class ModelsTable:
         try:
             async with get_async_db_context(db) as db:
                 await AccessGrants.revoke_all_access('model', id, db=db)
+                await self._delete_system_prompt_artifacts_for_model(id, db=db)
                 await db.execute(delete(Model).filter_by(id=id))
                 await db.commit()
 
@@ -586,6 +598,7 @@ class ModelsTable:
                 for model in existing_models:
                     if model.id not in new_model_ids:
                         await AccessGrants.revoke_all_access('model', model.id, db=db)
+                        await self._delete_system_prompt_artifacts_for_model(model.id, db=db)
                         await db.delete(model)
 
                 await db.commit()

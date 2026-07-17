@@ -17,7 +17,7 @@ from open_webui.models.config import Config
 from open_webui.models.model_system_prompt_binding import ModelSystemPromptBindings
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers
-from open_webui.utils.mcp.client import MCPClient
+from open_webui.utils.system_prompt_cache import clear_system_prompt_cache
 from open_webui.utils.oauth import (
     OAuthClientInformationFull,
     apply_connection_oauth_options,
@@ -484,9 +484,14 @@ async def set_langfuse_config(
     if ttl is not None and ttl < 0:
         raise HTTPException(status_code=400, detail='LANGFUSE_PROMPT_CACHE_TTL must be non-negative')
 
+    existing_ttl = await Config.get('langfuse.prompt_cache_ttl')
+    normalized_existing_ttl = existing_ttl if existing_ttl is not None else 300
+
     updates = {'langfuse.connections': connections}
     if ttl is not None:
         updates['langfuse.prompt_cache_ttl'] = ttl
+        if ttl != normalized_existing_ttl:
+            clear_system_prompt_cache()
 
     await Config.upsert(updates)
 

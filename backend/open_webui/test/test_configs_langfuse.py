@@ -125,6 +125,90 @@ async def test_set_langfuse_config_persists_and_redacts():
 
 
 @pytest.mark.asyncio
+async def test_set_langfuse_config_clears_cache_when_ttl_changes():
+    # Arrange
+    request = MagicMock()
+    existing = [{'id': 'conn-1', 'secret_key': 'stored-secret'}]
+    upsert_mock = AsyncMock()
+
+    async def fake_config_get(key):
+        if key == 'langfuse.connections':
+            return existing
+        if key == 'langfuse.prompt_cache_ttl':
+            return 300
+        return None
+
+    # Act
+    with (
+        patch.object(configs_module.Config, 'get', side_effect=fake_config_get),
+        patch.object(configs_module.Config, 'upsert', upsert_mock),
+        patch.object(configs_module, 'publish_event', new_callable=AsyncMock),
+        patch.object(configs_module, 'clear_system_prompt_cache') as clear_cache_mock,
+    ):
+        await configs_module.set_langfuse_config(
+            request,
+            configs_module.LangfuseConfigForm(
+                LANGFUSE_CONNECTIONS=[
+                    configs_module.LangfuseConnection(
+                        id='conn-1',
+                        name='Prod',
+                        url='https://lf.example',
+                        public_key='pk-live',
+                        secret_key='',
+                    )
+                ],
+                LANGFUSE_PROMPT_CACHE_TTL=5,
+            ),
+            user=_admin_user(),
+        )
+
+    # Assert
+    clear_cache_mock.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_set_langfuse_config_keeps_cache_when_ttl_unchanged():
+    # Arrange
+    request = MagicMock()
+    existing = [{'id': 'conn-1', 'secret_key': 'stored-secret'}]
+    upsert_mock = AsyncMock()
+
+    async def fake_config_get(key):
+        if key == 'langfuse.connections':
+            return existing
+        if key == 'langfuse.prompt_cache_ttl':
+            return 300
+        return None
+
+    # Act
+    with (
+        patch.object(configs_module.Config, 'get', side_effect=fake_config_get),
+        patch.object(configs_module.Config, 'upsert', upsert_mock),
+        patch.object(configs_module, 'publish_event', new_callable=AsyncMock),
+        patch.object(configs_module, 'clear_system_prompt_cache') as clear_cache_mock,
+    ):
+        await configs_module.set_langfuse_config(
+            request,
+            configs_module.LangfuseConfigForm(
+                LANGFUSE_CONNECTIONS=[
+                    configs_module.LangfuseConnection(
+                        id='conn-1',
+                        name='Prod',
+                        url='https://lf.example',
+                        public_key='pk-live',
+                        secret_key='',
+                    )
+                ],
+                LANGFUSE_PROMPT_CACHE_TTL=300,
+            ),
+            user=_admin_user(),
+        )
+
+    # Assert
+    clear_cache_mock.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_set_langfuse_config_rejects_negative_ttl():
     # Arrange
     request = MagicMock()

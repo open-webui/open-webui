@@ -13,6 +13,7 @@ from open_webui.utils.system_prompt_cache import (
     get_cached_system_prompt,
     invalidate_system_prompt_cache,
     is_binding_db_cache_warm,
+    is_cache_age_warm,
     is_newer_cache_write,
     is_system_prompt_fetch_backoff_active,
     record_system_prompt_fetch_failure,
@@ -360,6 +361,44 @@ def test_binding_db_cache_warm_when_fresh():
 
     # Assert
     assert is_binding_db_cache_warm(binding, default_ttl=300) is True
+
+
+def test_cache_ttl_five_is_warm_when_fresh():
+    # Arrange
+    set_cached_system_prompt('model-1', 'short ttl content', ttl_seconds=5)
+
+    # Act
+    cached = get_cached_system_prompt('model-1', effective_ttl_seconds=5)
+
+    # Assert
+    assert cached is not None
+    assert cached.content == 'short ttl content'
+
+
+def test_get_with_reduced_effective_ttl_returns_cold():
+    # Arrange — entry was warm under TTL=300, admin lowered effective TTL to 5
+    set_cached_system_prompt(
+        'model-1',
+        'content',
+        ttl_seconds=300,
+        cached_at=time.time() - 10,
+    )
+
+    # Act
+    cached = get_cached_system_prompt('model-1', effective_ttl_seconds=5)
+
+    # Assert
+    assert cached is None
+
+
+def test_is_cache_age_warm_allows_small_ttl_without_skew_block():
+    # Arrange
+    fresh_cached_at = time.time() - 2
+    expired_cached_at = time.time() - 5
+
+    # Act / Assert
+    assert is_cache_age_warm(fresh_cached_at, 5) is True
+    assert is_cache_age_warm(expired_cached_at, 5) is False
 
 
 @pytest.mark.asyncio

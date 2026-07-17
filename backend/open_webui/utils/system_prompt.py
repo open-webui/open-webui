@@ -11,6 +11,7 @@ from open_webui.utils.system_prompt_cache import (
     binding_cache_ttl_seconds,
     get_cached_system_prompt_async,
     invalidate_system_prompt_cache,
+    is_cache_age_warm,
     is_newer_cache_write,
     set_cached_system_prompt,
 )
@@ -149,8 +150,31 @@ async def _resolve_raw_system_prompt(model_info, metadata: dict | None = None) -
 
     cached = await get_cached_system_prompt_async(model_id)
     if cached is not None:
-        _apply_lru_metadata(cached, metadata)
-        return cached.content
+        try:
+            binding = await ModelSystemPromptBindings.get_by_model_id(model_id)
+        except Exception:
+            log.exception('Failed to load system prompt binding for model %s', model_id)
+            _apply_lru_metadata(cached, metadata)
+            return cached.content
+
+        if binding:
+            if binding.source == 'local':
+                from open_webui.integrations.system_prompt.local import (
+                    DEFAULT_LOCAL_CACHE_TTL_SECONDS,
+                )
+
+                default_ttl = DEFAULT_LOCAL_CACHE_TTL_SECONDS
+            else:
+                default_ttl = await _get_default_cache_ttl_seconds()
+            effective_ttl = binding_cache_ttl_seconds(binding, default_ttl)
+            if is_cache_age_warm(cached.cached_at, effective_ttl):
+                _apply_lru_metadata(cached, metadata)
+                return cached.content
+        else:
+            _apply_lru_metadata(cached, metadata)
+            return cached.content
+
+        invalidate_system_prompt_cache(model_id)
 
     try:
         binding = await ModelSystemPromptBindings.get_by_model_id(model_id)

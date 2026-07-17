@@ -304,9 +304,12 @@
 </script>
 
 {#if loaded}
-	<div class="flex flex-col gap-2 md:flex-row md:gap-3">
-		{#if history.length > 0 || historyLoading}
-			<div class="md:w-56 md:shrink-0">
+	<div
+		class="rounded-xl border border-gray-100 bg-gray-50/60 p-3 shadow-inner dark:border-gray-800 dark:bg-gray-900/30"
+	>
+		<div class="flex flex-col gap-2 md:flex-row md:gap-3">
+			{#if history.length > 0 || historyLoading}
+				<div class="md:w-56 md:shrink-0 md:border-r md:border-gray-100 md:pr-3 dark:md:border-gray-800">
 				<div class="mb-1 text-xs text-gray-400 dark:text-gray-600">
 					{$i18n.t('History')}
 				</div>
@@ -461,8 +464,11 @@
 			{/if}
 		</div>
 	</div>
+	</div>
 {:else}
-	<div class="flex justify-center py-4">
+	<div
+		class="flex justify-center rounded-xl border border-gray-100 bg-gray-50/60 py-4 shadow-inner dark:border-gray-800 dark:bg-gray-900/30"
+	>
 		<Spinner className="size-4" />
 	</div>
 {/if}

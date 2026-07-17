@@ -312,7 +312,9 @@
 </script>
 
 {#if loaded}
-	<div class="flex flex-col gap-3">
+	<div
+		class="flex flex-col gap-3 rounded-xl border border-gray-100 bg-gray-50/60 p-3 shadow-inner dark:border-gray-800 dark:bg-gray-900/30"
+	>
 		{#if connections.length === 0}
 			<div class="text-xs text-amber-600 dark:text-amber-400">
 				{$i18n.t(
@@ -461,7 +463,9 @@
 		/>
 	</div>
 {:else}
-	<div class="flex justify-center py-4">
+	<div
+		class="flex justify-center rounded-xl border border-gray-100 bg-gray-50/60 py-4 shadow-inner dark:border-gray-800 dark:bg-gray-900/30"
+	>
 		<Spinner className="size-4" />
 	</div>
 {/if}

@@ -875,15 +875,19 @@
 												/>
 											{/if}
 										{:else}
-											<Textarea
-												className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
-												placeholder={$i18n.t(
-													'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
-												)}
-												rows={2}
-												minSize={48}
-												bind:value={system}
-											/>
+											<div
+												class="rounded-xl border border-gray-100 bg-gray-50/60 p-3 shadow-inner dark:border-gray-800 dark:bg-gray-900/30"
+											>
+												<Textarea
+													className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+													placeholder={$i18n.t(
+														'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
+													)}
+													rows={2}
+													minSize={48}
+													bind:value={system}
+												/>
+											</div>
 										{/if}
 									</div>
 								</div>

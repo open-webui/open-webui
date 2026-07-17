@@ -5,7 +5,7 @@ from typing import Literal
 
 from open_webui.internal.db import Base, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, CheckConstraint, Column, ForeignKey, Integer, Text, func, select
+from sqlalchemy import BigInteger, CheckConstraint, Column, ForeignKey, Integer, Text, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 SystemPromptSource = Literal['local', 'langfuse']
@@ -238,6 +238,21 @@ class ModelSystemPromptBindingsTable:
             await db.commit()
             await db.refresh(binding)
             return ModelSystemPromptBindingModel.model_validate(binding)
+
+    async def delete_by_model_id(
+        self,
+        model_id: str,
+        db: AsyncSession | None = None,
+    ) -> bool:
+        """Delete the system prompt binding for a model."""
+        async with get_async_db_context(db) as db:
+            await db.execute(
+                delete(ModelSystemPromptBinding).filter(
+                    ModelSystemPromptBinding.model_id == model_id
+                )
+            )
+            await db.commit()
+            return True
 
 
 class BindingVersionConflictError(Exception):

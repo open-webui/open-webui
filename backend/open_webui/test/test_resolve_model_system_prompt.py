@@ -76,7 +76,7 @@ async def test_model_info_none_returns_empty():
 
 
 @pytest.mark.asyncio
-async def test_warm_lru_skips_binding_lookup():
+async def test_warm_lru_revalidates_binding_once_when_no_binding_row():
     # Arrange
     model = _make_model('Ignored mirror')
     set_cached_system_prompt(
@@ -92,6 +92,7 @@ async def test_warm_lru_skips_binding_lookup():
     with patch(
         'open_webui.utils.system_prompt.ModelSystemPromptBindings.get_by_model_id',
         new_callable=AsyncMock,
+        return_value=None,
     ) as mock_get_binding:
         result = await resolve_model_system_prompt(model, metadata, None, bypass=False)
 
@@ -99,7 +100,7 @@ async def test_warm_lru_skips_binding_lookup():
     assert result == 'Warm LRU content'
     assert metadata['langfuse_prompt_name'] == 'movie-critic'
     assert metadata['langfuse_prompt_version'] == '3'
-    mock_get_binding.assert_not_awaited()
+    mock_get_binding.assert_awaited_once_with('model-1')
 
 
 @pytest.mark.asyncio
@@ -173,11 +174,12 @@ async def test_local_warm_cache_skips_db_on_second_resolve():
     ):
         first = await resolve_model_system_prompt(model, {}, None, bypass=False)
 
-    # Act — second resolve must hit warm LRU only
+    # Act — second resolve must hit warm LRU and only revalidate binding TTL
     with (
         patch(
             'open_webui.utils.system_prompt.ModelSystemPromptBindings.get_by_model_id',
             new_callable=AsyncMock,
+            return_value=binding,
         ) as mock_get_binding_2,
         patch(
             'open_webui.integrations.system_prompt.local.ModelSystemPromptVersions.get_version_by_id',
@@ -191,7 +193,7 @@ async def test_local_warm_cache_skips_db_on_second_resolve():
     assert second == 'Cached local prompt'
     mock_get_binding.assert_awaited_once()
     mock_get_version.assert_awaited_once()
-    mock_get_binding_2.assert_not_awaited()
+    mock_get_binding_2.assert_awaited_once_with('model-1')
     mock_get_version_2.assert_not_awaited()
 
 

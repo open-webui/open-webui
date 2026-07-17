@@ -22,7 +22,7 @@ from open_webui.utils.redis import get_redis_client
 log = logging.getLogger(__name__)
 
 DEFAULT_MAX_SIZE = 256
-CACHE_WARM_CLOCK_SKEW_SECONDS = 5
+CACHE_WARM_CLOCK_SKEW_SECONDS = 1
 DEFAULT_FETCH_FAILURE_BACKOFF_SECONDS = 60
 
 _REDIS_KEY_PREFIX = f'{REDIS_KEY_PREFIX}:system_prompt_cache'
@@ -57,6 +57,20 @@ def binding_cache_ttl_seconds(binding, default_ttl: int) -> int:
     return default_ttl
 
 
+def _warm_clock_skew(ttl_seconds: int) -> float:
+    """Clock skew tolerance for warm checks; never allow skew >= ttl."""
+    if ttl_seconds <= 1:
+        return 0.0
+    return min(CACHE_WARM_CLOCK_SKEW_SECONDS, ttl_seconds - 1)
+
+
+def is_cache_age_warm(cached_at: float, ttl_seconds: int) -> bool:
+    if ttl_seconds <= 0:
+        return False
+    age_seconds = time.time() - cached_at
+    return (age_seconds + _warm_clock_skew(ttl_seconds)) < ttl_seconds
+
+
 def is_binding_db_cache_warm(binding, *, default_ttl: int) -> bool:
     """Return True when binding DB cache fields hold a non-expired prompt."""
     if not binding.cached_content:
@@ -65,18 +79,16 @@ def is_binding_db_cache_warm(binding, *, default_ttl: int) -> bool:
         return False
 
     ttl = binding_cache_ttl_seconds(binding, default_ttl)
-    if ttl <= 0:
-        return False
-
-    age_seconds = time.time() - binding.cached_at
-    return (age_seconds + CACHE_WARM_CLOCK_SKEW_SECONDS) < ttl
+    return is_cache_age_warm(binding.cached_at, ttl)
 
 
-def is_cache_entry_warm(entry: CachedSystemPrompt) -> bool:
-    if entry.ttl_seconds <= 0:
-        return False
-    age_seconds = time.time() - entry.cached_at
-    return (age_seconds + CACHE_WARM_CLOCK_SKEW_SECONDS) < entry.ttl_seconds
+def is_cache_entry_warm(
+    entry: CachedSystemPrompt,
+    *,
+    effective_ttl_seconds: int | None = None,
+) -> bool:
+    ttl = effective_ttl_seconds if effective_ttl_seconds is not None else entry.ttl_seconds
+    return is_cache_age_warm(entry.cached_at, ttl)
 
 
 class SystemPromptCache:
@@ -88,12 +100,20 @@ class SystemPromptCache:
         self._fetch_locks: dict[str, asyncio.Lock] = {}
         self._fetch_locks_guard = Lock()
 
-    def get(self, model_id: str) -> CachedSystemPrompt | None:
+    def get(
+        self,
+        model_id: str,
+        *,
+        effective_ttl_seconds: int | None = None,
+    ) -> CachedSystemPrompt | None:
         with self._lock:
             entry = self._entries.get(model_id)
             if not entry:
                 return None
-            if not is_cache_entry_warm(entry):
+            if not is_cache_entry_warm(
+                entry,
+                effective_ttl_seconds=effective_ttl_seconds,
+            ):
                 return None
             self._entries.move_to_end(model_id)
             return entry
@@ -256,7 +276,11 @@ def _redis_clear_all() -> None:
         log.debug('Failed to clear system prompt cache in Redis', exc_info=True)
 
 
-def _redis_lookup_checked(model_id: str) -> tuple[bool, CachedSystemPrompt | None]:
+def _redis_lookup_checked(
+    model_id: str,
+    *,
+    effective_ttl_seconds: int | None = None,
+) -> tuple[bool, CachedSystemPrompt | None]:
     """Return ``(redis_checked, entry)``.
 
     ``redis_checked`` is False when Redis is unavailable or the read failed.
@@ -269,7 +293,10 @@ def _redis_lookup_checked(model_id: str) -> tuple[bool, CachedSystemPrompt | Non
         if not raw:
             return True, None
         entry = _deserialize_entry(raw)
-        if entry is None or not is_cache_entry_warm(entry):
+        if entry is None or not is_cache_entry_warm(
+            entry,
+            effective_ttl_seconds=effective_ttl_seconds,
+        ):
             return True, None
         return True, entry
     except Exception:
@@ -288,25 +315,46 @@ def _store_l1_from_entry(model_id: str, entry: CachedSystemPrompt) -> CachedSyst
     )
 
 
-def get_cached_system_prompt(model_id: str) -> CachedSystemPrompt | None:
+def get_cached_system_prompt(
+    model_id: str,
+    *,
+    effective_ttl_seconds: int | None = None,
+) -> CachedSystemPrompt | None:
     """Return a warm L1 entry, or refill L1 from Redis on miss."""
-    l1_entry = SYSTEM_PROMPT_CACHE.get(model_id)
+    l1_entry = SYSTEM_PROMPT_CACHE.get(
+        model_id,
+        effective_ttl_seconds=effective_ttl_seconds,
+    )
     if l1_entry is not None:
         return l1_entry
 
-    redis_checked, redis_entry = _redis_lookup_checked(model_id)
+    redis_checked, redis_entry = _redis_lookup_checked(
+        model_id,
+        effective_ttl_seconds=effective_ttl_seconds,
+    )
     if redis_checked and redis_entry is not None:
         return _store_l1_from_entry(model_id, redis_entry)
     return None
 
 
-async def get_cached_system_prompt_async(model_id: str) -> CachedSystemPrompt | None:
+async def get_cached_system_prompt_async(
+    model_id: str,
+    *,
+    effective_ttl_seconds: int | None = None,
+) -> CachedSystemPrompt | None:
     """Async-safe getter: L1 is checked in-process; Redis I/O runs in a thread."""
-    l1_entry = SYSTEM_PROMPT_CACHE.get(model_id)
+    l1_entry = SYSTEM_PROMPT_CACHE.get(
+        model_id,
+        effective_ttl_seconds=effective_ttl_seconds,
+    )
     if l1_entry is not None:
         return l1_entry
 
-    redis_checked, redis_entry = await asyncio.to_thread(_redis_lookup_checked, model_id)
+    redis_checked, redis_entry = await asyncio.to_thread(
+        _redis_lookup_checked,
+        model_id,
+        effective_ttl_seconds=effective_ttl_seconds,
+    )
     if redis_checked and redis_entry is not None:
         return _store_l1_from_entry(model_id, redis_entry)
     return None
@@ -333,6 +381,10 @@ def set_cached_system_prompt(
 
 def invalidate_system_prompt_cache(model_id: str) -> None:
     SYSTEM_PROMPT_CACHE.invalidate(model_id)
+
+
+def clear_system_prompt_cache() -> None:
+    SYSTEM_PROMPT_CACHE.clear()
 
 
 def record_system_prompt_fetch_failure(model_id: str) -> None:

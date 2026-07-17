@@ -62,8 +62,14 @@ class LangfusePromptProvider(SystemPromptProviderBase):
         model_id: str,
         binding: ModelSystemPromptBindingModel,
         metadata: dict | None,
+        *,
+        default_ttl: int,
     ) -> str | None:
-        cached = get_cached_system_prompt(model_id)
+        effective_ttl = binding_cache_ttl_seconds(binding, default_ttl)
+        cached = get_cached_system_prompt(
+            model_id,
+            effective_ttl_seconds=effective_ttl,
+        )
         if not cached or not cached.content:
             return None
         self._attach_metadata(binding, metadata, prompt_version=cached.prompt_version)
@@ -100,7 +106,12 @@ class LangfusePromptProvider(SystemPromptProviderBase):
         metadata: dict | None,
         default_ttl: int,
     ) -> str | None:
-        cached_content = self._serve_memory_cache(model_id, binding, metadata)
+        cached_content = self._serve_memory_cache(
+            model_id,
+            binding,
+            metadata,
+            default_ttl=default_ttl,
+        )
         if cached_content is not None:
             return cached_content
 
@@ -151,7 +162,12 @@ class LangfusePromptProvider(SystemPromptProviderBase):
 
         default_ttl = await _get_default_cache_ttl_seconds()
 
-        cached_content = self._serve_memory_cache(model_id, binding, metadata)
+        cached_content = self._serve_memory_cache(
+            model_id,
+            binding,
+            metadata,
+            default_ttl=default_ttl,
+        )
         if cached_content is not None:
             return cached_content
 
