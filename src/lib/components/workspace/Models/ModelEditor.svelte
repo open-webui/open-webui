@@ -33,6 +33,8 @@
 	import TTSVoiceInput from './TTSVoiceInput.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
+	import ModelSystemPromptPanel from './ModelSystemPromptPanel.svelte';
+	import { createModelSystemPromptVersion } from '$lib/apis/models/systemPrompt';
 
 	const i18n = getContext('i18n');
 
@@ -75,6 +77,8 @@
 	}
 
 	let system = '';
+	let legacySystemPrompt = '';
+	let activeBaseline = '';
 	let info = {
 		id: '',
 		base_model_id: null,
@@ -277,6 +281,25 @@
 			}
 		}
 
+		if (edit && id) {
+			const normalizedSystem = system.trim() === '' ? '' : system;
+			const normalizedBaseline = activeBaseline.trim() === '' ? '' : activeBaseline;
+
+			if (normalizedSystem !== normalizedBaseline) {
+				try {
+					await createModelSystemPromptVersion(localStorage.token, id, {
+						content: system,
+						set_active: true
+					});
+					activeBaseline = normalizedSystem;
+				} catch (error) {
+					toast.error(`${error}`);
+					loading = false;
+					return;
+				}
+			}
+		}
+
 		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop
 			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
@@ -348,7 +371,8 @@
 				}
 			}
 
-			system = model?.params?.system ?? '';
+			legacySystemPrompt = model?.params?.system ?? '';
+			system = legacySystemPrompt;
 
 			params = { ...params, ...model?.params };
 			params.stop = params?.stop
@@ -690,15 +714,25 @@
 										{$i18n.t('System Prompt')}
 									</div>
 									<div>
-										<Textarea
-											className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
-											placeholder={$i18n.t(
-												'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
-											)}
-											rows={2}
-											minSize={48}
-											bind:value={system}
-										/>
+										{#if edit && id}
+											<ModelSystemPromptPanel
+												modelId={id}
+												writeAccess={model?.write_access ?? true}
+												legacySystem={legacySystemPrompt}
+												bind:system
+												bind:activeBaseline
+											/>
+										{:else}
+											<Textarea
+												className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+												placeholder={$i18n.t(
+													'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
+												)}
+												rows={2}
+												minSize={48}
+												bind:value={system}
+											/>
+										{/if}
 									</div>
 								</div>
 
