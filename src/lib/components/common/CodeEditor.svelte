@@ -26,6 +26,7 @@
 
 	export let boilerplate = '';
 	export let value = '';
+	export let className = 'text-sm';
 
 	export let onSave = () => {};
 	export let onChange = () => {};
@@ -318,4 +319,4 @@ print("${endTag}")
 	});
 </script>
 
-<div id="code-textarea-{id}" class="h-full w-full min-w-0 overflow-hidden text-sm" />
+<div id="code-textarea-{id}" class="{className} h-full w-full min-w-0 overflow-hidden" />

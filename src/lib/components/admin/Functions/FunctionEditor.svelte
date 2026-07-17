@@ -7,7 +7,7 @@
 	import { extractFrontmatter, formatSkillName, nameToId } from '$lib/utils';
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import Badge from '$lib/components/common/Badge.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 
@@ -15,7 +15,7 @@
 	let loading = false;
 	let showConfirm = false;
 
-	export let onSave = () => {};
+	export let onSave = /** @param {any} _value */ async (_value) => {};
 
 	export let edit = false;
 	export let clone = false;
@@ -305,12 +305,16 @@ class Pipe:
 
 	const saveHandler = async () => {
 		loading = true;
-		onSave({
-			id,
-			name,
-			meta,
-			content
-		});
+		try {
+			await onSave({
+				id,
+				name,
+				meta,
+				content
+			});
+		} finally {
+			loading = false;
+		}
 	};
 
 	const submitHandler = async () => {
@@ -333,146 +337,148 @@ class Pipe:
 	};
 </script>
 
-<div class=" flex flex-col justify-between w-full min-w-0 overflow-y-auto overflow-x-hidden h-full">
-	<div class="mx-auto w-full min-w-0 md:px-0 h-full">
-		<form
-			bind:this={formElement}
-			class=" flex flex-col min-w-0 max-h-[100dvh] h-full"
-			on:submit|preventDefault={() => {
-				if (edit) {
-					submitHandler();
-				} else {
-					showConfirm = true;
-				}
+<div class="flex h-full w-full min-w-0 flex-col overflow-hidden">
+	<form
+		bind:this={formElement}
+		class="flex h-full min-h-0 min-w-0 flex-col"
+		on:submit|preventDefault={() => {
+			if (edit) {
+				submitHandler();
+			} else {
+				showConfirm = true;
+			}
+		}}
+	>
+		<button
+			class="mb-1 flex h-6 w-fit items-center gap-1 rounded-md px-0.5 text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+			type="button"
+			on:click={() => {
+				goto('/admin/functions');
 			}}
 		>
-			<div class="flex flex-col flex-1 min-w-0 overflow-auto h-0 rounded-lg">
-				<div class="w-full mb-2 flex flex-col gap-0.5">
-					<div class="flex w-full min-w-0 items-center">
-						<div class=" shrink-0 mr-2">
-							<Tooltip content={$i18n.t('Back')}>
-								<button
-									class="w-full text-left text-sm py-1.5 px-1 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
-									on:click={() => {
-										goto('/admin/functions');
-									}}
-									type="button"
-								>
-									<ChevronLeft strokeWidth="2.5" />
-								</button>
-							</Tooltip>
+			<ChevronLeft className="size-3" strokeWidth="2" />
+			<span>{$i18n.t('Back')}</span>
+		</button>
+
+		<div class="flex shrink-0 items-start gap-2 pb-2">
+			<div class="min-w-0 flex-1">
+				<Tooltip content={$i18n.t('e.g. My Filter')} placement="top-start">
+					<input
+						class="w-full bg-transparent text-sm outline-hidden"
+						type="text"
+						placeholder={$i18n.t('Function Name')}
+						aria-label={$i18n.t('Function Name')}
+						bind:value={name}
+						required
+					/>
+				</Tooltip>
+
+				<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500">
+					{#if edit}
+						<div class="shrink-0 truncate font-mono" title={id}>
+							{id}
 						</div>
-
-						<div class="flex-1 min-w-0">
-							<Tooltip content={$i18n.t('e.g. My Filter')} placement="top-start">
-								<input
-									class="w-full text-2xl font-normal bg-transparent outline-hidden"
-									type="text"
-									placeholder={$i18n.t('Function Name')}
-									bind:value={name}
-									required
-								/>
-							</Tooltip>
-						</div>
-
-						<div class="flex shrink-0 items-center gap-2">
-							{#if !edit}
-								<select
-									class="text-xs bg-transparent border border-gray-100 dark:border-gray-800 rounded-lg px-2 py-1 outline-hidden"
-									bind:value={starterType}
-									on:change={(event) => selectStarterType(event.currentTarget.value)}
-									aria-label={$i18n.t('Function starter')}
-								>
-									<option value="filter">{$i18n.t('Filter')}</option>
-									<option value="event">{$i18n.t('Event')}</option>
-								</select>
-							{/if}
-							<Badge type="muted" content={$i18n.t('Function')} />
-						</div>
-					</div>
-
-					<div class=" flex min-w-0 gap-2 px-1 items-center">
-						{#if edit}
-							<div class="text-sm text-gray-500 shrink-0">
-								{id}
-							</div>
-						{:else}
-							<Tooltip className="w-full" content={$i18n.t('e.g. my_filter')} placement="top-start">
-								<input
-									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-hidden"
-									type="text"
-									placeholder={$i18n.t('Function ID')}
-									bind:value={id}
-									required
-									disabled={edit}
-								/>
-							</Tooltip>
-						{/if}
-
+					{:else}
 						<Tooltip
-							className="w-full self-center items-center flex"
-							content={$i18n.t('e.g. A filter to remove profanity from text')}
+							className="min-w-[8rem] flex-1"
+							content={$i18n.t('e.g. my_filter')}
 							placement="top-start"
 						>
 							<input
-								class="w-full text-sm bg-transparent outline-hidden"
+								class="w-full bg-transparent font-mono outline-hidden disabled:text-gray-500"
 								type="text"
-								placeholder={$i18n.t('Function Description')}
-								bind:value={meta.description}
+								placeholder={$i18n.t('Function ID')}
+								aria-label={$i18n.t('Function ID')}
+								bind:value={id}
 								required
+								disabled={edit}
 							/>
 						</Tooltip>
-					</div>
-				</div>
+					{/if}
 
-				<div class="mb-2 flex-1 min-w-0 overflow-auto h-0 rounded-lg">
-					<CodeEditor
-						bind:this={codeEditor}
-						value={content}
-						lang="python"
-						{boilerplate}
-						onChange={(e) => {
-							_content = e;
-							if (!edit) {
-								const fm = extractFrontmatter(e);
-								if (fm.title && !name) {
-									name = formatSkillName(fm.title);
-									id = nameToId(fm.title);
-								}
-								if (fm.description && !meta.description) {
-									meta = { ...meta, description: fm.description };
-								}
-							}
-						}}
-						onSave={async () => {
-							if (formElement) {
-								formElement.requestSubmit();
-							}
-						}}
-					/>
-				</div>
-
-				<div class="pb-3 flex justify-between">
-					<div class="flex-1 pr-3">
-						<div class="text-xs text-gray-500 line-clamp-2">
-							<span class=" font-normal dark:text-gray-200">{$i18n.t('Warning:')}</span>
-							{$i18n.t('Functions allow arbitrary code execution.')} <br />—
-							<span class=" font-normal dark:text-gray-400"
-								>{$i18n.t(`don't install random functions from sources you don't trust.`)}</span
-							>
-						</div>
-					</div>
-
-					<button
-						class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-						type="submit"
+					<Tooltip
+						className="flex min-w-0 flex-1 items-center"
+						content={$i18n.t('e.g. A filter to remove profanity from text')}
+						placement="top-start"
 					>
-						{$i18n.t('Save')}
-					</button>
+						<input
+							class="w-full bg-transparent outline-hidden"
+							type="text"
+							placeholder={$i18n.t('Function Description')}
+							aria-label={$i18n.t('Function Description')}
+							bind:value={meta.description}
+							required
+						/>
+					</Tooltip>
 				</div>
 			</div>
-		</form>
-	</div>
+
+			<div class="flex shrink-0 items-center gap-1">
+				{#if !edit}
+					<select
+						class="h-7 rounded-lg border border-gray-100 bg-transparent px-2 text-xs outline-hidden dark:border-gray-800"
+						bind:value={starterType}
+						on:change={(event) => selectStarterType(event.currentTarget.value)}
+						aria-label={$i18n.t('Function starter')}
+					>
+						<option value="filter">{$i18n.t('Filter')}</option>
+						<option value="event">{$i18n.t('Event')}</option>
+					</select>
+				{/if}
+			</div>
+		</div>
+
+		<div class="min-h-0 flex-1 overflow-hidden rounded-lg">
+			<CodeEditor
+				bind:this={codeEditor}
+				value={content}
+				lang="python"
+				{boilerplate}
+				className="text-[11px]"
+				onChange={(e) => {
+					_content = e;
+					if (!edit) {
+						const fm = extractFrontmatter(e);
+						if (fm.title && !name) {
+							name = formatSkillName(fm.title);
+							id = nameToId(fm.title);
+						}
+						if (fm.description && !meta.description) {
+							meta = { ...meta, description: fm.description };
+						}
+					}
+				}}
+				onSave={async () => {
+					if (formElement) {
+						formElement.requestSubmit();
+					}
+				}}
+			/>
+		</div>
+
+		<div class="shrink-0 py-2 text-xs text-gray-500">
+			<div class="flex items-center justify-between gap-3">
+				<div class="min-w-0">
+					<span class="font-normal dark:text-gray-200">{$i18n.t('Warning:')}</span>
+					{$i18n.t('Functions can execute arbitrary code.')}
+					<span class="font-normal dark:text-gray-400">
+						{$i18n.t('Only install functions from sources you trust.')}
+					</span>
+				</div>
+
+				<button
+					class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+					type="submit"
+					disabled={loading}
+				>
+					{$i18n.t(edit ? 'Save' : 'Save & Create')}
+					{#if loading}
+						<Spinner className="size-3" />
+					{/if}
+				</button>
+			</div>
+		</div>
+	</form>
 </div>
 
 <ConfirmDialog
