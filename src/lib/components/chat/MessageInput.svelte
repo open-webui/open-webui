@@ -69,6 +69,8 @@
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
 
 	import InputMenu from './MessageInput/InputMenu.svelte';
+	import ReasoningEffortSelector from './MessageInput/ReasoningEffortSelector.svelte';
+	import { parseReasoningEffortOptions } from '$lib/utils/reasoning-effort';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
 	import ModelSelector from './ModelSelector.svelte';
 
@@ -133,6 +135,14 @@
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
+	let reasoningEffortOptions = [];
+	$: reasoningEffortOptions =
+		selectedModelIds.length === 1
+			? parseReasoningEffortOptions(
+					$models.find((m) => m.id === selectedModelIds[0])?.info?.meta?.available_reasoning_effort
+				)
+			: [];
+
 	export let history;
 	export let taskIds = null;
 
@@ -144,6 +154,8 @@
 
 	export let prompt = '';
 	export let files = [];
+
+	export let params = {};
 
 	export let selectedToolIds = [];
 	export let selectedSkillIds = [];
@@ -2019,6 +2031,12 @@
 														<Knobs className="size-4" strokeWidth="1.5" />
 													</button>
 												</Tooltip>
+											</div>
+										{/if}
+
+										{#if reasoningEffortOptions.length > 0}
+											<div class="ml-1 flex shrink-0">
+												<ReasoningEffortSelector bind:params options={reasoningEffortOptions} />
 											</div>
 										{/if}
 

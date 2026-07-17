@@ -44,6 +44,8 @@
 	export let files = [];
 	export let messageInput = null;
 
+	export let params = {};
+
 	export let selectedToolIds = [];
 	export let selectedSkillIds = [];
 	export let selectedFilterIds = [];
@@ -219,6 +221,7 @@
 						bind:selectedModels
 						bind:files
 						bind:prompt
+						bind:params
 						bind:autoScroll
 						bind:selectedToolIds
 						bind:selectedSkillIds

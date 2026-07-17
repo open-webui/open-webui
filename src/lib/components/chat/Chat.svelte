@@ -3751,6 +3751,7 @@
 										bind:selectedModels
 										bind:files
 										bind:prompt
+										bind:params
 										bind:autoScroll
 										bind:selectedToolIds
 										bind:selectedSkillIds
@@ -3911,6 +3912,7 @@
 									bind:messageInput
 									bind:files
 									bind:prompt
+									bind:params
 									bind:autoScroll
 									bind:selectedToolIds
 									bind:selectedSkillIds

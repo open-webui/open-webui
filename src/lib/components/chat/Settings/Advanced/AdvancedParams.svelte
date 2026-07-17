@@ -13,6 +13,10 @@
 	export let custom = false;
 	export let layout: 'stack' | 'grid' = 'stack';
 
+	// Model meta object; when provided (model editor only), meta-backed fields
+	// like Available Reasoning Effort are shown alongside the params
+	export let meta: { available_reasoning_effort?: string | null } | null = null;
+
 	const defaultParams = {
 		// Advanced
 		stream_response: null, // Set stream responses for this model individually
@@ -487,6 +491,54 @@
 			</div>
 		{/if}
 	</div>
+
+	{#if meta}
+		<div class=" py-0.5 w-full justify-between">
+			<Tooltip
+				content={$i18n.t(
+					'Comma-separated list of reasoning effort options to show as a quick selector in the chat input. Leave the Reasoning Effort parameter unset so the selector can control it.'
+				)}
+				placement="top-start"
+				className="inline-tooltip"
+			>
+				<div class="flex w-full justify-between">
+					<div class=" self-center text-xs">
+						{$i18n.t('Available Reasoning Effort')}
+					</div>
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+						type="button"
+						on:click={() => {
+							meta.available_reasoning_effort =
+								(meta?.available_reasoning_effort ?? null) === null ? '' : null;
+						}}
+					>
+						{#if (meta?.available_reasoning_effort ?? null) === null}
+							<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+						{:else}
+							<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+						{/if}
+					</button>
+				</div>
+			</Tooltip>
+
+			{#if (meta?.available_reasoning_effort ?? null) !== null}
+				<div class="flex mt-0.5 space-x-2">
+					<div class=" flex-1">
+						<input
+							class="text-sm w-full bg-transparent outline-hidden outline-none"
+							type="text"
+							placeholder={$i18n.t(
+								'Enter comma-separated reasoning effort options (example: low,medium,high)'
+							)}
+							bind:value={meta.available_reasoning_effort}
+							autocomplete="off"
+						/>
+					</div>
+				</div>
+			{/if}
+		</div>
+	{/if}
 
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
