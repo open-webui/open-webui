@@ -75,19 +75,125 @@ rodada anterior.
 *(A lista pode voltar a fazer sentido: se, com o prompt restaurado, a Q12 ainda falhar. Aí
 seria **problema comprovado**.)*
 
-### ⚠️ Pendente antes do conserto: a linha do log
+### ✅ A linha do log fechou o diagnóstico
 
-**Há TRÊS caminhos para `geral`, não dois** — e só o log distingue:
+**Havia TRÊS caminhos para `geral`, não dois** — e só o log distinguia:
 
 | A linha diz | Diagnóstico |
 |---|---|
-| `classificador='geral'` | **o juiz decidiu** → o prompt é a causa |
+| **`classificador='geral'`** | **o juiz decidiu** → o prompt é a causa |
 | `classificador='<outra coisa>'` | **o parse não casou** e caiu no valor inicial `categoria = "geral"`, **em silêncio** — sem warning |
 | precedida de `classificador falhou` | **exceção** → nem prompt nem parse |
 
-O **segundo** eu não tinha considerado: o laço `for chave in [...]: if chave in saida` não
-tem `else` — **se nada casa, fica o valor inicial, calado**. Se for esse o caso, o prompt
-está certo e o bug é outro, mais feio.
+O **segundo eu não tinha considerado**: o laço `for chave in [...]: if chave in saida`
+não tem `else` — **se nada casa, fica o valor inicial, calado**.
+
+**A linha, trazida pelo Davi:**
+```
+12:45:03.818 | chatnd: roteador -> geral (classificador='geral')
+```
+**Primeiro caminho. O juiz decidiu.** O prompt era a causa, e o conserto foi escrito.
+
+---
+
+## Sessão 2026-07-17 (cont.) — Três fatias, e o que cada uma quase errou
+
+O Davi mediu o log e achou **três problemas com raiz comum**, na leitura dele: *"o pipe
+trata tarefa interna e histórico como se fossem a pergunta atual"*. Estava certo.
+
+| Fatia | O quê | Ganho |
+|---|---|---|
+| **A** | Tarefa interna (`__task__`) sai antes do roteador e do RAG | **⅔ do trabalho do pipe** |
+| **B** | Tira o catch-all do `geral` | Fim da regressão da Q12 |
+| **C** | Expansão de datas olha só a pergunta atual | Fim da poluição do histórico |
+
+### A — o número que explica a lentidão
+
+**Medido em 77 s de uso: 9 montagens de contexto, ~401.000 chars (~100k tokens) — SEIS
+eram tarefa interna.** Gerar título, tags e perguntas de acompanhamento disparava
+**busca híbrida + reranker + ~45k chars ao Sonnet**, em **toda conversa, de todo usuário**.
+O log dizia, com todas as letras:
+
+```
+busca -> antes='### Task: Generate a concise, 3-5 word title with an emoji...'
+```
+
+**O conserto já estava pronto no fork e ninguém tinha olhado:** `functions.py:226` lê
+`metadata['task']` e entrega em `extra_params['__task__']`. **O pipe só precisava declarar
+o parâmetro.**
+
+> **⚠️ O que a fatia A quase errou: "sair" não é "abortar".** O Open WebUI **espera a
+> resposta de volta** — o título, as tags. Um `return None` quebraria a interface. Ela
+> **encaminha** ao `ROUTER_MODEL` (`gpt-5-mini`), sem roteador e sem RAG. **Título de 3
+> palavras não precisa de Sonnet** — e não virou valve nova, por decisão do Davi: *"se um
+> dia os títulos ficarem ruins, aí viramos valve — com sintoma"*.
+
+**Dois sintomas somem junto, e não eram bugs próprios:** a **trava temporal** disparava em
+tarefa interna (*"trava temporal → geral vira documentos"* num pedido de gerar título) e a
+**expansão de datas** expandia data de outra pergunta — **porque a tarefa carrega o
+histórico**. Eram sintomas de tratar tarefa interna como pergunta.
+
+### C — a poluição real, e a correção sobre mim mesmo
+
+```
+antes='Quais os assuntos da reunião de 25/12/2027? O que a reunião de 13/07 decidiu...'
+depois='... 25122027 ... 25 dez 2027 13072026 ... 13 jul 2026'
+```
+**13 variantes, de duas perguntas diferentes.** Numa conversa real, quem muda de assunto
+continuava sendo buscado com a data anterior.
+
+**A correção NÃO foi reduzir as 3 mensagens para 1** — o Davi apontou, e estava certo:
+elas existem de propósito (*"e os outros?"* precisa do tema anterior). **São coisas
+separadas:** texto de busca = **3 mensagens**; expansão de datas = **só a última**.
+
+> **📌 Eu disse que esta era "a poluição que eu previ". NÃO É.** A que previ era **a query
+> poluindo o reranker** — e foi **refutada por teste**; está registrada como *"investigada
+> e descartada"*. Esta vem do **histórico**, e o mecanismo é outro.
+>
+> ### **Prever a classe certa pelo motivo errado não é acertar.**
+>
+> Fica registrado porque a versão vaidosa (*"eu tinha avisado"*) atrapalharia quem for ler:
+> daria crédito a um raciocínio que **estava errado** e que o teste **já matou**.
+
+### 🪤 A armadilha que só aparece quando alguém "simplifica"
+
+**A mais importante das três observações**, e a que motivou um teste próprio:
+
+```python
+onde_procurar = texto if fonte is None else fonte
+```
+
+**`fonte=""` é falsy, mas NÃO é `None`.** A distinção é o coração do conserto:
+
+| Chamada | Significa | Deve |
+|---|---|---|
+| `fonte=None` | *"não me disseram onde procurar"* | procurar no próprio `texto` (comportamento antigo) |
+| `fonte=""` | *"a pergunta atual está vazia"* | **procurar em `""` → não achar nada** |
+
+**Se alguém "simplificar" para `fonte or texto`** — que é o idioma natural em Python e
+parece idêntico — **o bug volta calado sempre que a última mensagem for vazia** (só um
+anexo, por exemplo): a expansão cai no texto de 3 mensagens e volta a puxar data antiga.
+**Sem erro, sem log, sem sintoma visível.**
+
+**Por isso existe o caso `fonte='' (falsy, nao None) -> nao expande; nao cai no texto`.**
+Ele não testa o conserto — **testa contra a simplificação**. É a única defesa possível
+contra uma mudança que *parece* uma limpeza.
+
+### 🧪 O teste da C reproduz o bug **antes** de provar o conserto
+
+O primeiro caso novo é:
+
+```
+OK   SEM fonte (o bug): expande a data ANTIGA (25/12/2027)
+```
+
+**É um teste que passa afirmando que o bug existia.** Sem ele, a suíte provaria que o
+código novo funciona — **não que havia o que consertar**. Se um dia alguém achar a `fonte`
+desnecessária, esse caso é a evidência de que ela não é enfeite.
+
+**Os 18 casos antigos passam sem uma linha de mudança** — `fonte=None` preserva o
+comportamento byte a byte. **Isso é o que torna a mudança segura, e está testado
+explicitamente** (`fonte=None == comportamento original`).
 
 **Não consigo ler os Deploy Logs do Railway** — nenhuma ferramenta minha alcança. Todos os
 logs desta semana vieram do Davi. **O conserto espera a linha.**
