@@ -67,7 +67,7 @@
 />
 
 <button
-	class="group flex cursor-pointer text-left w-full px-2.5 py-2 rounded-xl border-b border-gray-100/60 last:border-b-0 hover:bg-gray-50/70 dark:border-gray-850/60 dark:hover:bg-gray-850/50 transition"
+	class="group flex cursor-pointer text-left w-full px-2.5 py-2"
 	on:click={() => {
 		showEdit = true;
 	}}
@@ -76,7 +76,9 @@
 		<div class="flex items-center gap-3">
 			<div class="flex min-w-0 flex-1 flex-col gap-0.5 pl-1">
 				<div class="flex min-w-0 items-center gap-2">
-					<div class="text-sm font-normal line-clamp-1 text-gray-900 dark:text-gray-100">
+					<div
+						class="text-sm font-normal line-clamp-1 text-gray-900 group-hover:underline dark:text-gray-100"
+					>
 						{group.name}
 					</div>
 

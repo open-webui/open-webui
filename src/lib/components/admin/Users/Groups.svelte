@@ -20,6 +20,7 @@
 
 	let loaded = false;
 
+	/** @type {any[]} */
 	let groups = [];
 
 	let query = '';
@@ -48,6 +49,7 @@
 			return (b.member_count ?? 0) - (a.member_count ?? 0) || a.name.localeCompare(b.name);
 		});
 
+	/** @type {any} */
 	let defaultPermissions = {};
 
 	let showAddGroupModal = false;
@@ -58,6 +60,7 @@
 		adminGroupCount.set(groups.length);
 	};
 
+	/** @param {any} group */
 	const addGroupHandler = async (group) => {
 		const res = await createNewGroup(localStorage.token, group).catch((error) => {
 			toast.error(`${error}`);
@@ -70,6 +73,7 @@
 		}
 	};
 
+	/** @param {any} group */
 	const updateDefaultPermissionsHandler = async (group) => {
 		console.debug(group.permissions);
 
@@ -160,16 +164,6 @@
 			</Select>
 
 			<button
-				class="flex h-8 shrink-0 items-center px-2 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 dark:text-gray-200 transition text-xs"
-				aria-haspopup="dialog"
-				on:click={() => {
-					showDefaultPermissionsModal = true;
-				}}
-			>
-				{$i18n.t('Default permissions')}
-			</button>
-
-			<button
 				class="h-8 shrink-0 p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition font-normal text-sm flex items-center"
 				aria-label={$i18n.t('New Group')}
 				on:click={() => {
@@ -182,8 +176,11 @@
 
 		{#if filteredGroups.length !== 0}
 			<div class="mt-1 grid grid-cols-1">
-				{#each filteredGroups as group}
+				{#each filteredGroups as group, idx}
 					<GroupItem {group} {setGroups} {defaultPermissions} />
+					{#if idx < filteredGroups.length - 1}
+						<hr class="border-gray-50 dark:border-gray-850/40" />
+					{/if}
 				{/each}
 			</div>
 		{:else}
@@ -197,6 +194,36 @@
 				</div>
 			</div>
 		{/if}
+
+		<hr class="my-1 border-gray-50 dark:border-gray-850/40" />
+
+		<button
+			class="group flex cursor-pointer text-left w-full px-2.5 py-2"
+			aria-haspopup="dialog"
+			on:click={() => {
+				showDefaultPermissionsModal = true;
+			}}
+		>
+			<div class="w-full">
+				<div class="flex items-center gap-3">
+					<div class="flex min-w-0 flex-1 flex-col gap-0.5 pl-1">
+						<div class="text-sm font-normal text-gray-900 group-hover:underline dark:text-gray-100">
+							{$i18n.t('Default permissions')}
+						</div>
+
+						<div class="line-clamp-1 text-xs text-gray-500">
+							{$i18n.t('applies to all users with the "user" role')}
+						</div>
+					</div>
+
+					<div
+						class="shrink-0 px-1.5 text-xs text-gray-500 transition group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200"
+					>
+						{$i18n.t('Edit')}
+					</div>
+				</div>
+			</div>
+		</button>
 	</div>
 
 	{#if showDefaultPermissionsModal}
