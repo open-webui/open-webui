@@ -248,6 +248,21 @@ class ChatMessageTable:
             message = await db.get(ChatMessage, id)
             return ChatMessageModel.model_validate(message) if message else None
 
+    async def has_unfinished_assistant_by_chat_id(
+        self,
+        chat_id: str,
+        db: Optional[AsyncSession] = None,
+    ) -> bool:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(ChatMessage.id)
+                .where(ChatMessage.chat_id == chat_id)
+                .where(ChatMessage.role == 'assistant')
+                .where(ChatMessage.done.is_(False))
+                .limit(1)
+            )
+            return result.scalar_one_or_none() is not None
+
     async def get_messages_by_chat_id(self, chat_id: str, db: Optional[AsyncSession] = None) -> list[ChatMessageModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(

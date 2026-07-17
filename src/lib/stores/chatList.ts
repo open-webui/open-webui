@@ -3,7 +3,7 @@ import { getChatList, getPinnedChatList } from '$lib/apis/chats';
 
 type ChatListItem = {
 	id: string;
-	[key: string]: any;
+	[key: string]: unknown;
 };
 
 const chatsStore = writable<ChatListItem[] | null>(null);
@@ -88,6 +88,21 @@ export const loadNextChatListPage = async (token: string = ''): Promise<ChatList
 	} finally {
 		loadingNextPage = false;
 	}
+};
+
+export const setChatActive = (chatId: string, active: boolean): boolean => {
+	let found = false;
+	const updateChat = (chat: ChatListItem) => {
+		if (chat.id !== chatId) {
+			return chat;
+		}
+		found = true;
+		return { ...chat, active };
+	};
+
+	chatsStore.update((items) => (items ? items.map(updateChat) : items));
+	pinnedChatsStore.update((items) => items.map(updateChat));
+	return found;
 };
 
 export const resetChatListState = () => {

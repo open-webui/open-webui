@@ -26,7 +26,6 @@
 		showSidebar,
 		tags,
 		selectedFolder,
-		activeChatIds,
 		settings,
 		user
 	} from '$lib/stores';
@@ -58,6 +57,7 @@
 	export let createdAt: number | null = null;
 	export let updatedAt: number | null = null;
 	export let lastReadAt: number | null = null;
+	export let active = false;
 
 	export let selected = false;
 	export let shiftKey = false;
@@ -104,7 +104,7 @@
 
 	$: unread =
 		id !== $chatId &&
-		!$activeChatIds.has(id) &&
+		!active &&
 		(effectiveReadAt === null || (updatedAt !== null && updatedAt > effectiveReadAt));
 	$: showInlineActions = id === $chatId || confirmEdit || mouseOver || selected;
 
@@ -545,7 +545,7 @@
 			{/if}
 
 			<!-- Loading spinner for active chat (left side) -->
-			{#if $activeChatIds.has(id)}
+			{#if active}
 				<div class="shrink-0 self-center pr-2">
 					<Spinner className="size-3" />
 				</div>

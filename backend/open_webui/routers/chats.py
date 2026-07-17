@@ -14,6 +14,7 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
+from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import (
     AggregateChatStats,
     ChatBody,
@@ -55,6 +56,19 @@ CHAT_CONFIG_KEYS = {
     'CONTEXT_COMPACTION_TOKEN_CAP': 'chat.context_compaction.token_cap',
     'CONTEXT_COMPACTION_PROMPT_TEMPLATE': 'chat.context_compaction.prompt_template',
 }
+
+
+async def add_active_state_to_chat_list(
+    request: Request, chat_list: list[ChatTitleIdResponse]
+) -> list[ChatTitleIdResponse]:
+    for chat in chat_list:
+        chat.active = False
+        if not await has_active_tasks(request.app.state.redis, chat.id):
+            continue
+
+        chat.active = await ChatMessages.has_unfinished_assistant_by_chat_id(chat.id)
+
+    return chat_list
 
 
 class ChatConfigForm(BaseModel):
@@ -137,6 +151,7 @@ async def require_chat_import_permission(request: Request, user, db: AsyncSessio
 @router.get('/', response_model=list[ChatTitleIdResponse])
 @router.get('/list', response_model=list[ChatTitleIdResponse])
 async def get_session_user_chat_list(
+    request: Request,
     user=Depends(get_verified_user),
     page: int | None = None,
     include_pinned: bool | None = False,
@@ -148,7 +163,7 @@ async def get_session_user_chat_list(
             limit = 60
             skip = (page - 1) * limit
 
-            return await Chats.get_chat_title_id_list_by_user_id(
+            chats = await Chats.get_chat_title_id_list_by_user_id(
                 user.id,
                 include_folders=include_folders,
                 include_pinned=include_pinned,
@@ -157,12 +172,13 @@ async def get_session_user_chat_list(
                 db=db,
             )
         else:
-            return await Chats.get_chat_title_id_list_by_user_id(
+            chats = await Chats.get_chat_title_id_list_by_user_id(
                 user.id,
                 include_folders=include_folders,
                 include_pinned=include_pinned,
                 db=db,
             )
+        return await add_active_state_to_chat_list(request, chats)
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
@@ -605,6 +621,7 @@ async def delete_all_user_chats(
 
 @router.get('/list/user/{user_id}', response_model=list[ChatTitleIdResponse])
 async def get_user_chat_list_by_user_id(
+    request: Request,
     user_id: str,
     page: int | None = None,
     query: str | None = None,
@@ -629,9 +646,10 @@ async def get_user_chat_list_by_user_id(
     if direction:
         filter['direction'] = direction
 
-    return await Chats.get_chat_list_by_user_id(
+    chats = await Chats.get_chat_list_by_user_id(
         user_id, include_archived=True, filter=filter, skip=skip, limit=limit, db=db
     )
+    return await add_active_state_to_chat_list(request, chats)
 
 
 ############################
@@ -738,6 +756,7 @@ async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user
 
 @router.get('/search', response_model=list[ChatTitleIdResponse])
 async def search_user_chats(
+    request: Request,
     text: str,
     page: int | None = None,
     user=Depends(get_verified_user),
@@ -763,7 +782,7 @@ async def search_user_chats(
                 log.debug(f'deleting tag: {tag_id}')
                 await Tags.delete_tag_by_name_and_user_id(tag_id, user.id, db=db)
 
-    return chat_list
+    return await add_active_state_to_chat_list(request, chat_list)
 
 
 ############################
@@ -786,8 +805,9 @@ async def get_chats_by_folder_id(
     ]
 
 
-@router.get('/folder/{folder_id}/list')
+@router.get('/folder/{folder_id}/list', response_model=list[ChatTitleIdResponse])
 async def get_chat_list_by_folder_id(
+    request: Request,
     folder_id: str,
     page: int | None = 1,
     user=Depends(get_verified_user),
@@ -798,10 +818,7 @@ async def get_chat_list_by_folder_id(
         skip = (page - 1) * limit
 
         chats = await Chats.get_chats_by_folder_id_and_user_id(folder_id, user.id, skip=skip, limit=limit, db=db)
-        return [
-            {'title': chat.title, 'id': chat.id, 'updated_at': chat.updated_at, 'last_read_at': chat.last_read_at}
-            for chat in chats
-        ]
+        return await add_active_state_to_chat_list(request, chats)
 
     except Exception as e:
         log.exception(e)
@@ -814,8 +831,11 @@ async def get_chat_list_by_folder_id(
 
 
 @router.get('/pinned', response_model=list[ChatTitleIdResponse])
-async def get_user_pinned_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    return await Chats.get_pinned_chats_by_user_id(user.id, db=db)
+async def get_user_pinned_chats(
+    request: Request, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
+    chats = await Chats.get_pinned_chats_by_user_id(user.id, db=db)
+    return await add_active_state_to_chat_list(request, chats)
 
 
 ############################
@@ -908,6 +928,7 @@ async def get_all_user_chats_in_db(user=Depends(get_admin_user), db: AsyncSessio
 
 @router.get('/archived', response_model=list[ChatTitleIdResponse])
 async def get_archived_session_user_chat_list(
+    request: Request,
     page: int | None = None,
     query: str | None = None,
     order_by: str | None = None,
@@ -929,13 +950,14 @@ async def get_archived_session_user_chat_list(
     if direction:
         filter['direction'] = direction
 
-    return await Chats.get_archived_chat_list_by_user_id(
+    chats = await Chats.get_archived_chat_list_by_user_id(
         user.id,
         filter=filter,
         skip=skip,
         limit=limit,
         db=db,
     )
+    return await add_active_state_to_chat_list(request, chats)
 
 
 ############################
@@ -1103,6 +1125,7 @@ class TagFilterForm(TagForm):
 
 @router.post('/tags', response_model=list[ChatTitleIdResponse])
 async def get_user_chat_list_by_tag_name(
+    request: Request,
     form_data: TagFilterForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
@@ -1113,7 +1136,7 @@ async def get_user_chat_list_by_tag_name(
     if len(chats) == 0:
         await Tags.delete_tag_by_name_and_user_id(form_data.name, user.id, db=db)
 
-    return chats
+    return await add_active_state_to_chat_list(request, chats)
 
 
 ############################

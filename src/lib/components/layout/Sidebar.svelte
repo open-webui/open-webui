@@ -25,10 +25,9 @@
 		models,
 		selectedFolder,
 		WEBUI_NAME,
-		sidebarWidth,
-		activeChatIds
+		sidebarWidth
 	} from '$lib/stores';
-	import { loadNextChatListPage, refreshChatList } from '$lib/stores/chatList';
+	import { loadNextChatListPage, refreshChatList, setChatActive } from '$lib/stores/chatList';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -52,7 +51,6 @@
 	} from '$lib/apis/folders';
 	import { createNewNote, getPinnedNoteList, toggleNotePinnedStatusById } from '$lib/apis/notes';
 	import { updateUserSettings } from '$lib/apis/users';
-	import { checkActiveChats } from '$lib/apis/tasks';
 	import { createNoteHandler } from '$lib/components/notes/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
@@ -110,7 +108,7 @@
 	let showSharedFolders = false;
 
 	let folders = {};
-	let folderRegistry = {};
+	let folderRegistry: Record<string, { setFolderItems?: () => unknown }> = {};
 
 	let newFolderId = null;
 
@@ -366,16 +364,18 @@
 			})(),
 			(async () => {
 				console.log('Init chat list');
-				const result = await refreshChatList(localStorage.token, { refreshPinned: true });
-				if (result.accepted) {
-					await Promise.all(
-						Object.values(folderRegistry).map((folder: any) => folder?.setFolderItems?.())
-					);
-					allChatsLoaded = result.allLoaded;
-					chatListReady = true;
-				}
+				await refreshChatRows();
 			})()
 		]);
+	};
+
+	const refreshChatRows = async () => {
+		const result = await refreshChatList(localStorage.token, { refreshPinned: true });
+		if (result.accepted) {
+			await Promise.all(Object.values(folderRegistry).map((folder) => folder?.setFolderItems?.()));
+			allChatsLoaded = result.allLoaded;
+			chatListReady = true;
+		}
 	};
 
 	const loadMoreChats = async () => {
@@ -610,17 +610,6 @@
 						await initChannels();
 					}
 					await initChatList();
-
-					// Check which chats have active tasks
-					const allChatIds = [...$chats.map((c) => c.id), ...$pinnedChats.map((c) => c.id)];
-					if (allChatIds.length > 0) {
-						try {
-							const res = await checkActiveChats(localStorage.token, allChatIds);
-							activeChatIds.set(new Set(res.active_chat_ids || []));
-						} catch (e) {
-							console.debug('Failed to check active chats:', e);
-						}
-					}
 				}
 			}),
 			settings.subscribe((value) => {
@@ -649,6 +638,7 @@
 
 		const socketInstance = $socket;
 		socketInstance?.on('events', chatActiveEventHandler);
+		socketInstance?.on('connect', refreshChatRows);
 
 		await tick();
 		initPinnedMenuSortable();
@@ -672,28 +662,24 @@
 			}
 
 			socketInstance?.off('events', chatActiveEventHandler);
+			socketInstance?.off('connect', refreshChatRows);
 		};
 	});
 
 	// Handler for chat events (defined outside onMount for proper cleanup)
-	const chatActiveEventHandler = (event: {
+	const chatActiveEventHandler = async (event: {
 		chat_id: string;
 		message_id: string;
-		data: { type: string; data: any };
+		data: { type: string; data: { active?: boolean } };
 	}) => {
 		if (event.data?.type === 'chat:active') {
-			const { active } = event.data.data;
-			activeChatIds.update((ids) => {
-				const newSet = new Set(ids);
-				if (active) {
-					newSet.add(event.chat_id);
-				} else {
-					newSet.delete(event.chat_id);
-				}
-				return newSet;
-			});
+			const active = event.data.data.active ?? false;
+			const found = setChatActive(event.chat_id, active);
+			if (!found && active) {
+				await refreshChatRows();
+			}
 		} else if (event.data?.type === 'chat:list') {
-			initChatList();
+			refreshChatRows();
 		}
 	};
 
@@ -1416,6 +1402,7 @@
 												createdAt={chat.created_at}
 												updatedAt={chat.updated_at}
 												lastReadAt={chat.last_read_at}
+												active={chat.active ?? false}
 												{shiftKey}
 												selected={selectedChatId === chat.id}
 												on:select={() => {
@@ -1479,6 +1466,7 @@
 										createdAt={chat.created_at}
 										updatedAt={chat.updated_at}
 										lastReadAt={chat.last_read_at}
+										active={chat.active ?? false}
 										{shiftKey}
 										selected={selectedChatId === chat.id}
 										on:select={() => {
