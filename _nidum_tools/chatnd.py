@@ -1,9 +1,71 @@
 """
 title: ChatND
 author: Nidum
-version: 1.29.0
+version: 1.31.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum. Na rota de imagem, gera a imagem via Gemini (motor oculto). O usuario nao escolhe o motor.
 changelog:
+  1.31.0:
+    - FATIA 1+2 da reforma: SEIS rotas viram QUATRO. 'rapido', 'diaadia' e 'raciocinio'
+      viram UMA: 'geral' (= "fora do contexto Nidum"). Restam: imagem, arquivo,
+      documentos, geral. UM eixo por vez: e da Nidum (documentos) ou nao e (geral);
+      ferramentas a parte.
+    - POR QUE AS TRES MORREM JUNTAS: nunca foram distincoes SEMANTICAS - eram escolha de
+      MODELO (mini/padrao/topo) fantasiada de categoria. O classificador nao tinha como
+      acertar: onde termina "trivial" e comeca "conversa geral"? E 'raciocinio' era o
+      pior dos tres - Sonnet SEM base (so 'documentos' faz RAG). Medicao que fechou:
+      grep no log de um dia inteiro de uso -> ZERO ocorrencias de "roteador ->
+      raciocinio". A rota existia e nunca era escolhida.
+    - MODELO_GERAL aponta para o MESMO wrapper do antigo 'Dia A Dia' de proposito: o
+      Gerador de Arquivos ja esta anexado a ele. Wrapper novo exigiria lembrar de
+      reanexar a tool - e o clique que ninguem lembra.
+    - DECISAO DA GOVERNANCA que define o modelo de 'geral': Sonnet, NAO Haiku. Medido
+      por Davi: gpt-5-mini errou SPE e SCP - AS DUAS definicoes - e construiu duas
+      paginas de tabelas e exemplos "reais" em cima do erro. E SPE x SCP e o tema da ata
+      de 08/07: um coautor receberia consultoria inventada sobre decisao real da Nidum.
+    - TRAVA 2 (nova): _menciona_nidum. Se a pessoa escreveu "Nidum", vai para a base -
+      nao ha juizo a fazer. Palavra INTEIRA ( nas duas pontas): "nidumbrasil.com.br"
+      nao dispara. Cobre o pior caso concreto: "qual o proposito da Nidum?" caindo em
+      'geral' - que com a fatia 3 (web) voltaria uma empresa HOMONIMA do Google, com
+      confianca e citacao.
+    - TRAVA 1 mantida (_tem_marca_temporal) e agora testada contra regressao.
+    - AS DUAS SAO DETERMINISTICAS de proposito: elas tem que funcionar EXATAMENTE
+      quando o classificador nao funciona. Assimetria que decide o default: falso
+      positivo custa ~1s de busca vazia; falso negativo custa resposta inventada sobre a
+      Nidum. NA DUVIDA, BASE.
+    - teste_travas.py (novo): 22 casos puros, incluindo o BURACO CONHECIDO E ACEITO -
+      pergunta institucional sem a palavra "Nidum" e sem marca temporal ("como funciona
+      o EGP aqui?") depende SO do classificador. Esta no teste para ficar VISIVEL, nao
+      para ser descoberto em producao.
+    - PADRAO DE FALHA do classificador: 'geral' (era 'diaadia'). Escolha consciente: o
+      contrario mascararia a queda (o sintoma viraria "lentidao", nao "erro"), e as
+      travas deterministicas rodam DEPOIS e resgatam o institucional.
+  1.30.0:
+    - HOTFIX (2 linhas) - 'raciocinio' respondia sobre a NIDUM SEM BASE, e a triade ainda
+      mandava ele "ancorar nos documentos fundadores" que ele nao carregava.
+      SO 'documentos' faz RAG: o contexto e montado sob 'if categoria == "documentos"'.
+      'raciocinio' e Sonnet SEM base. E o gate da triade incluia 'raciocinio'. Resultado:
+      pergunta Nidum profunda -> sem acervo + instrucao para ancorar na Fonte = invencao
+      com autoridade de doutrina.
+    - NAO E BORDA RARA, e o proprio prompt provava: (a) a REGRA DE DESEMPATE cobria
+      'rapido'/'diaadia' x 'documentos' e NAO cobria 'raciocinio' x 'documentos' - o par
+      ambiguo mais perigoso era o unico sem desempate; (b) as descricoes colidem
+      ("sociedade, participacao, decisoes" em documentos x "decisoes complexas,
+      trade-offs" em raciocinio); (c) o prompt LISTAVA 'raciocinio | triade' como saida
+      valida - quem escreveu ja esperava pergunta Nidum caindo la.
+    - SINTOMA (1 linha): triade so em 'documentos'. Nao se pede ancoragem nos fundadores
+      a quem nao os carrega.
+    - CAUSA (1 linha): REGRA DE DESEMPATE 2 - tema Nidum e 'documentos' MESMO sendo
+      decisao complexa/trade-off; 'raciocinio' so quando o tema NAO for a Nidum. Nao e
+      regra nova: e o vies "na duvida, base" ja decidido para a reforma, aplicado antes
+      porque o bug esta no ar. Falso positivo custa ~1s de busca e '[Fora do acervo]';
+      falso negativo custa consultoria inventada sobre decisao real da Nidum.
+    - CASO QUE MOTIVOU (medido por Davi): gpt-5-mini errou SPE e SCP - AS DUAS definicoes
+      - e construiu duas paginas de tabelas, diagramas e exemplos "reais" (3M, Magazine
+      Luiza) em cima do erro. Articulado, confiante, falso. SPE x SCP e o tema da ata de
+      08/07 (estruturacao da participacao de investidores): um coautor perguntaria e
+      receberia consultoria inventada sobre uma decisao REAL da Nidum.
+    - NAO e a reforma: e o freio de mao ate a fatia 1 (fusao das rotas), onde o
+      'raciocinio' morre. Vai junto da 1.29.0 no mesmo republish.
   1.29.0:
     - DOUTRINA MORTA ARRANCADA (nao desligada). Remove o ramo "pedido fundacional ->
       injeta v29+v30 INTEIROS": a valve FUNDADORES_INTEIROS_SE_GATILHO, o _docs_
@@ -372,22 +434,27 @@ CLASSIFICADOR = (
     "atas na base institucional. Voce NAO tem calendario nem agenda do usuario: NUNCA "
     "responda 'nao tenho acesso ao calendario/agenda' - trate como 'documentos' e "
     "deixe o motor consultar o acervo.\n"
-    "REGRA DE DESEMPATE: na duvida entre QUALQUER conversa ('rapido'/'diaadia') e "
-    "'documentos', prefira 'documentos' - errar consultando e barato (o acervo "
-    "responde '[Fora do acervo]' se nao tiver), errar sem consultar entrega resposta "
-    "generica como se a base nao existisse.\n"
-    "rapido: saudacoes, perguntas triviais, traducoes curtas, classificacoes simples.\n"
-    "diaadia: conversa geral, redacao, organizacao de ideias, analise comum, "
-    "perguntas sobre uma imagem ja enviada (analise visual, sem gerar imagem).\n"
-    "raciocinio: decisoes complexas, planejamento, analise profunda, trade-offs.\n"
-    "Responda somente com uma destas: imagem, arquivo, documentos, rapido, diaadia, raciocinio.\n"
+    "REGRA DE DESEMPATE (a mais importante deste prompt): na duvida entre 'geral' e "
+    "'documentos', responda SEMPRE 'documentos'. Os dois erros NAO custam o mesmo: "
+    "mandar para 'documentos' algo que nao e da Nidum custa uma busca vazia - o acervo "
+    "responde '[Fora do acervo]' e a conversa segue normalmente; mandar para 'geral' "
+    "algo QUE E da Nidum entrega resposta inventada, ou buscada na internet, sobre a "
+    "propria Nidum. NA DUVIDA, BASE.\n"
+    "geral: TUDO que NAO e sobre a Nidum. Saudacoes, perguntas triviais, traducoes, "
+    "conversa geral, redacao, organizacao de ideias, analise comum, perguntas sobre uma "
+    "imagem ja enviada (analise visual, sem gerar imagem) e TAMBEM decisoes complexas, "
+    "planejamento, analise profunda e trade-offs - desde que o tema NAO seja a Nidum. "
+    "Se o tema for a Nidum, e 'documentos', por mais profunda que seja a pergunta: "
+    "'devemos estruturar a participacao dos investidores como SPE ou SCP?' e "
+    "'documentos', nao 'geral'.\n"
+    "Responda somente com uma destas: imagem, arquivo, documentos, geral.\n"
     "MARCADOR DE ESTRUTURA (triade) - excecao a 'apenas a palavra-chave': se (e SO "
-    "se) a categoria for 'documentos' ou 'raciocinio' E o pedido for sobre "
+    "se) a categoria for 'documentos' E o pedido for sobre "
     "MOVIMENTO, RELACAO, GERACAO ou TRANSFORMACAO (ex.: 'como os ecossistemas "
     "podem interagir para gerar regeneracao num ecossistema'), acrescente ' | "
     "triade' APOS a palavra-chave. Para pedidos de INVENTARIO, DEFINICAO ou FATO "
     "(ex.: 'quais os ecossistemas da Nidum'), NAO acrescente. Exemplos validos: "
-    "'documentos | triade', 'raciocinio | triade', 'documentos', 'raciocinio'."
+    "'documentos | triade', 'documentos', 'geral'."
 )
 
 GERADOR = (
@@ -1017,15 +1084,37 @@ def _tem_marca_temporal(texto):
     return bool(_RE_MARCA_TEMPORAL.search(texto or ""))
 
 
+# Palavra INTEIRA, sem acento, caixa ignorada. \b nas duas pontas de proposito:
+# sem isso, "nidumbrasil.com.br" ou um nome proprio colado dariam falso positivo.
+# Nao inclui apelidos ("a casa", "aqui", "a rede"): a trava e para o caso ABSOLUTO
+# (a pessoa escreveu o nome) - o resto e juizo, e juizo e do classificador. Uma
+# trava deterministica que tenta adivinhar deixa de ser trava e vira palpite.
+_RE_MENCIONA_NIDUM = re.compile(r"\bnidum\b", re.IGNORECASE)
+
+
+def _menciona_nidum(texto):
+    # Se a pessoa escreveu "Nidum", o assunto e a Nidum: nao ha o que interpretar.
+    # Roda no texto NORMALIZADO (sem acento) so por simetria com o resto do pipe -
+    # 'Nidum' nao tem acento, mas normalizar evita surpresa com caixa/unicode.
+    return bool(_RE_MENCIONA_NIDUM.search(_normalizar_ascii(texto or "")))
+
+
 class Pipe:
     class Valves(BaseModel):
         ROUTER_MODEL: str = Field(default="gpt-5-mini")
         GERADOR_MODEL: str = Field(default="gpt-5.1")
         TOOL_ID: str = Field(default="gerador_de_arquivos_nidum")
-        MODELO_RAPIDO: str = Field(default="nidum-10---rpido")
-        MODELO_DIADIA: str = Field(default="nidum-10---dia-a-dia")
+        # DUAS rotas de conversa viraram UMA (1.31.0). 'rapido', 'diaadia' e
+        # 'raciocinio' nunca foram distincoes SEMANTICAS - eram escolha de MODELO
+        # (mini / padrao / topo) fantasiada de categoria, e o classificador nao tinha
+        # como acertar ("onde termina 'trivial' e comeca 'conversa geral'?"). Agora ha
+        # UM eixo por vez: e da Nidum (documentos) ou nao e (geral). Ferramentas
+        # (imagem/arquivo) a parte.
+        # MODELO_GERAL aponta para o MESMO wrapper que era o 'Dia A Dia' - de proposito:
+        # o Gerador de Arquivos ja esta anexado a ele. Criar wrapper novo exigiria
+        # lembrar de reanexar a tool, e e o clique que ninguem lembra.
+        MODELO_GERAL: str = Field(default="nidum-10---dia-a-dia")
         MODELO_DOCUMENTOS: str = Field(default="nidum-10---documentos")
-        MODELO_RACIOCINIO: str = Field(default="nidum-20---raciocinio")
         BASE_CONHECIMENTO_ID: str = Field(
             default="f2c8a48c-59f5-4c93-bd5c-b3d9516d7451"
         )
@@ -1746,64 +1835,92 @@ class Pipe:
         user = await Users.get_user_by_id(__user__["id"])
 
         rota = {
-            "rapido": self.valves.MODELO_RAPIDO,
-            "diaadia": self.valves.MODELO_DIADIA,
+            "geral": self.valves.MODELO_GERAL,
             "documentos": self.valves.MODELO_DOCUMENTOS,
-            "raciocinio": self.valves.MODELO_RACIOCINIO,
         }
         rotulo = {
             "imagem": "Geracao de imagem",
             "arquivo": "Geracao de arquivo",
-            "rapido": "Rapido",
-            "diaadia": "Dia a dia",
+            "geral": "Fora do contexto Nidum",
             "documentos": "Documentos",
-            "raciocinio": "Raciocinio",
         }
 
         texto = _ultimo_texto_usuario(body.get("messages"))
-        categoria = "diaadia"
+        categoria = "geral"
         saida = ""
 
         # v1.12.0: atalho - saudacao trivial em conversa nova nao paga
         # classificador (latencia menor no caso mais comum).
         if self.valves.ATALHO_SAUDACAO and _e_saudacao_trivial(body.get("messages")):
-            categoria = "rapido"
+            categoria = "geral"
         else:
             try:
                 saida = await self._classificar(
                     __request__, user, body.get("messages")
                 )
-                for chave in [
-                    "imagem", "arquivo", "documentos",
-                    "raciocinio", "rapido", "diaadia",
-                ]:
+                for chave in ["imagem", "arquivo", "documentos", "geral"]:
                     if chave in saida:
                         categoria = chave
                         break
             except Exception:
+                # PADRAO DE FALHA: 'geral'. Escolha consciente e desconfortavel - se o
+                # classificador cai, a pergunta vai para a rota SEM base. O contrario
+                # (padrao 'documentos') pareceria mais seguro, mas mandaria TODA falha
+                # de classificador para a busca, inclusive saudacao, e mascararia a
+                # queda: o sintoma viraria "lentidao", nao "erro". As duas travas
+                # abaixo (marca temporal e mencao a Nidum) rodam DEPOIS deste except e
+                # resgatam o que for institucional - e sao deterministicas, entao
+                # funcionam justamente quando o classificador nao esta funcionando.
                 log.exception(
-                    "chatnd: classificador falhou; usando rota padrao diaadia"
+                    "chatnd: classificador falhou; usando rota padrao 'geral' "
+                    "(as travas deterministicas ainda podem levar para a base)"
                 )
-                categoria = "diaadia"
+                categoria = "geral"
 
-        # Fix B (rede de seguranca deterministica): pergunta com MARCA TEMPORAL
-        # (data/reuniao/ata/convergencia/quando) que o classificador jogou em conversa
-        # generica (rapido/diaadia) e provavelmente sobre o acervo -> forca documentos.
-        # Errar consultando e barato (o motor responde [Fora do acervo]); errar sem
-        # consultar entrega resposta generica como se a base nao existisse.
-        if categoria in ("rapido", "diaadia") and _tem_marca_temporal(texto):
+        # ---------------------------------------------------------------------
+        # AS DUAS TRAVAS DETERMINISTICAS. Existem porque o juiz e um LLM e o desenho
+        # de UMA fronteira ("e da Nidum?") poe TODO o peso nela. O custo dos dois
+        # erros e assimetrico, e a assimetria decide o default:
+        #   falso positivo (mandar para a base algo que nao e da Nidum)
+        #       -> ~1s de busca vazia, o motor responde [Fora do acervo], segue.
+        #   falso negativo (mandar para 'geral' algo QUE E da Nidum)
+        #       -> resposta inventada sobre a Nidum. Com a fatia 3 (web na rota
+        #          'geral'), vira resposta do GOOGLE sobre uma empresa homonima,
+        #          com confianca e citacao. Erro silencioso, o pior tipo.
+        # Por isso: NA DUVIDA, BASE. E por isso as travas sao deterministicas -
+        # elas tem que funcionar EXATAMENTE quando o classificador nao funciona.
+        # ---------------------------------------------------------------------
+
+        # TRAVA 1 (v1.22.0) - MARCA TEMPORAL. Nasceu de um bug real: "reuniao de
+        # 08/07" foi classificada como conversa e nunca chegou a base. Data, 'reuniao',
+        # 'ata', 'convergencia', 'quando' -> a Nidum REGISTRA isso no acervo.
+        if categoria == "geral" and _tem_marca_temporal(texto):
             categoria = "documentos"
+            log.info("chatnd: trava temporal -> geral vira documentos")
+
+        # TRAVA 2 (1.31.0) - MENCAO EXPLICITA A NIDUM. Se a pessoa escreveu "Nidum",
+        # o assunto e a Nidum - nao ha juizo a fazer. Cobre o pior caso concreto:
+        # "qual o proposito da Nidum?" classificada como 'geral' iria para a internet
+        # e voltaria com uma empresa homonima. Barata: quando a base nao tem, o motor
+        # responde [Fora do acervo] e a conversa segue.
+        if categoria == "geral" and _menciona_nidum(texto):
+            categoria = "documentos"
+            log.info("chatnd: trava 'menciona Nidum' -> geral vira documentos")
 
         log.info(
             "chatnd: roteador -> %s (classificador=%r)", categoria, saida or "(atalho)"
         )
 
-        # Triade Nidum (Opcao A): so quando o classificador marcou '| triade' e
-        # a rota e documentos ou raciocinio (gate de aplicabilidade).
+        # Triade: so em 'documentos' - a UNICA rota que carrega a base. 'raciocinio'
+        # SAIU do gate na 1.30.0 (era "documentos ou raciocinio"): ele NAO faz RAG (o
+        # contexto so e montado sob 'if categoria == "documentos"') e a VOZ_TRIADE manda
+        # "ancore ... na Intencao Reta e nos documentos fundadores". Pedir ancoragem nos
+        # fundadores a uma rota que NAO OS CARREGA e convite formal a inventar doutrina -
+        # com a autoridade de quem parece estar citando a Fonte.
         aplicar_triade = (
             self.valves.TRIADE_ATIVA
             and ("triade" in saida)
-            and categoria in ("documentos", "raciocinio")
+            and categoria == "documentos"
         )
 
         if self.valves.MOSTRAR_ROTA:
@@ -1888,7 +2005,7 @@ class Pipe:
                 body.get("messages") or [], VOZ_TRIADE
             )
 
-        body["model"] = rota.get(categoria, self.valves.MODELO_DIADIA)
+        body["model"] = rota.get(categoria, self.valves.MODELO_GERAL)
         try:
             resp = await generate_chat_completion(
                 __request__, body, user, bypass_filter=True
