@@ -1,9 +1,29 @@
 """
 title: ChatND
 author: Nidum
-version: 1.31.0
+version: 1.32.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum. Na rota de imagem, gera a imagem via Gemini (motor oculto). O usuario nao escolhe o motor.
 changelog:
+  1.32.0:
+    - FATIA A - TAREFA INTERNA NAO PAGA MAIS ROTEADOR NEM RAG. O Open WebUI usa o MODELO
+      SELECIONADO para gerar titulo do chat, tags e perguntas de acompanhamento. Como o
+      modelo selecionado e o ChatND, elas caiam no pipe e eram tratadas como pergunta de
+      coautor: classificador + busca hibrida + reranker + ~45k chars de contexto.
+    - MEDIDO em producao (77 s de uso): 9 montagens de contexto, ~401.000 chars (~100k
+      tokens) - SEIS eram tarefa interna. DOIS TERCOS do trabalho do pipe era desperdicio.
+      ~3 buscas fantasma POR CONVERSA, DE TODO USUARIO. Era a explicacao da lentidao.
+    - O conserto ja estava pronto no fork e ninguem tinha olhado: functions.py:226 le
+      metadata['task'] e entrega em extra_params['__task__'] (functions.py:258). O pipe so
+      precisava DECLARAR o parametro.
+    - NAO aborta: o Open WebUI ESPERA o titulo/as tags de volta. Encaminha ao ROUTER_MODEL
+      (gpt-5-mini), o barato da casa - titulo de 3 palavras nao precisa de Sonnet. Sem
+      valve nova: se um dia os titulos ficarem ruins, vira valve COM SINTOMA.
+    - DOIS SINTOMAS SOMEM JUNTO, e nao eram bugs proprios: (a) a TRAVA TEMPORAL disparava
+      em tarefa interna ("trava temporal -> geral vira documentos" num pedido de gerar
+      titulo), porque a tarefa carrega o historico; (b) a EXPANSAO DE DATAS expandia data
+      de pergunta anterior. Os dois eram sintoma de tratar tarefa interna como pergunta.
+    - NAO precisa do banco: nao muda resposta nenhuma, so evita trabalho. A prova e o LOG
+      (antes: 9 montagens em 77 s; depois: so as reais).
   1.31.0:
     - FATIA 1+2 da reforma: SEIS rotas viram QUATRO. 'rapido', 'diaadia' e 'raciocinio'
       viram UMA: 'geral' (= "fora do contexto Nidum"). Restam: imagem, arquivo,
@@ -1831,8 +1851,48 @@ class Pipe:
             except Exception:
                 log.exception("chatnd: falha ao emitir status")
 
-    async def pipe(self, body, __user__, __request__, __event_emitter__=None):
+    async def pipe(self, body, __user__, __request__, __event_emitter__=None,
+                   __task__=None):
         user = await Users.get_user_by_id(__user__["id"])
+
+        # ---------------------------------------------------------------------
+        # TAREFA INTERNA -> sai ANTES do roteador e do RAG (1.32.0).
+        #
+        # O Open WebUI usa o MODELO SELECIONADO para tarefas de bastidor: gerar o TITULO
+        # do chat, as TAGS e as PERGUNTAS DE ACOMPANHAMENTO. Como o modelo selecionado e
+        # o ChatND, elas caiam aqui e eram tratadas como pergunta de coautor:
+        # classificador + busca hibrida + reranker + injecao de contexto.
+        #
+        # CUSTO MEDIDO em producao (77 s de uso): 9 montagens de contexto, ~401.000 chars
+        # (~100k tokens) - SEIS delas eram tarefa interna. DOIS TERCOS do trabalho do pipe
+        # era desperdicio. Sao ~3 buscas fantasma POR CONVERSA, DE TODO USUARIO - e eram
+        # a explicacao da lentidao.
+        #
+        # DOIS SINTOMAS QUE SOMEM JUNTO (nao eram bugs proprios): a tarefa carrega o
+        # historico da conversa, entao a TRAVA TEMPORAL disparava nela ("trava temporal ->
+        # geral vira documentos" num pedido de gerar titulo) e a EXPANSAO DE DATAS
+        # expandia data de outra pergunta.
+        #
+        # O Open WebUI JA MARCA essas chamadas e JA ENTREGA ao pipe: functions.py:226 le
+        # metadata['task'] e passa em extra_params['__task__'] (functions.py:258). O pipe
+        # so precisava DECLARAR o parametro. Valores: title_generation, tags_generation,
+        # follow_up_generation, emoji_generation, query_generation, autocomplete_generation
+        # (constants.py:108, enum TASKS).
+        #
+        # NAO E "abortar": o Open WebUI ESPERA a resposta (o titulo, as tags). Por isso
+        # encaminha ao ROUTER_MODEL - o barato da casa, que ja existe. Titulo de 3 palavras
+        # nao precisa de Sonnet. Se um dia os titulos ficarem ruins, isto vira valve - com
+        # sintoma, nao por precaucao.
+        # ---------------------------------------------------------------------
+        if __task__:
+            body["model"] = self.valves.ROUTER_MODEL
+            log.info(
+                "chatnd: tarefa interna '%s' -> %s (sem roteador, sem RAG)",
+                __task__, self.valves.ROUTER_MODEL,
+            )
+            return await generate_chat_completion(
+                __request__, body, user, bypass_filter=True
+            )
 
         rota = {
             "geral": self.valves.MODELO_GERAL,
