@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import base64
+from typing import Any
+
+from open_webui.models.config import Config
 
 
 def langfuse_basic_auth_header(public_key: str, secret_key: str) -> dict[str, str]:
@@ -24,6 +27,30 @@ def merge_langfuse_connection_secrets(
         merged.append(updated)
 
     return merged
+
+
+async def get_langfuse_connections_with_secrets() -> list[dict[str, Any]]:
+    """Load Langfuse connections from Config, including secret keys."""
+    return list(await Config.get('langfuse.connections') or [])
+
+
+async def get_connection_by_id(connection_id: str) -> dict[str, Any] | None:
+    """Return a Langfuse connection by id, or None if not found."""
+    if not connection_id:
+        return None
+    return next(
+        (connection for connection in await get_langfuse_connections_with_secrets() if connection.get('id') == connection_id),
+        None,
+    )
+
+
+async def list_enabled_connections() -> list[dict[str, Any]]:
+    """Return enabled Langfuse connections with secrets (for server-side API calls)."""
+    return [
+        connection
+        for connection in await get_langfuse_connections_with_secrets()
+        if connection.get('enabled', True)
+    ]
 
 
 def redact_langfuse_connections_for_response(connections: list[dict] | None) -> list[dict]:

@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from open_webui.utils.system_prompt import resolve_model_system_prompt
+from open_webui.utils.system_prompt_cache import SYSTEM_PROMPT_CACHE
 
 
 def _make_model(system: str | None = None, model_id: str = 'model-1'):
@@ -42,6 +43,10 @@ def _make_version(**kwargs):
     }
     defaults.update(kwargs)
     return SimpleNamespace(**defaults)
+
+
+def setup_function():
+    SYSTEM_PROMPT_CACHE.clear()
 
 
 @pytest.mark.asyncio
@@ -212,3 +217,93 @@ async def test_binding_lookup_error_falls_back_to_mirror():
         result = await resolve_model_system_prompt(model, {}, None, bypass=False)
 
     assert result == 'Safe mirror'
+
+
+@pytest.mark.asyncio
+async def test_langfuse_live_fetch_updates_cache_and_metadata():
+    model = _make_model('Mirror fallback')
+    binding = _make_binding(
+        source='langfuse',
+        connection_id='conn-1',
+        external_name='movie-critic',
+        external_label='production',
+        cached_content='stale cache',
+        cached_at=1,
+        cache_ttl_seconds=300,
+    )
+    metadata: dict = {}
+
+    with (
+        patch(
+            'open_webui.utils.system_prompt.get_cached_system_prompt',
+            return_value=None,
+        ),
+        patch(
+            'open_webui.utils.system_prompt._get_default_cache_ttl_seconds',
+            new_callable=AsyncMock,
+            return_value=300,
+        ),
+        patch(
+            'open_webui.utils.system_prompt.ModelSystemPromptBindings.get_by_model_id',
+            new_callable=AsyncMock,
+            return_value=binding,
+        ),
+        patch(
+            'open_webui.utils.system_prompt._fetch_langfuse_prompt_content',
+            new_callable=AsyncMock,
+            return_value=('Fresh prompt {{name}}', '7'),
+        ),
+        patch(
+            'open_webui.utils.system_prompt._persist_langfuse_cache',
+            new_callable=AsyncMock,
+        ) as mock_persist,
+    ):
+        result = await resolve_model_system_prompt(
+            model,
+            metadata,
+            None,
+            bypass=False,
+        )
+
+    assert result == 'Fresh prompt {{name}}'
+    assert metadata['langfuse_prompt_name'] == 'movie-critic'
+    assert metadata['langfuse_prompt_version'] == '7'
+    mock_persist.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_langfuse_fetch_fail_uses_stale_cache():
+    model = _make_model('Mirror fallback')
+    binding = _make_binding(
+        source='langfuse',
+        connection_id='conn-1',
+        external_name='movie-critic',
+        cached_content='Stale but usable',
+        cached_at=1,
+        cache_ttl_seconds=300,
+    )
+
+    with (
+        patch(
+            'open_webui.utils.system_prompt.get_cached_system_prompt',
+            return_value=None,
+        ),
+        patch(
+            'open_webui.utils.system_prompt._get_default_cache_ttl_seconds',
+            new_callable=AsyncMock,
+            return_value=300,
+        ),
+        patch(
+            'open_webui.utils.system_prompt.ModelSystemPromptBindings.get_by_model_id',
+            new_callable=AsyncMock,
+            return_value=binding,
+        ),
+        patch(
+            'open_webui.utils.system_prompt._fetch_langfuse_prompt_content',
+            new_callable=AsyncMock,
+            side_effect=RuntimeError('langfuse down'),
+        ),
+    ):
+        result = await resolve_model_system_prompt(model, {}, None, bypass=False)
+
+    assert result == 'Stale but usable'

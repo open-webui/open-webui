@@ -199,6 +199,140 @@ async def test_create_version_set_active_updates_binding_and_mirror():
     mock_mirror.assert_awaited_once_with(model, 'new content', db)
 
 
+@pytest.mark.asyncio
+async def test_patch_binding_requires_write_access():
+    model = _make_model()
+    user = _make_user(user_id='other-user')
+    db = AsyncMock()
+
+    with (
+        patch(
+            'open_webui.routers.model_system_prompts._get_model_or_404',
+            new_callable=AsyncMock,
+            return_value=model,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._require_model_write_access',
+            new_callable=AsyncMock,
+            side_effect=HTTPException(status_code=401, detail='denied'),
+        ),
+    ):
+        with pytest.raises(HTTPException) as exc:
+            await router_module.patch_model_system_prompt_binding(
+                id='test-model',
+                form_data=router_module.PatchSystemPromptBindingForm(source='langfuse'),
+                user=user,
+                db=db,
+            )
+
+    assert exc.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_sync_langfuse_requires_write_access():
+    model = _make_model()
+    user = _make_user(user_id='other-user')
+    db = AsyncMock()
+
+    with (
+        patch(
+            'open_webui.routers.model_system_prompts._get_model_or_404',
+            new_callable=AsyncMock,
+            return_value=model,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._require_model_write_access',
+            new_callable=AsyncMock,
+            side_effect=HTTPException(status_code=401, detail='denied'),
+        ),
+    ):
+        with pytest.raises(HTTPException) as exc:
+            await router_module.sync_langfuse_system_prompt(
+                id='test-model',
+                user=user,
+                db=db,
+            )
+
+    assert exc.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_detach_creates_local_version_and_mirrors():
+    model = _make_model()
+    user = _make_user()
+    db = AsyncMock()
+    binding = SimpleNamespace(
+        source='langfuse',
+        cached_content='cached lf prompt',
+    )
+    version = SimpleNamespace(
+        id='version-1',
+        model_id='test-model',
+        content='cached lf prompt',
+        commit_message='Detached from Langfuse',
+        user_id='owner-id',
+        created_at=123,
+        model_dump=lambda: {
+            'id': 'version-1',
+            'model_id': 'test-model',
+            'content': 'cached lf prompt',
+            'commit_message': 'Detached from Langfuse',
+            'user_id': 'owner-id',
+            'created_at': 123,
+        },
+    )
+    updated_binding = SimpleNamespace(
+        model_id='test-model',
+        source='local',
+        active_version_id='version-1',
+    )
+
+    with (
+        patch(
+            'open_webui.routers.model_system_prompts._get_model_or_404',
+            new_callable=AsyncMock,
+            return_value=model,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._require_model_write_access',
+            new_callable=AsyncMock,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts.ModelSystemPromptBindings.get_by_model_id',
+            new_callable=AsyncMock,
+            return_value=binding,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts.ModelSystemPromptVersions.create_version',
+            new_callable=AsyncMock,
+            return_value=version,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts.ModelSystemPromptBindings.upsert',
+            new_callable=AsyncMock,
+            return_value=updated_binding,
+        ) as mock_upsert,
+        patch(
+            'open_webui.routers.model_system_prompts._mirror_params_system',
+            new_callable=AsyncMock,
+        ) as mock_mirror,
+        patch(
+            'open_webui.routers.model_system_prompts.invalidate_system_prompt_cache',
+        ) as mock_invalidate,
+    ):
+        response = await router_module.detach_langfuse_system_prompt(
+            id='test-model',
+            user=user,
+            db=db,
+        )
+
+    assert response.binding.source == 'local'
+    assert response.version.id == 'version-1'
+    mock_upsert.assert_awaited_once()
+    mock_mirror.assert_awaited_once_with(model, 'cached lf prompt', db)
+    mock_invalidate.assert_called_once_with('test-model')
+
+
 def test_router_paths_and_no_collision_with_model_update():
     paths = {route.path for route in router_module.router.routes if hasattr(route, 'path')}
 
@@ -208,6 +342,9 @@ def test_router_paths_and_no_collision_with_model_update():
         '/system-prompt/history/{version_id}',
         '/system-prompt/versions',
         '/system-prompt/active',
+        '/system-prompt/langfuse/sync',
+        '/system-prompt/langfuse/preview',
+        '/system-prompt/detach',
     }
     assert '/model/update' not in paths
 

@@ -152,6 +152,7 @@ from open_webui.routers import (
     groups,
     images,
     knowledge,
+    langfuse,
     memories,
     model_system_prompts,
     models,
@@ -773,6 +774,7 @@ app.include_router(notes.router, prefix='/api/v1/notes', tags=['notes'])
 
 app.include_router(models.router, prefix='/api/v1/models', tags=['models'])
 app.include_router(model_system_prompts.router, prefix='/api/v1/models', tags=['models'])
+app.include_router(langfuse.router, prefix='/api/v1/langfuse', tags=['langfuse'])
 app.include_router(notifications.router, prefix='/api/v1/notifications', tags=['notifications'])
 app.include_router(knowledge.router, prefix='/api/v1/knowledge', tags=['knowledge'])
 app.include_router(prompts.router, prefix='/api/v1/prompts', tags=['prompts'])
