@@ -13,6 +13,69 @@
 
 ---
 
+## Sessão 2026-07-16 (noite) — A reforma: 6 rotas viram 4, e a web entra pela porta certa
+
+### O que mudou (1.29.0 → 1.31.0)
+
+| Versão | O quê |
+|---|---|
+| **1.29.0** | Arranca a **doutrina morta**: `_docs_prioritarios`, o ramo do gatilho, a valve órfã |
+| **1.30.0** | Hotfix: `raciocinio` respondia sobre a Nidum **sem base**, e a tríade mandava ancorar nos fundadores que ele não carregava |
+| **1.31.0** | **Fatias 1+2**: `rapido`+`diaadia`+`raciocinio` → **`geral`**; trava de **menção a Nidum**; `teste_travas.py` |
+
+### `raciocinio`: peso morto **medido**, não suposto
+
+**Grep no log de um dia inteiro de uso + dezenas de testes: ZERO ocorrências de `roteador -> raciocinio`.** A rota existia e **nunca era escolhida** — o `documentos` do classificador é amplo demais para deixar passar.
+
+**Isso encerra o bug da tríade como "existe no código, nunca disparou".** Ele some junto com a rota, na 1.31.0. A 1.30.0 vira quase redundante — só faria sentido se fosse para o ar **antes** da reforma, e o grep provou que não há pressa.
+
+### A decisão que reordenou tudo: **`geral` é Sonnet, não Haiku**
+
+O desenho inicial rebaixava "fora de contexto" para Haiku. **O Davi recusou — e foi medir.** `gpt-5-mini` **errou as definições de SPE e SCP** — as duas — e construiu **duas páginas** de tabelas, diagramas e exemplos "reais" (3M, Magazine Luiza) em cima do erro. Articulado, confiante, falso. O Sonnet acertou, com os artigos do Código Civil.
+
+> **O agravante que decidiu:** **SPE × SCP é o tema da ata de 08/07** — o Daniel apresentou essa comparação para estruturar a participação de investidores. Um coautor perguntaria e receberia **consultoria inventada sobre uma decisão real da Nidum**. **O tema está "fora do contexto Nidum", mas a resposta entra numa decisão da Nidum.** Era um erro silencioso por uma porta que íamos abrir sozinhos.
+
+### Web: a ordem invertida, e por que a `ENABLE_WEB_SEARCH` fica `False`
+
+**Hoje:** o web search do Open WebUI roda **antes** do pipe, **cego ao contexto** — se ligado, contamina até pergunta institucional, e **o pipe não pode impedir**.
+
+**Novo:** o pipe **classifica primeiro** e só então decide. **Só a rota `geral` toca a web.**
+
+**Defesa em duas camadas** (as duas ficam): permissão do grupo **OFF** (impede o botão) + `ENABLE_WEB_SEARCH=False` (impede middleware e endpoint). **O pipe chama `search_web()`**, a camada de baixo, que não olha nenhum dos dois.
+
+> **Por que isso não é burlar segurança:** `features.web_search` significa *"o **usuário** pode ligar o toggle"*. **O pipe não é o usuário — é o sistema decidindo.**
+
+**A sonda foi decisiva — e o resultado dela mudou o plano.** Ela provou que o import funciona (`[OK] passo 0`) e que o 403 era **config, não impossibilidade**. Mas, ao investigar o 403, apareceu o que eu **não** tinha visto: **a permissão do grupo é checada DENTRO do `process_web_search`** (`routers/retrieval.py:2222`), não só na interface. **A defesa que eu tinha proposto (permissão OFF) mataria o próprio pipe** — 403 para todo coautor. **A desconfiança do Davi na pergunta 4 achou o buraco.** A saída (`search_web`, a camada de baixo) só apareceu porque a sonda forçou a leitura.
+
+**Engine: `duckduckgo`** — sem chave, sem cadastro, sem custo. **Decisão registrada:** não faz sentido escolher pago antes de saber se o grátis resolve perguntas factuais de volume baixo. Trocar é uma variável.
+
+> **⚠️ Erro meu, registrado para não se repetir:** meu primeiro levantamento dos engines marcou **9 como "sem chave"** — `bing`, `azure`, `jina`, `yandex`, `firecrawl`, `external`, `youcom`, `perplexity`, `sougou`. **Todos exigem chave.** O regex não pegava o formato da condição deles. **Se a lista errada tivesse ido, o Bing seria escolhido como "grátis".** Conferi um a um antes de entregar. **Ao reconferir um engine, leia o bloco `elif engine == '<nome>'` — não confie em busca por padrão.**
+
+### Duas correções minhas de estimativa
+
+1. **Custo da fatia 3: eu disse "o pipe teria que carregar as páginas".** Errado — **para mais**. O `SearchResult` já traz `snippet`, e o próprio fork tem o caminho que usa só isso (`BYPASS_WEB_SEARCH_WEB_LOADER`). **Não há scraping: ~30–40 linhas, não 300.**
+2. **A regra da tríade no classificador: eu disse 1.247 caracteres (31% do prompt).** São **518 (13%)**. Meu script quebrou o prompt por `". "` e capturou frases vizinhas. **Inflei 2,4×** — e a aprovação do enxugamento veio em cima desse número. **Cancelado.**
+
+### 📌 O achado da semana virou REGRA no `CLAUDE.md` — não ficou como anedota
+
+**A doc `03_Arquitetura`, reescrita do zero HOJE para consertar apodrecimento, descrevia 6 rotas — e a fatia 1 fez 4. Ela apodreceu antes de mergear.** Em horas.
+
+**Isso não é ironia — é diagnóstico.** É a prova de que o apodrecimento das docs **não era falta de disciplina**. Havia uma regra no `CLAUDE.md`, obrigatória, e ela era:
+
+> *"Atualize `Documentacao_ChatND_Nidum.html` na **MESMA sessão da alteração**"*
+
+**"Alteração" não é "deploy".** Aqui pipe/tools vão por **API, manualmente** — **mergear na `main` não publica**. Então a doc atualizada "na mesma sessão da alteração" fica **certa sobre algo que ainda não existe** e **errada sobre o que está no ar**.
+
+> ### **O problema não era ninguém seguir a regra. Era segui-la.**
+
+**A regra nova, escrita no `CLAUDE.md`** (onde regras moram e são lidas toda sessão, não aqui — diário é log, e regra que mora em log é anedota bem escrita):
+
+> **Doc que descreve PRODUÇÃO mergeia junto com o DEPLOY — nunca antes.**
+> Doc de **decisão** (este diário, o `08_Decisoes`) mergeia quando a decisão é tomada — **decisão não espera deploy: ela É o registro de que se decidiu.**
+> **Na dúvida:** *"isto fica falso se o publish não acontecer?"* Se sim, espera o deploy.
+
+**E o carimbo `Última verificação: <data>`** que a `03` passou a ter: ele **não impede** o apodrecimento — **deixa ele visível**. Era exatamente o que a doc antiga não tinha: ela mentia com autoridade e **sem data**, então ninguém tinha como saber que estava velha.
+
 ## Sessão 2026-07-16 — ChatND 1.26.0: busca por data em qualquer formato
 
 **16/07/2026 — ChatND 1.26.0: busca por data em qualquer formato.**
