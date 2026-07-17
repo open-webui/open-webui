@@ -329,6 +329,7 @@ async def create_model_system_prompt_version(
     if form_data.set_active:
         await _ensure_local_binding(model.id, version.id, db)
         await _mirror_params_system(model, form_data.content, db)
+        invalidate_system_prompt_cache(model.id)
 
     return ModelSystemPromptVersionResponse(**version.model_dump(), user=None)
 
@@ -347,6 +348,7 @@ async def set_active_model_system_prompt_version(
     version = await _get_version_for_model_or_404(model.id, form_data.version_id, db)
     binding = await _ensure_local_binding(model.id, version.id, db)
     await _mirror_params_system(model, version.content, db)
+    invalidate_system_prompt_cache(model.id)
     return binding
 
 

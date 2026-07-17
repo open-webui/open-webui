@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import dayjs from 'dayjs';
@@ -29,6 +29,10 @@
 	export let system = '';
 	export let activeBaseline = '';
 
+	const dispatch = createEventDispatcher<{
+		bindingchange: ModelSystemPromptBinding | null;
+	}>();
+
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	let binding: ModelSystemPromptBinding | null = null;
@@ -41,6 +45,8 @@
 	let savingVersion = false;
 	let settingActive = false;
 	let loaded = false;
+
+	$: effectiveWriteAccess = writeAccess && binding?.source !== 'langfuse';
 
 	const normalizeContent = (value: string) => (value.trim() === '' ? '' : value);
 
@@ -133,14 +139,21 @@
 
 		try {
 			binding = await getModelSystemPromptBinding(localStorage.token, modelId);
+			dispatch('bindingchange', binding);
 		} catch (error) {
 			console.error('Failed to load system prompt binding:', error);
 			binding = null;
+			dispatch('bindingchange', null);
 		}
 
 		await loadHistory(true);
 		await initializeSelection();
 		loaded = true;
+	};
+
+	export const reload = async () => {
+		loaded = false;
+		await loadPanel();
 	};
 
 	const handleHistoryScroll = (e: Event) => {
@@ -157,7 +170,7 @@
 	};
 
 	const handleSaveVersion = async () => {
-		if (!writeAccess) {
+		if (!effectiveWriteAccess) {
 			toast.error($i18n.t('You do not have permission to edit this model.'));
 			return;
 		}
@@ -172,6 +185,7 @@
 			});
 
 			binding = await getModelSystemPromptBinding(localStorage.token, modelId);
+			dispatch('bindingchange', binding);
 			await loadHistory(true);
 			selectedEntry = history.find((entry) => entry.id === created.id) ?? created;
 			system = selectedEntry.content;
@@ -186,7 +200,7 @@
 	};
 
 	const handleSetActive = async () => {
-		if (!writeAccess || !selectedEntry) return;
+		if (!effectiveWriteAccess || !selectedEntry) return;
 
 		settingActive = true;
 
@@ -196,6 +210,7 @@
 				modelId,
 				selectedEntry.id
 			);
+			dispatch('bindingchange', binding);
 			system = selectedEntry.content;
 			activeBaseline = normalizeContent(system);
 			toast.success($i18n.t('Production version updated'));
@@ -207,7 +222,7 @@
 	};
 
 	const handleDeleteHistory = async (versionId: string) => {
-		if (!writeAccess) return;
+		if (!effectiveWriteAccess) return;
 
 		try {
 			await deleteModelSystemPromptHistoryEntry(localStorage.token, modelId, versionId);
@@ -310,7 +325,7 @@
 					{/if}
 				</div>
 
-				{#if writeAccess && selectedEntry}
+				{#if effectiveWriteAccess && selectedEntry}
 					<div class="flex items-center gap-2">
 						{#if selectedEntry.id === binding?.active_version_id}
 							<span class="inline-flex items-center text-xs text-gray-400 dark:text-gray-500">
@@ -340,16 +355,22 @@
 				{/if}
 			</div>
 
+			{#if binding?.source === 'langfuse'}
+				<div class="mb-2 text-xs text-amber-600 dark:text-amber-400">
+					{$i18n.t('System prompt is managed by Langfuse. Detach to edit locally.')}
+				</div>
+			{/if}
+
 			<Textarea
 				className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
 				placeholder={$i18n.t(
 					'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
 				)}
-				readonly={!writeAccess}
+				readonly={!effectiveWriteAccess}
 				bind:value={system}
 			/>
 
-			{#if writeAccess}
+			{#if effectiveWriteAccess}
 				<div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end">
 					<div class="min-w-0 flex-1">
 						<div class="mb-1 text-xs text-gray-400 dark:text-gray-600">

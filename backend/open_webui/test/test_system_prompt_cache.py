@@ -1,5 +1,7 @@
 import time
 
+import pytest
+
 from open_webui.utils.system_prompt_cache import (
     SYSTEM_PROMPT_CACHE,
     get_cached_system_prompt,
@@ -47,3 +49,71 @@ def test_invalidate_removes_entry():
     invalidate_system_prompt_cache('model-1')
 
     assert get_cached_system_prompt('model-1') is None
+
+
+@pytest.mark.asyncio
+async def test_delete_model_by_id_invalidates_cache():
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from open_webui.routers import models as models_module
+
+    set_cached_system_prompt('model-1', 'content', ttl_seconds=300)
+    model = SimpleNamespace(id='model-1', name='Model 1', user_id='owner-id')
+    request = MagicMock()
+
+    with (
+        patch.object(
+            models_module.Models,
+            'get_model_by_id',
+            new_callable=AsyncMock,
+            return_value=model,
+        ),
+        patch.object(
+            models_module.Models,
+            'delete_model_by_id',
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch.object(models_module, 'publish_event', new_callable=AsyncMock),
+    ):
+        result = await models_module.delete_model_by_id(
+            request,
+            models_module.ModelIdForm(id='model-1'),
+            user=SimpleNamespace(id='owner-id', role='user'),
+            db=AsyncMock(),
+        )
+
+    assert result is True
+    assert get_cached_system_prompt('model-1') is None
+
+
+@pytest.mark.asyncio
+async def test_delete_all_models_clears_cache():
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from open_webui.routers import models as models_module
+
+    set_cached_system_prompt('model-1', 'content', ttl_seconds=300)
+    set_cached_system_prompt('model-2', 'content', ttl_seconds=300)
+    request = MagicMock()
+
+    with (
+        patch.object(
+            models_module.Models,
+            'delete_all_models',
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch.object(models_module, 'publish_event', new_callable=AsyncMock),
+    ):
+        result = await models_module.delete_all_models(
+            request,
+            user=SimpleNamespace(id='admin-id', role='admin'),
+            db=AsyncMock(),
+        )
+
+    assert result is True
+    assert get_cached_system_prompt('model-1') is None
+    assert get_cached_system_prompt('model-2') is None

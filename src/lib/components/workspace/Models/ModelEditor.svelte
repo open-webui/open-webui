@@ -34,7 +34,9 @@
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import ModelSystemPromptPanel from './ModelSystemPromptPanel.svelte';
-	import { createModelSystemPromptVersion } from '$lib/apis/models/systemPrompt';
+	import ModelSystemPromptLangfusePanel from './ModelSystemPromptLangfusePanel.svelte';
+	import { createModelSystemPromptVersion, type ModelSystemPromptBinding } from '$lib/apis/models/systemPrompt';
+	import { getLangfuseConnections } from '$lib/apis/langfuse';
 
 	const i18n = getContext('i18n');
 
@@ -79,6 +81,49 @@
 	let system = '';
 	let legacySystemPrompt = '';
 	let activeBaseline = '';
+	let systemPromptTab: 'local' | 'langfuse' = 'local';
+	let systemPromptTabInitialized = false;
+	let langfuseConnectionsAvailable = false;
+	let systemPromptBinding: ModelSystemPromptBinding | null = null;
+	let localSystemPromptPanel: ModelSystemPromptPanel | undefined;
+	let langfuseSystemPromptPanel: ModelSystemPromptLangfusePanel | undefined;
+	const tabButtonClass = (active: boolean) =>
+		`h-7 shrink-0 rounded-lg px-2 text-xs transition-colors duration-75 ${
+			active
+				? 'font-medium text-gray-900 dark:text-white bg-gray-50 dark:bg-white/[0.04]'
+				: 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+		}`;
+
+	const handleSystemPromptBindingChange = (binding: ModelSystemPromptBinding | null) => {
+		systemPromptBinding = binding;
+
+		if (!systemPromptTabInitialized && langfuseConnectionsAvailable) {
+			systemPromptTab = binding?.source === 'langfuse' ? 'langfuse' : 'local';
+			systemPromptTabInitialized = true;
+		}
+	};
+
+	const handleLangfuseDetach = async (
+		e: CustomEvent<{ binding: ModelSystemPromptBinding; content: string }>
+	) => {
+		systemPromptBinding = e.detail.binding;
+		system = e.detail.content;
+		activeBaseline = system.trim() === '' ? '' : system;
+		systemPromptTab = 'local';
+		systemPromptTabInitialized = true;
+		await tick();
+		await localSystemPromptPanel?.reload();
+	};
+
+	const loadLangfuseConnections = async () => {
+		try {
+			const res = await getLangfuseConnections(localStorage.token);
+			langfuseConnectionsAvailable = (res.connections?.length ?? 0) > 0;
+		} catch (error) {
+			console.error('Failed to load Langfuse connections:', error);
+			langfuseConnectionsAvailable = false;
+		}
+	};
 	let info = {
 		id: '',
 		base_model_id: null,
@@ -281,7 +326,11 @@
 			}
 		}
 
-		if (edit && id) {
+		// Never create a local version while Langfuse is the active source / tab.
+		const skipLocalSystemPromptVersion =
+			systemPromptBinding?.source === 'langfuse' || systemPromptTab === 'langfuse';
+
+		if (edit && id && !skipLocalSystemPromptVersion) {
 			const normalizedSystem = system.trim() === '' ? '' : system;
 			const normalizedBaseline = activeBaseline.trim() === '' ? '' : activeBaseline;
 
@@ -319,6 +368,10 @@
 	};
 
 	onMount(async () => {
+		if (edit) {
+			await loadLangfuseConnections();
+		}
+
 		await tools.set((await getTools(localStorage.token).catch(() => null)) ?? []);
 		skillsList = (await getSkills(localStorage.token).catch(() => null)) ?? [];
 		if (!$functions) {
@@ -715,13 +768,54 @@
 									</div>
 									<div>
 										{#if edit && id}
-											<ModelSystemPromptPanel
-												modelId={id}
-												writeAccess={model?.write_access ?? true}
-												legacySystem={legacySystemPrompt}
-												bind:system
-												bind:activeBaseline
-											/>
+											{#if langfuseConnectionsAvailable}
+												<div class="mb-2 flex gap-1" role="tablist">
+													<button
+														type="button"
+														role="tab"
+														aria-selected={systemPromptTab === 'local'}
+														class={tabButtonClass(systemPromptTab === 'local')}
+														on:click={() => {
+															systemPromptTab = 'local';
+														}}
+													>
+														{$i18n.t('Local')}
+													</button>
+													<button
+														type="button"
+														role="tab"
+														aria-selected={systemPromptTab === 'langfuse'}
+														class={tabButtonClass(systemPromptTab === 'langfuse')}
+														on:click={() => {
+															systemPromptTab = 'langfuse';
+														}}
+													>
+														{$i18n.t('Langfuse')}
+													</button>
+												</div>
+											{/if}
+
+											{#if systemPromptTab === 'local' || !langfuseConnectionsAvailable}
+												<ModelSystemPromptPanel
+													bind:this={localSystemPromptPanel}
+													modelId={id}
+													writeAccess={model?.write_access ?? true}
+													legacySystem={legacySystemPrompt}
+													bind:system
+													bind:activeBaseline
+													on:bindingchange={(e) => handleSystemPromptBindingChange(e.detail)}
+												/>
+											{:else}
+												<ModelSystemPromptLangfusePanel
+													bind:this={langfuseSystemPromptPanel}
+													modelId={id}
+													writeAccess={model?.write_access ?? true}
+													bind:system
+													bind:activeBaseline
+													on:bindingchange={(e) => handleSystemPromptBindingChange(e.detail)}
+													on:detach={handleLangfuseDetach}
+												/>
+											{/if}
 										{:else}
 											<Textarea
 												className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"

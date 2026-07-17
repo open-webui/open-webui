@@ -182,6 +182,9 @@ async def test_create_version_set_active_updates_binding_and_mirror():
             'open_webui.routers.model_system_prompts._mirror_params_system',
             new_callable=AsyncMock,
         ) as mock_mirror,
+        patch(
+            'open_webui.routers.model_system_prompts.invalidate_system_prompt_cache',
+        ) as mock_invalidate,
     ):
         response = await router_module.create_model_system_prompt_version(
             id='test-model',
@@ -197,6 +200,55 @@ async def test_create_version_set_active_updates_binding_and_mirror():
     assert response.id == 'version-1'
     mock_ensure.assert_awaited_once_with('test-model', 'version-1', db)
     mock_mirror.assert_awaited_once_with(model, 'new content', db)
+    mock_invalidate.assert_called_once_with('test-model')
+
+
+@pytest.mark.asyncio
+async def test_set_active_version_invalidates_cache():
+    model = _make_model()
+    user = _make_user()
+    db = AsyncMock()
+    version = SimpleNamespace(id='version-1', content='active prompt')
+    binding = SimpleNamespace(model_id='test-model', source='local', active_version_id='version-1')
+
+    with (
+        patch(
+            'open_webui.routers.model_system_prompts._get_model_or_404',
+            new_callable=AsyncMock,
+            return_value=model,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._require_model_write_access',
+            new_callable=AsyncMock,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._get_version_for_model_or_404',
+            new_callable=AsyncMock,
+            return_value=version,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._ensure_local_binding',
+            new_callable=AsyncMock,
+            return_value=binding,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._mirror_params_system',
+            new_callable=AsyncMock,
+        ) as mock_mirror,
+        patch(
+            'open_webui.routers.model_system_prompts.invalidate_system_prompt_cache',
+        ) as mock_invalidate,
+    ):
+        response = await router_module.set_active_model_system_prompt_version(
+            id='test-model',
+            form_data=router_module.SetActiveSystemPromptVersionForm(version_id='version-1'),
+            user=user,
+            db=db,
+        )
+
+    assert response.active_version_id == 'version-1'
+    mock_mirror.assert_awaited_once_with(model, 'active prompt', db)
+    mock_invalidate.assert_called_once_with('test-model')
 
 
 @pytest.mark.asyncio
