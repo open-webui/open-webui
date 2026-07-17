@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import { getContext, onMount, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
@@ -783,6 +784,8 @@
 		} else if (filteredSettings.length > 0 && !filteredSettings.includes(selectedTab)) {
 			selectedTab = filteredSettings[0];
 		}
+
+		scrollToSelectedTab();
 	};
 
 	const saveSettings = async (updated: Record<string, any>) => {
@@ -823,8 +826,24 @@
 		}`;
 
 	let selectedTab = 'general';
+	const scrollToSelectedTab = async () => {
+		if (!browser || !modalShow || !selectedTab) {
+			return;
+		}
+
+		await tick();
+		const tabElement = document.querySelector<HTMLElement>(
+			'#settings-tabs-container [role="tab"][aria-selected="true"]'
+		);
+		tabElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+	};
+
 	$: if ($user?.role !== 'admin' && isAdminTab(selectedTab)) {
 		selectedTab = 'general';
+	}
+
+	$: if (modalShow && selectedTab) {
+		scrollToSelectedTab();
 	}
 
 	onMount(() => {
