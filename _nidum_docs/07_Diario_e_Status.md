@@ -56,6 +56,45 @@ O desenho inicial rebaixava "fora de contexto" para Haiku. **O Davi recusou — 
 1. **Custo da fatia 3: eu disse "o pipe teria que carregar as páginas".** Errado — **para mais**. O `SearchResult` já traz `snippet`, e o próprio fork tem o caminho que usa só isso (`BYPASS_WEB_SEARCH_WEB_LOADER`). **Não há scraping: ~30–40 linhas, não 300.**
 2. **A regra da tríade no classificador: eu disse 1.247 caracteres (31% do prompt).** São **518 (13%)**. Meu script quebrou o prompt por `". "` e capturou frases vizinhas. **Inflei 2,4×** — e a aprovação do enxugamento veio em cima desse número. **Cancelado.**
 
+### O `CLAUDE.md` deste repo estava no `.gitignore` — e ninguém tinha decidido isso
+
+**Nunca foi versionado.** `git log --all -- CLAUDE.md` volta **vazio**, e o `.gitignore`
+o ignorava na **linha 18** — solta entre `.nvmrc` e `# C extensions`, **sem comentário,
+sem motivo escrito**.
+
+**Quase certo que veio do upstream:** o open-webui ignora `CLAUDE.md` por ser config local
+de dev. **Herdamos no fork sem decidir.** É a **mesma classe** da armadilha do PR que foi
+parar no upstream: **coisa do upstream agindo aqui porque ninguém olhou.**
+
+**O risco concreto:** as instruções que governam este projeto viviam **só no disco do
+Davi**. Se a máquina morre, morrem com ela — e quem clonasse o repo rodaria o Claude Code
+**sem as regras** que evitaram três erros nesta semana.
+
+**Removido do `.gitignore` COM comentário explicando por quê** — sem ele, o próximo rebase
+do upstream traria a linha de volta e ninguém saberia por que ela havia sumido.
+
+**Revisão de exposição antes de subir** (o repo é público): sem credenciais (só nomes de
+variáveis), sem caminhos pessoais. Os endpoints `/api/v1/...` são API pública do Open
+WebUI.
+
+> *(A esteira tinha o mesmo problema, por outro motivo — o `CLAUDE.md` dela vivia fora de
+> qualquer repo. Resolvido no mesmo dia; **a história de lá está registrada lá**.)*
+
+### ❓ Pergunta aberta para a governança — este repo é **PÚBLICO**
+
+Levantada ao revisar o `CLAUDE.md` antes de versioná-lo. **Ele está limpo** — mas a
+revisão mostrou que os **`_nidum_docs`, já públicos, expõem bem mais**: nome do projeto no
+**Railway** (`surprising-flow`), região, tamanho do volume, o **domínio**, os **ids das
+coleções** e a regra de *"só aprovar e-mails @nidumbrasil.com.br"*.
+
+**Nada disso é credencial — mas é mapa.** É inventário de infraestrutura num repositório
+aberto: diz **onde** as coisas estão e **como** o acesso é decidido.
+
+**Não bloqueia nada e não foi tratado como urgente.** A pergunta para a mesa: **o
+`nidum-platform` precisa ser público?** Se sim, vale decidir **o que** fica público; se
+não, fechar resolve sozinho. **Decisão de governança, não técnica** — por isso está
+anotada, não resolvida.
+
 ### 📌 O achado da semana virou REGRA no `CLAUDE.md` — não ficou como anedota
 
 **A doc `03_Arquitetura`, reescrita do zero HOJE para consertar apodrecimento, descrevia 6 rotas — e a fatia 1 fez 4. Ela apodreceu antes de mergear.** Em horas.
