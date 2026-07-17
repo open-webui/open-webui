@@ -18,36 +18,49 @@
 	export let actions: Action[] = [];
 	export let selectedActionIds: string[] = [];
 
+	$: selectableActions = actions.filter((action) => !action.is_global);
 	$: selectedActions = actions.filter(
 		(action) => action.is_global || selectedActionIds.includes(action.id)
 	);
-	$: availableActions = actions.filter(
-		(action) => !action.is_global && !selectedActionIds.includes(action.id)
-	);
 
-	const selectAction = (action: Action) => {
-		selectedActionIds = [...selectedActionIds, action.id];
+	const toggleAction = (action: Action) => {
+		selectedActionIds = selectedActionIds.includes(action.id)
+			? selectedActionIds.filter((id) => id !== action.id)
+			: [...selectedActionIds, action.id];
 	};
 </script>
 
 {#if actions.length > 0}
 	<div>
-		<div class="flex w-full justify-between mb-1">
+		<div class="flex w-full items-center gap-2 mb-1">
 			<div class=" self-center text-xs text-gray-500">{$i18n.t('Actions')}</div>
+
+			{#if selectableActions.length > 0}
+				<TypeaheadSelector
+					id="model-actions-selector"
+					items={selectableActions.map((action) => ({
+						...action,
+						description: action.meta?.description
+					}))}
+					selectedIds={selectedActionIds}
+					placeholder={$i18n.t('Search actions')}
+					triggerLabel={$i18n.t('Select Action')}
+					emptyLabel={$i18n.t('No actions found')}
+					variant="dropdown"
+					on:select={(e) => {
+						toggleAction(e.detail);
+					}}
+					on:enableall={(e) => {
+						selectedActionIds = [
+							...new Set([...selectedActionIds, ...e.detail.map((action) => action.id)])
+						];
+					}}
+				/>
+			{/if}
 		</div>
 
 		<div class="flex flex-col">
-			<TypeaheadSelector
-				id="model-actions-selector"
-				items={availableActions}
-				className="w-48 max-w-full"
-				placeholder={$i18n.t('Search actions')}
-				on:select={(e) => {
-					selectAction(e.detail);
-				}}
-			/>
-
-			<div class=" flex items-center flex-wrap">
+			<div class=" flex items-center flex-wrap mt-1">
 				{#each selectedActions as action, actionIdx}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
@@ -70,6 +83,10 @@
 					</div>
 				{/each}
 			</div>
+		</div>
+
+		<div class=" text-xs dark:text-gray-700">
+			{$i18n.t('To select actions here, add them to the "Functions" workspace first.')}
 		</div>
 	</div>
 {/if}
