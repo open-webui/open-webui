@@ -82,6 +82,18 @@
 						</div>
 					</div>
 				{/each}
+
+				{#if selectedActionIds.length > 0}
+					<button
+						type="button"
+						class="py-0.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+						on:click={() => {
+							selectedActionIds = [];
+						}}
+					>
+						{$i18n.t('Disable all')}
+					</button>
+				{/if}
 			</div>
 		</div>
 
