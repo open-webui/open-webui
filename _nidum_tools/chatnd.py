@@ -1,9 +1,34 @@
 """
 title: ChatND
 author: Nidum
-version: 1.32.0
+version: 1.33.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum. Na rota de imagem, gera a imagem via Gemini (motor oculto). O usuario nao escolhe o motor.
 changelog:
+  1.33.0:
+    - FATIA B - CONSERTA A REGRESSAO DA Q12: tira o catch-all do 'geral'. Ele abria com
+      "TUDO que NAO e sobre a Nidum" e voltou a ser LISTA FECHADA, com o dominio
+      explicito (mundo, atualidades, tecnologia, direito em geral, trabalho pessoal).
+    - A REGRESSAO, provada por Davi com as duas rodadas: "O que significa 'fazer da casa
+      um ninho'?" ia para 'documentos' na 1.26.0 e citava o v30; na 1.31.0 foi para
+      'geral' e respondeu de cabeca, sem etiqueta e sem fonte. Log da Q12:
+          chatnd: roteador -> geral (classificador='geral')
+      = DECISAO do LLM, nao excecao nem falha de parse. O prompt era a causa.
+    - POR QUE QUEBROU: as tres rotas velhas (rapido/diaadia/raciocinio) eram LISTAS
+      FECHADAS - enumeravam, nao reivindicavam territorio. "Fazer da casa um ninho" nao
+      casava com nenhuma -> ficava SEM CAIXA -> a REGRA DE DESEMPATE acordava ->
+      'documentos'. O 'geral' com catch-all deu caixa a frase: o gpt-5-mini nao sabe que
+      ela e da Nidum, logo ela E "tudo que nao e sobre a Nidum", e a definicao mandava.
+      REGRA DE DESEMPATE SO FUNCIONA QUANDO HA DUVIDA - e catch-all nao deixa duvida. A
+      regra continuou no prompt, intacta, e NUNCA FOI CONSULTADA.
+    - A descricao de 'documentos' NAO mudou - esta identica a da 1.26.0. O que se perdeu
+      na fusao 6->4 foi a delimitacao por ENUMERACAO das rotas de conversa. O conserto e
+      restaurar, nao inventar.
+    - NAO foi criada trava de termos canonicos. Ela era a resposta certa para o
+      diagnostico errado (eu presumi "buraco pre-existente"; era regressao). Se com o
+      prompt restaurado a Q12 ainda falhar, ai e problema comprovado.
+    - Comentario no codigo, ao lado da definicao, para nao reincidir - e a regra completa
+      esta no CLAUDE.md (REGRA DO CLASSIFICADOR).
+    - MEDIDA: Q12 antes/depois. Nao ha teste automatico possivel - o juiz e um LLM.
   1.32.0:
     - FATIA A - TAREFA INTERNA NAO PAGA MAIS ROTEADOR NEM RAG. O Open WebUI usa o MODELO
       SELECIONADO para gerar titulo do chat, tags e perguntas de acompanhamento. Como o
@@ -460,10 +485,18 @@ CLASSIFICADOR = (
     "responde '[Fora do acervo]' e a conversa segue normalmente; mandar para 'geral' "
     "algo QUE E da Nidum entrega resposta inventada, ou buscada na internet, sobre a "
     "propria Nidum. NA DUVIDA, BASE.\n"
-    "geral: TUDO que NAO e sobre a Nidum. Saudacoes, perguntas triviais, traducoes, "
-    "conversa geral, redacao, organizacao de ideias, analise comum, perguntas sobre uma "
-    "imagem ja enviada (analise visual, sem gerar imagem) e TAMBEM decisoes complexas, "
-    "planejamento, analise profunda e trade-offs - desde que o tema NAO seja a Nidum. "
+    # NAO reescrever esta descricao como "TUDO que nao e sobre a Nidum" nem qualquer
+    # outra forma de "o resto". Ela e uma LISTA FECHADA de proposito - ver a REGRA DO
+    # CLASSIFICADOR no CLAUDE.md. Catch-all vence regra de desempate: uma categoria
+    # definida pelo complemento de outra nunca deixa resto, e a regra de desempate acima
+    # so existe para o resto. Foi assim que a Q12 ("fazer da casa um ninho", frase
+    # LITERAL do Documento Fundador) foi parar em 'geral' na 1.31.0 depois de anos indo
+    # para 'documentos'.
+    "geral: saudacoes, perguntas triviais, traducoes, conversa geral, redacao, "
+    "organizacao de ideias, analise comum, perguntas sobre uma imagem ja enviada "
+    "(analise visual, sem gerar imagem) e TAMBEM decisoes complexas, planejamento, "
+    "analise profunda e trade-offs - SEMPRE sobre temas que nao sao da Nidum (mundo, "
+    "atualidades, tecnologia, direito em geral, o trabalho pessoal do usuario). "
     "Se o tema for a Nidum, e 'documentos', por mais profunda que seja a pergunta: "
     "'devemos estruturar a participacao dos investidores como SPE ou SCP?' e "
     "'documentos', nao 'geral'.\n"
