@@ -63,9 +63,35 @@ responda do seu conhecimento e diga que a busca não ajudou"*.
 > informação de qualidade duvidosa — e nos dois casos a solução é **dizer ao modelo o que a
 > informação vale**.
 
+#### ✅ A prova de que o aviso é OBEDECIDO, não só escrito — a resposta literal (1.36.0)
+
+Pergunta: *"qual a população de Americana-SP?"* → rota **Fora do contexto Nidum**, buscou,
+e respondeu:
+
+> *"Segundo dados do IBGE citados pelo site Psicopedagogia.com.br, Americana-SP tinha cerca
+> de 240.000 habitantes em 2023. […] para o dado mais atualizado, recomendo consultar
+> diretamente o IBGE ou a Prefeitura."*
+
+**Três comportamentos do aviso, todos presentes, num caso onde a fonte era ruim:**
+1. **Atribuiu a fonte real** — *"citados pelo site Psicopedagogia.com.br"* —, **não fingiu
+   IBGE**. É a diferença entre um número com procedência e um número inventado com cara de
+   oficial.
+2. **Ressalvou sozinho** — *"para o dado mais atualizado, consulte o IBGE"*.
+3. **Filtrou o lixo** — dos três resultados (blog, São Paulo cidade-errada, CEP), **usou só
+   o que servia** e ignorou os dois ruins, sem que nada no código os filtrasse. O
+   julgamento foi do modelo, guiado pelo aviso.
+
+> **Isto é o teste que o `teste_travas` não alcança.** O teste garante que o aviso **está no
+> contexto**; só o uso prova que o modelo **o obedece**. E obedeceu no pior caso — fonte
+> fraca, dois resultados irrelevantes. Se funcionasse só com fonte boa, não provaria nada.
+
 **Se doer, trocar de engine é mudar UMA variável** (`WEB_SEARCH_ENGINE`), não código — a
 fatia 3 não sabe qual engine está atrás. Os pagos e o que cada um exige estão no
 `04_Dicionario`.
+
+**A rota institucional não vazou:** *"vi um ninho de passarinho"* continuou em
+`documentos` → `[Fora do acervo]`. A web **não** tocou a base — a fronteira segurou nas
+duas direções.
 
 ### O que fica ligado, o que fica desligado
 
