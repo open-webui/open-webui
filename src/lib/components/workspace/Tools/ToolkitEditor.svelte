@@ -225,7 +225,7 @@ class Tools:
 		}}
 	>
 		<button
-			class="mb-1 flex h-6 w-fit items-center gap-1 rounded-md px-0.5 text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+			class="mb-1 flex h-6 w-fit items-center gap-1 rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
 			type="button"
 			on:click={() => {
 				goto('/workspace/tools');
@@ -235,7 +235,7 @@ class Tools:
 			<span>{$i18n.t('Back')}</span>
 		</button>
 
-		<div class="flex shrink-0 items-start gap-2 pb-2">
+		<div class="flex shrink-0 items-start gap-2 pb-2 px-1">
 			<div class="min-w-0 flex-1">
 				<Tooltip content={$i18n.t('e.g. My Tools')} placement="top-start">
 					<input

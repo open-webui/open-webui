@@ -385,7 +385,7 @@
 	<!-- Edit mode: Read-only view with history -->
 	<div class="flex h-full max-h-[100dvh] w-full flex-col">
 		<button
-			class="mb-1 flex h-6 w-fit items-center gap-1 rounded-md px-0.5 text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+			class="mb-1 flex h-6 w-fit items-center gap-1 rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
 			type="button"
 			on:click={() => {
 				goto('/workspace/prompts');
