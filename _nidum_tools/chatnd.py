@@ -1,9 +1,36 @@
 """
 title: ChatND
 author: Nidum
-version: 1.35.0
+version: 1.36.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum. Na rota de imagem, gera a imagem via Gemini (motor oculto). O usuario nao escolhe o motor.
 changelog:
+  1.36.0:
+    - FATIA 3 - WEB NA ROTA 'geral'. Fecha o desenho do chat unico: 'documentos' tem base
+      e NUNCA ve web; 'geral' tem web e NUNCA ve base. O classificador decide qual, e so
+      uma toca cada fonte. A pergunta institucional nunca e contaminada pela internet -
+      era o requisito que o Davi impos ("web que roda antes do pipe nao vai para
+      producao").
+    - USA search_web, NAO process_web_search - de proposito, e isto e o coracao do
+      desenho: process_web_search checa 'features.web_search' DENTRO da funcao
+      (retrieval.py:2222), e a permissao fica OFF (defesa em duas camadas) -> daria 403
+      para todo coautor. search_web (retrieval.py:1889) e a camada de baixo, sem gate.
+      Provado por DUAS sondas: a 1 (process_web_search como admin -> 403, revelou o gate)
+      e a 2 (search_web com a conta da Amanda, role='user' -> rodou). O pipe nao e o
+      usuario, e o sistema decidindo.
+    - USA O SNIPPET que ja vem no SearchResult - NAO carrega pagina (sem scraping). Por
+      isso a fatia e ~40 linhas, nao 300 (minha 1a estimativa estava errada, para mais),
+      e o BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL e IRRELEVANTE - ele so afeta o
+      process_web_search. A config "Ignorar Embedding" pode ficar como esta.
+    - QUALIDADE DA ENGINE E CUSTO CONHECIDO: o DDGS gratis, para "populacao de Americana",
+      trouxe blog de psicopedagogia, site da cidade errada e site de CEP - nenhum IBGE. Os
+      snippets tem a informacao, a fonte e fraca. Por isso o contexto injetado ABRE com um
+      aviso ao modelo: "apoio, nao verdade; cite a fonte; se irrelevante, responda do seu
+      conhecimento e diga que a busca nao ajudou". Se doer, trocar de engine e mudar UMA
+      variavel (WEB_SEARCH_ENGINE), nao codigo.
+    - DUAS VALVES: WEB_NA_ROTA_GERAL (liga/desliga, default ON; desligada = 'geral' como
+      antes da fatia 3) e WEB_MAX_RESULTADOS (default 3). Web e EXTRA: se search_web falha
+      (rate-limit do DDGS, rede), a conversa segue sem ela - nao derruba a resposta.
+    - _montar_contexto_web e PURA e testada; aceita SearchResult OU dict.
   1.35.0:
     - FATIA C - A EXPANSAO DE DATAS OLHA SO A PERGUNTA ATUAL. O texto de busca junta as
       ULTIMAS 3 mensagens (para follow-up curto manter o tema) e a expansao varria as
@@ -1216,6 +1243,49 @@ def _montar_contexto(sources):
     return "\n\n".join(blocos)
 
 
+def _campo(r, nome):
+    # SearchResult (pydantic) OU dict, indiferente - a sonda 2 mostrou que vem o objeto,
+    # mas aceitar dict tambem e barato e blinda contra mudanca de versao do fork.
+    v = getattr(r, nome, None)
+    if v is None and isinstance(r, dict):
+        v = r.get(nome)
+    return v or ""
+
+
+def _montar_contexto_web(resultados, maximo):
+    # PURA. Monta o bloco de contexto a partir dos SearchResult da web. Usa o SNIPPET que
+    # ja vem no resultado - NAO carrega a pagina (sem scraping). Por isso a fatia 3 e
+    # curta e nao depende do BYPASS.
+    #
+    # A instrucao no topo e deliberada e importa: os snippets da web sao de QUALIDADE
+    # VARIAVEL (o DDGS gratis trouxe, para "populacao de Americana", um blog de
+    # psicopedagogia e um site da cidade errada - ver diario). O modelo tem que saber que
+    # esse material e um APOIO falivel, nao a verdade, e citar a fonte para o usuario
+    # julgar. Sem isso, ele repetiria um numero errado com a mesma confianca de um certo.
+    blocos = []
+    for r in (resultados or [])[: max(1, maximo)]:
+        titulo = str(_campo(r, "title")).strip()
+        link = str(_campo(r, "link")).strip()
+        trecho = str(_campo(r, "snippet")).strip()
+        if not trecho and not titulo:
+            continue
+        cabec = titulo or link or "resultado"
+        if link and link != cabec:
+            cabec = cabec + " (" + link + ")"
+        blocos.append("--- Web: " + cabec + " ---\n" + trecho)
+    if not blocos:
+        return ""
+    aviso = (
+        "RESULTADOS DE BUSCA NA WEB (apoio, nao verdade): o material abaixo veio de uma "
+        "busca aberta na internet e tem qualidade VARIAVEL - pode conter erro, fonte "
+        "fraca ou dado desatualizado. Use como apoio, confronte com o que voce ja sabe, "
+        "e CITE a fonte (o site) quando usar um dado especifico, para o usuario poder "
+        "conferir. Se os resultados forem claramente irrelevantes, responda com seu "
+        "proprio conhecimento e diga que a busca nao ajudou.\n\n"
+    )
+    return aviso + "\n\n".join(blocos)
+
+
 _RE_MARCA_TEMPORAL = re.compile(
     r"reuni\w*|\bata\b|converg\w*|\bquando\b|\d{1,2}/\d{1,2}"
     r"|\bde\s+\d{1,2}\s+de\s+\w+\s+de\s+\d{4}\b",
@@ -1396,6 +1466,13 @@ class Pipe:
                 "inteligencia hibrida"
             )
         )
+        # WEB na rota 'geral' (1.36.0). SO afeta 'geral' - 'documentos' nunca ve web.
+        # Liga/desliga sem republish. DESLIGA e o modo seguro: sem web, 'geral' responde
+        # com o proprio conhecimento do modelo, como antes da fatia 3.
+        WEB_NA_ROTA_GERAL: bool = Field(default=True)
+        # Quantos resultados da web injetar. 3 e o que a sonda trouxe; mais que isso e
+        # ruido, dado que os snippets do DDGS gratis ja sao de qualidade variavel.
+        WEB_MAX_RESULTADOS: int = Field(default=3)
 
     def __init__(self):
         self.valves = self.Valves()
@@ -1681,6 +1758,31 @@ class Pipe:
         msgs = list(messages or [])
         msgs.insert(0, {"role": "system", "content": texto})
         return msgs
+
+    async def _contexto_web(self, request, user, texto):
+        # Busca na WEB (rota geral) e devolve um bloco de contexto pronto para injetar,
+        # ou "" se nada util voltou. So-leitura do ponto de vista do pipe: nao muda a base.
+        #
+        # USA search_web, NAO process_web_search - de proposito. O process_web_search
+        # checa a permissao 'features.web_search' DENTRO da funcao (retrieval.py:2222) e
+        # ela fica OFF por desenho (defesa em duas camadas): daria 403 para todo coautor.
+        # O search_web (retrieval.py:1889) e a camada de baixo - sem gate de permissao,
+        # sem gate de ENABLE_WEB_SEARCH. Provado por sonda com usuario NAO-ADMIN (a conta
+        # da Amanda, role='user'): roda, e devolve list[SearchResult] com .snippet.
+        # Como usamos o snippet que ja vem, NAO ha carregamento de pagina (scraping) e o
+        # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL e irrelevante - ele so afeta o
+        # process_web_search.
+        from open_webui.routers.retrieval import search_web
+
+        engine = request.app.state.config.WEB_SEARCH_ENGINE or "duckduckgo"
+        resultados = await search_web(request, engine, texto, user)
+        contexto = _montar_contexto_web(resultados, self.valves.WEB_MAX_RESULTADOS)
+        n = len(resultados or [])
+        log.info(
+            "chatnd: web -> engine=%s resultados=%d contexto=%d chars",
+            engine, n, len(contexto),
+        )
+        return contexto
 
     async def _stream_resiliente(self, body_iterator):
         # Encaminha o stream do motor VERBATIM e, se nenhum conteudo passar
@@ -2294,6 +2396,23 @@ class Pipe:
             else:
                 log.warning(
                     "chatnd: rota documentos sem contexto injetado (RAG vazio)"
+                )
+
+        # Rota GERAL: busca na WEB e injeta os trechos (1.36.0 / fatia 3).
+        # Simetrica a 'documentos', trocando a base pela internet: 'documentos' tem base
+        # e NUNCA ve web; 'geral' tem web e NUNCA ve base. E o desenho da governanca -
+        # "isto e sobre a Nidum?" decide qual das duas, e so uma toca cada fonte.
+        if categoria == "geral" and self.valves.WEB_NA_ROTA_GERAL and texto:
+            try:
+                contexto_web = await self._contexto_web(__request__, user, texto)
+            except Exception:
+                # Web e um EXTRA - se falha (rate-limit do DDGS, rede), a conversa segue
+                # sem ela, com o proprio conhecimento do modelo. Nao derruba a resposta.
+                log.exception("chatnd: falha na busca web (rota geral)")
+                contexto_web = ""
+            if contexto_web:
+                body["messages"] = self._injetar_sistema(
+                    body.get("messages") or [], contexto_web
                 )
 
         # Injeta a voz/estrutura da triade (documentos e raciocinio) quando

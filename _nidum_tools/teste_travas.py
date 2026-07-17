@@ -148,6 +148,31 @@ def main():
     ok &= check("valve vazia -> bloco vazio (nao polui o prompt a toa)",
                 C._bloco_termos_no_prompt("") == "")
 
+    print("== FATIA 3: _montar_contexto_web (contexto da busca web) ==")
+    class _SR:  # simula o SearchResult (pydantic) que a sonda 2 viu voltar
+        def __init__(s, t, l, sn):
+            s.title, s.link, s.snippet = t, l, sn
+    res = [
+        _SR("Americana - Wikipedia", "http://wiki/x", "Populacao estimada 247 mil"),
+        {"title": "Site de CEP", "link": "http://cep/y", "snippet": "lista de ruas"},
+    ]
+    ctx = C._montar_contexto_web(res, 3)
+    # O aviso no topo NAO e enfeite: os snippets da web sao de qualidade variavel (o DDGS
+    # trouxe cidade errada para "populacao de Americana"). Sem o aviso, o modelo repetiria
+    # um numero errado com a confianca de um certo.
+    ok &= check("abre com aviso 'apoio, nao verdade'", "apoio, nao verdade" in ctx)
+    ok &= check("aceita SearchResult (objeto)", "Americana - Wikipedia" in ctx)
+    ok &= check("aceita dict tambem (blindagem de versao)", "Site de CEP" in ctx)
+    ok &= check("cita o link, para o usuario conferir", "http://wiki/x" in ctx)
+    ok &= check("lista vazia -> '' (nao injeta aviso sozinho)",
+                C._montar_contexto_web([], 3) == "")
+    ok &= check("respeita WEB_MAX_RESULTADOS (max=1 corta o 2o)",
+                "Site de CEP" not in C._montar_contexto_web(res, 1))
+    ok &= check("resultado so com titulo (snippet vazio) nao explode",
+                isinstance(C._montar_contexto_web([_SR("T", "http://z", "")], 3), str))
+    ok &= check("None nos campos nao explode (_campo devolve '')",
+                isinstance(C._montar_contexto_web([_SR(None, None, None)], 3), str))
+
     print("== AS DUAS JUNTAS: o que a fronteira resgata ==")
     # Simula a decisao do roteador SEM chamar o classificador: dado que o LLM
     # devolveu 'geral' (o caso ruim), as travas corrigem?
