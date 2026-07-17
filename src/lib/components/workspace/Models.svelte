@@ -197,7 +197,7 @@
 		);
 	};
 
-	const getFullModel = async (model) =>
+	const getFullModel = async (model: any) =>
 		(await getModelById(localStorage.token, model.id).catch(() => null)) ?? model;
 
 	const cloneModelHandler = async (model) => {

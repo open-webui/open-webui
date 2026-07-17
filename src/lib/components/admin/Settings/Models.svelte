@@ -561,7 +561,7 @@
 		}
 	};
 
-	const getFullModel = async (model) =>
+	const getFullModel = async (model: any) =>
 		workspaceModels.some((workspaceModel) => workspaceModel.id === model.id)
 			? ((await getModelById(localStorage.token, model.id).catch(() => null)) ?? model)
 			: model;
