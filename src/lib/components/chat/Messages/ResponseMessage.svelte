@@ -764,7 +764,7 @@
 									></textarea>
 								{/if}
 
-								<div class=" mt-2 -mx-1 flex justify-between text-sm font-normal">
+								<div class=" mt-2 flex justify-between text-sm font-normal">
 									<div>
 										<button
 											id="save-new-message-button"
