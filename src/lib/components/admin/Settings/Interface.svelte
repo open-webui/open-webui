@@ -275,7 +275,7 @@
 					</AdminSettingField>
 
 					<AdminSettingField
-						label={$i18n.t('Retained Messages')}
+						label={$i18n.t('Retained Message Percentage')}
 						description={$i18n.t(
 							'Percentage (10–50%) of the most recent messages to retain after context compaction.'
 						)}
