@@ -4,7 +4,7 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { models, config as _config } from '$lib/stores';
+	import { config as _config } from '$lib/stores';
 	import { DEFAULT_CAPABILITIES } from '$lib/constants';
 	import { getModelsConfig, setModelsConfig, setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { getBackendConfig } from '$lib/apis';
@@ -14,7 +14,6 @@
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import ModelSelector from './ModelSelector.svelte';
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
@@ -28,10 +27,6 @@
 	export let initHandler = () => {};
 
 	let config = null;
-
-	let defaultModelIds = [];
-
-	let defaultPinnedModelIds = [];
 
 	let modelIds = [];
 
@@ -52,30 +47,7 @@
 	const init = async () => {
 		config = await getModelsConfig(localStorage.token);
 
-		if (config?.DEFAULT_MODELS) {
-			defaultModelIds = (config?.DEFAULT_MODELS).split(',').filter((id) => id);
-		} else {
-			defaultModelIds = [];
-		}
-
-		if (config?.DEFAULT_PINNED_MODELS) {
-			defaultPinnedModelIds = (config?.DEFAULT_PINNED_MODELS).split(',').filter((id) => id);
-		} else {
-			defaultPinnedModelIds = [];
-		}
-
-		const modelOrderList = config.MODEL_ORDER_LIST || [];
-		const allModelIds = $models.map((model) => model.id);
-
-		// Create a Set for quick lookup of ordered IDs
-		const orderedSet = new Set(modelOrderList);
-
-		modelIds = [
-			// Add all IDs from MODEL_ORDER_LIST that exist in allModelIds
-			...modelOrderList.filter((id) => orderedSet.has(id) && allModelIds.includes(id)),
-			// Add remaining IDs not in MODEL_ORDER_LIST, sorted alphabetically
-			...allModelIds.filter((id) => !orderedSet.has(id)).sort((a, b) => a.localeCompare(b))
-		];
+		modelIds = config.MODEL_ORDER_LIST || [];
 
 		const savedMeta = config?.DEFAULT_MODEL_METADATA;
 		if (savedMeta && Object.keys(savedMeta).length > 0) {
@@ -101,8 +73,8 @@
 		};
 
 		const res = await setModelsConfig(localStorage.token, {
-			DEFAULT_MODELS: defaultModelIds.join(','),
-			DEFAULT_PINNED_MODELS: defaultPinnedModelIds.join(','),
+			DEFAULT_MODELS: config?.DEFAULT_MODELS ?? null,
+			DEFAULT_PINNED_MODELS: config?.DEFAULT_PINNED_MODELS ?? null,
 			MODEL_ORDER_LIST: modelIds,
 			DEFAULT_MODEL_METADATA: metadata,
 			DEFAULT_MODEL_PARAMS: Object.fromEntries(
@@ -173,147 +145,123 @@
 
 							<div class="flex-1 mt-1 lg:mt-1 lg:h-[30rem] lg:max-h-[30rem] flex flex-col min-w-0">
 								<div class="w-full h-full overflow-y-auto overflow-x-hidden scrollbar-hidden">
-									<ModelSelector
-										title={$i18n.t('Selected Models')}
-										tooltip={$i18n.t(
-											'Set the default models that are automatically selected for all users when a new chat is created.'
-										)}
-										models={$models.filter((model) => !(model?.info?.meta?.hidden ?? false))}
-										bind:modelIds={defaultModelIds}
-									/>
+									<div>
+										<button
+											class="flex w-full justify-between items-center"
+											type="button"
+											on:click={() => {
+												showDefaultPromptSuggestions = !showDefaultPromptSuggestions;
+											}}
+										>
+											<div class="text-xs text-gray-500 font-normal">
+												{$i18n.t('Prompt Suggestions')}
+											</div>
+											<div>
+												{#if showDefaultPromptSuggestions}
+													<ChevronUp className="size-3" />
+												{:else}
+													<ChevronDown className="size-3" />
+												{/if}
+											</div>
+										</button>
 
-										<hr class=" border-gray-50 dark:border-gray-800/10 my-2.5 w-full" />
+										{#if showDefaultPromptSuggestions}
+											<div class="mt-2">
+												<PromptSuggestions bind:promptSuggestions />
 
-										<ModelSelector
-											title={$i18n.t('Pinned Models')}
-											tooltip={$i18n.t(
-												'Set the models that are automatically pinned to the sidebar for all users.'
-											)}
-											models={$models.filter((model) => !(model?.info?.meta?.hidden ?? false))}
-											bind:modelIds={defaultPinnedModelIds}
-										/>
+												{#if promptSuggestions.length > 0}
+													<div class="text-xs text-left w-full mt-2 text-gray-500">
+														{$i18n.t(
+															'Adjusting these settings will apply changes universally to all users.'
+														)}
+													</div>
+												{/if}
+											</div>
+										{/if}
+									</div>
 
-										<hr class=" border-gray-50 dark:border-gray-800/10 my-2.5 w-full" />
+									<hr class=" border-gray-50 dark:border-gray-800/10 my-2.5 w-full" />
 
-										<div>
-											<button
-												class="flex w-full justify-between items-center"
-												type="button"
-												on:click={() => {
-													showDefaultPromptSuggestions = !showDefaultPromptSuggestions;
-												}}
-											>
-												<div class="text-xs text-gray-500 font-normal">
-													{$i18n.t('Prompt Suggestions')}
-												</div>
-												<div>
-													{#if showDefaultPromptSuggestions}
-														<ChevronUp className="size-3" />
-													{:else}
-														<ChevronDown className="size-3" />
-													{/if}
-												</div>
-											</button>
+									<div>
+										<button
+											class="flex w-full justify-between items-center"
+											type="button"
+											on:click={() => {
+												showDefaultCapabilities = !showDefaultCapabilities;
+											}}
+										>
+											<div class="text-xs text-gray-500 font-normal">
+												{$i18n.t('Model Capabilities')}
+											</div>
+											<div>
+												{#if showDefaultCapabilities}
+													<ChevronUp className="size-3" />
+												{:else}
+													<ChevronDown className="size-3" />
+												{/if}
+											</div>
+										</button>
 
-											{#if showDefaultPromptSuggestions}
-												<div class="mt-2">
-													<PromptSuggestions bind:promptSuggestions />
+										{#if showDefaultCapabilities}
+											<div class="mt-2">
+												<Capabilities bind:capabilities={defaultCapabilities} />
 
-													{#if promptSuggestions.length > 0}
-														<div class="text-xs text-left w-full mt-2 text-gray-500">
-															{$i18n.t(
-																'Adjusting these settings will apply changes universally to all users.'
-															)}
-														</div>
-													{/if}
-												</div>
-											{/if}
-										</div>
+												{#if Object.keys(defaultCapabilities).filter((key) => defaultCapabilities[key]).length > 0}
+													{@const availableFeatures = Object.entries(defaultCapabilities)
+														.filter(
+															([key, value]) =>
+																value &&
+																['web_search', 'code_interpreter', 'image_generation'].includes(key)
+														)
+														.map(([key, value]) => key)}
 
-										<hr class=" border-gray-50 dark:border-gray-800/10 my-2.5 w-full" />
-
-										<div>
-											<button
-												class="flex w-full justify-between items-center"
-												type="button"
-												on:click={() => {
-													showDefaultCapabilities = !showDefaultCapabilities;
-												}}
-											>
-												<div class="text-xs text-gray-500 font-normal">
-													{$i18n.t('Model Capabilities')}
-												</div>
-												<div>
-													{#if showDefaultCapabilities}
-														<ChevronUp className="size-3" />
-													{:else}
-														<ChevronDown className="size-3" />
-													{/if}
-												</div>
-											</button>
-
-											{#if showDefaultCapabilities}
-												<div class="mt-2">
-													<Capabilities bind:capabilities={defaultCapabilities} />
-
-													{#if Object.keys(defaultCapabilities).filter((key) => defaultCapabilities[key]).length > 0}
-														{@const availableFeatures = Object.entries(defaultCapabilities)
-															.filter(
-																([key, value]) =>
-																	value &&
-																	['web_search', 'code_interpreter', 'image_generation'].includes(
-																		key
-																	)
-															)
-															.map(([key, value]) => key)}
-
-														{#if availableFeatures.length > 0}
-															<div class="mt-4">
-																<DefaultFeatures
-																	{availableFeatures}
-																	bind:featureIds={defaultFeatureIds}
-																/>
-															</div>
-														{/if}
-													{/if}
-
-													{#if defaultCapabilities.builtin_tools}
+													{#if availableFeatures.length > 0}
 														<div class="mt-4">
-															<BuiltinTools bind:builtinTools />
+															<DefaultFeatures
+																{availableFeatures}
+																bind:featureIds={defaultFeatureIds}
+															/>
 														</div>
 													{/if}
-												</div>
-											{/if}
-										</div>
+												{/if}
 
-										<hr class=" border-gray-50 dark:border-gray-800/10 my-2.5 w-full" />
+												{#if defaultCapabilities.builtin_tools}
+													<div class="mt-4">
+														<BuiltinTools bind:builtinTools />
+													</div>
+												{/if}
+											</div>
+										{/if}
+									</div>
 
-										<div>
-											<button
-												class="flex w-full justify-between items-center"
-												type="button"
-												on:click={() => {
-													showDefaultParams = !showDefaultParams;
-												}}
-											>
-												<div class="text-xs text-gray-500 font-normal">
-													{$i18n.t('Model Parameters')}
-												</div>
-												<div>
-													{#if showDefaultParams}
-														<ChevronUp className="size-3" />
-													{:else}
-														<ChevronDown className="size-3" />
-													{/if}
-												</div>
-											</button>
+									<hr class=" border-gray-50 dark:border-gray-800/10 my-2.5 w-full" />
 
-											{#if showDefaultParams}
-												<div class="mt-2">
-													<AdvancedParams admin={true} custom={true} bind:params={defaultParams} />
-												</div>
-											{/if}
-										</div>
+									<div>
+										<button
+											class="flex w-full justify-between items-center"
+											type="button"
+											on:click={() => {
+												showDefaultParams = !showDefaultParams;
+											}}
+										>
+											<div class="text-xs text-gray-500 font-normal">
+												{$i18n.t('Model Parameters')}
+											</div>
+											<div>
+												{#if showDefaultParams}
+													<ChevronUp className="size-3" />
+												{:else}
+													<ChevronDown className="size-3" />
+												{/if}
+											</div>
+										</button>
+
+										{#if showDefaultParams}
+											<div class="mt-2">
+												<AdvancedParams admin={true} custom={true} bind:params={defaultParams} />
+											</div>
+										{/if}
+									</div>
 								</div>
 
 								<div class="flex justify-end items-center pt-3 text-sm font-normal gap-1.5">

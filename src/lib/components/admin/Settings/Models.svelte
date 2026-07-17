@@ -71,6 +71,8 @@
 	let models = null;
 	let modelsConfig = null;
 	let modelOrderList: string[] = [];
+	let defaultModelIds: string[] = [];
+	let defaultPinnedModelIds: string[] = [];
 
 	let workspaceModels: ModelListItem[] = [];
 	let baseModels: ModelListItem[] = [];
@@ -120,6 +122,9 @@
 		}
 		return 'text-gray-500 dark:text-gray-400';
 	};
+
+	const isDefaultModel = (model) => defaultModelIds.includes(model.id);
+	const isDefaultPinnedModel = (model) => defaultPinnedModelIds.includes(model.id);
 
 	$: if (models) {
 		const modelOrder = new Map(modelOrderList.map((id, idx) => [id, idx]));
@@ -230,6 +235,10 @@
 
 		modelsConfig = await getModelsConfig(localStorage.token);
 		modelOrderList = modelsConfig?.MODEL_ORDER_LIST ?? [];
+		defaultModelIds = (modelsConfig?.DEFAULT_MODELS ?? '').split(',').filter((id) => id);
+		defaultPinnedModelIds = (modelsConfig?.DEFAULT_PINNED_MODELS ?? '')
+			.split(',')
+			.filter((id) => id);
 
 		tags = await getBaseModelTags(localStorage.token);
 		if (selectedTag && !tags.includes(selectedTag)) {
@@ -282,8 +291,8 @@
 		savingModelOrder = true;
 
 		const res = await setModelsConfig(localStorage.token, {
-			DEFAULT_MODELS: modelsConfig?.DEFAULT_MODELS ?? null,
-			DEFAULT_PINNED_MODELS: modelsConfig?.DEFAULT_PINNED_MODELS ?? null,
+			DEFAULT_MODELS: defaultModelIds.join(','),
+			DEFAULT_PINNED_MODELS: defaultPinnedModelIds.join(','),
 			MODEL_ORDER_LIST: orderedModelIds,
 			DEFAULT_MODEL_METADATA: modelsConfig?.DEFAULT_MODEL_METADATA ?? null,
 			DEFAULT_MODEL_PARAMS: modelsConfig?.DEFAULT_MODEL_PARAMS ?? null
@@ -305,6 +314,65 @@
 		}
 
 		savingModelOrder = false;
+	};
+
+	const saveModelDefaults = async (
+		nextDefaultModelIds: string[],
+		nextDefaultPinnedModelIds: string[],
+		successMessage: string
+	) => {
+		const previousDefaultModelIds = defaultModelIds;
+		const previousDefaultPinnedModelIds = defaultPinnedModelIds;
+
+		defaultModelIds = nextDefaultModelIds;
+		defaultPinnedModelIds = nextDefaultPinnedModelIds;
+
+		const res = await setModelsConfig(localStorage.token, {
+			DEFAULT_MODELS: nextDefaultModelIds.join(','),
+			DEFAULT_PINNED_MODELS: nextDefaultPinnedModelIds.join(','),
+			MODEL_ORDER_LIST: modelsConfig?.MODEL_ORDER_LIST ?? [],
+			DEFAULT_MODEL_METADATA: modelsConfig?.DEFAULT_MODEL_METADATA ?? null,
+			DEFAULT_MODEL_PARAMS: modelsConfig?.DEFAULT_MODEL_PARAMS ?? null
+		}).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			modelsConfig = res;
+			toast.success(successMessage);
+		} else {
+			defaultModelIds = previousDefaultModelIds;
+			defaultPinnedModelIds = previousDefaultPinnedModelIds;
+		}
+	};
+
+	const toggleDefaultModelHandler = async (model) => {
+		const nextDefaultModelIds = isDefaultModel(model)
+			? defaultModelIds.filter((id) => id !== model.id)
+			: [...new Set([...defaultModelIds, model.id])];
+
+		await saveModelDefaults(
+			nextDefaultModelIds,
+			defaultPinnedModelIds,
+			isDefaultModel(model)
+				? $i18n.t('Model removed from selected models')
+				: $i18n.t('Model added to selected models')
+		);
+	};
+
+	const toggleDefaultPinnedModelHandler = async (model) => {
+		const nextDefaultPinnedModelIds = isDefaultPinnedModel(model)
+			? defaultPinnedModelIds.filter((id) => id !== model.id)
+			: [...new Set([...defaultPinnedModelIds, model.id])];
+
+		await saveModelDefaults(
+			defaultModelIds,
+			nextDefaultPinnedModelIds,
+			isDefaultPinnedModel(model)
+				? $i18n.t('Model removed from pinned models')
+				: $i18n.t('Model added to pinned models')
+		);
 	};
 
 	const positionChangeHandler = async (event) => {
@@ -803,7 +871,7 @@
 								class="flex cursor-pointer transition w-full px-2 py-1 rounded-xl hover:bg-gray-50/70 dark:hover:bg-gray-850/50 {model
 									?.meta?.hidden
 									? 'opacity-50 dark:opacity-50'
-								: ''}"
+									: ''}"
 								id="model-item-{model.id}"
 							>
 								<div class="self-center pr-1 text-gray-400 dark:text-gray-600">
@@ -876,6 +944,22 @@
 												>
 													{modelAccessLabel(model)}
 												</span>
+
+												{#if isDefaultModel(model)}
+													<span
+														class="shrink-0 text-[11px] font-normal leading-4 text-gray-500 dark:text-gray-400"
+													>
+														{$i18n.t('Selected')}
+													</span>
+												{/if}
+
+												{#if isDefaultPinnedModel(model)}
+													<span
+														class="shrink-0 text-[11px] font-normal leading-4 text-gray-500 dark:text-gray-400"
+													>
+														{$i18n.t('Pinned')}
+													</span>
+												{/if}
 											</div>
 										</Tooltip>
 									</div>
@@ -933,6 +1017,14 @@
 										}}
 										privacyHandler={() => {
 											toggleModelPrivacyHandler(model);
+										}}
+										isDefaultSelected={isDefaultModel(model)}
+										isDefaultPinned={isDefaultPinnedModel(model)}
+										defaultSelectedHandler={() => {
+											toggleDefaultModelHandler(model);
+										}}
+										defaultPinnedHandler={() => {
+											toggleDefaultPinnedModelHandler(model);
 										}}
 										pinModelHandler={() => {
 											pinModelHandler(model.id);

@@ -14,6 +14,7 @@
 	import ArrowUpCircle from '$lib/components/icons/ArrowUpCircle.svelte';
 	import Pin from '$lib/components/icons/Pin.svelte';
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 
@@ -28,6 +29,10 @@
 	export let exportHandler: Function;
 	export let hideHandler: Function;
 	export let privacyHandler: Function;
+	export let isDefaultSelected = false;
+	export let isDefaultPinned = false;
+	export let defaultSelectedHandler: Function;
+	export let defaultPinnedHandler: Function;
 	export let pinModelHandler: Function;
 	export let copyLinkHandler: Function;
 	export let cloneHandler: Function;
@@ -104,6 +109,46 @@
 						{$i18n.t('Show Model')}
 					{:else}
 						{$i18n.t('Hide Model')}
+					{/if}
+				</div>
+			</button>
+
+			<button
+				class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
+				on:click={async () => {
+					show = false;
+					await defaultSelectedHandler();
+				}}
+			>
+				<Check className="size-3.5" />
+
+				<div class="flex items-center">
+					{#if isDefaultSelected}
+						{$i18n.t('Remove Selected Model')}
+					{:else}
+						{$i18n.t('Set as Selected Model')}
+					{/if}
+				</div>
+			</button>
+
+			<button
+				class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
+				on:click={async () => {
+					show = false;
+					await defaultPinnedHandler();
+				}}
+			>
+				{#if isDefaultPinned}
+					<PinSlash className="size-3.5" />
+				{:else}
+					<Pin className="size-3.5" />
+				{/if}
+
+				<div class="flex items-center">
+					{#if isDefaultPinned}
+						{$i18n.t('Remove Pinned Model')}
+					{:else}
+						{$i18n.t('Set as Pinned Model')}
 					{/if}
 				</div>
 			</button>
