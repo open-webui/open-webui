@@ -533,7 +533,7 @@
 								<div
 									class="flex w-full items-center gap-2 px-2 pb-2 text-xs text-gray-400 dark:text-gray-600"
 								>
-									<div class="flex min-w-0 flex-1 items-center gap-3">
+									<div class="flex min-w-0 flex-1 items-center">
 										<button
 											class="flex min-w-0 items-center gap-1 py-0.5 text-left"
 											type="button"
@@ -548,9 +548,13 @@
 												{/if}
 											{/if}
 										</button>
+									</div>
 
+									<div class="ml-2 flex shrink-0 items-center justify-end gap-2">
+										<div class="hidden w-44 shrink-0 md:block"></div>
+										<div class="size-5 shrink-0"></div>
 										<button
-											class="flex shrink-0 items-center gap-1 py-0.5 text-left"
+											class="flex w-24 shrink-0 items-center justify-end gap-1 py-0.5 text-right"
 											type="button"
 											on:click={() => setSortKey('updated_at')}
 										>
@@ -564,8 +568,6 @@
 											{/if}
 										</button>
 									</div>
-
-									<div class="hidden w-44 shrink-0 md:block"></div>
 								</div>
 							{/if}
 
