@@ -51,6 +51,7 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
 )
+from open_webui.utils.system_prompt import resolve_model_system_prompt
 from open_webui.utils.session_pool import (
     cleanup_response,
     get_session,
@@ -1240,11 +1241,12 @@ async def generate_chat_completion(
         params = model_info.params.model_dump()
 
         if params:
-            system = params.pop('system', None)
-
-            payload = apply_model_params_to_body_openai(params, payload)
-            if not bypass_system_prompt:
+            system = await resolve_model_system_prompt(
+                model_info, metadata, user, bypass=bypass_system_prompt
+            )
+            if system:
                 payload = await apply_system_prompt_to_body(system, payload, metadata, user)
+            payload = apply_model_params_to_body_openai(params, payload)
 
         await check_model_access(user, model_info, bypass_filter)
     else:

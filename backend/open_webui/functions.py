@@ -40,6 +40,7 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
 )
+from open_webui.utils.system_prompt import resolve_model_system_prompt
 from open_webui.utils.plugin import (
     get_function_module_from_cache,
     load_function_module_by_id,
@@ -272,6 +273,8 @@ async def generate_function_chat_completion(request, form_data, user, models: di
     }
     extra_params['__tools__'] = metadata.get('tools', {})
 
+    bypass_system_prompt = getattr(request.state, 'bypass_system_prompt', False)
+
     if model_info:
         if model_info.base_model_id:
             form_data['model'] = model_info.base_model_id
@@ -283,9 +286,12 @@ async def generate_function_chat_completion(request, form_data, user, models: di
         params = model_info.params.model_dump()
 
         if params:
-            system = params.pop('system', None)
+            system = await resolve_model_system_prompt(
+                model_info, metadata, user, bypass=bypass_system_prompt
+            )
+            if system:
+                form_data = await apply_system_prompt_to_body(system, form_data, metadata, user)
             form_data = apply_model_params_to_body_openai(params, form_data)
-            form_data = await apply_system_prompt_to_body(system, form_data, metadata, user)
 
     pipe_id = get_pipe_id(form_data)
     function_module = await get_function_module_by_id(request, pipe_id)
