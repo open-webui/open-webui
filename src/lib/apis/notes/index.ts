@@ -97,7 +97,8 @@ export const searchNotes = async (
 	viewOption: string | null = null,
 	permission: string | null = null,
 	sortKey: string | null = null,
-	page: number | null = null
+	page: number | null = null,
+	direction: string | null = null
 ) => {
 	let error = null;
 	const searchParams = new URLSearchParams();
@@ -116,6 +117,10 @@ export const searchNotes = async (
 
 	if (sortKey !== null) {
 		searchParams.append('order_by', sortKey);
+	}
+
+	if (direction !== null) {
+		searchParams.append('direction', direction);
 	}
 
 	if (page !== null) {

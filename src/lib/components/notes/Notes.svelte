@@ -55,6 +55,8 @@
 	import Loader from '../common/Loader.svelte';
 	import SidebarIcon from '../icons/Sidebar.svelte';
 	import SplitCreateButton from '../common/SplitCreateButton.svelte';
+	import ChevronDown from '../icons/ChevronDown.svelte';
+	import ChevronUp from '../icons/ChevronUp.svelte';
 
 	let loaded = false;
 
@@ -62,6 +64,7 @@
 	let importDocumentFiles: FileList | null = null;
 	let notesImportInputElement: HTMLInputElement;
 	let selectedNote = null;
+	let openNoteMenuId: string | null = null;
 	let showDeleteConfirm = false;
 
 	let notes = {};
@@ -72,7 +75,8 @@
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
-	let sortKey = null;
+	let sortKey = 'updated_at';
+	let sortDirection = 'desc';
 	let displayOption = null;
 	let viewOption = null;
 	let permission = null;
@@ -190,7 +194,13 @@
 		}, 300);
 	};
 
-	$: if (loaded && sortKey !== undefined && permission !== undefined && viewOption !== undefined) {
+	$: if (
+		loaded &&
+		sortKey !== undefined &&
+		sortDirection !== undefined &&
+		permission !== undefined &&
+		viewOption !== undefined
+	) {
 		init();
 	}
 
@@ -207,13 +217,13 @@
 			viewOption,
 			permission,
 			sortKey,
-			page
+			page,
+			sortKey ? sortDirection : null
 		).catch(() => {
 			return [];
 		});
 
 		if (res) {
-			console.log(res);
 			total = res.total;
 			const pageItems = res.items;
 
@@ -259,6 +269,15 @@
 
 		// Return as array of [timeRange, notes] to preserve insertion order
 		return orderedKeys.map((key) => [key, grouped[key]] as [string, any[]]);
+	};
+
+	const setSortKey = (key: string) => {
+		if (sortKey === key) {
+			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortKey = key;
+			sortDirection = key === 'updated_at' ? 'desc' : 'asc';
+		}
 	};
 
 	let dragged = false;
@@ -509,9 +528,47 @@
 					{@const groupedNotes = groupNotes(items)}
 
 					<div class="@container h-full my-1">
-						<div class="px-1">
+						<div>
+							{#if displayOption === null}
+								<div
+									class="flex w-full items-center gap-2 px-2 pb-2 text-xs text-gray-400 dark:text-gray-600"
+								>
+									<button
+										class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
+										type="button"
+										on:click={() => setSortKey('name')}
+									>
+										{$i18n.t('Title')}
+										{#if sortKey === 'name'}
+											{#if sortDirection === 'asc'}
+												<ChevronUp className="size-2" />
+											{:else}
+												<ChevronDown className="size-2" />
+											{/if}
+										{/if}
+									</button>
+
+									<div class="hidden w-44 shrink-0 md:block"></div>
+
+									<button
+										class="flex w-36 shrink-0 items-center justify-end gap-1 py-0.5 text-right"
+										type="button"
+										on:click={() => setSortKey('updated_at')}
+									>
+										{$i18n.t('Updated at')}
+										{#if sortKey === 'updated_at'}
+											{#if sortDirection === 'asc'}
+												<ChevronUp className="size-2" />
+											{:else}
+												<ChevronDown className="size-2" />
+											{/if}
+										{/if}
+									</button>
+								</div>
+							{/if}
+
 							{#each groupedNotes as [timeRange, notesList], idx}
-								<div class="w-full text-xs text-gray-500 dark:text-gray-500 pb-1">
+								<div class="w-full px-2 pb-1 text-xs text-gray-500 dark:text-gray-500">
 									{$i18n.t(timeRange)}
 								</div>
 
@@ -520,86 +577,104 @@
 										class="{groupedNotes.length - 1 !== idx ? 'mb-3' : ''} gap-y-0.5 flex flex-col"
 									>
 										{#each notesList as note, idx (note.id)}
-											<div
-												class="group flex min-h-8 w-full items-center gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-gray-50 focus-within:bg-gray-50 dark:hover:bg-gray-900 dark:focus-within:bg-gray-900"
+											<button
+												type="button"
+												aria-label={$i18n.t('Open note')}
+												class="group flex min-h-8 w-full items-center gap-2 rounded-xl px-2 py-[6px] text-left transition hover:bg-gray-50 focus-within:bg-gray-50 dark:hover:bg-gray-900 dark:focus-within:bg-gray-900"
+												on:click={() => {
+													goto(`/notes/${note.id}`);
+												}}
 											>
-												<a
-													href={`/notes/${note.id}`}
-													class="flex min-w-0 flex-1 items-center gap-3"
-												>
+												<div class="flex min-w-0 flex-1 items-center gap-2">
 													<Tooltip
 														content={note.title}
 														className="min-w-0 flex-1"
 														placement="top-start"
 													>
 														<div
-															class="truncate text-[13px] leading-5 text-gray-800 dark:text-gray-200"
+															dir="auto"
+															class="h-[20px] truncate text-[13px] leading-5 text-gray-800 hover:underline dark:text-gray-200"
 														>
 															{note.title}
 														</div>
 													</Tooltip>
 
 													<div
-														class="hidden shrink-0 items-center gap-2 text-[11px] leading-5 text-gray-500 dark:text-gray-500 sm:flex"
+														class="hidden w-44 shrink-0 truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
 													>
 														<Tooltip
 															content={note?.user?.email ?? $i18n.t('Deleted User')}
-															className="flex min-w-0 shrink"
+															className="min-w-0"
 															placement="top-start"
 														>
-															<div class="max-w-28 truncate">
+															<div class="truncate">
 																{capitalizeFirstLetter(
 																	note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
 																)}
 															</div>
 														</Tooltip>
+													</div>
 
-														<span class="text-gray-300 dark:text-gray-700">·</span>
-
+													<div class="w-28 shrink-0">
 														<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
-															<div>{dayjs(note.updated_at / 1000000).fromNow()}</div>
+															<div
+																class="min-w-0 truncate text-right text-xs text-gray-400 dark:text-gray-600"
+															>
+																{dayjs(note.updated_at / 1000000).fromNow()}
+															</div>
 														</Tooltip>
 													</div>
-												</a>
+												</div>
 
-												<NoteMenu
-													onDownload={(type) => {
-														selectedNote = note;
+												<div class="flex shrink-0 items-center justify-end">
+													<NoteMenu
+														show={openNoteMenuId === note.id}
+														onDownload={(type) => {
+															selectedNote = note;
 
-														downloadHandler(type);
-													}}
-													onCopyLink={async () => {
-														const baseUrl = window.location.origin;
-														const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
+															downloadHandler(type);
+														}}
+														onCopyLink={async () => {
+															const baseUrl = window.location.origin;
+															const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
 
-														if (res) {
-															toast.success($i18n.t('Copied link to clipboard'));
-														} else {
-															toast.error($i18n.t('Failed to copy link'));
-														}
-													}}
-													onDelete={() => {
-														selectedNote = note;
-														showDeleteConfirm = true;
-													}}
-													isPinned={note.is_pinned ?? false}
-													onPin={async () => {
-														await toggleNotePinnedStatusById(localStorage.token, note.id);
-														pinnedNotes.set(
-															await getPinnedNoteList(localStorage.token).catch(() => [])
-														);
-														init();
-													}}
-												>
-													<button
-														class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-														type="button"
-														aria-label={$i18n.t('Note Menu')}
+															if (res) {
+																toast.success($i18n.t('Copied link to clipboard'));
+															} else {
+																toast.error($i18n.t('Failed to copy link'));
+															}
+														}}
+														onDelete={() => {
+															selectedNote = note;
+															showDeleteConfirm = true;
+														}}
+														isPinned={note.is_pinned ?? false}
+														onPin={async () => {
+															await toggleNotePinnedStatusById(localStorage.token, note.id);
+															pinnedNotes.set(
+																await getPinnedNoteList(localStorage.token).catch(() => [])
+															);
+															init();
+														}}
+														onChange={(state) => {
+															openNoteMenuId = state ? note.id : null;
+														}}
 													>
-														<EllipsisHorizontal className="size-4" />
-													</button>
-												</NoteMenu>
-											</div>
+														<button
+															class="flex size-5 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
+															type="button"
+															aria-label={$i18n.t('Note Menu')}
+															on:click={(e) => {
+																e.preventDefault();
+																e.stopPropagation();
+																openNoteMenuId = openNoteMenuId === note.id ? null : note.id;
+															}}
+														>
+															<EllipsisHorizontal className="size-3.5" />
+														</button>
+													</NoteMenu>
+												</div>
+											</button>
 										{/each}
 									</div>
 								{:else if displayOption === 'grid'}
@@ -653,11 +728,11 @@
 														}}
 													>
 														<button
-															class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+															class="flex size-5 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
 															type="button"
 															aria-label={$i18n.t('Note Menu')}
 														>
-															<EllipsisHorizontal className="size-4" />
+															<EllipsisHorizontal className="size-3.5" />
 														</button>
 													</NoteMenu>
 												</div>
