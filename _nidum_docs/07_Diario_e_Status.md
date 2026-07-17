@@ -13,6 +13,79 @@
 
 ---
 
+## Sessão 2026-07-18 (fatia 3) — A web entra pela rota `geral`, e o desenho do chat único fecha
+
+**A reforma está completa.** O `chatnd` agora é:
+
+```
+classificador: é da Nidum?
+  SIM → documentos → base (2 coleções), NUNCA web
+  NÃO → geral      → web (DDGS),         NUNCA base
+```
+
+**A pergunta institucional nunca vê a internet; a pergunta geral nunca vê a base.** Era o
+requisito que travava tudo: *"web que roda antes do pipe não vai para produção"* — o erro
+silencioso que passamos dias eliminando.
+
+### As duas sondas provaram o caminho — nenhuma suposição
+
+| | Testou | Resultado |
+|---|---|---|
+| **Sonda 1** | `process_web_search` como **admin** | 403 → **revelou o gate de permissão** dentro da função |
+| **Sonda 2** | `search_web` com a conta da **Amanda** (`role='user'`) | **rodou** → 3 `SearchResult` com snippet |
+
+**A sonda 2 era a que importava**, e a 1 não podia dar: o `process_web_search` checa
+`features.web_search` **dentro** da função, e a permissão fica OFF — daria **403 para todo
+coautor**. Por isso a fatia usa `search_web`, a camada de baixo, sem gate. **O pipe não é o
+usuário — é o sistema decidindo.**
+
+### 🔧 Duas correções minhas, registradas — as duas viraram fato ao ler o código
+
+1. *"o pipe teria que carregar as páginas (~300 linhas)"* → **errado**. O `SearchResult`
+   já traz o `snippet`; **não há scraping**. São ~40 linhas.
+2. *"a fatia 3 precisa do BYPASS ligado"* → **errado**. O
+   `BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL` vive **dentro** do `process_web_search`, o
+   caminho que **não** usamos. **A config "Ignorar Embedding" pode ficar como está** — não
+   era decisão pendente. Eu tinha transformado um não-problema em pergunta aberta.
+
+### ⚠️ Qualidade da engine grátis — custo conhecido, tratado no código
+
+O DDGS, para *"população de Americana-SP"*, trouxe **blog de psicopedagogia, site da cidade
+errada e site de CEP — nenhum IBGE**. Os snippets têm a informação; **a fonte é fraca**.
+
+**Não deixei como nota — virou instrução no contexto injetado.** O bloco da web abre com:
+*"apoio, não verdade; confronte com o que você já sabe; CITE a fonte; se irrelevante,
+responda do seu conhecimento e diga que a busca não ajudou"*.
+
+> **Sem esse aviso, o modelo repetiria um número errado com a confiança de um certo.** Fonte
+> fraca não se conserta melhorando o código — **se conserta avisando o modelo do que ele
+> tem em mãos.** É a lição da Q12 pelo avesso: lá **faltava** informação; aqui **sobra**
+> informação de qualidade duvidosa — e nos dois casos a solução é **dizer ao modelo o que a
+> informação vale**.
+
+**Se doer, trocar de engine é mudar UMA variável** (`WEB_SEARCH_ENGINE`), não código — a
+fatia 3 não sabe qual engine está atrás. Os pagos e o que cada um exige estão no
+`04_Dicionario`.
+
+### O que fica ligado, o que fica desligado
+
+| Config | Estado | Por quê |
+|---|---|---|
+| `WEB_NA_ROTA_GERAL` (valve) | **ON** | a fatia 3, ligada |
+| `WEB_MAX_RESULTADOS` (valve) | 3 | mais que isso é ruído, dada a qualidade |
+| Permissão *"Pesquisa na Web"* | **OFF** | impede o caminho pré-pipe (camada 1) |
+| `ENABLE_WEB_SEARCH` | **False** | impede middleware e endpoint (camada 2) |
+| *"Ignorar Embedding e Recuperação"* | **OFF** | irrelevante — fora do caminho `search_web` |
+
+**Web é EXTRA:** se o `search_web` falha (rate-limit do DDGS, rede), a conversa segue com o
+conhecimento do próprio modelo — o `except` não derruba a resposta.
+
+### Limpeza pendente (quando a 1.36.0 for publicada e validada)
+
+- Apagar a **sonda 1** (`sonda_web_search`), ainda publicada.
+- Apagar a **sonda 2** (`sonda_search_web`).
+- Apagar o wrapper **"Sonda - Teste"**, criado para dar acesso à Amanda.
+
 ## Sessão 2026-07-17 (noite) — A teoria do catch-all foi demolida, e a demolição vale mais que o conserto
 
 **A fatia B (1.33.0) foi ao ar e NÃO consertou a Q12.** Mesma pergunta, mesmo veredito:
