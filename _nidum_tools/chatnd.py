@@ -1,9 +1,28 @@
 """
 title: ChatND
 author: Nidum
-version: 1.34.0
+version: 1.35.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum. Na rota de imagem, gera a imagem via Gemini (motor oculto). O usuario nao escolhe o motor.
 changelog:
+  1.35.0:
+    - FATIA C - A EXPANSAO DE DATAS OLHA SO A PERGUNTA ATUAL. O texto de busca junta as
+      ULTIMAS 3 mensagens (para follow-up curto manter o tema) e a expansao varria as
+      TRES - trazendo data de pergunta antiga. Medido em producao:
+        antes:  'Quais os assuntos da reuniao de 25/12/2027? O que a reuniao de 13/07
+                 decidiu sobre marketing...'
+        depois: '... 25-12-2027 ... 25 dez 2027 13/07/2026 ... 13 jul 2026'
+      13 variantes de DUAS perguntas diferentes. Numa conversa real, quem muda de assunto
+      continuava sendo buscado com a data anterior.
+    - A CORRECAO NAO E reduzir as 3 mensagens para 1: elas existem de proposito ("e os
+      outros?" precisa do tema anterior) e cortar quebraria o follow-up. Sao coisas
+      SEPARADAS: TEXTO DE BUSCA = 3 mensagens (contexto); EXPANSAO DE DATAS = so a
+      ultima (a pergunta atual).
+    - _expandir_datas ganha 'fonte': separa ONDE SE PROCURA data de ONDE SE ANEXA a
+      variante. fonte=None mantem o comportamento antigo (os 18 testes de data passam sem
+      mudanca), fonte='<ultima msg>' e o que o pipe usa.
+    - Esta e a poluicao que eu previ ao propor a expansao - mas por outro caminho. A que
+      previ (a query poluir o RERANKER) foi REFUTADA por teste. Esta e real e e do
+      historico, nao do reranker.
   1.34.0:
     - TERMOS CANONICOS (trava 3 + prompt), em valve. E a admissao de que o prompt NAO
       resolve isto: a Q12 ("o que significa 'fazer da casa um ninho'?" - frase LITERAL do
@@ -90,10 +109,16 @@ changelog:
     - NAO aborta: o Open WebUI ESPERA o titulo/as tags de volta. Encaminha ao ROUTER_MODEL
       (gpt-5-mini), o barato da casa - titulo de 3 palavras nao precisa de Sonnet. Sem
       valve nova: se um dia os titulos ficarem ruins, vira valve COM SINTOMA.
-    - DOIS SINTOMAS SOMEM JUNTO, e nao eram bugs proprios: (a) a TRAVA TEMPORAL disparava
-      em tarefa interna ("trava temporal -> geral vira documentos" num pedido de gerar
-      titulo), porque a tarefa carrega o historico; (b) a EXPANSAO DE DATAS expandia data
-      de pergunta anterior. Os dois eram sintoma de tratar tarefa interna como pergunta.
+    - DOIS SINTOMAS SOMEM AQUI, mas SO NO CASO DA TAREFA INTERNA: (a) a TRAVA TEMPORAL
+      disparava em tarefa interna ("trava temporal -> geral vira documentos" num pedido de
+      gerar titulo), porque a tarefa carrega o historico; (b) a EXPANSAO DE DATAS expandia
+      data de pergunta anterior, pelo mesmo motivo.
+      RESSALVA (corrigida na 1.34.0): o (b) NAO acaba aqui. Esta fatia tira a tarefa
+      interna do caminho; numa CONVERSA REAL o _texto_de_busca ainda junta as 3 ultimas
+      mensagens e a expansao continua varrendo as tres. O pipe tratava tarefa interna E
+      historico como se fossem a pergunta atual - esta fatia resolve a PRIMEIRA metade; a
+      1.34.0 resolve a segunda. A redacao original desta linha dizia "os dois eram sintoma
+      de tratar tarefa interna como pergunta", o que dava a metade por inteira.
     - NAO precisa do banco: nao muda resposta nenhuma, so evita trabalho. A prova e o LOG
       (antes: 9 montagens em 77 s; depois: so as reais).
   1.31.0:
@@ -795,22 +820,42 @@ def _variantes_de_data(dia, mes, ano):
     ]
 
 
-def _expandir_datas(texto, hoje=None):
+def _expandir_datas(texto, hoje=None, fonte=None):
     """
     PURA. Detecta datas (barras, pontos, hifens, compacta, ISO, por extenso e
     abreviada) e ANEXA as demais variantes ao texto usado na BUSCA - para o BM25 casar
     o NOME do arquivo (13072026) e o CORPO ("13 de julho de 2026"), qualquer que seja o
     formato da pergunta. NUNCA altera a pergunta que vai ao modelo (por isso mora no
-    _buscar_sources, e nao no _texto_de_busca - que tambem alimenta a rota de imagem e
-    o gatilho do piso). Idempotente: variante ja presente nao e repetida. Sem data no
-    texto -> devolve o texto intacto.
+    _buscar_sources, e nao no _texto_de_busca - que tambem alimenta a rota de imagem).
+    Idempotente: variante ja presente nao e repetida. Sem data -> texto intacto.
+
+    'fonte' separa ONDE SE PROCURA data de ONDE SE ANEXA as variantes (1.32.0):
+      fonte=None (padrao) -> procura no proprio 'texto'. Comportamento original.
+      fonte='<texto>'     -> procura SO em 'fonte'; anexa em 'texto'.
+
+    POR QUE EXISTE: o texto de busca junta as ULTIMAS 3 mensagens do usuario (para um
+    follow-up curto - "e os outros?" - manter o tema). Sem 'fonte', a expansao varria as
+    tres e trazia data de pergunta ANTIGA. Caso real, medido em producao:
+        antes:  'Quais os assuntos da reuniao de coautores de 25/12/2027? O que a
+                 reuniao de 13/07 decidiu sobre marketing...'
+        depois: '... 25-12-2027 25.12.2027 25122027 2027-12-25 25 de dezembro de 2027
+                 25 dez 2027 13/07/2026 13-07-2026 ... 13 jul 2026'
+    13 variantes, de DUAS perguntas diferentes. Numa conversa real, quem muda de assunto
+    continuava sendo buscado com a data anterior.
+
+    A CORRECAO NAO E reduzir as 3 mensagens para 1: elas existem de proposito e cortar
+    quebraria o follow-up. Sao coisas SEPARADAS - o TEXTO DE BUSCA segue com 3 mensagens
+    (contexto); a EXPANSAO DE DATAS olha so a ULTIMA (a pergunta atual).
     """
     if not texto:
         return texto
     hoje = hoje or datetime.date.today()
+    # Procura em 'fonte' quando dado; anexa sempre em 'texto'. A checagem de duplicata
+    # continua contra 'texto' - e nele que a variante vai (ou nao) entrar.
+    onde_procurar = texto if fonte is None else fonte
     alvo = _normalizar_ascii(texto)
     extras = []
-    for dia, mes, ano in _datas_no_texto(texto, hoje):
+    for dia, mes, ano in _datas_no_texto(onde_procurar, hoje):
         for v in _variantes_de_data(dia, mes, ano):
             if _normalizar_ascii(v) not in alvo and v not in extras:
                 extras.append(v)
@@ -1393,7 +1438,7 @@ class Pipe:
         raw = self.valves.BASE_CONHECIMENTO_ID or ""
         return [b.strip() for b in re.split(r"[,\s]+", raw) if b.strip()]
 
-    async def _buscar_sources(self, request, user, texto):
+    async def _buscar_sources(self, request, user, texto, texto_atual=None):
         # NORMALIZACAO DE DATAS: a pergunta diz "13/07", o arquivo se chama
         # ..._13072026.md e o corpo diz "13 de julho de 2026" - o BM25 nao casa esses
         # tokens e o denso ignora datas (causa provada da Q14). Expande a data em todas
@@ -1405,8 +1450,13 @@ class Pipe:
         # Log da query de busca (antes/depois): sem isto nao da para saber se a
         # expansao rodou - a alternativa e deduzir pelo resultado, que e justamente o
         # que confunde (o BM25 poe a ata no pool; o reranker decide se ela fica).
+        # 'texto' = as 3 ultimas mensagens (contexto para follow-up curto).
+        # 'texto_atual' = so a ULTIMA (a pergunta de agora). As datas saem DELA - sem
+        # isso, uma pergunta sobre outro assunto continuava sendo buscada com a data da
+        # anterior (medido: 13 variantes de duas perguntas diferentes). Ver a docstring
+        # de _expandir_datas.
         _antes = texto
-        texto = _expandir_datas(texto)
+        texto = _expandir_datas(texto, fonte=texto_atual)
         if texto != _antes:
             log.info(
                 "chatnd: busca -> datas EXPANDIDAS | antes=%r | depois=%r",
@@ -1460,7 +1510,7 @@ class Pipe:
             src["distances"] = distancias[0]
         return [src]
 
-    async def _contexto_documento(self, request, user, texto):
+    async def _contexto_documento(self, request, user, texto, texto_atual=None):
         # Recupera trechos (hybrid + reranker, config do Admin) e monta o contexto com
         # DUAS camadas: (1) o(s) documento(s) INTEIRO(S) mais bem ranqueados - evita
         # resposta fragmentada em "liste todos"; (2) os TRECHOS recuperados, que agora
@@ -1480,7 +1530,7 @@ class Pipe:
         #   3. PISO: fundadores que ainda nao entraram sao SEMPRE anexados ao
         #      final, cada um com ate FUNDADORES_MAX_CHARS (orcamento RESERVADO,
         #      para nao serem expulsos pelos ranqueados nem expulsa-los).
-        sources = await self._buscar_sources(request, user, texto)
+        sources = await self._buscar_sources(request, user, texto, texto_atual)
 
         ordem = []
         for src in sources or []:
@@ -2211,7 +2261,7 @@ class Pipe:
                     consulta = _texto_de_busca(body.get("messages"), 3) or texto
                     try:
                         contexto = await self._contexto_documento(
-                            __request__, user, consulta
+                            __request__, user, consulta, texto
                         )
                     except Exception:
                         log.exception(
@@ -2229,7 +2279,9 @@ class Pipe:
         if categoria == "documentos" and texto:
             consulta = _texto_de_busca(body.get("messages"), 3) or texto
             try:
-                contexto = await self._contexto_documento(__request__, user, consulta)
+                contexto = await self._contexto_documento(
+                    __request__, user, consulta, texto
+                )
             except Exception:
                 log.exception(
                     "chatnd: falha ao montar contexto RAG (rota documentos)"
