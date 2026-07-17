@@ -1,10 +1,11 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
-import type {
-	LangfuseConnection,
-	LangfusePromptOptions,
-	LangfusePromptResponse,
-	LangfusePromptsOptions,
-	LangfusePromptsResponse
+import {
+	formatApiError,
+	type LangfuseConnection,
+	type LangfusePromptOptions,
+	type LangfusePromptResponse,
+	type LangfusePromptsOptions,
+	type LangfusePromptsResponse
 } from '$lib/apis/langfuse';
 
 export type ModelSystemPromptSource = 'local' | 'langfuse';
@@ -45,6 +46,12 @@ export type CreateModelSystemPromptVersionForm = {
 	content: string;
 	commit_message?: string;
 	set_active?: boolean;
+	expected_updated_at?: number | null;
+};
+
+export type SetActiveModelSystemPromptVersionForm = {
+	version_id: string;
+	expected_updated_at?: number | null;
 };
 
 export type PatchModelSystemPromptBindingForm = {
@@ -94,7 +101,8 @@ export type DetachSystemPromptResponse = {
 
 export const getModelSystemPromptBinding = async (
 	token: string,
-	modelId: string
+	modelId: string,
+	signal?: AbortSignal
 ): Promise<ModelSystemPromptBinding | null> => {
 	let error = null;
 
@@ -105,6 +113,7 @@ export const getModelSystemPromptBinding = async (
 		`${WEBUI_API_BASE_URL}/models/system-prompt/binding?${searchParams.toString()}`,
 		{
 			method: 'GET',
+			signal,
 			headers: {
 				Accept: 'application/json',
 				'Content-Type': 'application/json',
@@ -117,7 +126,7 @@ export const getModelSystemPromptBinding = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return null;
 		});
@@ -132,7 +141,8 @@ export const getModelSystemPromptBinding = async (
 export const getModelSystemPromptHistory = async (
 	token: string,
 	modelId: string,
-	page: number = 0
+	page: number = 0,
+	signal?: AbortSignal
 ): Promise<ModelSystemPromptVersion[]> => {
 	let error = null;
 
@@ -144,6 +154,7 @@ export const getModelSystemPromptHistory = async (
 		`${WEBUI_API_BASE_URL}/models/system-prompt/history?${searchParams.toString()}`,
 		{
 			method: 'GET',
+			signal,
 			headers: {
 				Accept: 'application/json',
 				'Content-Type': 'application/json',
@@ -156,7 +167,7 @@ export const getModelSystemPromptHistory = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return null;
 		});
@@ -179,7 +190,7 @@ export const getModelSystemPromptHistoryEntry = async (
 	searchParams.append('id', modelId);
 
 	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/models/system-prompt/history/${versionId}?${searchParams.toString()}`,
+		`${WEBUI_API_BASE_URL}/models/system-prompt/history/${encodeURIComponent(versionId)}?${searchParams.toString()}`,
 		{
 			method: 'GET',
 			headers: {
@@ -194,7 +205,7 @@ export const getModelSystemPromptHistoryEntry = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return null;
 		});
@@ -211,29 +222,45 @@ export const createModelSystemPromptVersion = async (
 	modelId: string,
 	form: CreateModelSystemPromptVersionForm
 ): Promise<ModelSystemPromptVersion> => {
-	let error = null;
+	let error: unknown = null;
 
 	const searchParams = new URLSearchParams();
 	searchParams.append('id', modelId);
+
+	const headers: Record<string, string> = {
+		Accept: 'application/json',
+		'Content-Type': 'application/json',
+		authorization: `Bearer ${token}`
+	};
+
+	if (form.expected_updated_at != null) {
+		headers['If-Match'] = `"${form.expected_updated_at}"`;
+	}
 
 	const res = await fetch(
 		`${WEBUI_API_BASE_URL}/models/system-prompt/versions?${searchParams.toString()}`,
 		{
 			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			},
+			headers,
 			body: JSON.stringify(form)
 		}
 	)
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
+			if (!res.ok) {
+				const err = await res.json();
+				if (res.status === 409) {
+					const detail: ModelSystemPromptBindingConflictDetail =
+						typeof err.detail === 'object' && err.detail !== null
+							? err.detail
+							: { message: String(err.detail ?? 'Conflict') };
+					throw new ModelSystemPromptBindingConflictError(detail);
+				}
+				throw err.detail ?? err;
+			}
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return null;
 		});
@@ -248,31 +275,47 @@ export const createModelSystemPromptVersion = async (
 export const setActiveModelSystemPromptVersion = async (
 	token: string,
 	modelId: string,
-	versionId: string
+	form: SetActiveModelSystemPromptVersionForm
 ): Promise<ModelSystemPromptBinding> => {
-	let error = null;
+	let error: unknown = null;
 
 	const searchParams = new URLSearchParams();
 	searchParams.append('id', modelId);
+
+	const headers: Record<string, string> = {
+		Accept: 'application/json',
+		'Content-Type': 'application/json',
+		authorization: `Bearer ${token}`
+	};
+
+	if (form.expected_updated_at != null) {
+		headers['If-Match'] = `"${form.expected_updated_at}"`;
+	}
 
 	const res = await fetch(
 		`${WEBUI_API_BASE_URL}/models/system-prompt/active?${searchParams.toString()}`,
 		{
 			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			},
-			body: JSON.stringify({ version_id: versionId })
+			headers,
+			body: JSON.stringify(form)
 		}
 	)
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
+			if (!res.ok) {
+				const err = await res.json();
+				if (res.status === 409) {
+					const detail: ModelSystemPromptBindingConflictDetail =
+						typeof err.detail === 'object' && err.detail !== null
+							? err.detail
+							: { message: String(err.detail ?? 'Conflict') };
+					throw new ModelSystemPromptBindingConflictError(detail);
+				}
+				throw err.detail ?? err;
+			}
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return null;
 		});
@@ -295,7 +338,7 @@ export const deleteModelSystemPromptHistoryEntry = async (
 	searchParams.append('id', modelId);
 
 	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/models/system-prompt/history/${versionId}?${searchParams.toString()}`,
+		`${WEBUI_API_BASE_URL}/models/system-prompt/history/${encodeURIComponent(versionId)}?${searchParams.toString()}`,
 		{
 			method: 'DELETE',
 			headers: {
@@ -310,7 +353,7 @@ export const deleteModelSystemPromptHistoryEntry = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return false;
 		});
@@ -365,7 +408,7 @@ export const patchModelSystemPromptBinding = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return null;
 		});
@@ -402,7 +445,7 @@ export const syncModelSystemPromptFromLangfuse = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return null;
 		});
@@ -441,7 +484,7 @@ export const previewModelSystemPromptFromLangfuse = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return null;
 		});
@@ -455,7 +498,8 @@ export const previewModelSystemPromptFromLangfuse = async (
 
 export const getModelLangfuseConnections = async (
 	token: string,
-	modelId: string
+	modelId: string,
+	signal?: AbortSignal
 ): Promise<{ connections: LangfuseConnection[] }> => {
 	let error = null;
 
@@ -466,6 +510,7 @@ export const getModelLangfuseConnections = async (
 		`${WEBUI_API_BASE_URL}/models/system-prompt/langfuse/connections?${searchParams.toString()}`,
 		{
 			method: 'GET',
+			signal,
 			headers: {
 				Accept: 'application/json',
 				'Content-Type': 'application/json',
@@ -478,7 +523,7 @@ export const getModelLangfuseConnections = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return null;
 		});
@@ -494,7 +539,8 @@ export const getModelLangfusePrompts = async (
 	token: string,
 	modelId: string,
 	connectionId: string,
-	opts: LangfusePromptsOptions = {}
+	opts: LangfusePromptsOptions = {},
+	signal?: AbortSignal
 ): Promise<LangfusePromptsResponse> => {
 	let error = null;
 
@@ -510,6 +556,7 @@ export const getModelLangfusePrompts = async (
 		`${WEBUI_API_BASE_URL}/models/system-prompt/langfuse/prompts?${searchParams.toString()}`,
 		{
 			method: 'GET',
+			signal,
 			headers: {
 				Accept: 'application/json',
 				'Content-Type': 'application/json',
@@ -522,7 +569,7 @@ export const getModelLangfusePrompts = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return null;
 		});
@@ -565,7 +612,7 @@ export const getModelLangfusePrompt = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return null;
 		});
@@ -602,7 +649,7 @@ export const detachModelSystemPromptToLocal = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return null;
 		});

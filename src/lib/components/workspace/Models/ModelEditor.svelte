@@ -39,6 +39,7 @@
 		createModelSystemPromptVersion,
 		getModelLangfuseConnections,
 		getModelSystemPromptBinding,
+		ModelSystemPromptBindingConflictError,
 		type ModelSystemPromptBinding
 	} from '$lib/apis/models/systemPrompt';
 
@@ -123,6 +124,21 @@
 		await tick();
 		await localSystemPromptPanel?.reload();
 	};
+
+	const normalizeSystemPromptContent = (value: string) => (value.trim() === '' ? '' : value);
+
+	const switchToLocalSystemPromptTab = () => {
+		// Langfuse preview text is not a local draft — discard when leaving the tab.
+		if (systemPromptBinding?.source !== 'langfuse') {
+			system = activeBaseline;
+		}
+		systemPromptTab = 'local';
+	};
+
+	const isLangfusePreviewOnly = () =>
+		systemPromptTab === 'langfuse' &&
+		systemPromptBinding?.source !== 'langfuse' &&
+		normalizeSystemPromptContent(system) !== normalizeSystemPromptContent(activeBaseline);
 
 	const loadLangfuseConnections = async (modelId: string) => {
 		if (!modelId) {
@@ -341,23 +357,39 @@
 		}
 
 		// Langfuse is not backed by params.system — skip local versioning and params writes
-		// while Langfuse is the active source or tab (system holds preview/sync text only).
+		// when binding source is langfuse (any tab) or Langfuse tab holds unstaged preview.
 		const skipLocalSystemPromptVersion =
-			systemPromptBinding?.source === 'langfuse' || systemPromptTab === 'langfuse';
+			systemPromptBinding?.source === 'langfuse' || isLangfusePreviewOnly();
 
 		if (edit && id && !skipLocalSystemPromptVersion) {
-			const normalizedSystem = system.trim() === '' ? '' : system;
-			const normalizedBaseline = activeBaseline.trim() === '' ? '' : activeBaseline;
+			const normalizedSystem = normalizeSystemPromptContent(system);
+			const normalizedBaseline = normalizeSystemPromptContent(activeBaseline);
 
 			if (normalizedSystem !== normalizedBaseline) {
 				try {
-					await createModelSystemPromptVersion(localStorage.token, id, {
+					const payload: Parameters<typeof createModelSystemPromptVersion>[2] = {
 						content: system,
 						set_active: true
-					});
+					};
+
+					if (systemPromptBinding?.updated_at != null) {
+						payload.expected_updated_at = systemPromptBinding.updated_at;
+					}
+
+					await createModelSystemPromptVersion(localStorage.token, id, payload);
 					activeBaseline = normalizedSystem;
 				} catch (error) {
-					toast.error(`${error}`);
+					if (error instanceof ModelSystemPromptBindingConflictError) {
+						toast.error(
+							$i18n.t(
+								'System prompt binding was modified elsewhere. Refreshed to the latest state.'
+							)
+						);
+						systemPromptBinding = await getModelSystemPromptBinding(localStorage.token, id);
+						await localSystemPromptPanel?.reload();
+					} else {
+						toast.error(`${error}`);
+					}
 					loading = false;
 					return;
 				}
@@ -366,6 +398,8 @@
 
 		if (!skipLocalSystemPromptVersion) {
 			info.params.system = system.trim() === '' ? null : system;
+		} else if ('system' in info.params) {
+			delete info.params.system;
 		}
 		info.params.stop = params.stop
 			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
@@ -793,7 +827,7 @@
 										{$i18n.t('System Prompt')}
 									</div>
 									<div>
-										{#if edit && id}
+										{#if edit && id && preset}
 											{#if showLangfuseTab}
 												<div class="mb-2 flex gap-1" role="tablist">
 													<button
@@ -801,9 +835,7 @@
 														role="tab"
 														aria-selected={systemPromptTab === 'local'}
 														class={tabButtonClass(systemPromptTab === 'local')}
-														on:click={() => {
-															systemPromptTab = 'local';
-														}}
+														on:click={switchToLocalSystemPromptTab}
 													>
 														{$i18n.t('Local')}
 													</button>

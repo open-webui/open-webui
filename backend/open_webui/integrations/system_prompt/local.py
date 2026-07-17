@@ -5,6 +5,12 @@ from typing import Any
 from open_webui.integrations.system_prompt.factory import SystemPromptProviderBase
 from open_webui.models.model_system_prompt_binding import ModelSystemPromptBindingModel
 from open_webui.models.model_system_prompt_version import ModelSystemPromptVersions
+from open_webui.utils.system_prompt_cache import (
+    binding_cache_ttl_seconds,
+    set_cached_system_prompt,
+)
+
+DEFAULT_LOCAL_CACHE_TTL_SECONDS = 3600
 
 
 class LocalSystemPromptProvider(SystemPromptProviderBase):
@@ -18,11 +24,28 @@ class LocalSystemPromptProvider(SystemPromptProviderBase):
         metadata: dict | None = None,
         model_id: str | None = None,
     ) -> str | None:
+        if model_id is None:
+            model_id = binding.model_id
+
+        content = mirror
+        prompt_version: str | None = None
+
         if binding.active_version_id:
             version = await ModelSystemPromptVersions.get_version_by_id(binding.active_version_id)
             if version is not None:
-                return version.content
-        return mirror
+                content = version.content
+                prompt_version = binding.active_version_id
+
+        ttl = binding_cache_ttl_seconds(binding, DEFAULT_LOCAL_CACHE_TTL_SECONDS)
+        if ttl > 0 and model_id:
+            set_cached_system_prompt(
+                model_id,
+                content if content is not None else '',
+                ttl_seconds=ttl,
+                prompt_version=prompt_version,
+            )
+
+        return content
 
     async def list_prompts(
         self,

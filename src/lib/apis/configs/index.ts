@@ -1,5 +1,18 @@
 import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import { formatApiError, type LangfuseConnection } from '$lib/apis/langfuse';
 import type { Banner } from '$lib/types';
+
+export type LangfuseConfigPayload = {
+	LANGFUSE_CONNECTIONS: LangfuseConnection[];
+	LANGFUSE_PROMPT_CACHE_TTL?: number | null;
+};
+
+export type LangfuseConfigResponse = LangfuseConfigPayload;
+
+export type LangfuseConnectionVerifyPayload = Pick<
+	LangfuseConnection,
+	'id' | 'name' | 'url' | 'public_key' | 'secret_key' | 'enabled'
+>;
 
 export const importConfig = async (token: string, config: object) => {
 	let error = null;
@@ -514,7 +527,7 @@ export const verifyToolServerConnection = async (token: string, connection: obje
 	return res;
 };
 
-export const getLangfuseConfig = async (token: string) => {
+export const getLangfuseConfig = async (token: string): Promise<LangfuseConfigResponse> => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/langfuse`, {
@@ -530,7 +543,7 @@ export const getLangfuseConfig = async (token: string) => {
 		})
 		.catch((err) => {
 			console.error(err);
-			error = err.detail;
+			error = formatApiError(err);
 			return null;
 		});
 
@@ -541,7 +554,10 @@ export const getLangfuseConfig = async (token: string) => {
 	return res;
 };
 
-export const setLangfuseConfig = async (token: string, config: object) => {
+export const setLangfuseConfig = async (
+	token: string,
+	config: LangfuseConfigPayload
+): Promise<LangfuseConfigResponse> => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/langfuse`, {
@@ -560,7 +576,7 @@ export const setLangfuseConfig = async (token: string, config: object) => {
 		})
 		.catch((err) => {
 			console.error(err);
-			error = err.detail;
+			error = formatApiError(err);
 			return null;
 		});
 
@@ -571,7 +587,10 @@ export const setLangfuseConfig = async (token: string, config: object) => {
 	return res;
 };
 
-export const verifyLangfuseConnection = async (token: string, connection: object) => {
+export const verifyLangfuseConnection = async (
+	token: string,
+	connection: LangfuseConnectionVerifyPayload
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/langfuse/verify`, {
@@ -590,7 +609,7 @@ export const verifyLangfuseConnection = async (token: string, connection: object
 		})
 		.catch((err) => {
 			console.error(err);
-			error = err.detail;
+			error = formatApiError(err);
 			return null;
 		});
 

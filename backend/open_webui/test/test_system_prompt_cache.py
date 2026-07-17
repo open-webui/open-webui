@@ -238,9 +238,9 @@ def test_clear_removes_all_redis_keys_with_prefix():
     mock_client.delete.assert_called_once_with(key_one, key_two)
 
 
-def test_redis_miss_invalidates_stale_l1():
+def test_redis_miss_keeps_warm_l1():
     # Arrange
-    set_cached_system_prompt('model-1', 'stale l1 content', ttl_seconds=300)
+    set_cached_system_prompt('model-1', 'warm l1 content', ttl_seconds=300)
     mock_client = MagicMock()
     mock_client.get.return_value = None
 
@@ -252,13 +252,39 @@ def test_redis_miss_invalidates_stale_l1():
         cached = get_cached_system_prompt('model-1')
 
     # Assert
-    assert cached is None
-    assert SYSTEM_PROMPT_CACHE.get('model-1') is None
+    assert cached is not None
+    assert cached.content == 'warm l1 content'
+    mock_client.get.assert_not_called()
 
 
-def test_redis_hit_overrides_warm_l1():
+def test_l1_miss_redis_refills_l1():
     # Arrange
-    set_cached_system_prompt('model-1', 'stale l1 content', ttl_seconds=300)
+    redis_entry = CachedSystemPrompt(
+        content='redis warm',
+        cached_at=time.time(),
+        ttl_seconds=300,
+        prompt_name='prompt-a',
+        prompt_version='1',
+    )
+    mock_client = MagicMock()
+    mock_client.get.return_value = _serialize_entry(redis_entry)
+
+    # Act
+    with patch(
+        'open_webui.utils.system_prompt_cache.get_redis_client',
+        return_value=mock_client,
+    ):
+        cached = get_cached_system_prompt('model-redis-cold-l1')
+
+    # Assert
+    assert cached is not None
+    assert cached.content == 'redis warm'
+    assert SYSTEM_PROMPT_CACHE.get('model-redis-cold-l1') is not None
+
+
+def test_l1_hit_returns_without_redis_lookup():
+    # Arrange
+    set_cached_system_prompt('model-1', 'warm l1 content', ttl_seconds=300)
     redis_entry = CachedSystemPrompt(
         content='authoritative redis content',
         cached_at=time.time(),
@@ -278,9 +304,8 @@ def test_redis_hit_overrides_warm_l1():
 
     # Assert
     assert cached is not None
-    assert cached.content == 'authoritative redis content'
-    assert cached.prompt_name == 'prompt-b'
-    assert cached.prompt_version == '3'
+    assert cached.content == 'warm l1 content'
+    mock_client.get.assert_not_called()
 
 
 def test_l1_only_when_redis_unavailable():
@@ -375,6 +400,29 @@ async def test_delete_model_by_id_invalidates_cache():
     # Assert
     assert result is True
     assert get_cached_system_prompt('model-1') is None
+
+
+@pytest.mark.asyncio
+async def test_get_cached_system_prompt_async_l1_hit_skips_redis():
+    # Arrange
+    from unittest.mock import MagicMock, patch
+
+    from open_webui.utils.system_prompt_cache import get_cached_system_prompt_async
+
+    set_cached_system_prompt('model-1', 'async l1', ttl_seconds=300)
+    mock_client = MagicMock()
+
+    # Act
+    with patch(
+        'open_webui.utils.system_prompt_cache.get_redis_client',
+        return_value=mock_client,
+    ):
+        cached = await get_cached_system_prompt_async('model-1')
+
+    # Assert
+    assert cached is not None
+    assert cached.content == 'async l1'
+    mock_client.get.assert_not_called()
 
 
 @pytest.mark.asyncio

@@ -13,6 +13,7 @@ from open_webui.models.model_system_prompt_version import (
     ModelSystemPromptVersions,
 )
 from open_webui.models.models import ModelParams
+from open_webui.utils.system_prompt_cache import invalidate_system_prompt_cache
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -109,4 +110,5 @@ async def maybe_auto_version_from_params_system(
         )
         return version
 
+    invalidate_system_prompt_cache(model_id)
     return version

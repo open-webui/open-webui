@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	import { onMount, onDestroy, getContext, createEventDispatcher } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import dayjs from 'dayjs';
@@ -52,6 +52,15 @@
 	let syncing = false;
 	let detaching = false;
 	let isPreview = false;
+	let panelAbort: AbortController | null = null;
+
+	const beginPanelLoad = () => {
+		panelAbort?.abort();
+		panelAbort = new AbortController();
+		return panelAbort.signal;
+	};
+
+	const isPanelActive = (signal: AbortSignal) => !signal.aborted;
 
 	const normalizeContent = (value: string) => (value.trim() === '' ? '' : value);
 
@@ -118,8 +127,10 @@
 		dispatch('bindingchange', value);
 	};
 
-	const refreshBinding = async (refreshForm = false) => {
-		const next = await getModelSystemPromptBinding(localStorage.token, modelId);
+	const refreshBinding = async (refreshForm = false, signal?: AbortSignal) => {
+		const activeSignal = signal ?? panelAbort?.signal;
+		const next = await getModelSystemPromptBinding(localStorage.token, modelId, activeSignal);
+		if (activeSignal && !isPanelActive(activeSignal)) return next;
 		emitBinding(next);
 		if (refreshForm) {
 			applyBindingToForm(next);
@@ -136,49 +147,68 @@
 		await refreshBinding(true);
 	};
 
-	const loadPromptSuggestions = async () => {
+	const loadPromptSuggestions = async (signal?: AbortSignal) => {
 		if (!connectionId) {
 			promptSuggestions = [];
 			return;
 		}
 
+		const activeSignal = signal ?? panelAbort?.signal;
+		if (!activeSignal) return;
+
 		promptsLoading = true;
 		try {
-			const res = await getModelLangfusePrompts(localStorage.token, modelId, connectionId, {
-				limit: 100
-			});
+			const res = await getModelLangfusePrompts(
+				localStorage.token,
+				modelId,
+				connectionId,
+				{ limit: 100 },
+				activeSignal
+			);
+			if (!isPanelActive(activeSignal)) return;
 			promptSuggestions = res.data ?? [];
 		} catch (error) {
+			if (!isPanelActive(activeSignal)) return;
 			console.error('Failed to load Langfuse prompts:', error);
 			promptSuggestions = [];
 		}
-		promptsLoading = false;
+		if (isPanelActive(activeSignal)) {
+			promptsLoading = false;
+		}
 	};
 
 	const loadPanel = async () => {
 		if (!modelId) return;
 
+		const signal = beginPanelLoad();
+
 		try {
-			const res = await getModelLangfuseConnections(localStorage.token, modelId);
+			const res = await getModelLangfuseConnections(localStorage.token, modelId, signal);
+			if (!isPanelActive(signal)) return;
 			connections = res.connections ?? [];
 		} catch (error) {
+			if (!isPanelActive(signal)) return;
 			console.error('Failed to load Langfuse connections:', error);
 			connections = [];
 		}
 
 		try {
-			const nextBinding = await getModelSystemPromptBinding(localStorage.token, modelId);
+			const nextBinding = await getModelSystemPromptBinding(localStorage.token, modelId, signal);
+			if (!isPanelActive(signal)) return;
 			emitBinding(nextBinding);
 			applyBindingToForm(nextBinding);
 			applyContentFromBinding(nextBinding);
 		} catch (error) {
+			if (!isPanelActive(signal)) return;
 			console.error('Failed to load system prompt binding:', error);
 			emitBinding(null);
 			applyBindingToForm(null);
 		}
 
-		await loadPromptSuggestions();
-		loaded = true;
+		await loadPromptSuggestions(signal);
+		if (isPanelActive(signal)) {
+			loaded = true;
+		}
 	};
 
 	export const reload = async () => {
@@ -269,11 +299,15 @@
 
 	const handleConnectionChange = async () => {
 		externalName = '';
-		await loadPromptSuggestions();
+		await loadPromptSuggestions(panelAbort?.signal);
 	};
 
 	onMount(async () => {
 		await loadPanel();
+	});
+
+	onDestroy(() => {
+		panelAbort?.abort();
 	});
 </script>
 

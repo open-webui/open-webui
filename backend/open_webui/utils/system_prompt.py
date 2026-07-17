@@ -9,7 +9,7 @@ from open_webui.models.model_system_prompt_binding import (
 )
 from open_webui.utils.system_prompt_cache import (
     binding_cache_ttl_seconds,
-    get_cached_system_prompt,
+    get_cached_system_prompt_async,
     invalidate_system_prompt_cache,
     is_newer_cache_write,
     set_cached_system_prompt,
@@ -147,8 +147,8 @@ async def _resolve_raw_system_prompt(model_info, metadata: dict | None = None) -
     mirror = _get_params_system_mirror(model_info)
     model_id = model_info.id
 
-    cached = get_cached_system_prompt(model_id)
-    if cached and cached.content:
+    cached = await get_cached_system_prompt_async(model_id)
+    if cached is not None:
         _apply_lru_metadata(cached, metadata)
         return cached.content
 

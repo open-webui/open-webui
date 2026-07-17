@@ -20,6 +20,8 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     existing_tables = set(get_existing_tables())
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
 
     if 'model_system_prompt_version' not in existing_tables:
         op.create_table(
@@ -36,11 +38,18 @@ def upgrade() -> None:
             sa.Column('user_id', sa.Text(), nullable=False),
             sa.Column('created_at', sa.BigInteger(), nullable=False),
         )
-        op.create_index(
-            'idx_model_system_prompt_version_model_id',
-            'model_system_prompt_version',
-            ['model_id'],
-        )
+
+    inspector.clear_cache()
+    if 'model_system_prompt_version' in inspector.get_table_names():
+        version_indexes = {
+            idx['name'] for idx in inspector.get_indexes('model_system_prompt_version')
+        }
+        if 'idx_model_system_prompt_version_model_id' not in version_indexes:
+            op.create_index(
+                'idx_model_system_prompt_version_model_id',
+                'model_system_prompt_version',
+                ['model_id'],
+            )
 
     if 'model_system_prompt_binding' not in existing_tables:
         # active_version_id uses ON DELETE SET NULL so deleting a version row clears
@@ -72,6 +81,11 @@ def upgrade() -> None:
             sa.Column('cached_version', sa.Text(), nullable=True),
             sa.Column('cached_at', sa.BigInteger(), nullable=True),
             sa.Column('cache_ttl_seconds', sa.Integer(), nullable=True),
+            sa.Column('updated_at', sa.BigInteger(), nullable=True),
+            sa.CheckConstraint(
+                "source IN ('local', 'langfuse')",
+                name='ck_model_system_prompt_binding_source',
+            ),
         )
 
 

@@ -5,7 +5,7 @@ from typing import Literal
 
 from open_webui.internal.db import Base, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, ForeignKey, Integer, Text, func, select
+from sqlalchemy import BigInteger, CheckConstraint, Column, ForeignKey, Integer, Text, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 SystemPromptSource = Literal['local', 'langfuse']
@@ -17,6 +17,12 @@ SystemPromptSource = Literal['local', 'langfuse']
 
 class ModelSystemPromptBinding(Base):
     __tablename__ = 'model_system_prompt_binding'
+    __table_args__ = (
+        CheckConstraint(
+            "source IN ('local', 'langfuse')",
+            name='ck_model_system_prompt_binding_source',
+        ),
+    )
 
     model_id = Column(
         Text,

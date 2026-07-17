@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
 import shutil
 import socket
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from pathlib import Path
+from typing import Optional, Union
 from urllib.parse import urlparse
 
+import redis
 import requests
 from authlib.integrations.starlette_client import OAuth
 from pydantic import BaseModel
@@ -21,6 +25,10 @@ from open_webui.env import (
     FRONTEND_BUILD_DIR,
     OFFLINE_MODE,
     OPEN_WEBUI_DIR,
+    REDIS_KEY_PREFIX,
+    REDIS_SENTINEL_HOSTS,
+    REDIS_SENTINEL_PORT,
+    REDIS_URL,
     WEBUI_AUTH,
     WEBUI_FAVICON_URL,
     WEBUI_NAME,
@@ -75,7 +83,7 @@ async def import_legacy_config_json():
     """Migrate legacy config.json → database on first run."""
     if not os.path.exists(f'{DATA_DIR}/config.json'):
         return
-    with open(f'{DATA_DIR}/config.json') as _f:
+    with open(f'{DATA_DIR}/config.json', 'r') as _f:
         await Config.upsert(json.load(_f))
     os.rename(f'{DATA_DIR}/config.json', f'{DATA_DIR}/old_config.json')
 
@@ -92,14 +100,14 @@ try:
             if item.is_file() or item.is_symlink():
                 try:
                     item.unlink()
-                except Exception:
+                except Exception as e:
                     pass
-except Exception:
+except Exception as e:
     pass
 
 for file_path in (FRONTEND_BUILD_DIR / 'static').glob('**/*'):
     if file_path.is_file():
-        target_path = STATIC_DIR / file_path.relative_to(FRONTEND_BUILD_DIR / 'static')
+        target_path = STATIC_DIR / file_path.relative_to((FRONTEND_BUILD_DIR / 'static'))
         target_path.parent.mkdir(parents=True, exist_ok=True)
         try:
             shutil.copyfile(file_path, target_path)
@@ -1144,7 +1152,7 @@ WEB_SEARCH_RESULT_COUNT = int(os.getenv('WEB_SEARCH_RESULT_COUNT', '3'))
 
 try:
     web_search_domain_filter_list = json.loads(os.getenv('WEB_SEARCH_DOMAIN_FILTER_LIST', '[]'))
-except Exception:
+except Exception as e:
     web_search_domain_filter_list = [
         # "wikipedia.com",
         # "wikimedia.org",
@@ -2713,8 +2721,8 @@ def load_oauth_providers():
             f'⚠️  OAuth providers configured ({provider_list}) but OPENID_PROVIDER_URL not set - logout will not work!'
         )
         log.warning(
-            "Set OPENID_PROVIDER_URL to your OAuth provider's OpenID Connect discovery endpoint,"
-            ' or set OPENID_END_SESSION_ENDPOINT to a custom logout URL to fix logout functionality.'
+            f"Set OPENID_PROVIDER_URL to your OAuth provider's OpenID Connect discovery endpoint,"
+            f' or set OPENID_END_SESSION_ENDPOINT to a custom logout URL to fix logout functionality.'
         )
 
 

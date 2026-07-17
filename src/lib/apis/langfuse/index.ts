@@ -53,6 +53,108 @@ const authHeaders = (token: string): Record<string, string> => ({
 	authorization: `Bearer ${token}`
 });
 
+export type LangfuseBlockedConnection = {
+	connection_id: string;
+	action?: string;
+	bound_models: number;
+};
+
+export type LangfuseOrphanErrorDetail = {
+	message: string;
+	blocked_connections: LangfuseBlockedConnection[];
+};
+
+export type LangfuseConfigSaveErrorToast = {
+	title: string;
+	description?: string;
+};
+
+type TranslateFn = (key: string, options?: Record<string, string | number>) => string;
+
+export const isLangfuseOrphanErrorDetail = (
+	value: unknown
+): value is LangfuseOrphanErrorDetail => {
+	if (!value || typeof value !== 'object') {
+		return false;
+	}
+
+	const detail = value as Record<string, unknown>;
+	if (typeof detail.message !== 'string' || !Array.isArray(detail.blocked_connections)) {
+		return false;
+	}
+
+	return detail.blocked_connections.every((item) => {
+		if (!item || typeof item !== 'object') {
+			return false;
+		}
+
+		const blocked = item as LangfuseBlockedConnection;
+		return (
+			typeof blocked.connection_id === 'string' &&
+			typeof blocked.bound_models === 'number'
+		);
+	});
+};
+
+export const formatApiError = (err: unknown): unknown => {
+	if (err === null || typeof err !== 'object' || !('detail' in err)) {
+		return err;
+	}
+
+	const detail = (err as { detail?: unknown }).detail;
+	if (detail === undefined || detail === null) {
+		return err;
+	}
+
+	if (Array.isArray(detail)) {
+		return detail
+			.map((item: { msg?: string }) => item?.msg || JSON.stringify(item))
+			.join(', ');
+	}
+
+	return detail;
+};
+
+export const formatLangfuseConfigSaveError = (
+	err: unknown,
+	t: TranslateFn,
+	options: { connectionLabel?: (connectionId: string) => string | undefined } = {}
+): LangfuseConfigSaveErrorToast => {
+	const detail = isLangfuseOrphanErrorDetail(err)
+		? err
+		: isLangfuseOrphanErrorDetail(
+					err && typeof err === 'object' && 'detail' in err
+						? (err as { detail?: unknown }).detail
+						: null
+				)
+			? ((err as { detail?: unknown }).detail as LangfuseOrphanErrorDetail)
+			: null;
+
+	if (detail) {
+		const title = t(
+			'Cannot remove or disable Langfuse connections that are bound to models. Detach or rebind affected models first.'
+		);
+		const description = detail.blocked_connections
+			.map((item) => {
+				const connectionId =
+					options.connectionLabel?.(item.connection_id) ?? item.connection_id;
+				return t('{{connectionId}}: {{count}} bound models', {
+					connectionId,
+					count: item.bound_models
+				});
+			})
+			.join('\n');
+
+		return { title, description };
+	}
+
+	if (typeof err === 'string' && err.trim()) {
+		return { title: err };
+	}
+
+	return { title: t('Failed to save Langfuse configuration') };
+};
+
 /** Admin-only global browse — use model-scoped helpers in `$lib/apis/models/systemPrompt` for model editors. */
 export const getLangfuseConnections = async (
 	token: string
@@ -68,7 +170,7 @@ export const getLangfuseConnections = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return null;
 		});
@@ -105,7 +207,7 @@ export const getLangfusePrompts = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return null;
 		});
@@ -141,7 +243,7 @@ export const getLangfusePrompt = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err;
+			error = formatApiError(err);
 			console.error(err);
 			return null;
 		});

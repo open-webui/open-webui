@@ -146,6 +146,9 @@ async def test_change_creates_version_and_sets_local_binding():
             new_callable=AsyncMock,
             return_value=_make_binding(active_version_id='ver-new'),
         ) as mock_ensure,
+        patch(
+            'open_webui.utils.model_system_prompt_sync.invalidate_system_prompt_cache',
+        ) as mock_invalidate,
     ):
         result = await sync_module.maybe_auto_version_from_params_system(
             'model-1',
@@ -166,6 +169,7 @@ async def test_change_creates_version_and_sets_local_binding():
         db=db,
     )
     mock_ensure.assert_awaited_once_with('model-1', 'ver-new', db=db)
+    mock_invalidate.assert_called_once_with('model-1')
 
 
 @pytest.mark.asyncio

@@ -152,6 +152,83 @@ async def test_delete_active_version_returns_400():
 
 
 @pytest.mark.asyncio
+async def test_delete_non_active_version_invalidates_cache():
+    # Arrange
+    model = _make_model()
+    user = _make_user()
+    db = AsyncMock()
+
+    # Act
+    with (
+        patch(
+            'open_webui.routers.model_system_prompts._get_model_or_404',
+            new_callable=AsyncMock,
+            return_value=model,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._require_model_write_access',
+            new_callable=AsyncMock,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts.ModelSystemPromptBindings.get_by_model_id',
+            new_callable=AsyncMock,
+            return_value=SimpleNamespace(active_version_id='active-version'),
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts.ModelSystemPromptVersions.get_version_by_id',
+            new_callable=AsyncMock,
+            return_value=SimpleNamespace(model_id='test-model'),
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts.ModelSystemPromptVersions.delete_version',
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts.invalidate_system_prompt_cache',
+        ) as mock_invalidate,
+    ):
+        result = await router_module.delete_model_system_prompt_history_entry(
+            version_id='old-version',
+            id='test-model',
+            user=user,
+            db=db,
+        )
+
+    # Assert
+    assert result is True
+    mock_invalidate.assert_called_once_with('test-model')
+
+
+def test_parse_if_match_updated_at_accepts_quoted_timestamp():
+    assert router_module._parse_if_match_updated_at('"123"') == 123
+
+
+def test_parse_if_match_updated_at_rejects_invalid_token():
+    with pytest.raises(HTTPException) as exc:
+        router_module._parse_if_match_updated_at('not-a-timestamp')
+
+    assert exc.value.status_code == 400
+    assert exc.value.detail == 'Invalid If-Match header'
+
+
+def test_resolve_expected_updated_at_prefers_form_when_header_missing():
+    assert router_module._resolve_expected_updated_at(100, None) == 100
+
+
+def test_resolve_expected_updated_at_uses_header_when_form_missing():
+    assert router_module._resolve_expected_updated_at(None, '"200"') == 200
+
+
+def test_resolve_expected_updated_at_rejects_conflicting_values():
+    with pytest.raises(HTTPException) as exc:
+        router_module._resolve_expected_updated_at(100, '"200"')
+
+    assert exc.value.status_code == 400
+    assert exc.value.detail == 'expected_updated_at conflicts with If-Match'
+
+
+@pytest.mark.asyncio
 async def test_create_version_set_active_updates_binding_and_mirror():
     # Arrange
     model = _make_model()
@@ -217,7 +294,12 @@ async def test_create_version_set_active_updates_binding_and_mirror():
 
     # Assert
     assert response.id == 'version-1'
-    mock_ensure.assert_awaited_once_with('test-model', 'version-1', db)
+    mock_ensure.assert_awaited_once_with(
+        'test-model',
+        'version-1',
+        db,
+        expected_updated_at=None,
+    )
     mock_mirror.assert_awaited_once_with(model, 'new content', db)
     mock_invalidate.assert_called_once_with('test-model')
 
@@ -265,6 +347,7 @@ async def test_set_active_version_invalidates_cache():
             form_data=router_module.SetActiveSystemPromptVersionForm(version_id='version-1'),
             user=user,
             db=db,
+            if_match=None,
         )
 
     # Assert
@@ -860,6 +943,117 @@ async def test_patch_binding_returns_409_on_version_conflict():
 
 
 @pytest.mark.asyncio
+async def test_set_active_returns_409_on_version_conflict():
+    # Arrange
+    model = _make_model()
+    user = _make_user()
+    db = AsyncMock()
+    version = SimpleNamespace(id='version-1', content='active prompt')
+
+    # Act
+    with (
+        patch(
+            'open_webui.routers.model_system_prompts._get_model_or_404',
+            new_callable=AsyncMock,
+            return_value=model,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._require_model_write_access',
+            new_callable=AsyncMock,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._get_version_for_model_or_404',
+            new_callable=AsyncMock,
+            return_value=version,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._ensure_local_binding',
+            new_callable=AsyncMock,
+            side_effect=router_module.BindingVersionConflictError('test-model', 200),
+        ),
+    ):
+        with pytest.raises(HTTPException) as exc:
+            await router_module.set_active_model_system_prompt_version(
+                id='test-model',
+                form_data=router_module.SetActiveSystemPromptVersionForm(
+                    version_id='version-1',
+                    expected_updated_at=100,
+                ),
+                user=user,
+                db=db,
+                if_match=None,
+            )
+
+    # Assert
+    assert exc.value.status_code == 409
+    assert exc.value.detail['current_updated_at'] == 200
+
+
+@pytest.mark.asyncio
+async def test_create_version_set_active_returns_409_on_version_conflict():
+    # Arrange
+    model = _make_model()
+    user = _make_user()
+    db = AsyncMock()
+    created = SimpleNamespace(
+        id='version-1',
+        model_id='test-model',
+        content='new content',
+        commit_message='init',
+        user_id='owner-id',
+        created_at=123,
+        model_dump=lambda: {
+            'id': 'version-1',
+            'model_id': 'test-model',
+            'content': 'new content',
+            'commit_message': 'init',
+            'user_id': 'owner-id',
+            'created_at': 123,
+        },
+    )
+
+    # Act
+    with (
+        patch(
+            'open_webui.routers.model_system_prompts._get_model_or_404',
+            new_callable=AsyncMock,
+            return_value=model,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._require_model_write_access',
+            new_callable=AsyncMock,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts.ModelSystemPromptVersions.create_version',
+            new_callable=AsyncMock,
+            return_value=created,
+        ),
+        patch(
+            'open_webui.routers.model_system_prompts._ensure_local_binding',
+            new_callable=AsyncMock,
+            side_effect=router_module.BindingVersionConflictError('test-model', 200),
+        ),
+    ):
+        with pytest.raises(HTTPException) as exc:
+            await router_module.create_model_system_prompt_version(
+                id='test-model',
+                form_data=router_module.CreateSystemPromptVersionForm(
+                    content='new content',
+                    commit_message='init',
+                    set_active=True,
+                    expected_updated_at=100,
+                ),
+                user=user,
+                db=db,
+                if_match=None,
+            )
+
+    # Assert
+    assert exc.value.status_code == 409
+    assert exc.value.detail['current_updated_at'] == 200
+
+
+@pytest.mark.asyncio
 async def test_list_model_langfuse_prompts_read_only_rejected():
     # Arrange
     model = _make_model()
@@ -923,6 +1117,7 @@ async def test_ensure_local_binding_clears_langfuse_fields():
     assert kwargs['external_name'] is None
     assert kwargs['cached_content'] is None
     assert kwargs['cached_at'] is None
+    assert kwargs['expected_updated_at'] is None
 
 
 @pytest.mark.asyncio

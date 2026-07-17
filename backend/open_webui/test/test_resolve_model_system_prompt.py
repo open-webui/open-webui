@@ -6,6 +6,8 @@ from open_webui.utils.payload import apply_system_prompt_to_body
 from open_webui.utils.system_prompt import resolve_model_system_prompt
 from open_webui.utils.system_prompt_cache import (
     SYSTEM_PROMPT_CACHE,
+    get_cached_system_prompt_async,
+    invalidate_system_prompt_cache,
     set_cached_system_prompt,
 )
 
@@ -147,6 +149,98 @@ async def test_local_active_version_wins_over_stale_mirror():
 
     # Assert
     assert result == 'Active version {{role}}'
+
+
+@pytest.mark.asyncio
+async def test_local_warm_cache_skips_db_on_second_resolve():
+    # Arrange
+    model = _make_model('Stale mirror')
+    binding = _make_binding(source='local', active_version_id='ver-1')
+    version = _make_version(content='Cached local prompt')
+
+    # Act — first resolve populates LRU
+    with (
+        patch(
+            'open_webui.utils.system_prompt.ModelSystemPromptBindings.get_by_model_id',
+            new_callable=AsyncMock,
+            return_value=binding,
+        ) as mock_get_binding,
+        patch(
+            'open_webui.integrations.system_prompt.local.ModelSystemPromptVersions.get_version_by_id',
+            new_callable=AsyncMock,
+            return_value=version,
+        ) as mock_get_version,
+    ):
+        first = await resolve_model_system_prompt(model, {}, None, bypass=False)
+
+    # Act — second resolve must hit warm LRU only
+    with (
+        patch(
+            'open_webui.utils.system_prompt.ModelSystemPromptBindings.get_by_model_id',
+            new_callable=AsyncMock,
+        ) as mock_get_binding_2,
+        patch(
+            'open_webui.integrations.system_prompt.local.ModelSystemPromptVersions.get_version_by_id',
+            new_callable=AsyncMock,
+        ) as mock_get_version_2,
+    ):
+        second = await resolve_model_system_prompt(model, {}, None, bypass=False)
+
+    # Assert
+    assert first == 'Cached local prompt'
+    assert second == 'Cached local prompt'
+    mock_get_binding.assert_awaited_once()
+    mock_get_version.assert_awaited_once()
+    mock_get_binding_2.assert_not_awaited()
+    mock_get_version_2.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_invalidate_after_set_active_clears_local_cache():
+    # Arrange
+    model = _make_model('Mirror')
+    binding = _make_binding(source='local', active_version_id='ver-1')
+    version_v1 = _make_version(id='ver-1', content='Version one')
+    version_v2 = _make_version(id='ver-2', content='Version two')
+
+    with (
+        patch(
+            'open_webui.utils.system_prompt.ModelSystemPromptBindings.get_by_model_id',
+            new_callable=AsyncMock,
+            return_value=binding,
+        ),
+        patch(
+            'open_webui.integrations.system_prompt.local.ModelSystemPromptVersions.get_version_by_id',
+            new_callable=AsyncMock,
+            return_value=version_v1,
+        ),
+    ):
+        await resolve_model_system_prompt(model, {}, None, bypass=False)
+
+    assert (await get_cached_system_prompt_async('model-1')) is not None
+
+    # Act — simulate set-active mutation invalidating cache
+    invalidate_system_prompt_cache('model-1')
+    binding_v2 = _make_binding(source='local', active_version_id='ver-2')
+
+    with (
+        patch(
+            'open_webui.utils.system_prompt.ModelSystemPromptBindings.get_by_model_id',
+            new_callable=AsyncMock,
+            return_value=binding_v2,
+        ) as mock_get_binding,
+        patch(
+            'open_webui.integrations.system_prompt.local.ModelSystemPromptVersions.get_version_by_id',
+            new_callable=AsyncMock,
+            return_value=version_v2,
+        ) as mock_get_version,
+    ):
+        result = await resolve_model_system_prompt(model, {}, None, bypass=False)
+
+    # Assert
+    assert result == 'Version two'
+    mock_get_binding.assert_awaited_once()
+    mock_get_version.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -348,7 +442,7 @@ async def test_langfuse_live_fetch_updates_cache_and_metadata():
     # Act
     with (
         patch(
-            'open_webui.utils.system_prompt._get_default_cache_ttl_seconds',
+            'open_webui.integrations.langfuse.provider._get_default_cache_ttl_seconds',
             new_callable=AsyncMock,
             return_value=300,
         ),
@@ -397,7 +491,7 @@ async def test_langfuse_fetch_fail_uses_stale_cache():
     # Act
     with (
         patch(
-            'open_webui.utils.system_prompt._get_default_cache_ttl_seconds',
+            'open_webui.integrations.langfuse.provider._get_default_cache_ttl_seconds',
             new_callable=AsyncMock,
             return_value=300,
         ),
@@ -433,7 +527,7 @@ async def test_langfuse_fetch_fail_without_stale_uses_backoff():
     # Act
     with (
         patch(
-            'open_webui.utils.system_prompt._get_default_cache_ttl_seconds',
+            'open_webui.integrations.langfuse.provider._get_default_cache_ttl_seconds',
             new_callable=AsyncMock,
             return_value=300,
         ),

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	import { onMount, onDestroy, getContext, createEventDispatcher } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import dayjs from 'dayjs';
@@ -17,6 +17,7 @@
 		createModelSystemPromptVersion,
 		setActiveModelSystemPromptVersion,
 		deleteModelSystemPromptHistoryEntry,
+		ModelSystemPromptBindingConflictError,
 		type ModelSystemPromptBinding,
 		type ModelSystemPromptVersion
 	} from '$lib/apis/models/systemPrompt';
@@ -45,6 +46,15 @@
 	let savingVersion = false;
 	let settingActive = false;
 	let loaded = false;
+	let panelAbort: AbortController | null = null;
+
+	const beginPanelLoad = () => {
+		panelAbort?.abort();
+		panelAbort = new AbortController();
+		return panelAbort.signal;
+	};
+
+	const isPanelActive = (signal: AbortSignal) => !signal.aborted;
 
 	$: effectiveWriteAccess = writeAccess && binding?.source !== 'langfuse';
 
@@ -58,10 +68,13 @@
 		});
 	};
 
-	const loadHistory = async (reset = false) => {
+	const loadHistory = async (reset = false, signal?: AbortSignal) => {
 		if (!modelId) return;
 		if (historyLoading) return;
 		if (!reset && !historyHasMore) return;
+
+		const activeSignal = signal ?? panelAbort?.signal;
+		if (!activeSignal) return;
 
 		historyLoading = true;
 
@@ -74,8 +87,11 @@
 			const newEntries = await getModelSystemPromptHistory(
 				localStorage.token,
 				modelId,
-				historyPage
+				historyPage,
+				activeSignal
 			);
+
+			if (!isPanelActive(activeSignal)) return;
 
 			if (reset) {
 				history = newEntries;
@@ -86,13 +102,16 @@
 			historyHasMore = newEntries.length > 0;
 			historyPage = historyPage + 1;
 		} catch (error) {
+			if (!isPanelActive(activeSignal)) return;
 			console.error('Failed to load system prompt history:', error);
 			if (reset) {
 				history = [];
 			}
 		}
 
-		historyLoading = false;
+		if (isPanelActive(activeSignal)) {
+			historyLoading = false;
+		}
 	};
 
 	const resolveActiveEntry = async (): Promise<ModelSystemPromptVersion | null> => {
@@ -137,18 +156,25 @@
 	const loadPanel = async () => {
 		if (!modelId) return;
 
+		const signal = beginPanelLoad();
+
 		try {
-			binding = await getModelSystemPromptBinding(localStorage.token, modelId);
+			binding = await getModelSystemPromptBinding(localStorage.token, modelId, signal);
+			if (!isPanelActive(signal)) return;
 			dispatch('bindingchange', binding);
 		} catch (error) {
+			if (!isPanelActive(signal)) return;
 			console.error('Failed to load system prompt binding:', error);
 			binding = null;
 			dispatch('bindingchange', null);
 		}
 
-		await loadHistory(true);
+		await loadHistory(true, signal);
+		if (!isPanelActive(signal)) return;
 		await initializeSelection();
-		loaded = true;
+		if (isPanelActive(signal)) {
+			loaded = true;
+		}
 	};
 
 	export const reload = async () => {
@@ -169,20 +195,39 @@
 		system = entry.content;
 	};
 
+	const handleBindingConflict = async () => {
+		toast.error(
+			$i18n.t('System prompt binding was modified elsewhere. Refreshed to the latest state.')
+		);
+		binding = await getModelSystemPromptBinding(localStorage.token, modelId);
+		dispatch('bindingchange', binding);
+	};
+
 	const handleSaveVersion = async () => {
 		if (!effectiveWriteAccess) {
 			toast.error($i18n.t('You do not have permission to edit this model.'));
 			return;
 		}
 
+		if (normalizeContent(system) === '') {
+			toast.error($i18n.t('System prompt content cannot be empty.'));
+			return;
+		}
+
 		savingVersion = true;
 
 		try {
-			const created = await createModelSystemPromptVersion(localStorage.token, modelId, {
+			const payload: Parameters<typeof createModelSystemPromptVersion>[2] = {
 				content: system,
 				commit_message: commitMessage.trim() || undefined,
 				set_active: true
-			});
+			};
+
+			if (binding?.updated_at != null) {
+				payload.expected_updated_at = binding.updated_at;
+			}
+
+			const created = await createModelSystemPromptVersion(localStorage.token, modelId, payload);
 
 			binding = await getModelSystemPromptBinding(localStorage.token, modelId);
 			dispatch('bindingchange', binding);
@@ -193,7 +238,11 @@
 			commitMessage = '';
 			toast.success($i18n.t('Version saved'));
 		} catch (error) {
-			toast.error(`${error}`);
+			if (error instanceof ModelSystemPromptBindingConflictError) {
+				await handleBindingConflict();
+			} else {
+				toast.error(`${error}`);
+			}
 		}
 
 		savingVersion = false;
@@ -205,17 +254,25 @@
 		settingActive = true;
 
 		try {
-			binding = await setActiveModelSystemPromptVersion(
-				localStorage.token,
-				modelId,
-				selectedEntry.id
-			);
+			const payload: Parameters<typeof setActiveModelSystemPromptVersion>[2] = {
+				version_id: selectedEntry.id
+			};
+
+			if (binding?.updated_at != null) {
+				payload.expected_updated_at = binding.updated_at;
+			}
+
+			binding = await setActiveModelSystemPromptVersion(localStorage.token, modelId, payload);
 			dispatch('bindingchange', binding);
 			system = selectedEntry.content;
 			activeBaseline = normalizeContent(system);
 			toast.success($i18n.t('Production version updated'));
 		} catch (error) {
-			toast.error(`${error}`);
+			if (error instanceof ModelSystemPromptBindingConflictError) {
+				await handleBindingConflict();
+			} else {
+				toast.error(`${error}`);
+			}
 		}
 
 		settingActive = false;
@@ -239,6 +296,10 @@
 
 	onMount(async () => {
 		await loadPanel();
+	});
+
+	onDestroy(() => {
+		panelAbort?.abort();
 	});
 </script>
 

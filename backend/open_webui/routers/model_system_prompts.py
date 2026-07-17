@@ -47,10 +47,12 @@ class CreateSystemPromptVersionForm(BaseModel):
     content: str
     commit_message: str | None = None
     set_active: bool = True
+    expected_updated_at: int | None = None
 
 
 class SetActiveSystemPromptVersionForm(BaseModel):
     version_id: str
+    expected_updated_at: int | None = None
 
 
 class PatchSystemPromptBindingForm(BaseModel):
@@ -182,14 +184,27 @@ async def _ensure_local_binding(
     model_id: str,
     active_version_id: str,
     db: AsyncSession,
+    *,
+    expected_updated_at: int | None = None,
 ) -> ModelSystemPromptBindingModel:
     return await ModelSystemPromptBindings.upsert(
         model_id=model_id,
         source='local',
         active_version_id=active_version_id,
+        expected_updated_at=expected_updated_at,
         **_cleared_langfuse_binding_fields(),
         db=db,
     )
+
+
+def _raise_binding_version_conflict(exc: BindingVersionConflictError) -> None:
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            'message': 'System prompt binding was modified by another request',
+            'current_updated_at': exc.current_updated_at,
+        },
+    ) from exc
 
 
 async def _get_enabled_langfuse_connection_or_404(connection_id: str) -> dict[str, Any]:
@@ -448,6 +463,7 @@ async def create_model_system_prompt_version(
     form_data: CreateSystemPromptVersionForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
+    if_match: str | None = Header(default=None, alias='If-Match'),
 ):
     """Create a new local system prompt version."""
     model = await _get_model_or_404(id, db)
@@ -467,7 +483,19 @@ async def create_model_system_prompt_version(
         )
 
     if form_data.set_active:
-        await _ensure_local_binding(model.id, version.id, db)
+        expected_updated_at = _resolve_expected_updated_at(
+            form_data.expected_updated_at,
+            if_match,
+        )
+        try:
+            await _ensure_local_binding(
+                model.id,
+                version.id,
+                db,
+                expected_updated_at=expected_updated_at,
+            )
+        except BindingVersionConflictError as exc:
+            _raise_binding_version_conflict(exc)
         await _mirror_params_system(model, form_data.content, db)
         invalidate_system_prompt_cache(model.id)
 
@@ -480,13 +508,26 @@ async def set_active_model_system_prompt_version(
     form_data: SetActiveSystemPromptVersionForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
+    if_match: str | None = Header(default=None, alias='If-Match'),
 ):
     """Set the active local system prompt version."""
     model = await _get_model_or_404(id, db)
     await _require_model_write_access(model, user, db)
 
     version = await _get_version_for_model_or_404(model.id, form_data.version_id, db)
-    binding = await _ensure_local_binding(model.id, version.id, db)
+    expected_updated_at = _resolve_expected_updated_at(
+        form_data.expected_updated_at,
+        if_match,
+    )
+    try:
+        binding = await _ensure_local_binding(
+            model.id,
+            version.id,
+            db,
+            expected_updated_at=expected_updated_at,
+        )
+    except BindingVersionConflictError as exc:
+        _raise_binding_version_conflict(exc)
     await _mirror_params_system(model, version.content, db)
     invalidate_system_prompt_cache(model.id)
     return binding
@@ -524,6 +565,7 @@ async def delete_model_system_prompt_history_entry(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+    invalidate_system_prompt_cache(model.id)
     return success
 
 
@@ -558,13 +600,7 @@ async def patch_model_system_prompt_binding(
                 db=db,
             )
         except BindingVersionConflictError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    'message': 'System prompt binding was modified by another request',
-                    'current_updated_at': exc.current_updated_at,
-                },
-            ) from exc
+            _raise_binding_version_conflict(exc)
         invalidate_system_prompt_cache(model.id)
         return updated
 
@@ -627,13 +663,7 @@ async def patch_model_system_prompt_binding(
             db=db,
         )
     except BindingVersionConflictError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                'message': 'System prompt binding was modified by another request',
-                'current_updated_at': exc.current_updated_at,
-            },
-        ) from exc
+        _raise_binding_version_conflict(exc)
     invalidate_system_prompt_cache(model.id)
     return updated
 

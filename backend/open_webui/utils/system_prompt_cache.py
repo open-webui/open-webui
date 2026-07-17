@@ -289,14 +289,27 @@ def _store_l1_from_entry(model_id: str, entry: CachedSystemPrompt) -> CachedSyst
 
 
 def get_cached_system_prompt(model_id: str) -> CachedSystemPrompt | None:
-    redis_checked, redis_entry = _redis_lookup_checked(model_id)
-    if redis_checked:
-        if redis_entry is not None:
-            return _store_l1_from_entry(model_id, redis_entry)
-        SYSTEM_PROMPT_CACHE.invalidate(model_id, redis=False)
-        return None
+    """Return a warm L1 entry, or refill L1 from Redis on miss."""
+    l1_entry = SYSTEM_PROMPT_CACHE.get(model_id)
+    if l1_entry is not None:
+        return l1_entry
 
-    return SYSTEM_PROMPT_CACHE.get(model_id)
+    redis_checked, redis_entry = _redis_lookup_checked(model_id)
+    if redis_checked and redis_entry is not None:
+        return _store_l1_from_entry(model_id, redis_entry)
+    return None
+
+
+async def get_cached_system_prompt_async(model_id: str) -> CachedSystemPrompt | None:
+    """Async-safe getter: L1 is checked in-process; Redis I/O runs in a thread."""
+    l1_entry = SYSTEM_PROMPT_CACHE.get(model_id)
+    if l1_entry is not None:
+        return l1_entry
+
+    redis_checked, redis_entry = await asyncio.to_thread(_redis_lookup_checked, model_id)
+    if redis_checked and redis_entry is not None:
+        return _store_l1_from_entry(model_id, redis_entry)
+    return None
 
 
 def set_cached_system_prompt(

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
+	import { createEventDispatcher, onMount, onDestroy, getContext, tick } from 'svelte';
 	import { getModels as _getModels } from '$lib/apis';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -37,6 +37,7 @@
 		getLangfuseConfig,
 		setLangfuseConfig
 	} from '$lib/apis/configs';
+	import { formatLangfuseConfigSaveError } from '$lib/apis/langfuse';
 
 	export let saveSettings: Function;
 
@@ -73,6 +74,16 @@
 	let langfusePromptCacheTtl = 300;
 	let showAddLangfuseModal = false;
 	let editLangfuseIdx: number | null = null;
+	let langfuseSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+	const debouncedSaveLangfuseConfig = () => {
+		if (langfuseSaveTimer) {
+			clearTimeout(langfuseSaveTimer);
+		}
+		langfuseSaveTimer = setTimeout(() => {
+			saveLangfuseConfig();
+		}, 500);
+	};
 
 	const addConnectionHandler = async (server: ToolServerConnection) => {
 		servers = [...(servers ?? []), server];
@@ -152,8 +163,23 @@
 		const res = await setLangfuseConfig(localStorage.token, {
 			LANGFUSE_CONNECTIONS: payloadConnections,
 			LANGFUSE_PROMPT_CACHE_TTL: langfusePromptCacheTtl
-		}).catch(() => {
-			toast.error($i18n.t('Failed to save Langfuse configuration'));
+		}).catch((err) => {
+			const { title, description } = formatLangfuseConfigSaveError(
+				err,
+				(key, options) => $i18n.t(key, options),
+				{
+					connectionLabel: (connectionId) => {
+						const connection = langfuseConnections.find((item) => item.id === connectionId);
+						return connection?.name || connection?.url;
+					}
+				}
+			);
+
+			if (description) {
+				toast.error(title, { description });
+			} else {
+				toast.error(title);
+			}
 			return null;
 		});
 
@@ -211,6 +237,12 @@
 			}
 		} catch {
 			// Not configured yet
+		}
+	});
+
+	onDestroy(() => {
+		if (langfuseSaveTimer) {
+			clearTimeout(langfuseSaveTimer);
 		}
 	});
 </script>
@@ -480,7 +512,7 @@
 												langfuseConnections = langfuseConnections.map((c, i) =>
 													i === idx ? { ...c, enabled: !(c?.enabled !== false) } : c
 												);
-												saveLangfuseConfig();
+												debouncedSaveLangfuseConfig();
 											}}
 										/>
 									</Tooltip>
@@ -505,7 +537,7 @@
 							type="number"
 							min="0"
 							bind:value={langfusePromptCacheTtl}
-							on:change={saveLangfuseConfig}
+							on:change={debouncedSaveLangfuseConfig}
 						/>
 					</div>
 
