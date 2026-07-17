@@ -73,6 +73,8 @@
 	let modelOrderList: string[] = [];
 	let defaultModelIds: string[] = [];
 	let defaultPinnedModelIds: string[] = [];
+	let defaultModelIdSet = new Set<string>();
+	let defaultPinnedModelIdSet = new Set<string>();
 
 	let workspaceModels: ModelListItem[] = [];
 	let baseModels: ModelListItem[] = [];
@@ -123,8 +125,8 @@
 		return 'text-gray-500 dark:text-gray-400';
 	};
 
-	const isDefaultModel = (model) => defaultModelIds.includes(model.id);
-	const isDefaultPinnedModel = (model) => defaultPinnedModelIds.includes(model.id);
+	$: defaultModelIdSet = new Set(defaultModelIds);
+	$: defaultPinnedModelIdSet = new Set(defaultPinnedModelIds);
 
 	$: if (models) {
 		const modelOrder = new Map(modelOrderList.map((id, idx) => [id, idx]));
@@ -138,6 +140,8 @@
 				if (viewOption === 'hidden') return m?.meta?.hidden === true;
 				if (viewOption === 'public') return isPublicModel(m);
 				if (viewOption === 'private') return !isPublicModel(m);
+				if (viewOption === 'selected') return defaultModelIdSet.has(m.id);
+				if (viewOption === 'pinned') return defaultPinnedModelIdSet.has(m.id);
 				return true; // All
 			})
 			.sort((a, b) => {
@@ -348,28 +352,30 @@
 	};
 
 	const toggleDefaultModelHandler = async (model) => {
-		const nextDefaultModelIds = isDefaultModel(model)
+		const isSelected = defaultModelIdSet.has(model.id);
+		const nextDefaultModelIds = isSelected
 			? defaultModelIds.filter((id) => id !== model.id)
 			: [...new Set([...defaultModelIds, model.id])];
 
 		await saveModelDefaults(
 			nextDefaultModelIds,
 			defaultPinnedModelIds,
-			isDefaultModel(model)
+			isSelected
 				? $i18n.t('Model removed from selected models')
 				: $i18n.t('Model added to selected models')
 		);
 	};
 
 	const toggleDefaultPinnedModelHandler = async (model) => {
-		const nextDefaultPinnedModelIds = isDefaultPinnedModel(model)
+		const isPinned = defaultPinnedModelIdSet.has(model.id);
+		const nextDefaultPinnedModelIds = isPinned
 			? defaultPinnedModelIds.filter((id) => id !== model.id)
 			: [...new Set([...defaultPinnedModelIds, model.id])];
 
 		await saveModelDefaults(
 			defaultModelIds,
 			nextDefaultPinnedModelIds,
-			isDefaultPinnedModel(model)
+			isPinned
 				? $i18n.t('Model removed from pinned models')
 				: $i18n.t('Model added to pinned models')
 		);
@@ -945,7 +951,7 @@
 													{modelAccessLabel(model)}
 												</span>
 
-												{#if isDefaultModel(model)}
+												{#if defaultModelIdSet.has(model.id)}
 													<span
 														class="shrink-0 text-[11px] font-normal leading-4 text-gray-500 dark:text-gray-400"
 													>
@@ -953,7 +959,7 @@
 													</span>
 												{/if}
 
-												{#if isDefaultPinnedModel(model)}
+												{#if defaultPinnedModelIdSet.has(model.id)}
 													<span
 														class="shrink-0 text-[11px] font-normal leading-4 text-gray-500 dark:text-gray-400"
 													>
@@ -1018,8 +1024,8 @@
 										privacyHandler={() => {
 											toggleModelPrivacyHandler(model);
 										}}
-										isDefaultSelected={isDefaultModel(model)}
-										isDefaultPinned={isDefaultPinnedModel(model)}
+										isDefaultSelected={defaultModelIdSet.has(model.id)}
+										isDefaultPinned={defaultPinnedModelIdSet.has(model.id)}
 										defaultSelectedHandler={() => {
 											toggleDefaultModelHandler(model);
 										}}

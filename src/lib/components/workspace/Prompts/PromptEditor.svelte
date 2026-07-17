@@ -28,7 +28,6 @@
 	import dayjs from 'dayjs';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import PromptHistoryMenu from './PromptHistoryMenu.svelte';
-	import Badge from '$lib/components/common/Badge.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
 
 	dayjs.extend(localizedFormat);
@@ -396,7 +395,7 @@
 			<span>{$i18n.t('Back')}</span>
 		</button>
 
-		<div class="flex shrink-0 items-start justify-between gap-3 pb-2">
+		<div class="flex shrink-0 items-start justify-between gap-3 pb-1">
 			<div class="min-w-0 flex-1">
 				<input
 					class="w-full bg-transparent text-sm outline-hidden"
@@ -438,7 +437,7 @@
 			</div>
 		</div>
 
-		<div class="mb-2 flex justify-between items-center gap-2">
+		<div class="mb-1 flex justify-between items-center gap-2">
 			<div class="flex-1 min-w-0">
 				<Tags
 					{tags}
@@ -493,7 +492,9 @@
 					{#if selectedHistoryEntry && !disabled}
 						<div class="flex items-center gap-2">
 							{#if selectedHistoryEntry.id === prompt?.version_id}
-								<Badge type="success" content={$i18n.t('Live')} />
+								<span class="inline-flex items-center text-xs text-gray-400 dark:text-gray-500">
+									{$i18n.t('Live')}
+								</span>
 							{:else}
 								<button
 									class="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-300 hover:underline transition"
@@ -675,41 +676,47 @@
 		{#if history.length > 0}
 			<div class="space-y-0 flex-1 overflow-y-auto" on:scroll={handleHistoryScroll}>
 				{#each history as entry, index}
-					<div class="flex">
-						<!-- Content -->
-						<button
-							class="mb-0.5 flex-1 rounded-lg px-2 py-1.5 text-left transition group
-								{selectedHistoryEntry?.id === entry.id
-								? 'bg-gray-50/60 dark:bg-white/[0.03]'
-								: 'hover:bg-gray-50/60 dark:hover:bg-white/[0.03]'}"
-							on:click={() => (selectedHistoryEntry = entry)}
-						>
-							<!-- Commit Message -->
-							<div class="flex items-center gap-2 mb-1">
-								<div class="text-xs text-gray-900 dark:text-white truncate">
-									{entry.commit_message || $i18n.t('Update')}
-								</div>
-								{#if entry.id === prompt?.version_id}
-									<Badge type="success" content={$i18n.t('Live')} />
-								{/if}
-							</div>
+					<button
+						class="group relative w-full px-1.5 py-1.5 pl-3 text-left transition {selectedHistoryEntry?.id ===
+						entry.id
+							? 'text-gray-900 dark:text-white'
+							: 'text-gray-500 hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-200'}"
+						on:click={() => (selectedHistoryEntry = entry)}
+					>
+						<span
+							class="absolute left-0 top-1.5 h-[calc(100%-0.75rem)] w-px rounded-full transition {selectedHistoryEntry?.id ===
+							entry.id
+								? 'bg-gray-900 dark:bg-gray-200'
+								: 'bg-transparent'}"
+						></span>
 
-							<!-- User + Time -->
-							<div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-								{#if entry.user}
-									<img
-										src={`/api/v1/users/${entry.user.id}/profile/image`}
-										alt={entry.user.name}
-										class="size-3 rounded-full mr-0.5"
-										on:error={(e) => (e.target.src = '/user.png')}
-									/>
-									<span class="truncate">{entry.user.name}</span>
-									<span>•</span>
-								{/if}
-								<span class="shrink-0">{renderDate(entry.created_at)}</span>
+						<div class="flex items-center gap-2 mb-1">
+							<div class="truncate text-xs">
+								{entry.commit_message || $i18n.t('Update')}
 							</div>
-						</button>
-					</div>
+							{#if entry.id === prompt?.version_id}
+								<span
+									class="inline-flex shrink-0 items-center text-xs text-gray-400 dark:text-gray-500"
+								>
+									{$i18n.t('Live')}
+								</span>
+							{/if}
+						</div>
+
+						<div class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+							{#if entry.user}
+								<img
+									src={`/api/v1/users/${entry.user.id}/profile/image`}
+									alt={entry.user.name}
+									class="size-3 rounded-full mr-0.5"
+									on:error={(e) => (e.target.src = '/user.png')}
+								/>
+								<span class="truncate">{entry.user.name}</span>
+								<span>•</span>
+							{/if}
+							<span class="shrink-0">{renderDate(entry.created_at)}</span>
+						</div>
+					</button>
 				{/each}
 
 				{#if historyLoading}
