@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.integrations.langfuse.connections import (
     get_connection_by_id,
@@ -13,6 +13,7 @@ from open_webui.integrations.langfuse.provider import LangfusePromptError, Langf
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.model_system_prompt_binding import (
+    BindingVersionConflictError,
     ModelSystemPromptBindingModel,
     ModelSystemPromptBindings,
     SystemPromptSource,
@@ -59,6 +60,7 @@ class PatchSystemPromptBindingForm(BaseModel):
     external_label: str | None = None
     external_version: str | None = None
     cache_ttl_seconds: int | None = None
+    expected_updated_at: int | None = None
 
 
 class LangfusePromptPreviewForm(BaseModel):
@@ -217,16 +219,89 @@ async def _authorize_langfuse_connection_for_model(
     if user.role == 'admin':
         return
 
-    if binding and binding.connection_id == connection_id:
+    if configure and await _has_model_write_access(model, user, db):
         return
 
-    if configure and await _has_model_write_access(model, user, db):
+    if binding and binding.connection_id == connection_id:
         return
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
     )
+
+
+async def _require_bound_langfuse_identity_for_readonly(
+    model: ModelModel,
+    user,
+    db: AsyncSession,
+    binding: ModelSystemPromptBindingModel | None,
+    *,
+    external_name: str | None,
+    external_label: str | None,
+    external_version: str | None,
+) -> None:
+    if user.role == 'admin' or await _has_model_write_access(model, user, db):
+        return
+
+    if not binding or binding.source != 'langfuse':
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if external_name != binding.external_name:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+    if external_label != binding.external_label:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+    if external_version != binding.external_version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+
+def _assert_langfuse_label_xor_version(
+    external_label: str | None,
+    external_version: str | None,
+) -> None:
+    if external_label and external_version:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Specify external_label or external_version, not both',
+        )
+
+
+def _parse_if_match_updated_at(if_match: str | None) -> int | None:
+    if not if_match or not isinstance(if_match, str):
+        return None
+    token = if_match.strip().strip('"')
+    if not token.isdigit():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Invalid If-Match header',
+        )
+    return int(token)
+
+
+def _resolve_expected_updated_at(
+    form_expected: int | None,
+    if_match: str | None,
+) -> int | None:
+    header_expected = _parse_if_match_updated_at(if_match)
+    if form_expected is not None and header_expected is not None:
+        if form_expected != header_expected:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='expected_updated_at conflicts with If-Match',
+            )
+    return form_expected if form_expected is not None else header_expected
 
 
 def _langfuse_identity_changed(
@@ -284,6 +359,8 @@ def _resolve_langfuse_binding_fields(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Langfuse connection_id and external_name are required',
         )
+
+    _assert_langfuse_label_xor_version(external_label, external_version)
 
     return connection_id, external_name, external_label, external_version
 
@@ -456,23 +533,38 @@ async def patch_model_system_prompt_binding(
     form_data: PatchSystemPromptBindingForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
+    if_match: str | None = Header(default=None, alias='If-Match'),
 ):
     """Update system prompt binding Langfuse fields and source without fetching."""
     model = await _get_model_or_404(id, db)
     await _require_model_write_access(model, user, db)
 
     binding = await ModelSystemPromptBindings.get_by_model_id(model.id, db=db)
+    expected_updated_at = _resolve_expected_updated_at(
+        form_data.expected_updated_at,
+        if_match,
+    )
     source = form_data.source or (binding.source if binding else 'local')
     active_version_id = binding.active_version_id if binding else None
 
     if source == 'local':
-        updated = await ModelSystemPromptBindings.upsert(
-            model_id=model.id,
-            source='local',
-            active_version_id=active_version_id,
-            **_cleared_langfuse_binding_fields(),
-            db=db,
-        )
+        try:
+            updated = await ModelSystemPromptBindings.upsert(
+                model_id=model.id,
+                source='local',
+                active_version_id=active_version_id,
+                expected_updated_at=expected_updated_at,
+                **_cleared_langfuse_binding_fields(),
+                db=db,
+            )
+        except BindingVersionConflictError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    'message': 'System prompt binding was modified by another request',
+                    'current_updated_at': exc.current_updated_at,
+                },
+            ) from exc
         invalidate_system_prompt_cache(model.id)
         return updated
 
@@ -502,6 +594,8 @@ async def patch_model_system_prompt_binding(
         else (binding.cache_ttl_seconds if binding else None)
     )
 
+    _assert_langfuse_label_xor_version(external_label, external_version)
+
     if connection_id:
         await _authorize_langfuse_connection_for_model(
             model,
@@ -520,20 +614,30 @@ async def patch_model_system_prompt_binding(
         external_version=external_version,
     )
 
-    updated = await ModelSystemPromptBindings.upsert(
-        model_id=model.id,
-        source=source,
-        active_version_id=active_version_id,
-        connection_id=connection_id,
-        external_name=external_name,
-        external_label=external_label,
-        external_version=external_version,
-        cached_content=None if identity_changed else (binding.cached_content if binding else None),
-        cached_version=None if identity_changed else (binding.cached_version if binding else None),
-        cached_at=None if identity_changed else (binding.cached_at if binding else None),
-        cache_ttl_seconds=cache_ttl_seconds,
-        db=db,
-    )
+    try:
+        updated = await ModelSystemPromptBindings.upsert(
+            model_id=model.id,
+            source=source,
+            active_version_id=active_version_id,
+            connection_id=connection_id,
+            external_name=external_name,
+            external_label=external_label,
+            external_version=external_version,
+            cached_content=None if identity_changed else (binding.cached_content if binding else None),
+            cached_version=None if identity_changed else (binding.cached_version if binding else None),
+            cached_at=None if identity_changed else (binding.cached_at if binding else None),
+            cache_ttl_seconds=cache_ttl_seconds,
+            expected_updated_at=expected_updated_at,
+            db=db,
+        )
+    except BindingVersionConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                'message': 'System prompt binding was modified by another request',
+                'current_updated_at': exc.current_updated_at,
+            },
+        ) from exc
     invalidate_system_prompt_cache(model.id)
     return updated
 
@@ -585,13 +689,23 @@ async def preview_langfuse_system_prompt(
         binding,
         form_data,
     )
+    has_write = await _has_model_write_access(model, user, db)
     await _authorize_langfuse_connection_for_model(
         model,
         user,
         db,
         connection_id,
         binding,
-        configure=True,
+        configure=has_write,
+    )
+    await _require_bound_langfuse_identity_for_readonly(
+        model,
+        user,
+        db,
+        binding,
+        external_name=external_name,
+        external_label=external_label,
+        external_version=external_version,
     )
     return await _preview_langfuse_prompt(
         connection_id,
@@ -607,11 +721,23 @@ async def list_model_langfuse_connections(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """List enabled Langfuse connections for model editor (redacted, model read access)."""
+    """List Langfuse connections visible in the model editor (redacted)."""
     model = await _get_model_or_404(id, db)
     await _require_model_read_access(model, user, db)
 
-    connections = await list_enabled_connections()
+    if user.role == 'admin' or await _has_model_write_access(model, user, db):
+        connections = await list_enabled_connections()
+    else:
+        binding = await ModelSystemPromptBindings.get_by_model_id(model.id, db=db)
+        if binding and binding.connection_id:
+            connection = await get_connection_by_id(binding.connection_id)
+            if connection and connection.get('enabled', True):
+                connections = [connection]
+            else:
+                connections = []
+        else:
+            connections = []
+
     return {
         'connections': redact_langfuse_connections_for_response(connections),
     }
@@ -632,7 +758,16 @@ async def list_model_langfuse_prompts(
     model = await _get_model_or_404(id, db)
     await _require_model_read_access(model, user, db)
 
+    _assert_langfuse_label_xor_version(label, None)
+
     binding = await ModelSystemPromptBindings.get_by_model_id(model.id, db=db)
+    has_write = await _has_model_write_access(model, user, db)
+    if user.role != 'admin' and not has_write:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     await _authorize_langfuse_connection_for_model(
         model,
         user,
@@ -670,14 +805,29 @@ async def get_model_langfuse_prompt(
     model = await _get_model_or_404(id, db)
     await _require_model_read_access(model, user, db)
 
+    _assert_langfuse_label_xor_version(label, version)
+
     binding = await ModelSystemPromptBindings.get_by_model_id(model.id, db=db)
+    has_write = await _has_model_write_access(model, user, db)
     await _authorize_langfuse_connection_for_model(
         model,
         user,
         db,
         connection_id,
         binding,
-        configure=True,
+        configure=has_write,
+    )
+
+    fetch_label = label if label is not None else (binding.external_label if binding else None)
+    fetch_version = version if version is not None else (binding.external_version if binding else None)
+    await _require_bound_langfuse_identity_for_readonly(
+        model,
+        user,
+        db,
+        binding,
+        external_name=prompt_name,
+        external_label=fetch_label,
+        external_version=fetch_version,
     )
 
     connection = await _get_enabled_langfuse_connection_or_404(connection_id)
@@ -686,8 +836,8 @@ async def get_model_langfuse_prompt(
         return await provider.get_prompt(
             connection,
             prompt_name,
-            label=label,
-            version=version,
+            label=fetch_label,
+            version=fetch_version,
         )
     except LangfusePromptError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

@@ -16,6 +16,7 @@ from open_webui.integrations.langfuse.connections import (
     redact_langfuse_connections_for_response,
 )
 from open_webui.models.config import Config
+from open_webui.models.model_system_prompt_binding import ModelSystemPromptBindings
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers
@@ -416,6 +417,49 @@ class LangfuseConfigForm(BaseModel):
     LANGFUSE_PROMPT_CACHE_TTL: int | None = 300
 
 
+async def _assert_langfuse_connections_not_orphaned(
+    existing: list[dict],
+    incoming: list[dict],
+) -> None:
+    """Block delete/disable of Langfuse connections still bound to models."""
+    existing_by_id = {item.get('id'): item for item in existing if item.get('id')}
+    incoming_by_id = {item.get('id'): item for item in incoming if item.get('id')}
+
+    blocked: list[dict[str, object]] = []
+    for connection_id, previous in existing_by_id.items():
+        updated = incoming_by_id.get(connection_id)
+        action = None
+        if updated is None:
+            action = 'removed'
+        elif previous.get('enabled', True) and not updated.get('enabled', True):
+            action = 'disabled'
+
+        if not action:
+            continue
+
+        bound_models = await ModelSystemPromptBindings.count_by_connection_id(connection_id)
+        if bound_models:
+            blocked.append(
+                {
+                    'connection_id': connection_id,
+                    'action': action,
+                    'bound_models': bound_models,
+                }
+            )
+
+    if blocked:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                'message': (
+                    'Cannot remove or disable Langfuse connections that are bound to models. '
+                    'Detach or rebind affected models first.'
+                ),
+                'blocked_connections': blocked,
+            },
+        )
+
+
 @router.get('/langfuse')
 async def get_langfuse_config(request: Request, user=Depends(get_admin_user)):
     connections = await Config.get('langfuse.connections')
@@ -437,6 +481,8 @@ async def set_langfuse_config(
         [connection.model_dump() for connection in form_data.LANGFUSE_CONNECTIONS],
         existing,
     )
+
+    await _assert_langfuse_connections_not_orphaned(existing, connections)
 
     ttl = form_data.LANGFUSE_PROMPT_CACHE_TTL
     if ttl is not None and ttl < 0:

@@ -1,10 +1,11 @@
 """Per-model system prompt source binding and Langfuse cache."""
 
+import time
 from typing import Literal, Optional
 
 from open_webui.internal.db import Base, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, ForeignKey, Integer, Text
+from sqlalchemy import BigInteger, Column, ForeignKey, Integer, Text, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 SystemPromptSource = Literal['local', 'langfuse']
@@ -36,6 +37,7 @@ class ModelSystemPromptBinding(Base):
     cached_version = Column(Text, nullable=True)
     cached_at = Column(BigInteger, nullable=True)
     cache_ttl_seconds = Column(Integer, nullable=True)
+    updated_at = Column(BigInteger, nullable=True)
 
 
 class ModelSystemPromptBindingModel(BaseModel):
@@ -50,11 +52,30 @@ class ModelSystemPromptBindingModel(BaseModel):
     cached_version: Optional[str] = None
     cached_at: Optional[int] = None
     cache_ttl_seconds: Optional[int] = None
+    updated_at: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class ModelSystemPromptBindingsTable:
+    async def count_by_connection_id(
+        self,
+        connection_id: str,
+        db: Optional[AsyncSession] = None,
+    ) -> int:
+        """Count langfuse bindings referencing a connection."""
+        async with get_async_db_context(db) as db:
+            stmt = (
+                select(func.count())
+                .select_from(ModelSystemPromptBinding)
+                .where(
+                    ModelSystemPromptBinding.connection_id == connection_id,
+                    ModelSystemPromptBinding.source == 'langfuse',
+                )
+            )
+            result = await db.execute(stmt)
+            return int(result.scalar_one())
+
     async def get_by_model_id(
         self,
         model_id: str,
@@ -80,11 +101,18 @@ class ModelSystemPromptBindingsTable:
         cached_version: Optional[str] = None,
         cached_at: Optional[int] = None,
         cache_ttl_seconds: Optional[int] = None,
+        expected_updated_at: Optional[int] = None,
         db: Optional[AsyncSession] = None,
     ) -> ModelSystemPromptBindingModel:
         """Create or replace binding fields for a model."""
         async with get_async_db_context(db) as db:
             binding = await db.get(ModelSystemPromptBinding, model_id)
+            if binding and expected_updated_at is not None:
+                current = binding.updated_at
+                if current is None or current != expected_updated_at:
+                    raise BindingVersionConflictError(model_id, current)
+
+            now = int(time.time())
             if binding:
                 binding.source = source
                 binding.active_version_id = active_version_id
@@ -96,7 +124,10 @@ class ModelSystemPromptBindingsTable:
                 binding.cached_version = cached_version
                 binding.cached_at = cached_at
                 binding.cache_ttl_seconds = cache_ttl_seconds
+                binding.updated_at = now
             else:
+                if expected_updated_at is not None:
+                    raise BindingVersionConflictError(model_id, None)
                 binding = ModelSystemPromptBinding(
                     model_id=model_id,
                     source=source,
@@ -109,6 +140,7 @@ class ModelSystemPromptBindingsTable:
                     cached_version=cached_version,
                     cached_at=cached_at,
                     cache_ttl_seconds=cache_ttl_seconds,
+                    updated_at=now,
                 )
                 db.add(binding)
 
@@ -129,6 +161,7 @@ class ModelSystemPromptBindingsTable:
                 return None
 
             binding.active_version_id = active_version_id
+            binding.updated_at = int(time.time())
             await db.commit()
             await db.refresh(binding)
             return ModelSystemPromptBindingModel.model_validate(binding)
@@ -146,6 +179,7 @@ class ModelSystemPromptBindingsTable:
                 return None
 
             binding.source = source
+            binding.updated_at = int(time.time())
             await db.commit()
             await db.refresh(binding)
             return ModelSystemPromptBindingModel.model_validate(binding)
@@ -194,9 +228,17 @@ class ModelSystemPromptBindingsTable:
             binding.external_name = external_name
             binding.external_label = external_label
             binding.external_version = external_version
+            binding.updated_at = int(time.time())
             await db.commit()
             await db.refresh(binding)
             return ModelSystemPromptBindingModel.model_validate(binding)
+
+
+class BindingVersionConflictError(Exception):
+    def __init__(self, model_id: str, current_updated_at: int | None) -> None:
+        self.model_id = model_id
+        self.current_updated_at = current_updated_at
+        super().__init__(model_id)
 
 
 ModelSystemPromptBindings = ModelSystemPromptBindingsTable()

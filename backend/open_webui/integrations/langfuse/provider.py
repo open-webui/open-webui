@@ -12,8 +12,13 @@ from open_webui.models.config import Config
 from open_webui.models.model_system_prompt_binding import ModelSystemPromptBindingModel
 from open_webui.utils.session_pool import cleanup_response, get_session
 from open_webui.utils.system_prompt_cache import (
+    acquire_system_prompt_fetch_lock,
     binding_cache_ttl_seconds,
+    get_cached_system_prompt,
     is_binding_db_cache_warm,
+    is_system_prompt_fetch_backoff_active,
+    record_system_prompt_fetch_failure,
+    serve_stale_system_prompt_from_binding,
     set_cached_system_prompt,
 )
 
@@ -49,6 +54,14 @@ class LangfusePromptProvider(SystemPromptProviderBase):
 
         default_ttl = await _get_default_cache_ttl_seconds()
 
+        cached = get_cached_system_prompt(model_id)
+        if cached and cached.content:
+            from open_webui.utils.system_prompt import _langfuse_metadata
+
+            if metadata is not None:
+                metadata.update(_langfuse_metadata(binding, prompt_version=cached.prompt_version))
+            return cached.content
+
         if is_binding_db_cache_warm(binding, default_ttl=default_ttl):
             from open_webui.utils.system_prompt import _langfuse_metadata
 
@@ -65,37 +78,59 @@ class LangfusePromptProvider(SystemPromptProviderBase):
                 metadata.update(_langfuse_metadata(binding))
             return binding.cached_content
 
-        try:
-            content, prompt_version = await self.fetch_prompt_for_binding(binding)
-            from open_webui.utils.system_prompt import (
-                _langfuse_metadata,
-                _persist_langfuse_cache,
-            )
+        if is_system_prompt_fetch_backoff_active(model_id) and not binding.cached_content:
+            return mirror
 
-            await _persist_langfuse_cache(
-                model_id,
-                binding,
-                content,
-                prompt_version=prompt_version,
-                default_ttl=default_ttl,
-            )
-            if metadata is not None:
-                metadata.update(_langfuse_metadata(binding, prompt_version=prompt_version))
-            return content
-        except Exception:
-            log.exception(
-                'Failed to fetch Langfuse system prompt for model %s (connection=%s, name=%s)',
-                model_id,
-                binding.connection_id,
-                binding.external_name,
-            )
-            if binding.cached_content:
+        fetch_lock = await acquire_system_prompt_fetch_lock(model_id)
+        async with fetch_lock:
+            cached = get_cached_system_prompt(model_id)
+            if cached and cached.content:
                 from open_webui.utils.system_prompt import _langfuse_metadata
 
                 if metadata is not None:
-                    metadata.update(_langfuse_metadata(binding))
-                return binding.cached_content
-            return mirror
+                    metadata.update(_langfuse_metadata(binding, prompt_version=cached.prompt_version))
+                return cached.content
+
+            if is_system_prompt_fetch_backoff_active(model_id) and not binding.cached_content:
+                return mirror
+
+            try:
+                content, prompt_version = await self.fetch_prompt_for_binding(binding)
+                from open_webui.utils.system_prompt import (
+                    _langfuse_metadata,
+                    _persist_langfuse_cache,
+                )
+
+                await _persist_langfuse_cache(
+                    model_id,
+                    binding,
+                    content,
+                    prompt_version=prompt_version,
+                    default_ttl=default_ttl,
+                )
+                if metadata is not None:
+                    metadata.update(_langfuse_metadata(binding, prompt_version=prompt_version))
+                return content
+            except Exception:
+                log.exception(
+                    'Failed to fetch Langfuse system prompt for model %s (connection=%s, name=%s)',
+                    model_id,
+                    binding.connection_id,
+                    binding.external_name,
+                )
+                record_system_prompt_fetch_failure(model_id)
+                if binding.cached_content:
+                    from open_webui.utils.system_prompt import _langfuse_metadata
+
+                    serve_stale_system_prompt_from_binding(
+                        model_id,
+                        binding,
+                        default_ttl=default_ttl,
+                    )
+                    if metadata is not None:
+                        metadata.update(_langfuse_metadata(binding))
+                    return binding.cached_content
+                return mirror
 
     async def list_prompts(
         self,
@@ -130,9 +165,8 @@ class LangfusePromptProvider(SystemPromptProviderBase):
         )
         try:
             if not response.ok:
-                detail = await response.text()
                 raise LangfusePromptError(
-                    f'Langfuse list prompts failed ({response.status}): {detail}'
+                    f'Langfuse list prompts failed (HTTP {response.status})'
                 )
             return await response.json()
         finally:
@@ -200,9 +234,8 @@ class LangfusePromptProvider(SystemPromptProviderBase):
         )
         try:
             if not response.ok:
-                detail = await response.text()
                 raise LangfusePromptError(
-                    f'Langfuse get prompt failed ({response.status}): {detail}'
+                    f'Langfuse get prompt failed (HTTP {response.status})'
                 )
             data = await response.json()
         finally:
@@ -241,6 +274,8 @@ class LangfusePromptProvider(SystemPromptProviderBase):
         content = data.get('prompt')
         if not isinstance(content, str):
             raise LangfusePromptError('Unexpected Langfuse text prompt payload')
+        if not content:
+            raise LangfusePromptError('Langfuse prompt content must not be empty')
 
         return LangfusePromptResult(
             name=data.get('name') or expected_name,

@@ -17,7 +17,9 @@
 		syncModelSystemPromptFromLangfuse,
 		previewModelSystemPromptFromLangfuse,
 		detachModelSystemPromptToLocal,
-		type ModelSystemPromptBinding
+		ModelSystemPromptBindingConflictError,
+		type ModelSystemPromptBinding,
+		type PatchModelSystemPromptBindingForm
 	} from '$lib/apis/models/systemPrompt';
 	import type { LangfuseConnection, LangfusePromptSummary } from '$lib/apis/langfuse';
 
@@ -77,7 +79,23 @@
 			toast.error($i18n.t('Prompt name is required'));
 			return false;
 		}
+		if (externalLabel.trim() && externalVersion.trim()) {
+			toast.error($i18n.t('Use either a label or a version, not both.'));
+			return false;
+		}
 		return true;
+	};
+
+	const handleLabelInput = () => {
+		if (externalLabel.trim() !== '') {
+			externalVersion = '';
+		}
+	};
+
+	const handleVersionInput = () => {
+		if (externalVersion.trim() !== '') {
+			externalLabel = '';
+		}
 	};
 
 	const applyBindingToForm = (value: ModelSystemPromptBinding | null) => {
@@ -100,11 +118,22 @@
 		dispatch('bindingchange', value);
 	};
 
-	const refreshBinding = async () => {
+	const refreshBinding = async (refreshForm = false) => {
 		const next = await getModelSystemPromptBinding(localStorage.token, modelId);
 		emitBinding(next);
+		if (refreshForm) {
+			applyBindingToForm(next);
+		}
 		applyContentFromBinding(next);
 		return next;
+	};
+
+	const handleBindingConflict = async () => {
+		toast.error(
+			$i18n.t('System prompt binding was modified elsewhere. Refreshed to the latest state.')
+		);
+		isPreview = false;
+		await refreshBinding(true);
 	};
 
 	const loadPromptSuggestions = async () => {
@@ -158,13 +187,19 @@
 	};
 
 	const patchBinding = async () => {
-		return patchModelSystemPromptBinding(localStorage.token, modelId, {
+		const payload: PatchModelSystemPromptBindingForm = {
 			source: 'langfuse',
 			connection_id: connectionId,
 			external_name: externalName.trim(),
 			external_label: externalLabel.trim() || null,
 			external_version: externalVersion.trim() || null
-		});
+		};
+
+		if (binding?.updated_at != null) {
+			payload.expected_updated_at = binding.updated_at;
+		}
+
+		return patchModelSystemPromptBinding(localStorage.token, modelId, payload);
 	};
 
 	const handlePreview = async () => {
@@ -203,7 +238,11 @@
 			isPreview = false;
 			toast.success($i18n.t('Synced from Langfuse'));
 		} catch (error) {
-			toast.error(`${error}`);
+			if (error instanceof ModelSystemPromptBindingConflictError) {
+				await handleBindingConflict();
+			} else {
+				toast.error(`${error}`);
+			}
 		}
 		syncing = false;
 	};
@@ -240,6 +279,14 @@
 
 {#if loaded}
 	<div class="flex flex-col gap-3">
+		{#if connections.length === 0}
+			<div class="text-xs text-amber-600 dark:text-amber-400">
+				{$i18n.t(
+					'No Langfuse connections available. Configure connections in admin settings or detach to edit locally.'
+				)}
+			</div>
+		{/if}
+
 		<div class="grid gap-2 sm:grid-cols-2">
 			<div>
 				<div class="mb-1 text-xs text-gray-400 dark:text-gray-600">
@@ -284,10 +331,11 @@
 					{$i18n.t('Label')} ({$i18n.t('optional')})
 				</div>
 				<input
-					class="w-full rounded-lg bg-transparent py-1 text-xs text-gray-700 outline-hidden ring-1 ring-gray-200/70 placeholder:text-gray-300 focus:ring-gray-300 dark:text-gray-300 dark:ring-white/10 dark:placeholder:text-gray-700 dark:focus:ring-white/20 px-2"
+					class="w-full rounded-lg bg-transparent py-1 text-xs text-gray-700 outline-hidden ring-1 ring-gray-200/70 placeholder:text-gray-300 focus:ring-gray-300 dark:text-gray-300 dark:ring-white/10 dark:placeholder:text-gray-700 dark:focus:ring-white/20 px-2 disabled:opacity-50"
 					placeholder={$i18n.t('e.g. production')}
 					bind:value={externalLabel}
 					disabled={!writeAccess || externalVersion.trim() !== ''}
+					on:input={handleLabelInput}
 				/>
 			</div>
 
@@ -296,12 +344,17 @@
 					{$i18n.t('Version')} ({$i18n.t('optional')})
 				</div>
 				<input
-					class="w-full rounded-lg bg-transparent py-1 text-xs text-gray-700 outline-hidden ring-1 ring-gray-200/70 placeholder:text-gray-300 focus:ring-gray-300 dark:text-gray-300 dark:ring-white/10 dark:placeholder:text-gray-700 dark:focus:ring-white/20 px-2"
+					class="w-full rounded-lg bg-transparent py-1 text-xs text-gray-700 outline-hidden ring-1 ring-gray-200/70 placeholder:text-gray-300 focus:ring-gray-300 dark:text-gray-300 dark:ring-white/10 dark:placeholder:text-gray-700 dark:focus:ring-white/20 px-2 disabled:opacity-50"
 					placeholder={$i18n.t('e.g. 3')}
 					bind:value={externalVersion}
-					disabled={!writeAccess}
+					disabled={!writeAccess || externalLabel.trim() !== ''}
+					on:input={handleVersionInput}
 				/>
 			</div>
+		</div>
+
+		<div class="text-xs text-gray-400 dark:text-gray-600">
+			{$i18n.t('Use either a label or a version, not both.')}
 		</div>
 
 		<div class="flex flex-wrap items-center justify-between gap-2">
@@ -347,7 +400,7 @@
 						</div>
 					</button>
 
-					{#if binding?.source === 'langfuse' && binding?.cached_content}
+					{#if binding?.source === 'langfuse'}
 						<button
 							type="button"
 							class="text-xs text-gray-500 transition hover:text-gray-900 hover:underline dark:hover:text-gray-300"

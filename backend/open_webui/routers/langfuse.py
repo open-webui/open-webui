@@ -56,6 +56,11 @@ async def get_langfuse_prompt(
     user=Depends(get_admin_user),
 ):
     """Proxy Langfuse prompt fetch for an enabled connection (admin-only global browse)."""
+    if label and version:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Specify label or version, not both',
+        )
     connection = await _get_enabled_connection_or_404(connection_id)
     provider = LangfusePromptProvider()
     try:

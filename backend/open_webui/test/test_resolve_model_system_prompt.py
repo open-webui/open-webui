@@ -336,11 +336,88 @@ async def test_langfuse_fetch_fail_uses_stale_cache():
             return_value=binding,
         ),
         patch(
-            'open_webui.utils.system_prompt._fetch_langfuse_prompt_content',
+            'open_webui.integrations.langfuse.provider.LangfusePromptProvider.fetch_prompt_for_binding',
             new_callable=AsyncMock,
             side_effect=RuntimeError('langfuse down'),
-        ),
+        ) as mock_fetch,
     ):
         result = await resolve_model_system_prompt(model, {}, None, bypass=False)
 
     assert result == 'Stale but usable'
+    mock_fetch.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_langfuse_fetch_fail_without_stale_uses_backoff():
+    model = _make_model('Mirror fallback')
+    binding = _make_binding(
+        source='langfuse',
+        connection_id='conn-1',
+        external_name='movie-critic',
+        cached_content=None,
+    )
+
+    with (
+        patch(
+            'open_webui.utils.system_prompt._get_default_cache_ttl_seconds',
+            new_callable=AsyncMock,
+            return_value=300,
+        ),
+        patch(
+            'open_webui.utils.system_prompt.ModelSystemPromptBindings.get_by_model_id',
+            new_callable=AsyncMock,
+            return_value=binding,
+        ),
+        patch(
+            'open_webui.integrations.langfuse.provider.LangfusePromptProvider.fetch_prompt_for_binding',
+            new_callable=AsyncMock,
+            side_effect=RuntimeError('langfuse down'),
+        ) as mock_fetch,
+    ):
+        first = await resolve_model_system_prompt(model, {}, None, bypass=False)
+        second = await resolve_model_system_prompt(model, {}, None, bypass=False)
+
+    assert first == 'Mirror fallback'
+    assert second == 'Mirror fallback'
+    mock_fetch.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_persist_langfuse_cache_skips_older_write():
+    from open_webui.utils.system_prompt import _persist_langfuse_cache
+
+    binding = _make_binding(
+        source='langfuse',
+        external_name='movie-critic',
+        cache_ttl_seconds=300,
+    )
+
+    with (
+        patch('open_webui.utils.system_prompt.time.time', return_value=100),
+        patch(
+            'open_webui.utils.system_prompt.ModelSystemPromptBindings.get_by_model_id',
+            new_callable=AsyncMock,
+            return_value=_make_binding(
+                cached_content='newer content',
+                cached_version='5',
+                cached_at=200,
+            ),
+        ),
+        patch(
+            'open_webui.utils.system_prompt.ModelSystemPromptBindings.update_cache_fields',
+            new_callable=AsyncMock,
+        ) as mock_update,
+        patch(
+            'open_webui.utils.system_prompt.set_cached_system_prompt',
+        ) as mock_set_cache,
+    ):
+        await _persist_langfuse_cache(
+            'model-1',
+            binding,
+            'older content',
+            prompt_version='4',
+            default_ttl=300,
+        )
+
+    mock_update.assert_not_awaited()
+    mock_set_cache.assert_called_once()

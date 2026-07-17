@@ -63,6 +63,58 @@ async def test_get_prompt_text_ok(connection):
 
 
 @pytest.mark.asyncio
+async def test_get_prompt_empty_content_rejected(connection):
+    provider = LangfusePromptProvider()
+    response = _mock_response(
+        payload={
+            'name': 'empty-prompt',
+            'type': 'text',
+            'prompt': '',
+            'version': 1,
+        }
+    )
+    session = MagicMock()
+    session.get = AsyncMock(return_value=response)
+
+    with patch(
+        'open_webui.integrations.langfuse.provider.get_session',
+        new_callable=AsyncMock,
+        return_value=session,
+    ), patch(
+        'open_webui.integrations.langfuse.provider.cleanup_response',
+        new_callable=AsyncMock,
+    ):
+        with pytest.raises(LangfusePromptError, match='must not be empty'):
+            await provider.fetch_prompt(connection, 'empty-prompt')
+
+
+@pytest.mark.asyncio
+async def test_get_prompt_upstream_error_is_sanitized(connection):
+    provider = LangfusePromptProvider()
+    response = _mock_response(
+        ok=False,
+        status=502,
+        text='upstream secret stack trace and api keys',
+    )
+    session = MagicMock()
+    session.get = AsyncMock(return_value=response)
+
+    with patch(
+        'open_webui.integrations.langfuse.provider.get_session',
+        new_callable=AsyncMock,
+        return_value=session,
+    ), patch(
+        'open_webui.integrations.langfuse.provider.cleanup_response',
+        new_callable=AsyncMock,
+    ):
+        with pytest.raises(LangfusePromptError, match='HTTP 502') as exc:
+            await provider.fetch_prompt(connection, 'movie-critic')
+
+    assert 'stack trace' not in str(exc.value)
+    assert 'api keys' not in str(exc.value)
+
+
+@pytest.mark.asyncio
 async def test_get_prompt_chat_rejected(connection):
     provider = LangfusePromptProvider()
     response = _mock_response(

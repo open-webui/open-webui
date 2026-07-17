@@ -1240,12 +1240,12 @@ async def generate_chat_completion(
 
         params = model_info.params.model_dump()
 
+        system = await resolve_model_system_prompt(
+            model_info, metadata, user, bypass=bypass_system_prompt
+        )
+        if system:
+            payload = await apply_system_prompt_to_body(system, payload, metadata, user)
         if params:
-            system = await resolve_model_system_prompt(
-                model_info, metadata, user, bypass=bypass_system_prompt
-            )
-            if system:
-                payload = await apply_system_prompt_to_body(system, payload, metadata, user)
             payload = apply_model_params_to_body_openai(params, payload)
 
         await check_model_access(user, model_info, bypass_filter)

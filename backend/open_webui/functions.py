@@ -285,12 +285,12 @@ async def generate_function_chat_completion(request, form_data, user, models: di
 
         params = model_info.params.model_dump()
 
+        system = await resolve_model_system_prompt(
+            model_info, metadata, user, bypass=bypass_system_prompt
+        )
+        if system:
+            form_data = await apply_system_prompt_to_body(system, form_data, metadata, user)
         if params:
-            system = await resolve_model_system_prompt(
-                model_info, metadata, user, bypass=bypass_system_prompt
-            )
-            if system:
-                form_data = await apply_system_prompt_to_body(system, form_data, metadata, user)
             form_data = apply_model_params_to_body_openai(params, form_data)
 
     pipe_id = get_pipe_id(form_data)

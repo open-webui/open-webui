@@ -132,6 +132,100 @@ async def test_set_langfuse_config_rejects_negative_ttl():
 
 
 @pytest.mark.asyncio
+async def test_set_langfuse_config_blocks_orphaned_connection_removal():
+    request = MagicMock()
+    existing = [
+        {
+            'id': 'conn-bound',
+            'name': 'Bound',
+            'url': 'https://lf.example',
+            'public_key': 'pk',
+            'secret_key': 'sk',
+            'enabled': True,
+        }
+    ]
+
+    async def fake_config_get(key):
+        if key == 'langfuse.connections':
+            return existing
+        return None
+
+    with (
+        patch.object(configs_module.Config, 'get', side_effect=fake_config_get),
+        patch.object(
+            configs_module.ModelSystemPromptBindings,
+            'count_by_connection_id',
+            new_callable=AsyncMock,
+            return_value=2,
+        ),
+    ):
+        with pytest.raises(HTTPException) as exc:
+            await configs_module.set_langfuse_config(
+                request,
+                configs_module.LangfuseConfigForm(
+                    LANGFUSE_CONNECTIONS=[],
+                    LANGFUSE_PROMPT_CACHE_TTL=300,
+                ),
+                user=_admin_user(),
+            )
+
+    assert exc.value.status_code == 400
+    assert exc.value.detail['blocked_connections'][0]['connection_id'] == 'conn-bound'
+    assert exc.value.detail['blocked_connections'][0]['bound_models'] == 2
+
+
+@pytest.mark.asyncio
+async def test_set_langfuse_config_blocks_orphaned_connection_disable():
+    request = MagicMock()
+    existing = [
+        {
+            'id': 'conn-bound',
+            'name': 'Bound',
+            'url': 'https://lf.example',
+            'public_key': 'pk',
+            'secret_key': 'sk',
+            'enabled': True,
+        }
+    ]
+
+    async def fake_config_get(key):
+        if key == 'langfuse.connections':
+            return existing
+        return None
+
+    with (
+        patch.object(configs_module.Config, 'get', side_effect=fake_config_get),
+        patch.object(
+            configs_module.ModelSystemPromptBindings,
+            'count_by_connection_id',
+            new_callable=AsyncMock,
+            return_value=1,
+        ),
+    ):
+        with pytest.raises(HTTPException) as exc:
+            await configs_module.set_langfuse_config(
+                request,
+                configs_module.LangfuseConfigForm(
+                    LANGFUSE_CONNECTIONS=[
+                        configs_module.LangfuseConnection(
+                            id='conn-bound',
+                            name='Bound',
+                            url='https://lf.example',
+                            public_key='pk',
+                            secret_key='sk',
+                            enabled=False,
+                        )
+                    ],
+                    LANGFUSE_PROMPT_CACHE_TTL=300,
+                ),
+                user=_admin_user(),
+            )
+
+    assert exc.value.status_code == 400
+    assert exc.value.detail['blocked_connections'][0]['action'] == 'disabled'
+
+
+@pytest.mark.asyncio
 async def test_verify_langfuse_connection_requires_url():
     request = MagicMock()
 

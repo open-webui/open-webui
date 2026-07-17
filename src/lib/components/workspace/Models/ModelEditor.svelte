@@ -38,6 +38,7 @@
 	import {
 		createModelSystemPromptVersion,
 		getModelLangfuseConnections,
+		getModelSystemPromptBinding,
 		type ModelSystemPromptBinding
 	} from '$lib/apis/models/systemPrompt';
 
@@ -88,6 +89,8 @@
 	let systemPromptTabInitialized = false;
 	let langfuseConnectionsAvailable = false;
 	let systemPromptBinding: ModelSystemPromptBinding | null = null;
+	$: showLangfuseTab =
+		langfuseConnectionsAvailable || systemPromptBinding?.source === 'langfuse';
 	let localSystemPromptPanel: ModelSystemPromptPanel | undefined;
 	let langfuseSystemPromptPanel: ModelSystemPromptLangfusePanel | undefined;
 	const tabButtonClass = (active: boolean) =>
@@ -100,7 +103,10 @@
 	const handleSystemPromptBindingChange = (binding: ModelSystemPromptBinding | null) => {
 		systemPromptBinding = binding;
 
-		if (!systemPromptTabInitialized && langfuseConnectionsAvailable) {
+		if (
+			!systemPromptTabInitialized &&
+			(langfuseConnectionsAvailable || binding?.source === 'langfuse')
+		) {
 			systemPromptTab = binding?.source === 'langfuse' ? 'langfuse' : 'local';
 			systemPromptTabInitialized = true;
 		}
@@ -412,6 +418,15 @@
 
 			if (edit) {
 				await loadLangfuseConnections(id);
+				try {
+					systemPromptBinding = await getModelSystemPromptBinding(localStorage.token, id);
+					if (systemPromptBinding?.source === 'langfuse') {
+						systemPromptTab = 'langfuse';
+						systemPromptTabInitialized = true;
+					}
+				} catch (error) {
+					console.error('Failed to preload system prompt binding:', error);
+				}
 			}
 
 			enableDescription = model?.meta?.description !== null;
@@ -776,7 +791,7 @@
 									</div>
 									<div>
 										{#if edit && id}
-											{#if langfuseConnectionsAvailable}
+											{#if showLangfuseTab}
 												<div class="mb-2 flex gap-1" role="tablist">
 													<button
 														type="button"
@@ -803,7 +818,7 @@
 												</div>
 											{/if}
 
-											{#if systemPromptTab === 'local' || !langfuseConnectionsAvailable}
+											{#if systemPromptTab === 'local' || !showLangfuseTab}
 												<ModelSystemPromptPanel
 													bind:this={localSystemPromptPanel}
 													modelId={id}

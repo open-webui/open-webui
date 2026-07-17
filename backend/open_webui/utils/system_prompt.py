@@ -11,6 +11,7 @@ from open_webui.utils.system_prompt_cache import (
     binding_cache_ttl_seconds,
     get_cached_system_prompt,
     invalidate_system_prompt_cache,
+    is_newer_cache_write,
     set_cached_system_prompt,
 )
 
@@ -93,6 +94,28 @@ async def _persist_langfuse_cache(
 ) -> None:
     now = int(time.time())
     ttl = binding_cache_ttl_seconds(binding, default_ttl)
+
+    current = await ModelSystemPromptBindings.get_by_model_id(model_id, db=db)
+    if current and not is_newer_cache_write(
+        current.cached_at,
+        current.cached_version,
+        now,
+        prompt_version,
+    ):
+        log.debug(
+            'Skipping Langfuse cache persist for model %s: existing cache is newer',
+            model_id,
+        )
+        set_cached_system_prompt(
+            model_id,
+            current.cached_content or content,
+            ttl_seconds=ttl,
+            prompt_name=binding.external_name,
+            prompt_version=current.cached_version or prompt_version,
+            cached_at=current.cached_at,
+        )
+        return
+
     await ModelSystemPromptBindings.update_cache_fields(
         model_id,
         cached_content=content,

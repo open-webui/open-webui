@@ -21,6 +21,7 @@ export type ModelSystemPromptBinding = {
 	cached_version?: string | null;
 	cached_at?: number | null;
 	cache_ttl_seconds?: number | null;
+	updated_at?: number | null;
 };
 
 export type ModelSystemPromptVersionUser = {
@@ -53,7 +54,24 @@ export type PatchModelSystemPromptBindingForm = {
 	external_label?: string | null;
 	external_version?: string | null;
 	cache_ttl_seconds?: number | null;
+	expected_updated_at?: number | null;
 };
+
+export type ModelSystemPromptBindingConflictDetail = {
+	message?: string;
+	current_updated_at?: number | null;
+};
+
+export class ModelSystemPromptBindingConflictError extends Error {
+	status = 409;
+	current_updated_at?: number | null;
+
+	constructor(detail: ModelSystemPromptBindingConflictDetail) {
+		super(detail.message ?? 'System prompt binding was modified by another request');
+		this.name = 'ModelSystemPromptBindingConflictError';
+		this.current_updated_at = detail.current_updated_at;
+	}
+}
 
 export type LangfusePromptPreviewForm = {
 	connection_id?: string | null;
@@ -309,25 +327,41 @@ export const patchModelSystemPromptBinding = async (
 	modelId: string,
 	form: PatchModelSystemPromptBindingForm
 ): Promise<ModelSystemPromptBinding> => {
-	let error = null;
+	let error: unknown = null;
 
 	const searchParams = new URLSearchParams();
 	searchParams.append('id', modelId);
+
+	const headers: Record<string, string> = {
+		Accept: 'application/json',
+		'Content-Type': 'application/json',
+		authorization: `Bearer ${token}`
+	};
+
+	if (form.expected_updated_at != null) {
+		headers['If-Match'] = `"${form.expected_updated_at}"`;
+	}
 
 	const res = await fetch(
 		`${WEBUI_API_BASE_URL}/models/system-prompt/binding?${searchParams.toString()}`,
 		{
 			method: 'PATCH',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			},
+			headers,
 			body: JSON.stringify(form)
 		}
 	)
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
+			if (!res.ok) {
+				const err = await res.json();
+				if (res.status === 409) {
+					const detail: ModelSystemPromptBindingConflictDetail =
+						typeof err.detail === 'object' && err.detail !== null
+							? err.detail
+							: { message: String(err.detail ?? 'Conflict') };
+					throw new ModelSystemPromptBindingConflictError(detail);
+				}
+				throw err.detail ?? err;
+			}
 			return res.json();
 		})
 		.catch((err) => {

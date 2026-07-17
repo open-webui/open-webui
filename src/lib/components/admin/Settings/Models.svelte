@@ -19,6 +19,7 @@
 		updateModelAccessGrants,
 		importModels
 	} from '$lib/apis/models';
+	import { getModelSystemPromptBinding } from '$lib/apis/models/systemPrompt';
 	import { copyToClipboard } from '$lib/utils';
 	import { updateUserSettings } from '$lib/apis/users';
 
@@ -566,8 +567,24 @@
 			? ((await getModelById(localStorage.token, model.id).catch(() => null)) ?? model)
 			: model;
 
+	const warnIfLangfuseBindingNotCopied = async (modelId: string) => {
+		try {
+			const binding = await getModelSystemPromptBinding(localStorage.token, modelId);
+			if (binding?.source === 'langfuse') {
+				toast.warning(
+					$i18n.t(
+						'Langfuse system prompt bindings are not copied when cloning or exporting. Reconfigure them on the Langfuse tab after saving.'
+					)
+				);
+			}
+		} catch (error) {
+			console.error('Failed to check system prompt binding:', error);
+		}
+	};
+
 	const cloneHandler = async (model) => {
 		model = await getFullModel(model);
+		await warnIfLangfuseBindingNotCopied(model.id);
 		sessionStorage.model = JSON.stringify({
 			...model,
 			base_model_id: model.id,
@@ -580,6 +597,7 @@
 
 	const exportModelHandler = async (model) => {
 		model = await getFullModel(model);
+		await warnIfLangfuseBindingNotCopied(model.id);
 		let blob = new Blob([JSON.stringify([model])], {
 			type: 'application/json'
 		});
