@@ -25,10 +25,52 @@
 | `ENABLE_CODE_INTERPRETER` | Interpretador de código no navegador | `False` (desligado de propósito) |
 | `ENABLE_IMAGE_GENERATION` | Geração de imagem nativa | `True` |
 | `ENABLE_DB_MIGRATIONS` | Roda migrações Alembic no boot | `True` |
-| `STORAGE_PROVIDER` | Onde os arquivos são salvos | local (volume); `s3` no futuro |
+| `STORAGE_PROVIDER` | Onde os arquivos são salvos. **`s3` não é "em vez do disco" — é "disco E R2"**: o provedor grava local **e** sobe. O disco é cópia permanente de tudo que passa | **`s3`** |
+| **`ENABLE_WEB_SEARCH`** | **`False` — de propósito, mesmo com o ChatND buscando na web.** Leia o quadro abaixo **antes** de mexer | **`False`** |
+| `WEB_SEARCH_ENGINE` | Buscador da rota `geral` | `duckduckgo` |
 | `NIDUM_API_KEY` | Chave de API do **próprio Open WebUI** (admin), usada para publicar roteador/ferramenta | `.env.local` (local, gitignored) |
 
 > O `OPENAI_API_KEY` no `.env.local` local pode estar desatualizado; o valor que vale para o **app** é o salvo dentro do Open WebUI (Configurações → Conexões/Documentos). O Open WebUI guarda algumas chaves **no banco** após o boot.
+
+### 🚨 `ENABLE_WEB_SEARCH=False` **enquanto o ChatND busca na web** — isto NÃO é bug
+
+> **Se você chegou aqui achando que achou uma inconsistência: não achou. É desenho, e ligar essa variável quebra uma garantia.**
+
+**A regra em uma frase:** *só o pipe aciona a web, e só na rota `geral`. As rotas institucionais nunca veem conteúdo da internet.*
+
+**Por que a variável fica `False`.** O Open WebUI tem um caminho **próprio** de web search, que roda **antes** do pipe (`utils/middleware.py`, dentro do `process_chat_payload`). Esse caminho é **cego ao contexto**: se ligado, ele busca na internet em **toda** pergunta — inclusive *"qual o propósito da Nidum?"* — e injeta o resultado nas mensagens **antes** de o ChatND rodar. **O pipe não tem como impedir: quando ele acorda, a contaminação já aconteceu.**
+
+**Defesa em duas camadas — as duas precisam ficar como estão:**
+
+| Camada | Estado | O que impede |
+|---|---|---|
+| Permissão do grupo *"Pesquisa na Web"* | **OFF** | O **botão** não aparece; o usuário não liga o caminho pré-pipe |
+| `ENABLE_WEB_SEARCH` | **`False`** | O **middleware** e o **endpoint** `/process/web/search` recusam (403) |
+
+**E como o ChatND busca, então?** Ele chama a camada de baixo — **`search_web()`** (`routers/retrieval.py`) — que **não** olha essa variável nem a permissão. Ele chama **depois** de classificar, e **só** quando a rota é `geral`.
+
+**Por que pular esses gates não é burlar segurança.** A permissão `features.web_search` significa *"o usuário pode ligar o toggle"*. **O pipe não é o usuário — é o sistema decidindo.** São coisas diferentes: *"o coautor pediu busca"* versus *"o ChatND concluiu que a pergunta não é da Nidum e foi buscar"*.
+
+> ⚠️ **O que quebra se alguém ligar `ENABLE_WEB_SEARCH=True`:** volta o caminho pré-pipe. Basta um usuário com permissão clicar no botão para **uma pergunta institucional ser respondida com conteúdo da internet** — sobre uma empresa **homônima**, com confiança e citação. É o **erro silencioso**: ninguém percebe, porque a resposta *parece* fundamentada.
+
+**Se um dia for preciso ligar:** a defesa passa a depender **só** da permissão do grupo — e aí a `ENABLE_WEB_SEARCH` deixa de ser camada e vira decoração. Não é impossível; é uma decisão de governança, e precisa ser tomada de propósito, não por engano ao "arrumar uma config estranha".
+
+### Buscador (engine): **`duckduckgo`**
+
+**Escolhido por não exigir nada:** sem chave, sem cadastro, sem custo. **Decisão registrada:** não faz sentido escolher um buscador pago antes de saber se o gratuito resolve perguntas factuais de volume baixo. **Trocar é mudar uma variável** — o código da rota `geral` não muda.
+
+O fork suporta **28 engines**. Os que **não exigem chave**:
+
+| Engine | Config |
+|---|---|
+| **`duckduckgo`** | nada (opcional: `DDGS_BACKEND`) |
+| `ollama_cloud` | nada obrigatório |
+
+Self-hosted (URL, não chave): `searxng` (`SEARXNG_QUERY_URL`), `yacy` (`YACY_QUERY_URL` + usuário/senha).
+
+**Todos os demais exigem chave** — inclusive os que "parecem" nativos: `bing` (`BING_SEARCH_V7_SUBSCRIPTION_KEY` + `ENDPOINT`), `azure`, `jina`, `yandex`, `firecrawl`, `youcom`, `perplexity`, `sougou`, `external`, `google_pse` (chave **+** `ENGINE_ID`), `brave`, `tavily`, `exa`, `serper`, `serpapi`, `searchapi`, `serpstack`, `serply`, `kagi`, `mojeek`, `bocha`, `linkup`.
+
+> **Como esta lista foi levantada — e por que a primeira versão estava errada.** Ela saiu do `search_web()` em `routers/retrieval.py`. Meu primeiro script marcou **9 engines como "sem chave"** — `bing`, `azure`, `jina`, `yandex`, `firecrawl`, `external`, `youcom`, `perplexity`, `sougou`. **Todos exigem chave.** O regex não pegava o formato da condição deles. **Se a lista errada tivesse sido usada, alguém escolheria o Bing achando que era grátis.** Ao reconferir um engine aqui, **leia o bloco `elif engine == '<nome>'` no código** — não confie em busca por padrão.
 
 ## Valves do roteador ChatND
 
