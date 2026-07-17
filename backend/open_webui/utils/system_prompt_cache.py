@@ -124,16 +124,18 @@ class SystemPromptCache:
         _redis_set(model_id, entry)
         return entry
 
-    def invalidate(self, model_id: str) -> None:
+    def invalidate(self, model_id: str, *, redis: bool = True) -> None:
         with self._lock:
             self._entries.pop(model_id, None)
             self._fetch_failures.pop(model_id, None)
-        _redis_delete(model_id)
+        if redis:
+            _redis_delete(model_id)
 
     def clear(self) -> None:
         with self._lock:
             self._entries.clear()
             self._fetch_failures.clear()
+        _redis_clear_all()
 
     def record_fetch_failure(self, model_id: str) -> None:
         with self._lock:
@@ -227,23 +229,6 @@ def _redis_set(model_id: str, entry: CachedSystemPrompt) -> None:
         log.debug('Failed to write system prompt cache to Redis', exc_info=True)
 
 
-def _redis_get(model_id: str) -> CachedSystemPrompt | None:
-    client = get_redis_client(async_mode=False)
-    if client is None:
-        return None
-    try:
-        raw = client.get(_redis_key(model_id))
-        if not raw:
-            return None
-        entry = _deserialize_entry(raw)
-        if entry is None or not is_cache_entry_warm(entry):
-            return None
-        return entry
-    except Exception:
-        log.debug('Failed to read system prompt cache from Redis', exc_info=True)
-        return None
-
-
 def _redis_delete(model_id: str) -> None:
     client = get_redis_client(async_mode=False)
     if client is None:
@@ -254,23 +239,64 @@ def _redis_delete(model_id: str) -> None:
         log.debug('Failed to delete system prompt cache from Redis', exc_info=True)
 
 
-def get_cached_system_prompt(model_id: str) -> CachedSystemPrompt | None:
-    cached = SYSTEM_PROMPT_CACHE.get(model_id)
-    if cached is not None:
-        return cached
+def _redis_clear_all() -> None:
+    client = get_redis_client(async_mode=False)
+    if client is None:
+        return
+    pattern = f'{_REDIS_KEY_PREFIX}:*'
+    try:
+        cursor = 0
+        while True:
+            cursor, keys = client.scan(cursor=cursor, match=pattern, count=500)
+            if keys:
+                client.delete(*keys)
+            if cursor == 0:
+                break
+    except Exception:
+        log.debug('Failed to clear system prompt cache in Redis', exc_info=True)
 
-    redis_entry = _redis_get(model_id)
-    if redis_entry is not None:
-        SYSTEM_PROMPT_CACHE.set(
-            model_id,
-            redis_entry.content,
-            ttl_seconds=redis_entry.ttl_seconds,
-            prompt_name=redis_entry.prompt_name,
-            prompt_version=redis_entry.prompt_version,
-            cached_at=redis_entry.cached_at,
-        )
-        return redis_entry
-    return None
+
+def _redis_lookup_checked(model_id: str) -> tuple[bool, CachedSystemPrompt | None]:
+    """Return ``(redis_checked, entry)``.
+
+    ``redis_checked`` is False when Redis is unavailable or the read failed.
+    """
+    client = get_redis_client(async_mode=False)
+    if client is None:
+        return False, None
+    try:
+        raw = client.get(_redis_key(model_id))
+        if not raw:
+            return True, None
+        entry = _deserialize_entry(raw)
+        if entry is None or not is_cache_entry_warm(entry):
+            return True, None
+        return True, entry
+    except Exception:
+        log.debug('Failed to read system prompt cache from Redis', exc_info=True)
+        return False, None
+
+
+def _store_l1_from_entry(model_id: str, entry: CachedSystemPrompt) -> CachedSystemPrompt:
+    return SYSTEM_PROMPT_CACHE.set(
+        model_id,
+        entry.content,
+        ttl_seconds=entry.ttl_seconds,
+        prompt_name=entry.prompt_name,
+        prompt_version=entry.prompt_version,
+        cached_at=entry.cached_at,
+    )
+
+
+def get_cached_system_prompt(model_id: str) -> CachedSystemPrompt | None:
+    redis_checked, redis_entry = _redis_lookup_checked(model_id)
+    if redis_checked:
+        if redis_entry is not None:
+            return _store_l1_from_entry(model_id, redis_entry)
+        SYSTEM_PROMPT_CACHE.invalidate(model_id, redis=False)
+        return None
+
+    return SYSTEM_PROMPT_CACHE.get(model_id)
 
 
 def set_cached_system_prompt(

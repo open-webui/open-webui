@@ -20,7 +20,7 @@ class LocalSystemPromptProvider(SystemPromptProviderBase):
     ) -> str | None:
         if binding.active_version_id:
             version = await ModelSystemPromptVersions.get_version_by_id(binding.active_version_id)
-            if version and version.content:
+            if version is not None:
                 return version.content
         return mirror
 

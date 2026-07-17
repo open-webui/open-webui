@@ -340,7 +340,8 @@
 			}
 		}
 
-		// Never create a local version while Langfuse is the active source / tab.
+		// Langfuse is not backed by params.system — skip local versioning and params writes
+		// while Langfuse is the active source or tab (system holds preview/sync text only).
 		const skipLocalSystemPromptVersion =
 			systemPromptBinding?.source === 'langfuse' || systemPromptTab === 'langfuse';
 
@@ -363,7 +364,9 @@
 			}
 		}
 
-		info.params.system = system.trim() === '' ? null : system;
+		if (!skipLocalSystemPromptVersion) {
+			info.params.system = system.trim() === '' ? null : system;
+		}
 		info.params.stop = params.stop
 			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
 					s.trim()

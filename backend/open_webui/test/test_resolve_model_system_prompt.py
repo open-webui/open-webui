@@ -150,6 +150,37 @@ async def test_local_active_version_wins_over_stale_mirror():
 
 
 @pytest.mark.asyncio
+async def test_local_empty_active_version_beats_stale_mirror():
+    # Arrange
+    model = _make_model('Stale mirror {{role}}')
+    binding = _make_binding(source='local', active_version_id='ver-1')
+    version = _make_version(content='')
+
+    # Act
+    with (
+        patch(
+            'open_webui.utils.system_prompt.ModelSystemPromptBindings.get_by_model_id',
+            new_callable=AsyncMock,
+            return_value=binding,
+        ),
+        patch(
+            'open_webui.integrations.system_prompt.local.ModelSystemPromptVersions.get_version_by_id',
+            new_callable=AsyncMock,
+            return_value=version,
+        ),
+    ):
+        result = await resolve_model_system_prompt(
+            model,
+            {'variables': {'{{role}}': 'an expert'}},
+            None,
+            bypass=False,
+        )
+
+    # Assert
+    assert result == ''
+
+
+@pytest.mark.asyncio
 async def test_local_without_active_version_falls_back_to_mirror():
     # Arrange
     model = _make_model('Mirror only')
