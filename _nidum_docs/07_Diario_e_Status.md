@@ -13,6 +13,85 @@
 
 ---
 
+## Sessão 2026-07-17 — A fatia 1 quebrou a Q12, e o culpado é uma frase que eu escrevi
+
+**Regressão provada pelo Davi, com as duas rodadas lado a lado.** Mesma pergunta —
+**Q12: *"O que significa 'fazer da casa um ninho'?"*** — comportamento oposto:
+
+| Versão | Rota | Resposta |
+|---|---|---|
+| **1.26.0** | `documentos` | `[Fonte + Acervos]`, **citando o v30** na abertura (*"Uma casa é uma estrutura… Um ninho é uma estrutura a serviço da vida"*) |
+| **1.31.0** | **`geral`** | **de cabeça, sem etiqueta, sem fonte** — plausível e inventada |
+
+### A causa: **transformei uma lista fechada num catch-all**
+
+```
+1.26.0   rapido:     saudacoes, perguntas triviais, traducoes curtas, ...
+         diaadia:    conversa geral, redacao, organizacao de ideias, ...
+         raciocinio: decisoes complexas, planejamento, trade-offs.
+
+1.31.0   geral: TUDO que NAO e sobre a Nidum. Saudacoes, ...
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
+
+**As três rotas velhas não reivindicavam território — enumeravam.** *"Fazer da casa um
+ninho"* não é saudação, nem tradução, nem redação, nem trade-off: **não casava com
+nenhuma**. Ficava **sem caixa** → a **regra de desempate acordava** → `documentos`.
+
+**O `geral` abre reivindicando o complemento.** O `gpt-5-mini` **não sabe** que a frase é
+da Nidum — para ele é uma metáfora comum em português. Logo ela **é** *"tudo que não é
+sobre a Nidum"*, e a definição **manda**.
+
+> ### **Regra de desempate só funciona quando há dúvida — e catch-all não deixa dúvida.**
+>
+> A régua (*"na dúvida, `documentos`"*) continuou no prompt, intacta, **e nunca foi
+> consultada**. Ela vive do resto; o catch-all não deixa resto. **Virou regra no
+> `CLAUDE.md`** — não anedota: quem for reescrever o classificador daqui a seis meses
+> precisa saber disso **antes** de escrever *"TUDO que…"*.
+
+**A `documentos` não perdeu nada** — o texto dela está **idêntico** ao da 1.26.0. O que se
+perdeu foi a **delimitação por enumeração** das rotas de conversa. **O conserto é o prompt,
+não uma trava nova.**
+
+### 📌 Retirei uma proposta minha: a lista de termos canônicos
+
+Eu havia proposto uma **lista de termos canônicos** (*"fazer da casa um ninho"*,
+*"intenção reta"*, *"Fonte, Forma e Fluxo"*) em valve, alimentando uma terceira trava.
+**Retirada.**
+
+> **Era a resposta certa para o diagnóstico errado.** Eu tinha diagnosticado *"buraco
+> conhecido, pré-existente"* — porque meu próprio teste previu essa **classe** de falha
+> (*"como funciona o EGP aqui?"*) e eu usei isso para **presumir** que a Q12 sempre falhou.
+> **Ela funcionava.** O Davi provou com as duas rodadas. **Se a causa é uma frase que eu
+> escrevi, o conserto é apagar a frase — não construir máquina em volta dela.**
+
+**O que faz este registro valer mais que o conserto:** foi a **mesma semana** em que
+documentei o padrão. Matei a hipótese da poluição do reranker (P8), cancelei o enxugamento
+da tríade, recusei a etapa C — **todas por não construir contra problema não comprovado**.
+E aí quase construí uma trava inteira contra um diagnóstico que **eu não tinha verificado**.
+**Saber o padrão não protege de repeti-lo.** O que protegeu foi o Davi ter ido buscar a
+rodada anterior.
+
+*(A lista pode voltar a fazer sentido: se, com o prompt restaurado, a Q12 ainda falhar. Aí
+seria **problema comprovado**.)*
+
+### ⚠️ Pendente antes do conserto: a linha do log
+
+**Há TRÊS caminhos para `geral`, não dois** — e só o log distingue:
+
+| A linha diz | Diagnóstico |
+|---|---|
+| `classificador='geral'` | **o juiz decidiu** → o prompt é a causa |
+| `classificador='<outra coisa>'` | **o parse não casou** e caiu no valor inicial `categoria = "geral"`, **em silêncio** — sem warning |
+| precedida de `classificador falhou` | **exceção** → nem prompt nem parse |
+
+O **segundo** eu não tinha considerado: o laço `for chave in [...]: if chave in saida` não
+tem `else` — **se nada casa, fica o valor inicial, calado**. Se for esse o caso, o prompt
+está certo e o bug é outro, mais feio.
+
+**Não consigo ler os Deploy Logs do Railway** — nenhuma ferramenta minha alcança. Todos os
+logs desta semana vieram do Davi. **O conserto espera a linha.**
+
 ## Sessão 2026-07-16 (noite) — A reforma: 6 rotas viram 4, e a web entra pela porta certa
 
 ### O que mudou (1.29.0 → 1.31.0)
