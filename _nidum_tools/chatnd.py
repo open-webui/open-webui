@@ -1,9 +1,36 @@
 """
 title: ChatND
 author: Nidum
-version: 1.29.0
+version: 1.30.0
 description: Roteador automatico. Classifica o pedido (gpt-5-mini) e encaminha para o modelo NIDUM adequado. Na rota de documentos faz RAG da base institucional. Na rota de arquivo, gera a estrutura com gpt-5.1 e chama a ferramenta gerador_de_arquivos_nidum. Na rota de imagem, gera a imagem via Gemini (motor oculto). O usuario nao escolhe o motor.
 changelog:
+  1.30.0:
+    - HOTFIX (2 linhas) - 'raciocinio' respondia sobre a NIDUM SEM BASE, e a triade ainda
+      mandava ele "ancorar nos documentos fundadores" que ele nao carregava.
+      SO 'documentos' faz RAG: o contexto e montado sob 'if categoria == "documentos"'.
+      'raciocinio' e Sonnet SEM base. E o gate da triade incluia 'raciocinio'. Resultado:
+      pergunta Nidum profunda -> sem acervo + instrucao para ancorar na Fonte = invencao
+      com autoridade de doutrina.
+    - NAO E BORDA RARA, e o proprio prompt provava: (a) a REGRA DE DESEMPATE cobria
+      'rapido'/'diaadia' x 'documentos' e NAO cobria 'raciocinio' x 'documentos' - o par
+      ambiguo mais perigoso era o unico sem desempate; (b) as descricoes colidem
+      ("sociedade, participacao, decisoes" em documentos x "decisoes complexas,
+      trade-offs" em raciocinio); (c) o prompt LISTAVA 'raciocinio | triade' como saida
+      valida - quem escreveu ja esperava pergunta Nidum caindo la.
+    - SINTOMA (1 linha): triade so em 'documentos'. Nao se pede ancoragem nos fundadores
+      a quem nao os carrega.
+    - CAUSA (1 linha): REGRA DE DESEMPATE 2 - tema Nidum e 'documentos' MESMO sendo
+      decisao complexa/trade-off; 'raciocinio' so quando o tema NAO for a Nidum. Nao e
+      regra nova: e o vies "na duvida, base" ja decidido para a reforma, aplicado antes
+      porque o bug esta no ar. Falso positivo custa ~1s de busca e '[Fora do acervo]';
+      falso negativo custa consultoria inventada sobre decisao real da Nidum.
+    - CASO QUE MOTIVOU (medido por Davi): gpt-5-mini errou SPE e SCP - AS DUAS definicoes
+      - e construiu duas paginas de tabelas, diagramas e exemplos "reais" (3M, Magazine
+      Luiza) em cima do erro. Articulado, confiante, falso. SPE x SCP e o tema da ata de
+      08/07 (estruturacao da participacao de investidores): um coautor perguntaria e
+      receberia consultoria inventada sobre uma decisao REAL da Nidum.
+    - NAO e a reforma: e o freio de mao ate a fatia 1 (fusao das rotas), onde o
+      'raciocinio' morre. Vai junto da 1.29.0 no mesmo republish.
   1.29.0:
     - DOUTRINA MORTA ARRANCADA (nao desligada). Remove o ramo "pedido fundacional ->
       injeta v29+v30 INTEIROS": a valve FUNDADORES_INTEIROS_SE_GATILHO, o _docs_
@@ -376,6 +403,12 @@ CLASSIFICADOR = (
     "'documentos', prefira 'documentos' - errar consultando e barato (o acervo "
     "responde '[Fora do acervo]' se nao tiver), errar sem consultar entrega resposta "
     "generica como se a base nao existisse.\n"
+    "REGRA DE DESEMPATE 2 (raciocinio x documentos): se o TEMA e a NIDUM, e "
+    "'documentos' - mesmo sendo DECISAO COMPLEXA, planejamento, analise profunda ou "
+    "trade-off. Ex.: 'devemos estruturar a participacao dos investidores como SPE ou "
+    "SCP?' -> 'documentos'. Use 'raciocinio' SO quando o tema NAO for a Nidum. Motivo: "
+    "so 'documentos' consulta o acervo - decisao da Nidum respondida sem consultar a "
+    "base e invencao com cara de doutrina.\n"
     "rapido: saudacoes, perguntas triviais, traducoes curtas, classificacoes simples.\n"
     "diaadia: conversa geral, redacao, organizacao de ideias, analise comum, "
     "perguntas sobre uma imagem ja enviada (analise visual, sem gerar imagem).\n"
@@ -1798,12 +1831,16 @@ class Pipe:
             "chatnd: roteador -> %s (classificador=%r)", categoria, saida or "(atalho)"
         )
 
-        # Triade Nidum (Opcao A): so quando o classificador marcou '| triade' e
-        # a rota e documentos ou raciocinio (gate de aplicabilidade).
+        # Triade: so em 'documentos' - a UNICA rota que carrega a base. 'raciocinio'
+        # SAIU do gate na 1.30.0 (era "documentos ou raciocinio"): ele NAO faz RAG (o
+        # contexto so e montado sob 'if categoria == "documentos"') e a VOZ_TRIADE manda
+        # "ancore ... na Intencao Reta e nos documentos fundadores". Pedir ancoragem nos
+        # fundadores a uma rota que NAO OS CARREGA e convite formal a inventar doutrina -
+        # com a autoridade de quem parece estar citando a Fonte.
         aplicar_triade = (
             self.valves.TRIADE_ATIVA
             and ("triade" in saida)
-            and categoria in ("documentos", "raciocinio")
+            and categoria == "documentos"
         )
 
         if self.valves.MOSTRAR_ROTA:
