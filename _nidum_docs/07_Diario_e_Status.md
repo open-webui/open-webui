@@ -110,13 +110,46 @@ teria aparecido; (2) o determinismo dele era sobre **dado congelado** — *um LL
 está na base**, atualizado a cada 6 h pela esteira, com citação e etiqueta
 (`FONTE/Nidum_Quadro_de_Pessoas.md`, `FONTE/Grupo_Nidum_Estrutura_e_Direcionamento.md`).
 
-### Estado do corte
+### Estado do corte: ✅ **FECHADO — 2.830 linhas fora**
 
-- ✅ **`nidum_fonte_quadro_de_pessoas`** — deletado do painel (Tools: 8 → 7) **e removido
-  do repo** nesta branch.
-- ⏸️ **`roteador_semantico`** — **desabilitado** no painel; **delete pendente do aval do
-  Thiago**: é **filter global** e toca as conversas do **Chico**. **Fica no repo até lá** —
-  não se remove do Git código que ainda está instalado em produção.
+| Ferramenta | Linhas | Painel | Repo |
+|---|---|---|---|
+| `nidum_fonte_quadro_de_pessoas` | **1.286** | ✅ deletada (Tools: 8 → 7) | ✅ removido |
+| `roteador_semantico_da_fonte_nidum` | **1.544** | ✅ **deletada** — **Functions agora só tem o ChatND** | ✅ removido |
+
+**`_nidum_tools/` ficou com três arquivos:** `chatnd.py`, `gerador_de_arquivos_nidum.py`,
+`teste_datas.py`.
+
+**A ordem foi painel → repo, e ela importa:** enquanto o código está instalado, ele **roda
+a partir do banco** — apagar do Git não o tira do ar. O contrário é seguro: o Git nunca
+perde nada. **Não se remove do repositório código que ainda está instalado em produção.**
+
+**O aval do time foi condição, não formalidade.** O `roteador_semantico` era **filter
+global**: tocava **todas** as conversas, inclusive as do **Chico** — projeto de outro
+colaborador. Mesmo provado no-op, deletar coisa que atravessa o trabalho alheio **sem
+perguntar** é decidir pelos outros. O time confirmou que **ninguém usa** (nem a function,
+nem os 3 projetos do Railway).
+
+> **Por que delete, e não apenas disable:** as valves mostravam **`Enabled: Ativado`** e
+> **`Api Key: vazia`** — **duas luzes verdes e nada acontecendo**. Enquanto o código
+> existisse com a valve vazia, bastava **alguém preencher a chave "para testar"** e o
+> `FONTE_INDEX` **congelado em 2026-06-27** voltaria a injetar *"RESPOSTA OFICIAL DO
+> ENGINE… entregue sem resumir"* **por fora da busca**. Desabilitado, era **bomba de
+> efeito retardado**. Deletado, não é nada.
+
+**A cadeia de evidência, do começo ao fim — nenhum elo foi suposto:**
+
+1. **O log provou que estava vivo:** `Loaded module: function_roteador_semantico_da_fonte_nidum`
+   em toda chamada. Ninguém sabia.
+2. **O código provou que não agia:** `if not self.valves.enabled or not self.valves.api_key:
+   return body` (linha 1517) — e o painel confirmou a `api_key` **vazia**. *Carregado ≠
+   agindo.*
+3. **O banco provou que ninguém sentia falta:** P9/P10/P13 com as duas fora → **todas OK**,
+   comportamento idêntico, citando v29/v30 com versão.
+4. **O time provou que ninguém usa.**
+
+**Nenhuma linha saiu por "parecer complexa".** Saíram porque quatro fontes independentes —
+log, código, banco de perguntas e pessoas — disseram a mesma coisa.
 
 ### Fronteira do Chico (validada)
 
