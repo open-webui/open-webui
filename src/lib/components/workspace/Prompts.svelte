@@ -1,7 +1,11 @@
 <script lang="ts">
+	import dayjs from 'dayjs';
+	import relativeTime from 'dayjs/plugin/relativeTime';
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
+
+	dayjs.extend(relativeTime);
 
 	import { goto } from '$app/navigation';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
@@ -36,6 +40,8 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Switch from '../common/Switch.svelte';
 	import Pagination from '../common/Pagination.svelte';
+	import ChevronDown from '../icons/ChevronDown.svelte';
+	import ChevronUp from '../icons/ChevronUp.svelte';
 
 	type PromptDraft = {
 		id?: string;
@@ -75,6 +81,9 @@
 	let viewOption = '';
 	let selectedTag = '';
 	let copiedId: string | null = null;
+	let sortKey = 'updated_at';
+	let sortDirection = 'desc';
+	let openPromptMenuId: string | null = null;
 
 	let page = 1;
 
@@ -121,9 +130,33 @@
 	};
 
 	// Immediate response to page/filter changes
-	$: if (loaded && page && selectedTag !== undefined && viewOption !== undefined) {
+	$: if (
+		loaded &&
+		page &&
+		selectedTag !== undefined &&
+		viewOption !== undefined &&
+		sortKey !== undefined &&
+		sortDirection !== undefined
+	) {
 		getPromptList();
 	}
+
+	const setSortKey = (key: string) => {
+		if (sortKey === key) {
+			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortKey = key;
+			sortDirection = key === 'updated_at' ? 'desc' : 'asc';
+		}
+	};
+
+	const openPrompt = (prompt) => {
+		goto(`/workspace/prompts/${prompt.id}`);
+	};
+
+	const shouldIgnoreRowClick = (target: EventTarget | null) => {
+		return target instanceof Element && !!target.closest('button, a, input, [role="menu"]');
+	};
 
 	const getPromptList = async () => {
 		if (!loaded) return;
@@ -135,8 +168,8 @@
 				query,
 				viewOption,
 				selectedTag,
-				null,
-				null,
+				sortKey,
+				sortDirection,
 				page
 			).catch((error) => {
 				toast.error(`${error}`);
@@ -469,127 +502,226 @@
 				<Spinner className="size-5" />
 			</div>
 		{:else if (prompts ?? []).length !== 0}
-			<div class="my-1 grid gap-x-2 gap-y-0.5 lg:grid-cols-2">
-				{#each prompts as prompt (prompt.id)}
-					<a
-						class="flex w-full cursor-pointer rounded-xl px-2 py-1 text-left transition hover:bg-gray-50/60 dark:hover:bg-gray-850/40"
-						href={`/workspace/prompts/${prompt.id}`}
+			<div class="my-1">
+				<div
+					class="flex w-full items-center gap-2 px-2 pb-0.5 text-xs text-gray-400 dark:text-gray-600"
+				>
+					<button
+						class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
+						type="button"
+						on:click={() => setSortKey('name')}
 					>
-						<div class="flex w-full min-w-0 flex-1 cursor-pointer flex-col pl-0.5">
-							<div class="flex items-center justify-between w-full mb-0.5">
-								<div class="flex min-w-0 items-center gap-2">
-									<div class="line-clamp-1 text-sm font-normal capitalize">{prompt.name}</div>
-									<div class="line-clamp-1 overflow-hidden text-ellipsis text-xs text-gray-500">
-										/{prompt.command}
-									</div>
-								</div>
-								{#if !prompt.write_access}
-									<Badge type="muted" content={$i18n.t('Read Only')} />
-								{/if}
-							</div>
-
-							<div class="flex min-w-0 gap-1 text-xs text-gray-500">
-								<Tooltip
-									content={prompt?.user?.email ?? $i18n.t('Deleted User')}
-									className="flex shrink-0"
-									placement="top-start"
-								>
-									<div class="shrink-0">
-										{$i18n.t('By {{name}}', {
-											name: capitalizeFirstLetter(
-												prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
-											)
-										})}
-									</div>
-								</Tooltip>
-
-								<div>·</div>
-
-								{#if prompt.content}
-									<Tooltip content={prompt.content} placement="top">
-										<div class="line-clamp-1">
-											{prompt.content}
-										</div>
-									</Tooltip>
-								{/if}
-							</div>
-						</div>
-						<div class="flex flex-row gap-0.5 self-center">
-							{#if shiftKey}
-								<Tooltip content={$i18n.t('Delete')}>
-									<button
-										class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white"
-										type="button"
-										aria-label={$i18n.t('Delete')}
-										on:click={() => {
-											deleteHandler(prompt);
-										}}
-									>
-										<GarbageBin />
-									</button>
-								</Tooltip>
+						{$i18n.t('Title')}
+						{#if sortKey === 'name'}
+							{#if sortDirection === 'asc'}
+								<ChevronUp className="size-2" />
 							{:else}
-								<Tooltip content={$i18n.t('Copy Prompt')}>
-									<button
-										class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white"
-										type="button"
-										aria-label={$i18n.t('Copy Prompt')}
-										on:click={(e) => {
-											e.preventDefault();
-											e.stopPropagation();
-											copyHandler(prompt);
-										}}
-									>
-										{#if copiedId === prompt.command}
-											<Check className="size-4" strokeWidth="1.5" />
-										{:else}
-											<Clipboard className="size-4" strokeWidth="1.5" />
-										{/if}
-									</button>
-								</Tooltip>
-								<PromptMenu
-									editHandler={() => {
-										goto(`/workspace/prompts/${prompt.id}`);
-									}}
-									shareHandler={() => {
-										shareHandler(prompt);
-									}}
-									cloneHandler={() => {
-										cloneHandler(prompt);
-									}}
-									exportHandler={() => {
-										exportHandler(prompt);
-									}}
-									deleteHandler={async () => {
-										deletePrompt = prompt;
-										showDeleteConfirm = true;
-									}}
-									onClose={() => {}}
-								>
-									<button
-										class="self-center w-fit rounded-lg p-1 text-sm hover:bg-black/5 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white"
-										type="button"
-									>
-										<EllipsisHorizontal className="size-4" />
-									</button>
-								</PromptMenu>
-
-								<button on:click|stopPropagation|preventDefault>
-									<Tooltip
-										content={prompt.is_active !== false ? $i18n.t('Enabled') : $i18n.t('Disabled')}
-									>
-										<Switch
-											bind:state={prompt.is_active}
-											on:change={async () => {
-												togglePromptById(localStorage.token, prompt.id);
-											}}
-										/>
-									</Tooltip>
-								</button>
+								<ChevronDown className="size-2" />
 							{/if}
+						{/if}
+					</button>
+
+					<div class="hidden w-44 shrink-0 md:block"></div>
+
+					<button
+						class="flex w-36 shrink-0 items-center justify-end gap-1 py-0.5 text-right"
+						type="button"
+						on:click={() => setSortKey('updated_at')}
+					>
+						{$i18n.t('Updated at')}
+						{#if sortKey === 'updated_at'}
+							{#if sortDirection === 'asc'}
+								<ChevronUp className="size-2" />
+							{:else}
+								<ChevronDown className="size-2" />
+							{/if}
+						{/if}
+					</button>
+				</div>
+
+				<div class="grid gap-y-0.5">
+					{#each prompts as prompt (prompt.id)}
+						<div
+							class="group flex min-h-8 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-xl px-2 py-1 text-left"
+							role="button"
+							tabindex="0"
+							on:click={(e) => {
+								if (shouldIgnoreRowClick(e.target)) return;
+								openPrompt(prompt);
+							}}
+							on:keydown={(e) => {
+								if (e.currentTarget !== e.target) return;
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									openPrompt(prompt);
+								}
+							}}
+						>
+							<div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+								<div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+									<div class="flex min-w-0 items-center gap-2 overflow-hidden">
+										<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+											<Tooltip content={prompt.name} className="min-w-0" placement="top-start">
+												<div
+													class="truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+												>
+													{prompt.name}
+												</div>
+											</Tooltip>
+
+											<div
+												class="min-w-0 max-w-[40%] shrink-0 truncate text-[11px] leading-5 text-gray-500"
+											>
+												/{prompt.command}
+											</div>
+
+											{#if !prompt.write_access}
+												<Badge type="muted" content={$i18n.t('Read Only')} />
+											{/if}
+										</div>
+
+										<div
+											class="hidden max-w-44 shrink-0 truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
+										>
+											<Tooltip
+												content={prompt?.user?.email ?? $i18n.t('Deleted User')}
+												className="min-w-0"
+												placement="top-start"
+											>
+												<div class="truncate">
+													{capitalizeFirstLetter(
+														prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
+													)}
+												</div>
+											</Tooltip>
+										</div>
+
+										<div class="shrink-0">
+											<Tooltip
+												content={dayjs((prompt.updated_at ?? prompt.created_at) * 1000).format(
+													'LLLL'
+												)}
+											>
+												<div
+													class="min-w-0 truncate text-right text-xs text-gray-400 dark:text-gray-600"
+												>
+													{dayjs((prompt.updated_at ?? prompt.created_at) * 1000).fromNow()}
+												</div>
+											</Tooltip>
+										</div>
+									</div>
+
+									{#if prompt.content}
+										<Tooltip content={prompt.content} className="min-w-0" placement="top-start">
+											<div
+												class="mt-0.5 truncate text-[0.6875rem] leading-4 text-gray-400 dark:text-gray-600"
+											>
+												{prompt.content}
+											</div>
+										</Tooltip>
+									{/if}
+								</div>
+							</div>
+							<div class="ml-2 flex shrink-0 flex-row items-center self-center">
+								{#if shiftKey}
+									<Tooltip content={$i18n.t('Delete')}>
+										<button
+											class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+											type="button"
+											aria-label={$i18n.t('Delete')}
+											on:click={(e) => {
+												e.preventDefault();
+												e.stopPropagation();
+												deleteHandler(prompt);
+											}}
+										>
+											<GarbageBin className="size-4" />
+										</button>
+									</Tooltip>
+								{:else}
+									<Tooltip content={$i18n.t('Copy Prompt')}>
+										<button
+											class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+											type="button"
+											aria-label={$i18n.t('Copy Prompt')}
+											on:click={(e) => {
+												e.preventDefault();
+												e.stopPropagation();
+												copyHandler(prompt);
+											}}
+										>
+											{#if copiedId === prompt.command}
+												<Check className="size-4" strokeWidth="1.5" />
+											{:else}
+												<Clipboard className="size-4" strokeWidth="1.5" />
+											{/if}
+										</button>
+									</Tooltip>
+
+									<div class="ml-0.5 flex shrink-0 flex-row items-center gap-1.5 self-center">
+										<PromptMenu
+											show={openPromptMenuId === prompt.id}
+											editHandler={() => {
+												goto(`/workspace/prompts/${prompt.id}`);
+											}}
+											shareHandler={() => {
+												shareHandler(prompt);
+											}}
+											cloneHandler={() => {
+												cloneHandler(prompt);
+											}}
+											exportHandler={() => {
+												exportHandler(prompt);
+											}}
+											deleteHandler={async () => {
+												deletePrompt = prompt;
+												showDeleteConfirm = true;
+											}}
+											onClose={() => {
+												openPromptMenuId = null;
+											}}
+										>
+											<button
+												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+												type="button"
+												aria-label={$i18n.t('Prompt Menu')}
+												on:click={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													openPromptMenuId = openPromptMenuId === prompt.id ? null : prompt.id;
+												}}
+											>
+												<EllipsisHorizontal className="size-4" />
+											</button>
+										</PromptMenu>
+
+										<button
+											class="flex h-6 items-center"
+											type="button"
+											on:click={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+											}}
+										>
+											<Tooltip
+												content={prompt.is_active !== false
+													? $i18n.t('Enabled')
+													: $i18n.t('Disabled')}
+											>
+												<Switch
+													bind:state={prompt.is_active}
+													on:change={async () => {
+														togglePromptById(localStorage.token, prompt.id);
+													}}
+												/>
+											</Tooltip>
+										</button>
+									</div>
+								{/if}
+							</div>
 						</div>
-					</a>
-				{/each}
+					{/each}
+				</div>
 			</div>
 
 			{#if total > 30}
