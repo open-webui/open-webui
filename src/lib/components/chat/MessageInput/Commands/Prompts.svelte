@@ -15,6 +15,7 @@
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	let items = [];
+	let loaded = false;
 
 	$: if (query !== undefined) {
 		clearTimeout(searchDebounceTimer);
@@ -44,6 +45,7 @@
 		if (res) {
 			items = res;
 		}
+		loaded = true;
 	};
 
 	export const selectUp = () => {
@@ -93,5 +95,9 @@
 				</button>
 			</Tooltip>
 		{/each}
+	</div>
+{:else if loaded}
+	<div class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-100">
+		{$i18n.t('No prompts found')}
 	</div>
 {/if}
