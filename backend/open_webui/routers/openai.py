@@ -28,6 +28,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     BYPASS_MODEL_ACCESS_CONTROL,
+    ENABLE_FORWARD_CHAT_ID,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     ENABLE_OPENAI_API_PASSTHROUGH,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
@@ -1197,6 +1198,21 @@ def convert_responses_result(response: dict) -> dict:
     }
 
 
+def _inject_chat_id_as_user(payload: dict, metadata: dict | None) -> None:
+    """
+    Mutate *payload* in place: set ``payload['user']`` to the chat_id from
+    *metadata* when the ``ENABLE_FORWARD_CHAT_ID`` feature flag is active,
+    *metadata* and ``chat_id`` exist, and the caller did not already set
+    ``user`` explicitly.
+
+    This is a pure-ish helper extracted so the forwarding logic can be
+    unit-tested without spinning up a FastAPI test client with database
+    dependencies.
+    """
+    if ENABLE_FORWARD_CHAT_ID and metadata and metadata.get('chat_id') and 'user' not in payload:
+        payload['user'] = metadata.get('chat_id')
+
+
 @router.post('/chat/completions')
 async def generate_chat_completion(
     request: Request,
@@ -1224,6 +1240,8 @@ async def generate_chat_completion(
 
     payload = {**form_data}
     metadata = payload.pop('metadata', None)
+
+    _inject_chat_id_as_user(payload, metadata)
 
     model_id = form_data.get('model')
     model_info = await Models.get_model_by_id(model_id)

@@ -884,6 +884,14 @@ FORWARD_USER_INFO_HEADER_USER_ROLE = os.getenv('FORWARD_USER_INFO_HEADER_USER_RO
 FORWARD_SESSION_INFO_HEADER_MESSAGE_ID = os.getenv('FORWARD_SESSION_INFO_HEADER_MESSAGE_ID', 'X-OpenWebUI-Message-Id')
 FORWARD_SESSION_INFO_HEADER_CHAT_ID = os.getenv('FORWARD_SESSION_INFO_HEADER_CHAT_ID', 'X-OpenWebUI-Chat-Id')
 
+# When enabled, forward the chat_id from metadata as the standard 'user' field in
+# OpenAI-compatible /v1/chat/completions request bodies, unless the client
+# explicitly set 'user' in the original request. This allows upstream backends
+# that use the 'user' field for session identification (such as OpenClaw Gateway)
+# to maintain conversation continuity across turns.
+# Default: False — opt-in, no silent behavior change.
+ENABLE_FORWARD_CHAT_ID = os.getenv('ENABLE_FORWARD_CHAT_ID', 'False').lower() == 'true'
+
 # If set while ENABLE_FORWARD_USER_INFO_HEADERS is True, send one signed HS256 JWT
 # (FORWARD_USER_INFO_HEADER_JWT) instead of separate X-OpenWebUI-User-* headers.
 FORWARD_USER_INFO_HEADER_JWT_SECRET = (os.environ.get('FORWARD_USER_INFO_HEADER_JWT_SECRET') or '').strip() or None
