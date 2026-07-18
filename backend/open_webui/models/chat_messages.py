@@ -561,9 +561,14 @@ class ChatMessageTable:
         start_date: Optional[int] = None,
         end_date: Optional[int] = None,
         group_id: Optional[str] = None,
+        user_id: Optional[str] = None,
         db: Optional[AsyncSession] = None,
     ) -> dict[str, dict]:
-        """Aggregate token usage by user using database-level aggregation."""
+        """Aggregate token usage by user using database-level aggregation.
+
+        When ``user_id`` is provided the result is scoped to that single user,
+        avoiding a full-table scan for per-user quota checks.
+        """
         async with get_async_db_context(db) as db:
             from open_webui.models.groups import GroupMember
 
@@ -590,6 +595,8 @@ class ChatMessageTable:
             if group_id:
                 group_users = select(GroupMember.user_id).filter(GroupMember.group_id == group_id).scalar_subquery()
                 stmt = stmt.filter(ChatMessage.user_id.in_(group_users))
+            if user_id:
+                stmt = stmt.filter(ChatMessage.user_id == user_id)
 
             stmt = stmt.group_by(ChatMessage.user_id)
             result = await db.execute(stmt)

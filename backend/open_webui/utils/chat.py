@@ -34,6 +34,7 @@ from open_webui.utils.filter import (
     process_filter_functions,
 )
 from open_webui.utils.models import check_model_access, get_all_models
+from open_webui.utils.usage_limits import check_usage_limits
 from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (
     convert_response_ollama_to_openai,
@@ -202,6 +203,11 @@ async def generate_chat_completion(
                 await check_model_access(user, model)
             except Exception as e:
                 raise e
+
+        # Enforce per-user / per-group token and message usage quotas.
+        # Only 'user' role is subject to limits; admins are exempt.
+        if not bypass_filter and user.role == 'user':
+            await check_usage_limits(user.id)
 
         # Arena model — sub-model was already resolved by process_chat_payload.
         # Inject selected_model_id into the response for the frontend.
