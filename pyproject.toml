@@ -218,6 +218,16 @@ dev = [
     "ruff>=0.15.5",
 ]
 
+[tool.pytest.ini_options]
+# Prefer: `cd backend && uv run pytest`
+# From repo root: `uv run pytest` (uses paths below).
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# Same basenames across suites (e.g. test_router.py) need importlib mode.
+addopts = ["--import-mode=importlib"]
+
 [tool.black]
 line-length = 120
 skip-string-normalization = true

@@ -6,20 +6,12 @@ import sys
 from typing import AsyncGenerator, Generator, Iterator
 
 from fastapi import (
-    Depends,
-    FastAPI,
-    File,
-    Form,
-    HTTPException,
     Request,
-    UploadFile,
-    status,
 )
 from pydantic import BaseModel
-from starlette.responses import Response, StreamingResponse
+from starlette.responses import StreamingResponse
 
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
-from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_PLUGINS, GLOBAL_LOG_LEVEL
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
@@ -30,11 +22,8 @@ from open_webui.socket.main import (
 )
 from open_webui.utils.access_control import check_model_access
 from open_webui.utils.misc import (
-    add_or_update_system_message,
-    get_last_user_message,
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
-    prepend_to_first_user_message_content,
 )
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
@@ -42,8 +31,8 @@ from open_webui.utils.payload import (
 )
 from open_webui.utils.plugin import (
     get_function_module_from_cache,
-    load_function_module_by_id,
 )
+from open_webui.utils.system_prompt import resolve_model_system_prompt
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -272,6 +261,8 @@ async def generate_function_chat_completion(request, form_data, user, models: di
     }
     extra_params['__tools__'] = metadata.get('tools', {})
 
+    bypass_system_prompt = getattr(request.state, 'bypass_system_prompt', False)
+
     if model_info:
         if model_info.base_model_id:
             form_data['model'] = model_info.base_model_id
@@ -282,10 +273,11 @@ async def generate_function_chat_completion(request, form_data, user, models: di
 
         params = model_info.params.model_dump()
 
-        if params:
-            system = params.pop('system', None)
-            form_data = apply_model_params_to_body_openai(params, form_data)
+        system = await resolve_model_system_prompt(model_info, metadata, user, bypass=bypass_system_prompt)
+        if system:
             form_data = await apply_system_prompt_to_body(system, form_data, metadata, user)
+        if params:
+            form_data = apply_model_params_to_body_openai(params, form_data)
 
     pipe_id = get_pipe_id(form_data)
     function_module = await get_function_module_by_id(request, pipe_id)

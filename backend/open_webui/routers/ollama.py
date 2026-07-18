@@ -8,7 +8,6 @@ import random
 import re
 import time
 from datetime import datetime
-from typing import Optional, Union
 from urllib.parse import urlparse
 
 import aiohttp
@@ -46,6 +45,7 @@ from open_webui.utils.payload import (
     apply_system_prompt_to_body,
 )
 from open_webui.utils.session_pool import cleanup_response, get_session, stream_wrapper
+from open_webui.utils.system_prompt import resolve_model_system_prompt
 
 log = logging.getLogger(__name__)
 
@@ -93,7 +93,7 @@ async def send_request(
     url: str,
     method: str = 'POST',
     *,
-    payload: Union[str, bytes | None] = None,
+    payload: str | (bytes | None) = None,
     key: str | None = None,
     user: UserModel = None,
     stream: bool = False,
@@ -851,7 +851,7 @@ class GenerateEmbedForm(BaseModel):
     input: list[str] | str
     truncate: bool | None = None
     options: dict | None = None
-    keep_alive: Union[int, str | None] = None
+    keep_alive: int | (str | None) = None
     model_config = ConfigDict(extra='allow')
 
 
@@ -906,7 +906,7 @@ class GenerateEmbeddingsForm(BaseModel):
     model: str
     prompt: str
     options: dict | None = None
-    keep_alive: Union[int, str | None] = None
+    keep_alive: int | (str | None) = None
 
 
 @router.post('/api/embeddings')
@@ -961,14 +961,14 @@ class GenerateCompletionForm(BaseModel):
     prompt: str | None = None
     suffix: str | None = None
     images: list[str | None] = None
-    format: Union[dict, str | None] = None
+    format: dict | (str | None) = None
     options: dict | None = None
     system: str | None = None
     template: str | None = None
     context: list[int | None] = None
     stream: bool | None = True
     raw: bool | None = None
-    keep_alive: Union[int, str | None] = None
+    keep_alive: int | (str | None) = None
 
 
 @router.post('/api/generate')
@@ -1035,11 +1035,11 @@ class GenerateChatCompletionForm(BaseModel):
 
     model: str
     messages: list[ChatMessage]
-    format: Union[dict, str | None] = None
+    format: dict | (str | None) = None
     options: dict | None = None
     template: str | None = None
     stream: bool | None = True
-    keep_alive: Union[int, str | None] = None
+    keep_alive: int | (str | None) = None
     tools: list[dict | None] = None
     model_config = ConfigDict(extra='allow')
 
@@ -1118,11 +1118,12 @@ async def generate_chat_completion(
             payload['model'] = base_model_id
 
         params = model_info.params.model_dump()
+
+        system = await resolve_model_system_prompt(model_info, metadata, user, bypass=bypass_system_prompt)
+        if system:
+            payload = await apply_system_prompt_to_body(system, payload, metadata, user)
         if params:
-            system = params.pop('system', None)
             payload = apply_model_params_to_body_ollama(params, payload)
-            if not bypass_system_prompt:
-                payload = await apply_system_prompt_to_body(system, payload, metadata, user)
 
         await check_model_access(user, model_info, bypass_filter)
     else:
@@ -1160,7 +1161,7 @@ class OpenAIChatMessage(BaseModel):
     """A single message in an OpenAI-compatible chat request."""
 
     role: str
-    content: Union[str | None, list[OpenAIChatMessageContent]]
+    content: str | None | list[OpenAIChatMessageContent]
     model_config = ConfigDict(extra='allow')
 
 
@@ -1248,6 +1249,8 @@ async def generate_openai_chat_completion(
     # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
     # which would exhaust the connection pool under concurrent load.
+    bypass_system_prompt = getattr(request.state, 'bypass_system_prompt', False)
+
     metadata = form_data.pop('metadata', None)
 
     try:
@@ -1266,10 +1269,12 @@ async def generate_openai_chat_completion(
             payload['model'] = model_info.base_model_id
 
         params = model_info.params.model_dump()
-        if params:
-            system = params.pop('system', None)
-            payload = apply_model_params_to_body_openai(params, payload)
+
+        system = await resolve_model_system_prompt(model_info, metadata, user, bypass=bypass_system_prompt)
+        if system:
             payload = await apply_system_prompt_to_body(system, payload, metadata, user)
+        if params:
+            payload = apply_model_params_to_body_openai(params, payload)
 
         await check_model_access(user, model_info)
     else:

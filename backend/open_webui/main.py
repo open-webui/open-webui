@@ -152,7 +152,9 @@ from open_webui.routers import (
     groups,
     images,
     knowledge,
+    langfuse,
     memories,
+    model_system_prompts,
     models,
     notifications,
     notes,
@@ -423,7 +425,7 @@ async def lifespan(app: FastAPI):
     if license_task:
         try:
             await asyncio.wait_for(asyncio.shield(license_task), timeout=2)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             log.warning('License data retrieval is still pending; continuing startup without it')
         except Exception as e:
             log.warning(f'License data retrieval failed during startup: {e}')
@@ -771,6 +773,8 @@ app.include_router(notes.router, prefix='/api/v1/notes', tags=['notes'])
 
 
 app.include_router(models.router, prefix='/api/v1/models', tags=['models'])
+app.include_router(model_system_prompts.router, prefix='/api/v1/models', tags=['models'])
+app.include_router(langfuse.router, prefix='/api/v1/langfuse', tags=['langfuse'])
 app.include_router(notifications.router, prefix='/api/v1/notifications', tags=['notifications'])
 app.include_router(knowledge.router, prefix='/api/v1/knowledge', tags=['knowledge'])
 app.include_router(prompts.router, prefix='/api/v1/prompts', tags=['prompts'])
@@ -1402,9 +1406,9 @@ async def chat_completion(
                                 'content_preview': user_message.get('content', '')[:300],
                             },
                         )
-                        if not getattr(request.state, 'internal', False) and not (
-                            user_message.get('meta') or {}
-                        ).get('internal'):
+                        if not getattr(request.state, 'internal', False) and not (user_message.get('meta') or {}).get(
+                            'internal'
+                        ):
                             try:
                                 from open_webui.utils.timers import cancel_timers_for_chat
 
@@ -1815,9 +1819,7 @@ async def generate_messages(
             },
         )
     elif isinstance(response, dict):
-        return convert_openai_to_anthropic_response(
-            response, model=requested_model, input_tokens=input_tokens
-        )
+        return convert_openai_to_anthropic_response(response, model=requested_model, input_tokens=input_tokens)
     else:
         # Passthrough for error responses (JSONResponse, PlainTextResponse, etc.)
         return response
@@ -2263,7 +2265,7 @@ async def get_app_version():
 @app.get('/api/version/updates')
 async def get_app_latest_release_version(user=Depends(get_verified_user)):
     if not ENABLE_VERSION_UPDATE_CHECK:
-        log.debug(f'Version update check is disabled, returning current version as latest version')
+        log.debug('Version update check is disabled, returning current version as latest version')
         return {'current': VERSION, 'latest': VERSION}
     try:
         timeout = aiohttp.ClientTimeout(total=1)
@@ -2333,7 +2335,7 @@ try:
         log.info('Using Redis for session')
     else:
         raise ValueError('No Redis URL provided')
-except Exception as e:
+except Exception:
     app.add_middleware(
         SessionMiddleware,
         secret_key=WEBUI_SECRET_KEY,

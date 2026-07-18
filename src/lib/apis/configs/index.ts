@@ -1,5 +1,18 @@
 import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import { formatApiError, type LangfuseConnection } from '$lib/apis/langfuse';
 import type { Banner } from '$lib/types';
+
+export type LangfuseConfigPayload = {
+	LANGFUSE_CONNECTIONS: LangfuseConnection[];
+	LANGFUSE_PROMPT_CACHE_TTL?: number | null;
+};
+
+export type LangfuseConfigResponse = LangfuseConfigPayload;
+
+export type LangfuseConnectionVerifyPayload = Pick<
+	LangfuseConnection,
+	'id' | 'name' | 'url' | 'public_key' | 'secret_key' | 'enabled'
+>;
 
 export const importConfig = async (token: string, config: object) => {
 	let error = null;
@@ -504,6 +517,99 @@ export const verifyToolServerConnection = async (token: string, connection: obje
 		.catch((err) => {
 			console.error(err);
 			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getLangfuseConfig = async (token: string): Promise<LangfuseConfigResponse> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/langfuse`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = formatApiError(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const setLangfuseConfig = async (
+	token: string,
+	config: LangfuseConfigPayload
+): Promise<LangfuseConfigResponse> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/langfuse`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			...config
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = formatApiError(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const verifyLangfuseConnection = async (
+	token: string,
+	connection: LangfuseConnectionVerifyPayload
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/langfuse/verify`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			...connection
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = formatApiError(err);
 			return null;
 		});
 

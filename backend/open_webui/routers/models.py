@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import base64
 import io
-import json
 import logging
 import posixpath
-from typing import Optional
 from urllib.parse import unquote
 
 from fastapi import (
@@ -30,7 +27,6 @@ from open_webui.models.models import (
     ModelAccessListResponse,
     ModelAccessResponse,
     ModelForm,
-    ModelListResponse,
     ModelMeta,
     ModelModel,
     ModelParams,
@@ -40,6 +36,14 @@ from open_webui.models.models import (
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.model_system_prompt_sync import (
+    get_params_system,
+    maybe_auto_version_from_params_system,
+)
+from open_webui.utils.system_prompt_cache import (
+    SYSTEM_PROMPT_CACHE,
+    invalidate_system_prompt_cache,
+)
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -283,6 +287,13 @@ async def create_new_model(
 
         model = await Models.insert_new_model(form_data, user.id, db=db)
         if model:
+            await maybe_auto_version_from_params_system(
+                model.id,
+                None,
+                get_params_system(model.params),
+                user.id,
+                db=db,
+            )
             await publish_event(
                 request,
                 EVENTS.MODEL_CREATED,
@@ -437,7 +448,17 @@ async def import_models(
                                 updated_model.access_grants,
                                 'sharing.public_models',
                             )
-                        await Models.update_model_by_id(model_id, updated_model, db=db)
+                        previous_system = get_params_system(existing_model.params)
+                        new_system = get_params_system(updated_model.params)
+                        updated = await Models.update_model_by_id(model_id, updated_model, db=db)
+                        if updated:
+                            await maybe_auto_version_from_params_system(
+                                model_id,
+                                previous_system,
+                                new_system,
+                                user.id,
+                                db=db,
+                            )
                     else:
                         # Insert new model
                         model_data['meta'] = model_data.get('meta', {})
@@ -450,7 +471,19 @@ async def import_models(
                             new_model.access_grants,
                             'sharing.public_models',
                         )
-                        await Models.insert_new_model(user_id=user.id, form_data=new_model, db=db)
+                        imported_model = await Models.insert_new_model(
+                            user_id=user.id,
+                            form_data=new_model,
+                            db=db,
+                        )
+                        if imported_model:
+                            await maybe_auto_version_from_params_system(
+                                imported_model.id,
+                                None,
+                                get_params_system(imported_model.params),
+                                user.id,
+                                db=db,
+                            )
             await publish_event(
                 request,
                 EVENTS.MODEL_IMPORTED,
@@ -482,7 +515,25 @@ async def sync_models(
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    sync_model_ids = [model.id for model in form_data.models]
+    new_model_ids = set(sync_model_ids)
+    existing_ids_before_sync = {model.id for model in await Models.get_all_models(db=db)}
+    existing_models = await Models.get_models_by_ids(sync_model_ids, db=db) if sync_model_ids else []
+    previous_systems = {
+        existing_model.id: get_params_system(existing_model.params) for existing_model in existing_models
+    }
+
     models = await Models.sync_models(user.id, form_data.models, db=db)
+    for removed_id in existing_ids_before_sync - new_model_ids:
+        invalidate_system_prompt_cache(removed_id)
+    for model in models:
+        await maybe_auto_version_from_params_system(
+            model.id,
+            previous_systems.get(model.id),
+            get_params_system(model.params),
+            user.id,
+            db=db,
+        )
     await publish_event(
         request,
         EVENTS.MODEL_SYNCED,
@@ -739,8 +790,17 @@ async def update_model_by_id(
         'sharing.public_models',
     )
 
+    previous_system = get_params_system(model.params)
+    new_system = get_params_system(form_data.params)
     model = await Models.update_model_by_id(form_data.id, ModelForm(**form_data.model_dump()), db=db)
     if model:
+        await maybe_auto_version_from_params_system(
+            model.id,
+            previous_system,
+            new_system,
+            user.id,
+            db=db,
+        )
         await publish_event(
             request,
             EVENTS.MODEL_UPDATED,
@@ -870,6 +930,7 @@ async def delete_model_by_id(
 
     result = await Models.delete_model_by_id(form_data.id, db=db)
     if result:
+        invalidate_system_prompt_cache(form_data.id)
         await publish_event(
             request,
             EVENTS.MODEL_DELETED,
@@ -886,5 +947,6 @@ async def delete_all_models(
 ):
     result = await Models.delete_all_models(db=db)
     if result:
+        SYSTEM_PROMPT_CACHE.clear()
         await publish_event(request, EVENTS.MODEL_DELETED, actor=user, subject_type='model')
     return result

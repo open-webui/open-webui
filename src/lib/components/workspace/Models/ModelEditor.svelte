@@ -33,6 +33,15 @@
 	import TTSVoiceInput from './TTSVoiceInput.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
+	import ModelSystemPromptPanel from './ModelSystemPromptPanel.svelte';
+	import ModelSystemPromptLangfusePanel from './ModelSystemPromptLangfusePanel.svelte';
+	import {
+		createModelSystemPromptVersion,
+		getModelLangfuseConnections,
+		getModelSystemPromptBinding,
+		ModelSystemPromptBindingConflictError,
+		type ModelSystemPromptBinding
+	} from '$lib/apis/models/systemPrompt';
 
 	const i18n = getContext('i18n');
 
@@ -75,6 +84,76 @@
 	}
 
 	let system = '';
+	let legacySystemPrompt = '';
+	let activeBaseline = '';
+	let systemPromptTab: 'local' | 'langfuse' = 'local';
+	let systemPromptTabInitialized = false;
+	let langfuseConnectionsAvailable = false;
+	let systemPromptBinding: ModelSystemPromptBinding | null = null;
+	$: showLangfuseTab =
+		langfuseConnectionsAvailable || systemPromptBinding?.source === 'langfuse';
+	let localSystemPromptPanel: ModelSystemPromptPanel | undefined;
+	let langfuseSystemPromptPanel: ModelSystemPromptLangfusePanel | undefined;
+	const tabButtonClass = (active: boolean) =>
+		`h-7 shrink-0 rounded-lg px-2 text-xs transition-colors duration-75 ${
+			active
+				? 'font-medium text-gray-900 dark:text-white bg-gray-50 dark:bg-white/[0.04]'
+				: 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+		}`;
+
+	const handleSystemPromptBindingChange = (binding: ModelSystemPromptBinding | null) => {
+		systemPromptBinding = binding;
+
+		if (
+			!systemPromptTabInitialized &&
+			(langfuseConnectionsAvailable || binding?.source === 'langfuse')
+		) {
+			systemPromptTab = binding?.source === 'langfuse' ? 'langfuse' : 'local';
+			systemPromptTabInitialized = true;
+		}
+	};
+
+	const handleLangfuseDetach = async (
+		e: CustomEvent<{ binding: ModelSystemPromptBinding; content: string }>
+	) => {
+		systemPromptBinding = e.detail.binding;
+		system = e.detail.content;
+		activeBaseline = system.trim() === '' ? '' : system;
+		systemPromptTab = 'local';
+		systemPromptTabInitialized = true;
+		await tick();
+		await localSystemPromptPanel?.reload();
+	};
+
+	const normalizeSystemPromptContent = (value: string) => (value.trim() === '' ? '' : value);
+
+	const switchToLocalSystemPromptTab = () => {
+		// Langfuse preview text is not a local draft — discard when leaving the tab.
+		if (systemPromptBinding?.source !== 'langfuse') {
+			system = activeBaseline;
+		}
+		systemPromptTab = 'local';
+	};
+
+	const isLangfusePreviewOnly = () =>
+		systemPromptTab === 'langfuse' &&
+		systemPromptBinding?.source !== 'langfuse' &&
+		normalizeSystemPromptContent(system) !== normalizeSystemPromptContent(activeBaseline);
+
+	const loadLangfuseConnections = async (modelId: string) => {
+		if (!modelId) {
+			langfuseConnectionsAvailable = false;
+			return;
+		}
+
+		try {
+			const res = await getModelLangfuseConnections(localStorage.token, modelId);
+			langfuseConnectionsAvailable = (res.connections?.length ?? 0) > 0;
+		} catch (error) {
+			console.error('Failed to load Langfuse connections:', error);
+			langfuseConnectionsAvailable = false;
+		}
+	};
 	let info = {
 		id: '',
 		base_model_id: null,
@@ -277,7 +356,51 @@
 			}
 		}
 
-		info.params.system = system.trim() === '' ? null : system;
+		// Langfuse is not backed by params.system — skip local versioning and params writes
+		// when binding source is langfuse (any tab) or Langfuse tab holds unstaged preview.
+		const skipLocalSystemPromptVersion =
+			systemPromptBinding?.source === 'langfuse' || isLangfusePreviewOnly();
+
+		if (edit && id && !skipLocalSystemPromptVersion) {
+			const normalizedSystem = normalizeSystemPromptContent(system);
+			const normalizedBaseline = normalizeSystemPromptContent(activeBaseline);
+
+			if (normalizedSystem !== normalizedBaseline) {
+				try {
+					const payload: Parameters<typeof createModelSystemPromptVersion>[2] = {
+						content: system,
+						set_active: true
+					};
+
+					if (systemPromptBinding?.updated_at != null) {
+						payload.expected_updated_at = systemPromptBinding.updated_at;
+					}
+
+					await createModelSystemPromptVersion(localStorage.token, id, payload);
+					activeBaseline = normalizedSystem;
+				} catch (error) {
+					if (error instanceof ModelSystemPromptBindingConflictError) {
+						toast.error(
+							$i18n.t(
+								'System prompt binding was modified elsewhere. Refreshed to the latest state.'
+							)
+						);
+						systemPromptBinding = await getModelSystemPromptBinding(localStorage.token, id);
+						await localSystemPromptPanel?.reload();
+					} else {
+						toast.error(`${error}`);
+					}
+					loading = false;
+					return;
+				}
+			}
+		}
+
+		if (!skipLocalSystemPromptVersion) {
+			info.params.system = system.trim() === '' ? null : system;
+		} else if ('system' in info.params) {
+			delete info.params.system;
+		}
 		info.params.stop = params.stop
 			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
 					s.trim()
@@ -330,6 +453,19 @@
 
 			id = model.id;
 
+			if (edit) {
+				await loadLangfuseConnections(id);
+				try {
+					systemPromptBinding = await getModelSystemPromptBinding(localStorage.token, id);
+					if (systemPromptBinding?.source === 'langfuse') {
+						systemPromptTab = 'langfuse';
+						systemPromptTabInitialized = true;
+					}
+				} catch (error) {
+					console.error('Failed to preload system prompt binding:', error);
+				}
+			}
+
 			enableDescription = model?.meta?.description !== null;
 
 			if (model.base_model_id) {
@@ -348,7 +484,8 @@
 				}
 			}
 
-			system = model?.params?.system ?? '';
+			legacySystemPrompt = model?.params?.system ?? '';
+			system = legacySystemPrompt;
 
 			params = { ...params, ...model?.params };
 			params.stop = params?.stop
@@ -690,15 +827,68 @@
 										{$i18n.t('System Prompt')}
 									</div>
 									<div>
-										<Textarea
-											className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
-											placeholder={$i18n.t(
-												'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
-											)}
-											rows={2}
-											minSize={48}
-											bind:value={system}
-										/>
+										{#if edit && id && preset}
+											{#if showLangfuseTab}
+												<div class="mb-2 flex gap-1" role="tablist">
+													<button
+														type="button"
+														role="tab"
+														aria-selected={systemPromptTab === 'local'}
+														class={tabButtonClass(systemPromptTab === 'local')}
+														on:click={switchToLocalSystemPromptTab}
+													>
+														{$i18n.t('Local')}
+													</button>
+													<button
+														type="button"
+														role="tab"
+														aria-selected={systemPromptTab === 'langfuse'}
+														class={tabButtonClass(systemPromptTab === 'langfuse')}
+														on:click={() => {
+															systemPromptTab = 'langfuse';
+														}}
+													>
+														{$i18n.t('Langfuse')}
+													</button>
+												</div>
+											{/if}
+
+											{#if systemPromptTab === 'local' || !showLangfuseTab}
+												<ModelSystemPromptPanel
+													bind:this={localSystemPromptPanel}
+													modelId={id}
+													writeAccess={model?.write_access ?? true}
+													legacySystem={legacySystemPrompt}
+													bind:system
+													bind:activeBaseline
+													on:bindingchange={(e) => handleSystemPromptBindingChange(e.detail)}
+												/>
+											{:else}
+												<ModelSystemPromptLangfusePanel
+													bind:this={langfuseSystemPromptPanel}
+													modelId={id}
+													writeAccess={model?.write_access ?? true}
+													bind:system
+													bind:activeBaseline
+													on:bindingchange={(e) => handleSystemPromptBindingChange(e.detail)}
+													on:detach={handleLangfuseDetach}
+												/>
+											{/if}
+										{:else}
+											<div
+												class="rounded-xl border border-gray-100 bg-gray-50/60 p-3 shadow-inner dark:border-gray-800 dark:bg-gray-900/30"
+											>
+												<Textarea
+													className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+													placeholder={$i18n.t(
+														'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
+													)}
+													rows={2}
+													minSize={48}
+													bind:value={system}
+												/>
+											</div>
+										{/if}
 									</div>
 								</div>
 
