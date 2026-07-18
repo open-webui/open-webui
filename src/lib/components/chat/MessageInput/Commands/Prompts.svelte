@@ -35,6 +35,10 @@
 		selectedPromptIdx = 0;
 	}
 
+	onMount(() => {
+		getItems()
+	})
+
 	const getItems = async () => {
 		const res = await getPrompts(localStorage.token).catch(() => null);
 		if (res) {

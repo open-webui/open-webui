@@ -53,7 +53,7 @@
 </script>
 
 <div
-	class="{(filteredItems ?? []).length > 0
+	class="{(filteredItems ?? []).length > 0 || char === '/'
 		? ''
 		: 'hidden'} rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-72 p-1"
 	id="suggestions-container"
