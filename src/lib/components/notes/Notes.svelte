@@ -593,7 +593,7 @@
 													<Tooltip content={note.title} className="min-w-0" placement="top-start">
 														<div
 															dir="auto"
-															class="h-[20px] truncate text-[13px] leading-5 text-gray-800 hover:underline dark:text-gray-200"
+															class="h-[20px] truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
 														>
 															{note.title}
 														</div>
