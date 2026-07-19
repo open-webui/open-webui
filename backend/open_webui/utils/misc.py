@@ -711,15 +711,20 @@ def sanitize_filename(file_name):
     return final_file_name
 
 
+_SURROGATE_RE = re.compile('[\ud800-\udfff]')
+
+
 def sanitize_text_for_db(text: str) -> str:
     """Remove null bytes and invalid UTF-8 surrogates from text for PostgreSQL storage."""
     if not isinstance(text, str):
         return text
-    # Fast path: skip work when there are no null bytes (the common case)
-    if '\x00' not in text:
+    # Fast path: skip work when there are no null bytes or surrogates (the common case)
+    if '\x00' not in text and not _SURROGATE_RE.search(text):
         return text
     # Remove null bytes
     text = text.replace('\x00', '').replace('\u0000', '')
+    # Remove invalid UTF-8 surrogate characters
+    text = _SURROGATE_RE.sub('', text)
     # Remove invalid UTF-8 surrogate characters that can cause encoding errors
     # This handles cases where binary data or encoding issues introduced surrogates
     try:
@@ -744,19 +749,20 @@ def sanitize_data_for_db(obj):
     """Recursively sanitize all strings in a data structure for database storage.
 
     Performs a fast pre-check: serializes the structure once and scans for
-    null bytes.  If none are found (the overwhelmingly common case), the
-    original object is returned immediately, skipping the expensive
-    recursive walk.
+    null bytes or surrogate characters.  If none are found (the overwhelmingly
+    common case), the original object is returned immediately, skipping the
+    expensive recursive walk.
     """
     if isinstance(obj, str):
         return sanitize_text_for_db(obj)
-    # Fast path: check for null bytes in the serialized form.
+    # Fast path: check for null bytes/surrogates in the serialized form.
     # json.dumps is implemented in C and much faster than a Python-level
     # recursive walk over every leaf string.
     try:
-        if '\\u0000' not in json.dumps(obj, ensure_ascii=False):
+        dumped = json.dumps(obj, ensure_ascii=False)
+        if '\\u0000' not in dumped and not _SURROGATE_RE.search(dumped):
             return obj
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, UnicodeEncodeError):
         pass
     return _strip_null_bytes_deep(obj)
 
