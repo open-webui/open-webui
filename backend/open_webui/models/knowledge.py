@@ -2,6 +2,7 @@ import json
 import logging
 import time
 import uuid
+from datetime import date
 from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
@@ -21,10 +22,10 @@ from sqlalchemy import (
     Column,
     ForeignKey,
     Index,
-    String,
     Text,
     UniqueConstraint,
     delete,
+    Date,
     func,
     or_,
     select,
@@ -49,6 +50,10 @@ class Knowledge(Base):
 
     name = Column(Text)
     description = Column(Text)
+
+    ai_overwiew = Column(Text, nullable=True)
+    registration_number = Column(Text, nullable=True)
+    registration_date = Column(Date, nullable=True)
 
     meta = Column(JSON, nullable=True)
 
@@ -87,6 +92,9 @@ class KnowledgeModel(BaseModel):
     meta: Optional[dict] = None
 
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
+
+    registration_number: Optional[str] = None
+    registration_date: Optional[date] = None
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -161,6 +169,8 @@ class KnowledgeForm(BaseModel):
     name: str
     description: str
     access_grants: Optional[list[dict]] = None
+    registration_number: Optional[str] = None
+    registration_date: Optional[date] = None
 
 
 class FileUserResponse(FileModelResponse):
@@ -206,6 +216,7 @@ class KnowledgeTable:
                     'user_id': user_id,
                     'created_at': int(time.time()),
                     'updated_at': int(time.time()),
+                    'registration_date': form_data.registration_date if form_data.registration_date else None,
                     'access_grants': [],
                 }
             )

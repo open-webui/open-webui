@@ -2,9 +2,13 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const createNewKnowledge = async (
 	token: string,
-	name: string,
-	description: string,
-	accessGrants: object[]
+	data: {
+		name: string,
+		description: string,
+		accessGrants: object[],
+		registrationDate?: Date | null
+		registrationNumber?: string | null
+	}
 ) => {
 	let error = null;
 
@@ -16,9 +20,11 @@ export const createNewKnowledge = async (
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			name: name,
-			description: description,
-			access_grants: accessGrants
+			name: data.name,
+			description: data.description,
+			access_grants: data.accessGrants,
+			...(data.registrationNumber ? {registration_number: data.registrationNumber} : {}),
+			...(data.registrationDate ? {registration_date: data.registrationDate.toLocaleDateString('en-CA')} : {}),
 		})
 	})
 		.then(async (res) => {
