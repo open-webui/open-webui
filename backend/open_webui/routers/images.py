@@ -845,7 +845,14 @@ class EditImageForm(BaseModel):
 
 
 @router.post('/edit')
-async def edit_images(request: Request, form_data: EditImageForm, user=Depends(get_verified_user)):
+async def edit_images(request: Request, user=Depends(get_verified_user)):
+    body = await request.json()
+
+    if isinstance(body, dict) and "form_data" in body:
+        body = body["form_data"]
+
+    form_data = EditImageForm(**body)
+    
     # Authorize the direct route like /generations and the edit_image tool: enforce the
     # global image-edit switch and the per-user image-generation permission. The internal
     # callers (edit_image tool, chat middleware) gate themselves and call image_edits()
