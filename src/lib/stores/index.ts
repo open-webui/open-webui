@@ -94,6 +94,7 @@ export const adminLeaderboardCount: Writable<number | null> = writable(null);
 export const adminFeedbackCount: Writable<number | null> = writable(null);
 
 export const toolServers = writable([]);
+export const toolServersReady = writable(false);
 export const terminalServers = writable([]);
 
 // Persistent Pyodide worker for code interpreter FS

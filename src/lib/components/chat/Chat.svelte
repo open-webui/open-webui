@@ -38,6 +38,7 @@
 		tools,
 		skills,
 		toolServers,
+		toolServersReady,
 		terminalServers,
 		functions,
 		selectedFolder,
@@ -48,6 +49,7 @@
 		chatRequestQueues,
 		desktopEvent
 	} from '$lib/stores';
+	import { waitForStore } from '$lib/utils/store';
 	import { refreshChatList } from '$lib/stores/chatList';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -1799,6 +1801,7 @@
 
 			if (q) {
 				if (($page.url.searchParams.get('submit') ?? 'true') === 'true') {
+					await waitForStore(toolServersReady, (ready) => ready);
 					await tick();
 					submitHandler(q);
 				}

@@ -33,6 +33,7 @@
 		showChangelog,
 		temporaryChatEnabled,
 		toolServers,
+		toolServersReady,
 		terminalServers,
 		selectedTerminalId,
 		showSearch,
@@ -244,7 +245,10 @@
 		]);
 
 		// Tool servers can be slow or unreachable; they are not needed to initialize chat.
-		setToolServers().catch((e) => console.error('Failed to load tool servers:', e));
+		toolServersReady.set(false);
+		setToolServers()
+			.catch((e) => console.error('Failed to load tool servers:', e))
+			.finally(() => toolServersReady.set(true));
 
 		const setupKeyboardShortcuts = () => {
 			document.addEventListener('keydown', async (event) => {
