@@ -527,6 +527,7 @@ async def get_ollama_loaded_models(
 @router.get('/api/version/{url_idx}')
 async def get_ollama_versions(
     request: Request,
+    user=Depends(get_verified_user),
     url_idx: int | None = None,
 ):
     """Return the lowest Ollama version across all configured backends."""
