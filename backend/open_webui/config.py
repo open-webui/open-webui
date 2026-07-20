@@ -2096,6 +2096,8 @@ CORS_ALLOW_CUSTOM_SCHEME = os.getenv('CORS_ALLOW_CUSTOM_SCHEME', '').split(';')
 
 if CORS_ALLOW_ORIGIN == ['*']:
     log.warning("\n\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\n")
+elif CORS_ALLOW_ORIGIN == ['']:
+    log.info('CORS_ALLOW_ORIGIN is set to empty, disallowing CORS')
 else:
     # You have to pick between a single wildcard or a list of origins.
     # Doing both will result in CORS errors in the browser.
