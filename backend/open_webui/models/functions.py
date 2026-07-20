@@ -7,7 +7,7 @@ import time
 
 # local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
-from open_webui.models.users import UserResponse, Users
+from open_webui.models.users import User, UserResponse, Users, UserSettings
 from open_webui.utils.valves import decrypt_valves, encrypt_valves
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, Index, String, Text, delete, select, update
@@ -275,6 +275,13 @@ class FunctionsTable:
             result = await db.execute(select(Function).filter_by(type='filter', is_active=True, is_global=True))
             return [FunctionModel.model_validate(function) for function in result.scalars().all()]
 
+    async def get_active_filter_ids(self, db: AsyncSession | None = None) -> list[tuple[str, bool]]:
+        """(id, is_global) of active filter functions, without fetching full rows
+        (each row carries the plugin's entire source in `content`)."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Function.id, Function.is_global).filter_by(type='filter', is_active=True))
+            return [(row[0], bool(row[1])) for row in result.all()]
+
     async def get_global_action_functions(self, db: AsyncSession | None = None) -> list[FunctionModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Function).filter_by(type='action', is_active=True, is_global=True))
@@ -283,8 +290,11 @@ class FunctionsTable:
     async def get_function_valves_by_id(self, id: str, db: AsyncSession | None = None) -> dict | None:
         async with get_async_db_context(db) as db:
             try:
-                function = await db.get(Function, id)
-                return decrypt_valves(function.valves if function else None)
+                # Select only the valves column — the full row carries the
+                # plugin's entire source, and this runs per streamed chunk.
+                result = await db.execute(select(Function.valves).filter_by(id=id))
+                row = result.first()
+                return decrypt_valves(row[0] if row else None)
             except Exception as e:
                 log.exception(f'Error getting function valves by id {id}: {e}')
                 return None
@@ -347,8 +357,12 @@ class FunctionsTable:
         self, id: str, user_id: str, db: AsyncSession | None = None
     ) -> dict | None:
         try:
-            user = await Users.get_user_by_id(user_id, db=db)
-            user_settings = user.settings.model_dump() if user.settings else {}
+            # Select only the settings column — the full user row (incl.
+            # profile image data) is fetched per streamed chunk otherwise.
+            async with get_async_db_context(db) as db:
+                result = await db.execute(select(User.settings).filter_by(id=user_id))
+                row = result.one()
+            user_settings = UserSettings(**row[0]).model_dump() if row[0] else {}
 
             # Check if user has "functions" and "valves" settings
             if 'functions' not in user_settings:
