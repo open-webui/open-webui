@@ -399,8 +399,6 @@ async def get_current_user(
 
                 # Refresh the user's last active timestamp
                 # Fire-and-forget via asyncio.create_task to avoid blocking
-                import asyncio
-
                 asyncio.create_task(Users.update_last_active_by_id(user.id))
             return user
         else:
@@ -433,9 +431,15 @@ async def get_current_user_by_api_key(request, api_key: str):
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
 
-    user_permissions = await Config.get('user.permissions')
-    enable_endpoint_restrictions = await Config.get('auth.api_key.endpoint_restrictions')
-    allowed_endpoints = await Config.get('auth.api_key.allowed_endpoints', '')
+    # One batched SELECT instead of three sequential round trips.
+    config_values = await Config.get_many(
+        'user.permissions',
+        'auth.api_key.endpoint_restrictions',
+        'auth.api_key.allowed_endpoints',
+    )
+    user_permissions = config_values.get('user.permissions')
+    enable_endpoint_restrictions = config_values.get('auth.api_key.endpoint_restrictions')
+    allowed_endpoints = config_values.get('auth.api_key.allowed_endpoints', '')
 
     if not request.state.enable_api_keys or (
         user.role != 'admin'
