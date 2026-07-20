@@ -437,8 +437,7 @@ async def lifespan(app: FastAPI):
     await publish_event(app, EVENTS.SYSTEM_SHUTDOWN_COMPLETED, source='system')
 
 
-# Serialize all JSONResponse bodies (plain-dict routes, explicit returns)
-# with orjson; response_model routes keep FastAPI's Pydantic fast path.
+# orjson for JSONResponse bodies; response_model routes keep FastAPI's Pydantic fast path.
 apply_orjson_response_render()
 
 app = FastAPI(

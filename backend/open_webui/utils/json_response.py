@@ -13,8 +13,7 @@ def _orjson_render(self, content: Any) -> bytes:
     try:
         return orjson.dumps(content)
     except (TypeError, ValueError):
-        # Match starlette's JSONResponse.render exactly for anything orjson
-        # rejects (e.g. non-str dict keys, ints beyond 64 bits).
+        # Fallback matches starlette's JSONResponse.render exactly.
         return json.dumps(
             content,
             ensure_ascii=False,
@@ -27,18 +26,14 @@ def _orjson_render(self, content: Any) -> bytes:
 def apply_orjson_response_render() -> None:
     """Serialize every ``JSONResponse`` with orjson instead of the stdlib.
 
-    Overriding ``JSONResponse.render`` is deliberately preferred over
-    ``FastAPI(default_response_class=...)``: setting any explicit default —
-    even the stdlib ``JSONResponse`` — replaces the route-level
-    ``DefaultPlaceholder`` and thereby disables FastAPI's fast path that
-    serializes ``response_model`` routes straight to JSON bytes in Pydantic's
-    Rust core.  The override leaves that fast path untouched and also covers
-    explicit ``JSONResponse(...)`` returns, which a default response class
-    would not.
+    Deliberately not ``FastAPI(default_response_class=...)``: any explicit
+    default replaces the route-level ``DefaultPlaceholder``, which disables
+    FastAPI's fast path serializing ``response_model`` routes straight to
+    JSON bytes in Pydantic's Rust core.  This override keeps that fast path
+    and also covers explicit ``JSONResponse(...)`` returns.
 
-    Output is byte-identical to starlette's stdlib rendering (compact
-    separators, raw UTF-8) with one exception: ``NaN``/``Infinity`` floats
-    serialize as ``null`` instead of raising (starlette renders with
-    ``allow_nan=False``, so today such payloads are a 500 error).
+    Only observable change: ``NaN``/``Infinity`` floats serialize as
+    ``null`` instead of raising, matching what Pydantic already does on
+    ``response_model`` routes.
     """
     JSONResponse.render = _orjson_render

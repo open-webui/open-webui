@@ -18,13 +18,9 @@ YDOC_KEY_PREFIX = f'{REDIS_KEY_PREFIX}:ydoc:documents'
 class ORJSONCodec:
     """stdlib-``json``-compatible codec backed by orjson.
 
-    Handed to ``socketio.AsyncServer``/``AsyncRedisManager`` via their
-    ``json=`` hooks and used by the Redis-backed structures below.  orjson
-    encodes/decodes several times faster than the stdlib but accepts a
-    narrower range of inputs, so anything it rejects (non-str dict keys,
-    ints beyond 64 bits, ``NaN`` literals written by pre-orjson replicas)
-    falls back to engineio's stdlib-based codec — socket.io's default,
-    which keeps its oversized-integer guard for untrusted client payloads.
+    Anything orjson rejects (non-str dict keys, ints beyond 64 bits, ``NaN``
+    literals) falls back to engineio's stdlib-based codec, which keeps its
+    oversized-integer guard for untrusted client payloads.
     """
 
     JSONDecodeError = engineio_json.JSONDecodeError
