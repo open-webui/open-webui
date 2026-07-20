@@ -122,6 +122,7 @@ from open_webui.utils.task import (
 from open_webui.utils.tools import (
     build_tool_server_headers,
     get_builtin_tools,
+    get_effective_model_knowledge,
     get_terminal_tools,
     get_tools,
     get_updated_tool_function,
@@ -1505,10 +1506,48 @@ async def get_image_urls(delta_images, request, metadata, user) -> list[str]:
     return image_urls
 
 
-async def add_file_context(messages: list, chat_id: str, user) -> list:
+async def add_file_context(
+    messages: list, chat_id: str, user, include_knowledge: bool = False, knowledge: list = None
+) -> list:
     """
     Add file URLs to messages for native function calling.
+    knowledge lists the items reachable via the builtin knowledge tools (model-, folder-,
+    and chat-attached); it is appended to the system message once as an
+    <attached_knowledge> block so the model knows there is something to query. System
+    placement keeps user messages untouched, so the prompt prefix stays cache-stable
+    across turns as long as the attached knowledge does not change.
+    include_knowledge additionally surfaces URL-less chat attachments (referenced chats,
+    KB-selected files) per message; used when File Context is off. Metadata only:
+    each id is access-checked server-side when a tool actually reads it.
     """
+
+    def prepend_context(message, context):
+        content = message.get('content', '')
+        if isinstance(content, list):
+            message['content'] = [{'type': 'text', 'text': context}] + content
+        else:
+            message['content'] = context + content
+
+    def format_knowledge_tag(item):
+        attrs = f'type="{item["type"]}" id="{item["id"]}"'
+        if item.get('name'):
+            attrs += f' name="{item["name"]}"'
+        if item.get('source'):
+            attrs += f' source="{item["source"]}"'
+        return f'<knowledge {attrs}/>'
+
+    # Chat-level scope, appended to the system message like skill manifests and terminal
+    # prompts. Independent of the stored chat record: temporary (local:) chats can still
+    # carry folder knowledge.
+    if knowledge:
+        knowledge_tags = [format_knowledge_tag(item) for item in knowledge if item.get('id') and item.get('type')]
+        if knowledge_tags:
+            messages = add_or_update_system_message(
+                '<attached_knowledge>\n' + '\n'.join(knowledge_tags) + '\n</attached_knowledge>',
+                messages,
+                append=True,
+            )
+
     if not chat_id or chat_id.startswith('local:') or chat_id.startswith('channel:'):
         return messages
 
@@ -1527,6 +1566,12 @@ async def add_file_context(messages: list, chat_id: str, user) -> list:
             attrs += f' name="{file["name"]}"'
         return f'<file {attrs}/>'
 
+    def format_chat_item_tag(item):
+        attrs = f'type="{item["type"]}" id="{item["id"]}"'
+        if item.get('name'):
+            attrs += f' name="{item["name"]}"'
+        return f'<file {attrs}/>'
+
     # Pair only user-role messages from both lists to avoid misalignment.
     # After process_messages_with_output(), assistant messages with tool calls
     # are expanded into multiple messages (assistant + tool results), making
@@ -1537,22 +1582,25 @@ async def add_file_context(messages: list, chat_id: str, user) -> list:
     stored_user_messages = [m for m in stored_messages if m.get('role') == 'user']
 
     for message, stored_message in zip(user_messages, stored_user_messages):
-        files_with_urls = [
-            file
-            for file in stored_message.get('files', [])
+        stored_files = stored_message.get('files', [])
+        tags = [
+            format_file_tag(file)
+            for file in stored_files
             if file.get('url') and not file.get('url').startswith('data:')
         ]
-        if not files_with_urls:
+        if include_knowledge:
+            # URL-less chat attachments (referenced chats, KB-selected files); collections
+            # and notes are covered by the <attached_knowledge> block instead. Access is
+            # re-checked per id inside each tool, so surfacing the id here grants nothing.
+            tags += [
+                format_chat_item_tag(item)
+                for item in stored_files
+                if item.get('id') and not item.get('url') and item.get('type') in ('chat', 'file')
+            ]
+        if not tags:
             continue
 
-        file_tags = [format_file_tag(file) for file in files_with_urls]
-        file_context = '<attached_files>\n' + '\n'.join(file_tags) + '\n</attached_files>\n\n'
-
-        content = message.get('content', '')
-        if isinstance(content, list):
-            message['content'] = [{'type': 'text', 'text': file_context}] + content
-        else:
-            message['content'] = file_context + content
+        prepend_context(message, '<attached_files>\n' + '\n'.join(tags) + '\n</attached_files>\n\n')
 
     return messages
 
@@ -2600,6 +2648,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     }
     form_data['metadata'] = metadata
 
+    # Check if file context extraction is enabled for this model (default True)
+    file_context_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('file_context', True)
+
     # When the caller provides an explicit `tools` key in the request body,
     # skip all server-side tool resolution and pass the caller's tools through
     # unchanged.  Sending `tools: []` explicitly opts out of builtin injection.
@@ -2738,9 +2789,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # Only inject when the request originates from the UI (identified by session_id).
         # API callers don't expect hidden tools; they can explicitly request tools via tool_ids.
         if use_builtin_tools:
-            # Add file context to user messages
+            # Surface chat-attached files per message, and the knowledge reachable via the
+            # builtin knowledge tools (model/folder scope, plus chat scope when File Context
+            # is off) so the model knows what it can query.
             chat_id = metadata.get('chat_id')
-            form_data['messages'] = await add_file_context(form_data.get('messages', []), chat_id, user)
+            knowledge_tools_enabled = (model.get('info', {}).get('meta', {}).get('builtinTools') or {}).get(
+                'knowledge', True
+            )
+            form_data['messages'] = await add_file_context(
+                form_data.get('messages', []),
+                chat_id,
+                user,
+                include_knowledge=not file_context_enabled,
+                knowledge=get_effective_model_knowledge(model, metadata) if knowledge_tools_enabled else None,
+            )
             builtin_tools = await get_builtin_tools(
                 request,
                 {
@@ -2776,9 +2838,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     sources.extend(flags.get('sources', []))
                 except Exception as e:
                     log.exception(e)
-
-    # Check if file context extraction is enabled for this model (default True)
-    file_context_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('file_context', True)
 
     if file_context_enabled:
         try:
