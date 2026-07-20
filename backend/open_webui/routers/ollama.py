@@ -39,6 +39,7 @@ from open_webui.models.users import UserModel
 from open_webui.utils.access_control import check_model_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
+from open_webui.utils.json_codec import ORJSONCodec
 from open_webui.utils.misc import calculate_sha256
 from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
@@ -83,7 +84,7 @@ async def send_get_request(
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
             timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
         ) as r:
-            return await r.json()
+            return await r.json(loads=ORJSONCodec.loads)
     except Exception as exc:
         log.error(f'Connection error: {exc}')
         return None
@@ -132,7 +133,7 @@ async def send_request(
 
         if not r.ok:
             try:
-                res = await r.json()
+                res = await r.json(loads=ORJSONCodec.loads)
                 await publish_model_provider_request_failed(
                     request,
                     actor=user,
@@ -174,7 +175,7 @@ async def send_request(
             )
         else:
             try:
-                return await r.json()
+                return await r.json(loads=ORJSONCodec.loads)
             except Exception:
                 return None
 
@@ -265,12 +266,12 @@ async def verify_connection(
         ) as r:
             if r.status != 200:
                 detail = f'HTTP Error: {r.status}'
-                res = await r.json()
+                res = await r.json(loads=ORJSONCodec.loads)
                 if 'error' in res:
                     detail = f'External Error: {res["error"]}'
                 raise Exception(detail)
 
-            return await r.json()
+            return await r.json(loads=ORJSONCodec.loads)
     except aiohttp.ClientError as exc:
         log.exception(f'Client error: {exc}')
         raise HTTPException(status_code=500, detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR)
