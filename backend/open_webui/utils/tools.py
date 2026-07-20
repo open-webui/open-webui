@@ -462,6 +462,29 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
     return tools_dict
 
 
+def get_effective_model_knowledge(model: dict, metadata: dict) -> list[dict]:
+    """
+    Knowledge reachable by the builtin knowledge tools, annotated with its source:
+    model knowledge, folder-attached knowledge, and (when File Context is off)
+    chat-attached collections and notes. Chat items are collections/notes only:
+    their access is re-resolved and re-checked per id inside each tool, so trusting
+    the client id here grants nothing. Chat-attached files are excluded (they'd
+    short-circuit _has_read_access_to_file).
+    """
+    knowledge = [{**item, 'source': 'model'} for item in (model.get('info', {}).get('meta', {}).get('knowledge') or [])]
+    knowledge += [{**item, 'source': 'folder'} for item in (metadata.get('folder_knowledge') or [])]
+
+    file_context_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('file_context', True)
+    if not file_context_enabled:
+        existing_ids = {item.get('id') for item in knowledge}
+        knowledge += [
+            {'type': item['type'], 'id': item['id'], 'name': item.get('name'), 'source': 'chat'}
+            for item in (metadata.get('files') or [])
+            if item.get('type') in ('collection', 'note') and item.get('id') and item['id'] not in existing_ids
+        ]
+    return knowledge
+
+
 async def get_builtin_tools(
     request: Request, extra_params: dict, features: dict = None, model: dict = None
 ) -> dict[str, dict]:
@@ -510,29 +533,10 @@ async def get_builtin_tools(
     if is_builtin_tool_enabled('time'):
         builtin_functions.extend([get_current_timestamp, calculate_timestamp])
 
-    # Knowledge base tools - conditional injection based on model knowledge
-    # If model has attached knowledge (any type), only provide query_knowledge_files
+    # Knowledge base tools - conditional injection based on attached knowledge
+    # If any knowledge is attached (any type), only provide query_knowledge_files
     # Otherwise, provide all KB browsing tools
-    model_knowledge = model.get('info', {}).get('meta', {}).get('knowledge', [])
-    # Merge folder-attached knowledge so builtin tools can search it
-    folder_knowledge = extra_params.get('__metadata__', {}).get('folder_knowledge')
-    if folder_knowledge:
-        model_knowledge = list(model_knowledge or []) + list(folder_knowledge)
-    # When File Context is off, expose chat-attached collections and notes (selected via
-    # the chat input) to the builtin knowledge tools so the model can query them on demand
-    # instead of the disabled legacy RAG path. Collections/notes only: their access is
-    # re-resolved and re-checked per id inside each tool, so trusting the client id here
-    # grants nothing. Files are excluded (they'd short-circuit _has_read_access_to_file).
-    file_context_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('file_context', True)
-    if not file_context_enabled:
-        existing_ids = {item.get('id') for item in (model_knowledge or [])}
-        chat_knowledge = [
-            {'type': item['type'], 'id': item['id'], 'name': item.get('name')}
-            for item in (extra_params.get('__metadata__', {}).get('files') or [])
-            if item.get('type') in ('collection', 'note') and item.get('id') and item['id'] not in existing_ids
-        ]
-        if chat_knowledge:
-            model_knowledge = list(model_knowledge or []) + chat_knowledge
+    model_knowledge = get_effective_model_knowledge(model, extra_params.get('__metadata__', {}))
     if is_builtin_tool_enabled('knowledge'):
         from open_webui.env import ENABLE_KB_EXEC
 

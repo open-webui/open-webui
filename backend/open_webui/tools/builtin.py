@@ -2357,7 +2357,7 @@ async def list_knowledge(
     __model_knowledge__: Optional[list[dict]] = None,
 ) -> str:
     """
-    List knowledge bases, files, and notes attached to the current model.
+    List knowledge bases, files, and notes attached to this chat (via the model, folder, or chat).
     Use this first to discover what knowledge is available before querying or reading files.
     Without knowledge_id: returns KB summaries (name, description, file_count)
     plus standalone files and notes — no file listing inside KBs.
@@ -2501,6 +2501,8 @@ async def query_knowledge_files(
     """
     Search knowledge base files using semantic/vector search. Searches across collections (KBs),
     individual files, and notes that the user has access to.
+    Knowledge available to this chat is listed in the <attached_knowledge> block when present;
+    those items are searched automatically, no ids needed.
     Helpful for internal documentation, uploaded knowledge, and attached model knowledge.
 
     :param query: The search query to find semantically relevant content
