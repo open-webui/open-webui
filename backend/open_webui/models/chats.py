@@ -39,6 +39,7 @@ from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
 
 log = logging.getLogger(__name__)
+ACTIVE_CHAT_GAP_SECONDS = 30 * 60
 
 
 class Chat(Base):  # database table mapping for chat entity
@@ -1370,6 +1371,36 @@ class ChatTable:
             result = await session.execute(stmt.order_by(Chat.updated_at.desc()))
             all_chats = result.scalars().all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
+
+    async def get_user_usage_chat_stats(self, user_id: str, db: AsyncSession | None = None) -> dict:
+        async with get_async_db_context(db) as session:
+            chat_filter = (Chat.user_id == user_id, Chat.meta['internal'].as_boolean().is_not(True))
+            result = await session.execute(select(func.count(Chat.id).label('total_chats')).where(*chat_filter))
+            total_chats = int(result.scalar() or 0)
+
+            messages_stmt = (
+                select(ChatMessage.chat_id, ChatMessage.created_at)
+                .join(Chat, Chat.id == ChatMessage.chat_id)
+                .where(*chat_filter, ChatMessage.created_at.isnot(None))
+                .order_by(ChatMessage.chat_id, ChatMessage.created_at.asc())
+            )
+            messages_result = await session.execute(messages_stmt)
+            last_message_at_by_chat: dict[str, int] = {}
+            active_seconds_by_chat: dict[str, int] = {}
+
+            for chat_id, created_at in messages_result.all():
+                timestamp = int(created_at / 1000) if created_at > 10_000_000_000 else int(created_at)
+                last_message_at = last_message_at_by_chat.get(chat_id)
+                if last_message_at is not None:
+                    delta = timestamp - last_message_at
+                    if 0 < delta <= ACTIVE_CHAT_GAP_SECONDS:
+                        active_seconds_by_chat[chat_id] = active_seconds_by_chat.get(chat_id, 0) + delta
+                last_message_at_by_chat[chat_id] = timestamp
+
+            return {
+                'total_chats': total_chats,
+                'longest_chat_seconds': max(active_seconds_by_chat.values(), default=0),
+            }
 
     # list user conversations
     async def get_chats_by_user_id(

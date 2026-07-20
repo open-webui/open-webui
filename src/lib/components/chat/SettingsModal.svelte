@@ -17,6 +17,7 @@
 	import Shortcuts from './Settings/Shortcuts.svelte';
 	import Audio from './Settings/Audio.svelte';
 	import DataControls from './Settings/DataControls.svelte';
+	import Usage from './Settings/Usage.svelte';
 	import ArchivedChats from './Settings/ArchivedChats.svelte';
 	import Personalization from './Settings/Personalization.svelte';
 	import Search from '../icons/Search.svelte';
@@ -35,6 +36,7 @@
 	import ArchiveBox from '../icons/ArchiveBox.svelte';
 	import ChevronLeft from '../icons/ChevronLeft.svelte';
 	import Keyboard from '../icons/Keyboard.svelte';
+	import UsageIcon from '../icons/UsageIcon.svelte';
 	import AdminTabIcon from '$lib/components/admin/Settings/AdminTabIcon.svelte';
 	import AdminGeneral from '$lib/components/admin/Settings/General.svelte';
 	import AdminAuthentication from '$lib/components/admin/Settings/Authentication.svelte';
@@ -108,6 +110,7 @@
 		personalization: 'Preferences',
 		audio: 'Preferences',
 		data_controls: 'Data',
+		usage: 'Data',
 		archived_chats: 'Data',
 		account: 'Profile',
 		about: 'Profile'
@@ -491,6 +494,24 @@
 				'message history',
 				'messagearchive',
 				'messagehistory'
+			]
+		},
+		{
+			id: 'usage',
+			title: 'Usage',
+			keywords: [
+				'activity',
+				'activity heatmap',
+				'analytics',
+				'chat activity',
+				'heatmap',
+				'model usage',
+				'stats',
+				'streak',
+				'token activity',
+				'token usage',
+				'tokens',
+				'usage'
 			]
 		},
 		{
@@ -1033,6 +1054,19 @@
 							<DatabaseSettings className="size-3.5" strokeWidth="2" />
 							<span>{$i18n.t('Data Controls')}</span>
 						</button>
+					{:else if tabId === 'usage'}
+						<button
+							role="tab"
+							aria-controls="tab-usage"
+							aria-selected={selectedTab === 'usage'}
+							class={tabButtonClass(selectedTab === 'usage')}
+							on:click={() => {
+								selectedTab = 'usage';
+							}}
+						>
+							<UsageIcon className="size-3.5" strokeWidth="2" />
+							<span>{$i18n.t('Usage')}</span>
+						</button>
 					{:else if tabId === 'archived_chats'}
 						<button
 							role="tab"
@@ -1168,6 +1202,8 @@
 				/>
 			{:else if selectedTab === 'data_controls'}
 				<DataControls {saveSettings} />
+			{:else if selectedTab === 'usage'}
+				<Usage />
 			{:else if selectedTab === 'archived_chats'}
 				<ArchivedChats />
 			{:else if selectedTab === 'account'}
