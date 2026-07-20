@@ -280,6 +280,168 @@ class CORSStaticFiles(StaticFiles):
         return response
 
 
+# ----------------------------------------------------------------------------
+# API Tools (server-side tool execution) — reference schema for documentation.
+#
+# These Pydantic models are NOT used as response_model anywhere; the chat
+# completion endpoint returns a dynamic OpenAI-compatible response whose
+# shape depends on the request. They exist purely as self-documenting
+# references for the custom ``x_open_webui`` extension emitted by the API
+# Tools wrappers:
+#
+#   * **Per-event progress** (``XOpenWebUIToolEvent``):
+#     - Streaming (``stream: true``): carried as ``x_open_webui.tool_event``
+#       (singular) on individual ``chat.completion.chunk`` objects.
+#     - Non-streaming (``stream: false``): aggregated into the
+#       ``x_open_webui.tool_events`` array (plural) on the final
+#       ``chat.completion`` response.
+#
+#   * **Aggregated turn summary** (``XOpenWebUISource``,
+#     ``XOpenWebUIToolUsedEntry``):
+#     - Streaming: terminal summary chunk just before ``[DONE]``, carrying
+#       ``x_open_webui.sources`` and ``x_open_webui.tools_used``.
+#     - Non-streaming: ``sources`` and ``tools_used`` as top-level fields
+#       alongside ``tool_events`` on the ``chat.completion`` response.
+#     - Only emitted when at least one of ``sources`` or ``tools_used``
+#       is non-empty.
+#
+# The actual emitted payloads are plain ``dict``\ s; these models mirror
+# their shape so future maintainers can see the contract at a glance.
+# ----------------------------------------------------------------------------
+class XOpenWebUIToolEvent(BaseModel):
+    """Custom, optional extension to OpenAI chat completion objects.
+
+    Emitted only on outputs produced while API Tools are executing server-side.
+
+    * **Streaming** (``stream: true``): carried as ``x_open_webui.tool_event``
+      (singular) on individual ``chat.completion.chunk`` objects.
+    * **Non-streaming** (``stream: false``): carried as elements of the
+      ``x_open_webui.tool_events`` (plural) array on the final
+      ``chat.completion`` response object.
+
+    Compliant OpenAI clients ignore unknown top-level keys, so the response
+    remains valid for non-custom consumers. Custom clients should branch on
+    ``event["type"]`` to render progress UI.
+    """
+
+    type: str
+    """One of ``tool_call_start``, ``tool_call_end``, ``tool_error``,
+    ``tool_loop_max_iterations``."""
+
+    tool_call_id: str
+    """The upstream provider's tool call id (e.g. ``call_abc123``)."""
+
+    tool_name: str
+    """Name of the tool being invoked (e.g. ``web_search``)."""
+
+    iteration: int
+    """1-based index of the current tool-execution loop iteration."""
+
+    timestamp: str
+    """ISO-8601 UTC timestamp of the event."""
+
+    arguments: dict | None = None
+    """Parsed tool arguments. Present on ``tool_call_start``,
+    ``tool_call_end``, and ``tool_error`` (to allow summary builders
+    to produce ``tools_used`` entries from end events alone)."""
+
+    result_summary: str | None = None
+    """Truncated tool result (max 500 chars). Present on ``tool_call_end``
+    and ``tool_error``."""
+
+    error: str | None = None
+    """Error message. Present on ``tool_error`` only."""
+
+    files: list[dict] | None = None
+    """Structured file objects (``[{type: 'image'|'audio'|'data',
+    url|content: ...}]``). Present on ``tool_call_end`` only, when the tool
+    returned files. **Omitted entirely from the payload when empty**
+    (not serialized as ``[]``)."""
+
+    embeds: list[str] | None = None
+    """HTML strings or URLs to render as iframe embeds. Present on
+    ``tool_call_end`` only, when the tool returned embeds. **Omitted
+    entirely from the payload when empty** (not serialized as ``[]``)."""
+
+    citations: list[dict] | None = None
+    """Citation source objects (``{source, document, metadata}``) for tools
+    such as ``search_web``, ``fetch_url``, ``view_file``,
+    ``view_knowledge_file``, and ``query_knowledge_files``. Present on
+    ``tool_call_end`` only, when the tool returned citations. **Omitted
+    entirely from the payload when empty** (not serialized as ``[]``)."""
+
+
+# ----------------------------------------------------------------------------
+# API Tools aggregated summary models — ``x_open_webui.sources`` and
+# ``x_open_webui.tools_used``. These appear in a **terminal summary chunk**
+# (streaming, before ``[DONE]``) or as top-level fields on the non-streaming
+# ``chat.completion`` response. Only emitted when non-empty.
+#
+# Like ``XOpenWebUIToolEvent`` above, these are NOT used as
+# ``response_model`` — they are plain ``dict`` schemas documented here for
+# maintainability.
+# ----------------------------------------------------------------------------
+class XOpenWebUISource(BaseModel):
+    """A single citation source entry in ``x_open_webui.sources``.
+
+    Combines RAG file/knowledge retrieval results with tool-execution
+    citations (``search_web``, ``fetch_url``, knowledge tools).
+    """
+
+    source: dict
+    """Source descriptor::
+
+        {"id": "file-abc or collection-id", "name": "Display name",
+         "type": "file | collection | web_search | ...",
+         "url": "https://..."  // optional}
+    """
+
+    document: list[str]
+    """Relevant text snippets (one string per chunk)."""
+
+    metadata: list[dict]
+    """Per-chunk metadata::
+
+        [{"source": "citation_id", "name": "label override",
+          "file_id": "...", "page": 3, "url": "..."}, ...]
+    """
+
+    distances: list[float] | None = None
+    """Optional relevance scores, one per chunk (e.g. cosine distance)."""
+
+
+class XOpenWebUIToolUsedEntry(BaseModel):
+    """A single tool-execution summary entry in ``x_open_webui.tools_used``.
+
+    One entry per tool call executed during the turn. Provides enough
+    information for a client to render a "Tools used this turn" UI.
+    """
+
+    tool_name: str
+    """Name of the executed tool (e.g. ``web_search``)."""
+
+    tool_call_id: str
+    """The upstream provider's tool call id (e.g. ``call_abc123``)."""
+
+    arguments: dict
+    """The arguments the model provided for this tool call."""
+
+    result_summary: str
+    """Truncated result string (max 500 characters)."""
+
+    status: str
+    """``success`` or ``error``."""
+
+    iteration: int
+    """1-based index of the tool-execution loop iteration."""
+
+    timestamp: str
+    """ISO-8601 UTC timestamp of when the tool call completed."""
+
+    error: str | None = None
+    """Error message. Present only when ``status`` is ``"error"``."""
+
+
 if LOG_FORMAT != 'json':
     banner = rf"""
  ██████╗ ██████╗ ███████╗███╗   ██╗    ██╗    ██╗███████╗██████╗ ██╗   ██╗██╗
@@ -1017,13 +1179,583 @@ async def embeddings(request: Request, form_data: dict, user=Depends(get_verifie
     return await generate_embeddings(request, form_data, user)
 
 
-@app.post('/api/chat/completions')
-@app.post('/api/v1/chat/completions')  # Experimental: Compatibility with OpenAI API
+_API_TOOLS_500_RESPONSES = {
+    'description': 'API Tools internal error (rare). Indicates a backend bug, '
+    'not caller error. Both codes are documented below.',
+    'content': {
+        'application/json': {
+            'examples': {
+                'api_tools_stream_init_failed': {
+                    'summary': 'Failed to initialize streaming tool execution',
+                    'value': {
+                        'error': {
+                            'message': 'Failed to initialize streaming tool execution.',
+                            'type': 'internal_error',
+                            'param': None,
+                            'code': 'api_tools_stream_init_failed',
+                        }
+                    },
+                },
+                'api_tools_aggregation_failed': {
+                    'summary': 'Failed during non-streaming aggregation',
+                    'value': {
+                        'error': {
+                            'message': 'Failed to aggregate tool execution into a non-streaming response.',
+                            'type': 'internal_error',
+                            'param': None,
+                            'code': 'api_tools_aggregation_failed',
+                        }
+                    },
+                },
+            }
+        }
+    },
+}
+
+
+@app.post(
+    '/api/chat/completions',
+    responses={500: _API_TOOLS_500_RESPONSES},
+)
+@app.post(
+    '/api/v1/chat/completions',  # Experimental: Compatibility with OpenAI API
+    responses={500: _API_TOOLS_500_RESPONSES},
+)
 async def chat_completion(
     request: Request,
     form_data: dict,
     user=Depends(get_verified_user),
 ):
+    """OpenAI-compatible chat completion endpoint (streaming or single-shot).
+
+    Accepts an OpenAI-style [Chat Completion](https://platform.openai.com/docs/api-reference/chat/create)
+    payload, resolves the matching model, applies pipeline / outlet / inlet
+    filters, and dispatches to the appropriate backend (Ollama, OpenAI-compatible
+    providers, pipelines, arena models, etc.). Returns either a
+    `chat.completion` object or a SSE stream of `chat.completion.chunk` objects.
+
+    This same handler backs both routes:
+
+    * `POST /api/chat/completions` — native Open WebUI clients.
+    * `POST /api/v1/chat/completions` — experimental, drop-in compatible with
+      the OpenAI API path.
+
+    ---
+    ## API Tools (server-side tool execution)
+
+    **API Tools** lets an API caller opt a model into executing its attached
+    tools server-side, mirroring how the Open WebUI frontend handles tools.
+    When enabled for a model, the server — not the client — receives tool
+    calls from the LLM, runs them, feeds results back, and continues the
+    conversation, looping until the model produces a final answer or the
+    iteration cap (`CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS`) is reached.
+    Progress is surfaced to the client via the custom `x_open_webui`
+    extension field — either as **`x_open_webui.tool_event`** (singular)
+    chunks interleaved with a streaming content stream, or aggregated into
+    **`x_open_webui.tool_events`** (plural) on a single non-streaming
+    response. See [Streaming modes](#streaming-modes) below.
+
+    ### Prerequisites
+
+    All of the following must be true for API Tools to activate on a request:
+
+    1. **Global config `chat.api_tools.enabled`** is `True`.
+       Admins can set this via the DB config or the `CHAT_API_TOOLS_ENABLED=True`
+       environment variable. **Default: `False`.**
+    2. **The model has the `api_tools` capability** — set
+       `info.meta.capabilities.api_tools: true` on the model (e.g. via the
+       model editor at `/workspace/models/edit`). **Default: `False`.**
+    3. **`function_calling != 'legacy'`** — set on the model params or in the
+       request `params.function_calling` field. Anything other than `'legacy'`
+       qualifies; the default is `'native'`.
+
+    Additionally, the request must originate from a **stateless API caller**
+    (no UI `session_id`). UI calls always go through the regular frontend
+    tool-execution path and never activate API Tools.
+
+    When active, the server **auto-resolves** `info.meta.toolIds` (user-installed
+    Tools) and `info.meta.terminalId` (terminal / MCP tool server) on the
+    caller's behalf — API callers do not need to send `tool_ids` in the body.
+
+    ### What tools are exposed
+
+    For privacy (API keys are often shared across users), the **builtin tool
+    set exposed via API is restricted to an allowlist**:
+
+    | Builtin tool      | Exposed via API Tools |
+    | ----------------- | --------------------- |
+    | `time`            | Yes                   |
+    | `knowledge`       | Yes                   |
+    | `web_search`      | Yes                   |
+    | All others        | **No**                |
+
+    Personal-data tools (memory, chats, channels, notes, automations,
+    calendar, etc.) are **never** exposed via API Tools and cannot leak
+    across shared API keys.
+
+    On top of the builtin allowlist:
+
+    * **User-installed Tools** attached to the model via `info.meta.toolIds`
+      are executed (subject to the user's normal Tool permissions).
+    * **MCP / Terminal tool servers** are additionally gated behind a
+      separate capability, `info.meta.capabilities.api_terminal: true`
+      (default `False`). See the privacy / safety note below.
+
+    ### Streaming modes
+
+    API Tools supports **both** streaming and non-streaming requests.
+    The `stream` flag controls how tool-execution progress is delivered
+    back to the client.
+
+    #### Streaming (`stream: true`)
+
+    Tool events are emitted as **`x_open_webui.tool_event`** (singular)
+    on individual `chat.completion.chunk` objects, interleaved with the
+    normal content / tool_call chunks. This is the natural mode for
+    rendering live progress UI.
+
+    ```json
+    {
+      "id": "chatcmpl-x",
+      "object": "chat.completion.chunk",
+      "choices": [{"index": 0, "delta": {}, "finish_reason": null}],
+      "x_open_webui": {
+        "tool_event": {
+          "type": "tool_call_end",
+          "tool_call_id": "call_abc",
+          "tool_name": "web_search",
+          "iteration": 1,
+          "timestamp": "2026-07-13T12:34:57.012+00:00",
+          "result_summary": "Found 5 results..."
+        }
+      }
+    }
+    ```
+
+    #### Non-streaming (`stream: false`)
+
+    All tool events that occurred during execution are aggregated into the
+    **`x_open_webui.tool_events`** (plural — note the **`'s'`**) array on
+    the single final `chat.completion` response object. The response is
+    otherwise a standard OpenAI chat completion; non-custom clients can
+    ignore the `x_open_webui` key entirely.
+
+    ```json
+    {
+      "id": "chatcmpl-x",
+      "object": "chat.completion",
+      "choices": [
+        {
+          "index": 0,
+          "message": {"role": "assistant", "content": "Based on the latest release notes..."},
+          "finish_reason": "stop"
+        }
+      ],
+      "x_open_webui": {
+        "tool_events": [
+          {"type": "tool_call_start", "tool_call_id": "call_abc", "tool_name": "web_search", "iteration": 1, "timestamp": "...", "arguments": {"query": "..."}},
+          {"type": "tool_call_end",   "tool_call_id": "call_abc", "tool_name": "web_search", "iteration": 1, "timestamp": "...", "result_summary": "Found 5 results..."}
+        ]
+      }
+    }
+    ```
+
+    In both modes the per-event payload shape is identical and matches
+    `XOpenWebUIToolEvent` (see the reference model defined near the top
+    of this module).
+
+    #### Internal errors (rare)
+
+    If something goes wrong inside the server-side tool-execution wrapper
+    itself (not the model or the tool), the endpoint responds with
+    **HTTP 500** and one of the following `error.code` values. Both are
+    rare and indicate a backend bug, not caller error:
+
+    | HTTP | `error.code`                       | When                                          |
+    | ---- | ---------------------------------- | --------------------------------------------- |
+    | 500  | `api_tools_stream_init_failed`     | Failure initializing the streaming path.      |
+    | 500  | `api_tools_aggregation_failed`     | Failure during non-streaming aggregation.     |
+
+    ### The `x_open_webui` extension field
+
+    During tool execution, output objects carry an extra top-level
+    `x_open_webui` field (`tool_event` singular on streaming chunks,
+    `tool_events` plural array on non-streaming responses):
+
+    * **Optional.** It only appears on outputs produced during a
+      tool-execution step; regular content / usage chunks do not include it.
+    * **Safe for standard clients.** Per the JSON spec, compliant OpenAI
+      clients ignore unknown top-level keys, so the response remains a valid
+      OpenAI chat completion (streaming or non-streaming). Standard clients
+      simply render the `delta.content` / `choices[0].message.content`.
+    * **Reference schema:** see `XOpenWebUIToolEvent` defined near the top of
+      this module for the canonical field list.
+
+    Full chunk shape (streaming):
+
+    ```json
+    {
+      "id": "chatcmpl-abc123",
+      "object": "chat.completion.chunk",
+      "created": 1720847696,
+      "model": "my-model",
+      "system_fingerprint": "fp_...",
+      "choices": [{"index": 0, "delta": {}, "finish_reason": null}],
+      "x_open_webui": {
+        "tool_event": {
+          "type": "tool_call_end",
+          "tool_call_id": "call_abc123",
+          "tool_name": "web_search",
+          "iteration": 1,
+          "timestamp": "2026-07-13T12:34:57.012+00:00",
+          "result_summary": "Found 5 results...",
+          "files": [{"type": "image", "url": "https://example.com/chart.png"}],
+          "citations": [{"source": {"name": "Open WebUI Blog", "url": "https://openwebui.com/blog/v0.5"}, "document": ["..."], "metadata": [{"source": "...", "title": "..."}]}]
+        }
+      }
+    }
+    ```
+
+    Per-event field presence:
+
+    | `type`                     | `arguments` | `result_summary` | `error` | `files` / `embeds` / `citations` |
+    | -------------------------- | ----------- | ---------------- | ------- | -------------------------------- |
+    | `tool_call_start`          | **yes**     | —                | —       | —                                |
+    | `tool_call_end`            | **yes**     | **yes** (≤500c)  | —       | **optional** (see below)         |
+    | `tool_error`               | **yes**     | **yes** (≤500c)  | **yes** | —                                |
+    | `tool_loop_max_iterations` | —           | —                | —       | —                                |
+
+    `result_summary` is truncated to **500 characters**. The full result is
+    always fed back to the LLM via a `role: "tool"` message regardless of the
+    summary length.
+
+    #### Structured tool result data (`tool_call_end` only)
+
+    On `tool_call_end`, the event payload **may** additionally carry three
+    structured-data keys. **All three are omitted entirely from the payload
+    when empty** (they are NOT serialized as `[]`) — clients should treat
+    their absence as "none":
+
+    | Key         | Type     | Present when                                 | Description                                                                          |
+    | ----------- | -------- | -------------------------------------------- | ----------------------------------------------------------------------------------- |
+    | `files`     | list     | `tool_call_end`, when the tool returned files    | Structured file objects, each `{type, url or content}` where `type` is `image`, `audio`, or `data`. |
+    | `embeds`    | list     | `tool_call_end`, when the tool returned embeds   | HTML strings or URLs to render as iframe embeds.                                    |
+    | `citations` | list     | `tool_call_end`, when the tool returned citations | Citation source objects `[{source, document, metadata}]` (for `search_web`, `fetch_url`, `view_file`, `view_knowledge_file`, `query_knowledge_files`). |
+
+    Custom clients should branch on the event `type` to render progress
+    (a spinner while a tool runs, an error badge on `tool_error`, a stop
+    badge on `tool_loop_max_iterations`) and surface `files` / `embeds` /
+    `citations` from `tool_call_end` as rich UI (image attachments, iframe
+    previews, source footnotes respectively).
+
+    ### Aggregated summary: `sources` and `tools_used`
+
+    In addition to the per-event `tool_event` progress described above, the
+    API emits a **unified turn-level summary** carrying **`x_open_webui.sources`**
+    and **`x_open_webui.tools_used`**. This summary is designed for a
+    single-chunk read — clients can render a "Sources" and "Tools used"
+    section below the assistant response, mirroring the native Open WebUI UI.
+
+    **When it appears:**
+
+    - **Streaming (`stream: true`):** a terminal ``chat.completion.chunk``
+      carrying ONLY ``x_open_webui.sources`` and/or ``x_open_webui.tools_used``,
+      emitted just before ``data: [DONE]``. The chunk is otherwise empty
+      (``delta: {}``, ``finish_reason: null`` or the actual final reason).
+    - **Non-streaming (`stream: false`):** top-level fields ``sources`` and
+      ``tools_used`` alongside ``tool_events`` on the ``chat.completion``
+      response object.
+
+    **Only emitted when at least one of `sources` or `tools_used` is
+    non-empty.** When no tools were called and no RAG sources were retrieved,
+    neither field appears.
+
+    #### `sources` — combined citation sources
+
+    A list of source objects combining:
+
+    - **RAG citation sources** — file/knowledge documents retrieved when the
+      model has knowledge attached and RAG is enabled.
+    - **Tool-execution citations** — from ``search_web``, ``fetch_url``,
+      ``view_file``, ``view_knowledge_file``, ``query_knowledge_files``.
+
+    Each entry in ``sources`` (see also ``XOpenWebUISource``):
+
+    ```json
+    {
+      "source": {
+        "id": "file-abc or collection-id or URL",
+        "name": "Display name",
+        "type": "file | collection | web_search | ...",
+        "url": "https://..."
+      },
+      "document": ["relevant snippet 1", "snippet 2"],
+      "metadata": [
+        {"source": "citation_id", "name": "label", "file_id": "abc", "page": 3, "url": "https://..."}
+      ],
+      "distances": [0.85, 0.72]
+    }
+    ```
+
+    | Path                     | Type          | Required | Description                                                                                     |
+    | ------------------------ | ------------- | -------- | ----------------------------------------------------------------------------------------------- |
+    | ``source.id``            | string        | **yes**  | Unique identifier (file id, collection id, URL).                                               |
+    | ``source.name``          | string        | **yes**  | Human-readable display name.                                                                   |
+    | ``source.type``          | string        | **yes**  | Origin type: ``file``, ``collection``, ``web_search``, etc.                                    |
+    | ``source.url``           | string        | no       | External URL (for web_search / fetch_url sources).                                              |
+    | ``document[]``           | list[string]  | **yes**  | Relevant text snippets, one per retrieved chunk.                                                |
+    | ``metadata[]``           | list[dict]    | **yes**  | Per-chunk metadata: ``source`` (citation_id), ``name`` (label), ``file_id``, ``page``, ``url``. |
+    | ``distances[]``          | list[float]   | no       | Relevance scores (one per chunk), e.g. cosine distance. Omitted when unavailable.               |
+
+    #### `tools_used` — per-tool-call summary
+
+    A list of summary entries — one per tool call executed during the turn.
+    Provides enough context to render a "Tools used this turn" UI without
+    replaying the entire event stream.
+
+    Each entry (see also ``XOpenWebUIToolUsedEntry``):
+
+    ```json
+    {
+      "tool_name": "web_search",
+      "tool_call_id": "call_abc",
+      "arguments": {"query": "Open WebUI latest release"},
+      "result_summary": "Found 5 results. Top: Open WebUI v0.5.0...",
+      "status": "success",
+      "iteration": 1,
+      "timestamp": "2026-07-14T12:34:56.789+00:00"
+    }
+    ```
+
+    When the tool call fails:
+
+    ```json
+    {
+      "tool_name": "web_search",
+      "tool_call_id": "call_xyz",
+      "arguments": {},
+      "result_summary": "Network timeout after 30s",
+      "status": "error",
+      "iteration": 1,
+      "timestamp": "2026-07-14T12:35:10.123+00:00",
+      "error": "Network timeout after 30s"
+    }
+    ```
+
+    | Key                  | Type   | Required | Description                                                                 |
+    | -------------------- | ------ | -------- | --------------------------------------------------------------------------- |
+    | ``tool_name``        | string | **yes**  | Name of the executed tool (e.g. ``web_search``).                            |
+    | ``tool_call_id``     | string | **yes**  | The upstream provider's tool call id.                                       |
+    | ``arguments``        | dict   | **yes**  | Arguments the model provided for this tool call.                            |
+    | ``result_summary``   | string | **yes**  | Truncated result string (max 500 characters).                               |
+    | ``status``           | string | **yes**  | ``success`` or ``error``.                                                    |
+    | ``iteration``        | int    | **yes**  | 1-based index of the tool-execution loop iteration.                         |
+    | ``timestamp``        | string | **yes**  | ISO-8601 UTC timestamp of when the tool call completed.                     |
+    | ``error``            | string | no       | Error message. Present only when ``status`` is ``"error"``.                 |
+
+    **Client integration tip:** to render the native "Sources" and "Tools
+    used" UX, your client should:
+    1. In streaming mode, watch for the terminal summary chunk (the last
+       chunk with an ``x_open_webui`` key before ``[DONE]``).
+    2. In non-streaming mode, read ``response["x_open_webui"]["sources"]``
+       and ``response["x_open_webui"]["tools_used"]`` directly.
+    3. ``sources`` maps to the "Sources" section (cite from
+       ``metadata[].source``, display ``metadata[].name``, link to
+       ``metadata[].url`` or ``metadata[].file_id`` for native file deep-links).
+    4. ``tools_used`` maps to the "Tools used this turn" section (show
+       ``tool_name``, ``iteration``, ``status`` badge, optional error message).
+
+    ### Examples
+
+    Both examples assume `my-web-enabled-model` has
+    `info.meta.capabilities.api_tools: true`, `function_calling` is not
+    `'legacy'`, and the admin has enabled `chat.api_tools.enabled`.
+
+    #### Example A — Streaming (`stream: true`)
+
+    **1. Request (curl):**
+
+    ```bash
+    curl -N -X POST "https://openwebui.example.com/api/v1/chat/completions" \
+      -H "Authorization: Bearer $OPENWEBUI_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "model": "my-web-enabled-model",
+        "stream": true,
+        "messages": [
+          { "role": "user", "content": "What is new in the latest Open WebUI release?" }
+        ]
+      }'
+    ```
+
+    **2. Resulting SSE stream (abbreviated).** The `tool_call_end` chunk
+    carries `files` and `citations` (structured tool output). **The terminal
+    summary chunk** (just before `[DONE]`) carries the aggregated
+    `sources` and `tools_used` — read this single chunk to render the final
+    "Sources" and "Tools used" sections.
+
+    ```
+    data: {"id":"chatcmpl-x","object":"chat.completion.chunk","model":"my-web-enabled-model","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+
+    data: {"id":"chatcmpl-x","object":"chat.completion.chunk","model":"my-web-enabled-model","choices":[{"index":0,"delta":{"content":"Let me"},"finish_reason":null}]}
+
+    data: {"id":"chatcmpl-x","object":"chat.completion.chunk","model":"my-web-enabled-model","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_abc","type":"function","function":{"name":"web_search","arguments":"{\"query\":\"Open WebUI latest release notes\"}"}}]},"finish_reason":null}]}
+
+    data: {"id":"chatcmpl-x","object":"chat.completion.chunk","model":"my-web-enabled-model","choices":[{"index":0,"delta":{},"finish_reason":null}],"x_open_webui":{"tool_event":{"type":"tool_call_start","tool_call_id":"call_abc","tool_name":"web_search","iteration":1,"timestamp":"2026-07-13T12:34:56.789+00:00","arguments":{"query":"Open WebUI latest release notes"}}}}
+
+    data: {"id":"chatcmpl-x","object":"chat.completion.chunk","model":"my-web-enabled-model","choices":[{"index":0,"delta":{},"finish_reason":null}],"x_open_webui":{"tool_event":{"type":"tool_call_end","tool_call_id":"call_abc","tool_name":"web_search","iteration":1,"timestamp":"2026-07-13T12:34:57.012+00:00","arguments":{"query":"Open WebUI latest release notes"},"result_summary":"Found 5 results. Top: Open WebUI v0.5.0 release notes...","files":[{"type":"image","url":"https://openwebui.com/img/release-chart.png"}],"citations":[{"source":{"name":"Open WebUI Blog","url":"https://openwebui.com/blog/v0.5"},"document":["Open WebUI v0.5 release notes..."],"metadata":[{"source":"https://openwebui.com/blog/v0.5","title":"v0.5 Release"}]}]}}}
+
+    data: {"id":"chatcmpl-x","object":"chat.completion.chunk","model":"my-web-enabled-model","choices":[{"index":0,"delta":{"content":"Based on the latest release notes, "},"finish_reason":null}]}
+
+    data: {"id":"chatcmpl-x","object":"chat.completion.chunk","model":"my-web-enabled-model","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+    data: {"id":"chatcmpl-x","object":"chat.completion.chunk","model":"my-web-enabled-model","choices":[{"index":0,"delta":{},"finish_reason":null}],"x_open_webui":{"sources":[{"source":{"id":"search_web","name":"search_web","type":"web_search"},"document":["Open WebUI v0.5.0 release notes..."],"metadata":[{"source":"https://openwebui.com/blog/v0.5","name":"v0.5 Release","url":"https://openwebui.com/blog/v0.5"}]}],"tools_used":[{"tool_name":"web_search","tool_call_id":"call_abc","arguments":{"query":"Open WebUI latest release notes"},"result_summary":"Found 5 results. Top: Open WebUI v0.5.0...","status":"success","iteration":1,"timestamp":"2026-07-13T12:34:57.012+00:00"}]}}
+
+    data: [DONE]
+    ```
+
+    **3. Client-side handling (Python snippet):**
+
+    ```python
+    for raw in response.iter_lines():
+        if not raw.startswith("data: ") or raw.endswith("[DONE]"):
+            continue
+        chunk = json.loads(raw[len("data: "):])
+        xow = chunk.get("x_open_webui", {})
+        evt = xow.get("tool_event")
+        if xow.get("sources") or xow.get("tools_used"):
+            # Terminal summary chunk — render final "Sources" / "Tools used" sections
+            for src in xow.get("sources", []):
+                print(f"[source] {src['source']['name']} ({src['source']['url']})")
+            for tu in xow.get("tools_used", []):
+                badge = "OK" if tu["status"] == "success" else "FAIL"
+                print(f"[tool_used] [{badge}] {tu['tool_name']} (iter {tu['iteration']})")
+        elif evt:
+            print(f"[tool {evt['type']}] {evt['tool_name']} (iter {evt['iteration']})")
+            if evt["type"] == "tool_call_end":
+                for f in evt.get("files", []):
+                    print(f"  file: {f.get('type')} -> {f.get('url') or f.get('content')}")
+                for c in evt.get("citations", []):
+                    print(f"  citation: {c['source'].get('name')} ({c['source'].get('url')})")
+        else:
+            delta = chunk["choices"][0]["delta"].get("content")
+            if delta:
+                print(delta, end="", flush=True)
+    ```
+
+    #### Example B — Non-streaming (`stream: false`)
+
+    **1. Request (curl):**
+
+    ```bash
+    curl -X POST "https://openwebui.example.com/api/v1/chat/completions" \
+      -H "Authorization: Bearer $OPENWEBUI_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "model": "my-web-enabled-model",
+        "stream": false,
+        "messages": [
+          { "role": "user", "content": "What is new in the latest Open WebUI release?" }
+        ]
+      }'
+    ```
+
+    **2. Resulting single JSON response.** The `x_open_webui` block carries
+    all three extension fields: `tool_events` (per-event detail, backwards
+    compat), `sources` (combined citations), and `tools_used` (per-tool-call
+    summary).
+
+    ```json
+    {
+      "id": "chatcmpl-x",
+      "object": "chat.completion",
+      "created": 1720847697,
+      "model": "my-web-enabled-model",
+      "choices": [
+        {
+          "index": 0,
+          "message": {"role": "assistant", "content": "Based on the latest release notes..."},
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {"prompt_tokens": 42, "completion_tokens": 128, "total_tokens": 170},
+      "x_open_webui": {
+        "tool_events": [
+          {"type": "tool_call_start", "tool_call_id": "call_abc", "tool_name": "web_search", "iteration": 1, "timestamp": "2026-07-13T12:34:56.789+00:00", "arguments": {"query": "Open WebUI latest release notes"}},
+          {"type": "tool_call_end",   "tool_call_id": "call_abc", "tool_name": "web_search", "iteration": 1, "timestamp": "2026-07-13T12:34:57.012+00:00", "arguments": {"query": "Open WebUI latest release notes"}, "result_summary": "Found 5 results...", "files": [{"type": "image", "url": "https://openwebui.com/img/release-chart.png"}], "citations": [{"source": {"name": "Open WebUI Blog", "url": "https://openwebui.com/blog/v0.5"}, "document": ["..."], "metadata": [{"source": "https://openwebui.com/blog/v0.5", "title": "v0.5 Release"}]}]}
+        ],
+        "sources": [
+          {"source": {"id": "search_web", "name": "search_web", "type": "web_search"}, "document": ["Open WebUI v0.5.0 release notes..."], "metadata": [{"source": "https://openwebui.com/blog/v0.5", "name": "v0.5 Release", "url": "https://openwebui.com/blog/v0.5"}]}
+        ],
+        "tools_used": [
+          {"tool_name": "web_search", "tool_call_id": "call_abc", "arguments": {"query": "Open WebUI latest release notes"}, "result_summary": "Found 5 results. Top: Open WebUI v0.5.0...", "status": "success", "iteration": 1, "timestamp": "2026-07-13T12:34:57.012+00:00"}
+        ]
+      }
+    }
+    ```
+
+    **3. Client-side handling (Python snippet):**
+
+    ```python
+    data = response.json()
+    print(data["choices"][0]["message"]["content"])
+
+    xow = data.get("x_open_webui", {})
+
+    # Per-tool-event detail (backwards compat)
+    for evt in xow.get("tool_events", []):
+        print(f"[tool {evt['type']}] {evt['tool_name']} (iter {evt['iteration']})")
+
+    # Aggregated sources — render "Sources" section
+    for src in xow.get("sources", []):
+        print(f"[source] {src['source']['name']}")
+        for doc, meta in zip(src["document"], src["metadata"]):
+            print(f"  {meta.get('name', '')}: {doc[:80]}...")
+
+    # Aggregated tools_used — render "Tools used this turn" section
+    for tu in xow.get("tools_used", []):
+        badge = "OK" if tu["status"] == "success" else "FAIL"
+        print(f"[tool_used] [{badge}] {tu['tool_name']} (iter {tu['iteration']}): {tu['result_summary'][:60]}...")
+    ```
+
+    ### Privacy / safety note
+
+    * API Tools executes the model's **attached tools server-side**, under the
+      **identity of the API key's user**. Any side effects (web searches,
+      knowledge queries, terminal commands) run with that user's permissions.
+    * The **builtin tool allowlist is deliberately small** (`time`,
+      `knowledge`, `web_search`) to prevent personal data from one user
+      leaking to another via a shared API key. Do not widen this allowlist
+      without considering the cross-user data-exposure risk.
+    * **Terminal / MCP tool servers** via the API are gated separately on
+      `info.meta.capabilities.api_terminal: true` (default `False`). When
+      enabled, arbitrary shell commands may be executed server-side on behalf
+      of the API caller. Enable only on trusted models with narrowly scoped
+      tool servers, and audit the attached tool servers carefully.
+    * **Tool results are passed through to the API caller.** A tool's
+      structured output (`files`, `embeds`, `citations` on `tool_call_end`)
+      is surfaced verbatim in the `x_open_webui` extension — so the caller
+      sees images, audio, data, citation URLs, iframe embeds, etc. produced
+      by tools like `web_search` and knowledge tools. Treat this output as
+      untrusted tool-derived content (it may reference external URLs).
+    * All tool execution is logged via the standard Open WebUI logger and
+      is subject to the same audit trail as UI-initiated tool calls.
+
+    Args:
+        request (Request): Request context.
+        form_data (dict): OpenAI-compatible chat completion payload.
+        user: Authenticated user (verified token).
+
+    Returns:
+        StreamingResponse | JSONResponse: SSE stream of
+        ``chat.completion.chunk`` objects (carrying
+        ``x_open_webui.tool_event``) when ``stream=True``, otherwise a
+        single ``chat.completion`` object carrying the aggregated
+        ``x_open_webui.tool_events`` array. Returns HTTP 500 with
+        ``code: "api_tools_stream_init_failed"`` or
+        ``"api_tools_aggregation_failed"`` on rare internal errors inside
+        the API Tools wrapper.
+    """
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 

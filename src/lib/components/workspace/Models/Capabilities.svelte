@@ -56,6 +56,18 @@
 			description: $i18n.t(
 				'Automatically inject system tools in native function calling mode (e.g., timestamps, memory, chat history, notes, etc.)'
 			)
+		},
+		api_tools: {
+			label: $i18n.t('API Tools'),
+			description: $i18n.t(
+				'When enabled, this model exposes its builtin and attached tools (web search, knowledge, time) to API/programmatic callers (no UI session). Off by default. Built-in tool access is restricted to time, knowledge, and web_search for privacy.'
+			)
+		},
+		api_terminal: {
+			label: $i18n.t('API Terminal'),
+			description: $i18n.t(
+				'When enabled, this model can use its attached Terminal tool server when called via the API. Off by default. Use with caution — terminal servers can execute arbitrary commands.'
+			)
 		}
 	};
 
@@ -71,6 +83,8 @@
 		citations?: boolean;
 		status_updates?: boolean;
 		builtin_tools?: boolean;
+		api_tools?: boolean;
+		api_terminal?: boolean;
 	} = {};
 
 	// Hide file_context when file_upload is disabled

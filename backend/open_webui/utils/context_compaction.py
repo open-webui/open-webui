@@ -19,6 +19,9 @@ from open_webui.utils.task import (
 
 log = logging.getLogger(__name__)
 
+_TIKTOKEN_ENC = None
+_TIKTOKEN_AVAILABLE = None  # None = unknown, True/False after first attempt
+
 DEFAULT_CONTEXT_COMPACTION_PROMPT = """### Task:
 Summarize the conversation history that will be compacted out of the active chat context.
 
@@ -341,6 +344,30 @@ def _response_text(response: Any) -> str:
     return '\n'.join(part for part in parts if part)
 
 
+def _get_tiktoken_encoder():
+    """
+    Lazily load and cache the cl100k_base tiktoken encoder.
+
+    Returns None if tiktoken is unavailable or fails to load (caller falls
+    back to char-based heuristic).
+    """
+    global _TIKTOKEN_ENC, _TIKTOKEN_AVAILABLE
+    if _TIKTOKEN_AVAILABLE is False:
+        return None
+    if _TIKTOKEN_ENC is not None:
+        return _TIKTOKEN_ENC
+    try:
+        import tiktoken
+
+        _TIKTOKEN_ENC = tiktoken.get_encoding('cl100k_base')
+        _TIKTOKEN_AVAILABLE = True
+        return _TIKTOKEN_ENC
+    except Exception as e:
+        log.warning(f'tiktoken unavailable, falling back to char-based token estimate: {e}')
+        _TIKTOKEN_AVAILABLE = False
+        return None
+
+
 def _estimate_messages_tokens(messages: list[dict]) -> int:
     total = 0
     for message in messages:
@@ -364,16 +391,21 @@ def _estimate_messages_tokens(messages: list[dict]) -> int:
 
 
 def _estimate_tokens(value: Any) -> int:
+    """
+    Estimate token count for a value using tiktoken (cl100k_base encoding)
+    when available, falling back to len(str(value))//4 when not.
+    """
     if value is None:
         return 0
-
     if not isinstance(value, str):
-        try:
-            value = json.dumps(value, ensure_ascii=False)
-        except Exception:
-            value = str(value)
-
+        value = str(value)
     if not value:
         return 0
-
+    enc = _get_tiktoken_encoder()
+    if enc is not None:
+        try:
+            return len(enc.encode(value, disallowed_special=()))
+        except Exception:
+            # encode failure on unusual content — fall through to heuristic
+            pass
     return max(1, len(value) // 4)

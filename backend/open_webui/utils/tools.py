@@ -463,7 +463,11 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
 
 
 async def get_builtin_tools(
-    request: Request, extra_params: dict, features: dict = None, model: dict = None
+    request: Request,
+    extra_params: dict,
+    features: dict = None,
+    model: dict = None,
+    allowed_categories: Optional[set] = None,
 ) -> dict[str, dict]:
     """
     Get built-in tools for native function calling.
@@ -507,7 +511,7 @@ async def get_builtin_tools(
         )
 
     # Time utilities - available for date calculations
-    if is_builtin_tool_enabled('time'):
+    if (allowed_categories is None or 'time' in allowed_categories) and is_builtin_tool_enabled('time'):
         builtin_functions.extend([get_current_timestamp, calculate_timestamp])
 
     # Knowledge base tools - conditional injection based on model knowledge
@@ -518,7 +522,7 @@ async def get_builtin_tools(
     folder_knowledge = extra_params.get('__metadata__', {}).get('folder_knowledge')
     if folder_knowledge:
         model_knowledge = list(model_knowledge or []) + list(folder_knowledge)
-    if is_builtin_tool_enabled('knowledge'):
+    if (allowed_categories is None or 'knowledge' in allowed_categories) and is_builtin_tool_enabled('knowledge'):
         from open_webui.env import ENABLE_KB_EXEC
 
         if ENABLE_KB_EXEC:
@@ -556,12 +560,13 @@ async def get_builtin_tools(
             )
 
     # Chats tools - search and fetch user's chat history
-    if is_builtin_tool_enabled('chats'):
+    if (allowed_categories is None or 'chats' in allowed_categories) and is_builtin_tool_enabled('chats'):
         builtin_functions.extend([search_chats, view_chat])
 
     # Add memory tools when memory is enabled and the model allows this builtin category.
     if (
-        is_builtin_tool_enabled('memory')
+        (allowed_categories is None or 'memory' in allowed_categories)
+        and is_builtin_tool_enabled('memory')
         and features.get('memory')
         and get_model_capability('memory')
         and await has_user_permission('memories')
@@ -581,7 +586,8 @@ async def get_builtin_tools(
 
     # Add web search tools if builtin category enabled AND enabled globally AND model has web_search capability
     if (
-        is_builtin_tool_enabled('web_search')
+        (allowed_categories is None or 'web_search' in allowed_categories)
+        and is_builtin_tool_enabled('web_search')
         and config.get('web.search.enable')
         and get_model_capability('web_search')
         and features.get('web_search')
@@ -591,7 +597,8 @@ async def get_builtin_tools(
 
     # Add image generation/edit tools if builtin category enabled AND enabled globally AND model has image_generation capability
     if (
-        is_builtin_tool_enabled('image_generation')
+        (allowed_categories is None or 'image_generation' in allowed_categories)
+        and is_builtin_tool_enabled('image_generation')
         and config.get('image_generation.enable')
         and get_model_capability('image_generation')
         and features.get('image_generation')
@@ -599,7 +606,8 @@ async def get_builtin_tools(
     ):
         builtin_functions.append(generate_image)
     if (
-        is_builtin_tool_enabled('image_generation')
+        (allowed_categories is None or 'image_generation' in allowed_categories)
+        and is_builtin_tool_enabled('image_generation')
         and config.get('images.edit.enable')
         and get_model_capability('image_generation')
         and features.get('image_generation')
@@ -609,7 +617,8 @@ async def get_builtin_tools(
 
     # Add code interpreter tool if builtin category enabled AND enabled globally AND model has code_interpreter capability
     if (
-        is_builtin_tool_enabled('code_interpreter')
+        (allowed_categories is None or 'code_interpreter' in allowed_categories)
+        and is_builtin_tool_enabled('code_interpreter')
         and config.get('code_interpreter.enable')
         and get_model_capability('code_interpreter')
         and features.get('code_interpreter')
@@ -618,11 +627,21 @@ async def get_builtin_tools(
         builtin_functions.append(execute_code)
 
     # Notes tools - search, view, create, and update user's notes
-    if is_builtin_tool_enabled('notes') and config.get('notes.enable') and await has_user_permission('notes'):
+    if (
+        (allowed_categories is None or 'notes' in allowed_categories)
+        and is_builtin_tool_enabled('notes')
+        and config.get('notes.enable')
+        and await has_user_permission('notes')
+    ):
         builtin_functions.extend([search_notes, view_note, write_note, replace_note_content])
 
     # Channels tools - search channels and messages
-    if is_builtin_tool_enabled('channels') and config.get('channels.enable') and await has_user_permission('channels'):
+    if (
+        (allowed_categories is None or 'channels' in allowed_categories)
+        and is_builtin_tool_enabled('channels')
+        and config.get('channels.enable')
+        and await has_user_permission('channels')
+    ):
         builtin_functions.extend(
             [
                 search_channels,
@@ -633,16 +652,17 @@ async def get_builtin_tools(
         )
 
     # Skills tools - view_skill allows model to load full skill instructions on demand
-    if extra_params.get('__skill_ids__'):
+    if (allowed_categories is None or 'skills' in allowed_categories) and extra_params.get('__skill_ids__'):
         builtin_functions.append(view_skill)
 
     # Task management - break down complex work into trackable steps
-    if is_builtin_tool_enabled('tasks'):
+    if (allowed_categories is None or 'tasks' in allowed_categories) and is_builtin_tool_enabled('tasks'):
         builtin_functions.extend([create_tasks, update_task])
 
     # Automation tools - create and manage scheduled automations from chat
     if (
-        is_builtin_tool_enabled('automations')
+        (allowed_categories is None or 'automations' in allowed_categories)
+        and is_builtin_tool_enabled('automations')
         and config.get('automations.enable')
         and await has_user_permission('automations')
     ):
@@ -651,7 +671,12 @@ async def get_builtin_tools(
         )
 
     # Calendar tools - search/create/update/delete events
-    if is_builtin_tool_enabled('calendar') and config.get('calendar.enable') and await has_user_permission('calendar'):
+    if (
+        (allowed_categories is None or 'calendar' in allowed_categories)
+        and is_builtin_tool_enabled('calendar')
+        and config.get('calendar.enable')
+        and await has_user_permission('calendar')
+    ):
         builtin_functions.extend(
             [search_calendar_events, create_calendar_event, update_calendar_event, delete_calendar_event]
         )

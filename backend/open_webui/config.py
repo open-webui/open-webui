@@ -487,6 +487,10 @@ CODE_EXECUTION_JUPYTER_TIMEOUT = int(os.getenv('CODE_EXECUTION_JUPYTER_TIMEOUT',
 
 ENABLE_CODE_INTERPRETER = os.getenv('ENABLE_CODE_INTERPRETER', 'True').lower() == 'true'
 
+# Fork: API Tools — allow models to expose builtin/attached tools to API callers (no UI session).
+# Default OFF; per-model capabilities (meta.capabilities.api_tools / api_terminal) further gate this.
+CHAT_API_TOOLS_ENABLED = os.getenv('CHAT_API_TOOLS_ENABLED', 'False').lower() == 'true'
+
 ENABLE_MEMORIES = os.getenv('ENABLE_MEMORIES', 'True').lower() == 'true'
 ENABLE_MEMORY_SYSTEM_CONTEXT = os.getenv('ENABLE_MEMORY_SYSTEM_CONTEXT', 'True').lower() == 'true'
 ENABLE_MEMORY_BACKGROUND_REVIEW = os.getenv('ENABLE_MEMORY_BACKGROUND_REVIEW', 'False').lower() == 'true'
@@ -2209,6 +2213,15 @@ CONTEXT_COMPACTION_TOKEN_THRESHOLD = int(os.getenv('CONTEXT_COMPACTION_TOKEN_THR
 
 CONTEXT_COMPACTION_PROMPT_TEMPLATE = os.getenv('CONTEXT_COMPACTION_PROMPT_TEMPLATE', '')
 
+# Fork: lightweight context pruning (dedupe, prune, purge errors)
+# Runs on every chat (UI + API) before prefix-summarization compaction.
+ENABLE_CONTEXT_PRUNING = os.getenv('ENABLE_CONTEXT_PRUNING', 'True').lower() == 'true'
+ENABLE_CONTEXT_PRUNING_TOOL_OUTPUT = os.getenv('ENABLE_CONTEXT_PRUNING_TOOL_OUTPUT', 'True').lower() == 'true'
+CONTEXT_PRUNING_TOOL_OUTPUT_KEEP_RECENT = int(os.getenv('CONTEXT_PRUNING_TOOL_OUTPUT_KEEP_RECENT', '3'))
+ENABLE_CONTEXT_PRUNING_DEDUPE = os.getenv('ENABLE_CONTEXT_PRUNING_DEDUPE', 'True').lower() == 'true'
+ENABLE_CONTEXT_PRUNING_PURGE_ERRORS = os.getenv('ENABLE_CONTEXT_PRUNING_PURGE_ERRORS', 'True').lower() == 'true'
+CONTEXT_PRUNING_PURGE_ERROR_TURNS = int(os.getenv('CONTEXT_PRUNING_PURGE_ERROR_TURNS', '2'))
+
 TITLE_GENERATION_PROMPT_TEMPLATE = os.getenv('TITLE_GENERATION_PROMPT_TEMPLATE', '')
 
 DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = """### Task:
@@ -3115,6 +3128,13 @@ DEFAULT_CONFIG = {
     'chat.context_compaction.enable': ENABLE_CONTEXT_COMPACTION,
     'chat.context_compaction.token_threshold': CONTEXT_COMPACTION_TOKEN_THRESHOLD,
     'chat.context_compaction.prompt_template': CONTEXT_COMPACTION_PROMPT_TEMPLATE,
+    'chat.context_pruning.enable': ENABLE_CONTEXT_PRUNING,
+    'chat.context_pruning.tool_output_pruning': ENABLE_CONTEXT_PRUNING_TOOL_OUTPUT,
+    'chat.context_pruning.tool_output_keep_recent': CONTEXT_PRUNING_TOOL_OUTPUT_KEEP_RECENT,
+    'chat.context_pruning.dedupe_tool_calls': ENABLE_CONTEXT_PRUNING_DEDUPE,
+    'chat.context_pruning.purge_errors': ENABLE_CONTEXT_PRUNING_PURGE_ERRORS,
+    'chat.context_pruning.purge_error_turns': CONTEXT_PRUNING_PURGE_ERROR_TURNS,
+    'chat.api_tools.enabled': CHAT_API_TOOLS_ENABLED,
     'task.title.prompt_template': TITLE_GENERATION_PROMPT_TEMPLATE,
     'task.tags.prompt_template': TAGS_GENERATION_PROMPT_TEMPLATE,
     'task.image.prompt_template': IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,

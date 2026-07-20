@@ -12,6 +12,7 @@ import sys
 import textwrap
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import uuid4
 
@@ -77,6 +78,7 @@ from open_webui.utils.access_control.files import get_accessible_folder_files
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.context_compaction import compact_messages_for_request
+from open_webui.utils.context_pruning import prune_messages
 from open_webui.utils.files import (
     convert_markdown_base64_images,
     get_file_url_from_base64,
@@ -2257,6 +2259,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if regeneration_prompt:
         form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
 
+    # Fork: lightweight deterministic context pruning (dedupe, prune, purge errors).
+    # Runs for ALL chats (UI + API) — no LLM cost, reduces token usage before
+    # the more expensive prefix-summarization compaction runs.
+    try:
+        form_data['messages'] = await prune_messages(form_data.get('messages') or [])
+    except Exception:
+        log.exception('Context pruning failed (continuing)')
+
     if chat_id and user_message_id and not chat_id.startswith('local:') and not chat_id.startswith('channel:'):
         if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
             compaction_models = {
@@ -2535,11 +2545,45 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     )
     available_skills = []
     view_skill_ids = []
-    use_builtin_tools = (
-        bool(metadata.get('session_id'))
+    # Fork: API Tools — relax the session_id requirement when the model has the
+    # api_tools capability AND the global config chat.api_tools.enabled is True.
+    # When unlocked via API capability (no session_id), builtin tools are restricted
+    # to an allowlist (time, knowledge, web_search) to avoid leaking personal data
+    # (chats, memory, channels, notes, automations, calendar) across shared API keys.
+    model_capabilities = model.get('info', {}).get('meta', {}).get('capabilities') or {}
+
+    api_tools_active = (
+        not bool(metadata.get('session_id'))
+        and bool(model_capabilities.get('api_tools', False))
+        and bool(model_capabilities.get('builtin_tools', True))
         and metadata.get('params', {}).get('function_calling') != 'legacy'
-        and (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('builtin_tools', True)
+        and (await Config.get('chat.api_tools.enabled', False))
     )
+
+    # Stash in metadata so downstream code (Phase 2 Path C streaming branch) can detect.
+    metadata['api_tools_active'] = api_tools_active
+
+    # Builtin tools allowlist for API mode — privacy boundary for shared API keys.
+    API_BUILTIN_TOOLS_ALLOWLIST = {'time', 'knowledge', 'web_search'}
+
+    use_builtin_tools = (
+        (bool(metadata.get('session_id')) or api_tools_active)
+        and metadata.get('params', {}).get('function_calling') != 'legacy'
+        and bool(model_capabilities.get('builtin_tools', True))
+    )
+
+    # Fork: API Tools — when api_tools_active, auto-resolve model-attached toolIds and
+    # terminalId server-side (the frontend normally does this for UI calls). API callers
+    # typically don't know to send tool_ids in the body, so we resolve them here.
+    if api_tools_active:
+        if not tool_ids:
+            model_tool_ids = (model.get('info', {}).get('meta', {}) or {}).get('toolIds', [])
+            if model_tool_ids:
+                tool_ids = list(model_tool_ids)
+        if bool(model_capabilities.get('api_terminal', False)) and not terminal_id:
+            model_terminal_id = (model.get('info', {}).get('meta', {}) or {}).get('terminalId')
+            if model_terminal_id:
+                terminal_id = model_terminal_id
 
     if skill_ids:
         from open_webui.models.skills import Skills as SkillsModel
@@ -2770,6 +2814,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 },
                 features,
                 model,
+                allowed_categories=API_BUILTIN_TOOLS_ALLOWLIST if api_tools_active else None,
             )
             for name, tool_dict in builtin_tools.items():
                 if name not in tools_dict:
@@ -3465,6 +3510,164 @@ async def non_streaming_chat_response_handler(response, ctx):
     if response_data is None:
         return response
 
+    # Path C (non-streaming): re-issue the request as streaming internally,
+    # consume api_tool_stream_wrapper fully, and aggregate into a single
+    # chat.completion object. This avoids the prior v1 behaviour of returning
+    # 400 for stream:false requests when the model has the api_tools
+    # capability. The aggregated response carries an x_open_webui.tool_events
+    # array (plural — distinct from the singular streaming tool_event field).
+    if metadata.get('api_tools_active') and not event_emitter:
+        form_data = ctx.get('form_data', {}) or {}
+        model = ctx.get('model', {}) or {}
+
+        # 1) Re-issue the request as streaming so the tool-execution loop
+        #    in api_tool_stream_wrapper can drive the conversation forward.
+        try:
+            stream_form_data = {
+                **form_data,
+                'stream': True,
+                'metadata': metadata,
+            }
+            stream_response = await generate_chat_completion(
+                request,
+                stream_form_data,
+                user,
+                bypass_system_prompt=True,
+            )
+        except Exception as e:
+            log.exception('api_tools non-streaming: generate_chat_completion failed')
+            return JSONResponse(
+                status_code=500,
+                content={
+                    'error': {
+                        'message': f'Failed to initiate streaming tool loop: {e}',
+                        'type': 'internal_error',
+                        'code': 'api_tools_stream_init_failed',
+                    }
+                },
+            )
+
+        # 2) If the provider ignored stream:true and returned non-streaming
+        #    anyway, we can't run the tool loop. Fall back to returning
+        #    whatever the provider gave us. (Rare; documented as a known
+        #    limitation — the tool calls in the response, if any, are not
+        #    executed server-side in this case.)
+        if not isinstance(stream_response, StreamingResponse):
+            log.warning(
+                'api_tools non-streaming: provider returned non-StreamingResponse '
+                'despite stream=true; passing through without tool execution.'
+            )
+            _, passthrough_data = get_response_data(stream_response)
+            if isinstance(passthrough_data, dict):
+                return JSONResponse(content=passthrough_data)
+            return stream_response
+
+        # 3) Extract RAG citation sources from pre-stream events before
+        # the wrapper consumes them internally.  These are combined later
+        # with tool-execution citations to produce x_open_webui.sources.
+        rag_sources_for_aggregation = []
+        for ev in events or []:
+            if isinstance(ev, dict) and 'sources' in ev:
+                rag_sources_for_aggregation.extend(ev.get('sources') or [])
+
+        # 4) Consume api_tool_stream_wrapper fully, aggregating content,
+        #    tool_event payloads, usage, and identifiers into a single
+        #    non-streaming response.
+        aggregated_content = ''
+        aggregated_tool_events = []
+        aggregated_usage = None
+        aggregated_id = None
+        aggregated_model = None
+        aggregated_finish_reason = None
+
+        try:
+            async for raw_line in api_tool_stream_wrapper(stream_response, ctx, events):
+                if not raw_line:
+                    continue
+                line_text = raw_line.decode('utf-8', 'replace') if isinstance(raw_line, bytes) else raw_line
+                for one_line in line_text.splitlines():
+                    stripped = one_line.strip()
+                    if not stripped or stripped.startswith(':') or stripped.startswith('event:'):
+                        continue
+                    if not stripped.startswith('data:'):
+                        continue
+                    payload_str = stripped[len('data:') :].strip()
+                    if not payload_str or payload_str == '[DONE]':
+                        continue
+                    try:
+                        chunk = json.loads(payload_str)
+                    except Exception:
+                        continue
+                    if not isinstance(chunk, dict):
+                        continue
+
+                    if aggregated_id is None and chunk.get('id'):
+                        aggregated_id = chunk.get('id')
+                    if aggregated_model is None and chunk.get('model'):
+                        aggregated_model = chunk.get('model')
+                    # Usage: last one wins. Typically only the final chunk
+                    # carries usage, but if multiple appear (some providers
+                    # emit interim usage), the final value is the most
+                    # complete/accurate.
+                    if chunk.get('usage'):
+                        aggregated_usage = chunk.get('usage')
+
+                    # Collect x_open_webui.tool_event payloads (singular
+                    # per-chunk in streaming → plural array in aggregated).
+                    xow = chunk.get('x_open_webui')
+                    if isinstance(xow, dict) and isinstance(xow.get('tool_event'), dict):
+                        aggregated_tool_events.append(xow['tool_event'])
+
+                    choices = chunk.get('choices') or []
+                    if choices:
+                        choice = choices[0]
+                        delta = choice.get('delta') or {}
+                        content_part = delta.get('content')
+                        if isinstance(content_part, str) and content_part:
+                            aggregated_content += content_part
+                        fr = choice.get('finish_reason')
+                        if fr:
+                            aggregated_finish_reason = fr
+        except Exception as e:
+            log.exception('api_tools non-streaming: stream aggregation failed')
+            return JSONResponse(
+                status_code=500,
+                content={
+                    'error': {
+                        'message': f'Failed to aggregate streaming tool loop: {e}',
+                        'type': 'internal_error',
+                        'code': 'api_tools_aggregation_failed',
+                    }
+                },
+            )
+
+        # 5) Build the final non-streaming chat.completion object.
+        # Compute the unified summary from pre-extracted RAG sources plus
+        # every tool_event collected from the streaming wrapper.
+        summary = build_x_open_webui_summary(rag_sources_for_aggregation, aggregated_tool_events)
+
+        final = {
+            'id': aggregated_id or f'chatcmpl-{uuid4().hex}',
+            'object': 'chat.completion',
+            'model': aggregated_model or model.get('id', ''),
+            'choices': [
+                {
+                    'index': 0,
+                    'message': {'role': 'assistant', 'content': aggregated_content},
+                    'finish_reason': aggregated_finish_reason or 'stop',
+                }
+            ],
+            'x_open_webui': {
+                'tool_events': aggregated_tool_events,
+                'sources': summary['sources'],
+                'tools_used': summary['tools_used'],
+            },
+        }
+        if aggregated_usage:
+            final['usage'] = aggregated_usage
+
+        return JSONResponse(content=final)
+
     if event_emitter:
         try:
             if 'error' in response_data:
@@ -3614,6 +3817,19 @@ async def non_streaming_chat_response_handler(response, ctx):
 
         return response
 
+    # ---- API non-streaming passthrough (no event_emitter) -------------
+    # Extract RAG citation sources from the events list for the structured
+    # x_open_webui block instead of merging them as top-level keys (which
+    # produced non-standard OpenAI responses).  Other event types (e.g.
+    # inlet-filter metadata) are merged as before for backwards compat.
+    rag_sources_b2 = []
+    other_events = []
+    for ev in events or []:
+        if isinstance(ev, dict) and 'sources' in ev:
+            rag_sources_b2.extend(ev.get('sources') or [])
+        else:
+            other_events.append(ev)
+
     choices = response_data.get('choices', [])
     output = response_data.get('output')
     content = choices[0].get('message', {}).get('content') if choices else ''
@@ -3627,9 +3843,572 @@ async def non_streaming_chat_response_handler(response, ctx):
         await outlet_filter_handler(ctx)
 
     if isinstance(response, dict):
-        response = merge_events_into_response(response_data, events)
+        if rag_sources_b2:
+            summary = build_x_open_webui_summary(rag_sources_b2, [])
+            response_data = {
+                **response_data,
+                'x_open_webui': {
+                    'sources': summary['sources'],
+                    'tools_used': summary['tools_used'],
+                },
+            }
+        if other_events:
+            response_data = merge_events_into_response(response_data, other_events)
+        response = response_data
 
     return response
+
+
+def build_x_open_webui_summary(rag_sources, tool_events):
+    """Build the unified x_open_webui summary block for the final API response.
+
+    - **rag_sources**: list of canonical source dicts (from metadata['sources']
+      or the events list, computed during payload processing by the RAG engine).
+    - **tool_events**: list of ``x_open_webui.tool_event`` payloads emitted
+      during this turn (collected from the streaming tool loop or aggregated
+      from the non-streaming path).
+
+    Returns a dict with:
+      - ``sources``: combined RAG sources + tool-execution citation payloads.
+      - ``tools_used``: flat per-tool-call summary list (one entry per executed
+        tool call, derived from ``tool_call_end`` / ``tool_error`` events).
+    """
+    # ---- sources --------------------------------------------------------
+    all_sources = []
+    seen_ids = set()
+
+    for source in rag_sources or []:
+        if not isinstance(source, dict) or not source.get('source'):
+            continue
+        all_sources.append(source)
+
+    for ev in tool_events or []:
+        if ev.get('type') not in ('tool_call_end', 'tool_error'):
+            continue
+        for citation in ev.get('citations') or []:
+            if not isinstance(citation, dict):
+                continue
+            cite_name = (citation.get('source', {}) or {}).get('name', '') or ''
+            meta_source = ''
+            meta = citation.get('metadata')
+            if isinstance(meta, list) and meta:
+                meta_source = (meta[0] or {}).get('source', '') or ''
+            dedupe_key = f'{cite_name}::{meta_source}'
+            if dedupe_key in seen_ids:
+                continue
+            seen_ids.add(dedupe_key)
+            all_sources.append(citation)
+
+    # ---- tools_used -----------------------------------------------------
+    tools_used = []
+    for ev in tool_events or []:
+        if ev.get('type') not in ('tool_call_end', 'tool_error'):
+            continue
+        entry = {
+            'tool_name': ev.get('tool_name'),
+            'tool_call_id': ev.get('tool_call_id'),
+            'arguments': ev.get('arguments'),
+            'result_summary': ev.get('result_summary'),
+            'status': 'success' if ev.get('type') == 'tool_call_end' else 'error',
+            'iteration': ev.get('iteration'),
+            'timestamp': ev.get('timestamp'),
+        }
+        if ev.get('error'):
+            entry['error'] = ev.get('error')
+        tools_used.append(entry)
+
+    return {'sources': all_sources, 'tools_used': tools_used}
+
+
+async def api_tool_stream_wrapper(response, ctx, events):
+    """Path C — server-side tool execution loop for API callers with the
+    ``api_tools`` capability.
+
+    Consumes the upstream SSE stream, accumulates ``tool_calls`` across chunks,
+    executes them server-side using ``metadata['tools']``, and emits custom
+    ``x_open_webui.tool_event`` chunks alongside standard OpenAI-format
+    content chunks. Compliant OpenAI clients ignore the unknown top-level
+    ``x_open_webui`` key (per JSON spec), so the response remains a valid
+    chat.completion.chunk stream.
+
+    The loop terminates when:
+      * the upstream stream ends without ``tool_calls`` (natural completion),
+      * ``CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS`` is reached, or
+      * the next ``generate_chat_completion`` does not return a
+        ``StreamingResponse``.
+
+    A final ``data: [DONE]\\n\\n`` is always yielded.
+    """
+    request = ctx['request']
+    user = ctx['user']
+    model = ctx['model']
+    metadata = ctx['metadata']
+    # Deep copy so appended assistant/tool messages don't mutate caller state.
+    form_data = copy.deepcopy(ctx.get('form_data', {}))
+    tools = metadata.get('tools', {}) or {}
+
+    def wrap_item(item):
+        return f'data: {item}\n\n'
+
+    # ---- pre-stream setup --------------------------------------------
+    # Capture RAG citation sources from pre-stream events instead of
+    # yielding them as bare top-level chunks.  Compliant OpenAI API
+    # clients would treat unlabelled top-level keys as non-standard
+    # noise.  Non-source events (e.g. filter-driven metadata) are still
+    # yielded for backwards compatibility.
+    rag_sources = []
+    for event in events:
+        if not event:
+            continue
+        if isinstance(event, dict) and 'sources' in event:
+            rag_sources.extend(event.get('sources') or [])
+        else:
+            yield wrap_item(json.dumps(event))
+
+    # Per-turn accumulators — populated during stream consumption and
+    # flushed as the terminal summary chunk just before [DONE].
+    collected_tool_events = []  # every tool_event payload emitted this turn
+    global_last_id = None
+    global_last_model = None
+
+    iterations = 0
+    MAX_ITER = CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS  # may be None (unlimited)
+
+    # Mirror Path A's citations gate. Defaults to True for most models.
+    citations_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('citations', True)
+    # Builtin tools whose stringified results can be parsed into citation
+    # sources for rich rendering by API clients. Mirrors Path A's list.
+    CITATION_TOOL_NAMES = {
+        'search_web',
+        'fetch_url',
+        'view_file',
+        'view_knowledge_file',
+        'query_knowledge_files',
+    }
+
+    # Identifiers carried from the upstream chunk for our synthetic events.
+    def base_chunk(upstream_id, upstream_created, upstream_model, upstream_sf, finish_reason=None):
+        chunk = {
+            'id': upstream_id or f'chatcmpl-{uuid4().hex}',
+            'object': 'chat.completion.chunk',
+            'created': upstream_created or int(time.time()),
+            'model': upstream_model or model.get('id', ''),
+            'choices': [{'index': 0, 'delta': {}, 'finish_reason': finish_reason}],
+        }
+        if upstream_sf:
+            chunk['system_fingerprint'] = upstream_sf
+        return chunk
+
+    def make_tool_event(upstream_id, upstream_created, upstream_model, upstream_sf, payload):
+        chunk = base_chunk(upstream_id, upstream_created, upstream_model, upstream_sf, finish_reason=None)
+        chunk['x_open_webui'] = {'tool_event': payload}
+        return chunk
+
+    current_response = response
+
+    while True:
+        body_iterator = current_response.body_iterator
+
+        # Per-stream accumulation state.
+        accumulated_tool_calls = {}  # tool_call.index -> {id, type, function:{name,arguments}}
+        upstream_id = None
+        upstream_created = None
+        upstream_model = None
+        upstream_system_fingerprint = None
+
+        # Consume the upstream stream. Each yielded item is typically a
+        # pre-formatted SSE string ("data: {...}\n\n"); bytes are decoded.
+        async for raw_data in body_iterator:
+            if not raw_data:
+                continue
+
+            line_text = raw_data.decode('utf-8', 'replace') if isinstance(raw_data, bytes) else raw_data
+
+            # An item may contain multiple SSE lines.
+            for raw_line in line_text.splitlines():
+                stripped = raw_line.strip()
+                if not stripped:
+                    continue
+
+                # Skip SSE comments and event prefixes; only data: lines carry JSON.
+                if stripped.startswith(':') or stripped.startswith('event:'):
+                    continue
+
+                if stripped.startswith('data:'):
+                    payload_str = stripped[len('data:') :].strip()
+                else:
+                    payload_str = stripped
+
+                if payload_str == '[DONE]':
+                    # End-of-stream marker; we emit our own [DONE] at the bottom.
+                    continue
+
+                try:
+                    chunk = json.loads(payload_str)
+                except Exception:
+                    # Non-JSON payload (keepalive, comment); ignore silently.
+                    continue
+
+                if not isinstance(chunk, dict):
+                    continue
+
+                # Capture upstream identifiers for our synthetic chunks.
+                if upstream_id is None and chunk.get('id'):
+                    upstream_id = chunk.get('id')
+                    global_last_id = upstream_id
+                if upstream_created is None and chunk.get('created'):
+                    upstream_created = chunk.get('created')
+                if upstream_model is None and chunk.get('model'):
+                    upstream_model = chunk.get('model')
+                    global_last_model = upstream_model
+                if upstream_system_fingerprint is None and chunk.get('system_fingerprint'):
+                    upstream_system_fingerprint = chunk.get('system_fingerprint')
+
+                choices = chunk.get('choices') or []
+                if not choices:
+                    # No choices (e.g. usage-only chunk) — pass through unchanged.
+                    yield wrap_item(json.dumps(chunk))
+                    continue
+
+                delta = choices[0].get('delta') or {}
+                tcs = delta.get('tool_calls') or []
+
+                if tcs:
+                    # Accumulate tool_call fragments — do NOT pass through.
+                    # Args can span many chunks, keyed by tool_call.index.
+                    for tc in tcs:
+                        idx = tc.get('index', 0)
+                        if idx not in accumulated_tool_calls:
+                            accumulated_tool_calls[idx] = {
+                                'id': tc.get('id', '') or '',
+                                'type': 'function',
+                                'function': {'name': '', 'arguments': ''},
+                            }
+                        cur = accumulated_tool_calls[idx]
+                        if tc.get('id'):
+                            cur['id'] = tc['id']
+                        fn = tc.get('function') or {}
+                        if fn.get('name'):
+                            cur['function']['name'] = (cur['function']['name'] or '') + fn['name']
+                        if fn.get('arguments'):
+                            cur['function']['arguments'] = (cur['function']['arguments'] or '') + fn['arguments']
+                else:
+                    # Content / reasoning chunk — pass through unchanged.
+                    yield wrap_item(json.dumps(chunk))
+
+        # Upstream stream exhausted. Decide whether to run a tool iteration.
+        tool_calls_list = [accumulated_tool_calls[k] for k in sorted(accumulated_tool_calls.keys())]
+
+        if not tool_calls_list:
+            # Natural completion — no tool calls this iteration. Emit a final
+            # stop chunk (if the upstream didn't already) and break to the
+            # terminal summary.
+            yield wrap_item(
+                json.dumps(
+                    base_chunk(
+                        upstream_id,
+                        upstream_created,
+                        upstream_model,
+                        upstream_system_fingerprint,
+                        finish_reason='stop',
+                    )
+                )
+            )
+            break
+
+        # Hit the iteration cap before executing again.
+        if MAX_ITER is not None and iterations >= MAX_ITER:
+            for tc in tool_calls_list:
+                payload = {
+                    'type': 'tool_loop_max_iterations',
+                    'tool_call_id': tc.get('id', '') or '',
+                    'tool_name': tc.get('function', {}).get('name', '') or '',
+                    'iteration': iterations,
+                    'timestamp': datetime.now(timezone.utc).isoformat(),
+                }
+                collected_tool_events.append(payload)
+                yield wrap_item(
+                    json.dumps(
+                        make_tool_event(
+                            upstream_id,
+                            upstream_created,
+                            upstream_model,
+                            upstream_system_fingerprint,
+                            payload,
+                        )
+                    )
+                )
+            yield wrap_item(
+                json.dumps(
+                    base_chunk(
+                        upstream_id,
+                        upstream_created,
+                        upstream_model,
+                        upstream_system_fingerprint,
+                        finish_reason='length',
+                    )
+                )
+            )
+            break
+
+        iterations += 1
+
+        # Append the assistant tool_calls message for the next completion
+        # request (OpenAI Chat Completions protocol requires the assistant
+        # turn that issued the tool calls to be present before tool results).
+        assistant_msg = {
+            'role': 'assistant',
+            'tool_calls': [
+                {'id': tc.get('id', '') or f'call_{uuid4().hex}', 'type': 'function', 'function': tc['function']}
+                for tc in tool_calls_list
+            ],
+        }
+        form_data.setdefault('messages', []).append(assistant_msg)
+
+        # Execute each tool_call and emit start/end (or error) events.
+        for tc in tool_calls_list:
+            tool_call_id = tc.get('id', '') or ''
+            tool_name = tc.get('function', {}).get('name', '') or ''
+            tool_args_str = tc.get('function', {}).get('arguments', '') or ''
+
+            # Parse arguments; tolerate partial/malformed JSON from the model.
+            try:
+                tool_function_params = json.loads(tool_args_str) if tool_args_str.strip() else {}
+            except Exception:
+                try:
+                    tool_function_params = ast.literal_eval(tool_args_str)
+                except Exception:
+                    log.error(f'Error parsing tool call arguments for {tool_name}: {tool_args_str!r}')
+                    tool_function_params = {}
+
+            # Start event — includes parsed arguments.
+            start_payload = {
+                'type': 'tool_call_start',
+                'tool_call_id': tool_call_id,
+                'tool_name': tool_name,
+                'iteration': iterations,
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'arguments': tool_function_params,
+            }
+            collected_tool_events.append(start_payload)
+            yield wrap_item(
+                json.dumps(
+                    make_tool_event(
+                        upstream_id,
+                        upstream_created,
+                        upstream_model,
+                        upstream_system_fingerprint,
+                        start_payload,
+                    )
+                )
+            )
+
+            # Dispatch.
+            end_type = 'tool_call_end'
+            error_msg = None
+            raw_tool_result = None
+            tool = tools.get(tool_name)
+            tool_type = None
+            direct_tool = False
+            tool_id_for_citations = ''
+
+            if tool is None:
+                raw_tool_result = f'Error: Tool "{tool_name}" not found.'
+                end_type = 'tool_error'
+                error_msg = raw_tool_result
+            elif tool.get('direct', False):
+                # Direct tools (client-side execution) need a live UI session.
+                raw_tool_result = f'Error: Tool "{tool_name}" requires a UI session and cannot run via API.'
+                end_type = 'tool_error'
+                error_msg = raw_tool_result
+            else:
+                tool_type = tool.get('type', '') or ''
+                direct_tool = tool.get('direct', False)
+                tool_id_for_citations = tool.get('tool_id', '') or ''
+                spec = tool.get('spec', {}) or {}
+                allowed_params = (spec.get('parameters', {}) or {}).get('properties', {}) or {}
+                allowed_param_names = set(allowed_params.keys())
+
+                # Sanitize: keep only spec-allowed params, strip __-prefixed
+                # (Open WebUI-internal) keys for defense in depth.
+                sanitized_params = {
+                    k: v for k, v in tool_function_params.items() if k in allowed_param_names and not k.startswith('__')
+                }
+
+                try:
+                    # Mirror Path A: inject __messages__ / __files__ via the
+                    # tool-function wrapper so tools with these signatures
+                    # receive them.
+                    tool_function = await get_updated_tool_function(
+                        function=tool['callable'],
+                        extra_params={
+                            '__messages__': form_data.get('messages', []),
+                            '__files__': metadata.get('files', []),
+                        },
+                    )
+                    raw_tool_result = await tool_function(**sanitized_params)
+                except Exception as e:
+                    log.exception(f'Error executing API tool {tool_name}')
+                    raw_tool_result = f'Error executing tool {tool_name}: {e}'
+                    end_type = 'tool_error'
+                    error_msg = str(e)
+
+            # Normalize the raw tool return value into (string, files, embeds)
+            # — mirrors Path A's process_tool_result call so builtin tools
+            # that return structured data (search_web, query_knowledge_files,
+            # MCP image/audio, HTMLResponse embeds, base64 images, etc.)
+            # preserve their rich payloads instead of being flattened to str().
+            try:
+                normalized_result, tool_result_files, tool_result_embeds = await process_tool_result(
+                    request,
+                    tool_name,
+                    raw_tool_result,
+                    tool_type,
+                    direct_tool,
+                    metadata,
+                    user,
+                )
+            except Exception as e:
+                log.exception(f'process_tool_result failed for {tool_name}')
+                normalized_result = str(raw_tool_result) if raw_tool_result is not None else ''
+                tool_result_files = []
+                tool_result_embeds = []
+
+            # Extract citation sources for the supported builtin tools.
+            # Lets custom API clients render rich citation UIs from the
+            # x_open_webui.tool_event.citations field.
+            tool_result_citations = []
+            if (
+                citations_enabled
+                and end_type != 'tool_error'
+                and tool_name in CITATION_TOOL_NAMES
+                and normalized_result
+            ):
+                try:
+                    tool_result_citations = get_citation_source_from_tool_result(
+                        tool_name=tool_name,
+                        tool_params=tool_function_params,
+                        tool_result=normalized_result,
+                        tool_id=tool_id_for_citations,
+                    )
+                except Exception as e:
+                    log.exception(f'Error extracting citation source for {tool_name}: {e}')
+                    tool_result_citations = []
+
+            # Stringified content for the LLM tool message and human summary.
+            result_str = normalized_result if normalized_result is not None else ''
+            result_summary = result_str[:500]
+
+            end_payload = {
+                'type': end_type,
+                'tool_call_id': tool_call_id,
+                'tool_name': tool_name,
+                'iteration': iterations,
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'result_summary': result_summary,
+                'arguments': tool_function_params,
+            }
+            if end_type == 'tool_error':
+                end_payload['error'] = error_msg or result_summary
+            # Attach structured payloads only when non-empty (keeps chunks
+            # small; compliant OpenAI clients ignore the x_open_webui key
+            # entirely, custom clients can render these rich fields).
+            if tool_result_files:
+                end_payload['files'] = tool_result_files
+            if tool_result_embeds:
+                end_payload['embeds'] = tool_result_embeds
+            if tool_result_citations:
+                end_payload['citations'] = tool_result_citations
+            collected_tool_events.append(end_payload)
+            yield wrap_item(
+                json.dumps(
+                    make_tool_event(
+                        upstream_id,
+                        upstream_created,
+                        upstream_model,
+                        upstream_system_fingerprint,
+                        end_payload,
+                    )
+                )
+            )
+
+            # Append the tool result message for the next completion request.
+            form_data.setdefault('messages', []).append(
+                {
+                    'role': 'tool',
+                    'tool_call_id': tool_call_id,
+                    'content': result_str,
+                }
+            )
+
+        # Request the next completion turn, mirroring Path A's call (L5054).
+        try:
+            new_form_data = {
+                **form_data,
+                'model': form_data.get('model', '') or model.get('id', ''),
+                'stream': True,
+                'metadata': metadata,
+            }
+            new_response = await generate_chat_completion(
+                request,
+                new_form_data,
+                user,
+                bypass_system_prompt=True,
+            )
+        except Exception as e:
+            log.exception('generate_chat_completion failed inside api_tool_stream_wrapper')
+            yield wrap_item(
+                json.dumps(
+                    base_chunk(
+                        upstream_id,
+                        upstream_created,
+                        upstream_model,
+                        upstream_system_fingerprint,
+                        finish_reason='stop',
+                    )
+                )
+            )
+            break
+
+        if not isinstance(new_response, StreamingResponse):
+            # Provider returned a non-streaming response — can't continue the
+            # loop cleanly. Surface a stop, break to the terminal summary.
+            log.warning('api_tool_stream_wrapper: next response was not a StreamingResponse; ending tool loop.')
+            yield wrap_item(
+                json.dumps(
+                    base_chunk(
+                        upstream_id,
+                        upstream_created,
+                        upstream_model,
+                        upstream_system_fingerprint,
+                        finish_reason='stop',
+                    )
+                )
+            )
+            break
+
+        # Loop back with the new streaming response.
+        current_response = new_response
+
+    # ---- terminal summary chunk ---------------------------------------
+    # Emitted once when the tool loop exits (natural completion, max
+    # iterations, or error).  Combines RAG citation sources collected
+    # from pre-stream events with tool-execution summaries from every
+    # executed tool call.
+    summary = build_x_open_webui_summary(rag_sources, collected_tool_events)
+    if summary['sources'] or summary['tools_used']:
+        yield wrap_item(
+            json.dumps(
+                {
+                    'id': global_last_id or f'chatcmpl-{uuid4().hex}',
+                    'object': 'chat.completion.chunk',
+                    'model': global_last_model or model.get('id', ''),
+                    'choices': [{'index': 0, 'delta': {}, 'finish_reason': None}],
+                    'x_open_webui': summary,
+                }
+            )
+        )
+    yield wrap_item('[DONE]')
 
 
 async def streaming_chat_response_handler(response, ctx):
@@ -5356,13 +6135,32 @@ async def streaming_chat_response_handler(response, ctx):
 
         return await response_handler(response, events)
 
+    elif ctx.get('metadata', {}).get('api_tools_active'):
+        # Path C — API caller with the ``api_tools`` capability.
+        # Runs the tool-execution loop server-side and emits OpenAI-format
+        # chunks carrying the custom ``x_open_webui.tool_event`` field on
+        # tool-related chunks. Compliant clients ignore the unknown top-level
+        # key and just see the interleaved content/stop chunks.
+        return StreamingResponse(
+            api_tool_stream_wrapper(response, ctx, events),
+            headers=dict(response.headers),
+            background=response.background,
+        )
+
     else:
-        # Fallback to the original response
+        # Path B — standard API passthrough.
+        # Capture RAG citation sources from pre-stream events instead of
+        # yielding them as bare top-level chunks (non-standard for OpenAI
+        # API clients).  Other filter events (e.g. inlet-filter metadata)
+        # pass through unchanged for backwards compatibility.
         async def stream_wrapper(original_generator, events):
             def wrap_item(item):
                 return f'data: {item}\n\n'
 
             assistant_message = {}
+            rag_sources = []
+            last_id = None
+            last_model = None
 
             for event in events:
                 event, _ = await process_filter_functions(
@@ -5372,8 +6170,11 @@ async def streaming_chat_response_handler(response, ctx):
                     form_data=event,
                     extra_params=extra_params,
                 )
-
-                if event:
+                if not event:
+                    continue
+                if isinstance(event, dict) and 'sources' in event:
+                    rag_sources.extend(event.get('sources') or [])
+                else:
                     yield wrap_item(json.dumps(event))
 
             async for data in original_generator:
@@ -5390,9 +6191,45 @@ async def streaming_chat_response_handler(response, ctx):
                         update_assistant_message_from_stream(assistant_message, data)
                     yield data
 
+                # Parse the first content chunk to capture id/model for the
+                # terminal summary.  Once both are captured, skip the parse.
+                if last_id is None or last_model is None:
+                    try:
+                        line = data.decode('utf-8', 'replace') if isinstance(data, bytes) else data
+                        for raw_line in line.splitlines():
+                            stripped = raw_line.strip()
+                            if stripped.startswith('data:'):
+                                payload = stripped[len('data:') :].strip()
+                                if payload and payload != '[DONE]':
+                                    chunk = json.loads(payload)
+                                    if isinstance(chunk, dict):
+                                        if last_id is None and chunk.get('id'):
+                                            last_id = chunk['id']
+                                        if last_model is None and chunk.get('model'):
+                                            last_model = chunk['model']
+                    except Exception:
+                        pass
+
             if ENABLE_API_OUTLET_FILTERS and assistant_message:
                 ctx['assistant_message'] = assistant_message
                 await outlet_filter_handler(ctx)
+
+            # Terminal summary chunk — Path B never has tool execution, so
+            # tools_used is always empty.  Only emit if RAG sources exist.
+            if rag_sources:
+                summary = build_x_open_webui_summary(rag_sources, [])
+                if summary['sources']:
+                    yield wrap_item(
+                        json.dumps(
+                            {
+                                'id': last_id or f'chatcmpl-{uuid4().hex}',
+                                'object': 'chat.completion.chunk',
+                                'model': last_model or '',
+                                'choices': [{'index': 0, 'delta': {}, 'finish_reason': None}],
+                                'x_open_webui': summary,
+                            }
+                        )
+                    )
 
         return StreamingResponse(
             stream_wrapper(response.body_iterator, events),
