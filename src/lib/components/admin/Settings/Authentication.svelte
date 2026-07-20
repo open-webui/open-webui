@@ -58,6 +58,13 @@
 		await updateLdapConfig(localStorage.token, ENABLE_LDAP);
 		if (!ENABLE_LDAP) return true;
 
+		// Honor the "Default to memberOf" hint: fall back to the default group
+		// attribute when it is left blank while group management is enabled, so
+		// the save isn't rejected by the backend's required-field check.
+		if (LDAP_SERVER.enable_group_management && !LDAP_SERVER.attribute_for_groups?.trim()) {
+			LDAP_SERVER.attribute_for_groups = 'memberOf';
+		}
+
 		const res = await updateLdapServer(localStorage.token, LDAP_SERVER).catch((error) => {
 			toast.error(`${error}`);
 			return null;
