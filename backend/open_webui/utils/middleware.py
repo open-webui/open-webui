@@ -118,6 +118,7 @@ from open_webui.utils.payload import apply_system_prompt_to_body, resolve_system
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import merge_usage, normalize_usage
 from open_webui.utils.sanitize import sanitize_code
+from open_webui.utils.system_prompt import resolve_model_system_prompt
 from open_webui.utils.task import (
     get_task_model_id,
     rag_template,
@@ -2865,13 +2866,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Save the pre-RAG message state so the native tool call loop can
     # restore to the true original (before file-source injection) rather
     # than a snapshot that already has the RAG template baked in.
+    # Use resolve_model_system_prompt (not params.system mirror) so Langfuse /
+    # versioned prompts survive tool-loop turns that call with bypass_system_prompt.
     system_message = get_system_message(form_data['messages'])
     system_content = get_content_from_message(system_message) if system_message else ''
-    model_system_prompt = await resolve_system_prompt(
-        (form_data.get('params') or {}).get('system'),
-        metadata,
-        user,
-    )
+    model_info = await Models.get_model_by_id(model.get('id') or form_data.get('model'))
+    raw_model_system = await resolve_model_system_prompt(model_info, metadata, user, bypass=False)
+    model_system_prompt = await resolve_system_prompt(raw_model_system, metadata, user) if raw_model_system else ''
     if model_system_prompt:
         system_content = f'{model_system_prompt}\n{system_content}' if system_content else model_system_prompt
     metadata['system_prompt'] = system_content or None

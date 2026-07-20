@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import copy
 import logging
-from typing import Optional
 
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -10,15 +8,19 @@ from mcp.shared.auth import OAuthMetadata
 from open_webui.config import BannerModel
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
 from open_webui.events import EVENTS, publish_event
+from open_webui.integrations.langfuse.connections import (
+    langfuse_basic_auth_header,
+    merge_langfuse_connection_secrets,
+    redact_langfuse_connections_for_response,
+)
 from open_webui.models.config import Config
-from open_webui.models.oauth_sessions import OAuthSessions
+from open_webui.models.model_system_prompt_binding import ModelSystemPromptBindings
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.oauth import (
     OAuthClientInformationFull,
     apply_connection_oauth_options,
-    decrypt_data,
     encrypt_data,
     get_discovery_urls,
     get_oauth_client_info_with_dynamic_client_registration,
@@ -26,6 +28,7 @@ from open_webui.utils.oauth import (
     recover_static_oauth_client_metadata,
     resolve_oauth_client_info,
 )
+from open_webui.utils.system_prompt_cache import clear_system_prompt_cache
 from open_webui.utils.tools import (
     bearer_auth_header,
     get_tool_server_data,
@@ -205,7 +208,7 @@ async def register_oauth_client(
         log.debug(f'Failed to register OAuth client: {e}')
         raise HTTPException(
             status_code=400,
-            detail=f'Failed to register OAuth client',
+            detail='Failed to register OAuth client',
         )
 
 
@@ -393,6 +396,165 @@ async def verify_terminal_server_connection(
         log.debug(f'Failed to connect to the terminal server: {e}')
 
     raise HTTPException(status_code=400, detail='Failed to connect to the terminal server')
+
+
+class LangfuseConnection(BaseModel):
+    id: str | None = ''
+    name: str | None = ''
+    url: str
+    public_key: str | None = ''
+    secret_key: str | None = ''
+    enabled: bool | None = True
+
+    model_config = ConfigDict(extra='allow')
+
+
+class LangfuseConfigForm(BaseModel):
+    LANGFUSE_CONNECTIONS: list[LangfuseConnection]
+    LANGFUSE_PROMPT_CACHE_TTL: int | None = 300
+
+
+async def _assert_langfuse_connections_not_orphaned(
+    existing: list[dict],
+    incoming: list[dict],
+) -> None:
+    """Block delete/disable of Langfuse connections still bound to models."""
+    existing_by_id = {item.get('id'): item for item in existing if item.get('id')}
+    incoming_by_id = {item.get('id'): item for item in incoming if item.get('id')}
+
+    blocked: list[dict[str, object]] = []
+    for connection_id, previous in existing_by_id.items():
+        updated = incoming_by_id.get(connection_id)
+        action = None
+        if updated is None:
+            action = 'removed'
+        elif previous.get('enabled', True) and not updated.get('enabled', True):
+            action = 'disabled'
+
+        if not action:
+            continue
+
+        bound_models = await ModelSystemPromptBindings.count_by_connection_id(connection_id)
+        if bound_models:
+            blocked.append(
+                {
+                    'connection_id': connection_id,
+                    'action': action,
+                    'bound_models': bound_models,
+                }
+            )
+
+    if blocked:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                'message': (
+                    'Cannot remove or disable Langfuse connections that are bound to models. '
+                    'Detach or rebind affected models first.'
+                ),
+                'blocked_connections': blocked,
+            },
+        )
+
+
+@router.get('/langfuse')
+async def get_langfuse_config(request: Request, user=Depends(get_admin_user)):
+    connections = await Config.get('langfuse.connections')
+    ttl = await Config.get('langfuse.prompt_cache_ttl')
+    return {
+        'LANGFUSE_CONNECTIONS': redact_langfuse_connections_for_response(connections),
+        'LANGFUSE_PROMPT_CACHE_TTL': ttl if ttl is not None else 300,
+    }
+
+
+@router.post('/langfuse')
+async def set_langfuse_config(
+    request: Request,
+    form_data: LangfuseConfigForm,
+    user=Depends(get_admin_user),
+):
+    existing = await Config.get('langfuse.connections') or []
+    connections = merge_langfuse_connection_secrets(
+        [connection.model_dump() for connection in form_data.LANGFUSE_CONNECTIONS],
+        existing,
+    )
+
+    await _assert_langfuse_connections_not_orphaned(existing, connections)
+
+    ttl = form_data.LANGFUSE_PROMPT_CACHE_TTL
+    if ttl is not None and ttl < 0:
+        raise HTTPException(status_code=400, detail='LANGFUSE_PROMPT_CACHE_TTL must be non-negative')
+
+    existing_ttl = await Config.get('langfuse.prompt_cache_ttl')
+    normalized_existing_ttl = existing_ttl if existing_ttl is not None else 300
+
+    updates = {'langfuse.connections': connections}
+    if ttl is not None:
+        updates['langfuse.prompt_cache_ttl'] = ttl
+        if ttl != normalized_existing_ttl:
+            clear_system_prompt_cache()
+
+    await Config.upsert(updates)
+
+    await publish_event(
+        request,
+        EVENTS.CONFIG_LANGFUSE_UPDATED,
+        actor=user,
+        subject_id='langfuse',
+        subject_type='config',
+        data={'count': len(connections), 'prompt_cache_ttl': ttl},
+    )
+
+    return {
+        'LANGFUSE_CONNECTIONS': redact_langfuse_connections_for_response(connections),
+        'LANGFUSE_PROMPT_CACHE_TTL': ttl if ttl is not None else await Config.get('langfuse.prompt_cache_ttl'),
+    }
+
+
+@router.post('/langfuse/verify')
+async def verify_langfuse_connection(request: Request, form_data: LangfuseConnection, user=Depends(get_admin_user)):
+    """
+    Verify Langfuse credentials by calling the public API.
+
+    Returns ``{status: true}`` when GET {url}/api/public/projects succeeds.
+    """
+    base_url = (form_data.url or '').rstrip('/')
+    public_key = (form_data.public_key or '').strip()
+    secret_key = (form_data.secret_key or '').strip()
+
+    if not base_url:
+        raise HTTPException(status_code=400, detail='Langfuse URL is required')
+    if not public_key or not secret_key:
+        if form_data.id:
+            existing = await Config.get('langfuse.connections') or []
+            match = next((c for c in existing if c.get('id') == form_data.id), None)
+            if match:
+                public_key = public_key or (match.get('public_key') or '').strip()
+                secret_key = secret_key or (match.get('secret_key') or '').strip()
+
+    if not public_key or not secret_key:
+        raise HTTPException(status_code=400, detail='Langfuse public and secret keys are required')
+
+    headers = langfuse_basic_auth_header(public_key, secret_key)
+
+    try:
+        async with aiohttp.ClientSession(
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+        ) as session:
+            async with session.get(
+                f'{base_url}/api/public/projects',
+                headers=headers,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as resp:
+                if resp.ok:
+                    return {'status': True}
+                detail = await resp.text()
+                log.debug('Langfuse verify failed (%s): %s', resp.status, detail)
+    except Exception as e:
+        log.debug('Failed to connect to Langfuse: %s', e)
+
+    raise HTTPException(status_code=400, detail='Failed to connect to Langfuse')
 
 
 class TerminalServerPolicyForm(BaseModel):
@@ -606,7 +768,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
 
                                 if oauth_token:
                                     token = oauth_token.get('access_token', '')
-                        except Exception as e:
+                        except Exception:
                             pass
                     if token:
                         headers = {'Authorization': f'Bearer {token}'}
@@ -627,7 +789,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
                     log.debug(f'Failed to create MCP client: {e}')
                     raise HTTPException(
                         status_code=400,
-                        detail=f'Failed to create MCP client',
+                        detail='Failed to create MCP client',
                     )
                 finally:
                     if client:
@@ -650,7 +812,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
                         if oauth_token:
                             token = oauth_token.get('access_token', '')
 
-                except Exception as e:
+                except Exception:
                     pass
 
             if token:
@@ -670,7 +832,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
         log.debug(f'Failed to connect to the tool server: {e}')
         raise HTTPException(
             status_code=400,
-            detail=f'Failed to connect to the tool server',
+            detail='Failed to connect to the tool server',
         )
 
 

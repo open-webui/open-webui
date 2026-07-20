@@ -386,6 +386,8 @@ BLOB_PATH_TO_KEY = {
     'task.voice.prompt_template': 'VOICE_MODE_PROMPT_TEMPLATE',
     # Misc
     'terminal_server.connections': 'TERMINAL_SERVER_CONNECTIONS',
+    'langfuse.connections': 'LANGFUSE_CONNECTIONS',
+    'langfuse.prompt_cache_ttl': 'LANGFUSE_PROMPT_CACHE_TTL',
     'tool_server.connections': 'TOOL_SERVER_CONNECTIONS',
     'ui.banners': 'WEBUI_BANNERS',
     'ui.default_group_id': 'DEFAULT_GROUP_ID',

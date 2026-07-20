@@ -33,15 +33,56 @@ async def resolve_system_prompt(
 # What goes out cannot be taken back. Let it be shaped
 # well before it leaves this place.
 # inplace function: form_data is modified
+def _merge_system_text(existing, system: str, *, replace: bool = False):
+    """Merge resolved system text into a top-level system/instructions field."""
+    if replace or not existing:
+        return system
+    if isinstance(existing, str):
+        return f'{system}\n{existing}'
+    if isinstance(existing, list):
+        return [{'type': 'text', 'text': system}, *existing]
+    return system
+
+
 async def apply_system_prompt_to_body(
     system: Optional[str],
     form_data: dict,
     metadata: Optional[dict] = None,
     user=None,
     replace: bool = False,
+    into: Optional[str] = None,
 ) -> dict:
+    """Inject a system prompt into a request body.
+
+    ``into`` selects the target field:
+    - ``'messages'`` — Chat Completions / Ollama chat (default)
+    - ``'system'`` — Ollama ``/api/generate``, Anthropic Messages, completions
+    - ``'instructions'`` — OpenAI / Ollama Responses API
+
+    When ``into`` is omitted, the target is inferred from the payload shape.
+    """
     system = await resolve_system_prompt(system, metadata, user)
     if not system:
+        return form_data
+
+    if into is None:
+        if 'messages' in form_data:
+            into = 'messages'
+        elif 'input' in form_data:
+            into = 'instructions'
+        elif 'prompt' in form_data:
+            into = 'system'
+        else:
+            into = 'messages'
+
+    if into == 'system':
+        form_data['system'] = _merge_system_text(form_data.get('system'), system, replace=replace)
+        return form_data
+
+    if into == 'instructions':
+        form_data['instructions'] = _merge_system_text(
+            form_data.get('instructions'), system, replace=replace
+        )
         return form_data
 
     if replace:
