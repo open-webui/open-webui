@@ -28,6 +28,7 @@ from open_webui.retrieval.loaders.external_document import ExternalDocumentLoade
 from open_webui.retrieval.loaders.mineru import MinerULoader
 from open_webui.retrieval.loaders.mistral import MistralLoader
 from open_webui.retrieval.loaders.paddleocr_vl import PaddleOCRVLLoader
+from open_webui.utils.headers import get_user_groups_for_custom_headers
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -246,6 +247,7 @@ class Loader:
     def __init__(self, engine: str = '', **kwargs):
         self.engine = engine
         self.user = kwargs.get('user', None)
+        self.user_groups = kwargs.get('user_groups', None)
         self.metadata = kwargs.get('metadata', {})
         self.kwargs = kwargs
 
@@ -264,6 +266,13 @@ class Loader:
         loop for the entire parse — minutes for large PDFs. This offloads
         the work to a worker thread so the loop stays responsive.
         """
+        # Group lookup is async-only, so it must happen before `load`
+        # is offloaded to a thread without a running event loop.
+        if self.engine == 'external' and self.user_groups is None:
+            self.user_groups = await get_user_groups_for_custom_headers(
+                self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_HEADERS'), self.user
+            )
+
         return await asyncio.to_thread(self.load, filename, file_content_type, file_path)
 
     def _is_text_file(self, file_ext: str, file_content_type: str) -> bool:
@@ -422,6 +431,7 @@ class Loader:
                 api_key=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY'),
                 mime_type=file_content_type,
                 user=self.user,
+                user_groups=self.user_groups,
                 headers=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_HEADERS'),
                 metadata={
                     **self.metadata,
