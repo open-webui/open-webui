@@ -568,9 +568,10 @@ class UsersTable:
 
     async def get_user_webhook_url_by_id(self, id: str, db: AsyncSession | None = None) -> str | None:
         async with get_async_db_context(db) as session:
-            user = await session.get(User, id)
-            if user and user.settings:
-                return user.settings.get('ui', {}).get('notifications', {}).get('webhook_url', None)
+            # Column-only select — the full row includes the profile image.
+            row = (await session.execute(select(User.settings).where(User.id == id))).first()
+            if row and row[0]:
+                return row[0].get('ui', {}).get('notifications', {}).get('webhook_url', None)
             return None
 
     async def get_num_users_active_today(self, db: AsyncSession | None = None) -> int | None:
@@ -762,11 +763,12 @@ class UsersTable:
 
     async def is_user_active(self, user_id: str, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as session:
-            user = await session.get(User, user_id)
-            if user and user.last_active_at:
+            # Column-only select — the full row includes the profile image.
+            row = (await session.execute(select(User.last_active_at).where(User.id == user_id))).first()
+            if row and row[0]:
                 # Consider user active if last_active_at within the last 3 minutes
                 three_minutes_ago = int(time.time()) - 180
-                return user.last_active_at >= three_minutes_ago
+                return row[0] >= three_minutes_ago
             return False
 
 
