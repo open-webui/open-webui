@@ -243,14 +243,12 @@
 					</p>
 				{:else}
 					<div class="flex flex-col">
-						{#each targets as target}
+						{#each targets as target, index}
 							{@const alertLabels = events
 								.filter((event) => target.events.includes(event.event))
 								.map((event) => event.label)
 								.join(', ')}
-							<div
-								class="flex items-center gap-3 border-b border-gray-100/50 px-1 py-1.5 last:border-b-0 dark:border-white/[0.03]"
-							>
+							<div class="flex items-center gap-3 px-1 py-1.5">
 								<div class="min-w-0 flex-1">
 									<div class="flex min-w-0 items-center gap-2">
 										<span class="truncate text-[0.71875rem] text-gray-700 dark:text-gray-300">
@@ -329,6 +327,9 @@
 									/>
 								</div>
 							</div>
+							{#if index < targets.length - 1}
+								<hr class="my-1 h-px border-0 bg-gray-100/50 dark:bg-white/[0.03]" />
+							{/if}
 						{/each}
 					</div>
 				{/if}
