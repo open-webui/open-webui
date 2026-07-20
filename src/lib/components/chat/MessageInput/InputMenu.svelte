@@ -111,6 +111,7 @@
 
 <Dropdown
 	bind:show
+	visualViewportAware
 	on:change={(e) => {
 		if (e.detail === false) {
 			onClose();
