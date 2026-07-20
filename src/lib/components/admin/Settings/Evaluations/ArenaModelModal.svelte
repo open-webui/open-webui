@@ -14,7 +14,6 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	export let show = false;
 	export let edit = false;
@@ -129,10 +128,10 @@
 	}}
 />
 
-<Modal size="sm" bind:show className="bg-white dark:bg-gray-900 rounded-4xl">
+<Modal size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
-			<div class=" text-sm font-medium self-center">
+		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
+			<div class=" text-lg font-medium self-center font-primary">
 				{#if edit}
 					{$i18n.t('Edit Arena Model')}
 				{:else}
@@ -140,12 +139,12 @@
 				{/if}
 			</div>
 			<button
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center"
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<XMark className={'size-4'} />
+				<XMark className={'size-5'} />
 			</button>
 		</div>
 
@@ -350,16 +349,17 @@
 						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
 						<div class="flex items-center">
-							<SettingsSelect
+							<select
+								class="w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
+									? ''
+									: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 								bind:value={selectedModelId}
-								className="w-full"
-								selectClassName="text-sm"
 							>
 								<option value="">{$i18n.t('Select a model')}</option>
 								{#each $models.filter((m) => m?.owned_by !== 'arena') as model}
 									<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
 								{/each}
-							</SettingsSelect>
+							</select>
 
 							<div>
 								<button
@@ -374,10 +374,10 @@
 						</div>
 					</div>
 
-					<div class="flex justify-end pt-3 text-sm font-normal gap-1.5">
+					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
 						{#if edit}
 							<button
-								class="px-3.5 py-1.5 text-sm font-normal dark:bg-black dark:hover:bg-gray-950 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-950 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
 								type="button"
 								on:click={() => {
 									showDeleteConfirmDialog = true;
@@ -388,7 +388,7 @@
 						{/if}
 
 						<button
-							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
 								? ' cursor-not-allowed'
 								: ''}"
 							type="submit"

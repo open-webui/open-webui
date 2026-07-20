@@ -60,9 +60,9 @@
 	let policyLoadError = '';
 
 	const inputClass =
-		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
 	const selectClass =
-		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 pe-8 py-1.5 text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
+		'dark:bg-gray-900 bg-transparent pr-5 outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
 
 	const stringifyJson = (value: object | null | undefined) => {
 		return JSON.stringify(value && Object.keys(value).length ? value : {}, null, 2);
@@ -370,8 +370,8 @@
 
 <Modal size="sm" bind:show>
 	<div>
-		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
-			<h1 class="text-sm font-medium self-center">
+		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
+			<h1 class="text-lg font-medium self-center font-primary">
 				{#if edit}
 					{$i18n.t('Edit Terminal Connection')}
 				{:else}
@@ -380,13 +380,13 @@
 			</h1>
 
 			<button
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center"
 				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<XMark className={'size-4'} />
+				<XMark className={'size-5'} />
 			</button>
 		</div>
 
@@ -456,7 +456,7 @@
 
 							<Tooltip content={$i18n.t('Verify Connection')} className="self-end -mb-1">
 								<button
-									class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
+									class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
 									on:click={() => {
 										verifyHandler();
 									}}
@@ -720,7 +720,7 @@
 								</div>
 								<button
 									type="button"
-									class="px-2 py-1 text-xs font-normal rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition"
+									class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition"
 									disabled={refreshing}
 									on:click={refreshHandler}
 								>
@@ -848,11 +848,11 @@
 							</div>
 						</div>
 
-						<div class="flex justify-between items-center pt-3 text-sm font-normal">
+						<div class="flex justify-between items-center pt-3 text-sm font-medium">
 							<div>
 								{#if edit}
 									<button
-										class="px-1 py-1.5 text-sm font-normal text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
+										class="px-1 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
 										type="button"
 										on:click={() => {
 											showDeleteConfirmDialog = true;
@@ -864,7 +864,7 @@
 							</div>
 
 							<button
-								class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 disabled:opacity-50 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 disabled:opacity-50 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
 								type="submit"
 								disabled={loadingPolicy || !!policyLoadError}
 							>
