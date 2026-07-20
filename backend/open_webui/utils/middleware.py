@@ -4408,7 +4408,12 @@ async def streaming_chat_response_handler(response, ctx):
                                                 user,
                                             )
 
-                                        content = f'{content}{value}'
+                                        if isinstance(value, str):
+                                            # In-place append — avoids copying the full
+                                            # accumulated response on every chunk.
+                                            content += value
+                                        else:
+                                            content = f'{content}{value}'
 
                                         # Check if we're inside a tag-based block
                                         # (reasoning, code_interpreter, or solution).
@@ -4515,16 +4520,17 @@ async def streaming_chat_response_handler(response, ctx):
                                         if ENABLE_REALTIME_CHAT_SAVE and not metadata.get('chat_id', '').startswith(
                                             'channel:'
                                         ):
+                                            current_output = full_output()
                                             # Save message in the database
                                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                                 metadata['chat_id'],
                                                 metadata['message_id'],
                                                 {
-                                                    'output': full_output(),
+                                                    'output': current_output,
                                                 },
                                             )
                                             data = {
-                                                'output': full_output(),
+                                                'output': current_output,
                                             }
                                             delta_type = 'content'
                                         else:
