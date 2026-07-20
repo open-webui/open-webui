@@ -686,7 +686,7 @@ async def _kb_grep(
 
     # Grep on piped input
     if piped_input is not None:
-        lines = piped_input.split('\\n')
+        lines = piped_input.split('\n')
         matched = []
         for i, line in enumerate(lines, 1):
             if _matches(line):
@@ -702,7 +702,7 @@ async def _kb_grep(
         elif 'error' in resolved:
             return resolved['error']
         else:
-            lines = resolved['content'].split('\\n')
+            lines = resolved['content'].split('\n')
             matched = []
             for i, line in enumerate(lines, 1):
                 if _matches(line):
