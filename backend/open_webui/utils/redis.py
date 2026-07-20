@@ -112,8 +112,10 @@ def get_redis_client(async_mode: bool = False) -> Any | None:
 class SentinelRedisProxy:
     """Transparent proxy that re-resolves the Sentinel master on connection errors.
 
-    Every call (sync or async) is wrapped with retry logic so that transient
-    Sentinel failovers are handled without caller intervention.
+    The master client is cached and reused so redis-py's connection pool can
+    amortize connections. Re-resolution only happens on connection errors
+    (matching this docstring's intent) — not on every attribute access, which
+    previously created a new SentinelConnectionPool per call (#27210).
     """
 
     def __init__(
@@ -126,10 +128,11 @@ class SentinelRedisProxy:
         self._sentinel = sentinel
         self._service_name = service_name
         self._async_mode = async_mode
+        self._master: Any | None = None
 
     def __getattr__(self, name: str) -> Any:
         """Proxy attribute access with automatic Sentinel failover retry."""
-        current_master = self._sentinel.master_for(self._service_name)
+        current_master = self._resolve_master()
         original = getattr(current_master, name)
 
         # Non-callable or factory attributes pass through without wrapping.
@@ -141,9 +144,15 @@ class SentinelRedisProxy:
             return self._wrap_sync(name)
         return self._wrap_async(name, original)
 
-    def _resolve_master(self) -> Any:
-        """Ask Sentinel for the current master connection."""
-        return self._sentinel.master_for(self._service_name)
+    def _resolve_master(self, *, force: bool = False) -> Any:
+        """Return a cached master client, re-resolving only when forced or empty."""
+        if force or self._master is None:
+            self._master = self._sentinel.master_for(self._service_name)
+        return self._master
+
+    def _invalidate_master(self) -> None:
+        """Drop the cached master so the next resolve hits Sentinel again."""
+        self._master = None
 
     def _should_retry(self, attempt: int) -> bool:
         return attempt < REDIS_SENTINEL_MAX_RETRY_COUNT - 1
@@ -184,6 +193,7 @@ class SentinelRedisProxy:
                     except _SENTINEL_RETRYABLE as exc:
                         if proxy._should_retry(attempt):
                             proxy._log_retry(exc, attempt)
+                            proxy._invalidate_master()
                             if REDIS_RECONNECT_DELAY:
                                 await asyncio.sleep(REDIS_RECONNECT_DELAY / 1000)
                             continue
@@ -208,6 +218,7 @@ class SentinelRedisProxy:
                 except _SENTINEL_RETRYABLE as exc:
                     if proxy._should_retry(attempt):
                         proxy._log_retry(exc, attempt)
+                        proxy._invalidate_master()
                         if REDIS_RECONNECT_DELAY:
                             await asyncio.sleep(REDIS_RECONNECT_DELAY / 1000)
                         continue
@@ -229,6 +240,7 @@ class SentinelRedisProxy:
                 except _SENTINEL_RETRYABLE as exc:
                     if proxy._should_retry(attempt):
                         proxy._log_retry(exc, attempt)
+                        proxy._invalidate_master()
                         if REDIS_RECONNECT_DELAY:
                             time.sleep(REDIS_RECONNECT_DELAY / 1000)
                         continue
