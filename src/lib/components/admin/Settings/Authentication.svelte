@@ -107,7 +107,9 @@
 				groups = await getGroups(localStorage.token);
 			})(),
 			(async () => {
-				LDAP_SERVER = await getLdapServer(localStorage.token);
+				// Merge into the defaults so any key the backend omits (e.g. an
+				// older backend without the group settings) keeps its default.
+				LDAP_SERVER = { ...LDAP_SERVER, ...(await getLdapServer(localStorage.token)) };
 			})(),
 			(async () => {
 				oauthConfig = await getOAuthConfig(localStorage.token).catch(() => null);

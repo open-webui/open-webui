@@ -630,9 +630,9 @@ async def ldap_auth(
 
             if user:
                 if ENABLE_LDAP_GROUP_MANAGEMENT and user_groups:
-                    if ENABLE_LDAP_GROUP_CREATION:
-                        await Groups.create_groups_by_group_names(user.id, user_groups, db=db)
                     try:
+                        if ENABLE_LDAP_GROUP_CREATION:
+                            await Groups.create_groups_by_group_names(user.id, user_groups, db=db)
                         await Groups.sync_groups_by_group_names(user.id, user_groups, db=db)
                         log.info(f'Successfully synced groups for user {user.id}: {user_groups}')
                     except Exception as e:
@@ -1214,6 +1214,11 @@ async def update_ldap_server(request: Request, form_data: LdapServerConfig, user
         value = getattr(form_data, key)
         if not value:
             raise HTTPException(400, detail=ERROR_MESSAGES.REQUIRED_FIELD_EMPTY(key))
+
+    # The group attribute is what group management reads from the directory
+    # entry; an empty value would make group sync silently do nothing.
+    if form_data.enable_group_management and not (form_data.attribute_for_groups or '').strip():
+        raise HTTPException(400, detail=ERROR_MESSAGES.REQUIRED_FIELD_EMPTY('attribute_for_groups'))
 
     updates = config_updates(form_data.model_dump(), LDAP_SERVER_CONFIG_KEYS)
     updates['ldap.server.app_dn'] = form_data.app_dn or ''
