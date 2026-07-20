@@ -5,12 +5,13 @@ import os
 import sys
 import time
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import aiohttp
 import requests
 from langchain_core.documents import Document
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, GLOBAL_LOG_LEVEL
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, ENABLE_FORWARD_USER_INFO_HEADERS, GLOBAL_LOG_LEVEL
+from open_webui.utils.headers import include_user_info_headers
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ class MistralLoader:
         max_retries: int = 3,
         enable_debug_logging: bool = False,
         use_base64: bool = False,
+        user: Optional[Any] = None,
     ):
         """
         Initializes the loader with enhanced features.
@@ -50,6 +52,8 @@ class MistralLoader:
             max_retries: Maximum number of retry attempts.
             enable_debug_logging: Enable detailed debug logs.
             use_base64: Send the document as a data URL instead of uploading it first.
+            user: The requesting user, forwarded to Mistral via user-info headers
+                when ENABLE_FORWARD_USER_INFO_HEADERS is enabled.
         """
         if not api_key:
             raise ValueError('API key cannot be empty.')
@@ -63,6 +67,7 @@ class MistralLoader:
         self.max_retries = max_retries
         self.debug = enable_debug_logging
         self.use_base64 = use_base64
+        self.user = user
 
         # PERFORMANCE OPTIMIZATION: Differentiated timeouts for different operations
         # This prevents long-running OCR operations from affecting quick operations
@@ -82,6 +87,8 @@ class MistralLoader:
             'Authorization': f'Bearer {self.api_key}',
             'User-Agent': 'OpenWebUI-MistralLoader/2.0',  # Helps API provider track usage
         }
+        if self.user is not None and ENABLE_FORWARD_USER_INFO_HEADERS:
+            self.headers = include_user_info_headers(self.headers, self.user)
 
     def _debug_log(self, message: str, *args) -> None:
         """
