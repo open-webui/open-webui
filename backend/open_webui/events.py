@@ -1150,6 +1150,20 @@ async def publish_model_provider_request_failed(
         else 'upstream_error'
     )
 
+    # Server-log only; the upstream error body is otherwise invisible to admins
+    # (event sinks require an event function or webhook to be configured).
+    log.log(
+        logging.ERROR if status >= 500 else logging.WARNING,
+        'Upstream %s request failed: HTTP %d (%s) url=%s model=%s code=%s message=%s',
+        provider,
+        status,
+        error_type,
+        base_url,
+        requested_model or '-',
+        error_code or '-',
+        error_text[:MAX_STRING_LENGTH] or '-',
+    )
+
     data = {
         'error_type': error_type,
         'status': status,
