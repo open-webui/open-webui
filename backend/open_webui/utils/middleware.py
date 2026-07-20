@@ -1512,8 +1512,10 @@ async def add_file_context(
     """
     Add file URLs to messages for native function calling.
     knowledge lists the items reachable via the builtin knowledge tools (model-, folder-,
-    and chat-attached); it is surfaced once, on the last user message, in an
-    <attached_knowledge> block so the model knows there is something to query.
+    and chat-attached); it is appended to the system message once as an
+    <attached_knowledge> block so the model knows there is something to query. System
+    placement keeps user messages untouched, so the prompt prefix stays cache-stable
+    across turns as long as the attached knowledge does not change.
     include_knowledge additionally surfaces URL-less chat attachments (referenced chats,
     KB-selected files) per message; used when File Context is off. Metadata only:
     each id is access-checked server-side when a tool actually reads it.
@@ -1534,16 +1536,16 @@ async def add_file_context(
             attrs += f' source="{item["source"]}"'
         return f'<knowledge {attrs}/>'
 
-    user_messages = [m for m in messages if m.get('role') == 'user']
-
-    # Chat-level scope, so surface once on the last user message. Independent of the
-    # stored chat record: temporary (local:) chats can still carry folder knowledge.
-    if knowledge and user_messages:
+    # Chat-level scope, appended to the system message like skill manifests and terminal
+    # prompts. Independent of the stored chat record: temporary (local:) chats can still
+    # carry folder knowledge.
+    if knowledge:
         knowledge_tags = [format_knowledge_tag(item) for item in knowledge if item.get('id') and item.get('type')]
         if knowledge_tags:
-            prepend_context(
-                user_messages[-1],
-                '<attached_knowledge>\n' + '\n'.join(knowledge_tags) + '\n</attached_knowledge>\n\n',
+            messages = add_or_update_system_message(
+                '<attached_knowledge>\n' + '\n'.join(knowledge_tags) + '\n</attached_knowledge>',
+                messages,
+                append=True,
             )
 
     if not chat_id or chat_id.startswith('local:') or chat_id.startswith('channel:'):
@@ -1576,6 +1578,7 @@ async def add_file_context(
     # the payload message list longer than the stored message list. A naive
     # positional zip() would pair user messages with wrong stored messages,
     # causing later images to lose their file context (see #21878).
+    user_messages = [m for m in messages if m.get('role') == 'user']
     stored_user_messages = [m for m in stored_messages if m.get('role') == 'user']
 
     for message, stored_message in zip(user_messages, stored_user_messages):
