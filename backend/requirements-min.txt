@@ -8,6 +8,7 @@ python-multipart==0.0.27
 itsdangerous==2.2.0
 
 python-socketio==5.16.2
+orjson==3.11.9
 python-jose==3.5.0
 cryptography
 bcrypt==5.0.0

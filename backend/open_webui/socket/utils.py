@@ -6,11 +6,42 @@ import hashlib
 import json
 import uuid
 
+import orjson
 import pycrdt as Y
+from engineio import json as engineio_json
 from open_webui.utils.redis import get_redis_connection
 from open_webui.env import REDIS_KEY_PREFIX
 
 YDOC_KEY_PREFIX = f'{REDIS_KEY_PREFIX}:ydoc:documents'
+
+
+class ORJSONCodec:
+    """stdlib-``json``-compatible codec backed by orjson.
+
+    Handed to ``socketio.AsyncServer``/``AsyncRedisManager`` via their
+    ``json=`` hooks and used by the Redis-backed structures below.  orjson
+    encodes/decodes several times faster than the stdlib but accepts a
+    narrower range of inputs, so anything it rejects (non-str dict keys,
+    ints beyond 64 bits, ``NaN`` literals written by pre-orjson replicas)
+    falls back to engineio's stdlib-based codec — socket.io's default,
+    which keeps its oversized-integer guard for untrusted client payloads.
+    """
+
+    JSONDecodeError = engineio_json.JSONDecodeError
+
+    @staticmethod
+    def dumps(obj, *args, **kwargs):
+        try:
+            return orjson.dumps(obj).decode('utf-8')
+        except (TypeError, ValueError):
+            return engineio_json.dumps(obj, *args, **kwargs)
+
+    @staticmethod
+    def loads(s, *args, **kwargs):
+        try:
+            return orjson.loads(s)
+        except (TypeError, ValueError):
+            return engineio_json.loads(s, *args, **kwargs)
 
 
 class RedisLock:
@@ -65,14 +96,14 @@ class RedisDict:
         )
 
     def __setitem__(self, key, value):
-        serialized_value = json.dumps(value)
+        serialized_value = ORJSONCodec.dumps(value)
         self.redis.hset(self.name, key, serialized_value)
 
     def __getitem__(self, key):
         value = self.redis.hget(self.name, key)
         if value is None:
             raise KeyError(key)
-        return json.loads(value)
+        return ORJSONCodec.loads(value)
 
     def __delitem__(self, key):
         result = self.redis.hdel(self.name, key)
@@ -89,10 +120,10 @@ class RedisDict:
         return self.redis.hkeys(self.name)
 
     def values(self):
-        return [json.loads(v) for v in self.redis.hvals(self.name)]
+        return [ORJSONCodec.loads(v) for v in self.redis.hvals(self.name)]
 
     def items(self):
-        return [(k, json.loads(v)) for k, v in self.redis.hgetall(self.name).items()]
+        return [(k, ORJSONCodec.loads(v)) for k, v in self.redis.hgetall(self.name).items()]
 
     def set(self, mapping: dict):
         if not mapping:
@@ -101,13 +132,17 @@ class RedisDict:
             return
 
         # Serialize values once — reused for both the fingerprint and the write.
-        serialized = {k: json.dumps(v) for k, v in mapping.items()}
+        serialized = {k: ORJSONCodec.dumps(v) for k, v in mapping.items()}
 
         # Skip the write when the prepared mapping is identical to the last one
         # this process wrote.  The check is per-instance (not distributed), but
         # still eliminates the majority of redundant writes because each pod
         # typically produces the same model list on consecutive refreshes.
-        signature = hashlib.sha256(json.dumps(serialized, sort_keys=True).encode()).hexdigest()
+        try:
+            canonical = orjson.dumps(serialized, option=orjson.OPT_SORT_KEYS)
+        except TypeError:
+            canonical = json.dumps(serialized, sort_keys=True).encode()
+        signature = hashlib.sha256(canonical).hexdigest()
         if signature == self._last_signature:
             return
 
@@ -166,7 +201,7 @@ class YdocManager:
         document_id = document_id.replace(':', '_')
         if self._redis:
             redis_key = f'{self._redis_key_prefix}:{document_id}:updates'
-            await self._redis.rpush(redis_key, json.dumps(list(update)))
+            await self._redis.rpush(redis_key, ORJSONCodec.dumps(list(update)))
             list_len = await self._redis.llen(redis_key)
             if list_len >= self.COMPACTION_THRESHOLD:
                 await self._compact_updates_redis(document_id)
@@ -186,8 +221,8 @@ class YdocManager:
         mid = len(all_updates) // 2
         ydoc = Y.Doc()
         for raw in all_updates[:mid]:
-            ydoc.apply_update(bytes(json.loads(raw)))
-        snapshot = json.dumps(list(ydoc.get_update()))
+            ydoc.apply_update(bytes(ORJSONCodec.loads(raw)))
+        snapshot = ORJSONCodec.dumps(list(ydoc.get_update()))
         pipe = self._redis.pipeline()
         pipe.delete(redis_key)
         pipe.rpush(redis_key, snapshot, *all_updates[mid:])
@@ -210,7 +245,7 @@ class YdocManager:
         if self._redis:
             redis_key = f'{self._redis_key_prefix}:{document_id}:updates'
             updates = await self._redis.lrange(redis_key, 0, -1)
-            return [bytes(json.loads(update)) for update in updates]
+            return [bytes(ORJSONCodec.loads(update)) for update in updates]
         else:
             return self._updates.get(document_id, [])
 
