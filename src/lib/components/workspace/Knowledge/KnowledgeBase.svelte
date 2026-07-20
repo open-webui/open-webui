@@ -866,8 +866,8 @@
 		try {
 			console.log('Starting file deletion process for:', fileId);
 
-			// Remove from knowledge base only
-			const res = await removeFileFromKnowledgeById(localStorage.token, id, fileId);
+			// Remove from knowledge base and delete file
+			const res = await removeFileFromKnowledgeById(localStorage.token, id, fileId, true);
 			console.log('Knowledge base updated:', res);
 
 			if (res) {
@@ -876,6 +876,18 @@
 			}
 		} catch (e) {
 			console.error('Error in deleteFileHandler:', e);
+			toast.error(`${e}`);
+		}
+	};
+
+	const unlinkFileHandler = async (fileId) => {
+		try {
+			const res = await removeFileFromKnowledgeById(localStorage.token, id, fileId, false);
+			if (res) {
+				toast.success('File unlinked (kept on disk). Rollback can restore it.');
+				await init();
+			}
+		} catch (e) {
 			toast.error(`${e}`);
 		}
 	};
@@ -1582,6 +1594,9 @@
 													loadingFileContent = false;
 
 													deleteFileHandler(fileId);
+												}}
+												onUnlink={(fileId) => {
+													unlinkFileHandler(fileId);
 												}}
 												onRename={(fileId, name) => renameFileHandler(fileId, name)}
 												onNavigateDirectory={(dirId) => navigateToDirectory(dirId)}

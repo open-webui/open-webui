@@ -1110,3 +1110,243 @@ class KnowledgeTable:
 
 
 Knowledges = KnowledgeTable()
+
+
+####################
+# Knowledge Management Tables (Enterprise Dashboard)
+####################
+
+
+class KnowledgeChunk(Base):
+    """Tracks individual chunks per file for preview and manual adjustment."""
+
+    __tablename__ = 'knowledge_chunk'
+
+    id = Column(Text, unique=True, primary_key=True)
+    knowledge_id = Column(Text, ForeignKey('knowledge.id', ondelete='CASCADE'), nullable=False)
+    file_id = Column(Text, ForeignKey('file.id', ondelete='CASCADE'), nullable=False)
+    chunk_index = Column(BigInteger, nullable=False)
+    content = Column(Text, nullable=False)
+    token_count = Column(BigInteger, nullable=True)
+    meta = Column(JSON, nullable=True)
+    content_hash = Column(Text, nullable=True)
+
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint('file_id', 'chunk_index', name='uq_knowledge_chunk_file_index'),
+        Index('ix_knowledge_chunk_knowledge_id', 'knowledge_id'),
+        Index('ix_knowledge_chunk_file_id', 'file_id'),
+    )
+
+
+class KnowledgeChunkModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    knowledge_id: str
+    file_id: str
+    chunk_index: int
+    content: str
+    token_count: Optional[int] = None
+    meta: Optional[dict] = None
+    content_hash: Optional[str] = None
+    created_at: int
+    updated_at: int
+
+
+class KnowledgeChunkMergeForm(BaseModel):
+    """Merge adjacent chunks within the same file."""
+
+    knowledge_id: str
+    file_id: str
+    start_index: int
+    end_index: int
+
+
+class KnowledgeChunkSplitForm(BaseModel):
+    """Split a chunk at a character offset."""
+
+    chunk_id: str
+    split_at: int  # character offset within the chunk
+
+
+class KnowledgeProcessingTask(Base):
+    """Per-file processing progress tracking."""
+
+    __tablename__ = 'knowledge_processing_task'
+
+    id = Column(Text, unique=True, primary_key=True)
+    knowledge_id = Column(Text, ForeignKey('knowledge.id', ondelete='CASCADE'), nullable=False)
+    file_id = Column(Text, ForeignKey('file.id', ondelete='CASCADE'), nullable=True)
+    task_type = Column(Text, nullable=False)  # 'chunking' | 'embedding' | 'full_process'
+    status = Column(Text, nullable=False)  # 'pending' | 'chunking' | 'embedding' | 'completed' | 'failed'
+    progress_pct = Column(BigInteger, nullable=False, default=0)
+    chunks_total = Column(BigInteger, nullable=True)
+    chunks_processed = Column(BigInteger, nullable=True)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+
+    __table_args__ = (
+        Index('ix_knowledge_processing_knowledge_id', 'knowledge_id'),
+        Index('ix_knowledge_processing_file_id', 'file_id'),
+    )
+
+
+class KnowledgeProcessingTaskModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    knowledge_id: str
+    file_id: Optional[str] = None
+    task_type: str
+    status: str
+    progress_pct: int
+    chunks_total: Optional[int] = None
+    chunks_processed: Optional[int] = None
+    error_message: Optional[str] = None
+    created_at: int
+    updated_at: int
+
+
+class KnowledgeBatchTask(Base):
+    """Parent batch processing task grouping sub-tasks."""
+
+    __tablename__ = 'knowledge_batch_task'
+
+    id = Column(Text, unique=True, primary_key=True)
+    knowledge_id = Column(Text, ForeignKey('knowledge.id', ondelete='CASCADE'), nullable=False)
+    total_files = Column(BigInteger, nullable=False)
+    files_processed = Column(BigInteger, nullable=False, default=0)
+    total_chunks = Column(BigInteger, nullable=True)
+    chunks_embedded = Column(BigInteger, nullable=True, default=0)
+    status = Column(Text, nullable=False)  # 'running' | 'completed' | 'failed'
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+
+    __table_args__ = (Index('ix_knowledge_batch_knowledge_id', 'knowledge_id'),)
+
+
+class KnowledgeBatchTaskModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    knowledge_id: str
+    total_files: int
+    files_processed: int
+    total_chunks: Optional[int] = None
+    chunks_embedded: Optional[int] = None
+    status: str
+    created_at: int
+    updated_at: int
+
+
+class KnowledgeRelevanceJudgment(Base):
+    """Ground-truth relevance judgments for retrieval evaluation."""
+
+    __tablename__ = 'knowledge_relevance_judgment'
+
+    id = Column(Text, unique=True, primary_key=True)
+    knowledge_id = Column(Text, ForeignKey('knowledge.id', ondelete='CASCADE'), nullable=False)
+    query_text = Column(Text, nullable=False)
+    chunk_id = Column(Text, nullable=True)
+    document_text = Column(Text, nullable=False)
+    rank_position = Column(BigInteger, nullable=True)
+    relevance = Column(BigInteger, nullable=False)  # 0=not relevant, 1=relevant
+    user_id = Column(Text, nullable=False)
+    created_at = Column(BigInteger, nullable=False)
+
+    __table_args__ = (
+        Index('ix_knowledge_judgment_knowledge_id', 'knowledge_id'),
+        Index('ix_knowledge_judgment_query', 'knowledge_id', 'query_text'),
+    )
+
+
+class KnowledgeRelevanceJudgmentModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    knowledge_id: str
+    query_text: str
+    chunk_id: Optional[str] = None
+    document_text: str
+    rank_position: Optional[int] = None
+    relevance: int
+    user_id: str
+    created_at: int
+
+
+class KnowledgeSnapshot(Base):
+    """Version snapshots of knowledge bases."""
+
+    __tablename__ = 'knowledge_snapshot'
+
+    id = Column(Text, unique=True, primary_key=True)
+    knowledge_id = Column(Text, ForeignKey('knowledge.id', ondelete='CASCADE'), nullable=False)
+    label = Column(Text, nullable=True)
+    description = Column(Text, nullable=True)
+    file_count = Column(BigInteger, nullable=False)
+    chunk_count = Column(BigInteger, nullable=True)
+    snapshot_data = Column(JSON, nullable=False)
+    collection_snapshot_path = Column(Text, nullable=True)
+    created_by = Column(Text, nullable=False)
+    created_at = Column(BigInteger, nullable=False)
+
+    __table_args__ = (Index('ix_knowledge_snapshot_knowledge_id', 'knowledge_id'),)
+
+
+class KnowledgeSnapshotModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    knowledge_id: str
+    label: Optional[str] = None
+    description: Optional[str] = None
+    file_count: int
+    chunk_count: Optional[int] = None
+    snapshot_data: dict
+    collection_snapshot_path: Optional[str] = None
+    created_by: str
+    created_at: int
+
+
+class KnowledgeSnapshotCreateForm(BaseModel):
+    label: Optional[str] = None
+    description: Optional[str] = None
+
+
+class KnowledgeSnapshotCompareResult(BaseModel):
+    added_files: list[dict]
+    removed_files: list[dict]
+    modified_files: list[dict]
+    total_chunks_before: int
+    total_chunks_after: int
+
+
+class KnowledgeChunkPreviewForm(BaseModel):
+    """Request form for chunk preview - takes a file_id to preview chunking."""
+
+    file_id: str
+
+
+class KnowledgeRelevanceAnnotationForm(BaseModel):
+    """Form to annotate retrieval results as relevant/not relevant."""
+
+    query_text: str
+    judgments: list[dict]  # [{chunk_id, rank_position, document_text, relevance: 0|1}]
+
+
+class KnowledgeEvaluateQueryForm(BaseModel):
+    """Form to run an evaluation query."""
+
+    query: str
+    k: int = 10
+
+
+class KnowledgeSnapshotCompareForm(BaseModel):
+    """Form to compare two snapshots."""
+
+    snapshot_a_id: str
+    snapshot_b_id: str

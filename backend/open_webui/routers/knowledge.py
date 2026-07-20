@@ -21,22 +21,50 @@ from open_webui.models.config import Config
 from open_webui.models.files import FileMetadataResponse, FileModel, FileModelResponse, Files
 from open_webui.models.groups import Groups
 from open_webui.models.knowledge import (
+    KnowledgeChunkMergeForm,
+    KnowledgeChunkModel,
+    KnowledgeChunkPreviewForm,
+    KnowledgeChunkSplitForm,
+    KnowledgeChunk,
     KnowledgeDirectoryForm,
     KnowledgeDirectoryModel,
+    KnowledgeEvaluateQueryForm,
+    KnowledgeFile,
     KnowledgeFileListResponse,
     KnowledgeForm,
+    KnowledgeProcessingTask,
+    KnowledgeProcessingTaskModel,
+    KnowledgeBatchTask,
+    KnowledgeBatchTaskModel,
+    KnowledgeRelevanceAnnotationForm,
     KnowledgeResponse,
+    KnowledgeRelevanceJudgment,
+    KnowledgeRelevanceJudgmentModel,
+    KnowledgeSnapshot,
+    KnowledgeSnapshotCompareForm,
+    KnowledgeSnapshotCompareResult,
+    KnowledgeSnapshotCreateForm,
+    KnowledgeSnapshotModel,
     Knowledges,
     KnowledgeUserResponse,
 )
 from open_webui.models.models import ModelForm, Models
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.retrieval.external import retrieve_external_knowledge, retrieve_external_knowledge_for_connection
+from open_webui.retrieval.utils import (
+    build_loader_from_config,
+    get_embedding_function,
+    get_loader_config,
+    query_collection_with_hybrid_search,
+    query_collection,
+)
 from open_webui.routers.retrieval import (
     BatchProcessFilesForm,
     ProcessFileForm,
+    get_retrieval_config,
     process_file,
     process_files_batch,
+    save_docs_to_vector_db,
 )
 from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
@@ -1415,12 +1443,59 @@ async def add_file_to_knowledge_by_id(
 
     # Add content to the vector database
     try:
+        await _update_processing_progress(
+            knowledge_id=id, file_id=form_data.file_id,
+            status='embedding', progress_pct=50, db=db,
+        )
+
         await process_file(
             request,
             ProcessFileForm(file_id=form_data.file_id, collection_name=id),
             user=user,
             db=db,
         )
+
+        await _update_processing_progress(
+            knowledge_id=id, file_id=form_data.file_id,
+            status='completed', progress_pct=100, db=db,
+        )
+
+        # ── Automatically persist chunks to knowledge_chunk table ──
+        try:
+            from sqlalchemy import delete as sa_delete
+            result_vdb = await ASYNC_VECTOR_DB_CLIENT.query(
+                collection_name=id, filter={'file_id': form_data.file_id}
+            )
+            if result_vdb and result_vdb.ids and len(result_vdb.ids) > 0:
+                import hashlib
+                now = int(time.time())
+                # Remove old chunk records
+                await db.execute(
+                    sa_delete(KnowledgeChunk).where(
+                        KnowledgeChunk.knowledge_id == id,
+                        KnowledgeChunk.file_id == form_data.file_id,
+                    )
+                )
+                for idx, (doc_id, text, metadata) in enumerate(
+                    zip(result_vdb.ids[0], result_vdb.documents[0], result_vdb.metadatas[0])
+                ):
+                    content_hash = hashlib.sha256(text.encode()).hexdigest() if text else None
+                    chunk = KnowledgeChunk(
+                        id=str(uuid.uuid4()),
+                        knowledge_id=id,
+                        file_id=form_data.file_id,
+                        chunk_index=idx,
+                        content=text,
+                        token_count=len(text) // 4 if text else None,
+                        meta=metadata,
+                        content_hash=content_hash,
+                        created_at=now,
+                        updated_at=now,
+                    )
+                    db.add(chunk)
+                await db.commit()
+        except Exception as chunk_err:
+            log.warning(f'Failed to persist chunks for KB {id} file {form_data.file_id}: {chunk_err}')
 
         # Add file to knowledge base
         await Knowledges.add_file_to_knowledge_by_id(
@@ -1432,6 +1507,10 @@ async def add_file_to_knowledge_by_id(
         )
     except Exception as e:
         log.debug(e)
+        await _update_processing_progress(
+            knowledge_id=id, file_id=form_data.file_id,
+            status='failed', error_message=str(e), db=db,
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -2339,4 +2418,1011 @@ async def move_file_in_knowledge(
         subject_id=form_data.file_id,
         data={'knowledge_id': id, 'directory_id': form_data.directory_id},
     )
+    return {'status': True}
+
+
+# ─────────────────────────────────────────────────────────────
+# Enterprise Knowledge Dashboard – Phase 1: Chunk Management
+# ─────────────────────────────────────────────────────────────
+
+
+@router.post('/{id}/chunks/preview', response_model=list[KnowledgeChunkModel])
+async def preview_knowledge_chunks(
+    request: Request,
+    id: str,
+    form_data: KnowledgeChunkPreviewForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Chunk a file without embedding – preview what the splitter will produce."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    file = await Files.get_file_by_id(form_data.file_id)
+    if not file:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    file_path = file.path
+    if not file_path:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='File has no path.')
+
+    # Use existing loader + splitter (no embedding)
+    try:
+        file_path = await asyncio.to_thread(Storage.get_file, file_path)
+        loader_config = await get_loader_config()
+        loader = build_loader_from_config(request, loader_config)
+        loader.user = user
+        loader.metadata = {
+            'file_id': file.id,
+            'file_name': file.filename,
+            'file_content_type': file.meta.get('content_type'),
+        }
+        docs = await loader.aload(file.filename, file.meta.get('content_type'), file_path)
+
+        # Chunk using same logic as save_docs_to_vector_db
+        config = await get_retrieval_config()
+        from open_webui.routers.retrieval import merge_docs_to_target_size
+        from langchain_text_splitters import (
+            MarkdownHeaderTextSplitter,
+            RecursiveCharacterTextSplitter,
+            TokenTextSplitter,
+        )
+        import tiktoken
+
+        if config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER:
+            markdown_splitter = MarkdownHeaderTextSplitter(
+                headers_to_split_on=[
+                    ('#', 'Header 1'),
+                    ('##', 'Header 2'),
+                    ('###', 'Header 3'),
+                    ('####', 'Header 4'),
+                    ('#####', 'Header 5'),
+                    ('######', 'Header 6'),
+                ],
+                strip_headers=False,
+            )
+            split_docs = []
+            for doc in docs:
+                split_docs.extend([
+                    type(doc)(page_content=c.page_content, metadata={**doc.metadata})
+                    for c in markdown_splitter.split_text(doc.page_content)
+                ])
+            docs = split_docs
+            if config.CHUNK_MIN_SIZE_TARGET > 0:
+                docs = merge_docs_to_target_size(request, docs, config)
+
+        if config.TEXT_SPLITTER in ['', 'character']:
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP, add_start_index=True,
+            )
+            docs = text_splitter.split_documents(docs)
+        elif config.TEXT_SPLITTER == 'token':
+            tiktoken.get_encoding(str(config.TIKTOKEN_ENCODING_NAME))
+            text_splitter = TokenTextSplitter(
+                encoding_name=str(config.TIKTOKEN_ENCODING_NAME),
+                chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP, add_start_index=True,
+            )
+            docs = text_splitter.split_documents(docs)
+        else:
+            # Fallback to RecursiveCharacterTextSplitter
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=config.CHUNK_SIZE, chunk_overlap=config.CHUNK_OVERLAP, add_start_index=True,
+            )
+            docs = text_splitter.split_documents(docs)
+
+        # Remove old preview chunks for this file in this KB
+        from sqlalchemy import delete as sa_delete
+        await db.execute(
+            sa_delete(KnowledgeChunk).where(
+                KnowledgeChunk.knowledge_id == id,
+                KnowledgeChunk.file_id == form_data.file_id,
+            )
+        )
+
+        # Persist chunks in knowledge_chunk table
+        import hashlib
+        now = int(time.time())
+        chunks = []
+        for idx, doc in enumerate(docs):
+            content_hash = hashlib.sha256(doc.page_content.encode()).hexdigest()
+            token_count = len(doc.page_content) // 4  # rough estimate
+
+            chunk = KnowledgeChunk(
+                id=str(uuid.uuid4()),
+                knowledge_id=id,
+                file_id=form_data.file_id,
+                chunk_index=idx,
+                content=doc.page_content,
+                token_count=token_count,
+                meta=doc.metadata,
+                content_hash=content_hash,
+                created_at=now,
+                updated_at=now,
+            )
+            db.add(chunk)
+            chunks.append(KnowledgeChunkModel.model_validate(chunk))
+
+        await db.commit()
+        return chunks
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.get('/{id}/files/{file_id}/chunks', response_model=list[KnowledgeChunkModel])
+async def get_file_chunks(
+    id: str,
+    file_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Get all chunks for a file in a knowledge base."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    from sqlalchemy import select as sa_select
+    result = await db.execute(
+        sa_select(KnowledgeChunk)
+        .where(KnowledgeChunk.knowledge_id == id, KnowledgeChunk.file_id == file_id)
+        .order_by(KnowledgeChunk.chunk_index.asc())
+    )
+    rows = result.scalars().all()
+    return [KnowledgeChunkModel.model_validate(r) for r in rows]
+
+
+@router.get('/{id}/chunks/{chunk_id}', response_model=KnowledgeChunkModel)
+async def get_chunk_detail(
+    id: str,
+    chunk_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Get full content of a single chunk."""
+    from sqlalchemy import select as sa_select
+    result = await db.execute(
+        sa_select(KnowledgeChunk).where(
+            KnowledgeChunk.knowledge_id == id,
+            KnowledgeChunk.id == chunk_id,
+        )
+    )
+    chunk = result.scalars().first()
+    if not chunk:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Chunk not found.')
+    return KnowledgeChunkModel.model_validate(chunk)
+
+
+@router.post('/{id}/chunks/merge')
+async def merge_knowledge_chunks(
+    request: Request,
+    id: str,
+    form_data: KnowledgeChunkMergeForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Merge adjacent chunks [start_index, end_index] into one."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    from sqlalchemy import select as sa_select, delete as sa_delete
+
+    # Fetch chunks in range
+    result = await db.execute(
+        sa_select(KnowledgeChunk)
+        .where(
+            KnowledgeChunk.knowledge_id == id,
+            KnowledgeChunk.file_id == form_data.file_id,
+            KnowledgeChunk.chunk_index >= form_data.start_index,
+            KnowledgeChunk.chunk_index <= form_data.end_index,
+        )
+        .order_by(KnowledgeChunk.chunk_index.asc())
+    )
+    target_chunks = result.scalars().all()
+    if len(target_chunks) < 2:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Need at least 2 chunks to merge.')
+
+    # Merge content
+    merged_content = '\n\n'.join(c.content for c in target_chunks)
+    merged_meta = target_chunks[0].meta or {}
+
+    import hashlib
+    now = int(time.time())
+    content_hash = hashlib.sha256(merged_content.encode()).hexdigest()
+    token_count = len(merged_content) // 4
+
+    # Create new merged chunk at the first index
+    merged_chunk = KnowledgeChunk(
+        id=str(uuid.uuid4()),
+        knowledge_id=id,
+        file_id=form_data.file_id,
+        chunk_index=form_data.start_index,
+        content=merged_content,
+        token_count=token_count,
+        meta=merged_meta,
+        content_hash=content_hash,
+        created_at=now,
+        updated_at=now,
+    )
+
+    # Delete old chunks
+    old_ids = [c.id for c in target_chunks]
+    await db.execute(sa_delete(KnowledgeChunk).where(KnowledgeChunk.id.in_(old_ids)))
+    db.add(merged_chunk)
+
+    # Re-index chunks after the deleted range
+    result = await db.execute(
+        sa_select(KnowledgeChunk)
+        .where(
+            KnowledgeChunk.knowledge_id == id,
+            KnowledgeChunk.file_id == form_data.file_id,
+            KnowledgeChunk.chunk_index > form_data.end_index,
+        )
+        .order_by(KnowledgeChunk.chunk_index.asc())
+    )
+    trailing = result.scalars().all()
+    offset = form_data.end_index - form_data.start_index
+    for chunk in trailing:
+        chunk.chunk_index -= offset
+        chunk.updated_at = now
+
+    await db.commit()
+    return {'status': True, 'merged_chunk_id': merged_chunk.id}
+
+
+@router.post('/{id}/chunks/split')
+async def split_knowledge_chunk(
+    request: Request,
+    id: str,
+    form_data: KnowledgeChunkSplitForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Split a chunk at a character offset into two chunks."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    from sqlalchemy import select as sa_select
+
+    result = await db.execute(
+        sa_select(KnowledgeChunk).where(
+            KnowledgeChunk.knowledge_id == id,
+            KnowledgeChunk.id == form_data.chunk_id,
+        )
+    )
+    chunk = result.scalars().first()
+    if not chunk:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Chunk not found.')
+
+    content = chunk.content
+    split_point = form_data.split_at
+    if split_point <= 0 or split_point >= len(content):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Split point must be within chunk content.')
+
+    part_a = content[:split_point].strip()
+    part_b = content[split_point:].strip()
+    if not part_a or not part_b:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Both parts must be non-empty.')
+
+    import hashlib
+    now = int(time.time())
+
+    # Update original chunk to part_a
+    chunk.content = part_a
+    chunk.token_count = len(part_a) // 4
+    chunk.content_hash = hashlib.sha256(part_a.encode()).hexdigest()
+    chunk.updated_at = now
+
+    # Create new chunk for part_b
+    new_chunk = KnowledgeChunk(
+        id=str(uuid.uuid4()),
+        knowledge_id=id,
+        file_id=chunk.file_id,
+        chunk_index=chunk.chunk_index + 1,
+        content=part_b,
+        token_count=len(part_b) // 4,
+        meta=(chunk.meta or {}).copy(),
+        content_hash=hashlib.sha256(part_b.encode()).hexdigest(),
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(new_chunk)
+
+    # Shift trailing chunks
+    result = await db.execute(
+        sa_select(KnowledgeChunk)
+        .where(
+            KnowledgeChunk.knowledge_id == id,
+            KnowledgeChunk.file_id == chunk.file_id,
+            KnowledgeChunk.chunk_index > chunk.chunk_index,
+        )
+        .order_by(KnowledgeChunk.chunk_index.asc())
+    )
+    trailing = result.scalars().all()
+    for tc in trailing:
+        tc.chunk_index += 1
+        tc.updated_at = now
+
+    await db.commit()
+    return {'status': True, 'new_chunk_id': new_chunk.id}
+
+
+@router.post('/{id}/chunks/reindex')
+async def reindex_knowledge_chunks(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Re-embed all chunks for this KB after manual adjustments."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    from sqlalchemy import select as sa_select
+
+    result = await db.execute(
+        sa_select(KnowledgeChunk).where(KnowledgeChunk.knowledge_id == id)
+    )
+    chunks = result.scalars().all()
+    if not chunks:
+        return {'status': True, 'message': 'No chunks to reindex.'}
+
+    # Delete old vectors for this KB's collection
+    try:
+        await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+    except Exception:
+        pass
+
+    # Rebuild vectors from knowledge_chunk rows
+    from langchain_core.documents import Document
+
+    docs = [
+        Document(
+            page_content=c.content,
+            metadata={
+                **(c.meta or {}),
+                'file_id': c.file_id,
+                'chunk_index': c.chunk_index,
+                'content_hash': c.content_hash,
+            },
+        )
+        for c in chunks
+    ]
+
+    try:
+        await save_docs_to_vector_db(
+            request=request,
+            collection_name=id,
+            docs=docs,
+            user=user,
+            bypass_embedding=False,
+        )
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+    return {'status': True, 'chunks_processed': len(chunks)}
+
+
+# ─────────────────────────────────────────────────────────────
+# Enterprise Knowledge Dashboard – Phase 2: Progress Tracking
+# ─────────────────────────────────────────────────────────────
+
+
+# In-memory progress store for real-time SSE updates
+# Key: (knowledge_id, file_id) → KnowledgeProcessingTaskModel
+_progress_store: dict[str, KnowledgeProcessingTaskModel] = {}
+
+
+async def _update_processing_progress(
+    knowledge_id: str,
+    file_id: str,
+    status: str,
+    progress_pct: int = 0,
+    chunks_total: int | None = None,
+    chunks_processed: int | None = None,
+    error_message: str | None = None,
+    db: AsyncSession | None = None,
+):
+    """Create or update a processing task record in DB and in-memory store."""
+    import time as _time, uuid as _uuid
+
+    key = f'{knowledge_id}:{file_id}'
+    now = int(_time.time())
+
+    # Try to update existing task
+    from sqlalchemy import select as sa_select
+    result = await db.execute(
+        sa_select(KnowledgeProcessingTask).where(
+            KnowledgeProcessingTask.knowledge_id == knowledge_id,
+            KnowledgeProcessingTask.file_id == file_id,
+        )
+    )
+    task = result.scalars().first()
+
+    if task:
+        task.status = status
+        task.progress_pct = progress_pct
+        if chunks_total is not None:
+            task.chunks_total = chunks_total
+        if chunks_processed is not None:
+            task.chunks_processed = chunks_processed
+        if error_message is not None:
+            task.error_message = error_message
+        task.updated_at = now
+        db.add(task)
+        await db.commit()
+    else:
+        task = KnowledgeProcessingTask(
+            id=str(_uuid.uuid4()),
+            knowledge_id=knowledge_id,
+            file_id=file_id,
+            task_type='full_process',
+            status=status,
+            progress_pct=progress_pct,
+            chunks_total=chunks_total,
+            chunks_processed=chunks_processed,
+            error_message=error_message,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(task)
+        await db.commit()
+
+    # Update in-memory store
+    _progress_store[key] = KnowledgeProcessingTaskModel.model_validate(task)
+
+
+@router.get('/{id}/progress', response_model=list[KnowledgeProcessingTaskModel])
+async def get_processing_progress(
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Get current processing status for all files in a KB."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    from sqlalchemy import select as sa_select
+
+    result = await db.execute(
+        sa_select(KnowledgeProcessingTask)
+        .where(KnowledgeProcessingTask.knowledge_id == id)
+        .order_by(KnowledgeProcessingTask.created_at.desc())
+    )
+    tasks = result.scalars().all()
+    return [KnowledgeProcessingTaskModel.model_validate(t) for t in tasks]
+
+
+@router.get('/{id}/progress/stream')
+async def stream_processing_progress(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """SSE endpoint that streams progress updates every second."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    async def event_generator():
+        import time as _time
+        from sqlalchemy import select as sa_select
+
+        # Track the last run to stop after idle timeout
+        last_active = _time.time()
+        sent_count = 0
+
+        while True:
+            # Check DB for tasks
+            result = await db.execute(
+                sa_select(KnowledgeProcessingTask)
+                .where(KnowledgeProcessingTask.knowledge_id == id)
+                .order_by(KnowledgeProcessingTask.created_at.desc())
+            )
+            tasks = result.scalars().all()
+            task_list = [KnowledgeProcessingTaskModel.model_validate(t).model_dump() for t in tasks]
+
+            # Also include in-memory tasks that may not be in DB yet
+            for key, mem_task in _progress_store.items():
+                if key.startswith(f'{id}:'):
+                    exists = any(t['id'] == mem_task.id for t in task_list)
+                    if not exists:
+                        task_list.append(mem_task.model_dump())
+
+            data = json.dumps(task_list)
+            yield f'data: {data}\n\n'
+            sent_count += 1
+
+            # Check if all tasks are in terminal state
+            all_done = all(
+                t['status'] in ('completed', 'failed') for t in task_list
+            ) if task_list else False
+
+            if all_done and sent_count > 2:
+                # Send one more update then stop
+                yield f'data: {data}\n\n'
+                break
+
+            if not all_done:
+                last_active = _time.time()
+
+            # Timeout after 5 minutes of inactivity
+            if _time.time() - last_active > 300:
+                break
+
+            await asyncio.sleep(1)
+
+            # Refresh DB session between iterations
+            await db.commit()
+
+    return StreamingResponse(event_generator(), media_type='text/event-stream')
+
+
+@router.get('/{id}/progress/batch', response_model=KnowledgeBatchTaskModel | None)
+async def get_batch_progress(
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Get the latest batch processing task for this KB."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    from sqlalchemy import select as sa_select
+
+    result = await db.execute(
+        sa_select(KnowledgeBatchTask)
+        .where(KnowledgeBatchTask.knowledge_id == id)
+        .order_by(KnowledgeBatchTask.created_at.desc())
+        .limit(1)
+    )
+    batch = result.scalars().first()
+    if not batch:
+        return None
+    return KnowledgeBatchTaskModel.model_validate(batch)
+
+
+# ─────────────────────────────────────────────────────────────
+# Enterprise Knowledge Dashboard – Phase 3: Retrieval Evaluation
+# ─────────────────────────────────────────────────────────────
+
+
+@router.post('/{id}/evaluate/query')
+async def evaluate_retrieval_query(
+    request: Request,
+    id: str,
+    form_data: KnowledgeEvaluateQueryForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Run a test query against the KB and return Top-K results with metrics."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    k = form_data.k if form_data.k else 10
+
+    try:
+        result = await query_collection(
+            request=request,
+            collection_names=[id],
+            queries=[form_data.query],
+            embedding_function=request.app.state.EMBEDDING_FUNCTION,
+            k=k,
+        )
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+    # query_collection returns: {'distances': [[]], 'documents': [[]], 'metadatas': [[]]}
+    results = []
+    if isinstance(result, dict):
+        docs_list = result.get('documents', [[]])[0] if result.get('documents') else []
+        metas_list = result.get('metadatas', [[]])[0] if result.get('metadatas') else []
+        dists_list = result.get('distances', [[]])[0] if result.get('distances') else []
+
+        for i in range(min(k, len(docs_list))):
+            doc_text = docs_list[i] if i < len(docs_list) else ''
+            results.append({
+                'chunk_id': metas_list[i].get('content_hash', f'chunk-{i}') if i < len(metas_list) else f'chunk-{i}',
+                'text': doc_text[:500],
+                'score': dists_list[i] if i < len(dists_list) else None,
+                'metadata': metas_list[i] if i < len(metas_list) else {},
+                'rank': i + 1,
+            })
+
+    # Compute metrics if judgments exist
+    from sqlalchemy import select as sa_select
+    metrics = None
+    j_result = await db.execute(
+        sa_select(KnowledgeRelevanceJudgment)
+        .where(
+            KnowledgeRelevanceJudgment.knowledge_id == id,
+            KnowledgeRelevanceJudgment.query_text == form_data.query,
+        )
+    )
+    judgments = j_result.scalars().all()
+    if judgments:
+        relevant_ids = {j.chunk_id for j in judgments if j.relevance == 1}
+        total_relevant = len(relevant_ids)
+        if total_relevant > 0:
+            # recall@K
+            retrieved_ids = {r['chunk_id'] for r in results if r['chunk_id']}
+            relevant_retrieved = relevant_ids & retrieved_ids
+            recall_at_k = len(relevant_retrieved) / total_relevant
+            # precision@K
+            precision_at_k = len(relevant_retrieved) / k if k > 0 else 0
+            # MRR
+            mrr = 0.0
+            for j in judgments:
+                if j.relevance == 1 and j.rank_position and j.rank_position > 0:
+                    mrr = max(mrr, 1.0 / j.rank_position)
+            metrics = {
+                'recall_at_k': round(recall_at_k, 4),
+                'precision_at_k': round(precision_at_k, 4),
+                'mrr': round(mrr, 4),
+                'total_relevant': total_relevant,
+            }
+
+    return {'results': results, 'metrics': metrics}
+
+
+@router.post('/{id}/evaluate/annotate')
+async def annotate_retrieval_results(
+    request: Request,
+    id: str,
+    form_data: KnowledgeRelevanceAnnotationForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Mark retrieved chunks as relevant (1) or not relevant (0)."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    from sqlalchemy import delete as sa_delete
+    now = int(time.time())
+    count = 0
+
+    for j in form_data.judgments:
+        # Upsert: delete old judgment for same query+chunk, then insert
+        await db.execute(
+            sa_delete(KnowledgeRelevanceJudgment).where(
+                KnowledgeRelevanceJudgment.knowledge_id == id,
+                KnowledgeRelevanceJudgment.query_text == form_data.query_text,
+                KnowledgeRelevanceJudgment.chunk_id == j.get('chunk_id'),
+            )
+        )
+        judgment = KnowledgeRelevanceJudgment(
+            id=str(uuid.uuid4()),
+            knowledge_id=id,
+            query_text=form_data.query_text,
+            chunk_id=j.get('chunk_id'),
+            document_text=j.get('document_text', ''),
+            rank_position=j.get('rank_position'),
+            relevance=j.get('relevance', 0),
+            user_id=user.id,
+            created_at=now,
+        )
+        db.add(judgment)
+        count += 1
+
+    await db.commit()
+    return {'status': True, 'annotations_saved': count}
+
+
+@router.get('/{id}/evaluate/judgments')
+async def get_evaluation_judgments(
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Get all relevance judgments for this KB, grouped by query."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    from sqlalchemy import select as sa_select
+    result = await db.execute(
+        sa_select(KnowledgeRelevanceJudgment)
+        .where(KnowledgeRelevanceJudgment.knowledge_id == id)
+        .order_by(KnowledgeRelevanceJudgment.created_at.desc())
+    )
+    rows = result.scalars().all()
+
+    # Group by query_text
+    grouped: dict[str, list] = {}
+    for r in rows:
+        key = r.query_text
+        if key not in grouped:
+            grouped[key] = []
+        grouped[key].append(KnowledgeRelevanceJudgmentModel.model_validate(r).model_dump())
+
+    return {'judgments': grouped, 'total_queries': len(grouped)}
+
+
+@router.delete('/{id}/evaluate/judgments/{query_text:path}')
+async def delete_evaluation_judgments(
+    id: str,
+    query_text: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Delete all judgments for a specific query."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    from urllib.parse import unquote
+    from sqlalchemy import delete as sa_delete
+
+    decoded_query = unquote(query_text)
+    await db.execute(
+        sa_delete(KnowledgeRelevanceJudgment).where(
+            KnowledgeRelevanceJudgment.knowledge_id == id,
+            KnowledgeRelevanceJudgment.query_text == decoded_query,
+        )
+    )
+    await db.commit()
+    return {'status': True}
+
+
+# ─────────────────────────────────────────────────────────────
+# Enterprise Knowledge Dashboard – Phase 4: Snapshot Management
+# ─────────────────────────────────────────────────────────────
+
+
+@router.post('/{id}/snapshots', response_model=KnowledgeSnapshotModel)
+async def create_knowledge_snapshot(
+    request: Request,
+    id: str,
+    form_data: KnowledgeSnapshotCreateForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Create a snapshot of the current KB state (files + chunks)."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    from sqlalchemy import select as sa_select
+    now = int(time.time())
+
+    # Collect chunk records
+    chunk_result = await db.execute(
+        sa_select(KnowledgeChunk).where(KnowledgeChunk.knowledge_id == id)
+    )
+    chunk_rows = chunk_result.scalars().all()
+
+    # Collect file associations
+    files_with_dirs = await Knowledges.get_files_with_directory_ids(id, db=db)
+
+    # Build snapshot data
+    snapshot_data = {
+        'files': [
+            {
+                'file_id': f.id,
+                'filename': f.filename,
+                'directory_id': dir_id,
+            }
+            for f, dir_id in files_with_dirs
+        ],
+        'chunks': [
+            {
+                'id': c.id,
+                'file_id': c.file_id,
+                'chunk_index': c.chunk_index,
+                'content_hash': c.content_hash,
+                'token_count': c.token_count,
+            }
+            for c in chunk_rows
+        ],
+    }
+
+    snapshot = KnowledgeSnapshot(
+        id=str(uuid.uuid4()),
+        knowledge_id=id,
+        label=form_data.label,
+        description=form_data.description,
+        file_count=len(files_with_dirs),
+        chunk_count=len(chunk_rows),
+        snapshot_data=snapshot_data,
+        created_by=user.id,
+        created_at=now,
+    )
+    db.add(snapshot)
+    await db.commit()
+    await db.refresh(snapshot)
+
+    return KnowledgeSnapshotModel.model_validate(snapshot)
+
+
+@router.get('/{id}/snapshots', response_model=list[KnowledgeSnapshotModel])
+async def list_knowledge_snapshots(
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """List all snapshots for this KB."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    from sqlalchemy import select as sa_select
+    result = await db.execute(
+        sa_select(KnowledgeSnapshot)
+        .where(KnowledgeSnapshot.knowledge_id == id)
+        .order_by(KnowledgeSnapshot.created_at.desc())
+    )
+    rows = result.scalars().all()
+    return [KnowledgeSnapshotModel.model_validate(r) for r in rows]
+
+
+@router.get('/{id}/snapshots/{snapshot_id}', response_model=KnowledgeSnapshotModel)
+async def get_knowledge_snapshot(
+    id: str,
+    snapshot_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Get a single snapshot detail."""
+    from sqlalchemy import select as sa_select
+    result = await db.execute(
+        sa_select(KnowledgeSnapshot).where(
+            KnowledgeSnapshot.id == snapshot_id,
+            KnowledgeSnapshot.knowledge_id == id,
+        )
+    )
+    snap = result.scalars().first()
+    if not snap:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Snapshot not found.')
+    return KnowledgeSnapshotModel.model_validate(snap)
+
+
+@router.post('/{id}/snapshots/{snapshot_id}/rollback')
+async def rollback_knowledge_snapshot(
+    request: Request,
+    id: str,
+    snapshot_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Rollback to a previous snapshot - restore chunk records and re-index."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    from sqlalchemy import select as sa_select, delete as sa_delete
+
+    result = await db.execute(
+        sa_select(KnowledgeSnapshot).where(
+            KnowledgeSnapshot.id == snapshot_id,
+            KnowledgeSnapshot.knowledge_id == id,
+        )
+    )
+    snap = result.scalars().first()
+    if not snap:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Snapshot not found.')
+
+    snap_data = snap.snapshot_data or {}
+    snap_files = snap_data.get('files', [])
+    snap_chunks = snap_data.get('chunks', [])
+
+    now = int(time.time())
+
+    # 1. Clear current chunks and file associations
+    await db.execute(sa_delete(KnowledgeChunk).where(KnowledgeChunk.knowledge_id == id))
+    await db.execute(sa_delete(KnowledgeFile).where(KnowledgeFile.knowledge_id == id))
+
+    restored_chunks = len(snap_chunks)
+
+    # 2. Restore chunk records
+    for c in snap_chunks:
+        db.add(KnowledgeChunk(
+            id=c.get('id', str(uuid.uuid4())),
+            knowledge_id=id, file_id=c['file_id'],
+            chunk_index=c['chunk_index'], content='',
+            token_count=c.get('token_count'), content_hash=c.get('content_hash'),
+            created_at=now, updated_at=now,
+        ))
+
+    # 3. Restore file associations
+    seen = set()
+    for f in snap_files:
+        if f['file_id'] not in seen:
+            seen.add(f['file_id'])
+            db.add(KnowledgeFile(
+                id=str(uuid.uuid4()), knowledge_id=id,
+                file_id=f['file_id'], user_id=user.id,
+                directory_id=f.get('directory_id'),
+                created_at=now, updated_at=now,
+            ))
+
+    await db.commit()
+
+    return {
+        'status': True,
+        'restored_files': len(snap_files),
+        'restored_chunks': restored_chunks,
+        'snapshot_label': snap.label,
+        'hint': 'Vectors need re-indexing. Go to Chunks tab and click Reindex Vectors to rebuild.',
+    }
+
+
+@router.post('/{id}/snapshots/compare', response_model=KnowledgeSnapshotCompareResult)
+async def compare_knowledge_snapshots(
+    id: str,
+    form_data: KnowledgeSnapshotCompareForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Compare two snapshots and show added/removed/modified files."""
+    knowledge = await Knowledges.get_knowledge_by_id(id, db=db)
+    if not knowledge:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    from sqlalchemy import select as sa_select
+
+    # Load both snapshots
+    r1 = await db.execute(
+        sa_select(KnowledgeSnapshot).where(KnowledgeSnapshot.id == form_data.snapshot_a_id)
+    )
+    snap_a = r1.scalars().first()
+    r2 = await db.execute(
+        sa_select(KnowledgeSnapshot).where(KnowledgeSnapshot.id == form_data.snapshot_b_id)
+    )
+    snap_b = r2.scalars().first()
+    if not snap_a or not snap_b:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Snapshot not found.')
+
+    files_a = {(f['file_id'], f['filename']) for f in (snap_a.snapshot_data or {}).get('files', [])}
+    files_b = {(f['file_id'], f['filename']) for f in (snap_b.snapshot_data or {}).get('files', [])}
+
+    added = [{'file_id': fid, 'filename': fn} for fid, fn in (files_b - files_a)]
+    removed = [{'file_id': fid, 'filename': fn} for fid, fn in (files_a - files_b)]
+
+    # Check for modified (same file_id but different hash)
+    chunks_a = {(c['file_id'], c.get('content_hash')) for c in (snap_a.snapshot_data or {}).get('chunks', [])}
+    chunks_b = {(c['file_id'], c.get('content_hash')) for c in (snap_b.snapshot_data or {}).get('chunks', [])}
+    common_ids = {fid for fid, _ in files_a} & {fid for fid, _ in files_b}
+    modified = []
+    for fid in common_ids:
+        hashes_a = {h for f, h in chunks_a if f == fid}
+        hashes_b = {h for f, h in chunks_b if f == fid}
+        if hashes_a != hashes_b:
+            name_a = next((fn for i, fn in files_a if i == fid), fid)
+            modified.append({'file_id': fid, 'filename': name_a})
+
+    return KnowledgeSnapshotCompareResult(
+        added_files=added,
+        removed_files=removed,
+        modified_files=modified,
+        total_chunks_before=snap_a.chunk_count or 0,
+        total_chunks_after=snap_b.chunk_count or 0,
+    )
+
+
+@router.delete('/{id}/snapshots/{snapshot_id}')
+async def delete_knowledge_snapshot(
+    id: str,
+    snapshot_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Delete a snapshot."""
+    from sqlalchemy import delete as sa_delete
+    await db.execute(
+        sa_delete(KnowledgeSnapshot).where(
+            KnowledgeSnapshot.id == snapshot_id,
+            KnowledgeSnapshot.knowledge_id == id,
+        )
+    )
+    await db.commit()
     return {'status': True}

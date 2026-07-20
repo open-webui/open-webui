@@ -30,6 +30,7 @@
 
 	export let onClick = (fileId) => {};
 	export let onDelete = (fileId) => {};
+	export let onUnlink = (fileId) => {};
 	export let onRename = (fileId: string, name: string) => {};
 	export let onNavigateDirectory = (directoryId: string) => {};
 	export let onRenameDirectory = (id: string, name: string) => {};
@@ -207,6 +208,16 @@
 								>
 									<Download className="size-3.5" />
 									{$i18n.t('Download')}
+								</button>
+								<button
+									type="button"
+									class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-amber-50 dark:hover:bg-amber-900/30 transition items-center gap-2 text-sm text-amber-600"
+									on:click={() => {
+										onUnlink(file?.id ?? file?.tempId);
+									}}
+								>
+									<GarbageBin className="size-3.5" />
+									Unlink Only
 								</button>
 								<button
 									type="button"
