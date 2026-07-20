@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import re
+import time
 from functools import partial, update_wrapper
 from typing import (
     Any,
@@ -1093,7 +1094,8 @@ async def get_terminal_system_prompt(
     base = base_url.rstrip('/')
     try:
         async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=3),
+            # 30s: orchestrator instances may cold-start before answering
+            timeout=aiohttp.ClientTimeout(total=30),
             trust_env=True,
         ) as session:
             # 1. Check feature flag
@@ -1116,6 +1118,39 @@ async def get_terminal_system_prompt(
     except Exception as e:
         log.debug(f'Failed to fetch terminal system prompt: {e}')
     return None
+
+
+_TERMINAL_SYSTEM_PROMPT_TTL = 300  # seconds
+_TERMINAL_SYSTEM_PROMPT_ERROR_TTL = 60  # seconds
+_terminal_system_prompt_cache: dict[tuple[str, str], tuple[float, str | None]] = {}
+
+
+async def get_cached_terminal_system_prompt(
+    base_url: str,
+    headers: dict,
+    cookies: dict | None = None,
+) -> str | None:
+    """Return a terminal server's system prompt, cached per (URL, user).
+
+    Each user may resolve to a different orchestrator instance. Failures
+    are cached briefly so an unreachable instance doesn't stall every
+    request.
+    """
+    key = (base_url, headers.get('X-User-Id', ''))
+    now = time.monotonic()
+
+    cached = _terminal_system_prompt_cache.get(key)
+    if cached and cached[0] > now:
+        return cached[1]
+
+    prompt = await get_terminal_system_prompt(base_url, headers, cookies)
+
+    if len(_terminal_system_prompt_cache) > 4096:
+        for stale_key in [k for k, (expiry, _) in _terminal_system_prompt_cache.items() if expiry <= now]:
+            _terminal_system_prompt_cache.pop(stale_key, None)
+    ttl = _TERMINAL_SYSTEM_PROMPT_TTL if prompt else _TERMINAL_SYSTEM_PROMPT_ERROR_TTL
+    _terminal_system_prompt_cache[key] = (now + ttl, prompt)
+    return prompt
 
 
 async def set_terminal_servers(request: Request):
@@ -1245,15 +1280,20 @@ async def get_terminal_tools(
             headers.update(bearer_auth_header(oauth_token.get('access_token', '')))
     # auth_type == "none": no Authorization header
 
-    system_prompt = server_data.get('system_prompt')
-
     # Use chat_id as the per-session key for cwd tracking
     metadata = extra_params.get('__metadata__', {})
     session_id = metadata.get('chat_id')
     if session_id:
         headers['X-Session-Id'] = session_id
 
-    terminal_cwd = await get_terminal_cwd(server_data['url'], headers, cookies)
+    # Live fetch with the user's credentials; the set_terminal_servers
+    # snapshot is the fallback.
+    terminal_cwd, system_prompt = await asyncio.gather(
+        get_terminal_cwd(server_data['url'], headers, cookies),
+        get_cached_terminal_system_prompt(server_data['url'], headers, cookies),
+    )
+    if not system_prompt:
+        system_prompt = server_data.get('system_prompt')
 
     tools_dict = {}
     for spec in specs:
