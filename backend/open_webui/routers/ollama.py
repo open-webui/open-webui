@@ -355,6 +355,12 @@ def resolve_api_config(api_configs: dict, idx: int, url: str) -> dict:
     return api_configs.get(str(idx), api_configs.get(url, {}))
 
 
+async def get_ollama_connection_config() -> tuple[list, dict]:
+    """Base URLs and per-connection API configs in one batched SELECT."""
+    config = await Config.get_many('ollama.base_urls', 'ollama.api_configs')
+    return config.get('ollama.base_urls', []), config.get('ollama.api_configs', {})
+
+
 @cached(
     ttl=MODELS_CACHE_TTL,
     # key_builder (not key) is the per-call hook in aiocache 0.12; `key=` is a
@@ -871,12 +877,10 @@ async def embed(
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model))
         url_idx = random.choice(models[model]['urls'])
 
-    url = (await Config.get('ollama.base_urls', []))[url_idx]
-    api_config = (await Config.get('ollama.api_configs', {})).get(
-        str(url_idx),
-        (await Config.get('ollama.api_configs', {})).get(url, {}),
-    )
-    key = get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {})))
+    base_urls, api_configs = await get_ollama_connection_config()
+    url = base_urls[url_idx]
+    api_config = api_configs.get(str(url_idx), api_configs.get(url, {}))
+    key = get_api_key(url_idx, url, api_configs)
 
     prefix_id = api_config.get('prefix_id')
     if prefix_id:
@@ -925,12 +929,10 @@ async def embeddings(
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model))
         url_idx = random.choice(models[model]['urls'])
 
-    url = (await Config.get('ollama.base_urls', []))[url_idx]
-    api_config = (await Config.get('ollama.api_configs', {})).get(
-        str(url_idx),
-        (await Config.get('ollama.api_configs', {})).get(url, {}),
-    )
-    key = get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {})))
+    base_urls, api_configs = await get_ollama_connection_config()
+    url = base_urls[url_idx]
+    api_config = api_configs.get(str(url_idx), api_configs.get(url, {}))
+    key = get_api_key(url_idx, url, api_configs)
 
     prefix_id = api_config.get('prefix_id')
     if prefix_id:
@@ -984,11 +986,9 @@ async def generate_completion(
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model))
         url_idx = random.choice(models[model]['urls'])
 
-    url = (await Config.get('ollama.base_urls', []))[url_idx]
-    api_config = (await Config.get('ollama.api_configs', {})).get(
-        str(url_idx),
-        (await Config.get('ollama.api_configs', {})).get(url, {}),
-    )
+    base_urls, api_configs = await get_ollama_connection_config()
+    url = base_urls[url_idx]
+    api_config = api_configs.get(str(url_idx), api_configs.get(url, {}))
 
     prefix_id = api_config.get('prefix_id')
     if prefix_id:
@@ -997,7 +997,7 @@ async def generate_completion(
     return await send_request(
         f'{url}/api/generate',
         payload=form_data.model_dump_json(exclude_none=True).encode(),
-        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=True,
     )
@@ -1119,7 +1119,8 @@ async def generate_chat_completion(
         await check_model_access(user, None, bypass_filter)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx, user)
-    api_config = resolve_api_config((await Config.get('ollama.api_configs', {})), url_idx, url)
+    api_configs = await Config.get('ollama.api_configs', {})
+    api_config = resolve_api_config(api_configs, url_idx, url)
 
     prefix_id = api_config.get('prefix_id')
     if prefix_id:
@@ -1128,7 +1129,7 @@ async def generate_chat_completion(
     return await send_request(
         f'{url}/api/chat',
         payload=json.dumps(payload),
-        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=form_data.stream,
         content_type='application/x-ndjson',
@@ -1207,7 +1208,8 @@ async def generate_openai_completion(
         await check_model_access(user, None)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx, user)
-    api_config = resolve_api_config((await Config.get('ollama.api_configs', {})), url_idx, url)
+    api_configs = await Config.get('ollama.api_configs', {})
+    api_config = resolve_api_config(api_configs, url_idx, url)
 
     prefix_id = api_config.get('prefix_id')
     if prefix_id:
@@ -1216,7 +1218,7 @@ async def generate_openai_completion(
     return await send_request(
         f'{url}/v1/completions',
         payload=json.dumps(payload),
-        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
         metadata=metadata,
@@ -1266,7 +1268,8 @@ async def generate_openai_chat_completion(
         await check_model_access(user, None)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx, user)
-    api_config = resolve_api_config((await Config.get('ollama.api_configs', {})), url_idx, url)
+    api_configs = await Config.get('ollama.api_configs', {})
+    api_config = resolve_api_config(api_configs, url_idx, url)
 
     prefix_id = api_config.get('prefix_id')
     if prefix_id:
@@ -1275,7 +1278,7 @@ async def generate_openai_chat_completion(
     return await send_request(
         f'{url}/v1/chat/completions',
         payload=json.dumps(payload),
-        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
         metadata=metadata,
@@ -1317,10 +1320,8 @@ async def generate_anthropic_messages(
         await check_model_access(user, None)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx, user)
-    api_config = (await Config.get('ollama.api_configs', {})).get(
-        str(url_idx),
-        (await Config.get('ollama.api_configs', {})).get(url, {}),  # Legacy support
-    )
+    api_configs = await Config.get('ollama.api_configs', {})
+    api_config = api_configs.get(str(url_idx), api_configs.get(url, {}))  # Legacy support
 
     prefix_id = api_config.get('prefix_id', None)
     if prefix_id:
@@ -1329,7 +1330,7 @@ async def generate_anthropic_messages(
     return await send_request(
         f'{url}/v1/messages',
         payload=json.dumps(payload),
-        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
         content_type='text/event-stream' if payload.get('stream', False) else None,
@@ -1377,10 +1378,8 @@ async def generate_responses(
         await check_model_access(user, None)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx, user)
-    api_config = (await Config.get('ollama.api_configs', {})).get(
-        str(url_idx),
-        (await Config.get('ollama.api_configs', {})).get(url, {}),  # Legacy support
-    )
+    api_configs = await Config.get('ollama.api_configs', {})
+    api_config = api_configs.get(str(url_idx), api_configs.get(url, {}))  # Legacy support
 
     prefix_id = api_config.get('prefix_id', None)
     if prefix_id:
@@ -1389,7 +1388,7 @@ async def generate_responses(
     return await send_request(
         f'{url}/v1/responses',
         payload=json.dumps(payload),
-        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
         content_type='text/event-stream' if payload.get('stream', False) else None,
