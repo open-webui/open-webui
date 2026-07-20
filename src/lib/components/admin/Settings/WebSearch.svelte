@@ -25,6 +25,7 @@
 		'google_pse',
 		'brave',
 		'brave_llm_context',
+		'keenable',
 		'kagi',
 		'mojeek',
 		'bocha',
@@ -434,6 +435,24 @@
 											autocomplete="off"
 										/>
 									</div>
+								</div>
+							</div>
+						</div>
+					{:else if webConfig.WEB_SEARCH_ENGINE === 'keenable'}
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
+								<div class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1">
+									{$i18n.t('Keenable Search API Key')}
+								</div>
+
+								<SensitiveInput
+									variant="settings"
+									placeholder={$i18n.t('Enter Keenable Search API Key (optional)')}
+									bind:value={webConfig.KEENABLE_SEARCH_API_KEY}
+								/>
+
+								<div class="mt-1 text-xs text-gray-400">
+									{$i18n.t('Works without a key; add one to raise rate limits.')}
 								</div>
 							</div>
 						</div>
