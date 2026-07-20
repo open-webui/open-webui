@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import os
+import time
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -38,7 +39,7 @@ from open_webui.models.files import (
     Files,
 )
 from open_webui.models.groups import Groups
-from open_webui.models.knowledge import Knowledges
+from open_webui.models.knowledge import Knowledges, KnowledgeProcessingTask
 from open_webui.models.users import Users
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.audio import transcribe
@@ -203,7 +204,25 @@ async def process_uploaded_file(
                     else:
                         # Keep the generic file status stream open until the
                         # KB-specific vector write and durable link both finish.
-                        await Files.update_file_data_by_id(file_item.id, {'status': 'processing'}, db=db_session)
+                        await Files.update_file_data_by_id(
+                            file_item.id, {'status': 'processing'}, db=db_session
+                        )
+
+                        # ── Progress tracking for enterprise dashboard ──
+                        _now = int(time.time())
+                        _task_id = str(uuid.uuid4())
+                        _task = KnowledgeProcessingTask(
+                            id=_task_id,
+                            knowledge_id=knowledge_id,
+                            file_id=file_item.id,
+                            task_type='full_process',
+                            status='embedding',
+                            progress_pct=50,
+                            created_at=_now,
+                            updated_at=_now,
+                        )
+                        db_session.add(_task)
+                        await db_session.commit()
                         await process_file(
                             request,
                             ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
@@ -219,6 +238,13 @@ async def process_uploaded_file(
                         )
                         if not knowledge_file:
                             raise Exception(f'Failed to link file {file_item.id} to knowledge {knowledge_id}')
+
+                        # Mark completed
+                        _task.status = 'completed'
+                        _task.progress_pct = 100
+                        _task.updated_at = int(time.time())
+                        db_session.add(_task)
+                        await db_session.commit()
                         log.info(f'Linked file {file_item.id} to knowledge {knowledge_id}')
                 except Exception as e:
                     log.warning(f'Failed to link file {file_item.id} to knowledge {knowledge_id}: {e}')

@@ -845,15 +845,37 @@ async def apply_source_context_to_messages(
     if not context:
         return messages
 
+    # ── Custom KB Prompt Template: check if any source KB has a custom template ──
+    template = await Config.get('rag.template')
+    for source in sources:
+        source_meta = source.get('source', {}) if isinstance(source, dict) else getattr(source, 'source', None)
+        if source_meta:
+            kb_id = source_meta.get('id') if isinstance(source_meta, dict) else getattr(source_meta, 'id', None)
+            if kb_id:
+                try:
+                    from open_webui.models.knowledge import Knowledges
+                    kb = await Knowledges.get_knowledge_by_id(kb_id)
+                    if kb and kb.meta:
+                        custom_tpl = kb.meta.get('rag_prompt_template')
+                        if custom_tpl:
+                            # Convert {query}/{context}/{kb_name} to [query]/[context]
+                            custom_tpl = custom_tpl.replace('{query}', '[query]')
+                            custom_tpl = custom_tpl.replace('{context}', '[context]')
+                            custom_tpl = custom_tpl.replace('{kb_name}', kb.name)
+                            template = custom_tpl
+                            break  # Use first custom template found
+                except Exception:
+                    pass  # Fall back to global template
+
     if RAG_SYSTEM_CONTEXT:
         return add_or_update_system_message(
-            await rag_template(await Config.get('rag.template'), context, user_message),
+            await rag_template(template, context, user_message),
             messages,
             append=True,
         )
     else:
         return add_or_update_user_message(
-            await rag_template(await Config.get('rag.template'), context, user_message),
+            await rag_template(template, context, user_message),
             messages,
             append=False,
         )
