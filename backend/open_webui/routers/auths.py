@@ -128,6 +128,9 @@ LDAP_SERVER_CONFIG_KEYS = {
     'certificate_path': 'ldap.server.ca_cert_file',
     'validate_cert': 'ldap.server.validate_cert',
     'ciphers': 'ldap.server.ciphers',
+    'enable_group_management': 'ldap.group.enable_management',
+    'enable_group_creation': 'ldap.group.enable_creation',
+    'attribute_for_groups': 'ldap.server.attribute_for_groups',
 }
 
 
@@ -1188,6 +1191,9 @@ class LdapServerConfig(BaseModel):
     certificate_path: str | None = None
     validate_cert: bool = True
     ciphers: str | None = 'ALL'
+    enable_group_management: bool = False
+    enable_group_creation: bool = False
+    attribute_for_groups: str = 'memberOf'
 
 
 @router.get('/admin/config/ldap/server', response_model=LdapServerConfig)
