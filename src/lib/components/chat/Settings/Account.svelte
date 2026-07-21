@@ -197,7 +197,7 @@
 				description={$i18n.t('Set the birth date saved with your profile.')}
 			>
 				<input
-					class={inputClass}
+					class="{inputClass} dark:scheme-dark"
 					type="date"
 					aria-label={$i18n.t('Birth Date')}
 					bind:value={dateOfBirth}
