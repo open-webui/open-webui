@@ -30,7 +30,7 @@ psycopg[binary]==3.3.4
 alembic==1.18.4
 
 pycrdt==0.13.1
-redis==8.0.0
+redis==8.0.1
 hiredis==3.4.0
 
 APScheduler==3.11.2
