@@ -141,11 +141,35 @@ class AuthTokenMiddleware:
     Also exposes `request.state.enable_api_keys` (snapshotted at request
     entry from runtime config) and stamps an `X-Process-Time` response
     header.
+
+    The enable_api_keys flag is cached with bounded staleness instead of
+    hitting the DB on every request: config writes in this process
+    invalidate immediately via `Config.GENERATION`; writes from other
+    instances become visible within `CONFIG_CACHE_TTL` seconds.
     """
+
+    CONFIG_CACHE_TTL = 15.0
 
     def __init__(self, app: ASGIApp, *, fastapi_app) -> None:
         self.app = app
         self._fastapi_app = fastapi_app
+        self._api_keys_value = None
+        self._api_keys_expires = 0.0
+        self._api_keys_generation = -1
+
+    async def _get_enable_api_keys(self):
+        now = time.monotonic()
+        if now < self._api_keys_expires and self._api_keys_generation == Config.GENERATION:
+            return self._api_keys_value
+        # Capture the generation before the fetch: a write that lands mid-read
+        # bumps it, so the next request refetches rather than trusting a value
+        # that may predate the write.
+        generation = Config.GENERATION
+        value = await Config.get('auth.enable_api_keys')
+        self._api_keys_value = value
+        self._api_keys_expires = now + self.CONFIG_CACHE_TTL
+        self._api_keys_generation = generation
+        return value
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope['type'] != 'http':
@@ -166,7 +190,7 @@ class AuthTokenMiddleware:
                 token = HTTPAuthorizationCredentials(scheme='Bearer', credentials=api_key)
 
         request.state.token = token
-        request.state.enable_api_keys = await Config.get('auth.enable_api_keys')
+        request.state.enable_api_keys = await self._get_enable_api_keys()
 
         async def send_with_timing(message: Message) -> None:
             if message['type'] == 'http.response.start':

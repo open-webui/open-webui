@@ -106,6 +106,9 @@ class Config(Base):
     DEFAULTS: ClassVar[dict[str, Any]] = {}
     PERSISTENT_ENABLED: ClassVar[bool] = True
     OAUTH_PERSISTENT_ENABLED: ClassVar[bool] = False
+    # Bumped on every write so read-side caches (e.g. AuthTokenMiddleware's
+    # enable_api_keys snapshot) can invalidate same-process without a DB read.
+    GENERATION: ClassVar[int] = 0
 
     # ── Class methods ────────────────────────────────────────
 
@@ -202,6 +205,7 @@ class Config(Base):
                 Config.DEFAULTS[key] = value
 
         if not persistent_updates:
+            Config.GENERATION += 1
             return
 
         async with get_async_db() as db:
@@ -214,6 +218,7 @@ class Config(Base):
                 else:
                     db.add(Config(key=key, value=value, updated_at=now))
             await db.commit()
+        Config.GENERATION += 1
 
     @staticmethod
     async def delete(key: str) -> bool:
@@ -223,6 +228,7 @@ class Config(Base):
             if row:
                 await db.delete(row)
                 await db.commit()
+                Config.GENERATION += 1
                 return True
             return False
 
@@ -232,6 +238,7 @@ class Config(Base):
         async with get_async_db() as db:
             await db.execute(delete(Config))
             await db.commit()
+        Config.GENERATION += 1
 
     @staticmethod
     async def seed_defaults(defaults: dict) -> None:
