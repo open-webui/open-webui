@@ -32,7 +32,7 @@
 	let LDAP_SERVER = {
 		label: '',
 		host: '',
-		port: '',
+		port: null,
 		attribute_for_mail: 'mail',
 		attribute_for_username: 'uid',
 		app_dn: '',
