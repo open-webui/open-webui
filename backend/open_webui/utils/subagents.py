@@ -110,10 +110,7 @@ async def process_pending_internal_messages(
                         and meta.get('type') == 'subagent'
                         and meta.get('status') in (None, 'pending')
                     )
-                    or (
-                        meta.get('internal') is True
-                        and meta.get('type') == 'timer'
-                    )
+                    or (meta.get('internal') is True and meta.get('type') == 'timer')
                 )
             ]
             if not pending:
@@ -137,11 +134,9 @@ async def process_pending_internal_messages(
                     if message.get('parentId') == parent_id
                     and (message.get('model') or model_id) == model_id
                     and (
-                        (
-                            meta.get('internal') is True
-                            and meta.get('type') == 'subagent'
-                            and meta.get('status') in (None, 'pending')
-                        )
+                        meta.get('internal') is True
+                        and meta.get('type') == 'subagent'
+                        and meta.get('status') in (None, 'pending')
                     )
                 ]
             combined_content = '\n\n'.join(message.get('content', '') for message in batch if message.get('content'))

@@ -582,9 +582,7 @@ async def update_note_by_id(
         event_data = note.model_dump()
         if form_data.data is not None:
             event_data['data'] = {
-                key: note.data.get(key)
-                for key in form_data.data.keys()
-                if note.data is not None and key in note.data
+                key: note.data.get(key) for key in form_data.data.keys() if note.data is not None and key in note.data
             }
 
         await sio.emit(

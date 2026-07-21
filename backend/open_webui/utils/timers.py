@@ -25,8 +25,8 @@ from open_webui.utils.misc import get_message_list
 
 log = logging.getLogger(__name__)
 
-_RELATIVE_TIME = re.compile(r"^(?:\+|in\s+)?(\d+)\s*(s|sec(?:onds?)?|m|min(?:utes?)?|h|hours?|d|days?)$")
-_RFC3339_TIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$")
+_RELATIVE_TIME = re.compile(r'^(?:\+|in\s+)?(\d+)\s*(s|sec(?:onds?)?|m|min(?:utes?)?|h|hours?|d|days?)$')
+_RFC3339_TIME = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$')
 _TIME_UNITS_NS = {
     's': 1_000_000_000,
     'm': 60 * 1_000_000_000,
@@ -49,15 +49,13 @@ def parse_timer_at(value: str) -> int:
 
     if not _RFC3339_TIME.fullmatch(raw):
         raise ValueError(
-            'at must be a relative time such as 10s or in 10 seconds, '
-            'or an RFC 3339 timestamp with a timezone.'
+            'at must be a relative time such as 10s or in 10 seconds, or an RFC 3339 timestamp with a timezone.'
         )
     try:
         parsed = datetime.fromisoformat(raw.replace('Z', '+00:00'))
     except ValueError as exc:
         raise ValueError(
-            'at must be a relative time such as 10s or in 10 seconds, '
-            'or an RFC 3339 timestamp with a timezone.'
+            'at must be a relative time such as 10s or in 10 seconds, or an RFC 3339 timestamp with a timezone.'
         ) from exc
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise ValueError('absolute at values must include an explicit timezone.')
@@ -182,11 +180,7 @@ async def claim_due_timers(now_ns: int, limit: int = 10) -> list[tuple[str, str]
             stmt = stmt.with_for_update(skip_locked=True)
 
         result = await db.execute(stmt)
-        rows = [
-            row
-            for row in result.scalars().all()
-            if int((row.meta or {}).get('timer_at') or 0) <= now_ns
-        ]
+        rows = [row for row in result.scalars().all() if int((row.meta or {}).get('timer_at') or 0) <= now_ns]
         rows.sort(key=lambda row: int((row.meta or {}).get('timer_at') or 0))
         rows = rows[:limit]
 

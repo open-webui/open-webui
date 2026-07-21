@@ -156,9 +156,7 @@ class MilvusClient(VectorDBBase):
             except MilvusException as e:
                 # The index only accelerates resource_id filters; never fail
                 # collection creation over it.
-                log.warning(
-                    f'Could not create {RESOURCE_ID_FIELD} index on {mt_collection_name}: {e}'
-                )
+                log.warning(f'Could not create {RESOURCE_ID_FIELD} index on {mt_collection_name}: {e}')
         log.info(f'Created shared collection: {mt_collection_name}')
         return collection
 

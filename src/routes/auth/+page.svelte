@@ -236,7 +236,7 @@
 
 	{#if loaded}
 		<div
-			class="fixed bg-transparent min-h-screen w-full flex justify-center  z-50 text-black dark:text-white"
+			class="fixed bg-transparent min-h-screen w-full flex justify-center z-50 text-black dark:text-white"
 			id="auth-container"
 		>
 			<div class="w-full px-10 min-h-screen flex flex-col text-center">

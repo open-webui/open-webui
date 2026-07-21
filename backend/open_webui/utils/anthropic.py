@@ -467,9 +467,7 @@ def convert_openai_to_anthropic_response(
     }
 
 
-async def openai_stream_to_anthropic_stream(
-    openai_stream_generator, model: str = '', input_tokens: int = 0
-):
+async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str = '', input_tokens: int = 0):
     """
     Convert an OpenAI SSE streaming response to Anthropic Messages SSE format.
 
@@ -560,9 +558,7 @@ async def openai_stream_to_anthropic_stream(
 
                 # Update usage if present
                 if data.get('usage'):
-                    input_tokens = data['usage'].get(
-                        'input_tokens', data['usage'].get('prompt_tokens', input_tokens)
-                    )
+                    input_tokens = data['usage'].get('input_tokens', data['usage'].get('prompt_tokens', input_tokens))
                     output_tokens = data['usage'].get(
                         'output_tokens', data['usage'].get('completion_tokens', output_tokens)
                     )

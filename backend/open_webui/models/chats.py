@@ -1593,12 +1593,14 @@ class ChatTable:
 
                 # Check if there are any tags to filter
                 if 'none' in tag_ids:
-                    stmt = stmt.filter(text("""
+                    stmt = stmt.filter(
+                        text("""
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_each(Chat.meta, '$.tags') AS tag
                             )
-                            """))
+                            """)
+                    )
                 elif tag_ids:
                     stmt = stmt.filter(
                         and_(
@@ -1641,12 +1643,14 @@ class ChatTable:
                 ).params(title_key=f'%{search_text}%', content_key=search_text.lower())
 
                 if 'none' in tag_ids:
-                    stmt = stmt.filter(text("""
+                    stmt = stmt.filter(
+                        text("""
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_array_elements_text(Chat.meta->'tags') AS tag
                             )
-                            """))
+                            """)
+                    )
                 elif tag_ids:
                     stmt = stmt.filter(
                         and_(

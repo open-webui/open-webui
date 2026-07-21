@@ -477,7 +477,9 @@
 	$: contextPercent = contextHasThreshold
 		? Math.max(0, Math.round(statusContextUsage?.percent ?? 0))
 		: null;
-	$: contextTokens = formatTokenCount(statusContextUsage?.estimated_tokens || statusContextUsage?.tokens || 0);
+	$: contextTokens = formatTokenCount(
+		statusContextUsage?.estimated_tokens || statusContextUsage?.tokens || 0
+	);
 	$: contextValue = statusContextUsage
 		? contextHasThreshold
 			? `${contextPercent}% ${contextTokens}/${formatTokenCount(statusContextUsage.threshold)}`
