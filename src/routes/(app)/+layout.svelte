@@ -248,6 +248,10 @@
 
 		const setupKeyboardShortcuts = () => {
 			document.addEventListener('keydown', async (event) => {
+				if ($settings?.keyboardShortcuts === false) {
+					return;
+				}
+
 				const shortcut = matchKeybinding(event);
 				if (shortcut === Shortcut.SEARCH) {
 					console.log('Shortcut triggered: SEARCH');
