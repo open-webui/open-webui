@@ -33,8 +33,8 @@
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
 	import { toast } from 'svelte-sonner';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import ModelSettingsModal from './Models/ModelSettingsModal.svelte';
 	import ManageModelsModal from './Models/ManageModelsModal.svelte';
+	import ModelDefaultsPanel from './Models/ModelDefaultsPanel.svelte';
 	import ModelMenu from '$lib/components/admin/Settings/Models/ModelMenu.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
@@ -47,7 +47,6 @@
 	import Download from '$lib/components/icons/Download.svelte';
 	import EllipsisVertical from '$lib/components/icons/EllipsisVertical.svelte';
 	import Wrench from '$lib/components/icons/Wrench.svelte';
-	import SettingsIcon from '$lib/components/icons/Settings.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { goto } from '$app/navigation';
 
@@ -83,11 +82,13 @@
 	let filteredModels = [];
 	let selectedModelId = null;
 
-	let showConfigModal = false;
 	let showManageModal = false;
 	let showResetModal = false;
 	let savingModelOrder = false;
+	let savingModelsSettings = false;
 	let modelOrderDirty = false;
+	let modelDefaultsPanel = null;
+	let modelDefaultsDirty = false;
 
 	let viewOption = ''; // '' = All, 'enabled', 'disabled', 'visible', 'hidden'
 	let tags: string[] = [];
@@ -320,6 +321,20 @@
 		}
 
 		savingModelOrder = false;
+	};
+
+	const saveModelsSettings = async () => {
+		savingModelsSettings = true;
+
+		if (modelOrderDirty) {
+			await saveModelOrder(modelOrderList);
+		}
+
+		if (modelDefaultsDirty) {
+			await modelDefaultsPanel?.save();
+		}
+
+		savingModelsSettings = false;
 	};
 
 	const saveModelDefaults = async (
@@ -649,7 +664,6 @@
 	}}
 />
 
-<ModelSettingsModal bind:show={showConfigModal} initHandler={init} />
 <ManageModelsModal bind:show={showManageModal} />
 
 {#if models !== null}
@@ -662,18 +676,6 @@
 						{filteredModels.length}
 					</span>
 				</h2>
-
-				<Tooltip content={$i18n.t('Settings')}>
-					<button
-						type="button"
-						class="flex h-6 w-6 items-center justify-center rounded-lg text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
-						on:click={() => {
-							showConfigModal = true;
-						}}
-					>
-						<SettingsIcon className="size-3.5" />
-					</button>
-				</Tooltip>
 			</div>
 
 			{#if $user?.role === 'admin'}
@@ -714,6 +716,12 @@
 			{/if}
 
 			<div class="flex min-h-0 flex-1 flex-col space-y-1">
+				<ModelDefaultsPanel
+					bind:this={modelDefaultsPanel}
+					bind:dirty={modelDefaultsDirty}
+					initHandler={init}
+				/>
+
 				<div class="flex h-8 shrink-0 items-center w-full gap-2">
 					<div class="flex min-w-0 flex-1 items-center">
 						<div class=" self-center ml-1 mr-3">
@@ -1105,13 +1113,15 @@
 					<button
 						class="flex items-center gap-2 px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full disabled:cursor-not-allowed disabled:opacity-40"
 						type="button"
-						disabled={!modelOrderDirty || savingModelOrder}
+						disabled={(!modelOrderDirty && !modelDefaultsDirty) ||
+							savingModelOrder ||
+							savingModelsSettings}
 						on:click={async () => {
-							await saveModelOrder(modelOrderList);
+							await saveModelsSettings();
 						}}
 					>
 						{$i18n.t('Save')}
-						{#if savingModelOrder}
+						{#if savingModelOrder || savingModelsSettings}
 							<span class="shrink-0">
 								<Spinner />
 							</span>
