@@ -2572,15 +2572,25 @@ def load_oauth_providers():
     if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
 
         def google_oauth_register(oauth: OAuth):
+            client_kwargs = {
+                'scope': GOOGLE_OAUTH_SCOPE,
+                **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
+            }
+
+            if OAUTH_CODE_CHALLENGE_METHOD and OAUTH_CODE_CHALLENGE_METHOD == 'S256':
+                client_kwargs['code_challenge_method'] = 'S256'
+            elif OAUTH_CODE_CHALLENGE_METHOD:
+                raise Exception(
+                    'Code challenge methods other than "%s" not supported. Given: "%s"'
+                    % ('S256', OAUTH_CODE_CHALLENGE_METHOD)
+                )
+
             client = oauth.register(
                 name='google',
                 client_id=GOOGLE_CLIENT_ID,
                 client_secret=GOOGLE_CLIENT_SECRET,
                 server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-                client_kwargs={
-                    'scope': GOOGLE_OAUTH_SCOPE,
-                    **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
-                },
+                client_kwargs=client_kwargs,
                 redirect_uri=GOOGLE_REDIRECT_URI,
                 **({'authorize_params': GOOGLE_OAUTH_AUTHORIZE_PARAMS} if GOOGLE_OAUTH_AUTHORIZE_PARAMS else {}),
             )
@@ -2593,15 +2603,25 @@ def load_oauth_providers():
     if MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET and MICROSOFT_CLIENT_TENANT_ID:
 
         def microsoft_oauth_register(oauth: OAuth):
+            client_kwargs = {
+                'scope': MICROSOFT_OAUTH_SCOPE,
+                **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
+            }
+
+            if OAUTH_CODE_CHALLENGE_METHOD and OAUTH_CODE_CHALLENGE_METHOD == 'S256':
+                client_kwargs['code_challenge_method'] = 'S256'
+            elif OAUTH_CODE_CHALLENGE_METHOD:
+                raise Exception(
+                    'Code challenge methods other than "%s" not supported. Given: "%s"'
+                    % ('S256', OAUTH_CODE_CHALLENGE_METHOD)
+                )
+
             client = oauth.register(
                 name='microsoft',
                 client_id=MICROSOFT_CLIENT_ID,
                 client_secret=MICROSOFT_CLIENT_SECRET,
                 server_metadata_url=f'{MICROSOFT_CLIENT_LOGIN_BASE_URL}/{MICROSOFT_CLIENT_TENANT_ID}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID}',
-                client_kwargs={
-                    'scope': MICROSOFT_OAUTH_SCOPE,
-                    **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
-                },
+                client_kwargs=client_kwargs,
                 redirect_uri=MICROSOFT_REDIRECT_URI,
             )
             return client
@@ -2614,6 +2634,19 @@ def load_oauth_providers():
     if GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET:
 
         def github_oauth_register(oauth: OAuth):
+            client_kwargs = {
+                'scope': GITHUB_CLIENT_SCOPE,
+                **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
+            }
+
+            if OAUTH_CODE_CHALLENGE_METHOD and OAUTH_CODE_CHALLENGE_METHOD == 'S256':
+                client_kwargs['code_challenge_method'] = 'S256'
+            elif OAUTH_CODE_CHALLENGE_METHOD:
+                raise Exception(
+                    'Code challenge methods other than "%s" not supported. Given: "%s"'
+                    % ('S256', OAUTH_CODE_CHALLENGE_METHOD)
+                )
+
             client = oauth.register(
                 name='github',
                 client_id=GITHUB_CLIENT_ID,
@@ -2622,10 +2655,7 @@ def load_oauth_providers():
                 authorize_url='https://github.com/login/oauth/authorize',
                 api_base_url='https://api.github.com',
                 userinfo_endpoint='https://api.github.com/user',
-                client_kwargs={
-                    'scope': GITHUB_CLIENT_SCOPE,
-                    **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
-                },
+                client_kwargs=client_kwargs,
                 redirect_uri=GITHUB_CLIENT_REDIRECT_URI,
             )
             return client
