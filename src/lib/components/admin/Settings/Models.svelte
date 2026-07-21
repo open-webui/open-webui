@@ -40,6 +40,7 @@
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import Eye from '$lib/components/icons/Eye.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
 	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Minus from '$lib/components/icons/Minus.svelte';
@@ -47,6 +48,10 @@
 	import Download from '$lib/components/icons/Download.svelte';
 	import EllipsisVertical from '$lib/components/icons/EllipsisVertical.svelte';
 	import Wrench from '$lib/components/icons/Wrench.svelte';
+	import Pin from '$lib/components/icons/Pin.svelte';
+	import PinSlash from '$lib/components/icons/PinSlash.svelte';
+	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { goto } from '$app/navigation';
 
@@ -1010,6 +1015,79 @@
 													<EyeSlash />
 												{:else}
 													<Eye />
+												{/if}
+											</button>
+										</Tooltip>
+
+										<Tooltip
+											content={defaultModelIdSet.has(model.id)
+												? $i18n.t('Remove Selected Model')
+												: $i18n.t('Set as Selected Model')}
+										>
+											<button
+												class="self-center w-fit text-sm p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 {defaultModelIdSet.has(
+													model.id
+												)
+													? 'text-gray-900 dark:text-white'
+													: 'text-gray-500 dark:text-gray-400 dark:hover:text-white'}"
+												type="button"
+												aria-label={defaultModelIdSet.has(model.id)
+													? $i18n.t('Remove Selected Model')
+													: $i18n.t('Set as Selected Model')}
+												on:click={() => {
+													toggleDefaultModelHandler(model);
+												}}
+											>
+												<Check className="size-3.5" />
+											</button>
+										</Tooltip>
+
+										<Tooltip
+											content={defaultPinnedModelIdSet.has(model.id)
+												? $i18n.t('Remove Pinned Model')
+												: $i18n.t('Set as Pinned Model')}
+										>
+											<button
+												class="self-center w-fit text-sm p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 {defaultPinnedModelIdSet.has(
+													model.id
+												)
+													? 'text-gray-900 dark:text-white'
+													: 'text-gray-500 dark:text-gray-400 dark:hover:text-white'}"
+												type="button"
+												aria-label={defaultPinnedModelIdSet.has(model.id)
+													? $i18n.t('Remove Pinned Model')
+													: $i18n.t('Set as Pinned Model')}
+												on:click={() => {
+													toggleDefaultPinnedModelHandler(model);
+												}}
+											>
+												{#if defaultPinnedModelIdSet.has(model.id)}
+													<PinSlash className="size-3.5" />
+												{:else}
+													<Pin className="size-3.5" />
+												{/if}
+											</button>
+										</Tooltip>
+
+										<Tooltip
+											content={isPublicModel(model)
+												? $i18n.t('Make Private')
+												: $i18n.t('Make Public')}
+										>
+											<button
+												class="self-center w-fit text-sm p-1.5 rounded-xl text-gray-500 hover:bg-black/5 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white"
+												type="button"
+												aria-label={isPublicModel(model)
+													? $i18n.t('Make Private')
+													: $i18n.t('Make Public')}
+												on:click={() => {
+													toggleModelPrivacyHandler(model);
+												}}
+											>
+												{#if isPublicModel(model)}
+													<LockClosed className="size-3.5" />
+												{:else}
+													<GlobeAlt className="size-3.5" />
 												{/if}
 											</button>
 										</Tooltip>
