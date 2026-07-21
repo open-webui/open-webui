@@ -817,6 +817,46 @@ if audit_level != AuditLevel.NONE:
 ##################################
 
 
+def _strip_knowledge_content(model: dict) -> dict:
+    """Return a copy of `model` with attached knowledge file bodies removed.
+
+    A model with an attached knowledge base stores each file's fully-extracted
+    text in ``info.meta.knowledge``: knowledge files selected from a base keep
+    it under ``item["data"]["content"]``, while files uploaded through the model
+    editor keep it under ``item["file"]["data"]["content"]``. The model list
+    only needs each item's identity (id/name/collection) to render, and
+    retrieval re-fetches file content by id at query time, so inlining these
+    bodies is pure overhead — a single model with a large knowledge base can add
+    tens of MB to the ``/api/models`` response.
+
+    Nested dicts are copied rather than mutated so the shared
+    ``request.app.state.MODELS`` cache (reused for chat retrieval) keeps its
+    content intact.
+    """
+    meta = (model.get('info') or {}).get('meta') or {}
+    knowledge = meta.get('knowledge')
+    if not knowledge:
+        return model
+
+    def _drop_content(obj: dict) -> dict:
+        data = obj.get('data')
+        if not (isinstance(data, dict) and 'content' in data):
+            return obj
+        return {**obj, 'data': {k: v for k, v in data.items() if k != 'content'}}
+
+    stripped = []
+    for item in knowledge:
+        if not isinstance(item, dict):
+            stripped.append(item)
+            continue
+        item = _drop_content(item)
+        if isinstance(item.get('file'), dict):
+            item = {**item, 'file': _drop_content(item['file'])}
+        stripped.append(item)
+
+    return {**model, 'info': {**model['info'], 'meta': {**meta, 'knowledge': stripped}}}
+
+
 @app.get('/api/models')
 @app.get('/api/v1/models')  # Experimental: Compatibility with OpenAI API
 async def get_models(request: Request, refresh: bool = False, user=Depends(get_verified_user)):
@@ -831,6 +871,10 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
         # Remove profile image URL to reduce payload size
         if model.get('info', {}).get('meta', {}).get('profile_image_url'):
             model['info']['meta'].pop('profile_image_url', None)
+
+        # Drop attached knowledge file bodies (info.meta.knowledge[*].data.content):
+        # unused by the model list and potentially tens of MB per model.
+        model = _strip_knowledge_content(model)
 
         try:
             model_tags = [tag.get('name') for tag in model.get('info', {}).get('meta', {}).get('tags', [])]
