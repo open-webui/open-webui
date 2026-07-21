@@ -1525,14 +1525,22 @@ class ChatTable:
                 # Safety filter: title must not contain actual null bytes
                 stmt = stmt.filter(text("Chat.title::text NOT LIKE '%\\x00%'"))
 
-                postgres_content_sql = """
-                EXISTS (
-                    SELECT 1
-                    FROM json_array_elements(Chat.chat->'messages') AS message
-                    WHERE json_typeof(message->'content') = 'string'
-                    AND LOWER(message->>'content') LIKE '%' || :content_key || '%'
+                # Use a direct text-cast ILIKE instead of a correlated
+                # json_array_elements subquery.  The original EXISTS +
+                # json_array_elements pattern forces PostgreSQL into a
+                # per-row function scan that cannot leverage GIN/trigram
+                # indexes, resulting in O(n) sequential scans that degrade
+                # severely as chat history grows (#27221).
+                #
+                # Casting the entire JSON column to text and applying ILIKE
+                # is semantically equivalent for search (matches term
+                # anywhere in the chat payload, including message content)
+                # and allows the planner to use an expression index such as:
+                #   CREATE INDEX idx_chat_content_trgm ON chat
+                #     USING gin ((chat::text) gin_trgm_ops);
+                postgres_content_sql = (
+                    "LOWER(Chat.chat::text) LIKE '%' || :content_key || '%'"
                 )
-                """
 
                 postgres_content_clause = text(postgres_content_sql)
 
