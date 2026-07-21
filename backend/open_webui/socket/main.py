@@ -65,13 +65,15 @@ class LocalFilteredRedisManager(socketio.AsyncRedisManager):
     the full packet before discovering the target room has no participants on
     this instance, so each instance burns CPU serializing payloads addressed
     to sessions it does not host — a cost that grows with instance count.
-    Bail out before that work when the room is empty here. Broadcasts
-    (``room=None``) always pass through.
+    Bail out before that work when the room is empty here. Only string
+    rooms take the fast path; broadcasts (``room=None``) and any other
+    room shape (e.g. lists, which upstream indexes before validating)
+    always pass through unchanged.
     """
 
     async def _handle_emit(self, message):
         room = message.get('room')
-        if room is not None:
+        if isinstance(room, str):
             namespace = message.get('namespace') or '/'
             if next(self.get_participants(namespace, room), None) is None:
                 return
