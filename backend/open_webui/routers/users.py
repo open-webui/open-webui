@@ -200,6 +200,7 @@ class SharingPermissions(BaseModel):
     public_skills: bool = False
     notes: bool = False
     public_notes: bool = True
+    folders: bool = False
     public_chats: bool = False
     public_calendars: bool = False
 
