@@ -1624,14 +1624,9 @@ class ChatTable:
                 # Safety filter: title must not contain actual null bytes
                 stmt = stmt.filter(text("Chat.title::text NOT LIKE '%\\x00%'"))
 
-                postgres_content_sql = """
-                EXISTS (
-                    SELECT 1
-                    FROM json_array_elements(Chat.chat->'messages') AS message
-                    WHERE json_typeof(message->'content') = 'string'
-                    AND LOWER(message->>'content') LIKE '%' || :content_key || '%'
+                postgres_content_sql = (
+                    "LOWER(Chat.chat::text) LIKE '%' || :content_key || '%'"
                 )
-                """
 
                 postgres_content_clause = text(postgres_content_sql)
 
