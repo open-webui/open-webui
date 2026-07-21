@@ -1345,6 +1345,13 @@ async def generate_chat_completion(
                     part.get('text', '') for part in message['content'] if part.get('type') in ('input_text', 'text')
                 )
 
+    # stream_options is only valid alongside "stream": true. The stream flag
+    # may have been overridden after the client payload was built (e.g. the
+    # model's stream_response param), and upstreams like OpenAI and vLLM
+    # reject non-streaming requests that still carry stream_options.
+    if not payload.get('stream'):
+        payload.pop('stream_options', None)
+
     payload = json.dumps(payload)
 
     r = None

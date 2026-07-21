@@ -89,23 +89,49 @@ async def get_anthropic_models(url: str, key: str, user: UserModel = None) -> di
 ##############################
 
 
-def _extract_cache_token_usage(usage: dict) -> tuple[int | None, int | None]:
-    """
-    Extract (cache_creation_input_tokens, cache_read_input_tokens) from an
-    OpenAI-compatible usage payload.
+def _usage_int(value) -> int | None:
+    """Return value as a non-negative int, or None when missing or invalid."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    value = int(value)
+    return value if value >= 0 else None
 
-    Falls back to OpenAI's prompt_tokens_details.cached_tokens for the
-    cache-read count when the Anthropic-style field is absent.
-    """
-    cache_creation = usage.get('cache_creation_input_tokens')
 
-    cache_read = usage.get('cache_read_input_tokens')
+def _extract_anthropic_usage(
+    usage: dict,
+) -> tuple[int | None, int | None, int | None, int | None]:
+    """
+    Convert an OpenAI-compatible usage payload to Anthropic usage fields:
+    (input_tokens, output_tokens, cache_creation_input_tokens, cache_read_input_tokens).
+
+    OpenAI's prompt_tokens includes cached tokens, while Anthropic's
+    input_tokens excludes them (total input = input_tokens +
+    cache_creation_input_tokens + cache_read_input_tokens), so the cache
+    counts are subtracted whenever the input count is derived from
+    prompt_tokens. An Anthropic-native input_tokens key is taken as already
+    exclusive. The cache-read count falls back to OpenAI's
+    prompt_tokens_details.cached_tokens.
+
+    A count that is missing, null, or 0 is treated as unreported (None) so
+    callers can keep previously known values; a 0 produced by the cache
+    subtraction is kept, since the upstream did report usage.
+    """
+    cache_creation = _usage_int(usage.get('cache_creation_input_tokens')) or None
+    cache_read = _usage_int(usage.get('cache_read_input_tokens')) or None
     if cache_read is None:
         prompt_details = usage.get('prompt_tokens_details')
         if isinstance(prompt_details, dict):
-            cache_read = prompt_details.get('cached_tokens')
+            cache_read = _usage_int(prompt_details.get('cached_tokens')) or None
 
-    return cache_creation, cache_read
+    input_tokens = _usage_int(usage.get('input_tokens')) or None
+    if input_tokens is None:
+        prompt_tokens = _usage_int(usage.get('prompt_tokens')) or None
+        if prompt_tokens is not None:
+            input_tokens = max(prompt_tokens - (cache_creation or 0) - (cache_read or 0), 0)
+
+    output_tokens = _usage_int(usage.get('output_tokens')) or _usage_int(usage.get('completion_tokens')) or None
+
+    return input_tokens, output_tokens, cache_creation, cache_read
 
 
 def _copy_cache_control(source: dict, target: dict) -> dict:
@@ -468,12 +494,14 @@ def convert_openai_to_anthropic_response(
 
     # Usage: prefer upstream-reported statistics; the locally counted
     # input_tokens is only a fallback for upstreams that report nothing.
-    openai_usage = openai_response.get('usage') or {}
+    openai_usage = openai_response.get('usage')
+    if not isinstance(openai_usage, dict):
+        openai_usage = {}
+    usage_input, usage_output, cache_creation, cache_read = _extract_anthropic_usage(openai_usage)
     usage = {
-        'input_tokens': (openai_usage.get('input_tokens') or openai_usage.get('prompt_tokens') or input_tokens or 0),
-        'output_tokens': openai_usage.get('output_tokens') or openai_usage.get('completion_tokens') or 0,
+        'input_tokens': usage_input if usage_input is not None else (input_tokens or 0),
+        'output_tokens': usage_output or 0,
     }
-    cache_creation, cache_read = _extract_cache_token_usage(openai_usage)
     if cache_creation is not None:
         usage['cache_creation_input_tokens'] = cache_creation
     if cache_read is not None:
@@ -519,9 +547,11 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
 
         if not isinstance(chunk_usage, dict):
             return
-        input_tokens = chunk_usage.get('input_tokens', chunk_usage.get('prompt_tokens', input_tokens))
-        output_tokens = chunk_usage.get('output_tokens', chunk_usage.get('completion_tokens', output_tokens))
-        cache_creation, cache_read = _extract_cache_token_usage(chunk_usage)
+        chunk_input, chunk_output, cache_creation, cache_read = _extract_anthropic_usage(chunk_usage)
+        if chunk_input is not None:
+            input_tokens = chunk_input
+        if chunk_output is not None:
+            output_tokens = chunk_output
         if cache_creation is not None:
             cache_creation_input_tokens = cache_creation
         if cache_read is not None:
