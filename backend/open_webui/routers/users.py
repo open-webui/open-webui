@@ -475,6 +475,20 @@ async def update_user_settings_by_session_user(
         # If the user is not an admin and does not have permission to use tool servers, remove the key
         updated_user_settings['ui'].pop('toolServers', None)
 
+    notifications = ui_settings.get('notifications') if ui_settings is not None else None
+    if (
+        user.role != 'admin'
+        and isinstance(notifications, dict)
+        and notifications.get('webhook_url')
+        and not await has_permission(
+            user.id,
+            'features.webhooks',
+            await Config.get('user.permissions'),
+        )
+    ):
+        # If the user is not an admin and does not have the webhooks permission, drop the webhook URL
+        updated_user_settings['ui']['notifications'].pop('webhook_url', None)
+
     user = await Users.update_user_settings_by_id(user.id, updated_user_settings, db=db)
     if user:
         await publish_event(
