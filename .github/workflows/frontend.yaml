@@ -24,6 +24,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
+        with:
+          # On pull_request the checkout is the PR merge commit; depth 2 makes its
+          # first parent (the base branch tip) available for changed-file diffs
+          fetch-depth: 2
 
       - uses: actions/setup-node@v5
         with:
@@ -32,13 +36,27 @@ jobs:
       - name: Install dependencies
         run: npm install --force
 
-      - name: Verify code formatting
+      # PRs are judged on the files they touch, so a PR's check reflects the PR
+      # itself rather than the formatting state of the base branch. The i18n
+      # catalog sync stays a push/release concern and is not required of PRs.
+      - name: Verify code formatting (files changed by this PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only --diff-filter=d HEAD^1 HEAD -- \
+            '*.js' '*.ts' '*.svelte' '*.css' '*.md' '*.html' '*.json' \
+            | xargs -r npx prettier --check
+
+      # Pushes to dev/main keep the whole-repository signal
+      - name: Verify code formatting (full tree)
+        if: github.event_name == 'push'
         run: npm run format
 
       - name: Verify i18n strings
+        if: github.event_name == 'push'
         run: npm run i18n:parse
 
       - name: Ensure working tree is clean
+        if: github.event_name == 'push'
         run: git diff --exit-code
 
       - name: Production build

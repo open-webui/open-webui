@@ -28,6 +28,10 @@ jobs:
         python-version: ['3.11', '3.12']
     steps:
       - uses: actions/checkout@v5
+        with:
+          # On pull_request the checkout is the PR merge commit; depth 2 makes its
+          # first parent (the base branch tip) available for changed-file diffs
+          fetch-depth: 2
 
       - uses: actions/setup-python@v6
         with:
@@ -36,7 +40,17 @@ jobs:
       - name: Install formatter
         run: pip install "ruff>=0.15.5"
 
-      - name: Verify formatting
+      # PRs are judged on the files they touch, so a PR's check reflects the PR
+      # itself rather than the formatting state of the base branch
+      - name: Verify formatting (files changed by this PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only --diff-filter=d HEAD^1 HEAD -- 'backend/**/*.py' \
+            | xargs -r ruff format --check
+
+      # Pushes to dev/main keep the whole-repository signal
+      - name: Verify formatting (full tree)
+        if: github.event_name == 'push'
         run: ruff format --check . --exclude .venv --exclude venv
 
       - name: Detect logic errors
