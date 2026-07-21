@@ -351,6 +351,7 @@
 	"Base Model is required.": "",
 	"Base Model List Cache speeds up access by fetching base models only at startup or on settings save—faster, but may not show recent base model changes.": "Luasaíonn Taisce an Liosta Bunsamhail de rochtain trí bhunmhúnlaí a fháil ach amháin ag am tosaithe nó ar shocruithe a shábháil-níos tapúla, ach b'fhéidir nach dtaispeánfar athruithe bonnsamhail le déanaí.",
 	"Base URL": "",
+	"BaseRT": "",
 	"Bearer": "Iompróir",
 	"before": "roimh",
 	"Being lazy": "A bheith leisciúil",

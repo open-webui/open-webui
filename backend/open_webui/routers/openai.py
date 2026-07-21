@@ -242,20 +242,27 @@ LLAMACPP_LOADED_STATES = {'loaded', 'sleeping'}
 LLAMACPP_UNLOADED_STATES = {'loading', 'unloaded'}
 
 
-def get_llamacpp_model_loaded_state(model: dict, provider: str, manual_model_ids: bool = False) -> bool | None:
-    if provider != 'llama.cpp':
+def get_local_model_loaded_state(model: dict, provider: str, manual_model_ids: bool = False) -> bool | None:
+    if provider == 'llama.cpp':
+        status = model.get('status')
+        if isinstance(status, dict):
+            value = status.get('value')
+            if value in LLAMACPP_LOADED_STATES:
+                return True
+            if value in LLAMACPP_UNLOADED_STATES:
+                return False
+
+        if not manual_model_ids and 'status' not in model:
+            return True
+
         return None
 
-    status = model.get('status')
-    if isinstance(status, dict):
-        value = status.get('value')
-        if value in LLAMACPP_LOADED_STATES:
-            return True
-        if value in LLAMACPP_UNLOADED_STATES:
-            return False
-
-    if not manual_model_ids and 'status' not in model:
-        return True
+    if provider == 'basert':
+        # baseRT reports a boolean `loaded` field on /v1/models
+        loaded = model.get('loaded')
+        if isinstance(loaded, bool):
+            return loaded
+        return None
 
     return None
 
@@ -701,7 +708,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                             'urlIdx': idx,
                         }
 
-                        loaded = get_llamacpp_model_loaded_state(
+                        loaded = get_local_model_loaded_state(
                             model,
                             provider,
                             manual_model_ids=bool(api_config.get('model_ids')),

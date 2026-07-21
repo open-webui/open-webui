@@ -351,6 +351,7 @@
 	"Base Model is required.": "",
 	"Base Model List Cache speeds up access by fetching base models only at startup or on settings save—faster, but may not show recent base model changes.": "அடிப்படை மாதிரி பட்டியல் கேச், தொடக்கத்தில் அல்லது சேமி அமைப்புகளில் மட்டுமே அடிப்படை மாதிரிகளைப் பெறுவதன் மூலம் அணுகலை விரைவுபடுத்துகிறது, ஆனால் சமீபத்திய அடிப்படை மாதிரி மாற்றங்களைக் காட்டாமல் போகலாம்.",
 	"Base URL": "",
+	"BaseRT": "",
 	"Bearer": "தாங்குபவர்",
 	"before": "முன்",
 	"Being lazy": "சோம்பேறியாக இருப்பது",

@@ -344,6 +344,7 @@
 	"Base Model is required.": "",
 	"Base Model List Cache speeds up access by fetching base models only at startup or on settings save—faster, but may not show recent base model changes.": "基礎模型清單快取只會在啟動或儲存設定時才取得基礎模型，以加快存取速度，但可能不會顯示最近的基礎模型變更。",
 	"Base URL": "",
+	"BaseRT": "",
 	"Bearer": "Bearer",
 	"before": "之前",
 	"Being lazy": "懶惰模式",

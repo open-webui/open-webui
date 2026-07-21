@@ -351,6 +351,7 @@
 	"Base Model is required.": "",
 	"Base Model List Cache speeds up access by fetching base models only at startup or on settings save—faster, but may not show recent base model changes.": "Malliluettelon välimuisti nopeuttaa käyttöä hakemalla mallit vain käynnistyksen yhteydessä, tai asetusten tallentamisen yhteydessä - nopeampaa, mutta ei välttämättä näytä viimeisimpiä malli muutoksia.",
 	"Base URL": "",
+	"BaseRT": "",
 	"Bearer": "Bearer",
 	"before": "ennen",
 	"Being lazy": "Oli laiska",

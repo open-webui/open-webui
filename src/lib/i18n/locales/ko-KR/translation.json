@@ -345,6 +345,7 @@
 	"Base Model is required.": "",
 	"Base Model List Cache speeds up access by fetching base models only at startup or on settings save—faster, but may not show recent base model changes.": "기본 모델 목록 캐시는 시작 시 또는 설정 저장 시에만 기본 모델을 불러와 접근 속도를 높여줍니다. 이는 더 빠르지만, 최근 기본 모델 변경 사항이 반영되지 않을 수 있습니다.",
 	"Base URL": "",
+	"BaseRT": "",
 	"Bearer": "보유자",
 	"before": "이전",
 	"Being lazy": "게으름 피우기",

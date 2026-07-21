@@ -889,7 +889,7 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
     """
     Unified model unload endpoint.
     Resolves the provider that owns the model and calls its native unload mechanism.
-    Supports: Ollama (keep_alive=0) and llama.cpp (/models/unload).
+    Supports: Ollama (keep_alive=0), llama.cpp (/models/unload), and baseRT (/v1/models/unload).
     """
     model_id = form_data.model
 
@@ -962,8 +962,12 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
         base_url = openai_base_urls[idx]
         key = openai_api_keys[idx] if idx < len(openai_api_keys) else ''
 
-        if provider == 'llama.cpp':
-            root_url = base_url.rstrip('/').removesuffix('/v1')
+        if provider in ('llama.cpp', 'basert'):
+            if provider == 'basert':
+                # baseRT serves /v1/models/unload under the configured base url
+                root_url = base_url.rstrip('/')
+            else:
+                root_url = base_url.rstrip('/').removesuffix('/v1')
             actual_model = strip_provider_model_prefix(model_id, api_config.get('prefix_id'))
             try:
                 timeout = aiohttp.ClientTimeout(total=30)
@@ -984,7 +988,7 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
             except HTTPException:
                 raise
             except Exception as e:
-                log.exception(f'Failed to unload model via llama.cpp: {e}')
+                log.exception(f'Failed to unload model via {provider}: {e}')
                 raise HTTPException(status_code=500, detail=str(e))
         else:
             raise HTTPException(
