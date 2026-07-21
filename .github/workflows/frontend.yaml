@@ -43,6 +43,10 @@ jobs:
 
       - name: Production build
         run: npm run build
+        env:
+          # Same heap ceiling as the Dockerfile build stage: the Vite build peaks
+          # near 5 GB, above Node's ~4 GB default cap on the 16 GB runners
+          NODE_OPTIONS: --max-old-space-size=8192
 
   # ── Vitest unit tests ────────────────────────────────────────────────────
   unit-tests:
