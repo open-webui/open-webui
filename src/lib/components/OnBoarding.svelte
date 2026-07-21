@@ -82,25 +82,36 @@
 						)}
 					</p>
 
-					<button
-						aria-label={$i18n.t('Get started')}
-						class="group relative z-20 mt-8 inline-flex min-w-40 items-center justify-center gap-2 bg-white px-8 py-3 text-sm font-normal text-black transition hover:bg-white/90 focus:ring-2 focus:ring-white/50 focus:outline-hidden"
-						on:click={() => {
-							getStartedHandler();
-						}}
-					>
-						{$i18n.t('Get started')}
-						<svg
-							class="h-4 w-4 transition group-hover:translate-x-0.5"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-							stroke-width="1.5"
-							aria-hidden="true"
+					<div class="mt-8 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-7">
+						<button
+							aria-label={$i18n.t('Get started')}
+							class="group relative z-20 inline-flex min-w-40 items-center justify-center gap-2 bg-white px-8 py-3 text-sm font-normal text-black transition hover:bg-white/90 focus:ring-2 focus:ring-white/50 focus:outline-hidden"
+							on:click={() => {
+								getStartedHandler();
+							}}
 						>
-							<path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-						</svg>
-					</button>
+							{$i18n.t('Get started')}
+							<svg
+								class="h-4 w-4 transition group-hover:translate-x-0.5"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+								stroke-width="1.5"
+								aria-hidden="true"
+							>
+								<path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+							</svg>
+						</button>
+
+						<a
+							class="inline-flex items-center text-sm text-white/60 transition hover:text-white"
+							href="https://docs.openwebui.com/"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							{$i18n.t('Read the docs')}
+						</a>
+					</div>
 				</div>
 			</div>
 		</div>
