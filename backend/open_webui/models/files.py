@@ -451,5 +451,24 @@ class FilesTable:
             except Exception:
                 return False
 
+    async def get_pending_files(self, db: AsyncSession | None = None) -> list[FileModel]:
+        """Return all files still queued for processing (``data.status == 'pending'``).
+
+        Ordered oldest-first so recovered files keep their original upload order.
+        """
+        async with get_async_db_context(db) as db:
+            try:
+                result = await db.execute(
+                    select(File)
+                    .filter(
+                        File.data['status'].as_string().in_(['pending', 'processing']),
+                    )
+                    .order_by(File.created_at.asc())
+                )
+                return [FileModel.model_validate(f) for f in result.scalars().all()]
+            except Exception as e:
+                log.warning(f'Error fetching pending files: {e}')
+                return []
+
 
 Files = FilesTable()  # singleton files repository

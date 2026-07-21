@@ -677,6 +677,10 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(scheduler_worker_loop(app))
 
+    from open_webui.services.process_file_queue import file_processing_worker_loop
+
+    asyncio.create_task(file_processing_worker_loop(app))
+
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         try:
             await get_all_models(
