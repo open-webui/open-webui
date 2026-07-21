@@ -2,39 +2,11 @@
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_BASE_URL } from '$lib/constants';
-
 	export let show = true;
 	export let getStartedHandler = () => {};
 
 	let videoElement;
 	let playOnInteractionRegistered = false;
-
-	function setLogoImage() {
-		const logo = document.getElementById('logo');
-
-		if (logo) {
-			const isDarkMode = document.documentElement.classList.contains('dark');
-
-			if (isDarkMode) {
-				const darkImage = new Image();
-				darkImage.src = `${WEBUI_BASE_URL}/static/favicon-dark.png`;
-
-				darkImage.onload = () => {
-					logo.src = `${WEBUI_BASE_URL}/static/favicon-dark.png`;
-					logo.style.filter = ''; // Ensure no inversion is applied if splash-dark.png exists
-				};
-
-				darkImage.onerror = () => {
-					logo.style.filter = 'invert(1)'; // Invert image if splash-dark.png is missing
-				};
-			}
-		}
-	}
-
-	$: if (show) {
-		setLogoImage();
-	}
 
 	function playBackgroundVideo() {
 		if (!videoElement) {
@@ -71,7 +43,7 @@
 			<img
 				id="logo"
 				crossorigin="anonymous"
-				src="{WEBUI_BASE_URL}/static/favicon.png"
+				src="/static/favicon.png"
 				class="size-6 rounded-full"
 				alt="logo"
 			/>
