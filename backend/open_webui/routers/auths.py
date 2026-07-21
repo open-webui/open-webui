@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse, Response
 from ldap3 import NONE, Connection, Server, Tls
 from ldap3.utils.conv import escape_filter_chars
+from ldap3.utils.dn import parse_dn
 from open_webui.config import (
     ENABLE_PASSWORD_AUTH,
     OAUTH_PROVIDERS,
@@ -401,6 +402,56 @@ async def update_password(
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
 
+def _unescape_ldap_dn_value(value: str) -> str:
+    """Resolve RFC 4514 escape sequences in a distinguished-name attribute value.
+
+    ``parse_dn`` splits a DN on unescaped separators but leaves the escape
+    sequences in the returned value, so ``CN=Sales\\, EMEA`` yields the value
+    ``Sales\\, EMEA``. Resolve those escapes so the group name matches what an
+    administrator sees (``Sales, EMEA``). Consecutive ``\\XX`` hex escapes encode
+    UTF-8 bytes and are decoded together.
+    """
+    hexdigits = '0123456789abcdefABCDEF'
+    result = []
+    i = 0
+    length = len(value)
+    while i < length:
+        char = value[i]
+        if char == '\\' and i + 1 < length:
+            if i + 2 < length and value[i + 1] in hexdigits and value[i + 2] in hexdigits:
+                byte_values = bytearray()
+                while (
+                    i + 2 < length
+                    and value[i] == '\\'
+                    and value[i + 1] in hexdigits
+                    and value[i + 2] in hexdigits
+                ):
+                    byte_values.append(int(value[i + 1 : i + 3], 16))
+                    i += 3
+                result.append(byte_values.decode('utf-8', errors='replace'))
+            else:
+                # A backslash escaping a literal special char (e.g. "\," "\+").
+                result.append(value[i + 1])
+                i += 2
+        else:
+            result.append(char)
+            i += 1
+    return ''.join(result)
+
+
+def extract_group_cn_from_dn(group_dn: str) -> str | None:
+    """Return the first CN component of an LDAP group DN, or None.
+
+    Uses ``parse_dn`` so escaped separators inside a value (e.g. a group whose
+    name contains a comma) are handled correctly instead of naively splitting
+    on ``,``.
+    """
+    for attr_type, attr_value, _ in parse_dn(group_dn):
+        if attr_type.upper() == 'CN':
+            return _unescape_ldap_dn_value(attr_value)
+    return None
+
+
 ############################
 # LDAP Authentication
 ############################
@@ -548,17 +599,10 @@ async def ldap_auth(
                     log.info(f'Processing group DN #{group_idx + 1}: {group_dn}')
 
                     try:
-                        group_cn = None
-
-                        for item in group_dn.split(','):
-                            item = item.strip()
-                            if item.upper().startswith('CN='):
-                                group_cn = item[3:]
-                                break
+                        group_cn = extract_group_cn_from_dn(group_dn)
 
                         if group_cn:
                             user_groups.append(group_cn)
-
                         else:
                             log.warning(f'Could not extract CN from group DN: {group_dn}')
                     except Exception as e:
