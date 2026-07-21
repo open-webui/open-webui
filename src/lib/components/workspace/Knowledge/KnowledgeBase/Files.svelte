@@ -22,6 +22,7 @@
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 	import DirectoryRow from './DirectoryRow.svelte';
 
 	export let knowledge = null;
@@ -89,7 +90,26 @@
 			}}
 		>
 			<div class="flex items-center">
-				{#if file?.status !== 'uploading'}
+				{#if file?.status === 'uploading'}
+					<Spinner className="size-3.5" />
+				{:else if file?.meta?.status === 'failed'}
+					<Tooltip
+						content={file?.meta?.error
+							? $i18n.t('Processing failed: {{error}}', { error: file.meta.error })
+							: $i18n.t('Processing failed')}
+					>
+						<button
+							class="p-1 rounded-full transition"
+							type="button"
+							on:click={() => {
+								let fileId = file?.id ?? file?.tempId;
+								onClick(fileId);
+							}}
+						>
+							<XMark className="size-3.5 text-red-500" />
+						</button>
+					</Tooltip>
+				{:else}
 					<button
 						class="p-1 rounded-full transition"
 						type="button"
@@ -100,8 +120,6 @@
 					>
 						<DocumentPage className="size-3.5" />
 					</button>
-				{:else}
-					<Spinner className="size-3.5" />
 				{/if}
 			</div>
 

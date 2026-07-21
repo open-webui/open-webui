@@ -454,6 +454,7 @@
 					console.warn('File upload warning:', uploadedFile.error);
 					toast.warning(uploadedFile.error);
 					fileItems = fileItems.filter((file) => file.id !== uploadedFile.id);
+					init();
 				} else {
 					toast.success($i18n.t('File added successfully.'));
 					init();
