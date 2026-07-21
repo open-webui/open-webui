@@ -1944,6 +1944,8 @@ async def process_file(
 
             if config.BYPASS_EMBEDDING_AND_RETRIEVAL:
                 await Files.update_file_data_by_id(file.id, {'status': 'completed'}, db=db)
+                await Files.update_file_metadata_by_id(file.id, {'status': 'completed'}, db=db)
+
                 await Files.update_file_hash_by_id(file.id, hash, db=db)
                 await publish_event(
                     request,
@@ -1993,6 +1995,7 @@ async def process_file(
                             await Files.update_file_metadata_by_id(
                                 file.id,
                                 {
+                                    'status': 'completed',
                                     'collection_name': collection_name,
                                 },
                                 db=session,
@@ -2031,6 +2034,14 @@ async def process_file(
                 await Files.update_file_data_by_id(
                     file.id,
                     {'status': 'failed'},
+                    db=session,
+                )
+                await Files.update_file_metadata_by_id(
+                    file.id,
+                    {
+                        'status': 'failed',
+                        'error': str(e.detail) if hasattr(e, 'detail') else str(e),
+                    },
                     db=session,
                 )
                 # Clear the hash so the file can be re-uploaded after fixing the issue

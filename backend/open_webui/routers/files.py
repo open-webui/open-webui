@@ -161,6 +161,11 @@ async def process_uploaded_file(
                         {'status': 'completed'},
                         db=db_session,
                     )
+                    await Files.update_file_metadata_by_id(
+                        file_item.id,
+                        {'status': 'completed'},
+                        db=db_session,
+                    )
                 else:
                     raise Exception(f'File type {content_type} is not supported for processing')
 
@@ -204,17 +209,19 @@ async def process_uploaded_file(
                         # Keep the generic file status stream open until the
                         # KB-specific vector write and durable link both finish.
                         await Files.update_file_data_by_id(file_item.id, {'status': 'processing'}, db=db_session)
-                        await process_file(
-                            request,
-                            ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
-                            user=user,
-                            db=db_session,
-                        )
+                        await Files.update_file_metadata_by_id(file_item.id, {'status': 'processing'}, db=db_session)
+
                         knowledge_file = await Knowledges.add_file_to_knowledge_by_id(
                             knowledge_id=knowledge_id,
                             file_id=file_item.id,
                             user_id=user.id,
                             directory_id=file_metadata.get('directory_id'),
+                            db=db_session,
+                        )
+                        await process_file(
+                            request,
+                            ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
+                            user=user,
                             db=db_session,
                         )
                         if not knowledge_file:
@@ -227,6 +234,14 @@ async def process_uploaded_file(
         except Exception as e:
             log.error(f'Error processing file: {file_item.id}')
             await Files.update_file_data_by_id(
+                file_item.id,
+                {
+                    'status': 'failed',
+                    'error': str(e.detail) if hasattr(e, 'detail') else str(e),
+                },
+                db=db_session,
+            )
+            await Files.update_file_metadata_by_id(
                 file_item.id,
                 {
                     'status': 'failed',
