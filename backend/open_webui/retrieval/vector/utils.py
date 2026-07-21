@@ -14,10 +14,15 @@ def filter_metadata(metadata: dict[str, any]) -> dict[str, any]:
 
 
 def process_metadata(
-    metadata: dict[str, any],
+    metadata: dict[str, any] | None,
 ) -> dict[str, any]:
-    # Removes large fields, converts non-serializable types (datetime, list, dict) to strings,
-    # and sanitizes strings for database storage (strips null bytes and invalid surrogates).
+    # Handles None or non-dict input. Removes large fields.
+    # Preserves valid simple types (str, int, float, bool) for ChromaDB/vector storage.
+    # Converts all other complex types (list, dict, tuple, set, datetime, etc.) to strings.
+    # Sanitizes all string values for database storage.
+    if not metadata or not isinstance(metadata, dict):
+        return {}
+
     result = {}
     for key, value in metadata.items():
         # Skip large fields
@@ -25,11 +30,15 @@ def process_metadata(
             continue
         if value is None:
             continue
-        # Convert non-serializable fields to strings
-        if isinstance(value, (dt.datetime, list, dict)):
-            result[key] = sanitize_text_for_db(str(value))
+        # Only allow primitive types (str, int, float, bool)
+        # Convert any other type (datetime, list, dict, tuple, set, etc.) to string.
+        if isinstance(value, (str, int, float, bool)):
+            if isinstance(value, str):
+                result[key] = sanitize_text_for_db(value)
+            else:
+                result[key] = value
         else:
-            result[key] = sanitize_text_for_db(value)
+            result[key] = sanitize_text_for_db(str(value))
     return result
 
 
