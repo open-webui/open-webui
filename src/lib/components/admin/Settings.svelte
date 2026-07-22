@@ -552,7 +552,7 @@
 	</div>
 
 	<div
-		class="flex-1 mt-3 lg:mt-1 px-[16px] lg:pr-[16px] lg:pl-0 overflow-y-scroll scrollbar-hidden"
+		class="flex-1 min-w-0 mt-3 lg:mt-1 px-[16px] lg:pr-[16px] lg:pl-0 overflow-y-scroll scrollbar-hidden"
 	>
 		{#if selectedTab === 'general'}
 			<General

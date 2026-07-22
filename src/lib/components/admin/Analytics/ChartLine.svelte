@@ -44,7 +44,7 @@
 	let hovered = $derived(hoveredIdx !== null ? data[hoveredIdx] : null);
 </script>
 
-<div class="relative w-full" style="height:{height}px">
+<div class="relative w-full min-w-0" style="height:{height}px">
 	<svg
 		viewBox="0 0 {w} {height - 20}"
 		class="h-[calc(100%-20px)] w-full"
