@@ -45,6 +45,15 @@
 	let audioStream = null;
 	let audioChunks = [];
 
+	// Onset buffering: the recorder runs continuously so the start of an utterance is
+	// never clipped. `headerChunk` keeps the container init segment (first chunk) so the
+	// assembled file stays decodable; `preRollChunks` is a short rolling buffer of audio
+	// captured just before speech is detected.
+	let headerChunk = null;
+	let preRollChunks = [];
+	const PRE_ROLL_CHUNK_COUNT = 4; // ~400ms kept before speech is detected
+	const RECORDER_TIMESLICE_MS = 100;
+
 	let videoInputDevices = [];
 	let selectedVideoInputDeviceId = null;
 
@@ -251,11 +260,31 @@
 			mediaRecorder.onstart = () => {
 				console.log('Recording started');
 				audioChunks = [];
+				preRollChunks = [];
+				headerChunk = null;
 			};
 
 			mediaRecorder.ondataavailable = (event) => {
+				if (!event.data || event.data.size === 0) {
+					return;
+				}
+
+				// The first chunk carries the container init/header segment — always keep it
+				// so the assembled file stays decodable even when earlier clusters are dropped.
+				if (headerChunk === null) {
+					headerChunk = event.data;
+					return;
+				}
+
 				if (hasStartedSpeaking) {
 					audioChunks.push(event.data);
+				} else {
+					// Keep a short rolling buffer of the audio just before speech is detected so
+					// the onset of the first word isn't clipped from the transcription.
+					preRollChunks.push(event.data);
+					if (preRollChunks.length > PRE_ROLL_CHUNK_COUNT) {
+						preRollChunks.shift();
+					}
 				}
 			};
 
@@ -263,6 +292,10 @@
 				console.log('Recording stopped', audioStream, e);
 				stopRecordingCallback();
 			};
+
+			// Start recording immediately (with a timeslice) so leading audio is always
+			// buffered; detectSound decides when a real utterance has actually begun.
+			mediaRecorder.start(RECORDER_TIMESLICE_MS);
 
 			analyseAudio(audioStream);
 		}
@@ -344,12 +377,15 @@
 				if (hasSound) {
 					// BIG RED TEXT
 					console.log('%c%s', 'color: red; font-size: 20px;', '🔊 Sound detected');
-					if (mediaRecorder && mediaRecorder.state !== 'recording') {
-						mediaRecorder.start();
-					}
 
 					if (!hasStartedSpeaking) {
 						hasStartedSpeaking = true;
+
+						// Prepend the buffered onset audio (header + pre-roll) so the start of the
+						// first word isn't cut off — the recorder has been running all along.
+						audioChunks = [...(headerChunk ? [headerChunk] : []), ...preRollChunks, ...audioChunks];
+						preRollChunks = [];
+
 						stopAllAudio();
 					}
 
@@ -398,10 +434,22 @@
 	const speakSpeechSynthesisHandler = (content) => {
 		if ($showCallOverlay) {
 			return new Promise((resolve) => {
+				let settled = false;
+				const finish = (e) => {
+					if (settled) return;
+					settled = true;
+					resolve(e);
+				};
+
 				let voices = [];
+				let attempts = 0;
 				const getVoicesLoop = setInterval(async () => {
 					voices = await speechSynthesis.getVoices();
-					if (voices.length > 0) {
+					attempts += 1;
+
+					// Proceed once voices are available, or give up waiting after ~2s (mobile
+					// browsers sometimes never populate the list) and fall back to the default.
+					if (voices.length > 0 || attempts > 20) {
 						clearInterval(getVoicesLoop);
 
 						const voiceId = getVoiceId();
@@ -414,11 +462,17 @@
 							currentUtterance.voice = voice;
 						}
 
-						speechSynthesis.speak(currentUtterance);
+						// Resolve on end or error so the playback loop never hangs on mobile.
 						currentUtterance.onend = async (e) => {
 							await new Promise((r) => setTimeout(r, 200));
-							resolve(e);
+							finish(e);
 						};
+						currentUtterance.onerror = (e) => {
+							console.error('Speech synthesis error:', e);
+							finish(e);
+						};
+
+						speechSynthesis.speak(currentUtterance);
 					}
 				}, 100);
 			});
@@ -432,25 +486,44 @@
 			return new Promise((resolve) => {
 				const audioElement = document.getElementById('audioElement') as HTMLAudioElement;
 
-				if (audioElement) {
-					audioElement.src = audio.src;
-					audioElement.muted = true;
-					audioElement.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
-
-					audioElement
-						.play()
-						.then(() => {
-							audioElement.muted = false;
-						})
-						.catch((error) => {
-							console.error(error);
-						});
-
-					audioElement.onended = async (e) => {
-						await new Promise((r) => setTimeout(r, 100));
-						resolve(e);
-					};
+				if (!audioElement) {
+					resolve(null);
+					return;
 				}
+
+				// Guard against never resolving: on mobile `onended` may not fire (or `play()`
+				// may reject due to autoplay restrictions). If the playback loop never gets a
+				// resolution it hangs forever and the loading indicator spins indefinitely.
+				let settled = false;
+				const finish = (e) => {
+					if (settled) return;
+					settled = true;
+					resolve(e);
+				};
+
+				audioElement.src = audio.src;
+				audioElement.muted = true;
+				audioElement.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
+
+				audioElement.onended = async (e) => {
+					await new Promise((r) => setTimeout(r, 100));
+					finish(e);
+				};
+				audioElement.onerror = (e) => {
+					console.error('Audio playback error:', e);
+					finish(e);
+				};
+
+				audioElement
+					.play()
+					.then(() => {
+						audioElement.muted = false;
+					})
+					.catch((error) => {
+						console.error(error);
+						// Playback failed to start — resolve so the loop advances instead of hanging.
+						finish(error);
+					});
 			});
 		} else {
 			return Promise.resolve();
@@ -536,6 +609,7 @@
 	let messages = {};
 
 	const monitorAndPlayAudio = async (id, signal) => {
+		const playbackAttempts = {};
 		while (!signal.aborted) {
 			if (messages[id] && messages[id].length > 0) {
 				// Retrieve the next content string from the queue
@@ -570,8 +644,22 @@
 						await speakSpeechSynthesisHandler(content);
 					}
 				} else {
-					// If not available in the cache, push it back to the queue and delay
-					messages[id].unshift(content); // Re-queue the content at the start
+					// Not in the cache yet — synthesis may still be in flight.
+					playbackAttempts[content] = (playbackAttempts[content] ?? 0) + 1;
+
+					// If the message has finished streaming and the audio still hasn't arrived
+					// after several retries, synthesis most likely failed. Drop this chunk instead
+					// of re-queuing it forever — otherwise the loop never reaches the "finished"
+					// branch and the loading indicator spins until Call Mode is stopped manually.
+					if (finishedMessages[id] && playbackAttempts[content] > 25) {
+						console.error(
+							`Giving up on audio for "${content}" after ${playbackAttempts[content]} attempts`
+						);
+						continue;
+					}
+
+					// Re-queue the content at the start and delay before retrying.
+					messages[id].unshift(content);
 					console.log(`Audio for "${content}" not yet available in the cache, re-queued...`);
 					await new Promise((resolve) => setTimeout(resolve, 200)); // Wait before retrying to reduce tight loop
 				}
@@ -583,6 +671,13 @@
 				// No messages to process, sleep for a bit
 				await new Promise((resolve) => setTimeout(resolve, 200));
 			}
+		}
+
+		// Safety net: ensure the indicator clears if the loop exits for the current message
+		// via some path other than the "finished" branch (only touch it when this is still the
+		// active message, so a newer message that aborted this loop keeps its own state).
+		if (currentMessageId === id) {
+			assistantSpeaking = false;
 		}
 		console.log(`Audio monitoring and playing stopped for message ID ${id}`);
 	};

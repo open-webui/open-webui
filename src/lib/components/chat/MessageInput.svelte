@@ -2321,6 +2321,29 @@
 
 																return;
 															}
+
+															// Unlock the shared TTS audio element while we still have the user
+															// gesture. Mobile browsers only allow audible programmatic playback
+															// from an element that has already been played from a user gesture;
+															// Call Mode plays TTS asynchronously (long after this tap), so without
+															// this priming the audio stays silent on mobile. Must run before the
+															// first `await` below, or the transient user activation is consumed.
+															const ttsAudioElement = document.getElementById(
+																'audioElement'
+															) as HTMLAudioElement | null;
+															if (ttsAudioElement) {
+																try {
+																	ttsAudioElement.muted = true;
+																	// Minimal valid silent WAV; playing it counts as a gesture-initiated
+																	// play and unlocks the element for later TTS playback.
+																	ttsAudioElement.src =
+																		'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+																	ttsAudioElement.play().catch(() => {});
+																} catch (e) {
+																	// ignore – best-effort unlock
+																}
+															}
+
 															// check if user has access to getUserMedia
 															try {
 																let stream = await navigator.mediaDevices.getUserMedia({
