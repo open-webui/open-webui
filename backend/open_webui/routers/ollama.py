@@ -1294,6 +1294,57 @@ async def generate_openai_chat_completion(
     )
 
 
+class OpenAIEmbeddingsForm(BaseModel):
+    """Payload for the OpenAI-compatible /v1/embeddings proxy."""
+
+    model: str
+    input: list[str] | str
+    model_config = ConfigDict(extra='allow')
+
+
+@router.post('/v1/embeddings')
+@router.post('/v1/embeddings/{url_idx}')
+async def generate_openai_embeddings(
+    request: Request,
+    form_data: dict,
+    url_idx: int | None = None,
+    user=Depends(get_verified_user),  # noqa: B008
+):
+    """Forward an embeddings request via the OpenAI-compatible proxy."""
+    try:
+        form_data = OpenAIEmbeddingsForm(**form_data)
+    except Exception as exc:
+        log.exception(exc)
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    payload = {**form_data.model_dump(exclude_none=True)}
+
+    model_id = form_data.model
+    model_info = await Models.get_model_by_id(model_id)
+    if model_info is not None:
+        if model_info.base_model_id:
+            payload['model'] = model_info.base_model_id
+        await check_model_access(user, model_info)
+    else:
+        await check_model_access(user, None)
+
+    url, url_idx = await get_ollama_url(request, payload['model'], url_idx, user)
+    api_config = resolve_api_config((await Config.get('ollama.api_configs', {})), url_idx, url)
+
+    prefix_id = api_config.get('prefix_id')
+    if prefix_id:
+        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+
+    return await send_request(
+        f'{url}/v1/embeddings',
+        payload=json.dumps(payload),
+        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        user=user,
+        api_config=api_config,
+        request=request,
+    )
+
+
 @router.post('/v1/messages')
 @router.post('/v1/messages/{url_idx}')
 async def generate_anthropic_messages(
