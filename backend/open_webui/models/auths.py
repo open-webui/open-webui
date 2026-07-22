@@ -133,6 +133,9 @@ class AuthsTable:
                 oauth=oauth,
                 db=session,
             )
+            if not created_user:
+                await session.rollback()
+                return None
             # persist both records and reload generated defaults
             await session.commit()
             await session.refresh(credential)

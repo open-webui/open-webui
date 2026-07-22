@@ -27,6 +27,7 @@ from sqlalchemy import (
     select,
     update,
 )
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -301,7 +302,11 @@ class UsersTable:
             )
             result = User(**user.model_dump())
             session.add(result)
-            await session.commit()
+            try:
+                await session.commit()
+            except IntegrityError:
+                await session.rollback()
+                return None
             await session.refresh(result)
             return user if result else None
 

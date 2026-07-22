@@ -681,14 +681,20 @@ async def signin(
                 pass
 
         if not await Users.get_user_by_email(email.lower(), db=db):
-            await signup_handler(
-                request,
-                email,
-                str(uuid.uuid4()),
-                name,
-                db=db,
-                source='trusted_header',
-            )
+            try:
+                await signup_handler(
+                    request,
+                    email,
+                    str(uuid.uuid4()),
+                    name,
+                    db=db,
+                    source='trusted_header',
+                )
+            except HTTPException as e:
+                if e.status_code != 409:
+                    raise
+                # Concurrent request already created the user — fall through
+                # to authenticate_user_by_email below.
 
         user = await Auths.authenticate_user_by_email(email, db=db)
         if user:
@@ -791,7 +797,7 @@ async def signup_handler(
         db=db,
     )
     if not user:
-        raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+        raise HTTPException(409, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     # Atomically check if this is the only user *after* the insert.
     # Only the single user present at this point should become admin.
