@@ -1076,19 +1076,15 @@ async def transcribe(request: Request, file_path: str, metadata: Optional[dict] 
                 detail=ERROR_MESSAGES.DEFAULT(e, 'Error processing audio file'),
             )
 
-    results = []
     try:
         tasks = [transcription_handler(request, chunk_path, metadata, user) for chunk_path in chunk_paths]
-        for coro in asyncio.as_completed(tasks):
-            try:
-                results.append(await coro)
-            except HTTPException:
-                raise
-            except Exception as transcribe_exc:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f'Error transcribing chunk: {transcribe_exc}',
-                )
+        try:
+            results = await asyncio.gather(*tasks)
+        except Exception as transcribe_exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f'Error transcribing chunk: {transcribe_exc}',
+            )
     finally:
         # Clean up only the temporary chunks, never the original file
         for chunk_path in chunk_paths:
