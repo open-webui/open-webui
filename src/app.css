@@ -720,11 +720,15 @@ input[type='number'] {
 body {
 	background: #fff;
 	color: #000;
-}
+}.dark body { background: #171717; color: #eee; }
 
-.dark body {
-	background: #171717;
-	color: #eee;
+/* Make native date/time picker icons visible in dark mode */
+.dark input[type="date"],
+.dark input[type="time"],
+.dark input[type="datetime-local"],
+.dark input[type="month"],
+.dark input[type="week"] {
+	color-scheme: dark;
 }
 
 /* Position the handle relative to each LI */
