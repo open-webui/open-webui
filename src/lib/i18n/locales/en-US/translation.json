@@ -494,8 +494,6 @@
 	"Context compaction failed": "",
 	"Context Compaction Prompt": "",
 	"Context Compaction Threshold": "",
-	"Retained Message Percentage": "",
-	"Percentage (10–50%) of the most recent messages to retain after context compaction.": "",
 	"Context Tokens": "",
 	"Continue": "",
 	"Continue Response": "",

@@ -200,7 +200,7 @@ async def _load_config() -> dict:
         'token_threshold': token_threshold,
         'token_cap': _parse_positive_int(values.get('chat.context_compaction.token_cap')) or token_threshold,
         'retained_messages_percentage': _clamp_retained_messages_percentage(
-            values.get('chat.context_compaction.retained_messages_percentage', 50)
+            values.get('chat.context_compaction.retained_messages_percentage', 20)
         ),
         'prompt_template': values.get('chat.context_compaction.prompt_template', '') or '',
     }
@@ -218,7 +218,7 @@ def _clamp_retained_messages_percentage(value: Any) -> int:
     try:
         return min(50, max(10, int(value)))
     except (TypeError, ValueError):
-        return 50
+        return 20
 
 
 def _resolve_token_threshold(global_threshold: int, global_cap: int, metadata: dict) -> int:
