@@ -725,6 +725,7 @@ body {
 .dark body {
 	background: #171717;
 	color: #eee;
+	color-scheme: dark;
 }
 
 /* Position the handle relative to each LI */
