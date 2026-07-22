@@ -500,9 +500,12 @@ class CalendarEventTable:
                 # Filter to requested calendars only
                 accessible_cal_ids = [c for c in accessible_cal_ids if c in calendar_ids]
 
-            # Also get event IDs where user is an attendee
+            # Also get event IDs where the user is an attendee, excluding invites they declined
             attendee_event_ids_result = await db.execute(
-                select(CalendarEventAttendee.event_id).filter(CalendarEventAttendee.user_id == user_id)
+                select(CalendarEventAttendee.event_id).filter(
+                    CalendarEventAttendee.user_id == user_id,
+                    CalendarEventAttendee.status != 'declined',
+                )
             )
             attendee_event_ids = [r[0] for r in attendee_event_ids_result.all()]
 
