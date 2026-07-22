@@ -365,7 +365,6 @@
 	"Base Model is required.": "",
 	"Base Model List Cache speeds up access by fetching base models only at startup or on settings save—faster, but may not show recent base model changes.": "Mezipaměť seznamu základních modelů zrychluje přístup načítáním základních modelů pouze při spuštění nebo při uložení nastavení – je to rychlejší, ale nemusí zobrazovat nedávné změny základních modelů.",
 	"Base URL": "",
-	"BaseRT": "",
 	"Bearer": "Bearer",
 	"before": "před",
 	"Being lazy": "Být líný",

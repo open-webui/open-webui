@@ -358,7 +358,6 @@
 	"Base Model is required.": "Modelo Base é obrigatório.",
 	"Base Model List Cache speeds up access by fetching base models only at startup or on settings save—faster, but may not show recent base model changes.": "O cache da lista de modelos base acelera o acesso buscando modelos base somente na inicialização ou ao salvar as configurações — mais rápido, mas pode não mostrar alterações recentes no modelo base.",
 	"Base URL": "",
-	"BaseRT": "",
 	"Bearer": "Bearer",
 	"before": "antes",
 	"Being lazy": "Sendo preguiçoso",

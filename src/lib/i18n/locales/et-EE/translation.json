@@ -351,7 +351,6 @@
 	"Base Model is required.": "",
 	"Base Model List Cache speeds up access by fetching base models only at startup or on settings save—faster, but may not show recent base model changes.": "Baasmudelite nimekirja vahemälu kiirendab juurdepääsu, tuues baasmudelid ainult käivitamisel või seadete salvestamisel—kiirem, kuid ei pruugi näidata hiljutisi muudatusi.",
 	"Base URL": "",
-	"BaseRT": "",
 	"Bearer": "Bearer",
 	"before": "enne",
 	"Being lazy": "Laisklemine",

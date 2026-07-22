@@ -358,7 +358,6 @@
 	"Base Model is required.": "Es requereix el model base.",
 	"Base Model List Cache speeds up access by fetching base models only at startup or on settings save—faster, but may not show recent base model changes.": "La memòria cau de la llista de models base accelera l'accés obtenint els models base només a l'inici o en desar la configuració; és més ràpid, però és possible que no mostri els canvis recents del model base.",
 	"Base URL": "",
-	"BaseRT": "",
 	"Bearer": "Bearer",
 	"before": "abans",
 	"Being lazy": "Essent mandrós",
