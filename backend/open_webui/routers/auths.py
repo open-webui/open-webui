@@ -403,39 +403,35 @@ async def update_password(
 
 
 def _unescape_ldap_dn_value(value: str) -> str:
-    """Resolve RFC 4514 escape sequences in a distinguished-name attribute value.
+    """Resolve RFC 4514 escapes in a DN value, e.g. ``CN=Sales\\, EMEA`` -> ``Sales, EMEA``.
 
-    ``parse_dn`` splits a DN on unescaped separators but leaves the escape
-    sequences in the returned value, so ``CN=Sales\\, EMEA`` yields the value
-    ``Sales\\, EMEA``. Resolve those escapes so the group name matches what an
-    administrator sees (``Sales, EMEA``). Consecutive ``\\XX`` hex escapes encode
-    UTF-8 bytes and are decoded together.
+    Consecutive ``\\XX`` hex escapes encode UTF-8 bytes and are decoded together.
     """
     hexdigits = '0123456789abcdefABCDEF'
     result = []
-    i = 0
+    pos = 0
     length = len(value)
-    while i < length:
-        char = value[i]
-        if char == '\\' and i + 1 < length:
-            if i + 2 < length and value[i + 1] in hexdigits and value[i + 2] in hexdigits:
+    while pos < length:
+        char = value[pos]
+        if char == '\\' and pos + 1 < length:
+            if pos + 2 < length and value[pos + 1] in hexdigits and value[pos + 2] in hexdigits:
                 byte_values = bytearray()
                 while (
-                    i + 2 < length
-                    and value[i] == '\\'
-                    and value[i + 1] in hexdigits
-                    and value[i + 2] in hexdigits
+                    pos + 2 < length
+                    and value[pos] == '\\'
+                    and value[pos + 1] in hexdigits
+                    and value[pos + 2] in hexdigits
                 ):
-                    byte_values.append(int(value[i + 1 : i + 3], 16))
-                    i += 3
+                    byte_values.append(int(value[pos + 1 : pos + 3], 16))
+                    pos += 3
                 result.append(byte_values.decode('utf-8', errors='replace'))
             else:
-                # A backslash escaping a literal special char (e.g. "\," "\+").
-                result.append(value[i + 1])
-                i += 2
+                # Backslash escaping a literal special char, e.g. "\," or "\+".
+                result.append(value[pos + 1])
+                pos += 2
         else:
             result.append(char)
-            i += 1
+            pos += 1
     return ''.join(result)
 
 
