@@ -1593,12 +1593,14 @@ class ChatTable:
 
                 # Check if there are any tags to filter
                 if 'none' in tag_ids:
-                    stmt = stmt.filter(text("""
+                    stmt = stmt.filter(
+                        text("""
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_each(Chat.meta, '$.tags') AS tag
                             )
-                            """))
+                            """)
+                    )
                 elif tag_ids:
                     stmt = stmt.filter(
                         and_(
@@ -1641,12 +1643,14 @@ class ChatTable:
                 ).params(title_key=f'%{search_text}%', content_key=search_text.lower())
 
                 if 'none' in tag_ids:
-                    stmt = stmt.filter(text("""
+                    stmt = stmt.filter(
+                        text("""
                             NOT EXISTS (
                                 SELECT 1
                                 FROM json_array_elements_text(Chat.meta->'tags') AS tag
                             )
-                            """))
+                            """)
+                    )
                 elif tag_ids:
                     stmt = stmt.filter(
                         and_(
@@ -1718,17 +1722,21 @@ class ChatTable:
         folder_id: str,
         skip: int = 0,
         limit: int = 60,
+        sort_by: str = 'updated_at',
+        sort_dir: str = 'desc',
         db: AsyncSession | None = None,
     ) -> list[dict]:
         """Get chats in a folder across ALL users. Returns dicts with user_id."""
         async with get_async_db_context(db) as session:
+            sort_column = Chat.title if sort_by == 'title' else Chat.updated_at
+            order_clause = sort_column.asc() if sort_dir == 'asc' else sort_column.desc()
             stmt = (
                 select(Chat.id, Chat.title, Chat.user_id, Chat.updated_at, Chat.created_at, Chat.last_read_at)
                 .filter_by(folder_id=folder_id)
                 .filter(or_(Chat.pinned == False, Chat.pinned == None))
                 .filter_by(archived=False)
                 .where(Chat.meta['internal'].as_boolean().is_not(True))
-                .order_by(Chat.updated_at.desc(), Chat.id)
+                .order_by(order_clause, Chat.id)
             )
 
             if skip:
@@ -1749,6 +1757,22 @@ class ChatTable:
                 }
                 for chat in all_chats
             ]
+
+    async def count_all_chats_by_folder_id(
+        self,
+        folder_id: str,
+        db: AsyncSession | None = None,
+    ) -> int:
+        async with get_async_db_context(db) as session:
+            stmt = (
+                select(func.count(Chat.id))
+                .filter_by(folder_id=folder_id)
+                .filter(or_(Chat.pinned == False, Chat.pinned == None))
+                .filter_by(archived=False)
+                .where(Chat.meta['internal'].as_boolean().is_not(True))
+            )
+            result = await session.execute(stmt)
+            return result.scalar_one()
 
     async def get_chats_by_folder_ids_and_user_id(
         self, folder_ids: list[str], user_id: str, db: AsyncSession | None = None

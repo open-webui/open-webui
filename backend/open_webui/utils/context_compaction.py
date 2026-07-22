@@ -240,9 +240,7 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
         usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
         input_tokens = (usage or {}).get('input_tokens') or (usage or {}).get('prompt_tokens')
         if isinstance(usage, dict) and input_tokens:
-            tokens = int(input_tokens or 0) + int(
-                usage.get('output_tokens') or usage.get('completion_tokens') or 0
-            )
+            tokens = int(input_tokens or 0) + int(usage.get('output_tokens') or usage.get('completion_tokens') or 0)
             tokens += _estimate_messages_tokens(messages[idx + 1 :])
             return _build_context_usage(tokens, threshold)
 

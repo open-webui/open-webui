@@ -1402,9 +1402,9 @@ async def chat_completion(
                                 'content_preview': user_message.get('content', '')[:300],
                             },
                         )
-                        if not getattr(request.state, 'internal', False) and not (
-                            user_message.get('meta') or {}
-                        ).get('internal'):
+                        if not getattr(request.state, 'internal', False) and not (user_message.get('meta') or {}).get(
+                            'internal'
+                        ):
                             try:
                                 from open_webui.utils.timers import cancel_timers_for_chat
 
@@ -1815,9 +1815,7 @@ async def generate_messages(
             },
         )
     elif isinstance(response, dict):
-        return convert_openai_to_anthropic_response(
-            response, model=requested_model, input_tokens=input_tokens
-        )
+        return convert_openai_to_anthropic_response(response, model=requested_model, input_tokens=input_tokens)
     else:
         # Passthrough for error responses (JSONResponse, PlainTextResponse, etc.)
         return response

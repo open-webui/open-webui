@@ -44,7 +44,6 @@
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import FolderModal from './Folders/FolderModal.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
-	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	export let folderRegistry = {};
 	export let open = false;
@@ -385,24 +384,46 @@
 		}, 500);
 	};
 
+	const SIDEBAR_CHATS_PAGE_SIZE = 10;
+	/** @type {any[] | null} */
 	let chats = null;
-	export const setFolderItems = async () => {
+	let chatsPage = 1;
+	let hasMoreChats = false;
+	let chatsLoading = false;
+
+	export const setFolderItems = async (append = false) => {
 		await tick();
-		if (open) {
+		if (open && !chatsLoading) {
 			// Always use getSharedFolderChats so owners also see chats
 			// created by users who have write access to this folder.
+			const nextPage = append ? chatsPage + 1 : 1;
+			chatsLoading = true;
 			try {
-				const res = await getSharedFolderChats(localStorage.token, folderId);
-				chats = res?.chats ?? [];
+				const res = await getSharedFolderChats(localStorage.token, folderId, {
+					page: nextPage
+				});
+				const nextChats = res?.chats ?? [];
+				chats = append ? [...(chats ?? []), ...nextChats] : nextChats;
+				chatsPage = nextPage;
+				hasMoreChats = res?.has_more ?? nextChats.length === SIDEBAR_CHATS_PAGE_SIZE;
 			} catch (error) {
 				// Fallback to regular API
-				chats = await getChatListByFolderId(localStorage.token, folderId).catch((error) => {
-					toast.error(`${error}`);
-					return [];
-				});
+				const fallback = await getChatListByFolderId(localStorage.token, folderId, nextPage).catch(
+					(error) => {
+						toast.error(`${error}`);
+						return [];
+					}
+				);
+				chats = append ? [...(chats ?? []), ...(fallback ?? [])] : (fallback ?? []);
+				chatsPage = nextPage;
+				hasMoreChats = (fallback?.length ?? 0) === SIDEBAR_CHATS_PAGE_SIZE;
+			} finally {
+				chatsLoading = false;
 			}
 		} else {
 			chats = null;
+			chatsPage = 1;
+			hasMoreChats = false;
 		}
 	};
 
@@ -564,7 +585,7 @@
 							await selectedFolder.set({ ...folders[folderId], ...folder });
 						}
 
-						await goto('/');
+						await goto(`/folders/${folderId}`);
 
 						if ($mobile) {
 							showSidebar.set(!$showSidebar);
@@ -678,7 +699,7 @@
 		</div>
 
 		<div slot="content" class="w-full">
-			{#if (folders[folderId]?.childrenIds ?? []).length > 0 || (chats ?? []).length > 0}
+			{#if (folders[folderId]?.childrenIds ?? []).length > 0 || (chats ?? []).length > 0 || hasMoreChats}
 				<div
 					class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
 				>
@@ -731,12 +752,41 @@
 							}}
 						/>
 					{/each}
+
+					{#if hasMoreChats}
+						<button
+							class="w-full px-2 py-0.5 text-left text-[11px] text-gray-400 transition hover:text-gray-700 disabled:cursor-not-allowed dark:text-gray-600 dark:hover:text-gray-300"
+							disabled={chatsLoading}
+							on:click={() => setFolderItems(true)}
+						>
+							{#if chatsLoading}
+								<div class="flex gap-1 px-2 py-1.5" aria-label="Loading">
+									<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"
+									></span>
+									<span
+										class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:150ms] dark:bg-gray-600"
+									></span>
+									<span
+										class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:300ms] dark:bg-gray-600"
+									></span>
+								</div>
+							{:else}
+								{$i18n.t('Show more')}
+							{/if}
+						</button>
+					{/if}
 				</div>
 			{/if}
 
-			{#if chats === null}
-				<div class="flex justify-center items-center p-2">
-					<Spinner className="size-4 text-gray-500" />
+			{#if chats === null && chatsLoading}
+				<div class="flex gap-1 px-2 py-1.5" aria-label="Loading">
+					<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"></span>
+					<span
+						class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:150ms] dark:bg-gray-600"
+					></span>
+					<span
+						class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:300ms] dark:bg-gray-600"
+					></span>
 				</div>
 			{/if}
 		</div>

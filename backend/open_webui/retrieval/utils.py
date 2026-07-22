@@ -1340,9 +1340,7 @@ async def get_sources_from_items(
         folder = await Folders.get_folder_by_id(folder_id)
         if folder and (user.role == 'admin' or await has_folder_access(user.id, folder, 'read', db=None)):
             files = (folder.data or {}).get('files', [])
-            folder_items.update(
-                (entry.get('type'), entry.get('id')) for entry in files if isinstance(entry, dict)
-            )
+            folder_items.update((entry.get('type'), entry.get('id')) for entry in files if isinstance(entry, dict))
             items.extend(files)
 
     for item in items:
