@@ -352,7 +352,9 @@
 			})(),
 			(async () => {
 				console.log('Init chat list');
-				const _chats = await getChatList(localStorage.token, $currentChatPage);
+				// Use explicit page 1 for initialization to avoid
+				// race conditions with the pagination store on mobile
+				const _chats = await getChatList(localStorage.token, 1);
 				await chats.set(_chats);
 			})()
 		]);
