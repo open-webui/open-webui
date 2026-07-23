@@ -248,7 +248,8 @@
 										onSelect({
 											type: 'file',
 											name: file?.meta?.name,
-											...file
+											...file,
+											url: file.id
 										});
 									}}
 								>
