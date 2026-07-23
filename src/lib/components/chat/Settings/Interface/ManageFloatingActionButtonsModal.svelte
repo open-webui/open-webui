@@ -10,6 +10,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { settings } from '$lib/stores';
 
 	export let show = false;
 	export let onSave = () => {};
@@ -27,24 +28,26 @@
 	onMount(() => {});
 </script>
 
-<Modal size="sm" bind:show>
+<Modal size="sm" bind:show className="bg-white dark:bg-gray-900 rounded-4xl">
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-1.5">
-			<h1 class="text-lg font-medium self-center font-primary">
+		<div class=" flex justify-between text-gray-900 dark:text-white px-4 pt-3 pb-1">
+			<h1 class="text-sm font-medium self-center">
 				{$i18n.t('Quick Actions')}
 			</h1>
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close modal')}
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<XMark className={'size-5'} />
+				<XMark className={'size-4'} />
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+		<div
+			class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 text-gray-600 dark:text-gray-400"
+		>
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full px-1"
@@ -55,9 +58,9 @@
 				>
 					<div>
 						<div class="text-xs flex items-center justify-between mb-2">
-							<div class="font-medium">{$i18n.t('Actions')}</div>
+							<div class="font-normal">{$i18n.t('Actions')}</div>
 
-							<div class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+							<div class="flex items-center gap-2 text-gray-500 dark:text-gray-500">
 								<button
 									type="button"
 									on:click={() => {
@@ -169,9 +172,9 @@
 						{/if}
 					</div>
 
-					<div class="flex justify-end text-sm font-medium">
+					<div class="flex justify-end text-sm font-normal">
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 							type="submit"
 						>
 							{$i18n.t('Save')}

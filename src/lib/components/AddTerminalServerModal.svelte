@@ -3,13 +3,11 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext<any>('i18n');
 
-	import { settings } from '$lib/stores';
-
 	import Modal from '$lib/components/common/Modal.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
-	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import {
@@ -17,6 +15,8 @@
 		verifyTerminalServerConnection,
 		putOrchestratorPolicy,
 		putOrchestratorLifecycle,
+		getOrchestratorPolicy,
+		getOrchestratorLifecycle,
 		refreshOrchestratorTerminals
 	} from '$lib/apis/configs';
 	import { getTerminalConfig } from '$lib/apis/terminal';
@@ -56,6 +56,13 @@
 	let lifecycleJson = '{}';
 	let refreshOnlyIdle = true;
 	let refreshReset = false;
+	let loadingPolicy = false;
+	let policyLoadError = '';
+
+	const inputClass =
+		'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
+	const selectClass =
+		'dark:bg-gray-900 bg-transparent pr-5 outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
 
 	const stringifyJson = (value: object | null | undefined) => {
 		return JSON.stringify(value && Object.keys(value).length ? value : {}, null, 2);
@@ -73,10 +80,10 @@
 			accessGrants = connection?.config?.access_grants ?? [];
 
 			// Restore policy state
-			serverType = connection?.server_type ?? null;
+			serverType = connection?.server_type ?? (connection?.policy_id ? 'orchestrator' : null);
 			policyId = connection?.policy_id ?? '';
 
-			const p = connection?.policy ?? {};
+			const p: Record<string, any> = {};
 			policyImage = p.image ?? '';
 			policyIdleTimeout = p.idle_timeout_minutes ?? 30;
 			policyStorage = p.storage ? 'persistent' : 'ephemeral';
@@ -89,9 +96,11 @@
 			// Restore resources
 			policyCpu = p.cpu_limit ?? '1';
 			policyMemory = p.memory_limit ?? '1Gi';
-			lifecycleJson = stringifyJson(connection?.lifecycle);
+			lifecycleJson = stringifyJson({});
 			refreshOnlyIdle = true;
 			refreshReset = false;
+			loadingPolicy = false;
+			policyLoadError = '';
 		} else {
 			id = '';
 			url = '';
@@ -114,11 +123,53 @@
 			lifecycleJson = '{}';
 			refreshOnlyIdle = true;
 			refreshReset = false;
+			loadingPolicy = false;
+			policyLoadError = '';
+		}
+	};
+
+	const loadPolicy = async () => {
+		if (!connection || serverType !== 'orchestrator' || !policyId || direct) return;
+
+		loadingPolicy = true;
+		policyLoadError = '';
+		try {
+			let policy: any = null;
+			try {
+				policy = await getOrchestratorPolicy(localStorage.token, url, key, policyId, auth_type);
+			} catch (error: any) {
+				if (error?.status !== 404) throw error;
+			}
+
+			const lifecycle = await getOrchestratorLifecycle(
+				localStorage.token,
+				url,
+				key,
+				policyId,
+				auth_type
+			);
+			const data = policy?.data ?? {};
+			policyImage = data.image ?? '';
+			policyIdleTimeout = data.idle_timeout_minutes ?? 30;
+			policyStorage = data.storage ? 'persistent' : 'ephemeral';
+			policyStorageSize = data.storage ?? '5Gi';
+			policyEnvPairs = Object.entries(data.env ?? {}).map(([key, value]) => ({
+				key,
+				value: String(value)
+			}));
+			policyCpu = data.cpu_limit ?? '1';
+			policyMemory = data.memory_limit ?? '1Gi';
+			lifecycleJson = stringifyJson(lifecycle?.data);
+		} catch (error: any) {
+			policyLoadError = error?.message || String(error);
+		} finally {
+			loadingPolicy = false;
 		}
 	};
 
 	$: if (show) {
 		init();
+		void loadPolicy();
 	}
 
 	const verifyHandler = async () => {
@@ -262,6 +313,14 @@
 		url = url.replace(/\/$/, '');
 		// Bearer key whitespace breaks the terminal WebSocket auth (HTTP headers strip it, JSON doesn't)
 		key = key.trim();
+		if (loadingPolicy) {
+			toast.error($i18n.t('Policy is still loading'));
+			return;
+		}
+		if (policyLoadError) {
+			toast.error($i18n.t('Failed to load policy: {{error}}', { error: policyLoadError }));
+			return;
+		}
 
 		// Save policy to orchestrator if applicable
 		let policyData = {};
@@ -301,8 +360,7 @@
 			},
 			// Policy fields
 			...(serverType ? { server_type: serverType } : {}),
-			...(serverType === 'orchestrator' && policyId ? { policy_id: policyId } : {}),
-			...(serverType === 'orchestrator' ? { policy: policyData, lifecycle: lifecycleData } : {})
+			...(serverType === 'orchestrator' && policyId ? { policy_id: policyId } : {})
 		};
 
 		onSubmit(result);
@@ -339,9 +397,7 @@
 						<div class="flex gap-2">
 							<div class="flex flex-col flex-1">
 								<div class="flex justify-between mb-0.5">
-									<label
-										for="terminal-name"
-										class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+									<label for="terminal-name" class={`text-xs text-gray-500`}
 										>{$i18n.t('Name')}</label
 									>
 								</div>
@@ -349,7 +405,7 @@
 								<div class="flex flex-1 items-center">
 									<input
 										id="terminal-name"
-										class={`w-full flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										class={`w-full flex-1 text-sm ${inputClass}`}
 										type="text"
 										bind:value={name}
 										placeholder={$i18n.t('My Terminal')}
@@ -360,9 +416,7 @@
 							{#if !direct}
 								<div class="flex flex-col flex-1">
 									<div class="flex justify-between mb-0.5">
-										<label
-											for="terminal-id"
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										<label for="terminal-id" class={`text-xs text-gray-500`}
 											>{$i18n.t('ID')}
 											<span class="opacity-50">({$i18n.t('optional')})</span></label
 										>
@@ -370,7 +424,7 @@
 									<div class="flex flex-1 items-center">
 										<input
 											id="terminal-id"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full flex-1 text-sm font-mono ${inputClass}`}
 											type="text"
 											bind:value={id}
 											placeholder="auto"
@@ -384,17 +438,13 @@
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between mb-0.5">
-									<label
-										for="terminal-url"
-										class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>{$i18n.t('URL')}</label
-									>
+									<label for="terminal-url" class={`text-xs text-gray-500`}>{$i18n.t('URL')}</label>
 								</div>
 
 								<div class="flex flex-1 items-center">
 									<input
 										id="terminal-url"
-										class={`w-full flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										class={`w-full flex-1 text-sm ${inputClass}`}
 										type="text"
 										bind:value={url}
 										placeholder="http://localhost:9900"
@@ -459,16 +509,14 @@
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
 									<div class="flex justify-between mb-0.5">
-										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
+										<div class={`text-xs text-gray-500`}>
 											{$i18n.t('Policy ID')}
 										</div>
 									</div>
 									<div class="flex flex-1 items-center">
 										<input
 											id="policy-id"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full flex-1 text-sm font-mono ${inputClass}`}
 											type="text"
 											bind:value={policyId}
 											placeholder="python-ds"
@@ -478,13 +526,18 @@
 									</div>
 								</div>
 							</div>
+							{#if loadingPolicy}
+								<div class="mt-2 text-xs text-gray-500">{$i18n.t('Loading policy...')}</div>
+							{:else if policyLoadError}
+								<div class="mt-2 text-xs text-red-600 dark:text-red-400">
+									{$i18n.t('Failed to load policy: {{error}}', { error: policyLoadError })}
+								</div>
+							{/if}
 
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
 									<div class="flex justify-between mb-0.5">
-										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
+										<div class={`text-xs text-gray-500`}>
 											{$i18n.t('Image')}
 											<span class="opacity-50">({$i18n.t('optional')})</span>
 										</div>
@@ -492,7 +545,7 @@
 									<div class="flex flex-1 items-center">
 										<input
 											id="policy-image"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full flex-1 text-sm font-mono ${inputClass}`}
 											type="text"
 											bind:value={policyImage}
 											placeholder="ghcr.io/open-webui/open-terminal:latest"
@@ -505,16 +558,14 @@
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col flex-1">
 									<div class="flex justify-between mb-0.5">
-										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
+										<div class={`text-xs text-gray-500`}>
 											{$i18n.t('CPU')}
 										</div>
 									</div>
 									<div class="flex flex-1 items-center">
 										<input
 											id="policy-cpu"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full flex-1 text-sm font-mono ${inputClass}`}
 											type="text"
 											bind:value={policyCpu}
 											placeholder="1"
@@ -524,16 +575,14 @@
 								</div>
 								<div class="flex flex-col flex-1">
 									<div class="flex justify-between mb-0.5">
-										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
+										<div class={`text-xs text-gray-500`}>
 											{$i18n.t('Memory')}
 										</div>
 									</div>
 									<div class="flex flex-1 items-center">
 										<input
 											id="policy-memory"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full flex-1 text-sm font-mono ${inputClass}`}
 											type="text"
 											bind:value={policyMemory}
 											placeholder="1Gi"
@@ -546,18 +595,13 @@
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col flex-1">
 									<div class="flex justify-between mb-0.5">
-										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
+										<div class={`text-xs text-gray-500`}>
 											{$i18n.t('Storage')}
 										</div>
 									</div>
 									<div class="flex gap-2">
 										<div class="flex-shrink-0 self-start">
-											<select
-												class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-												bind:value={policyStorage}
-											>
+											<select class={`w-full text-sm ${selectClass}`} bind:value={policyStorage}>
 												<option value="ephemeral">{$i18n.t('Ephemeral')}</option>
 												<option value="persistent">{$i18n.t('Persistent')}</option>
 											</select>
@@ -566,7 +610,7 @@
 											<div class="flex flex-1 items-center">
 												<input
 													id="policy-storage-size"
-													class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+													class={`w-full flex-1 text-sm font-mono ${inputClass}`}
 													type="text"
 													bind:value={policyStorageSize}
 													placeholder="5Gi"
@@ -579,9 +623,7 @@
 
 								<div class="flex flex-col flex-1">
 									<div class="flex justify-between mb-0.5">
-										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
+										<div class={`text-xs text-gray-500`}>
 											{$i18n.t('Idle Timeout')}
 											<span class="opacity-50">({$i18n.t('min')})</span>
 										</div>
@@ -589,7 +631,7 @@
 									<div class="flex flex-1 items-center">
 										<input
 											id="idle-timeout"
-											class={`w-full flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class={`w-full flex-1 text-sm font-mono ${inputClass}`}
 											type="number"
 											min="0"
 											bind:value={policyIdleTimeout}
@@ -604,9 +646,7 @@
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
 									<div class="flex justify-between items-center mb-0.5">
-										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
+										<div class={`text-xs text-gray-500`}>
 											{$i18n.t('Environment Variables')}
 										</div>
 										<button
@@ -621,13 +661,13 @@
 									{#each policyEnvPairs as pair, idx}
 										<div class="flex gap-1.5 mb-1">
 											<input
-												class={`flex-1 text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												class={`flex-1 text-sm font-mono ${inputClass}`}
 												type="text"
 												bind:value={pair.key}
 												placeholder="KEY"
 											/>
 											<input
-												class={`flex-[2] text-sm bg-transparent font-mono ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												class={`flex-[2] text-sm font-mono ${inputClass}`}
 												type="text"
 												bind:value={pair.value}
 												placeholder="value"
@@ -648,15 +688,13 @@
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
 									<div class="flex justify-between mb-0.5">
-										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
+										<div class={`text-xs text-gray-500`}>
 											{$i18n.t('Lifecycle JSON')}
 										</div>
 									</div>
 									<textarea
 										id="lifecycle-json"
-										class={`w-full min-h-24 resize-y text-xs bg-transparent font-mono rounded-lg p-2 border border-gray-200 dark:border-gray-800 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										class={`w-full min-h-24 resize-y text-xs font-mono ${inputClass}`}
 										bind:value={lifecycleJson}
 										spellcheck="false"
 										placeholder={`{\n  "reset": {\n    "schedule": "@weekly",\n    "timezone": "UTC"\n  }\n}`}
@@ -674,6 +712,11 @@
 										<input type="checkbox" bind:checked={refreshReset} />
 										<span>{$i18n.t('Reset persisted files')}</span>
 									</label>
+								</div>
+								<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+									{$i18n.t(
+										'Policy changes apply to newly provisioned terminals. Refresh matching terminals to apply them to existing terminals.'
+									)}
 								</div>
 								<button
 									type="button"
@@ -708,19 +751,12 @@
 							</button>
 
 							{#if !direct}
-								<button
-									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 object-cover rounded-full flex gap-1 items-center mt-2"
-									type="button"
+								<AccessButton
+									className="mt-2"
 									on:click={() => {
 										showAccessControlModal = true;
 									}}
-								>
-									<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
-
-									<div class="text-xs font-medium shrink-0">
-										{$i18n.t('Access')}
-									</div>
-								</button>
+								/>
 							{/if}
 						</div>
 
@@ -729,9 +765,7 @@
 								<div class="flex flex-col w-full">
 									<div class="flex justify-between items-center mb-0.5">
 										<div class="flex gap-2 items-center">
-											<div
-												class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-											>
+											<div class={`text-xs text-gray-500`}>
 												{$i18n.t('OpenAPI Spec')}
 											</div>
 										</div>
@@ -744,7 +778,7 @@
 													>{$i18n.t('openapi.json URL or Path')}</label
 												>
 												<input
-													class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+													class={`w-full text-sm ${inputClass}`}
 													type="text"
 													id="openapi-path"
 													bind:value={path}
@@ -756,9 +790,7 @@
 										</div>
 									</div>
 
-									<div
-										class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-									>
+									<div class={`text-xs mt-1 text-gray-500`}>
 										{$i18n.t(`WebUI will make requests to "{{url}}"`, {
 											url: path.includes('://')
 												? path
@@ -773,9 +805,7 @@
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between items-center">
 									<div class="flex gap-2 items-center">
-										<div
-											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>
+										<div class={`text-xs text-gray-500`}>
 											{$i18n.t('Auth')}
 										</div>
 									</div>
@@ -783,10 +813,7 @@
 
 								<div class="flex gap-2">
 									<div class="flex-shrink-0 self-start">
-										<select
-											class={`dark:bg-gray-900 w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-											bind:value={auth_type}
-										>
+										<select class={`w-full text-sm ${selectClass}`} bind:value={auth_type}>
 											<option value="none">{$i18n.t('None')}</option>
 											<option value="bearer">{$i18n.t('Bearer')}</option>
 											{#if !direct}
@@ -804,21 +831,15 @@
 												required={false}
 											/>
 										{:else if auth_type === 'none'}
-											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-											>
+											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
 												{$i18n.t('No authentication')}
 											</div>
 										{:else if auth_type === 'session'}
-											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-											>
+											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
 												{$i18n.t('Forwards system user session credentials to authenticate')}
 											</div>
 										{:else if auth_type === 'system_oauth'}
-											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-											>
+											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
 												{$i18n.t('Forwards system user OAuth access token to authenticate')}
 											</div>
 										{/if}
@@ -843,8 +864,9 @@
 							</div>
 
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 disabled:opacity-50 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
 								type="submit"
+								disabled={loadingPolicy || !!policyLoadError}
 							>
 								{$i18n.t('Save')}
 							</button>

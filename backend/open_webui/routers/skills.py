@@ -72,6 +72,8 @@ async def get_skills(
 async def get_skill_list(
     query: Optional[str] = None,
     view_option: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
     page: Optional[int] = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
@@ -86,6 +88,10 @@ async def get_skill_list(
         filter['query'] = query
     if view_option:
         filter['view_option'] = view_option
+    if order_by:
+        filter['order_by'] = order_by
+    if direction:
+        filter['direction'] = direction
 
     if not (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL):
         groups = await Groups.get_groups_by_member_id(user.id, db=db)
