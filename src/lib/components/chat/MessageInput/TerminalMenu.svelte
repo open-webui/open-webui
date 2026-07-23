@@ -6,6 +6,7 @@
 	import { getToolServersData } from '$lib/apis';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cloud from '$lib/components/icons/Cloud.svelte';
 
@@ -90,14 +91,14 @@
 </script>
 
 <div class="flex items-center translate-x-0.5">
-	<Dropdown bind:show align="end">
+	<Dropdown bind:show align="start">
 		<Tooltip content={$i18n.t('Terminal')} placement="top">
 			<button
 				type="button"
-				class="flex items-center gap-1.5 translate-y-[1px] hover:bg-gray-50 dark:hover:bg-gray-850 text-sm transition rounded-lg cursor-pointer {$selectedTerminalId &&
+				class="flex items-center gap-1.5 translate-y-[1px] text-[13px] text-gray-600 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-800/40 dark:hover:text-gray-200 transition rounded-lg cursor-pointer {$selectedTerminalId &&
 				selectedLabel
-					? ' px-2.5 py-1 '
-					: ' p-2 opacity-50'}"
+					? ' p-1 '
+					: ' p-1 opacity-50'}"
 			>
 				<Cloud className="size-3.5" strokeWidth="2" />
 
@@ -108,14 +109,14 @@
 		</Tooltip>
 
 		<div slot="content">
-			<div
-				class="min-w-56 max-w-56 rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
+			<DropdownMenu
+				className="min-w-56 max-w-56 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
 			>
 				<!-- Direct terminals (gated by permission) -->
 				{#if directTerminals.length > 0 && ($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))}
 					<div class="flex items-center justify-between px-3 py-1">
 						<span
-							class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider"
+							class="text-[10px] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
 						>
 							{$i18n.t('Direct')}
 						</span>
@@ -145,14 +146,14 @@
 					{#each directTerminals as terminal}
 						<button
 							type="button"
-							class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl {$selectedTerminalId ===
+							class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl {$selectedTerminalId ===
 							terminal.url
-								? 'bg-gray-50 dark:bg-gray-800/50'
-								: 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}"
+								? 'bg-gray-50/40 dark:bg-gray-800/40'
+								: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"
 							on:click={() => selectDirect(terminal)}
 						>
 							<div class="flex flex-1 gap-2 items-center truncate">
-								<Cloud className="size-4 shrink-0" strokeWidth="2" />
+								<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
 								<span class="truncate"
 									>{terminal.name || terminal.url.replace(/^https?:\/\//, '')}</span
 								>
@@ -163,7 +164,7 @@
 										xmlns="http://www.w3.org/2000/svg"
 										viewBox="0 0 20 20"
 										fill="currentColor"
-										class="size-4"
+										class="size-3.5"
 									>
 										<path
 											fill-rule="evenodd"
@@ -175,17 +176,13 @@
 							{/if}
 						</button>
 					{/each}
-
-					{#if directTerminals.length > 0 && systemTerminals.length > 0}
-						<hr class="border-gray-100 dark:border-gray-800 my-1" />
-					{/if}
 				{/if}
 
 				<!-- System terminals -->
 				{#if systemTerminals.length > 0}
 					<div class="flex items-center justify-between px-3 py-1">
 						<span
-							class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider"
+							class="text-[10px] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
 						>
 							{$i18n.t('System')}
 						</span>
@@ -217,14 +214,14 @@
 					{#each systemTerminals as terminal}
 						<button
 							type="button"
-							class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl {$selectedTerminalId ===
+							class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl {$selectedTerminalId ===
 							terminal.id
-								? 'bg-gray-50 dark:bg-gray-800/50'
-								: 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}"
+								? 'bg-gray-50/40 dark:bg-gray-800/40'
+								: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"
 							on:click={() => selectSystem(terminal)}
 						>
 							<div class="flex flex-1 gap-2 items-center truncate">
-								<Cloud className="size-4 shrink-0" strokeWidth="2" />
+								<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
 								<span class="truncate">{terminal.name || $i18n.t('Terminal')}</span>
 							</div>
 							{#if $selectedTerminalId === terminal.id}
@@ -233,7 +230,7 @@
 										xmlns="http://www.w3.org/2000/svg"
 										viewBox="0 0 20 20"
 										fill="currentColor"
-										class="size-4"
+										class="size-3.5"
 									>
 										<path
 											fill-rule="evenodd"
@@ -246,7 +243,7 @@
 						</button>
 					{/each}
 				{/if}
-			</div>
+			</DropdownMenu>
 		</div>
 	</Dropdown>
 </div>

@@ -13,8 +13,10 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Model from './Evaluations/Model.svelte';
 	import ArenaModelModal from './Evaluations/ArenaModelModal.svelte';
+	import AdminSettingRow from './AdminSettingRow.svelte';
+	import AdminSettingSection from './AdminSettingSection.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	let evaluationConfig = null;
 	let showAddModel = false;
@@ -30,7 +32,9 @@
 			models.set(
 				await getModels(
 					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					$config?.features?.enable_direct_connections
+						? ($settings?.directConnections ?? null)
+						: null
 				)
 			);
 		}
@@ -44,7 +48,7 @@
 		models.set(
 			await getModels(
 				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 			)
 		);
 	};
@@ -57,7 +61,7 @@
 		models.set(
 			await getModels(
 				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
 			)
 		);
 	};
@@ -100,71 +104,62 @@
 		dispatch('save');
 	}}
 >
-	<div class="overflow-y-scroll scrollbar-hidden h-full">
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Evaluations')}</h2>
+
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if evaluationConfig !== null}
-			<div class="">
-				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
+			<AdminSettingSection first>
+				<AdminSettingRow
+					label={$i18n.t('Arena Models')}
+					description={$i18n.t('Message rating should be enabled to use this feature')}
+				>
+					<Tooltip content={$i18n.t(`Message rating should be enabled to use this feature`)}>
+						<Switch bind:state={evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS} />
+					</Tooltip>
+				</AdminSettingRow>
+			</AdminSettingSection>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+			{#if evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS}
+				<AdminSettingSection title={$i18n.t('Models')}>
+					<div class="mb-2 flex items-center justify-between">
+						<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Arena Models')}</div>
 
-					<div class="mb-2.5 flex w-full justify-between">
-						<div class=" text-xs font-medium">{$i18n.t('Arena Models')}</div>
-
-						<Tooltip content={$i18n.t(`Message rating should be enabled to use this feature`)}>
-							<Switch bind:state={evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS} />
+						<Tooltip content={$i18n.t('Add Arena Model')}>
+							<button
+								class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+								type="button"
+								on:click={() => {
+									showAddModel = true;
+								}}
+							>
+								<Plus />
+							</button>
 						</Tooltip>
 					</div>
-				</div>
 
-				{#if evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS}
-					<div class="mb-3">
-						<div class=" mt-0.5 mb-2.5 text-base font-medium flex justify-between items-center">
-							<div>
-								{$i18n.t('Manage')}
+					<div class="flex flex-col gap-2">
+						{#if (evaluationConfig?.EVALUATION_ARENA_MODELS ?? []).length > 0}
+							{#each evaluationConfig.EVALUATION_ARENA_MODELS as model, index}
+								<Model
+									{model}
+									on:edit={(e) => {
+										editModelHandler(e.detail, index);
+									}}
+									on:delete={(e) => {
+										deleteModelHandler(index);
+									}}
+								/>
+							{/each}
+						{:else}
+							<div class="text-center text-[0.6875rem] text-gray-400 dark:text-gray-600">
+								{$i18n.t(
+									`Using the default arena model with all models. Click the plus button to add custom models.`
+								)}
 							</div>
-
-							<div>
-								<Tooltip content={$i18n.t('Add Arena Model')}>
-									<button
-										class="p-1"
-										type="button"
-										on:click={() => {
-											showAddModel = true;
-										}}
-									>
-										<Plus />
-									</button>
-								</Tooltip>
-							</div>
-						</div>
-
-						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
-						<div class="flex flex-col gap-2">
-							{#if (evaluationConfig?.EVALUATION_ARENA_MODELS ?? []).length > 0}
-								{#each evaluationConfig.EVALUATION_ARENA_MODELS as model, index}
-									<Model
-										{model}
-										on:edit={(e) => {
-											editModelHandler(e.detail, index);
-										}}
-										on:delete={(e) => {
-											deleteModelHandler(index);
-										}}
-									/>
-								{/each}
-							{:else}
-								<div class=" text-center text-xs text-gray-500">
-									{$i18n.t(
-										`Using the default arena model with all models. Click the plus button to add custom models.`
-									)}
-								</div>
-							{/if}
-						</div>
+						{/if}
 					</div>
-				{/if}
-			</div>
+				</AdminSettingSection>
+			{/if}
 		{:else}
 			<div class="flex h-full justify-center">
 				<div class="my-auto">
@@ -174,9 +169,9 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-6 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

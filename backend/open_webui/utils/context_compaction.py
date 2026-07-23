@@ -5,7 +5,6 @@ import logging
 from typing import Any
 
 from fastapi.responses import JSONResponse
-
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_message_list
@@ -53,7 +52,7 @@ async def compact_messages_for_request(
         return messages, None, False
 
     messages, previous_summary = _apply_latest_summary_checkpoint(messages)
-    token_threshold = _resolve_token_threshold(config['token_threshold'], metadata)
+    token_threshold = _resolve_token_threshold(config['token_threshold'], config['token_cap'], metadata)
     if not _exceeds_token_threshold(messages, system_prompt, previous_summary, token_threshold) or len(messages) <= 3:
         return messages, previous_summary, False
 
@@ -108,12 +107,15 @@ async def compact_messages_for_request(
         raise
 
     chat_id = metadata.get('chat_id')
-    checkpoint_message_id = metadata.get('user_message_id') or metadata.get('message_id')
+    checkpoint_message_id = (
+        recent_messages[0].get('id') or metadata.get('user_message_id') or metadata.get('message_id')
+    )
     if chat_id and checkpoint_message_id and not chat_id.startswith(('local:', 'channel:')):
         await Chats.upsert_message_to_chat_by_id_and_message_id(
             chat_id,
             checkpoint_message_id,
             {'contextSummary': summary},
+            touch=False,
         )
 
     log.info(
@@ -146,8 +148,13 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
     if not config['enable']:
         return {'ok': True, 'compacted': False, 'reason': 'disabled'}
 
-    history = (chat.chat or {}).get('history') or {}
-    current_id = history.get('currentId')
+    chat_data = chat.chat or {}
+    history = chat_data.get('history') or {}
+    current_id = getattr(chat, 'current_message_id', None) or history.get('currentId')
+    if not current_id:
+        current_id = chat_data.get('currentId') or chat_data.get('branchPointMessageId')
+    if not current_id and isinstance(chat_data.get('messages'), list) and chat_data['messages']:
+        current_id = chat_data['messages'][-1].get('id')
     if not current_id:
         return {'ok': True, 'compacted': False, 'reason': 'empty'}
 
@@ -156,11 +163,11 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
         messages_map = history.get('messages') or {}
 
     messages, previous_summary = _apply_latest_summary_checkpoint(get_message_list(messages_map, current_id))
-    if len(messages) <= 2:
-        return {'ok': True, 'compacted': False, 'reason': 'too_short'}
-
     compacted_messages = messages[:-1]
     recent_messages = messages[-1:]
+    if not compacted_messages or not recent_messages:
+        return {'ok': True, 'compacted': False, 'reason': 'too_short'}
+
     summary = await _generate_summary(
         request,
         user,
@@ -171,7 +178,9 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
         previous_summary,
         config['prompt_template'],
     )
-    await Chats.upsert_message_to_chat_by_id_and_message_id(chat.id, current_id, {'contextSummary': summary})
+    await Chats.upsert_message_to_chat_by_id_and_message_id(
+        chat.id, current_id, {'contextSummary': summary}, touch=False
+    )
 
     return {
         'ok': True,
@@ -186,11 +195,14 @@ async def _load_config() -> dict:
     values = await Config.get_many(
         'chat.context_compaction.enable',
         'chat.context_compaction.token_threshold',
+        'chat.context_compaction.token_cap',
         'chat.context_compaction.prompt_template',
     )
+    token_threshold = _parse_positive_int(values.get('chat.context_compaction.token_threshold')) or 80000
     return {
         'enable': bool(values.get('chat.context_compaction.enable', False)),
-        'token_threshold': int(values.get('chat.context_compaction.token_threshold', 80000) or 80000),
+        'token_threshold': token_threshold,
+        'token_cap': _parse_positive_int(values.get('chat.context_compaction.token_cap')) or token_threshold,
         'prompt_template': values.get('chat.context_compaction.prompt_template', '') or '',
     }
 
@@ -203,11 +215,57 @@ def _parse_positive_int(value: Any) -> int | None:
     return parsed if parsed > 0 else None
 
 
-def _resolve_token_threshold(global_threshold: int, metadata: dict) -> int:
+def _resolve_token_threshold(global_threshold: int, global_cap: int, metadata: dict) -> int:
     configured_threshold = _parse_positive_int((metadata.get('params') or {}).get('compact_token_threshold'))
-    if configured_threshold is None:
-        return global_threshold
-    return min(configured_threshold, global_threshold)
+    return min(configured_threshold or global_threshold, global_cap)
+
+
+async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict | None:
+    chat_data = chat.chat or {}
+    history = chat_data.get('history') or {}
+    current_id = getattr(chat, 'current_message_id', None) or history.get('currentId')
+    if not current_id:
+        current_id = chat_data.get('currentId') or chat_data.get('branchPointMessageId')
+    if not current_id and isinstance(chat_data.get('messages'), list) and chat_data['messages']:
+        current_id = chat_data['messages'][-1].get('id')
+    if not current_id:
+        return None
+
+    messages_map = await Chats.get_messages_map_by_chat_id(chat.id)
+    messages = get_message_list(messages_map or history.get('messages') or {}, current_id)
+    if not messages:
+        return None
+
+    config = await _load_config()
+    if not config['enable']:
+        return None
+
+    params = ((chat.chat or {}).get('params') or {}).copy()
+    if model_id:
+        params['model'] = model_id
+    threshold = _resolve_token_threshold(config['token_threshold'], config['token_cap'], {'params': params})
+    messages, previous_summary = _apply_latest_summary_checkpoint(messages)
+
+    for idx in range(len(messages) - 1, -1, -1):
+        usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
+        input_tokens = (usage or {}).get('input_tokens') or (usage or {}).get('prompt_tokens')
+        if isinstance(usage, dict) and input_tokens:
+            tokens = int(input_tokens or 0) + int(usage.get('output_tokens') or usage.get('completion_tokens') or 0)
+            tokens += _estimate_messages_tokens(messages[idx + 1 :])
+            return _build_context_usage(tokens, threshold)
+
+    tokens = _estimate_tokens(previous_summary or '') + _estimate_messages_tokens(messages)
+    return _build_context_usage(tokens, threshold)
+
+
+def _build_context_usage(tokens: int, threshold: int) -> dict:
+    return {
+        'tokens': tokens,
+        'estimated_tokens': tokens,
+        'threshold': threshold,
+        'percent': round((tokens / threshold) * 100) if threshold > 0 else 0,
+        'source': 'estimated',
+    }
 
 
 def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], str | None]:
@@ -246,17 +304,9 @@ def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: 
 
 def _find_compaction_boundary(messages: list[dict]) -> int:
     keep_count = max(2, len(messages) * 2 // 5)
-    split = max(1, len(messages) - keep_count)
-
-    while split < len(messages) - 1:
-        previous = messages[split - 1] if split > 0 else {}
-        current = messages[split]
-        if current.get('role') == 'tool' or previous.get('tool_calls') or previous.get('output'):
-            split += 1
-            continue
-        break
-
-    return min(split, len(messages) - 2)
+    target = max(1, len(messages) - keep_count)
+    boundaries = [idx for idx, message in enumerate(messages) if message.get('role') == 'user'][1:]
+    return next((idx for idx in reversed(boundaries) if idx <= target), 0)
 
 
 async def _generate_summary(

@@ -785,7 +785,11 @@ async def image_generations(
                 images.append({'url': url})
             return images
         elif image_config.IMAGE_GENERATION_ENGINE == 'automatic1111' or image_config.IMAGE_GENERATION_ENGINE == '':
-            if form_data.model:
+            # Automatic1111 holds one checkpoint instance-wide, so set_image_model
+            # persists the global default and switches the shared backend. Only an
+            # admin may do that; a non-admin generates on the currently configured
+            # checkpoint. The model field is not a per-user selection on this backend.
+            if form_data.model and user.role == 'admin':
                 await set_image_model(request, form_data.model)
 
             data = {

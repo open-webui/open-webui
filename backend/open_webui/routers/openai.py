@@ -301,6 +301,91 @@ async def get_openai_connection(idx: int) -> tuple[str, str, dict]:
     return url, key, api_config
 
 
+async def get_anthropic_token_count_target(request: Request, form_data: dict, user: UserModel):
+    """Resolve the upstream LiteLLM connection for an Anthropic token-count request."""
+    requested_model = form_data.get('model')
+    if not requested_model:
+        raise HTTPException(status_code=400, detail='model is required')
+
+    payload = {**form_data}
+    model_id = requested_model
+    model_info = await Models.get_model_by_id(model_id)
+    await check_model_access(user, model_info, BYPASS_MODEL_ACCESS_CONTROL)
+
+    if model_info and model_info.base_model_id:
+        model_id = model_info.base_model_id
+        payload['model'] = model_id
+
+    models = request.app.state.OPENAI_MODELS
+    if not models or model_id not in models:
+        await get_all_models(request, user=user)
+        models = request.app.state.OPENAI_MODELS
+
+    model = models.get(model_id)
+    if not model or 'urlIdx' not in model:
+        raise HTTPException(status_code=404, detail=ERROR_MESSAGES.MODEL_NOT_FOUND())
+
+    url, key, api_config = await get_openai_connection(model['urlIdx'])
+    prefix_id = api_config.get('prefix_id')
+    if prefix_id:
+        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+
+    headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
+    return requested_model, payload, url, key, headers, cookies
+
+
+async def count_anthropic_tokens(request: Request, form_data: dict, user: UserModel) -> int:
+    """Forward an Anthropic token-count request through an OpenAI-compatible connection."""
+    requested_model, payload, url, key, headers, cookies = await get_anthropic_token_count_target(
+        request, form_data, user
+    )
+    request_url = f'{url.rstrip("/")}/messages/count_tokens'
+    response = None
+
+    try:
+        session = await get_session()
+        response = await session.request(
+            method='POST',
+            url=request_url,
+            data=json.dumps(payload),
+            headers=headers,
+            cookies=cookies,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+        )
+
+        try:
+            response_data = await response.json()
+        except Exception:
+            response_data = await response.text()
+
+        if response.status >= 400:
+            await publish_model_provider_request_failed(
+                request,
+                actor=user,
+                provider='openai-compatible',
+                base_url=url,
+                api_key=key,
+                status=response.status,
+                requested_model=requested_model,
+                upstream_error=response_data,
+            )
+            raise HTTPException(status_code=response.status, detail=response_data)
+
+        input_tokens = response_data.get('input_tokens') if isinstance(response_data, dict) else None
+        if isinstance(input_tokens, bool) or not isinstance(input_tokens, int) or input_tokens < 0:
+            raise HTTPException(status_code=502, detail='Invalid token-count response from upstream provider')
+
+        return input_tokens
+    except HTTPException:
+        raise
+    except Exception:
+        log.exception('Failed to count Anthropic tokens for model %s', requested_model)
+        raise HTTPException(status_code=502, detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR)
+    finally:
+        await cleanup_response(response)
+
+
 @router.get('/config')
 async def get_config(request: Request, user=Depends(get_admin_user)):
     return await get_openai_config()
@@ -333,6 +418,16 @@ async def update_config(request: Request, form_data: OpenAIConfigForm, user=Depe
             'openai.api_configs': api_configs,
         }
     )
+
+    await get_all_models.cache.clear()
+    request.app.state.BASE_MODELS = []
+    request.app.state.OPENAI_MODELS = {}
+    models = getattr(request.app.state, 'MODELS', None)
+    if hasattr(models, 'clear'):
+        models.clear()
+    else:
+        request.app.state.MODELS = {}
+
     await publish_event(
         request,
         EVENTS.MODEL_PROVIDER_CONFIG_UPDATED,
@@ -551,6 +646,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 
     enable_openai_api, api_base_urls, _, api_configs = await get_openai_runtime_config()
     if not enable_openai_api:
+        request.app.state.OPENAI_MODELS = {}
         return {'data': []}
 
     responses = await get_all_models_responses(request, user=user)
@@ -1107,6 +1203,9 @@ async def generate_chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
+    if not await Config.get('openai.enable'):
+        raise HTTPException(status_code=503, detail='OpenAI API is disabled')
+
     # NOTE: We intentionally do NOT use Depends(get_async_session) here.
     # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),

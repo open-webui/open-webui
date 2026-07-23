@@ -7,7 +7,7 @@ import time
 
 # local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
-from open_webui.models.users import UserResponse, Users
+from open_webui.models.users import User, UserResponse, Users, UserSettings
 from open_webui.utils.valves import decrypt_valves, encrypt_valves
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, Index, String, Text, delete, select, update
@@ -275,6 +275,12 @@ class FunctionsTable:
             result = await db.execute(select(Function).filter_by(type='filter', is_active=True, is_global=True))
             return [FunctionModel.model_validate(function) for function in result.scalars().all()]
 
+    async def get_active_filter_ids(self, db: AsyncSession | None = None) -> list[tuple[str, bool]]:
+        """Return (id, is_global) for active filters without fetching plugin source."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Function.id, Function.is_global).filter_by(type='filter', is_active=True))
+            return [(id, bool(is_global)) for id, is_global in result.all()]
+
     async def get_global_action_functions(self, db: AsyncSession | None = None) -> list[FunctionModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Function).filter_by(type='action', is_active=True, is_global=True))
@@ -283,13 +289,15 @@ class FunctionsTable:
     async def get_function_valves_by_id(self, id: str, db: AsyncSession | None = None) -> dict | None:
         async with get_async_db_context(db) as db:
             try:
-                function = await db.get(Function, id)
-                return decrypt_valves(function.valves if function else None)
+                result = await db.execute(select(Function.valves).filter_by(id=id))
+                return decrypt_valves(result.scalar_one_or_none())
             except Exception as e:
                 log.exception(f'Error getting function valves by id {id}: {e}')
                 return None
 
-    async def get_function_valves_by_ids(self, ids: list[str], db: AsyncSession | None = None) -> dict[str, dict]:
+    async def get_function_valves_by_ids(
+        self, ids: list[str], db: AsyncSession | None = None
+    ) -> dict[str, dict]:
         """
         Batch fetch valves for multiple functions in a single query.
         Returns a dict mapping function_id -> valves dict.
@@ -300,8 +308,7 @@ class FunctionsTable:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(Function.id, Function.valves).filter(Function.id.in_(ids)))
-                functions = result.all()
-                return {f.id: decrypt_valves(f.valves) for f in functions}
+                return {id: decrypt_valves(valves) for id, valves in result.all()}
         except Exception as e:
             log.exception(f'Error batch-fetching function valves: {e}')
             return {}
@@ -347,8 +354,11 @@ class FunctionsTable:
         self, id: str, user_id: str, db: AsyncSession | None = None
     ) -> dict | None:
         try:
-            user = await Users.get_user_by_id(user_id, db=db)
-            user_settings = user.settings.model_dump() if user.settings else {}
+            async with get_async_db_context(db) as db:
+                result = await db.execute(select(User.settings).filter_by(id=user_id))
+                settings = result.scalar_one_or_none()
+
+            user_settings = UserSettings(**settings).model_dump() if settings else {}
 
             # Check if user has "functions" and "valves" settings
             if 'functions' not in user_settings:

@@ -8,7 +8,7 @@ import uuid
 from types import SimpleNamespace
 from typing import Any
 
-from open_webui.env import VERSION
+from open_webui.env import ENABLE_PLUGINS, VERSION
 from open_webui.models.config import Config
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from open_webui.retrieval.web.utils import validate_url
@@ -161,6 +161,12 @@ class EventDefinitions(BaseModel):
     CHAT_CREATED: EventDefinition = EventDefinition(
         name='chat.created', description='A chat was created.', message='Chat created'
     )
+    CHAT_FINISHED: EventDefinition = EventDefinition(
+        name='chat.finished', description='A chat response finished.', message='Chat finished'
+    )
+    CHAT_FAILED: EventDefinition = EventDefinition(
+        name='chat.failed', description='A chat response failed.', message='Chat failed'
+    )
     CHAT_IMPORTED: EventDefinition = EventDefinition(
         name='chat.imported', description='A chat was imported.', message='Chat imported'
     )
@@ -257,6 +263,11 @@ class EventDefinitions(BaseModel):
         name='channel.member_active_updated',
         description='A channel member active state was updated.',
         message='Channel member active updated',
+    )
+    CHANNEL_MESSAGE: EventDefinition = EventDefinition(
+        name='channel.message',
+        description='A channel message was posted.',
+        message='Channel message',
     )
     CHANNEL_WEBHOOK_CREATED: EventDefinition = EventDefinition(
         name='channel.webhook.created',
@@ -566,6 +577,11 @@ class EventDefinitions(BaseModel):
         description='A calendar event RSVP was updated.',
         message='Calendar Event rsvp updated',
     )
+    CALENDAR_ALERT: EventDefinition = EventDefinition(
+        name='calendar.alert',
+        description='A calendar event alert was triggered.',
+        message='Calendar alert',
+    )
     AUTOMATION_CREATED: EventDefinition = EventDefinition(
         name='automation.created', description='An automation was created.', message='Automation created'
     )
@@ -622,6 +638,12 @@ class EventDefinitions(BaseModel):
     TERMINAL_SESSION_CLOSED: EventDefinition = EventDefinition(
         name='terminal.session.closed', description='A terminal session was closed.', message='Terminal Session closed'
     )
+    NOTIFICATION_TEST: EventDefinition = EventDefinition(
+        name='notification.test', description='A notification target test was sent.', message='Notification test'
+    )
+    NOTIFICATION_MANUAL: EventDefinition = EventDefinition(
+        name='notification.manual', description='A manual notification was sent.', message='Notification sent'
+    )
 
 
 EVENTS = EventDefinitions()
@@ -629,6 +651,12 @@ EVENT_DEFINITIONS = tuple(getattr(EVENTS, field_name) for field_name in EventDef
 EVENT_DEFINITIONS_BY_NAME = {definition.name: definition for definition in EVENT_DEFINITIONS}
 EVENT_CATALOG = tuple(definition.name for definition in EVENT_DEFINITIONS)
 EVENT_CATALOG_SET = set(EVENT_CATALOG)
+NOTIFICATION_EVENTS = (
+    EVENTS.CHAT_FINISHED.name,
+    EVENTS.CHAT_FAILED.name,
+    EVENTS.CHANNEL_MESSAGE.name,
+    EVENTS.CALENDAR_ALERT.name,
+)
 
 
 def get_event_catalog() -> list[dict[str, str]]:
@@ -1024,7 +1052,25 @@ class WebhookEventSink:
         schedule_webhook_dispatch(app, event)
 
 
+def schedule_notification_dispatch(app: Any, event: Event) -> None:
+    try:
+        from open_webui.utils.notifications import dispatch_notification_event
+
+        asyncio.create_task(dispatch_notification_event(app, event))
+    except RuntimeError:
+        log.exception('Notification delivery could not be scheduled for %s', event.event)
+
+
+class NotificationEventSink:
+    async def handle_event(self, app: Any, event: Event, request: Any | None = None) -> None:
+        if event.event in NOTIFICATION_EVENTS:
+            schedule_notification_dispatch(app, event)
+
+
 async def dispatch_event_functions(app: Any, event: Event, request: Any | None = None) -> None:
+    if not ENABLE_PLUGINS:
+        return
+
     from open_webui.models.functions import Functions
     from open_webui.utils.plugin import get_function_module_from_cache
 
@@ -1081,7 +1127,7 @@ class EventFunctionSink:
         schedule_event_function_dispatch(app, event, request)
 
 
-EVENT_SINKS = [EventFunctionSink(), WebhookEventSink()]
+EVENT_SINKS = [EventFunctionSink(), WebhookEventSink(), NotificationEventSink()]
 
 
 async def publish_event(
@@ -1145,6 +1191,20 @@ async def publish_model_provider_request_failed(
         else 'server_failed'
         if status >= 500
         else 'upstream_error'
+    )
+
+    # Server-log only; the upstream error body is otherwise invisible to admins
+    # (event sinks require an event function or webhook to be configured).
+    log.log(
+        logging.ERROR if status >= 500 else logging.WARNING,
+        'Upstream %s request failed: HTTP %d (%s) url=%s model=%s code=%s message=%s',
+        provider,
+        status,
+        error_type,
+        base_url,
+        requested_model or '-',
+        error_code or '-',
+        error_text[:MAX_STRING_LENGTH] or '-',
     )
 
     data = {

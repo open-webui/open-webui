@@ -10,7 +10,7 @@ import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT, ENABLE_PLUGINS
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.functions import (
@@ -46,11 +46,17 @@ router = APIRouter()
 
 @router.get('/', response_model=list[FunctionResponse])
 async def get_functions(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    if not ENABLE_PLUGINS:
+        return []
+
     return await Functions.get_functions(db=db)
 
 
 @router.get('/list', response_model=list[FunctionUserResponse])
 async def get_function_list(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+    if not ENABLE_PLUGINS:
+        return []
+
     return await Functions.get_function_list(db=db)
 
 
@@ -65,6 +71,9 @@ async def get_functions(
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    if not ENABLE_PLUGINS:
+        return []
+
     return await Functions.get_functions(include_valves=include_valves, db=db)
 
 

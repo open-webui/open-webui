@@ -259,7 +259,26 @@ class SkillsTable:
                         permission='read',
                     )
 
-                stmt = stmt.order_by(Skill.updated_at.desc())
+                order_by = filter.get('order_by')
+                direction = filter.get('direction')
+
+                if order_by == 'name':
+                    if direction == 'asc':
+                        stmt = stmt.order_by(Skill.name.asc())
+                    else:
+                        stmt = stmt.order_by(Skill.name.desc())
+                elif order_by == 'created_at':
+                    if direction == 'asc':
+                        stmt = stmt.order_by(Skill.created_at.asc())
+                    else:
+                        stmt = stmt.order_by(Skill.created_at.desc())
+                elif order_by == 'updated_at':
+                    if direction == 'asc':
+                        stmt = stmt.order_by(Skill.updated_at.asc())
+                    else:
+                        stmt = stmt.order_by(Skill.updated_at.desc())
+                else:
+                    stmt = stmt.order_by(Skill.updated_at.desc())
 
                 # Count BEFORE pagination
                 count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))

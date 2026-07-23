@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Link from '$lib/components/icons/Link.svelte';
@@ -30,34 +31,32 @@
 	</Tooltip>
 
 	<div slot="content">
-		<div
-			class="min-w-[190px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-		>
+		<DropdownMenu className="min-w-[190px]">
 			<button
-				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 				on:click={async () => {
 					createHandler();
 					show = false;
 				}}
 			>
-				<div class=" self-center mr-2">
-					<Pencil />
+				<div class="self-center">
+					<Pencil className="size-3.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('New Function')}</div>
 			</button>
 
 			<button
-				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 				on:click={async () => {
 					importFromLinkHandler();
 					show = false;
 				}}
 			>
-				<div class=" self-center mr-2">
-					<Link />
+				<div class="self-center">
+					<Link className="size-3.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Import From Link')}</div>
 			</button>
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>

@@ -111,16 +111,16 @@
 
 <Modal bind:show size="md">
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Share Chat')}</div>
+		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+			<div class=" text-sm font-medium self-center">{$i18n.t('Share Chat')}</div>
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<XMark className={'size-5'} />
+				<XMark className={'size-4'} />
 			</button>
 		</div>
 
@@ -168,7 +168,7 @@
 				<div class="flex justify-end gap-1 mt-3">
 					{#if $config?.features.enable_community_sharing}
 						<button
-							class="flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full"
+							class="flex items-center gap-1 px-3.5 py-2 text-sm font-normal bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full"
 							type="button"
 							on:click={() => {
 								shareChat();
@@ -179,7 +179,7 @@
 					{/if}
 
 					<button
-						class="flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+						class="flex items-center gap-1 px-3.5 py-2 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 						type="button"
 						id="copy-and-share-chat-button"
 						on:click={async () => {

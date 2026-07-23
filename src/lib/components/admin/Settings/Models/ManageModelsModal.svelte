@@ -37,19 +37,19 @@
 	});
 </script>
 
-<Modal size="sm" bind:show>
+<Modal size="sm" bind:show className="bg-white dark:bg-gray-900 rounded-4xl">
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4">
-			<div class=" text-lg font-medium self-center font-primary">
+		<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
+			<div class=" text-sm font-medium self-center">
 				{$i18n.t('Manage Models')}
 			</div>
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<XMark className={'size-5'} />
+				<XMark className={'size-4'} />
 			</button>
 		</div>
 
@@ -64,7 +64,7 @@
 				{:else if selected !== null}
 					<div class=" flex w-full flex-col">
 						<div
-							class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent dark:text-gray-200"
+							class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal rounded-full bg-transparent dark:text-gray-200"
 						>
 							<button
 								class="min-w-fit p-1.5 {selected === 'ollama'
