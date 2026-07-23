@@ -275,11 +275,17 @@ class FunctionsTable:
             result = await db.execute(select(Function).filter_by(type='filter', is_active=True, is_global=True))
             return [FunctionModel.model_validate(function) for function in result.scalars().all()]
 
+    async def get_active_function_ids_by_type(
+        self, type: str, db: AsyncSession | None = None
+    ) -> list[tuple[str, bool]]:
+        """Return (id, is_global) for active functions without fetching plugin source."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Function.id, Function.is_global).filter_by(type=type, is_active=True))
+            return [(id, bool(is_global)) for id, is_global in result.all()]
+
     async def get_active_filter_ids(self, db: AsyncSession | None = None) -> list[tuple[str, bool]]:
         """Return (id, is_global) for active filters without fetching plugin source."""
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(Function.id, Function.is_global).filter_by(type='filter', is_active=True))
-            return [(id, bool(is_global)) for id, is_global in result.all()]
+        return await self.get_active_function_ids_by_type('filter', db=db)
 
     async def get_global_action_functions(self, db: AsyncSession | None = None) -> list[FunctionModel]:
         async with get_async_db_context(db) as db:
