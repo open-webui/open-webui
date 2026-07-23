@@ -166,9 +166,9 @@ class AuthTokenMiddleware:
 
         async def send_with_timing(message: Message) -> None:
             if message['type'] == 'http.response.start':
-                process_time = int(time.monotonic() - start_time)
+                process_time = time.monotonic() - start_time
                 headers = MutableHeaders(scope=message)
-                headers['X-Process-Time'] = str(process_time)
+                headers['X-Process-Time'] = f'{process_time:.6f}'
             await send(message)
 
         await self.app(scope, receive, send_with_timing)
