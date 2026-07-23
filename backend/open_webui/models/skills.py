@@ -113,11 +113,11 @@ class SkillsTable:
         access_grants: Optional[list[AccessGrantModel]] = None,
         db: Optional[AsyncSession] = None,
     ) -> SkillModel:
-        skill_data = SkillModel.model_validate(skill).model_dump(exclude={'access_grants'})
-        skill_data['access_grants'] = (
-            access_grants if access_grants is not None else await self._get_access_grants(skill_data['id'], db=db)
+        skill_obj = SkillModel.model_validate(skill)
+        skill_obj.access_grants = (
+            access_grants if access_grants is not None else await self._get_access_grants(skill_obj.id, db=db)
         )
-        return SkillModel.model_validate(skill_data)
+        return skill_obj
 
     async def insert_new_skill(
         self,

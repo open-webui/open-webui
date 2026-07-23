@@ -192,11 +192,11 @@ class KnowledgeTable:
         access_grants: Optional[list[AccessGrantModel]] = None,
         db: Optional[AsyncSession] = None,
     ) -> KnowledgeModel:
-        knowledge_data = KnowledgeModel.model_validate(knowledge).model_dump(exclude={'access_grants'})
-        knowledge_data['access_grants'] = (
-            access_grants if access_grants is not None else await self._get_access_grants(knowledge_data['id'], db=db)
+        knowledge_obj = KnowledgeModel.model_validate(knowledge)
+        knowledge_obj.access_grants = (
+            access_grants if access_grants is not None else await self._get_access_grants(knowledge_obj.id, db=db)
         )
-        return KnowledgeModel.model_validate(knowledge_data)
+        return knowledge_obj
 
     async def insert_new_knowledge(
         self, user_id: str, form_data: KnowledgeForm, db: Optional[AsyncSession] = None
