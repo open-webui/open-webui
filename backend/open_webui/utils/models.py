@@ -395,7 +395,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     return models
 
 
-async def check_model_access(user, model, db=None):
+async def check_model_access(user, model, model_info=None, db=None):
     if model.get('arena'):
         meta = model.get('info', {}).get('meta', {})
         access_grants = meta.get('access_grants', [])
@@ -407,23 +407,33 @@ async def check_model_access(user, model, db=None):
         ):
             raise Exception('Model not found')
     else:
-        model_info = await Models.get_model_by_id(model.get('id'), db=db)
+        # Callers that already fetched the row (chat completion entry) pass it in
+        if model_info is None or model_info.id != model.get('id'):
+            model_info = await Models.get_model_by_id(model.get('id'), db=db)
         if not model_info:
             raise Exception('Model not found')
-        elif not (
+
+        # One group-membership fetch shared by the direct check and every
+        # base-model hop; skipped when no check below needs it.
+        user_group_ids = None
+        if user.id != model_info.user_id or model_info.base_model_id:
+            user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+
+        if not (
             user.id == model_info.user_id
             or await AccessGrants.has_access(
                 user_id=user.id,
                 resource_type='model',
                 resource_id=model_info.id,
                 permission='read',
+                user_group_ids=user_group_ids,
                 db=db,
             )
         ):
             raise Exception('Model not found')
 
         # Enforce access on chained base models
-        if not await has_base_model_access(user.id, model_info, db=db):
+        if not await has_base_model_access(user.id, model_info, user_group_ids=user_group_ids, db=db):
             raise Exception('Model not found')
 
 

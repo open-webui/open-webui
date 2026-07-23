@@ -1052,7 +1052,7 @@ async def chat_completion(
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and (user.role != 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL):
                 try:
-                    await check_model_access(user, model)
+                    await check_model_access(user, model, model_info=model_info)
                 except Exception as e:
                     raise e
         else:
