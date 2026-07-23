@@ -1172,10 +1172,16 @@ async def chat_completion_tools_handler(
     event_emitter = extra_params['__event_emitter__']
     metadata = extra_params['__metadata__']
 
+    # One batched SELECT instead of four sequential round trips.
+    task_config = await Config.get_many(
+        'task.model.default',
+        'task.model.external',
+        'task.tools.prompt_template',
+    )
     task_model_id = get_task_model_id(
         body['model'],
-        await Config.get('task.model.default'),
-        await Config.get('task.model.external'),
+        task_config.get('task.model.default'),
+        task_config.get('task.model.external'),
         models,
     )
 
@@ -1185,8 +1191,9 @@ async def chat_completion_tools_handler(
     specs = [tool['spec'] for tool in tools.values()]
     tools_specs = json.dumps(specs, ensure_ascii=False)
 
-    if await Config.get('task.tools.prompt_template') != '':
-        template = await Config.get('task.tools.prompt_template')
+    tools_prompt_template = task_config.get('task.tools.prompt_template')
+    if tools_prompt_template != '':
+        template = tools_prompt_template
     else:
         template = DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
 
@@ -1859,6 +1866,15 @@ async def chat_completion_files_handler(
             queries = [get_last_user_message(body['messages']) or '']
 
         try:
+            # One batched SELECT instead of six sequential round trips.
+            rag_config = await Config.get_many(
+                'rag.top_k',
+                'rag.top_k_reranker',
+                'rag.relevance_threshold',
+                'rag.hybrid_bm25_weight',
+                'rag.enable_hybrid_search',
+                'rag.full_context',
+            )
             # Directly await async get_sources_from_items (no thread needed - fully async now)
             sources = await get_sources_from_items(
                 request=request,
@@ -1867,17 +1883,17 @@ async def chat_completion_files_handler(
                 embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
-                k=await Config.get('rag.top_k'),
+                k=rag_config.get('rag.top_k'),
                 reranking_function=(
                     (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents, user=user))
                     if request.app.state.RERANKING_FUNCTION
                     else None
                 ),
-                k_reranker=await Config.get('rag.top_k_reranker'),
-                r=await Config.get('rag.relevance_threshold'),
-                hybrid_bm25_weight=await Config.get('rag.hybrid_bm25_weight'),
-                hybrid_search=await Config.get('rag.enable_hybrid_search'),
-                full_context=all_full_context or await Config.get('rag.full_context'),
+                k_reranker=rag_config.get('rag.top_k_reranker'),
+                r=rag_config.get('rag.relevance_threshold'),
+                hybrid_bm25_weight=rag_config.get('rag.hybrid_bm25_weight'),
+                hybrid_search=rag_config.get('rag.enable_hybrid_search'),
+                full_context=all_full_context or rag_config.get('rag.full_context'),
                 user=user,
             )
         except Exception as e:
@@ -2492,9 +2508,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if features:
         if 'voice' in features and features['voice']:
             if await Config.get('task.voice.prompt.enable'):
-                if await Config.get('task.voice.prompt_template'):
-                    template = await Config.get('task.voice.prompt_template')
-                else:
+                template = await Config.get('task.voice.prompt_template')
+                if not template:
                     template = DEFAULT_VOICE_MODE_PROMPT_TEMPLATE
 
                 form_data['messages'] = add_or_update_system_message(
@@ -2521,11 +2536,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             # Skip XML-tag prompt injection when native FC is enabled —
             # execute_code will be injected as a builtin tool instead
             if metadata.get('params', {}).get('function_calling') == 'legacy':
-                prompt = (
-                    await Config.get('code_interpreter.prompt_template')
-                    if await Config.get('code_interpreter.prompt_template') != ''
-                    else DEFAULT_CODE_INTERPRETER_PROMPT
-                )
+                ci_prompt_template = await Config.get('code_interpreter.prompt_template')
+                prompt = ci_prompt_template if ci_prompt_template != '' else DEFAULT_CODE_INTERPRETER_PROMPT
 
                 # Append filesystem awareness only for pyodide engine
                 if engine != 'jupyter':
@@ -2605,12 +2617,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if skill_ids:
         from open_webui.models.skills import Skills as SkillsModel
 
-        accessible_skill_ids = {s.id for s in await SkillsModel.get_skills_by_user_id(user.id, 'read')}
+        # Reuse the rows from the access query instead of re-fetching each
+        # skill by id.
+        accessible_skills = {s.id: s for s in await SkillsModel.get_skills_by_user_id(user.id, 'read')}
         for sid in skill_ids:
-            if sid in accessible_skill_ids:
-                s = await SkillsModel.get_skill_by_id(sid)
-                if s and s.is_active:
-                    available_skills.append(s)
+            s = accessible_skills.get(sid)
+            if s and s.is_active:
+                available_skills.append(s)
 
         skill_manifest = ''
         for skill in available_skills:
@@ -5192,7 +5205,8 @@ async def streaming_chat_response_handler(response, ctx):
                                     """)
                                     code = blocking_code + '\n' + code
 
-                                if await Config.get('code_interpreter.engine') == 'pyodide':
+                                ci_engine = await Config.get('code_interpreter.engine')
+                                if ci_engine == 'pyodide':
                                     ci_output = await event_caller(
                                         {
                                             'type': 'execute:python',
@@ -5204,7 +5218,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             },
                                         }
                                     )
-                                elif await Config.get('code_interpreter.engine') == 'jupyter':
+                                elif ci_engine == 'jupyter':
                                     ci_output = await execute_code_jupyter(
                                         await Config.get('code_interpreter.jupyter.url'),
                                         code,
