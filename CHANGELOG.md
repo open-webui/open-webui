@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.10.3] - 2026-07-24
+## [0.10.3] - 2026-07-23
 
 ### Added
 
@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧾 **Group permissions at a glance.** The groups list now shows whether each group uses custom or default permissions, without opening it. [Commit](https://github.com/open-webui/open-webui/commit/ccb1ab7739fbeb77c810036dcac240570034a56a), [Commit](https://github.com/open-webui/open-webui/commit/1d1f60ab440b167b9c6ab8f4011b884caa99f27d)
 - 🚀 **Lower per-request overhead.** Requests no longer each perform a settings lookup before they are handled, trimming a little latency from everything the app does. [Commit](https://github.com/open-webui/open-webui/commit/6ff1df326c76824f0706671b0974df4035cb453f)
 - ⚡ **Lighter model lists.** Model lists no longer carry embedded profile images in their data, so they load faster. [Commit](https://github.com/open-webui/open-webui/commit/9281adc5647b7046e3ddcc53ac4b84be7f650221), [Commit](https://github.com/open-webui/open-webui/commit/f3a35507845e4a911c3d278d680a9989bb8d99ad)
+- 🪶 **Model lists without knowledge text.** Model lists no longer include the extracted text of files attached to a model as knowledge, so they stay small regardless of how large those knowledge bases are. [Commit](https://github.com/open-webui/open-webui/commit/48625e657ff11161c3588af2747598f102c1a4d1), [#27287](https://github.com/open-webui/open-webui/issues/27287)
 - ♿ **Improved UI accessibility.** Keyboard and screen reader users can now reach and activate the regenerate control on a response, and the sidebar buttons across notes, automations, the playground, and admin pages now announce whether they open or close the sidebar.
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 **Translation updates.** Translations for English (UK), Japanese and Portuguese (Brazil) were enhanced and expanded.
