@@ -602,30 +602,31 @@ class ChatTable:
         except Exception:
             return None
 
-    async def update_chat_tags_by_id(self, id: str, tags: list[str], user) -> ChatModel | None:
+    async def update_chat_tags_by_id(self, id: str, tags: list[str], user) -> None:
+        """Replace a chat's tags. Runs after every completion with tag
+        generation enabled, so only the meta column is read and written,
+        never the chat blob."""
         async with get_async_db_context() as session:
-            chat = await session.get(Chat, id)
-            if chat is None:
+            row = (await session.execute(select(Chat.meta).filter_by(id=id))).one_or_none()
+            if row is None:
                 return None
 
-            old_tags = chat.meta.get('tags', [])
+            meta = row[0] or {}
+            old_tags = meta.get('tags', [])
             new_tags = [t for t in tags if t.replace(' ', '_').lower() != 'none']
             new_tag_ids = [t.replace(' ', '_').lower() for t in new_tags]
 
             # Single meta update
-            chat.meta = {**chat.meta, 'tags': new_tag_ids}
+            await session.execute(update(Chat).filter_by(id=id).values(meta={**meta, 'tags': new_tag_ids}))
             await session.commit()
-            await session.refresh(chat)
 
             # Batch-create any missing tag rows
             await Tags.ensure_tags_exist(new_tags, user.id, db=session)
 
-            # Clean up orphaned old tags in one query
+            # Clean up orphaned old tags
             removed = set(old_tags) - set(new_tag_ids)
             if removed:
                 await self.delete_orphan_tags_for_user(list(removed), user.id, db=session)
-
-            return ChatModel.model_validate(chat)
 
     async def get_chat_title_by_id(self, id: str) -> str | None:
         async with get_async_db_context() as session:
@@ -1919,46 +1920,66 @@ class ChatTable:
 
     async def add_chat_tag_by_id_and_user_id_and_tag_name(
         self, id: str, user_id: str, tag_name: str, db: AsyncSession | None = None
-    ) -> ChatModel | None:
+    ) -> None:
+        """Add one tag to a chat's meta. Meta-column-only, never the blob."""
         tag_id = tag_name.replace(' ', '_').lower()
         await Tags.ensure_tags_exist([tag_name], user_id, db=db)
         try:
             async with get_async_db_context(db) as session:
-                chat = await session.get(Chat, id)
-                if tag_id not in chat.meta.get('tags', []):
-                    chat.meta = {
-                        **chat.meta,
-                        'tags': list(set(chat.meta.get('tags', []) + [tag_id])),
-                    }
-                await session.commit()
-                await session.refresh(chat)
-                return ChatModel.model_validate(chat)
+                row = (await session.execute(select(Chat.meta).filter_by(id=id))).one_or_none()
+                if row is None:
+                    return None
+
+                meta = row[0] or {}
+                if tag_id not in meta.get('tags', []):
+                    await session.execute(
+                        update(Chat)
+                        .filter_by(id=id)
+                        .values(meta={**meta, 'tags': list(set(meta.get('tags', []) + [tag_id]))})
+                    )
+                    await session.commit()
         except Exception:
             return None
 
     async def count_chats_by_tag_name_and_user_id(
         self, tag_name: str, user_id: str, db: AsyncSession | None = None
     ) -> int:
-        async with get_async_db_context(db) as session:
-            stmt = select(func.count(Chat.id)).filter_by(user_id=user_id, archived=False)
-            stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
-            tag_id = tag_name.replace(' ', '_').lower()
+        tag_id = tag_name.replace(' ', '_').lower()
+        counts = await self.count_chats_by_tag_ids_and_user_id([tag_id], user_id, db=db)
+        return counts.get(tag_id, 0)
 
+    async def count_chats_by_tag_ids_and_user_id(
+        self, tag_ids: list[str], user_id: str, db: AsyncSession | None = None
+    ) -> dict[str, int]:
+        """Per-tag chat counts in one round trip (one scalar subquery per tag)."""
+        if not tag_ids:
+            return {}
+        async with get_async_db_context(db) as session:
             bind = await session.connection()
             dialect_name = bind.dialect.name
-            if dialect_name == 'sqlite':
-                stmt = stmt.filter(
-                    text("EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)")
-                ).params(tag_id=tag_id)
-            elif dialect_name == 'postgresql':
-                stmt = stmt.filter(
-                    text("EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)")
-                ).params(tag_id=tag_id)
-            else:
-                raise NotImplementedError(f'Unsupported dialect: {dialect_name}')
 
-            result = await session.execute(stmt)
-            return result.scalar()
+            columns = []
+            for index, tag_id in enumerate(tag_ids):
+                tag_id = tag_id.replace(' ', '_').lower()
+                stmt = select(func.count(Chat.id)).filter_by(user_id=user_id, archived=False)
+                stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
+                param = f'tag_id_{index}'
+                if dialect_name == 'sqlite':
+                    stmt = stmt.filter(
+                        text(f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :{param})")
+                    ).params(**{param: tag_id})
+                elif dialect_name == 'postgresql':
+                    stmt = stmt.filter(
+                        text(
+                            f"EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :{param})"
+                        )
+                    ).params(**{param: tag_id})
+                else:
+                    raise NotImplementedError(f'Unsupported dialect: {dialect_name}')
+                columns.append(stmt.scalar_subquery().label(f'count_{index}'))
+
+            row = (await session.execute(select(*columns))).one()
+            return dict(zip(tag_ids, row))
 
     async def delete_orphan_tags_for_user(
         self,
@@ -1978,11 +1999,8 @@ class ChatTable:
         if not tag_ids:
             return
         async with get_async_db_context(db) as session:
-            orphans = []
-            for tag_id in tag_ids:
-                count = await self.count_chats_by_tag_name_and_user_id(tag_id, user_id, db=session)
-                if count <= threshold:
-                    orphans.append(tag_id)
+            counts = await self.count_chats_by_tag_ids_and_user_id(tag_ids, user_id, db=session)
+            orphans = [tag_id for tag_id in tag_ids if counts.get(tag_id, 0) <= threshold]
             await Tags.delete_tags_by_ids_and_user_id(orphans, user_id, db=session)
 
     async def count_chats_by_folder_id_and_user_id(
