@@ -246,12 +246,18 @@ if SQLALCHEMY_DATABASE_URL.startswith('sqlite+sqlcipher://'):
     # Extract database path from SQLCipher URL
     db_path = SQLALCHEMY_DATABASE_URL.replace('sqlite+sqlcipher://', '')
 
+    # Escape single quotes in password for safe SQLite PRAGMA usage.
+    # SQLite PRAGMA statements do not support parameterised queries,
+    # so we must escape the value manually to avoid syntax errors when
+    # the password contains a single quote.
+    _escaped_password = database_password.replace("'", "''")
+
     # Create a custom creator function that uses sqlcipher3
     def create_sqlcipher_connection():
         import sqlcipher3
 
         conn = sqlcipher3.connect(db_path, check_same_thread=False)
-        conn.execute(f"PRAGMA key = '{database_password}'")
+        conn.execute(f"PRAGMA key = '{_escaped_password}'")
         return conn
 
     # The dummy "sqlite://" URL would cause SQLAlchemy to auto-select

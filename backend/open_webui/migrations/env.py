@@ -50,11 +50,15 @@ def _get_engine_connectable():
         if raw_db_path.startswith('/'):
             raw_db_path = raw_db_path[1:]
 
+        # Escape single quotes in password for safe SQLite PRAGMA usage.
+        # SQLite PRAGMA statements do not support parameterised queries.
+        _escaped_pw = DATABASE_PASSWORD.replace("'", "''")
+
         def _sqlite_cipher_creator():
             import sqlcipher3
 
             cipher_conn = sqlcipher3.connect(raw_db_path, check_same_thread=False)
-            cipher_conn.execute(f"PRAGMA key = '{DATABASE_PASSWORD}'")
+            cipher_conn.execute(f"PRAGMA key = '{_escaped_pw}'")
             return cipher_conn
 
         return create_engine('sqlite://', creator=_sqlite_cipher_creator, echo=False)

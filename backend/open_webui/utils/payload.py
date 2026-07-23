@@ -244,7 +244,7 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
                     'id': tool_call.get('id', None),
                     'function': {
                         'name': tool_call.get('function', {}).get('name', ''),
-                        'arguments': json.loads(tool_call.get('function', {}).get('arguments', {})),
+                        'arguments': json.loads(tool_call.get('function', {}).get('arguments', '{}')),
                     },
                 }
                 ollama_tool_calls.append(ollama_tool_call)
