@@ -16,8 +16,9 @@
 		deleteChatById,
 		getAllTags,
 		getChatById,
+		getChatByIdWindow,
 		getChatListByTagName,
-		updateChatById,
+		updateChatByIdWindow,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
 	import {
@@ -114,7 +115,7 @@
 	const loadChat = async () => {
 		if (!chat) {
 			draggable = false;
-			chat = await getChatById(localStorage.token, id);
+			chat = await getChatByIdWindow(localStorage.token, id, 1);
 			draggable = true;
 		}
 	};
@@ -128,7 +129,7 @@
 		if (title === '') {
 			toast.error($i18n.t('Title cannot be an empty string.'));
 		} else {
-			await updateChatById(localStorage.token, id, {
+			await updateChatByIdWindow(localStorage.token, id, {
 				title: title
 			});
 

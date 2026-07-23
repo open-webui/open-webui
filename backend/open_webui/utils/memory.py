@@ -10,7 +10,11 @@ from fastapi import HTTPException
 
 from open_webui.models.config import Config
 from open_webui.models.memories import Memories
-from open_webui.utils.misc import add_or_update_system_message, get_content_from_message
+from open_webui.utils.misc import (
+    add_or_update_system_message,
+    expand_messages_with_output,
+    get_content_from_message,
+)
 
 log = logging.getLogger(__name__)
 
@@ -422,8 +426,13 @@ async def review_memory_after_turn(
     if not features.get('memory'):
         return
 
-    assistant_content = assistant_message.get('content', '')
-    if not isinstance(assistant_content, str) or not assistant_content.strip():
+    assistant_content = '\n'.join(
+        content.strip()
+        for message in expand_messages_with_output([assistant_message])
+        for content in [get_content_from_message(message)]
+        if message.get('role') == 'assistant' and isinstance(content, str) and content.strip()
+    )
+    if not assistant_content:
         return
 
     config = await Config.get_many(
@@ -479,18 +488,21 @@ async def _review_memory(
         for memory in (existing_memories or [])[:80]
     ]
 
-    assistant_content = assistant_message.get('content', '')
-    if not isinstance(assistant_content, str):
-        assistant_content = get_content_from_message(assistant_message)
+    assistant_content = '\n'.join(
+        content.strip()
+        for message in expand_messages_with_output([assistant_message])
+        for content in [get_content_from_message(message)]
+        if message.get('role') == 'assistant' and isinstance(content, str) and content.strip()
+    )
 
     transcript_lines = []
-    for message in messages[-16:]:
+    for message in expand_messages_with_output(messages[-16:]):
         role = message.get('role', '')
-        content = message.get('content', '')
+        content = get_content_from_message(message)
         if not isinstance(content, str):
-            content = get_content_from_message(message)
+            continue
         content = content.strip()
-        if role not in {'user', 'assistant'} or not content:
+        if role not in {'user', 'assistant', 'tool'} or not content:
             continue
         if len(content) > 1600:
             content = f'{content[:1000]}\n...(truncated)...\n{content[-400:]}'

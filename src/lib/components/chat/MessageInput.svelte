@@ -56,7 +56,7 @@
 	import { uploadFile } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
-	import { getChatById } from '$lib/apis/chats';
+	import { getChatByIdWindow } from '$lib/apis/chats';
 	import { getFolderById } from '$lib/apis/folders';
 	import { getNoteById } from '$lib/apis/notes';
 	import { getSessionUser } from '$lib/apis/auths';
@@ -1014,7 +1014,7 @@
 				const data = JSON.parse(textData);
 				if (data.type === 'chat' && data.id) {
 					// Fetch the chat to get its title, then add as a reference chat
-					const chat = await getChatById(localStorage.token, data.id);
+					const chat = await getChatByIdWindow(localStorage.token, data.id, 1);
 					if (chat) {
 						const chatItem = {
 							type: 'chat',

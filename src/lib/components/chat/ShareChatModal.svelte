@@ -6,6 +6,7 @@
 	import {
 		deleteSharedChatById,
 		getChatById,
+		getChatByIdWindow,
 		shareChatById,
 		getChatAccessGrants,
 		updateChatAccessGrants
@@ -30,13 +31,14 @@
 		const sharedChat = await shareChatById(localStorage.token, chatId);
 		shareUrl = `${window.location.origin}/s/${sharedChat.share_id}`;
 		console.log(shareUrl);
-		chat = await getChatById(localStorage.token, chatId);
+		chat = await getChatByIdWindow(localStorage.token, chatId, 1);
 
 		return shareUrl;
 	};
 
 	const shareChat = async () => {
-		const _chat = chat.chat;
+		const fullChat = await getChatById(localStorage.token, chatId);
+		const _chat = fullChat.chat;
 		console.log('share', _chat);
 
 		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
@@ -96,7 +98,7 @@
 	$: if (show) {
 		(async () => {
 			if (chatId) {
-				const _chat = await getChatById(localStorage.token, chatId);
+				const _chat = await getChatByIdWindow(localStorage.token, chatId, 1);
 				if (isDifferentChat(_chat)) {
 					chat = _chat;
 				}
@@ -139,7 +141,7 @@
 								const res = await deleteSharedChatById(localStorage.token, chatId);
 
 								if (res) {
-									chat = await getChatById(localStorage.token, chatId);
+									chat = await getChatByIdWindow(localStorage.token, chatId, 1);
 								}
 							}}
 							>{$i18n.t('delete this link')}

@@ -7,12 +7,13 @@
 	import SearchInput from './Sidebar/SearchInput.svelte';
 	import {
 		getChatById,
+		getChatByIdWindow,
 		getChatList,
 		getChatListBySearchText,
 		cloneChatById,
 		deleteChatById,
 		archiveChatById,
-		updateChatById,
+		updateChatByIdWindow,
 		updateChatFolderIdById,
 		getAllTags
 	} from '$lib/apis/chats';
@@ -162,7 +163,7 @@
 			return;
 		}
 
-		await updateChatById(localStorage.token, editingChatId, { title: trimmed });
+		await updateChatByIdWindow(localStorage.token, editingChatId, { title: trimmed });
 
 		if (chatList) {
 			chatList = chatList.map((c) => (c.id === editingChatId ? { ...c, title: trimmed } : c));
@@ -331,7 +332,7 @@
 
 		const chatId = chatList[selectedChatIdx].id;
 
-		const chat = await getChatById(localStorage.token, chatId).catch(async (error) => {
+		const chat = await getChatByIdWindow(localStorage.token, chatId).catch(async (error) => {
 			return null;
 		});
 
