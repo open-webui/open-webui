@@ -3,7 +3,14 @@
 	import { config, knowledge, settings, user } from '$lib/stores';
 
 	import KnowledgeSelector from './Knowledge/KnowledgeSelector.svelte';
-	import FileItem from '$lib/components/common/FileItem.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
+	import Database from '$lib/components/icons/Database.svelte';
+	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
+	import Folder from '$lib/components/icons/Folder.svelte';
+	import PageEdit from '$lib/components/icons/PageEdit.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import { uploadFile } from '$lib/apis/files';
@@ -155,74 +162,118 @@
 />
 
 <div>
-	<slot name="label">
-		<div class="mb-2">
-			<div class="flex w-full justify-between mb-1">
-				<div class=" self-center text-xs font-medium text-gray-500">
-					{$i18n.t('Knowledge')}
-				</div>
+	<div class="mb-2">
+		<div class="flex w-full items-center gap-2 mb-1">
+			<div class="min-w-0">
+				<slot name="label">
+					<div class=" self-center text-xs text-gray-500">
+						{$i18n.t('Knowledge')}
+					</div>
+				</slot>
 			</div>
+
+			{#if loaded}
+				<div class="flex shrink-0 items-center gap-2">
+					<div class="min-w-0">
+						<KnowledgeSelector
+							on:select={(e) => {
+								const item = e.detail;
+
+								if (!selectedItems.find((k) => k.id === item.id)) {
+									selectedItems = [
+										...selectedItems,
+										{
+											...item
+										}
+									];
+								}
+							}}
+						>
+							<div
+								class="flex min-w-0 items-center bg-transparent text-xs text-gray-500 outline-hidden hover:underline dark:text-gray-400"
+							>
+								<span class="truncate">{$i18n.t('Select Knowledge')}</span>
+							</div>
+						</KnowledgeSelector>
+					</div>
+
+					{#if $user?.role === 'admin' || $user?.permissions?.chat?.file_upload}
+						<button
+							class="self-center bg-transparent text-xs text-gray-500 hover:underline dark:text-gray-400"
+							type="button"
+							aria-label={$i18n.t('Upload Files')}
+							on:click={() => {
+								filesInputElement.click();
+							}}
+						>
+							{$i18n.t('Upload')}
+						</button>
+					{/if}
+				</div>
+			{/if}
 		</div>
-	</slot>
+	</div>
 
 	<div class="flex flex-col mb-1">
 		{#if selectedItems?.length > 0}
-			<div class=" flex flex-wrap items-center gap-2 mb-2.5">
+			<div class=" flex flex-wrap items-center gap-1.5 mb-2.5">
 				{#each selectedItems as file, fileIdx}
-					<FileItem
-						{file}
-						small={true}
-						item={file}
-						name={file.name}
-						modal={true}
-						edit={true}
-						loading={file.status === 'uploading'}
-						type={file?.legacy
-							? `Legacy${file.type ? ` ${file.type}` : ''}`
-							: (file?.type ?? 'collection')}
-						dismissible
-						on:dismiss={(e) => {
-							selectedItems = selectedItems.filter((_, idx) => idx !== fileIdx);
-						}}
-					/>
+					<Tooltip content={file.description || file.name || file.id}>
+						<div
+							class="flex max-w-56 items-center gap-1.5 py-0.5 pr-2 text-xs text-gray-700 dark:text-gray-200"
+						>
+							<div class="shrink-0 text-gray-500 dark:text-gray-400">
+								{#if file.status === 'uploading'}
+									<Spinner className="size-3.5" />
+								{:else if file.type === 'collection'}
+									<Database className="size-3.5" />
+								{:else if file.type === 'note'}
+									<PageEdit className="size-3.5" />
+								{:else if file.type === 'chat'}
+									<ChatBubble className="size-3.5" />
+								{:else if file.type === 'folder'}
+									<Folder className="size-3.5" />
+								{:else}
+									<DocumentPage className="size-3.5" />
+								{/if}
+							</div>
+
+							<div class="min-w-0 truncate">
+								{file.name || file.id}
+							</div>
+
+							{#if file.status === 'uploading'}
+								<div class="shrink-0 text-gray-400 dark:text-gray-500">
+									{$i18n.t('Uploading')}
+								</div>
+							{/if}
+
+							<button
+								type="button"
+								class="flex size-4 shrink-0 items-center justify-center text-gray-400 dark:text-gray-500"
+								aria-label={$i18n.t('Remove File')}
+								on:click={() => {
+									selectedItems = selectedItems.filter((_, idx) => idx !== fileIdx);
+								}}
+							>
+								<XMark className="size-3" />
+							</button>
+						</div>
+					</Tooltip>
 				{/each}
-			</div>
-		{/if}
 
-		{#if loaded}
-			<div class="flex flex-wrap flex-row text-sm gap-1">
-				<KnowledgeSelector
-					on:select={(e) => {
-						const item = e.detail;
-
-						if (!selectedItems.find((k) => k.id === item.id)) {
-							selectedItems = [
-								...selectedItems,
-								{
-									...item
-								}
-							];
-						}
+				<button
+					type="button"
+					class="py-0.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+					on:click={() => {
+						selectedItems = [];
 					}}
 				>
-					<div
-						class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-850 rounded-3xl"
-					>
-						{$i18n.t('Select Knowledge')}
-					</div>
-				</KnowledgeSelector>
-
-				{#if $user?.role === 'admin' || $user?.permissions?.chat?.file_upload}
-					<button
-						class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-850 rounded-3xl"
-						type="button"
-						on:click={() => {
-							filesInputElement.click();
-						}}>{$i18n.t('Upload Files')}</button
-					>
-				{/if}
+					{$i18n.t('Disable all')}
+				</button>
 			</div>
 		{/if}
+
 		<!-- {knowledge} -->
 	</div>
 

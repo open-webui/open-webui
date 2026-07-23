@@ -24,9 +24,12 @@ IF NOT "%WEBUI_SECRET_KEY_FILE%" == "" (
 
 IF "%PORT%"=="" SET PORT=8080
 IF "%HOST%"=="" SET HOST=0.0.0.0
-IF "%FORWARDED_ALLOW_IPS%"=="" SET "FORWARDED_ALLOW_IPS=*"
+IF "%FORWARDED_ALLOW_IPS%"=="" SET "FORWARDED_ALLOW_IPS='*'"
 SET "WEBUI_SECRET_KEY=%WEBUI_SECRET_KEY%"
 SET "WEBUI_JWT_SECRET_KEY=%WEBUI_JWT_SECRET_KEY%"
+IF "%WEBUI_SECRET_KEY_LENGTH%" == "" (
+    SET "WEBUI_SECRET_KEY_LENGTH=24"
+)
 
 :: Check if WEBUI_SECRET_KEY and WEBUI_JWT_SECRET_KEY are not set
 IF "%WEBUI_SECRET_KEY% %WEBUI_JWT_SECRET_KEY%" == " " (
@@ -36,7 +39,7 @@ IF "%WEBUI_SECRET_KEY% %WEBUI_JWT_SECRET_KEY%" == " " (
         echo Generating WEBUI_SECRET_KEY
         :: Generate a random value to use as a WEBUI_SECRET_KEY in case the user didn't provide one
         SET /p WEBUI_SECRET_KEY=<nul
-        FOR /L %%i IN (1,1,12) DO SET /p WEBUI_SECRET_KEY=<!random!>>%KEY_FILE%
+        FOR /L %%i IN (1,1,%WEBUI_SECRET_KEY_LENGTH%) DO SET /p WEBUI_SECRET_KEY=<!random!>>%KEY_FILE%
         echo WEBUI_SECRET_KEY generated
     )
 
@@ -47,5 +50,5 @@ IF "%WEBUI_SECRET_KEY% %WEBUI_JWT_SECRET_KEY%" == " " (
 :: Execute uvicorn
 SET "WEBUI_SECRET_KEY=%WEBUI_SECRET_KEY%"
 IF "%UVICORN_WORKERS%"=="" SET UVICORN_WORKERS=1
-uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips "%FORWARDED_ALLOW_IPS%" --workers %UVICORN_WORKERS% --ws auto
+uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips %FORWARDED_ALLOW_IPS% --workers %UVICORN_WORKERS% --ws auto
 :: For ssl user uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips '*' --ssl-keyfile "key.pem" --ssl-certfile "cert.pem" --ws auto

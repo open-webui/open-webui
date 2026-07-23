@@ -7,26 +7,31 @@
 	import { getUsage } from '$lib/apis';
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
 
-	import { showSettings, mobile, showSidebar, showShortcuts, user, config } from '$lib/stores';
+	import { showSettings, mobile, showSidebar, user, config, settings } from '$lib/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
-	import Map from '$lib/components/icons/Map.svelte';
-	import Keyboard from '$lib/components/icons/Keyboard.svelte';
-	import ShortcutsModal from '$lib/components/chat/ShortcutsModal.svelte';
-	import Settings from '$lib/components/icons/Settings.svelte';
-	import Code from '$lib/components/icons/Code.svelte';
-	import UserGroup from '$lib/components/icons/UserGroup.svelte';
-	import SignOut from '$lib/components/icons/SignOut.svelte';
-	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
 	import UserStatusModal from './UserStatusModal.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
-	import { updateUserStatus } from '$lib/apis/users';
+	import CalendarIcon from './icons/Calendar.svelte';
+	import ClockIcon from './icons/Clock.svelte';
+	import CodeIcon from './icons/Code.svelte';
+	import EmojiFaceIcon from './icons/EmojiFace.svelte';
+	import HelpCircleIcon from './icons/HelpCircle.svelte';
+	import LogOutIcon from './icons/LogOut.svelte';
+	import MapIcon from './icons/Map.svelte';
+	import NotesIcon from './icons/Notes.svelte';
+	import PinIcon from './icons/Pin.svelte';
+	import PinSlashIcon from './icons/PinSlash.svelte';
+	import Settings from '$lib/components/icons/Settings.svelte';
+	import KeyIcon from './icons/Key.svelte';
+	import UserIcon from './icons/User.svelte';
+	import WorkspaceIcon from './icons/Workspace.svelte';
+	import XMarkIcon from './icons/XMark.svelte';
+	import { updateUserStatus, updateUserSettings } from '$lib/apis/users';
 	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
@@ -43,8 +48,28 @@
 	export let showActiveUsers = true;
 
 	let showUserStatusModal = false;
+	let shiftKey = false;
 
 	const dispatch = createEventDispatcher();
+
+	const DEFAULT_PINNED_ITEMS = ['notes', 'workspace'];
+
+	$: pinnedItems = $settings?.pinnedMenuItems ?? DEFAULT_PINNED_ITEMS;
+
+	const isPinned = (id: string) => {
+		return pinnedItems.includes(id);
+	};
+
+	const togglePin = async (id: string) => {
+		let updated;
+		if (isPinned(id)) {
+			updated = pinnedItems.filter((item) => item !== id);
+		} else {
+			updated = [...pinnedItems, id];
+		}
+		await settings.set({ ...$settings, pinnedMenuItems: updated });
+		await updateUserSettings(localStorage.token, { ui: $settings });
+	};
 
 	let usage = null;
 	const getUsageInfo = async () => {
@@ -69,7 +94,15 @@
 	};
 </script>
 
-<ShortcutsModal bind:show={$showShortcuts} />
+<svelte:window
+	on:keydown={(e) => {
+		if (e.key === 'Shift') shiftKey = true;
+	}}
+	on:keyup={(e) => {
+		if (e.key === 'Shift') shiftKey = false;
+	}}
+/>
+
 <UserStatusModal
 	bind:show={showUserStatusModal}
 	onSave={async () => {
@@ -77,55 +110,63 @@
 	}}
 />
 
-<!-- svelte-ignore a11y-no-static-element-interactions -->
 <Dropdown bind:show onOpenChange={handleDropdownChange} {align}>
 	<slot />
 
 	<div slot="content">
-		<div
-			class="{className} rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg text-sm"
-		>
-			{#if profile}
-				<div class=" flex gap-3.5 w-full p-2.5 items-center">
-					<div class=" items-center flex shrink-0">
-						<img
-							src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
-							class=" size-10 object-cover rounded-full"
-							alt="profile"
-						/>
-					</div>
+		<DropdownMenu className="{className} font-sans text-xs">
+			{#if $user}
+				<div>
+					<button
+						class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-xs w-full hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none text-left"
+						type="button"
+						on:click={async () => {
+							show = false;
+							await showSettings.set('account');
 
-					<div class=" flex flex-col w-full flex-1">
-						<div class="font-medium line-clamp-1 pr-2">
-							{$user.name}
+							if ($mobile) {
+								await tick();
+								showSidebar.set(false);
+							}
+						}}
+					>
+						<div class="self-center shrink-0 size-4.5 flex items-center justify-center">
+							<img
+								src={`${WEBUI_API_BASE_URL}/users/${$user.id}/profile/image`}
+								alt=""
+								class="size-4.5 rounded-full object-cover"
+							/>
 						</div>
+						<div class="self-center min-w-0 flex-1 truncate">{$user.name}</div>
 
-						<div class=" flex items-center gap-2">
-							{#if $user?.is_active ?? true}
-								<div>
-									<span class="relative flex size-2">
-										<span class="relative inline-flex rounded-full size-2 bg-green-500" />
-									</span>
+						{#if showActiveUsers && ($config?.features?.enable_public_active_users_count || role === 'admin') && usage?.user_count}
+							<Tooltip
+								content={usage?.model_ids && usage?.model_ids.length > 0
+									? `${$i18n.t('Running')}: ${usage.model_ids.join(', ')} ✨`
+									: $i18n.t('Active Users')}
+							>
+								<div
+									class="ml-auto flex shrink-0 items-center justify-end gap-1 rounded-full px-1.5 py-0.5 text-[11px] leading-none text-gray-500 dark:text-gray-400"
+									on:mouseenter={() => {
+										if ($config?.features?.enable_public_active_users_count || role === 'admin') {
+											getUsageInfo();
+										}
+									}}
+								>
+									<span class="size-1.5 rounded-full bg-green-500" />
+									<span>{usage.user_count}</span>
 								</div>
-
-								<span class="text-xs"> {$i18n.t('Active')} </span>
-							{:else}
-								<div>
-									<span class="relative flex size-2">
-										<span class="relative inline-flex rounded-full size-2 bg-gray-500" />
-									</span>
-								</div>
-
-								<span class="text-xs"> {$i18n.t('Away')} </span>
-							{/if}
-						</div>
-					</div>
+							</Tooltip>
+						{/if}
+					</button>
 				</div>
+			{/if}
 
+			{#if profile}
 				{#if $user?.status_emoji || $user?.status_message}
-					<div class="mx-1">
+					<div class="user-menu-status">
 						<button
-							class="mb-1 w-full gap-2 px-2.5 py-1.5 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center"
+							class="w-full h-[1.6875rem] gap-2 rounded-xl px-2 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none text-xs flex items-center text-left"
 							type="button"
 							on:click={() => {
 								show = false;
@@ -133,21 +174,22 @@
 							}}
 						>
 							{#if $user?.status_emoji}
-								<div class=" self-center shrink-0">
-									<Emoji className="size-4" shortCode={$user?.status_emoji} />
+								<div class="self-center shrink-0 size-4.5 flex items-center justify-center">
+									<Emoji className="size-3.5" shortCode={$user?.status_emoji} />
 								</div>
 							{/if}
 
 							<Tooltip
 								content={$user?.status_message}
-								className=" self-center line-clamp-2 flex-1 text-left"
+								className="self-center line-clamp-2 flex-1 text-left"
 							>
 								{$user?.status_message}
 							</Tooltip>
 
-							<div class="self-start">
+							<div class="self-center">
 								<Tooltip content={$i18n.t('Clear status')}>
 									<button
+										class="flex size-5 items-center justify-center"
 										type="button"
 										on:click={async (e) => {
 											e.preventDefault();
@@ -167,140 +209,319 @@
 											}
 										}}
 									>
-										<XMark className="size-4 opacity-50" strokeWidth="2" />
+										<XMarkIcon className="size-3.5 opacity-50" strokeWidth="1.5" />
 									</button>
 								</Tooltip>
 							</div>
 						</button>
 					</div>
 				{:else}
-					<div class="mx-1">
+					<div class="user-menu-status">
 						<button
-							class="mb-1 w-full px-3 py-1.5 gap-1 rounded-xl bg-gray-50 dark:text-white dark:bg-gray-900/50 text-black transition text-xs flex items-center justify-center"
+							class="w-full h-[1.6875rem] gap-2 rounded-xl px-2 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none text-xs flex items-center text-left"
 							type="button"
 							on:click={() => {
 								show = false;
 								showUserStatusModal = true;
 							}}
 						>
-							<div class=" self-center">
-								<FaceSmile className="size-4" strokeWidth="1.5" />
+							<div class="self-center shrink-0 size-4.5 flex items-center justify-center">
+								<EmojiFaceIcon className="size-3.5" strokeWidth="1.5" />
 							</div>
-							<div class=" self-center truncate">{$i18n.t('Update your status')}</div>
+							<div class="self-center truncate">{$i18n.t('Update your status')}</div>
 						</button>
 					</div>
 				{/if}
-
-				<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1.5 p-0" />
 			{/if}
 
-			<button
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
-				type="button"
-				on:click={async () => {
-					show = false;
+			{#if profile}
+				<hr class="border-gray-50/30 dark:border-gray-800/30 my-0.5 mx-1 p-0" />
+			{/if}
 
-					await showSettings.set(true);
-
-					if ($mobile) {
-						await tick();
-						showSidebar.set(false);
-					}
-				}}
-			>
-				<div class=" self-center mr-3">
-					<Settings className="w-5 h-5" strokeWidth="1.5" />
-				</div>
-				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
-			</button>
-
-			{#if $user?.role === 'admin' || $user?.permissions?.features?.automations}
-				<a
-					href="/automations"
-					draggable="false"
-					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
-					on:click={async (e) => {
-						if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
-						e.preventDefault();
-						show = false;
-						goto('/automations');
-						if ($mobile) {
-							await tick();
-							showSidebar.set(false);
-						}
-					}}
-				>
-					<div class="self-center mr-3">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="size-5"
+			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools || $user?.permissions?.workspace?.skills}
+				<div class="flex items-center w-full">
+					<a
+						href="/workspace"
+						draggable="false"
+						class="flex flex-1 h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
+						on:click={async (e) => {
+							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+							e.preventDefault();
+							show = false;
+							goto('/workspace');
+							if ($mobile) {
+								await tick();
+								showSidebar.set(false);
+							}
+						}}
+					>
+						<div class="self-center">
+							<WorkspaceIcon className="size-3.5" strokeWidth="1.5" />
+						</div>
+						<div class="self-center truncate">{$i18n.t('Workspace')}</div>
+					</a>
+					{#if shiftKey}
+						<Tooltip
+							content={isPinned('workspace')
+								? $i18n.t('Unpin from Sidebar')
+								: $i18n.t('Pin to Sidebar')}
 						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-							/>
-						</svg>
-					</div>
-					<div class="self-center truncate">{$i18n.t('Automations')}</div>
-				</a>
+							<button
+								type="button"
+								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
+								on:click|preventDefault|stopPropagation={() => togglePin('workspace')}
+							>
+								{#if isPinned('workspace')}
+									<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
+								{:else}
+									<PinIcon className="size-3.5" strokeWidth="1.5" />
+								{/if}
+							</button>
+						</Tooltip>
+					{/if}
+				</div>
+			{/if}
+
+			{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+				<div class="flex items-center w-full">
+					<a
+						href="/notes"
+						draggable="false"
+						class="flex flex-1 h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
+						on:click={async (e) => {
+							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+							e.preventDefault();
+							show = false;
+							goto('/notes');
+							if ($mobile) {
+								await tick();
+								showSidebar.set(false);
+							}
+						}}
+					>
+						<div class="self-center">
+							<NotesIcon className="size-3.5" strokeWidth="1.5" />
+						</div>
+						<div class="self-center truncate">{$i18n.t('Notes')}</div>
+					</a>
+					{#if shiftKey}
+						<Tooltip
+							content={isPinned('notes')
+								? $i18n.t('Unpin from Sidebar')
+								: $i18n.t('Pin to Sidebar')}
+						>
+							<button
+								type="button"
+								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
+								on:click|preventDefault|stopPropagation={() => togglePin('notes')}
+							>
+								{#if isPinned('notes')}
+									<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
+								{:else}
+									<PinIcon className="size-3.5" strokeWidth="1.5" />
+								{/if}
+							</button>
+						</Tooltip>
+					{/if}
+				</div>
+			{/if}
+
+			{#if $config?.features?.enable_calendar && ($user?.role === 'admin' || $user?.permissions?.features?.calendar)}
+				<div class="flex items-center w-full">
+					<a
+						href="/calendar"
+						draggable="false"
+						class="flex flex-1 h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
+						on:click={async (e) => {
+							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+							e.preventDefault();
+							show = false;
+							goto('/calendar');
+						}}
+					>
+						<div class="self-center">
+							<CalendarIcon className="size-3.5" strokeWidth="1.5" />
+						</div>
+						<div class="self-center truncate">{$i18n.t('Calendar')}</div>
+					</a>
+					{#if shiftKey}
+						<Tooltip
+							content={isPinned('calendar')
+								? $i18n.t('Unpin from Sidebar')
+								: $i18n.t('Pin to Sidebar')}
+						>
+							<button
+								type="button"
+								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
+								on:click|preventDefault|stopPropagation={() => togglePin('calendar')}
+							>
+								{#if isPinned('calendar')}
+									<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
+								{:else}
+									<PinIcon className="size-3.5" strokeWidth="1.5" />
+								{/if}
+							</button>
+						</Tooltip>
+					{/if}
+				</div>
+			{/if}
+
+			{#if $config?.features?.enable_automations && ($user?.role === 'admin' || $user?.permissions?.features?.automations)}
+				<div class="flex items-center w-full">
+					<a
+						href="/automations"
+						draggable="false"
+						class="flex flex-1 h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
+						on:click={async (e) => {
+							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+							e.preventDefault();
+							show = false;
+							goto('/automations');
+							if ($mobile) {
+								await tick();
+								showSidebar.set(false);
+							}
+						}}
+					>
+						<div class="self-center">
+							<ClockIcon className="size-3.5" strokeWidth="1.5" />
+						</div>
+						<div class="self-center truncate">{$i18n.t('Automations')}</div>
+					</a>
+					{#if shiftKey}
+						<Tooltip
+							content={isPinned('automations')
+								? $i18n.t('Unpin from Sidebar')
+								: $i18n.t('Pin to Sidebar')}
+						>
+							<button
+								type="button"
+								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
+								on:click|preventDefault|stopPropagation={() => togglePin('automations')}
+							>
+								{#if isPinned('automations')}
+									<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
+								{:else}
+									<PinIcon className="size-3.5" strokeWidth="1.5" />
+								{/if}
+							</button>
+						</Tooltip>
+					{/if}
+				</div>
 			{/if}
 
 			{#if role === 'admin'}
-				<a
-					href="/playground"
-					draggable="false"
-					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
-					on:click={async (e) => {
-						if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
-							return;
-						}
-						e.preventDefault();
+				<div class="flex items-center w-full">
+					<a
+						href="/playground"
+						draggable="false"
+						class="flex flex-1 h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
+						on:click={async (e) => {
+							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+							e.preventDefault();
+							show = false;
+							goto('/playground');
+							if ($mobile) {
+								await tick();
+								showSidebar.set(false);
+							}
+						}}
+					>
+						<div class="self-center">
+							<CodeIcon className="size-3.5" strokeWidth="1.5" />
+						</div>
+						<div class="self-center truncate">{$i18n.t('Playground')}</div>
+					</a>
+					{#if shiftKey}
+						<Tooltip
+							content={isPinned('playground')
+								? $i18n.t('Unpin from Sidebar')
+								: $i18n.t('Pin to Sidebar')}
+						>
+							<button
+								type="button"
+								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
+								on:click|preventDefault|stopPropagation={() => togglePin('playground')}
+							>
+								{#if isPinned('playground')}
+									<PinSlashIcon className="size-3.5" strokeWidth="1.5" />
+								{:else}
+									<PinIcon className="size-3.5" strokeWidth="1.5" />
+								{/if}
+							</button>
+						</Tooltip>
+					{/if}
+				</div>
+			{/if}
+
+			{#if help}
+				<hr class="border-gray-50/30 dark:border-gray-800/30 my-0.5 mx-1 p-0" />
+
+				<!-- {$i18n.t('Help')} -->
+
+				{#if $user?.role === 'admin'}
+					<a
+						href="https://docs.openwebui.com"
+						target="_blank"
+						draggable="false"
+						class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
+						id="chat-share-button"
+						on:click={() => {
+							show = false;
+						}}
+					>
+						<div class="self-center">
+							<HelpCircleIcon className="size-3.5" />
+						</div>
+						<div class=" self-center truncate">{$i18n.t('Documentation')}</div>
+					</a>
+
+					<!-- Releases -->
+					<a
+						href="https://github.com/open-webui/open-webui/releases"
+						target="_blank"
+						draggable="false"
+						class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
+						id="chat-share-button"
+						on:click={() => {
+							show = false;
+						}}
+					>
+						<div class="self-center">
+							<MapIcon className="size-3.5" />
+						</div>
+						<div class=" self-center truncate">{$i18n.t('Releases')}</div>
+					</a>
+				{/if}
+
+				<button
+					class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
+					type="button"
+					id="chat-share-button"
+					on:click={async () => {
 						show = false;
-						goto('/playground');
+						showSettings.set('shortcuts');
+
 						if ($mobile) {
 							await tick();
 							showSidebar.set(false);
 						}
 					}}
 				>
-					<div class=" self-center mr-3">
-						<Code className="size-5" strokeWidth="1.5" />
+					<div class="self-center">
+						<KeyIcon className="size-3.5" />
 					</div>
-					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
-				</a>
+					<div class=" self-center truncate">{$i18n.t('Keyboard')}</div>
+				</button>
 			{/if}
 
-			<button
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
-				type="button"
-				on:click={async () => {
-					show = false;
-
-					dispatch('show', 'archived-chat');
-
-					if ($mobile) {
-						await tick();
-
-						showSidebar.set(false);
-					}
-				}}
-			>
-				<div class=" self-center mr-3">
-					<ArchiveBox className="size-5" strokeWidth="1.5" />
-				</div>
-				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
-			</button>
+			<hr class="border-gray-50/30 dark:border-gray-800/30 my-0.5 mx-1 p-0" />
 
 			{#if role === 'admin'}
 				<a
 					href="/admin"
 					draggable="false"
-					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+					class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
 					on:click={async (e) => {
 						if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
 							return;
@@ -314,78 +535,35 @@
 						}
 					}}
 				>
-					<div class=" self-center mr-3">
-						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
+					<div class="self-center">
+						<UserIcon className="size-3.5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
 				</a>
 			{/if}
 
-			{#if help}
-				<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
+			<button
+				class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
+				type="button"
+				on:click={async () => {
+					show = false;
 
-				<!-- {$i18n.t('Help')} -->
+					await showSettings.set(true);
 
-				{#if $user?.role === 'admin'}
-					<a
-						href="https://docs.openwebui.com"
-						target="_blank"
-						draggable="false"
-						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
-						id="chat-share-button"
-						on:click={() => {
-							show = false;
-						}}
-					>
-						<div class=" self-center mr-3">
-							<QuestionMarkCircle className="size-5" />
-						</div>
-						<div class=" self-center truncate">{$i18n.t('Documentation')}</div>
-					</a>
-
-					<!-- Releases -->
-					<a
-						href="https://github.com/open-webui/open-webui/releases"
-						target="_blank"
-						draggable="false"
-						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
-						id="chat-share-button"
-						on:click={() => {
-							show = false;
-						}}
-					>
-						<div class=" self-center mr-3">
-							<Map className="size-5" />
-						</div>
-						<div class=" self-center truncate">{$i18n.t('Releases')}</div>
-					</a>
-				{/if}
-
-				<button
-					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
-					type="button"
-					id="chat-share-button"
-					on:click={async () => {
-						show = false;
-						showShortcuts.set(!$showShortcuts);
-
-						if ($mobile) {
-							await tick();
-							showSidebar.set(false);
-						}
-					}}
-				>
-					<div class=" self-center mr-3">
-						<Keyboard className="size-5" />
-					</div>
-					<div class=" self-center truncate">{$i18n.t('Keyboard shortcuts')}</div>
-				</button>
-			{/if}
-
-			<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
+					if ($mobile) {
+						await tick();
+						showSidebar.set(false);
+					}
+				}}
+			>
+				<div class="self-center">
+					<Settings className="size-3.5" strokeWidth="1.5" />
+				</div>
+				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
+			</button>
 
 			<button
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+				class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
 				type="button"
 				on:click={async () => {
 					const res = await userSignOut();
@@ -396,47 +574,11 @@
 					show = false;
 				}}
 			>
-				<div class=" self-center mr-3">
-					<SignOut className="w-5 h-5" strokeWidth="1.5" />
+				<div class="self-center">
+					<LogOutIcon className="size-3.5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</button>
-
-			{#if showActiveUsers && ($config?.features?.enable_public_active_users_count || role === 'admin') && usage}
-				{#if usage?.user_count}
-					<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
-
-					<Tooltip
-						content={usage?.model_ids && usage?.model_ids.length > 0
-							? `${$i18n.t('Running')}: ${usage.model_ids.join(', ')} ✨`
-							: ''}
-					>
-						<div
-							class="flex rounded-xl py-1 px-3 text-xs gap-2.5 items-center"
-							on:mouseenter={() => {
-								if ($config?.features?.enable_public_active_users_count || role === 'admin') {
-									getUsageInfo();
-								}
-							}}
-						>
-							<div class=" flex items-center">
-								<span class="relative flex size-2">
-									<span class="relative inline-flex rounded-full size-2 bg-green-500" />
-								</span>
-							</div>
-
-							<div class=" ">
-								<span class="">
-									{$i18n.t('Active Users')}:
-								</span>
-								<span class=" font-semibold">
-									{usage?.user_count}
-								</span>
-							</div>
-						</div>
-					</Tooltip>
-				{/if}
-			{/if}
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>

@@ -5,7 +5,7 @@
 
 	import dayjs from 'dayjs';
 
-	import { settings, chatId, WEBUI_NAME, models, config } from '$lib/stores';
+	import { settings, chatId, WEBUI_NAME, models, config, user as sessionUser } from '$lib/stores';
 	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
 	import { getChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
@@ -128,6 +128,11 @@
 	};
 
 	const cloneSharedChat = async () => {
+		if (!($sessionUser?.role === 'admin' || ($sessionUser?.permissions?.chat?.import ?? true))) {
+			toast.error($i18n.t('Access prohibited'));
+			return;
+		}
+
 		if (!chat) return;
 
 		const res = await cloneSharedChatById(localStorage.token, chat.id).catch((error) => {
@@ -158,10 +163,10 @@
 				<div
 					class="pt-5 px-2 w-full {($settings?.widescreenMode ?? null)
 						? 'max-w-full'
-						: 'max-w-5xl'} mx-auto"
+						: 'max-w-[52rem]'} mx-auto"
 				>
 					<div class="px-3">
-						<h1 class=" text-2xl font-medium line-clamp-1 m-0">
+						<h1 class=" text-2xl font-normal line-clamp-1 m-0">
 							{title}
 						</h1>
 
@@ -197,18 +202,20 @@
 				</div>
 			</div>
 
-			<div
-				class="absolute bottom-0 right-0 left-0 flex justify-center w-full bg-linear-to-b from-transparent to-white dark:to-gray-900"
-			>
-				<div class="pb-5">
-					<button
-						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-						on:click={cloneSharedChat}
-					>
-						{$i18n.t('Clone Chat')}
-					</button>
+			{#if $sessionUser?.role === 'admin' || ($sessionUser?.permissions?.chat?.import ?? true)}
+				<div
+					class="absolute bottom-0 right-0 left-0 flex justify-center w-full bg-linear-to-b from-transparent to-white dark:to-gray-900"
+				>
+					<div class="pb-5">
+						<button
+							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+							on:click={cloneSharedChat}
+						>
+							{$i18n.t('Clone Chat')}
+						</button>
+					</div>
 				</div>
-			</div>
+			{/if}
 		</div>
 	</div>
 {/if}

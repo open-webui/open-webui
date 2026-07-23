@@ -1,20 +1,17 @@
-import time
-import logging
-import uuid
-from typing import Optional, List
 import base64
 import hashlib
 import json
+import logging
+import time
+import uuid
+from typing import List, Optional
 
 from cryptography.fernet import Fernet
-
-from sqlalchemy import select, delete, update
-from sqlalchemy.ext.asyncio import AsyncSession
-from open_webui.internal.db import Base, get_async_db_context
 from open_webui.env import OAUTH_SESSION_TOKEN_ENCRYPTION_KEY
-
+from open_webui.internal.db import Base, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, Index
+from sqlalchemy import BigInteger, Column, Index, String, Text, delete, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -123,7 +120,7 @@ class OAuthSessionTable:
                         'user_id': user_id,
                         'provider': provider,
                         'token': self._encrypt_token(token),
-                        'expires_at': token.get('expires_at'),
+                        'expires_at': token.get('expires_at') or int(time.time() + 3600),
                         'created_at': current_time,
                         'updated_at': current_time,
                     }
@@ -151,7 +148,9 @@ class OAuthSessionTable:
             log.error(f'Error creating OAuth session: {e}')
             return None
 
-    async def get_session_by_id(self, session_id: str, db: Optional[AsyncSession] = None) -> Optional[OAuthSessionModel]:
+    async def get_session_by_id(
+        self, session_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[OAuthSessionModel]:
         """Get OAuth session by ID"""
         try:
             async with get_async_db_context(db) as db:
@@ -235,15 +234,17 @@ class OAuthSessionTable:
                 results = []
                 for session in sessions:
                     try:
-                        results.append(OAuthSessionModel(
-                            id=session.id,
-                            user_id=session.user_id,
-                            provider=session.provider,
-                            token=self._decrypt_token(session.token),
-                            expires_at=session.expires_at,
-                            created_at=session.created_at,
-                            updated_at=session.updated_at,
-                        ))
+                        results.append(
+                            OAuthSessionModel(
+                                id=session.id,
+                                user_id=session.user_id,
+                                provider=session.provider,
+                                token=self._decrypt_token(session.token),
+                                expires_at=session.expires_at,
+                                created_at=session.created_at,
+                                updated_at=session.updated_at,
+                            )
+                        )
                     except Exception as e:
                         log.warning(
                             f'Skipping OAuth session {session.id} due to decryption failure, deleting corrupted session: {type(e).__name__}: {e}'
@@ -266,9 +267,11 @@ class OAuthSessionTable:
                 current_time = int(time.time())
 
                 await db.execute(
-                    update(OAuthSession).filter_by(id=session_id).values(
+                    update(OAuthSession)
+                    .filter_by(id=session_id)
+                    .values(
                         token=self._encrypt_token(token),
-                        expires_at=token.get('expires_at'),
+                        expires_at=token.get('expires_at') or int(time.time() + 3600),
                         updated_at=current_time,
                     )
                 )
@@ -312,6 +315,19 @@ class OAuthSessionTable:
                 return True
         except Exception as e:
             log.error(f'Error deleting OAuth sessions by user ID: {e}')
+            return False
+
+    async def delete_sessions_by_user_id_and_provider(
+        self, user_id: str, provider: str, db: Optional[AsyncSession] = None
+    ) -> bool:
+        """Delete all OAuth sessions for a specific user and provider"""
+        try:
+            async with get_async_db_context(db) as db:
+                result = await db.execute(delete(OAuthSession).filter_by(user_id=user_id, provider=provider))
+                await db.commit()
+                return result.rowcount > 0
+        except Exception as e:
+            log.error(f'Error deleting OAuth sessions for user {user_id} and provider {provider}: {e}')
             return False
 
     async def delete_sessions_by_provider(self, provider: str, db: Optional[AsyncSession] = None) -> bool:

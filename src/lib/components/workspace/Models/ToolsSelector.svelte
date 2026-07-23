@@ -1,60 +1,96 @@
 <script lang="ts">
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { getContext, onMount } from 'svelte';
+	import TypeaheadSelector from './TypeaheadSelector.svelte';
+	import { getContext } from 'svelte';
 
-	export let tools = [];
+	type Tool = {
+		id: string;
+		name?: string;
+		meta?: {
+			description?: string;
+		};
+	};
 
-	let _tools = {};
+	export let tools: Tool[] = [];
+	export let selectedToolIds: string[] = [];
 
-	export let selectedToolIds = [];
+	const i18n = getContext('i18n') as any;
 
-	const i18n = getContext('i18n');
+	$: selectedTools = tools.filter((tool) => selectedToolIds.includes(tool.id));
 
-	onMount(() => {
-		_tools = tools.reduce((acc, tool) => {
-			acc[tool.id] = {
-				...tool,
-				selected: selectedToolIds.includes(tool.id)
-			};
-
-			return acc;
-		}, {});
-	});
+	const toggleTool = (tool: Tool) => {
+		selectedToolIds = selectedToolIds.includes(tool.id)
+			? selectedToolIds.filter((id) => id !== tool.id)
+			: [...selectedToolIds, tool.id];
+	};
 </script>
 
 <div>
-	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Tools')}</div>
+	<div class="flex w-full items-center gap-2 mb-1">
+		<div class=" self-center text-xs text-gray-500">{$i18n.t('Tools')}</div>
+
+		{#if tools.length > 0}
+			<TypeaheadSelector
+				id="model-tools-selector"
+				items={tools}
+				selectedIds={selectedToolIds}
+				placeholder={$i18n.t('Search tools')}
+				triggerLabel={$i18n.t('Select Tool')}
+				emptyLabel={$i18n.t('No tools found')}
+				variant="dropdown"
+				on:select={(e) => {
+					toggleTool(e.detail);
+				}}
+				on:enableall={(e) => {
+					selectedToolIds = [...new Set([...selectedToolIds, ...e.detail.map((tool) => tool.id)])];
+				}}
+			/>
+		{/if}
 	</div>
 
 	<div class="flex flex-col mb-1">
 		{#if tools.length > 0}
-			<div class=" flex items-center flex-wrap">
-				{#each Object.keys(_tools) as tool, toolIdx}
+			<div class=" flex items-center flex-wrap mt-1">
+				{#each selectedTools as tool, toolIdx}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox
-								state={_tools[tool].selected ? 'checked' : 'unchecked'}
+								state="checked"
 								on:change={(e) => {
-									_tools[tool].selected = e.detail === 'checked';
-									selectedToolIds = Object.keys(_tools).filter((t) => _tools[t].selected);
+									if (e.detail === 'unchecked') {
+										selectedToolIds = selectedToolIds.filter((id) => id !== tool.id);
+									}
 								}}
 							/>
 						</div>
 
-						<Tooltip content={_tools[tool]?.meta?.description ?? _tools[tool].id}>
-							<div class=" py-0.5 text-sm w-full capitalize font-medium">
-								{_tools[tool].name}
+						<Tooltip content={tool.meta?.description ?? tool.id}>
+							<div class=" py-0.5 text-xs capitalize">
+								{tool.name}
 							</div>
 						</Tooltip>
 					</div>
 				{/each}
+
+				{#if selectedTools.length > 0}
+					<button
+						type="button"
+						class="py-0.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+						on:click={() => {
+							selectedToolIds = [];
+						}}
+					>
+						{$i18n.t('Disable all')}
+					</button>
+				{/if}
 			</div>
 		{/if}
 	</div>
 
 	<div class=" text-xs dark:text-gray-700">
-		{$i18n.t('To select toolkits here, add them to the "Tools" workspace first.')}
+		{$i18n.t(
+			'To select toolkits here, add them to the "Tools" workspace or enable a tool server first.'
+		)}
 	</div>
 </div>

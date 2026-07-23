@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher, getContext } from 'svelte';
+	import { createEventDispatcher, getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -21,6 +21,7 @@
 
 	export let show = false;
 	export let automation: AutomationResponse | null = null;
+	export let cloneFrom: AutomationResponse | null = null;
 
 	let name = '';
 	let prompt = '';
@@ -75,6 +76,8 @@
 	};
 
 	const init = async () => {
+		await tick();
+
 		if (automation) {
 			name = automation.name;
 			prompt = automation.data.prompt;
@@ -82,6 +85,14 @@
 			is_active = automation.is_active;
 			if (scheduleDropdown) {
 				scheduleDropdown.parseRrule(automation.data.rrule);
+			}
+		} else if (cloneFrom) {
+			name = cloneFrom.name;
+			prompt = cloneFrom.data.prompt;
+			model_id = cloneFrom.data.model_id;
+			is_active = true;
+			if (scheduleDropdown) {
+				scheduleDropdown.parseRrule(cloneFrom.data.rrule);
 			}
 		} else {
 			name = '';
@@ -99,9 +110,9 @@
 <Modal size="md" bind:show>
 	<div>
 		<!-- Header -->
-		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
+		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
 			<input
-				class="w-full text-lg font-medium bg-transparent outline-hidden font-primary placeholder:text-gray-300 dark:placeholder:text-gray-700"
+				class="w-full text-sm font-medium bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
 				type="text"
 				bind:value={name}
 				placeholder={$i18n.t('Automation title')}
@@ -111,7 +122,7 @@
 				aria-label={$i18n.t('Close')}
 				on:click={() => (show = false)}
 			>
-				<XMark className="size-5" />
+				<XMark className="size-4" />
 			</button>
 		</div>
 
@@ -143,7 +154,7 @@
 					{$i18n.t('Cancel')}
 				</button>
 				<button
-					class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 {loading
+					class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 {loading
 						? 'cursor-not-allowed'
 						: ''}"
 					on:click={submitHandler}

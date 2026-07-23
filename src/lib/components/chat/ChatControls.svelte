@@ -55,6 +55,7 @@
 	export let codeInterpreterEnabled = false;
 
 	export let pane: Pane | null = null;
+	export let containerId = 'chat-container';
 
 	let largeScreen = false;
 	let dragged = false;
@@ -72,7 +73,10 @@
 
 	$: showControlsTab = $user?.role === 'admin' || ($user?.permissions?.chat?.controls ?? true);
 	$: showFilesTab =
-		!!$selectedTerminalId ||
+		($selectedTerminalId &&
+			(($terminalServers ?? []).some((t) => t.id && t.id === $selectedTerminalId) ||
+				$user?.role === 'admin' ||
+				($user?.permissions?.features?.direct_tool_servers ?? true))) ||
 		(codeInterpreterEnabled && $config?.code?.interpreter_engine !== 'jupyter');
 	$: showOverviewTab = hasMessages;
 
@@ -96,11 +100,20 @@
 	}
 
 	// Auto-open Files tab when a terminal is selected (suppress panel open when full-screen)
-	$: if ($selectedTerminalId) {
+	$: if ($selectedTerminalId && showFilesTab) {
 		activeTab = 'files';
 		if (largeScreen) {
-			showControls.set(true);
+			showControls.set($settings?.showFilesOnTerminalSelect ?? true);
 		}
+	}
+
+	// Clear selected direct terminal if user lost permission
+	$: if (
+		$selectedTerminalId &&
+		!($terminalServers ?? []).some((t) => t.id && t.id === $selectedTerminalId) &&
+		!($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
+	) {
+		selectedTerminalId.set(null);
 	}
 
 	// Attach a terminal file to the chat input
@@ -147,7 +160,7 @@
 
 	export const openPane = () => {
 		if (parseInt(localStorage?.chatControlsSize)) {
-			const container = document.getElementById('chat-container');
+			const container = document.getElementById(containerId);
 			let size = Math.floor(
 				(parseInt(localStorage?.chatControlsSize) / container.clientWidth) * 100
 			);
@@ -206,7 +219,7 @@
 				paneReady = true;
 			}, 0);
 
-			const container = document.getElementById('chat-container') as HTMLElement;
+			const container = document.getElementById(containerId) as HTMLElement;
 			if (!container) return;
 
 			minSize = Math.floor((350 / container.clientWidth) * 100);
@@ -297,8 +310,8 @@
 									<button
 										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 										'controls'
-											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
-											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
+											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 										on:click={() => (activeTab = 'controls')}
 									>
 										{$i18n.t('Controls')}
@@ -308,8 +321,8 @@
 									<button
 										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 										'files'
-											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
-											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
+											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 										on:click={() => (activeTab = 'files')}
 									>
 										{$i18n.t('Files')}
@@ -319,8 +332,8 @@
 									<button
 										class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 										'overview'
-											? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
-											: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
+											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 										on:click={() => (activeTab = 'overview')}
 									>
 										{$i18n.t('Overview')}
@@ -328,7 +341,7 @@
 								{/if}
 							</div>
 							<button
-								class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+								class="p-1 rounded-lg text-gray-500 dark:text-gray-400"
 								on:click={() => showControls.set(false)}
 								aria-label={$i18n.t('Close')}
 							>
@@ -395,7 +408,7 @@
 				if (size < minSize) {
 					localStorage.chatControlsSize = 0;
 				} else {
-					const container = document.getElementById('chat-container');
+					const container = document.getElementById(containerId);
 					localStorage.chatControlsSize = Math.floor((size / 100) * container.clientWidth);
 				}
 			}
@@ -404,15 +417,14 @@
 			if (paneReady) showControls.set(false);
 		}}
 		collapsible={true}
-		class="z-10 bg-white dark:bg-gray-850"
+		class="z-10 bg-white dark:bg-gray-900"
 	>
 		{#if $showControls}
 			<div class="flex max-h-full min-h-full">
 				<div
 					class="w-full {specialPanel && !$showCallOverlay
 						? ' '
-						: 'bg-white dark:shadow-lg dark:bg-gray-850'} z-40 pointer-events-auto {activeTab ===
-					'files'
+						: 'bg-white dark:bg-gray-900'} z-40 pointer-events-auto {activeTab === 'files'
 						? ''
 						: 'overflow-y-auto'} scrollbar-hidden"
 					id="controls-container"
@@ -443,8 +455,8 @@
 										<button
 											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 											'controls'
-												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
-												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
+												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 											on:click={() => (activeTab = 'controls')}
 										>
 											{$i18n.t('Controls')}
@@ -454,8 +466,8 @@
 										<button
 											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 											'files'
-												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
-												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
+												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 											on:click={() => (activeTab = 'files')}
 										>
 											{$i18n.t('Files')}
@@ -465,8 +477,8 @@
 										<button
 											class="px-2.5 py-1 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
 											'overview'
-												? 'bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white'
-												: 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
+												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
+												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 											on:click={() => (activeTab = 'overview')}
 										>
 											{$i18n.t('Overview')}
@@ -474,7 +486,7 @@
 									{/if}
 								</div>
 								<button
-									class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+									class="p-1 rounded-lg text-gray-500 dark:text-gray-400"
 									on:click={() => showControls.set(false)}
 									aria-label={$i18n.t('Close')}
 								>

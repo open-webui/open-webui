@@ -3,6 +3,7 @@
 	const i18n = getContext('i18n');
 
 	import Markdown from './Markdown.svelte';
+	import StructuredOutputRenderer from './StructuredOutputRenderer.svelte';
 	import {
 		artifactCode,
 		chatId,
@@ -13,10 +14,63 @@
 		showEmbeds
 	} from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
-	import { createMessagesList } from '$lib/utils';
+	import { createMessagesList, replaceOutsideCode } from '$lib/utils';
+
+	/**
+	 * Extracts all top-level <details>...</details> blocks from content,
+	 * handling nested <details> via depth tracking.
+	 * Returns { detailsContent, plainContent }.
+	 */
+	const extractDetailsBlocks = (text) => {
+		const blocks = [];
+		let remaining = text;
+		let result = '';
+		const openTag = '<details';
+		const closeTag = '</details>';
+
+		while (true) {
+			const start = remaining.indexOf(openTag);
+			if (start === -1) {
+				result += remaining;
+				break;
+			}
+
+			result += remaining.slice(0, start);
+
+			// Find matching closing tag with depth tracking
+			let depth = 1;
+			let idx = start + openTag.length;
+			while (depth > 0 && idx < remaining.length) {
+				if (remaining.startsWith(openTag, idx)) {
+					depth++;
+				} else if (remaining.startsWith(closeTag, idx)) {
+					depth--;
+				}
+				if (depth > 0) idx++;
+			}
+
+			if (depth === 0) {
+				const end = idx + closeTag.length;
+				blocks.push(remaining.slice(start, end));
+				remaining = remaining.slice(end);
+			} else {
+				// Unmatched opening tag, treat as plain text
+				result += remaining.slice(start);
+				remaining = '';
+				break;
+			}
+		}
+
+		return {
+			detailsContent: blocks.join('\n'),
+			plainContent: result.trim()
+		};
+	};
 
 	export let id;
 	export let content;
+	/** @type {import('./structuredOutput').OutputItem[]} */
+	export let output = [];
 
 	export let history;
 	export let messageId;
@@ -37,7 +91,7 @@
 	export let onSave = (e) => {};
 	export let onSourceClick = (e) => {};
 	export let onTaskClick = (e) => {};
-	export let onAddMessages = (e) => {};
+	export let onSetInputText = (text) => {};
 
 	let contentContainerElement;
 	let floatingButtonsElement;
@@ -66,6 +120,41 @@
 		}
 		sourceIds = [...new Set(result)];
 	};
+
+	/** @param {string} messageContent */
+	const formatMessageContent = (messageContent) =>
+		model?.info?.meta?.capabilities?.citations == false
+			? replaceOutsideCode(messageContent, (segment) =>
+					segment.replace(/\s*(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/g, '')
+				)
+			: messageContent;
+
+	const markdownUpdateHandler = /** @type {any} */ (
+		async (/** @type {{ lang?: string; text?: string }} */ token) => {
+			const { lang = '', text: code = '' } = token;
+
+			if (
+				($settings?.detectArtifacts ?? true) &&
+				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
+				!$mobile &&
+				$chatId
+			) {
+				await tick();
+				showArtifacts.set(true);
+				showControls.set(true);
+			}
+		}
+	);
+
+	const previewHandler = /** @type {any} */ (
+		async (/** @type {string} */ value) => {
+			console.log('Preview', value);
+			await artifactCode.set(/** @type {any} */ (value));
+			await showControls.set(true);
+			await showArtifacts.set(true);
+			await showEmbeds.set(false);
+		}
+	);
 
 	const updateButtonPosition = (event) => {
 		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
@@ -140,78 +229,100 @@
 		}
 	};
 
-	onMount(() => {
-		if (floatingButtons) {
-			contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
+	// Reactive listener attachment: re-attaches when floatingButtons
+	// transitions from false → true (e.g. when message.done flips).
+	let listenersAttached = false;
+
+	function attachListeners() {
+		if (!listenersAttached && contentContainerElement) {
+			contentContainerElement.addEventListener('mouseup', updateButtonPosition);
 			document.addEventListener('mouseup', updateButtonPosition);
 			document.addEventListener('keydown', keydownHandler);
+			listenersAttached = true;
 		}
-	});
+	}
 
-	onDestroy(() => {
-		if (floatingButtons) {
+	function detachListeners() {
+		if (listenersAttached) {
 			contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
 			document.removeEventListener('mouseup', updateButtonPosition);
 			document.removeEventListener('keydown', keydownHandler);
+			listenersAttached = false;
 		}
+	}
+
+	$: if (floatingButtons && contentContainerElement) {
+		attachListeners();
+	} else {
+		detachListeners();
+	}
+
+	onDestroy(() => {
+		detachListeners();
 	});
 </script>
 
 <div bind:this={contentContainerElement}>
-	<Markdown
-		{id}
-		content={model?.info?.meta?.capabilities?.citations == false
-			? content.replace(/\s*(\[(?:\d+(?:#[^,\]\s]+)?(?:,\s*\d+(?:#[^,\]\s]+)?)*)\])+/g, '')
-			: content}
-		{model}
-		{save}
-		{preview}
-		{done}
-		{editCodeBlock}
-		{topPadding}
-		{sourceIds}
-		{onSourceClick}
-		{onTaskClick}
-		{onSave}
-		onUpdate={async (token) => {
-			const { lang, text: code } = token;
+	{#if output?.length}
+		<StructuredOutputRenderer
+			{id}
+			{output}
+			{model}
+			{save}
+			{preview}
+			{done}
+			{editCodeBlock}
+			{topPadding}
+			{sourceIds}
+			renderMarkdown={$settings?.renderMarkdownInAssistantMessages ?? true}
+			{formatMessageContent}
+			{onSourceClick}
+			{onTaskClick}
+			{onSave}
+			onUpdate={markdownUpdateHandler}
+			onPreview={previewHandler}
+		/>
+	{:else if $settings?.renderMarkdownInAssistantMessages ?? true}
+		<div class="markdown-prose">
+			<Markdown
+				{id}
+				content={formatMessageContent(content)}
+				{model}
+				{save}
+				{preview}
+				{done}
+				{editCodeBlock}
+				{topPadding}
+				{sourceIds}
+				{onSourceClick}
+				{onTaskClick}
+				{onSave}
+				onUpdate={markdownUpdateHandler}
+				onPreview={previewHandler}
+			/>
+		</div>
+	{:else}
+		{@const extracted = extractDetailsBlocks(content)}
 
-			if (
-				($settings?.detectArtifacts ?? true) &&
-				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
-				!$mobile &&
-				$chatId
-			) {
-				await tick();
-				showArtifacts.set(true);
-				showControls.set(true);
-			}
-		}}
-		onPreview={async (value) => {
-			console.log('Preview', value);
-			await artifactCode.set(value);
-			await showControls.set(true);
-			await showArtifacts.set(true);
-			await showEmbeds.set(false);
-		}}
-	/>
+		{#if extracted.detailsContent}
+			<!-- Render structural blocks (tool calls, reasoning, etc.) through Markdown -->
+			<div class="markdown-prose">
+				<Markdown {id} content={extracted.detailsContent} {preview} {done} />
+			</div>
+		{/if}
+		{#if extracted.plainContent}
+			<div class="whitespace-pre-wrap text-[0.9375rem]">{extracted.plainContent}</div>
+		{/if}
+	{/if}
 </div>
 
 {#if floatingButtons}
 	<FloatingButtons
 		bind:this={floatingButtonsElement}
 		{id}
-		{messageId}
 		actions={$settings?.floatingActionButtons ?? []}
-		model={(selectedModels ?? []).includes(model?.id)
-			? model?.id
-			: (selectedModels ?? []).length > 0
-				? selectedModels.at(0)
-				: (model?.id ?? null)}
-		messages={createMessagesList(history, messageId)}
-		onAdd={({ modelId, parentId, messages }) => {
-			console.log(modelId, parentId, messages);
-			onAddMessages({ modelId, parentId, messages });
+		onSetInputText={(text) => {
+			onSetInputText(text);
 			closeFloatingButtons();
 		}}
 	/>

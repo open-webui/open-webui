@@ -1,6 +1,7 @@
-from pydantic import BaseModel
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Union
+
+from pydantic import BaseModel
 
 
 class VectorItem(BaseModel):
@@ -61,6 +62,18 @@ class VectorDBBase(ABC):
     ) -> Optional[SearchResult]:
         """Search for similar vectors in a collection."""
         pass
+
+    def hybrid_search(
+        self,
+        collection_name: str,
+        query: str,
+        vectors: List[List[Union[float, int]]],
+        filter: Optional[Dict] = None,
+        limit: int = 10,
+        hybrid_bm25_weight: float = 0.5,
+    ) -> Optional[SearchResult]:
+        """Search using a backend-native hybrid keyword/vector implementation when available."""
+        return None
 
     @abstractmethod
     def query(self, collection_name: str, filter: Dict, limit: Optional[int] = None) -> Optional[GetResult]:

@@ -49,7 +49,7 @@
 <div
 	class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
 >
-	<div class="flex items-center text-xl font-medium px-0.5 gap-2 shrink-0">
+	<div class="flex items-center text-xl font-normal px-0.5 gap-2 shrink-0">
 		{$i18n.t('User Activity')}
 		<span class="text-lg text-gray-500">{userStats.length} {$i18n.t('users')}</span>
 	</div>
@@ -132,18 +132,18 @@
 					<tr
 						class="bg-white dark:bg-gray-900 text-xs hover:bg-gray-50 dark:hover:bg-gray-850/50 transition"
 					>
-						<td class="px-3 py-1.5 font-medium text-gray-900 dark:text-white">
+						<td class="px-3 py-1.5 font-normal text-gray-900 dark:text-white">
 							{idx + 1}
 						</td>
 						<td class="px-3 py-1.5">
-							<span class="font-medium text-gray-800 dark:text-gray-200 font-mono text-xs">
+							<span class="font-normal text-gray-800 dark:text-gray-200 font-mono text-xs">
 								{user.user_id.substring(0, 8)}...
 							</span>
 						</td>
-						<td class="px-3 py-1.5 text-right font-medium text-gray-900 dark:text-white">
+						<td class="px-3 py-1.5 text-right font-normal text-gray-900 dark:text-white">
 							{user.count.toLocaleString()}
 						</td>
-						<td class="px-3 py-1.5 text-right font-medium text-blue-500">
+						<td class="px-3 py-1.5 text-right font-normal text-blue-500">
 							{((user.count / totalMessages) * 100).toFixed(1)}%
 						</td>
 					</tr>

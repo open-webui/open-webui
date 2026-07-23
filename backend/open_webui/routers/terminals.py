@@ -12,12 +12,17 @@ from urllib.parse import unquote
 import aiohttp
 from fastapi import APIRouter, Depends, Request, Response, WebSocket
 from fastapi.responses import JSONResponse, StreamingResponse
-from starlette.background import BackgroundTask
-
-from open_webui.utils.auth import get_verified_user
-from open_webui.utils.access_control import has_connection_access
+from open_webui.config import TERMINAL_PROXY_HEADERS
+from open_webui.events import EVENTS, publish_event
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
+from open_webui.utils.access_control import has_connection_access
+from open_webui.utils.auth import get_verified_user
+from open_webui.utils.terminals import get_terminal_server_url
+from open_webui.utils.tools import bearer_auth_header, normalize_bearer_token
+from starlette.background import BackgroundTask
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +39,17 @@ def _sanitize_proxy_path(path: str) -> str | None:
     Trailing slashes are preserved — many upstream frameworks treat
     ``/path`` and ``/path/`` differently.
     """
-    decoded = unquote(path)
+    # Decode until stable: a single unquote pass leaves %252e%252e as %2e%2e,
+    # which the upstream then re-decodes into '..', bypassing the check below.
+    decoded = path
+    for _ in range(8):
+        once = unquote(decoded)
+        if once == decoded:
+            break
+        decoded = once
+    # Fail closed: still encoded after the cap means the upstream would decode further into traversal.
+    if unquote(decoded) != decoded:
+        return None
     had_trailing_slash = decoded.endswith('/')
     normalized = posixpath.normpath(decoded)
     # Remove any leading slashes that would reset the base
@@ -51,7 +66,7 @@ def _sanitize_proxy_path(path: str) -> str | None:
 @router.get('/')
 async def list_terminal_servers(request: Request, user=Depends(get_verified_user)):
     """Return terminal servers the authenticated user has access to."""
-    connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connections = await Config.get('terminal_server.connections', []) or []
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
 
     return [
@@ -76,7 +91,7 @@ async def proxy_terminal(
     user=Depends(get_verified_user),
 ):
     """Proxy a request to the admin terminal server identified by *server_id*."""
-    connections = request.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connections = await Config.get('terminal_server.connections', []) or []
     connection = next((c for c in connections if c.get('id') == server_id), None)
 
     if connection is None:
@@ -86,7 +101,7 @@ async def proxy_terminal(
     if not await has_connection_access(user, connection, user_group_ids):
         return JSONResponse({'error': 'Access denied'}, status_code=403)
 
-    base_url = (connection.get('url') or '').rstrip('/')
+    base_url = get_terminal_server_url(connection)
     if not base_url:
         return JSONResponse({'error': 'Terminal server URL not configured'}, status_code=503)
 
@@ -95,11 +110,6 @@ async def proxy_terminal(
         return JSONResponse({'error': 'Invalid path'}, status_code=400)
 
     target_url = f'{base_url}/{safe_path}'
-
-    # Route through orchestrator policy endpoint if policy_id is set
-    policy_id = connection.get('policy_id')
-    if policy_id:
-        target_url = f'{base_url}/p/{policy_id}/{safe_path}'
 
     if request.query_params:
         target_url += f'?{request.query_params}'
@@ -113,15 +123,15 @@ async def proxy_terminal(
     auth_type = connection.get('auth_type', 'bearer')
 
     if auth_type == 'bearer':
-        headers['Authorization'] = f'Bearer {connection.get("key", "")}'
+        headers.update(bearer_auth_header(connection.get('key', '')))
     elif auth_type == 'session':
         cookies = request.cookies
-        headers['Authorization'] = f'Bearer {request.state.token.credentials}'
+        headers.update(bearer_auth_header(request.state.token.credentials))
     elif auth_type == 'system_oauth':
         cookies = request.cookies
         oauth_token = request.headers.get('x-oauth-access-token', '')
         if oauth_token:
-            headers['Authorization'] = f'Bearer {oauth_token}'
+            headers.update(bearer_auth_header(oauth_token))
     # auth_type == "none": no Authorization header
 
     content_type = request.headers.get('content-type')
@@ -141,6 +151,7 @@ async def proxy_terminal(
             headers=headers,
             cookies=cookies,
             data=body or None,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
 
         upstream_content_type = upstream_response.headers.get('content-type', '')
@@ -149,6 +160,8 @@ async def proxy_terminal(
             for key, value in upstream_response.headers.items()
             if key.lower() not in STRIPPED_RESPONSE_HEADERS
         }
+        if TERMINAL_PROXY_HEADERS:
+            filtered_headers.update(TERMINAL_PROXY_HEADERS)
 
         # Stream binary responses directly
         if any(t in upstream_content_type for t in STREAMING_CONTENT_TYPES):
@@ -194,7 +207,8 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     """
     import asyncio
     import json
-    from open_webui.utils.auth import decode_token
+
+    from open_webui.utils.auth import decode_token, is_valid_token
 
     # First-message authentication
     try:
@@ -205,7 +219,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
             return None
         token = payload.get('token', '')
         data = decode_token(token)
-        if data is None or 'id' not in data:
+        if data is None or 'id' not in data or not await is_valid_token(data, getattr(ws.app.state, 'redis', None)):
             await ws.close(code=4001, reason='Invalid token')
             return None
         user = await Users.get_user_by_id(data['id'])
@@ -220,7 +234,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
         return None
 
     # Resolve terminal server
-    connections = ws.app.state.config.TERMINAL_SERVER_CONNECTIONS or []
+    connections = await Config.get('terminal_server.connections', []) or []
     connection = next((c for c in connections if c.get('id') == server_id), None)
 
     if connection is None:
@@ -254,7 +268,7 @@ async def ws_terminal(
         return
     user, connection = result
 
-    base_url = (connection.get('url') or '').rstrip('/')
+    base_url = get_terminal_server_url(connection)
     if not base_url:
         await ws.close(code=4003, reason='Terminal server URL not configured')
         return
@@ -262,32 +276,43 @@ async def ws_terminal(
     # Build upstream WebSocket URL (no token in URL)
     ws_base = base_url.replace('https://', 'wss://').replace('http://', 'ws://')
 
-    # Route through orchestrator policy endpoint if policy_id is set
-    policy_id = connection.get('policy_id')
     upstream_params = {}
     # For orchestrator-backed servers, pass user_id
     upstream_params['user_id'] = user.id
 
     import urllib.parse
 
-    if policy_id:
-        upstream_url = f'{ws_base}/p/{policy_id}/api/terminals/{session_id}'
-    else:
-        upstream_url = f'{ws_base}/api/terminals/{session_id}'
+    # Encode session_id as an opaque path segment so it cannot smuggle '?'/'#'/'&' (at any
+    # decode depth) and inject an attacker-chosen user_id ahead of the one appended below.
+    safe_session_id = urllib.parse.quote(session_id, safe='')
+
+    upstream_url = f'{ws_base}/api/terminals/{safe_session_id}'
     if upstream_params:
         upstream_url += f'?{urllib.parse.urlencode(upstream_params)}'
 
+    app = ws.scope.get('app')
+    opened = False
     session = aiohttp.ClientSession()
     try:
-        async with session.ws_connect(upstream_url) as upstream:
+        async with session.ws_connect(upstream_url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as upstream:
             import asyncio
             import json as _json
 
             # First-message auth to upstream terminal server
             auth_type = connection.get('auth_type', 'bearer')
             if auth_type == 'bearer':
-                key = connection.get('key', '')
+                key = normalize_bearer_token(connection.get('key', ''))
                 await upstream.send_str(_json.dumps({'type': 'auth', 'token': key}))
+
+            await publish_event(
+                app,
+                EVENTS.TERMINAL_SESSION_OPENED,
+                actor=user,
+                subject_id=session_id,
+                subject_type='terminal.session',
+                data={'server_id': server_id},
+            )
+            opened = True
 
             async def _client_to_upstream():
                 """Forward client → upstream."""
@@ -319,15 +344,33 @@ async def ws_terminal(
                 except Exception:
                     pass
 
-            await asyncio.gather(
-                _client_to_upstream(),
-                _upstream_to_client(),
-                return_exceptions=True,
-            )
+            # End the proxy as soon as either direction finishes (e.g. a
+            # graceful upstream CLOSE) and cancel the sibling, which would
+            # otherwise hang on a blocked ws.receive() until the browser leaves.
+            tasks = [
+                asyncio.create_task(_client_to_upstream()),
+                asyncio.create_task(_upstream_to_client()),
+            ]
+            _done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            for task in pending:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
     except Exception as e:
         log.exception('Terminal WebSocket proxy error: %s', e)
     finally:
         await session.close()
+        if opened:
+            await publish_event(
+                app,
+                EVENTS.TERMINAL_SESSION_CLOSED,
+                actor=user,
+                subject_id=session_id,
+                subject_type='terminal.session',
+                data={'server_id': server_id},
+            )
         try:
             await ws.close()
         except Exception:

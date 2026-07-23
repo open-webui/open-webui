@@ -3,13 +3,11 @@ import time
 import uuid
 from typing import Optional
 
-from sqlalchemy import select, delete
-from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, get_async_db_context
-
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, Text, UniqueConstraint, or_, and_
+from sqlalchemy import BigInteger, Column, Text, UniqueConstraint, and_, delete, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -295,8 +293,7 @@ class AccessGrantsTable:
         async with get_async_db_context(db) as db:
             # Check for existing grant
             result = await db.execute(
-                select(AccessGrant)
-                .filter_by(
+                select(AccessGrant).filter_by(
                     resource_type=resource_type,
                     resource_id=resource_id,
                     principal_type=principal_type,
@@ -334,8 +331,7 @@ class AccessGrantsTable:
         """Remove a single access grant."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                delete(AccessGrant)
-                .filter_by(
+                delete(AccessGrant).filter_by(
                     resource_type=resource_type,
                     resource_id=resource_id,
                     principal_type=principal_type,
@@ -355,8 +351,7 @@ class AccessGrantsTable:
         """Remove all access grants for a resource."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                delete(AccessGrant)
-                .filter_by(
+                delete(AccessGrant).filter_by(
                     resource_type=resource_type,
                     resource_id=resource_id,
                 )
@@ -451,8 +446,7 @@ class AccessGrantsTable:
         """
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(AccessGrant)
-                .filter_by(
+                select(AccessGrant).filter_by(
                     resource_type=resource_type,
                     resource_id=resource_id,
                 )
@@ -470,8 +464,7 @@ class AccessGrantsTable:
         """Get all grants for a specific resource."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(AccessGrant)
-                .filter_by(
+                select(AccessGrant).filter_by(
                     resource_type=resource_type,
                     resource_id=resource_id,
                 )
@@ -490,8 +483,7 @@ class AccessGrantsTable:
             return {}
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(AccessGrant)
-                .filter(
+                select(AccessGrant).filter(
                     AccessGrant.resource_type == resource_type,
                     AccessGrant.resource_id.in_(resource_ids),
                 )
@@ -629,13 +621,12 @@ class AccessGrantsTable:
         Get all users who have the specified permission on a resource.
         Returns a list of UserModel instances.
         """
-        from open_webui.models.users import Users, UserModel
         from open_webui.models.groups import Groups
+        from open_webui.models.users import UserModel, Users
 
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(AccessGrant)
-                .filter_by(
+                select(AccessGrant).filter_by(
                     resource_type=resource_type,
                     resource_id=resource_id,
                     permission=permission,

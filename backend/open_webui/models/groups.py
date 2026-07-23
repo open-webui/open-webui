@@ -1,25 +1,29 @@
 import json
 import logging
 import time
-from typing import Optional
 import uuid
+from typing import Optional
 
-from sqlalchemy import select, delete, update, func, and_, or_, cast, String
-from sqlalchemy.ext.asyncio import AsyncSession
-from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.env import DEFAULT_GROUP_SHARE_PERMISSION
-
+from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.files import FileMetadataResponse
-
-
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Column,
-    Text,
-    JSON,
     ForeignKey,
+    String,
+    Text,
+    and_,
+    cast,
+    delete,
+    func,
+    or_,
+    select,
+    update,
 )
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -261,12 +265,10 @@ class GroupTable:
 
                 if 'share' in filter:
                     share_value = filter['share']
-                    stmt = stmt.filter(Group.data.op('->>') ('share') == str(share_value))
+                    stmt = stmt.filter(Group.data.op('->>')('share') == str(share_value))
 
             # Get total count
-            count_result = await db.execute(
-                select(func.count()).select_from(stmt.subquery())
-            )
+            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
             total = count_result.scalar()
 
             member_count = (
@@ -348,7 +350,9 @@ class GroupTable:
 
             return [m[0] for m in members]
 
-    async def get_group_user_ids_by_ids(self, group_ids: list[str], db: Optional[AsyncSession] = None) -> dict[str, list[str]]:
+    async def get_group_user_ids_by_ids(
+        self, group_ids: list[str], db: Optional[AsyncSession] = None
+    ) -> dict[str, list[str]]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 select(GroupMember.group_id, GroupMember.user_id).filter(GroupMember.group_id.in_(group_ids))
@@ -362,7 +366,9 @@ class GroupTable:
 
             return group_user_ids
 
-    async def set_group_user_ids_by_id(self, group_id: str, user_ids: list[str], db: Optional[AsyncSession] = None) -> None:
+    async def set_group_user_ids_by_id(
+        self, group_id: str, user_ids: list[str], db: Optional[AsyncSession] = None
+    ) -> None:
         async with get_async_db_context(db) as db:
             # Delete existing members
             await db.execute(delete(GroupMember).filter(GroupMember.group_id == group_id))
@@ -411,7 +417,9 @@ class GroupTable:
         try:
             async with get_async_db_context(db) as db:
                 await db.execute(
-                    update(Group).filter_by(id=id).values(
+                    update(Group)
+                    .filter_by(id=id)
+                    .values(
                         **form_data.model_dump(exclude_none=True),
                         updated_at=int(time.time()),
                     )
@@ -455,14 +463,10 @@ class GroupTable:
                 # Remove the user from each group
                 for group in groups:
                     await db.execute(
-                        delete(GroupMember).filter(
-                            GroupMember.group_id == group.id, GroupMember.user_id == user_id
-                        )
+                        delete(GroupMember).filter(GroupMember.group_id == group.id, GroupMember.user_id == user_id)
                     )
 
-                    await db.execute(
-                        update(Group).filter_by(id=group.id).values(updated_at=int(time.time()))
-                    )
+                    await db.execute(update(Group).filter_by(id=group.id).values(updated_at=int(time.time())))
 
                 await db.commit()
                 return True
@@ -507,7 +511,9 @@ class GroupTable:
                         continue
             return new_groups
 
-    async def sync_groups_by_group_names(self, user_id: str, group_names: list[str], db: Optional[AsyncSession] = None) -> bool:
+    async def sync_groups_by_group_names(
+        self, user_id: str, group_names: list[str], db: Optional[AsyncSession] = None
+    ) -> bool:
         async with get_async_db_context(db) as db:
             try:
                 now = int(time.time())
@@ -538,9 +544,7 @@ class GroupTable:
                         )
                     )
 
-                    await db.execute(
-                        update(Group).filter(Group.id.in_(groups_to_remove)).values(updated_at=now)
-                    )
+                    await db.execute(update(Group).filter(Group.id.in_(groups_to_remove)).values(updated_at=now))
 
                 # 5. Bulk insert missing memberships
                 for group_id in groups_to_add:
@@ -555,9 +559,7 @@ class GroupTable:
                     )
 
                 if groups_to_add:
-                    await db.execute(
-                        update(Group).filter(Group.id.in_(groups_to_add)).values(updated_at=now)
-                    )
+                    await db.execute(update(Group).filter(Group.id.in_(groups_to_add)).values(updated_at=now))
 
                 await db.commit()
                 return True

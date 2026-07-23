@@ -1,18 +1,32 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
+	import type { Writable } from 'svelte/store';
 	import Tooltip from '../common/Tooltip.svelte';
+	import { formatChord, isConfigurableShortcut, keybindings, shortcuts } from '$lib/shortcuts';
 	import type { Shortcut } from '$lib/shortcuts';
 
-	export let shortcut: Shortcut;
-	export let isMac: boolean;
+	type ShortcutDefinition = NonNullable<(typeof shortcuts)[keyof typeof shortcuts]>;
+	type I18nStore = Writable<{
+		t: (key: string, options?: Record<string, unknown>) => string;
+	}>;
 
-	const i18n = getContext('i18n');
+	export let id: Shortcut | undefined = undefined;
+	export let shortcut: ShortcutDefinition;
+	export let isMac: boolean;
+	export let compact = false;
+	export let keysOnly = false;
+
+	const i18n: I18nStore = getContext('i18n');
 	let keyboardLayoutMap: Map<string, string> | undefined;
 
 	onMount(async () => {
-		if (navigator.keyboard && 'getLayoutMap' in navigator.keyboard) {
+		const nav = navigator as Navigator & {
+			keyboard?: { getLayoutMap?: () => Promise<Map<string, string>> };
+		};
+
+		if (nav.keyboard?.getLayoutMap) {
 			try {
-				keyboardLayoutMap = await navigator.keyboard.getLayoutMap();
+				keyboardLayoutMap = await nav.keyboard.getLayoutMap();
 			} catch (error) {
 				console.error('Failed to get keyboard layout map:', error);
 			}
@@ -46,7 +60,7 @@
 			case 'escape':
 				return 'Esc';
 			case 'enter':
-				return isMac ? '↩' : 'Enter';
+				return isMac ? '↩\uFE0E' : 'Enter';
 			case 'tab':
 				return isMac ? '⇥' : 'Tab';
 			case 'arrowup':
@@ -70,27 +84,59 @@
 				return key.toUpperCase();
 		}
 	}
+
+	function visibleKeys(keys: string[]): string[] {
+		return keys.filter((key) => !(key.toLowerCase() === 'delete' && keys.includes('Backspace')));
+	}
+
+	function formatKeys(keys: string[]): string {
+		return visibleKeys(keys)
+			.map(formatKey)
+			.join(isMac ? '' : ' + ');
+	}
+
+	function displayKeys(): string {
+		if (id && isConfigurableShortcut(id)) {
+			return formatChord($keybindings[id]) || $i18n.t('Unassigned');
+		}
+		return formatKeys(shortcut.keys);
+	}
 </script>
 
-<div class="w-full flex justify-between">
-	<div class="text-sm whitespace-pre-line">
-		{#if shortcut.tooltip}
-			<Tooltip content={$i18n.t(shortcut.tooltip)}>
-				<span class="whitespace-nowrap">
-					{$i18n.t(shortcut.name)}<span class="text-xs">&nbsp;*</span>
-				</span>
-			</Tooltip>
-		{:else}
-			{$i18n.t(shortcut.name)}
+{#if keysOnly}
+	<span
+		class="inline-flex min-h-[1.125rem] max-w-[9.5rem] shrink-0 items-center justify-center rounded-full bg-gray-100 px-[0.4375rem] py-0.5 text-center text-[0.625rem] font-medium leading-none text-gray-500 dark:bg-white/6 dark:text-gray-400"
+	>
+		{displayKeys()}
+	</span>
+{:else}
+	<div
+		class={compact
+			? 'min-w-0 flex-1 text-[0.71875rem] leading-tight text-gray-700 dark:text-gray-300'
+			: 'flex min-h-8 w-full items-center gap-3 px-1 py-1.5'}
+	>
+		<div
+			class={compact
+				? ''
+				: 'min-w-0 flex-1 text-[0.71875rem] leading-tight text-gray-700 dark:text-gray-300'}
+		>
+			{#if shortcut.tooltip}
+				<Tooltip content={$i18n.t(shortcut.tooltip)}>
+					<span class="inline-flex max-w-full items-baseline gap-1">
+						<span class="truncate whitespace-pre-line">{$i18n.t(shortcut.name)}</span>
+						<span class="text-[0.625rem] text-gray-400 dark:text-gray-600">*</span>
+					</span>
+				</Tooltip>
+			{:else}
+				<span class="whitespace-pre-line">{$i18n.t(shortcut.name)}</span>
+			{/if}
+		</div>
+		{#if !compact}
+			<span
+				class="inline-flex min-h-[1.125rem] max-w-[9.5rem] shrink-0 items-center justify-center rounded-full bg-gray-100 px-[0.4375rem] py-0.5 text-center text-[0.625rem] font-medium leading-none text-gray-500 dark:bg-white/6 dark:text-gray-400"
+			>
+				{displayKeys()}
+			</span>
 		{/if}
 	</div>
-	<div class="flex-shrink-0 flex justify-end self-start h-full space-x-1 text-xs">
-		{#each shortcut.keys.filter((key) => !(key.toLowerCase() === 'delete' && shortcut.keys.includes('Backspace'))) as key}
-			<div
-				class="h-fit px-1 py-0.5 flex items-start justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
-			>
-				{formatKey(key)}
-			</div>
-		{/each}
-	</div>
-</div>
+{/if}

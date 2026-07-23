@@ -2,15 +2,13 @@ import logging
 import time
 from typing import Optional
 
-from sqlalchemy import select, delete, update, or_
-from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, get_async_db_context
-from open_webui.models.users import Users, User, UserModel, UserResponse
-from open_webui.models.groups import Groups
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
-
+from open_webui.models.groups import Groups
+from open_webui.models.users import User, UserModel, UserResponse, Users
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, func
+from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, delete, func, or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -184,11 +182,13 @@ class SkillsTable:
                 skills.append(
                     SkillUserModel.model_validate(
                         {
-                            **(await self._to_skill_model(
-                                skill,
-                                access_grants=grants_map.get(skill.id, []),
-                                db=db,
-                            )).model_dump(),
+                            **(
+                                await self._to_skill_model(
+                                    skill,
+                                    access_grants=grants_map.get(skill.id, []),
+                                    db=db,
+                                )
+                            ).model_dump(),
                             'user': user.model_dump() if user else None,
                         }
                     )
@@ -259,12 +259,29 @@ class SkillsTable:
                         permission='read',
                     )
 
-                stmt = stmt.order_by(Skill.updated_at.desc())
+                order_by = filter.get('order_by')
+                direction = filter.get('direction')
+
+                if order_by == 'name':
+                    if direction == 'asc':
+                        stmt = stmt.order_by(Skill.name.asc())
+                    else:
+                        stmt = stmt.order_by(Skill.name.desc())
+                elif order_by == 'created_at':
+                    if direction == 'asc':
+                        stmt = stmt.order_by(Skill.created_at.asc())
+                    else:
+                        stmt = stmt.order_by(Skill.created_at.desc())
+                elif order_by == 'updated_at':
+                    if direction == 'asc':
+                        stmt = stmt.order_by(Skill.updated_at.asc())
+                    else:
+                        stmt = stmt.order_by(Skill.updated_at.desc())
+                else:
+                    stmt = stmt.order_by(Skill.updated_at.desc())
 
                 # Count BEFORE pagination
-                count_result = await db.execute(
-                    select(func.count()).select_from(stmt.subquery())
-                )
+                count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
                 total = count_result.scalar()
 
                 if skip:
@@ -282,11 +299,13 @@ class SkillsTable:
                 for skill, user in items:
                     skills.append(
                         SkillUserResponse(
-                            **(await self._to_skill_model(
-                                skill,
-                                access_grants=grants_map.get(skill.id, []),
-                                db=db,
-                            )).model_dump(),
+                            **(
+                                await self._to_skill_model(
+                                    skill,
+                                    access_grants=grants_map.get(skill.id, []),
+                                    db=db,
+                                )
+                            ).model_dump(),
                             user=(UserResponse(**UserModel.model_validate(user).model_dump()) if user else None),
                         )
                     )
@@ -296,7 +315,9 @@ class SkillsTable:
             log.exception(f'Error searching skills: {e}')
             return SkillListResponse(items=[], total=0)
 
-    async def update_skill_by_id(self, id: str, updated: dict, db: Optional[AsyncSession] = None) -> Optional[SkillModel]:
+    async def update_skill_by_id(
+        self, id: str, updated: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[SkillModel]:
         try:
             async with get_async_db_context(db) as db:
                 access_grants = updated.pop('access_grants', None)

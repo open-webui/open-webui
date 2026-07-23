@@ -31,6 +31,12 @@
 			label: $i18n.t('Code Interpreter'),
 			description: $i18n.t('Model can execute code and perform calculations')
 		},
+		terminal: {
+			label: $i18n.t('Terminal'),
+			description: $i18n.t(
+				'Model can access Open Terminal for command execution and file management'
+			)
+		},
 		usage: {
 			label: $i18n.t('Usage'),
 			description: $i18n.t(
@@ -60,6 +66,7 @@
 		web_search?: boolean;
 		image_generation?: boolean;
 		code_interpreter?: boolean;
+		terminal?: boolean;
 		usage?: boolean;
 		citations?: boolean;
 		status_updates?: boolean;
@@ -76,24 +83,21 @@
 </script>
 
 <div>
-	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Capabilities')}</div>
-	</div>
-	<div class="flex items-center mt-2 flex-wrap">
+	<div class="mb-1.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Capabilities')}</div>
+	<div class="grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
 		{#each visibleCapabilities as capability}
-			<div class=" flex items-center gap-2 mr-3">
+			<div class="flex min-h-6 items-center justify-between gap-2.5">
+				<div class="min-w-0 text-xs text-gray-600 dark:text-gray-400">
+					<Tooltip content={marked.parse(capabilityLabels[capability].description)}>
+						<span class="truncate">{$i18n.t(capabilityLabels[capability].label)}</span>
+					</Tooltip>
+				</div>
 				<Checkbox
 					state={capabilities[capability] ? 'checked' : 'unchecked'}
 					on:change={(e) => {
 						capabilities[capability] = e.detail === 'checked';
 					}}
 				/>
-
-				<div class=" py-0.5 text-sm capitalize">
-					<Tooltip content={marked.parse(capabilityLabels[capability].description)}>
-						{$i18n.t(capabilityLabels[capability].label)}
-					</Tooltip>
-				</div>
 			</div>
 		{/each}
 	</div>

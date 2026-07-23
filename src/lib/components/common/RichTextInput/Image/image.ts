@@ -1,4 +1,5 @@
 import { mergeAttributes, Node, nodeInputRule } from '@tiptap/core';
+import { safeImageUrl } from '$lib/utils/safeImageUrl';
 
 export interface ImageOptions {
 	/**
@@ -137,23 +138,23 @@ export const Image = Node.create<ImageOptions>({
 			if (editorFiles && node.attrs.src.startsWith('data://')) {
 				const file = editorFiles.find((f) => f.id === fileId);
 				if (file) {
-					img.setAttribute('src', file.url || '');
+					img.setAttribute('src', safeImageUrl(file.url || ''));
 				} else {
 					img.setAttribute('src', '/image-placeholder.png');
 				}
 			} else {
-				img.setAttribute('src', node.attrs.src || '');
+				img.setAttribute('src', safeImageUrl(node.attrs.src || ''));
 			}
 
 			img.setAttribute('alt', node.attrs.alt || '');
 			img.setAttribute('title', node.attrs.title || '');
 
 			img.addEventListener('data', (e) => {
-				const files = e?.files || [];
+				const files = e?.files || editor.storage?.files || [];
 				if (files && node.attrs.src.startsWith('data://')) {
-					const file = editorFiles.find((f) => f.id === fileId);
+					const file = files.find((f) => f.id === fileId);
 					if (file) {
-						img.setAttribute('src', file.url || '');
+						img.setAttribute('src', safeImageUrl(file.url || ''));
 					} else {
 						img.setAttribute('src', '/image-placeholder.png');
 					}

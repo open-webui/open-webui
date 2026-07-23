@@ -1,13 +1,16 @@
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
 	import { getContext, tick, onDestroy } from 'svelte';
 	import { formatFileSize } from '$lib/utils';
 	import type { FileEntry } from '$lib/apis/terminal';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Folder from '../../icons/Folder.svelte';
 	import EllipsisHorizontal from '../../icons/EllipsisHorizontal.svelte';
 	import GarbageBin from '../../icons/GarbageBin.svelte';
 	import Pencil from '../../icons/Pencil.svelte';
+	import Clipboard from '../../icons/Clipboard.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -28,6 +31,17 @@
 	export let selectedPaths: Set<string> = new Set();
 	export let onSelect: (entry: FileEntry, event: MouseEvent) => void = () => {};
 	export let onLongPress: () => void = () => {};
+	export let showDate: boolean = false;
+
+	const formatRelativeTime = (epoch: number): string => {
+		const diff = Math.floor(Date.now() / 1000) - epoch;
+		if (diff < 60) return 'just now';
+		if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+		if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+		if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
+		if (diff < 31536000) return `${Math.floor(diff / 2592000)}mo ago`;
+		return `${Math.floor(diff / 31536000)}y ago`;
+	};
 
 	let dragOverFolder = false;
 
@@ -269,7 +283,14 @@
 				</span>
 			{/if}
 			{#if entry.type === 'file' && entry.size !== undefined && !renaming}
+				{#if showDate && entry.modified}
+					<span class="text-[10px] text-gray-400 shrink-0"
+						>{formatRelativeTime(entry.modified)}</span
+					>
+				{/if}
 				<span class="text-xs text-gray-400 shrink-0">{formatFileSize(entry.size)}</span>
+			{:else if entry.type === 'directory' && showDate && entry.modified && !renaming}
+				<span class="text-[10px] text-gray-400 shrink-0">{formatRelativeTime(entry.modified)}</span>
 			{/if}
 		</button>
 
@@ -284,12 +305,10 @@
 			</button>
 
 			<div slot="content">
-				<div
-					class="min-w-[150px] rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
-				>
+				<DropdownMenu className="min-w-[150px] z-[9999999]">
 					<button
 						type="button"
-						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
 						on:click={(e) => {
 							e.stopPropagation();
 							const path =
@@ -303,7 +322,7 @@
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 20 20"
 							fill="currentColor"
-							class="size-4"
+							class="size-3.5"
 						>
 							<path
 								d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
@@ -317,28 +336,46 @@
 
 					<button
 						type="button"
-						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
+						on:click={(e) => {
+							e.stopPropagation();
+							const path =
+								entry.type === 'directory'
+									? `${currentPath}${entry.name}/`
+									: `${currentPath}${entry.name}`;
+							navigator.clipboard.writeText(path).then(() => {
+								toast.success($i18n.t('Path copied'));
+							});
+						}}
+					>
+						<Clipboard className="size-3.5" strokeWidth="1.5" />
+						<div class="flex items-center">{$i18n.t('Copy Path')}</div>
+					</button>
+
+					<button
+						type="button"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
 						on:click={(e) => {
 							e.stopPropagation();
 							startRename();
 						}}
 					>
-						<Pencil className="size-4" strokeWidth="1.5" />
+						<Pencil className="size-3.5" strokeWidth="1.5" />
 						<div class="flex items-center">{$i18n.t('Rename')}</div>
 					</button>
 
 					<button
 						type="button"
-						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
 						on:click={(e) => {
 							e.stopPropagation();
 							onDelete(`${currentPath}${entry.name}`, entry.name);
 						}}
 					>
-						<GarbageBin className="size-4" />
+						<GarbageBin className="size-3.5" />
 						<div class="flex items-center">{$i18n.t('Delete')}</div>
 					</button>
-				</div>
+				</DropdownMenu>
 			</div>
 		</Dropdown>
 	</div>

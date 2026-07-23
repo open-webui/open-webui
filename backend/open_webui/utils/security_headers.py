@@ -1,16 +1,37 @@
-import re
 import os
-
-from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
+import re
 from typing import Dict
 
+from starlette.datastructures import MutableHeaders
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-        response.headers.update(set_security_headers())
-        return response
+
+class SecurityHeadersMiddleware:
+    """Apply configured security headers to every HTTP response.
+
+    Pure ASGI to avoid BaseHTTPMiddleware's response re-buffering. See
+    open_webui.utils.asgi_middleware for the rationale.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+        # Headers derive only from env vars, which are static for the process
+        # lifetime — compute them once instead of per response.
+        self._headers = list(set_security_headers().items())
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope['type'] != 'http' or not self._headers:
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_security_headers(message: Message) -> None:
+            if message['type'] == 'http.response.start':
+                headers = MutableHeaders(scope=message)
+                for key, value in self._headers:
+                    headers[key] = value
+            await send(message)
+
+        await self.app(scope, receive, send_with_security_headers)
 
 
 def set_security_headers() -> Dict[str, str]:
@@ -28,6 +49,10 @@ def set_security_headers() -> Dict[str, str]:
     - x-frame-options
     - x-permitted-cross-domain-policies
     - content-security-policy
+    - content-security-policy-report-only
+    - cross-origin-embedder-policy
+    - cross-origin-opener-policy
+    - cross-origin-resource-policy
     - reporting-endpoints
 
     Each environment variable is associated with a specific setter function
@@ -48,6 +73,10 @@ def set_security_headers() -> Dict[str, str]:
         'XFRAME_OPTIONS': set_xframe,
         'XPERMITTED_CROSS_DOMAIN_POLICIES': set_xpermitted_cross_domain_policies,
         'CONTENT_SECURITY_POLICY': set_content_security_policy,
+        'CONTENT_SECURITY_POLICY_REPORT_ONLY': set_content_security_policy_report_only,
+        'CROSS_ORIGIN_EMBEDDER_POLICY': set_cross_origin_embedder_policy,
+        'CROSS_ORIGIN_OPENER_POLICY': set_cross_origin_opener_policy,
+        'CROSS_ORIGIN_RESOURCE_POLICY': set_cross_origin_resource_policy,
         'REPORTING_ENDPOINTS': set_reporting_endpoints,
     }
 
@@ -133,6 +162,38 @@ def set_xpermitted_cross_domain_policies(value: str):
 # Set Content-Security-Policy response header
 def set_content_security_policy(value: str):
     return {'Content-Security-Policy': value}
+
+
+# Set Content-Security-Policy-Report-Only response header
+def set_content_security_policy_report_only(value: str):
+    return {'Content-Security-Policy-Report-Only': value}
+
+
+# Set Cross-Origin-Embedder-Policy response header
+def set_cross_origin_embedder_policy(value: str):
+    pattern = r'^(unsafe-none|require-corp|credentialless)$'
+    match = re.match(pattern, value, re.IGNORECASE)
+    if not match:
+        value = 'require-corp'
+    return {'Cross-Origin-Embedder-Policy': value}
+
+
+# Set Cross-Origin-Opener-Policy response header
+def set_cross_origin_opener_policy(value: str):
+    pattern = r'^(unsafe-none|same-origin-allow-popups|same-origin)$'
+    match = re.match(pattern, value, re.IGNORECASE)
+    if not match:
+        value = 'same-origin'
+    return {'Cross-Origin-Opener-Policy': value}
+
+
+# Set Cross-Origin-Resource-Policy response header
+def set_cross_origin_resource_policy(value: str):
+    pattern = r'^(same-site|same-origin|cross-origin)$'
+    match = re.match(pattern, value, re.IGNORECASE)
+    if not match:
+        value = 'same-origin'
+    return {'Cross-Origin-Resource-Policy': value}
 
 
 # Set Reporting-Endpoints response header

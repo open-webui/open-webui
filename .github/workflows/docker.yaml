@@ -1,0 +1,395 @@
+name: Create and publish Docker images with specific build args
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - dev
+    tags:
+      - v*
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build:
+    runs-on: ${{ matrix.platform.runner }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - arch: linux/amd64
+            runner: ubuntu-latest
+          - arch: linux/arm64
+            runner: ubuntu-24.04-arm
+        variant:
+          - name: main
+            suffix: ""
+            build_args: ""
+            free_disk: false
+          - name: cuda
+            suffix: "-cuda"
+            build_args: "USE_CUDA=true"
+            free_disk: true
+          - name: cuda126
+            suffix: "-cuda126"
+            build_args: |
+              USE_CUDA=true
+              USE_CUDA_VER=cu126
+            free_disk: true
+          - name: ollama
+            suffix: "-ollama"
+            build_args: "USE_OLLAMA=true"
+            free_disk: false
+          - name: slim
+            suffix: "-slim"
+            build_args: "USE_SLIM=true"
+            free_disk: false
+
+    steps:
+      - name: Prepare environment
+        run: |
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+          platform=${{ matrix.platform.arch }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> ${GITHUB_ENV}
+
+      - name: Free disk space
+        if: matrix.variant.free_disk
+        run: rm -rf /opt/hostedtoolcache
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker images
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.FULL_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=git-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            ${{ matrix.variant.suffix != '' && format('type=raw,enable={0},prefix=,suffix=,value={1}', github.ref == 'refs/heads/main', matrix.variant.name) || '' }}
+          flavor: |
+            latest=${{ github.ref == 'refs/heads/main' }}
+            ${{ matrix.variant.suffix != '' && format('suffix={0},onlatest=true', matrix.variant.suffix) || '' }}
+
+      - name: Extract metadata for Docker cache
+        id: cache-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.FULL_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
+          flavor: |
+            prefix=cache-${{ matrix.variant.name }}-${{ matrix.platform.arch }}-
+            latest=false
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        id: build
+        with:
+          context: .
+          push: true
+          platforms: ${{ matrix.platform.arch }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
+          cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          sbom: true
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
+            ${{ matrix.variant.build_args }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.variant.name }}-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: ${{ !cancelled() }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - name: main
+            suffix: ""
+          - name: cuda
+            suffix: "-cuda"
+          - name: cuda126
+            suffix: "-cuda126"
+          - name: ollama
+            suffix: "-ollama"
+          - name: slim
+            suffix: "-slim"
+
+    steps:
+      - name: Prepare environment
+        run: |
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+
+      - name: Download digests
+        id: download
+        uses: actions/download-artifact@v5
+        with:
+          pattern: digests-${{ matrix.variant.name }}-*
+          path: /tmp/digests
+          merge-multiple: true
+        continue-on-error: true
+
+      - name: Check digests
+        id: check
+        run: |
+          count=$(find /tmp/digests -type f 2>/dev/null | wc -l | tr -d ' ')
+          echo "digest_count=$count" >> $GITHUB_OUTPUT
+          if [ "$count" -lt 2 ]; then
+            echo "::warning::${{ matrix.variant.name }}: found $count digest(s), need 2 (one per arch). Skipping merge."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker images
+        if: steps.check.outputs.skip != 'true'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.FULL_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=git-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            ${{ matrix.variant.suffix != '' && format('type=raw,enable={0},prefix=,suffix=,value={1}', github.ref == 'refs/heads/main', matrix.variant.name) || '' }}
+          flavor: |
+            latest=${{ github.ref == 'refs/heads/main' }}
+            ${{ matrix.variant.suffix != '' && format('suffix={0},onlatest=true', matrix.variant.suffix) || '' }}
+
+      - name: Create manifest list and push
+        if: steps.check.outputs.skip != 'true'
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.FULL_IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Inspect image
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+
+  notify-helm-charts:
+    runs-on: ubuntu-latest
+    needs: [merge]
+    if: ${{ !cancelled() && needs.merge.result == 'success' && (github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/tags/v')) }}
+    steps:
+      - name: Create Helm charts app token
+        id: helm-app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.HELM_CHARTS_APP_ID }}
+          private-key: ${{ secrets.HELM_CHARTS_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: helm-charts
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Verify published Open WebUI image
+        id: image
+        run: |
+          set -euo pipefail
+
+          image_name="ghcr.io/${GITHUB_REPOSITORY,,}"
+          ref_name="${GITHUB_REF_NAME}"
+
+          if [ "${GITHUB_REF}" = "refs/heads/dev" ]; then
+            image_tag="dev"
+          else
+            image_tag="${ref_name#v}"
+          fi
+
+          docker buildx imagetools inspect "${image_name}:${image_tag}"
+          echo "tag=${image_tag}" >> "${GITHUB_OUTPUT}"
+
+      - name: Dispatch Helm chart automation
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.helm-app-token.outputs.token }}
+          script: |
+            const isDev = context.ref === 'refs/heads/dev';
+            const eventType = isDev
+              ? 'open-webui-dev-image-published'
+              : 'open-webui-release-published';
+            const refName = context.ref.replace('refs/heads/', '').replace('refs/tags/', '');
+            const appVersion = refName.startsWith('v') ? refName.slice(1) : refName;
+            const payload = {
+              image_tag: isDev ? 'dev' : appVersion,
+              source_ref: context.ref,
+              source_sha: context.sha,
+              source_run_id: String(context.runId),
+              source_repository: context.repo.repo,
+            };
+
+            if (!isDev) {
+              payload.app_version = appVersion;
+            }
+
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: 'helm-charts',
+              event_type: eventType,
+              client_payload: payload,
+            });
+
+  copy-to-dockerhub:
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
+    needs: [merge]
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: main
+            suffix: ""
+          - variant: cuda
+            suffix: "-cuda"
+          - variant: cuda126
+            suffix: "-cuda126"
+          - variant: ollama
+            suffix: "-ollama"
+          - variant: slim
+            suffix: "-slim"
+
+    steps:
+      - name: Prepare environment
+        run: |
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Determine source and destination tags
+        id: tags
+        run: |
+          DOCKERHUB_IMAGE="openwebui/open-webui"
+          SUFFIX="${{ matrix.suffix }}"
+
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+            MAJOR_MINOR="${VERSION%.*}"
+
+            echo "tags<<EOF" >> $GITHUB_OUTPUT
+            echo "${VERSION}${SUFFIX}" >> $GITHUB_OUTPUT
+            echo "${MAJOR_MINOR}${SUFFIX}" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            if [ -z "$SUFFIX" ]; then
+              echo "tags=latest" >> $GITHUB_OUTPUT
+            else
+              VARIANT_NAME="${SUFFIX#-}"
+              echo "tags<<EOF" >> $GITHUB_OUTPUT
+              echo "latest${SUFFIX}" >> $GITHUB_OUTPUT
+              echo "${VARIANT_NAME}" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+          echo "dockerhub_image=${DOCKERHUB_IMAGE}" >> $GITHUB_OUTPUT
+
+      - name: Copy images from GHCR to Docker Hub
+        run: |
+          DOCKERHUB_IMAGE="${{ steps.tags.outputs.dockerhub_image }}"
+          SUFFIX="${{ matrix.suffix }}"
+
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+            SOURCE_TAG="${VERSION}${SUFFIX}"
+          else
+            if [ -z "$SUFFIX" ]; then
+              SOURCE_TAG="latest"
+            else
+              SOURCE_TAG="latest${SUFFIX}"
+            fi
+          fi
+
+          SOURCE="${{ env.FULL_IMAGE_NAME }}:${SOURCE_TAG}"
+
+          echo "Copying from ${SOURCE} to Docker Hub..."
+
+          while IFS= read -r TAG; do
+            [ -z "$TAG" ] && continue
+            DEST="${DOCKERHUB_IMAGE}:${TAG}"
+            echo "  -> ${DEST}"
+            docker buildx imagetools create -t "${DEST}" "${SOURCE}"
+          done <<< "${{ steps.tags.outputs.tags }}"

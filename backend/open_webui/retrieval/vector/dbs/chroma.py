@@ -1,29 +1,27 @@
-import chromadb
 import logging
-from chromadb import Settings
-from chromadb.utils.batch_utils import create_batches
-
 from typing import Optional
 
-from open_webui.retrieval.vector.main import (
-    VectorDBBase,
-    VectorItem,
-    SearchResult,
-    GetResult,
-)
-from open_webui.retrieval.vector.utils import process_metadata
-
+import chromadb
+from chromadb import Settings
+from chromadb.utils.batch_utils import create_batches
 from open_webui.config import (
+    CHROMA_CLIENT_AUTH_CREDENTIALS,
+    CHROMA_CLIENT_AUTH_PROVIDER,
     CHROMA_DATA_PATH,
+    CHROMA_DATABASE,
+    CHROMA_HTTP_HEADERS,
     CHROMA_HTTP_HOST,
     CHROMA_HTTP_PORT,
-    CHROMA_HTTP_HEADERS,
     CHROMA_HTTP_SSL,
     CHROMA_TENANT,
-    CHROMA_DATABASE,
-    CHROMA_CLIENT_AUTH_PROVIDER,
-    CHROMA_CLIENT_AUTH_CREDENTIALS,
 )
+from open_webui.retrieval.vector.main import (
+    GetResult,
+    SearchResult,
+    VectorDBBase,
+    VectorItem,
+)
+from open_webui.retrieval.vector.utils import process_metadata
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +57,11 @@ class ChromaClient(VectorDBBase):
 
     def has_collection(self, collection_name: str) -> bool:
         # Check if the collection exists based on the collection name.
-        collection_names = self.client.list_collections()
+        # chromadb's list_collections() returns Collection objects (1.x), so a
+        # bare `name in collections` membership test is always False — compare
+        # against the names. (hasattr guard tolerates versions that yield names.)
+        collections = self.client.list_collections()
+        collection_names = [c.name if hasattr(c, 'name') else c for c in collections]
         return collection_name in collection_names
 
     def delete_collection(self, collection_name: str):

@@ -1,34 +1,35 @@
+import asyncio
+import errno
+import hashlib
+import json
 import logging
 import os
 import uuid
-import json
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
-import asyncio
 
 from fastapi import (
-    BackgroundTasks,
     APIRouter,
+    BackgroundTasks,
     Depends,
     File,
     Form,
     HTTPException,
+    Query,
     Request,
     UploadFile,
     status,
-    Query,
 )
-
 from fastapi.responses import FileResponse, StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from open_webui.internal.db import get_async_session, get_async_db_context
-
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, STORAGE_LOCAL_CACHE, STORAGE_PROVIDER, UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
-
+from open_webui.events import EVENTS, publish_event
+from open_webui.internal.db import get_async_db_context, get_async_session
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
-from open_webui.models.users import Users
+from open_webui.models.config import Config
+from open_webui.models.chats import Chats
 from open_webui.models.files import (
     FileForm,
     FileListResponse,
@@ -36,22 +37,17 @@ from open_webui.models.files import (
     FileModelResponse,
     Files,
 )
-from open_webui.models.chats import Chats
-from open_webui.models.knowledge import Knowledges
 from open_webui.models.groups import Groups
-from open_webui.models.access_grants import AccessGrants
-
-
-from open_webui.routers.retrieval import ProcessFileForm, process_file
+from open_webui.models.knowledge import Knowledges
+from open_webui.models.users import Users
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.audio import transcribe
-
+from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.storage.provider import Storage
-
-
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -68,7 +64,11 @@ from open_webui.utils.access_control.files import has_access_to_file
 
 
 def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
-    """Check if a file is likely a text file by reading a chunk and validating UTF-8.
+    """Check if a file is likely a text file by reading a chunk and decoding it.
+
+    Tries UTF-8 first, then falls back to Latin-1 (which accepts every byte
+    in 0x00–0xFF) so that legacy-encoded files from Windows environments are
+    not misclassified as binary.
 
     This catches files whose extensions are mis-mapped by mimetypes/browsers
     (e.g. TypeScript .ts → video/mp2t) without maintaining an extension whitelist.
@@ -82,10 +82,30 @@ def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
         # Null bytes are a strong indicator of binary content
         if b'\x00' in chunk:
             return False
-        chunk.decode('utf-8')
+        try:
+            chunk.decode('utf-8')
+        except UnicodeDecodeError:
+            # Latin-1 always succeeds (every byte is valid), so this
+            # effectively just means "the file has no null bytes and is
+            # therefore likely text, even if not valid UTF-8".
+            chunk.decode('latin-1')
         return True
-    except (UnicodeDecodeError, Exception):
+    except Exception:
         return False
+
+
+def _cleanup_local_cache(file_path: str) -> None:
+    """Remove the local cached copy of a cloud-stored file after processing."""
+    if STORAGE_LOCAL_CACHE or STORAGE_PROVIDER == 'local':
+        return
+    try:
+        local_filename = os.path.basename(file_path)
+        local_path = os.path.join(UPLOAD_DIR, local_filename)
+        if os.path.isfile(local_path):
+            os.remove(local_path)
+            log.debug(f'Cleaned up local cache: {local_path}')
+    except OSError as e:
+        log.warning(f'Failed to clean up local cache for {file_path}: {e}')
 
 
 async def process_uploaded_file(
@@ -106,38 +126,103 @@ async def process_uploaded_file(
                 if _is_text_file(file_path):
                     content_type = 'text/plain'
 
-            if content_type:
-                stt_supported_content_types = getattr(request.app.state.config, 'STT_SUPPORTED_CONTENT_TYPES', [])
+            stt_supported = await Config.get('audio.stt.supported_content_types', [])
 
-                if strict_match_mime_type(stt_supported_content_types, content_type):
-                    file_path_processed = Storage.get_file(file_path)
-                    result = transcribe(request, file_path_processed, file_metadata, user)
+            if content_type and strict_match_mime_type(stt_supported, content_type):
+                # Audio / STT-supported files → transcribe then index
+                file_path_processed = await asyncio.to_thread(Storage.get_file, file_path)
+                result = await transcribe(
+                    request,
+                    file_path_processed,
+                    file_metadata,
+                    user,
+                )
+                await process_file(
+                    request,
+                    ProcessFileForm(file_id=file_item.id, content=result.get('text', '')),
+                    user=user,
+                    db=db_session,
+                )
 
-                    await process_file(
-                        request,
-                        ProcessFileForm(file_id=file_item.id, content=result.get('text', '')),
-                        user=user,
-                        db=db_session,
-                    )
-                elif (not content_type.startswith(('image/', 'video/'))) or (
-                    request.app.state.config.CONTENT_EXTRACTION_ENGINE == 'external'
-                ):
-                    await process_file(
-                        request,
-                        ProcessFileForm(file_id=file_item.id),
-                        user=user,
+            elif (
+                content_type
+                and content_type.startswith(('image/', 'video/'))
+                and await Config.get('rag.content_extraction_engine') != 'external'
+            ):
+                # Media files without an external extraction engine
+                if content_type.startswith('video/'):
+                    # Videos are stored as-is for downstream multimodal
+                    # processing (Tools, vision models). Attempting text
+                    # extraction causes "Timeout reached while detecting
+                    # encoding" errors.
+                    log.info(f'Video file detected ({content_type}), skipping text extraction')
+                    await Files.update_file_data_by_id(
+                        file_item.id,
+                        {'status': 'completed'},
                         db=db_session,
                     )
                 else:
                     raise Exception(f'File type {content_type} is not supported for processing')
+
             else:
-                log.info(f'File type {file.content_type} is not provided, but trying to process anyway')
+                # Documents, or any file when an external engine is configured
+                if not content_type:
+                    log.info(f'File type {file.content_type} is not provided, but trying to process anyway')
                 await process_file(
                     request,
                     ProcessFileForm(file_id=file_item.id),
                     user=user,
                     db=db_session,
                 )
+
+            # Auto-link to Knowledge Collection when uploaded from one (#24807).
+            # Mirrors POST /knowledge/{id}/file/add so linking doesn't depend
+            # on the frontend staying connected after upload.
+            knowledge_id = file_metadata.get('knowledge_id')
+            if knowledge_id:
+                try:
+                    # Gate like POST /knowledge/{id}/file/add: a client-supplied
+                    # metadata.knowledge_id must not let a non-writer attach files (CWE-862/863).
+                    knowledge = await Knowledges.get_knowledge_by_id(id=knowledge_id, db=db_session)
+                    can_write = bool(knowledge) and (
+                        knowledge.user_id == user.id
+                        or user.role == 'admin'
+                        or await AccessGrants.has_access(
+                            user_id=user.id,
+                            resource_type='knowledge',
+                            resource_id=knowledge.id,
+                            permission='write',
+                            db=db_session,
+                        )
+                    )
+                    if not can_write:
+                        log.warning(
+                            f'Refusing to auto-link file {file_item.id} to knowledge '
+                            f'{knowledge_id}: user {user.id} lacks write access'
+                        )
+                    else:
+                        # Keep the generic file status stream open until the
+                        # KB-specific vector write and durable link both finish.
+                        await Files.update_file_data_by_id(file_item.id, {'status': 'processing'}, db=db_session)
+                        await process_file(
+                            request,
+                            ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
+                            user=user,
+                            db=db_session,
+                        )
+                        knowledge_file = await Knowledges.add_file_to_knowledge_by_id(
+                            knowledge_id=knowledge_id,
+                            file_id=file_item.id,
+                            user_id=user.id,
+                            directory_id=file_metadata.get('directory_id'),
+                            db=db_session,
+                        )
+                        if not knowledge_file:
+                            raise Exception(f'Failed to link file {file_item.id} to knowledge {knowledge_id}')
+                        log.info(f'Linked file {file_item.id} to knowledge {knowledge_id}')
+                except Exception as e:
+                    log.warning(f'Failed to link file {file_item.id} to knowledge {knowledge_id}: {e}')
+                    raise
 
         except Exception as e:
             log.error(f'Error processing file: {file_item.id}')
@@ -150,11 +235,14 @@ async def process_uploaded_file(
                 db=db_session,
             )
 
-    if db:
-        await _process_handler(db)
-    else:
-        async with get_async_db_context() as db_session:
-            await _process_handler(db_session)
+    try:
+        if db:
+            await _process_handler(db)
+        else:
+            async with get_async_db_context() as db_session:
+                await _process_handler(db_session)
+    finally:
+        _cleanup_local_cache(file_path)
 
 
 @router.post('/', response_model=FileModelResponse)
@@ -168,7 +256,7 @@ async def upload_file(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    return await upload_file_handler(
+    result = await upload_file_handler(
         request,
         file=file,
         metadata=metadata,
@@ -178,6 +266,27 @@ async def upload_file(
         background_tasks=background_tasks,
         db=db,
     )
+
+    if isinstance(result, dict):
+        result_id = result.get('id')
+        result_filename = result.get('filename')
+        result_meta = result.get('meta') or {}
+    else:
+        result_id = result.id
+        result_filename = result.filename
+        result_meta = result.meta or {}
+
+    result_content_type = (
+        result_meta.get('content_type') if isinstance(result_meta, dict) else getattr(result_meta, 'content_type', None)
+    )
+    await publish_event(
+        request,
+        EVENTS.FILE_UPLOADED,
+        actor=user,
+        subject_id=result_id,
+        data={'filename': result_filename, 'content_type': result_content_type},
+    )
+    return result
 
 
 async def upload_file_handler(
@@ -210,30 +319,58 @@ async def upload_file_handler(
         # Remove the leading dot from the file extension and lowercase it
         file_extension = file_extension[1:].lower() if file_extension else ''
 
-        if process and request.app.state.config.ALLOWED_FILE_EXTENSIONS:
-            request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
-                ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
-            ]
+        allowed_file_extensions = await Config.get('rag.file.allowed_extensions')
+        if process and allowed_file_extensions:
+            allowed_file_extensions = [ext for ext in allowed_file_extensions if ext]
 
-            if file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+            if file_extension not in allowed_file_extensions:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT(f'File type {file_extension} is not allowed'),
                 )
 
-        # replace filename with uuid
+        # Prefer readable storage names for admins, but fall back if the filesystem rejects it.
         id = str(uuid.uuid4())
         name = filename
         filename = f'{id}_{filename}'
-        contents, file_path = Storage.upload_file(
-            file.file,
-            filename,
-            {
-                'OpenWebUI-User-Email': user.email,
-                'OpenWebUI-User-Id': user.id,
-                'OpenWebUI-User-Name': user.name,
-                'OpenWebUI-File-Id': id,
-            },
+        tags = {
+            'OpenWebUI-User-Email': user.email,
+            'OpenWebUI-User-Id': user.id,
+            'OpenWebUI-User-Name': user.name,
+            'OpenWebUI-File-Id': id,
+        }
+        try:
+            contents, file_path = await asyncio.to_thread(Storage.upload_file, file.file, filename, tags)
+        except OSError as e:
+            if e.errno != errno.ENAMETOOLONG:
+                log.exception(e)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(e.strerror or 'Error uploading file'),
+                )
+
+            file.file.seek(0)
+            filename = f'{id}.{file_extension}' if file_extension else id
+            try:
+                contents, file_path = await asyncio.to_thread(Storage.upload_file, file.file, filename, tags)
+            except OSError as e:
+                log.exception(e)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(e.strerror or 'Error uploading file'),
+                )
+        max_size = await Config.get('rag.file.max_size')
+        if max_size and len(contents) > int(max_size) * 1024 * 1024:
+            await asyncio.to_thread(Storage.delete_file, file_path)
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_size} MB'),
+            )
+
+        # SHA-256 of raw uploaded bytes for incremental sync diffing.
+        # If the client pre-computed and sent file_hash, use that.
+        file_hash = file_metadata.get('file_hash') or await asyncio.to_thread(
+            lambda: hashlib.sha256(contents).hexdigest()
         )
 
         file_item = await Files.insert_new_file(
@@ -250,6 +387,7 @@ async def upload_file_handler(
                         'name': name,
                         'content_type': (file.content_type if isinstance(file.content_type, str) else None),
                         'size': len(contents),
+                        'file_hash': file_hash,
                         'data': file_metadata,
                     },
                 }
@@ -380,17 +518,33 @@ async def search_files(
 
 
 ############################
+# Count Files
+############################
+
+
+@router.get('/count', response_model=int)
+async def count_files(
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    user_id = None if (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL) else user.id
+    return await Files.count_files_by_user_id(user_id=user_id, db=db)
+
+
+############################
 # Delete All Files
 ############################
 
 
 @router.delete('/all')
-async def delete_all_files(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_all_files(
+    request: Request, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+):
     result = await Files.delete_all_files(db=db)
     if result:
         try:
-            Storage.delete_all_files()
-            VECTOR_DB_CLIENT.reset()
+            await asyncio.to_thread(Storage.delete_all_files)
+            await ASYNC_VECTOR_DB_CLIENT.reset()
         except Exception as e:
             log.exception(e)
             log.error('Error deleting files')
@@ -398,6 +552,7 @@ async def delete_all_files(user=Depends(get_admin_user), db: AsyncSession = Depe
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Error deleting files'),
             )
+        await publish_event(request, EVENTS.FILE_DELETED_ALL, actor=user, subject_type='file')
         return {'message': 'All files deleted successfully'}
     else:
         raise HTTPException(
@@ -495,7 +650,9 @@ async def get_file_process_status(
 
 
 @router.get('/{id}/data/content')
-async def get_file_data_content_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_file_data_content_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     file = await Files.get_file_by_id(id, db=db)
 
     if not file:
@@ -539,6 +696,12 @@ async def update_file_data_content_by_id(
         )
 
     if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'write', user, db=db):
+        max_size = await Config.get('rag.file.max_size')
+        if max_size and len(form_data.content.encode('utf-8')) > int(max_size) * 1024 * 1024:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_size} MB'),
+            )
         try:
             await process_file(
                 request,
@@ -557,18 +720,29 @@ async def update_file_data_content_by_id(
         knowledges = await Knowledges.get_knowledges_by_file_id(id, db=db)
         for knowledge in knowledges:
             try:
-                # Remove old embeddings for this file from the KB collection
-                VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': id})
-                # Re-add from the now-updated file-{file_id} collection
+                old_vectors = await ASYNC_VECTOR_DB_CLIENT.query(collection_name=knowledge.id, filter={'file_id': id})
+                old_vector_ids = old_vectors.ids[0] if old_vectors and old_vectors.ids else []
+
+                # Re-add from the now-updated file-{file_id} collection before
+                # removing old vectors, so a failed reindex keeps the KB usable.
                 await process_file(
                     request,
                     ProcessFileForm(file_id=id, collection_name=knowledge.id),
                     user=user,
                     db=db,
                 )
+                if old_vector_ids:
+                    await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, ids=old_vector_ids)
             except Exception as e:
                 log.warning(f'Failed to update knowledge {knowledge.id} after content change for file {id}: {e}')
 
+        await publish_event(
+            request,
+            EVENTS.FILE_CONTENT_UPDATED,
+            actor=user,
+            subject_id=id,
+            data={'content_preview': form_data.content[:300]},
+        )
         return {'content': file.data.get('content', '')}
     else:
         raise HTTPException(
@@ -599,7 +773,7 @@ async def get_file_content_by_id(
 
     if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'read', user, db=db):
         try:
-            file_path = Storage.get_file(file.path)
+            file_path = await asyncio.to_thread(Storage.get_file, file.path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
@@ -646,7 +820,9 @@ async def get_file_content_by_id(
 
 
 @router.get('/{id}/content/html')
-async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_html_file_content_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     file = await Files.get_file_by_id(id, db=db)
 
     if not file:
@@ -664,7 +840,7 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user), 
 
     if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'read', user, db=db):
         try:
-            file_path = Storage.get_file(file.path)
+            file_path = await asyncio.to_thread(Storage.get_file, file.path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
@@ -693,7 +869,9 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user), 
 
 
 @router.get('/{id}/content/{file_name}')
-async def get_file_content_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_file_content_by_id(
+    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     file = await Files.get_file_by_id(id, db=db)
 
     if not file:
@@ -711,7 +889,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user), db: A
         headers = {'Content-Disposition': f"attachment; filename*=UTF-8''{encoded_filename}"}
 
         if file_path:
-            file_path = Storage.get_file(file_path)
+            file_path = await asyncio.to_thread(Storage.get_file, file_path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
@@ -744,12 +922,62 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user), db: A
 
 
 ############################
+# Rename File By Id
+############################
+
+
+class FileRenameForm(BaseModel):
+    filename: str
+
+
+@router.post('/{id}/rename')
+async def rename_file_by_id(
+    request: Request,
+    id: str,
+    form_data: FileRenameForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    file = await Files.get_file_by_id(id, db=db)
+
+    if not file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'write', user, db=db):
+        result = await Files.update_file_name_by_id(id, form_data.filename, db=db)
+        if result:
+            await publish_event(
+                request,
+                EVENTS.FILE_RENAMED,
+                actor=user,
+                subject_id=id,
+                data={'filename': form_data.filename},
+            )
+            return result
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT('Error renaming file'),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
 # Delete File By Id
 ############################
 
 
 @router.delete('/{id}')
-async def delete_file_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_file_by_id(
+    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     file = await Files.get_file_by_id(id, db=db)
 
     if not file:
@@ -766,17 +994,17 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user), db: AsyncS
             await Knowledges.remove_file_from_knowledge_by_id(knowledge.id, id, db=db)
             # Clean KB embeddings (same logic as /knowledge/{id}/file/remove)
             try:
-                VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': id})
+                await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'file_id': id})
                 if file.hash:
-                    VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'hash': file.hash})
+                    await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'hash': file.hash})
             except Exception as e:
                 log.debug(f'KB embedding cleanup for {knowledge.id}: {e}')
 
         result = await Files.delete_file_by_id(id, db=db)
         if result:
             try:
-                Storage.delete_file(file.path)
-                VECTOR_DB_CLIENT.delete(collection_name=f'file-{id}')
+                await asyncio.to_thread(Storage.delete_file, file.path)
+                await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=f'file-{id}')
             except Exception as e:
                 log.exception(e)
                 log.error('Error deleting files')
@@ -784,6 +1012,13 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user), db: AsyncS
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT('Error deleting files'),
                 )
+            await publish_event(
+                request,
+                EVENTS.FILE_DELETED,
+                actor=user,
+                subject_id=id,
+                data={'filename': file.filename},
+            )
             return {'message': 'File deleted successfully'}
         else:
             raise HTTPException(

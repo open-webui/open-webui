@@ -1,27 +1,29 @@
+import logging
 import os
 from pathlib import Path
 from typing import Optional
-import logging
 
-from open_webui.models.users import Users, UserInfoResponse
-from open_webui.models.groups import (
-    Groups,
-    GroupForm,
-    GroupInfoResponse,
-    GroupUpdateForm,
-    GroupResponse,
-    UserIdsForm,
-)
-
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-
+from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.groups import (
+    GroupForm,
+    GroupInfoResponse,
+    GroupResponse,
+    Groups,
+    GroupUpdateForm,
+    UserIdsForm,
+)
+from open_webui.models.knowledge import Knowledges
+from open_webui.models.models import Models
+from open_webui.models.tools import Tools
+from open_webui.models.users import UserInfoResponse, Users
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.socket.main import resync_channel_rooms_for_users
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -58,6 +60,7 @@ async def get_groups(
 
 @router.post('/create', response_model=Optional[GroupResponse])
 async def create_new_group(
+    request: Request,
     form_data: GroupForm,
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
@@ -65,6 +68,13 @@ async def create_new_group(
     try:
         group = await Groups.insert_new_group(user.id, form_data, db=db)
         if group:
+            await publish_event(
+                request,
+                EVENTS.GROUP_CREATED,
+                actor=user,
+                subject_id=group.id,
+                data={'name': group.name},
+            )
             return GroupResponse(
                 **group.model_dump(),
                 member_count=await Groups.get_group_member_count_by_id(group.id, db=db),
@@ -74,11 +84,13 @@ async def create_new_group(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Error creating group'),
             )
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(f'Error creating a new group: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error creating group'),
         )
 
 
@@ -157,7 +169,7 @@ async def get_users_in_group(id: str, user=Depends(get_admin_user), db: AsyncSes
         log.exception(f'Error adding users to group {id}: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error getting group members'),
         )
 
 
@@ -168,6 +180,7 @@ async def get_users_in_group(id: str, user=Depends(get_admin_user), db: AsyncSes
 
 @router.post('/id/{id}/update', response_model=Optional[GroupResponse])
 async def update_group_by_id(
+    request: Request,
     id: str,
     form_data: GroupUpdateForm,
     user=Depends(get_admin_user),
@@ -176,6 +189,13 @@ async def update_group_by_id(
     try:
         group = await Groups.update_group_by_id(id, form_data, db=db)
         if group:
+            await publish_event(
+                request,
+                EVENTS.GROUP_UPDATED,
+                actor=user,
+                subject_id=id,
+                data={'name': group.name},
+            )
             return GroupResponse(
                 **group.model_dump(),
                 member_count=await Groups.get_group_member_count_by_id(group.id, db=db),
@@ -185,11 +205,13 @@ async def update_group_by_id(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Error updating group'),
             )
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(f'Error updating group {id}: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error updating group'),
         )
 
 
@@ -200,6 +222,7 @@ async def update_group_by_id(
 
 @router.post('/id/{id}/users/add', response_model=Optional[GroupResponse])
 async def add_user_to_group(
+    request: Request,
     id: str,
     form_data: UserIdsForm,
     user=Depends(get_admin_user),
@@ -211,6 +234,13 @@ async def add_user_to_group(
 
         group = await Groups.add_users_to_group(id, form_data.user_ids, db=db)
         if group:
+            await publish_event(
+                request,
+                EVENTS.GROUP_MEMBER_ADDED,
+                actor=user,
+                subject_id=id,
+                data={'user_ids': form_data.user_ids},
+            )
             return GroupResponse(
                 **group.model_dump(),
                 member_count=await Groups.get_group_member_count_by_id(group.id, db=db),
@@ -220,16 +250,19 @@ async def add_user_to_group(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Error adding users to group'),
             )
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(f'Error adding users to group {id}: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error adding users to group'),
         )
 
 
 @router.post('/id/{id}/users/remove', response_model=Optional[GroupResponse])
 async def remove_users_from_group(
+    request: Request,
     id: str,
     form_data: UserIdsForm,
     user=Depends(get_admin_user),
@@ -243,6 +276,13 @@ async def remove_users_from_group(
             # users from any channel:* rooms they no longer qualify for.
             if removed_user_ids:
                 await resync_channel_rooms_for_users(removed_user_ids)
+            await publish_event(
+                request,
+                EVENTS.GROUP_MEMBER_REMOVED,
+                actor=user,
+                subject_id=id,
+                data={'user_ids': form_data.user_ids},
+            )
             return GroupResponse(
                 **group.model_dump(),
                 member_count=await Groups.get_group_member_count_by_id(group.id, db=db),
@@ -258,7 +298,7 @@ async def remove_users_from_group(
         log.exception(f'Error removing users from group {id}: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error removing users from group'),
         )
 
 
@@ -268,7 +308,9 @@ async def remove_users_from_group(
 
 
 @router.delete('/id/{id}/delete', response_model=bool)
-async def delete_group_by_id(id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_group_by_id(
+    request: Request, id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+):
     try:
         # Capture members before deletion so we can resync their live rooms
         # afterwards — the group is the access basis, not the members.
@@ -282,6 +324,12 @@ async def delete_group_by_id(id: str, user=Depends(get_admin_user), db: AsyncSes
         if result:
             if affected_user_ids:
                 await resync_channel_rooms_for_users(affected_user_ids)
+            await publish_event(
+                request,
+                EVENTS.GROUP_DELETED,
+                actor=user,
+                subject_id=id,
+            )
             return result
         else:
             raise HTTPException(
@@ -294,5 +342,77 @@ async def delete_group_by_id(id: str, user=Depends(get_admin_user), db: AsyncSes
         log.exception(f'Error deleting group {id}: {e}')
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error deleting group'),
         )
+
+
+############################
+# PreviewGroupAccess
+############################
+
+
+@router.get('/id/{id}/preview')
+async def preview_group_access(
+    id: str,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Show what resources a group can access (preview audit)."""
+    group = await Groups.get_group_by_id(id, db=db)
+    if not group:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    group_ids = {group.id}
+
+    # Batch-check accessible resources using existing AccessGrants
+    all_models = await Models.get_all_models(db=db)
+    accessible_model_ids = await AccessGrants.get_accessible_resource_ids(
+        user_id='',
+        resource_type='model',
+        resource_ids=[m.id for m in all_models],
+        permission='read',
+        user_group_ids=group_ids,
+        db=db,
+    )
+
+    all_knowledge = await Knowledges.get_knowledge_bases(db=db)
+    accessible_knowledge_ids = await AccessGrants.get_accessible_resource_ids(
+        user_id='',
+        resource_type='knowledge',
+        resource_ids=[k.id for k in all_knowledge],
+        permission='read',
+        user_group_ids=group_ids,
+        db=db,
+    )
+
+    all_tools = await Tools.get_tools(defer_content=True, db=db)
+    accessible_tool_ids = await AccessGrants.get_accessible_resource_ids(
+        user_id='',
+        resource_type='tool',
+        resource_ids=[t.id for t in all_tools],
+        permission='read',
+        user_group_ids=group_ids,
+        db=db,
+    )
+
+    active_models = [m for m in all_models if m.is_active]
+
+    return {
+        'group': {'id': group.id, 'name': group.name},
+        'models': {
+            'items': [{'id': m.id, 'name': m.name} for m in active_models if m.id in accessible_model_ids],
+            'total': len(active_models),
+        },
+        'knowledge': {
+            'items': [{'id': k.id, 'name': k.name} for k in all_knowledge if k.id in accessible_knowledge_ids],
+            'total': len(all_knowledge),
+        },
+        'tools': {
+            'items': [{'id': t.id, 'name': t.name} for t in all_tools if t.id in accessible_tool_ids],
+            'total': len(all_tools),
+        },
+        'permissions': group.permissions or {},
+    }

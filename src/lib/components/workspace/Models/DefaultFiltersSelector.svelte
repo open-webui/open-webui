@@ -1,55 +1,104 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import TypeaheadSelector from './TypeaheadSelector.svelte';
 
-	const i18n = getContext('i18n');
+	type Filter = {
+		id: string;
+		name?: string;
+		meta?: {
+			description?: string;
+		};
+	};
 
-	export let filters = [];
-	export let selectedFilterIds = [];
+	const i18n = getContext('i18n') as any;
 
-	let _filters = {};
+	export let filters: Filter[] = [];
+	export let selectedFilterIds: string[] = [];
 
-	onMount(() => {
-		_filters = filters.reduce((acc, filter) => {
-			acc[filter.id] = {
-				...filter,
-				selected: selectedFilterIds.includes(filter.id)
-			};
+	$: selectedFilters = filters.filter((filter) => selectedFilterIds.includes(filter.id));
 
-			return acc;
-		}, {});
-	});
+	const toggleFilter = (filter: Filter) => {
+		selectedFilterIds = selectedFilterIds.includes(filter.id)
+			? selectedFilterIds.filter((id) => id !== filter.id)
+			: [...selectedFilterIds, filter.id];
+	};
 </script>
 
 <div>
-	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-xs text-gray-500 font-medium">{$i18n.t('Default Filters')}</div>
+	<div class="flex w-full items-center gap-2 mb-1">
+		<div class=" self-center text-xs text-gray-500">{$i18n.t('Default Filters')}</div>
+
+		{#if filters.length > 0}
+			<TypeaheadSelector
+				id="model-default-filters-selector"
+				items={filters.map((filter) => ({
+					...filter,
+					description: filter.meta?.description
+				}))}
+				selectedIds={selectedFilterIds}
+				placeholder={$i18n.t('Search filters')}
+				triggerLabel={$i18n.t('Select Filter')}
+				emptyLabel={$i18n.t('No filters found')}
+				variant="dropdown"
+				on:select={(e) => {
+					toggleFilter(e.detail);
+				}}
+				on:enableall={(e) => {
+					selectedFilterIds = [
+						...new Set([...selectedFilterIds, ...e.detail.map((filter) => filter.id)])
+					];
+				}}
+			/>
+		{/if}
 	</div>
 
 	<div class="flex flex-col">
 		{#if filters.length > 0}
-			<div class=" flex items-center flex-wrap">
-				{#each Object.keys(_filters) as filter, filterIdx}
+			<div class=" flex items-center flex-wrap mt-1">
+				{#each selectedFilters as filter}
+					{@const isSelected = selectedFilterIds.includes(filter.id)}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox
-								state={_filters[filter].selected ? 'checked' : 'unchecked'}
+								state={isSelected ? 'checked' : 'unchecked'}
 								on:change={(e) => {
-									_filters[filter].selected = e.detail === 'checked';
-									selectedFilterIds = Object.keys(_filters).filter((t) => _filters[t].selected);
+									if (e.detail === 'checked') {
+										if (!selectedFilterIds.includes(filter.id)) {
+											selectedFilterIds = [...selectedFilterIds, filter.id];
+										}
+									} else {
+										selectedFilterIds = selectedFilterIds.filter((id) => id !== filter.id);
+									}
 								}}
 							/>
 						</div>
 
-						<div class=" py-0.5 text-sm w-full capitalize font-medium">
-							<Tooltip content={_filters[filter].meta.description}>
-								{_filters[filter].name}
+						<div class=" py-0.5 text-xs capitalize">
+							<Tooltip content={filter.meta?.description ?? filter.id}>
+								{filter.name}
 							</Tooltip>
 						</div>
 					</div>
 				{/each}
+
+				{#if selectedFilters.length > 0}
+					<button
+						type="button"
+						class="py-0.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+						on:click={() => {
+							selectedFilterIds = [];
+						}}
+					>
+						{$i18n.t('Disable all')}
+					</button>
+				{/if}
 			</div>
 		{/if}
+	</div>
+
+	<div class=" text-xs dark:text-gray-700">
+		{$i18n.t('To select default filters here, enable toggleable filters for this model first.')}
 	</div>
 </div>

@@ -1,19 +1,12 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import {
-		chats,
-		config,
-		settings,
-		user as _user,
-		mobile,
-		currentChatPage,
-		temporaryChatEnabled
-	} from '$lib/stores';
+	import { config, settings, user as _user, mobile, temporaryChatEnabled } from '$lib/stores';
+	import { refreshChatList } from '$lib/stores/chatList';
 	import { tick, getContext, onMount, onDestroy, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import { toast } from 'svelte-sonner';
-	import { getChatList, updateChatById } from '$lib/apis/chats';
+	import { deleteChatMessageById, updateChatById } from '$lib/apis/chats';
 	import { copyToClipboard, extractCurlyBraceWords } from '$lib/utils';
 
 	import Message from './Messages/Message.svelte';
@@ -24,7 +17,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let className = 'h-full flex pt-8';
+	export let className = 'h-full flex pt-18';
 
 	export let chatId = '';
 	export let user = $_user;
@@ -47,26 +40,39 @@
 	export let showMessage: Function = () => {};
 	export let submitMessage: Function = () => {};
 	export let addMessages: Function = () => {};
+	export let forkHandler: Function | null = null;
 
 	export let readOnly = false;
+	export let preview = false;
 	export let editCodeBlock = true;
 
 	export let topPadding = false;
 	export let bottomPadding = false;
 	export let autoScroll;
+	export let messagesContainerId = 'messages-container';
 
 	export let onSelect = (e) => {};
+	export let onInsertToNote: ((content: string) => void) | null = null;
 
-	export let messagesCount: number | null = 20;
+	export let messagesCount: number | null = 8;
 	let messagesLoading = false;
+
+	const getMessagesContainer = () => document.getElementById(messagesContainerId);
+
+	onDestroy(() => {
+		cancelAnimationFrame(pendingRebuild);
+	});
 
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
-		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollTop + 100;
+		const element = getMessagesContainer();
+		if (element) {
+			element.scrollTop = element.scrollTop + 100;
+		}
 
 		messagesLoading = true;
-		messagesCount += 20;
+		messagesCount += 8;
+
 		buildMessages();
 
 		await tick();
@@ -134,21 +140,51 @@
 	}
 
 	const scrollToBottom = () => {
-		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollHeight;
+		const element = getMessagesContainer();
+		if (element) {
+			element.scrollTop = element.scrollHeight;
+
+			// Follow-up scroll to account for content-visibility: auto re-layouts
+			requestAnimationFrame(() => {
+				if (element) {
+					element.scrollTop = element.scrollHeight;
+				}
+			});
+		}
+	};
+
+	export const scrollToTop = async () => {
+		messagesCount = null;
+		buildMessages();
+		await tick();
+		if (messages.length > 0) {
+			const firstMessageEl = document.getElementById(`message-${messages[0].id}`);
+			if (firstMessageEl) {
+				firstMessageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}
+		}
 	};
 
 	const updateChat = async () => {
 		if (!$temporaryChatEnabled) {
 			history = history;
 			await tick();
-			await updateChatById(localStorage.token, chatId, {
+			const res = await updateChatById(localStorage.token, chatId, {
 				history: history,
 				messages: messages
 			});
 
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			// Keep local plain-content edits aligned with the saved chat response.
+			if (res?.chat?.history?.messages) {
+				for (const [id, msg] of Object.entries(res.chat.history.messages)) {
+					if (history.messages[id] && (msg as any).content) {
+						history.messages[id].content = (msg as any).content;
+					}
+				}
+				history = history;
+			}
+
+			await refreshChatList(localStorage.token);
 		}
 	};
 
@@ -184,8 +220,10 @@
 
 		// Optional auto-scroll
 		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			const element = getMessagesContainer();
+			autoScroll = element
+				? element.scrollHeight - element.scrollTop <= element.clientHeight + 50
+				: false;
 
 			setTimeout(() => {
 				scrollToBottom();
@@ -231,8 +269,10 @@
 		await tick();
 
 		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			const element = getMessagesContainer();
+			autoScroll = element
+				? element.scrollHeight - element.scrollTop <= element.clientHeight + 50
+				: false;
 
 			setTimeout(() => {
 				scrollToBottom();
@@ -282,8 +322,10 @@
 		await tick();
 
 		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			const element = getMessagesContainer();
+			autoScroll = element
+				? element.scrollHeight - element.scrollTop <= element.clientHeight + 50
+				: false;
 
 			setTimeout(() => {
 				scrollToBottom();
@@ -300,7 +342,7 @@
 		await updateChat();
 	};
 
-	const editMessage = async (messageId, { content, files }, submit = true) => {
+	const editMessage = async (messageId, { content, files, output = undefined }, submit = true) => {
 		if ((selectedModels ?? []).filter((id) => id).length === 0) {
 			toast.error($i18n.t('Model not selected'));
 			return;
@@ -344,7 +386,7 @@
 			}
 		} else {
 			if (submit) {
-				// New response message
+				// New response message (Save As Copy)
 				const responseMessageId = uuidv4();
 				const message = history.messages[messageId];
 				const parentId = message.parentId;
@@ -355,7 +397,8 @@
 					parentId: parentId,
 					childrenIds: [],
 					files: undefined,
-					content: content,
+					content: output !== undefined ? '' : content,
+					...(output !== undefined ? { output } : {}),
 					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
 
@@ -373,8 +416,14 @@
 				await updateChat();
 			} else {
 				// Edit response message
-				history.messages[messageId].originalContent = history.messages[messageId].content;
-				history.messages[messageId].content = content;
+				if (content !== undefined) {
+					history.messages[messageId].originalContent = history.messages[messageId].content;
+					history.messages[messageId].content = content;
+				}
+				if (output !== undefined) {
+					history.messages[messageId].output = output;
+					history.messages[messageId].content = '';
+				}
 				await updateChat();
 			}
 		}
@@ -423,20 +472,37 @@
 			delete history.messages[id];
 		});
 
-		showMessage({ id: parentMessageId }, false);
-	};
+		let nextMessageId = parentMessageId;
+		let nextChildrenIds =
+			nextMessageId === null
+				? Object.keys(history.messages).filter((id) => history.messages[id].parentId === null)
+				: (history.messages[nextMessageId]?.childrenIds ?? []);
+		while (nextChildrenIds.length > 0) {
+			nextMessageId = nextChildrenIds.at(-1);
+			nextChildrenIds = history.messages[nextMessageId]?.childrenIds ?? [];
+		}
+		history.currentId = nextMessageId;
+		history = history;
 
-	onDestroy(() => {
-		cancelAnimationFrame(pendingRebuild);
-	});
+		if (!$temporaryChatEnabled) {
+			const res = await deleteChatMessageById(localStorage.token, chatId, messageId);
+			if (res?.chat?.history) {
+				history = res.chat.history;
+			}
+
+			await refreshChatList(localStorage.token);
+		}
+	};
 
 	const triggerScroll = () => {
 		if (autoScroll) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-			setTimeout(() => {
-				scrollToBottom();
-			}, 100);
+			const element = getMessagesContainer();
+			if (element) {
+				autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+				setTimeout(() => {
+					scrollToBottom();
+				}, 100);
+			}
 		}
 	};
 </script>
@@ -488,10 +554,13 @@
 								{continueResponse}
 								{mergeResponses}
 								{addMessages}
+								{forkHandler}
 								{triggerScroll}
 								{readOnly}
+								{preview}
 								{editCodeBlock}
 								{topPadding}
+								{onInsertToNote}
 							/>
 						{/each}
 					</ul>

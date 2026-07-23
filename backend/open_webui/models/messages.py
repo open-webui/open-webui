@@ -3,17 +3,13 @@ import time
 import uuid
 from typing import Optional
 
-from sqlalchemy import select, delete, func
-from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, JSONField, get_async_db_context
-from open_webui.models.tags import TagModel, Tag, Tags
-from open_webui.models.users import Users, User, UserNameResponse
-from open_webui.models.channels import Channels, ChannelMember
-
-
+from open_webui.models.channels import ChannelMember, Channels
+from open_webui.models.tags import Tag, TagModel, Tags
+from open_webui.models.users import User, UserNameResponse, Users
 from pydantic import BaseModel, ConfigDict, field_validator
-from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
-from sqlalchemy import or_, func, and_, text
+from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, and_, delete, func, or_, select, text
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import exists
 
 ####################
@@ -250,11 +246,11 @@ class MessageTable:
                 }
         return None
 
-    async def get_thread_replies_by_message_id(self, id: str, db: Optional[AsyncSession] = None) -> list[MessageReplyToResponse]:
+    async def get_thread_replies_by_message_id(
+        self, id: str, db: Optional[AsyncSession] = None
+    ) -> list[MessageReplyToResponse]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(Message).filter_by(parent_id=id).order_by(Message.created_at.desc())
-            )
+            result = await db.execute(select(Message).filter_by(parent_id=id).order_by(Message.created_at.desc()))
             all_messages = result.scalars().all()
 
             messages = []
@@ -332,7 +328,8 @@ class MessageTable:
         async with get_async_db_context(db) as db:
             message = await db.get(Message, parent_id)
 
-            if not message:
+            # Thread parent must belong to the requested channel; never disclose a foreign-channel message.
+            if not message or message.channel_id != channel_id:
                 return []
 
             result = await db.execute(
@@ -369,7 +366,9 @@ class MessageTable:
                 )
             return messages
 
-    async def get_last_message_by_channel_id(self, channel_id: str, db: Optional[AsyncSession] = None) -> Optional[MessageModel]:
+    async def get_last_message_by_channel_id(
+        self, channel_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[MessageModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 select(Message).filter_by(channel_id=channel_id).order_by(Message.created_at.desc()).limit(1)
@@ -453,9 +452,7 @@ class MessageTable:
     ) -> Optional[MessageReactionModel]:
         async with get_async_db_context(db) as db:
             # check for existing reaction
-            result = await db.execute(
-                select(MessageReaction).filter_by(message_id=id, user_id=user_id, name=name)
-            )
+            result = await db.execute(select(MessageReaction).filter_by(message_id=id, user_id=user_id, name=name))
             existing_reaction = result.scalars().first()
             if existing_reaction:
                 return MessageReactionModel.model_validate(existing_reaction)
@@ -503,6 +500,71 @@ class MessageTable:
                 reactions[reaction.name]['count'] += 1
 
             return [Reactions(**reaction) for reaction in reactions.values()]
+
+    async def get_reactions_by_message_ids(
+        self, ids: list[str], db: Optional[AsyncSession] = None
+    ) -> dict[str, list[Reactions]]:
+        """Batch-fetch reactions for multiple messages in a single query.
+
+        Returns a dict mapping each message_id to its list of Reactions.
+        Messages with no reactions map to an empty list.
+        """
+        if not ids:
+            return {}
+
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(MessageReaction, User)
+                .join(User, MessageReaction.user_id == User.id)
+                .filter(MessageReaction.message_id.in_(ids))
+            )
+            rows = result.all()
+
+            # Group by (message_id, reaction_name)
+            grouped: dict[str, dict[str, dict]] = {mid: {} for mid in ids}
+            for reaction, user in rows:
+                mid = reaction.message_id
+                if mid not in grouped:
+                    grouped[mid] = {}
+                if reaction.name not in grouped[mid]:
+                    grouped[mid][reaction.name] = {
+                        'name': reaction.name,
+                        'users': [],
+                        'count': 0,
+                    }
+                grouped[mid][reaction.name]['users'].append(
+                    {
+                        'id': user.id,
+                        'name': user.name,
+                    }
+                )
+                grouped[mid][reaction.name]['count'] += 1
+
+            return {mid: [Reactions(**r) for r in reactions.values()] for mid, reactions in grouped.items()}
+
+    async def get_thread_reply_counts_by_message_ids(
+        self, ids: list[str], db: Optional[AsyncSession] = None
+    ) -> dict[str, tuple[int, int | None]]:
+        """Batch-fetch reply counts and latest reply timestamps for multiple parent messages.
+
+        Returns a dict mapping each parent message_id to a
+        (reply_count, latest_reply_created_at) tuple.
+        Messages with no replies are omitted from the result.
+        """
+        if not ids:
+            return {}
+
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(
+                    Message.parent_id,
+                    func.count(Message.id),
+                    func.max(Message.created_at),
+                )
+                .filter(Message.parent_id.in_(ids))
+                .group_by(Message.parent_id)
+            )
+            return {row[0]: (row[1], row[2]) for row in result.all()}
 
     async def remove_reaction_by_id_and_user_id_and_name(
         self, id: str, user_id: str, name: str, db: Optional[AsyncSession] = None

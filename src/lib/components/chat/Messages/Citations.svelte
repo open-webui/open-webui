@@ -162,7 +162,7 @@
 	{@const urlCitations = citations.filter((c) => c?.source?.name?.startsWith('http'))}
 	<div class=" py-1 -mx-0.5 w-full flex gap-1 items-center flex-wrap">
 		<button
-			class="text-xs font-medium text-gray-600 dark:text-gray-300 px-3.5 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center gap-1 border border-gray-50 dark:border-gray-850/30"
+			class="text-xs font-normal text-gray-600 dark:text-gray-300 px-3.5 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center gap-1 border border-gray-50 dark:border-gray-850/30"
 			aria-label={citations.length === 1
 				? $i18n.t('Toggle 1 source')
 				: $i18n.t('Toggle {{COUNT}} sources', { COUNT: citations.length })}
@@ -183,6 +183,14 @@
 							}}
 						/>
 					{/each}
+					{#if citations.length > 3}
+						<div
+							class="size-4 rounded-full shrink-0 border border-white dark:border-gray-850 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[8px] font-normal text-gray-500 dark:text-gray-400 whitespace-nowrap tracking-tighter"
+							aria-hidden="true"
+						>
+							+{citations.length - Math.min(urlCitations.length, 3)}
+						</div>
+					{/if}
 				</div>
 			{/if}
 			<div>
@@ -213,7 +221,7 @@
 						selectedCitation = citation;
 					}}
 				>
-					<div class=" font-medium bg-gray-50 dark:bg-gray-850 rounded-md px-1">
+					<div class=" font-normal bg-gray-50 dark:bg-gray-850 rounded-md px-1">
 						{idx + 1}
 					</div>
 					<div

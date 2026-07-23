@@ -97,7 +97,8 @@ export const searchNotes = async (
 	viewOption: string | null = null,
 	permission: string | null = null,
 	sortKey: string | null = null,
-	page: number | null = null
+	page: number | null = null,
+	direction: string | null = null
 ) => {
 	let error = null;
 	const searchParams = new URLSearchParams();
@@ -116,6 +117,10 @@ export const searchNotes = async (
 
 	if (sortKey !== null) {
 		searchParams.append('order_by', sortKey);
+	}
+
+	if (direction !== null) {
+		searchParams.append('direction', direction);
 	}
 
 	if (page !== null) {
@@ -218,6 +223,98 @@ export const getNoteById = async (token: string, id: string) => {
 	return res;
 };
 
+export const getNoteChatById = async (token: string, id: string) => {
+	let error = null;
+	const url = `${WEBUI_API_BASE_URL}/notes/${id}/chat`;
+
+	console.info('[note-chat] fetching linked chat', { noteId: id, url });
+
+	const res = await fetch(url, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			console.info('[note-chat] linked chat response', {
+				noteId: id,
+				status: res.status,
+				ok: res.ok
+			});
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error('[note-chat] linked chat request failed', { noteId: id, error: err });
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getNoteChatsById = async (token: string, id: string) => {
+	let error = null;
+	const url = `${WEBUI_API_BASE_URL}/notes/${id}/chats`;
+
+	const res = await fetch(url, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const createNoteChatById = async (token: string, id: string) => {
+	let error = null;
+	const url = `${WEBUI_API_BASE_URL}/notes/${id}/chat`;
+
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const updateNoteById = async (token: string, id: string, note: NoteItem) => {
 	let error = null;
 
@@ -303,6 +400,68 @@ export const deleteNoteById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err.detail;
 
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getPinnedNoteList = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/pinned`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res ?? [];
+};
+
+export const toggleNotePinnedStatusById = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/${id}/pin`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
 			console.error(err);
 			return null;
 		});

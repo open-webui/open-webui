@@ -47,6 +47,7 @@
 
 	export let showUserProfile = true;
 	export let thread = false;
+	export let id = null;
 
 	export let replyToMessage = false;
 	export let disabled = false;
@@ -64,6 +65,12 @@
 	let edit = false;
 	let editedContent = null;
 	let showDeleteConfirmDialog = false;
+	$: renderedMessageId = message ? (id ? `${id}-${message.id}` : message.id) : null;
+	$: replyToMessageId = message?.reply_to_message
+		? id
+			? `${id}-${message.reply_to_message.id}`
+			: message.reply_to_message.id
+		: null;
 
 	// Swipe-to-reply state
 	let swipeStartX = 0;
@@ -177,7 +184,7 @@
 		{/if}
 
 		<div
-			id="message-{message.id}"
+			id="message-{renderedMessageId}"
 			class="flex flex-col justify-between w-full max-w-full mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 relative {className
 				? className
 				: `px-5 ${
@@ -313,9 +320,7 @@
 					<button
 						class="ml-12 flex items-center space-x-2 relative z-0"
 						on:click={() => {
-							const messageElement = document.getElementById(
-								`message-${message.reply_to_message.id}`
-							);
+							const messageElement = document.getElementById(`message-${replyToMessageId}`);
 							if (messageElement) {
 								messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
 								messageElement.classList.add('highlight');
@@ -354,8 +359,9 @@
 
 						<div class="italic text-sm text-gray-500 dark:text-gray-400 line-clamp-1 w-full flex-1">
 							<Markdown
-								id={`${message.id}-reply-to`}
+								id={`${renderedMessageId}-reply-to`}
 								content={message?.reply_to_message?.content}
+								allowEmbeds={false}
 							/>
 						</div>
 					</button>
@@ -364,7 +370,7 @@
 
 			<div
 				class=" flex w-full message-{message.id} "
-				id="message-{message.id}"
+				id="message-{renderedMessageId}"
 				dir={$settings.chatDirection}
 			>
 				<div class={`shrink-0 mr-1 w-9`}>
@@ -396,7 +402,7 @@
 
 						{#if message.created_at}
 							<div
-								class="mt-1.5 flex shrink-0 items-center text-xs self-center invisible group-hover:visible text-gray-500 font-medium first-letter:capitalize"
+								class="mt-1.5 flex shrink-0 items-center text-xs self-center invisible group-hover:visible text-gray-500 font-normal first-letter:capitalize"
 							>
 								<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
 									{dayjs(message.created_at / 1000000).format('HH:mm')}
@@ -409,7 +415,7 @@
 				<div class="flex-auto w-0 pl-2">
 					{#if showUserProfile}
 						<Name>
-							<div class=" self-end text-base shrink-0 font-medium truncate">
+							<div class=" self-end text-base shrink-0 font-normal truncate">
 								{#if message?.meta?.model_id}
 									{message?.meta?.model_name ?? message?.meta?.model_id}
 								{:else}
@@ -419,7 +425,7 @@
 
 							{#if message.created_at}
 								<div
-									class=" self-center text-xs text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
+									class=" self-center text-xs text-gray-400 font-normal first-letter:capitalize ml-0.5 translate-y-[1px]"
 								>
 									<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
 										<span class="line-clamp-1">
@@ -491,7 +497,7 @@
 									}
 								}}
 							/>
-							<div class=" mt-2 mb-1 flex justify-end text-sm font-medium">
+							<div class=" mt-2 mb-1 flex justify-end text-sm font-normal">
 								<div class="flex space-x-1.5">
 									<button
 										id="close-edit-message-button"
@@ -519,15 +525,18 @@
 							</div>
 						</div>
 					{:else}
-						<div class=" min-w-full markdown-prose {pending ? 'opacity-50' : ''}">
+						<div class="min-w-full {pending ? 'opacity-50' : ''}">
 							{#if (message?.content ?? '').trim() === '' && message?.meta?.model_id}
 								<Skeleton />
 							{:else}
-								<Markdown
-									id={message.id}
-									content={message.content}
-									paragraphTag="span"
-								/>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
+								<span class="markdown-prose">
+									<Markdown
+										id={renderedMessageId}
+										content={message.content}
+										paragraphTag="span"
+										allowEmbeds={!!message?.meta?.model_id}
+									/>
+								</span>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
 										class="text-gray-500 text-[10px] pl-1 self-center">({$i18n.t('edited')})</span
 									>{/if}
 							{/if}
@@ -586,7 +595,7 @@
 												<Emoji shortCode={reaction.name} />
 
 												{#if reaction.users.length > 0}
-													<div class="text-xs font-medium text-gray-500 dark:text-gray-400">
+													<div class="text-xs font-normal text-gray-500 dark:text-gray-400">
 														{reaction.users?.length}
 													</div>
 												{/if}
@@ -621,7 +630,7 @@
 										onThread(message.id);
 									}}
 								>
-									<span class="font-medium mr-1">
+									<span class="font-normal mr-1">
 										{$i18n.t('{{COUNT}} Replies', { COUNT: message.reply_count })}</span
 									><span>
 										{' - '}{$i18n.t('Last reply')}

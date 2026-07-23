@@ -1,9 +1,10 @@
 <script lang="ts">
+	import type i18nType from '$lib/i18n';
 	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: typeof i18nType = getContext('i18n');
 
 	export let frequency = 'DAILY';
 	export let interval = 1;
@@ -23,23 +24,23 @@
 
 	let showDropdown = false;
 
-	const FREQUENCIES = [
-		{ key: 'ONCE', label: 'Once' },
-		{ key: 'HOURLY', label: 'Hourly' },
-		{ key: 'DAILY', label: 'Daily' },
-		{ key: 'WEEKLY', label: 'Weekly' },
-		{ key: 'MONTHLY', label: 'Monthly' },
-		{ key: 'CUSTOM', label: 'Custom' }
+	$: FREQUENCIES = [
+		{ key: 'ONCE', label: $i18n.t('Once') },
+		{ key: 'HOURLY', label: $i18n.t('Hourly') },
+		{ key: 'DAILY', label: $i18n.t('Daily') },
+		{ key: 'WEEKLY', label: $i18n.t('Weekly') },
+		{ key: 'MONTHLY', label: $i18n.t('Monthly') },
+		{ key: 'CUSTOM', label: $i18n.t('Custom') }
 	];
 
-	const DAYS = [
-		{ key: 'MO', label: 'Mo' },
-		{ key: 'TU', label: 'Tu' },
-		{ key: 'WE', label: 'We' },
-		{ key: 'TH', label: 'Th' },
-		{ key: 'FR', label: 'Fr' },
-		{ key: 'SA', label: 'Sa' },
-		{ key: 'SU', label: 'Su' }
+	$: DAYS = [
+		{ key: 'MO', label: $i18n.t('Mo', { context: 'day_of_week' }) },
+		{ key: 'TU', label: $i18n.t('Tu', { context: 'day_of_week' }) },
+		{ key: 'WE', label: $i18n.t('We', { context: 'day_of_week' }) },
+		{ key: 'TH', label: $i18n.t('Th', { context: 'day_of_week' }) },
+		{ key: 'FR', label: $i18n.t('Fr', { context: 'day_of_week' }) },
+		{ key: 'SA', label: $i18n.t('Sa', { context: 'day_of_week' }) },
+		{ key: 'SU', label: $i18n.t('Su', { context: 'day_of_week' }) }
 	];
 
 	let lastVisualFrequency = 'DAILY';
@@ -160,7 +161,7 @@
 	<button
 		type="button"
 		class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition
-			text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5"
+			text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
 	>
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
@@ -191,15 +192,15 @@
 
 	<div
 		slot="content"
-		class="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-48 p-1"
+		class="rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-48 p-0.5"
 	>
-		<div class="px-2 text-xs text-gray-500 pt-1">
+		<div class="px-2 text-[11px] text-gray-500 pt-0.5">
 			{$i18n.t('Schedule')}
 		</div>
 
 		<div class="px-1.5 py-0.5">
 			<select
-				class="w-full bg-transparent rounded-xl text-xs py-1.5 px-1.5 outline-hidden"
+				class="w-full h-[1.6875rem] bg-transparent rounded-xl text-[13px] px-1.5 outline-hidden"
 				bind:value={frequency}
 				on:click={(e) => e.stopPropagation()}
 				on:change={onChange}
@@ -216,13 +217,13 @@
 					type="text"
 					bind:value={customRrule}
 					placeholder="RRULE:FREQ=DAILY;BYHOUR=9;BYMINUTE=0"
-					class="w-full bg-transparent outline-hidden text-xs placeholder:text-gray-400 dark:placeholder:text-gray-600"
+					class="w-full bg-transparent outline-hidden text-[13px] placeholder:text-gray-400 dark:placeholder:text-gray-600"
 					on:click={(e) => e.stopPropagation()}
 					on:input={onChange}
 				/>
 			</div>
 		{:else if frequency !== 'HOURLY'}
-			<div class="flex gap-2 flex-wrap items-center px-3 pb-2 text-xs">
+			<div class="flex gap-2 flex-wrap items-center px-3 pb-2 text-[13px]">
 				{#if frequency === 'ONCE'}
 					<div class="flex items-center gap-1.5">
 						<input
@@ -283,7 +284,7 @@
 						<button
 							type="button"
 							class="flex-1 py-1 text-xs rounded-xl transition {selectedDays.includes(d.key)
-								? 'bg-gray-50 dark:bg-gray-800 text-black dark:text-gray-100'
+								? 'text-black dark:text-gray-100'
 								: 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'}"
 							on:click={() => {
 								if (selectedDays.includes(d.key)) {

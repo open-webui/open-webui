@@ -14,6 +14,7 @@
 	import { getBanners } from '$lib/apis/configs';
 	import { getTerminalServers } from '$lib/apis/terminal';
 	import { getUserSettings } from '$lib/apis/users';
+	import { setTextScale } from '$lib/utils/text-scale';
 
 	import { WEBUI_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
@@ -29,7 +30,6 @@
 		tags,
 		banners,
 		showSettings,
-		showShortcuts,
 		showChangelog,
 		temporaryChatEnabled,
 		toolServers,
@@ -47,7 +47,7 @@
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { Shortcut, shortcuts } from '$lib/shortcuts';
+	import { loadKeybindings, matchKeybinding, Shortcut } from '$lib/shortcuts';
 
 	const i18n = getContext('i18n');
 
@@ -56,6 +56,7 @@
 	let localDBChats = [];
 
 	let version;
+	let handledSettingsUrl = '';
 
 	const clearChatInputStorage = () => {
 		const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
@@ -86,7 +87,7 @@
 		}
 	};
 
-	const setUserSettings = async (cb: () => Promise<void>) => {
+	const setUserSettings = async (cb?: () => Promise<void>) => {
 		let userSettings = await getUserSettings(localStorage.token).catch((error) => {
 			console.error(error);
 			return null;
@@ -104,6 +105,9 @@
 		if (userSettings?.ui) {
 			settings.set(userSettings.ui);
 		}
+		loadKeybindings(userSettings?.keybindings);
+
+		setTextScale($settings?.textScale ?? 1);
 
 		if (cb) {
 			await cb();
@@ -192,6 +196,34 @@
 		tools.set(toolsData);
 	};
 
+	const openSettingsFromUrl = async () => {
+		const requestedSettings = $page.url.searchParams.get('settings');
+		if (!requestedSettings) {
+			return;
+		}
+
+		const urlKey = `${$page.url.pathname}${$page.url.search}${$page.url.hash}`;
+		if (handledSettingsUrl === urlKey) {
+			return;
+		}
+		handledSettingsUrl = urlKey;
+
+		showSettings.set(
+			requestedSettings.startsWith('admin:') && $user?.role !== 'admin'
+				? 'general'
+				: requestedSettings
+		);
+
+		const params = new URLSearchParams($page.url.searchParams);
+		params.delete('settings');
+		const query = params.toString();
+		await goto(`${$page.url.pathname}${query ? `?${query}` : ''}${$page.url.hash}`, {
+			replaceState: true,
+			noScroll: true,
+			keepFocus: true
+		});
+	};
+
 	onMount(async () => {
 		if ($user === undefined || $user === null) {
 			await goto('/auth');
@@ -207,88 +239,61 @@
 			setBanners().catch((e) => console.error('Failed to load banners:', e)),
 			setTools().catch((e) => console.error('Failed to load tools:', e)),
 			setUserSettings(async () => {
-				await Promise.all([
-					setModels().catch((e) => console.error('Failed to load models:', e)),
-					setToolServers().catch((e) => console.error('Failed to load tool servers:', e))
-				]);
+				await setModels().catch((e) => console.error('Failed to load models:', e));
 			}).catch((e) => console.error('Failed to load user settings:', e))
 		]);
 
-		// Helper function to check if the pressed keys match the shortcut definition
-		const isShortcutMatch = (event: KeyboardEvent, shortcut): boolean => {
-			const keys = shortcut?.keys || [];
-
-			const normalized = keys.map((k) => k.toLowerCase());
-			const needCtrl = normalized.includes('ctrl') || normalized.includes('mod');
-			const needShift = normalized.includes('shift');
-			const needAlt = normalized.includes('alt');
-
-			const mainKeys = normalized.filter((k) => !['ctrl', 'shift', 'alt', 'mod'].includes(k));
-
-			// Get the main key pressed
-			const keyPressed = event.key.toLowerCase();
-
-			// Check modifiers
-			if (needShift && !event.shiftKey) return false;
-
-			if (needCtrl && !(event.ctrlKey || event.metaKey)) return false;
-			if (!needCtrl && (event.ctrlKey || event.metaKey)) return false;
-			if (needAlt && !event.altKey) return false;
-			if (!needAlt && event.altKey) return false;
-
-			if (mainKeys.length && !mainKeys.includes(keyPressed)) return false;
-
-			return true;
-		};
+		// Tool servers can be slow or unreachable; they are not needed to initialize chat.
+		setToolServers().catch((e) => console.error('Failed to load tool servers:', e));
 
 		const setupKeyboardShortcuts = () => {
 			document.addEventListener('keydown', async (event) => {
-				if (isShortcutMatch(event, shortcuts[Shortcut.SEARCH])) {
+				const shortcut = matchKeybinding(event);
+				if (shortcut === Shortcut.SEARCH) {
 					console.log('Shortcut triggered: SEARCH');
 					event.preventDefault();
 					showSearch.set(!$showSearch);
-				} else if (isShortcutMatch(event, shortcuts[Shortcut.NEW_CHAT])) {
+				} else if (shortcut === Shortcut.NEW_CHAT) {
 					console.log('Shortcut triggered: NEW_CHAT');
 					event.preventDefault();
 					document.getElementById('sidebar-new-chat-button')?.click();
-				} else if (isShortcutMatch(event, shortcuts[Shortcut.FOCUS_INPUT])) {
+				} else if (shortcut === Shortcut.FOCUS_INPUT) {
 					console.log('Shortcut triggered: FOCUS_INPUT');
 					event.preventDefault();
 					document.getElementById('chat-input')?.focus();
-				} else if (isShortcutMatch(event, shortcuts[Shortcut.COPY_LAST_CODE_BLOCK])) {
+				} else if (shortcut === Shortcut.COPY_LAST_CODE_BLOCK) {
 					console.log('Shortcut triggered: COPY_LAST_CODE_BLOCK');
 					event.preventDefault();
 					[...document.getElementsByClassName('copy-code-button')]?.at(-1)?.click();
-				} else if (isShortcutMatch(event, shortcuts[Shortcut.COPY_LAST_RESPONSE])) {
+				} else if (shortcut === Shortcut.COPY_LAST_RESPONSE) {
 					console.log('Shortcut triggered: COPY_LAST_RESPONSE');
 					event.preventDefault();
 					[...document.getElementsByClassName('copy-response-button')]?.at(-1)?.click();
-				} else if (isShortcutMatch(event, shortcuts[Shortcut.TOGGLE_SIDEBAR])) {
+				} else if (shortcut === Shortcut.TOGGLE_SIDEBAR) {
 					console.log('Shortcut triggered: TOGGLE_SIDEBAR');
 					event.preventDefault();
 					showSidebar.set(!$showSidebar);
-				} else if (isShortcutMatch(event, shortcuts[Shortcut.DELETE_CHAT])) {
+				} else if (shortcut === Shortcut.DELETE_CHAT) {
 					console.log('Shortcut triggered: DELETE_CHAT');
 					event.preventDefault();
 					document.getElementById('delete-chat-button')?.click();
-				} else if (isShortcutMatch(event, shortcuts[Shortcut.OPEN_SETTINGS])) {
+				} else if (shortcut === Shortcut.OPEN_SETTINGS) {
 					console.log('Shortcut triggered: OPEN_SETTINGS');
 					event.preventDefault();
 					showSettings.set(!$showSettings);
-				} else if (isShortcutMatch(event, shortcuts[Shortcut.SHOW_SHORTCUTS])) {
+				} else if (shortcut === Shortcut.SHOW_SHORTCUTS) {
 					console.log('Shortcut triggered: SHOW_SHORTCUTS');
 					event.preventDefault();
-					showShortcuts.set(!$showShortcuts);
-				} else if (isShortcutMatch(event, shortcuts[Shortcut.CLOSE_MODAL])) {
+					showSettings.set('shortcuts');
+				} else if (shortcut === Shortcut.CLOSE_MODAL) {
 					console.log('Shortcut triggered: CLOSE_MODAL');
 					event.preventDefault();
 					showSettings.set(false);
-					showShortcuts.set(false);
-				} else if (isShortcutMatch(event, shortcuts[Shortcut.OPEN_MODEL_SELECTOR])) {
+				} else if (shortcut === Shortcut.OPEN_MODEL_SELECTOR) {
 					console.log('Shortcut triggered: OPEN_MODEL_SELECTOR');
 					event.preventDefault();
 					document.getElementById('model-selector-0-button')?.click();
-				} else if (isShortcutMatch(event, shortcuts[Shortcut.NEW_TEMPORARY_CHAT])) {
+				} else if (shortcut === Shortcut.NEW_TEMPORARY_CHAT) {
 					console.log('Shortcut triggered: NEW_TEMPORARY_CHAT');
 					event.preventDefault();
 					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
@@ -300,12 +305,12 @@
 					setTimeout(() => {
 						document.getElementById('new-chat-button')?.click();
 					}, 0);
-				} else if (isShortcutMatch(event, shortcuts[Shortcut.GENERATE_MESSAGE_PAIR])) {
+				} else if (shortcut === Shortcut.GENERATE_MESSAGE_PAIR) {
 					console.log('Shortcut triggered: GENERATE_MESSAGE_PAIR');
 					event.preventDefault();
 					document.getElementById('generate-message-pair-button')?.click();
 				} else if (
-					isShortcutMatch(event, shortcuts[Shortcut.REGENERATE_RESPONSE]) &&
+					shortcut === Shortcut.REGENERATE_RESPONSE &&
 					document.activeElement?.id === 'chat-input'
 				) {
 					console.log('Shortcut triggered: REGENERATE_RESPONSE');
@@ -366,6 +371,10 @@
 		loaded = true;
 	});
 
+	$: if (loaded) {
+		void openSettingsFromUrl();
+	}
+
 	const checkForVersionUpdates = async () => {
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
 			return {
@@ -406,7 +415,7 @@
 						>
 							<div class="m-auto pb-44 flex flex-col justify-center">
 								<div class="max-w-md">
-									<div class="text-center dark:text-white text-2xl font-medium z-50">
+									<div class="text-center dark:text-white text-2xl font-normal z-50">
 										{$i18n.t('Important Update')}<br />
 										{$i18n.t('Action Required for Chat Log Storage')}
 									</div>
@@ -415,7 +424,7 @@
 										{$i18n.t(
 											"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through"
 										)}
-										<span class="font-medium dark:text-white"
+										<span class="font-normal dark:text-white"
 											>{$i18n.t('Settings')} > {$i18n.t('Chats')} > {$i18n.t('Import Chats')}</span
 										>. {$i18n.t(
 											'This ensures that your valuable conversations are securely saved to your backend database. Thank you!'
@@ -424,7 +433,7 @@
 
 									<div class=" mt-6 mx-auto relative group w-fit">
 										<button
-											class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 transition font-medium text-sm"
+											class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 transition font-normal text-sm"
 											on:click={async () => {
 												let blob = new Blob([JSON.stringify(localDBChats)], {
 													type: 'application/json'

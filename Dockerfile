@@ -43,7 +43,7 @@ ENV APP_BUILD_HASH=${BUILD_HASH}
 RUN npm run build
 
 ######## WebUI backend ########
-FROM python:3.11.14-slim-bookworm AS base
+FROM python:3.11-slim-bookworm AS base
 
 # Use args
 ARG USE_CUDA
@@ -126,7 +126,7 @@ RUN chown -R $UID:$GID /app $HOME
 # Install common system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    git build-essential pandoc gcc netcat-openbsd curl jq \
+    git build-essential pandoc gcc netcat-openbsd curl jq ca-certificates \
     libmariadb-dev \
     python3-dev \
     ffmpeg libsm6 libxext6 zstd \
@@ -134,6 +134,9 @@ RUN apt-get update && \
 
 # install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
+
+# Set UV_LINK_MODE to copy to prevent 0-byte file corruption in QEMU arm64 cross-builds
+ENV UV_LINK_MODE=copy
 
 RUN set -e; \
     pip3 install --no-cache-dir uv; \

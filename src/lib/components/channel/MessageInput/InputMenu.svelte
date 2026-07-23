@@ -5,6 +5,7 @@
 	import { getTools } from '$lib/apis/tools';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import DocumentArrowUpSolid from '$lib/components/icons/DocumentArrowUpSolid.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -43,30 +44,30 @@
 	</Tooltip>
 
 	<div slot="content">
-		<div
-			class="w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-999 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
-		>
+		<DropdownMenu className="w-[200px] z-999 transition">
 			<button
-				class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 				type="button"
 				on:click={() => {
 					uploadFilesHandler();
+					show = false;
 				}}
 			>
-				<Clip />
+				<Clip className="size-3.5" />
 				<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
 			</button>
 
 			<button
-				class="select-none flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 				type="button"
 				on:click={() => {
 					screenCaptureHandler();
+					show = false;
 				}}
 			>
-				<Camera />
+				<Camera className="size-3.5" />
 				<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
 			</button>
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>

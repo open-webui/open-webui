@@ -1,55 +1,54 @@
-from typing import Optional, List, Dict, Any, Tuple
-import logging
 import json
+import logging
+from typing import Any, Dict, List, Optional, Tuple
+
+from open_webui.config import (
+    PGVECTOR_CREATE_EXTENSION,
+    PGVECTOR_DB_URL,
+    PGVECTOR_HNSW_EF_CONSTRUCTION,
+    PGVECTOR_HNSW_M,
+    PGVECTOR_INDEX_METHOD,
+    PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH,
+    PGVECTOR_IVFFLAT_LISTS,
+    PGVECTOR_PGCRYPTO,
+    PGVECTOR_PGCRYPTO_KEY,
+    PGVECTOR_POOL_MAX_OVERFLOW,
+    PGVECTOR_POOL_RECYCLE,
+    PGVECTOR_POOL_SIZE,
+    PGVECTOR_POOL_TIMEOUT,
+    PGVECTOR_USE_HALFVEC,
+)
+from open_webui.retrieval.vector.main import (
+    GetResult,
+    SearchResult,
+    VectorDBBase,
+    VectorItem,
+)
+from open_webui.retrieval.vector.utils import merge_hybrid_search_results, process_metadata
+from open_webui.utils.misc import sanitize_text_for_db
+from pgvector.sqlalchemy import HALFVEC, Vector
 from sqlalchemy import (
-    func,
-    literal,
+    Column,
+    Integer,
+    LargeBinary,
+    MetaData,
+    Table,
+    Text,
     cast,
     column,
     create_engine,
-    Column,
-    Integer,
-    MetaData,
-    LargeBinary,
+    func,
+    literal,
     select,
     text,
-    Text,
-    Table,
     values,
 )
-from sqlalchemy.sql import true
-from sqlalchemy.pool import NullPool, QueuePool
-
-from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
 from sqlalchemy.dialects.postgresql import JSONB, array
-from pgvector.sqlalchemy import Vector, HALFVEC
-from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.exc import NoSuchTableError
-
-
-from open_webui.retrieval.vector.utils import process_metadata
-from open_webui.retrieval.vector.main import (
-    VectorDBBase,
-    VectorItem,
-    SearchResult,
-    GetResult,
-)
-from open_webui.config import (
-    PGVECTOR_DB_URL,
-    PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH,
-    PGVECTOR_CREATE_EXTENSION,
-    PGVECTOR_PGCRYPTO,
-    PGVECTOR_PGCRYPTO_KEY,
-    PGVECTOR_POOL_SIZE,
-    PGVECTOR_POOL_MAX_OVERFLOW,
-    PGVECTOR_POOL_TIMEOUT,
-    PGVECTOR_POOL_RECYCLE,
-    PGVECTOR_INDEX_METHOD,
-    PGVECTOR_HNSW_M,
-    PGVECTOR_HNSW_EF_CONSTRUCTION,
-    PGVECTOR_IVFFLAT_LISTS,
-    PGVECTOR_USE_HALFVEC,
-)
+from sqlalchemy.ext.mutable import MutableDict
+from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
+from sqlalchemy.pool import NullPool, QueuePool
+from sqlalchemy.sql import true
 
 VECTOR_LENGTH = PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH
 USE_HALFVEC = PGVECTOR_USE_HALFVEC
@@ -154,6 +153,7 @@ class PgvectorClient(VectorDBBase):
 
             index_method, index_options = self._vector_index_configuration()
             self._ensure_vector_index(index_method, index_options)
+            self._ensure_text_search_index()
 
             self.session.execute(
                 text(
@@ -237,6 +237,19 @@ class PgvectorClient(VectorDBBase):
                 f' {index_options}' if index_options else '',
             )
 
+    def _ensure_text_search_index(self) -> None:
+        if PGVECTOR_PGCRYPTO:
+            return
+
+        self.session.execute(
+            text("""
+                CREATE INDEX IF NOT EXISTS idx_document_chunk_text_search
+                ON document_chunk
+                USING GIN (to_tsvector('simple', coalesce(text, '')));
+                """)
+        )
+        log.info("Ensured text search index 'idx_document_chunk_text_search'.")
+
     def check_vector_length(self) -> None:
         """
         Check if the VECTOR_LENGTH matches the existing vector column dimension in the database.
@@ -289,7 +302,9 @@ class PgvectorClient(VectorDBBase):
                     vector = self.adjust_vector_length(item['vector'])
                     # Use raw SQL for BYTEA/pgcrypto
                     # Ensure metadata is converted to its JSON text representation
-                    json_metadata = json.dumps(item['metadata'])
+                    # Sanitize to strip null bytes / surrogates that PostgreSQL cannot store
+                    json_metadata = sanitize_text_for_db(json.dumps(item['metadata']))
+                    item_text = sanitize_text_for_db(item['text'])
                     self.session.execute(
                         text("""
                             INSERT INTO document_chunk
@@ -305,7 +320,7 @@ class PgvectorClient(VectorDBBase):
                             'id': item['id'],
                             'vector': vector,
                             'collection_name': collection_name,
-                            'text': item['text'],
+                            'text': item_text,
                             'metadata_text': json_metadata,
                             'key': PGVECTOR_PGCRYPTO_KEY,
                         },
@@ -338,7 +353,9 @@ class PgvectorClient(VectorDBBase):
             if PGVECTOR_PGCRYPTO:
                 for item in items:
                     vector = self.adjust_vector_length(item['vector'])
-                    json_metadata = json.dumps(item['metadata'])
+                    # Sanitize to strip null bytes / surrogates that PostgreSQL cannot store
+                    json_metadata = sanitize_text_for_db(json.dumps(item['metadata']))
+                    item_text = sanitize_text_for_db(item['text'])
                     self.session.execute(
                         text("""
                             INSERT INTO document_chunk
@@ -358,7 +375,7 @@ class PgvectorClient(VectorDBBase):
                             'id': item['id'],
                             'vector': vector,
                             'collection_name': collection_name,
-                            'text': item['text'],
+                            'text': item_text,
                             'metadata_text': json_metadata,
                             'key': PGVECTOR_PGCRYPTO_KEY,
                         },
@@ -516,6 +533,71 @@ class PgvectorClient(VectorDBBase):
         except Exception as e:
             self.session.rollback()
             log.exception(f'Error during search: {e}')
+            return None
+
+    def hybrid_search(
+        self,
+        collection_name: str,
+        query: str,
+        vectors: List[List[float]],
+        filter: Optional[Dict[str, Any]] = None,
+        limit: int = 10,
+        hybrid_bm25_weight: float = 0.5,
+    ) -> Optional[SearchResult]:
+        if PGVECTOR_PGCRYPTO or filter:
+            return None
+
+        try:
+            limit = max(1, limit)
+            vectors = [self.adjust_vector_length(vector) for vector in vectors] if vectors else []
+            num_queries = len(vectors) if vectors else 1
+            bm25_weight = min(max(hybrid_bm25_weight, 0.0), 1.0)
+            vector_weight = 1.0 - bm25_weight
+
+            vector_result = None
+            if vector_weight > 0 and vectors:
+                vector_result = self.search(collection_name=collection_name, vectors=vectors, limit=limit)
+
+            fts_results = []
+            if bm25_weight > 0 and query and query.strip():
+                fts_rows = self.session.execute(
+                    text("""
+                        WITH fts_query AS (
+                            SELECT plainto_tsquery('simple', :query) AS query
+                        )
+                        SELECT
+                            document_chunk.id AS id,
+                            document_chunk.text AS text,
+                            document_chunk.vmetadata AS vmetadata,
+                            ts_rank_cd(
+                                to_tsvector('simple', coalesce(document_chunk.text, '')),
+                                fts_query.query
+                            ) AS rank
+                        FROM document_chunk, fts_query
+                        WHERE document_chunk.collection_name = :collection_name
+                          AND to_tsvector('simple', coalesce(document_chunk.text, '')) @@ fts_query.query
+                        ORDER BY rank DESC
+                        LIMIT :limit
+                    """),
+                    {
+                        'collection_name': collection_name,
+                        'query': query,
+                        'limit': limit,
+                    },
+                )
+                fts_results = [dict(row) for row in fts_rows.mappings().all()]
+                self.session.rollback()
+
+            return merge_hybrid_search_results(
+                vector_result=vector_result,
+                fts_results=fts_results,
+                num_queries=num_queries,
+                limit=limit,
+                hybrid_bm25_weight=hybrid_bm25_weight,
+            )
+        except Exception as e:
+            self.session.rollback()
+            log.exception(f'Error during hybrid search: {e}')
             return None
 
     def query(self, collection_name: str, filter: Dict[str, Any], limit: Optional[int] = None) -> Optional[GetResult]:

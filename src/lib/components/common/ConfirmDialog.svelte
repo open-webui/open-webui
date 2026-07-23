@@ -11,6 +11,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { marked } from 'marked';
 	import SensitiveInput from './SensitiveInput.svelte';
+	import NativeSelect from './NativeSelect.svelte';
 
 	export let title = '';
 	export let message = '';
@@ -24,6 +25,7 @@
 	export let inputPlaceholder = '';
 	export let inputValue = '';
 	export let inputType = '';
+	export let inputOptions: ({ label?: string; value: string } | string)[] = [];
 
 	let _inputValue = inputValue;
 
@@ -45,7 +47,7 @@
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
 			console.log('Escape');
-			show = false;
+			cancelHandler();
 		}
 
 		if (event.key === 'Enter') {
@@ -61,6 +63,11 @@
 		await tick();
 		await onConfirm();
 		dispatch('confirm', _inputValue);
+	};
+
+	const cancelHandler = () => {
+		show = false;
+		dispatch('cancel');
 	};
 
 	onMount(() => {
@@ -105,18 +112,18 @@
 		class=" fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-99999999 overflow-hidden overscroll-contain"
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
-			show = false;
+			cancelHandler();
 		}}
 	>
 		<div
-			class=" m-auto max-w-full w-[32rem] mx-2 bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm rounded-4xl max-h-[100dvh] shadow-3xl border border-white dark:border-gray-900"
+			class="m-auto max-w-full w-[32rem] mx-2 bg-white dark:bg-gray-950 rounded-3xl max-h-[100dvh] shadow-3xl border border-white dark:border-gray-900"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();
 			}}
 		>
-			<div class="px-[1.75rem] py-6 flex flex-col">
-				<div class=" text-lg font-medium dark:text-gray-200 mb-2.5">
+			<div class="px-5 py-5 flex flex-col">
+				<div class="text-base font-medium dark:text-gray-200 mb-2.5">
 					{#if title !== ''}
 						{title}
 					{:else}
@@ -147,6 +154,14 @@
 										required={true}
 									/>
 								</div>
+							{:else if inputType === 'select' && inputOptions.length}
+								<NativeSelect
+									className="w-full mt-2 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden"
+									bind:value={_inputValue}
+									options={inputOptions}
+									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Select an option')}
+									required
+								/>
 							{:else}
 								<textarea
 									bind:value={_inputValue}
@@ -160,19 +175,18 @@
 					</div>
 				</slot>
 
-				<div class="mt-6 flex justify-between gap-1.5">
+				<div class="mt-5 flex justify-between gap-1.5">
 					<button
-						class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white font-medium w-full py-2 rounded-3xl transition"
+						class="text-sm bg-gray-100 hover:bg-gray-100/70 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-850/60 dark:text-white font-normal w-full py-1.5 rounded-full transition"
 						on:click={() => {
-							show = false;
-							dispatch('cancel');
+							cancelHandler();
 						}}
 						type="button"
 					>
 						{cancelLabel}
 					</button>
 					<button
-						class="text-sm bg-gray-900 hover:bg-gray-850 text-gray-100 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800 font-medium w-full py-2 rounded-3xl transition"
+						class="text-sm bg-gray-900 hover:bg-gray-900/90 text-gray-100 dark:bg-gray-100 dark:hover:bg-gray-100/90 dark:text-gray-800 font-normal w-full py-1.5 rounded-full transition"
 						on:click={() => {
 							confirmHandler();
 						}}

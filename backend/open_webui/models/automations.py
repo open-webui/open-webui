@@ -1,13 +1,12 @@
-import time
 import logging
+import time
 from typing import Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Column, Text, JSON, Boolean, BigInteger, Index, select, or_, func, cast, String, delete, update
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from open_webui.internal.db import Base, get_async_db_context
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import JSON, BigInteger, Boolean, Column, Index, String, Text, cast, delete, func, or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -145,15 +144,21 @@ class AutomationTable:
 
     async def count_by_user(self, user_id: str, db: Optional[AsyncSession] = None) -> int:
         async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(func.count()).select_from(Automation).filter_by(user_id=user_id)
-            )
+            result = await db.execute(select(func.count()).select_from(Automation).filter_by(user_id=user_id))
             return result.scalar()
 
     async def get_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[AutomationModel]:
         async with get_async_db_context(db) as db:
             row = await db.get(Automation, id)
             return AutomationModel.model_validate(row) if row else None
+
+    async def get_active_by_user(self, user_id: str, db: Optional[AsyncSession] = None) -> list[AutomationModel]:
+        """Get active automations for a user (for calendar RRULE expansion)."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(Automation).filter_by(user_id=user_id, is_active=True).order_by(Automation.created_at.desc())
+            )
+            return [AutomationModel.model_validate(r) for r in result.scalars().all()]
 
     async def search_automations(
         self,
@@ -185,9 +190,7 @@ class AutomationTable:
             stmt = stmt.order_by(Automation.created_at.desc())
 
             # Get total count
-            count_result = await db.execute(
-                select(func.count()).select_from(stmt.subquery())
-            )
+            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
             total = count_result.scalar()
 
             if skip:
@@ -277,9 +280,19 @@ class AutomationTable:
 
             from open_webui.utils.automations import next_run_ns
 
+            # Batch-fetch user timezones so rescheduling respects each
+            # user's local timezone instead of falling back to server time.
+            user_ids = list({row.user_id for row in rows})
+            timezone_by_user_id: dict[str, Optional[str]] = {}
+            if user_ids:
+                from open_webui.models.users import User
+
+                tz_result = await db.execute(select(User.id, User.timezone).where(User.id.in_(user_ids)))
+                timezone_by_user_id = {uid: tz for uid, tz in tz_result.all()}
+
             for row in rows:
                 row.last_run_at = now_ns
-                row.next_run_at = next_run_ns(row.data.get('rrule', ''))
+                row.next_run_at = next_run_ns(row.data.get('rrule', ''), tz=timezone_by_user_id.get(row.user_id))
 
             await db.commit()
 
@@ -343,18 +356,14 @@ class AutomationRunTable:
                 .subquery()
             )
             result = await db.execute(
-                select(AutomationRun)
-                .join(
+                select(AutomationRun).join(
                     subq,
                     (AutomationRun.automation_id == subq.c.automation_id)
                     & (AutomationRun.created_at == subq.c.max_created),
                 )
             )
             rows = result.scalars().all()
-            return {
-                row.automation_id: AutomationRunModel.model_validate(row)
-                for row in rows
-            }
+            return {row.automation_id: AutomationRunModel.model_validate(row) for row in rows}
 
     async def get_by_automation(
         self,
@@ -379,6 +388,32 @@ class AutomationRunTable:
             result = await db.execute(delete(AutomationRun).filter_by(automation_id=automation_id))
             await db.commit()
             return result.rowcount
+
+    async def get_runs_by_user_range(
+        self,
+        user_id: str,
+        start_ns: int,
+        end_ns: int,
+        limit: int = 500,
+        db: Optional[AsyncSession] = None,
+    ) -> list[tuple['AutomationRunModel', 'AutomationModel']]:
+        """Get runs within a date range for a user, joined with parent automation."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(AutomationRun, Automation)
+                .join(Automation, Automation.id == AutomationRun.automation_id)
+                .filter(
+                    Automation.user_id == user_id,
+                    AutomationRun.created_at >= start_ns,
+                    AutomationRun.created_at < end_ns,
+                )
+                .order_by(AutomationRun.created_at.desc())
+                .limit(limit)
+            )
+            return [
+                (AutomationRunModel.model_validate(run), AutomationModel.model_validate(auto))
+                for run, auto in result.all()
+            ]
 
 
 Automations = AutomationTable()

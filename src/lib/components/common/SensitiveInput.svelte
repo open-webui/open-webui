@@ -1,38 +1,58 @@
 <script lang="ts">
 	const i18n = getContext('i18n');
 	import { getContext } from 'svelte';
-	import { settings } from '$lib/stores';
 	export let id = 'password-input';
 	export let value: string = '';
 	export let placeholder = '';
 	export let type = 'text';
 	export let required = true;
 	export let readOnly = false;
-	export let outerClassName = 'flex flex-1 bg-transparent';
-	export let inputClassName = 'w-full text-sm py-0.5 bg-transparent';
-	export let showButtonClassName = 'pl-1.5  transition bg-transparent';
+	export let variant: 'plain' | 'settings' = 'plain';
+	export let outerClassName = 'flex flex-1';
+	export let inputClassName = '';
+	export let showButtonClassName = '';
 	export let screenReader = true;
 	export let autocomplete = 'off';
+	export let name: string | undefined = undefined;
+	let className = '';
+	export { className as class };
 
 	let show = false;
+
+	$: outerClass =
+		variant === 'settings'
+			? `${outerClassName} h-7 items-center rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 transition-colors focus-within:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:focus-within:border-blue-500`
+			: outerClassName;
+	$: inputBaseClass =
+		variant === 'settings'
+			? 'min-w-0 flex-1 bg-transparent text-xs text-gray-700 outline-hidden placeholder:text-gray-300 disabled:text-gray-500 dark:text-gray-300 dark:placeholder:text-gray-700'
+			: 'w-full bg-transparent py-0.5 text-sm outline-hidden';
+	$: resolvedInputClass = `${inputBaseClass} ${variant === 'plain' ? className : ''} ${inputClassName} ${
+		show ? '' : 'password'
+	}`;
+	$: buttonClass =
+		variant === 'settings'
+			? `ml-1.5 bg-transparent text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 ${showButtonClassName}`
+			: `pl-1.5 bg-transparent transition ${showButtonClassName}`;
 </script>
 
-<div class={outerClassName}>
+<div class={outerClass}>
 	{#if screenReader}
 		<label class="sr-only" for={id}>{placeholder || $i18n.t('Password')}</label>
 	{/if}
 	<input
 		{id}
-		class={`${inputClassName} ${show ? '' : 'password'} ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : ' outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-600'}`}
+		class={resolvedInputClass}
 		{placeholder}
 		type={type === 'password' && !show ? 'password' : 'text'}
 		bind:value
+		{name}
 		required={required && !readOnly}
 		disabled={readOnly}
 		{autocomplete}
 	/>
 	<button
-		class={showButtonClassName}
+		class={buttonClass}
 		type="button"
 		aria-pressed={show}
 		aria-label={$i18n.t('Make password visible in the user interface')}

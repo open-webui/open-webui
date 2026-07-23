@@ -15,7 +15,7 @@
 
 	import { onMount, createEventDispatcher, getContext, tick, onDestroy } from 'svelte';
 
-	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
 
 	import { formatPythonCode } from '$lib/apis/utils';
 	import { toast } from 'svelte-sonner';
@@ -26,6 +26,7 @@
 
 	export let boilerplate = '';
 	export let value = '';
+	export let className = 'text-sm';
 
 	export let onSave = () => {};
 	export let onChange = () => {};
@@ -96,7 +97,7 @@
 
 	const getPyodideWorker = () => {
 		if (!pyodideWorkerInstance) {
-			pyodideWorkerInstance = new PyodideWorker(); // Your worker constructor
+			pyodideWorkerInstance = createPyodideWorker();
 		}
 		return pyodideWorkerInstance;
 	};
@@ -318,4 +319,4 @@ print("${endTag}")
 	});
 </script>
 
-<div id="code-textarea-{id}" class="h-full w-full text-sm" />
+<div id="code-textarea-{id}" class="{className} h-full w-full min-w-0 overflow-hidden" />

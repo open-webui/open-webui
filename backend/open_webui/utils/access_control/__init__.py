@@ -1,16 +1,15 @@
 import json
 from typing import Any
 
-from open_webui.models.users import UserModel
-from open_webui.models.groups import Groups
+from open_webui.config import DEFAULT_USER_PERMISSIONS
 from open_webui.models.access_grants import (
     has_public_read_access_grant,
     has_public_write_access_grant,
     has_user_access_grant,
     strip_user_access_grants,
 )
-from open_webui.config import DEFAULT_USER_PERMISSIONS
-
+from open_webui.models.groups import Groups
+from open_webui.models.users import UserModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -115,7 +114,7 @@ async def has_access(
     Check if a user has the specified permission using an in-memory access_grants list.
 
     Used for config-driven resources (arena models, tool servers) that store
-    access control as JSON in PersistentConfig rather than in the access_grant DB table.
+    access control as JSON config rather than in the access_grant DB table.
 
     Semantics:
     - None or []  → private (owner-only, deny all)
@@ -254,7 +253,64 @@ async def filter_allowed_access_grants(
     ):
         access_grants = strip_user_access_grants(access_grants)
 
+    if any(
+        (grant.get('principal_type') if isinstance(grant, dict) else getattr(grant, 'principal_type', None)) == 'group'
+        for grant in access_grants
+    ) and not await has_permission(
+        user_id,
+        'access_grants.allow_groups',
+        default_permissions,
+        db=db,
+    ):
+        access_grants = [
+            grant
+            for grant in access_grants
+            if (grant.get('principal_type') if isinstance(grant, dict) else getattr(grant, 'principal_type', None))
+            != 'group'
+        ]
+
     return access_grants
+
+
+async def has_base_model_access(
+    user_id: str,
+    model_info,
+    *,
+    user_group_ids: set[str] | None = None,
+    db=None,
+) -> bool:
+    """
+    Walk the ``base_model_id`` chain and verify the caller has read access
+    at every hop.
+
+    Returns ``True`` when access is granted (or the chain ends at a raw
+    provider model that has no per-model ACL).  Returns ``False`` the
+    moment a registered base model denies access.
+    """
+    from open_webui.models.access_grants import AccessGrants
+    from open_webui.models.models import Models
+
+    base_model_id = getattr(model_info, 'base_model_id', None)
+    seen = {model_info.id}
+    while base_model_id and base_model_id not in seen:
+        seen.add(base_model_id)
+        base_model_info = await Models.get_model_by_id(base_model_id, db=db)
+        if base_model_info is None:
+            break  # Raw provider model — no per-model ACL
+        if not (
+            user_id == base_model_info.user_id
+            or await AccessGrants.has_access(
+                user_id=user_id,
+                resource_type='model',
+                resource_id=base_model_info.id,
+                permission='read',
+                user_group_ids=user_group_ids,
+                db=db,
+            )
+        ):
+            return False
+        base_model_id = getattr(base_model_info, 'base_model_id', None)
+    return True
 
 
 async def check_model_access(
@@ -281,7 +337,8 @@ async def check_model_access(
         return
 
     if model_info:
-        if user.role == 'user':
+        # Enforce for every non-admin role (including pending); never fail open.
+        if user.role != 'admin':
             from open_webui.models.access_grants import AccessGrants
 
             user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
@@ -295,6 +352,10 @@ async def check_model_access(
                     user_group_ids=user_group_ids,
                 )
             ):
+                raise HTTPException(status_code=403, detail='Model not found')
+
+            # Enforce access on chained base models
+            if not await has_base_model_access(user.id, model_info, user_group_ids=user_group_ids):
                 raise HTTPException(status_code=403, detail='Model not found')
     else:
         if user.role != 'admin':
