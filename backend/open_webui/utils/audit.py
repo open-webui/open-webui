@@ -235,10 +235,12 @@ class AuditLoggingMiddleware:
                 return True  # Skip: path not in whitelist
             return False  # Do NOT skip: path is in whitelist
 
-        # Blacklist mode: skip paths that match excluded_paths
-        pattern = re.compile(r'^/api(?:/v1)?/(' + '|'.join(self.excluded_paths) + r')\b')
-        if pattern.match(request.url.path):
-            return True
+        # Blacklist mode: skip paths that match excluded_paths.
+        # An empty alternation would match every path, so guard the empty list.
+        if self.excluded_paths:
+            pattern = re.compile(r'^/api(?:/v1)?/(' + '|'.join(self.excluded_paths) + r')\b')
+            if pattern.match(request.url.path):
+                return True
 
         return False
 
