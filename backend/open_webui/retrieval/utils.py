@@ -108,6 +108,20 @@ LOADER_CONFIG_KEYS = {
     'MINERU_API_TIMEOUT': 'rag.mineru_api_timeout',
     'MINERU_PARAMS': 'rag.mineru_params',
     'MINERU_FILE_EXTENSIONS': 'rag.mineru_file_extensions',
+    'web_loader_engine': 'web.loader.engine',
+    'web_loader_timeout': 'web.loader.timeout',
+    'playwright_timeout': 'web.loader.playwright_timeout',
+    'playwright_ws_url': 'web.loader.playwright_ws_url',
+    'firecrawl_api_key': 'web.loader.firecrawl_api_key',
+    'firecrawl_api_url': 'web.loader.firecrawl_api_url',
+    'firecrawl_timeout': 'web.loader.firecrawl_timeout',
+    'tavily_api_key': 'web.search.tavily_api_key',
+    'tavily_extract_depth': 'web.search.tavily_extract_depth',
+    'microsoft_web_iq_api_base_url': 'web.search.microsoft_web_iq_api_base_url',
+    'microsoft_web_iq_api_key': 'web.search.microsoft_web_iq_api_key',
+    'microsoft_web_iq_language': 'web.search.microsoft_web_iq_language',
+    'external_web_loader_url': 'web.loader.external_web_loader_url',
+    'external_web_loader_api_key': 'web.loader.external_web_loader_api_key',
 }
 
 
@@ -128,6 +142,20 @@ def get_loader(request, url: str, config: dict):
         verify_ssl=config.get('web_loader_ssl_verification'),
         requests_per_second=config.get('web_loader_concurrent_requests'),
         trust_env=config.get('web_search_trust_env'),
+        engine=config.get('web_loader_engine'),
+        timeout=config.get('web_loader_timeout'),
+        playwright_timeout=config.get('playwright_timeout'),
+        playwright_ws_url=config.get('playwright_ws_url'),
+        firecrawl_api_key=config.get('firecrawl_api_key'),
+        firecrawl_api_url=config.get('firecrawl_api_url'),
+        firecrawl_timeout=config.get('firecrawl_timeout'),
+        tavily_api_key=config.get('tavily_api_key'),
+        tavily_extract_depth=config.get('tavily_extract_depth'),
+        microsoft_web_iq_api_base_url=config.get('microsoft_web_iq_api_base_url'),
+        microsoft_web_iq_api_key=config.get('microsoft_web_iq_api_key'),
+        microsoft_web_iq_language=config.get('microsoft_web_iq_language'),
+        external_url=config.get('external_web_loader_url'),
+        external_api_key=config.get('external_web_loader_api_key'),
     )
 
 

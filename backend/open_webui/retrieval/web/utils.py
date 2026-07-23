@@ -838,6 +838,20 @@ def get_web_loader(
     verify_ssl: bool = True,
     requests_per_second: int = 2,
     trust_env: bool = False,
+    engine: str = None,
+    timeout: str = None,
+    playwright_timeout: int = None,
+    playwright_ws_url: str = None,
+    firecrawl_api_key: str = None,
+    firecrawl_api_url: str = None,
+    firecrawl_timeout: int = None,
+    tavily_api_key: str = None,
+    tavily_extract_depth: str = None,
+    microsoft_web_iq_api_base_url: str = None,
+    microsoft_web_iq_api_key: str = None,
+    microsoft_web_iq_language: str = None,
+    external_url: str = None,
+    external_api_key: str = None,
 ):
     # Check if the URLs are valid
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
@@ -854,13 +868,37 @@ def get_web_loader(
         'trust_env': trust_env,
     }
 
-    if WEB_LOADER_ENGINE == '' or WEB_LOADER_ENGINE == 'safe_web':
+    # Resolve effective values: caller overrides take precedence over env defaults
+    web_loader_engine = engine if engine is not None else WEB_LOADER_ENGINE
+    web_loader_timeout = timeout if timeout is not None else WEB_LOADER_TIMEOUT
+    playwright_timeout_val = playwright_timeout if playwright_timeout is not None else PLAYWRIGHT_TIMEOUT
+    playwright_ws_url_val = playwright_ws_url if playwright_ws_url is not None else PLAYWRIGHT_WS_URL
+    firecrawl_api_key_val = firecrawl_api_key if firecrawl_api_key is not None else FIRECRAWL_API_KEY
+    firecrawl_api_url_val = firecrawl_api_url if firecrawl_api_url is not None else FIRECRAWL_API_BASE_URL
+    firecrawl_timeout_val = firecrawl_timeout if firecrawl_timeout is not None else FIRECRAWL_TIMEOUT
+    tavily_api_key_val = tavily_api_key if tavily_api_key is not None else TAVILY_API_KEY
+    tavily_extract_depth_val = tavily_extract_depth if tavily_extract_depth is not None else TAVILY_EXTRACT_DEPTH
+    microsoft_web_iq_api_base_url_val = (
+        microsoft_web_iq_api_base_url if microsoft_web_iq_api_base_url is not None else MICROSOFT_WEB_IQ_API_BASE_URL
+    )
+    microsoft_web_iq_api_key_val = (
+        microsoft_web_iq_api_key if microsoft_web_iq_api_key is not None else MICROSOFT_WEB_IQ_API_KEY
+    )
+    microsoft_web_iq_language_val = (
+        microsoft_web_iq_language if microsoft_web_iq_language is not None else MICROSOFT_WEB_IQ_LANGUAGE
+    )
+    external_url_val = external_url if external_url is not None else EXTERNAL_WEB_LOADER_URL
+    external_api_key_val = external_api_key if external_api_key is not None else EXTERNAL_WEB_LOADER_API_KEY
+
+    WebLoaderClass = None
+
+    if web_loader_engine == '' or web_loader_engine == 'safe_web':
         WebLoaderClass = SafeWebBaseLoader
 
         request_kwargs = {}
-        if WEB_LOADER_TIMEOUT:
+        if web_loader_timeout:
             try:
-                timeout_value = float(WEB_LOADER_TIMEOUT)
+                timeout_value = float(web_loader_timeout)
             except ValueError:
                 timeout_value = None
 
@@ -870,42 +908,42 @@ def get_web_loader(
         if request_kwargs:
             web_loader_args['requests_kwargs'] = request_kwargs
 
-    if WEB_LOADER_ENGINE == 'playwright':
+    if web_loader_engine == 'playwright':
         WebLoaderClass = SafePlaywrightURLLoader
-        web_loader_args['playwright_timeout'] = PLAYWRIGHT_TIMEOUT
-        if PLAYWRIGHT_WS_URL:
-            web_loader_args['playwright_ws_url'] = PLAYWRIGHT_WS_URL
+        web_loader_args['playwright_timeout'] = playwright_timeout_val
+        if playwright_ws_url_val:
+            web_loader_args['playwright_ws_url'] = playwright_ws_url_val
 
-    if WEB_LOADER_ENGINE == 'firecrawl':
+    if web_loader_engine == 'firecrawl':
         WebLoaderClass = SafeFireCrawlLoader
-        web_loader_args['api_key'] = FIRECRAWL_API_KEY
-        web_loader_args['api_url'] = FIRECRAWL_API_BASE_URL
-        if FIRECRAWL_TIMEOUT:
+        web_loader_args['api_key'] = firecrawl_api_key_val
+        web_loader_args['api_url'] = firecrawl_api_url_val
+        if firecrawl_timeout_val:
             try:
-                web_loader_args['timeout'] = int(FIRECRAWL_TIMEOUT)
+                web_loader_args['timeout'] = int(firecrawl_timeout_val)
             except ValueError:
                 pass
 
-    if WEB_LOADER_ENGINE == 'tavily':
+    if web_loader_engine == 'tavily':
         WebLoaderClass = SafeTavilyLoader
-        web_loader_args['api_key'] = TAVILY_API_KEY
-        web_loader_args['extract_depth'] = TAVILY_EXTRACT_DEPTH
+        web_loader_args['api_key'] = tavily_api_key_val
+        web_loader_args['extract_depth'] = tavily_extract_depth_val
 
-    if WEB_LOADER_ENGINE == 'microsoft_web_iq':
+    if web_loader_engine == 'microsoft_web_iq':
         WebLoaderClass = SafeMicrosoftWebIQLoader
-        web_loader_args['api_base_url'] = MICROSOFT_WEB_IQ_API_BASE_URL
-        web_loader_args['api_key'] = MICROSOFT_WEB_IQ_API_KEY
-        web_loader_args['language'] = MICROSOFT_WEB_IQ_LANGUAGE
-        if WEB_LOADER_TIMEOUT:
+        web_loader_args['api_base_url'] = microsoft_web_iq_api_base_url_val
+        web_loader_args['api_key'] = microsoft_web_iq_api_key_val
+        web_loader_args['language'] = microsoft_web_iq_language_val
+        if web_loader_timeout:
             try:
-                web_loader_args['timeout'] = int(WEB_LOADER_TIMEOUT)
+                web_loader_args['timeout'] = int(web_loader_timeout)
             except ValueError:
                 pass
 
-    if WEB_LOADER_ENGINE == 'external':
+    if web_loader_engine == 'external':
         WebLoaderClass = ExternalWebLoader
-        web_loader_args['external_url'] = EXTERNAL_WEB_LOADER_URL
-        web_loader_args['external_api_key'] = EXTERNAL_WEB_LOADER_API_KEY
+        web_loader_args['external_url'] = external_url_val
+        web_loader_args['external_api_key'] = external_api_key_val
 
     if WebLoaderClass:
         web_loader = WebLoaderClass(**web_loader_args)
@@ -919,6 +957,6 @@ def get_web_loader(
         return web_loader
     else:
         raise ValueError(
-            f'Invalid WEB_LOADER_ENGINE: {WEB_LOADER_ENGINE}. '
+            f'Invalid WEB_LOADER_ENGINE: {web_loader_engine}. '
             "Please set it to 'safe_web', 'playwright', 'firecrawl', 'tavily', 'external', or 'microsoft_web_iq'."
         )

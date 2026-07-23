@@ -2609,6 +2609,20 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                 verify_ssl=config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
                 requests_per_second=config.WEB_LOADER_CONCURRENT_REQUESTS,
                 trust_env=config.WEB_SEARCH_TRUST_ENV,
+                engine=getattr(config, 'WEB_LOADER_ENGINE', None),
+                timeout=getattr(config, 'WEB_LOADER_TIMEOUT', None),
+                playwright_timeout=getattr(config, 'PLAYWRIGHT_TIMEOUT', None),
+                playwright_ws_url=getattr(config, 'PLAYWRIGHT_WS_URL', None),
+                firecrawl_api_key=getattr(config, 'FIRECRAWL_API_KEY', None),
+                firecrawl_api_url=getattr(config, 'FIRECRAWL_API_BASE_URL', None),
+                firecrawl_timeout=getattr(config, 'FIRECRAWL_TIMEOUT', None),
+                tavily_api_key=getattr(config, 'TAVILY_API_KEY', None),
+                tavily_extract_depth=getattr(config, 'TAVILY_EXTRACT_DEPTH', None),
+                microsoft_web_iq_api_base_url=getattr(config, 'MICROSOFT_WEB_IQ_API_BASE_URL', None),
+                microsoft_web_iq_api_key=getattr(config, 'MICROSOFT_WEB_IQ_API_KEY', None),
+                microsoft_web_iq_language=getattr(config, 'MICROSOFT_WEB_IQ_LANGUAGE', None),
+                external_url=getattr(config, 'EXTERNAL_WEB_LOADER_URL', None),
+                external_api_key=getattr(config, 'EXTERNAL_WEB_LOADER_API_KEY', None),
             )
             docs = await loader.aload()
 
