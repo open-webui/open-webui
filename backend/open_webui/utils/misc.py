@@ -591,9 +591,9 @@ def strip_empty_content_blocks(messages: list[dict]) -> list[dict]:
     return messages
 
 
-def openai_chat_message_template(model: str):
+def openai_chat_message_template(model: str, message_id: str | None = None):
     return {
-        'id': f'{model}-{str(uuid.uuid4())}',
+        'id': message_id if message_id else f'{model}-{str(uuid.uuid4())}',
         'created': int(time.time()),
         'model': model,
         'choices': [{'index': 0, 'logprobs': None, 'finish_reason': None}],
@@ -606,8 +606,9 @@ def openai_chat_chunk_message_template(
     reasoning_content: str | None = None,
     tool_calls: list[dict | None] = None,
     usage: dict | None = None,
+    message_id: str | None = None,
 ) -> dict:
-    template = openai_chat_message_template(model)
+    template = openai_chat_message_template(model, message_id)
     template['object'] = 'chat.completion.chunk'
 
     template['choices'][0]['index'] = 0
