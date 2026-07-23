@@ -1199,34 +1199,114 @@ async def compact_chat_by_id(
 ############################
 
 
+async def get_accessible_chat_by_id(
+    id: str,
+    user,
+    db: AsyncSession,
+    *,
+    include_messages: bool,
+):
+    chat = await Chats.get_chat_by_id_and_user_id(
+        id,
+        user.id,
+        db=db,
+        include_messages=include_messages,
+    )
+
+    if chat:
+        return chat
+
+    if user.role == 'admin':
+        candidate = await Chats.get_chat_by_id(id, db=db, include_messages=include_messages)
+        if ENABLE_ADMIN_CHAT_ACCESS or (candidate and is_internal_chat(candidate.meta)):
+            return candidate
+        return None
+
+    has_grant = await AccessGrants.has_access(
+        user_id=user.id,
+        resource_type='shared_chat',
+        resource_id=id,
+        permission='read',
+        db=db,
+    )
+    if has_grant:
+        return await Chats.get_chat_by_id(id, db=db, include_messages=include_messages)
+
+    candidate = await Chats.get_chat_by_id(id, db=db, include_messages=include_messages)
+    if candidate and candidate.folder_id:
+        folder = await Folders.get_folder_by_id(candidate.folder_id, db=db)
+        if folder and await has_folder_access(user.id, folder, 'read', db):
+            return candidate
+
+    return None
+
+
+@router.get('/{id}/window', response_model=ChatResponse | None)
+async def get_chat_window_by_id(
+    id: str,
+    limit: int = 32,
+    current_id: str | None = None,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    limit = max(1, min(limit, 128))
+    chat = await get_accessible_chat_by_id(id, user, db, include_messages=False)
+    if not chat:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    try:
+        chat = await Chats.get_chat_window(chat, limit=limit, current_id=current_id, db=db)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    data = ChatResponse(**chat.model_dump()).model_dump()
+    data['context_usage'] = await get_chat_context_usage(chat)
+    return data
+
+
+@router.get('/{id}/history/window')
+async def get_chat_history_window_by_id(
+    id: str,
+    current_id: str,
+    limit: int = 32,
+    before_id: str | None = None,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    limit = max(1, min(limit, 128))
+    chat = await get_accessible_chat_by_id(id, user, db, include_messages=False)
+    if not chat:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    try:
+        window_chat = await Chats.get_chat_window(
+            chat,
+            current_id=current_id,
+            limit=limit,
+            before_id=before_id,
+            db=db,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    history = window_chat.chat.get('history') or {}
+    metadata = history.get('messageWindow') or {}
+    loaded_ids = metadata.get('loadedIds') or []
+    return {
+        'messages': {
+            message_id: history['messages'][message_id]
+            for message_id in loaded_ids
+            if message_id in (history.get('messages') or {})
+        },
+        'loadedIds': loaded_ids,
+        'hasMore': metadata.get('hasMore', False),
+        'currentId': history.get('currentId'),
+    }
+
+
 @router.get('/{id}', response_model=ChatResponse | None)
 async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
-
-    if not chat:
-        # Check if user has access via access grants (shared_chat grants)
-        if user.role == 'admin':
-            candidate = await Chats.get_chat_by_id(id, db=db)
-            if ENABLE_ADMIN_CHAT_ACCESS or (candidate and is_internal_chat(candidate.meta)):
-                chat = candidate
-        else:
-            has_grant = await AccessGrants.has_access(
-                user_id=user.id,
-                resource_type='shared_chat',
-                resource_id=id,
-                permission='read',
-                db=db,
-            )
-            if has_grant:
-                chat = await Chats.get_chat_by_id(id, db=db)
-
-            # Check folder-based access (shared folders)
-            if not chat:
-                candidate = await Chats.get_chat_by_id(id, db=db)
-                if candidate and candidate.folder_id:
-                    folder = await Folders.get_folder_by_id(candidate.folder_id, db=db)
-                    if folder and await has_folder_access(user.id, folder, 'read', db):
-                        chat = candidate
+    chat = await get_accessible_chat_by_id(id, user, db, include_messages=True)
 
     if chat:
         data = ChatResponse(**chat.model_dump()).model_dump()
@@ -1239,6 +1319,39 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSess
 ############################
 # UpdateChatById
 ############################
+
+
+@router.post('/{id}/window', response_model=ChatResponse | None)
+async def update_chat_window_by_id(
+    request: Request,
+    id: str,
+    form_data: ChatForm,
+    limit: int = 32,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    limit = max(1, min(limit, 128))
+    if not await Chats.is_chat_owner(id, user.id, db=db):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    chat = await Chats.update_chat_window_by_id(id, form_data.chat, db=db)
+    if not chat:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.DEFAULT())
+
+    chat = await Chats.get_chat_window(chat, limit=limit, db=db)
+    await publish_event(
+        request,
+        EVENTS.CHAT_UPDATED,
+        actor=user,
+        subject_id=id,
+        data={'title': chat.title},
+    )
+    data = ChatResponse(**chat.model_dump()).model_dump()
+    data['context_usage'] = await get_chat_context_usage(chat)
+    return data
 
 
 @router.post('/{id}', response_model=ChatResponse | None)
@@ -1286,6 +1399,78 @@ async def update_chat_by_id(
 ############################
 class MessageForm(BaseModel):
     content: str
+
+
+class MessagePatchForm(BaseModel):
+    message: dict
+
+
+@router.patch('/{id}/messages/{message_id}', response_model=dict | None)
+async def patch_chat_message_by_id(
+    request: Request,
+    id: str,
+    message_id: str,
+    form_data: MessagePatchForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    chat = await Chats.get_chat_by_id(id, db=db, include_messages=False)
+
+    if not chat or (chat.user_id != user.id and user.role != 'admin'):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    message = await Chats.patch_message_by_chat_id_and_message_id(
+        id,
+        message_id,
+        form_data.message,
+        db=db,
+    )
+    if message is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    event_emitter = await get_event_emitter(
+        {
+            'user_id': chat.user_id,
+            'chat_id': id,
+            'message_id': message_id,
+        },
+        False,
+    )
+    protected_fields = {'__loaded', 'childrenIds', 'id', 'parentId', 'role', 'timestamp'}
+    response_patch = {
+        key: message.get(key) for key in form_data.message if key not in protected_fields and key in message
+    }
+
+    if event_emitter:
+        await event_emitter(
+            {
+                'type': 'chat:message',
+                'data': {
+                    'chat_id': id,
+                    'message_id': message_id,
+                    **response_patch,
+                },
+            }
+        )
+
+    content = form_data.message.get('content')
+    await publish_event(
+        request,
+        EVENTS.MESSAGE_UPDATED,
+        actor=user,
+        subject_id=message_id,
+        data={
+            'chat_id': id,
+            'content_preview': content[:300] if isinstance(content, str) else '',
+        },
+    )
+    return {'id': message_id, **response_patch}
 
 
 @router.post('/{id}/messages/{message_id}', response_model=ChatResponse | None)
@@ -1355,10 +1540,11 @@ async def delete_chat_message_by_id(
     request: Request,
     id: str,
     message_id: str,
+    compact: bool = False,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    chat = await Chats.get_chat_by_id(id, db=db)
+    chat = await Chats.get_chat_by_id(id, db=db, include_messages=False)
 
     if not chat:
         raise HTTPException(
@@ -1372,7 +1558,18 @@ async def delete_chat_message_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    chat = await Chats.delete_message_from_chat_by_id_and_message_id(id, message_id)
+    if await has_active_tasks(request.app.state.redis, id):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail='Wait for the current response to finish before deleting messages.',
+        )
+
+    chat = await Chats.delete_message_from_chat_by_id_and_message_id(
+        id,
+        message_id,
+        include_messages=not compact,
+        db=db,
+    )
     if not chat:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -1386,6 +1583,8 @@ async def delete_chat_message_by_id(
         subject_id=message_id,
         data={'chat_id': id},
     )
+    if compact:
+        chat = await Chats.get_chat_window(chat, limit=32, db=db)
     return ChatResponse(**chat.model_dump())
 
 
@@ -1602,7 +1801,9 @@ async def fork_chat_by_id(
             detail='Wait for the current response to finish before forking.',
         )
 
-    source_message_id = (form_data.message_id if form_data else None) or chat.current_message_id or history.get('currentId')
+    source_message_id = (
+        (form_data.message_id if form_data else None) or chat.current_message_id or history.get('currentId')
+    )
     if not source_message_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='chat has no messages to fork')
 

@@ -25,6 +25,8 @@
 	export let gotoMessage;
 	export let showPreviousMessage;
 	export let showNextMessage;
+	export let navigateToMessageId;
+	export let ensureMessageLoaded;
 	export let updateChat;
 
 	export let editMessage;
@@ -113,6 +115,8 @@
 					{chatId}
 					{messageId}
 					{selectedModels}
+					{navigateToMessageId}
+					{ensureMessageLoaded}
 					isLastMessage={messageId === history?.currentId}
 					{setInputText}
 					{updateChat}

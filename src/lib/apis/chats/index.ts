@@ -1,5 +1,9 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { getTimeRange } from '$lib/utils';
+import {
+	DEFAULT_CHAT_MESSAGE_WINDOW,
+	type ChatHistoryWindowResponse
+} from '$lib/utils/chatHistoryWindow';
 
 export const getChatConfig = async (token: string) => {
 	let error = null;
@@ -771,6 +775,87 @@ export const getChatById = async (token: string, id: string) => {
 	return res;
 };
 
+export const getChatByIdWindow = async (
+	token: string,
+	id: string,
+	limit: number = DEFAULT_CHAT_MESSAGE_WINDOW,
+	currentId?: string
+) => {
+	let error = null;
+	const searchParams = new URLSearchParams();
+	searchParams.set('limit', `${limit}`);
+	if (currentId) {
+		searchParams.set('current_id', currentId);
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/window?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err?.detail ?? err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getChatHistoryWindow = async (
+	token: string,
+	id: string,
+	currentId: string,
+	limit: number = DEFAULT_CHAT_MESSAGE_WINDOW,
+	beforeId?: string
+): Promise<ChatHistoryWindowResponse> => {
+	let error = null;
+	const searchParams = new URLSearchParams();
+	searchParams.set('current_id', currentId);
+	searchParams.set('limit', `${limit}`);
+	if (beforeId) {
+		searchParams.set('before_id', beforeId);
+	}
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/chats/${id}/history/window?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err?.detail ?? err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getChatByShareId = async (token: string, share_id: string) => {
 	let error = null;
 
@@ -1232,6 +1317,37 @@ export const updateChatById = async (token: string, id: string, chat: object) =>
 	return res;
 };
 
+export const updateChatByIdWindow = async (token: string, id: string, chat: object) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/window`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			chat
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err?.detail ?? err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const compactChatById = async (token: string, id: string, model?: string | null) => {
 	let error = null;
 
@@ -1265,10 +1381,44 @@ export const compactChatById = async (token: string, id: string, model?: string 
 	return res;
 };
 
-export const deleteChatMessageById = async (token: string, id: string, messageId: string) => {
+export const updateChatMessageById = async (
+	token: string,
+	id: string,
+	messageId: string,
+	message: object
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/messages/${messageId}`, {
+		method: 'PATCH',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({ message })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err?.detail ?? err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const deleteChatMessageById = async (token: string, id: string, messageId: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/messages/${messageId}?compact=true`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
