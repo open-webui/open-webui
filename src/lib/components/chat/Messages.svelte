@@ -6,8 +6,20 @@
 	const dispatch = createEventDispatcher();
 
 	import { toast } from 'svelte-sonner';
-	import { deleteChatMessageById, updateChatById } from '$lib/apis/chats';
+	import {
+		deleteChatMessageById,
+		getChatHistoryWindow,
+		updateChatByIdWindow,
+		updateChatMessageById
+	} from '$lib/apis/chats';
 	import { copyToClipboard, extractCurlyBraceWords } from '$lib/utils';
+	import {
+		createMessagePatch,
+		DEFAULT_CHAT_MESSAGE_WINDOW,
+		isChatMessageLoaded,
+		mergeChatHistoryWindow,
+		serializeChatForWindowSave
+	} from '$lib/utils/chatHistoryWindow';
 
 	import Message from './Messages/Message.svelte';
 	import Loader from '../common/Loader.svelte';
@@ -15,7 +27,18 @@
 
 	import ChatPlaceholder from './ChatPlaceholder.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
+
+	type ChatHistoryState = {
+		currentId: string | null;
+		messages: Record<string, any>;
+		messageWindow?: {
+			loadedIds?: string[];
+			hasMore?: boolean;
+			[key: string]: unknown;
+		};
+		[key: string]: unknown;
+	};
 
 	export let className = 'h-full flex pt-18';
 
@@ -23,11 +46,11 @@
 	export let user = $_user;
 
 	export let prompt;
-	export let history = {};
+	export let history: ChatHistoryState = { messages: {}, currentId: null };
 	export let selectedModels;
 	export let atSelectedModel;
 
-	let messages = [];
+	let messages: any[] = [];
 
 	export let setInputText: Function = () => {};
 
@@ -48,54 +71,209 @@
 
 	export let topPadding = false;
 	export let bottomPadding = false;
-	export let autoScroll;
+	export let autoScroll: boolean;
 	export let messagesContainerId = 'messages-container';
 
-	export let onSelect = (e) => {};
+	export let onSelect = (e: any) => {};
 	export let onInsertToNote: ((content: string) => void) | null = null;
 
 	export let messagesCount: number | null = 8;
 	let messagesLoading = false;
+	let destroyed = false;
+	const historyWindowRequests = new Map<string, Promise<boolean>>();
+	const branchHasMoreByCurrentId = new Map<string, boolean>();
+	let pendingRebuild: number | null = null;
+	let lastCurrentId: string | null = null;
+	let branchNavigationGeneration = 0;
+	let historyGeneration = 0;
+	let observedHistory = history;
+	let observedChatId = chatId;
 
 	const getMessagesContainer = () => document.getElementById(messagesContainerId);
 
-	onDestroy(() => {
-		cancelAnimationFrame(pendingRebuild);
-	});
-
-	const loadMoreMessages = async () => {
-		// scroll slightly down to disable continuous loading
-		const element = getMessagesContainer();
-		if (element) {
-			element.scrollTop = element.scrollTop + 100;
-		}
-
-		messagesLoading = true;
-		messagesCount += 8;
-
-		buildMessages();
-
-		await tick();
-
+	const resetLazyPaginationState = () => {
+		messagesCount = 8;
 		messagesLoading = false;
+		branchNavigationGeneration += 1;
+		historyGeneration += 1;
+		historyWindowRequests.clear();
+		branchHasMoreByCurrentId.clear();
+		lastCurrentId = null;
+		if (pendingRebuild !== null) cancelAnimationFrame(pendingRebuild);
+		pendingRebuild = null;
 	};
 
-	let pendingRebuild = null;
-	let lastCurrentId = null;
+	const setMergedHistory = (nextHistory: ChatHistoryState) => {
+		observedHistory = nextHistory;
+		history = nextHistory;
+	};
+
+	const replaceHistory = (nextHistory: ChatHistoryState) => {
+		resetLazyPaginationState();
+		observedHistory = nextHistory;
+		observedChatId = chatId;
+		history = nextHistory;
+	};
+
+	const observeHistoryReplacement = (nextHistory: ChatHistoryState, nextChatId: string) => {
+		if (nextHistory === observedHistory && nextChatId === observedChatId) return;
+
+		resetLazyPaginationState();
+		observedHistory = nextHistory;
+		observedChatId = nextChatId;
+	};
+
+	onDestroy(() => {
+		destroyed = true;
+		branchNavigationGeneration += 1;
+		historyGeneration += 1;
+		historyWindowRequests.clear();
+		branchHasMoreByCurrentId.clear();
+		if (pendingRebuild !== null) cancelAnimationFrame(pendingRebuild);
+	});
+
+	$: observeHistoryReplacement(history, chatId);
+
+	const getBranchLoadState = (currentId = history?.currentId) => {
+		let loadedCount = 0;
+		let earliestLoadedId: string | null = null;
+		let blockedId: string | null = null;
+		let reachedRoot = false;
+		let messageId = currentId;
+		const visited = new Set<string>();
+
+		while (messageId) {
+			if (visited.has(messageId)) {
+				reachedRoot = true;
+				break;
+			}
+			visited.add(messageId);
+
+			const message = history?.messages?.[messageId];
+			if (!message || !isChatMessageLoaded(history, messageId)) {
+				blockedId = messageId;
+				break;
+			}
+
+			loadedCount += 1;
+			earliestLoadedId = messageId;
+			if (message.parentId === null || message.parentId === undefined) {
+				reachedRoot = true;
+				break;
+			}
+			messageId = message.parentId;
+		}
+
+		return { loadedCount, earliestLoadedId, blockedId, reachedRoot };
+	};
+
+	const hydrateHistoryWindow = async (currentId: string, beforeId?: string) => {
+		if (
+			!currentId ||
+			!history?.messageWindow ||
+			$temporaryChatEnabled ||
+			!chatId ||
+			chatId.startsWith('local:')
+		) {
+			return true;
+		}
+
+		const requestChatId = chatId;
+		const requestGeneration = historyGeneration;
+		const requestKey = `${requestGeneration}:${requestChatId}:${currentId}:${beforeId ?? ''}`;
+		const pendingRequest = historyWindowRequests.get(requestKey);
+		if (pendingRequest) return await pendingRequest;
+
+		const request = (async () => {
+			try {
+				const historyWindow = await getChatHistoryWindow(
+					localStorage.token,
+					requestChatId,
+					currentId,
+					DEFAULT_CHAT_MESSAGE_WINDOW,
+					beforeId
+				);
+				if (
+					!historyWindow ||
+					destroyed ||
+					chatId !== requestChatId ||
+					historyGeneration !== requestGeneration
+				) {
+					return false;
+				}
+
+				const activeCurrentId = history.currentId;
+				branchHasMoreByCurrentId.set(currentId, historyWindow.hasMore);
+				const mergedHistory = mergeChatHistoryWindow(history, historyWindow) as ChatHistoryState;
+				mergedHistory.currentId = activeCurrentId;
+				if (currentId !== activeCurrentId && mergedHistory.messageWindow) {
+					mergedHistory.messageWindow.hasMore = history.messageWindow?.hasMore;
+				}
+				setMergedHistory(mergedHistory);
+				return true;
+			} catch (error) {
+				console.error('Failed to load chat history window', error);
+				toast.error($i18n.t('Failed to load chat'));
+				return false;
+			} finally {
+				historyWindowRequests.delete(requestKey);
+			}
+		})();
+
+		historyWindowRequests.set(requestKey, request);
+		return await request;
+	};
+
+	const ensureLoadedAncestors = async (targetCount: number) => {
+		while (true) {
+			const state = getBranchLoadState();
+			if (state.loadedCount >= targetCount || state.reachedRoot) return true;
+			if (!state.earliestLoadedId || history?.messageWindow?.hasMore === false) return false;
+
+			const currentId = history.currentId;
+			if (!currentId) return false;
+			const loaded = await hydrateHistoryWindow(currentId, state.earliestLoadedId);
+			if (!loaded) return false;
+
+			const nextState = getBranchLoadState();
+			if (nextState.loadedCount <= state.loadedCount) return false;
+		}
+	};
+
+	const loadMoreMessages = async () => {
+		if (messagesLoading || messagesCount === null) return;
+
+		// scroll slightly down to disable continuous loading
+		const element = getMessagesContainer();
+		if (element) element.scrollTop += 100;
+
+		messagesLoading = true;
+		try {
+			const nextCount = messagesCount + 8;
+			if (!(await ensureLoadedAncestors(nextCount))) return;
+
+			messagesCount = nextCount;
+			buildMessages();
+			await tick();
+		} finally {
+			messagesLoading = false;
+		}
+	};
 
 	const buildMessages = () => {
 		let _messages = [];
 
-		let message = history.messages[history.currentId];
+		let message = history.currentId ? history.messages[history.currentId] : null;
 		const visitedMessageIds = new Set();
 
-		while (message && (messagesCount !== null ? _messages.length <= messagesCount : true)) {
+		while (message && (messagesCount !== null ? _messages.length < messagesCount : true)) {
 			if (visitedMessageIds.has(message.id)) {
 				console.warn('Circular dependency detected in message history', message.id);
 				break;
 			}
 			visitedMessageIds.add(message.id);
 
+			if (!isChatMessageLoaded(history, message.id)) break;
 			_messages.push(message);
 			message = message.parentId !== null ? history.messages[message.parentId] : null;
 		}
@@ -105,7 +283,7 @@
 
 	// Throttle message list rebuilds to once per animation frame during streaming.
 	// Structural changes (currentId change) always rebuild immediately.
-	const handleHistoryChange = (currentId, _messages) => {
+	const handleHistoryChange = (currentId: string | null, _messages: Record<string, any>) => {
 		if (!currentId) {
 			messages = [];
 			return;
@@ -116,7 +294,7 @@
 
 		if (currentIdChanged) {
 			// Structural change: new chat, navigation, new message — rebuild immediately
-			cancelAnimationFrame(pendingRebuild);
+			if (pendingRebuild !== null) cancelAnimationFrame(pendingRebuild);
 			pendingRebuild = null;
 			buildMessages();
 		} else if (_messages) {
@@ -154,14 +332,35 @@
 	};
 
 	export const scrollToTop = async () => {
-		messagesCount = null;
-		buildMessages();
-		await tick();
-		if (messages.length > 0) {
-			const firstMessageEl = document.getElementById(`message-${messages[0].id}`);
-			if (firstMessageEl) {
-				firstMessageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		if (messagesLoading) return;
+
+		messagesLoading = true;
+		try {
+			while (true) {
+				const state = getBranchLoadState();
+				if (state.reachedRoot) break;
+				if (!state.earliestLoadedId || history?.messageWindow?.hasMore === false) return;
+
+				const currentId = history.currentId;
+				if (!currentId) return;
+				const loaded = await hydrateHistoryWindow(currentId, state.earliestLoadedId);
+				if (!loaded) return;
+
+				const nextState = getBranchLoadState();
+				if (nextState.loadedCount <= state.loadedCount) return;
 			}
+
+			messagesCount = null;
+			buildMessages();
+			await tick();
+			if (messages.length > 0) {
+				const firstMessageEl = document.getElementById(`message-${messages[0].id}`);
+				if (firstMessageEl) {
+					firstMessageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				}
+			}
+		} finally {
+			messagesLoading = false;
 		}
 	};
 
@@ -169,181 +368,113 @@
 		if (!$temporaryChatEnabled) {
 			history = history;
 			await tick();
-			const res = await updateChatById(localStorage.token, chatId, {
+			const payload = serializeChatForWindowSave({
 				history: history,
 				messages: messages
 			});
-
-			// Keep local plain-content edits aligned with the saved chat response.
-			if (res?.chat?.history?.messages) {
-				for (const [id, msg] of Object.entries(res.chat.history.messages)) {
-					if (history.messages[id] && (msg as any).content) {
-						history.messages[id].content = (msg as any).content;
-					}
-				}
-				history = history;
-			}
+			await updateChatByIdWindow(localStorage.token, chatId, payload);
 
 			await refreshChatList(localStorage.token);
 		}
 	};
 
-	const gotoMessage = async (message, idx) => {
-		// Determine the correct sibling list (either parent's children or root messages)
-		let siblings;
-		if (message.parentId !== null) {
-			siblings = history.messages[message.parentId].childrenIds;
-		} else {
-			siblings = Object.values(history.messages)
-				.filter((msg) => msg.parentId === null)
-				.map((msg) => msg.id);
+	const getSiblingIds = (message: any): string[] =>
+		message.parentId !== null
+			? (history.messages[message.parentId]?.childrenIds ?? [])
+			: Object.values(history.messages)
+					.filter((candidate) => candidate.parentId === null)
+					.map((candidate) => candidate.id);
+
+	const getDeepestLeafId = (messageId: string) => {
+		const visited = new Set<string>();
+		let leafId = messageId;
+
+		while (leafId && !visited.has(leafId)) {
+			visited.add(leafId);
+			const childrenIds = history.messages[leafId]?.childrenIds ?? [];
+			if (childrenIds.length === 0) break;
+			leafId = childrenIds.at(-1);
 		}
 
-		// Clamp index to a valid range
-		idx = Math.max(0, Math.min(idx, siblings.length - 1));
-
-		let messageId = siblings[idx];
-
-		// If we're navigating to a different message
-		if (message.id !== messageId) {
-			// Drill down to the deepest child of that branch
-			let messageChildrenIds = history.messages[messageId].childrenIds;
-			while (messageChildrenIds.length !== 0) {
-				messageId = messageChildrenIds.at(-1);
-				messageChildrenIds = history.messages[messageId].childrenIds;
-			}
-
-			history.currentId = messageId;
-		}
-
-		await tick();
-
-		// Optional auto-scroll
-		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = getMessagesContainer();
-			autoScroll = element
-				? element.scrollHeight - element.scrollTop <= element.clientHeight + 50
-				: false;
-
-			setTimeout(() => {
-				scrollToBottom();
-			}, 100);
-		}
+		return leafId;
 	};
 
-	const showPreviousMessage = async (message) => {
-		if (message.parentId !== null) {
-			let messageId =
-				history.messages[message.parentId].childrenIds[
-					Math.max(history.messages[message.parentId].childrenIds.indexOf(message.id) - 1, 0)
-				];
-
-			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
-				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
-				}
-
-				history.currentId = messageId;
-			}
-		} else {
-			let childrenIds = Object.values(history.messages)
-				.filter((message) => message.parentId === null)
-				.map((message) => message.id);
-			let messageId = childrenIds[Math.max(childrenIds.indexOf(message.id) - 1, 0)];
-
-			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
-				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
-				}
-
-				history.currentId = messageId;
-			}
-		}
-
-		await tick();
-
-		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = getMessagesContainer();
-			autoScroll = element
-				? element.scrollHeight - element.scrollTop <= element.clientHeight + 50
-				: false;
-
-			setTimeout(() => {
-				scrollToBottom();
-			}, 100);
-		}
+	const ensureMessageLoaded = async (messageId: string) => {
+		if (!messageId || isChatMessageLoaded(history, messageId)) return true;
+		return await hydrateHistoryWindow(messageId);
 	};
 
-	const showNextMessage = async (message) => {
-		if (message.parentId !== null) {
-			let messageId =
-				history.messages[message.parentId].childrenIds[
-					Math.min(
-						history.messages[message.parentId].childrenIds.indexOf(message.id) + 1,
-						history.messages[message.parentId].childrenIds.length - 1
-					)
-				];
-
-			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
-				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
-				}
-
-				history.currentId = messageId;
-			}
-		} else {
-			let childrenIds = Object.values(history.messages)
-				.filter((message) => message.parentId === null)
-				.map((message) => message.id);
-			let messageId =
-				childrenIds[Math.min(childrenIds.indexOf(message.id) + 1, childrenIds.length - 1)];
-
-			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
-				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
-				}
-
-				history.currentId = messageId;
-			}
-		}
-
+	const scrollAfterBranchChange = async () => {
 		await tick();
+		if (!($settings?.scrollOnBranchChange ?? true)) return;
 
-		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = getMessagesContainer();
-			autoScroll = element
-				? element.scrollHeight - element.scrollTop <= element.clientHeight + 50
-				: false;
-
-			setTimeout(() => {
-				scrollToBottom();
-			}, 100);
+		const element = getMessagesContainer();
+		if (element) {
+			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 		}
+
+		setTimeout(() => {
+			scrollToBottom();
+		}, 100);
+	};
+
+	const switchToBranchLeaf = async (messageId: string) => {
+		if (!messageId) return false;
+		const navigationGeneration = ++branchNavigationGeneration;
+		if (messageId === history.currentId) return true;
+		if (!(await ensureMessageLoaded(messageId))) return false;
+		if (navigationGeneration !== branchNavigationGeneration) return false;
+
+		messagesCount = 8;
+		history.currentId = messageId;
+		const targetHasMore = branchHasMoreByCurrentId.get(messageId);
+		if (typeof targetHasMore === 'boolean' && history.messageWindow) {
+			history.messageWindow.hasMore = targetHasMore;
+		}
+		history = history;
+		await scrollAfterBranchChange();
+		return true;
+	};
+
+	const gotoMessage = async (message: any, idx: number) => {
+		const siblings = getSiblingIds(message);
+		if (siblings.length === 0) return;
+
+		const siblingIndex = Math.max(0, Math.min(idx, siblings.length - 1));
+		const leafId = getDeepestLeafId(siblings[siblingIndex]);
+		await switchToBranchLeaf(leafId);
+	};
+
+	const showPreviousMessage = async (message: any) => {
+		const siblings = getSiblingIds(message);
+		if (siblings.length === 0) return;
+
+		const siblingIndex = Math.max(siblings.indexOf(message.id) - 1, 0);
+		const leafId = getDeepestLeafId(siblings[siblingIndex]);
+		await switchToBranchLeaf(leafId);
+	};
+
+	const showNextMessage = async (message: any) => {
+		const siblings = getSiblingIds(message);
+		if (siblings.length === 0) return;
+
+		const siblingIndex = Math.min(siblings.indexOf(message.id) + 1, siblings.length - 1);
+		const leafId = getDeepestLeafId(siblings[siblingIndex]);
+		await switchToBranchLeaf(leafId);
 	};
 
 	const rateMessage = async (messageId, rating) => {
-		history.messages[messageId].annotation = {
-			...history.messages[messageId].annotation,
-			rating: rating
-		};
-
-		await updateChat();
+		await saveMessage(messageId, {
+			...history.messages[messageId],
+			annotation: {
+				...history.messages[messageId].annotation,
+				rating: rating
+			}
+		});
 	};
 
 	const editMessage = async (messageId, { content, files, output = undefined }, submit = true) => {
-		if ((selectedModels ?? []).filter((id) => id).length === 0) {
+		if (submit && (selectedModels ?? []).filter((id) => id).length === 0) {
 			toast.error($i18n.t('Model not selected'));
 			return;
 		}
@@ -380,9 +511,11 @@
 				await sendMessage(history, userMessageId);
 			} else {
 				// Edit user message
-				history.messages[messageId].content = content;
-				history.messages[messageId].files = files;
-				await updateChat();
+				await saveMessage(messageId, {
+					...history.messages[messageId],
+					content,
+					files
+				});
 			}
 		} else {
 			if (submit) {
@@ -416,15 +549,16 @@
 				await updateChat();
 			} else {
 				// Edit response message
+				const updatedMessage = { ...history.messages[messageId] };
 				if (content !== undefined) {
-					history.messages[messageId].originalContent = history.messages[messageId].content;
-					history.messages[messageId].content = content;
+					updatedMessage.originalContent = history.messages[messageId].content;
+					updatedMessage.content = content;
 				}
 				if (output !== undefined) {
-					history.messages[messageId].output = output;
-					history.messages[messageId].content = '';
+					updatedMessage.output = output;
+					updatedMessage.content = '';
 				}
-				await updateChat();
+				await saveMessage(messageId, updatedMessage);
 			}
 		}
 	};
@@ -435,15 +569,78 @@
 
 	const saveMessage = async (messageId, message) => {
 		if (!history.messages?.[messageId]) {
-			return;
+			return null;
 		}
 
-		history.messages[messageId] = message;
-		await updateChat();
+		const previousMessage = structuredClone(history.messages[messageId]);
+		const messagePatch = createMessagePatch(previousMessage, message);
+		history.messages[messageId] = { ...structuredClone(message), __loaded: true };
+		history = history;
+		await tick();
+
+		if ($temporaryChatEnabled) {
+			return history.messages[messageId];
+		}
+		if (Object.keys(messagePatch).length === 0) {
+			return history.messages[messageId];
+		}
+
+		try {
+			const savedMessage = await updateChatMessageById(
+				localStorage.token,
+				chatId,
+				messageId,
+				messagePatch
+			);
+
+			if (savedMessage) {
+				history.messages[messageId] = {
+					...history.messages[messageId],
+					...savedMessage,
+					__loaded: true
+				};
+				history = history;
+				await tick();
+			}
+
+			void refreshChatList(localStorage.token);
+			return savedMessage;
+		} catch (error) {
+			history.messages[messageId] = previousMessage;
+			history = history;
+			await tick();
+			toast.error(`${error}`);
+			throw error;
+		}
 	};
 
 	const deleteMessage = async (messageId) => {
 		const messageToDelete = history.messages[messageId];
+		if (!messageToDelete) return;
+
+		if (!$temporaryChatEnabled) {
+			try {
+				const response = await deleteChatMessageById(localStorage.token, chatId, messageId);
+				let nextHistory = response?.chat?.history as ChatHistoryState | undefined;
+
+				if (nextHistory?.currentId && !isChatMessageLoaded(nextHistory, nextHistory.currentId)) {
+					const historyWindow = await getChatHistoryWindow(
+						localStorage.token,
+						chatId,
+						nextHistory.currentId,
+						DEFAULT_CHAT_MESSAGE_WINDOW
+					);
+					nextHistory = mergeChatHistoryWindow(nextHistory, historyWindow) as ChatHistoryState;
+				}
+
+				if (nextHistory) replaceHistory(nextHistory);
+				void refreshChatList(localStorage.token);
+			} catch (error) {
+				toast.error(`${error}`);
+			}
+			return;
+		}
+
 		const parentMessageId = messageToDelete.parentId;
 		const childMessageIds = messageToDelete.childrenIds ?? [];
 
@@ -483,15 +680,6 @@
 		}
 		history.currentId = nextMessageId;
 		history = history;
-
-		if (!$temporaryChatEnabled) {
-			const res = await deleteChatMessageById(localStorage.token, chatId, messageId);
-			if (res?.chat?.history) {
-				history = res.chat.history;
-			}
-
-			await refreshChatList(localStorage.token);
-		}
 	};
 
 	const triggerScroll = () => {
@@ -543,6 +731,8 @@
 								{gotoMessage}
 								{showPreviousMessage}
 								{showNextMessage}
+								navigateToMessageId={switchToBranchLeaf}
+								{ensureMessageLoaded}
 								{updateChat}
 								{editMessage}
 								{deleteMessage}
