@@ -1,0 +1,88 @@
+name: Publish lazy history image
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - perf/lazy-branched-chat-history
+
+concurrency:
+  group: lazy-history-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/open-webui
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci --force
+
+      - name: Run lazy history frontend tests
+        run: npm run test:frontend -- --run src/lib/utils/chatHistoryWindow.test.ts
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install backend test dependencies
+        run: uv sync --frozen --group dev --no-install-project
+
+      - name: Run lazy history backend tests
+        env:
+          PYTHONPATH: backend
+        run: uv run --no-sync pytest backend/tests/test_chat_storage.py -q
+
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish slim image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.IMAGE_NAME }}:lazy-history
+            ${{ env.IMAGE_NAME }}:lazy-history-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
+            USE_SLIM=true
+          cache-from: type=gha,scope=lazy-history-slim-amd64
+          cache-to: type=gha,mode=max,scope=lazy-history-slim-amd64
+
+      - name: Inspect published image
+        run: docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:lazy-history
