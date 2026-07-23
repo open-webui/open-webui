@@ -104,14 +104,23 @@ async def cleanup_response(
                 await result
 
 
-async def stream_wrapper(response, session=None, content_handler=None):
+async def stream_wrapper(response, session=None, content_handler=None, passthrough=False):
     """Wrap a stream to ensure cleanup happens even if streaming is interrupted.
 
     This is more reliable than BackgroundTask which may not run if the client
     disconnects.  When using the shared pool, ``session`` should be ``None``.
+
+    ``passthrough=True`` yields raw network chunks (iter_any) instead of
+    lines: byte-identical output without a buffer scan, slice and copy per
+    line. Only for streams no internal consumer parses line-by-line.
     """
     try:
-        stream = content_handler(response.content) if content_handler else response.content
+        if content_handler:
+            stream = content_handler(response.content)
+        elif passthrough:
+            stream = response.content.iter_any()
+        else:
+            stream = response.content
         async for chunk in stream:
             yield chunk
     finally:
