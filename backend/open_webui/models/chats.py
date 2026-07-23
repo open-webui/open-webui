@@ -546,6 +546,19 @@ class ChatTable:
 
             return [ChatModel.model_validate(chat) for chat in chats]
 
+    def _apply_chat_update(self, chat_item: Chat, chat: dict, *, touch: bool) -> None:
+        """Write a (possibly in-place mutated) blob back onto the row.
+        flag_modified is required: callers may mutate the row's own dict,
+        which SQLAlchemy cannot detect."""
+        chat_item.chat = self._clean_null_bytes(chat)
+        flag_modified(chat_item, 'chat')
+        chat_item.title = self._clean_null_bytes(chat['title']) if 'title' in chat else 'New Chat'
+        if any(key in chat for key in ('history', 'messages', 'currentId', 'branchPointMessageId')):
+            chat_item.current_message_id = self.get_current_message_id(chat)
+
+        if touch:
+            chat_item.updated_at = int(time.time())
+
     async def update_chat_by_id(
         self,
         id: str,
@@ -561,14 +574,7 @@ class ChatTable:
                 if chat_item is None:
                     return None
 
-                chat_item.chat = self._clean_null_bytes(chat)
-                chat_item.title = self._clean_null_bytes(chat['title']) if 'title' in chat else 'New Chat'
-                if any(key in chat for key in ('history', 'messages', 'currentId', 'branchPointMessageId')):
-                    chat_item.current_message_id = self.get_current_message_id(chat)
-
-                if touch:
-                    chat_item.updated_at = int(time.time())
-
+                self._apply_chat_update(chat_item, chat, touch=touch)
                 await session.commit()
 
                 return ChatModel.model_validate(chat_item)
@@ -800,91 +806,112 @@ class ChatTable:
     async def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict, *, touch: bool = True
     ) -> ChatModel | None:
-        chat = await self.get_chat_by_id(id)
-        if chat is None:
-            return None
-
         # Sanitize message content for null characters before upserting
         if isinstance(message.get('content'), str):
             message['content'] = sanitize_text_for_db(message['content'])
 
-        user_id = chat.user_id
-        chat = chat.chat
-        history = chat.get('history', {})
-        messages = history.setdefault('messages', {})
-
-        if message_id in messages:
-            messages[message_id] = {
-                **messages[message_id],
-                **message,
-            }
-        else:
-            message_parent_id = message.get('parentId')
-            parent_id = message_parent_id
-            if parent_id is None:
-                for existing_id, existing_message in messages.items():
-                    if message_id in existing_message.get('childrenIds', []):
-                        parent_id = existing_id
-                        break
-
-            parent = messages.get(parent_id) if parent_id else None
-            output = message.get('output') or []
-            output_role = next(
-                (item.get('role') for item in output if isinstance(item, dict) and item.get('role')),
-                None,
-            )
-            role = message.get('role') or output_role
-            if not role:
-                parent_role = parent.get('role') if parent else None
-                if parent_role == 'user':
-                    role = 'assistant'
-                elif parent_role == 'assistant':
-                    role = 'user'
-                else:
-                    role = 'assistant'
-
-            messages[message_id] = {
-                **message,
-                'id': message.get('id') or message_id,
-                'parentId': message_parent_id if message_parent_id is not None else parent_id,
-                'childrenIds': message.get('childrenIds') if isinstance(message.get('childrenIds'), list) else [],
-                'role': role,
-                'timestamp': message.get('timestamp') or int(time.time()),
-            }
-
-        history['currentId'] = message_id
-
-        chat['history'] = history
-
-        # Dual-write to chat_message table
         try:
-            await ChatMessages.upsert_message(
-                message_id=message_id,
-                chat_id=id,
-                user_id=user_id,
-                data=messages[message_id],
-            )
+            # Single read-modify-write: this runs at least once per assistant
+            # reply, so the blob must not be fetched, parsed and validated twice.
+            async with get_async_db_context() as session:
+                chat_item = await session.get(Chat, id)
+                if chat_item is None:
+                    return None
+
+                user_id = chat_item.user_id
+                chat = chat_item.chat or {}
+                history = chat.get('history', {})
+                messages = history.setdefault('messages', {})
+
+                if message_id in messages:
+                    messages[message_id] = {
+                        **messages[message_id],
+                        **message,
+                    }
+                else:
+                    message_parent_id = message.get('parentId')
+                    parent_id = message_parent_id
+                    if parent_id is None:
+                        for existing_id, existing_message in messages.items():
+                            if message_id in existing_message.get('childrenIds', []):
+                                parent_id = existing_id
+                                break
+
+                    parent = messages.get(parent_id) if parent_id else None
+                    output = message.get('output') or []
+                    output_role = next(
+                        (item.get('role') for item in output if isinstance(item, dict) and item.get('role')),
+                        None,
+                    )
+                    role = message.get('role') or output_role
+                    if not role:
+                        parent_role = parent.get('role') if parent else None
+                        if parent_role == 'user':
+                            role = 'assistant'
+                        elif parent_role == 'assistant':
+                            role = 'user'
+                        else:
+                            role = 'assistant'
+
+                    messages[message_id] = {
+                        **message,
+                        'id': message.get('id') or message_id,
+                        'parentId': message_parent_id if message_parent_id is not None else parent_id,
+                        'childrenIds': message.get('childrenIds')
+                        if isinstance(message.get('childrenIds'), list)
+                        else [],
+                        'role': role,
+                        'timestamp': message.get('timestamp') or int(time.time()),
+                    }
+
+                history['currentId'] = message_id
+
+                chat['history'] = history
+
+                # Dual-write to chat_message table
+                try:
+                    await ChatMessages.upsert_message(
+                        message_id=message_id,
+                        chat_id=id,
+                        user_id=user_id,
+                        data=messages[message_id],
+                    )
+                except Exception as e:
+                    log.warning(f'Failed to write to chat_message table: {e}')
+
+                self._apply_chat_update(chat_item, chat, touch=touch)
+                await session.commit()
+
+                return ChatModel.model_validate(chat_item)
         except Exception as e:
-            log.warning(f'Failed to write to chat_message table: {e}')
-
-        return await self.update_chat_by_id(id, chat, touch=touch)
-
-    async def delete_message_from_chat_by_id_and_message_id(self, id: str, message_id: str) -> ChatModel | None:
-        chat_model = await self.get_chat_by_id(id)
-        if chat_model is None:
+            log.warning(f'Failed to upsert message {message_id} for chat {id}: {e}')
             return None
 
-        chat = chat_model.chat
-        history = chat.get('history', {})
-        deleted_ids = self.delete_message_from_history(history, message_id)
-        if not deleted_ids:
-            return chat_model
+    async def delete_message_from_chat_by_id_and_message_id(self, id: str, message_id: str) -> ChatModel | None:
+        try:
+            async with get_async_db_context() as session:
+                chat_item = await session.get(Chat, id)
+                if chat_item is None:
+                    return None
 
-        messages = history.get('messages') or {}
-        chat['history'] = history
-        updated_chat = await self.update_chat_by_id(id, chat)
+                user_id = chat_item.user_id
+                chat = chat_item.chat or {}
+                history = chat.get('history', {})
+                deleted_ids = self.delete_message_from_history(history, message_id)
+                if not deleted_ids:
+                    return ChatModel.model_validate(chat_item)
 
-        await self.backfill_messages_by_chat_id(id, chat_model.user_id, messages)
+                messages = history.get('messages') or {}
+                chat['history'] = history
+
+                self._apply_chat_update(chat_item, chat, touch=True)
+                await session.commit()
+                updated_chat = ChatModel.model_validate(chat_item)
+        except Exception as e:
+            log.warning(f'Failed to delete message {message_id} from chat {id}: {e}')
+            return None
+
+        await self.backfill_messages_by_chat_id(id, user_id, messages)
         await ChatMessages.delete_message_ids_by_chat_id(id, deleted_ids)
 
         return updated_chat
@@ -892,20 +919,29 @@ class ChatTable:
     async def add_message_status_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, status: dict
     ) -> ChatModel | None:
-        chat = await self.get_chat_by_id(id)
-        if chat is None:
+        try:
+            async with get_async_db_context() as session:
+                chat_item = await session.get(Chat, id)
+                if chat_item is None:
+                    return None
+
+                chat = chat_item.chat or {}
+                history = chat.get('history', {})
+
+                if message_id in history.get('messages', {}):
+                    status_history = history['messages'][message_id].get('statusHistory', [])
+                    status_history.append(status)
+                    history['messages'][message_id]['statusHistory'] = status_history
+
+                chat['history'] = history
+
+                self._apply_chat_update(chat_item, chat, touch=False)
+                await session.commit()
+
+                return ChatModel.model_validate(chat_item)
+        except Exception as e:
+            log.warning(f'Failed to add status to message {message_id} in chat {id}: {e}')
             return None
-
-        chat = chat.chat
-        history = chat.get('history', {})
-
-        if message_id in history.get('messages', {}):
-            status_history = history['messages'][message_id].get('statusHistory', [])
-            status_history.append(status)
-            history['messages'][message_id]['statusHistory'] = status_history
-
-        chat['history'] = history
-        return await self.update_chat_by_id(id, chat, touch=False)
 
     async def add_message_files_by_id_and_message_id(self, id: str, message_id: str, files: list[dict]) -> list[dict]:
         async with get_async_db_context() as session:
