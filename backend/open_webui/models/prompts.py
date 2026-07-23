@@ -103,11 +103,11 @@ class PromptsTable:
         access_grants: list[AccessGrantModel | None] = None,
         db: AsyncSession | None = None,
     ) -> PromptModel:
-        prompt_data = PromptModel.model_validate(prompt).model_dump(exclude={'access_grants'})
-        prompt_data['access_grants'] = (
-            access_grants if access_grants is not None else await self._get_access_grants(prompt_data['id'], db=db)
+        prompt_obj = PromptModel.model_validate(prompt)
+        prompt_obj.access_grants = (
+            access_grants if access_grants is not None else await self._get_access_grants(prompt_obj.id, db=db)
         )
-        return PromptModel.model_validate(prompt_data)
+        return prompt_obj
 
     async def insert_new_prompt(
         self, user_id: str, form_data: PromptForm, db: AsyncSession | None = None

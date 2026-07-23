@@ -199,11 +199,11 @@ class ModelsTable:
                 if db is not None:
                     await db.commit()
 
-        model_data = ModelModel.model_validate(model).model_dump(exclude={'access_grants'})
-        model_data['access_grants'] = (
-            access_grants if access_grants is not None else await self._get_access_grants(model_data['id'], db=db)
+        model_obj = ModelModel.model_validate(model)
+        model_obj.access_grants = (
+            access_grants if access_grants is not None else await self._get_access_grants(model_obj.id, db=db)
         )
-        return ModelModel.model_validate(model_data)
+        return model_obj
 
     async def insert_new_model(
         self, form_data: ModelForm, user_id: str, db: AsyncSession | None = None
