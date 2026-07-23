@@ -32,6 +32,10 @@
 	const getDetailTitle = (detailToken: OutputDetailToken): any => detailToken.summary;
 	const getDetailAttributes = (detailToken: OutputDetailToken): any => detailToken.attributes;
 
+	$: detailButtonClassName = `w-fit py-0.5 ${
+		preview ? 'text-xs' : 'text-[0.9375rem]'
+	} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition`;
+
 	$: displayItems = buildOutputDisplayItems(output) as OutputDisplayItem[];
 </script>
 
@@ -64,6 +68,7 @@
 			id={`${id}-${displayItem.id}`}
 			tokens={displayItem.tokens}
 			messageDone={done}
+			{preview}
 		>
 			<div slot="content">
 				{#each displayItem.tokens as detailToken, detailIndex}
@@ -75,7 +80,7 @@
 							grouped={true}
 							open={$settings?.expandDetails ?? false}
 							className="w-full"
-							buttonClassName="w-fit py-0.5 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+							buttonClassName={detailButtonClassName}
 						/>
 					{:else if detailToken.text?.length > 0}
 						<Collapsible
@@ -84,7 +89,7 @@
 							attributes={getDetailAttributes(detailToken)}
 							messageDone={done}
 							className="w-full"
-							buttonClassName="w-fit py-0.5 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+							buttonClassName={detailButtonClassName}
 						>
 							<div class="mb-1.5" slot="content">
 								<div class="markdown-prose">
@@ -92,6 +97,7 @@
 										id={`${id}-${displayItem.id}-${detailIndex}-detail`}
 										content={detailToken.text}
 										{done}
+										{preview}
 										{editCodeBlock}
 									/>
 								</div>
@@ -105,7 +111,7 @@
 							attributes={getDetailAttributes(detailToken)}
 							messageDone={done}
 							className="w-full"
-							buttonClassName="w-fit py-0.5 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+							buttonClassName={detailButtonClassName}
 						/>
 					{/if}
 				{/each}
@@ -120,6 +126,7 @@
 				resultContent={detailToken.text}
 				open={$settings?.expandDetails ?? false}
 				className="w-full space-y-2"
+				buttonClassName={detailButtonClassName}
 			/>
 		{:else if detailToken.text?.length > 0}
 			<Collapsible
@@ -128,6 +135,7 @@
 				attributes={getDetailAttributes(detailToken)}
 				messageDone={done}
 				className="w-full space-y-2"
+				buttonClassName={detailButtonClassName}
 			>
 				<div class="mb-1.5" slot="content">
 					<div class="markdown-prose">
@@ -135,6 +143,7 @@
 							id={`${id}-${displayItem.id}-detail`}
 							content={detailToken.text}
 							{done}
+							{preview}
 							{editCodeBlock}
 						/>
 					</div>
@@ -148,6 +157,7 @@
 				attributes={getDetailAttributes(detailToken)}
 				messageDone={done}
 				className="w-full space-y-2"
+				buttonClassName={detailButtonClassName}
 			/>
 		{/if}
 	{/if}

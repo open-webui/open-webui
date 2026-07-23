@@ -42,6 +42,7 @@
 	export let forkHandler: Function | null = null;
 	export let triggerScroll;
 	export let readOnly = false;
+	export let preview = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
 	export let onInsertToNote: ((content: string) => void) | null = null;
@@ -72,6 +73,7 @@
 				{editMessage}
 				{deleteMessage}
 				{readOnly}
+				{preview}
 				{editCodeBlock}
 				{topPadding}
 				{onInsertToNote}
@@ -100,6 +102,7 @@
 				{addMessages}
 				{forkHandler}
 				{readOnly}
+				{preview}
 				{editCodeBlock}
 				{topPadding}
 			/>
@@ -126,6 +129,7 @@
 					{addMessages}
 					{forkHandler}
 					{readOnly}
+					{preview}
 					{editCodeBlock}
 					{topPadding}
 					{onInsertToNote}

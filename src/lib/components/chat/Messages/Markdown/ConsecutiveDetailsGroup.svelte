@@ -31,6 +31,7 @@
 
 	export let messageDone = true;
 	export let allowEmbeds = true;
+	export let preview = false;
 
 	let open = $settings?.expandDetails ?? false;
 
@@ -112,7 +113,9 @@
 <div {id} class="w-full">
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<button
-		class="w-fit py-0.5 text-left text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer"
+		class="w-fit py-0.5 text-left {preview
+			? 'text-xs'
+			: 'text-[0.9375rem]'} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer"
 		aria-label={$i18n.t('Toggle details')}
 		aria-expanded={open}
 		on:click={() => {

@@ -43,6 +43,7 @@
 	export let forkHandler: Function | null = null;
 
 	export let readOnly = false;
+	export let preview = false;
 	export let editCodeBlock = true;
 
 	export let topPadding = false;
@@ -543,6 +544,7 @@
 								{forkHandler}
 								{triggerScroll}
 								{readOnly}
+								{preview}
 								{editCodeBlock}
 								{topPadding}
 								{onInsertToNote}
