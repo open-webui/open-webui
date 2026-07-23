@@ -55,6 +55,10 @@ log = logging.getLogger(__name__)
 # in ZlibError.  See https://github.com/aio-libs/aiohttp/issues/4462.
 _STRIP_PROXY_HEADERS = frozenset({'Content-Encoding', 'Content-Length', 'Transfer-Encoding'})
 
+# ClientTimeout is immutable; build the shared instances once
+_CLIENT_TIMEOUT = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+_MODEL_LIST_TIMEOUT = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+
 
 def _clean_proxy_headers(raw_headers) -> dict:
     """Return a copy of *raw_headers* with stale encoding headers removed."""
@@ -81,7 +85,7 @@ async def send_get_request(
             url,
             headers=headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
+            timeout=_MODEL_LIST_TIMEOUT,
         ) as r:
             return await r.json()
     except Exception as exc:
@@ -127,7 +131,7 @@ async def send_request(
             data=payload,
             headers=headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            timeout=_CLIENT_TIMEOUT,
         )
 
         if not r.ok:
@@ -261,7 +265,7 @@ async def verify_connection(
             f'{form_data.url}/api/version',
             headers=headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
+            timeout=_MODEL_LIST_TIMEOUT,
         ) as r:
             if r.status != 200:
                 detail = f'HTTP Error: {r.status}'
@@ -1105,7 +1109,7 @@ async def generate_chat_completion(
         raise HTTPException(status_code=400, detail=str(exc))
 
     if isinstance(form_data, BaseModel):
-        payload = {**form_data.model_dump(exclude_none=True)}
+        payload = form_data.model_dump(exclude_none=True)
 
     payload.pop('metadata', None)
 
@@ -1210,8 +1214,7 @@ async def generate_openai_completion(
         log.exception(exc)
         raise HTTPException(status_code=400, detail=str(exc))
 
-    payload = {**form_data.model_dump(exclude_none=True, exclude=['metadata'])}
-    payload.pop('metadata', None)
+    payload = form_data.model_dump(exclude_none=True, exclude=['metadata'])
 
     model_id = form_data.model
     model_info = await Models.get_model_by_id(model_id)
@@ -1265,7 +1268,7 @@ async def generate_openai_embeddings(
         log.exception(exc)
         raise HTTPException(status_code=400, detail=str(exc))
 
-    payload = {**form_data.model_dump(exclude_none=True)}
+    payload = form_data.model_dump(exclude_none=True)
     payload.pop('metadata', None)
 
     model_id = form_data.model
@@ -1316,8 +1319,7 @@ async def generate_openai_chat_completion(
         log.exception(exc)
         raise HTTPException(status_code=400, detail=str(exc))
 
-    payload = {**form_data.model_dump(exclude_none=True, exclude=['metadata'])}
-    payload.pop('metadata', None)
+    payload = form_data.model_dump(exclude_none=True, exclude=['metadata'])
 
     model_id = form_data.model
     model_info = await Models.get_model_by_id(model_id)
@@ -1663,7 +1665,7 @@ async def upload_model(
                 blob_url,
                 data=blob_data,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+                timeout=_CLIENT_TIMEOUT,
             ) as resp:
                 if not resp.ok:
                     raise Exception('Ollama: Could not create blob, Please try again.')
@@ -1686,7 +1688,7 @@ async def upload_model(
                 headers={'Content-Type': 'application/json'},
                 data=json.dumps(create_payload),
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+                timeout=_CLIENT_TIMEOUT,
             ) as create_resp:
                 if create_resp.ok:
                     log.info('API SUCCESS!')
