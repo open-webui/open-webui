@@ -18,6 +18,7 @@
 	export let model = null;
 	export let save = false;
 	export let preview = false;
+	export let compactPreview = false;
 	export let renderMarkdown = true;
 	export let editCodeBlock = true;
 	export let topPadding = false;
@@ -33,7 +34,7 @@
 	const getDetailAttributes = (detailToken: OutputDetailToken): any => detailToken.attributes;
 
 	$: detailButtonClassName = `w-fit py-0.5 ${
-		preview ? 'text-xs' : 'text-[0.9375rem]'
+		compactPreview ? 'text-xs' : 'text-[0.9375rem]'
 	} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition`;
 
 	$: displayItems = buildOutputDisplayItems(output) as OutputDisplayItem[];
@@ -49,6 +50,7 @@
 					{model}
 					{save}
 					{preview}
+					{compactPreview}
 					{done}
 					{editCodeBlock}
 					{topPadding}
@@ -68,7 +70,7 @@
 			id={`${id}-${displayItem.id}`}
 			tokens={displayItem.tokens}
 			messageDone={done}
-			{preview}
+			{compactPreview}
 		>
 			<div slot="content">
 				{#each displayItem.tokens as detailToken, detailIndex}
@@ -98,6 +100,7 @@
 										content={detailToken.text}
 										{done}
 										{preview}
+										{compactPreview}
 										{editCodeBlock}
 									/>
 								</div>
@@ -144,6 +147,7 @@
 							content={detailToken.text}
 							{done}
 							{preview}
+							{compactPreview}
 							{editCodeBlock}
 						/>
 					</div>

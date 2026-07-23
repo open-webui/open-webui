@@ -39,7 +39,7 @@
 
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
-	export let preview = false;
+	export let compactPreview = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
 
@@ -416,8 +416,9 @@
 						>
 							<time
 								datetime={new Date(message.timestamp * 1000).toISOString()}
-								class="{preview ? '' : 'invisible group-hover:visible'} {($settings?.chatBubble ??
-								true)
+								class="{compactPreview
+									? ''
+									: 'invisible group-hover:visible'} {($settings?.chatBubble ?? true)
 									? 'mr-1'
 									: 'ml-1 shrink-0 whitespace-nowrap'} text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
 							>
@@ -426,7 +427,7 @@
 						</Tooltip>
 					{/if}
 
-					{#if !preview && !($settings?.chatBubble ?? true)}
+					{#if !compactPreview && !($settings?.chatBubble ?? true)}
 						{#if siblings.length > 1}
 							<div class="flex self-center" dir="ltr">
 								<button
@@ -520,7 +521,7 @@
 							</div>
 						{/if}
 					{/if}
-					{#if !preview && !readOnly}
+					{#if !compactPreview && !readOnly}
 						<Tooltip content={$i18n.t('Edit')} placement="bottom">
 							<button
 								class="{($settings?.highContrastMode ?? false)
@@ -548,7 +549,7 @@
 						</Tooltip>
 					{/if}
 
-					{#if !preview && message?.content}
+					{#if !compactPreview && message?.content}
 						<Tooltip content={$i18n.t('Copy')} placement="bottom">
 							<button
 								class="{($settings?.highContrastMode ?? false)
@@ -577,7 +578,7 @@
 					{/if}
 
 					{#if $_user?.role === 'admin' || ($_user?.permissions?.chat?.delete_message ?? false)}
-						{#if !preview && !readOnly && (!isFirstMessage || siblings.length > 1)}
+						{#if !compactPreview && !readOnly && (!isFirstMessage || siblings.length > 1)}
 							<Tooltip content={$i18n.t('Delete')} placement="bottom">
 								<button
 									class="{($settings?.highContrastMode ?? false)
@@ -610,7 +611,7 @@
 						{/if}
 					{/if}
 
-					{#if !preview && ($settings?.chatBubble ?? true)}
+					{#if !compactPreview && ($settings?.chatBubble ?? true)}
 						{#if siblings.length > 1}
 							<div class="flex self-center" dir="ltr">
 								<button

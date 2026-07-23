@@ -165,7 +165,7 @@
 
 	export let isLastMessage = true;
 	export let readOnly = false;
-	export let preview = false;
+	export let compactPreview = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
 	export let onInsertToNote: ((content: string) => void) | null = null;
@@ -666,7 +666,7 @@
 		</div>
 
 		<div class="flex-auto w-0 pl-1 relative">
-			{#if !preview}
+			{#if !compactPreview}
 				<Name>
 					<Tooltip content={model?.name ?? message.model} placement="top-start">
 						<span id="response-message-model-name" class="line-clamp-1 text-black dark:text-white">
@@ -825,7 +825,8 @@
 										!readOnly &&
 										($settings?.showFloatingActionButtons ?? true)}
 									save={!readOnly}
-									preview={preview || !readOnly}
+									preview={!readOnly}
+									{compactPreview}
 									{editCodeBlock}
 									{topPadding}
 									done={($settings?.chatFadeStreamingText ?? true)
@@ -894,7 +895,7 @@
 					</div>
 				</div>
 
-				{#if preview && message.timestamp}
+				{#if compactPreview && message.timestamp}
 					<div class="mt-0.5 flex justify-start whitespace-nowrap text-gray-600 dark:text-gray-500">
 						<Tooltip
 							className="flex self-center"

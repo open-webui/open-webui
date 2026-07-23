@@ -28,7 +28,7 @@
 
 	export let isLastMessage;
 	export let readOnly = false;
-	export let preview = false;
+	export let compactPreview = false;
 	export let editCodeBlock = true;
 
 	export let setInputText: Function = () => {};
@@ -253,7 +253,7 @@
 			{#if $settings?.displayMultiModelResponsesInTabs ?? false}
 				<div class="w-full">
 					<div
-						class=" flex w-full mb-4.5 border-b border-gray-200 dark:border-gray-850 {preview
+						class=" flex w-full mb-4.5 border-b border-gray-200 dark:border-gray-850 {compactPreview
 							? 'hidden'
 							: ''}"
 					>
@@ -327,7 +327,7 @@
 									{addMessages}
 									{forkHandler}
 									{readOnly}
-									{preview}
+									{compactPreview}
 									{topPadding}
 									{onInsertToNote}
 								/>
@@ -344,7 +344,7 @@
 							groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]]}
 
 						<div
-							class="snap-center w-full max-w-full transition-all {preview
+							class="snap-center w-full max-w-full transition-all {compactPreview
 								? ''
 								: `m-1 border p-5 rounded-2xl ${
 										history.messages[messageId]?.modelIdx == modelIdx
@@ -389,7 +389,7 @@
 										{addMessages}
 										{forkHandler}
 										{readOnly}
-										{preview}
+										{compactPreview}
 										{editCodeBlock}
 										{topPadding}
 										{onInsertToNote}
@@ -402,7 +402,7 @@
 			{/if}
 		</div>
 
-		{#if !preview && !readOnly}
+		{#if !compactPreview && !readOnly}
 			{#if !Object.keys(groupedMessageIds).find((modelIdx) => {
 				const { messageIds } = groupedMessageIds[modelIdx];
 				const _messageId = messageIds[groupedMessageIdsIdx[modelIdx]];
