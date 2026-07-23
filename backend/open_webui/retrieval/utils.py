@@ -617,7 +617,8 @@ def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
 
         for distance, document, metadata in zip(distances, documents, metadatas):
             if isinstance(document, str):
-                doc_hash = hashlib.sha256(document.encode()).hexdigest()  # Compute a hash for uniqueness
+                # Hybrid results already carry the same sha256 in their metadata
+                doc_hash = (metadata or {}).get(CHUNK_HASH_KEY) or hashlib.sha256(document.encode()).hexdigest()
 
                 if doc_hash not in combined.keys():
                     combined[doc_hash] = (distance, document, metadata)
@@ -1320,7 +1321,8 @@ async def get_sources_from_items(
     full_context=False,
     user: UserModel | None = None,
 ):
-    log.debug(f'items: {items} {queries} {embedding_function} {reranking_function} {full_context}')
+    # Lazy formatting: items can embed entire file contents
+    log.debug('items: %s %s %s %s %s', items, queries, embedding_function, reranking_function, full_context)
 
     bypass_embedding_and_retrieval = await Config.get('rag.bypass_embedding_and_retrieval')
     extracted_collections = []
