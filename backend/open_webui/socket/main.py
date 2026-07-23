@@ -117,6 +117,15 @@ else:
 
 # Timeout duration in seconds
 TIMEOUT_DURATION = 3
+
+_LOCAL_MANAGER = WEBSOCKET_MANAGER != 'redis'
+
+
+def room_is_known_empty(room: str) -> bool:
+    """Exact only in local manager mode: rooms is authoritative there and empty
+    rooms are pruned on leave. In Redis mode another instance may host the room,
+    so never claim empty."""
+    return _LOCAL_MANAGER and room not in sio.manager.rooms.get('/', {})
 SESSION_POOL_TIMEOUT = 120  # seconds without heartbeat before session is reaped
 
 # Dictionary to maintain the user pool
@@ -960,16 +969,21 @@ async def get_event_emitter(request_info, update_db=True):
         if internal and event_data.get('type') == 'notification':
             return
 
-        await sio.emit(
-            'events',
-            {
-                'chat_id': chat_id,
-                'message_id': message_id,
-                **({'internal': True} if internal else {}),
-                'data': event_data,
-            },
-            room=f'user:{user_id}',
-        )
+        # Streams keep running after the tab closes (background tasks, API and
+        # internal chats); encoding every event for a room with no listeners is
+        # wasted CPU that grows with the accumulated content.
+        room = f'user:{user_id}'
+        if not room_is_known_empty(room):
+            await sio.emit(
+                'events',
+                {
+                    'chat_id': chat_id,
+                    'message_id': message_id,
+                    **({'internal': True} if internal else {}),
+                    'data': event_data,
+                },
+                room=room,
+            )
 
         if update_db and message_id and not (request_info.get('chat_id') or '').startswith('local:'):
             event_type = event_data.get('type')
