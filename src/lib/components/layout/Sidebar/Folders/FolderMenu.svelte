@@ -6,11 +6,12 @@
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
-	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
-	import Pencil from '$lib/components/icons/Pencil.svelte';
+	import EditPencil from '../icons/EditPencil.svelte';
+	import FolderIcon from '../icons/Folder.svelte';
+	import ShareIcon from '../icons/Share.svelte';
+	import TrashIcon from '../icons/Trash.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Download from '$lib/components/icons/Download.svelte';
-	import Folder from '$lib/components/icons/Folder.svelte';
+	import Download from '../icons/Download.svelte';
 
 	export let align: 'start' | 'end' = 'start';
 	export let onEdit = () => {};
@@ -50,7 +51,7 @@
 					onCreateSubFolder();
 				}}
 			>
-				<Folder className="size-3.5" />
+				<FolderIcon className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('Create Folder')}</div>
 			</button>
 
@@ -62,7 +63,7 @@
 					onEdit();
 				}}
 			>
-				<Pencil className="size-3.5" />
+				<EditPencil className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('Edit')}</div>
 			</button>
 
@@ -82,20 +83,7 @@
 					onShare();
 				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke-width="1.5"
-					stroke="currentColor"
-					class="size-3.5"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.935-2.186 2.25 2.25 0 0 0-3.935 2.186Z"
-					/>
-				</svg>
+				<ShareIcon className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('Share')}</div>
 			</button>
 
@@ -107,7 +95,7 @@
 					onDelete();
 				}}
 			>
-				<GarbageBin className="size-3.5" />
+				<TrashIcon className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</button>
 		</DropdownMenu>

@@ -28,6 +28,7 @@
 
 	export let isLastMessage;
 	export let readOnly = false;
+	export let preview = false;
 	export let editCodeBlock = true;
 
 	export let setInputText: Function = () => {};
@@ -45,10 +46,12 @@
 	export let mergeResponses: Function;
 
 	export let addMessages: Function;
+	export let forkHandler: Function | null = null;
 
 	export let triggerScroll: Function;
 
 	export let topPadding = false;
+	export let onInsertToNote: ((content: string) => void) | null = null;
 
 	const dispatch = createEventDispatcher();
 
@@ -249,7 +252,11 @@
 		>
 			{#if $settings?.displayMultiModelResponsesInTabs ?? false}
 				<div class="w-full">
-					<div class=" flex w-full mb-4.5 border-b border-gray-200 dark:border-gray-850">
+					<div
+						class=" flex w-full mb-4.5 border-b border-gray-200 dark:border-gray-850 {preview
+							? 'hidden'
+							: ''}"
+					>
 						<div
 							class="flex gap-2 scrollbar-none overflow-x-auto w-fit text-center font-normal bg-transparent pt-1 text-sm"
 							on:wheel|preventDefault={(e) => {
@@ -318,8 +325,11 @@
 											groupedMessageIds[selectedModelIdx].messageIds.length - 1;
 									}}
 									{addMessages}
+									{forkHandler}
 									{readOnly}
+									{preview}
 									{topPadding}
+									{onInsertToNote}
 								/>
 							{/if}
 						{/key}
@@ -334,14 +344,17 @@
 							groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]]}
 
 						<div
-							class=" snap-center w-full max-w-full m-1 border {history.messages[messageId]
-								?.modelIdx == modelIdx
-								? `bg-gray-50 dark:bg-gray-850 border-gray-100 dark:border-gray-800 border-2 ${
-										$mobile ? 'min-w-full' : 'min-w-80'
-									}`
-								: `border-gray-100/30 dark:border-gray-850/30 border-dashed ${
-										$mobile ? 'min-w-full' : 'min-w-80'
-									}`} transition-all p-5 rounded-2xl"
+							class="snap-center w-full max-w-full transition-all {preview
+								? ''
+								: `m-1 border p-5 rounded-2xl ${
+										history.messages[messageId]?.modelIdx == modelIdx
+											? `bg-gray-50 dark:bg-gray-850 border-gray-100 dark:border-gray-800 border-2 ${
+													$mobile ? 'min-w-full' : 'min-w-80'
+												}`
+											: `border-gray-100/30 dark:border-gray-850/30 border-dashed ${
+													$mobile ? 'min-w-full' : 'min-w-80'
+												}`
+									}`}"
 							on:click={async () => {
 								onGroupClick(_messageId, modelIdx);
 							}}
@@ -374,9 +387,12 @@
 												groupedMessageIds[modelIdx].messageIds.length - 1;
 										}}
 										{addMessages}
+										{forkHandler}
 										{readOnly}
+										{preview}
 										{editCodeBlock}
 										{topPadding}
+										{onInsertToNote}
 									/>
 								{/if}
 							{/key}
@@ -386,7 +402,7 @@
 			{/if}
 		</div>
 
-		{#if !readOnly}
+		{#if !preview && !readOnly}
 			{#if !Object.keys(groupedMessageIds).find((modelIdx) => {
 				const { messageIds } = groupedMessageIds[modelIdx];
 				const _messageId = messageIds[groupedMessageIdsIdx[modelIdx]];
@@ -402,16 +418,20 @@
 									{$i18n.t('Merged Response')}
 								</Name>
 
-								<div class="mt-1 markdown-prose w-full min-w-full">
+								<div class="mt-1 w-full min-w-full">
 									{#if (message?.content ?? '') === ''}
 										<Skeleton />
 									{:else}
-										<Markdown id={`merged`} content={message.content ?? ''} />
+										<div class="markdown-prose">
+											<Markdown id={`merged`} content={message.content ?? ''} />
+										</div>
 									{/if}
 								</div>
 
 								{#if message.timestamp}
-									<div class="mt-0.5 flex justify-start text-gray-600 dark:text-gray-500">
+									<div
+										class="mt-0.5 flex justify-start whitespace-nowrap text-gray-600 dark:text-gray-500"
+									>
 										<Tooltip
 											className="flex self-center"
 											content={formatMessageTimestampFull(message.timestamp * 1000)}
@@ -419,7 +439,7 @@
 										>
 											<time
 												datetime={new Date(message.timestamp * 1000).toISOString()}
-												class="invisible group-hover:visible ml-1 text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
+												class="invisible group-hover:visible ml-1 shrink-0 whitespace-nowrap text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
 											>
 												{formatMessageTimestamp(message.timestamp * 1000)}
 											</time>

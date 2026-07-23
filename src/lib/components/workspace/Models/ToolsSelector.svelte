@@ -27,18 +27,18 @@
 </script>
 
 <div>
-	<div class="flex w-full justify-between mb-1">
+	<div class="flex w-full items-center gap-2 mb-1">
 		<div class=" self-center text-xs text-gray-500">{$i18n.t('Tools')}</div>
-	</div>
 
-	<div class="flex flex-col mb-1">
 		{#if tools.length > 0}
 			<TypeaheadSelector
 				id="model-tools-selector"
 				items={tools}
 				selectedIds={selectedToolIds}
-				className="w-48 max-w-full"
 				placeholder={$i18n.t('Search tools')}
+				triggerLabel={$i18n.t('Select Tool')}
+				emptyLabel={$i18n.t('No tools found')}
+				variant="dropdown"
 				on:select={(e) => {
 					toggleTool(e.detail);
 				}}
@@ -46,8 +46,12 @@
 					selectedToolIds = [...new Set([...selectedToolIds, ...e.detail.map((tool) => tool.id)])];
 				}}
 			/>
+		{/if}
+	</div>
 
-			<div class=" flex items-center flex-wrap">
+	<div class="flex flex-col mb-1">
+		{#if tools.length > 0}
+			<div class=" flex items-center flex-wrap mt-1">
 				{#each selectedTools as tool, toolIdx}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
@@ -77,7 +81,7 @@
 							selectedToolIds = [];
 						}}
 					>
-						Disable all
+						{$i18n.t('Disable all')}
 					</button>
 				{/if}
 			</div>

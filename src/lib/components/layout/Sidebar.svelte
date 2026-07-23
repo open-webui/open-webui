@@ -4,18 +4,17 @@
 	import Sortable from 'sortablejs';
 
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import {
 		user,
 		chats,
 		settings,
-		showSettings,
 		chatId,
 		tags,
 		folders as _folders,
 		showSidebar,
 		showSearch,
 		mobile,
-		showArchivedChats,
 		pinnedChats,
 		pinnedNotes,
 		temporaryChatEnabled,
@@ -26,10 +25,9 @@
 		models,
 		selectedFolder,
 		WEBUI_NAME,
-		sidebarWidth,
-		activeChatIds
+		sidebarWidth
 	} from '$lib/stores';
-	import { loadNextChatListPage, refreshChatList } from '$lib/stores/chat-list';
+	import { loadNextChatListPage, refreshChatList, setChatActive } from '$lib/stores/chatList';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -53,11 +51,9 @@
 	} from '$lib/apis/folders';
 	import { createNewNote, getPinnedNoteList, toggleNotePinnedStatusById } from '$lib/apis/notes';
 	import { updateUserSettings } from '$lib/apis/users';
-	import { checkActiveChats } from '$lib/apis/tasks';
 	import { createNoteHandler } from '$lib/components/notes/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
-	import ArchivedChatsModal from './ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -70,15 +66,18 @@
 	import { getChannels, createNewChannel } from '$lib/apis/channels';
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
-	import PencilSquare from '../icons/PencilSquare.svelte';
-	import Search from '../icons/Search.svelte';
 	import SearchModal from './SearchModal.svelte';
 	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
-	import Sidebar from '../icons/Sidebar.svelte';
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 	import PinnedNoteList from './Sidebar/PinnedNoteList.svelte';
-	import Note from '../icons/Note.svelte';
-	import Code from '../icons/Code.svelte';
+	import CalendarIcon from './Sidebar/icons/Calendar.svelte';
+	import ClockIcon from './Sidebar/icons/Clock.svelte';
+	import CodeIcon from './Sidebar/icons/Code.svelte';
+	import EditPencilIcon from './Sidebar/icons/EditPencil.svelte';
+	import NotesIcon from './Sidebar/icons/Notes.svelte';
+	import SearchIcon from './Sidebar/icons/Search.svelte';
+	import Sidebar from '../icons/Sidebar.svelte';
+	import WorkspaceIcon from './Sidebar/icons/Workspace.svelte';
 	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
 
@@ -109,7 +108,7 @@
 	let showSharedFolders = false;
 
 	let folders = {};
-	let folderRegistry = {};
+	let folderRegistry: Record<string, { setFolderItems?: () => unknown }> = {};
 
 	let newFolderId = null;
 
@@ -160,6 +159,26 @@
 		};
 		return items[id];
 	};
+
+	const menuItemPathPrefixes = {
+		notes: '/notes',
+		workspace: '/workspace',
+		calendar: '/calendar',
+		automations: '/automations',
+		playground: '/playground'
+	};
+
+	const getActiveMenuItemId = (pathname) => {
+		for (const [id, pathPrefix] of Object.entries(menuItemPathPrefixes)) {
+			if (pathname === pathPrefix || pathname.startsWith(`${pathPrefix}/`)) {
+				return id;
+			}
+		}
+
+		return null;
+	};
+
+	$: activeMenuItemId = getActiveMenuItemId($page.url.pathname);
 
 	const initPinnedMenuSortable = () => {
 		const el = document.getElementById('pinned-menu-items-list');
@@ -345,13 +364,18 @@
 			})(),
 			(async () => {
 				console.log('Init chat list');
-				const result = await refreshChatList(localStorage.token, { refreshPinned: true });
-				if (result.accepted) {
-					allChatsLoaded = result.allLoaded;
-					chatListReady = true;
-				}
+				await refreshChatRows();
 			})()
 		]);
+	};
+
+	const refreshChatRows = async () => {
+		const result = await refreshChatList(localStorage.token, { refreshPinned: true });
+		if (result.accepted) {
+			await Promise.all(Object.values(folderRegistry).map((folder) => folder?.setFolderItems?.()));
+			allChatsLoaded = result.allLoaded;
+			chatListReady = true;
+		}
 	};
 
 	const loadMoreChats = async () => {
@@ -586,17 +610,6 @@
 						await initChannels();
 					}
 					await initChatList();
-
-					// Check which chats have active tasks
-					const allChatIds = [...$chats.map((c) => c.id), ...$pinnedChats.map((c) => c.id)];
-					if (allChatIds.length > 0) {
-						try {
-							const res = await checkActiveChats(localStorage.token, allChatIds);
-							activeChatIds.set(new Set(res.active_chat_ids || []));
-						} catch (e) {
-							console.debug('Failed to check active chats:', e);
-						}
-					}
 				}
 			}),
 			settings.subscribe((value) => {
@@ -625,6 +638,7 @@
 
 		const socketInstance = $socket;
 		socketInstance?.on('events', chatActiveEventHandler);
+		socketInstance?.on('connect', refreshChatRows);
 
 		await tick();
 		initPinnedMenuSortable();
@@ -648,28 +662,24 @@
 			}
 
 			socketInstance?.off('events', chatActiveEventHandler);
+			socketInstance?.off('connect', refreshChatRows);
 		};
 	});
 
 	// Handler for chat events (defined outside onMount for proper cleanup)
-	const chatActiveEventHandler = (event: {
+	const chatActiveEventHandler = async (event: {
 		chat_id: string;
 		message_id: string;
-		data: { type: string; data: any };
+		data: { type: string; data: { active?: boolean } };
 	}) => {
 		if (event.data?.type === 'chat:active') {
-			const { active } = event.data.data;
-			activeChatIds.update((ids) => {
-				const newSet = new Set(ids);
-				if (active) {
-					newSet.add(event.chat_id);
-				} else {
-					newSet.delete(event.chat_id);
-				}
-				return newSet;
-			});
+			const active = event.data.data.active ?? false;
+			const found = setChatActive(event.chat_id, active);
+			if (!found && active) {
+				await refreshChatRows();
+			}
 		} else if (event.data?.type === 'chat:list') {
-			initChatList();
+			refreshChatRows();
 		}
 	};
 
@@ -703,19 +713,6 @@
 
 	const isWindows = /Windows/i.test(navigator.userAgent);
 </script>
-
-<ArchivedChatsModal
-	bind:show={$showArchivedChats}
-	onUpdate={async () => {
-		await initChatList();
-	}}
-	onDelete={(id) => {
-		if ($chatId === id) {
-			goto('/');
-			chatId.set('');
-		}
-	}}
-/>
 
 <ChannelModal
 	bind:show={showCreateChannel}
@@ -808,7 +805,7 @@
 
 {#if !$mobile && !$showSidebar}
 	<div
-		class=" pt-[7px] pb-2 px-2 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/30 dark:hover:bg-gray-950/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
+		class=" w-[42px] shrink-0 py-1 px-1 flex flex-col justify-between text-gray-700 dark:text-gray-300 hover:bg-gray-50/30 dark:hover:bg-gray-800/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
 		id="sidebar"
 	>
 		<button
@@ -817,35 +814,37 @@
 				showSidebar.set(!$showSidebar);
 			}}
 		>
-			<div class="pb-1.5">
+			<div class="pb-1">
 				<Tooltip
 					content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 					placement="right"
 				>
 					<button
-						class="flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group {isWindows
+						class="flex size-8.5 items-center justify-center transition group {isWindows
 							? 'cursor-pointer'
 							: 'cursor-[e-resize]'}"
 						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 					>
-						<div class=" self-center flex items-center justify-center size-9">
+						<div
+							class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-50/40 dark:group-hover:bg-gray-800/40"
+						>
 							<img
 								src="{WEBUI_BASE_URL}/static/favicon.png"
 								class="sidebar-new-chat-icon size-5 rounded-full group-hover:hidden"
 								alt=""
 							/>
 
-							<Sidebar className="size-4.5 hidden group-hover:flex" />
+							<Sidebar className="size-4 hidden group-hover:flex" />
 						</div>
 					</button>
 				</Tooltip>
 			</div>
 
-			<div class="-mt-[0.5px]">
+			<div class="-gap-0.5">
 				<div class="">
 					<Tooltip content={$i18n.t('New Chat')} placement="right">
 						<a
-							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							class=" cursor-pointer flex size-8 items-center justify-center transition group"
 							href="/"
 							draggable="false"
 							on:click={async (e) => {
@@ -857,8 +856,10 @@
 							}}
 							aria-label={$i18n.t('New Chat')}
 						>
-							<div class=" self-center flex items-center justify-center size-9">
-								<PencilSquare className="size-4" />
+							<div
+								class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-50/40 dark:group-hover:bg-gray-800/40"
+							>
+								<EditPencilIcon className="size-4" strokeWidth="1.5" />
 							</div>
 						</a>
 					</Tooltip>
@@ -867,7 +868,7 @@
 				<div>
 					<Tooltip content={$i18n.t('Search')} placement="right">
 						<button
-							class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							class=" cursor-pointer flex size-8 items-center justify-center transition group"
 							on:click={(e) => {
 								e.stopImmediatePropagation();
 								e.preventDefault();
@@ -877,8 +878,10 @@
 							draggable="false"
 							aria-label={$i18n.t('Search')}
 						>
-							<div class=" self-center flex items-center justify-center size-9">
-								<Search className="size-4" />
+							<div
+								class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-50/40 dark:group-hover:bg-gray-800/40"
+							>
+								<SearchIcon className="size-4" strokeWidth="1.5" />
 							</div>
 						</button>
 					</Tooltip>
@@ -890,7 +893,10 @@
 						<div class="">
 							<Tooltip content={$i18n.t(meta.label)} placement="right">
 								<a
-									class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+									class=" cursor-pointer flex size-8 items-center justify-center transition group {itemId ===
+									activeMenuItemId
+										? 'text-gray-900 dark:text-gray-100'
+										: ''}"
 									href={meta.href}
 									on:click={async (e) => {
 										e.stopImmediatePropagation();
@@ -901,56 +907,22 @@
 									draggable="false"
 									aria-label={$i18n.t(meta.label)}
 								>
-									<div class=" self-center flex items-center justify-center size-9">
+									<div
+										class=" self-center flex size-[30px] items-center justify-center rounded-lg transition {itemId ===
+										activeMenuItemId
+											? 'bg-gray-100/80 dark:bg-gray-850/50'
+											: 'group-hover:bg-gray-50/40 dark:group-hover:bg-gray-800/40'}"
+									>
 										{#if itemId === 'notes'}
-											<Note className="size-4" />
+											<NotesIcon className="size-4" strokeWidth="1.5" />
 										{:else if itemId === 'workspace'}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="size-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
-												/>
-											</svg>
+											<WorkspaceIcon className="size-4" strokeWidth="1.5" />
 										{:else if itemId === 'automations'}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="size-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-												/>
-											</svg>
+											<ClockIcon className="size-4" strokeWidth="1.5" />
 										{:else if itemId === 'calendar'}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="size-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
-												/>
-											</svg>
+											<CalendarIcon className="size-4" strokeWidth="1.5" />
 										{:else if itemId === 'playground'}
-											<Code className="size-4" />
+											<CodeIcon className="size-4" strokeWidth="1.5" />
 										{/if}
 									</div>
 								</a>
@@ -963,24 +935,17 @@
 
 		<div>
 			<div>
-				<div class=" py-2 flex justify-center items-center">
+				<div class=" flex justify-center items-center">
 					{#if $user !== undefined && $user !== null}
-						<UserMenu
-							role={$user?.role}
-							profile={$config?.features?.enable_user_status ?? true}
-							showActiveUsers={false}
-							on:show={(e) => {
-								if (e.detail === 'archived-chat') {
-									showArchivedChats.set(true);
-								}
-							}}
-						>
+						<UserMenu role={$user?.role} profile={$config?.features?.enable_user_status ?? true}>
 							<button
 								type="button"
-								class=" cursor-pointer flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								class=" cursor-pointer flex size-8.5 items-center justify-center transition group"
 								aria-label={$i18n.t('User menu')}
 							>
-								<div class="self-center relative">
+								<div
+									class="self-center relative flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-50/40 dark:group-hover:bg-gray-800/40"
+								>
 									<img
 										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
 										class="size-5.5 object-cover rounded-full"
@@ -1020,7 +985,7 @@
 			? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-50/70 dark:bg-gray-950/70'} z-50`
 			: ' bg-transparent z-0 '} {$isApp
 			? `ml-[4.5rem] md:ml-0 `
-			: ' transition-all duration-300 '} shrink-0 text-gray-900 dark:text-gray-200 text-sm fixed top-0 left-0 overflow-x-hidden
+			: ' transition-all duration-300 '} shrink-0 text-gray-700 dark:text-gray-300 text-[13px] leading-5 fixed top-0 left-0 overflow-x-hidden
         "
 		transition:slide={{ duration: 250, axis: 'x' }}
 		data-state={$showSidebar}
@@ -1031,10 +996,10 @@
 				: 'invisible'}"
 		>
 			<div
-				class="sidebar px-1.5 pt-1.5 pb-1 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-2"
+				class="sidebar px-1 pt-1.5 pb-1 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-2"
 			>
 				<a
-					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
+					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition no-drag-region"
 					href="/"
 					draggable="false"
 					on:click={newChatHandler}
@@ -1050,7 +1015,7 @@
 				<a href="/" class="flex flex-1 px-0.5" on:click={newChatHandler}>
 					<div
 						id="sidebar-webui-name"
-						class=" self-center font-normal text-gray-850 dark:text-white "
+						class=" self-center font-normal text-gray-700 dark:text-gray-200"
 					>
 						{$WEBUI_NAME}
 					</div>
@@ -1060,7 +1025,7 @@
 					placement="bottom"
 				>
 					<button
-						class="flex rounded-xl size-8.5 justify-center items-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition {isWindows
+						class="flex size-[30px] justify-center items-center rounded-lg hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition {isWindows
 							? 'cursor-pointer'
 							: 'cursor-[w-resize]'}"
 						on:click={() => {
@@ -1068,8 +1033,8 @@
 						}}
 						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 					>
-						<div class=" self-center p-1.5">
-							<Sidebar className="size-4.5" />
+						<div class=" self-center">
+							<Sidebar className="size-4" />
 						</div>
 					</button>
 				</Tooltip>
@@ -1092,43 +1057,43 @@
 				}}
 			>
 				<div class="pb-1">
-					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+					<div class="px-1 flex justify-center text-gray-700 dark:text-gray-300">
 						<a
 							id="sidebar-new-chat-button"
-							class="group grow flex items-center space-x-2.5 rounded-xl px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition outline-none"
 							href="/"
 							draggable="false"
 							on:click={newChatHandler}
 							aria-label={$i18n.t('New Chat')}
 						>
-							<div class="self-center">
-								<PencilSquare className=" size-4" strokeWidth="2" />
+							<div class="self-center flex size-4 shrink-0 items-center justify-center">
+								<EditPencilIcon className=" size-4" strokeWidth="1.5" />
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm ">{$i18n.t('New Chat')}</div>
+								<div class=" self-center text-[13px] leading-5">{$i18n.t('New Chat')}</div>
 							</div>
 
 							<HotkeyHint name="newChat" className=" group-hover:visible invisible" />
 						</a>
 					</div>
 
-					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+					<div class="px-1 flex justify-center text-gray-700 dark:text-gray-300">
 						<button
 							id="sidebar-search-button"
-							class="group grow flex items-center space-x-2.5 rounded-xl px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition outline-none"
 							on:click={() => {
 								showSearch.set(true);
 							}}
 							draggable="false"
 							aria-label={$i18n.t('Search')}
 						>
-							<div class="self-center">
-								<Search strokeWidth="2" className="size-4" />
+							<div class="self-center flex size-4 shrink-0 items-center justify-center">
+								<SearchIcon strokeWidth="1.5" className="size-4" />
 							</div>
 
 							<div class="flex flex-1 self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm ">{$i18n.t('Search')}</div>
+								<div class=" self-center text-[13px] leading-5">{$i18n.t('Search')}</div>
 							</div>
 							<HotkeyHint name="search" className=" group-hover:visible invisible" />
 						</button>
@@ -1139,72 +1104,38 @@
 							{@const meta = getMenuItemMeta(itemId)}
 							{#if meta && isMenuItemVisible(itemId)}
 								<div
-									class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200"
+									class="px-1 flex justify-center {itemId === activeMenuItemId
+										? 'text-gray-900 dark:text-gray-100'
+										: 'text-gray-700 dark:text-gray-300'}"
 									data-id={itemId}
 								>
 									<a
 										id="sidebar-{itemId}-button"
-										class="grow flex items-center space-x-2.5 rounded-xl px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+										class="grow flex items-center space-x-2 rounded-xl px-2 py-1.5 transition {itemId ===
+										activeMenuItemId
+											? 'bg-gray-100/80 dark:bg-gray-850/50'
+											: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"
 										href={meta.href}
 										on:click={itemClickHandler}
 										draggable="false"
 										aria-label={$i18n.t(meta.label)}
 									>
-										<div class="self-center">
+										<div class="self-center flex size-4 shrink-0 items-center justify-center">
 											{#if itemId === 'notes'}
-												<Note className="size-4" strokeWidth="2" />
+												<NotesIcon className="size-4" strokeWidth="1.5" />
 											{:else if itemId === 'workspace'}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="2"
-													stroke="currentColor"
-													class="size-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
-													/>
-												</svg>
+												<WorkspaceIcon className="size-4" strokeWidth="1.5" />
 											{:else if itemId === 'automations'}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="2"
-													stroke="currentColor"
-													class="size-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-													/>
-												</svg>
+												<ClockIcon className="size-4" strokeWidth="1.5" />
 											{:else if itemId === 'calendar'}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="2"
-													stroke="currentColor"
-													class="size-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
-													/>
-												</svg>
+												<CalendarIcon className="size-4" strokeWidth="1.5" />
 											{:else if itemId === 'playground'}
-												<Code className="size-4" strokeWidth="2" />
+												<CodeIcon className="size-4" strokeWidth="1.5" />
 											{/if}
 										</div>
 
 										<div class="flex self-center translate-y-[0.5px]">
-											<div class=" self-center text-sm ">{$i18n.t(meta.label)}</div>
+											<div class=" self-center text-[13px] leading-5">{$i18n.t(meta.label)}</div>
 										</div>
 									</a>
 								</div>
@@ -1461,7 +1392,7 @@
 									name={$i18n.t('Pinned')}
 								>
 									<div
-										class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900 text-gray-900 dark:text-gray-200"
+										class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900 text-gray-700 dark:text-gray-300"
 									>
 										{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
 											<ChatItem
@@ -1471,6 +1402,7 @@
 												createdAt={chat.created_at}
 												updatedAt={chat.updated_at}
 												lastReadAt={chat.last_read_at}
+												active={chat.active ?? false}
 												{shiftKey}
 												selected={selectedChatId === chat.id}
 												on:select={() => {
@@ -1534,6 +1466,7 @@
 										createdAt={chat.created_at}
 										updatedAt={chat.updated_at}
 										lastReadAt={chat.last_read_at}
+										active={chat.active ?? false}
 										{shiftKey}
 										selected={selectedChatId === chat.id}
 										on:select={() => {
@@ -1581,26 +1514,20 @@
 				</SidebarSection>
 			</div>
 
-			<div class="px-1.5 pt-1 pb-1.5 sticky bottom-0 z-10 -mt-2 sidebar">
+			<div class="px-1 pt-1 pb-1.5 sticky bottom-0 z-10 -mt-2 sidebar">
 				<div
 					class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 				></div>
-				<div class="flex flex-col ">
+				<div class="flex flex-col">
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
 							role={$user?.role}
 							profile={$config?.features?.enable_user_status ?? true}
-							showActiveUsers={false}
 							className="w-[calc(var(--sidebar-width)-1rem)]"
-							on:show={(e) => {
-								if (e.detail === 'archived-chat') {
-									showArchivedChats.set(true);
-								}
-							}}
 						>
 							<button
 								type="button"
-								class=" flex items-center rounded-xl py-2 px-1.5 w-full hover:bg-gray-100/50 dark:hover:bg-gray-900/50 transition"
+								class=" flex items-center rounded-xl py-1.5 px-1.5 w-full hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
 								aria-label={$i18n.t('User menu')}
 							>
 								<div class=" self-center mr-3 relative flex-shrink-0">

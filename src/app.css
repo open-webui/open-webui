@@ -68,6 +68,18 @@ code {
 	font-family: 'InstrumentSerif', sans-serif;
 }
 
+.app-muted {
+	@apply text-gray-500 dark:text-gray-400;
+}
+
+.app-icon-muted {
+	@apply text-gray-500 dark:text-gray-400;
+}
+
+.app-interactive-active {
+	@apply bg-gray-50/40 dark:bg-gray-800/40;
+}
+
 .marked a {
 	@apply underline;
 }
@@ -88,8 +100,21 @@ textarea::placeholder {
 	direction: auto;
 }
 
+textarea {
+	color-scheme: light;
+}
+
+.dark textarea {
+	color-scheme: dark;
+}
+
+textarea::-webkit-resizer,
+textarea::-webkit-scrollbar-corner {
+	background: transparent;
+}
+
 .input-prose {
-	@apply prose dark:prose-invert prose-headings:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
+	@apply prose dark:prose-invert !text-[0.9375rem] prose-headings:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
 }
 
 .input-prose-sm {
@@ -97,7 +122,7 @@ textarea::placeholder {
 }
 
 .markdown-prose {
-	@apply prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply prose prose-sm dark:prose-invert max-w-none break-words !text-[0.9375rem] font-normal leading-relaxed prose-p:mt-0 prose-p:mb-2 prose-p:font-normal prose-p:leading-relaxed prose-headings:mt-2 prose-headings:mb-1 prose-headings:font-normal prose-headings:leading-snug prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-strong:font-medium prose-code:before:content-none prose-code:after:content-none prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:font-normal prose-pre:my-3 prose-table:my-0 prose-blockquote:my-3 prose-blockquote:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850/30 prose-img:my-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0 [&_p:first-child]:mt-0 [&_h1:first-child]:mt-0 [&_h2:first-child]:mt-0 [&_h3:first-child]:mt-0 [&_h4:first-child]:mt-0 [&_h5:first-child]:mt-0 [&_h6:first-child]:mt-0;
 }
 
 .markdown-prose-sm {

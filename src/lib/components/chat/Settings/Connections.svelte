@@ -1,18 +1,15 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
-	import { getModels as _getModels } from '$lib/apis';
+	import { onMount, getContext } from 'svelte';
 
-	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
-	import { models, settings, user } from '$lib/stores';
+	import { settings } from '$lib/stores';
 
-	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Connection from './Connections/Connection.svelte';
+	import UserSettingSection from './UserSettingSection.svelte';
 
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 
@@ -76,72 +73,63 @@
 		updateHandler();
 	}}
 >
-	<div class=" overflow-y-scroll scrollbar-hidden h-full">
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Connections')}</h2>
+
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if config !== null}
-			<div class="">
-				<div class="pr-1.5">
-					<div class="">
-						<div class="flex justify-between items-center mb-0.5">
-							<div class="font-normal">{$i18n.t('Manage Direct Connections')}</div>
-
-							<Tooltip content={$i18n.t(`Add Connection`)}>
-								<button
-									class="px-1"
-									aria-label={$i18n.t('Add Connection')}
-									on:click={() => {
-										showConnectionModal = true;
-									}}
-									type="button"
-								>
-									<Plus />
-								</button>
-							</Tooltip>
-						</div>
-
-						<div class="flex flex-col gap-1.5">
-							{#each config?.OPENAI_API_BASE_URLS ?? [] as url, idx}
-								<Connection
-									bind:url
-									bind:key={config.OPENAI_API_KEYS[idx]}
-									bind:config={config.OPENAI_API_CONFIGS[idx]}
-									onSubmit={() => {
-										updateHandler();
-									}}
-									onDelete={() => {
-										config.OPENAI_API_BASE_URLS = config.OPENAI_API_BASE_URLS.filter(
-											(url, urlIdx) => idx !== urlIdx
-										);
-										config.OPENAI_API_KEYS = config.OPENAI_API_KEYS.filter(
-											(key, keyIdx) => idx !== keyIdx
-										);
-
-										let newConfig = {};
-										config.OPENAI_API_BASE_URLS.forEach((url, newIdx) => {
-											newConfig[newIdx] =
-												config.OPENAI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
-										});
-										config.OPENAI_API_CONFIGS = newConfig;
-									}}
-								/>
-							{/each}
-						</div>
+			<UserSettingSection title={$i18n.t('Manage Direct Connections')} first>
+				<div class="flex items-center justify-between gap-2.5">
+					<div class="min-w-0 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						{$i18n.t('Connect to your own OpenAI compatible API endpoints.')}
 					</div>
 
-					<div class="my-1.5">
-						<div
-							class="text-xs {($settings?.highContrastMode ?? false)
-								? 'text-gray-800 dark:text-gray-100'
-								: 'text-gray-500'}"
+					<Tooltip content={$i18n.t(`Add Connection`)}>
+						<button
+							class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+							aria-label={$i18n.t('Add Connection')}
+							on:click={() => {
+								showConnectionModal = true;
+							}}
+							type="button"
 						>
-							{$i18n.t('Connect to your own OpenAI compatible API endpoints.')}
-							<br />
-							{$i18n.t(
-								'CORS must be properly configured by the provider to allow requests from Open WebUI.'
-							)}
-						</div>
-					</div>
+							<Plus />
+						</button>
+					</Tooltip>
 				</div>
-			</div>
+
+				<div class="flex flex-col gap-2">
+					{#each config?.OPENAI_API_BASE_URLS ?? [] as url, idx}
+						<Connection
+							bind:url
+							bind:key={config.OPENAI_API_KEYS[idx]}
+							bind:config={config.OPENAI_API_CONFIGS[idx]}
+							onSubmit={() => {
+								updateHandler();
+							}}
+							onDelete={() => {
+								config.OPENAI_API_BASE_URLS = config.OPENAI_API_BASE_URLS.filter(
+									(url, urlIdx) => idx !== urlIdx
+								);
+								config.OPENAI_API_KEYS = config.OPENAI_API_KEYS.filter(
+									(key, keyIdx) => idx !== keyIdx
+								);
+
+								let newConfig = {};
+								config.OPENAI_API_BASE_URLS.forEach((url, newIdx) => {
+									newConfig[newIdx] = config.OPENAI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
+								});
+								config.OPENAI_API_CONFIGS = newConfig;
+							}}
+						/>
+					{/each}
+				</div>
+
+				<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+					{$i18n.t(
+						'CORS must be properly configured by the provider to allow requests from Open WebUI.'
+					)}
+				</div>
+			</UserSettingSection>
 		{:else}
 			<div class="flex h-full justify-center">
 				<div class="my-auto">
@@ -151,7 +139,7 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-normal">
+	<div class="shrink-0 flex justify-end pt-3 text-sm font-normal">
 		<button
 			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"

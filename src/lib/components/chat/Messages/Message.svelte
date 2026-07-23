@@ -39,17 +39,20 @@
 	export let mergeResponses;
 
 	export let addMessages;
+	export let forkHandler: Function | null = null;
 	export let triggerScroll;
 	export let readOnly = false;
+	export let preview = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
+	export let onInsertToNote: ((content: string) => void) | null = null;
 </script>
 
 <div
 	role="listitem"
 	class="flex flex-col justify-between px-5 mb-3 w-full {($settings?.widescreenMode ?? null)
 		? 'max-w-full'
-		: 'max-w-[52rem]'} mx-auto rounded-lg group message-listitem"
+		: 'max-w-[58rem]'} mx-auto rounded-lg group message-listitem"
 >
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}
@@ -70,8 +73,10 @@
 				{editMessage}
 				{deleteMessage}
 				{readOnly}
+				{preview}
 				{editCodeBlock}
 				{topPadding}
+				{onInsertToNote}
 			/>
 		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}
 			<ResponseMessage
@@ -95,7 +100,9 @@
 				{continueResponse}
 				{regenerateResponse}
 				{addMessages}
+				{forkHandler}
 				{readOnly}
+				{preview}
 				{editCodeBlock}
 				{topPadding}
 			/>
@@ -120,9 +127,12 @@
 					{mergeResponses}
 					{triggerScroll}
 					{addMessages}
+					{forkHandler}
 					{readOnly}
+					{preview}
 					{editCodeBlock}
 					{topPadding}
+					{onInsertToNote}
 				/>
 			{/key}
 		{/if}

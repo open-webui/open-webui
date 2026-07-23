@@ -11,9 +11,9 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
+	import XMark from './icons/XMark.svelte';
 	import EmojiPicker from '$lib/components/common/EmojiPicker.svelte';
-	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
+	import FaceSmile from './icons/EmojiFace.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 
 	export let show = false;
@@ -23,6 +23,9 @@
 	let message = '';
 
 	let loading = false;
+
+	const highContrastInputClass =
+		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 
 	const submitHandler = async () => {
 		loading = true;
@@ -73,17 +76,17 @@
 
 <Modal size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class=" text-lg font-normal self-center">
+		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+			<div class=" text-sm self-center">
 				{$i18n.t('Set your status')}
 			</div>
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<XMark className={'size-5'} />
+				<XMark className={'size-4'} />
 			</button>
 		</div>
 
@@ -123,7 +126,7 @@
 								id="status-message"
 								type="text"
 								bind:value={message}
-								class={`w-full flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+								class={`w-full flex-1 text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 								placeholder={$i18n.t("What's on your mind?")}
 								autocomplete="off"
 								required

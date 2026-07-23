@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { onMount, tick, getContext } from 'svelte';
+	import { onDestroy, onMount, tick, getContext } from 'svelte';
 
 	import { decodeString } from '$lib/utils';
-	import { knowledge } from '$lib/stores';
-
-	import { getKnowledgeBases, searchKnowledgeFilesById } from '$lib/apis/knowledge';
+	import { searchKnowledgeBases, searchKnowledgeFilesById } from '$lib/apis/knowledge';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Database from '$lib/components/icons/Database.svelte';
@@ -13,6 +11,7 @@
 	import Loader from '$lib/components/common/Loader.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import SearchInput from './SearchInput.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -20,6 +19,7 @@
 
 	let loaded = false;
 	let selectedIdx = 0;
+	let query = '';
 
 	let selectedItem = null;
 
@@ -30,35 +30,37 @@
 
 	let selectedFileItemsLoading = false;
 	let selectedFileAllItemsLoaded = false;
+	let selectedFileRequestId = 0;
 
 	$: if (selectedItem) {
 		initSelectedFileItems();
 	}
 
 	const initSelectedFileItems = async () => {
+		selectedFileRequestId += 1;
 		selectedFileItemsPage = 1;
 		selectedFileItems = null;
 		selectedFileItemsTotal = null;
 		selectedFileAllItemsLoaded = false;
 		selectedFileItemsLoading = false;
 		await tick();
-		await getSelectedFileItemsPage();
+		await getSelectedFileItemsPage(selectedFileRequestId);
 	};
 
 	const loadMoreSelectedFileItems = async () => {
 		if (selectedFileAllItemsLoaded) return;
 		selectedFileItemsPage += 1;
-		await getSelectedFileItemsPage();
+		await getSelectedFileItemsPage(selectedFileRequestId);
 	};
 
-	const getSelectedFileItemsPage = async () => {
+	const getSelectedFileItemsPage = async (activeRequestId = selectedFileRequestId) => {
 		if (!selectedItem) return;
 		selectedFileItemsLoading = true;
 
 		const res = await searchKnowledgeFilesById(
 			localStorage.token,
 			selectedItem.id,
-			null,
+			query.trim() || null,
 			null,
 			null,
 			null,
@@ -66,6 +68,7 @@
 		).catch(() => {
 			return null;
 		});
+		if (activeRequestId !== selectedFileRequestId) return res;
 
 		if (res) {
 			selectedFileItemsTotal = res.total;
@@ -91,25 +94,36 @@
 	};
 
 	let page = 1;
-	let items = null;
+	let items = [];
 	let total = null;
 
 	let itemsLoading = false;
 	let allItemsLoaded = false;
+	let initialized = false;
+	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let requestId = 0;
 
-	$: if (loaded) {
-		init();
+	$: if (initialized) {
+		query;
+		scheduleSearch();
 	}
 
+	const scheduleSearch = () => {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(init, 200);
+	};
+
 	const init = async () => {
+		requestId += 1;
 		reset();
+		selectedItem = null;
 		await tick();
-		await getItemsPage();
+		await getItemsPage(requestId);
 	};
 
 	const reset = () => {
 		page = 1;
-		items = null;
+		items = [];
 		total = null;
 		allItemsLoaded = false;
 		itemsLoading = false;
@@ -118,17 +132,22 @@
 	const loadMoreItems = async () => {
 		if (allItemsLoaded) return;
 		page += 1;
-		await getItemsPage();
+		await getItemsPage(requestId);
 	};
 
-	const getItemsPage = async () => {
+	const getItemsPage = async (activeRequestId = requestId) => {
 		itemsLoading = true;
-		const res = await getKnowledgeBases(localStorage.token, page).catch(() => {
+		const res = await searchKnowledgeBases(
+			localStorage.token,
+			query.trim() || null,
+			null,
+			page
+		).catch(() => {
 			return null;
 		});
+		if (activeRequestId !== requestId) return res;
 
 		if (res) {
-			console.log(res);
 			total = res.total;
 			const pageItems = res.items;
 
@@ -152,156 +171,170 @@
 	};
 
 	onMount(async () => {
+		await init();
 		await tick();
 		loaded = true;
+		initialized = true;
+	});
+
+	onDestroy(() => {
+		clearTimeout(searchDebounceTimer);
 	});
 </script>
 
-{#if loaded && items !== null}
-	<div class="flex flex-col gap-0.5">
-		{#if items.length === 0}
-			<div class="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-				{$i18n.t('No knowledge bases found.')}
-			</div>
-		{:else}
-			{#each items as item, idx (item.id)}
-				<div
-					class=" h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[13px] font-normal hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100 {idx ===
-					selectedIdx
-						? ' bg-gray-50/40 dark:bg-gray-800/40 dark:text-gray-100 selected-command-option-button'
-						: ''}"
-				>
-					<button
-						class="w-full flex-1"
-						type="button"
-						on:click={() => {
-							onSelect({
-								type: 'collection',
-								...item
-							});
-						}}
-						on:mousemove={() => {
-							selectedIdx = idx;
-						}}
-						on:mouseleave={() => {
-							if (idx === 0) {
-								selectedIdx = -1;
-							}
-						}}
-						data-selected={idx === selectedIdx}
+{#if loaded}
+	<div class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-hidden">
+		<SearchInput bind:value={query} placeholder={$i18n.t('Search Knowledge')} />
+
+		<div class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
+			{#if items.length === 0 && itemsLoading}
+				<div class="py-4.5">
+					<Spinner />
+				</div>
+			{:else if items.length === 0}
+				<div class="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+					{$i18n.t('No knowledge bases found.')}
+				</div>
+			{:else}
+				{#each items as item, idx (item.id)}
+					<div
+						class=" h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[13px] font-normal hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100 {idx ===
+						selectedIdx
+							? ' bg-gray-50/40 dark:bg-gray-800/40 dark:text-gray-100 selected-command-option-button'
+							: ''}"
 					>
-						<div class="w-full text-left text-black dark:text-gray-100 flex items-center gap-1">
-							<Tooltip content={$i18n.t('Collection')} placement="top">
-								<Database className="size-3.5" />
-							</Tooltip>
-
-							<Tooltip
-								content={item.description || decodeString(item?.name)}
-								placement="top-start"
-								className="flex flex-1 min-w-0"
-							>
-								<div class="line-clamp-1 flex-1 text-[13px]">
-									{decodeString(item?.name)}
-								</div>
-							</Tooltip>
-						</div>
-					</button>
-
-					<Tooltip content={$i18n.t('Show Files')} placement="top">
 						<button
+							class="w-full flex-1"
 							type="button"
-							class=" ml-2 opacity-50 hover:opacity-100 transition"
 							on:click={() => {
-								if (selectedItem && selectedItem.id === item.id) {
-									selectedItem = null;
-								} else {
-									selectedItem = item;
+								onSelect({
+									type: 'collection',
+									...item
+								});
+							}}
+							on:mousemove={() => {
+								selectedIdx = idx;
+							}}
+							on:mouseleave={() => {
+								if (idx === 0) {
+									selectedIdx = -1;
 								}
 							}}
+							data-selected={idx === selectedIdx}
 						>
-							{#if selectedItem && selectedItem.id === item.id}
-								<ChevronDown className="size-3" />
-							{:else}
-								<ChevronRight className="size-3" />
-							{/if}
+							<div class="w-full text-left text-black dark:text-gray-100 flex items-center gap-1">
+								<Tooltip content={$i18n.t('Collection')} placement="top">
+									<Database className="size-3.5" />
+								</Tooltip>
+
+								<Tooltip
+									content={item.description || decodeString(item?.name)}
+									placement="top-start"
+									className="flex flex-1 min-w-0"
+								>
+									<div class="line-clamp-1 flex-1 text-[13px]">
+										{decodeString(item?.name)}
+									</div>
+								</Tooltip>
+							</div>
 						</button>
-					</Tooltip>
-				</div>
 
-				{#if selectedItem && selectedItem.id === item.id}
-					<div class="pl-3 mb-1 flex flex-col gap-0.5">
-						{#if selectedFileItems === null && selectedFileItemsTotal === null}
-							<div class=" py-1 flex justify-center">
-								<Spinner className="size-3" />
-							</div>
-						{:else if selectedFileItemsTotal === 0}
-							<div class=" text-xs text-gray-500 dark:text-gray-400 italic py-0.5 px-2">
-								{$i18n.t('No files in this knowledge base.')}
-							</div>
-						{:else}
-							{#each selectedFileItems as file, fileIdx (file.id)}
-								<button
-									class=" h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[13px] font-normal hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100"
-									type="button"
-									on:click={() => {
-										console.log(file);
-										onSelect({
-											type: 'file',
-											name: file?.meta?.name,
-											...file
-										});
-									}}
-								>
-									<div class=" flex items-center gap-1.5">
-										<Tooltip content={$i18n.t('Collection')} placement="top">
-											<DocumentPage className="size-3.5" />
-										</Tooltip>
+						<Tooltip content={$i18n.t('Show Files')} placement="top">
+							<button
+								type="button"
+								class=" ml-2 opacity-50 hover:opacity-100 transition"
+								on:click={() => {
+									if (selectedItem && selectedItem.id === item.id) {
+										selectedItem = null;
+									} else {
+										selectedItem = item;
+									}
+								}}
+							>
+								{#if selectedItem && selectedItem.id === item.id}
+									<ChevronDown className="size-3" />
+								{:else}
+									<ChevronRight className="size-3" />
+								{/if}
+							</button>
+						</Tooltip>
+					</div>
 
-										<Tooltip content={decodeString(file?.meta?.name)} placement="top-start">
-											<div class="line-clamp-1 flex-1 text-[13px]">
-												{decodeString(file?.meta?.name)}
-											</div>
-										</Tooltip>
-									</div>
-								</button>
-							{/each}
-
-							{#if !selectedFileAllItemsLoaded && !selectedFileItemsLoading}
-								<Loader
-									on:visible={async (e) => {
-										if (!selectedFileItemsLoading) {
-											await loadMoreSelectedFileItems();
-										}
-									}}
-								>
-									<div
-										class="w-full flex justify-center py-4 text-xs animate-pulse items-center gap-2"
+					{#if selectedItem && selectedItem.id === item.id}
+						<div class="pl-3 mb-1 flex flex-col gap-0.5">
+							{#if selectedFileItems === null && selectedFileItemsTotal === null}
+								<div class=" py-1 flex justify-center">
+									<Spinner className="size-3" />
+								</div>
+							{:else if selectedFileItemsTotal === 0}
+								<div class=" text-xs text-gray-500 dark:text-gray-400 italic py-0.5 px-2">
+									{$i18n.t('No files in this knowledge base.')}
+								</div>
+							{:else}
+								{#each selectedFileItems as file, fileIdx (file.id)}
+									<button
+										class=" h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[13px] font-normal hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100"
+										type="button"
+										on:click={() => {
+											console.log(file);
+											onSelect({
+												type: 'file',
+												name: file?.meta?.name,
+												...file
+											});
+										}}
 									>
-										<Spinner className=" size-3" />
-										<div class=" ">{$i18n.t('Loading...')}</div>
-									</div>
-								</Loader>
-							{/if}
-						{/if}
-					</div>
-				{/if}
-			{/each}
+										<div class=" flex items-center gap-1.5">
+											<Tooltip content={$i18n.t('Collection')} placement="top">
+												<DocumentPage className="size-3.5" />
+											</Tooltip>
 
-			{#if !allItemsLoaded}
-				<Loader
-					on:visible={(e) => {
-						if (!itemsLoading) {
-							loadMoreItems();
-						}
-					}}
-				>
-					<div class="w-full flex justify-center py-4 text-xs animate-pulse items-center gap-2">
-						<Spinner className=" size-4" />
-						<div class=" ">{$i18n.t('Loading...')}</div>
-					</div>
-				</Loader>
+											<Tooltip content={decodeString(file?.meta?.name)} placement="top-start">
+												<div class="line-clamp-1 flex-1 text-[13px]">
+													{decodeString(file?.meta?.name)}
+												</div>
+											</Tooltip>
+										</div>
+									</button>
+								{/each}
+
+								{#if !selectedFileAllItemsLoaded && !selectedFileItemsLoading}
+									<Loader
+										on:visible={async (e) => {
+											if (!selectedFileItemsLoading) {
+												await loadMoreSelectedFileItems();
+											}
+										}}
+									>
+										<div
+											class="w-full flex justify-center py-4 text-xs animate-pulse items-center gap-2"
+										>
+											<Spinner className=" size-3" />
+											<div class=" ">{$i18n.t('Loading...')}</div>
+										</div>
+									</Loader>
+								{/if}
+							{/if}
+						</div>
+					{/if}
+				{/each}
+
+				{#if !allItemsLoaded}
+					<Loader
+						on:visible={(e) => {
+							if (!itemsLoading) {
+								loadMoreItems();
+							}
+						}}
+					>
+						<div class="w-full flex justify-center py-4 text-xs animate-pulse items-center gap-2">
+							<Spinner className=" size-4" />
+							<div class=" ">{$i18n.t('Loading...')}</div>
+						</div>
+					</Loader>
+				{/if}
 			{/if}
-		{/if}
+		</div>
 	</div>
 {:else}
 	<div class="py-4.5">

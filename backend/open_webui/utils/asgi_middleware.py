@@ -138,9 +138,7 @@ class AuthTokenMiddleware:
     the middleware checks that instead and avoids the 401 short-circuit.
 
     Routes that depend on `get_verified_user` etc. read this state.
-    Also exposes `request.state.enable_api_keys` (snapshotted at request
-    entry from runtime config) and stamps an `X-Process-Time` response
-    header.
+    Also stamps an `X-Process-Time` response header.
     """
 
     def __init__(self, app: ASGIApp, *, fastapi_app) -> None:
@@ -231,7 +229,15 @@ class RedirectMiddleware:
             return
 
         path = scope.get('path', '')
-        query_string = scope.get('query_string', b'').decode('latin-1', errors='replace')
+        raw_query = scope.get('query_string', b'')
+        # This middleware only acts on /watch?v= and ?shared= URLs; skip the
+        # decode + parse_qs work for every other GET. (A false positive on the
+        # substring check just falls through to the full parse below.)
+        if not (path.endswith('/watch') or b'shared' in raw_query):
+            await self.app(scope, receive, send)
+            return
+
+        query_string = raw_query.decode('latin-1', errors='replace')
         query_params = parse_qs(query_string)
 
         redirect_params: dict[str, str] = {}

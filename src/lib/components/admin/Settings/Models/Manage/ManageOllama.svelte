@@ -23,6 +23,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ModelDeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	let modelUploadInputElement: HTMLInputElement;
 	let showModelDeleteConfirm = false;
@@ -811,10 +812,11 @@
 						<div
 							class="flex-1 mr-2 pr-1.5 rounded-lg bg-gray-50 dark:text-gray-300 dark:bg-gray-850"
 						>
-							<select
-								class="w-full py-2 px-4 text-sm outline-hidden bg-transparent"
+							<SettingsSelect
 								bind:value={deleteModelTag}
+								className="w-full"
 								placeholder={$i18n.t('Select a model')}
+								selectClassName="text-sm"
 							>
 								<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 
@@ -823,7 +825,7 @@
 										>{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}</option
 									>
 								{/each}
-							</select>
+							</SettingsSelect>
 						</div>
 						<Tooltip content={$i18n.t('Delete Model')} placement="top">
 							<button

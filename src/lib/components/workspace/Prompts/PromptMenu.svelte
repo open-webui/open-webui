@@ -19,7 +19,12 @@
 	export let deleteHandler: Function;
 	export let onClose: Function;
 
-	let show = false;
+	export let show = false;
+
+	const closeMenu = () => {
+		show = false;
+		onClose();
+	};
 </script>
 
 <Dropdown
@@ -41,6 +46,7 @@
 				draggable="false"
 				on:click={() => {
 					editHandler();
+					closeMenu();
 				}}
 			>
 				<svg
@@ -67,6 +73,7 @@
 					draggable="false"
 					on:click={() => {
 						shareHandler();
+						closeMenu();
 					}}
 				>
 					<Share className="size-3.5" />
@@ -79,6 +86,7 @@
 				draggable="false"
 				on:click={() => {
 					cloneHandler();
+					closeMenu();
 				}}
 			>
 				<DocumentDuplicate className="size-3.5" />
@@ -91,6 +99,7 @@
 					draggable="false"
 					on:click={() => {
 						exportHandler();
+						closeMenu();
 					}}
 				>
 					<Download className="size-3.5" />
@@ -105,6 +114,7 @@
 				draggable="false"
 				on:click={() => {
 					deleteHandler();
+					closeMenu();
 				}}
 			>
 				<GarbageBin className="size-3.5" />

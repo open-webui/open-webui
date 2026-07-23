@@ -121,7 +121,7 @@
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full">
-		<div class=" flex flex-col h-full px-4">
+		<div class=" flex flex-col h-full px-2.5">
 			<div
 				class=" pt-0.5 pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
 				id="messages-container"

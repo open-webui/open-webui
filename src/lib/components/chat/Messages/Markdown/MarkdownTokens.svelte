@@ -97,7 +97,14 @@
 			.trim();
 	};
 
+	$: detailButtonClassName = `w-fit py-0.5 ${
+		preview ? 'text-xs' : 'text-[0.9375rem]'
+	} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition`;
+
 	$: displayTokens = getDisplayTokens(tokens);
+	$: singlePlainBlock =
+		displayTokens.length === 1 &&
+		(displayTokens[0]?.type === 'paragraph' || displayTokens[0]?.type === 'text');
 
 	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
 		console.log('Exporting table to CSV');
@@ -141,7 +148,7 @@
 <!-- {JSON.stringify(tokens)} -->
 {#each displayTokens as token, tokenIdx (tokenIdx)}
 	{#if token.type === 'hr'}
-		<hr class=" border-gray-100/30 dark:border-gray-850/30" />
+		<hr class="border-gray-50 dark:border-gray-850/30" />
 	{:else if token.type === 'heading'}
 		<svelte:element this={headerComponent(token.depth)} dir="auto">
 			<MarkdownInlineTokens
@@ -275,6 +282,7 @@
 					id={`${id}-${tokenIdx}`}
 					tokens={token.tokens}
 					{done}
+					{preview}
 					{editCodeBlock}
 					{onTaskClick}
 					{sourceIds}
@@ -310,6 +318,7 @@
 							tokens={item.tokens}
 							top={token.loose}
 							{done}
+							{preview}
 							{editCodeBlock}
 							{onTaskClick}
 							{sourceIds}
@@ -345,6 +354,7 @@
 									tokens={item.tokens}
 									top={token.loose}
 									{done}
+									{preview}
 									{editCodeBlock}
 									{onTaskClick}
 									{sourceIds}
@@ -357,6 +367,7 @@
 								tokens={item.tokens}
 								top={token.loose}
 								{done}
+								{preview}
 								{editCodeBlock}
 								{onTaskClick}
 								{sourceIds}
@@ -372,9 +383,10 @@
 			id={`${id}-${tokenIdx}-detail-group`}
 			tokens={token.items}
 			messageDone={done}
+			{preview}
 			{allowEmbeds}
 		>
-			<div slot="content" class="space-y-1">
+			<div slot="content">
 				{#each token.items as detailToken, detailIdx}
 					{@const textContent = getDetailTextContent(detailToken)}
 
@@ -385,7 +397,8 @@
 							resultContent={getDetailTextContent(detailToken)}
 							grouped={true}
 							open={$settings?.expandDetails ?? false}
-							className="w-full space-y-1"
+							className="w-full"
+							buttonClassName={detailButtonClassName}
 						/>
 					{:else if textContent.length > 0}
 						<Collapsible
@@ -393,7 +406,8 @@
 							open={$settings?.expandDetails ?? false}
 							attributes={detailToken?.attributes}
 							messageDone={done}
-							className="w-full space-y-1"
+							className="w-full"
+							buttonClassName={detailButtonClassName}
 							dir="auto"
 						>
 							<div class="mb-1.5" slot="content">
@@ -402,6 +416,7 @@
 									tokens={marked.lexer(decode(detailToken.text))}
 									attributes={detailToken?.attributes}
 									{done}
+									{preview}
 									{editCodeBlock}
 									{onTaskClick}
 									{sourceIds}
@@ -416,7 +431,8 @@
 							disabled={true}
 							attributes={detailToken?.attributes}
 							messageDone={done}
-							className="w-full space-y-1"
+							className="w-full"
+							buttonClassName={detailButtonClassName}
 							dir="auto"
 						/>
 					{/if}
@@ -433,7 +449,8 @@
 				attributes={token.attributes}
 				resultContent={getDetailTextContent(token)}
 				open={$settings?.expandDetails ?? false}
-				className="w-full space-y-1"
+				className="w-full space-y-2"
+				buttonClassName={detailButtonClassName}
 			/>
 		{:else if textContent.length > 0}
 			<Collapsible
@@ -441,7 +458,8 @@
 				open={$settings?.expandDetails ?? false}
 				attributes={token?.attributes}
 				messageDone={done}
-				className="w-full space-y-1"
+				className="w-full space-y-2"
+				buttonClassName={detailButtonClassName}
 				dir="auto"
 			>
 				<div class=" mb-1.5" slot="content">
@@ -450,6 +468,7 @@
 						tokens={marked.lexer(decode(token.text))}
 						attributes={token?.attributes}
 						{done}
+						{preview}
 						{editCodeBlock}
 						{onTaskClick}
 						{sourceIds}
@@ -464,7 +483,8 @@
 				disabled={true}
 				attributes={token?.attributes}
 				messageDone={done}
-				className="w-full space-y-1"
+				className="w-full space-y-2"
+				buttonClassName={detailButtonClassName}
 				dir="auto"
 			/>
 		{/if}
@@ -495,7 +515,7 @@
 				/>
 			</span>
 		{:else}
-			<p dir="auto">
+			<p dir="auto" class={singlePlainBlock ? '!my-0' : ''}>
 				<MarkdownInlineTokens
 					id={`${id}-${tokenIdx}-p`}
 					tokens={token.tokens ?? []}
@@ -507,7 +527,7 @@
 		{/if}
 	{:else if token.type === 'text'}
 		{#if top}
-			<p>
+			<p class={singlePlainBlock ? '!my-0' : ''}>
 				{#if token.tokens}
 					<MarkdownInlineTokens
 						id={`${id}-${tokenIdx}-t`}
@@ -551,7 +571,7 @@
 			{onSourceClick}
 		/>
 	{:else if token.type === 'space'}
-		<div class="my-2" />
+		<!-- skip -->
 	{:else}
 		{console.log('Unknown token', token)}
 	{/if}

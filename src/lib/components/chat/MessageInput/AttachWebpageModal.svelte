@@ -14,6 +14,9 @@
 
 	let url = '';
 
+	const highContrastInputClass =
+		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+
 	const submitHandler = () => {
 		let urls = url
 			.split('\n')
@@ -36,18 +39,18 @@
 
 <Modal bind:show size="sm">
 	<div class="flex flex-col h-full">
-		<div class="flex justify-between items-center dark:text-gray-100 px-5 pt-4 pb-1.5">
-			<h1 class="text-lg font-normal self-center ">
+		<div class="flex justify-between items-center dark:text-gray-100 px-4 pt-3 pb-1">
+			<h1 class="text-sm font-medium self-center">
 				{$i18n.t('Attach Webpage')}
 			</h1>
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close modal')}
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<XMark className="size-5" />
+				<XMark className="size-4" />
 			</button>
 		</div>
 
@@ -68,7 +71,7 @@
 
 				<textarea
 					id="webpage-url"
-					class={`w-full flex-1 text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+					class={`w-full flex-1 text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 					type="text"
 					bind:value={url}
 					rows="3"

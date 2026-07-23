@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.config import UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
@@ -482,6 +482,9 @@ async def update_folder_access_by_id(
 async def get_shared_folder_chats(
     request: Request,
     id: str,
+    page: int | None = Query(None, ge=1),
+    sort_by: str = Query('updated_at'),
+    sort_dir: str = Query('desc'),
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -505,7 +508,17 @@ async def get_shared_folder_chats(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    chats = await Chats.get_all_chats_by_folder_id(id, db=db)
+    limit = 10
+    skip = (page - 1) * limit if page is not None else 0
+    chats = await Chats.get_all_chats_by_folder_id(
+        id,
+        skip=skip,
+        limit=limit if page is not None else 60,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        db=db,
+    )
+    total = await Chats.count_all_chats_by_folder_id(id, db=db) if page is not None else len(chats)
 
     # Resolve owner names for display (avatar URLs are constructed client-side)
     owner_cache: dict[str, str] = {}
@@ -516,10 +529,13 @@ async def get_shared_folder_chats(
             owner_cache[uid] = u.name if u else 'Unknown'
         chat['owner_name'] = owner_cache[uid]
 
-    return {
+    response = {
         'chats': [{**chat, 'readonly': chat['user_id'] != user.id} for chat in chats],
         'folder_permission': 'write' if has_write else 'read',
     }
+    if page is not None:
+        response.update({'total': total, 'has_more': skip + limit < total})
+    return response
 
 
 ############################

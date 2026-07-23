@@ -96,11 +96,15 @@ def get_license_data(app, key):
                 setattr(app.state, 'LICENSE_METADATA', v)
 
     def handler(u):
-        res = requests.post(
-            f'{u}/api/v1/license/',
-            json={'key': key, 'version': '1'},
-            timeout=5,
-        )
+        try:
+            res = requests.post(
+                f'{u}/api/v1/license/',
+                json={'key': key, 'version': '1'},
+                timeout=5,
+            )
+        except Exception as ex:
+            log.error(f'License: retrieval issue from {u}: {ex}')
+            return False
 
         if getattr(res, 'ok', False):
             payload = getattr(res, 'json', lambda: {})()

@@ -27,7 +27,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Wrench from '$lib/components/icons/Wrench.svelte';
-	import Keyframes from '$lib/components/icons/Keyframes.svelte';
+	import Cube from '$lib/components/icons/Cube.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Photo from '$lib/components/icons/Photo.svelte';
@@ -176,7 +176,7 @@
 									tab = 'skills';
 								}}
 							>
-								<Keyframes className="size-3.5" strokeWidth="1.75" />
+								<Cube className="size-3.5" strokeWidth="1.75" />
 
 								<div class="flex items-center w-full justify-between">
 									<div class=" line-clamp-1">
@@ -534,7 +534,7 @@
 								<div class="flex flex-1 gap-2 items-center">
 									<Tooltip content={skills[skillId]?.name ?? ''} placement="top">
 										<div class="shrink-0">
-											<Keyframes className="size-3.5" strokeWidth="1.75" />
+											<Cube className="size-3.5" strokeWidth="1.75" />
 										</div>
 									</Tooltip>
 									<Tooltip content={skills[skillId]?.description ?? ''} placement="top-start">
