@@ -675,9 +675,25 @@ class KnowledgeTable:
     async def get_file_metadatas_by_id(
         self, knowledge_id: str, db: Optional[AsyncSession] = None
     ) -> list[FileMetadataResponse]:
+        """Column-only listing: File.data holds each file's full extracted
+        text, which metadata views must never load."""
         try:
-            files = await self.get_files_by_id(knowledge_id, db=db)
-            return [FileMetadataResponse(**file.model_dump()) for file in files]
+            async with get_async_db_context(db) as db:
+                result = await db.execute(
+                    select(File.id, File.hash, File.meta, File.created_at, File.updated_at)
+                    .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
+                    .filter(KnowledgeFile.knowledge_id == knowledge_id)
+                )
+                return [
+                    FileMetadataResponse(
+                        id=row.id,
+                        hash=row.hash,
+                        meta=row.meta,
+                        created_at=row.created_at,
+                        updated_at=row.updated_at,
+                    )
+                    for row in result.all()
+                ]
         except Exception:
             return []
 
