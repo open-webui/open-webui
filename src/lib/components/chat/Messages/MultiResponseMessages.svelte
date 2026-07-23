@@ -28,6 +28,7 @@
 
 	export let isLastMessage;
 	export let readOnly = false;
+	export let preview = false;
 	export let editCodeBlock = true;
 
 	export let setInputText: Function = () => {};
@@ -45,6 +46,7 @@
 	export let mergeResponses: Function;
 
 	export let addMessages: Function;
+	export let forkHandler: Function | null = null;
 
 	export let triggerScroll: Function;
 
@@ -250,7 +252,11 @@
 		>
 			{#if $settings?.displayMultiModelResponsesInTabs ?? false}
 				<div class="w-full">
-					<div class=" flex w-full mb-4.5 border-b border-gray-200 dark:border-gray-850">
+					<div
+						class=" flex w-full mb-4.5 border-b border-gray-200 dark:border-gray-850 {preview
+							? 'hidden'
+							: ''}"
+					>
 						<div
 							class="flex gap-2 scrollbar-none overflow-x-auto w-fit text-center font-normal bg-transparent pt-1 text-sm"
 							on:wheel|preventDefault={(e) => {
@@ -319,7 +325,9 @@
 											groupedMessageIds[selectedModelIdx].messageIds.length - 1;
 									}}
 									{addMessages}
+									{forkHandler}
 									{readOnly}
+									{preview}
 									{topPadding}
 									{onInsertToNote}
 								/>
@@ -336,14 +344,17 @@
 							groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]]}
 
 						<div
-							class=" snap-center w-full max-w-full m-1 border {history.messages[messageId]
-								?.modelIdx == modelIdx
-								? `bg-gray-50 dark:bg-gray-850 border-gray-100 dark:border-gray-800 border-2 ${
-										$mobile ? 'min-w-full' : 'min-w-80'
-									}`
-								: `border-gray-100/30 dark:border-gray-850/30 border-dashed ${
-										$mobile ? 'min-w-full' : 'min-w-80'
-									}`} transition-all p-5 rounded-2xl"
+							class="snap-center w-full max-w-full transition-all {preview
+								? ''
+								: `m-1 border p-5 rounded-2xl ${
+										history.messages[messageId]?.modelIdx == modelIdx
+											? `bg-gray-50 dark:bg-gray-850 border-gray-100 dark:border-gray-800 border-2 ${
+													$mobile ? 'min-w-full' : 'min-w-80'
+												}`
+											: `border-gray-100/30 dark:border-gray-850/30 border-dashed ${
+													$mobile ? 'min-w-full' : 'min-w-80'
+												}`
+									}`}"
 							on:click={async () => {
 								onGroupClick(_messageId, modelIdx);
 							}}
@@ -376,7 +387,9 @@
 												groupedMessageIds[modelIdx].messageIds.length - 1;
 										}}
 										{addMessages}
+										{forkHandler}
 										{readOnly}
+										{preview}
 										{editCodeBlock}
 										{topPadding}
 										{onInsertToNote}
@@ -389,7 +402,7 @@
 			{/if}
 		</div>
 
-		{#if !readOnly}
+		{#if !preview && !readOnly}
 			{#if !Object.keys(groupedMessageIds).find((modelIdx) => {
 				const { messageIds } = groupedMessageIds[modelIdx];
 				const _messageId = messageIds[groupedMessageIdsIdx[modelIdx]];

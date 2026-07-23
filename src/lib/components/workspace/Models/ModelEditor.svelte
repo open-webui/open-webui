@@ -148,6 +148,27 @@
 		voices = res?.voices ?? [];
 	};
 
+	const toModelKnowledgeReference = (item: any) => {
+		if (!item || typeof item !== 'object') {
+			return item;
+		}
+
+		return Object.fromEntries(
+			[
+				'id',
+				'name',
+				'type',
+				'description',
+				'context',
+				'legacy',
+				'collection_name',
+				'collection_names'
+			]
+				.filter((key) => item[key] !== undefined && item[key] !== null && item[key] !== '')
+				.map((key) => [key, item[key]])
+		);
+	};
+
 	const submitHandler = async () => {
 		loading = true;
 
@@ -194,7 +215,7 @@
 		}
 
 		if (knowledge.length > 0) {
-			info.meta.knowledge = knowledge;
+			info.meta.knowledge = knowledge.map(toModelKnowledgeReference);
 		} else {
 			if (info.meta.knowledge) {
 				delete info.meta.knowledge;

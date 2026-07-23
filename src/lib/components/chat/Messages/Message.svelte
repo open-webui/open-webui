@@ -39,8 +39,10 @@
 	export let mergeResponses;
 
 	export let addMessages;
+	export let forkHandler: Function | null = null;
 	export let triggerScroll;
 	export let readOnly = false;
+	export let preview = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
 	export let onInsertToNote: ((content: string) => void) | null = null;
@@ -71,6 +73,7 @@
 				{editMessage}
 				{deleteMessage}
 				{readOnly}
+				{preview}
 				{editCodeBlock}
 				{topPadding}
 				{onInsertToNote}
@@ -97,7 +100,9 @@
 				{continueResponse}
 				{regenerateResponse}
 				{addMessages}
+				{forkHandler}
 				{readOnly}
+				{preview}
 				{editCodeBlock}
 				{topPadding}
 			/>
@@ -122,7 +127,9 @@
 					{mergeResponses}
 					{triggerScroll}
 					{addMessages}
+					{forkHandler}
 					{readOnly}
+					{preview}
 					{editCodeBlock}
 					{topPadding}
 					{onInsertToNote}

@@ -159,11 +159,13 @@
 	export let submitMessage: Function;
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
+	export let forkHandler: Function | null = null;
 
 	export let addMessages: Function;
 
 	export let isLastMessage = true;
 	export let readOnly = false;
+	export let preview = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
 	export let onInsertToNote: ((content: string) => void) | null = null;
@@ -664,13 +666,15 @@
 		</div>
 
 		<div class="flex-auto w-0 pl-1 relative">
-			<Name>
-				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span id="response-message-model-name" class="line-clamp-1 text-black dark:text-white">
-						{model?.name ?? message.model}
-					</span>
-				</Tooltip>
-			</Name>
+			{#if !preview}
+				<Name>
+					<Tooltip content={model?.name ?? message.model} placement="top-start">
+						<span id="response-message-model-name" class="line-clamp-1 text-black dark:text-white">
+							{model?.name ?? message.model}
+						</span>
+					</Tooltip>
+				</Name>
+			{/if}
 
 			<div>
 				<div class="chat-{message.role} w-full min-w-full">
@@ -821,7 +825,7 @@
 										!readOnly &&
 										($settings?.showFloatingActionButtons ?? true)}
 									save={!readOnly}
-									preview={!readOnly}
+									preview={preview || !readOnly}
 									{editCodeBlock}
 									{topPadding}
 									done={($settings?.chatFadeStreamingText ?? true)
@@ -890,7 +894,22 @@
 					</div>
 				</div>
 
-				{#if !edit}
+				{#if preview && message.timestamp}
+					<div class="mt-0.5 flex justify-start whitespace-nowrap text-gray-600 dark:text-gray-500">
+						<Tooltip
+							className="flex self-center"
+							content={formatMessageTimestampFull(message.timestamp * 1000)}
+							placement="bottom"
+						>
+							<time
+								datetime={new Date(message.timestamp * 1000).toISOString()}
+								class="ml-1 shrink-0 whitespace-nowrap text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
+							>
+								{formatMessageTimestamp(message.timestamp * 1000)}
+							</time>
+						</Tooltip>
+					</div>
+				{:else if !edit}
 					<div
 						bind:this={buttonsContainerElement}
 						class="flex items-center justify-start overflow-x-auto whitespace-nowrap buttons text-gray-600 dark:text-gray-500 mt-0.5 [&>*]:shrink-0"
@@ -1053,6 +1072,37 @@
 										</svg>
 									</button>
 								</Tooltip>
+
+								{#if message.done && !readOnly && forkHandler}
+									<Tooltip content="Fork chat" placement="bottom">
+										<button
+											aria-label="Fork chat"
+											class="{isLastMessage || ($settings?.highContrastMode ?? false)
+												? 'visible'
+												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+											on:click={() => {
+												forkHandler?.(message.id);
+											}}
+										>
+											<svg
+												class="w-4 h-4"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="1.8"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												aria-hidden="true"
+											>
+												<path d="M4 12H9" />
+												<path d="M9 12C12.5 12 12.5 7 16 7H20" />
+												<path d="M17 4L20 7L17 10" />
+												<path d="M9 12C12.5 12 12.5 17 16 17H20" />
+												<path d="M17 14L20 17L17 20" />
+											</svg>
+										</button>
+									</Tooltip>
+								{/if}
 
 								{#if onInsertToNote && visibleResponseContent}
 									<Tooltip content={$i18n.t('Insert into note')} placement="bottom">

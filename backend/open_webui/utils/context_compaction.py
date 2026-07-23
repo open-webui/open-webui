@@ -148,8 +148,13 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
     if not config['enable']:
         return {'ok': True, 'compacted': False, 'reason': 'disabled'}
 
-    history = (chat.chat or {}).get('history') or {}
-    current_id = history.get('currentId')
+    chat_data = chat.chat or {}
+    history = chat_data.get('history') or {}
+    current_id = getattr(chat, 'current_message_id', None) or history.get('currentId')
+    if not current_id:
+        current_id = chat_data.get('currentId') or chat_data.get('branchPointMessageId')
+    if not current_id and isinstance(chat_data.get('messages'), list) and chat_data['messages']:
+        current_id = chat_data['messages'][-1].get('id')
     if not current_id:
         return {'ok': True, 'compacted': False, 'reason': 'empty'}
 
@@ -216,8 +221,13 @@ def _resolve_token_threshold(global_threshold: int, global_cap: int, metadata: d
 
 
 async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict | None:
-    history = (chat.chat or {}).get('history') or {}
-    current_id = history.get('currentId')
+    chat_data = chat.chat or {}
+    history = chat_data.get('history') or {}
+    current_id = getattr(chat, 'current_message_id', None) or history.get('currentId')
+    if not current_id:
+        current_id = chat_data.get('currentId') or chat_data.get('branchPointMessageId')
+    if not current_id and isinstance(chat_data.get('messages'), list) and chat_data['messages']:
+        current_id = chat_data['messages'][-1].get('id')
     if not current_id:
         return None
 

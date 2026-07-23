@@ -38,6 +38,7 @@ from open_webui.tasks import has_active_tasks, stop_item_tasks
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.chat_fork import build_fork_history
 from open_webui.utils.context_compaction import compact_chat_branch, get_chat_context_usage
 from open_webui.utils.misc import get_message_list
 from open_webui.utils.models import get_all_models
@@ -1167,7 +1168,8 @@ async def compact_chat_by_id(
 
     history = (chat.chat or {}).get('history') or {}
     messages_map = await Chats.get_messages_map_by_chat_id(id)
-    message_list = get_message_list(messages_map or history.get('messages') or {}, history.get('currentId'))
+    current_message_id = chat.current_message_id or history.get('currentId')
+    message_list = get_message_list(messages_map or history.get('messages') or {}, current_message_id)
     model_id = (form_data.model if form_data else None) or next(
         (message.get('model') for message in reversed(message_list) if message.get('model')),
         None,
@@ -1562,6 +1564,96 @@ async def pin_chat_by_id(
 
 class CloneForm(BaseModel):
     title: str | None = None
+
+
+class ForkForm(BaseModel):
+    message_id: str | None = None
+
+
+@router.post('/{id}/fork', response_model=ChatResponse | None)
+async def fork_chat_by_id(
+    request: Request,
+    id: str,
+    form_data: ForkForm | None = None,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await require_chat_import_permission(request, user, db)
+
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    if not chat:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
+
+    if await has_active_tasks(request.app.state.redis, id):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail='Wait for the current response to finish before forking.',
+        )
+
+    history = (chat.chat or {}).get('history') or {}
+    messages_map = await Chats.get_messages_map_by_chat_id(id) or history.get('messages') or {}
+    if any(
+        message.get('role') == 'assistant' and message.get('done') is False
+        for message in messages_map.values()
+        if isinstance(message, dict)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail='Wait for the current response to finish before forking.',
+        )
+
+    source_message_id = (form_data.message_id if form_data else None) or chat.current_message_id or history.get('currentId')
+    if not source_message_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='chat has no messages to fork')
+
+    try:
+        fork_history, fork_messages = build_fork_history(messages_map, source_message_id)
+    except ValueError as exc:
+        detail = str(exc)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND if detail == 'message not found' else status.HTTP_400_BAD_REQUEST,
+            detail=detail,
+        ) from exc
+
+    updated_chat = {**(chat.chat or {})}
+    updated_chat.pop('currentId', None)
+    updated_chat.update(
+        {
+            'originalChatId': chat.id,
+            'branchPointMessageId': source_message_id,
+            'title': f'{chat.title} (fork)',
+            'history': fork_history,
+            'messages': fork_messages,
+        }
+    )
+    meta = {
+        **(chat.meta or {}),
+        'forked_from': chat.id,
+        'forked_from_message_id': source_message_id,
+    }
+
+    fork = await Chats.insert_new_chat(
+        str(uuid4()),
+        user.id,
+        ChatForm(chat=updated_chat, folder_id=chat.folder_id),
+        db=db,
+        internal_meta=meta,
+    )
+
+    if not fork:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.DEFAULT())
+
+    if chat.pinned:
+        fork = await Chats.toggle_chat_pinned_by_id(fork.id, db=db) or fork
+
+    await publish_event(
+        request,
+        EVENTS.CHAT_CLONED,
+        actor=user,
+        subject_id=fork.id,
+        data={'original_chat_id': id, 'forked_from_message_id': source_message_id},
+    )
+    return ChatResponse(**fork.model_dump())
 
 
 @router.post('/{id}/clone', response_model=ChatResponse | None)

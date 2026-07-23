@@ -1795,8 +1795,23 @@ async def generate_messages(
         # Counting must not turn a compatible generation request into an outage.
         log.warning('Unable to count Anthropic input tokens for model %s', requested_model, exc_info=True)
 
+    model_id = requested_model
+    model_info = await Models.get_model_by_id(model_id)
+    if model_info and model_info.base_model_id:
+        model_id = model_info.base_model_id
+
+    passthrough_params = []
+    models = request.app.state.OPENAI_MODELS
+    if not models or model_id not in models:
+        await openai.get_all_models(request, user=user)
+        models = request.app.state.OPENAI_MODELS
+    model = models.get(model_id)
+    if model:
+        _, _, api_config = await openai.get_openai_connection(model['urlIdx'])
+        passthrough_params = api_config.get('passthrough_params') or []
+
     # Convert Anthropic payload to OpenAI format
-    openai_payload = convert_anthropic_to_openai_payload(form_data)
+    openai_payload = convert_anthropic_to_openai_payload(form_data, passthrough_params)
 
     # Route through the existing chat_completion handler
     response = await chat_completion(request, openai_payload, user)

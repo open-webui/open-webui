@@ -203,23 +203,26 @@ export const convertMessagesToHistory = (messages) => {
 	let messageId = null;
 
 	for (const message of messages) {
-		messageId = uuidv4();
-
-		if (parentMessageId !== null) {
-			history.messages[parentMessageId].childrenIds = [
-				...history.messages[parentMessageId].childrenIds,
-				messageId
-			];
-		}
+		messageId = message?.id ?? uuidv4();
+		const parentId = message?.parentId ?? parentMessageId;
 
 		history.messages[messageId] = {
 			...message,
 			id: messageId,
-			parentId: parentMessageId,
+			parentId,
 			childrenIds: []
 		};
 
 		parentMessageId = messageId;
+	}
+
+	for (const message of Object.values(history.messages)) {
+		if (message.parentId && history.messages[message.parentId]) {
+			history.messages[message.parentId].childrenIds = [
+				...history.messages[message.parentId].childrenIds,
+				message.id
+			];
+		}
 	}
 
 	history.currentId = messageId;
