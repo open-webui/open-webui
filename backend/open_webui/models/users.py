@@ -566,13 +566,6 @@ class UsersTable:
             row = (await session.execute(stmt)).scalars().first()
             return UserModel.model_validate(row) if row else None
 
-    async def get_user_webhook_url_by_id(self, id: str, db: AsyncSession | None = None) -> str | None:
-        async with get_async_db_context(db) as session:
-            user = await session.get(User, id)
-            if user and user.settings:
-                return user.settings.get('ui', {}).get('notifications', {}).get('webhook_url', None)
-            return None
-
     async def get_num_users_active_today(self, db: AsyncSession | None = None) -> int | None:
         async with get_async_db_context(db) as session:
             current_timestamp = int(time.time())
