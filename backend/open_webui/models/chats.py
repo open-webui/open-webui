@@ -1662,9 +1662,23 @@ class ChatTable:
                 postgres_content_sql = """
                 EXISTS (
                     SELECT 1
-                    FROM json_array_elements(Chat.chat->'messages') AS message
-                    WHERE json_typeof(message->'content') = 'string'
-                    AND LOWER(message->>'content') LIKE '%' || :content_key || '%'
+                    FROM chat_message AS message
+                    WHERE message.chat_id = Chat.id
+                    AND message.user_id = Chat.user_id
+                    AND json_typeof(message.content) = 'string'
+                    AND LOWER(message.content #>> '{}') LIKE '%' || :content_key || '%'
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM json_each(Chat.chat#>'{history,messages}') AS history_message
+                    WHERE json_typeof(history_message.value->'content') = 'string'
+                    AND LOWER(history_message.value->>'content') LIKE '%' || :content_key || '%'
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM json_array_elements(Chat.chat->'messages') AS legacy_message
+                    WHERE json_typeof(legacy_message->'content') = 'string'
+                    AND LOWER(legacy_message->>'content') LIKE '%' || :content_key || '%'
                 )
                 """
 
