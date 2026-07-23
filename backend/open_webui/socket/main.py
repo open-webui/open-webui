@@ -373,7 +373,8 @@ async def connect(sid, environ, auth):
         if data is not None and 'id' in data and await is_valid_token(data, redis):
             user = await Users.get_user_by_id(data['id'])
 
-        if user:
+        # Parity with HTTP get_verified_user: only verified roles get a realtime session.
+        if user and user.role in {'user', 'admin'}:
             SESSION_POOL[sid] = {
                 **user.model_dump(
                     exclude=[
@@ -404,7 +405,7 @@ async def user_join(sid, data):
         return
 
     user = await Users.get_user_by_id(token_data['id'])
-    if not user:
+    if not user or user.role not in {'user', 'admin'}:
         return
 
     SESSION_POOL[sid] = {
@@ -455,7 +456,7 @@ async def join_channel(sid, data):
         return
 
     user = await Users.get_user_by_id(data['id'])
-    if not user:
+    if not user or user.role not in {'user', 'admin'}:
         return
 
     # Join all the channels only if user has channels permission
@@ -481,7 +482,7 @@ async def join_note(sid, data):
         return
 
     user = await Users.get_user_by_id(token_data['id'])
-    if not user:
+    if not user or user.role not in {'user', 'admin'}:
         return
 
     note = await Notes.get_note_by_id(data['note_id'])
