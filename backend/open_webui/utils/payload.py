@@ -1,4 +1,3 @@
-import copy
 import json
 from typing import Callable, Optional
 
@@ -297,9 +296,10 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     Returns:
         dict: A modified payload compatible with the Ollama API.
     """
-    # Shallow copy metadata separately (may contain non-picklable objects)
+    # Only the top-level dict and the nested options dict are mutated below, so
+    # shallow copies suffice; deepcopy walked the entire message tree per call.
     metadata = openai_payload.get('metadata')
-    openai_payload = copy.deepcopy({k: v for k, v in openai_payload.items() if k != 'metadata'})
+    openai_payload = {k: v for k, v in openai_payload.items() if k != 'metadata'}
     if metadata is not None:
         openai_payload['metadata'] = dict(metadata)
     ollama_payload = {}
@@ -317,8 +317,9 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
 
     # If there are advanced parameters in the payload, format them in Ollama's options field
     if openai_payload.get('options'):
-        ollama_payload['options'] = openai_payload['options']
-        ollama_options = openai_payload['options']
+        # Copied before key deletions below so the caller's options stay intact
+        ollama_options = dict(openai_payload['options'])
+        ollama_payload['options'] = ollama_options
 
         def parse_json(value: str) -> dict:
             """
