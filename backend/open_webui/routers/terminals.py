@@ -129,9 +129,18 @@ async def proxy_terminal(
         headers.update(bearer_auth_header(request.state.token.credentials))
     elif auth_type == 'system_oauth':
         cookies = request.cookies
-        oauth_token = request.headers.get('x-oauth-access-token', '')
+        # Resolve the token server-side from the caller's OAuth session; never trust a client header.
+        oauth_token = None
+        try:
+            if request.cookies.get('oauth_session_id', None):
+                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
+                    user.id,
+                    request.cookies.get('oauth_session_id', None),
+                )
+        except Exception as e:
+            log.error(f'Error getting OAuth token: {e}')
         if oauth_token:
-            headers.update(bearer_auth_header(oauth_token))
+            headers.update(bearer_auth_header(oauth_token.get('access_token', '')))
     # auth_type == "none": no Authorization header
 
     content_type = request.headers.get('content-type')
