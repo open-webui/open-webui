@@ -100,13 +100,19 @@ class CommitSessionMiddleware:
             # Downstream did not complete successfully. Roll back any
             # pending sync writes, release the connection, and let the
             # exception propagate.
-            try:
-                ScopedSession.rollback()
-            except Exception:
-                log.exception('CommitSessionMiddleware: rollback failed after downstream error')
-            finally:
-                ScopedSession.remove()
+            if ScopedSession.registry.has():
+                try:
+                    ScopedSession.rollback()
+                except Exception:
+                    log.exception('CommitSessionMiddleware: rollback failed after downstream error')
+                finally:
+                    ScopedSession.remove()
             raise
+
+        # Nothing in this request touched the sync session: committing would
+        # only instantiate one to run an empty transaction.
+        if not ScopedSession.registry.has():
+            return
 
         # Downstream completed. Commit pending sync work.
         try:
