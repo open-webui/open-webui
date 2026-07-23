@@ -2649,7 +2649,12 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                     user=user,
                 )
             except Exception as e:
-                log.debug(f'error saving docs: {e}')
+                # Surface the failure instead of returning an unusable collection
+                log.exception(f'Error saving web search results to vector DB: {e}')
+                raise HTTPException(
+                    status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail='Failed to embed and store the retrieved web pages. Check the embedding configuration in Admin Settings > Documents.',
+                )
 
             return {
                 'status': True,
