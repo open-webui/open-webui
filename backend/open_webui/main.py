@@ -717,6 +717,25 @@ app.state.speech_speaker_embeddings_dataset = None
 app.state.MODELS = MODELS
 
 # Add the middleware to the app
+try:
+    audit_level = AuditLevel(AUDIT_LOG_LEVEL)
+except ValueError as e:
+    logger.error(f'Invalid audit level: {AUDIT_LOG_LEVEL}. Error: {e}')
+    audit_level = AuditLevel.NONE
+
+# Added before CompressMiddleware so audit sits inside compression and
+# captures response bodies before they are compressed (last added runs
+# outermost).
+if audit_level != AuditLevel.NONE:
+    app.add_middleware(
+        AuditLoggingMiddleware,
+        audit_level=audit_level,
+        excluded_paths=AUDIT_EXCLUDED_PATHS,
+        included_paths=AUDIT_INCLUDED_PATHS,
+        audit_get_requests=ENABLE_AUDIT_GET_REQUESTS,
+        max_body_size=MAX_BODY_LOG_SIZE,
+    )
+
 if ENABLE_COMPRESSION_MIDDLEWARE:
     app.add_middleware(CompressMiddleware)
 
@@ -795,21 +814,6 @@ if ENABLE_SCIM:
     app.include_router(scim.router, prefix='/api/v1/scim/v2', tags=['scim'])
 
 
-try:
-    audit_level = AuditLevel(AUDIT_LOG_LEVEL)
-except ValueError as e:
-    logger.error(f'Invalid audit level: {AUDIT_LOG_LEVEL}. Error: {e}')
-    audit_level = AuditLevel.NONE
-
-if audit_level != AuditLevel.NONE:
-    app.add_middleware(
-        AuditLoggingMiddleware,
-        audit_level=audit_level,
-        excluded_paths=AUDIT_EXCLUDED_PATHS,
-        included_paths=AUDIT_INCLUDED_PATHS,
-        audit_get_requests=ENABLE_AUDIT_GET_REQUESTS,
-        max_body_size=MAX_BODY_LOG_SIZE,
-    )
 ##################################
 #
 # Chat Endpoints
