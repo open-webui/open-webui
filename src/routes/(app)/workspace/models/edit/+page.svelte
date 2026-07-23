@@ -15,24 +15,26 @@
 
 	let model = null;
 
-	onMount(async () => {
+	const loadModel = async () => {
 		const _id = $page.url.searchParams.get('id');
 		if (_id) {
-			model = await getModelById(localStorage.token, _id).catch((e) => {
-				return null;
-			});
-
-			if (!model) {
+			const m = await getModelById(localStorage.token, _id).catch((e) => null);
+			if (!m) {
 				goto('/workspace/models');
+				return;
 			}
-
-			if (!model?.write_access) {
+			if (!m?.write_access) {
 				toast.error($i18n.t('You do not have permission to edit this model'));
 				goto('/workspace/models');
+				return;
 			}
-		} else {
-			goto('/workspace/models');
+			return m;
 		}
+		goto('/workspace/models');
+	};
+
+	onMount(async () => {
+		model = await loadModel();
 	});
 
 	const onSubmit = async (modelInfo) => {
@@ -56,6 +58,7 @@
 		edit={true}
 		{model}
 		{onSubmit}
+		onReload={loadModel}
 		onBack={async () => {
 			await goto('/workspace/models');
 		}}

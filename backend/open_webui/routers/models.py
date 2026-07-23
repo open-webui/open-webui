@@ -37,6 +37,14 @@ from open_webui.models.models import (
     ModelResponse,
     Models,
 )
+from open_webui.models.model_system_prompt_history import (
+    ModelSystemPromptCommentModel,
+    ModelSystemPromptCommentResponse,
+    ModelSystemPromptDiffResponse,
+    ModelSystemPromptHistories,
+    ModelSystemPromptHistoryModel,
+    ModelSystemPromptHistoryResponse,
+)
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -888,3 +896,236 @@ async def delete_all_models(
     if result:
         await publish_event(request, EVENTS.MODEL_DELETED, actor=user, subject_type='model')
     return result
+
+
+############################
+# System Prompt Versioning
+############################
+
+
+@router.get('/model/{model_id}/system/history', response_model=list[ModelSystemPromptHistoryResponse])
+async def get_model_system_prompt_history(
+    model_id: str,
+    page: int = 0,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    PAGE_SIZE = 200
+    model = await Models.get_model_by_id(model_id, db=db)
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    write_access = (
+        (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+        or user.id == model.user_id
+        or await AccessGrants.has_access(
+            user_id=user.id, resource_type='model', resource_id=model.id, permission='write', db=db
+        )
+    )
+    has_read = write_access or await AccessGrants.has_access(
+        user_id=user.id, resource_type='model', resource_id=model.id, permission='read', db=db
+    )
+    if not has_read:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.UNAUTHORIZED)
+
+    return await ModelSystemPromptHistories.get_history_by_model_id(
+        model_id, limit=PAGE_SIZE, offset=page * PAGE_SIZE, db=db
+    )
+
+
+@router.get('/model/{model_id}/system/history/{history_id}', response_model=ModelSystemPromptHistoryModel)
+async def get_model_system_prompt_history_entry(
+    model_id: str,
+    history_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    model = await Models.get_model_by_id(model_id, db=db)
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    write_access = (
+        (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+        or user.id == model.user_id
+        or await AccessGrants.has_access(
+            user_id=user.id, resource_type='model', resource_id=model.id, permission='write', db=db
+        )
+    )
+    has_read = write_access or await AccessGrants.has_access(
+        user_id=user.id, resource_type='model', resource_id=model.id, permission='read', db=db
+    )
+    if not has_read:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.UNAUTHORIZED)
+
+    entry = await ModelSystemPromptHistories.get_history_entry_by_id(history_id, db=db)
+    if not entry or entry.model_id != model.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    return entry
+
+
+@router.post('/model/{model_id}/system/history/{history_id}/restore', response_model=ModelModel | None)
+async def restore_model_system_prompt_version(
+    model_id: str,
+    history_id: str,
+    request: Request,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    model = await Models.get_model_by_id(model_id, db=db)
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if not (
+        (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+        or user.id == model.user_id
+        or await AccessGrants.has_access(
+            user_id=user.id, resource_type='model', resource_id=model.id, permission='write', db=db
+        )
+    ):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.UNAUTHORIZED)
+
+    result = await Models.update_model_system_prompt_version(model_id, history_id, user_id=user.id, db=db)
+    if result:
+        await publish_event(request, EVENTS.MODEL_UPDATED, actor=user, subject_id=model_id, data={'name': result.name})
+    return result
+
+
+async def _has_model_read_access(model, user, db: AsyncSession) -> bool:
+    return (
+        (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+        or user.id == model.user_id
+        or await AccessGrants.has_access(
+            user_id=user.id, resource_type='model', resource_id=model.id, permission='write', db=db
+        )
+        or await AccessGrants.has_access(
+            user_id=user.id, resource_type='model', resource_id=model.id, permission='read', db=db
+        )
+    )
+
+
+@router.get('/model/{model_id}/system/history/{history_id}/detail', response_model=ModelSystemPromptHistoryResponse)
+async def get_model_system_prompt_history_detail(
+    model_id: str,
+    history_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    model = await Models.get_model_by_id(model_id, db=db)
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if not await _has_model_read_access(model, user, db):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.UNAUTHORIZED)
+
+    detail = await ModelSystemPromptHistories.get_detail(history_id, db=db)
+    if not detail or detail.model_id != model.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    return detail
+
+
+class DiffForm(BaseModel):
+    from_id: str
+    to_id: str
+
+
+@router.post('/model/{model_id}/system/history/diff', response_model=ModelSystemPromptDiffResponse)
+async def diff_model_system_prompt_versions(
+    model_id: str,
+    form_data: DiffForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    model = await Models.get_model_by_id(model_id, db=db)
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if not await _has_model_read_access(model, user, db):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.UNAUTHORIZED)
+
+    result = await ModelSystemPromptHistories.compute_diff(form_data.from_id, form_data.to_id, model.id, db=db)
+    if not result:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    return result
+
+
+@router.get('/model/{model_id}/system/history/{history_id}/comments', response_model=list[ModelSystemPromptCommentResponse])
+async def get_model_system_prompt_comments(
+    model_id: str,
+    history_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    model = await Models.get_model_by_id(model_id, db=db)
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if not await _has_model_read_access(model, user, db):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.UNAUTHORIZED)
+
+    return await ModelSystemPromptHistories.get_comments_by_history_id(history_id, db=db)
+
+
+class CommentForm(BaseModel):
+    content: str
+
+
+@router.post('/model/{model_id}/system/history/{history_id}/comments', response_model=ModelSystemPromptCommentModel)
+async def create_model_system_prompt_comment(
+    model_id: str,
+    history_id: str,
+    form_data: CommentForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    model = await Models.get_model_by_id(model_id, db=db)
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if not await _has_model_read_access(model, user, db):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.UNAUTHORIZED)
+
+    entry = await ModelSystemPromptHistories.get_history_entry_by_id(history_id, db=db)
+    if not entry or entry.model_id != model.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    return await ModelSystemPromptHistories.create_comment(
+        history_id=history_id, user_id=user.id, content=form_data.content, db=db
+    )
+
+
+@router.delete('/model/{model_id}/system/history/{history_id}/comments/{comment_id}', response_model=bool)
+async def delete_model_system_prompt_comment(
+    model_id: str,
+    history_id: str,
+    comment_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    model = await Models.get_model_by_id(model_id, db=db)
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if not await _has_model_read_access(model, user, db):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.UNAUTHORIZED)
+
+    return await ModelSystemPromptHistories.delete_comment(comment_id, user.id, db=db)
+
+
+@router.delete('/model/{model_id}/system/history/{history_id}', response_model=bool)
+async def delete_model_system_prompt_history_entry(
+    model_id: str,
+    history_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    model = await Models.get_model_by_id(model_id, db=db)
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    if not (
+        (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+        or user.id == model.user_id
+        or await AccessGrants.has_access(
+            user_id=user.id, resource_type='model', resource_id=model.id, permission='write', db=db
+        )
+    ):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.UNAUTHORIZED)
+
+    if model.system_prompt_version_id == history_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Cannot delete the active version')
+
+    return await ModelSystemPromptHistories.delete_history_entry(history_id, model.id, db=db)

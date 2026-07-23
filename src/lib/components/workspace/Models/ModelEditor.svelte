@@ -33,6 +33,8 @@
 	import TTSVoiceInput from './TTSVoiceInput.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import ModelSystemPromptHistory from './ModelSystemPromptHistory.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -41,6 +43,7 @@
 
 	export let model = null;
 	export let edit = false;
+	export let onReload: (() => Promise<any>) | undefined = undefined;
 
 	export let preset = true;
 
@@ -111,6 +114,7 @@
 	let terminalId = '';
 	let tts = { voice: '' };
 	export let suggestionTags: { name: string }[] = [];
+	let commitMessage = '';
 	let voices: { id: string; name?: string }[] = [];
 
 	const getBaseModelItems = (models: any[] = []) => {
@@ -299,6 +303,7 @@
 		}
 
 		info.params.system = system.trim() === '' ? null : system;
+		info.commit_message = commitMessage.trim() || null;
 		info.params.stop = params.stop
 			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
 					s.trim()
@@ -345,92 +350,95 @@
 			workspaceContainer.scrollTop = 0;
 		}
 
-		if (model) {
-			name = model.name;
-			await tick();
-
-			id = model.id;
-
-			enableDescription = model?.meta?.description !== null;
-
-			if (model.base_model_id) {
-				const base_model = $models
-					.filter(
-						(m) => (!m?.preset && !(m?.arena ?? false)) || (edit && m.id === model.base_model_id)
-					)
-					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
-
-				console.log('base_model', base_model);
-
-				if (base_model) {
-					model.base_model_id = base_model.id;
-				} else if (!edit) {
-					model.base_model_id = null;
-				}
-			}
-
-			system = model?.params?.system ?? '';
-
-			params = { ...params, ...model?.params };
-			params.stop = params?.stop
-				? (typeof params.stop === 'string' ? params.stop.split(',') : (params?.stop ?? [])).join(
-						','
-					)
-				: null;
-
-			knowledge = (model?.meta?.knowledge ?? []).map((item) => {
-				if (item?.collection_name && item?.type !== 'file') {
-					return {
-						id: item.collection_name,
-						name: item.name,
-						legacy: true
-					};
-				} else if (item?.collection_names) {
-					return {
-						name: item.name,
-						type: 'collection',
-						collection_names: item.collection_names,
-						legacy: true
-					};
-				} else {
-					return item;
-				}
-			});
-
-			toolIds = model?.meta?.toolIds ?? [];
-			skillIds = model?.meta?.skillIds ?? [];
-			filterIds = model?.meta?.filterIds ?? [];
-			defaultFilterIds = model?.meta?.defaultFilterIds ?? [];
-			actionIds = model?.meta?.actionIds ?? [];
-
-			// Per-model overrides take precedence over admin defaults
-			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
-			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? defaultFeatureIds;
-			builtinTools = model?.meta?.builtinTools ?? builtinTools;
-			terminalId = model?.meta?.terminalId ?? '';
-			tts = { voice: model?.meta?.tts?.voice ?? '' };
-
-			accessGrants = model?.access_grants ?? [];
-
-			info = {
-				...info,
-				...JSON.parse(
-					JSON.stringify(
-						model
-							? model
-							: {
-									id: model.id,
-									name: model.name
-								}
-					)
-				)
-			};
-
-			console.log(model);
-		}
+		applyModel();
 
 		loaded = true;
 	});
+
+	const applyModel = () => {
+		if (!model) return;
+		name = model.name;
+		tick();
+
+		id = model.id;
+
+		enableDescription = model?.meta?.description !== null;
+
+		if (model.base_model_id) {
+			const base_model = $models
+				.filter(
+					(m) => (!m?.preset && !(m?.arena ?? false)) || (edit && m.id === model.base_model_id)
+				)
+				.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
+
+			console.log('base_model', base_model);
+
+			if (base_model) {
+				model.base_model_id = base_model.id;
+			} else if (!edit) {
+				model.base_model_id = null;
+			}
+		}
+
+		system = model?.params?.system ?? '';
+
+		params = { ...params, ...model?.params };
+		params.stop = params?.stop
+			? (typeof params.stop === 'string' ? params.stop.split(',') : (params?.stop ?? [])).join(
+					','
+				)
+			: null;
+
+		knowledge = (model?.meta?.knowledge ?? []).map((item) => {
+			if (item?.collection_name && item?.type !== 'file') {
+				return {
+					id: item.collection_name,
+					name: item.name,
+					legacy: true
+				};
+			} else if (item?.collection_names) {
+				return {
+					name: item.name,
+					type: 'collection',
+					collection_names: item.collection_names,
+					legacy: true
+				};
+			} else {
+				return item;
+			}
+		});
+
+		toolIds = model?.meta?.toolIds ?? [];
+		skillIds = model?.meta?.skillIds ?? [];
+		filterIds = model?.meta?.filterIds ?? [];
+		defaultFilterIds = model?.meta?.defaultFilterIds ?? [];
+		actionIds = model?.meta?.actionIds ?? [];
+
+		// Per-model overrides take precedence over admin defaults
+		capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
+		defaultFeatureIds = model?.meta?.defaultFeatureIds ?? defaultFeatureIds;
+		builtinTools = model?.meta?.builtinTools ?? builtinTools;
+		terminalId = model?.meta?.terminalId ?? '';
+		tts = { voice: model?.meta?.tts?.voice ?? '' };
+
+		accessGrants = model?.access_grants ?? [];
+
+		info = {
+			...info,
+			...JSON.parse(
+				JSON.stringify(
+					model
+						? model
+						: {
+								id: model.id,
+								name: model.name
+							}
+				)
+			)
+		};
+
+		console.log(model);
+	};
 </script>
 
 {#if loaded}
@@ -748,6 +756,17 @@
 										<AdvancedParams admin={true} custom={true} layout="grid" bind:params />
 									</div>
 								{/if}
+								{#if edit && model}
+									<ModelSystemPromptHistory
+										modelId={model.id}
+										versionId={model?.system_prompt_version_id ?? null}
+										onRestore={(prompt) => {
+											system = prompt;
+										}}
+										onRestoreComplete={async () => {
+											if (onReload) { model = await onReload(); applyModel(); }
+										}}
+									/>
 							</div>
 						</section>
 
@@ -847,9 +866,9 @@
 								)
 								.map(([key, value]) => key)}
 
-							{#if availableFeatures.length > 0}
-								<div class="my-3">
-									<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
+						{#if availableFeatures.length > 0}
+							<div class="my-3">
+								<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
 								</div>
 							{/if}
 						{/if}
@@ -879,9 +898,22 @@
 							/>
 						</div>
 
-						<hr class="my-3 border-gray-100/30 dark:border-gray-850/30" />
+					<hr class="my-3 border-gray-100/30 dark:border-gray-850/30" />
 
-						<div class="my-2 flex justify-end">
+					{#if edit}
+						<div class="my-2">
+							<div class="text-xs font-medium mb-1 text-gray-500">
+								{$i18n.t('Commit Message')}
+							</div>
+							<input
+								class="w-full bg-transparent outline-hidden text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5"
+								placeholder={$i18n.t('Describe what changed in this version')}
+								bind:value={commitMessage}
+							/>
+						</div>
+					{/if}
+
+					<div class="my-2 flex justify-end">
 							<button
 								class=" text-sm px-3 py-2 transition rounded-lg {loading
 									? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
