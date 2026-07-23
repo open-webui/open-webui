@@ -310,8 +310,9 @@
 				{#each chatList as chat (chat.id)}
 					<div class="flex w-full justify-between gap-2 px-1 py-1 text-xs">
 						<a
-							class="min-w-0 flex-1 self-center truncate text-gray-600 hover:text-black dark:text-gray-400 dark:hover:text-white"
+							class="mr-auto min-w-0 max-w-xl flex-1 self-center truncate text-gray-600 hover:text-black dark:text-gray-400 dark:hover:text-white"
 							href={`/c/${chat.id}`}
+							title={chat?.title}
 							on:click={(event) => {
 								event.preventDefault();
 								showSettings.set(false);
