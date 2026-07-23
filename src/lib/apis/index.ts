@@ -474,10 +474,43 @@ export const getToolServersData = async (servers: object[]) => {
 							};
 						}
 
-						const { openapi, info, specs } = {
+						let specs = convertOpenApiToToolPayload(res);
+
+						// Apply the per-connection function-name filter (the
+						// "Filterliste für Funktionsnamen" field). The backend only
+						// honours this on the admin `server:openapi:` path, so for
+						// direct/personal tool servers it was silently ignored and
+						// the full tool set (often thousands of tokens) was always
+						// sent to the model. Filter here so the field actually works
+						// on every path. Same allow/block semantics as the backend
+						// `is_string_allowed`: bare entries are an allow-list matched
+						// by suffix; entries prefixed with "!" are blocked.
+						const rawFilter = server?.config?.function_name_filter_list ?? '';
+						const filterList = (typeof rawFilter === 'string' ? rawFilter.split(',') : rawFilter)
+							.map((s: string) => (s ?? '').trim())
+							.filter((s: string) => s.length > 0);
+						if (filterList.length > 0) {
+							const allowList = filterList
+								.filter((s: string) => !s.startsWith('!'))
+								.map((s: string) => s);
+							const blockList = filterList
+								.filter((s: string) => s.startsWith('!'))
+								.map((s: string) => s.slice(1));
+							specs = specs.filter((spec: { name: string }) => {
+								const name = spec?.name ?? '';
+								if (allowList.length > 0 && !allowList.some((a: string) => name.endsWith(a))) {
+									return false;
+								}
+								if (blockList.some((b: string) => name.endsWith(b))) {
+									return false;
+								}
+								return true;
+							});
+						}
+
+						const { openapi, info } = {
 							openapi: res,
-							info: res.info,
-							specs: convertOpenApiToToolPayload(res)
+							info: res.info
 						};
 
 						const result: Record<string, any> = {
