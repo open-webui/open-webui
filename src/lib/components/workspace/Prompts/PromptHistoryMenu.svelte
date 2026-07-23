@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -49,30 +50,28 @@
 	</Tooltip>
 
 	<div slot="content">
-		<div
-			class="min-w-[170px] rounded-2xl p-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-		>
+		<DropdownMenu className="min-w-[170px]">
 			{#if isProduction}
 				<Tooltip content={$i18n.t('Cannot delete the production version')} placement="top">
 					<div
-						class="flex gap-2 items-center px-3 py-1.5 text-sm rounded-xl opacity-40 cursor-not-allowed"
+						class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] opacity-40 cursor-not-allowed"
 					>
-						<GarbageBin />
+						<GarbageBin className="size-3.5" />
 						<div class="flex items-center">{$i18n.t('Delete')}</div>
 					</div>
 				</Tooltip>
 			{:else}
 				<button
-					class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
 					on:click={() => {
 						show = false;
 						showDeleteConfirmDialog = true;
 					}}
 				>
-					<GarbageBin />
+					<GarbageBin className="size-3.5" />
 					<div class="flex items-center">{$i18n.t('Delete')}</div>
 				</button>
 			{/if}
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>
