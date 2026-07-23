@@ -2609,6 +2609,20 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                 verify_ssl=config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
                 requests_per_second=config.WEB_LOADER_CONCURRENT_REQUESTS,
                 trust_env=config.WEB_SEARCH_TRUST_ENV,
+                engine=config.WEB_LOADER_ENGINE,
+                firecrawl_api_key=config.FIRECRAWL_API_KEY,
+                firecrawl_api_url=config.FIRECRAWL_API_BASE_URL,
+                firecrawl_timeout=config.FIRECRAWL_TIMEOUT,
+                playwright_ws_url=config.PLAYWRIGHT_WS_URL,
+                playwright_timeout=config.PLAYWRIGHT_TIMEOUT,
+                tavily_api_key=config.TAVILY_API_KEY,
+                tavily_extract_depth=config.TAVILY_EXTRACT_DEPTH,
+                microsoft_web_iq_api_base_url=config.MICROSOFT_WEB_IQ_API_BASE_URL,
+                microsoft_web_iq_api_key=config.MICROSOFT_WEB_IQ_API_KEY,
+                microsoft_web_iq_language=config.MICROSOFT_WEB_IQ_LANGUAGE,
+                external_web_loader_url=config.EXTERNAL_WEB_LOADER_URL,
+                external_web_loader_api_key=config.EXTERNAL_WEB_LOADER_API_KEY,
+                web_loader_timeout=config.WEB_LOADER_TIMEOUT,
             )
             docs = await loader.aload()
 
