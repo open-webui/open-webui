@@ -151,7 +151,6 @@ all = [
     "psycopg2-binary==2.9.12",
     "pgvector==0.4.2",
     "moto[s3]>=5.0.26",
-    "gcp-storage-emulator>=2024.8.3",
     "docker~=7.1.0",
     "pytest~=8.3.2",
     "pytest-docker~=3.2.5",
