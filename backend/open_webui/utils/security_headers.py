@@ -15,16 +15,19 @@ class SecurityHeadersMiddleware:
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
+        # Headers derive only from env vars, which are static for the process
+        # lifetime — compute them once instead of per response.
+        self._headers = list(set_security_headers().items())
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope['type'] != 'http':
+        if scope['type'] != 'http' or not self._headers:
             await self.app(scope, receive, send)
             return
 
         async def send_with_security_headers(message: Message) -> None:
             if message['type'] == 'http.response.start':
                 headers = MutableHeaders(scope=message)
-                for key, value in set_security_headers().items():
+                for key, value in self._headers:
                     headers[key] = value
             await send(message)
 
