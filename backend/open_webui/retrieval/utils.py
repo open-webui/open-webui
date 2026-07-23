@@ -35,6 +35,7 @@ from open_webui.env import (
     OFFLINE_MODE,
 )
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
 from open_webui.models.files import Files
 from open_webui.models.folders import Folders
@@ -51,7 +52,7 @@ from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.headers import include_user_info_headers
-from open_webui.utils.misc import get_message_list
+from open_webui.utils.misc import expand_messages_with_output, get_content_from_message, get_message_list
 
 log = logging.getLogger(__name__)
 
@@ -1339,7 +1340,7 @@ async def get_sources_from_items(
 
         folder = await Folders.get_folder_by_id(folder_id)
         if folder and (user.role == 'admin' or await has_folder_access(user.id, folder, 'read', db=None)):
-            files = (folder.data or {}).get('files', [])
+            files = (folder.data or {}).get('files') or []
             folder_items.update((entry.get('type'), entry.get('id')) for entry in files if isinstance(entry, dict))
             items.extend(files)
 
@@ -1399,24 +1400,25 @@ async def get_sources_from_items(
 
         elif item.get('type') == 'chat':
             # Chat Attached
-            chat = await Chats.get_chat_by_id(item.get('id'))
+            chat = await Chats.get_chat_by_id(item.get('id'), include_messages=False)
 
             if chat and (user.role == 'admin' or chat.user_id == user.id):
-                messages_map = chat.chat.get('history', {}).get('messages', {})
                 message_id = chat.chat.get('history', {}).get('currentId')
 
-                if messages_map and message_id:
-                    # Reconstruct the message list in order
-                    message_list = get_message_list(messages_map, message_id)
+                if message_id:
+                    message_list = await ChatMessages.get_message_branch_by_chat_id(chat.id, message_id)
                     message_history = '\n'.join(
-                        [f'#### {m.get("role", "user").capitalize()}\n{m.get("content")}\n' for m in message_list]
+                        f'#### {message.get("role", "user").capitalize()}\n{content}\n'
+                        for message in expand_messages_with_output(message_list)
+                        for content in [get_content_from_message(message)]
+                        if isinstance(content, str) and content.strip()
                     )
 
-                    # User has access to the chat
-                    query_result = {
-                        'documents': [[message_history]],
-                        'metadatas': [[{'file_id': chat.id, 'name': chat.title}]],
-                    }
+                    if message_list:
+                        query_result = {
+                            'documents': [[message_history]],
+                            'metadatas': [[{'file_id': chat.id, 'name': chat.title}]],
+                        }
 
         elif item.get('type') == 'url':
             content, docs = await get_content_from_url(request, item.get('url'))

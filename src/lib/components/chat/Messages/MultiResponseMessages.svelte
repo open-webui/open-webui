@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { onMount, tick, getContext } from 'svelte';
+	import { onDestroy, onMount, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	import { mobile, models, settings } from '$lib/stores';
 
 	import { generateMoACompletion } from '$lib/apis';
-	import { updateChatById } from '$lib/apis/chats';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
+	import { groupMessageIdsByModel, isChatMessageLoaded } from '$lib/utils/chatHistoryWindow';
 
 	import ResponseMessage from './ResponseMessage.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -25,6 +25,8 @@
 	export let history;
 	export let messageId;
 	export let selectedModels = [];
+	export let navigateToMessageId: (messageId: string) => Promise<boolean>;
+	export let ensureMessageLoaded: (messageId: string) => Promise<boolean>;
 
 	export let isLastMessage;
 	export let readOnly = false;
@@ -61,6 +63,10 @@
 	let groupedMessageIdsIdx = {};
 
 	let selectedModelIdx = null;
+	let destroyed = false;
+	onDestroy(() => {
+		destroyed = true;
+	});
 
 	let message = structuredClone(history.messages[messageId]);
 	$: if (history.messages) {
@@ -74,77 +80,42 @@
 		}
 	}
 
-	const gotoMessage = async (modelIdx, messageIdx) => {
-		// Clamp messageIdx to ensure it's within valid range
-		groupedMessageIdsIdx[modelIdx] = Math.max(
-			0,
-			Math.min(messageIdx, groupedMessageIds[modelIdx].messageIds.length - 1)
-		);
+	const getDeepestLeafId = (rootMessageId: string) => {
+		let leafId = rootMessageId;
+		const visited = new Set<string>();
 
-		// Get the messageId at the specified index
-		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
-		console.log(messageId);
-
-		// Traverse the branch to find the deepest child message
-		let messageChildrenIds = history.messages[messageId].childrenIds;
-		while (messageChildrenIds.length !== 0) {
-			messageId = messageChildrenIds.at(-1);
-			messageChildrenIds = history.messages[messageId].childrenIds;
+		while (leafId && !visited.has(leafId)) {
+			visited.add(leafId);
+			const childrenIds = history.messages[leafId]?.childrenIds ?? [];
+			if (childrenIds.length === 0) break;
+			leafId = childrenIds.at(-1);
 		}
 
-		// Update the current message ID in history
-		history.currentId = messageId;
-
-		// Await UI updates
-		await tick();
-		await updateChat();
-
-		// Trigger scrolling after navigation
-		triggerScroll();
+		return leafId;
 	};
 
-	const showPreviousMessage = async (modelIdx) => {
-		groupedMessageIdsIdx[modelIdx] = Math.max(0, groupedMessageIdsIdx[modelIdx] - 1);
+	const navigateToGroupedMessage = async (modelIdx, messageIdx) => {
+		const messageIds = groupedMessageIds[modelIdx]?.messageIds ?? [];
+		if (messageIds.length === 0) return false;
 
-		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
-		console.log(messageId);
+		const nextMessageIdx = Math.max(0, Math.min(messageIdx, messageIds.length - 1));
+		const leafId = getDeepestLeafId(messageIds[nextMessageIdx]);
+		if (!(await navigateToMessageId(leafId))) return false;
 
-		let messageChildrenIds = history.messages[messageId].childrenIds;
-
-		while (messageChildrenIds.length !== 0) {
-			messageId = messageChildrenIds.at(-1);
-			messageChildrenIds = history.messages[messageId].childrenIds;
-		}
-
-		history.currentId = messageId;
-
-		await tick();
-		await updateChat();
+		groupedMessageIdsIdx[modelIdx] = nextMessageIdx;
+		selectedModelIdx = Number(modelIdx);
 		triggerScroll();
+		return true;
 	};
 
-	const showNextMessage = async (modelIdx) => {
-		groupedMessageIdsIdx[modelIdx] = Math.min(
-			groupedMessageIds[modelIdx].messageIds.length - 1,
-			groupedMessageIdsIdx[modelIdx] + 1
-		);
+	const gotoMessage = async (modelIdx, messageIdx) =>
+		await navigateToGroupedMessage(modelIdx, messageIdx);
 
-		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
-		console.log(messageId);
+	const showPreviousMessage = async (modelIdx) =>
+		await navigateToGroupedMessage(modelIdx, groupedMessageIdsIdx[modelIdx] - 1);
 
-		let messageChildrenIds = history.messages[messageId].childrenIds;
-
-		while (messageChildrenIds.length !== 0) {
-			messageId = messageChildrenIds.at(-1);
-			messageChildrenIds = history.messages[messageId].childrenIds;
-		}
-
-		history.currentId = messageId;
-
-		await tick();
-		await updateChat();
-		triggerScroll();
-	};
+	const showNextMessage = async (modelIdx) =>
+		await navigateToGroupedMessage(modelIdx, groupedMessageIdsIdx[modelIdx] + 1);
 
 	const initHandler = async () => {
 		console.log('multiresponse:initHandler');
@@ -155,32 +126,17 @@
 			? history.messages[history.messages[messageId].parentId]
 			: null;
 
-		groupedMessageIds = parentMessage?.models.reduce((a, model, modelIdx) => {
-			// Find all messages that are children of the parent message and have the same model
-			let modelMessageIds = parentMessage?.childrenIds
-				.map((id) => history.messages[id])
-				.filter((m) => m?.modelIdx === modelIdx)
-				.map((m) => m.id);
+		const unloadedSiblingIds = (parentMessage?.childrenIds ?? []).filter(
+			(id) => !isChatMessageLoaded(history, id)
+		);
+		await Promise.all(unloadedSiblingIds.map((id) => ensureMessageLoaded(id)));
+		if (destroyed) return;
+		await tick();
 
-			// Legacy support for messages that don't have a modelIdx
-			// Find all messages that are children of the parent message and have the same model
-			if (modelMessageIds.length === 0) {
-				let modelMessages = parentMessage?.childrenIds
-					.map((id) => history.messages[id])
-					.filter((m) => m?.model === model);
-
-				modelMessages.forEach((m) => {
-					m.modelIdx = modelIdx;
-				});
-
-				modelMessageIds = modelMessages.map((m) => m.id);
-			}
-
-			return {
-				...a,
-				[modelIdx]: { messageIds: modelMessageIds }
-			};
-		}, {});
+		parentMessage = history.messages[messageId].parentId
+			? history.messages[history.messages[messageId].parentId]
+			: null;
+		groupedMessageIds = groupMessageIdsByModel(parentMessage, history.messages);
 
 		groupedMessageIdsIdx = parentMessage?.models.reduce((a, model, modelIdx) => {
 			const idx = groupedMessageIds[modelIdx].messageIds.findIndex((id) => id === messageId);
@@ -197,7 +153,13 @@
 			}
 		}, {});
 
-		selectedModelIdx = history.messages[messageId]?.modelIdx;
+		selectedModelIdx =
+			history.messages[messageId]?.modelIdx ??
+			Number(
+				Object.keys(groupedMessageIds).find((modelIdx) =>
+					groupedMessageIds[modelIdx].messageIds.includes(messageId)
+				) ?? 0
+			);
 
 		console.log(groupedMessageIds, groupedMessageIdsIdx);
 
@@ -206,18 +168,8 @@
 
 	const onGroupClick = async (_messageId, modelIdx) => {
 		if (messageId != _messageId) {
-			let currentMessageId = _messageId;
-			let messageChildrenIds = history.messages[currentMessageId].childrenIds;
-			while (messageChildrenIds.length !== 0) {
-				currentMessageId = messageChildrenIds.at(-1);
-				messageChildrenIds = history.messages[currentMessageId].childrenIds;
-			}
-			history.currentId = currentMessageId;
-			selectedModelIdx = modelIdx;
-
-			// await tick();
-			// await updateChat();
-			// triggerScroll();
+			const messageIdx = groupedMessageIds[modelIdx]?.messageIds.indexOf(_messageId) ?? -1;
+			if (messageIdx !== -1) await navigateToGroupedMessage(modelIdx, messageIdx);
 		}
 	};
 
@@ -271,7 +223,9 @@
 									{@const _messageId =
 										groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]]}
 
-									{@const model = $models.find((m) => m.id === history.messages[_messageId]?.model)}
+									{@const modelId =
+										history.messages[_messageId]?.model ?? parentMessage.models?.[Number(modelIdx)]}
+									{@const model = $models.find((m) => m.id === modelId)}
 
 									<button
 										class="min-w-fit {selectedModelIdx == modelIdx
@@ -282,12 +236,12 @@
 												selectedModelIdx = modelIdx;
 											}
 
-											onGroupClick(_messageId, modelIdx);
+											await onGroupClick(_messageId, modelIdx);
 										}}
 									>
 										<div class="flex items-center gap-1.5">
 											<div class="-translate-y-[1px]">
-												{model ? `${model.name}` : history.messages[_messageId]?.model}
+												{model?.name ?? history.messages[_messageId]?.modelName ?? modelId}
 											</div>
 										</div>
 									</button>
@@ -356,7 +310,7 @@
 												}`
 									}`}"
 							on:click={async () => {
-								onGroupClick(_messageId, modelIdx);
+								await onGroupClick(_messageId, modelIdx);
 							}}
 						>
 							{#key history.currentId}

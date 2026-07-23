@@ -11,7 +11,7 @@
 	const dispatch = createEventDispatcher();
 
 	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
-	import { getChatById } from '$lib/apis/chats';
+	import { getChatByIdWindow } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
 	import {
@@ -409,11 +409,11 @@
 
 	const editMessageConfirmHandler = async () => {
 		if (editedOutput) {
-			editMessage(message.id, { output: editedOutput }, false);
+			await editMessage(message.id, { output: editedOutput }, false);
 		} else {
 			// Legacy text edit
 			const messageContent = postprocessAfterEditing(editedContent ?? '');
-			editMessage(message.id, { content: messageContent }, false);
+			await editMessage(message.id, { content: messageContent }, false);
 		}
 
 		edit = false;
@@ -425,10 +425,10 @@
 
 	const saveAsCopyHandler = async () => {
 		if (editedOutput) {
-			editMessage(message.id, { output: editedOutput });
+			await editMessage(message.id, { output: editedOutput });
 		} else {
 			const messageContent = postprocessAfterEditing(editedContent ?? '');
-			editMessage(message.id, { content: messageContent });
+			await editMessage(message.id, { content: messageContent });
 		}
 
 		edit = false;
@@ -446,127 +446,130 @@
 	};
 
 	let feedbackLoading = false;
+	let feedbackGeneration = 0;
 
 	const feedbackHandler = async (rating: number | null = null, details: object | null = null) => {
+		const requestGeneration = ++feedbackGeneration;
 		feedbackLoading = true;
 		console.log('Feedback', rating, details);
 
-		const updatedMessage = {
-			...message,
-			annotation: {
-				...(message?.annotation ?? {}),
-				...(rating !== null ? { rating: rating } : {}),
-				...(details ? details : {})
-			}
-		};
+		try {
+			const updatedMessage = {
+				...message,
+				annotation: {
+					...(message?.annotation ?? {}),
+					...(rating !== null ? { rating: rating } : {}),
+					...(details ? details : {})
+				}
+			};
 
-		const chat = await getChatById(localStorage.token, chatId).catch((error) => {
-			toast.error(`${error}`);
-		});
-		if (!chat) {
-			return;
-		}
+			const chat = await getChatByIdWindow(localStorage.token, chatId, 32, message.id);
+			if (!chat) return;
 
-		const messages = createMessagesList(history, message.id);
+			const snapshotHistory = chat?.chat?.history ?? history;
+			const messages = createMessagesList(snapshotHistory, message.id);
+			const siblingIds = history.messages[message.parentId]?.childrenIds ?? [];
 
-		let feedbackItem = {
-			type: 'rating',
-			data: {
-				...(updatedMessage?.annotation ? updatedMessage.annotation : {}),
-				model_id: message?.selectedModelId ?? message.model,
-				...(history.messages[message.parentId].childrenIds.length > 1
-					? {
-							sibling_model_ids: history.messages[message.parentId].childrenIds
-								.filter((id) => id !== message.id)
-								.map((id) => history.messages[id]?.selectedModelId ?? history.messages[id].model)
-						}
-					: {})
-			},
-			meta: {
-				arena: message ? message.arena : false,
-				model_id: message.model,
-				message_id: message.id,
-				message_index: messages.length,
-				chat_id: chatId
-			},
-			snapshot: {
-				chat: chat
-			}
-		};
+			let feedbackItem = {
+				type: 'rating',
+				data: {
+					...(updatedMessage?.annotation ? updatedMessage.annotation : {}),
+					model_id: message?.selectedModelId ?? message.model,
+					...(siblingIds.length > 1
+						? {
+								sibling_model_ids: siblingIds
+									.filter((id) => id !== message.id)
+									.map((id) => history.messages[id]?.selectedModelId ?? history.messages[id]?.model)
+									.filter(Boolean)
+							}
+						: {})
+				},
+				meta: {
+					arena: message ? message.arena : false,
+					model_id: message.model,
+					message_id: message.id,
+					message_index: messages.length,
+					chat_id: chatId
+				},
+				snapshot: {
+					chat
+				}
+			};
 
-		const baseModels = [
-			feedbackItem.data.model_id,
-			...(feedbackItem.data.sibling_model_ids ?? [])
-		].reduce((acc, modelId) => {
-			const model = $models.find((m) => m.id === modelId);
-			if (model) {
-				acc[model.id] = model?.info?.base_model_id ?? null;
+			const baseModels = [
+				feedbackItem.data.model_id,
+				...(feedbackItem.data.sibling_model_ids ?? [])
+			].reduce((acc, modelId) => {
+				const model = $models.find((m) => m.id === modelId);
+				if (model) {
+					acc[model.id] = model?.info?.base_model_id ?? null;
+				} else {
+					console.warn(`Model with ID ${modelId} not found`);
+				}
+				return acc;
+			}, {});
+			feedbackItem.meta.base_models = baseModels;
+
+			let feedback = null;
+			if (message?.feedbackId) {
+				feedback = await updateFeedbackById(localStorage.token, message.feedbackId, feedbackItem);
 			} else {
-				// Log or handle cases where corresponding model is not found
-				console.warn(`Model with ID ${modelId} not found`);
-			}
-			return acc;
-		}, {});
-		feedbackItem.meta.base_models = baseModels;
-
-		let feedback = null;
-		if (message?.feedbackId) {
-			feedback = await updateFeedbackById(
-				localStorage.token,
-				message.feedbackId,
-				feedbackItem
-			).catch((error) => {
-				toast.error(`${error}`);
-			});
-		} else {
-			feedback = await createNewFeedback(localStorage.token, feedbackItem).catch((error) => {
-				toast.error(`${error}`);
-			});
-
-			if (feedback) {
-				updatedMessage.feedbackId = feedback.id;
-			}
-		}
-
-		console.log(updatedMessage);
-		saveMessage(message.id, updatedMessage);
-
-		await tick();
-
-		if (!details) {
-			showRateComment = true;
-
-			if (!updatedMessage.annotation?.tags && (message?.content ?? '') !== '') {
-				// attempt to generate tags
-				const tags = await generateTags(localStorage.token, message.model, messages, chatId).catch(
-					(error) => {
-						console.error(error);
-						return [];
-					}
-				);
-				console.log(tags);
-
-				if (tags) {
-					updatedMessage.annotation.tags = tags;
-					feedbackItem.data.tags = tags;
-
-					saveMessage(message.id, updatedMessage);
-					await updateFeedbackById(
-						localStorage.token,
-						updatedMessage.feedbackId,
-						feedbackItem
-					).catch((error) => {
-						toast.error(`${error}`);
-					});
+				feedback = await createNewFeedback(localStorage.token, feedbackItem);
+				if (feedback) {
+					updatedMessage.feedbackId = feedback.id;
 				}
 			}
-		}
 
-		feedbackLoading = false;
+			if (!feedback) return;
+
+			await saveMessage(message.id, updatedMessage);
+			await tick();
+
+			if (!details) {
+				showRateComment = true;
+				if (requestGeneration === feedbackGeneration) feedbackLoading = false;
+
+				if (!updatedMessage.annotation?.tags && (message?.content ?? '') !== '') {
+					const tags = await generateTags(
+						localStorage.token,
+						message.model,
+						messages,
+						chatId
+					).catch((error) => {
+						console.error(error);
+						return [];
+					});
+
+					if (requestGeneration !== feedbackGeneration) return;
+
+					if (tags) {
+						const currentMessage = history.messages[message.id] ?? updatedMessage;
+						const taggedMessage = {
+							...currentMessage,
+							annotation: {
+								...(currentMessage?.annotation ?? {}),
+								tags
+							}
+						};
+						feedbackItem.data = {
+							...feedbackItem.data,
+							...taggedMessage.annotation
+						};
+						await saveMessage(message.id, taggedMessage);
+						if (requestGeneration !== feedbackGeneration) return;
+						await updateFeedbackById(localStorage.token, taggedMessage.feedbackId, feedbackItem);
+					}
+				}
+			}
+		} catch (error) {
+			toast.error(`${error}`);
+		} finally {
+			if (requestGeneration === feedbackGeneration) feedbackLoading = false;
+		}
 	};
 
 	const deleteMessageHandler = async () => {
-		deleteMessage(message.id);
+		await deleteMessage(message.id);
 	};
 
 	$: if (!edit) {
@@ -845,8 +848,8 @@
 									onSetInputText={(text) => {
 										setInputText(text);
 									}}
-									onSave={({ raw, oldContent, newContent }) => {
-										const sourceMessage = history.messages[message.id];
+									onSave={async ({ raw, oldContent, newContent }) => {
+										const sourceMessage = structuredClone(history.messages[message.id]);
 										if (sourceMessage.output?.length) {
 											const updatedOutput = replaceOutputMessageText(
 												sourceMessage.output,
@@ -868,7 +871,7 @@
 											);
 										}
 
-										updateChat();
+										await saveMessage(message.id, sourceMessage);
 									}}
 								/>
 							{/if}

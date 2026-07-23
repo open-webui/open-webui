@@ -643,7 +643,7 @@ async def get_builtin_tools(
     chat_id = metadata.get('chat_id') or ''
     chat = None
     if chat_id and not chat_id.startswith(('local:', 'channel:')):
-        chat = await Chats.get_chat_by_id(chat_id)
+        chat = await Chats.get_chat_by_id(chat_id, include_messages=False)
 
     # Notes tools - search, view, create, and update user's notes
     if (chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note') or (

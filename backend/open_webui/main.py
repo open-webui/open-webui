@@ -1374,14 +1374,18 @@ async def chat_completion(
                     # now the backend owns persistence.
                     chat_files = metadata.get('files')
                     if chat_files is not None or selected_chat_models:
-                        existing_chat = await Chats.get_chat_by_id(chat_id)
+                        existing_chat = await Chats.get_chat_by_id(chat_id, include_messages=False)
                         if existing_chat:
                             updated = {**existing_chat.chat}
                             if chat_files is not None:
                                 updated['files'] = chat_files
                             if selected_chat_models:
                                 updated['models'] = selected_chat_models
-                            await Chats.update_chat_by_id(chat_id, updated)
+                            await Chats.update_chat_by_id(
+                                chat_id,
+                                updated,
+                                include_messages=False,
+                            )
 
                     # Save user message to DB
                     if user_message and user_message.get('id'):
@@ -1417,7 +1421,7 @@ async def chat_completion(
                         if grandparent_id:
                             grandparent = await Chats.get_message_by_id_and_message_id(chat_id, grandparent_id)
                             if grandparent:
-                                child_ids = grandparent.get('childrenIds', [])
+                                child_ids = grandparent.get('childrenIds') or []
                                 if user_message['id'] not in child_ids:
                                     child_ids.append(user_message['id'])
                                     await Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -1450,7 +1454,7 @@ async def chat_completion(
                     if user_message_id and all_assistant_ids:
                         existing_user_message = await Chats.get_message_by_id_and_message_id(chat_id, user_message_id)
                         if existing_user_message:
-                            child_ids = existing_user_message.get('childrenIds', [])
+                            child_ids = existing_user_message.get('childrenIds') or []
                             for assistant_id in all_assistant_ids:
                                 if assistant_id not in child_ids:
                                     child_ids.append(assistant_id)
@@ -1894,7 +1898,7 @@ async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
         if owner_id != user.id and user.role != 'admin':
             return {'task_ids': []}
     else:
-        chat = await Chats.get_chat_by_id(chat_id)
+        chat = await Chats.get_chat_by_id(chat_id, include_messages=False)
         if chat is None or (chat.user_id != user.id and user.role != 'admin'):
             return {'task_ids': []}
 
@@ -1912,7 +1916,7 @@ async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
         if owner_id != user.id and user.role != 'admin':
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
     else:
-        chat = await Chats.get_chat_by_id(chat_id)
+        chat = await Chats.get_chat_by_id(chat_id, include_messages=False)
         if chat is None or (chat.user_id != user.id and user.role != 'admin'):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
     result = await stop_item_tasks(request.app.state.redis, chat_id)

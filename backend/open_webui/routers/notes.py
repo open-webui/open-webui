@@ -362,7 +362,13 @@ async def get_note_chat_by_id(
 
         payload['params'] = params
         if changed:
-            updated_chat = await Chats.update_chat_by_id(chat.id, payload, db=db, touch=False)
+            updated_chat = await Chats.update_chat_by_id(
+                chat.id,
+                payload,
+                db=db,
+                touch=False,
+                include_messages=False,
+            )
             if updated_chat:
                 return updated_chat
 
@@ -457,7 +463,16 @@ async def get_note_chats_by_id(
 
         payload['params'] = params
         if changed:
-            chat = await Chats.update_chat_by_id(chat.id, payload, db=db, touch=False) or chat
+            chat = (
+                await Chats.update_chat_by_id(
+                    chat.id,
+                    payload,
+                    db=db,
+                    touch=False,
+                    include_messages=False,
+                )
+                or chat
+            )
 
         normalized_chats.append(chat)
 

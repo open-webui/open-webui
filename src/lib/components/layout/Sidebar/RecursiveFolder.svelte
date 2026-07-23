@@ -23,7 +23,7 @@
 		getSharedFolderChats
 	} from '$lib/apis/folders';
 	import {
-		getChatById,
+		getChatByIdWindow,
 		getChatsByFolderId,
 		getChatListByFolderId,
 		updateChatFolderIdById,
@@ -156,7 +156,7 @@
 							} else if (type === 'chat') {
 								open = true;
 
-								let chat = await getChatById(localStorage.token, id).catch((error) => {
+								let chat = await getChatByIdWindow(localStorage.token, id, 1).catch((error) => {
 									return null;
 								});
 								if (!chat && item) {

@@ -13,15 +13,13 @@ from typing import Literal
 from uuid import uuid4
 
 from fastapi import Request
-from sqlalchemy import select
-from starlette.datastructures import Headers
-
 from open_webui.internal.db import get_async_db
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chat, ChatForm, Chats
 from open_webui.models.users import UserModel, Users
 from open_webui.tasks import has_active_tasks
-from open_webui.utils.misc import get_message_list
+from sqlalchemy import select
+from starlette.datastructures import Headers
 
 log = logging.getLogger(__name__)
 
@@ -229,7 +227,7 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
         from open_webui.socket.main import sio
         from open_webui.utils.subagents import _parent_locks
 
-        timer = await Chats.get_chat_by_id(timer_id)
+        timer = await Chats.get_chat_by_id(timer_id, include_messages=False)
         if not timer:
             return
         meta = timer.meta or {}
@@ -239,7 +237,11 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
             return
 
         parent_chat_id = meta.get('parent_chat_id') or ''
-        parent = await Chats.get_chat_by_id_and_user_id(parent_chat_id, timer.user_id)
+        parent = await Chats.get_chat_by_id_and_user_id(
+            parent_chat_id,
+            timer.user_id,
+            include_messages=False,
+        )
         if not parent:
             await _set_timer_state(timer_id, 'error', timer_error='parent chat no longer exists')
             return
@@ -275,83 +277,96 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
         parent_lock = _parent_locks.setdefault(parent_chat_id, asyncio.Lock())
         async with parent_lock:
             async with get_async_db() as db:
-                stmt = select(Chat).where(Chat.id == parent_chat_id, Chat.user_id == timer.user_id)
-                if db.bind.dialect.name == 'postgresql':
-                    stmt = stmt.with_for_update()
-                result = await db.execute(stmt)
-                parent = result.scalar_one_or_none()
-                if not parent:
-                    await _set_timer_state(timer_id, 'error', timer_error='parent chat no longer exists')
-                    return
-                if await has_active_tasks(app.state.redis, parent_chat_id):
+                try:
+                    stmt = select(Chat).where(Chat.id == parent_chat_id, Chat.user_id == timer.user_id)
+                    if db.bind.dialect.name == 'postgresql':
+                        stmt = stmt.with_for_update()
+                    result = await db.execute(stmt)
+                    parent = result.scalar_one_or_none()
+                    if not parent:
+                        await _set_timer_state(timer_id, 'error', timer_error='parent chat no longer exists')
+                        return
+
+                    compact_chat = await ChatMessages.compact_legacy_chat_in_session(
+                        db,
+                        parent_chat_id,
+                        timer.user_id,
+                        parent.chat,
+                    )
+                    if await has_active_tasks(app.state.redis, parent_chat_id):
+                        parent.chat = compact_chat
+                        timer_row = await db.get(Chat, timer_id)
+                        if timer_row:
+                            timer_row.meta = {
+                                **(timer_row.meta or {}),
+                                'status': 'pending',
+                                'timer_claim_id': None,
+                                'timer_started_at': None,
+                            }
+                            timer_row.updated_at = int(time.time())
+                        await db.commit()
+                        return
+
+                    parent_id = await ChatMessages.get_latest_eligible_assistant_id_in_session(
+                        db,
+                        parent_chat_id,
+                    )
+                    parent_id = parent_id or meta.get('parent_message_id')
+                    message_list = (
+                        await ChatMessages.get_message_branch_in_session(db, parent_chat_id, parent_id)
+                        if parent_id
+                        else []
+                    )
+
+                    user_message = {
+                        'id': user_message_id,
+                        'parentId': parent_id,
+                        'childrenIds': [assistant_message_id],
+                        'role': 'user',
+                        'content': prompt,
+                        'model': model_id,
+                        'meta': {'internal': True, 'type': 'timer', 'timer_id': timer_id},
+                        'timestamp': int(time.time()),
+                    }
+                    assistant_message = {
+                        'id': assistant_message_id,
+                        'parentId': user_message_id,
+                        'childrenIds': [],
+                        'role': 'assistant',
+                        'content': '',
+                        'done': False,
+                        'model': model_id,
+                        'timestamp': int(time.time()),
+                    }
+                    await ChatMessages.bulk_upsert_messages_in_session(
+                        db,
+                        parent_chat_id,
+                        timer.user_id,
+                        {
+                            user_message_id: user_message,
+                            assistant_message_id: assistant_message,
+                        },
+                    )
+
+                    updated_chat = copy.deepcopy(compact_chat)
+                    updated_chat['history'] = {
+                        **(updated_chat.get('history') or {}),
+                        'currentId': assistant_message_id,
+                    }
+                    parent.chat = updated_chat
+                    parent.updated_at = int(time.time())
                     timer_row = await db.get(Chat, timer_id)
                     if timer_row:
                         timer_row.meta = {
                             **(timer_row.meta or {}),
-                            'status': 'pending',
-                            'timer_claim_id': None,
-                            'timer_started_at': None,
+                            'status': 'completed',
+                            'timer_completed_at': int(time.time_ns()),
                         }
                         timer_row.updated_at = int(time.time())
                     await db.commit()
-                    return
-
-                parent_chat = copy.deepcopy(parent.chat or {})
-                history = parent_chat.setdefault('history', {})
-                messages = history.setdefault('messages', {})
-                done_assistants = [
-                    message
-                    for message in messages.values()
-                    if message.get('role') == 'assistant' and message.get('done') is not False
-                ]
-                parent_id = (
-                    max(done_assistants, key=lambda message: message.get('timestamp', 0)).get('id')
-                    if done_assistants
-                    else meta.get('parent_message_id')
-                )
-                message_list = get_message_list(messages, parent_id)
-
-                user_message = {
-                    'id': user_message_id,
-                    'parentId': parent_id,
-                    'childrenIds': [assistant_message_id],
-                    'role': 'user',
-                    'content': prompt,
-                    'model': model_id,
-                    'meta': {'internal': True, 'type': 'timer', 'timer_id': timer_id},
-                    'timestamp': int(time.time()),
-                }
-                assistant_message = {
-                    'id': assistant_message_id,
-                    'parentId': user_message_id,
-                    'childrenIds': [],
-                    'role': 'assistant',
-                    'content': '',
-                    'done': False,
-                    'model': model_id,
-                    'timestamp': int(time.time()),
-                }
-                messages[user_message_id] = user_message
-                messages[assistant_message_id] = assistant_message
-                if parent_id and parent_id in messages:
-                    children = messages[parent_id].setdefault('childrenIds', [])
-                    if user_message_id not in children:
-                        children.append(user_message_id)
-
-                parent.chat = parent_chat
-                history['currentId'] = assistant_message_id
-                parent.updated_at = int(time.time())
-                timer_row = await db.get(Chat, timer_id)
-                if timer_row:
-                    timer_row.meta = {
-                        **(timer_row.meta or {}),
-                        'status': 'completed',
-                        'timer_completed_at': int(time.time_ns()),
-                    }
-                    timer_row.updated_at = int(time.time())
-                await db.commit()
-            await ChatMessages.upsert_message(user_message_id, parent_chat_id, timer.user_id, user_message)
-            await ChatMessages.upsert_message(assistant_message_id, parent_chat_id, timer.user_id, assistant_message)
+                except Exception:
+                    await db.rollback()
+                    raise
 
         await sio.emit(
             'events',

@@ -37,7 +37,7 @@
 	import {
 		getAllTags,
 		toggleChatPinnedStatusById,
-		getChatById,
+		getChatByIdWindow,
 		updateChatFolderIdById,
 		importChats,
 		deleteAllChats,
@@ -1276,7 +1276,7 @@
 						const { type, id, item } = e.detail;
 
 						if (type === 'chat') {
-							let chat = await getChatById(localStorage.token, id).catch((error) => {
+							let chat = await getChatByIdWindow(localStorage.token, id, 1).catch((error) => {
 								return null;
 							});
 							if (!chat && item) {
@@ -1347,9 +1347,11 @@
 										const { type, id, item } = e.detail;
 
 										if (type === 'chat') {
-											let chat = await getChatById(localStorage.token, id).catch((error) => {
-												return null;
-											});
+											let chat = await getChatByIdWindow(localStorage.token, id, 1).catch(
+												(error) => {
+													return null;
+												}
+											);
 											if (!chat && item) {
 												if (!canImportChats) {
 													toast.error($i18n.t('Access prohibited'));

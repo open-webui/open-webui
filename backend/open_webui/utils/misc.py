@@ -400,6 +400,29 @@ def convert_output_to_messages(
     return reconcile_tool_pairs(messages)
 
 
+def expand_messages_with_output(
+    messages: list[dict],
+    raw: bool = True,
+    reasoning_format: str | None = None,
+) -> list[dict]:
+    """Expand stored Responses API output into ordinary assistant/tool messages."""
+    expanded = []
+    for message in messages:
+        if message.get('role') == 'assistant' and message.get('output'):
+            output_messages = convert_output_to_messages(
+                message['output'],
+                raw=raw,
+                reasoning_format=reasoning_format,
+            )
+            if output_messages:
+                expanded.extend(output_messages)
+                continue
+
+        expanded.append({key: value for key, value in message.items() if key != 'output'})
+
+    return expanded
+
+
 def get_last_user_message(messages: list[dict]) -> str | None:
     message = get_last_user_message_item(messages)
     if message is None:

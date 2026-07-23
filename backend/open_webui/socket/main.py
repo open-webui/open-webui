@@ -1011,60 +1011,52 @@ async def get_event_emitter(request_info, update_db=True):
 
             elif event_type == 'embeds':
                 event_payload = event_data.get('data', {})
-                embeds = event_payload.get('embeds', [])
+                embeds = event_payload.get('embeds') or []
 
-                if not event_payload.get('replace', False):
-                    message = await Chats.get_message_by_id_and_message_id(
+                if event_payload.get('replace', False):
+                    await Chats.patch_message_by_chat_id_and_message_id(
                         request_info['chat_id'],
                         request_info['message_id'],
+                        {'embeds': embeds},
+                        touch=False,
                     )
-                    embeds.extend(message.get('embeds', []))
-
-                await Chats.upsert_message_to_chat_by_id_and_message_id(
-                    request_info['chat_id'],
-                    request_info['message_id'],
-                    {
-                        'embeds': embeds,
-                    },
-                    touch=False,
-                )
+                else:
+                    await Chats.append_message_items_by_chat_id_and_message_id(
+                        request_info['chat_id'],
+                        request_info['message_id'],
+                        'embeds',
+                        embeds,
+                        deduplicate=True,
+                    )
 
             elif event_type == 'files':
-                message = await Chats.get_message_by_id_and_message_id(
-                    request_info['chat_id'],
-                    request_info['message_id'],
-                )
-
-                files = event_data.get('data', {}).get('files', [])
-                files.extend(message.get('files', []))
-
-                await Chats.upsert_message_to_chat_by_id_and_message_id(
-                    request_info['chat_id'],
-                    request_info['message_id'],
-                    {
-                        'files': files,
-                    },
-                    touch=False,
-                )
+                event_payload = event_data.get('data', {})
+                files = event_payload.get('files') or []
+                if event_payload.get('replace', False):
+                    await Chats.patch_message_by_chat_id_and_message_id(
+                        request_info['chat_id'],
+                        request_info['message_id'],
+                        {'files': files},
+                        touch=False,
+                    )
+                else:
+                    await Chats.append_message_items_by_chat_id_and_message_id(
+                        request_info['chat_id'],
+                        request_info['message_id'],
+                        'files',
+                        files,
+                        deduplicate=True,
+                    )
 
             elif event_type in ('source', 'citation'):
                 data = event_data.get('data', {})
                 if data.get('type') is None:
-                    message = await Chats.get_message_by_id_and_message_id(
+                    await Chats.append_message_items_by_chat_id_and_message_id(
                         request_info['chat_id'],
                         request_info['message_id'],
-                    )
-
-                    sources = message.get('sources', [])
-                    sources.append(data)
-
-                    await Chats.upsert_message_to_chat_by_id_and_message_id(
-                        request_info['chat_id'],
-                        request_info['message_id'],
-                        {
-                            'sources': sources,
-                        },
-                        touch=False,
+                        'sources',
+                        [data],
+                        deduplicate=True,
                     )
 
     if 'user_id' in request_info and 'chat_id' in request_info and 'message_id' in request_info:

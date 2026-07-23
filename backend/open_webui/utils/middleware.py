@@ -40,6 +40,7 @@ from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     RAG_SYSTEM_CONTEXT,
 )
+from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
@@ -79,6 +80,7 @@ from open_webui.utils.access_control import has_connection_access, has_permissio
 from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.chat import generate_chat_completion
+from open_webui.utils.chat_history import inline_message_images_from_files
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.context_compaction import compact_messages_for_request
 from open_webui.utils.files import (
@@ -100,6 +102,7 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     convert_output_to_messages,
     deep_update,
+    expand_messages_with_output,
     extract_urls,
     get_content_from_message,
     get_last_assistant_message,
@@ -1441,7 +1444,7 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
         )
 
         if results:
-            files = form_data.get('files', [])
+            files = form_data.get('files') or []
 
             if results.get('collection_names'):
                 for col_idx, collection_name in enumerate(results.get('collection_names')):
@@ -1517,7 +1520,7 @@ def get_images_from_messages(message_list):
 
     for message in reversed(message_list):
         message_images = []
-        for file in message.get('files', []):
+        for file in message.get('files') or []:
             if file.get('type') == 'image':
                 message_images.append(file.get('url'))
             elif file.get('content_type', '').startswith('image/'):
@@ -1550,19 +1553,20 @@ async def get_image_urls(delta_images, request, metadata, user) -> list[str]:
     return image_urls
 
 
-async def add_file_context(messages: list, chat_id: str, user) -> list:
+async def add_file_context(messages: list, chat_id: str, user, message_id: str | None = None) -> list:
     """
     Add file URLs to messages for native function calling.
     """
     if not chat_id or chat_id.startswith('local:') or chat_id.startswith('channel:'):
         return messages
 
-    chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+    chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id, include_messages=False)
     if not chat:
         return messages
 
     history = chat.chat.get('history', {})
-    stored_messages = get_message_list(history.get('messages', {}), history.get('currentId'))
+    current_id = message_id or history.get('currentId')
+    stored_messages = await ChatMessages.get_message_branch_by_chat_id(chat_id, current_id) if current_id else []
 
     def format_file_tag(file):
         attrs = f'type="{file.get("type", "file")}" url="{file["url"]}"'
@@ -1578,13 +1582,19 @@ async def add_file_context(messages: list, chat_id: str, user) -> list:
     # the payload message list longer than the stored message list. A naive
     # positional zip() would pair user messages with wrong stored messages,
     # causing later images to lose their file context (see #21878).
-    user_messages = [m for m in messages if m.get('role') == 'user']
+    user_messages = [
+        message
+        for message in messages
+        if message.get('role') == 'user' and not message.get('_skip_stored_file_context')
+    ]
     stored_user_messages = [m for m in stored_messages if m.get('role') == 'user']
 
-    for message, stored_message in zip(user_messages, stored_user_messages):
+    # Context compaction may keep only a suffix of the branch, so align from
+    # the newest user message backwards instead of pairing from the root.
+    for message, stored_message in zip(reversed(user_messages), reversed(stored_user_messages)):
         files_with_urls = [
             file
-            for file in stored_message.get('files', [])
+            for file in stored_message.get('files') or []
             if file.get('url') and not file.get('url').startswith('data:')
         ]
         if not files_with_urls:
@@ -1599,6 +1609,9 @@ async def add_file_context(messages: list, chat_id: str, user) -> list:
         else:
             message['content'] = file_context + content
 
+    for message in messages:
+        message.pop('_skip_stored_file_context', None)
+
     return messages
 
 
@@ -1610,20 +1623,14 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
     if not chat_id or not isinstance(chat_id, str) or not __event_emitter__:
         return form_data
 
-    if chat_id.startswith('local:') or chat_id.startswith('channel:'):
-        message_list = form_data.get('messages', [])
-    else:
-        chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+    message_list = form_data.get('messages', [])
+    if not chat_id.startswith('local:') and not chat_id.startswith('channel:'):
         await __event_emitter__(
             {
                 'type': 'status',
                 'data': {'description': 'Creating image', 'done': False},
             }
         )
-
-        messages_map = chat.chat.get('history', {}).get('messages', {})
-        message_id = chat.chat.get('history', {}).get('currentId')
-        message_list = get_message_list(messages_map, message_id)
 
     user_message = get_last_user_message(message_list)
 
@@ -2012,11 +2019,10 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
     Load the message chain from DB up to message_id,
     keeping only LLM-relevant fields (role, content, output).
     """
-    messages_map = await Chats.get_messages_map_by_chat_id(chat_id)
-    if not messages_map:
-        return None
-
-    db_messages = get_message_list(messages_map, message_id)
+    db_messages = await ChatMessages.get_message_branch_by_chat_id(chat_id, message_id)
+    if not db_messages:
+        messages_map = await Chats.get_messages_map_by_chat_id(chat_id)
+        db_messages = get_message_list(messages_map, message_id) if messages_map else []
     if not db_messages:
         return None
 
@@ -2053,25 +2059,7 @@ def process_messages_with_output(
     For assistant messages with 'output' field, produces properly formatted
     OpenAI-style messages (tool_calls + tool results). Strips 'output' before LLM.
     """
-    processed = []
-
-    for message in messages:
-        if message.get('role') == 'assistant' and message.get('output'):
-            # Use output items for clean OpenAI-format messages
-            output_messages = convert_output_to_messages(
-                message['output'],
-                raw=True,
-                reasoning_format=reasoning_format,
-            )
-            if output_messages:
-                processed.extend(output_messages)
-                continue
-
-        # Strip 'output' field before adding (LLM shouldn't see it)
-        clean_message = {k: v for k, v in message.items() if k != 'output'}
-        processed.append(clean_message)
-
-    return processed
+    return expand_messages_with_output(messages, raw=True, reasoning_format=reasoning_format)
 
 
 def strip_compaction_fields(messages: list[dict]) -> list[dict]:
@@ -2254,6 +2242,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Guided regeneration: extract before it reaches the LLM provider
     regeneration_prompt = form_data.pop('regeneration_prompt', None)
+    regeneration_source_message_id = form_data.pop('regeneration_source_message_id', None)
 
     # Load messages from DB when available — DB preserves structured 'output' items
     # which the frontend strips, causing tool calls to be merged into content.
@@ -2280,32 +2269,36 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             system_message = get_system_message(form_data.get('messages', []))
             form_data['messages'] = [system_message, *db_messages] if system_message else db_messages
 
-            # Inject image files into content as image_url parts (mirrors frontend logic)
-            for message in form_data['messages']:
-                image_files = [
-                    f
-                    for f in message.get('files', [])
-                    if f.get('type') == 'image' or (f.get('content_type') or '').startswith('image/')
-                ]
-                if message.get('role') == 'user' and image_files:
-                    text_content = message.get('content', '')
-                    if isinstance(text_content, str):
-                        message['content'] = [
-                            {'type': 'text', 'text': text_content},
-                            *[
-                                {
-                                    'type': 'image_url',
-                                    'image_url': {'url': f['url']},
-                                }
-                                for f in image_files
-                                if f.get('url')
-                            ],
-                        ]
-                # Strip files field — it's been incorporated into content
-                message.pop('files', None)
+            if regeneration_source_message_id:
+                source_message = await Chats.get_message_by_id_and_message_id(
+                    chat_id,
+                    regeneration_source_message_id,
+                )
+                if (
+                    source_message
+                    and source_message.get('role') == 'assistant'
+                    and source_message.get('parentId') == user_message_id
+                    and (source_message.get('content') or source_message.get('output'))
+                ):
+                    form_data['messages'].append(
+                        {
+                            key: value
+                            for key, value in source_message.items()
+                            if key in ('id', 'role', 'content', 'output', 'files', 'contextSummary')
+                        }
+                    )
+
+            # Inject image files into content as image_url parts (mirrors frontend logic).
+            form_data['messages'] = inline_message_images_from_files(form_data['messages'])
 
     if regeneration_prompt:
-        form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
+        form_data['messages'].append(
+            {
+                'role': 'user',
+                'content': regeneration_prompt,
+                '_skip_stored_file_context': True,
+            }
+        )
 
     if chat_id and user_message_id and not chat_id.startswith('local:') and not chat_id.startswith('channel:'):
         if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
@@ -2414,7 +2407,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 if metadata.get('params', {}).get('function_calling') == 'legacy':
                     form_data['files'] = [
                         {'type': 'folder', 'id': folder.id},
-                        *form_data.get('files', []),
+                        *(form_data.get('files') or []),
                     ]
                 else:
                     # Native FC: skip RAG injection, builtin tools
@@ -2459,7 +2452,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             else:
                 knowledge_files.append(item)
 
-        files = form_data.get('files', [])
+        files = form_data.get('files') or []
         files.extend(knowledge_files)
         form_data['files'] = files
 
@@ -2569,7 +2562,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     view_skill_ids = []
     chat = None
     if metadata.get('chat_id') and not metadata['chat_id'].startswith(('local:', 'channel:')):
-        chat = await Chats.get_chat_by_id(metadata['chat_id'])
+        chat = await Chats.get_chat_by_id(metadata['chat_id'], include_messages=False)
 
     if chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note':
         note_id = (chat.meta or {}).get('note_id')
@@ -2752,7 +2745,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         **extra_params,
                         '__model__': models[task_model_id],
                         '__messages__': form_data['messages'],
-                        '__files__': metadata.get('files', []),
+                        '__files__': metadata.get('files') or [],
                     },
                 )
 
@@ -2815,7 +2808,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         if use_builtin_tools:
             # Add file context to user messages
             chat_id = metadata.get('chat_id')
-            form_data['messages'] = await add_file_context(form_data.get('messages', []), chat_id, user)
+            form_data['messages'] = await add_file_context(
+                form_data.get('messages', []),
+                chat_id,
+                user,
+                metadata.get('user_message_id'),
+            )
             builtin_tools = await get_builtin_tools(
                 request,
                 {
@@ -2829,6 +2827,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             for name, tool_dict in builtin_tools.items():
                 if name not in tools_dict:
                     tools_dict[name] = tool_dict
+
+        for message in form_data.get('messages', []):
+            message.pop('_skip_stored_file_context', None)
 
         if tools_dict:
             # Always store resolved tools in metadata so downstream consumers
@@ -3136,20 +3137,22 @@ async def background_tasks_handler(ctx):
         and not metadata.get('chat_id', '').startswith('local:')
         and not metadata.get('chat_id', '').startswith('channel:')
     ):
-        messages_map = await Chats.get_messages_map_by_chat_id(metadata['chat_id'])
-        if not messages_map:
+        message_list = await ChatMessages.get_message_branch_by_chat_id(
+            metadata['chat_id'],
+            metadata['message_id'],
+        )
+        if not message_list:
             # Chat was deleted while the response was streaming — skip background tasks
             return
+        messages_map = {item['id']: item for item in message_list if item.get('id')}
         message = messages_map.get(metadata['message_id'])
-
-        message_list = get_message_list(messages_map, metadata['message_id'])
 
         # Remove details tags and files from the messages.
         # as get_message_list creates a new list, it does not affect
         # the original messages outside of this handler
 
         messages = []
-        for message in message_list:
+        for message in expand_messages_with_output(message_list):
             content = message.get('content', '')
             if isinstance(content, list):
                 for item in content:
@@ -3399,13 +3402,10 @@ async def outlet_filter_handler(ctx):
             if not message_list:
                 return
         else:
-            messages_map = await Chats.get_messages_map_by_chat_id(chat_id)
-            if not messages_map:
-                return
-
-            message_list = get_message_list(messages_map, message_id)
+            message_list = await ChatMessages.get_message_branch_by_chat_id(chat_id, message_id)
             if not message_list:
                 return
+            messages_map = {message['id']: message for message in message_list if message.get('id')}
 
         model_id = model.get('id') if isinstance(model, dict) else model
 
@@ -4377,13 +4377,13 @@ async def streaming_chat_response_handler(response, ctx):
                                             metadata['message_id'],
                                             image_file_list,
                                         )
-                                        if message_files is None:
+                                        if not message_files:
                                             message_files = image_file_list
 
                                         await event_emitter(
                                             {
                                                 'type': 'files',
-                                                'data': {'files': message_files},
+                                                'data': {'files': message_files, 'replace': True},
                                             }
                                         )
 
@@ -4818,7 +4818,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     function=tool['callable'],
                                     extra_params={
                                         '__messages__': form_data.get('messages', []),
-                                        '__files__': metadata.get('files', []),
+                                        '__files__': metadata.get('files') or [],
                                     },
                                 )
                                 result = await function(**params)
@@ -4925,7 +4925,7 @@ async def streaming_chat_response_handler(response, ctx):
                         # Separate image data URIs (for LLM via input_image) from
                         # other files (for frontend display via files attribute).
                         display_files = []
-                        for file_item in result.get('files', []):
+                        for file_item in result.get('files') or []:
                             if file_item.get('type') == 'image' and file_item.get('url', '').startswith('data:'):
                                 # LLM-only: add as input_image part, not frontend display output.
                                 output_parts.append({'type': 'input_image', 'image_url': file_item['url']})
@@ -5200,7 +5200,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                 'id': str(uuid4()),
                                                 'code': code,
                                                 'session_id': metadata.get('session_id', None),
-                                                'files': metadata.get('files', []),
+                                                'files': metadata.get('files') or [],
                                             },
                                         }
                                     )
@@ -5334,29 +5334,17 @@ async def streaming_chat_response_handler(response, ctx):
                 }
 
                 if not metadata.get('chat_id', '').startswith('channel:'):
-                    if not ENABLE_REALTIME_CHAT_SAVE:
-                        # Save message in the database
-                        await Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata['chat_id'],
-                            metadata['message_id'],
-                            {
-                                'done': True,
-                                'output': output,
-                                **({'usage': usage} if usage else {}),
-                            },
-                        )
-                    elif usage:
-                        await Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata['chat_id'],
-                            metadata['message_id'],
-                            {'done': True, 'usage': usage},
-                        )
-                    else:
-                        await Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata['chat_id'],
-                            metadata['message_id'],
-                            {'done': True},
-                        )
+                    # Realtime saving only improves incremental durability; the
+                    # canonical final output is persisted for every protocol.
+                    await Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata['chat_id'],
+                        metadata['message_id'],
+                        {
+                            'done': True,
+                            'output': output,
+                            **({'usage': usage} if usage else {}),
+                        },
+                    )
 
                 await publish_chat_finished_event(request, user, metadata, title, content, output)
 
@@ -5389,22 +5377,15 @@ async def streaming_chat_response_handler(response, ctx):
                 async def save_cancelled_state():
                     await event_emitter({'type': 'chat:tasks:cancel'})
                     if not metadata.get('chat_id', '').startswith('channel:'):
-                        if not ENABLE_REALTIME_CHAT_SAVE:
-                            await Chats.upsert_message_to_chat_by_id_and_message_id(
-                                metadata['chat_id'],
-                                metadata['message_id'],
-                                {
-                                    'done': True,
-                                    'output': output,
-                                },
-                            )
-                        else:
-                            await Chats.upsert_message_to_chat_by_id_and_message_id(
-                                metadata['chat_id'],
-                                metadata['message_id'],
-                                {'done': True},
-                                touch=False,
-                            )
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata['chat_id'],
+                            metadata['message_id'],
+                            {
+                                'done': True,
+                                'output': output,
+                            },
+                            touch=False,
+                        )
 
                 try:
                     await asyncio.shield(save_cancelled_state())

@@ -16,7 +16,6 @@ from open_webui.models.config import Config
 from open_webui.models.users import UserModel, Users
 from open_webui.tasks import create_task, has_active_tasks
 from open_webui.utils.auth import create_token
-from open_webui.utils.misc import get_message_list
 from sqlalchemy import select
 from starlette.datastructures import Headers
 
@@ -88,144 +87,136 @@ async def process_pending_internal_messages(
             return
 
         async with get_async_db() as db:
-            stmt = select(Chat).where(Chat.id == parent_chat_id, Chat.user_id == user_id)
-            if db.bind.dialect.name == 'postgresql':
-                stmt = stmt.with_for_update()
-            result = await db.execute(stmt)
-            chat = result.scalar_one_or_none()
-            if not chat:
-                return
+            try:
+                stmt = select(Chat).where(Chat.id == parent_chat_id, Chat.user_id == user_id)
+                if db.bind.dialect.name == 'postgresql':
+                    stmt = stmt.with_for_update()
+                result = await db.execute(stmt)
+                chat = result.scalar_one_or_none()
+                if not chat:
+                    return
 
-            history = copy.deepcopy((chat.chat or {}).get('history') or {})
-            messages = history.get('messages') or {}
-            pending = [
-                message
-                for message in messages.values()
-                for meta in [message.get('meta') or {}]
-                if message.get('role') == 'user'
-                and not message.get('childrenIds')
-                and (
-                    (
-                        meta.get('internal') is True
-                        and meta.get('type') == 'subagent'
-                        and meta.get('status') in (None, 'pending')
-                    )
-                    or (meta.get('internal') is True and meta.get('type') == 'timer')
+                compact_chat = await ChatMessages.compact_legacy_chat_in_session(
+                    db,
+                    parent_chat_id,
+                    user_id,
+                    chat.chat,
                 )
-            ]
-            if not pending:
-                return
+                normalized_legacy = compact_chat != (chat.chat or {})
 
-            first = pending[0]
-            first_meta = first.get('meta') or {}
-            kind = 'timer' if first_meta.get('internal') is True and first_meta.get('type') == 'timer' else 'subagent'
-            parent_id = first.get('parentId')
-            if kind == 'timer' and first_meta.get('timer_id'):
-                timer = await Chats.get_chat_by_id(first_meta['timer_id'])
-                run = {**run, **(((timer.meta or {}).get('run') if timer else None) or {})}
-            model_id = first.get('model') or run['model_id']
-            if kind == 'timer':
-                batch = [first]
-            else:
-                batch = [
-                    message
-                    for message in pending
-                    for meta in [message.get('meta') or {}]
-                    if message.get('parentId') == parent_id
-                    and (message.get('model') or model_id) == model_id
-                    and (
-                        meta.get('internal') is True
+                pending = await ChatMessages.get_pending_internal_leaf_messages_in_session(db, parent_chat_id)
+                if not pending:
+                    if normalized_legacy:
+                        chat.chat = compact_chat
+                        await db.commit()
+                    return
+
+                first = pending[0]
+                first_meta = first.get('meta') or {}
+                kind = (
+                    'timer' if first_meta.get('internal') is True and first_meta.get('type') == 'timer' else 'subagent'
+                )
+                parent_id = first.get('parentId')
+                if kind == 'timer' and first_meta.get('timer_id'):
+                    timer = await db.get(Chat, first_meta['timer_id'])
+                    run = {**run, **(((timer.meta or {}).get('run') if timer else None) or {})}
+                model_id = first.get('model') or run['model_id']
+                if kind == 'timer':
+                    batch = [first]
+                else:
+                    batch = [
+                        message
+                        for message in pending
+                        for meta in [message.get('meta') or {}]
+                        if message.get('parentId') == parent_id
+                        and (message.get('model') or model_id) == model_id
+                        and meta.get('internal') is True
                         and meta.get('type') == 'subagent'
                         and meta.get('status') in (None, 'pending')
-                    )
-                ]
-            combined_content = '\n\n'.join(message.get('content', '') for message in batch if message.get('content'))
-            if kind == 'timer':
-                timer_ids = [
-                    message['meta']['timer_id'] for message in batch if (message.get('meta') or {}).get('timer_id')
-                ]
-                combined_meta = {'internal': True, 'type': 'timer'}
-                if len(timer_ids) == 1:
-                    combined_meta['timer_id'] = timer_ids[0]
-                elif timer_ids:
-                    combined_meta['timer_ids'] = timer_ids
-            else:
-                delegation_ids = [
-                    message['meta']['delegation_id']
-                    for message in batch
-                    if (message.get('meta') or {}).get('delegation_id')
-                ]
-                subagent_chat_ids = [
-                    message['meta']['subagent_chat_id']
-                    for message in batch
-                    if (message.get('meta') or {}).get('subagent_chat_id')
-                ]
-                combined_meta = {'internal': True, 'type': 'subagent'}
-                if len(delegation_ids) == 1:
-                    combined_meta['delegation_id'] = delegation_ids[0]
-                elif delegation_ids:
-                    combined_meta['delegation_ids'] = delegation_ids
-                if len(subagent_chat_ids) == 1:
-                    combined_meta['subagent_chat_id'] = subagent_chat_ids[0]
-                elif subagent_chat_ids:
-                    combined_meta['subagent_chat_ids'] = subagent_chat_ids
-
-            reuse_message = len(batch) == 1 and (first.get('meta') or {}).get('status') != 'pending'
-            user_message_id = first['id'] if reuse_message else str(uuid4())
-            removed_ids = set()
-            if not reuse_message:
-                removed_ids = {message['id'] for message in batch}
-                for message_id in removed_ids:
-                    messages.pop(message_id, None)
-                if parent_id and parent_id in messages:
-                    messages[parent_id]['childrenIds'] = [
-                        child_id
-                        for child_id in messages[parent_id].get('childrenIds', [])
-                        if child_id not in removed_ids
                     ]
+                combined_content = '\n\n'.join(
+                    message.get('content', '') for message in batch if message.get('content')
+                )
+                if kind == 'timer':
+                    timer_ids = [
+                        message['meta']['timer_id'] for message in batch if (message.get('meta') or {}).get('timer_id')
+                    ]
+                    combined_meta = {'internal': True, 'type': 'timer'}
+                    if len(timer_ids) == 1:
+                        combined_meta['timer_id'] = timer_ids[0]
+                    elif timer_ids:
+                        combined_meta['timer_ids'] = timer_ids
+                else:
+                    delegation_ids = [
+                        message['meta']['delegation_id']
+                        for message in batch
+                        if (message.get('meta') or {}).get('delegation_id')
+                    ]
+                    subagent_chat_ids = [
+                        message['meta']['subagent_chat_id']
+                        for message in batch
+                        if (message.get('meta') or {}).get('subagent_chat_id')
+                    ]
+                    combined_meta = {'internal': True, 'type': 'subagent'}
+                    if len(delegation_ids) == 1:
+                        combined_meta['delegation_id'] = delegation_ids[0]
+                    elif delegation_ids:
+                        combined_meta['delegation_ids'] = delegation_ids
+                    if len(subagent_chat_ids) == 1:
+                        combined_meta['subagent_chat_id'] = subagent_chat_ids[0]
+                    elif subagent_chat_ids:
+                        combined_meta['subagent_chat_ids'] = subagent_chat_ids
 
-            assistant_message_id = str(uuid4())
-            message_list = get_message_list(messages, parent_id)
-            system_prompt = run.get('system_prompt')
-            user_message = {
-                'id': user_message_id,
-                'parentId': parent_id,
-                'childrenIds': [assistant_message_id],
-                'role': 'user',
-                'content': combined_content,
-                'model': model_id,
-                'meta': combined_meta,
-                'timestamp': int(time.time()),
-            }
-            assistant_message = {
-                'id': assistant_message_id,
-                'parentId': user_message_id,
-                'childrenIds': [],
-                'role': 'assistant',
-                'content': '',
-                'done': False,
-                'model': model_id,
-                'timestamp': int(time.time()),
-            }
+                reuse_message = len(batch) == 1 and (first.get('meta') or {}).get('status') != 'pending'
+                user_message_id = first['id'] if reuse_message else str(uuid4())
+                removed_ids = set() if reuse_message else {message['id'] for message in batch}
+                assistant_message_id = str(uuid4())
+                message_list = (
+                    await ChatMessages.get_message_branch_in_session(db, parent_chat_id, parent_id) if parent_id else []
+                )
+                system_prompt = run.get('system_prompt')
+                user_message = {
+                    'id': user_message_id,
+                    'parentId': parent_id,
+                    'childrenIds': [assistant_message_id],
+                    'role': 'user',
+                    'content': combined_content,
+                    'model': model_id,
+                    'meta': combined_meta,
+                    'timestamp': int(time.time()),
+                }
+                assistant_message = {
+                    'id': assistant_message_id,
+                    'parentId': user_message_id,
+                    'childrenIds': [],
+                    'role': 'assistant',
+                    'content': '',
+                    'done': False,
+                    'model': model_id,
+                    'timestamp': int(time.time()),
+                }
 
-            if parent_id and parent_id in messages:
-                parent_children = [
-                    child_id for child_id in messages[parent_id].get('childrenIds', []) if child_id != user_message_id
-                ]
-                parent_children.append(user_message_id)
-                messages[parent_id]['childrenIds'] = parent_children
-            messages[user_message_id] = {**messages.get(user_message_id, {}), **user_message}
-            messages[assistant_message_id] = assistant_message
-            history['messages'] = messages
-            history['currentId'] = assistant_message_id
-            chat.chat = {**(chat.chat or {}), 'history': history}
-            chat.updated_at = int(time.time())
-            await db.commit()
-
-        if removed_ids:
-            await ChatMessages.delete_message_ids_by_chat_id(parent_chat_id, removed_ids)
-        await ChatMessages.upsert_message(user_message_id, parent_chat_id, user_id, user_message)
-        await ChatMessages.upsert_message(assistant_message_id, parent_chat_id, user_id, assistant_message)
+                await ChatMessages.delete_message_ids_in_session(db, parent_chat_id, removed_ids)
+                await ChatMessages.bulk_upsert_messages_in_session(
+                    db,
+                    parent_chat_id,
+                    user_id,
+                    {
+                        user_message_id: user_message,
+                        assistant_message_id: assistant_message,
+                    },
+                )
+                updated_chat = copy.deepcopy(compact_chat)
+                updated_chat['history'] = {
+                    **(updated_chat.get('history') or {}),
+                    'currentId': assistant_message_id,
+                }
+                chat.chat = updated_chat
+                chat.updated_at = int(time.time())
+                await db.commit()
+            except Exception:
+                await db.rollback()
+                raise
 
         from open_webui.socket.main import sio
 
@@ -571,48 +562,45 @@ async def delegate(
         lock = _parent_locks.setdefault(parent_chat_id, asyncio.Lock())
         async with lock:
             async with get_async_db() as db:
-                stmt = select(Chat).where(Chat.id == parent_chat_id, Chat.user_id == user.id)
-                if db.bind.dialect.name == 'postgresql':
-                    stmt = stmt.with_for_update()
-                result_row = await db.execute(stmt)
-                parent = result_row.scalar_one_or_none()
-                if not parent:
-                    if cancelled:
-                        raise asyncio.CancelledError
-                    return result
+                try:
+                    stmt = select(Chat).where(Chat.id == parent_chat_id, Chat.user_id == user.id)
+                    if db.bind.dialect.name == 'postgresql':
+                        stmt = stmt.with_for_update()
+                    result_row = await db.execute(stmt)
+                    parent = result_row.scalar_one_or_none()
+                    if not parent:
+                        if cancelled:
+                            raise asyncio.CancelledError
+                        return result
 
-                updated_chat = copy.deepcopy(parent.chat or {})
-                updated_history = updated_chat.setdefault('history', {})
-                updated_messages = updated_history.setdefault('messages', {})
-                done_assistants = [
-                    message
-                    for message in updated_messages.values()
-                    if message.get('role') == 'assistant' and message.get('done') is not False
-                ]
-                result_parent_id = (
-                    max(done_assistants, key=lambda message: message.get('timestamp', 0)).get('id')
-                    if done_assistants
-                    else parent_message_id
-                )
-                pending_message['parentId'] = result_parent_id
-                if await has_active_tasks(request.app.state.redis, parent_chat_id):
-                    pending_message['meta']['status'] = 'pending'
-                updated_messages[pending_message_id] = pending_message
-                if result_parent_id and result_parent_id in updated_messages:
-                    children = updated_messages[result_parent_id].setdefault('childrenIds', [])
-                    if pending_message_id not in children:
-                        children.append(pending_message_id)
-                updated_history['messages'] = updated_messages
-                parent.chat = {**(parent.chat or {}), **updated_chat, 'history': updated_history}
-                parent.updated_at = int(time.time())
-                await db.commit()
+                    compact_chat = await ChatMessages.compact_legacy_chat_in_session(
+                        db,
+                        parent_chat_id,
+                        user.id,
+                        parent.chat,
+                    )
+                    result_parent_id = await ChatMessages.get_latest_eligible_assistant_id_in_session(
+                        db,
+                        parent_chat_id,
+                    )
+                    result_parent_id = result_parent_id or parent_message_id
+                    pending_message['parentId'] = result_parent_id
+                    if await has_active_tasks(request.app.state.redis, parent_chat_id):
+                        pending_message['meta']['status'] = 'pending'
 
-            await ChatMessages.upsert_message(
-                message_id=pending_message_id,
-                chat_id=parent_chat_id,
-                user_id=user.id,
-                data=pending_message,
-            )
+                    await ChatMessages.upsert_message_in_session(
+                        db,
+                        pending_message_id,
+                        parent_chat_id,
+                        user.id,
+                        pending_message,
+                    )
+                    parent.chat = compact_chat
+                    parent.updated_at = int(time.time())
+                    await db.commit()
+                except Exception:
+                    await db.rollback()
+                    raise
 
         if pending_message['meta'].get('status') == 'pending':
             from open_webui.socket.main import sio
