@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import uuid
 
@@ -53,10 +52,10 @@ class RedisLock:
 class RedisDict:
     def __init__(self, name, redis_url, redis_sentinels=[], redis_cluster=False):
         self.name = name
-        # Per-process cache of the last payload fingerprint written by set().
+        # Per-process cache of the last serialized payload written by set().
         # Used to skip redundant HSET round-trips when the model list hasn't
         # changed — the dominant Redis write source on busy multi-pod setups.
-        self._last_signature: str | None = None
+        self._last_signature: dict | None = None
         self.redis = get_redis_connection(
             redis_url,
             redis_sentinels,
@@ -107,8 +106,8 @@ class RedisDict:
         # this process wrote.  The check is per-instance (not distributed), but
         # still eliminates the majority of redundant writes because each pod
         # typically produces the same model list on consecutive refreshes.
-        signature = hashlib.sha256(json.dumps(serialized, sort_keys=True).encode()).hexdigest()
-        if signature == self._last_signature:
+        # Direct dict comparison: hashing would re-serialize the whole payload.
+        if serialized == self._last_signature:
             return
 
         # Fetch existing keys before writing so we know which ones to remove.
@@ -124,7 +123,7 @@ class RedisDict:
         if keys_to_remove:
             self.redis.hdel(self.name, *keys_to_remove)
 
-        self._last_signature = signature
+        self._last_signature = serialized
 
     def get(self, key, default=None):
         try:
