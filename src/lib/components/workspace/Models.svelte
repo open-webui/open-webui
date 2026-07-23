@@ -433,7 +433,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Models')} • {$WEBUI_NAME}
+		{$i18n.t('Models')} / {$WEBUI_NAME}
 	</title>
 </svelte:head>
 

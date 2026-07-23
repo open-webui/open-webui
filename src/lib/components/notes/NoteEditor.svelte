@@ -962,7 +962,7 @@ ${content}
 <svelte:head>
 	<title>
 		{note?.title
-			? `${note?.title.length > 30 ? `${note?.title.slice(0, 30)}...` : note?.title} • ${$WEBUI_NAME}`
+			? `${note?.title.length > 30 ? `${note?.title.slice(0, 30)}...` : note?.title} / ${$WEBUI_NAME}`
 			: `${$WEBUI_NAME}`}
 	</title>
 </svelte:head>

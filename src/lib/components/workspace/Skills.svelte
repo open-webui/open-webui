@@ -249,7 +249,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Skills')} • {$WEBUI_NAME}
+		{$i18n.t('Skills')} / {$WEBUI_NAME}
 	</title>
 </svelte:head>
 

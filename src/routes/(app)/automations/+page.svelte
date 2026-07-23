@@ -339,7 +339,7 @@
 </script>
 
 <svelte:head>
-	<title>{$i18n.t('Automations')} • {$WEBUI_NAME}</title>
+	<title>{$i18n.t('Automations')} / {$WEBUI_NAME}</title>
 </svelte:head>
 
 <DeleteConfirmDialog
