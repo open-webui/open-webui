@@ -303,26 +303,26 @@ class ModelsTable:
             ]
 
     async def get_models_by_user_id(
-        self, user_id: str, permission: str = 'write', db: AsyncSession | None = None
+        self,
+        user_id: str,
+        permission: str = 'write',
+        db: AsyncSession | None = None,
+        user_group_ids: set[str] | None = None,
     ) -> list[ModelUserResponse]:
         models = await self.get_models(db=db)
-        user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
-        user_group_ids = {group.id for group in user_groups}
+        if user_group_ids is None:
+            user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user_id, db=db)}
 
-        result = []
-        for model in models:
-            if model.user_id == user_id:
-                result.append(model)
-            elif await AccessGrants.has_access(
-                user_id=user_id,
-                resource_type='model',
-                resource_id=model.id,
-                permission=permission,
-                user_group_ids=user_group_ids,
-                db=db,
-            ):
-                result.append(model)
-        return result
+        # One grants query for all non-owned models instead of one per model
+        accessible_ids = await AccessGrants.get_accessible_resource_ids(
+            user_id=user_id,
+            resource_type='model',
+            resource_ids=[model.id for model in models if model.user_id != user_id],
+            permission=permission,
+            user_group_ids=user_group_ids,
+            db=db,
+        )
+        return [model for model in models if model.user_id == user_id or model.id in accessible_ids]
 
     def _has_permission(self, db, query, filter: dict, permission: str = 'read'):
         return AccessGrants.has_permission_filter(
