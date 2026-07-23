@@ -119,7 +119,11 @@ async def _verify_knowledge_file_access(
 PAGE_ITEM_COUNT = 30
 
 
-@router.get('/list', response_model=ModelAccessListResponse)  # do NOT use "/" as path, conflicts with main.py
+@router.get(
+    '/list',
+    response_model=ModelAccessListResponse,
+    response_model_exclude={'items': {'__all__': {'meta': {'profile_image_url'}}}},
+)  # do NOT use "/" as path, conflicts with main.py
 async def get_models(
     query: str | None = None,
     view_option: str | None = None,
@@ -415,7 +419,10 @@ async def import_models(
                             continue
 
                         # Update existing model
-                        model_data['meta'] = model_data.get('meta', {})
+                        model_data['meta'] = {
+                            **existing_model.meta.model_dump(),
+                            **(model_data.get('meta') or {}),
+                        }
                         model_data['params'] = model_data.get('params', {})
 
                         updated_model = ModelForm(**{**existing_model.model_dump(), **model_data})
@@ -720,6 +727,9 @@ async def update_model_by_id(
 
     if 'base_model_id' not in form_data.model_fields_set:
         form_data.base_model_id = model.base_model_id
+
+    if 'profile_image_url' not in form_data.meta.model_fields_set:
+        form_data.meta.profile_image_url = model.meta.profile_image_url
 
     form_data.access_grants = await filter_allowed_access_grants(
         await Config.get('user.permissions'),

@@ -6,6 +6,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	import { DEFAULT_PERMISSIONS } from '$lib/constants/permissions';
+	import { config } from '$lib/stores';
 
 	export let permissions = {};
 	export let defaultPermissions = {};
@@ -40,11 +41,11 @@
 	{$i18n.t('No model IDs')} -->
 
 	<div>
-		<div class=" mb-2 text-sm font-medium">{$i18n.t('Workspace Permissions')}</div>
+		<div class=" mb-2 text-sm font-normal">{$i18n.t('Workspace Permissions')}</div>
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Models Access')}
 				</div>
 				<Switch bind:state={permissions.workspace.models} />
@@ -76,7 +77,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Knowledge Access')}
 				</div>
 				<Switch bind:state={permissions.workspace.knowledge} />
@@ -92,7 +93,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Prompts Access')}
 				</div>
 				<Switch bind:state={permissions.workspace.prompts} />
@@ -122,6 +123,46 @@
 			{/if}
 		</div>
 
+		{#if $config?.features?.enable_plugins}
+			<div class="flex flex-col w-full">
+				<Tooltip
+					className="flex w-full justify-between my-1"
+					content={$i18n.t(
+						'Warning: Enabling this will allow users to upload arbitrary code on the server.'
+					)}
+					placement="top-start"
+				>
+					<div class=" self-center text-xs font-normal">
+						{$i18n.t('Tools Access')}
+					</div>
+					<Switch bind:state={permissions.workspace.tools} />
+				</Tooltip>
+
+				{#if permissions.workspace.tools}
+					<div class="ml-2 flex flex-col gap-2 pt-0.5 pb-1">
+						<div class="flex w-full justify-between">
+							<div class="self-center text-xs">
+								{$i18n.t('Import Tools')}
+							</div>
+							<Switch bind:state={permissions.workspace.tools_import} />
+						</div>
+						<div class="flex w-full justify-between">
+							<div class="self-center text-xs">
+								{$i18n.t('Export Tools')}
+							</div>
+							<Switch bind:state={permissions.workspace.tools_export} />
+						</div>
+					</div>
+				{:else if defaultPermissions?.workspace?.tools}
+					<div class="pb-0.5">
+						<div class="text-xs text-gray-500">
+							{$i18n.t('This is a default user permission and will remain enabled.')}
+						</div>
+					</div>
+				{/if}
+			</div>
+		{/if}
+
 		<div class="flex flex-col w-full">
 			<Tooltip
 				className="flex w-full justify-between my-1"
@@ -130,45 +171,7 @@
 				)}
 				placement="top-start"
 			>
-				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Tools Access')}
-				</div>
-				<Switch bind:state={permissions.workspace.tools} />
-			</Tooltip>
-
-			{#if permissions.workspace.tools}
-				<div class="ml-2 flex flex-col gap-2 pt-0.5 pb-1">
-					<div class="flex w-full justify-between">
-						<div class="self-center text-xs">
-							{$i18n.t('Import Tools')}
-						</div>
-						<Switch bind:state={permissions.workspace.tools_import} />
-					</div>
-					<div class="flex w-full justify-between">
-						<div class="self-center text-xs">
-							{$i18n.t('Export Tools')}
-						</div>
-						<Switch bind:state={permissions.workspace.tools_export} />
-					</div>
-				</div>
-			{:else if defaultPermissions?.workspace?.tools}
-				<div class="pb-0.5">
-					<div class="text-xs text-gray-500">
-						{$i18n.t('This is a default user permission and will remain enabled.')}
-					</div>
-				</div>
-			{/if}
-		</div>
-
-		<div class="flex flex-col w-full">
-			<Tooltip
-				className="flex w-full justify-between my-1"
-				content={$i18n.t(
-					'Warning: Enabling this will allow users to upload arbitrary code on the server.'
-				)}
-				placement="top-start"
-			>
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Skills Access')}
 				</div>
 				<Switch bind:state={permissions.workspace.skills} />
@@ -202,11 +205,11 @@
 	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
 
 	<div>
-		<div class=" mb-2 text-sm font-medium">{$i18n.t('Sharing Permissions')}</div>
+		<div class=" mb-2 text-sm font-normal">{$i18n.t('Sharing Permissions')}</div>
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Models Sharing')}
 				</div>
 				<Switch bind:state={permissions.sharing.models} />
@@ -223,7 +226,7 @@
 		{#if permissions.sharing.models}
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs font-normal">
 						{$i18n.t('Models Public Sharing')}
 					</div>
 					<Switch bind:state={permissions.sharing.public_models} />
@@ -240,7 +243,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Knowledge Sharing')}
 				</div>
 				<Switch bind:state={permissions.sharing.knowledge} />
@@ -257,7 +260,7 @@
 		{#if permissions.sharing.knowledge}
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs font-normal">
 						{$i18n.t('Knowledge Public Sharing')}
 					</div>
 					<Switch bind:state={permissions.sharing.public_knowledge} />
@@ -274,7 +277,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Prompts Sharing')}
 				</div>
 				<Switch bind:state={permissions.sharing.prompts} />
@@ -291,7 +294,7 @@
 		{#if permissions.sharing.prompts}
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs font-normal">
 						{$i18n.t('Prompts Public Sharing')}
 					</div>
 					<Switch bind:state={permissions.sharing.public_prompts} />
@@ -308,7 +311,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Tools Sharing')}
 				</div>
 				<Switch bind:state={permissions.sharing.tools} />
@@ -325,7 +328,7 @@
 		{#if permissions.sharing.tools}
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs font-normal">
 						{$i18n.t('Tools Public Sharing')}
 					</div>
 					<Switch bind:state={permissions.sharing.public_tools} />
@@ -342,7 +345,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Skills Sharing')}
 				</div>
 				<Switch bind:state={permissions.sharing.skills} />
@@ -359,7 +362,7 @@
 		{#if permissions.sharing.skills}
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs font-normal">
 						{$i18n.t('Skills Public Sharing')}
 					</div>
 					<Switch bind:state={permissions.sharing.public_skills} />
@@ -376,7 +379,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Notes Sharing')}
 				</div>
 				<Switch bind:state={permissions.sharing.notes} />
@@ -393,7 +396,7 @@
 		{#if permissions.sharing.notes}
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs font-normal">
 						{$i18n.t('Notes Public Sharing')}
 					</div>
 					<Switch bind:state={permissions.sharing.public_notes} />
@@ -410,7 +413,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Projects Sharing')}
 				</div>
 				<Switch bind:state={permissions.sharing.folders} />
@@ -427,7 +430,7 @@
 		{#if permissions.chat.share}
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs font-normal">
 						{$i18n.t('Chats Public Sharing')}
 					</div>
 					<Switch bind:state={permissions.sharing.public_chats} />
@@ -445,7 +448,7 @@
 		{#if permissions.features.calendar}
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs font-normal">
 						{$i18n.t('Calendars Public Sharing')}
 					</div>
 					<Switch bind:state={permissions.sharing.public_calendars} />
@@ -464,11 +467,11 @@
 	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
 
 	<div>
-		<div class=" mb-2 text-sm font-medium">{$i18n.t('Access Grants')}</div>
+		<div class=" mb-2 text-sm font-normal">{$i18n.t('Access Grants')}</div>
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Sharing With Users')}
 				</div>
 				<Switch bind:state={permissions.access_grants.allow_users} />
@@ -481,16 +484,32 @@
 				</div>
 			{/if}
 		</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-normal">
+					{$i18n.t('Allow Sharing With Groups')}
+				</div>
+				<Switch bind:state={permissions.access_grants.allow_groups} />
+			</div>
+			{#if defaultPermissions?.access_grants?.allow_groups && !permissions.access_grants.allow_groups}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
 	</div>
 
 	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
 
 	<div>
-		<div class=" mb-2 text-sm font-medium">{$i18n.t('Chat Permissions')}</div>
+		<div class=" mb-2 text-sm font-normal">{$i18n.t('Chat Permissions')}</div>
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow File Upload')}
 				</div>
 				<Switch bind:state={permissions.chat.file_upload} />
@@ -506,7 +525,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Web Upload')}
 				</div>
 				<Switch bind:state={permissions.chat.web_upload} />
@@ -522,7 +541,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Chat Controls')}
 				</div>
 				<Switch bind:state={permissions.chat.controls} />
@@ -539,7 +558,7 @@
 		{#if permissions.chat.controls}
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs font-normal">
 						{$i18n.t('Allow Chat Valves')}
 					</div>
 					<Switch bind:state={permissions.chat.valves} />
@@ -555,7 +574,7 @@
 
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs font-normal">
 						{$i18n.t('Allow Chat System Prompt')}
 					</div>
 					<Switch bind:state={permissions.chat.system_prompt} />
@@ -571,7 +590,7 @@
 
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs font-normal">
 						{$i18n.t('Allow Chat Params')}
 					</div>
 					<Switch bind:state={permissions.chat.params} />
@@ -588,7 +607,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Chat Edit')}
 				</div>
 				<Switch bind:state={permissions.chat.edit} />
@@ -604,7 +623,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Chat Delete')}
 				</div>
 				<Switch bind:state={permissions.chat.delete} />
@@ -620,7 +639,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Delete Messages')}
 				</div>
 				<Switch bind:state={permissions.chat.delete_message} />
@@ -636,7 +655,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Continue Response')}
 				</div>
 				<Switch bind:state={permissions.chat.continue_response} />
@@ -652,7 +671,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Regenerate Response')}
 				</div>
 				<Switch bind:state={permissions.chat.regenerate_response} />
@@ -668,7 +687,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Rate Response')}
 				</div>
 				<Switch bind:state={permissions.chat.rate_response} />
@@ -684,7 +703,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Chat Share')}
 				</div>
 				<Switch bind:state={permissions.chat.share} />
@@ -700,7 +719,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Chat Export')}
 				</div>
 				<Switch bind:state={permissions.chat.export} />
@@ -716,7 +735,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Chat Import')}
 				</div>
 				<Switch bind:state={permissions.chat['import']} />
@@ -732,7 +751,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Speech to Text')}
 				</div>
 				<Switch bind:state={permissions.chat.stt} />
@@ -748,7 +767,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Text to Speech')}
 				</div>
 				<Switch bind:state={permissions.chat.tts} />
@@ -764,7 +783,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Call')}
 				</div>
 				<Switch bind:state={permissions.chat.call} />
@@ -780,7 +799,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Multiple Models in Chat')}
 				</div>
 				<Switch bind:state={permissions.chat.multiple_models} />
@@ -796,7 +815,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Allow Temporary Chat')}
 				</div>
 				<Switch bind:state={permissions.chat.temporary} />
@@ -813,7 +832,7 @@
 		{#if permissions.chat.temporary}
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs font-normal">
 						{$i18n.t('Enforce Temporary Chat')}
 					</div>
 					<Switch bind:state={permissions.chat.temporary_enforced} />
@@ -832,11 +851,11 @@
 	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
 
 	<div>
-		<div class=" mb-2 text-sm font-medium">{$i18n.t('Features Permissions')}</div>
+		<div class=" mb-2 text-sm font-normal">{$i18n.t('Features Permissions')}</div>
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('API Keys')}
 				</div>
 				<Switch bind:state={permissions.features.api_keys} />
@@ -852,7 +871,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Notes')}
 				</div>
 				<Switch bind:state={permissions.features.notes} />
@@ -868,7 +887,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Channels')}
 				</div>
 				<Switch bind:state={permissions.features.channels} />
@@ -884,7 +903,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Projects')}
 				</div>
 				<Switch bind:state={permissions.features.folders} />
@@ -900,7 +919,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Direct Tool Servers')}
 				</div>
 				<Switch bind:state={permissions.features.direct_tool_servers} />
@@ -916,7 +935,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Web Search')}
 				</div>
 				<Switch bind:state={permissions.features.web_search} />
@@ -932,7 +951,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Image Generation')}
 				</div>
 				<Switch bind:state={permissions.features.image_generation} />
@@ -948,7 +967,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Code Interpreter')}
 				</div>
 				<Switch bind:state={permissions.features.code_interpreter} />
@@ -964,7 +983,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Memories')}
 				</div>
 				<Switch bind:state={permissions.features.memories} />
@@ -986,7 +1005,7 @@
 				)}
 				placement="top-start"
 			>
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Automations')}
 				</div>
 				<Switch bind:state={permissions.features.automations} />
@@ -1002,7 +1021,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Calendar')}
 				</div>
 				<Switch bind:state={permissions.features.calendar} />
@@ -1018,7 +1037,7 @@
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('User Webhooks')}
 				</div>
 				<Switch bind:state={permissions.features.webhooks} />
@@ -1036,11 +1055,11 @@
 	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
 
 	<div>
-		<div class=" mb-2 text-sm font-medium">{$i18n.t('Settings Permissions')}</div>
+		<div class=" mb-2 text-sm font-normal">{$i18n.t('Settings Permissions')}</div>
 
 		<div class="flex flex-col w-full">
 			<div class="flex w-full justify-between my-1">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs font-normal">
 					{$i18n.t('Interface Settings Access')}
 				</div>
 				<Switch bind:state={permissions.settings.interface} />
