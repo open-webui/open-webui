@@ -5179,7 +5179,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
     
                                         _real_import = builtins.__import__
-                                        async def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
+                                        def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
                                             if name.split('.')[0] in BLOCKED_MODULES:
                                                 importer_name = globals.get('__name__') if globals else None
                                                 if importer_name == '__main__':
