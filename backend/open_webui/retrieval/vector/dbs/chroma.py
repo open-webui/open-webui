@@ -57,12 +57,13 @@ class ChromaClient(VectorDBBase):
 
     def has_collection(self, collection_name: str) -> bool:
         # Check if the collection exists based on the collection name.
-        # chromadb's list_collections() returns Collection objects (1.x), so a
-        # bare `name in collections` membership test is always False — compare
-        # against the names. (hasattr guard tolerates versions that yield names.)
-        collections = self.client.list_collections()
-        collection_names = [c.name if hasattr(c, 'name') else c for c in collections]
-        return collection_name in collection_names
+        # Direct lookup: list_collections() materializes every collection
+        # (one per uploaded file on typical instances) just to scan names.
+        try:
+            self.client.get_collection(name=collection_name)
+            return True
+        except Exception:
+            return False
 
     def delete_collection(self, collection_name: str):
         # Delete the collection based on the collection name.
