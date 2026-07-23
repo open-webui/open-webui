@@ -1,11 +1,28 @@
 import inspect
 import logging
+import weakref
 
 from open_webui.env import ENABLE_PLUGINS
 from open_webui.models.functions import Functions
 from open_webui.utils.plugin import get_function_module_from_cache
 
 log = logging.getLogger(__name__)
+
+# Keyed on the underlying function so the cache survives bound-method churn;
+# a module reload creates new function objects and evicts stale entries.
+_signature_cache = weakref.WeakKeyDictionary()
+
+
+def get_handler_signature(handler):
+    func = getattr(handler, '__func__', handler)
+    try:
+        signature = _signature_cache.get(func)
+        if signature is None:
+            signature = inspect.signature(handler)
+            _signature_cache[func] = signature
+        return signature
+    except TypeError:
+        return inspect.signature(handler)
 
 
 async def get_function_module(request, function_id, load_from_db=True):
@@ -66,12 +83,14 @@ async def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list =
 
 # Grant these filters the discernment to pass what serves
 # and refuse what harms, for every soul in the house.
-async def process_filter_functions(request, filter_functions, filter_type, form_data, extra_params):
+async def process_filter_functions(request, filter_functions, filter_type, form_data, extra_params, state=None):
+    """`state` is a caller-owned per-stream memo: with it, valves are fetched
+    and applied once per stream instead of once per chunk."""
     if not ENABLE_PLUGINS:
         return form_data, {}
 
     skip_files = None
-    valves_by_id = None
+    valves_by_id = state.get('valves_by_id') if state is not None else None
     filter_ids = [function.id for function in filter_functions if function]
 
     for function in filter_functions:
@@ -91,14 +110,20 @@ async def process_filter_functions(request, filter_functions, filter_type, form_
 
         # Apply valves to the function
         if hasattr(function_module, 'valves') and hasattr(function_module, 'Valves'):
-            if valves_by_id is None:
-                valves_by_id = await Functions.get_function_valves_by_ids(filter_ids)
-            valves = valves_by_id.get(filter_id)
-            function_module.valves = function_module.Valves(**(valves if valves else {}))
+            applied_valve_ids = state.setdefault('applied_valve_ids', set()) if state is not None else None
+            if applied_valve_ids is None or filter_id not in applied_valve_ids:
+                if valves_by_id is None:
+                    valves_by_id = await Functions.get_function_valves_by_ids(filter_ids)
+                    if state is not None:
+                        state['valves_by_id'] = valves_by_id
+                valves = valves_by_id.get(filter_id)
+                function_module.valves = function_module.Valves(**(valves if valves else {}))
+                if applied_valve_ids is not None:
+                    applied_valve_ids.add(filter_id)
 
         try:
             # Prepare parameters
-            sig = inspect.signature(handler)
+            sig = get_handler_signature(handler)
 
             params = {'body': form_data}
             if filter_type == 'stream':
@@ -116,12 +141,19 @@ async def process_filter_functions(request, filter_functions, filter_type, form_
             # Handle user parameters
             if '__user__' in sig.parameters:
                 if hasattr(function_module, 'UserValves'):
-                    try:
-                        params['__user__']['valves'] = function_module.UserValves(
-                            **await Functions.get_user_valves_by_id_and_user_id(filter_id, params['__user__']['id'])
-                        )
-                    except Exception as e:
-                        log.exception(f'Failed to get user values: {e}')
+                    user_valves_by_id = state.setdefault('user_valves_by_id', {}) if state is not None else None
+                    user_valves = user_valves_by_id.get(filter_id) if user_valves_by_id is not None else None
+                    if user_valves is None:
+                        try:
+                            user_valves = function_module.UserValves(
+                                **await Functions.get_user_valves_by_id_and_user_id(filter_id, params['__user__']['id'])
+                            )
+                            if user_valves_by_id is not None:
+                                user_valves_by_id[filter_id] = user_valves
+                        except Exception as e:
+                            log.exception(f'Failed to get user values: {e}')
+                    if user_valves is not None:
+                        params['__user__']['valves'] = user_valves
 
             # Execute handler
             if inspect.iscoroutinefunction(handler):
