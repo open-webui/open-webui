@@ -46,6 +46,7 @@ log = logging.getLogger(__name__)
 SCHEDULER_POLL_INTERVAL = int(os.getenv('SCHEDULER_POLL_INTERVAL', os.getenv('AUTOMATION_POLL_INTERVAL', '10')))
 TIMER_POLL_INTERVAL = int(os.getenv('TIMER_POLL_INTERVAL', '1'))
 CALENDAR_ALERT_LOOKAHEAD_MINUTES = int(os.getenv('CALENDAR_ALERT_LOOKAHEAD_MINUTES', '10'))
+AUTOMATION_COMPLETION_TIMEOUT = max(30, int(os.getenv('AUTOMATION_COMPLETION_TIMEOUT', '1800')))
 
 
 ####################
@@ -290,6 +291,46 @@ def _resolve_model_tool_ids(app, model_id: str) -> list[str]:
     return list(tool_ids) if tool_ids else []
 
 
+def _has_final_assistant_message(message: dict) -> bool:
+    """Return whether a terminal assistant row contains visible final text."""
+    output = message.get('output')
+    if not isinstance(output, list):
+        return False
+
+    return any(
+        isinstance(item, dict)
+        and item.get('type') == 'message'
+        and any(
+            isinstance(content, dict) and content.get('type') == 'output_text' and str(content.get('text', '')).strip()
+            for content in item.get('content', [])
+        )
+        for item in output
+    )
+
+
+async def _wait_for_automation_completion(chat_id: str, message_id: str) -> dict:
+    """Wait for the detached chat task and validate its persisted result."""
+    deadline = time.monotonic() + AUTOMATION_COMPLETION_TIMEOUT
+
+    while time.monotonic() < deadline:
+        message = await Chats.get_message_by_id_and_message_id(chat_id, message_id)
+        if message:
+            error = message.get('error')
+            if error:
+                if isinstance(error, dict):
+                    error = error.get('content') or error.get('message') or str(error)
+                raise RuntimeError(f'Automation assistant failed: {error}')
+
+            if message.get('done'):
+                if not _has_final_assistant_message(message):
+                    raise RuntimeError('Automation completed without a final assistant message')
+                return message
+
+        await asyncio.sleep(0.5)
+
+    raise TimeoutError(f'Automation did not complete within {AUTOMATION_COMPLETION_TIMEOUT} seconds')
+
+
 async def _resolve_model_features(app, model_id: str) -> dict:
     """Read model default features from model config.
 
@@ -398,6 +439,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
     session_id + chat_id + message_id → async task → pipeline handles everything
     (filters, model params, knowledge/RAG, tools, DB saves, webhooks).
     """
+    chat_id = None
     try:
         user = await Users.get_user_by_id(automation.user_id)
         if not user:
@@ -547,6 +589,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         )
         request = _build_request(app, token=token)
         await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
+        await _wait_for_automation_completion(chat.id, assistant_msg_id)
 
         # Notify user
         from open_webui.socket.main import sio
@@ -574,7 +617,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
     except Exception as e:
         log.exception(f'Automation {automation.id} failed')
         error = str(e)[:4000]
-        await _record_run(automation.id, 'error', error=error)
+        await _record_run(automation.id, 'error', chat_id=chat_id, error=error)
         await publish_event(
             app,
             EVENTS.AUTOMATION_RUN_FAILED,
