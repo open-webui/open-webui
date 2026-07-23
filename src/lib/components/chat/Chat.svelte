@@ -755,10 +755,12 @@
 		await tick();
 
 		if (($settings?.scrollOnBranchChange ?? true) && scroll) {
-			const messageElement = document.getElementById(`message-${message.id}`);
-			if (messageElement) {
-				messageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-			}
+			setTimeout(() => {
+				const messageElement = document.getElementById(`message-${message.id}`);
+				if (messageElement) {
+					messageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				}
+			}, 0);
 		}
 
 		await tick();
