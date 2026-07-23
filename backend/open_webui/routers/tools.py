@@ -10,7 +10,7 @@ import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT, ENABLE_PLUGINS
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
@@ -72,20 +72,23 @@ async def get_tools(
     tools = []
 
     # Local Tools
-    tools_cache = get_tools_cache(request)
-    for tool in await Tools.get_tools(defer_content=True, db=db):
-        tool_module = tools_cache.get(tool.id)
-        has_user_valves = (
-            hasattr(tool_module, 'UserValves') if tool_module else (tool.meta.has_user_valves if tool.meta else False)
-        )
-        tools.append(
-            ToolUserResponse(
-                **{
-                    **tool.model_dump(),
-                    'has_user_valves': has_user_valves,
-                }
+    if ENABLE_PLUGINS:
+        tools_cache = get_tools_cache(request)
+        for tool in await Tools.get_tools(defer_content=True, db=db):
+            tool_module = tools_cache.get(tool.id)
+            has_user_valves = (
+                hasattr(tool_module, 'UserValves')
+                if tool_module
+                else (tool.meta.has_user_valves if tool.meta else False)
             )
-        )
+            tools.append(
+                ToolUserResponse(
+                    **{
+                        **tool.model_dump(),
+                        'has_user_valves': has_user_valves,
+                    }
+                )
+            )
 
     # OpenAPI Tool Servers
     server_access_grants = {}
@@ -199,6 +202,9 @@ async def get_tools(
 
 @router.get('/list', response_model=list[ToolAccessResponse])
 async def get_tool_list(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    if not ENABLE_PLUGINS:
+        return []
+
     if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
         tools = await Tools.get_tools(defer_content=True, db=db)
     else:

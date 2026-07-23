@@ -114,7 +114,7 @@
 
 	<div>
 		{#if title}
-			<div class=" text-[13px] font-medium mb-0.5 line-clamp-1">{title}</div>
+			<div class=" text-[13px] font-normal mb-0.5 line-clamp-1">{title}</div>
 		{/if}
 
 		<div class=" line-clamp-2 text-xs self-center dark:text-gray-300 font-normal">

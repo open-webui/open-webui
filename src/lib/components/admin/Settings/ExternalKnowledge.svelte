@@ -21,6 +21,7 @@
 		updateExternalKnowledgeConnection,
 		updateExternalKnowledgeSource
 	} from '$lib/apis/knowledge';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -408,15 +409,15 @@
 	onMount(refresh);
 </script>
 
-<Modal bind:show={showSourceModal} size="sm">
+<Modal bind:show={showSourceModal} size="sm" className="bg-white dark:bg-gray-900 rounded-4xl">
 	<div>
-		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-			<h1 class="text-lg font-medium self-center font-primary">
+		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
+			<h1 class="text-sm font-medium self-center">
 				{editingItem ? $i18n.t('Edit Knowledge Connection') : $i18n.t('Add Knowledge Connection')}
 			</h1>
 
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close')}
 				type="button"
 				on:click={() => {
@@ -424,7 +425,7 @@
 					resetForm();
 				}}
 			>
-				<XMark className="size-5" />
+				<XMark className="size-4" />
 			</button>
 		</div>
 
@@ -458,16 +459,17 @@
 									>
 								</div>
 								<div class="flex flex-1 items-center">
-									<select
+									<SettingsSelect
 										id="external-source-provider"
-										class="w-full text-sm bg-transparent outline-hidden"
 										bind:value={sourceForm.provider}
+										className="w-full"
 										on:change={updateProvider}
+										selectClassName="text-sm"
 									>
 										<option value="qdrant">Qdrant</option>
 										<option value="milvus">Milvus</option>
 										<option value="pgvector">pgvector</option>
-									</select>
+									</SettingsSelect>
 								</div>
 							</div>
 						</div>
@@ -724,7 +726,7 @@
 										className="shrink-0 flex items-center mr-1"
 									>
 										<button
-											class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
+											class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
 											type="button"
 											on:click={testSource}
 											disabled={testing}
@@ -769,11 +771,11 @@
 							shareUsers={true}
 						/>
 
-						<div class="flex justify-between items-center pt-3 text-sm font-medium">
+						<div class="flex justify-between items-center pt-3 text-sm font-normal">
 							<div></div>
 
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+								class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
 								type="submit"
 								disabled={creating || !sourceFormIsValid() || !testResult?.documents?.length}
 							>
@@ -788,18 +790,23 @@
 	</div>
 </Modal>
 
-<div class="mb-2.5 flex flex-col w-full justify-between text-sm">
-	<div class="flex justify-between items-center mb-1">
-		<div class="flex items-center gap-2">
-			<div class="font-medium">{$i18n.t('External Knowledge Sources')}</div>
+<div class="flex w-full flex-col justify-between text-xs">
+	<div class="mb-2 flex items-center justify-between">
+		<div class="flex items-center gap-2 leading-none text-gray-600 dark:text-gray-400">
+			<div>{$i18n.t('External Knowledge Sources')}</div>
 			<span
-				class="text-[0.65rem] font-medium uppercase px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-				>{$i18n.t('Experimental')}</span
+				class="inline-flex items-center text-[0.625rem] font-normal uppercase leading-none text-gray-400 dark:text-gray-600"
 			>
+				{$i18n.t('Experimental')}
+			</span>
 		</div>
 
 		<Tooltip content={$i18n.t('Add Connection')}>
-			<button class="px-1" on:click={openCreateSource} type="button">
+			<button
+				class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+				on:click={openCreateSource}
+				type="button"
+			>
 				<Plus />
 			</button>
 		</Tooltip>
@@ -821,7 +828,7 @@
 								<DatabaseSettings className="size-4" strokeWidth="1.5" />
 							</Tooltip>
 
-							<div class="outline-hidden w-full bg-transparent text-sm min-w-0 line-clamp-1">
+							<div class="outline-hidden w-full bg-transparent text-xs min-w-0 line-clamp-1">
 								<span>{item.name}</span>
 								{' '}
 								<span class="text-gray-500">
@@ -836,7 +843,7 @@
 				<div class="flex gap-1 items-center">
 					<Tooltip content={$i18n.t('Configure')}>
 						<button
-							class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+							class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
 							type="button"
 							disabled={!connection}
 							aria-label={$i18n.t('Configure')}
@@ -868,16 +875,14 @@
 			<Spinner />
 		</div>
 	{:else if items.length === 0}
-		<div class="text-xs text-gray-400 dark:text-gray-500">
+		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 			{$i18n.t('No external knowledge sources configured.')}
 		</div>
 	{/if}
 
-	<div class="my-1.5">
-		<div class="text-xs text-gray-500">
-			{$i18n.t(
-				'Create one read-only Knowledge source per external collection. Test must pass before the source is created.'
-			)}
+	{#if items.length === 0}
+		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+			{$i18n.t('Test must pass before a source is created.')}
 		</div>
-	</div>
+	{/if}
 </div>

@@ -9,7 +9,7 @@ from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     DEFAULT_ARENA_MODEL,
 )
-from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
+from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_PLUGINS, GLOBAL_LOG_LEVEL
 from open_webui.functions import get_function_models
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
@@ -68,6 +68,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         'models.base_models_cache',
         'evaluation.arena.enable',
         'evaluation.arena.models',
+        'models.default_metadata',
     )
     if (
         request.app.state.MODELS
@@ -125,11 +126,21 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             ]
         models = models + arena_models
 
-    global_action_ids = {function.id for function in await Functions.get_global_action_functions()}
-    enabled_action_ids = {function.id for function in await Functions.get_functions_by_type('action', active_only=True)}
+    # One query per type: the global sets are subsets of the active sets, so
+    # deriving them from the same rows halves the function-table queries.
+    if ENABLE_PLUGINS:
+        active_actions = await Functions.get_functions_by_type('action', active_only=True)
+        global_action_ids = {function.id for function in active_actions if function.is_global}
+        enabled_action_ids = {function.id for function in active_actions}
 
-    global_filter_ids = {function.id for function in await Functions.get_global_filter_functions()}
-    enabled_filter_ids = {function.id for function in await Functions.get_functions_by_type('filter', active_only=True)}
+        active_filters = await Functions.get_functions_by_type('filter', active_only=True)
+        global_filter_ids = {function.id for function in active_filters if function.is_global}
+        enabled_filter_ids = {function.id for function in active_filters}
+    else:
+        global_action_ids = set()
+        enabled_action_ids = set()
+        global_filter_ids = set()
+        enabled_filter_ids = set()
 
     custom_models = await Models.get_all_models()
 
@@ -157,8 +168,9 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
                     if 'info' in model:
                         if 'meta' in model['info']:
-                            action_ids.extend(model['info']['meta'].get('actionIds', []))
-                            filter_ids.extend(model['info']['meta'].get('filterIds', []))
+                            if ENABLE_PLUGINS:
+                                action_ids.extend(model['info']['meta'].get('actionIds', []))
+                                filter_ids.extend(model['info']['meta'].get('filterIds', []))
 
                         if 'params' in model['info']:
                             del model['info']['params']
@@ -211,10 +223,10 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             if custom_model.meta:
                 meta = custom_model.meta.model_dump()
 
-                if 'actionIds' in meta:
+                if ENABLE_PLUGINS and 'actionIds' in meta:
                     action_ids.extend(meta['actionIds'])
 
-                if 'filterIds' in meta:
+                if ENABLE_PLUGINS and 'filterIds' in meta:
                     filter_ids.extend(meta['filterIds'])
 
             model['action_ids'] = action_ids
@@ -292,7 +304,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     # Apply global model defaults to all models
     # Per-model overrides take precedence over global defaults
-    default_metadata = await Config.get('models.default_metadata', {}) or {}
+    default_metadata = config.get('models.default_metadata') or {}
 
     if default_metadata:
         for model in models:

@@ -48,6 +48,7 @@ API_CONFIG_FIELDS = (
     'azure',
     'api_version',
     'extra_params',
+    'passthrough_params',
 )
 
 
