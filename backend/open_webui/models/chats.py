@@ -404,7 +404,6 @@ class ChatTable:
             chat_item = Chat(**chat.model_dump())
             session.add(chat_item)
             await session.commit()
-            await session.refresh(chat_item)
 
             # Dual-write initial messages to chat_message table
             try:
@@ -597,7 +596,6 @@ class ChatTable:
                 chat_item.title = clean_title
                 chat_item.chat = {**(chat_item.chat or {}), 'title': clean_title}
                 await session.commit()
-                await session.refresh(chat_item)
                 return ChatModel.model_validate(chat_item)
         except Exception:
             return None
@@ -615,7 +613,6 @@ class ChatTable:
             # Single meta update
             chat.meta = {**chat.meta, 'tags': new_tag_ids}
             await session.commit()
-            await session.refresh(chat)
 
             # Batch-create any missing tag rows
             await Tags.ensure_tags_exist(new_tags, user.id, db=session)
@@ -947,7 +944,6 @@ class ChatTable:
             # Set share_id on the original chat
             chat.share_id = shared.id
             await session.commit()
-            await session.refresh(chat)
             return ChatModel.model_validate(chat)  # return the updated original
 
     # refresh helper
@@ -994,7 +990,6 @@ class ChatTable:
                 chat = await session.get(Chat, id)
                 chat.share_id = share_id
                 await session.commit()
-                await session.refresh(chat)
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
@@ -1007,7 +1002,6 @@ class ChatTable:
                 chat.updated_at = int(time.time())
                 chat.last_read_at = int(time.time())
                 await session.commit()
-                await session.refresh(chat)
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
@@ -1021,7 +1015,6 @@ class ChatTable:
                 chat.updated_at = int(time.time())
                 chat.last_read_at = int(time.time())
                 await session.commit()
-                await session.refresh(chat)
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
@@ -1327,7 +1320,6 @@ class ChatTable:
                     flag_modified(chat_item, 'chat')
                 if self._sanitize_chat_row(chat_item) or repaired_history:
                     await session.commit()
-                    await session.refresh(chat_item)
 
                 return ChatModel.model_validate(chat_item)
         except Exception:
@@ -1369,7 +1361,6 @@ class ChatTable:
                     flag_modified(chat, 'chat')
                 if self._sanitize_chat_row(chat) or repaired_history:
                     await session.commit()
-                    await session.refresh(chat)
 
                 return ChatModel.model_validate(chat)
         except Exception:
@@ -1851,7 +1842,6 @@ class ChatTable:
                 chat.last_read_at = int(time.time())
                 chat.pinned = False
                 await session.commit()
-                await session.refresh(chat)
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
@@ -1931,7 +1921,6 @@ class ChatTable:
                         'tags': list(set(chat.meta.get('tags', []) + [tag_id])),
                     }
                 await session.commit()
-                await session.refresh(chat)
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
@@ -2231,7 +2220,6 @@ class ChatTable:
                     return None
                 chat.tasks = tasks
                 await session.commit()
-                await session.refresh(chat)
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
