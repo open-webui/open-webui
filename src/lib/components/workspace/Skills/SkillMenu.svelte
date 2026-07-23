@@ -17,7 +17,12 @@
 	export let deleteHandler: Function;
 	export let onClose: Function;
 
-	let show = false;
+	export let show = false;
+
+	const closeMenu = () => {
+		show = false;
+		onClose();
+	};
 </script>
 
 <Dropdown
@@ -38,6 +43,7 @@
 				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={() => {
 					editHandler();
+					closeMenu();
 				}}
 			>
 				<svg
@@ -62,6 +68,7 @@
 				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={() => {
 					cloneHandler();
+					closeMenu();
 				}}
 			>
 				<DocumentDuplicate className="size-3.5" />
@@ -73,6 +80,7 @@
 					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
 					on:click={() => {
 						exportHandler();
+						closeMenu();
 					}}
 				>
 					<Download className="size-3.5" />
@@ -86,6 +94,7 @@
 				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={() => {
 					deleteHandler();
+					closeMenu();
 				}}
 			>
 				<GarbageBin className="size-3.5" />

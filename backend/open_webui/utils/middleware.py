@@ -45,8 +45,10 @@ from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
+from open_webui.models.notes import Notes
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import UserModel, Users
+from open_webui.events import EVENTS, publish_event
 from open_webui.retrieval.utils import get_sources_from_items
 from open_webui.routers.images import (
     CreateImageForm,
@@ -74,6 +76,7 @@ from open_webui.socket.main import (
     get_event_emitter,
 )
 from open_webui.utils.access_control import has_connection_access, has_permission
+from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.code_interpreter import execute_code_jupyter
@@ -128,11 +131,52 @@ from open_webui.utils.tools import (
     get_tools,
     get_updated_tool_function,
 )
-from open_webui.utils.webhook import post_webhook
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
+
+
+def _last_output_text(output: list | None) -> str:
+    for item in reversed(output or []):
+        if item.get('type') != 'message':
+            continue
+        parts = item.get('content') or []
+        text = ''.join(str(part.get('text') or '') for part in parts if part.get('type') == 'output_text')
+        if text:
+            return text
+    return ''
+
+
+async def publish_chat_finished_event(
+    request: Request, user: UserModel, metadata: dict, title: str, content: str, output: list | None = None
+):
+    chat_id = metadata.get('chat_id')
+    if getattr(request.state, 'internal', False) is True or not chat_id or chat_id.startswith(('channel:', 'local:')):
+        return
+
+    content = content or _last_output_text(output)
+    webui_url = await Config.get('webui.url')
+    await publish_event(
+        request,
+        EVENTS.CHAT_FINISHED,
+        actor=user,
+        subject_id=chat_id,
+        subject_type='chat',
+        data={
+            'user_id': user.id,
+            'chat_id': chat_id,
+            'message_id': metadata.get('message_id'),
+            'model_id': metadata.get('model_id'),
+            'title': title,
+            'url': f'{webui_url}/c/{chat_id}' if webui_url else f'/c/{chat_id}',
+            'message': content,
+        },
+        message=title or 'Chat finished',
+    )
+    event_emitter = await get_event_emitter(metadata, update_db=False)
+    if event_emitter:
+        await event_emitter({'type': 'chat:list', 'data': {'chat_id': chat_id}})
 
 
 # We believe in one maker of all models, seen and unseen,
@@ -1882,6 +1926,7 @@ def apply_params_to_form_data(form_data, model):
         'reasoning_tags': list,
         'compact_token_threshold': int,
         'system': str,
+        'note_id': str,
     }
 
     for key in list(params.keys()):
@@ -2075,7 +2120,7 @@ def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
     return sanitized
 
 
-SKILL_MENTION_RE = re.compile(r'<\$([^|>]+)(?:\|[^>]*)?>')
+SKILL_MENTION_RE = re.compile(r'<(?:\$([^|>]+)(?:\|[^>]*)?|/([^|>]+)\|[^>]*)>')
 
 
 def _get_text_parts(message: dict) -> list[str]:
@@ -2089,27 +2134,31 @@ def _get_text_parts(message: dict) -> list[str]:
 
 
 def extract_skill_ids_from_messages(messages: list[dict]) -> set[str]:
-    """Extract skill IDs from <$skillId|label> mention tags in messages."""
+    """Extract skill IDs from <$skillId|label> and </skillId|label> mention tags."""
     ids: set[str] = set()
     for message in messages:
         for text in _get_text_parts(message):
-            ids.update(m.group(1) for m in SKILL_MENTION_RE.finditer(text))
+            ids.update(m.group(1) or m.group(2) for m in SKILL_MENTION_RE.finditer(text))
     return ids
 
 
 def strip_skill_mentions(messages: list[dict]) -> None:
-    """Replace <$skillId|label> mention tags with the label in message content in-place."""
-    strip_re = re.compile(r'<\$[^|>]+(?:\|([^>]*))?>')
+    """Replace <$skillId|label> and </skillId|label> mention tags with the label in-place."""
+    strip_re = re.compile(r'<(?:\$[^|>]+(?:\|([^>]*))?|/[^|>]+\|([^>]*))>')
+
+    def label(match):
+        return match.group(1) or match.group(2) or ''
+
     for message in messages:
         content = message.get('content')
         if isinstance(content, str) and strip_re.search(content):
-            message['content'] = strip_re.sub(r'\1', content).strip()
+            message['content'] = strip_re.sub(label, content).strip()
         elif isinstance(content, list):
             for part in content:
                 if isinstance(part, dict) and part.get('type') == 'text':
                     text = part.get('text', '')
                     if strip_re.search(text):
-                        part['text'] = strip_re.sub(r'\1', text).strip()
+                        part['text'] = strip_re.sub(label, text).strip()
 
 
 async def connect_mcp_server(
@@ -2519,7 +2568,36 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     )
     available_skills = []
     view_skill_ids = []
+    chat = None
+    if metadata.get('chat_id') and not metadata['chat_id'].startswith(('local:', 'channel:')):
+        chat = await Chats.get_chat_by_id(metadata['chat_id'])
+
+    if chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note':
+        note_id = (chat.meta or {}).get('note_id')
+        note = await Notes.get_note_by_id(note_id) if note_id else None
+        if note and (
+            user.role == 'admin'
+            or note.user_id == user.id
+            or await AccessGrants.has_access(
+                user_id=user.id,
+                resource_type='note',
+                resource_id=note.id,
+                permission='read',
+            )
+        ):
+            note_files = [
+                file
+                for file in ((note.data or {}).get('files') or [])
+                if isinstance(file, dict)
+                and file.get('type') != 'image'
+                and not (file.get('content_type') or '').startswith('image/')
+            ]
+            if note_files:
+                files = [*(files or []), *note_files]
+
     use_builtin_tools = (
+        chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note'
+    ) or (
         bool(metadata.get('session_id'))
         and metadata.get('params', {}).get('function_calling') != 'legacy'
         and (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('builtin_tools', True)
@@ -3549,26 +3627,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                             },
                         )
 
-                    # Send a webhook notification if the user is not active
-                    if (
-                        getattr(request.state, 'internal', False) is not True
-                        and await Config.get('ui.enable_user_webhooks')
-                        and not await Users.is_user_active(user.id)
-                    ):
-                        webhook_url = await Users.get_user_webhook_url_by_id(user.id)
-                        if webhook_url:
-                            webui_url = await Config.get('webui.url')
-                            await post_webhook(
-                                request.app.state.WEBUI_NAME,
-                                webhook_url,
-                                f'{content}\n\n{title} - {webui_url}/c/{metadata["chat_id"]}',
-                                {
-                                    'action': 'chat',
-                                    'message': content,
-                                    'title': title,
-                                    'url': f'{webui_url}/c/{metadata["chat_id"]}',
-                                },
-                            )
+                    await publish_chat_finished_event(request, user, metadata, title, content, response_output)
 
                     ctx['assistant_message'] = {
                         'content': content,
@@ -3581,6 +3640,29 @@ async def non_streaming_chat_response_handler(response, ctx):
             response = build_response_object(response, merge_events_into_response(response_data, events))
         except Exception as e:
             log.debug(f'Error occurred while processing request: {e}')
+            chat_id = metadata.get('chat_id')
+            if (
+                getattr(request.state, 'internal', False) is not True
+                and chat_id
+                and not chat_id.startswith(('channel:', 'local:'))
+            ):
+                webui_url = await Config.get('webui.url')
+                await publish_event(
+                    request,
+                    EVENTS.CHAT_FAILED,
+                    actor=user,
+                    subject_id=chat_id,
+                    subject_type='chat',
+                    data={
+                        'user_id': user.id,
+                        'chat_id': chat_id,
+                        'message_id': metadata.get('message_id'),
+                        'model_id': metadata.get('model_id'),
+                        'url': f'{webui_url}/c/{chat_id}' if webui_url else f'/c/{chat_id}',
+                        'message': str(e),
+                    },
+                    message='Chat failed',
+                )
             pass
 
         return response
@@ -4409,7 +4491,12 @@ async def streaming_chat_response_handler(response, ctx):
                                                 user,
                                             )
 
-                                        content = f'{content}{value}'
+                                        if isinstance(value, str):
+                                            # In-place append — avoids copying the full
+                                            # accumulated response on every chunk.
+                                            content += value
+                                        else:
+                                            content = f'{content}{value}'
 
                                         # Check if we're inside a tag-based block
                                         # (reasoning, code_interpreter, or solution).
@@ -4516,16 +4603,17 @@ async def streaming_chat_response_handler(response, ctx):
                                         if ENABLE_REALTIME_CHAT_SAVE and not metadata.get('chat_id', '').startswith(
                                             'channel:'
                                         ):
+                                            current_output = full_output()
                                             # Save message in the database
                                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                                 metadata['chat_id'],
                                                 metadata['message_id'],
                                                 {
-                                                    'output': full_output(),
+                                                    'output': current_output,
                                                 },
                                             )
                                             data = {
-                                                'output': full_output(),
+                                                'output': current_output,
                                             }
                                             delta_type = 'content'
                                         else:
@@ -5264,36 +5352,15 @@ async def streaming_chat_response_handler(response, ctx):
                             metadata['chat_id'],
                             metadata['message_id'],
                             {'done': True, 'usage': usage},
-                            touch=False,
                         )
                     else:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
                             {'done': True},
-                            touch=False,
                         )
 
-                # Send a webhook notification if the user is not active
-                if (
-                    getattr(request.state, 'internal', False) is not True
-                    and await Config.get('ui.enable_user_webhooks')
-                    and not await Users.is_user_active(user.id)
-                ):
-                    webhook_url = await Users.get_user_webhook_url_by_id(user.id)
-                    if webhook_url:
-                        webui_url = await Config.get('webui.url')
-                        await post_webhook(
-                            request.app.state.WEBUI_NAME,
-                            webhook_url,
-                            f'{content}\n\n{title} - {webui_url}/c/{metadata["chat_id"]}',
-                            {
-                                'action': 'chat',
-                                'message': content,
-                                'title': title,
-                                'url': f'{webui_url}/c/{metadata["chat_id"]}',
-                            },
-                        )
+                await publish_chat_finished_event(request, user, metadata, title, content, output)
 
                 await event_emitter(
                     {

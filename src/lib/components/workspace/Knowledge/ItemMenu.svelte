@@ -15,6 +15,11 @@
 	export let onClose: Function = () => {};
 
 	let show = false;
+
+	const closeMenu = () => {
+		show = false;
+		onClose();
+	};
 </script>
 
 <Dropdown
@@ -29,15 +34,16 @@
 	<Tooltip content={$i18n.t('More')}>
 		<slot
 			><button
-				class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+				class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 				type="button"
 				aria-label={$i18n.t('More Options')}
 				on:click={(e) => {
+					e.preventDefault();
 					e.stopPropagation();
-					show = true;
+					show = !show;
 				}}
 			>
-				<EllipsisHorizontal className="size-5" />
+				<EllipsisHorizontal className="size-4" />
 			</button>
 		</slot>
 	</Tooltip>
@@ -49,6 +55,7 @@
 					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
 					on:click={() => {
 						onExport();
+						closeMenu();
 					}}
 				>
 					<Download className="size-3.5" />
@@ -60,6 +67,7 @@
 				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={() => {
 					dispatch('delete');
+					closeMenu();
 				}}
 			>
 				<GarbageBin className="size-3.5" />

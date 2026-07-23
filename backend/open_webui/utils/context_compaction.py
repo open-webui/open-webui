@@ -148,8 +148,13 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
     if not config['enable']:
         return {'ok': True, 'compacted': False, 'reason': 'disabled'}
 
-    history = (chat.chat or {}).get('history') or {}
-    current_id = history.get('currentId')
+    chat_data = chat.chat or {}
+    history = chat_data.get('history') or {}
+    current_id = getattr(chat, 'current_message_id', None) or history.get('currentId')
+    if not current_id:
+        current_id = chat_data.get('currentId') or chat_data.get('branchPointMessageId')
+    if not current_id and isinstance(chat_data.get('messages'), list) and chat_data['messages']:
+        current_id = chat_data['messages'][-1].get('id')
     if not current_id:
         return {'ok': True, 'compacted': False, 'reason': 'empty'}
 
@@ -158,11 +163,11 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
         messages_map = history.get('messages') or {}
 
     messages, previous_summary = _apply_latest_summary_checkpoint(get_message_list(messages_map, current_id))
-    if len(messages) <= 2:
-        return {'ok': True, 'compacted': False, 'reason': 'too_short'}
-
     compacted_messages = messages[:-1]
     recent_messages = messages[-1:]
+    if not compacted_messages or not recent_messages:
+        return {'ok': True, 'compacted': False, 'reason': 'too_short'}
+
     summary = await _generate_summary(
         request,
         user,
@@ -213,6 +218,54 @@ def _parse_positive_int(value: Any) -> int | None:
 def _resolve_token_threshold(global_threshold: int, global_cap: int, metadata: dict) -> int:
     configured_threshold = _parse_positive_int((metadata.get('params') or {}).get('compact_token_threshold'))
     return min(configured_threshold or global_threshold, global_cap)
+
+
+async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict | None:
+    chat_data = chat.chat or {}
+    history = chat_data.get('history') or {}
+    current_id = getattr(chat, 'current_message_id', None) or history.get('currentId')
+    if not current_id:
+        current_id = chat_data.get('currentId') or chat_data.get('branchPointMessageId')
+    if not current_id and isinstance(chat_data.get('messages'), list) and chat_data['messages']:
+        current_id = chat_data['messages'][-1].get('id')
+    if not current_id:
+        return None
+
+    messages_map = await Chats.get_messages_map_by_chat_id(chat.id)
+    messages = get_message_list(messages_map or history.get('messages') or {}, current_id)
+    if not messages:
+        return None
+
+    config = await _load_config()
+    if not config['enable']:
+        return None
+
+    params = ((chat.chat or {}).get('params') or {}).copy()
+    if model_id:
+        params['model'] = model_id
+    threshold = _resolve_token_threshold(config['token_threshold'], config['token_cap'], {'params': params})
+    messages, previous_summary = _apply_latest_summary_checkpoint(messages)
+
+    for idx in range(len(messages) - 1, -1, -1):
+        usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
+        input_tokens = (usage or {}).get('input_tokens') or (usage or {}).get('prompt_tokens')
+        if isinstance(usage, dict) and input_tokens:
+            tokens = int(input_tokens or 0) + int(usage.get('output_tokens') or usage.get('completion_tokens') or 0)
+            tokens += _estimate_messages_tokens(messages[idx + 1 :])
+            return _build_context_usage(tokens, threshold)
+
+    tokens = _estimate_tokens(previous_summary or '') + _estimate_messages_tokens(messages)
+    return _build_context_usage(tokens, threshold)
+
+
+def _build_context_usage(tokens: int, threshold: int) -> dict:
+    return {
+        'tokens': tokens,
+        'estimated_tokens': tokens,
+        'threshold': threshold,
+        'percent': round((tokens / threshold) * 100) if threshold > 0 else 0,
+        'source': 'estimated',
+    }
 
 
 def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], str | None]:

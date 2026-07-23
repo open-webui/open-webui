@@ -24,7 +24,12 @@
 
 	export let onClose: Function;
 
-	let show = false;
+	export let show = false;
+
+	const closeMenu = () => {
+		show = false;
+		onClose();
+	};
 </script>
 
 <Dropdown
@@ -62,6 +67,7 @@
 				class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl w-full"
 				on:click={() => {
 					editHandler();
+					closeMenu();
 				}}
 			>
 				<svg
@@ -86,6 +92,7 @@
 				class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl w-full"
 				on:click={() => {
 					shareHandler();
+					closeMenu();
 				}}
 			>
 				<Share />
@@ -96,6 +103,7 @@
 				class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl w-full"
 				on:click={() => {
 					cloneHandler();
+					closeMenu();
 				}}
 			>
 				<DocumentDuplicate />
@@ -106,6 +114,7 @@
 				class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl w-full"
 				on:click={() => {
 					exportHandler();
+					closeMenu();
 				}}
 			>
 				<Download />
@@ -118,6 +127,7 @@
 				class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl w-full"
 				on:click={() => {
 					deleteHandler();
+					closeMenu();
 				}}
 			>
 				<GarbageBin strokeWidth="2" />

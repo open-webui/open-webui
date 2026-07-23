@@ -203,9 +203,7 @@ async def process_uploaded_file(
                     else:
                         # Keep the generic file status stream open until the
                         # KB-specific vector write and durable link both finish.
-                        await Files.update_file_data_by_id(
-                            file_item.id, {'status': 'processing'}, db=db_session
-                        )
+                        await Files.update_file_data_by_id(file_item.id, {'status': 'processing'}, db=db_session)
                         await process_file(
                             request,
                             ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),

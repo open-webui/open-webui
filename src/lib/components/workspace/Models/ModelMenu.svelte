@@ -37,6 +37,11 @@
 	export let writeAccess: boolean = true;
 
 	let show = false;
+
+	const runAndClose = async (handler: Function) => {
+		show = false;
+		await handler();
+	};
 </script>
 
 <Dropdown
@@ -63,9 +68,7 @@
 			{#if writeAccess}
 				<button
 					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
-					on:click={() => {
-						editHandler();
-					}}
+					on:click={() => runAndClose(editHandler)}
 				>
 					<Pencil />
 					<div class="flex items-center">{$i18n.t('Edit')}</div>
@@ -75,9 +78,7 @@
 			{#if writeAccess}
 				<button
 					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
-					on:click={() => {
-						hideHandler();
-					}}
+					on:click={() => runAndClose(hideHandler)}
 				>
 					{#if model?.meta?.hidden ?? false}
 						<svg
@@ -128,9 +129,7 @@
 
 			<button
 				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
-				on:click={() => {
-					pinModelHandler(model?.id);
-				}}
+				on:click={() => runAndClose(() => pinModelHandler(model?.id))}
 			>
 				{#if ($settings?.pinnedModels ?? []).includes(model?.id)}
 					<PinSlash />
@@ -150,9 +149,7 @@
 			{#if writeAccess}
 				<button
 					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
-					on:click={() => {
-						cloneHandler();
-					}}
+					on:click={() => runAndClose(cloneHandler)}
 				>
 					<DocumentDuplicate />
 
@@ -166,9 +163,7 @@
 
 			<button
 				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
-				on:click={() => {
-					copyLinkHandler();
-				}}
+				on:click={() => runAndClose(copyLinkHandler)}
 			>
 				<Link />
 
@@ -178,9 +173,7 @@
 			{#if writeAccess && ($currentUser?.role === 'admin' || $currentUser?.permissions?.workspace?.models_export)}
 				<button
 					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
-					on:click={() => {
-						exportHandler();
-					}}
+					on:click={() => runAndClose(exportHandler)}
 				>
 					<Download />
 
@@ -191,9 +184,7 @@
 			{#if writeAccess && $config?.features.enable_community_sharing}
 				<button
 					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
-					on:click={() => {
-						shareHandler();
-					}}
+					on:click={() => runAndClose(shareHandler)}
 				>
 					<Share />
 					<div class="flex items-center">{$i18n.t('Share')}</div>
@@ -205,9 +196,7 @@
 
 				<button
 					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
-					on:click={() => {
-						deleteHandler();
-					}}
+					on:click={() => runAndClose(deleteHandler)}
 				>
 					<GarbageBin />
 					<div class="flex items-center">{$i18n.t('Delete')}</div>

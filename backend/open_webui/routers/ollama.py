@@ -314,6 +314,16 @@ async def update_config(
             'ollama.api_configs': api_configs,
         }
     )
+
+    await get_all_models.cache.clear()
+    request.app.state.BASE_MODELS = []
+    request.app.state.OLLAMA_MODELS = {}
+    models = getattr(request.app.state, 'MODELS', None)
+    if hasattr(models, 'clear'):
+        models.clear()
+    else:
+        request.app.state.MODELS = {}
+
     await publish_event(
         request,
         EVENTS.MODEL_PROVIDER_CONFIG_UPDATED,
@@ -1171,6 +1181,14 @@ class OpenAICompletionForm(BaseModel):
     model_config = ConfigDict(extra='allow')
 
 
+class OpenAIEmbeddingsForm(BaseModel):
+    """Payload for the OpenAI-compatible /v1/embeddings proxy."""
+
+    model: str
+    input: object
+    model_config = ConfigDict(extra='allow')
+
+
 @router.post('/v1/completions')
 @router.post('/v1/completions/{url_idx}')
 async def generate_openai_completion(
@@ -1220,6 +1238,56 @@ async def generate_openai_completion(
         key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
         user=user,
         stream=payload.get('stream', False),
+        metadata=metadata,
+        api_config=api_config,
+        request=request,
+    )
+
+
+@router.post('/v1/embeddings')
+@router.post('/v1/embeddings/{url_idx}')
+async def generate_openai_embeddings(
+    request: Request,
+    form_data: dict,
+    url_idx: int | None = None,
+    user=Depends(get_verified_user),  # noqa: B008
+):
+    """Forward an embeddings request via the OpenAI-compatible proxy."""
+    if not await Config.get('ollama.enable'):
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
+
+    metadata = form_data.pop('metadata', None)
+
+    try:
+        form_data = OpenAIEmbeddingsForm(**form_data)
+    except Exception as exc:
+        log.exception(exc)
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    payload = {**form_data.model_dump(exclude_none=True)}
+    payload.pop('metadata', None)
+
+    model_id = form_data.model
+    model_info = await Models.get_model_by_id(model_id)
+    if model_info is not None:
+        if model_info.base_model_id:
+            payload['model'] = model_info.base_model_id
+        await check_model_access(user, model_info)
+    else:
+        await check_model_access(user, None)
+
+    url, url_idx = await get_ollama_url(request, payload['model'], url_idx, user)
+    api_config = resolve_api_config((await Config.get('ollama.api_configs', {})), url_idx, url)
+
+    prefix_id = api_config.get('prefix_id')
+    if prefix_id:
+        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+
+    return await send_request(
+        f'{url}/v1/embeddings',
+        payload=json.dumps(payload),
+        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        user=user,
         metadata=metadata,
         api_config=api_config,
         request=request,

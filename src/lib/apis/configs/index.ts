@@ -401,7 +401,9 @@ export const getOrchestratorLifecycle = async (
 	});
 	if (!res.ok) {
 		const body = await res.json();
-		throw Object.assign(new Error(body.detail || 'Failed to read lifecycle'), { status: res.status });
+		throw Object.assign(new Error(body.detail || 'Failed to read lifecycle'), {
+			status: res.status
+		});
 	}
 	return res.json();
 };

@@ -3,8 +3,8 @@
 
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
+	import ChevronRight from './icons/ChevronRight.svelte';
+	import Plus from './icons/Plus.svelte';
 
 	const dispatch = createEventDispatcher();
 	type AddHandler = () => void | Promise<void>;

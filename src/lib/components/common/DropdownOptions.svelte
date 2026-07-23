@@ -37,11 +37,13 @@
 	}}
 >
 	<svelte:fragment slot="trigger" let:selectedLabel>
-		{selectedLabel}
+		<span class="min-w-0 truncate">{selectedLabel}</span>
 		<ChevronDown className=" size-3" strokeWidth="2.5" />
 	</svelte:fragment>
 
 	<svelte:fragment slot="item" let:item let:selected>
-		<span class={selected ? '' : 'text-gray-500 dark:text-gray-400'}>{item.label}</span>
+		<span class={`min-w-0 truncate ${selected ? '' : 'text-gray-500 dark:text-gray-400'}`}
+			>{item.label}</span
+		>
 	</svelte:fragment>
 </Select>

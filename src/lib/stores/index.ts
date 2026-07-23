@@ -31,7 +31,6 @@ export const mobile = writable(false);
 export const socket: Writable<null | Socket> = writable(null);
 export const socketConnected: Writable<boolean> = writable(true);
 export const activeUserIds: Writable<null | string[]> = writable(null);
-export const activeChatIds: Writable<Set<string>> = writable(new Set());
 export const USAGE_POOL: Writable<null | string[]> = writable(null);
 
 export const theme = writable('system');
@@ -58,7 +57,7 @@ export const chatTitle = writable('');
 export const channels = writable([]);
 export const channelId = writable(null);
 
-export { chats, pinnedChats } from './chat-list';
+export { chats, pinnedChats } from './chatList';
 export const pinnedNotes = writable([]);
 export const tags = writable([]);
 export const folders = writable([]);
@@ -71,6 +70,28 @@ export const knowledge: Writable<null | Document[]> = writable(null);
 export const tools = writable(null);
 export const skills = writable(null);
 export const functions = writable(null);
+
+export type WorkspaceSection = 'models' | 'knowledge' | 'prompts' | 'skills' | 'tools';
+export type WorkspaceAction = {
+	id: string;
+	label: string;
+	href?: string;
+	onClick?: () => void | Promise<void>;
+	visible?: boolean;
+};
+
+export const workspaceCounts: Writable<Record<WorkspaceSection, number | null>> = writable({
+	models: null,
+	knowledge: null,
+	prompts: null,
+	skills: null,
+	tools: null
+});
+export const workspaceActions: Writable<WorkspaceAction[]> = writable([]);
+export const adminUserCount: Writable<number | null> = writable(null);
+export const adminGroupCount: Writable<number | null> = writable(null);
+export const adminLeaderboardCount: Writable<number | null> = writable(null);
+export const adminFeedbackCount: Writable<number | null> = writable(null);
 
 export const toolServers = writable([]);
 export const terminalServers = writable([]);
@@ -89,11 +110,14 @@ export const chatRequestQueues: Writable<
 
 export const sidebarWidth = writable(245);
 
+export type SettingsModalRequest = {
+	tab: string;
+	state?: Record<string, unknown> | null;
+};
+
 export const showSidebar = writable(false);
 export const showSearch = writable(false);
-export const showSettings = writable(false);
-export const showShortcuts = writable(false);
-export const showArchivedChats = writable(false);
+export const showSettings: Writable<boolean | string | SettingsModalRequest> = writable(false);
 export const showChangelog = writable(false);
 
 export const showControls = writable(false);
@@ -297,6 +321,7 @@ type Config = {
 		enable_admin_export: boolean;
 		enable_admin_chat_access: boolean;
 		enable_admin_analytics: boolean;
+		enable_context_compaction?: boolean;
 		enable_community_sharing: boolean;
 		enable_memories: boolean;
 		enable_plugins?: boolean;

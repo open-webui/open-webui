@@ -154,6 +154,7 @@ from open_webui.routers import (
     knowledge,
     memories,
     models,
+    notifications,
     notes,
     ollama,
     openai,
@@ -258,6 +259,15 @@ if SAFE_MODE:
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
+
+
+async def emit_chat_list_event(metadata: dict, chat_id: str):
+    if not chat_id or chat_id.startswith(('channel:', 'local:')):
+        return
+
+    event_emitter = await get_event_emitter(metadata, update_db=False)
+    if event_emitter:
+        await event_emitter({'type': 'chat:list', 'data': {'chat_id': chat_id}})
 
 
 class SPAStaticFiles(StaticFiles):
@@ -765,6 +775,7 @@ app.include_router(notes.router, prefix='/api/v1/notes', tags=['notes'])
 
 
 app.include_router(models.router, prefix='/api/v1/models', tags=['models'])
+app.include_router(notifications.router, prefix='/api/v1/notifications', tags=['notifications'])
 app.include_router(knowledge.router, prefix='/api/v1/knowledge', tags=['knowledge'])
 app.include_router(prompts.router, prefix='/api/v1/prompts', tags=['prompts'])
 app.include_router(tools.router, prefix='/api/v1/tools', tags=['tools'])
@@ -1281,6 +1292,7 @@ async def chat_completion(
                         subject_id=chat_id,
                         data={'title': 'New Chat'},
                     )
+                    await emit_chat_list_event(metadata, chat_id)
                     if user_message_id:
                         await publish_event(
                             request,
@@ -1382,6 +1394,7 @@ async def chat_completion(
                             user_message['id'],
                             user_message,
                         )
+                        await emit_chat_list_event({**metadata, 'message_id': user_message['id']}, chat_id)
                         await publish_event(
                             request,
                             EVENTS.MESSAGE_CREATED,
@@ -1393,6 +1406,15 @@ async def chat_completion(
                                 'content_preview': user_message.get('content', '')[:300],
                             },
                         )
+                        if not getattr(request.state, 'internal', False) and not (user_message.get('meta') or {}).get(
+                            'internal'
+                        ):
+                            try:
+                                from open_webui.utils.timers import cancel_timers_for_chat
+
+                                await cancel_timers_for_chat(chat_id, 'chat.user_message')
+                            except Exception:
+                                log.exception('Failed to cancel chat.user_message timers for chat %s', chat_id)
 
                         # Link grandparent → user message (childrenIds)
                         grandparent_id = user_message.get('parentId')
@@ -1611,9 +1633,9 @@ async def chat_completion(
                     and getattr(request.state, 'internal', False) is not True
                     and not await has_active_tasks(request.app.state.redis, chat_id)
                 ):
-                    from open_webui.utils.subagents import process_pending_subagent_results
+                    from open_webui.utils.subagents import process_pending_internal_messages
 
-                    await process_pending_subagent_results(
+                    await process_pending_internal_messages(
                         request,
                         chat_id,
                         user.id,
@@ -1630,7 +1652,7 @@ async def chat_completion(
                         },
                     )
             except Exception:
-                log.exception('Failed to process pending sub-agent results for chat %s', metadata.get('chat_id'))
+                log.exception('Failed to process pending internal messages for chat %s', metadata.get('chat_id'))
 
     # Fan out: one task per model
     if metadata.get('session_id') and metadata.get('chat_id'):
@@ -1777,8 +1799,23 @@ async def generate_messages(
         # Counting must not turn a compatible generation request into an outage.
         log.warning('Unable to count Anthropic input tokens for model %s', requested_model, exc_info=True)
 
+    model_id = requested_model
+    model_info = await Models.get_model_by_id(model_id)
+    if model_info and model_info.base_model_id:
+        model_id = model_info.base_model_id
+
+    passthrough_params = []
+    models = request.app.state.OPENAI_MODELS
+    if not models or model_id not in models:
+        await openai.get_all_models(request, user=user)
+        models = request.app.state.OPENAI_MODELS
+    model = models.get(model_id)
+    if model:
+        _, _, api_config = await openai.get_openai_connection(model['urlIdx'])
+        passthrough_params = api_config.get('passthrough_params') or []
+
     # Convert Anthropic payload to OpenAI format
-    openai_payload = convert_anthropic_to_openai_payload(form_data)
+    openai_payload = convert_anthropic_to_openai_payload(form_data, passthrough_params)
 
     # Route through the existing chat_completion handler
     response = await chat_completion(request, openai_payload, user)
@@ -1797,9 +1834,7 @@ async def generate_messages(
             },
         )
     elif isinstance(response, dict):
-        return convert_openai_to_anthropic_response(
-            response, model=requested_model, input_tokens=input_tokens
-        )
+        return convert_openai_to_anthropic_response(response, model=requested_model, input_tokens=input_tokens)
     else:
         # Passthrough for error responses (JSONResponse, PlainTextResponse, etc.)
         return response
@@ -1941,6 +1976,7 @@ async def get_app_config(request: Request):
         'calendar.enable',
         'automations.enable',
         'notes.enable',
+        'chat.context_compaction.enable',
         'web.search.enable',
         'web.search.confirmation.enable',
         'web.search.confirmation.content',
@@ -2010,6 +2046,7 @@ async def get_app_config(request: Request):
                     'enable_calendar': config.get('calendar.enable'),
                     'enable_automations': config.get('automations.enable'),
                     'enable_notes': config.get('notes.enable'),
+                    'enable_context_compaction': config.get('chat.context_compaction.enable'),
                     'enable_web_search': config.get('web.search.enable'),
                     'enable_web_search_confirmation': config.get('web.search.confirmation.enable'),
                     'web_search_confirmation_content': config.get('web.search.confirmation.content'),

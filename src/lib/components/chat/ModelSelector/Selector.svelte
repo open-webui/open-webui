@@ -11,7 +11,6 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
-	import { goto } from '$app/navigation';
 
 	import { deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
 	import { unloadModel } from '$lib/apis';
@@ -22,7 +21,8 @@
 		models,
 		temporaryChatEnabled,
 		settings,
-		config
+		config,
+		showSettings
 	} from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { capitalizeFirstLetter, sanitizeResponseContent, splitStream } from '$lib/utils';
@@ -74,7 +74,10 @@
 	let show = false;
 	let triggerElement: HTMLElement | null = null;
 	let contentElement: HTMLElement | null = null;
-	let dropdownPosition = { top: 0, left: 0 };
+	let panelElement: HTMLElement | null = null;
+	let dropdownPosition = { top: 0, left: 0, maxHeight: undefined as number | undefined };
+	let positionFrame: number | undefined;
+	let settleTimers: number[] = [];
 
 	const portal = (node: HTMLElement) => {
 		document.body.appendChild(node);
@@ -85,29 +88,88 @@
 		};
 	};
 
+	const measureContent = () => {
+		if (!contentElement) return { width: 0, height: 0 };
+
+		const previousMaxHeight = panelElement?.style.maxHeight;
+		if (panelElement) panelElement.style.maxHeight = '';
+		const rect = contentElement.getBoundingClientRect();
+		if (panelElement && previousMaxHeight !== undefined) {
+			panelElement.style.maxHeight = previousMaxHeight;
+		}
+
+		return { width: rect.width, height: rect.height };
+	};
+
+	const visualViewportRect = () => {
+		const viewport = window.visualViewport;
+		return {
+			left: viewport?.offsetLeft ?? 0,
+			top: viewport?.offsetTop ?? 0,
+			width: viewport?.width ?? window.innerWidth,
+			height: viewport?.height ?? window.innerHeight
+		};
+	};
+
 	const updatePosition = () => {
 		if (!show || !triggerElement) return;
 		const rect = triggerElement.getBoundingClientRect();
-		const contentRect = contentElement?.getBoundingClientRect();
-		const contentWidth = contentRect?.width ?? 0;
-		const contentHeight = contentRect?.height ?? 0;
-		const spaceBelow = window.innerHeight - rect.bottom - 8;
-		const spaceAbove = rect.top - 8;
+		const { width: contentWidth, height: contentHeight } = measureContent();
+		const viewport = visualViewportRect();
+		const viewportRight = viewport.left + viewport.width;
+		const viewportBottom = viewport.top + viewport.height;
+		const pad = 8;
+		const gap = 2;
+		const spaceBelow = viewportBottom - rect.bottom - gap - pad;
+		const spaceAbove = rect.top - viewport.top - gap - pad;
 		const preferredLeft = align === 'end' && contentWidth ? rect.right - contentWidth : rect.left;
-		const maxLeft = contentWidth ? window.innerWidth - contentWidth - 8 : preferredLeft;
+		const maxLeft = contentWidth ? viewportRight - contentWidth - pad : preferredLeft;
 		const resolvedPlacement =
 			placement === 'auto'
 				? contentHeight && spaceBelow < contentHeight && spaceAbove > spaceBelow
 					? 'top'
 					: 'bottom'
 				: placement;
+		const availableHeight = resolvedPlacement === 'top' ? spaceAbove : spaceBelow;
+		const constrainedHeight =
+			contentHeight && availableHeight >= 0
+				? Math.min(contentHeight, availableHeight)
+				: contentHeight;
+		const top =
+			resolvedPlacement === 'top' && contentHeight
+				? rect.top - constrainedHeight - gap
+				: rect.bottom + gap;
+
 		dropdownPosition = {
-			top:
-				resolvedPlacement === 'top' && contentHeight
-					? rect.top - contentHeight - 2
-					: rect.bottom + 2,
-			left: Math.max(8, Math.min(preferredLeft, maxLeft))
+			top: Math.max(viewport.top + pad, Math.min(top, viewportBottom - pad - constrainedHeight)),
+			left: Math.max(viewport.left + pad, Math.min(preferredLeft, maxLeft)),
+			maxHeight:
+				contentHeight && availableHeight >= 0 && contentHeight > availableHeight
+					? Math.max(0, availableHeight)
+					: undefined
 		};
+	};
+
+	const schedulePositionUpdate = () => {
+		if (positionFrame != null) cancelAnimationFrame(positionFrame);
+		positionFrame = requestAnimationFrame(() => {
+			positionFrame = undefined;
+			updatePosition();
+		});
+	};
+
+	const scheduleSettledPositionUpdates = () => {
+		for (const timer of settleTimers) window.clearTimeout(timer);
+		settleTimers = [];
+		schedulePositionUpdate();
+		for (const delay of [50, 150, 300]) {
+			settleTimers.push(window.setTimeout(schedulePositionUpdate, delay));
+		}
+	};
+
+	const handleScroll = (event: Event) => {
+		if (event.target instanceof Node && contentElement?.contains(event.target)) return;
+		schedulePositionUpdate();
 	};
 
 	const toggleOpen = async () => {
@@ -322,6 +384,7 @@
 		await tick();
 		const item = document.querySelector(`[data-arrow-selected="true"]`);
 		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+		schedulePositionUpdate();
 	};
 
 	const setCompareEnabled = (enabled: boolean) => {
@@ -495,7 +558,7 @@
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 	};
 
-	onMount(async () => {
+	onMount(() => {
 		if (items) {
 			tags = items
 				.filter((item) => includeHidden || !(item.model?.info?.meta?.hidden ?? false))
@@ -504,6 +567,18 @@
 			// Remove duplicates and sort
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
+
+		window.addEventListener('scroll', handleScroll, true);
+		window.visualViewport?.addEventListener('resize', scheduleSettledPositionUpdates);
+		window.visualViewport?.addEventListener('scroll', schedulePositionUpdate);
+
+		return () => {
+			if (positionFrame != null) cancelAnimationFrame(positionFrame);
+			for (const timer of settleTimers) window.clearTimeout(timer);
+			window.removeEventListener('scroll', handleScroll, true);
+			window.visualViewport?.removeEventListener('resize', scheduleSettledPositionUpdates);
+			window.visualViewport?.removeEventListener('scroll', schedulePositionUpdate);
+		};
 	});
 
 	$: if (show && !selectionOnly) {
@@ -585,11 +660,33 @@
 
 	let listScrollTop = 0;
 	let listContainer;
+	let listViewportHeight = 288;
+
+	const trackListViewport = (node: HTMLElement) => {
+		const updateHeight = () => {
+			listViewportHeight = node.clientHeight || 288;
+		};
+
+		updateHeight();
+
+		if (!('ResizeObserver' in window)) {
+			return { destroy() {} };
+		}
+
+		const observer = new ResizeObserver(updateHeight);
+		observer.observe(node);
+
+		return {
+			destroy() {
+				observer.disconnect();
+			}
+		};
+	};
 
 	$: visibleStart = Math.max(0, Math.floor(listScrollTop / ITEM_HEIGHT) - OVERSCAN);
 	$: visibleEnd = Math.min(
 		filteredItems.length,
-		Math.ceil((listScrollTop + 288) / ITEM_HEIGHT) + OVERSCAN
+		Math.ceil((listScrollTop + listViewportHeight) / ITEM_HEIGHT) + OVERSCAN
 	);
 </script>
 
@@ -607,7 +704,7 @@
 <svelte:window
 	on:pointerdown={handlePointerDown}
 	on:keydown={handleKeydown}
-	on:resize={updatePosition}
+	on:resize={scheduleSettledPositionUpdates}
 />
 
 <div class="relative w-full">
@@ -652,13 +749,16 @@
 			style="position: fixed; z-index: 9999; top: {dropdownPosition.top}px; left: {dropdownPosition.left}px;"
 		>
 			<div
-				class="z-40 {className} max-w-[calc(100vw-1rem)] justify-start rounded-xl border border-gray-100 bg-white p-0.5 shadow-lg outline-hidden dark:border-gray-800 dark:bg-gray-850 dark:text-white"
+				bind:this={panelElement}
+				class="z-40 {className ??
+					'w-[20rem]'} max-w-[calc(100vw-1rem)] justify-start rounded-xl border border-gray-100 bg-white p-0.5 shadow-lg outline-hidden dark:border-gray-800 dark:bg-gray-850 dark:text-white flex flex-col overflow-hidden"
+				style={dropdownPosition.maxHeight ? `max-height: ${dropdownPosition.maxHeight}px;` : ''}
 				transition:flyAndScale
 			>
 				<slot>
 					{#if searchEnabled}
-						<div class="my-0.5 flex h-[1.6875rem] items-center gap-2">
-							<Search className="ml-2 size-3.5 shrink-0" strokeWidth="2" />
+						<div class="my-0.5 flex ml-2 mr-0.5 h-[1.6875rem] shrink-0 items-center gap-2">
+							<Search className=" size-3.5 shrink-0" strokeWidth="2" />
 
 							<input
 								id="model-search-input"
@@ -691,14 +791,14 @@
 								}}
 							/>
 
-							{#if modelFilterItems.length > 0 || multipleEnabled}
+							{#if modelFilterItems.length > 0 || (multipleEnabled && items.length > 0)}
 								<div class="flex min-w-0 shrink-0 items-center gap-0.5">
-									{#if multipleEnabled}
+									{#if multipleEnabled && items.length > 0}
 										<Tooltip content={$i18n.t('Compare')}>
 											<button
 												type="button"
 												class="flex size-[1.375rem] shrink-0 items-center justify-center rounded-lg transition-colors duration-100 {compareEnabled
-													? 'bg-gray-100/60 text-gray-700 hover:bg-gray-100/60 dark:bg-gray-800/40 dark:text-gray-300 dark:hover:bg-gray-800/40'
+													? 'bg-gray-50 text-gray-700 hover:bg-gray-50 dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-gray-800/60'
 													: 'text-gray-500 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200'}"
 												aria-label={$i18n.t('Compare')}
 												aria-pressed={compareEnabled}
@@ -728,25 +828,30 @@
 						</div>
 					{/if}
 
-					<div class="group relative">
+					<div class="group relative flex min-h-0 flex-1 flex-col">
 						{#if filteredItems.length === 0}
 							{#if items.length === 0 && $user?.role === 'admin'}
-								<div class="flex flex-col items-start justify-center py-6 px-4 text-start">
-									<div class="text-sm font-normal text-gray-900 dark:text-gray-100 mb-1">
+								<div
+									class="my-2 flex w-full flex-col items-start justify-center px-4 py-3 text-start"
+								>
+									<div
+										class="mb-0.5 text-xs font-normal leading-4 text-gray-800 dark:text-gray-100"
+									>
 										{$i18n.t('No models available')}
 									</div>
-									<div class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+									<div class="w-full text-[11px] leading-3.5 text-gray-500 dark:text-gray-400">
 										{$i18n.t('Connect to an AI provider to start chatting')}
 									</div>
-									<a
-										href="/admin/settings/connections"
-										class="px-4 py-1.5 rounded-xl text-xs font-normal bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 transition"
+									<button
+										type="button"
+										class="mt-3 rounded-lg px-0 py-1 text-[11px] font-normal leading-none text-gray-600 underline-offset-2 transition-colors duration-100 hover:text-gray-800 hover:underline focus:outline-hidden focus:underline dark:text-gray-300 dark:hover:text-gray-100"
 										on:click={() => {
 											show = false;
+											showSettings.set('admin:connections');
 										}}
 									>
 										{$i18n.t('Manage Connections')}
-									</a>
+									</button>
 								</div>
 							{:else}
 								<div class="">
@@ -758,10 +863,12 @@
 						{:else}
 							<!-- svelte-ignore a11y-no-static-element-interactions -->
 							<div
-								class="max-h-72 overflow-y-auto"
+								class="min-h-0 flex-1 overflow-y-auto"
+								style="max-height: 288px;"
 								role="listbox"
 								aria-label={$i18n.t('Available models')}
 								bind:this={listContainer}
+								use:trackListViewport
 								on:scroll={() => {
 									listScrollTop = listContainer.scrollTop;
 								}}
@@ -875,7 +982,7 @@
 					</div>
 
 					{#if showSetDefault}
-						<div class="flex items-center justify-end px-2 py-1 leading-none">
+						<div class="flex shrink-0 items-center justify-end px-2 py-1 leading-none">
 							<button
 								type="button"
 								class="text-[0.65rem] font-normal leading-none text-gray-500 underline-offset-2 transition-colors duration-100 hover:text-gray-700 hover:underline dark:text-gray-500 dark:hover:text-gray-300"
@@ -885,7 +992,7 @@
 							</button>
 						</div>
 					{:else}
-						<div class="pb-1"></div>
+						<div class="shrink-0 pb-1"></div>
 					{/if}
 
 					<div class="hidden w-[42rem]" />

@@ -123,7 +123,7 @@
 							<input
 								bind:this={editInput}
 								bind:value={editName}
-								class="text-sm w-full bg-transparent border-none outline-hidden"
+								class="text-xs w-full bg-transparent border-none outline-hidden"
 								on:keydown={(e) => {
 									if (e.key === 'Enter') submitRename();
 									if (e.key === 'Escape') cancelRename();
@@ -137,10 +137,10 @@
 								autofocus
 							/>
 						{:else}
-							<div class="line-clamp-1 text-sm">
+							<div class="line-clamp-1 text-xs">
 								{file?.name ?? file?.meta?.name}
 								{#if file?.meta?.size}
-									<span class="text-xs text-gray-500">{formatFileSize(file?.meta?.size)}</span>
+									<span class="text-[11px] text-gray-500">{formatFileSize(file?.meta?.size)}</span>
 								{/if}
 							</div>
 						{/if}
@@ -188,7 +188,7 @@
 							<DropdownMenu className="min-w-[140px] z-[9999999]">
 								<button
 									type="button"
-									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] transition hover:text-gray-900 dark:hover:text-gray-100"
+									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-gray-900 dark:hover:text-gray-100"
 									on:click={() => {
 										startRename(file);
 									}}
@@ -198,7 +198,7 @@
 								</button>
 								<button
 									type="button"
-									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] transition hover:text-gray-900 dark:hover:text-gray-100"
+									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-gray-900 dark:hover:text-gray-100"
 									on:click={() => {
 										let fileId = file?.id ?? file?.tempId;
 										window.open(`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`, '_blank');
@@ -209,7 +209,7 @@
 								</button>
 								<button
 									type="button"
-									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] transition hover:text-gray-900 dark:hover:text-gray-100"
+									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-gray-900 dark:hover:text-gray-100"
 									on:click={() => {
 										onDelete(file?.id ?? file?.tempId);
 									}}

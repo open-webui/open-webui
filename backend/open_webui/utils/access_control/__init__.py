@@ -254,8 +254,7 @@ async def filter_allowed_access_grants(
         access_grants = strip_user_access_grants(access_grants)
 
     if any(
-        (grant.get('principal_type') if isinstance(grant, dict) else getattr(grant, 'principal_type', None))
-        == 'group'
+        (grant.get('principal_type') if isinstance(grant, dict) else getattr(grant, 'principal_type', None)) == 'group'
         for grant in access_grants
     ) and not await has_permission(
         user_id,

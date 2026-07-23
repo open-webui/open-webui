@@ -10,7 +10,7 @@
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { WEBUI_NAME, knowledge, user } from '$lib/stores';
+	import { WEBUI_NAME, user, workspaceActions } from '$lib/stores';
 	import {
 		deleteKnowledgeById,
 		searchKnowledgeBases,
@@ -22,9 +22,10 @@
 
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import ItemMenu from './Knowledge/ItemMenu.svelte';
+	import CreateKnowledgeBase from './Knowledge/CreateKnowledgeBase.svelte';
 	import Badge from '../common/Badge.svelte';
+	import Modal from '../common/Modal.svelte';
 	import Search from '../icons/Search.svelte';
-	import Plus from '../icons/Plus.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import XMark from '../icons/XMark.svelte';
@@ -37,6 +38,7 @@
 		name: string;
 		description?: string;
 		updated_at: number;
+		file_count?: number;
 		write_access?: boolean;
 		meta?: any;
 		user?: {
@@ -45,8 +47,12 @@
 		};
 	};
 
+	export let showCreateOnMount = false;
+	export let createModalCloseHref = '';
+
 	let loaded = false;
 	let showDeleteConfirm = false;
+	let showCreateModal = false;
 	let tagsContainerElement: HTMLDivElement;
 
 	let selectedItem: KnowledgeListItem | null = null;
@@ -62,6 +68,18 @@
 
 	let allItemsLoaded = false;
 	let itemsLoading = false;
+
+	$: if (loaded) {
+		workspaceActions.set([
+			{
+				id: 'knowledge-new',
+				label: $i18n.t('Create'),
+				onClick: () => {
+					showCreateModal = true;
+				}
+			}
+		]);
+	}
 
 	const handleSearchInput = () => {
 		clearTimeout(searchDebounceTimer);
@@ -148,6 +166,14 @@
 		}
 	};
 
+	const closeCreateModal = async () => {
+		showCreateModal = false;
+
+		if (createModalCloseHref) {
+			await goto(createModalCloseHref);
+		}
+	};
+
 	const exportHandler = async (item: KnowledgeListItem) => {
 		try {
 			const blob = await exportKnowledgeById(localStorage.token, item.id);
@@ -167,10 +193,67 @@
 		}
 	};
 
+	const openKnowledge = (item: KnowledgeListItem) => {
+		if (item?.meta?.document) {
+			toast.error(
+				$i18n.t(
+					'Only collections can be edited, create a new knowledge base to edit/add documents.'
+				)
+			);
+			return;
+		}
+
+		goto(`/workspace/knowledge/${item.id}`);
+	};
+
+	const shouldIgnoreRowClick = (target: EventTarget | null) => {
+		return target instanceof Element && !!target.closest('button, a, input, [role="menu"]');
+	};
+
+	const getKnowledgeMetaPreview = (item: KnowledgeListItem) => {
+		const fileCount =
+			item.file_count !== undefined
+				? item.file_count === 1
+					? $i18n.t('1 file')
+					: $i18n.t('{{count}} files', { count: item.file_count })
+				: null;
+
+		if (!item?.meta) return [fileCount, item.description].filter(Boolean).join(' · ');
+
+		if (item.meta.source === 'external') {
+			return [
+				fileCount,
+				item.meta.external?.provider,
+				item.meta.external?.source?.name,
+				item.meta.external?.auth_mode,
+				item.description
+			]
+				.filter(Boolean)
+				.join(' · ');
+		}
+
+		const metadata = Object.entries(item.meta)
+			.filter(([, value]) => value !== null && value !== undefined && value !== '')
+			.map(([key, value]) => {
+				if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+					return `${key}: ${value}`;
+				}
+
+				return key;
+			})
+			.join(' · ');
+
+		return [fileCount, metadata, item.description].filter(Boolean).join(' · ');
+	};
+
 	onMount(async () => {
 		viewOption = localStorage?.workspaceViewOption || '';
 		sourceOption = localStorage?.workspaceKnowledgeSourceOption || '';
 		loaded = true;
+
+		if (showCreateOnMount) {
+			showCreateModal = true;
+		}
 	});
 </script>
 
@@ -188,30 +271,14 @@
 		}}
 	/>
 
-	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-2">
-		<div class="flex justify-between items-center">
-			<div class="flex items-center md:self-center text-xl font-normal px-0.5 gap-2 shrink-0">
-				<div>
-					{$i18n.t('Knowledge')}
-				</div>
-
-				<div class="text-lg font-normal text-gray-500 dark:text-gray-500">
-					{total}
-				</div>
-			</div>
-
-			<div class="flex w-full justify-end gap-1.5">
-				<a
-					class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-normal text-sm flex items-center"
-					href="/workspace/knowledge/create"
-				>
-					<Plus className="size-3" strokeWidth="2.5" />
-
-					<div class=" hidden md:block md:ml-1 text-xs">{$i18n.t('New Knowledge')}</div>
-				</a>
-			</div>
-		</div>
-	</div>
+	<Modal bind:show={showCreateModal} size="md">
+		<CreateKnowledgeBase
+			modal={true}
+			onBack={() => {
+				closeCreateModal();
+			}}
+		/>
+	</Modal>
 
 	<div class="space-y-1">
 		<div class="flex h-8 w-full items-center gap-2">
@@ -284,103 +351,124 @@
 
 		{#if items !== null && total !== null}
 			{#if (items ?? []).length !== 0}
-				<!-- The Aleph dreams itself into being, and the void learns its own name -->
-				<div class="my-1 grid grid-cols-1 lg:grid-cols-2 gap-x-2 gap-y-0.5">
-					{#each items as item}
-						<button
-							class="flex space-x-4 cursor-pointer text-left w-full px-2.5 py-1.5 transition rounded-2xl hover:bg-gray-50/70 dark:hover:bg-gray-850/50"
-							on:click={() => {
-								if (item?.meta?.document) {
-									toast.error(
-										$i18n.t(
-											'Only collections can be edited, create a new knowledge base to edit/add documents.'
-										)
-									);
-								} else {
-									goto(`/workspace/knowledge/${item.id}`);
-								}
-							}}
-						>
-							<div class=" w-full">
-								<div class=" self-center flex-1 justify-between">
-									<div class="flex items-center justify-between -my-1 h-8">
-										<div class=" flex gap-2 items-center justify-between w-full">
-											{#if item?.meta?.source === 'external'}
-												<div>
+				<div class="my-1">
+					<div
+						class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-600"
+					>
+						<div class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left">
+							{$i18n.t('Title')}
+						</div>
+
+						<div class="hidden w-44 shrink-0 md:block"></div>
+
+						<div class="flex w-36 shrink-0 items-center justify-end gap-1 py-0.5 text-right">
+							{$i18n.t('Updated at')}
+						</div>
+					</div>
+
+					<div class="grid gap-y-0.5">
+						{#each items as item}
+							{@const metaPreview = getKnowledgeMetaPreview(item)}
+							<div
+								class="group flex min-h-8 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-xl px-2 py-1 text-left"
+								role="button"
+								tabindex="0"
+								on:click={(e) => {
+									if (shouldIgnoreRowClick(e.target)) return;
+									openKnowledge(item);
+								}}
+								on:keydown={(e) => {
+									if (e.currentTarget !== e.target) return;
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault();
+										openKnowledge(item);
+									}
+								}}
+							>
+								<div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+									<div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+										<div class="flex min-w-0 items-center gap-2 overflow-hidden">
+											<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+												<Tooltip
+													content={item?.description ?? item.name}
+													className="min-w-0"
+													placement="top-start"
+												>
+													<div
+														class="truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+													>
+														{item.name}
+													</div>
+												</Tooltip>
+
+												{#if item?.meta?.source === 'external'}
 													<Badge
 														type="muted"
 														content={item?.meta?.external?.provider ?? $i18n.t('Connected')}
 													/>
-												</div>
-												<div>
 													<Badge type="muted" content={$i18n.t('Read Only')} />
-												</div>
-											{:else}
-												<div>
-													<Badge type="success" content={$i18n.t('Collection')} />
-												</div>
-											{/if}
+												{/if}
 
-											{#if !item?.write_access && item?.meta?.source !== 'external'}
-												<div>
+												{#if !item?.write_access && item?.meta?.source !== 'external'}
 													<Badge type="muted" content={$i18n.t('Read Only')} />
-												</div>
-											{/if}
-										</div>
+												{/if}
 
-										{#if item?.write_access || $user?.role === 'admin'}
-											<div class="flex items-center gap-2">
-												<div class=" flex self-center">
-													<ItemMenu
-														onExport={$user?.role === 'admin'
-															? () => {
-																	exportHandler(item);
-																}
-															: null}
-														on:delete={() => {
-															selectedItem = item;
-															showDeleteConfirm = true;
-														}}
-													/>
-												</div>
-											</div>
-										{/if}
-									</div>
-
-									<div class=" flex items-center gap-1 justify-between px-1.5">
-										<Tooltip content={item?.description ?? item.name}>
-											<div class=" flex items-center gap-2">
-												<div class=" text-sm font-normal line-clamp-1 capitalize">{item.name}</div>
-											</div>
-										</Tooltip>
-
-										<div class="flex items-center gap-2 shrink-0">
-											<Tooltip content={dayjs(item.updated_at * 1000).format('LLLL')}>
-												<div class=" text-xs text-gray-500 line-clamp-1 hidden sm:block">
-													{$i18n.t('Updated')}
-													{dayjs(item.updated_at * 1000).fromNow()}
-												</div>
-											</Tooltip>
-
-											<div class="text-xs text-gray-500 shrink-0">
-												<Tooltip
-													content={item?.user?.email ?? $i18n.t('Deleted User')}
-													className="flex shrink-0"
-													placement="top-start"
-												>
-													{$i18n.t('By {{name}}', {
-														name: capitalizeFirstLetter(
-															item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
-														)
-													})}
+												<Tooltip content={dayjs(item.updated_at * 1000).format('LLLL')}>
+													<div
+														class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+													>
+														{dayjs(item.updated_at * 1000).fromNow()}
+													</div>
 												</Tooltip>
 											</div>
 										</div>
+
+										{#if metaPreview}
+											<Tooltip content={metaPreview} className="min-w-0" placement="top-start">
+												<div
+													class="mt-0.5 truncate text-[0.6875rem] leading-4 text-gray-400 dark:text-gray-600"
+												>
+													{metaPreview}
+												</div>
+											</Tooltip>
+										{/if}
 									</div>
 								</div>
+
+								<div
+									class="hidden max-w-44 shrink-0 self-center truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
+								>
+									<Tooltip
+										content={item?.user?.email ?? $i18n.t('Deleted User')}
+										className="min-w-0"
+										placement="top-start"
+									>
+										<div class="truncate">
+											{capitalizeFirstLetter(
+												item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
+											)}
+										</div>
+									</Tooltip>
+								</div>
+
+								{#if item?.write_access || $user?.role === 'admin'}
+									<div class="ml-2 flex shrink-0 flex-row items-center self-center">
+										<ItemMenu
+											onExport={$user?.role === 'admin'
+												? () => {
+														exportHandler(item);
+													}
+												: null}
+											on:delete={() => {
+												selectedItem = item;
+												showDeleteConfirm = true;
+											}}
+										/>
+									</div>
+								{/if}
 							</div>
-						</button>
-					{/each}
+						{/each}
+					</div>
 				</div>
 
 				{#if !allItemsLoaded}
@@ -398,11 +486,10 @@
 					</Loader>
 				{/if}
 			{:else}
-				<div class=" w-full h-full flex flex-col justify-center items-center my-16 mb-24">
-					<div class="max-w-md text-center">
-						<div class=" text-3xl mb-3">😕</div>
-						<div class=" text-lg font-normal mb-1">{$i18n.t('No knowledge found')}</div>
-						<div class=" text-gray-500 text-center text-xs">
+				<div class="flex w-full flex-col items-center justify-center py-16 pb-24">
+					<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
+						<div class="mb-1.5 text-sm">{$i18n.t('No knowledge found')}</div>
+						<div class="text-center text-xs leading-5 text-gray-500">
 							{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 						</div>
 					</div>

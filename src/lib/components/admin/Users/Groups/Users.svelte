@@ -16,7 +16,6 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
-	import Badge from '$lib/components/common/Badge.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
@@ -44,6 +43,16 @@
 			direction = 'asc';
 		}
 		page = 1;
+	};
+
+	const roleClass = (role) => {
+		if (role === 'admin') {
+			return 'text-[#4f6f93] dark:text-[#8ba6c6]';
+		}
+		if (role === 'user') {
+			return 'text-[#4f7a5a] dark:text-[#8db395]';
+		}
+		return 'text-gray-500 dark:text-gray-400';
 	};
 
 	const getUserList = async () => {
@@ -129,7 +138,7 @@
 						<tr class=" border-b-[1.5px] border-gray-50/50 dark:border-gray-800/10">
 							<th
 								scope="col"
-								class="px-2.5 py-2 cursor-pointer text-left w-8"
+								class="px-2.5 py-1.5 cursor-pointer text-left w-8"
 								on:click={() => setSortKey(`group_id:${groupId}`)}
 							>
 								<div class="flex gap-1.5 items-center">
@@ -153,30 +162,7 @@
 
 							<th
 								scope="col"
-								class="px-2.5 py-2 cursor-pointer select-none"
-								on:click={() => setSortKey('role')}
-							>
-								<div class="flex gap-1.5 items-center">
-									{$i18n.t('Role')}
-
-									{#if orderBy === 'role'}
-										<span class="font-normal"
-											>{#if direction === 'asc'}
-												<ChevronUp className="size-2" />
-											{:else}
-												<ChevronDown className="size-2" />
-											{/if}
-										</span>
-									{:else}
-										<span class="invisible">
-											<ChevronUp className="size-2" />
-										</span>
-									{/if}
-								</div>
-							</th>
-							<th
-								scope="col"
-								class="px-2.5 py-2 cursor-pointer select-none"
+								class="px-2.5 py-1.5 cursor-pointer select-none"
 								on:click={() => setSortKey('name')}
 							>
 								<div class="flex gap-1.5 items-center">
@@ -197,10 +183,33 @@
 									{/if}
 								</div>
 							</th>
+							<th
+								scope="col"
+								class="px-2.5 py-1.5 cursor-pointer select-none"
+								on:click={() => setSortKey('role')}
+							>
+								<div class="flex gap-1.5 items-center">
+									{$i18n.t('Role')}
+
+									{#if orderBy === 'role'}
+										<span class="font-normal"
+											>{#if direction === 'asc'}
+												<ChevronUp className="size-2" />
+											{:else}
+												<ChevronDown className="size-2" />
+											{/if}
+										</span>
+									{:else}
+										<span class="invisible">
+											<ChevronUp className="size-2" />
+										</span>
+									{/if}
+								</div>
+							</th>
 
 							<th
 								scope="col"
-								class="px-2.5 py-2 cursor-pointer select-none"
+								class="px-2.5 py-1.5 cursor-pointer select-none"
 								on:click={() => setSortKey('last_active_at')}
 							>
 								<div class="flex gap-1.5 items-center">
@@ -236,23 +245,11 @@
 										/>
 									</div>
 								</td>
-								<td class="px-3 py-1 min-w-[7rem] w-28">
-									<div class=" translate-y-0.5">
-										<Badge
-											type={user.role === 'admin'
-												? 'info'
-												: user.role === 'user'
-													? 'success'
-													: 'muted'}
-											content={$i18n.t(user.role)}
-										/>
-									</div>
-								</td>
 								<td class="px-3 py-1 font-normal text-gray-900 dark:text-white max-w-48">
 									<Tooltip content={user.email} placement="top-start">
-										<div class="flex items-center">
+										<div class="flex items-center gap-2">
 											<img
-												class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
+												class="rounded-full w-6 h-6 object-cover flex-shrink-0"
 												src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 												alt="user"
 											/>
@@ -260,6 +257,11 @@
 											<div class="font-normal truncate">{user.name}</div>
 										</div>
 									</Tooltip>
+								</td>
+								<td class="px-3 py-1 min-w-[5rem] w-20">
+									<span class="text-xs font-normal leading-4 capitalize {roleClass(user.role)}">
+										{$i18n.t(user.role)}
+									</span>
 								</td>
 
 								<td class=" px-3 py-1">

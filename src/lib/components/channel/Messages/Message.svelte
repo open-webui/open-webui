@@ -525,16 +525,18 @@
 							</div>
 						</div>
 					{:else}
-						<div class=" min-w-full markdown-prose {pending ? 'opacity-50' : ''}">
+						<div class="min-w-full {pending ? 'opacity-50' : ''}">
 							{#if (message?.content ?? '').trim() === '' && message?.meta?.model_id}
 								<Skeleton />
 							{:else}
-								<Markdown
-									id={renderedMessageId}
-									content={message.content}
-									paragraphTag="span"
-									allowEmbeds={!!message?.meta?.model_id}
-								/>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
+								<span class="markdown-prose">
+									<Markdown
+										id={renderedMessageId}
+										content={message.content}
+										paragraphTag="span"
+										allowEmbeds={!!message?.meta?.model_id}
+									/>
+								</span>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
 										class="text-gray-500 text-[10px] pl-1 self-center">({$i18n.t('edited')})</span
 									>{/if}
 							{/if}

@@ -24,17 +24,12 @@
 	import Loader from '../common/Loader.svelte';
 	import { createMessagesList } from '$lib/utils';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
-	import {
-		config,
-		user,
-		chatId as currentChatId,
-		tags
-	} from '$lib/stores';
-	import { refreshChatList } from '$lib/stores/chat-list';
+	import { config, user, chatId as currentChatId, tags } from '$lib/stores';
+	import { refreshChatList } from '$lib/stores/chatList';
 	import Messages from '../chat/Messages.svelte';
 	import { goto } from '$app/navigation';
-	import PencilSquare from '../icons/PencilSquare.svelte';
-	import PageEdit from '../icons/PageEdit.svelte';
+	import EditPencilIcon from './Sidebar/icons/EditPencil.svelte';
+	import NotesIcon from './Sidebar/icons/Notes.svelte';
 
 	import ChatMenu from './Sidebar/ChatMenu.svelte';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
@@ -256,7 +251,7 @@
 				show = false;
 				onClose();
 			},
-			icon: PencilSquare
+			icon: EditPencilIcon
 		}
 	];
 
@@ -513,7 +508,7 @@
 								show = false;
 								onClose();
 							},
-							icon: PageEdit
+							icon: NotesIcon
 						}
 					]
 				: [])
@@ -561,8 +556,6 @@
 					messages = null;
 				}}
 				onKeydown={(e) => {
-					console.log('e', e);
-
 					if (e.code === 'Enter' && (chatList ?? []).length > 0) {
 						const item = document.querySelector(`[data-arrow-selected="true"]`);
 						if (item) {
@@ -585,8 +578,6 @@
 			/>
 		</div>
 
-		<!-- <hr class="border-gray-50 dark:border-gray-850/30 my-1" /> -->
-
 		<div class="flex px-3.5 pb-0.5">
 			<div
 				class="flex flex-col overflow-y-auto h-96 md:h-[40rem] max-h-full scrollbar-hidden w-full flex-1 pr-2"
@@ -597,12 +588,12 @@
 
 				{#each actions as action, idx (action.label)}
 					<button
-						class=" w-full flex items-center rounded-xl text-sm py-1.5 px-2.5 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedIdx ===
+						class="w-full flex items-center rounded-lg text-sm py-1.5 px-2.5 hover:bg-gray-50/70 dark:hover:bg-gray-850/50 {selectedIdx ===
 						idx
-							? 'bg-gray-50 dark:bg-gray-850'
+							? 'bg-gray-50/70 dark:bg-gray-850/50'
 							: ''}"
 						data-arrow-selected={selectedIdx === idx ? 'true' : undefined}
-						dragabble="false"
+						draggable="false"
 						on:mouseenter={() => {
 							selectedIdx = idx;
 						}}
@@ -622,7 +613,7 @@
 				{/each}
 
 				{#if chatList}
-					<hr class="border-gray-50 dark:border-gray-850/30 my-3" />
+					<div aria-hidden="true" class="h-px my-3" />
 
 					{#if chatList.length === 0}
 						<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 py-4">
@@ -661,9 +652,9 @@
 
 						<!-- svelte-ignore a11y-no-static-element-interactions -->
 						<div
-							class="w-full flex justify-between items-center rounded-xl text-sm py-1.5 pl-2.5 pr-32 hover:bg-gray-50 dark:hover:bg-gray-850 group/item relative {selectedIdx ===
+							class="w-full flex justify-between items-center rounded-lg text-sm py-1.5 pl-2.5 pr-32 hover:bg-gray-50/70 dark:hover:bg-gray-850/50 group/item relative {selectedIdx ===
 							idx + actions.length
-								? 'bg-gray-50 dark:bg-gray-850'
+								? 'bg-gray-50/70 dark:bg-gray-850/50'
 								: ''}"
 							data-arrow-selected={selectedIdx === idx + actions.length ? 'true' : undefined}
 							on:mouseenter={() => {
