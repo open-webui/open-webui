@@ -1306,6 +1306,30 @@ async def filter_accessible_collections(
     return validated
 
 
+def _get_message_text(message: dict) -> str:
+    # Since the 0.10 rendering refactor, streamed assistant text lives in
+    # `output[].content[].text` while `content` is persisted empty; fall back
+    # to it so chat-reference sources don't drop the assistant's reply.
+    content = message.get('content')
+    if isinstance(content, str) and content.strip():
+        return content
+
+    output = message.get('output')
+    if not isinstance(output, list):
+        return content or ''
+
+    texts = [
+        ''.join(
+            part.get('text') or ''
+            for part in item.get('content', [])
+            if isinstance(part, dict) and part.get('type') == 'output_text'
+        )
+        for item in output
+        if isinstance(item, dict) and item.get('type') == 'message'
+    ]
+    return '\n'.join(text for text in texts if text.strip()) or (content or '')
+
+
 async def get_sources_from_items(
     request,
     items,
@@ -1409,7 +1433,7 @@ async def get_sources_from_items(
                     # Reconstruct the message list in order
                     message_list = get_message_list(messages_map, message_id)
                     message_history = '\n'.join(
-                        [f'#### {m.get("role", "user").capitalize()}\n{m.get("content")}\n' for m in message_list]
+                        [f'#### {m.get("role", "user").capitalize()}\n{_get_message_text(m)}\n' for m in message_list]
                     )
 
                     # User has access to the chat
