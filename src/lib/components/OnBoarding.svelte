@@ -1,103 +1,116 @@
 <script>
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
-
-	import { WEBUI_BASE_URL } from '$lib/constants';
-
-	import Marquee from './common/Marquee.svelte';
-	import SlideShow from './common/SlideShow.svelte';
-	import ArrowRightCircle from './icons/ArrowRightCircle.svelte';
 
 	export let show = true;
 	export let getStartedHandler = () => {};
 
-	function setLogoImage() {
-		const logo = document.getElementById('logo');
+	let videoElement;
+	let playOnInteractionRegistered = false;
 
-		if (logo) {
-			const isDarkMode = document.documentElement.classList.contains('dark');
-
-			if (isDarkMode) {
-				const darkImage = new Image();
-				darkImage.src = `${WEBUI_BASE_URL}/static/favicon-dark.png`;
-
-				darkImage.onload = () => {
-					logo.src = `${WEBUI_BASE_URL}/static/favicon-dark.png`;
-					logo.style.filter = ''; // Ensure no inversion is applied if splash-dark.png exists
-				};
-
-				darkImage.onerror = () => {
-					logo.style.filter = 'invert(1)'; // Invert image if splash-dark.png is missing
-				};
-			}
+	function playBackgroundVideo() {
+		if (!videoElement) {
+			return;
 		}
+
+		videoElement.play().catch(() => {
+			if (playOnInteractionRegistered) {
+				return;
+			}
+
+			playOnInteractionRegistered = true;
+
+			const playOnInteraction = () => {
+				videoElement.play().catch(() => {});
+				document.removeEventListener('click', playOnInteraction);
+				document.removeEventListener('touchstart', playOnInteraction);
+				playOnInteractionRegistered = false;
+			};
+
+			document.addEventListener('click', playOnInteraction);
+			document.addEventListener('touchstart', playOnInteraction);
+		});
 	}
 
-	$: if (show) {
-		setLogoImage();
+	$: if (show && videoElement) {
+		playBackgroundVideo();
 	}
 </script>
 
 {#if show}
-	<div class="w-full h-screen max-h-[100dvh] text-white relative">
-		<div class="fixed m-10 z-50">
-			<div class="flex space-x-2">
-				<div class=" self-center">
-					<img
-						id="logo"
-						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/favicon.png"
-						class=" w-6 rounded-full"
-						alt="logo"
-					/>
-				</div>
-			</div>
+	<div class="relative h-screen max-h-[100dvh] w-full overflow-hidden text-white">
+		<div class="fixed top-6 left-6 z-50 sm:top-10 sm:left-10">
+			<img
+				id="logo"
+				crossorigin="anonymous"
+				src="/static/favicon.png"
+				class="size-6 rounded-full"
+				alt="logo"
+			/>
 		</div>
 
-		<SlideShow duration={5000} />
+		<video
+			bind:this={videoElement}
+			class="absolute inset-0 h-full w-full object-cover"
+			src="/assets/welcome.mp4"
+			autoplay
+			muted
+			loop
+			playsinline
+			preload="auto"
+			poster="/assets/welcome.webp"
+			aria-hidden="true"
+		></video>
 
-		<div
-			class="w-full h-full absolute top-0 left-0 bg-linear-to-t from-20% from-black to-transparent"
-		></div>
+		<div class="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent"></div>
+		<div class="absolute inset-0 bg-linear-to-r from-black/50 via-black/10 to-transparent"></div>
 
-		<div class="w-full h-full absolute top-0 left-0 backdrop-blur-xs bg-black/50"></div>
+		<div class="relative z-10 flex h-screen max-h-[100dvh] w-full">
+			<div class="flex w-full flex-col justify-end px-6 pb-8 sm:px-10 sm:pb-10 lg:px-16 lg:pb-14">
+				<div class="max-w-3xl">
+					<div class="mb-4 text-[11px] font-medium tracking-[0.18em] uppercase opacity-35">
+						Open WebUI
+					</div>
 
-		<div class="relative bg-transparent w-full h-screen max-h-[100dvh] flex z-10">
-			<div class="flex flex-col justify-end w-full items-center pb-10 text-center">
-				<div class="text-5xl lg:text-7xl font-secondary">
-					<Marquee
-						duration={5000}
-						words={[
-							$i18n.t('Explore the cosmos'),
-							$i18n.t('Unlock mysteries'),
-							$i18n.t('Chart new frontiers'),
-							$i18n.t('Dive into knowledge'),
-							$i18n.t('Discover wonders'),
-							$i18n.t('Ignite curiosity'),
-							$i18n.t('Forge new paths'),
-							$i18n.t('Unravel secrets'),
-							$i18n.t('Pioneer insights'),
-							$i18n.t('Embark on adventures')
-						]}
-					/>
+					<h1 class="m-0 max-w-3xl text-2xl leading-[1.15] font-light tracking-tight lg:text-4xl">
+						{$i18n.t('Welcome to your AI home.')}
+					</h1>
 
-					<div class="mt-0.5">{$i18n.t(`wherever you are`)}</div>
-				</div>
+					<p class="mt-6 max-w-xl text-sm leading-relaxed font-light text-white/60 lg:text-base">
+						{$i18n.t(
+							'Run AI on your own terms. Connect any model, extend with code, and protect what matters without compromise. Your models, your data, your machine, wherever you open it.'
+						)}
+					</p>
 
-				<div class="flex justify-center mt-8">
-					<div class="flex flex-col justify-center items-center">
+					<div class="mt-8 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-7">
 						<button
 							aria-label={$i18n.t('Get started')}
-							class="relative z-20 flex p-1 rounded-full bg-white/5 hover:bg-white/10 transition font-medium text-sm"
+							class="group relative z-20 inline-flex min-w-40 items-center justify-center gap-2 bg-white px-8 py-3 text-sm font-normal text-black transition hover:bg-white/90 focus:ring-2 focus:ring-white/50 focus:outline-hidden"
 							on:click={() => {
 								getStartedHandler();
 							}}
 						>
-							<ArrowRightCircle className="size-6" aria-hidden="true" />
+							{$i18n.t('Get started')}
+							<svg
+								class="h-4 w-4 transition group-hover:translate-x-0.5"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+								stroke-width="1.5"
+								aria-hidden="true"
+							>
+								<path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+							</svg>
 						</button>
-						<div class="mt-1.5 font-primary text-base font-medium" aria-hidden="true">
-							{$i18n.t(`Get started`)}
-						</div>
+
+						<a
+							class="inline-flex items-center text-sm text-white/60 transition hover:text-white"
+							href="https://docs.openwebui.com/"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							{$i18n.t('Read the docs')}
+						</a>
 					</div>
 				</div>
 			</div>

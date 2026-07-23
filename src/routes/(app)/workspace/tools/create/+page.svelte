@@ -82,16 +82,18 @@
 
 {#if mounted}
 	{#key tool?.content}
-		<ToolkitEditor
-			id={tool?.id ?? ''}
-			name={tool?.name ?? ''}
-			meta={tool?.meta ?? { description: '' }}
-			content={tool?.content ?? ''}
-			accessGrants={tool?.access_grants !== undefined ? tool.access_grants : []}
-			{clone}
-			onSave={(value) => {
-				saveHandler(value);
-			}}
-		/>
+		<div class="h-full min-w-0 overflow-x-hidden">
+			<ToolkitEditor
+				id={tool?.id ?? ''}
+				name={tool?.name ?? ''}
+				meta={tool?.meta ?? { description: '' }}
+				content={tool?.content ?? ''}
+				accessGrants={tool?.access_grants !== undefined ? tool.access_grants : []}
+				{clone}
+				onSave={(value) => {
+					saveHandler(value);
+				}}
+			/>
+		</div>
 	{/key}
 {/if}

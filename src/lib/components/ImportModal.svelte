@@ -63,16 +63,16 @@
 
 <Modal size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Import')}</div>
+		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+			<div class=" text-sm font-medium self-center">{$i18n.t('Import')}</div>
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<XMark className={'size-5'} />
+				<XMark className={'size-4'} />
 			</button>
 		</div>
 
@@ -102,9 +102,9 @@
 						</div>
 					</div>
 
-					<div class="flex justify-end pt-3 text-sm font-medium">
+					<div class="flex justify-end pt-3 text-sm font-normal">
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
+							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
 								? ' cursor-not-allowed'
 								: ''}"
 							type="submit"

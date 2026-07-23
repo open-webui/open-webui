@@ -133,8 +133,8 @@
 
 <Modal size="lg" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 mb-1.5">
-			<div class=" text-lg font-medium self-center font-primary">
+		<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 mb-1">
+			<div class=" text-sm font-medium self-center">
 				{#if custom}
 					{#if edit}
 						{$i18n.t('Edit User Group')}
@@ -146,12 +146,12 @@
 				{/if}
 			</div>
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<XMark className={'size-5'} />
+				<XMark className={'size-4'} />
 			</button>
 		</div>
 
@@ -167,7 +167,7 @@
 					<div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">
 						<div
 							id="admin-settings-tabs-container"
-							class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
+							class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-normal text-left scrollbar-none"
 						>
 							{#if tabs.includes('general')}
 								<button
@@ -287,7 +287,7 @@
 							</div>
 
 							{#if ['general', 'permissions'].includes(selectedTab)}
-								<div class="flex justify-between items-center pt-3 text-sm font-medium gap-1.5">
+								<div class="flex justify-between items-center pt-3 text-sm font-normal gap-1.5">
 									<div>
 										{#if selectedTab === 'permissions'}
 											<Tooltip
@@ -311,7 +311,7 @@
 									</div>
 
 									<button
-										class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
+										class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
 											? ' cursor-not-allowed'
 											: ''}"
 										type="submit"
@@ -331,7 +331,7 @@
 					</div>
 
 					<!-- <div
-						class=" tabs flex flex-row overflow-x-auto gap-2.5 text-sm font-medium border-b border-b-gray-800 scrollbar-hidden"
+						class=" tabs flex flex-row overflow-x-auto gap-2.5 text-sm font-normal border-b border-b-gray-800 scrollbar-hidden"
 					>
 						{#if tabs.includes('display')}
 							<button
