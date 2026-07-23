@@ -12,6 +12,7 @@ import sys
 import textwrap
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from typing import Any, Optional
 from uuid import uuid4
 
@@ -195,6 +196,287 @@ DEFAULT_REASONING_TAGS = [
 
 DEFAULT_SOLUTION_TAGS = [('<|begin_of_solution|>', '<|end_of_solution|>')]
 DEFAULT_CODE_INTERPRETER_TAGS = [('<code_interpreter>', '</code_interpreter>')]
+
+
+def _start_tag_pattern(start_tag):
+    if start_tag.startswith('<') and start_tag.endswith('>'):
+        return rf'<{re.escape(start_tag[1:-1])}(\s.*?)?>'
+    return rf'{re.escape(start_tag)}'
+
+
+@lru_cache(maxsize=256)
+def _compiled_start_tag_pattern(start_tag):
+    return re.compile(_start_tag_pattern(start_tag))
+
+
+def tag_output_handler(content_type, tags, output, scan_state=None):
+    """
+    Detect special tags (reasoning, solution, code_interpreter) in streaming
+    content and create corresponding OR-aligned output items directly.
+    Operates on output items instead of content_blocks.
+
+    Uses the text from the output items themselves for tag detection,
+    eliminating state divergence between accumulated content and items.
+
+    scan_state (caller-owned, keyed by item id then content_type) lets each call
+    scan only new text plus a bounded lookback; None always scans from the start.
+    """
+    end_flag = False
+
+    def extract_attributes(tag_content):
+        """Extract attributes from a tag if they exist."""
+        attributes = {}
+        if not tag_content:
+            return attributes
+        matches = re.findall(r'(\w+)\s*=\s*"([^"]+)"', tag_content)
+        for key, value in matches:
+            attributes[key] = value
+        return attributes
+
+    def get_last_text(out):
+        """Get text from last message item, or empty string."""
+        if out and out[-1].get('type') == 'message':
+            parts = out[-1].get('content', [])
+            if parts and parts[-1].get('type') == 'output_text':
+                return parts[-1].get('text', '')
+        return ''
+
+    def set_last_text(out, text):
+        """Set text on last message item's output_text."""
+        if out and out[-1].get('type') == 'message':
+            parts = out[-1].get('content', [])
+            if parts and parts[-1].get('type') == 'output_text':
+                parts[-1]['text'] = text
+
+    def get_scan_state(item, text):
+        if scan_state is None or not item.get('id'):
+            return 0, -1, 0
+        state = scan_state.get(item['id'], {}).get(content_type)
+        if state and state['scanned'] <= len(text):
+            return state['scanned'], state['breaker'], state['clear']
+        return 0, -1, 0
+
+    def save_scan_state(item, text, scanned, breaker, clear):
+        if scan_state is None or not item.get('id'):
+            return
+        # an open <tag ...> can only still begin after the last '\n' or '>'
+        breaker = max(breaker, text.rfind('\n', scanned), text.rfind('>', scanned))
+        scan_state.setdefault(item['id'], {})[content_type] = {
+            'scanned': len(text),
+            'breaker': breaker,
+            'clear': clear,
+        }
+
+    def drop_scan_state(item):
+        if scan_state is not None and item.get('id'):
+            scan_state.pop(item['id'], None)
+
+    # Map content_type to output item type
+    output_type_map = {
+        'reasoning': 'reasoning',
+        'solution': 'message',  # solution tags just produce text
+        'code_interpreter': 'open_webui:code_interpreter',
+    }
+    output_item_type = output_type_map.get(content_type, content_type)
+
+    last_type = output[-1].get('type', '') if output else ''
+
+    if last_type == 'message':
+        item = output[-1]
+        # Use the output item's own text for tag detection
+        item_text = get_last_text(output)
+        scanned, breaker, clear = get_scan_state(item, item_text)
+        max_tag_len = max((len(start_tag) for start_tag, _ in tags), default=0)
+        if any(start_tag.startswith('<') and start_tag.endswith('>') for start_tag, _ in tags):
+            # attr-form tags can still be pending after the last breaker
+            bound = 0 if breaker < 0 else max(0, breaker - max_tag_len + 1)
+        else:
+            bound = max(0, scanned - max_tag_len + 1)
+        # skip regions verified free of tag-start characters
+        scan_from = -1
+        search_lo = max(bound, clear)
+        for char in {start_tag[0] for start_tag, _ in tags}:
+            pos = item_text.find(char, search_lo)
+            if pos != -1 and (scan_from == -1 or pos < scan_from):
+                scan_from = pos
+        if scan_from == -1:
+            save_scan_state(item, item_text, scanned, breaker, len(item_text))
+            return output, end_flag
+        for start_tag, end_tag in tags:
+            match = _compiled_start_tag_pattern(start_tag).search(item_text, scan_from)
+            if match:
+                drop_scan_state(item)
+                try:
+                    attr_content = match.group(1) if match.group(1) else ''
+                except Exception:
+                    attr_content = ''
+
+                attributes = extract_attributes(attr_content)
+
+                before_tag = item_text[: match.start()]
+                after_tag = item_text[match.end() :]
+
+                # Keep only text before the tag in the message
+                set_last_text(output, before_tag)
+
+                if not before_tag.strip():
+                    # Remove empty message item
+                    if output and output[-1].get('type') == 'message':
+                        output.pop()
+
+                # Append the new output item
+                if output_item_type == 'reasoning':
+                    output.append(
+                        {
+                            'type': 'reasoning',
+                            'id': output_id('r'),
+                            'status': 'in_progress',
+                            'start_tag': start_tag,
+                            'end_tag': end_tag,
+                            'attributes': attributes,
+                            'content': [],
+                            'summary': None,
+                            'started_at': time.time(),
+                        }
+                    )
+                elif output_item_type == 'open_webui:code_interpreter':
+                    output.append(
+                        {
+                            'type': 'open_webui:code_interpreter',
+                            'id': output_id('ci'),
+                            'status': 'in_progress',
+                            'start_tag': start_tag,
+                            'end_tag': end_tag,
+                            'attributes': attributes,
+                            'lang': attributes.get('lang', 'python'),
+                            'code': '',
+                            'output': None,
+                            'started_at': time.time(),
+                        }
+                    )
+                else:
+                    # solution or other text-producing tag
+                    output.append(
+                        {
+                            'type': 'message',
+                            'id': output_id('msg'),
+                            'status': 'in_progress',
+                            'role': 'assistant',
+                            'content': [{'type': 'output_text', 'text': ''}],
+                            '_tag_type': content_type,
+                            'start_tag': start_tag,
+                            'end_tag': end_tag,
+                            'attributes': attributes,
+                            'started_at': time.time(),
+                        }
+                    )
+
+                if after_tag:
+                    # Set the after_tag content on the new item
+                    if output_item_type == 'reasoning':
+                        output[-1]['content'] = [{'type': 'output_text', 'text': after_tag}]
+                    elif output_item_type == 'open_webui:code_interpreter':
+                        output[-1]['code'] = after_tag
+                    else:
+                        set_last_text(output, after_tag)
+
+                    _, recursive_end = tag_output_handler(content_type, tags, output, scan_state)
+                    if recursive_end:
+                        end_flag = True
+
+                break
+        else:
+            save_scan_state(item, item_text, scanned, breaker, scan_from)
+
+    elif (
+        (last_type == 'reasoning' and content_type == 'reasoning')
+        or (last_type == 'open_webui:code_interpreter' and content_type == 'code_interpreter')
+        or (last_type == 'message' and output[-1].get('_tag_type') == content_type)
+    ):
+        item = output[-1]
+        start_tag = item.get('start_tag', '')
+        end_tag = item.get('end_tag', '')
+
+        # Get the block content from the item itself
+        if last_type == 'reasoning':
+            parts = item.get('content', [])
+            block_content = ''
+            if parts and parts[-1].get('type') == 'output_text':
+                block_content = parts[-1].get('text', '')
+        elif last_type == 'open_webui:code_interpreter':
+            block_content = item.get('code', '')
+        else:
+            block_content = get_last_text(output)
+
+        scanned, breaker, clear = get_scan_state(item, block_content)
+        # end tags are plain literals, so a bounded overlap is enough
+        if block_content.find(end_tag, max(0, scanned - max(len(end_tag), 1) + 1)) != -1:
+            drop_scan_state(item)
+            end_flag = True
+
+            # Strip start and end tags from content
+            start_tag_pattern = _start_tag_pattern(start_tag)
+            end_tag_pattern = rf'{re.escape(end_tag)}'
+            block_content = re.sub(start_tag_pattern, '', block_content).strip()
+
+            end_tag_regex = re.compile(end_tag_pattern, re.DOTALL)
+            split_content = end_tag_regex.split(block_content, maxsplit=1)
+
+            block_content = split_content[0].strip() if split_content else ''
+            leftover_content = split_content[1].strip() if len(split_content) > 1 else ''
+
+            if block_content:
+                # Update the item with final content
+                if last_type == 'reasoning':
+                    item['content'] = [{'type': 'output_text', 'text': block_content}]
+                    item['ended_at'] = time.time()
+                    item['duration'] = int(item['ended_at'] - item['started_at'])
+                    item['status'] = 'completed'
+                elif last_type == 'open_webui:code_interpreter':
+                    item['code'] = block_content
+                    item['ended_at'] = time.time()
+                    item['duration'] = int(item['ended_at'] - item['started_at'])
+                else:
+                    set_last_text(output, block_content)
+                    item['ended_at'] = time.time()
+
+                # Reset by appending a new message item for leftover
+                output.append(
+                    {
+                        'type': 'message',
+                        'id': output_id('msg'),
+                        'status': 'in_progress',
+                        'role': 'assistant',
+                        'content': [
+                            {
+                                'type': 'output_text',
+                                'text': leftover_content,
+                            }
+                        ],
+                    }
+                )
+            else:
+                # Remove the block if content is empty
+                output.pop()
+                output.append(
+                    {
+                        'type': 'message',
+                        'id': output_id('msg'),
+                        'status': 'in_progress',
+                        'role': 'assistant',
+                        'content': [
+                            {
+                                'type': 'output_text',
+                                'text': leftover_content,
+                            }
+                        ],
+                    }
+                )
+        else:
+            save_scan_state(item, block_content, scanned, breaker, clear)
+
+    return output, end_flag
+
 
 
 def output_id(prefix: str) -> str:
@@ -3725,229 +4007,6 @@ async def streaming_chat_response_handler(response, ctx):
 
         # Handle as a background task
         async def response_handler(response, events):
-            def tag_output_handler(content_type, tags, output):
-                """
-                Detect special tags (reasoning, solution, code_interpreter) in streaming
-                content and create corresponding OR-aligned output items directly.
-                Operates on output items instead of content_blocks.
-
-                Uses the text from the output items themselves for tag detection,
-                eliminating state divergence between accumulated content and items.
-                """
-                end_flag = False
-
-                def extract_attributes(tag_content):
-                    """Extract attributes from a tag if they exist."""
-                    attributes = {}
-                    if not tag_content:
-                        return attributes
-                    matches = re.findall(r'(\w+)\s*=\s*"([^"]+)"', tag_content)
-                    for key, value in matches:
-                        attributes[key] = value
-                    return attributes
-
-                def get_last_text(out):
-                    """Get text from last message item, or empty string."""
-                    if out and out[-1].get('type') == 'message':
-                        parts = out[-1].get('content', [])
-                        if parts and parts[-1].get('type') == 'output_text':
-                            return parts[-1].get('text', '')
-                    return ''
-
-                def set_last_text(out, text):
-                    """Set text on last message item's output_text."""
-                    if out and out[-1].get('type') == 'message':
-                        parts = out[-1].get('content', [])
-                        if parts and parts[-1].get('type') == 'output_text':
-                            parts[-1]['text'] = text
-
-                # Map content_type to output item type
-                output_type_map = {
-                    'reasoning': 'reasoning',
-                    'solution': 'message',  # solution tags just produce text
-                    'code_interpreter': 'open_webui:code_interpreter',
-                }
-                output_item_type = output_type_map.get(content_type, content_type)
-
-                last_type = output[-1].get('type', '') if output else ''
-
-                if last_type == 'message':
-                    # Use the output item's own text for tag detection
-                    item_text = get_last_text(output)
-                    for start_tag, end_tag in tags:
-                        start_tag_pattern = rf'{re.escape(start_tag)}'
-                        if start_tag.startswith('<') and start_tag.endswith('>'):
-                            start_tag_pattern = rf'<{re.escape(start_tag[1:-1])}(\s.*?)?>'
-
-                        match = re.search(start_tag_pattern, item_text)
-                        if match:
-                            try:
-                                attr_content = match.group(1) if match.group(1) else ''
-                            except Exception:
-                                attr_content = ''
-
-                            attributes = extract_attributes(attr_content)
-
-                            before_tag = item_text[: match.start()]
-                            after_tag = item_text[match.end() :]
-
-                            # Keep only text before the tag in the message
-                            set_last_text(output, before_tag)
-
-                            if not before_tag.strip():
-                                # Remove empty message item
-                                if output and output[-1].get('type') == 'message':
-                                    output.pop()
-
-                            # Append the new output item
-                            if output_item_type == 'reasoning':
-                                output.append(
-                                    {
-                                        'type': 'reasoning',
-                                        'id': output_id('r'),
-                                        'status': 'in_progress',
-                                        'start_tag': start_tag,
-                                        'end_tag': end_tag,
-                                        'attributes': attributes,
-                                        'content': [],
-                                        'summary': None,
-                                        'started_at': time.time(),
-                                    }
-                                )
-                            elif output_item_type == 'open_webui:code_interpreter':
-                                output.append(
-                                    {
-                                        'type': 'open_webui:code_interpreter',
-                                        'id': output_id('ci'),
-                                        'status': 'in_progress',
-                                        'start_tag': start_tag,
-                                        'end_tag': end_tag,
-                                        'attributes': attributes,
-                                        'lang': attributes.get('lang', 'python'),
-                                        'code': '',
-                                        'output': None,
-                                        'started_at': time.time(),
-                                    }
-                                )
-                            else:
-                                # solution or other text-producing tag
-                                output.append(
-                                    {
-                                        'type': 'message',
-                                        'id': output_id('msg'),
-                                        'status': 'in_progress',
-                                        'role': 'assistant',
-                                        'content': [{'type': 'output_text', 'text': ''}],
-                                        '_tag_type': content_type,
-                                        'start_tag': start_tag,
-                                        'end_tag': end_tag,
-                                        'attributes': attributes,
-                                        'started_at': time.time(),
-                                    }
-                                )
-
-                            if after_tag:
-                                # Set the after_tag content on the new item
-                                if output_item_type == 'reasoning':
-                                    output[-1]['content'] = [{'type': 'output_text', 'text': after_tag}]
-                                elif output_item_type == 'open_webui:code_interpreter':
-                                    output[-1]['code'] = after_tag
-                                else:
-                                    set_last_text(output, after_tag)
-
-                                _, recursive_end = tag_output_handler(content_type, tags, output)
-                                if recursive_end:
-                                    end_flag = True
-
-                            break
-
-                elif (
-                    (last_type == 'reasoning' and content_type == 'reasoning')
-                    or (last_type == 'open_webui:code_interpreter' and content_type == 'code_interpreter')
-                    or (last_type == 'message' and output[-1].get('_tag_type') == content_type)
-                ):
-                    item = output[-1]
-                    start_tag = item.get('start_tag', '')
-                    end_tag = item.get('end_tag', '')
-
-                    end_tag_pattern = rf'{re.escape(end_tag)}'
-
-                    # Get the block content from the item itself
-                    if last_type == 'reasoning':
-                        parts = item.get('content', [])
-                        block_content = ''
-                        if parts and parts[-1].get('type') == 'output_text':
-                            block_content = parts[-1].get('text', '')
-                    elif last_type == 'open_webui:code_interpreter':
-                        block_content = item.get('code', '')
-                    else:
-                        block_content = get_last_text(output)
-
-                    if re.search(end_tag_pattern, block_content):
-                        end_flag = True
-
-                        # Strip start and end tags from content
-                        start_tag_pattern = rf'{re.escape(start_tag)}'
-                        if start_tag.startswith('<') and start_tag.endswith('>'):
-                            start_tag_pattern = rf'<{re.escape(start_tag[1:-1])}(\s.*?)?>'
-                        block_content = re.sub(start_tag_pattern, '', block_content).strip()
-
-                        end_tag_regex = re.compile(end_tag_pattern, re.DOTALL)
-                        split_content = end_tag_regex.split(block_content, maxsplit=1)
-
-                        block_content = split_content[0].strip() if split_content else ''
-                        leftover_content = split_content[1].strip() if len(split_content) > 1 else ''
-
-                        if block_content:
-                            # Update the item with final content
-                            if last_type == 'reasoning':
-                                item['content'] = [{'type': 'output_text', 'text': block_content}]
-                                item['ended_at'] = time.time()
-                                item['duration'] = int(item['ended_at'] - item['started_at'])
-                                item['status'] = 'completed'
-                            elif last_type == 'open_webui:code_interpreter':
-                                item['code'] = block_content
-                                item['ended_at'] = time.time()
-                                item['duration'] = int(item['ended_at'] - item['started_at'])
-                            else:
-                                set_last_text(output, block_content)
-                                item['ended_at'] = time.time()
-
-                            # Reset by appending a new message item for leftover
-                            output.append(
-                                {
-                                    'type': 'message',
-                                    'id': output_id('msg'),
-                                    'status': 'in_progress',
-                                    'role': 'assistant',
-                                    'content': [
-                                        {
-                                            'type': 'output_text',
-                                            'text': leftover_content,
-                                        }
-                                    ],
-                                }
-                            )
-                        else:
-                            # Remove the block if content is empty
-                            output.pop()
-                            output.append(
-                                {
-                                    'type': 'message',
-                                    'id': output_id('msg'),
-                                    'status': 'in_progress',
-                                    'role': 'assistant',
-                                    'content': [
-                                        {
-                                            'type': 'output_text',
-                                            'text': leftover_content,
-                                        }
-                                    ],
-                                }
-                            )
-
-                return output, end_flag
-
             message = await Chats.get_message_by_id_and_message_id(metadata['chat_id'], metadata['message_id'])
 
             tool_calls = []
@@ -3985,6 +4044,7 @@ async def streaming_chat_response_handler(response, ctx):
             usage = None
             prior_output = []
             last_response_id = None
+            tag_scan_state = {}
 
             def full_output():
                 return prior_output + output if prior_output else output
@@ -4580,12 +4640,14 @@ async def streaming_chat_response_handler(response, ctx):
                                                 'reasoning',
                                                 reasoning_tags,
                                                 output,
+                                                tag_scan_state,
                                             )
 
                                             output, _ = tag_output_handler(
                                                 'solution',
                                                 DEFAULT_SOLUTION_TAGS,
                                                 output,
+                                                tag_scan_state,
                                             )
 
                                         if DETECT_CODE_INTERPRETER:
@@ -4593,6 +4655,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                 'code_interpreter',
                                                 DEFAULT_CODE_INTERPRETER_TAGS,
                                                 output,
+                                                tag_scan_state,
                                             )
 
                                             if end:
