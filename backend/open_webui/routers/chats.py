@@ -1602,7 +1602,9 @@ async def fork_chat_by_id(
             detail='Wait for the current response to finish before forking.',
         )
 
-    source_message_id = (form_data.message_id if form_data else None) or chat.current_message_id or history.get('currentId')
+    source_message_id = (
+        (form_data.message_id if form_data else None) or chat.current_message_id or history.get('currentId')
+    )
     if not source_message_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='chat has no messages to fork')
 

@@ -57,6 +57,7 @@ REDIS = None
 # Configure CORS for Socket.IO
 SOCKETIO_CORS_ORIGINS = '*' if CORS_ALLOW_ORIGIN == ['*'] else CORS_ALLOW_ORIGIN
 
+
 class LocalFilteredRedisManager(socketio.AsyncRedisManager):
     """AsyncRedisManager that drops pub/sub emits with no local recipients.
 

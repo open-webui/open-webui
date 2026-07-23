@@ -2492,7 +2492,11 @@
 		const toastId = toast.loading($i18n.t('Forking chat...'));
 
 		try {
-			const result = await forkChatById(localStorage.token, $chatId, messageId ?? history.currentId);
+			const result = await forkChatById(
+				localStorage.token,
+				$chatId,
+				messageId ?? history.currentId
+			);
 
 			if (result?.id) {
 				if (!embedded) {

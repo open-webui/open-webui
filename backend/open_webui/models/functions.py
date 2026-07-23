@@ -295,9 +295,7 @@ class FunctionsTable:
                 log.exception(f'Error getting function valves by id {id}: {e}')
                 return None
 
-    async def get_function_valves_by_ids(
-        self, ids: list[str], db: AsyncSession | None = None
-    ) -> dict[str, dict]:
+    async def get_function_valves_by_ids(self, ids: list[str], db: AsyncSession | None = None) -> dict[str, dict]:
         """
         Batch fetch valves for multiple functions in a single query.
         Returns a dict mapping function_id -> valves dict.
