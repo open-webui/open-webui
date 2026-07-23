@@ -76,7 +76,8 @@ class LocalFilteredRedisManager(socketio.AsyncRedisManager):
         room = message.get('room')
         if isinstance(room, str):
             namespace = message.get('namespace') or '/'
-            if next(self.get_participants(namespace, room), None) is None:
+            # O(1) containment; get_participants copies the room dict per emit
+            if room not in self.rooms.get(namespace, {}):
                 return
         await super()._handle_emit(message)
 
@@ -118,6 +119,12 @@ else:
 # Timeout duration in seconds
 TIMEOUT_DURATION = 3
 SESSION_POOL_TIMEOUT = 120  # seconds without heartbeat before session is reaped
+
+
+def is_in_local_room(sid: str, room: str) -> bool:
+    """O(1) local membership test. get_participants copies the room dict and
+    sio.rooms scans every room; both checks are local-instance-only anyway."""
+    return sid in (sio.manager.rooms.get('/', {}).get(room) or {})
 
 # Dictionary to maintain the user pool
 
@@ -233,12 +240,16 @@ async def periodic_usage_pool_cleanup():
                 raise Exception('Unable to renew usage pool cleanup lock.')
 
             now = int(time.time())
-            send_usage = False
             for model_id, connections in list(USAGE_POOL.items()):
                 # Creating a list of sids to remove if they have timed out
                 expired_sids = [
                     sid for sid, details in connections.items() if now - details['updated_at'] > TIMEOUT_DURATION
                 ]
+
+                if not expired_sids:
+                    # Nothing changed; rewriting the entry every tick is wasted
+                    # work (a serialize + HSET per model in Redis mode)
+                    continue
 
                 for sid in expired_sids:
                     del connections[sid]
@@ -248,8 +259,6 @@ async def periodic_usage_pool_cleanup():
                     del USAGE_POOL[model_id]
                 else:
                     USAGE_POOL[model_id] = connections
-
-                send_usage = True
             await asyncio.sleep(TIMEOUT_DURATION)
     finally:
         release_func()
@@ -404,40 +413,53 @@ async def user_join(sid, data):
     if token_data is None or 'id' not in token_data or not await is_valid_token(token_data, redis):
         return
 
-    user = await Users.get_user_by_id(token_data['id'])
-    if not user:
-        return
+    existing = SESSION_POOL.get(sid)
+    if existing and existing.get('id') == token_data['id']:
+        # connect already resolved and registered this sid; skip the duplicate
+        # user fetch, serialization and user-room join
+        SESSION_POOL[sid] = {**existing, 'last_seen_at': int(time.time())}
+        user_id, user_name, user_role = existing['id'], existing['name'], existing['role']
+    else:
+        user = await Users.get_user_by_id(token_data['id'])
+        if not user:
+            return
 
-    SESSION_POOL[sid] = {
-        **user.model_dump(
-            exclude=[
-                'profile_image_url',
-                'profile_banner_image_url',
-                'date_of_birth',
-                'bio',
-                'gender',
-            ]
-        ),
-        'last_seen_at': int(time.time()),
-    }
+        SESSION_POOL[sid] = {
+            **user.model_dump(
+                exclude=[
+                    'profile_image_url',
+                    'profile_banner_image_url',
+                    'date_of_birth',
+                    'bio',
+                    'gender',
+                ]
+            ),
+            'last_seen_at': int(time.time()),
+        }
 
-    await sio.enter_room(sid, f'user:{user.id}')
+        await sio.enter_room(sid, f'user:{user.id}')
+        user_id, user_name, user_role = user.id, user.name, user.role
 
     # Join all the channels only if user has channels permission
-    if user.role == 'admin' or await has_permission(user.id, 'features.channels'):
-        channels = await Channels.get_channels_by_user_id(user.id)
+    if user_role == 'admin' or await has_permission(user_id, 'features.channels'):
+        channels = await Channels.get_channels_by_user_id(user_id)
         log.debug(f'{channels=}')
         for channel in channels:
             await sio.enter_room(sid, f'channel:{channel.id}')
 
-    return {'id': user.id, 'name': user.name}
+    return {'id': user_id, 'name': user_name}
 
 
 @sio.on('heartbeat')
 async def heartbeat(sid, data):
     user = SESSION_POOL.get(sid)
     if user:
-        SESSION_POOL[sid] = {**user, 'last_seen_at': int(time.time())}
+        now = int(time.time())
+        # Clients beat every 30s and the reaper tolerates 120s; skip early
+        # duplicates instead of round-tripping the record and the DB again
+        if now - user.get('last_seen_at', 0) < 15:
+            return
+        SESSION_POOL[sid] = {**user, 'last_seen_at': now}
         await Users.update_last_active_by_id(user['id'])
 
 
@@ -510,13 +532,7 @@ async def join_note(sid, data):
 @sio.on('events:channel')
 async def channel_events(sid, data):
     room = f'channel:{data["channel_id"]}'
-    participants = sio.manager.get_participants(
-        namespace='/',
-        room=room,
-    )
-
-    sids = [sid for sid, _ in participants]
-    if sid not in sids:
+    if not is_in_local_room(sid, room):
         return
 
     event_data = data['data']
@@ -534,7 +550,7 @@ async def channel_events(sid, data):
                 'channel_id': data['channel_id'],
                 'message_id': data.get('message_id', None),
                 'data': event_data,
-                'user': UserNameResponse(**user).model_dump(),
+                'user': {'id': user['id'], 'name': user['name'], 'role': user['role']},
             },
             room=room,
         )
@@ -731,8 +747,7 @@ async def yjs_document_update(sid, data):
 
         # Verify the sender actually joined this document room
         room = f'doc_{document_id}'
-        active_session_ids = get_session_ids_from_room(room)
-        if sid not in active_session_ids:
+        if not is_in_local_room(sid, room):
             log.warning(f'Session {sid} not in room {room}. Rejecting update.')
             return
 
@@ -840,7 +855,7 @@ async def yjs_awareness_update(sid, data):
     try:
         document_id = normalize_document_id(data['document_id'])
         room = f'doc_{document_id}'
-        if room not in sio.rooms(sid):  # must have joined the document first
+        if not is_in_local_room(sid, room):  # must have joined the document first
             return
         update = data['update']
 
