@@ -32,7 +32,7 @@
 	let LDAP_SERVER = {
 		label: '',
 		host: '',
-		port: '',
+		port: null,
 		attribute_for_mail: 'mail',
 		attribute_for_username: 'uid',
 		app_dn: '',
@@ -42,7 +42,10 @@
 		use_tls: false,
 		validate_cert: false,
 		certificate_path: '',
-		ciphers: ''
+		ciphers: '',
+		enable_group_management: false,
+		enable_group_creation: false,
+		attribute_for_groups: 'memberOf'
 	};
 
 	let oauthConfig: any = null;
@@ -54,6 +57,13 @@
 	const updateLdapServerHandler = async () => {
 		await updateLdapConfig(localStorage.token, ENABLE_LDAP);
 		if (!ENABLE_LDAP) return true;
+
+		// Honor the "Default to memberOf" hint: fall back to the default group
+		// attribute when it is left blank while group management is enabled, so
+		// the save isn't rejected by the backend's required-field check.
+		if (LDAP_SERVER.enable_group_management && !LDAP_SERVER.attribute_for_groups?.trim()) {
+			LDAP_SERVER.attribute_for_groups = 'memberOf';
+		}
 
 		const res = await updateLdapServer(localStorage.token, LDAP_SERVER).catch((error) => {
 			toast.error(`${error}`);
@@ -104,7 +114,9 @@
 				groups = await getGroups(localStorage.token);
 			})(),
 			(async () => {
-				LDAP_SERVER = await getLdapServer(localStorage.token);
+				// Merge into the defaults so any key the backend omits (e.g. an
+				// older backend without the group settings) keeps its default.
+				LDAP_SERVER = { ...LDAP_SERVER, ...(await getLdapServer(localStorage.token)) };
 			})(),
 			(async () => {
 				oauthConfig = await getOAuthConfig(localStorage.token).catch(() => null);
@@ -461,6 +473,35 @@
 								class={inputClass}
 								placeholder={$i18n.t('Example: ALL')}
 								bind:value={LDAP_SERVER.ciphers}
+							/>
+						</Tooltip>
+					</AdminSettingField>
+				{/if}
+
+				<AdminSettingRow
+					label={$i18n.t('Group Mapping')}
+					description={$i18n.t('Map LDAP groups to Open WebUI groups.')}
+				>
+					<Switch bind:state={LDAP_SERVER.enable_group_management} />
+				</AdminSettingRow>
+
+				{#if LDAP_SERVER.enable_group_management}
+					<AdminSettingRow
+						label={$i18n.t('Auto-Create Groups')}
+						description={$i18n.t('Create missing groups from LDAP groups.')}
+					>
+						<Switch bind:state={LDAP_SERVER.enable_group_creation} />
+					</AdminSettingRow>
+
+					<AdminSettingField
+						label={$i18n.t('Group Attribute')}
+						description={$i18n.t('LDAP attribute containing the user group memberships.')}
+					>
+						<Tooltip content={$i18n.t('Default to memberOf')} placement="top-start">
+							<input
+								class={inputClass}
+								placeholder="memberOf"
+								bind:value={LDAP_SERVER.attribute_for_groups}
 							/>
 						</Tooltip>
 					</AdminSettingField>
