@@ -259,7 +259,7 @@ def _split_tool_calls(
 
     expanded = []
     for tool_call in tool_calls:
-        arguments = tool_call.get('function', {}).get('arguments', '')
+        arguments = tool_call.get('function', {}).get('arguments') or ''
         split_arguments = split_json_objects(arguments)
 
         if len(split_arguments) <= 1:
