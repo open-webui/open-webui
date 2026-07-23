@@ -3709,10 +3709,9 @@ async def streaming_chat_response_handler(response, ctx):
     }
 
     filter_functions = (
-        [
-            await Functions.get_function_by_id(filter_id)
-            for filter_id in await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
-        ]
+        await Functions.get_functions_by_ids(
+            await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
+        )
         if ENABLE_PLUGINS
         else []
     )
