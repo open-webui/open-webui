@@ -960,16 +960,19 @@ async def get_event_emitter(request_info, update_db=True):
         if internal and event_data.get('type') == 'notification':
             return
 
-        await sio.emit(
-            'events',
-            {
-                'chat_id': chat_id,
-                'message_id': message_id,
-                **({'internal': True} if internal else {}),
-                'data': event_data,
-            },
-            room=f'user:{user_id}',
-        )
+        room = f'user:{user_id}'
+        # Local rooms are authoritative; Redis may have listeners on another instance.
+        if WEBSOCKET_MANAGER == 'redis' or room in sio.manager.rooms.get('/', {}):
+            await sio.emit(
+                'events',
+                {
+                    'chat_id': chat_id,
+                    'message_id': message_id,
+                    **({'internal': True} if internal else {}),
+                    'data': event_data,
+                },
+                room=room,
+            )
 
         if update_db and message_id and not (request_info.get('chat_id') or '').startswith('local:'):
             event_type = event_data.get('type')
