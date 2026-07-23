@@ -6,7 +6,6 @@
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { user } from '$lib/stores';
-	import { createMessagesList } from '$lib/utils';
 
 	const i18n: any = getContext('i18n');
 
@@ -21,7 +20,6 @@
 
 	let selectedModels = [''];
 	let history: any = null;
-	let previewMessages: any[] = [];
 	let previewReady = false;
 	let loading = false;
 	let error = '';
@@ -56,7 +54,6 @@
 		loading = true;
 		error = '';
 		previewReady = false;
-		previewMessages = [];
 		history = null;
 		selectedModels = [''];
 
@@ -68,11 +65,9 @@
 				? chat.chat.models
 				: [chat.chat.models ?? ''];
 			history = chat.chat.history;
-			previewMessages = createMessagesList(chat.chat.history, chat.chat.history.currentId);
 			previewReady = true;
 			scrollPreviewToBottom();
 		} else if (chat) {
-			previewMessages = [];
 			previewReady = true;
 		} else {
 			error = $i18n.t('Failed to load chat preview');
@@ -135,7 +130,7 @@
 						atSelectedModel={null}
 						{history}
 						autoScroll={true}
-						messagesCount={null}
+						messagesCount={8}
 						sendMessage={() => {}}
 						continueResponse={() => {}}
 						regenerateResponse={() => {}}
