@@ -571,6 +571,21 @@ except (ValueError, TypeError):
 # When "True", falls back to AIOHTTP_CLIENT_SSL_CERT_FILE if set.
 AIOHTTP_CLIENT_SESSION_SSL = _parse_ssl_env(os.getenv('AIOHTTP_CLIENT_SESSION_SSL', 'True'))
 
+# Auth type for the RAG OpenAI-compatible embedding connection.
+# "bearer" (default): send RAG_OPENAI_API_KEY as a static Bearer token.
+# "system_oauth": send the acting user's SSO OAuth access token instead,
+# mirroring the `system_oauth` auth type of chat connections — for gateways
+# that only accept OAuth tokens. Falls back to the static key when the user
+# has no active OAuth session.
+RAG_OPENAI_API_AUTH_TYPE = os.getenv('RAG_OPENAI_API_AUTH_TYPE', 'bearer').strip().lower()
+
+# Auth type for the external RAG reranker connection.
+# "bearer" (default): send RAG_EXTERNAL_RERANKER_API_KEY as a static Bearer token.
+# "system_oauth": send the acting user's SSO OAuth access token instead, same
+# semantics as the embedding connection above. Falls back to the static key
+# when the user has no active OAuth session.
+RAG_EXTERNAL_RERANKER_API_AUTH_TYPE = os.getenv('RAG_EXTERNAL_RERANKER_API_AUTH_TYPE', 'bearer').strip().lower()
+
 # When False (default), outbound HTTP requests do not follow 3xx redirects.
 AIOHTTP_CLIENT_ALLOW_REDIRECTS = os.getenv('AIOHTTP_CLIENT_ALLOW_REDIRECTS', 'False').lower() == 'true'
 
