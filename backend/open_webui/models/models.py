@@ -220,7 +220,6 @@ class ModelsTable:
                 )
                 db.add(result)
                 await db.commit()
-                await db.refresh(result)
                 await AccessGrants.set_access_grants('model', result.id, form_data.access_grants, db=db)
 
                 if result:
@@ -530,7 +529,6 @@ class ModelsTable:
                 model.is_active = not model.is_active
                 model.updated_at = int(time.time())
                 await db.commit()
-                await db.refresh(model)
 
                 return await self._to_model_model(model, db=db)
             except Exception:
@@ -562,7 +560,6 @@ class ModelsTable:
                     return None
                 model_obj.updated_at = int(time.time())
                 await db.commit()
-                await db.refresh(model_obj)
                 return await self._to_model_model(model_obj, db=db)
         except Exception as e:
             log.exception(f'Failed to update the model updated_at by id {id}: {e}')

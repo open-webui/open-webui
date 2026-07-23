@@ -129,7 +129,6 @@ class FunctionsTable:
                 result = Function(**function.model_dump())
                 db.add(result)
                 await db.commit()
-                await db.refresh(result)
                 if result:
                     return FunctionModel.model_validate(result)
                 else:
@@ -326,7 +325,6 @@ class FunctionsTable:
                 function.valves = encrypt_valves(valves)
                 function.updated_at = int(time.time())
                 await db.commit()
-                await db.refresh(function)
                 return FunctionModel.model_validate(function)
             except Exception:
                 return None
@@ -346,7 +344,6 @@ class FunctionsTable:
 
                     function.updated_at = int(time.time())
                     await db.commit()
-                    await db.refresh(function)
                     return FunctionModel.model_validate(function)
                 else:
                     return None

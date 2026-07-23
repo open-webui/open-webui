@@ -302,7 +302,6 @@ class UsersTable:
             result = User(**user.model_dump())
             session.add(result)
             await session.commit()
-            await session.refresh(result)
             return user if result else None
 
     # database read methods
@@ -582,7 +581,6 @@ class UsersTable:
                 return None
             user.role = role
             await session.commit()
-            await session.refresh(user)
             return UserModel.model_validate(user)
 
     async def update_user_status_by_id(
@@ -595,7 +593,6 @@ class UsersTable:
             for key, value in form_data.model_dump(exclude_none=True).items():
                 setattr(user, key, value)
             await session.commit()
-            await session.refresh(user)
             return UserModel.model_validate(user)
 
     async def update_user_profile_image_url_by_id(
@@ -615,7 +612,6 @@ class UsersTable:
                 return None
             user.profile_image_url = profile_image_url
             await session.commit()
-            await session.refresh(user)
             return UserModel.model_validate(user)
 
     @throttle(DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL)
@@ -636,7 +632,6 @@ class UsersTable:
             oauth[provider] = {'sub': sub}
             user.oauth = oauth
             await session.commit()
-            await session.refresh(user)
             return UserModel.model_validate(user)
 
     async def update_user_scim_by_id(
@@ -655,7 +650,6 @@ class UsersTable:
             scim[provider] = {'external_id': external_id}
             user.scim = scim
             await session.commit()
-            await session.refresh(user)
             return UserModel.model_validate(user)
 
     async def update_user_by_id(self, id: str, updated: dict, db: AsyncSession | None = None) -> UserModel | None:
@@ -666,7 +660,6 @@ class UsersTable:
             for key, value in updated.items():
                 setattr(user, key, value)
             await session.commit()
-            await session.refresh(user)
             return UserModel.model_validate(user)
 
     # settings update helper
@@ -681,7 +674,6 @@ class UsersTable:
             user_settings.update(updated)
             user.settings = user_settings
             await session.commit()
-            await session.refresh(user)
             return UserModel.model_validate(user)
 
     async def delete_user_by_id(self, id: str, db: AsyncSession | None = None) -> bool:

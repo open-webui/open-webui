@@ -132,7 +132,6 @@ class ToolsTable:
                 )
                 db.add(result)
                 await db.commit()
-                await db.refresh(result)
                 await AccessGrants.set_access_grants('tool', result.id, form_data.access_grants, db=db)
                 if result:
                     return await self._to_tool_model(result, db=db)
@@ -305,8 +304,8 @@ class ToolsTable:
                 if access_grants is not None:
                     await AccessGrants.set_access_grants('tool', id, access_grants, db=db)
 
-                tool = await db.get(Tool, id)
-                await db.refresh(tool)
+                # populate_existing: the Core update above bypasses any identity-map copy
+                tool = await db.get(Tool, id, populate_existing=True)
                 return await self._to_tool_model(tool, db=db)
         except Exception:
             return None

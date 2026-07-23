@@ -137,7 +137,6 @@ class SkillsTable:
                 )
                 db.add(result)
                 await db.commit()
-                await db.refresh(result)
                 await AccessGrants.set_access_grants('skill', result.id, form_data.access_grants, db=db)
                 if result:
                     return await self._to_skill_model(result, db=db)
@@ -326,8 +325,8 @@ class SkillsTable:
                 if access_grants is not None:
                     await AccessGrants.set_access_grants('skill', id, access_grants, db=db)
 
-                skill = await db.get(Skill, id)
-                await db.refresh(skill)
+                # populate_existing: the Core update above bypasses any identity-map copy
+                skill = await db.get(Skill, id, populate_existing=True)
                 return await self._to_skill_model(skill, db=db)
         except Exception:
             return None
@@ -343,7 +342,6 @@ class SkillsTable:
                 skill.is_active = not skill.is_active
                 skill.updated_at = int(time.time())
                 await db.commit()
-                await db.refresh(skill)
 
                 return await self._to_skill_model(skill, db=db)
             except Exception:
