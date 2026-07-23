@@ -4116,7 +4116,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 raw_error = raw_obj.get('error') if isinstance(raw_obj, dict) else None
                                 if raw_error:
                                     try:
-                                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                                        await Chats.upsert_message_to_chat_by_id_and_message_id(
                                             metadata['chat_id'],
                                             metadata['message_id'],
                                             {
