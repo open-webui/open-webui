@@ -57,6 +57,7 @@ from open_webui.routers.images import (
     image_generations,
 )
 from open_webui.routers.pipelines import (
+    get_sorted_filters,
     process_pipeline_inlet_filter,
     process_pipeline_outlet_filter,
 )
@@ -88,6 +89,7 @@ from open_webui.utils.files import (
     get_image_url_from_base64,
 )
 from open_webui.utils.filter import (
+    get_function_module,
     get_sorted_filter_ids,
     process_filter_functions,
 )
@@ -5432,12 +5434,39 @@ async def streaming_chat_response_handler(response, ctx):
         return await response_handler(response, events)
 
     else:
+
+        async def has_api_outlet_consumer():
+            """True when the end-of-stream outlet pass could observe the
+            accumulated message; on any doubt, accumulate as before."""
+            if not ENABLE_API_OUTLET_FILTERS:
+                return False
+            try:
+                if isinstance(model, dict):
+                    if 'pipeline' in model:
+                        return True
+                    model_id = model.get('id')
+                else:
+                    model_id = model
+                if get_sorted_filters(model_id, request.app.state.MODELS):
+                    return True
+                for function in filter_functions:
+                    if not function:
+                        continue
+                    function_module = await get_function_module(request, function.id)
+                    if getattr(function_module, 'outlet', None):
+                        return True
+            except Exception:
+                return True
+            return False
+
         # Fallback to the original response
         async def stream_wrapper(original_generator, events):
             def wrap_item(item):
                 return f'data: {item}\n\n'
 
             assistant_message = {}
+            # Without an outlet consumer, per-chunk accumulation is pure waste
+            accumulate_for_outlet = await has_api_outlet_consumer()
 
             for event in events:
                 event, _ = await process_filter_functions(
@@ -5461,11 +5490,11 @@ async def streaming_chat_response_handler(response, ctx):
                 )
 
                 if data:
-                    if ENABLE_API_OUTLET_FILTERS:
+                    if accumulate_for_outlet:
                         update_assistant_message_from_stream(assistant_message, data)
                     yield data
 
-            if ENABLE_API_OUTLET_FILTERS and assistant_message:
+            if accumulate_for_outlet and assistant_message:
                 ctx['assistant_message'] = assistant_message
                 await outlet_filter_handler(ctx)
 
