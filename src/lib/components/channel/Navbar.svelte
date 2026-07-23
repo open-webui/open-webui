@@ -2,14 +2,13 @@
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { mobile, showArchivedChats, showSidebar, user } from '$lib/stores';
+	import { mobile, showSidebar, user } from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
@@ -79,7 +78,7 @@
 							}}
 						>
 							<div class=" self-center p-1.5">
-								<Sidebar />
+								<Sidebar className="size-4" />
 							</div>
 						</button>
 					</Tooltip>
@@ -192,35 +191,6 @@
 							</button>
 						</Tooltip>
 					{/if}
-				{/if}
-
-				{#if $user !== undefined}
-					<div>
-						<UserMenu
-							className="w-[240px]"
-							role={$user?.role}
-							help={true}
-							on:show={(e) => {
-								if (e.detail === 'archived-chat') {
-									showArchivedChats.set(true);
-								}
-							}}
-						>
-							<button
-								class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-								aria-label="User Menu"
-							>
-								<div class=" self-center">
-									<img
-										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
-										class="size-6 object-cover rounded-full"
-										alt="User profile"
-										draggable="false"
-									/>
-								</div>
-							</button>
-						</UserMenu>
-					</div>
 				{/if}
 			</div>
 		</div>

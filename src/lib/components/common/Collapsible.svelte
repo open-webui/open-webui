@@ -40,11 +40,13 @@
 
 	export let className = '';
 	export let buttonClassName =
-		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
+		'w-fit py-1 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
 
 	export let id = '';
 	export let title = null;
 	export let attributes = null;
+	export let chevronClassName = 'size-3';
+	export let chevronStrokeWidth = '2.75';
 
 	export let chevron = false;
 	export let grow = false;
@@ -119,9 +121,9 @@
 				{#if !disabled}
 					<div class="flex self-center translate-y-[1px]">
 						{#if open}
-							<ChevronUp strokeWidth="3.5" className="size-3.5" />
+							<ChevronUp strokeWidth={chevronStrokeWidth} className={chevronClassName} />
 						{:else}
-							<ChevronDown strokeWidth="3.5" className="size-3.5" />
+							<ChevronDown strokeWidth={chevronStrokeWidth} className={chevronClassName} />
 						{/if}
 					</div>
 				{/if}
@@ -144,9 +146,9 @@
 					{#if chevron}
 						<div class="flex self-start translate-y-1">
 							{#if open}
-								<ChevronUp strokeWidth="3.5" className="size-3.5" />
+								<ChevronUp strokeWidth={chevronStrokeWidth} className={chevronClassName} />
 							{:else}
-								<ChevronDown strokeWidth="3.5" className="size-3.5" />
+								<ChevronDown strokeWidth={chevronStrokeWidth} className={chevronClassName} />
 							{/if}
 						</div>
 					{/if}

@@ -37,6 +37,7 @@ from open_webui.env import (
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.chats import Chats
 from open_webui.models.files import Files
+from open_webui.models.folders import Folders
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.notes import Notes
 from open_webui.models.config import Config
@@ -48,6 +49,7 @@ from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.retrieval.vector.main import GetResult, SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.utils.access_control.files import has_access_to_file
+from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.misc import get_message_list
 
@@ -1323,6 +1325,23 @@ async def get_sources_from_items(
     bypass_embedding_and_retrieval = await Config.get('rag.bypass_embedding_and_retrieval')
     extracted_collections = []
     query_results = []
+    folder_items = set()
+    expanded_folders = set()
+
+    items = list(items)
+    for item in items:
+        if item.get('type') != 'folder' or not user:
+            continue
+        folder_id = item.get('id')
+        if not folder_id or folder_id in expanded_folders:
+            continue
+        expanded_folders.add(folder_id)
+
+        folder = await Folders.get_folder_by_id(folder_id)
+        if folder and (user.role == 'admin' or await has_folder_access(user.id, folder, 'read', db=None)):
+            files = (folder.data or {}).get('files', [])
+            folder_items.update((entry.get('type'), entry.get('id')) for entry in files if isinstance(entry, dict))
+            items.extend(files)
 
     for item in items:
         query_result = None
@@ -1429,6 +1448,7 @@ async def get_sources_from_items(
                         user.role == 'admin'
                         or file_object.user_id == user.id
                         or await has_access_to_file(item.get('id'), 'read', user)
+                        or ('file', item.get('id')) in folder_items
                     ):
                         query_result = {
                             'documents': [[file_object.data.get('content', '')]],
@@ -1459,6 +1479,7 @@ async def get_sources_from_items(
                             user.role == 'admin'
                             or file_object.user_id == user.id
                             or await has_access_to_file(file_id, 'read', user)
+                            or ('file', file_id) in folder_items
                         ):
                             if item.get('legacy'):
                                 collection_names.append(f'{file_id}')
@@ -1478,6 +1499,7 @@ async def get_sources_from_items(
                     resource_id=knowledge_base.id,
                     permission='read',
                 )
+                or ('collection', item.get('id')) in folder_items
             ):
                 if (knowledge_base.meta or {}).get('source') == 'external':
                     query_result = await retrieve_external_knowledge(
@@ -1500,6 +1522,7 @@ async def get_sources_from_items(
                                 resource_id=knowledge_base.id,
                                 permission='read',
                             )
+                            or ('collection', item.get('id')) in folder_items
                         ):
                             files = await Knowledges.get_files_by_id(knowledge_base.id)
 
@@ -1570,7 +1593,7 @@ async def get_sources_from_items(
                 continue
 
             # Filter out collections the user cannot read
-            if user:
+            if user and (item.get('type'), item.get('id')) not in folder_items:
                 collection_names = await filter_accessible_collections(collection_names, user)
                 if not collection_names:
                     log.debug(f'access denied for all collections in item {item}')

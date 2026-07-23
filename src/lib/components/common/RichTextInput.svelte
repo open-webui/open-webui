@@ -106,15 +106,16 @@
 		}
 	});
 
-	// Convert TipTap mention spans -> <@id>
+	// Convert TipTap mention spans -> serialized mention tags.
 	turndownService.addRule('mentions', {
 		filter: (node) => node.nodeName === 'SPAN' && node.getAttribute('data-type') === 'mention',
 		replacement: (_content, node: HTMLElement) => {
 			const id = node.getAttribute('data-id') || '';
 			// TipTap stores the trigger char in data-mention-suggestion-char (usually "@")
 			const ch = node.getAttribute('data-mention-suggestion-char') || '@';
-			// Emit <@id> style, e.g. <@llama3.2:latest>
-			return `<${ch}${id}>`;
+			// Skills are always serialized as <$id|label>, even when selected from "/".
+			const mentionChar = id.includes('|') ? '$' : ch;
+			return `<${mentionChar}${id}>`;
 		}
 	});
 
@@ -149,6 +150,7 @@
 	import Typography from '@tiptap/extension-typography';
 	import Highlight from '@tiptap/extension-highlight';
 	import Code from '@tiptap/extension-code';
+	import Italic from '@tiptap/extension-italic';
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 
 	// WORKAROUND: TipTap's default Code mark input rule regex captures the
@@ -165,6 +167,16 @@
 					type: this.type
 				})
 			];
+		}
+	});
+
+	// Prompt inputs need literal asterisks preserved, while toolbar-applied italic should still work.
+	const PromptItalic = Italic.extend({
+		addInputRules() {
+			return [];
+		},
+		addPasteRules() {
+			return [];
 		}
 	});
 
@@ -267,6 +279,13 @@
 					.run();
 			};
 		});
+	};
+
+	const getMentionText = ({ node, suggestion }) => {
+		const id = node.attrs.id ?? '';
+		const label = node.attrs.label ?? id;
+		const char = id.includes('|') ? '$' : (suggestion?.char ?? '@');
+		return `${char}${label}`;
 	};
 
 	export let onSelectionUpdate = (e) => {};
@@ -454,9 +473,6 @@
 		if (text === '') {
 			editor.commands.clearContent();
 		} else {
-			// Regex to find serialized mention tags: <@id>, <#id>, <$id|label>
-			const mentionReG = /<([@#$])([\w.\-:/]+)(?:\|([^>]*))?>/g;
-
 			// Convert each line to a <p>, replacing mention tags with proper
 			// TipTap mention spans that the editor's DOMParser will recognise.
 			const lines = text.split('\n');
@@ -469,10 +485,14 @@
 					const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 					// Now replace the escaped mention patterns back into real spans
 					const withMentions = escaped.replace(
-						/&lt;([@#$])([\w.\-:/]+)(?:\|([^&]*?))?&gt;/g,
-						(_, ch, id, label) => {
-							const display = label?.length ? label : id;
-							return `<span class="mention" data-type="mention" data-id="${id}" data-label="${display}" data-mention-suggestion-char="${ch}">${ch}${display}</span>`;
+						/&lt;([@#$])([\w.\-:/]+)(?:\|([^&]*?))?&gt;|&lt;\/([\w.\-:/]+)\|([^&]*?)&gt;/g,
+						(_, ch, id, label, slashSkillId, slashSkillLabel) => {
+							const mentionChar = ch || '$';
+							const mentionId = id || slashSkillId;
+							const display = (label || slashSkillLabel)?.length
+								? label || slashSkillLabel
+								: mentionId;
+							return `<span class="mention" data-type="mention" data-id="${mentionId}" data-label="${display}" data-mention-suggestion-char="${mentionChar}">${mentionChar}${display}</span>`;
 						}
 					);
 					return `<p>${withMentions}</p>`;
@@ -739,6 +759,7 @@
 				StarterKit.configure({
 					link: link,
 					code: false, // Disabled in favor of FixedCode (see workaround above)
+					...(messageInput ? { italic: false } : {}),
 					// When rich text is on, ListKit + CodeBlockLowlight provide these.
 					// Disable StarterKit's equivalents to avoid duplicate extension names.
 					...(richText
@@ -757,6 +778,7 @@
 					...(richText ? {} : { strike: false })
 				}),
 				FixedCode,
+				...(messageInput ? [PromptItalic] : []),
 				...(dragHandle ? [ListItemDragHandle] : []),
 				Placeholder.configure({ placeholder: () => _placeholder, showOnlyWhenEditable: false }),
 				SelectionDecoration,
@@ -781,6 +803,12 @@
 					? [
 							Mention.configure({
 								HTMLAttributes: { class: 'mention' },
+								renderText: getMentionText,
+								renderHTML: ({ options, node, suggestion }) => [
+									'span',
+									options.HTMLAttributes,
+									getMentionText({ node, suggestion })
+								],
 								suggestions: suggestions
 							})
 						]

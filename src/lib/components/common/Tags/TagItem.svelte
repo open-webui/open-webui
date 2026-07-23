@@ -13,14 +13,14 @@
 {#if tag}
 	{#if disabled}
 		<span
-			class="flex items-center gap-1 px-1.5 py-[1px] rounded-full bg-gray-100/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-300 text-xs font-medium"
+			class="flex items-center gap-1 px-1.5 py-[1px] rounded-full bg-gray-100/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-300 text-xs font-normal"
 		>
 			<span class="line-clamp-1">{tag.name}</span>
 		</span>
 	{:else}
 		<button
 			type="button"
-			class="flex items-center gap-1 px-1.5 py-[1px] rounded-full bg-gray-100/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-300 text-xs font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+			class="flex items-center gap-1 px-1.5 py-[1px] rounded-full bg-gray-100/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-300 text-xs font-normal hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
 			on:click={() => {
 				onDelete();
 			}}

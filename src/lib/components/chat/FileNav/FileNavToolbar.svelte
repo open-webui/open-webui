@@ -7,6 +7,7 @@
 	import Spinner from '../../common/Spinner.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -187,12 +188,10 @@
 			</Tooltip>
 
 			<div slot="content">
-				<div
-					class="min-w-[150px] rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
-				>
+				<DropdownMenu className="min-w-[150px] z-[9999999]">
 					<button
 						type="button"
-						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
 						on:click={() => onSort('name')}
 					>
 						<span class="flex-1 text-left">{$i18n.t('Name')}</span>
@@ -215,7 +214,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
 						on:click={() => onSort('date')}
 					>
 						<span class="flex-1 text-left">{$i18n.t('Date Modified')}</span>
@@ -236,7 +235,7 @@
 							</svg>
 						{/if}
 					</button>
-				</div>
+				</DropdownMenu>
 			</div>
 		</Dropdown>
 		<Tooltip content={$i18n.t('New Folder')}>

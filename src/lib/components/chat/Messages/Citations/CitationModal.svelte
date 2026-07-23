@@ -98,7 +98,7 @@
 <Modal size="lg" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-4.5 pt-3 pb-2">
-			<div class=" text-lg font-medium self-center flex items-center">
+			<div class=" text-sm font-medium self-center flex items-center">
 				{#if citation?.source?.name}
 					{@const document = mergedDocuments?.[0]}
 					{#if document?.metadata?.file_id || document.source?.url?.includes('http')}
@@ -130,13 +130,13 @@
 				{/if}
 			</div>
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close citation modal')}
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<XMark className={'size-5'} />
+				<XMark className={'size-4'} />
 			</button>
 		</div>
 
@@ -148,7 +148,7 @@
 					<div class="flex flex-col w-full gap-2">
 						{#if document.metadata?.parameters}
 							<div>
-								<div class="text-sm font-medium dark:text-gray-300 mb-1">
+								<div class="text-sm font-normal dark:text-gray-300 mb-1">
 									{$i18n.t('Parameters')}
 								</div>
 
@@ -159,7 +159,7 @@
 
 						<div>
 							<div
-								class=" text-sm font-medium dark:text-gray-300 flex items-center gap-2 w-fit mb-1"
+								class=" text-sm font-normal dark:text-gray-300 flex items-center gap-2 w-fit mb-1"
 							>
 								{#if document.source?.url?.includes('http')}
 									{@const snippetUrl = getTextFragmentUrl(document)}
@@ -190,7 +190,7 @@
 
 												{#if typeof percentage === 'number'}
 													<span
-														class={`px-1 rounded-sm font-medium ${getRelevanceColor(percentage)}`}
+														class={`px-1 rounded-sm font-normal ${getRelevanceColor(percentage)}`}
 													>
 														{percentage.toFixed(2)}%
 													</span>

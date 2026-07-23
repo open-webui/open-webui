@@ -28,7 +28,7 @@
 {#if codeExecutions.length > 0}
 	<div class="mt-1 mb-2 w-full flex gap-1 items-center flex-wrap">
 		{#each codeExecutions as execution (execution.id)}
-			<div class="flex gap-1 text-xs font-semibold">
+			<div class="flex gap-1 text-xs font-normal">
 				<button
 					class="flex dark:text-gray-300 py-1 px-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-xl max-w-96"
 					on:click={() => {

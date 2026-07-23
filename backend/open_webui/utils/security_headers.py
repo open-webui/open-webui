@@ -2,15 +2,36 @@ import os
 import re
 from typing import Dict
 
-from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.datastructures import MutableHeaders
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-        response.headers.update(set_security_headers())
-        return response
+class SecurityHeadersMiddleware:
+    """Apply configured security headers to every HTTP response.
+
+    Pure ASGI to avoid BaseHTTPMiddleware's response re-buffering. See
+    open_webui.utils.asgi_middleware for the rationale.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+        # Headers derive only from env vars, which are static for the process
+        # lifetime — compute them once instead of per response.
+        self._headers = list(set_security_headers().items())
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope['type'] != 'http' or not self._headers:
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_security_headers(message: Message) -> None:
+            if message['type'] == 'http.response.start':
+                headers = MutableHeaders(scope=message)
+                for key, value in self._headers:
+                    headers[key] = value
+            await send(message)
+
+        await self.app(scope, receive, send_with_security_headers)
 
 
 def set_security_headers() -> Dict[str, str]:

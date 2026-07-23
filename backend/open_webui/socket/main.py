@@ -57,6 +57,29 @@ REDIS = None
 # Configure CORS for Socket.IO
 SOCKETIO_CORS_ORIGINS = '*' if CORS_ALLOW_ORIGIN == ['*'] else CORS_ALLOW_ORIGIN
 
+class LocalFilteredRedisManager(socketio.AsyncRedisManager):
+    """AsyncRedisManager that drops pub/sub emits with no local recipients.
+
+    Every instance subscribed to the shared Socket.IO channel receives every
+    emit published by the whole fleet. Upstream ``_handle_emit`` re-encodes
+    the full packet before discovering the target room has no participants on
+    this instance, so each instance burns CPU serializing payloads addressed
+    to sessions it does not host — a cost that grows with instance count.
+    Bail out before that work when the room is empty here. Only string
+    rooms take the fast path; broadcasts (``room=None``) and any other
+    room shape (e.g. lists, which upstream indexes before validating)
+    always pass through unchanged.
+    """
+
+    async def _handle_emit(self, message):
+        room = message.get('room')
+        if isinstance(room, str):
+            namespace = message.get('namespace') or '/'
+            if next(self.get_participants(namespace, room), None) is None:
+                return
+        await super()._handle_emit(message)
+
+
 if WEBSOCKET_MANAGER == 'redis':
     sentinel_hosts = WEBSOCKET_SENTINEL_HOSTS or ''
     ws_redis_url = (
@@ -64,7 +87,7 @@ if WEBSOCKET_MANAGER == 'redis':
         if sentinel_hosts
         else WEBSOCKET_REDIS_URL
     )
-    redis_manager = socketio.AsyncRedisManager(ws_redis_url, redis_options=WEBSOCKET_REDIS_OPTIONS)
+    redis_manager = LocalFilteredRedisManager(ws_redis_url, redis_options=WEBSOCKET_REDIS_OPTIONS)
     sio = socketio.AsyncServer(
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode='asgi',
@@ -529,6 +552,12 @@ async def chat_events(sid, data):
 
     if event_type == 'last_read_at':
         await Chats.update_chat_last_read_at_by_id(data['chat_id'], user['id'])
+        try:
+            from open_webui.utils.timers import cancel_timers_for_chat
+
+            await cancel_timers_for_chat(data['chat_id'], 'chat.read')
+        except Exception:
+            log.exception('Failed to cancel chat.read timers for chat %s', data.get('chat_id'))
 
 
 def normalize_document_id(document_id: str) -> str:
@@ -925,12 +954,17 @@ async def get_event_emitter(request_info, update_db=True):
         user_id = request_info['user_id']
         chat_id = request_info['chat_id']
         message_id = request_info['message_id']
+        internal = request_info.get('internal') is True
+
+        if internal and event_data.get('type') == 'notification':
+            return
 
         await sio.emit(
             'events',
             {
                 'chat_id': chat_id,
                 'message_id': message_id,
+                **({'internal': True} if internal else {}),
                 'data': event_data,
             },
             room=f'user:{user_id}',
@@ -992,6 +1026,7 @@ async def get_event_emitter(request_info, update_db=True):
                     {
                         'embeds': embeds,
                     },
+                    touch=False,
                 )
 
             elif event_type == 'files':
@@ -1009,6 +1044,7 @@ async def get_event_emitter(request_info, update_db=True):
                     {
                         'files': files,
                     },
+                    touch=False,
                 )
 
             elif event_type in ('source', 'citation'):
@@ -1028,6 +1064,7 @@ async def get_event_emitter(request_info, update_db=True):
                         {
                             'sources': sources,
                         },
+                        touch=False,
                     )
 
     if 'user_id' in request_info and 'chat_id' in request_info and 'message_id' in request_info:
