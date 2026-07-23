@@ -2157,23 +2157,25 @@ def extract_skill_ids_from_messages(messages: list[dict]) -> set[str]:
     return ids
 
 
+SKILL_MENTION_STRIP_RE = re.compile(r'<(?:\$[^|>]+(?:\|([^>]*))?|/[^|>]+\|([^>]*))>')
+
+
 def strip_skill_mentions(messages: list[dict]) -> None:
     """Replace <$skillId|label> and </skillId|label> mention tags with the label in-place."""
-    strip_re = re.compile(r'<(?:\$[^|>]+(?:\|([^>]*))?|/[^|>]+\|([^>]*))>')
 
     def label(match):
         return match.group(1) or match.group(2) or ''
 
     for message in messages:
         content = message.get('content')
-        if isinstance(content, str) and strip_re.search(content):
-            message['content'] = strip_re.sub(label, content).strip()
+        if isinstance(content, str) and SKILL_MENTION_STRIP_RE.search(content):
+            message['content'] = SKILL_MENTION_STRIP_RE.sub(label, content).strip()
         elif isinstance(content, list):
             for part in content:
                 if isinstance(part, dict) and part.get('type') == 'text':
                     text = part.get('text', '')
-                    if strip_re.search(text):
-                        part['text'] = strip_re.sub(label, text).strip()
+                    if SKILL_MENTION_STRIP_RE.search(text):
+                        part['text'] = SKILL_MENTION_STRIP_RE.sub(label, text).strip()
 
 
 async def connect_mcp_server(
@@ -4789,12 +4791,12 @@ async def streaming_chat_response_handler(response, ctx):
                         params = {}
                         if tool_args and tool_args.strip():
                             try:
-                                params = ast.literal_eval(tool_args)
-                            except Exception as e:
-                                log.debug(e)
+                                params = json.loads(tool_args)
+                            except Exception:
                                 try:
-                                    params = json.loads(tool_args)
-                                except Exception:
+                                    params = ast.literal_eval(tool_args)
+                                except Exception as e:
+                                    log.debug(e)
                                     return None
                         tool_call.setdefault('function', {})['arguments'] = json.dumps(params)
                         return params

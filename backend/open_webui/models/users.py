@@ -720,8 +720,8 @@ class UsersTable:
 
     async def get_valid_user_ids(self, user_ids: list[str], db: AsyncSession | None = None) -> list[str]:
         async with get_async_db_context(db) as session:
-            result = await session.execute(select(User).where(User.id.in_(user_ids)))
-            return [u.id for u in result.scalars().all()]
+            result = await session.execute(select(User.id).where(User.id.in_(user_ids)))
+            return list(result.scalars().all())
 
     async def get_super_admin_user(self, db: AsyncSession | None = None) -> UserModel | None:
         async with get_async_db_context(db) as session:
