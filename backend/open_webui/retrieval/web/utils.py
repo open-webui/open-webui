@@ -785,13 +785,11 @@ class SafeWebBaseLoader(WebBaseLoader):
         final_results = []
         for i, result in enumerate(results):
             url = urls[i]
-            if parser is None:
-                if url.endswith('.xml'):
-                    parser = 'xml'
-                else:
-                    parser = self.default_parser
-                self._check_parser(parser)
-            final_results.append(BeautifulSoup(result, parser, **self.bs_kwargs))
+            url_parser = parser
+            if url_parser is None:
+                url_parser = 'xml' if url.endswith('.xml') else self.default_parser
+                self._check_parser(url_parser)
+            final_results.append(BeautifulSoup(result, url_parser, **self.bs_kwargs))
         return final_results
 
     async def ascrape_all(self, urls: List[str], parser: Union[str, None] = None) -> List[Any]:
