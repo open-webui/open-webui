@@ -4,11 +4,17 @@ import logging
 from typing import Any
 
 from fastapi.responses import JSONResponse
+from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_message_list
+from open_webui.utils.misc import (
+    expand_messages_with_output,
+    get_content_from_message,
+    get_last_user_message,
+    get_message_list,
+)
 from open_webui.utils.task import (
     get_task_model_id,
     prompt_template,
@@ -52,19 +58,30 @@ async def compact_messages_for_request(
     if not config['enable']:
         return messages, None, False
 
-    system_messages = [messages[0]] if messages and messages[0].get('role') == 'system' else []
-    messages = messages[1:] if system_messages else messages
-
-    messages, previous_summary = _apply_latest_summary_checkpoint(messages)
+    original_messages = messages
+    system_messages = [message for message in messages if message.get('role') == 'system']
+    conversation_messages = [message for message in messages if message.get('role') != 'system']
+    conversation_messages, previous_summary = _apply_latest_summary_checkpoint(conversation_messages)
     token_threshold = _resolve_token_threshold(config['token_threshold'], config['token_cap'], metadata)
-    if not _exceeds_token_threshold(messages, system_prompt, previous_summary, token_threshold) or len(messages) <= 3:
-        return [*system_messages, *messages], previous_summary, False
+    if (
+        not _exceeds_token_threshold(
+            conversation_messages,
+            system_prompt,
+            previous_summary,
+            token_threshold,
+        )
+        or len(conversation_messages) <= 3
+    ):
+        return original_messages, previous_summary, False
 
-    boundary = _find_compaction_boundary(messages, config['retention_percentage'])
-    compacted_messages = messages[:boundary]
-    recent_messages = messages[boundary:]
+    boundary = _find_compaction_boundary(
+        conversation_messages,
+        config.get('retention_percentage', 40),
+    )
+    compacted_messages = conversation_messages[:boundary]
+    recent_messages = conversation_messages[boundary:]
     if not compacted_messages or not recent_messages:
-        return [*system_messages, *messages], previous_summary, False
+        return original_messages, previous_summary, False
 
     event_emitter = None
     if metadata.get('chat_id') and metadata.get('message_id'):
@@ -162,11 +179,10 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
     if not current_id:
         return {'ok': True, 'compacted': False, 'reason': 'empty'}
 
-    messages_map = await Chats.get_messages_map_by_chat_id(chat.id)
-    if not messages_map:
-        messages_map = history.get('messages') or {}
-
-    messages, previous_summary = _apply_latest_summary_checkpoint(get_message_list(messages_map, current_id))
+    messages = get_message_list(history.get('messages') or {}, current_id) if not history.get('messageWindow') else []
+    if not messages:
+        messages = await ChatMessages.get_message_branch_by_chat_id(chat.id, current_id)
+    messages, previous_summary = _apply_latest_summary_checkpoint(messages)
     compacted_messages = messages[:-1]
     recent_messages = messages[-1:]
     if not compacted_messages or not recent_messages:
@@ -245,13 +261,23 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
     if not current_id:
         return None
 
-    messages_map = await Chats.get_messages_map_by_chat_id(chat.id)
-    messages = get_message_list(messages_map or history.get('messages') or {}, current_id)
-    if not messages:
-        return None
-
     config = await _load_config()
     if not config['enable']:
+        return None
+
+    message_window = history.get('messageWindow') or {}
+    if message_window:
+        messages = [
+            message
+            for message in get_message_list(history.get('messages') or {}, current_id)
+            if message.get('__loaded') is not False
+        ]
+    else:
+        messages = get_message_list(history.get('messages') or {}, current_id)
+
+    if not messages and not message_window:
+        messages = await ChatMessages.get_message_branch_by_chat_id(chat.id, current_id)
+    if not messages:
         return None
 
     params = ((chat.chat or {}).get('params') or {}).copy()
@@ -261,9 +287,13 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
     messages, previous_summary = _apply_latest_summary_checkpoint(messages)
 
     for idx in range(len(messages) - 1, -1, -1):
-        usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-        if isinstance(usage, dict) and (
-            tokens := (
+        usage = (
+            messages[idx].get('lastRequestUsage')
+            or messages[idx].get('usage')
+            or (messages[idx].get('info') or {}).get('usage')
+        )
+        if isinstance(usage, dict):
+            tokens = (
                 int(
                     usage.get('prompt_tokens')
                     or usage.get('input_tokens')
@@ -280,9 +310,16 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
                 )
                 + int(usage.get('cache_n') or 0)
             )
-        ):
+        else:
+            tokens = 0
+        if tokens:
             tokens += _estimate_messages_tokens(messages[idx + 1 :])
             return _build_context_usage(tokens, threshold)
+
+    # A lazy window without usage cannot produce a trustworthy whole-context
+    # estimate without reloading the complete branch, which defeats the API.
+    if message_window.get('hasMore'):
+        return None
 
     tokens = _estimate_tokens(previous_summary or '') + _estimate_messages_tokens(messages)
     return _build_context_usage(tokens, threshold)
@@ -318,9 +355,13 @@ def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: 
         return False
 
     for idx in range(len(messages) - 1, -1, -1):
-        usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-        if isinstance(usage, dict) and (
-            tokens := (
+        usage = (
+            messages[idx].get('lastRequestUsage')
+            or messages[idx].get('usage')
+            or (messages[idx].get('info') or {}).get('usage')
+        )
+        if isinstance(usage, dict):
+            total = (
                 int(
                     usage.get('prompt_tokens')
                     or usage.get('input_tokens')
@@ -337,8 +378,10 @@ def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: 
                 )
                 + int(usage.get('cache_n') or 0)
             )
-        ):
-            return tokens + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
+        else:
+            total = 0
+        if total:
+            return total + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
 
     estimated = _estimate_tokens(system_prompt) + _estimate_tokens(summary or '') + _estimate_messages_tokens(messages)
     return estimated > threshold
@@ -386,11 +429,13 @@ async def _generate_summary(
         raise ValueError('No available model for context compaction')
 
     summary_prompt_template = summary_prompt_template.strip() or DEFAULT_CONTEXT_COMPACTION_PROMPT
-    all_messages = [*compacted_messages, *recent_messages]
+    compacted_messages_for_summary = expand_messages_with_output(compacted_messages)
+    recent_messages_for_summary = expand_messages_with_output(recent_messages)
+    all_messages = [*compacted_messages_for_summary, *recent_messages_for_summary]
     prompt = replace_prompt_variable(summary_prompt_template, get_last_user_message(all_messages) or '')
     prompt = replace_messages_variable(prompt, all_messages)
-    prompt = replace_messages_variable(prompt, compacted_messages, 'COMPACTED_MESSAGES')
-    prompt = replace_messages_variable(prompt, recent_messages, 'RECENT_MESSAGES')
+    prompt = replace_messages_variable(prompt, compacted_messages_for_summary, 'COMPACTED_MESSAGES')
+    prompt = replace_messages_variable(prompt, recent_messages_for_summary, 'RECENT_MESSAGES')
     prompt = prompt_variables_template(prompt, {'{{PREVIOUS_SUMMARY}}': previous_summary or ''})
     prompt = await prompt_template(prompt, user)
 
@@ -416,7 +461,7 @@ async def _generate_summary(
         return summary
 
     parts = [previous_summary] if previous_summary else []
-    for message in compacted_messages:
+    for message in compacted_messages_for_summary:
         content = get_content_from_message(message)
         if content:
             parts.append(f'- {message.get("role", "unknown")}: {content[:500]}')

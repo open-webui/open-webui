@@ -4,7 +4,7 @@
 		deleteTagById,
 		getAllTags,
 		getTagsById,
-		updateChatById
+		updateChatByIdWindow
 	} from '$lib/apis/chats';
 	import { tags as _tags } from '$lib/stores';
 	import { createEventDispatcher, onMount } from 'svelte';
@@ -34,7 +34,7 @@
 		}
 
 		tags = await getTags();
-		await updateChatById(localStorage.token, chatId, {
+		await updateChatByIdWindow(localStorage.token, chatId, {
 			tags: tags
 		});
 
@@ -47,7 +47,7 @@
 	const deleteTag = async (tagName) => {
 		const res = await deleteTagById(localStorage.token, chatId, tagName);
 		tags = await getTags();
-		await updateChatById(localStorage.token, chatId, {
+		await updateChatByIdWindow(localStorage.token, chatId, {
 			tags: tags
 		});
 

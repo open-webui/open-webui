@@ -2,7 +2,7 @@
 	import { getContext, onDestroy, tick } from 'svelte';
 	import { LinkPreview } from 'bits-ui';
 
-	import { getChatById } from '$lib/apis/chats';
+	import { getChatByIdWindow } from '$lib/apis/chats';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { user } from '$lib/stores';
@@ -49,7 +49,7 @@
 	};
 
 	const loadChatPreview = async (id: string) => {
-		if (!id || loading || requestedChatId === id) return;
+		if (!id || requestedChatId === id) return;
 
 		const token = ++loadToken;
 		requestedChatId = id;
@@ -59,7 +59,7 @@
 		history = null;
 		selectedModels = [''];
 
-		const chat = await getChatById(localStorage.token, id).catch(() => null);
+		const chat = await getChatByIdWindow(localStorage.token, id, 8).catch(() => null);
 		if (token !== loadToken) return;
 
 		if (chat?.chat?.history) {
@@ -124,7 +124,7 @@
 				{:else if previewReady}
 					<Messages
 						className="flex w-full pt-2 pb-0 [&_.message-listitem]:!mb-1 [&_.message-listitem]:!max-w-none [&_.message-listitem]:!px-3 [&_.pb-18]:!pb-1.5 [&_.markdown-prose]:!text-xs [&_.markdown-prose]:!leading-snug [&_.whitespace-pre-wrap]:!text-xs [&_.whitespace-pre-wrap]:!leading-snug [&_.text-\[0\.9375rem\]]:!text-xs [&_.text-sm]:!text-xs [&_.tool-call-body_pre]:!text-[11px] [&_.rounded-3xl]:!rounded-2xl [&_.chat-user_.rounded-3xl]:!bg-gray-50 dark:[&_.chat-user_.rounded-3xl]:!bg-gray-800 [&_.px-4]:!px-3 [&_.py-3]:!py-2 [&_.py-1\.5]:!py-1"
-						chatId={`chat-hover-preview-${chatId}`}
+						{chatId}
 						user={$user}
 						prompt=""
 						readOnly={true}

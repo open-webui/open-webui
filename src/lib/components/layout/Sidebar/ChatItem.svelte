@@ -24,10 +24,10 @@
 		cloneChatById,
 		deleteChatById,
 		getAllTags,
-		getChatById,
+		getChatByIdWindow,
 		getChatListByTagName,
 		markChatUnreadById,
-		updateChatById,
+		updateChatByIdWindow,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
 	import {
@@ -133,14 +133,6 @@
 		(effectiveReadAt === null || (updatedAt !== null && updatedAt > effectiveReadAt));
 	$: showInlineActions = id === $chatId || confirmEdit || mouseOver || selected;
 
-	const loadChat = async () => {
-		if (!chat) {
-			draggable = false;
-			chat = await getChatById(localStorage.token, id);
-			draggable = true;
-		}
-	};
-
 	const markUnreadHandler = async () => {
 		const res = await markChatUnreadById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
@@ -162,7 +154,7 @@
 		if (title === '') {
 			toast.error($i18n.t('Title cannot be an empty string.'));
 		} else {
-			await updateChatById(localStorage.token, id, {
+			await updateChatByIdWindow(localStorage.token, id, {
 				title: title
 			});
 
@@ -386,7 +378,7 @@
 
 	const generateTitleHandler = async () => {
 		generating = true;
-		chat = await getChatById(localStorage.token, id);
+		chat = await getChatByIdWindow(localStorage.token, id);
 
 		const chatContent = chat.chat;
 

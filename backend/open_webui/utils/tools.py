@@ -712,7 +712,7 @@ async def get_builtin_tools(
     chat_id = metadata.get('chat_id') or ''
     chat = None
     if is_saved_chat_id(chat_id):
-        chat = await Chats.get_chat_by_id(chat_id)
+        chat = await Chats.get_chat_by_id(chat_id, include_messages=False)
 
     # Notes tools - search, view, create, and update user's notes
     if (chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note') or (
@@ -1297,7 +1297,9 @@ async def get_terminal_servers(request: Request):
     terminal_servers = []
     if request.app.state.redis is not None:
         try:
-            terminal_servers = JSONCodec.loads(await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers'))
+            terminal_servers = JSONCodec.loads(
+                await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers')
+            )
             request.app.state.TERMINAL_SERVERS = terminal_servers
         except Exception as e:
             log.error(f'Error fetching terminal_servers from Redis: {e}')
