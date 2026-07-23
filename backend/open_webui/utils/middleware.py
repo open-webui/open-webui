@@ -4098,12 +4098,16 @@ async def streaming_chat_response_handler(response, ctx):
                         if delta_count >= delta_chunk_size:
                             await flush_pending_delta_data(delta_chunk_size)
 
+                    # Loop-invariant values hoisted out of the per-chunk path
+                    stream_extra_params = {'__body__': form_data, **extra_params}
+                    realtime_save = ENABLE_REALTIME_CHAT_SAVE and not metadata.get('chat_id', '').startswith('channel:')
+
                     async for line in response.body_iterator:
                         line = line.decode('utf-8', 'replace') if isinstance(line, bytes) else line
                         data = line
 
-                        # Skip empty lines
-                        if not data.strip():
+                        # Skip empty lines (isspace: strip() would allocate per line)
+                        if not data or data.isspace():
                             continue
 
                         # "data:" is the prefix for each event
@@ -4130,19 +4134,20 @@ async def streaming_chat_response_handler(response, ctx):
                                 pass
                             continue
 
-                        # Remove the prefix
-                        data = data[len('data:') :].strip()
+                        # Remove the "data:" prefix
+                        data = data[5:].strip()
 
                         try:
                             data = json.loads(data)
 
-                            data, _ = await process_filter_functions(
-                                request=request,
-                                filter_functions=filter_functions,
-                                filter_type='stream',
-                                form_data=data,
-                                extra_params={'__body__': form_data, **extra_params},
-                            )
+                            if filter_functions:
+                                data, _ = await process_filter_functions(
+                                    request=request,
+                                    filter_functions=filter_functions,
+                                    filter_type='stream',
+                                    form_data=data,
+                                    extra_params=stream_extra_params,
+                                )
 
                             if data:
                                 if 'event' in data and not getattr(request.state, 'direct', False):
@@ -4382,7 +4387,11 @@ async def streaming_chat_response_handler(response, ctx):
                                             }
                                             delta_type = 'tool_call'
 
-                                    image_urls = await get_image_urls(delta.get('images', []), request, metadata, user)
+                                    delta_images = delta.get('images')
+                                    # Virtually no chunks carry images; skip the coroutine round trip
+                                    image_urls = (
+                                        await get_image_urls(delta_images, request, metadata, user) if delta_images else []
+                                    )
                                     if image_urls:
                                         image_file_list = [{'type': 'image', 'url': url} for url in image_urls]
                                         message_files = await Chats.add_message_files_by_id_and_message_id(
@@ -4611,9 +4620,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             if end:
                                                 break
 
-                                        if ENABLE_REALTIME_CHAT_SAVE and not metadata.get('chat_id', '').startswith(
-                                            'channel:'
-                                        ):
+                                        if realtime_save:
                                             current_output = full_output()
                                             # Save message in the database
                                             await Chats.upsert_message_to_chat_by_id_and_message_id(
