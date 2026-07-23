@@ -45,6 +45,7 @@
 	export let mergeResponses: Function;
 
 	export let addMessages: Function;
+	export let forkHandler: Function | null = null;
 
 	export let triggerScroll: Function;
 
@@ -319,6 +320,7 @@
 											groupedMessageIds[selectedModelIdx].messageIds.length - 1;
 									}}
 									{addMessages}
+									{forkHandler}
 									{readOnly}
 									{topPadding}
 									{onInsertToNote}
@@ -376,6 +378,7 @@
 												groupedMessageIds[modelIdx].messageIds.length - 1;
 										}}
 										{addMessages}
+										{forkHandler}
 										{readOnly}
 										{editCodeBlock}
 										{topPadding}

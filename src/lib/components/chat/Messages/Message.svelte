@@ -39,6 +39,7 @@
 	export let mergeResponses;
 
 	export let addMessages;
+	export let forkHandler: Function | null = null;
 	export let triggerScroll;
 	export let readOnly = false;
 	export let editCodeBlock = true;
@@ -97,6 +98,7 @@
 				{continueResponse}
 				{regenerateResponse}
 				{addMessages}
+				{forkHandler}
 				{readOnly}
 				{editCodeBlock}
 				{topPadding}
@@ -122,6 +124,7 @@
 					{mergeResponses}
 					{triggerScroll}
 					{addMessages}
+					{forkHandler}
 					{readOnly}
 					{editCodeBlock}
 					{topPadding}

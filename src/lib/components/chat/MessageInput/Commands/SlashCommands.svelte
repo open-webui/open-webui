@@ -183,10 +183,10 @@
 				</button>
 			</Tooltip>
 		{:else if item.data.id === 'fork'}
-			<Tooltip content="Clone this chat into a new copy." placement="top">
+			<Tooltip content="Fork the current chat branch into a new chat." placement="top">
 				<button
 					type="button"
-					aria-label="Fork: clone this chat into a new copy."
+					aria-label="Fork: fork the current chat branch into a new chat."
 					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-xs text-left transition-colors duration-75
 						{commandIdx === selectedIdx ? 'app-interactive-active' : ''} disabled:opacity-50"
 					disabled={forkDisabled}
@@ -222,7 +222,7 @@
 					</span>
 					<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
 						<span class="truncate">Fork</span>
-						<span class="app-muted text-[0.625rem] truncate shrink-0">Clone chat</span>
+						<span class="app-muted text-[0.625rem] truncate shrink-0">Current branch</span>
 					</span>
 				</button>
 			</Tooltip>
