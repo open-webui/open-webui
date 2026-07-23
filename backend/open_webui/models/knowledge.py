@@ -479,20 +479,16 @@ class KnowledgeTable:
         user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
         user_group_ids = {group.id for group in user_groups}
 
-        result = []
-        for knowledge_base in knowledge_bases:
-            if knowledge_base.user_id == user_id:
-                result.append(knowledge_base)
-            elif await AccessGrants.has_access(
-                user_id=user_id,
-                resource_type='knowledge',
-                resource_id=knowledge_base.id,
-                permission=permission,
-                user_group_ids=user_group_ids,
-                db=db,
-            ):
-                result.append(knowledge_base)
-        return result
+        # One grants query for all non-owned knowledge bases instead of one each
+        accessible_ids = await AccessGrants.get_accessible_resource_ids(
+            user_id=user_id,
+            resource_type='knowledge',
+            resource_ids=[kb.id for kb in knowledge_bases if kb.user_id != user_id],
+            permission=permission,
+            user_group_ids=user_group_ids,
+            db=db,
+        )
+        return [kb for kb in knowledge_bases if kb.user_id == user_id or kb.id in accessible_ids]
 
     async def get_knowledge_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[KnowledgeModel]:
         try:
