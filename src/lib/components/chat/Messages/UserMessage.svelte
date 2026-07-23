@@ -77,7 +77,7 @@
 	const editMessageHandler = async () => {
 		edit = true;
 		editedContent = message?.content ?? '';
-		editedFiles = message.files;
+		editedFiles = structuredClone(message.files ?? []);
 
 		await tick();
 
@@ -99,7 +99,7 @@
 			return;
 		}
 
-		editMessage(message.id, { content: editedContent, files: editedFiles }, submit);
+		await editMessage(message.id, { content: editedContent, files: editedFiles }, submit);
 
 		edit = false;
 		editedContent = '';
@@ -113,7 +113,7 @@
 	};
 
 	const deleteMessageHandler = async () => {
-		deleteMessage(message.id);
+		await deleteMessage(message.id);
 	};
 
 	onMount(() => {
