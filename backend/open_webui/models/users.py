@@ -755,11 +755,11 @@ class UsersTable:
 
     async def is_user_active(self, user_id: str, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as session:
-            user = await session.get(User, user_id)
-            if user and user.last_active_at:
+            last_active_at = await session.scalar(select(User.last_active_at).where(User.id == user_id))
+            if last_active_at:
                 # Consider user active if last_active_at within the last 3 minutes
                 three_minutes_ago = int(time.time()) - 180
-                return user.last_active_at >= three_minutes_ago
+                return last_active_at >= three_minutes_ago
             return False
 
 
