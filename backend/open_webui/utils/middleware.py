@@ -2157,9 +2157,12 @@ def extract_skill_ids_from_messages(messages: list[dict]) -> set[str]:
     return ids
 
 
+SKILL_MENTION_STRIP_RE = re.compile(r'<(?:\$[^|>]+(?:\|([^>]*))?|/[^|>]+\|([^>]*))>')
+
+
 def strip_skill_mentions(messages: list[dict]) -> None:
     """Replace <$skillId|label> and </skillId|label> mention tags with the label in-place."""
-    strip_re = re.compile(r'<(?:\$[^|>]+(?:\|([^>]*))?|/[^|>]+\|([^>]*))>')
+    strip_re = SKILL_MENTION_STRIP_RE
 
     def label(match):
         return match.group(1) or match.group(2) or ''
@@ -4788,13 +4791,15 @@ async def streaming_chat_response_handler(response, ctx):
                         tool_args = tool_call.get('function', {}).get('arguments', '{}')
                         params = {}
                         if tool_args and tool_args.strip():
+                            # Arguments are almost always JSON; literal_eval is
+                            # kept as fallback for Python-repr-style payloads
                             try:
-                                params = ast.literal_eval(tool_args)
-                            except Exception as e:
-                                log.debug(e)
+                                params = json.loads(tool_args)
+                            except Exception:
                                 try:
-                                    params = json.loads(tool_args)
-                                except Exception:
+                                    params = ast.literal_eval(tool_args)
+                                except Exception as e:
+                                    log.debug(e)
                                     return None
                         tool_call.setdefault('function', {})['arguments'] = json.dumps(params)
                         return params

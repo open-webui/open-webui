@@ -5,6 +5,7 @@ import inspect
 import logging
 import time
 import uuid
+import weakref
 from types import SimpleNamespace
 from typing import Any
 
@@ -1067,6 +1068,23 @@ class NotificationEventSink:
             schedule_notification_dispatch(app, event)
 
 
+# Keyed on the underlying function: reflection is expensive and runs per
+# dispatched event per handler; reloads create new functions and evict.
+_signature_cache = weakref.WeakKeyDictionary()
+
+
+def _handler_signature(handler):
+    func = getattr(handler, '__func__', handler)
+    try:
+        signature = _signature_cache.get(func)
+        if signature is None:
+            signature = inspect.signature(handler)
+            _signature_cache[func] = signature
+        return signature
+    except TypeError:
+        return inspect.signature(handler)
+
+
 async def dispatch_event_functions(app: Any, event: Event, request: Any | None = None) -> None:
     if not ENABLE_PLUGINS:
         return
@@ -1094,7 +1112,7 @@ async def dispatch_event_functions(app: Any, event: Event, request: Any | None =
                 valves = await Functions.get_function_valves_by_id(function.id)
                 function_module.valves = function_module.Valves(**(valves if valves else {}))
 
-            sig = inspect.signature(handler)
+            sig = _handler_signature(handler)
             accepts_kwargs = any(param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values())
             extra_params = {
                 'event': event_payload,
