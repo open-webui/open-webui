@@ -64,14 +64,15 @@
 </script>
 
 {#if filteredItems.length > 0}
-	<div class="px-2 text-xs text-gray-500 py-1">
+	<div class="px-2 py-1 text-[11px] text-gray-500 dark:text-gray-400">
 		{$i18n.t('Emojis')}
 	</div>
 
 	{#each filteredItems as emoji, emojiIdx}
 		<button
-			class="px-2.5 py-1.5 rounded-xl w-full text-left {emojiIdx === selectedIdx
-				? 'bg-gray-50 dark:bg-gray-800 selected-command-option-button'
+			class="flex h-[1.6875rem] w-full items-center rounded-xl px-2 text-left text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {emojiIdx ===
+			selectedIdx
+				? 'bg-gray-50/40 dark:bg-gray-800/40 selected-command-option-button'
 				: ''}"
 			type="button"
 			on:click={() => {
@@ -83,14 +84,14 @@
 			on:focus={() => {}}
 			data-selected={emojiIdx === selectedIdx}
 		>
-			<div class="flex items-center gap-2 text-black dark:text-gray-100">
+			<div class="flex min-w-0 items-center gap-2 text-black dark:text-gray-100">
 				<img
 					src="{WEBUI_BASE_URL}/assets/emojis/{emoji.name.toLowerCase()}.svg"
 					alt={emoji.name}
-					class="size-5 flex-shrink-0"
+					class="size-4.5 flex-shrink-0"
 					loading="lazy"
 				/>
-				<div class="truncate text-sm">
+				<div class="truncate text-[13px]">
 					:{emoji.shortCodes[0]}:
 				</div>
 			</div>

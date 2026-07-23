@@ -97,7 +97,9 @@ export const getSkillItems = async (
 	token: string = '',
 	query: string | null = null,
 	viewOption: string | null = null,
-	page: number | null = null
+	page: number | null = null,
+	orderBy: string | null = null,
+	direction: string | null = null
 ) => {
 	let error = null;
 
@@ -105,6 +107,8 @@ export const getSkillItems = async (
 	if (query) searchParams.append('query', query);
 	if (viewOption) searchParams.append('view_option', viewOption);
 	if (page) searchParams.append('page', page.toString());
+	if (orderBy) searchParams.append('order_by', orderBy);
+	if (direction) searchParams.append('direction', direction);
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/skills/list?${searchParams.toString()}`, {
 		method: 'GET',

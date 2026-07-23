@@ -10,8 +10,7 @@
 	import citationExtension from '$lib/utils/marked/citation-extension';
 
 	const options = {
-		throwOnError: false,
-		breaks: true
+		throwOnError: false
 	};
 
 	marked.use(markedKatexExtension(options));

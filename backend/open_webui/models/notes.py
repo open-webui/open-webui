@@ -312,6 +312,9 @@ class NoteTable:
             if 'meta' in form_data:
                 note.meta = {**note.meta, **form_data['meta']}
 
+            if not db.is_modified(note) and 'access_grants' not in form_data:
+                return await self._to_note_model(note, db=db)
+
             if 'access_grants' in form_data:
                 await AccessGrants.set_access_grants('note', id, form_data['access_grants'], db=db)
 

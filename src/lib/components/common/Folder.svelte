@@ -156,7 +156,7 @@
 					id="sidebar-folder-button"
 					class=" w-full group rounded-xl relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-900 transition {buttonClassName}"
 				>
-					<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium">
+					<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-normal">
 						{#if chevron}
 							<div class=" p-[1px]">
 								{#if open}

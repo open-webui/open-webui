@@ -604,3 +604,87 @@ export const getUserPreview = async (token: string, userId: string) => {
 
 	return res;
 };
+
+export type UserUsageHeatmapEntry = {
+	date: string;
+	messages: number;
+	chats: number;
+	tokens: number;
+	models: Record<string, number>;
+};
+
+export type UserUsageResponse = {
+	totals: {
+		lifetime_tokens: number;
+		input_tokens: number;
+		output_tokens: number;
+		peak_daily_tokens: number;
+		longest_chat_seconds: number;
+		current_streak: number;
+		longest_streak: number;
+		total_chats: number;
+		active_days: number;
+		models_used: number;
+		messages: number;
+		user_messages: number;
+		assistant_messages: number;
+	};
+	heatmap: UserUsageHeatmapEntry[];
+	weekly_heatmap: UserUsageHeatmapEntry[];
+	cumulative_heatmap: UserUsageHeatmapEntry[];
+	insights: {
+		most_used_model: string | null;
+		average_tokens_per_chat: number;
+		average_messages_per_active_day: number;
+		user_message_share: number;
+		assistant_message_share: number;
+	};
+	top_models: Array<{
+		model_id: string;
+		messages: number;
+		input_tokens: number;
+		output_tokens: number;
+		total_tokens: number;
+	}>;
+	top_tools: Array<{ name: string; count: number }>;
+	period: {
+		start_date: number;
+		end_date: number;
+		days: number;
+	};
+};
+
+export const getUserUsage = async (
+	token: string,
+	options: { days?: number; startDate?: number | null; endDate?: number | null } = {}
+): Promise<UserUsageResponse | null> => {
+	let error = null;
+	const searchParams = new URLSearchParams();
+
+	if (options.days) searchParams.append('days', options.days.toString());
+	if (options.startDate) searchParams.append('start_date', options.startDate.toString());
+	if (options.endDate) searchParams.append('end_date', options.endDate.toString());
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/usage?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
