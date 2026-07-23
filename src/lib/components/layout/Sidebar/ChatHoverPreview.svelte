@@ -26,6 +26,8 @@
 	let requestedChatId = '';
 	let loadToken = 0;
 
+	$: messagesContainerId = `chat-hover-preview-messages-${chatId}`;
+
 	const scrollPreviewToBottom = async () => {
 		await tick();
 		requestAnimationFrame(() => {
@@ -103,6 +105,7 @@
 				</div>
 			</div>
 			<div
+				id={messagesContainerId}
 				bind:this={messagesContainerElement}
 				class="max-h-[min(15rem,calc(100vh-4rem))] overflow-y-auto bg-white scrollbar-hover @container dark:bg-gray-850"
 			>
@@ -130,6 +133,7 @@
 						atSelectedModel={null}
 						{history}
 						autoScroll={true}
+						{messagesContainerId}
 						messagesCount={8}
 						sendMessage={() => {}}
 						continueResponse={() => {}}
