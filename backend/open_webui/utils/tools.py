@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import re
+import weakref
 from functools import partial, update_wrapper
 from typing import (
     Any,
@@ -180,16 +181,37 @@ async def build_tool_server_headers(
     return headers, cookies
 
 
+# Signature and type-hint reflection is expensive and deterministic per
+# function; dynamically created functions simply age out of the weak cache.
+_introspection_cache = weakref.WeakKeyDictionary()
+
+
+def get_function_introspection(function: Callable):
+    func = getattr(function, '__func__', function)
+    try:
+        cached = _introspection_cache.get(func)
+    except TypeError:
+        cached = None
+    if cached is None:
+        sig = inspect.signature(function)
+        try:
+            type_hints = get_type_hints(function)
+        except Exception:
+            type_hints = {}
+        cached = (sig, type_hints)
+        try:
+            _introspection_cache[func] = cached
+        except TypeError:
+            pass
+    return cached
+
+
 # Let no function be called without need, and let what
 # it yields justify the cost of running it.
 async def get_async_tool_function_and_apply_extra_params(
     function: Callable, extra_params: dict
 ) -> Callable[..., Awaitable]:
-    sig = inspect.signature(function)
-    try:
-        type_hints = get_type_hints(function)
-    except Exception:
-        type_hints = {}
+    sig, type_hints = get_function_introspection(function)
 
     def coerce_kwargs(kwargs):
         for name, value in kwargs.items():
@@ -714,9 +736,7 @@ async def get_builtin_tools(
         )
 
         # Generate spec from function
-        pydantic_model = convert_function_to_pydantic_model(func)
-        spec = convert_pydantic_model_to_openai_function_spec(pydantic_model)
-        spec = clean_openai_tool_schema(spec)
+        spec = get_builtin_tool_spec(func)
         if func.__name__ == 'delegate_task' and not config.get('subagents.background_enabled'):
             parameters = spec.get('parameters', {})
             parameters.get('properties', {}).pop('background', None)
@@ -865,6 +885,22 @@ def clean_openai_tool_schema(spec: dict) -> dict:
         clean_properties(cleaned_spec['parameters'])
 
     return cleaned_spec
+
+
+# Builtin specs are deterministic per function; building one runs pydantic
+# create_model plus JSON-schema generation, far costlier than the deepcopy.
+_builtin_spec_cache = weakref.WeakKeyDictionary()
+
+
+def get_builtin_tool_spec(func: Callable) -> dict:
+    spec = _builtin_spec_cache.get(func)
+    if spec is None:
+        pydantic_model = convert_function_to_pydantic_model(func)
+        spec = clean_openai_tool_schema(convert_pydantic_model_to_openai_function_spec(pydantic_model))
+        _builtin_spec_cache[func] = spec
+    # Callers mutate specs (delegate_task flags, payload converters), so each
+    # request gets its own copy.
+    return copy.deepcopy(spec)
 
 
 def get_functions_from_tool(tool: object) -> list[Callable]:
