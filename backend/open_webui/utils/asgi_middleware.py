@@ -39,7 +39,6 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials
 from open_webui.env import CUSTOM_API_KEY_HEADER
 from open_webui.internal.db import ScopedSession
-from open_webui.models.config import Config
 from open_webui.utils.auth import get_http_authorization_cred
 from starlette.datastructures import MutableHeaders
 from starlette.requests import Request
@@ -138,9 +137,7 @@ class AuthTokenMiddleware:
     the middleware checks that instead and avoids the 401 short-circuit.
 
     Routes that depend on `get_verified_user` etc. read this state.
-    Also exposes `request.state.enable_api_keys` (snapshotted at request
-    entry from runtime config) and stamps an `X-Process-Time` response
-    header.
+    Also stamps an `X-Process-Time` response header.
     """
 
     def __init__(self, app: ASGIApp, *, fastapi_app) -> None:
@@ -166,7 +163,6 @@ class AuthTokenMiddleware:
                 token = HTTPAuthorizationCredentials(scheme='Bearer', credentials=api_key)
 
         request.state.token = token
-        request.state.enable_api_keys = await Config.get('auth.enable_api_keys')
 
         async def send_with_timing(message: Message) -> None:
             if message['type'] == 'http.response.start':
