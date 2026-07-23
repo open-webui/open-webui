@@ -70,10 +70,10 @@
 
 	import {
 		archiveChatById,
-		cloneChatById,
 		compactChatById,
 		createNewChat,
 		deleteChatById,
+		forkChatById,
 		getAllTags,
 		getChatById,
 		getTagsById,
@@ -1177,7 +1177,7 @@
 		}
 
 		const pageSubscribe = page.subscribe(async (p) => {
-			if (p.url.pathname === '/') {
+			if (p.url.pathname === '/' || p.url.pathname.startsWith('/folders/')) {
 				await tick();
 				initNewChat();
 			}
@@ -1884,6 +1884,9 @@
 					(chatContent?.history ?? undefined) !== undefined
 						? chatContent.history
 						: convertMessagesToHistory(chatContent.messages);
+				if (chat?.current_message_id && history?.messages?.[chat.current_message_id]) {
+					history.currentId = chat.current_message_id;
+				}
 
 				// Sanitize history: repair orphaned references and structurally-malformed
 				// nodes from failed regenerations (#24424, #24157, #20474)
@@ -2466,7 +2469,7 @@
 		document.getElementById('chat-input')?.focus();
 	};
 
-	const handleForkChat = async () => {
+	const handleForkChat = async (messageId: string | null = null) => {
 		if (!$chatId || !history?.currentId) {
 			toast.message($i18n.t('No chat to fork'));
 			return;
@@ -2489,13 +2492,7 @@
 		const toastId = toast.loading($i18n.t('Forking chat...'));
 
 		try {
-			const result = await cloneChatById(
-				localStorage.token,
-				$chatId,
-				$i18n.t('Clone of {{TITLE}}', {
-					TITLE: $chatTitle || 'Chat'
-				})
-			);
+			const result = await forkChatById(localStorage.token, $chatId, messageId ?? history.currentId);
 
 			if (result?.id) {
 				if (!embedded) {
@@ -3725,6 +3722,7 @@
 										{mergeResponses}
 										{chatActionHandler}
 										{addMessages}
+										forkHandler={generating || taskIds?.length ? null : handleForkChat}
 										topPadding={!embedded}
 										bottomPadding={files.length > 0}
 										{onSelect}

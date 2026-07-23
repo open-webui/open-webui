@@ -437,24 +437,24 @@ async def get_current_user_by_api_key(request, api_key: str):
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
 
-    user_permissions = await Config.get('user.permissions')
-    enable_endpoint_restrictions = await Config.get('auth.api_key.endpoint_restrictions')
-    allowed_endpoints = await Config.get('auth.api_key.allowed_endpoints', '')
+    if not await Config.get('auth.enable_api_keys'):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED)
 
-    if not request.state.enable_api_keys or (
-        user.role != 'admin'
-        and not await has_permission(
+    if user.role != 'admin':
+        user_permissions = await Config.get('user.permissions')
+        if not await has_permission(
             user.id,
             'features.api_keys',
             user_permissions,
-        )
-    ):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED)
+        ):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED)
 
     # Enforce endpoint restrictions — checked here (not in middleware)
     # so it applies regardless of how the API key was transported
     # (Authorization header, cookie, x-api-key header, etc.).
+    enable_endpoint_restrictions = await Config.get('auth.api_key.endpoint_restrictions')
     if enable_endpoint_restrictions:
+        allowed_endpoints = await Config.get('auth.api_key.allowed_endpoints', '')
         allowed_paths = [path.strip() for path in str(allowed_endpoints).split(',') if path.strip()]
         request_path = request.scope['path']  # Use raw ASGI path — not spoofable via Host header (CVE-2026-48710)
         is_allowed = any(request_path == allowed or request_path.startswith(allowed + '/') for allowed in allowed_paths)

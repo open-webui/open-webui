@@ -40,13 +40,16 @@
 	export let showMessage: Function = () => {};
 	export let submitMessage: Function = () => {};
 	export let addMessages: Function = () => {};
+	export let forkHandler: Function | null = null;
 
 	export let readOnly = false;
+	export let preview = false;
 	export let editCodeBlock = true;
 
 	export let topPadding = false;
 	export let bottomPadding = false;
 	export let autoScroll;
+	export let messagesContainerId = 'messages-container';
 
 	export let onSelect = (e) => {};
 	export let onInsertToNote: ((content: string) => void) | null = null;
@@ -54,14 +57,18 @@
 	export let messagesCount: number | null = 8;
 	let messagesLoading = false;
 
+	const getMessagesContainer = () => document.getElementById(messagesContainerId);
+
 	onDestroy(() => {
 		cancelAnimationFrame(pendingRebuild);
 	});
 
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
-		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollTop + 100;
+		const element = getMessagesContainer();
+		if (element) {
+			element.scrollTop = element.scrollTop + 100;
+		}
 
 		messagesLoading = true;
 		messagesCount += 8;
@@ -133,7 +140,7 @@
 	}
 
 	const scrollToBottom = () => {
-		const element = document.getElementById('messages-container');
+		const element = getMessagesContainer();
 		if (element) {
 			element.scrollTop = element.scrollHeight;
 
@@ -213,8 +220,10 @@
 
 		// Optional auto-scroll
 		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			const element = getMessagesContainer();
+			autoScroll = element
+				? element.scrollHeight - element.scrollTop <= element.clientHeight + 50
+				: false;
 
 			setTimeout(() => {
 				scrollToBottom();
@@ -260,8 +269,10 @@
 		await tick();
 
 		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			const element = getMessagesContainer();
+			autoScroll = element
+				? element.scrollHeight - element.scrollTop <= element.clientHeight + 50
+				: false;
 
 			setTimeout(() => {
 				scrollToBottom();
@@ -311,8 +322,10 @@
 		await tick();
 
 		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			const element = getMessagesContainer();
+			autoScroll = element
+				? element.scrollHeight - element.scrollTop <= element.clientHeight + 50
+				: false;
 
 			setTimeout(() => {
 				scrollToBottom();
@@ -483,11 +496,13 @@
 
 	const triggerScroll = () => {
 		if (autoScroll) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-			setTimeout(() => {
-				scrollToBottom();
-			}, 100);
+			const element = getMessagesContainer();
+			if (element) {
+				autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+				setTimeout(() => {
+					scrollToBottom();
+				}, 100);
+			}
 		}
 	};
 </script>
@@ -539,8 +554,10 @@
 								{continueResponse}
 								{mergeResponses}
 								{addMessages}
+								{forkHandler}
 								{triggerScroll}
 								{readOnly}
+								{preview}
 								{editCodeBlock}
 								{topPadding}
 								{onInsertToNote}

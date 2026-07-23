@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Optional
+from copy import deepcopy
+from typing import Any, Optional
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
@@ -22,6 +23,38 @@ log = logging.getLogger(__name__)
 _warned_profile_urls: set[str] = set()
 
 
+def strip_extracted_content_from_model_knowledge(knowledge: Any) -> Any:
+    """Drop duplicated extracted text from ModelMeta.knowledge."""
+    if not isinstance(knowledge, list):
+        return knowledge
+
+    sanitized = []
+
+    for item in knowledge:
+        if not isinstance(item, dict):
+            sanitized.append(item)
+            continue
+
+        next_item = item
+        data = item.get('data')
+        if isinstance(data, dict) and 'content' in data:
+            next_item = deepcopy(item)
+            next_item.get('data', {}).pop('content', None)
+
+        file = next_item.get('file')
+        file_data = file.get('data') if isinstance(file, dict) else None
+        if isinstance(file_data, dict) and 'content' in file_data:
+            if next_item is item:
+                next_item = deepcopy(item)
+                file = next_item.get('file')
+                file_data = file.get('data') if isinstance(file, dict) else None
+            file_data.pop('content', None)
+
+        sanitized.append(next_item)
+
+    return sanitized
+
+
 # --- Models DB Schema ---
 
 
@@ -37,6 +70,7 @@ class ModelMeta(BaseModel):
     profile_image_url: str | None = None
     description: str | None = Field(default=None, description='User-facing description of the model.')
     capabilities: dict | None = None
+    knowledge: list[Any] | None = None
 
     model_config = ConfigDict(extra='allow')
 
@@ -55,6 +89,11 @@ class ModelMeta(BaseModel):
                     v,
                 )
             return None
+
+    @field_validator('knowledge', mode='before')
+    @classmethod
+    def strip_knowledge_content(cls, v):
+        return strip_extracted_content_from_model_knowledge(v)
 
     @model_validator(mode='before')
     @classmethod
@@ -152,6 +191,14 @@ class ModelsTable:
         access_grants: list[AccessGrantModel | None] = None,
         db: AsyncSession | None = None,
     ) -> ModelModel:
+        if isinstance(model.meta, dict):
+            knowledge = model.meta.get('knowledge')
+            stripped_knowledge = strip_extracted_content_from_model_knowledge(knowledge)
+            if stripped_knowledge != knowledge:
+                model.meta = {**model.meta, 'knowledge': stripped_knowledge}
+                if db is not None:
+                    await db.commit()
+
         model_data = ModelModel.model_validate(model).model_dump(exclude={'access_grants'})
         model_data['access_grants'] = (
             access_grants if access_grants is not None else await self._get_access_grants(model_data['id'], db=db)

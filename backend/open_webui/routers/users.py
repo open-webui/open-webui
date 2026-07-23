@@ -200,6 +200,7 @@ class SharingPermissions(BaseModel):
     public_skills: bool = False
     notes: bool = False
     public_notes: bool = True
+    folders: bool = False
     public_chats: bool = False
     public_calendars: bool = False
 
@@ -474,6 +475,23 @@ async def update_user_settings_by_session_user(
     ):
         # If the user is not an admin and does not have permission to use tool servers, remove the key
         updated_user_settings['ui'].pop('toolServers', None)
+
+    ui_notifications = ui_settings.get('notifications') if isinstance(ui_settings, dict) else None
+    if (
+        user.role != 'admin'
+        and (
+            'notifications' in updated_user_settings
+            or (isinstance(ui_notifications, dict) and 'webhook_url' in ui_notifications)
+        )
+        and not await has_permission(
+            user.id,
+            'features.webhooks',
+            await Config.get('user.permissions'),
+        )
+    ):
+        updated_user_settings.pop('notifications', None)
+        if isinstance(ui_notifications, dict):
+            ui_notifications.pop('webhook_url', None)
 
     user = await Users.update_user_settings_by_id(user.id, updated_user_settings, db=db)
     if user:

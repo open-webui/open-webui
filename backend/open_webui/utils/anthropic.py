@@ -12,6 +12,23 @@ from open_webui.utils.headers import include_user_info_headers
 
 log = logging.getLogger(__name__)
 
+ANTHROPIC_CONVERTED_REQUEST_PARAMS = {
+    'model',
+    'messages',
+    'system',
+    'max_tokens',
+    'temperature',
+    'top_p',
+    'top_k',
+    'stop_sequences',
+    'stream',
+    'metadata',
+    'service_tier',
+    'tools',
+    'tool_choice',
+    'reasoning_effort',
+}
+
 
 def is_anthropic_url(url: str) -> bool:
     """Check if the URL is an Anthropic API endpoint."""
@@ -154,7 +171,9 @@ def _finalize_openai_content(blocks: list) -> str | list:
     return blocks
 
 
-def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
+def convert_anthropic_to_openai_payload(
+    anthropic_payload: dict, passthrough_params: list[str] | str | None = None
+) -> dict:
     """
     Convert an Anthropic Messages API request to OpenAI Chat Completions format.
 
@@ -395,6 +414,48 @@ def convert_anthropic_to_openai_payload(anthropic_payload: dict) -> dict:
     if 'max_tokens' in anthropic_payload:
         openai_payload['max_tokens'] = anthropic_payload['max_tokens']
 
+    captured_passthrough_params = {
+        param: value for param, value in anthropic_payload.items() if param not in ANTHROPIC_CONVERTED_REQUEST_PARAMS
+    }
+    if isinstance(passthrough_params, str):
+        passthrough_params = passthrough_params.split(',')
+    elif not isinstance(passthrough_params, (list, tuple, set)):
+        passthrough_params = []
+    passthrough_param_names = {str(item).strip() for item in passthrough_params if str(item).strip()}
+    if '*' in passthrough_param_names:
+        openai_payload.update(captured_passthrough_params)
+    else:
+        for param in passthrough_param_names:
+            if param in captured_passthrough_params:
+                openai_payload[param] = captured_passthrough_params[param]
+
+    output_config = anthropic_payload.get('output_config')
+    if isinstance(output_config, dict):
+        if 'effort' in output_config and 'reasoning_effort' not in anthropic_payload:
+            openai_payload['reasoning_effort'] = output_config['effort']
+
+        format_config = output_config.get('format')
+        if isinstance(format_config, dict):
+            format_type = format_config.get('type')
+            if format_type == 'json_schema':
+                json_schema = {
+                    'name': format_config.get('name', 'response_schema'),
+                    'schema': format_config.get('schema', {}),
+                }
+                if 'description' in format_config:
+                    json_schema['description'] = format_config['description']
+                if 'strict' in format_config:
+                    json_schema['strict'] = format_config['strict']
+                openai_payload['response_format'] = {
+                    'type': 'json_schema',
+                    'json_schema': json_schema,
+                }
+            elif format_type == 'json_object':
+                openai_payload['response_format'] = {'type': format_type}
+
+    if 'reasoning_effort' in anthropic_payload:
+        openai_payload['reasoning_effort'] = anthropic_payload['reasoning_effort']
+
     # Common parameters
     for param in ('temperature', 'top_p', 'top_k', 'stop_sequences', 'stream', 'metadata', 'service_tier'):
         if param in anthropic_payload:
@@ -471,6 +532,32 @@ def convert_openai_to_anthropic_response(
 
     # Build content blocks
     content = []
+    message_thinking = message.get('thinking')
+    thinking_blocks = message.get('thinking_blocks') or []
+    if not thinking_blocks and isinstance(message_thinking, dict):
+        thinking_blocks = message_thinking.get('blocks') or []
+
+    has_thinking = False
+    for block in thinking_blocks:
+        if not isinstance(block, dict):
+            continue
+
+        thinking = block.get('thinking') or block.get('content') or block.get('text')
+        if not thinking:
+            continue
+
+        thinking_block = {'type': 'thinking', 'thinking': thinking}
+        if block.get('signature'):
+            thinking_block['signature'] = block['signature']
+        content.append(thinking_block)
+        has_thinking = True
+
+    reasoning_content = message.get('reasoning_content') or message.get('reasoning')
+    if not reasoning_content and isinstance(message_thinking, str):
+        reasoning_content = message_thinking
+    if reasoning_content and not has_thinking:
+        content.append({'type': 'thinking', 'thinking': reasoning_content})
+
     message_content = message.get('content')
     if message_content:
         content.append({'type': 'text', 'text': message_content})
@@ -560,6 +647,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
     # Track content blocks with a running index.
     # Each text block or tool_use block gets its own index.
     current_block_index = 0
+    thinking_block_open = False
     text_block_open = False
 
     # Accumulated state for each tool call, keyed by tool call id.
@@ -623,11 +711,52 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                 # Update usage if present
                 capture_usage(data.get('usage'))
 
+                reasoning_content = (
+                    delta.get('reasoning_content')
+                    or delta.get('reasoning')
+                    or delta.get('thinking')
+                    or message.get('reasoning_content')
+                    or message.get('reasoning')
+                )
+                if not reasoning_content:
+                    thinking_blocks = delta.get('thinking_blocks') or message.get('thinking_blocks') or []
+                    for block in thinking_blocks:
+                        if isinstance(block, dict):
+                            reasoning_content = block.get('thinking') or block.get('content') or block.get('text')
+                            if reasoning_content:
+                                break
+
+                if reasoning_content and not text_block_open and not has_tool_calls:
+                    if not thinking_block_open:
+                        block_start = {
+                            'type': 'content_block_start',
+                            'index': current_block_index,
+                            'content_block': {'type': 'thinking', 'thinking': ''},
+                        }
+                        yield f'event: content_block_start\ndata: {json.dumps(block_start)}\n\n'.encode()
+                        thinking_block_open = True
+
+                    block_delta = {
+                        'type': 'content_block_delta',
+                        'index': current_block_index,
+                        'delta': {'type': 'thinking_delta', 'thinking': reasoning_content},
+                    }
+                    yield f'event: content_block_delta\ndata: {json.dumps(block_delta)}\n\n'.encode()
+
                 # --- Handle text content ---
                 # Anthropic expects text blocks before tool blocks, so skip
                 # text deltas once any tool call has started.
                 content = delta.get('content')
                 if content and not has_tool_calls:
+                    if thinking_block_open:
+                        block_stop = {
+                            'type': 'content_block_stop',
+                            'index': current_block_index,
+                        }
+                        yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
+                        thinking_block_open = False
+                        current_block_index += 1
+
                     if not text_block_open:
                         block_start = {
                             'type': 'content_block_start',
@@ -653,6 +782,15 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
 
                 if tool_calls:
                     # Close text block if one is open (text comes before tools)
+                    if thinking_block_open:
+                        block_stop = {
+                            'type': 'content_block_stop',
+                            'index': current_block_index,
+                        }
+                        yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
+                        thinking_block_open = False
+                        current_block_index += 1
+
                     if text_block_open:
                         block_stop = {
                             'type': 'content_block_stop',
@@ -763,6 +901,12 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
 
     except Exception as e:
         log.error(f'Error in Anthropic stream conversion: {e}')
+
+    # Close any open thinking block
+    if thinking_block_open:
+        block_stop = {'type': 'content_block_stop', 'index': current_block_index}
+        yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
+        current_block_index += 1
 
     # Flush any tools that buffered arguments but never emitted a block
     for tool in tracked_tool_calls.values():

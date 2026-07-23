@@ -97,6 +97,10 @@
 			.trim();
 	};
 
+	$: detailButtonClassName = `w-fit py-0.5 ${
+		preview ? 'text-xs' : 'text-[0.9375rem]'
+	} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition`;
+
 	$: displayTokens = getDisplayTokens(tokens);
 	$: singlePlainBlock =
 		displayTokens.length === 1 &&
@@ -278,6 +282,7 @@
 					id={`${id}-${tokenIdx}`}
 					tokens={token.tokens}
 					{done}
+					{preview}
 					{editCodeBlock}
 					{onTaskClick}
 					{sourceIds}
@@ -313,6 +318,7 @@
 							tokens={item.tokens}
 							top={token.loose}
 							{done}
+							{preview}
 							{editCodeBlock}
 							{onTaskClick}
 							{sourceIds}
@@ -348,6 +354,7 @@
 									tokens={item.tokens}
 									top={token.loose}
 									{done}
+									{preview}
 									{editCodeBlock}
 									{onTaskClick}
 									{sourceIds}
@@ -360,6 +367,7 @@
 								tokens={item.tokens}
 								top={token.loose}
 								{done}
+								{preview}
 								{editCodeBlock}
 								{onTaskClick}
 								{sourceIds}
@@ -375,6 +383,7 @@
 			id={`${id}-${tokenIdx}-detail-group`}
 			tokens={token.items}
 			messageDone={done}
+			{preview}
 			{allowEmbeds}
 		>
 			<div slot="content">
@@ -389,7 +398,7 @@
 							grouped={true}
 							open={$settings?.expandDetails ?? false}
 							className="w-full"
-							buttonClassName="w-fit py-0.5 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+							buttonClassName={detailButtonClassName}
 						/>
 					{:else if textContent.length > 0}
 						<Collapsible
@@ -398,7 +407,7 @@
 							attributes={detailToken?.attributes}
 							messageDone={done}
 							className="w-full"
-							buttonClassName="w-fit py-0.5 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+							buttonClassName={detailButtonClassName}
 							dir="auto"
 						>
 							<div class="mb-1.5" slot="content">
@@ -407,6 +416,7 @@
 									tokens={marked.lexer(decode(detailToken.text))}
 									attributes={detailToken?.attributes}
 									{done}
+									{preview}
 									{editCodeBlock}
 									{onTaskClick}
 									{sourceIds}
@@ -422,7 +432,7 @@
 							attributes={detailToken?.attributes}
 							messageDone={done}
 							className="w-full"
-							buttonClassName="w-fit py-0.5 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+							buttonClassName={detailButtonClassName}
 							dir="auto"
 						/>
 					{/if}
@@ -440,6 +450,7 @@
 				resultContent={getDetailTextContent(token)}
 				open={$settings?.expandDetails ?? false}
 				className="w-full space-y-2"
+				buttonClassName={detailButtonClassName}
 			/>
 		{:else if textContent.length > 0}
 			<Collapsible
@@ -448,6 +459,7 @@
 				attributes={token?.attributes}
 				messageDone={done}
 				className="w-full space-y-2"
+				buttonClassName={detailButtonClassName}
 				dir="auto"
 			>
 				<div class=" mb-1.5" slot="content">
@@ -456,6 +468,7 @@
 						tokens={marked.lexer(decode(token.text))}
 						attributes={token?.attributes}
 						{done}
+						{preview}
 						{editCodeBlock}
 						{onTaskClick}
 						{sourceIds}
@@ -471,6 +484,7 @@
 				attributes={token?.attributes}
 				messageDone={done}
 				className="w-full space-y-2"
+				buttonClassName={detailButtonClassName}
 				dir="auto"
 			/>
 		{/if}

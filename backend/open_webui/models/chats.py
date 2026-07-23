@@ -62,6 +62,7 @@ class Chat(Base):  # database table mapping for chat entity
 
     tasks = Column(JSON, nullable=True)
     summary = Column(Text, nullable=True)
+    current_message_id = Column(Text, nullable=True)
 
     last_read_at = Column(BigInteger, nullable=True)
 
@@ -98,6 +99,7 @@ class ChatModel(BaseModel):
 
     tasks: list | None = None
     summary: str | None = None
+    current_message_id: str | None = None
 
     last_read_at: int | None = None
 
@@ -145,6 +147,7 @@ class ChatForm(BaseModel):
 class ChatImportForm(ChatForm):
     meta: dict | None = {}
     pinned: bool | None = False
+    current_message_id: str | None = None
     created_at: int | None = None
     updated_at: int | None = None
 
@@ -177,6 +180,7 @@ class ChatResponse(BaseModel):
 
     tasks: list | None = None
     summary: str | None = None
+    current_message_id: str | None = None
     context_usage: dict | None = None
 
 
@@ -280,6 +284,21 @@ class ChatTable:
         """Recursively remove null bytes from strings in dict/list structures."""
         return sanitize_data_for_db(obj)
 
+    def get_current_message_id(self, chat: dict | None) -> str | None:
+        chat = chat or {}
+        history = chat.get('history') if isinstance(chat.get('history'), dict) else {}
+        current_id = history.get('currentId') or chat.get('currentId') or chat.get('branchPointMessageId')
+        if current_id:
+            return current_id
+
+        messages = chat.get('messages')
+        if isinstance(messages, list):
+            for message in reversed(messages):
+                if isinstance(message, dict) and message.get('id'):
+                    return message['id']
+
+        return None
+
     def _sanitize_chat_row(self, chat_item):
         """
         Clean a Chat SQLAlchemy model's title + chat JSON,
@@ -375,6 +394,7 @@ class ChatTable:
                     'chat': self._clean_null_bytes(form_data.chat),
                     'folder_id': form_data.folder_id,
                     'meta': internal_meta or {},
+                    'current_message_id': self.get_current_message_id(form_data.chat),
                     'created_at': int(time.time()),
                     'updated_at': int(time.time()),
                     'last_read_at': int(time.time()),
@@ -388,8 +408,14 @@ class ChatTable:
 
             # Dual-write initial messages to chat_message table
             try:
-                history = form_data.chat.get('history', {})
-                messages = history.get('messages', {})
+                history = form_data.chat.get('history') if isinstance(form_data.chat.get('history'), dict) else {}
+                messages = history.get('messages') if isinstance(history.get('messages'), dict) else {}
+                if not messages and isinstance(form_data.chat.get('messages'), list):
+                    messages = {
+                        message.get('id'): message
+                        for message in form_data.chat['messages']
+                        if isinstance(message, dict) and message.get('id')
+                    }
                 for message_id, message in messages.items():
                     if isinstance(message, dict) and message.get('role'):
                         await ChatMessages.upsert_message(
@@ -458,6 +484,7 @@ class ChatTable:
                 'meta': form_data.meta,
                 'pinned': form_data.pinned,
                 'folder_id': form_data.folder_id,
+                'current_message_id': form_data.current_message_id or self.get_current_message_id(form_data.chat),
                 'created_at': (form_data.created_at if form_data.created_at else int(time.time())),
                 'updated_at': (form_data.updated_at if form_data.updated_at else int(time.time())),
             }
@@ -497,8 +524,14 @@ class ChatTable:
 
             # Dual-write messages to chat_message table
             for form_data, chat_obj in zip(chat_import_forms, chats):
-                history = form_data.chat.get('history', {})
-                messages = history.get('messages', {})
+                history = form_data.chat.get('history') if isinstance(form_data.chat.get('history'), dict) else {}
+                messages = history.get('messages') if isinstance(history.get('messages'), dict) else {}
+                if not messages and isinstance(form_data.chat.get('messages'), list):
+                    messages = {
+                        message.get('id'): message
+                        for message in form_data.chat['messages']
+                        if isinstance(message, dict) and message.get('id')
+                    }
                 for message_id, message in messages.items():
                     if isinstance(message, dict) and message.get('role'):
                         try:
@@ -530,6 +563,8 @@ class ChatTable:
 
                 chat_item.chat = self._clean_null_bytes(chat)
                 chat_item.title = self._clean_null_bytes(chat['title']) if 'title' in chat else 'New Chat'
+                if any(key in chat for key in ('history', 'messages', 'currentId', 'branchPointMessageId')):
+                    chat_item.current_message_id = self.get_current_message_id(chat)
 
                 if touch:
                     chat_item.updated_at = int(time.time())
@@ -1627,9 +1662,23 @@ class ChatTable:
                 postgres_content_sql = """
                 EXISTS (
                     SELECT 1
-                    FROM json_array_elements(Chat.chat->'messages') AS message
-                    WHERE json_typeof(message->'content') = 'string'
-                    AND LOWER(message->>'content') LIKE '%' || :content_key || '%'
+                    FROM chat_message AS message
+                    WHERE message.chat_id = Chat.id
+                    AND message.user_id = Chat.user_id
+                    AND json_typeof(message.content) = 'string'
+                    AND LOWER(message.content #>> '{}') LIKE '%' || :content_key || '%'
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM json_each(Chat.chat#>'{history,messages}') AS history_message
+                    WHERE json_typeof(history_message.value->'content') = 'string'
+                    AND LOWER(history_message.value->>'content') LIKE '%' || :content_key || '%'
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM json_array_elements(Chat.chat->'messages') AS legacy_message
+                    WHERE json_typeof(legacy_message->'content') = 'string'
+                    AND LOWER(legacy_message->>'content') LIKE '%' || :content_key || '%'
                 )
                 """
 
@@ -1722,17 +1771,21 @@ class ChatTable:
         folder_id: str,
         skip: int = 0,
         limit: int = 60,
+        sort_by: str = 'updated_at',
+        sort_dir: str = 'desc',
         db: AsyncSession | None = None,
     ) -> list[dict]:
         """Get chats in a folder across ALL users. Returns dicts with user_id."""
         async with get_async_db_context(db) as session:
+            sort_column = Chat.title if sort_by == 'title' else Chat.updated_at
+            order_clause = sort_column.asc() if sort_dir == 'asc' else sort_column.desc()
             stmt = (
                 select(Chat.id, Chat.title, Chat.user_id, Chat.updated_at, Chat.created_at, Chat.last_read_at)
                 .filter_by(folder_id=folder_id)
                 .filter(or_(Chat.pinned == False, Chat.pinned == None))
                 .filter_by(archived=False)
                 .where(Chat.meta['internal'].as_boolean().is_not(True))
-                .order_by(Chat.updated_at.desc(), Chat.id)
+                .order_by(order_clause, Chat.id)
             )
 
             if skip:
@@ -1753,6 +1806,22 @@ class ChatTable:
                 }
                 for chat in all_chats
             ]
+
+    async def count_all_chats_by_folder_id(
+        self,
+        folder_id: str,
+        db: AsyncSession | None = None,
+    ) -> int:
+        async with get_async_db_context(db) as session:
+            stmt = (
+                select(func.count(Chat.id))
+                .filter_by(folder_id=folder_id)
+                .filter(or_(Chat.pinned == False, Chat.pinned == None))
+                .filter_by(archived=False)
+                .where(Chat.meta['internal'].as_boolean().is_not(True))
+            )
+            result = await session.execute(stmt)
+            return result.scalar_one()
 
     async def get_chats_by_folder_ids_and_user_id(
         self, folder_ids: list[str], user_id: str, db: AsyncSession | None = None

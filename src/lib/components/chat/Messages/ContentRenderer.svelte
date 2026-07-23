@@ -307,7 +307,7 @@
 		{#if extracted.detailsContent}
 			<!-- Render structural blocks (tool calls, reasoning, etc.) through Markdown -->
 			<div class="markdown-prose">
-				<Markdown {id} content={extracted.detailsContent} {done} />
+				<Markdown {id} content={extracted.detailsContent} {preview} {done} />
 			</div>
 		{/if}
 		{#if extracted.plainContent}
