@@ -62,6 +62,7 @@ class Chat(Base):  # database table mapping for chat entity
 
     tasks = Column(JSON, nullable=True)
     summary = Column(Text, nullable=True)
+    current_message_id = Column(Text, nullable=True)
 
     last_read_at = Column(BigInteger, nullable=True)
 
@@ -98,6 +99,7 @@ class ChatModel(BaseModel):
 
     tasks: list | None = None
     summary: str | None = None
+    current_message_id: str | None = None
 
     last_read_at: int | None = None
 
@@ -145,6 +147,7 @@ class ChatForm(BaseModel):
 class ChatImportForm(ChatForm):
     meta: dict | None = {}
     pinned: bool | None = False
+    current_message_id: str | None = None
     created_at: int | None = None
     updated_at: int | None = None
 
@@ -177,6 +180,7 @@ class ChatResponse(BaseModel):
 
     tasks: list | None = None
     summary: str | None = None
+    current_message_id: str | None = None
     context_usage: dict | None = None
 
 
@@ -280,6 +284,21 @@ class ChatTable:
         """Recursively remove null bytes from strings in dict/list structures."""
         return sanitize_data_for_db(obj)
 
+    def get_current_message_id(self, chat: dict | None) -> str | None:
+        chat = chat or {}
+        history = chat.get('history') if isinstance(chat.get('history'), dict) else {}
+        current_id = history.get('currentId') or chat.get('currentId') or chat.get('branchPointMessageId')
+        if current_id:
+            return current_id
+
+        messages = chat.get('messages')
+        if isinstance(messages, list):
+            for message in reversed(messages):
+                if isinstance(message, dict) and message.get('id'):
+                    return message['id']
+
+        return None
+
     def _sanitize_chat_row(self, chat_item):
         """
         Clean a Chat SQLAlchemy model's title + chat JSON,
@@ -375,6 +394,7 @@ class ChatTable:
                     'chat': self._clean_null_bytes(form_data.chat),
                     'folder_id': form_data.folder_id,
                     'meta': internal_meta or {},
+                    'current_message_id': self.get_current_message_id(form_data.chat),
                     'created_at': int(time.time()),
                     'updated_at': int(time.time()),
                     'last_read_at': int(time.time()),
@@ -388,8 +408,14 @@ class ChatTable:
 
             # Dual-write initial messages to chat_message table
             try:
-                history = form_data.chat.get('history', {})
-                messages = history.get('messages', {})
+                history = form_data.chat.get('history') if isinstance(form_data.chat.get('history'), dict) else {}
+                messages = history.get('messages') if isinstance(history.get('messages'), dict) else {}
+                if not messages and isinstance(form_data.chat.get('messages'), list):
+                    messages = {
+                        message.get('id'): message
+                        for message in form_data.chat['messages']
+                        if isinstance(message, dict) and message.get('id')
+                    }
                 for message_id, message in messages.items():
                     if isinstance(message, dict) and message.get('role'):
                         await ChatMessages.upsert_message(
@@ -458,6 +484,7 @@ class ChatTable:
                 'meta': form_data.meta,
                 'pinned': form_data.pinned,
                 'folder_id': form_data.folder_id,
+                'current_message_id': form_data.current_message_id or self.get_current_message_id(form_data.chat),
                 'created_at': (form_data.created_at if form_data.created_at else int(time.time())),
                 'updated_at': (form_data.updated_at if form_data.updated_at else int(time.time())),
             }
@@ -497,8 +524,14 @@ class ChatTable:
 
             # Dual-write messages to chat_message table
             for form_data, chat_obj in zip(chat_import_forms, chats):
-                history = form_data.chat.get('history', {})
-                messages = history.get('messages', {})
+                history = form_data.chat.get('history') if isinstance(form_data.chat.get('history'), dict) else {}
+                messages = history.get('messages') if isinstance(history.get('messages'), dict) else {}
+                if not messages and isinstance(form_data.chat.get('messages'), list):
+                    messages = {
+                        message.get('id'): message
+                        for message in form_data.chat['messages']
+                        if isinstance(message, dict) and message.get('id')
+                    }
                 for message_id, message in messages.items():
                     if isinstance(message, dict) and message.get('role'):
                         try:
@@ -530,6 +563,8 @@ class ChatTable:
 
                 chat_item.chat = self._clean_null_bytes(chat)
                 chat_item.title = self._clean_null_bytes(chat['title']) if 'title' in chat else 'New Chat'
+                if any(key in chat for key in ('history', 'messages', 'currentId', 'branchPointMessageId')):
+                    chat_item.current_message_id = self.get_current_message_id(chat)
 
                 if touch:
                     chat_item.updated_at = int(time.time())
