@@ -164,6 +164,26 @@ def test_normalize_delegator_message_is_non_mutating():
     assert message['content'] == ''
 
 
+def test_normalize_completed_message_without_final_text_returns_explicit_marker():
+    message = {
+        'content': '',
+        'done': True,
+        'output': [
+            {'type': 'function_call_output', 'output': '{"matches": 0}'},
+            {'type': 'reasoning', 'content': 'finished'},
+        ],
+    }
+    normalized = normalize_delegator_message(message)
+    recovered = json.loads(normalized['content'])
+    assert recovered['status'] == 'completed_without_final_text'
+    assert message['content'] == ''
+
+
+def test_normalize_incomplete_message_without_text_keeps_polling():
+    message = {'content': '', 'done': False, 'output': None}
+    assert normalize_delegator_message(message) is message
+
+
 def test_owner_envelope_requires_exact_field_partition():
     value = envelope()
     value['patches'][1]['field_key'] = 'foreign'

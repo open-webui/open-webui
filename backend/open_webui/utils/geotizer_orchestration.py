@@ -166,8 +166,22 @@ def normalize_delegator_message(message: Mapping[str, Any] | None) -> Mapping[st
     if not isinstance(message, Mapping):
         return message
     recovered = extract_output_message_text(message)
-    if not recovered or recovered == message.get('content'):
-        return message
+    if recovered:
+        if recovered == message.get('content'):
+            return message
+    else:
+        if message.get('done') is not True:
+            return message
+        recovered = json.dumps(
+            {
+                'status': 'completed_without_final_text',
+                'note': (
+                    'The specialist completed without a final textual message; '
+                    'function-call output remains in the persisted output array.'
+                ),
+            },
+            ensure_ascii=False,
+        )
     return {**message, 'content': recovered}
 
 
