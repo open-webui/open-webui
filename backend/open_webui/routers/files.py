@@ -144,28 +144,21 @@ async def process_uploaded_file(
                     db=db_session,
                 )
 
-            elif (
-                content_type
-                and content_type.startswith(('image/', 'video/'))
-                and await Config.get('rag.content_extraction_engine') != 'external'
-            ):
-                # Media files without an external extraction engine
-                if content_type.startswith('video/'):
-                    # Videos are stored as-is for downstream multimodal
-                    # processing (Tools, vision models). Attempting text
-                    # extraction causes "Timeout reached while detecting
-                    # encoding" errors.
-                    log.info(f'Video file detected ({content_type}), skipping text extraction')
-                    await Files.update_file_data_by_id(
-                        file_item.id,
-                        {'status': 'completed'},
-                        db=db_session,
-                    )
-                else:
-                    raise Exception(f'File type {content_type} is not supported for processing')
+            elif content_type and content_type.startswith('video/'):
+                # Videos are stored as-is for downstream multimodal
+                # processing (Tools, vision models). Attempting text
+                # extraction causes "Timeout reached while detecting
+                # encoding" errors.
+                log.info(f'Video file detected ({content_type}), skipping text extraction')
+                await Files.update_file_data_by_id(
+                    file_item.id,
+                    {'status': 'completed'},
+                    db=db_session,
+                )
 
             else:
-                # Documents, or any file when an external engine is configured
+                # Documents, images (handled by OCR-capable engines),
+                # or any file when an external engine is configured
                 if not content_type:
                     log.info(f'File type {file.content_type} is not provided, but trying to process anyway')
                 await process_file(
