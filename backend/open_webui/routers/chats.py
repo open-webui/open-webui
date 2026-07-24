@@ -55,6 +55,7 @@ CHAT_CONFIG_KEYS = {
     'ENABLE_CONTEXT_COMPACTION': 'chat.context_compaction.enable',
     'CONTEXT_COMPACTION_TOKEN_THRESHOLD': 'chat.context_compaction.token_threshold',
     'CONTEXT_COMPACTION_TOKEN_CAP': 'chat.context_compaction.token_cap',
+    'CONTEXT_COMPACTION_RETAINED_MESSAGES_PERCENTAGE': 'chat.context_compaction.retained_messages_percentage',
     'CONTEXT_COMPACTION_PROMPT_TEMPLATE': 'chat.context_compaction.prompt_template',
 }
 
@@ -76,6 +77,7 @@ class ChatConfigForm(BaseModel):
     ENABLE_CONTEXT_COMPACTION: bool
     CONTEXT_COMPACTION_TOKEN_THRESHOLD: int
     CONTEXT_COMPACTION_TOKEN_CAP: int | None = None
+    CONTEXT_COMPACTION_RETAINED_MESSAGES_PERCENTAGE: int = 20
     CONTEXT_COMPACTION_PROMPT_TEMPLATE: str
 
 
@@ -125,6 +127,9 @@ async def get_chat_config_values() -> dict:
     config = {field: values[storage_key] for field, storage_key in CHAT_CONFIG_KEYS.items() if storage_key in values}
     if config.get('CONTEXT_COMPACTION_TOKEN_CAP') is None:
         config['CONTEXT_COMPACTION_TOKEN_CAP'] = config.get('CONTEXT_COMPACTION_TOKEN_THRESHOLD', 80000)
+    config['CONTEXT_COMPACTION_RETAINED_MESSAGES_PERCENTAGE'] = min(
+        50, max(10, int(config.get('CONTEXT_COMPACTION_RETAINED_MESSAGES_PERCENTAGE', 20)))
+    )
     return config
 
 
@@ -738,12 +743,16 @@ async def get_chat_config(user=Depends(get_admin_user)):
 async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user)):
     threshold = max(1, int(form_data.CONTEXT_COMPACTION_TOKEN_THRESHOLD))
     token_cap = max(1, int(form_data.CONTEXT_COMPACTION_TOKEN_CAP or threshold))
+    retained_messages_percentage = min(
+        50, max(10, int(form_data.CONTEXT_COMPACTION_RETAINED_MESSAGES_PERCENTAGE))
+    )
     await Config.upsert(
         chat_config_updates(
             {
                 **form_data.model_dump(),
                 'CONTEXT_COMPACTION_TOKEN_THRESHOLD': threshold,
                 'CONTEXT_COMPACTION_TOKEN_CAP': token_cap,
+                'CONTEXT_COMPACTION_RETAINED_MESSAGES_PERCENTAGE': retained_messages_percentage,
             }
         )
     )

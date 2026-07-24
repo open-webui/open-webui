@@ -44,6 +44,7 @@
 		ENABLE_CONTEXT_COMPACTION: false,
 		CONTEXT_COMPACTION_TOKEN_THRESHOLD: 80000,
 		CONTEXT_COMPACTION_TOKEN_CAP: 80000,
+		CONTEXT_COMPACTION_RETAINED_MESSAGES_PERCENTAGE: 20,
 		CONTEXT_COMPACTION_PROMPT_TEMPLATE: ''
 	};
 
@@ -271,6 +272,25 @@
 							class={inputClass}
 							bind:value={chatConfig.CONTEXT_COMPACTION_TOKEN_CAP}
 						/>
+					</AdminSettingField>
+
+					<AdminSettingField
+						label={$i18n.t('Retained Message Percentage')}
+						description={$i18n.t(
+							'Percentage (10–50%) of the most recent messages to retain after context compaction.'
+						)}
+					>
+						<div class="relative">
+							<input
+								type="number"
+								min="10"
+								max="50"
+								step="1"
+								class={inputClass}
+								bind:value={chatConfig.CONTEXT_COMPACTION_RETAINED_MESSAGES_PERCENTAGE}
+							/>
+							<span class="absolute inset-y-0 right-4 flex items-center text-sm text-gray-500">%</span>
+						</div>
 					</AdminSettingField>
 
 					<AdminSettingField
