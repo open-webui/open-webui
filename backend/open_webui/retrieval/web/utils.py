@@ -728,6 +728,8 @@ class SafeWebBaseLoader(WebBaseLoader):
             trust_env (bool, optional): set to True if using proxy to make web requests, for example
                 using http(s)_proxy environment variables. Defaults to False.
         """
+        # lxml parses scraped pages far faster than the html.parser default
+        kwargs.setdefault('default_parser', 'lxml')
         super().__init__(*args, **kwargs)
         self.trust_env = trust_env
 

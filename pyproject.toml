@@ -85,6 +85,7 @@ dependencies = [
     "nltk==3.9.4",
     "Markdown==3.10.2",
     "beautifulsoup4==4.14.3",
+    "lxml==6.1.1",
     "pypandoc==1.17",
     "pandas==3.0.3",
     "openpyxl==3.1.5",
