@@ -16,6 +16,7 @@ from open_webui.utils.geotizer_orchestration import (
     compact_batch_context,
     ensure_state_can_continue,
     extract_json_object,
+    extract_owner_envelope,
     merge_owner_envelopes,
     normalize_delegator_message,
     owner_submission,
@@ -309,7 +310,7 @@ async def _produce_valid_owner_envelope(
         raw = await agent_call(owner, prompt, object_name, datacube)
         previous_output = raw
         try:
-            envelope = extract_json_object(raw)
+            envelope = extract_owner_envelope(raw, next_batch)
         except GeotizerOrchestrationError as exc:
             feedback = [str(exc)]
             continue

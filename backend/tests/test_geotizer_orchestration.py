@@ -12,6 +12,7 @@ from open_webui.utils.geotizer_orchestration import (
     build_batch_tasks,
     extract_json_object,
     extract_output_message_text,
+    extract_owner_envelope,
     merge_owner_envelopes,
     normalize_delegator_message,
     partition_owner_batch,
@@ -275,6 +276,40 @@ def test_repair_negative_provenance_does_not_mask_positive_or_unknown_refs():
 )
 def test_extract_json_object_accepts_one_unambiguous_object(rendered):
     assert extract_json_object(rendered)['batch_id'] == 'GIS-DC'
+
+
+def test_extract_owner_envelope_selects_only_exact_partition_candidate():
+    evidence = {'status': 'searched', 'query': 'object'}
+    incomplete = {
+        **envelope(),
+        'patches': envelope()['patches'][:1],
+    }
+    rendered = '\n'.join(
+        [
+            json.dumps(evidence),
+            json.dumps(incomplete),
+            json.dumps(envelope()),
+        ]
+    )
+    selected = extract_owner_envelope(rendered, batch())
+    assert selected == envelope()
+
+
+def test_extract_owner_envelope_rejects_two_distinct_exact_candidates():
+    first = envelope()
+    second = envelope()
+    second['patches'][0]['value'] = 'different'
+    rendered = f'{json.dumps(first)}\n{json.dumps(second)}'
+    with pytest.raises(
+        GeotizerOrchestrationError,
+        match='matching_candidates=2',
+    ):
+        extract_owner_envelope(rendered, batch())
+
+
+def test_extract_owner_envelope_recovers_exact_candidate_from_json_array():
+    rendered = json.dumps([{'status': 'searched'}, envelope()])
+    assert extract_owner_envelope(rendered, batch()) == envelope()
 
 
 def test_extract_output_message_text_reads_latest_openwebui_output_text():

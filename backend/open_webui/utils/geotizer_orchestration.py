@@ -278,12 +278,7 @@ def extract_json_object(text: str) -> dict[str, Any]:
     if not isinstance(text, str) or not text.strip():
         raise GeotizerOrchestrationError('Agent returned an empty response')
 
-    stripped = text.strip()
-    if stripped.startswith('```'):
-        first_newline = stripped.find('\n')
-        last_fence = stripped.rfind('```')
-        if first_newline >= 0 and last_fence > first_newline:
-            stripped = stripped[first_newline + 1 : last_fence].strip()
+    stripped = _strip_json_fence(text)
 
     try:
         parsed = json.loads(stripped)
@@ -294,7 +289,62 @@ def extract_json_object(text: str) -> dict[str, Any]:
     return parsed
 
 
+def extract_owner_envelope(
+    text: str,
+    next_batch: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Select one structurally exact owner envelope among incidental JSON objects."""
+    try:
+        return extract_json_object(text)
+    except GeotizerOrchestrationError as original_error:
+        if not isinstance(text, str) or not text.strip():
+            raise
+        candidates = _decode_embedded_objects(_strip_json_fence(text))
+        expected_keys = [
+            str(field.get('field_key') or '')
+            for field in next_batch.get('fields') or []
+        ]
+        matching = []
+        for candidate in candidates:
+            violations = _contract_violations(next_batch, candidate)
+            patches = candidate.get('patches')
+            if not isinstance(patches, list):
+                continue
+            violations.extend(_partition_violations(expected_keys, patches))
+            if not violations:
+                matching.append(candidate)
+        unique = {
+            json.dumps(item, ensure_ascii=False, sort_keys=True): item
+            for item in matching
+        }
+        if len(unique) == 1:
+            return next(iter(unique.values()))
+        raise GeotizerOrchestrationError(
+            'Agent response must contain exactly one structurally exact '
+            f'owner JSON object; matching_candidates={len(unique)}'
+        ) from original_error
+
+
+def _strip_json_fence(text: str) -> str:
+    stripped = text.strip()
+    if stripped.startswith('```'):
+        first_newline = stripped.find('\n')
+        last_fence = stripped.rfind('```')
+        if first_newline >= 0 and last_fence > first_newline:
+            return stripped[first_newline + 1 : last_fence].strip()
+    return stripped
+
+
 def _decode_embedded_object(text: str) -> dict[str, Any]:
+    objects = _decode_embedded_objects(text)
+    if len(objects) != 1:
+        raise GeotizerOrchestrationError(
+            'Agent response must contain exactly one unambiguous JSON object'
+        )
+    return objects[0]
+
+
+def _decode_embedded_objects(text: str) -> tuple[dict[str, Any], ...]:
     decoder = json.JSONDecoder()
     objects: list[tuple[int, int, dict[str, Any]]] = []
     for index, char in enumerate(text):
@@ -312,9 +362,7 @@ def _decode_embedded_object(text: str) -> dict[str, Any]:
         if not any(other_start < candidate[0] and candidate[1] <= other_end for other_start, other_end, _ in objects)
     ]
     unique = {json.dumps(item, ensure_ascii=False, sort_keys=True): item for _, _, item in top_level}
-    if len(unique) != 1:
-        raise GeotizerOrchestrationError('Agent response must contain exactly one unambiguous JSON object')
-    return next(iter(unique.values()))
+    return tuple(unique.values())
 
 
 def extract_output_message_text(message: Mapping[str, Any]) -> str:
