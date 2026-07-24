@@ -185,6 +185,16 @@ select {
 	@apply bg-gray-850 text-white;
 }
 
+/* Dark theme native date/time controls: render the picker (and its calendar/clock
+   indicator) in dark mode so the icon isn't dark-on-dark and nearly invisible. */
+.dark input[type='date'],
+.dark input[type='time'],
+.dark input[type='datetime-local'],
+.dark input[type='month'],
+.dark input[type='week'] {
+	color-scheme: dark;
+}
+
 @keyframes shimmer {
 	0% {
 		background-position: 100% 0;
