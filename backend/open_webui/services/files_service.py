@@ -123,11 +123,26 @@ async def process_uploaded_file(
             knowledge_id = file_metadata.get('knowledge_id')
             if knowledge_id:
                 try:
+                    # Recreate the uploaded folder tree under the current folder:
+                    # the sanitized virtual path lives on the file's meta; its
+                    # directory portion maps to a knowledge_directory chain created
+                    # beneath the current directory_id. Files without a relative
+                    # path land directly in the current directory.
+                    base_directory_id = file_metadata.get('directory_id')
+                    relative_path = (file_item.meta or {}).get('relative_path')
+                    dir_part = relative_path.rsplit('/', 1)[0] if relative_path and '/' in relative_path else None
+                    directory_id = (
+                        await Knowledges.ensure_directory_path(
+                            knowledge_id, dir_part, user.id, parent_id=base_directory_id, db=db_session
+                        )
+                        if dir_part
+                        else base_directory_id
+                    )
                     await Knowledges.add_file_to_knowledge_by_id(
                         knowledge_id=knowledge_id,
                         file_id=file_item.id,
                         user_id=user.id,
-                        directory_id=file_metadata.get('directory_id'),
+                        directory_id=directory_id,
                     )
                     await process_file(
                         request,

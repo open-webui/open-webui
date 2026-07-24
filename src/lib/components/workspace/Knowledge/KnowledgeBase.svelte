@@ -36,6 +36,7 @@
 		updateKnowledgeAccessGrants,
 		searchKnowledgeFilesById,
 		createKnowledgeDirectory,
+		ensureKnowledgeDirectories,
 		updateKnowledgeDirectory,
 		deleteKnowledgeDirectory,
 		moveFileInKnowledge,
@@ -127,6 +128,10 @@
 	let directoryItems = [];
 	let breadcrumbs = [];
 
+	// Files currently being uploaded, surfaced in a single tooltip indicator
+	// rather than as placeholder rows in the list.
+	let uploadingFiles: { id: string; name: string }[] = [];
+
 	let showDeleteDirectoryConfirm = false;
 	let pendingDeleteDirectoryId: string | null = null;
 	let deleteDirectoryContents = true;
@@ -136,6 +141,12 @@
 	const reset = () => {
 		currentPage = 1;
 	};
+
+	// One name per line for the uploading-files tooltip (escaped; DOMPurify also
+	// sanitizes the rendered content).
+	$: uploadingTooltip = uploadingFiles
+		.map((f) => f.name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'))
+		.join('<br/>');
 
 	const init = async () => {
 		reset();
@@ -175,8 +186,9 @@
 	const getItemsPage = async () => {
 		if (knowledgeId === null) return;
 
-		fileItems = null;
-		fileItemsTotal = null;
+		// Keep already-rendered items visible while refetching (delete, move,
+		// navigate, filter). The full-panel spinner only shows on the initial
+		// load, when fileItems is still null — refreshes swap data in place.
 
 		if (sortKey === null) {
 			direction = null;
@@ -337,22 +349,8 @@
 		}
 	};
 
-	const uploadFileHandler = async (file) => {
-		console.log(file);
-
-		const fileItem = {
-			type: 'file',
-			file: '',
-			id: null,
-			url: '',
-			name: file.name,
-			size: file.size,
-			status: 'uploading',
-			error: '',
-			itemId: uuidv4()
-		};
-
-		if (fileItem.size == 0) {
+	const uploadFileHandler = async (file, relativePath = null) => {
+		if (file.size == 0) {
 			toast.error($i18n.t('You cannot upload an empty file.'));
 			return null;
 		}
@@ -373,11 +371,17 @@
 			return;
 		}
 
-		fileItems = [fileItem, ...(fileItems ?? [])];
+		// Track in-progress uploads in the tooltip indicator instead of adding
+		// placeholder rows to the list.
+		const uploadId = uuidv4();
+		uploadingFiles = [...uploadingFiles, { id: uploadId, name: relativePath || file.name }];
 		try {
 			let metadata = {
 				knowledge_id: knowledge.id,
 				directory_id: currentDirectoryId,
+				// When uploading a folder, carry the file's relative path so the
+				// backend recreates the folder tree (physical storage stays flat).
+				...(relativePath ? { relative_path: relativePath } : {}),
 				// If the file is an audio file, provide the language for STT.
 				...((file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
 				$settings?.audio?.stt?.language
@@ -393,27 +397,20 @@
 			});
 
 			if (uploadedFile) {
-				console.log(uploadedFile);
-				fileItems = fileItems.map((item) => {
-					if (item.itemId === fileItem.itemId) {
-						item.id = uploadedFile.id;
-					}
-					return item;
-				});
-
 				if (uploadedFile.error) {
 					console.warn('File upload warning:', uploadedFile.error);
 					toast.warning(uploadedFile.error);
-					fileItems = fileItems.filter((file) => file.id !== uploadedFile.id);
 				} else {
 					toast.success($i18n.t('File added successfully.'));
-					init();
+					getItemsPage();
 				}
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));
 			}
 		} catch (e) {
 			toast.error(`${e}`);
+		} finally {
+			uploadingFiles = uploadingFiles.filter((f) => f.id !== uploadId);
 		}
 	};
 
@@ -437,6 +434,26 @@
 	// Helper function to check if a path contains hidden folders
 	const hasHiddenFolder = (path) => {
 		return path.split('/').some((part) => part.startsWith('.'));
+	};
+
+	// Directory portion of a file's relative path ('' for a root-level file).
+	const dirPathOf = (relativePath: string): string => {
+		const idx = relativePath.lastIndexOf('/');
+		return idx === -1 ? '' : relativePath.slice(0, idx);
+	};
+
+	// Create the folder tree (root first) under the current directory before
+	// uploading its files, so the folders appear immediately and each file lands
+	// into an existing directory instead of being materialized lazily.
+	const ensureFolderTree = async (relativePaths: string[]) => {
+		const dirPaths = [...new Set(relativePaths.map(dirPathOf).filter(Boolean))];
+		if (dirPaths.length === 0) return;
+		try {
+			await ensureKnowledgeDirectories(localStorage.token, knowledge.id, dirPaths, currentDirectoryId);
+			await getItemsPage();
+		} catch (e) {
+			console.error('Failed to pre-create folder tree', e);
+		}
 	};
 
 	// Modern browsers implementation using File System Access API
@@ -474,8 +491,10 @@
 			}
 		}
 
-		// Recursive function to process directories excluding hidden files and folders
-		async function processDirectory(dirHandle, path = '') {
+		// Recursively collect files (without uploading yet) so the folder tree
+		// can be created first. entryPath is the file's relative path.
+		const collected: { file: File; relativePath: string }[] = [];
+		async function collect(dirHandle, path = '') {
 			for await (const entry of dirHandle.values()) {
 				// Skip hidden files and directories
 				if (entry.name.startsWith('.')) continue;
@@ -487,16 +506,9 @@
 
 				if (entry.kind === 'file') {
 					const file = await entry.getFile();
-					const fileWithPath = new File([file], entryPath, { type: file.type });
-
-					await uploadFileHandler(fileWithPath);
-					uploadedFiles++;
-					updateProgress();
+					collected.push({ file, relativePath: entryPath });
 				} else if (entry.kind === 'directory') {
-					// Only process non-hidden directories
-					if (!entry.name.startsWith('.')) {
-						await processDirectory(entry, entryPath);
-					}
+					await collect(entry, entryPath);
 				}
 			}
 		}
@@ -505,7 +517,19 @@
 		updateProgress();
 
 		if (totalFiles > 0) {
-			await processDirectory(dirHandle);
+			// Seed with the picked folder's name so the selected folder itself
+			// becomes the root directory (matching the Firefox webkitRelativePath
+			// path, which includes the top-level folder).
+			await collect(dirHandle, dirHandle.name);
+
+			// Create the folder tree (root first) before uploading files.
+			await ensureFolderTree(collected.map((c) => c.relativePath));
+
+			for (const { file, relativePath } of collected) {
+				await uploadFileHandler(file, relativePath);
+				uploadedFiles++;
+				updateProgress();
+			}
 		} else {
 			console.log('No files to upload.');
 		}
@@ -548,17 +572,18 @@
 
 					updateProgress();
 
-					// Process all files
-					for (const file of files) {
-						// Skip hidden files (additional check)
-						if (!file.name.startsWith('.')) {
-							const relativePath = file.webkitRelativePath || file.name;
-							const fileWithPath = new File([file], relativePath, { type: file.type });
+					const visible = files.filter((file) => !file.name.startsWith('.'));
 
-							await uploadFileHandler(fileWithPath);
-							uploadedFiles++;
-							updateProgress();
-						}
+					// Create the folder tree (root first) before uploading files.
+					await ensureFolderTree(visible.map((file) => file.webkitRelativePath || file.name));
+
+					// Process all files
+					for (const file of visible) {
+						const relativePath = file.webkitRelativePath || file.name;
+
+						await uploadFileHandler(file, relativePath);
+						uploadedFiles++;
+						updateProgress();
 					}
 
 					// Clean up
@@ -900,7 +925,9 @@
 
 			if (res) {
 				toast.success($i18n.t('File removed successfully.'));
-				await init();
+				// Refresh the list in place (same as folder delete) — stay on the
+				// current page/folder instead of resetting to page 1.
+				getItemsPage();
 			}
 		} catch (e) {
 			console.error('Error in deleteFileHandler:', e);
@@ -1458,6 +1485,24 @@
 							{syncing}
 						</div>
 					</div>
+				</div>
+			{/if}
+
+			{#if uploadingFiles.length > 0}
+				<!-- Fixed at the very top of the viewport so it stays visible while scrolling. -->
+				<div class="fixed top-2 left-1/2 -translate-x-1/2 z-[9999]">
+					<Tooltip content={uploadingTooltip} placement="bottom" className="w-fit">
+						<div
+							class="flex items-center gap-2.5 rounded-xl py-2 px-3 bg-white dark:bg-gray-850 shadow-lg border border-gray-100 dark:border-gray-800"
+						>
+							<Spinner className="size-3.5 shrink-0" />
+							<div class="text-xs text-gray-600 dark:text-gray-300 truncate max-w-[60vw]">
+								{uploadingFiles.length === 1
+									? $i18n.t('Uploading {{name}}', { name: uploadingFiles[0].name })
+									: $i18n.t('Uploading {{count}} files', { count: uploadingFiles.length })}
+							</div>
+						</div>
+					</Tooltip>
 				</div>
 			{/if}
 

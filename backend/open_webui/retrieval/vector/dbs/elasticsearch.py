@@ -2,11 +2,12 @@
 NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
 """
 
+import logging
 import ssl
 from typing import Optional
 
 from elasticsearch import BadRequestError, Elasticsearch
-from elasticsearch.helpers import bulk, scan
+from elasticsearch.helpers import BulkIndexError, bulk, scan
 from open_webui.config import (
     ELASTICSEARCH_API_KEY,
     ELASTICSEARCH_CA_CERTS,
@@ -24,6 +25,26 @@ from open_webui.retrieval.vector.main import (
     VectorItem,
 )
 from open_webui.retrieval.vector.utils import process_metadata
+
+log = logging.getLogger(__name__)
+
+
+def _bulk(client, actions):
+    """Wrap elasticsearch bulk() so per-document failures are actually visible.
+
+    bulk() raises BulkIndexError('N document(s) failed to index.') with the real
+    reasons buried in .errors; without unpacking them the cause (immense keyword
+    term, mapping conflict, …) is impossible to diagnose from the traceback.
+    """
+    try:
+        bulk(client, actions)
+    except BulkIndexError as e:
+        for err in e.errors[:5]:
+            op = next(iter(err.values()), {})
+            reason = (op.get('error') or {}).get('reason')
+            field = (op.get('error') or {}).get('caused_by', {}).get('reason')
+            log.error(f'ES bulk index failure id={op.get("_id")} status={op.get("status")}: {reason} | {field}')
+        raise
 
 
 class ElasticsearchClient(VectorDBBase):
@@ -244,7 +265,7 @@ class ElasticsearchClient(VectorDBBase):
                 }
                 for item in batch
             ]
-            bulk(self.client, actions)
+            _bulk(self.client, actions)
 
     # Upsert documents using the update API with doc_as_upsert=True.
     def upsert(self, collection_name: str, items: list[VectorItem]):
@@ -266,7 +287,7 @@ class ElasticsearchClient(VectorDBBase):
                 }
                 for item in batch
             ]
-            bulk(self.client, actions)
+            _bulk(self.client, actions)
 
     # Delete specific documents from a collection by filtering on both collection and document IDs.
     def delete(

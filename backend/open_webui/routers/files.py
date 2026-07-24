@@ -42,7 +42,7 @@ from open_webui.routers.audio import transcribe
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.misc import strict_match_mime_type
+from open_webui.utils.misc import sanitize_relative_path, strict_match_mime_type
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -111,6 +111,14 @@ async def upload_file_handler(
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
 
+        # Virtual folder path used to recreate a logical directory tree; physical
+        # storage stays flat. Prefer an explicit metadata value, otherwise fall
+        # back to a webkitRelativePath-style filename (e.g. "docs/sub/a.txt").
+        relative_path = sanitize_relative_path(
+            file_metadata.get('relative_path')
+            or (unsanitized_filename if '/' in unsanitized_filename or '\\' in unsanitized_filename else None)
+        )
+
         file_extension = os.path.splitext(filename)[1]
         # Remove the leading dot from the file extension and lowercase it
         file_extension = file_extension[1:].lower() if file_extension else ''
@@ -161,6 +169,7 @@ async def upload_file_handler(
                         'content_type': (file.content_type if isinstance(file.content_type, str) else None),
                         'size': len(contents),
                         'file_hash': file_hash,
+                        'relative_path': relative_path,
                         'data': file_metadata,
                     },
                 }

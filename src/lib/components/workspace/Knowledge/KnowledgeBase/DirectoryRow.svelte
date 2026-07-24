@@ -21,8 +21,13 @@
 		name: string;
 		created_at: number;
 		updated_at: number;
+		meta?: { file_count?: number; directory_count?: number } | null;
 	};
 	export let writeAccess = false;
+
+	// Cached immediate-children counts (see knowledge_directory.meta).
+	$: fileCount = directory?.meta?.file_count ?? 0;
+	$: directoryCount = directory?.meta?.directory_count ?? 0;
 
 	export let onNavigate: (id: string) => void = () => {};
 	export let onRename: (id: string, name: string) => void = () => {};
@@ -140,6 +145,17 @@
 					</div>
 				{/if}
 			</div>
+			{#if !editing}
+				<div class="text-xs text-gray-400 line-clamp-1">
+					{directoryCount === 1
+						? $i18n.t('{{count}} folder', { count: directoryCount })
+						: $i18n.t('{{count}} folders', { count: directoryCount })}
+					·
+					{fileCount === 1
+						? $i18n.t('{{count}} file', { count: fileCount })
+						: $i18n.t('{{count}} files', { count: fileCount })}
+				</div>
+			{/if}
 		</div>
 
 		<div class="flex items-center gap-2 shrink-0">

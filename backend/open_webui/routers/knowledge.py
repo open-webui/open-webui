@@ -907,36 +907,9 @@ async def remove_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    await Knowledges.remove_file_from_knowledge_by_id(knowledge_id=id, file_id=form_data.file_id, db=db)
-
-    # Remove content from the vector database
-    try:
-        await ASYNC_VECTOR_DB_CLIENT.delete(
-            collection_name=knowledge.id, filter={'file_id': form_data.file_id}
-        )  # Remove by file_id first
-
-        await ASYNC_VECTOR_DB_CLIENT.delete(
-            collection_name=knowledge.id, filter={'hash': file.hash}
-        )  # Remove by hash as well in case of duplicates
-    except Exception as e:
-        log.debug('This was most likely caused by bypassing embedding processing')
-        log.debug(e)
-        pass
-
-    # Anyone with write permission or higher can delete files
-    if delete_file and (file.user_id == user.id or user.role == 'admin'):
-        try:
-            # Remove the file's collection from vector database
-            file_collection = f'file-{form_data.file_id}'
-            if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-                await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
-        except Exception as e:
-            log.debug('This was most likely caused by bypassing embedding processing')
-            log.debug(e)
-            pass
-
-        # Delete file from database
-        await Files.delete_file_by_id(form_data.file_id, db=db)
+    # Unlink + drop vectors and, when requested, delete the file's DB row and
+    # physical storage (guarded against files still linked to other KBs).
+    await _purge_knowledge_file(knowledge.id, file, user, db, delete_file=delete_file)
 
     if knowledge:
         return KnowledgeFilesResponse(
@@ -1210,28 +1183,7 @@ async def sync_knowledge_cleanup(
         file = await Files.get_file_by_id(file_id, db=db)
         if not file:
             continue
-
-        await Knowledges.remove_file_from_knowledge_by_id(id, file_id, db=db)
-
-        try:
-            await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=id, filter={'file_id': file_id})
-            await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=id, filter={'hash': file.hash})
-        except Exception:
-            pass
-
-        try:
-            collection_name = f'file-{file_id}'
-            if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name):
-                await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name)
-        except Exception:
-            pass
-
-        if file.user_id == user.id or user.role == 'admin':
-            await Files.delete_file_by_id(file_id, db=db)
-            try:
-                await asyncio.to_thread(Storage.delete_file, file.path)
-            except Exception:
-                pass
+        await _purge_knowledge_file(id, file, user, db, delete_file=True)
 
     # ── Remove orphaned directories (children before parents) ──
     for dir_id in reversed(form_data.dir_ids):
@@ -1458,6 +1410,47 @@ async def _verify_knowledge_write_access(id: str, user, db: AsyncSession):
     return knowledge
 
 
+async def _purge_knowledge_file(knowledge_id: str, file, user, db: AsyncSession, delete_file: bool = True) -> None:
+    """Single source of truth for removing a file from a knowledge base.
+
+    Always unlinks the file from this KB and drops the KB's embeddings for it.
+    When ``delete_file`` is set and the caller may delete it, also removes the
+    file's own collection, DB row, and physical storage — but only once the
+    file is no longer linked to any other knowledge base (reference guard), so
+    a file shared across KBs is never orphaned mid-use.
+    """
+    await Knowledges.remove_file_from_knowledge_by_id(knowledge_id=knowledge_id, file_id=file.id, db=db)
+
+    # Drop this KB's vectors for the file (by id, and by hash for duplicates).
+    try:
+        await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge_id, filter={'file_id': file.id})
+        if file.hash:
+            await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge_id, filter={'hash': file.hash})
+    except Exception as e:
+        log.debug(f'Vector delete skipped for {file.id}: {e}')
+
+    if not delete_file:
+        return
+    if not (file.user_id == user.id or user.role == 'admin'):
+        return
+    # Reference guard: keep the bytes while another KB still links this file.
+    if await Knowledges.is_file_linked_to_any_knowledge(file.id, db=db):
+        return
+
+    try:
+        file_collection = f'file-{file.id}'
+        if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+            await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+    except Exception as e:
+        log.debug(f'File collection delete skipped for {file.id}: {e}')
+
+    await Files.delete_file_by_id(file.id, db=db)
+    try:
+        await asyncio.to_thread(Storage.delete_file, file.path)
+    except Exception as e:
+        log.warning(f'Failed to delete storage for file {file.id} ({file.path}): {e}')
+
+
 @router.post('/{id}/dirs/create', response_model=KnowledgeDirectoryModel)
 async def create_knowledge_directory(
     id: str,
@@ -1480,6 +1473,36 @@ async def create_knowledge_directory(
             detail='Failed to create directory. A directory with this name may already exist at this level.',
         )
     return directory
+
+
+class KnowledgeDirectoryEnsureForm(BaseModel):
+    # POSIX-style directory paths (no filename), e.g. ["MyFolder", "MyFolder/sub"].
+    paths: list[str]
+    # Optional base directory to create the paths under (the current folder).
+    parent_id: Optional[str] = None
+
+
+@router.post('/{id}/dirs/ensure')
+async def ensure_knowledge_directories(
+    id: str,
+    form_data: KnowledgeDirectoryEnsureForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Idempotently create a set of directory paths (parents first) under an
+    optional base directory, and return a {path: directory_id} map. Used to
+    materialize a folder tree up front — root first — before uploading files."""
+    await _verify_knowledge_write_access(id, user, db)
+
+    # Create shallow paths before deep ones so parents always exist first.
+    result: dict[str, str] = {}
+    for path in sorted({p for p in form_data.paths if p}, key=lambda p: p.count('/')):
+        directory_id = await Knowledges.ensure_directory_path(
+            id, path, user.id, parent_id=form_data.parent_id, db=db
+        )
+        if directory_id:
+            result[path] = directory_id
+    return result
 
 
 @router.post('/{id}/dirs/{dir_id}/update', response_model=KnowledgeDirectoryModel)
@@ -1531,6 +1554,16 @@ async def delete_knowledge_directory(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
+    # When files are not moved to the parent, fully tear them down (vectors +
+    # DB row + physical storage) instead of just orphaning them. Done here,
+    # before the structural delete, because delete_directory only removes the
+    # join/directory rows.
+    if not move_files:
+        for file_id in await Knowledges.get_file_ids_in_directory_subtree(dir_id, db=db):
+            file = await Files.get_file_by_id(file_id, db=db)
+            if file:
+                await _purge_knowledge_file(id, file, user, db, delete_file=True)
 
     success = await Knowledges.delete_directory(
         directory_id=dir_id,

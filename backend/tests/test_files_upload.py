@@ -10,6 +10,8 @@ External boundaries (embedding/vector-DB via ``process_file``) are mocked;
 storage uses the real local provider writing into a temp ``DATA_DIR``.
 """
 
+import json
+
 import pytest
 
 from open_webui.models.files import Files
@@ -31,10 +33,12 @@ def _clean_queue():
     _drain(get_file_processing_queue())
 
 
-async def _upload(client, name='hello.txt', content=b'hello world', ctype='text/plain', **params):
+async def _upload(client, name='hello.txt', content=b'hello world', ctype='text/plain', metadata=None, **params):
+    data = {'metadata': json.dumps(metadata)} if metadata is not None else None
     return await client.post(
         '/api/v1/files/',
         files={'file': (name, content, ctype)},
+        data=data,
         params=params,
     )
 
@@ -146,3 +150,119 @@ async def test_pending_files_are_recoverable(async_client):
 
     assert uploaded <= pending_ids
     assert all(f.data.get('status') == 'pending' for f in pending)
+
+
+# ── Folder-structure preservation (relative_path → knowledge_directory tree) ──
+
+
+@pytest.fixture
+def _link_only_process(monkeypatch):
+    """Stub extraction/embedding so the auto-link + directory-materialization
+    path runs against the real DB without touching vector backends."""
+
+    async def fake_process_file(request, form_data, user=None, db=None):
+        await Files.update_file_data_by_id(form_data.file_id, {'status': 'completed'}, db=db)
+        return {'status': True}
+
+    monkeypatch.setattr('open_webui.services.files_service.process_file', fake_process_file)
+
+
+async def _new_kb(user_id, name='KB'):
+    from open_webui.models.knowledge import KnowledgeForm, Knowledges
+
+    return await Knowledges.insert_new_knowledge(user_id, KnowledgeForm(name=name, description=''))
+
+
+async def test_upload_stores_relative_path_but_keeps_flat_storage(async_client):
+    resp = await _upload(
+        async_client,
+        name='report.pdf',
+        content=b'body',
+        metadata={'relative_path': 'Q3/finance/report.pdf'},
+    )
+    assert resp.status_code == 200
+    file_id = resp.json()['id']
+
+    file = await Files.get_file_by_id(file_id)
+    # Virtual path preserved as metadata …
+    assert file.meta['relative_path'] == 'Q3/finance/report.pdf'
+    # … but the physical file is flat ({id}_report.pdf), no subdirectories on disk.
+    assert file.filename == 'report.pdf'
+    assert file.path.endswith(f'{file_id}_report.pdf')
+    assert 'Q3' not in file.path and 'finance' not in file.path
+
+
+async def test_relative_path_derived_from_webkit_style_filename(async_client):
+    # No explicit metadata: the folder path rides in the filename (webkitRelativePath).
+    resp = await _upload(async_client, name='docs/sub/a.txt', content=b'x')
+    file = await Files.get_file_by_id(resp.json()['id'])
+    assert file.meta['relative_path'] == 'docs/sub/a.txt'
+    assert file.filename == 'a.txt'
+
+
+async def test_relative_path_rejects_traversal(async_client):
+    resp = await _upload(
+        async_client,
+        name='passwd',
+        content=b'x',
+        metadata={'relative_path': '../../etc/passwd'},
+    )
+    file = await Files.get_file_by_id(resp.json()['id'])
+    # '..' segments are stripped down to a safe basename; nothing escapes upward.
+    assert file.meta['relative_path'] == 'passwd'
+    assert '..' not in file.path
+
+
+async def test_plain_upload_has_no_relative_path(async_client):
+    resp = await _upload(async_client, name='hello.txt')
+    file = await Files.get_file_by_id(resp.json()['id'])
+    assert file.meta.get('relative_path') is None
+
+
+async def test_folder_upload_recreates_knowledge_directory_tree(async_client, app, test_user, _link_only_process):
+    from open_webui.models.knowledge import Knowledges
+
+    kb = await _new_kb(test_user.id)
+
+    resp = await _upload(
+        async_client,
+        name='report.pdf',
+        content=b'body',
+        metadata={'knowledge_id': kb.id, 'relative_path': 'Q3/finance/report.pdf'},
+    )
+    assert resp.status_code == 200
+    file_id = resp.json()['id']
+
+    await _process_queued_file(app, get_file_processing_queue().get_nowait())
+
+    # The Q3 > finance tree was created with correct parent_id foreign keys.
+    dirs = {d.name: d for d in await Knowledges.get_all_directories(kb.id)}
+    assert set(dirs) == {'Q3', 'finance'}
+    assert dirs['Q3'].parent_id is None
+    assert dirs['finance'].parent_id == dirs['Q3'].id
+
+    # The file is linked to the leaf directory via the knowledge_file.directory_id FK.
+    linked = {f.id: dir_id for f, dir_id in await Knowledges.get_files_with_directory_ids(kb.id)}
+    assert linked[file_id] == dirs['finance'].id
+
+
+async def test_folder_upload_is_idempotent_across_files(async_client, app, test_user, _link_only_process):
+    from open_webui.models.knowledge import Knowledges
+
+    kb = await _new_kb(test_user.id)
+
+    for name in ('a.txt', 'b.txt'):
+        resp = await _upload(
+            async_client,
+            name=name,
+            content=name.encode(),
+            metadata={'knowledge_id': kb.id, 'relative_path': f'shared/{name}'},
+        )
+        assert resp.status_code == 200
+        await _process_queued_file(app, get_file_processing_queue().get_nowait())
+
+    # Both files share one 'shared' directory — no duplicate levels created.
+    dirs = [d for d in await Knowledges.get_all_directories(kb.id) if d.name == 'shared']
+    assert len(dirs) == 1
+    linked = {f.filename: dir_id for f, dir_id in await Knowledges.get_files_with_directory_ids(kb.id)}
+    assert linked['a.txt'] == linked['b.txt'] == dirs[0].id

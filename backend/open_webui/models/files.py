@@ -53,6 +53,9 @@ class FileMeta(BaseModel):
     name: str | None = None
     content_type: str | None = None
     size: int | None = None
+    # POSIX-style virtual folder path (e.g. "Q3/finance/report.pdf"); physical
+    # storage stays flat. Used to recreate a logical directory tree in a KB.
+    relative_path: str | None = None
 
     model_config = ConfigDict(extra='allow')
 
