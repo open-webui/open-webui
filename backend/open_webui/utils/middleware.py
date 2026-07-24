@@ -5131,7 +5131,20 @@ async def streaming_chat_response_handler(response, ctx):
                         else:
                             break
                     except Exception as e:
-                        log.debug(e)
+                        log.exception('Error in tool-call continuation: %s', e)
+                        error_content = str(e) or 'Error during tool-call continuation.'
+                        if not metadata.get('chat_id', '').startswith('channel:'):
+                            await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                metadata['chat_id'],
+                                metadata['message_id'],
+                                {'error': {'content': error_content}},
+                            )
+                        await event_emitter(
+                            {
+                                'type': 'chat:message:error',
+                                'data': {'error': {'content': error_content}},
+                            }
+                        )
                         break
 
                 if (
@@ -5321,7 +5334,20 @@ async def streaming_chat_response_handler(response, ctx):
                             else:
                                 break
                         except Exception as e:
-                            log.debug(e)
+                            log.exception('Error in code-interpreter continuation: %s', e)
+                            error_content = str(e) or 'Error during code-interpreter continuation.'
+                            if not metadata.get('chat_id', '').startswith('channel:'):
+                                await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                    metadata['chat_id'],
+                                    metadata['message_id'],
+                                    {'error': {'content': error_content}},
+                                )
+                            await event_emitter(
+                                {
+                                    'type': 'chat:message:error',
+                                    'data': {'error': {'content': error_content}},
+                                }
+                            )
                             break
 
                 # Mark all in-progress items as completed
