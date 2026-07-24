@@ -44,6 +44,7 @@ from open_webui.utils.access_control import check_model_access, has_connection_a
 from open_webui.utils.anthropic import get_anthropic_models, is_anthropic_url
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
+from open_webui.utils.json_codec import ORJSONCodec
 from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     stream_chunks_handler,
@@ -110,7 +111,7 @@ async def send_get_request(
                 cookies=cookies,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
-                return await response.json()
+                return await response.json(loads=ORJSONCodec.loads)
     except Exception as e:
         # Handle connection error here
         log.error(f'Connection error: {e}')
@@ -356,7 +357,7 @@ async def count_anthropic_tokens(request: Request, form_data: dict, user: UserMo
         )
 
         try:
-            response_data = await response.json()
+            response_data = await response.json(loads=ORJSONCodec.loads)
         except Exception:
             response_data = await response.text()
 
@@ -508,7 +509,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             detail = None
             if r is not None:
                 try:
-                    res = await r.json()
+                    res = await r.json(loads=ORJSONCodec.loads)
                     if 'error' in res:
                         detail = f'External: {res["error"]}'
                 except Exception:
@@ -762,14 +763,14 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
                         if r.status != 200:
                             error_detail = f'HTTP Error: {r.status}'
                             try:
-                                res = await r.json()
+                                res = await r.json(loads=ORJSONCodec.loads)
                                 if 'error' in res:
                                     error_detail = f'External Error: {res["error"]}'
                             except Exception:
                                 pass
                             raise Exception(error_detail)
 
-                        response_data = await r.json()
+                        response_data = await r.json(loads=ORJSONCodec.loads)
 
                         if 'api.openai.com' in url:
                             response_data['data'] = [
@@ -852,7 +853,7 @@ async def verify_connection(
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
                     try:
-                        response_data = await r.json()
+                        response_data = await r.json(loads=ORJSONCodec.loads)
                     except Exception:
                         response_data = await r.text()
 
@@ -878,7 +879,7 @@ async def verify_connection(
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
                     try:
-                        response_data = await r.json()
+                        response_data = await r.json(loads=ORJSONCodec.loads)
                     except Exception:
                         response_data = await r.text()
 
@@ -1413,7 +1414,7 @@ async def generate_chat_completion(
             )
         else:
             try:
-                response = await r.json()
+                response = await r.json(loads=ORJSONCodec.loads)
             except Exception as e:
                 log.error(e)
                 response = await r.text()
@@ -1525,7 +1526,7 @@ async def embeddings(request: Request, form_data: dict, user):
             )
         else:
             try:
-                response_data = await r.json()
+                response_data = await r.json(loads=ORJSONCodec.loads)
             except Exception:
                 response_data = await r.text()
 
@@ -1651,7 +1652,7 @@ async def responses(
             )
         else:
             try:
-                response_data = await r.json()
+                response_data = await r.json(loads=ORJSONCodec.loads)
             except Exception:
                 response_data = await r.text()
 
@@ -1772,7 +1773,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             )
         else:
             try:
-                response_data = await r.json()
+                response_data = await r.json(loads=ORJSONCodec.loads)
             except Exception:
                 response_data = await r.text()
 

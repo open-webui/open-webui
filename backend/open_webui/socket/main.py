@@ -37,6 +37,7 @@ from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
 from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import decode_token, is_valid_token
+from open_webui.utils.json_codec import ORJSONCodec
 from open_webui.utils.redis import (
     build_sentinel_url,
     get_redis_connection,
@@ -90,10 +91,11 @@ if WEBSOCKET_MANAGER == 'redis':
         if sentinel_hosts
         else WEBSOCKET_REDIS_URL
     )
-    redis_manager = LocalFilteredRedisManager(ws_redis_url, redis_options=WEBSOCKET_REDIS_OPTIONS)
+    redis_manager = LocalFilteredRedisManager(ws_redis_url, redis_options=WEBSOCKET_REDIS_OPTIONS, json=ORJSONCodec)
     sio = socketio.AsyncServer(
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode='asgi',
+        json=ORJSONCodec,
         transports=(['websocket'] if ENABLE_WEBSOCKET_SUPPORT else ['polling']),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
@@ -107,6 +109,7 @@ else:
     sio = socketio.AsyncServer(
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode='asgi',
+        json=ORJSONCodec,
         transports=(['websocket'] if ENABLE_WEBSOCKET_SUPPORT else ['polling']),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
