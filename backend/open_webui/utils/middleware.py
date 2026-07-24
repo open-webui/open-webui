@@ -1836,7 +1836,8 @@ async def chat_completion_files_handler(
                     queries_response = queries_response[bracket_start:bracket_end]
                     queries_response = json.loads(queries_response)
                 except Exception as e:
-                    queries_response = {'queries': [queries_response]}
+                    # Non-JSON output (e.g. a refusal) is not a usable query; empty list triggers the last-user-message fallback
+                    queries_response = {'queries': []}
 
                 queries = queries_response.get('queries', [])
             except Exception:
