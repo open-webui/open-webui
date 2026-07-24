@@ -1,17 +1,24 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import type { CalendarModel } from '$lib/apis/calendar';
+	import type { CalendarEventModel, CalendarModel } from '$lib/apis/calendar';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import {
+		miniCalendarDayKey,
+		miniCalendarEventIndicators,
+		miniCalendarVisibleRange
+	} from './calendarEventIndicators';
 
 	const i18n = getContext('i18n');
 
 	export let calendars: CalendarModel[] = [];
+	export let events: CalendarEventModel[] = [];
 	export let visibleCalendarIds: Set<string> = new Set();
 	export let currentDate: Date = new Date();
 	export let onToggle: (id: string) => void = () => {};
 	export let onCreateCalendar: () => void = () => {};
 	export let onDeleteCalendar: (id: string) => void = () => {};
 	export let onDateSelect: (date: Date) => void = () => {};
+	export let onVisibleRangeChange: (start: string, end: string) => void | Promise<void> = () => {};
 
 	// Delete confirmation state
 	let showDeleteConfirm = false;
@@ -38,12 +45,8 @@
 	$: miniMonth = currentDate.getMonth();
 	$: miniYear = currentDate.getFullYear();
 
-	$: miniMonthStart = new Date(miniYear, miniMonth, 1);
-	$: miniCalStart = (() => {
-		const d = new Date(miniMonthStart);
-		d.setDate(d.getDate() - d.getDay());
-		return d;
-	})();
+	$: miniVisibleRange = miniCalendarVisibleRange(new Date(miniYear, miniMonth, 1));
+	$: miniCalStart = miniVisibleRange.start;
 
 	$: miniDays = (() => {
 		const days: Date[] = [];
@@ -54,6 +57,17 @@
 		}
 		return days;
 	})();
+	$: calendarColorMap = new Map(calendars.map((calendar) => [calendar.id, calendar.color]));
+	$: eventIndicators = miniCalendarEventIndicators(events, visibleCalendarIds, calendarColorMap);
+
+	let lastVisibleRangeKey = '';
+	$: {
+		const rangeKey = `${miniVisibleRange.start.toISOString()}|${miniVisibleRange.end.toISOString()}`;
+		if (rangeKey !== lastVisibleRangeKey) {
+			lastVisibleRangeKey = rangeKey;
+			onVisibleRangeChange(miniVisibleRange.start.toISOString(), miniVisibleRange.end.toISOString());
+		}
+	}
 
 	$: miniMonthNames = [
 		'January',
@@ -76,6 +90,14 @@
 
 	function isSelected(d: Date): boolean {
 		return d.toDateString() === currentDate.toDateString();
+	}
+
+	function miniDayAriaLabel(day: Date, eventCount: number): string {
+		const dateLabel = `${miniMonthNames[day.getMonth()]} ${day.getDate()}, ${day.getFullYear()}`;
+		if (eventCount <= 0) {
+			return dateLabel;
+		}
+		return `${dateLabel}, ${eventCount} ${eventCount === 1 ? 'event' : 'events'}`;
 	}
 
 	function navigateMini(delta: number) {
@@ -155,8 +177,11 @@
 
 		<div class="grid grid-cols-7 text-center text-[10px]">
 			{#each miniDays as day}
+				{@const dayIndicators = eventIndicators.get(miniCalendarDayKey(day))}
+				{@const eventColors = dayIndicators?.colors ?? []}
+				{@const eventCount = dayIndicators?.count ?? 0}
 				<button
-					class="w-6 h-6 flex items-center justify-center rounded-full transition
+					class="relative w-6 h-6 flex items-center justify-center rounded-full transition
 						{day.getMonth() !== miniMonth ? 'text-gray-300 dark:text-gray-600' : ''}
 						{isToday(day) ? 'bg-blue-500 text-white' : ''}
 						{day.toDateString() === currentDate.toDateString() && !isToday(day)
@@ -165,9 +190,23 @@
 						{!isToday(day) && day.toDateString() !== currentDate.toDateString()
 						? 'hover:bg-gray-100 dark:hover:bg-gray-800'
 						: ''}"
+					aria-label={miniDayAriaLabel(day, eventCount)}
 					on:click={() => onDateSelect(day)}
 				>
 					{day.getDate()}
+					{#if eventColors.length > 0}
+						<span
+							aria-hidden="true"
+							class="absolute bottom-px left-1/2 -translate-x-1/2 flex gap-px"
+						>
+							{#each eventColors.slice(0, 3) as color}
+								<span
+									class="size-1 rounded-full {isToday(day) ? 'ring-1 ring-white/80' : ''}"
+									style="background-color: {color};"
+								></span>
+							{/each}
+						</span>
+					{/if}
 				</button>
 			{/each}
 		</div>

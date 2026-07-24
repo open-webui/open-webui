@@ -12,6 +12,7 @@
 	} from '$lib/apis/calendar';
 	import CalendarView from '$lib/components/calendar/CalendarView.svelte';
 	import CalendarSidebar from '$lib/components/calendar/CalendarSidebar.svelte';
+	import { miniCalendarVisibleRange } from '$lib/components/calendar/calendarEventIndicators';
 	import CalendarEventModal from '$lib/components/calendar/CalendarEventModal.svelte';
 	import CreateCalendarModal from '$lib/components/calendar/CreateCalendarModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -26,6 +27,7 @@
 	let loaded = false;
 	let calendars: CalendarModel[] = [];
 	let events: CalendarEventModel[] = [];
+	let miniCalendarEvents: CalendarEventModel[] = [];
 	let visibleCalendarIds: Set<string> = new Set();
 
 	let view: 'month' | 'week' | 'day' = 'month';
@@ -35,6 +37,11 @@
 	let editEvent: CalendarEventModel | null = null;
 	let defaultStartAt: number | null = null;
 	let showCreateCalendarModal = false;
+	let miniRangeStart: string | null = null;
+	let miniRangeEnd: string | null = null;
+	let miniEventsLoadedRangeKey: string | null = null;
+	let miniEventsLoadingRangeKey: string | null = null;
+	let miniEventsRequestId = 0;
 
 	const MONTH_NAMES = [
 		'January',
@@ -99,8 +106,58 @@
 		}
 	}
 
+	function getMiniVisibleRange(date: Date): { start: string; end: string } {
+		const range = miniCalendarVisibleRange(date);
+		return {
+			start: range.start.toISOString(),
+			end: range.end.toISOString()
+		};
+	}
+
+	function miniRangeKey(start: string, end: string): string {
+		return `${start}|${end}`;
+	}
+
+	async function loadMiniEvents(start?: string, end?: string) {
+		const requestId = ++miniEventsRequestId;
+		const range =
+			start && end
+				? { start, end }
+				: miniRangeStart && miniRangeEnd
+					? { start: miniRangeStart, end: miniRangeEnd }
+					: getMiniVisibleRange(currentDate);
+
+		miniRangeStart = range.start;
+		miniRangeEnd = range.end;
+		const rangeKey = miniRangeKey(range.start, range.end);
+		const previousLoadedRangeKey = miniEventsLoadedRangeKey;
+		miniEventsLoadedRangeKey = null;
+		miniEventsLoadingRangeKey = rangeKey;
+		if (previousLoadedRangeKey !== rangeKey) {
+			miniCalendarEvents = [];
+		}
+
+		try {
+			const nextEvents = await getCalendarEvents(localStorage.token, range.start, range.end);
+			if (requestId !== miniEventsRequestId) {
+				return;
+			}
+			miniCalendarEvents = nextEvents;
+			miniEventsLoadedRangeKey = rangeKey;
+		} catch (err) {
+			if (requestId !== miniEventsRequestId) {
+				return;
+			}
+			toast.error(`${err}`);
+		} finally {
+			if (requestId === miniEventsRequestId) {
+				miniEventsLoadingRangeKey = null;
+			}
+		}
+	}
+
 	async function refresh() {
-		await loadEvents();
+		await Promise.all([loadEvents(), loadMiniEvents()]);
 	}
 
 	function toggleCalendar(id: string) {
@@ -158,6 +215,14 @@
 		currentDate = date;
 		await tick();
 		refresh();
+	}
+
+	async function handleMiniVisibleRangeChange(start: string, end: string) {
+		const rangeKey = miniRangeKey(start, end);
+		if (miniEventsLoadedRangeKey === rangeKey || miniEventsLoadingRangeKey === rangeKey) {
+			return;
+		}
+		await loadMiniEvents(start, end);
 	}
 
 	function handleCreateCalendar() {
@@ -345,12 +410,14 @@
 			<div class="hidden md:flex flex-col w-56 shrink-0 pr-1.5 pl-3 overflow-y-auto">
 				<CalendarSidebar
 					{calendars}
+					events={miniCalendarEvents}
 					{visibleCalendarIds}
 					{currentDate}
 					onToggle={toggleCalendar}
 					onCreateCalendar={handleCreateCalendar}
 					onDeleteCalendar={handleDeleteCalendar}
 					onDateSelect={handleDateSelect}
+					onVisibleRangeChange={handleMiniVisibleRangeChange}
 				/>
 			</div>
 
