@@ -188,6 +188,12 @@ async def get_oauth_runtime_config() -> SimpleNamespace:
 # Matches the value recommended by Authlib's compliance_fix documentation.
 DEFAULT_TOKEN_EXPIRY_SECONDS = 3600
 
+# Local expiry for tokens without expiry metadata and without a refresh_token (e.g. Slack user tokens)
+NON_REFRESHABLE_TOKEN_EXPIRY_SECONDS = 365 * 24 * 3600
+
+# Flags such tokens so the refresh path renews the local expiry instead of deleting the session
+NON_REFRESHABLE_TOKEN_MARKER = 'non_refreshable'
+
 
 # Apereo CAS includes client_id in ID token JWS headers; Authlib 1.7/joserfc
 # rejects unknown headers unless we register the provider extension.
@@ -203,8 +209,13 @@ def _normalize_token_expiry(token: dict) -> dict:
     Resolution order:
     1. If *expires_at* is already present and non-None, trust it.
     2. Else if *expires_in* is present and non-None, compute *expires_at*.
-    3. Otherwise fall back to ``DEFAULT_TOKEN_EXPIRY_SECONDS`` and log a
-       warning so operators can identify providers that omit expiration.
+    3. Else if a *refresh_token* is present, fall back to
+       ``DEFAULT_TOKEN_EXPIRY_SECONDS`` and log a warning so operators can
+       identify providers that omit expiration.
+    4. Otherwise the token is non-expiring and non-refreshable; use
+       ``NON_REFRESHABLE_TOKEN_EXPIRY_SECONDS`` and flag it with
+       ``NON_REFRESHABLE_TOKEN_MARKER`` so the refresh path renews the local
+       expiry in place instead of deleting the session.
 
     Also stamps *issued_at* for auditing.
     """
@@ -218,13 +229,36 @@ def _normalize_token_expiry(token: dict) -> dict:
         token['expires_at'] = int(datetime.now().timestamp() + token['expires_in'])
         return token
 
-    # Neither field present — conservative fallback
-    log.warning(
-        "OAuth token response missing both 'expires_in' and 'expires_at'; "
-        f'defaulting to {DEFAULT_TOKEN_EXPIRY_SECONDS}s from now'
-    )
-    token['expires_at'] = int(datetime.now().timestamp() + DEFAULT_TOKEN_EXPIRY_SECONDS)
+    # Fabricating a short expiry for a non-refreshable token would guarantee session deletion (#26141)
+    if token.get('refresh_token'):
+        log.warning(
+            "OAuth token response missing both 'expires_in' and 'expires_at'; "
+            f'defaulting to {DEFAULT_TOKEN_EXPIRY_SECONDS}s from now'
+        )
+        token['expires_at'] = int(datetime.now().timestamp() + DEFAULT_TOKEN_EXPIRY_SECONDS)
+    else:
+        log.info(
+            "OAuth token response missing 'expires_in', 'expires_at' and 'refresh_token'; treating token as long-lived"
+        )
+        token['expires_at'] = int(datetime.now().timestamp() + NON_REFRESHABLE_TOKEN_EXPIRY_SECONDS)
+        token[NON_REFRESHABLE_TOKEN_MARKER] = True
     return token
+
+
+def _renew_non_refreshable_token(token_data: dict, session_id: str):
+    """
+    Re-stamp the local expiry of a token flagged long-lived by
+    ``_normalize_token_expiry``, since refreshing it can only fail and would
+    delete the session (#26141). Returns the mutated token dict, or ``None``
+    when the token is not flagged so the caller falls through to its normal
+    no-refresh-token handling.
+    """
+    if not token_data.get(NON_REFRESHABLE_TOKEN_MARKER):
+        return None
+
+    token_data['expires_at'] = int(datetime.now().timestamp() + NON_REFRESHABLE_TOKEN_EXPIRY_SECONDS)
+    log.debug(f'Renewing long-lived non-refreshable token for session {session_id}')
+    return token_data
 
 
 FERNET = None
@@ -1053,6 +1087,9 @@ class OAuthClientManager:
         token_data = session.token
 
         if not token_data.get('refresh_token'):
+            renewed = _renew_non_refreshable_token(token_data, session.id)
+            if renewed is not None:
+                return renewed
             log.warning(f'No refresh token available for session {session.id}')
             return None
 
@@ -1332,6 +1369,9 @@ class OAuthManager:
         auth_config = await get_oauth_runtime_config()
 
         if not token_data.get('refresh_token'):
+            renewed = _renew_non_refreshable_token(token_data, session.id)
+            if renewed is not None:
+                return renewed
             log.warning(f'No refresh token available for session {session.id}')
             return None
 
