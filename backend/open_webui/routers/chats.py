@@ -1466,64 +1466,48 @@ async def delete_chat_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    # Cancel any in-flight LLM tasks (streaming, title/tags generation)
-    # before deleting the chat to prevent orphaned requests.
-    await stop_item_tasks(request.app.state.redis, id)
-
-    async def delete_internal_children(owner_id: str) -> None:
-        child_ids = await Chats.get_internal_chat_ids_by_parent_id(id, owner_id)
-        for child_id in child_ids:
-            await stop_item_tasks(request.app.state.redis, child_id)
-            await Chats.delete_chat_by_id_and_user_id(child_id, owner_id)
-        await stop_item_tasks(request.app.state.redis, id)
-
+    # Authorize before any side effect: cancelling a chat's in-flight tasks must
+    # not be reachable for a chat the caller may not delete.
     if user.role == 'admin':
         chat = await Chats.get_chat_by_id(id, db=db)
-        if not chat:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=ERROR_MESSAGES.NOT_FOUND,
-            )
-        await Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), user.id, threshold=1, db=db)
-        await delete_internal_children(chat.user_id)
-
-        result = await Chats.delete_chat_by_id(id, db=db)
-
-        if result:
-            await publish_event(
-                request,
-                EVENTS.CHAT_DELETED,
-                actor=user,
-                subject_id=id,
-                data={'owner_id': chat.user_id},
-            )
-        return result
     else:
         if not await has_permission(user.id, 'chat.delete', await Config.get('user.permissions')):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
-
         chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
-        if not chat:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=ERROR_MESSAGES.NOT_FOUND,
-            )
-        await Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), user.id, threshold=1, db=db)
-        await delete_internal_children(user.id)
 
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # Cancel any in-flight LLM tasks (streaming, title/tags generation) before
+    # deleting the chat to prevent orphaned requests.
+    await stop_item_tasks(request.app.state.redis, id)
+    await Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), user.id, threshold=1, db=db)
+
+    # Cascade to internal child chats spawned from this one.
+    for child_id in await Chats.get_internal_chat_ids_by_parent_id(id, chat.user_id):
+        await stop_item_tasks(request.app.state.redis, child_id)
+        await Chats.delete_chat_by_id_and_user_id(child_id, chat.user_id)
+
+    if user.role == 'admin':
+        result = await Chats.delete_chat_by_id(id, db=db)
+    else:
         result = await Chats.delete_chat_by_id_and_user_id(id, user.id, db=db)
-        if result:
-            await publish_event(
-                request,
-                EVENTS.CHAT_DELETED,
-                actor=user,
-                subject_id=id,
-                data={'owner_id': user.id},
-            )
-        return result
+
+    if result:
+        await publish_event(
+            request,
+            EVENTS.CHAT_DELETED,
+            actor=user,
+            subject_id=id,
+            data={'owner_id': chat.user_id},
+        )
+    return result
 
 
 ############################
