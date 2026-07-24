@@ -98,7 +98,7 @@ dependencies = [
 
     "pillow==12.2.0",
     "opencv-python-headless==4.13.0.92",
-    "rapidocr-onnxruntime==1.4.4",
+    "rapidocr==3.9.2",
     "rank-bm25==0.2.2",
 
     "onnxruntime==1.26.0",
