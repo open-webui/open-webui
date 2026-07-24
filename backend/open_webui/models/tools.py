@@ -41,7 +41,7 @@ class ToolMeta(BaseModel):
 
 class ToolModel(BaseModel):
     id: str
-    user_id: str
+    user_id: str | None = None  # may be null for legacy/malformed records
     name: str
     # None when listed with defer_content=True (source skipped for listings)
     content: str | None = None
@@ -66,7 +66,7 @@ class ToolUserModel(ToolModel):
 
 class ToolResponse(BaseModel):
     id: str
-    user_id: str
+    user_id: str | None = None  # may be null for legacy/malformed records
     name: str
     meta: ToolMeta
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
