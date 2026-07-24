@@ -1203,30 +1203,31 @@ async def compact_chat_by_id(
 async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
 
-    if not chat:
-        # Check if user has access via access grants (shared_chat grants)
-        if user.role == 'admin':
-            candidate = await Chats.get_chat_by_id(id, db=db)
-            if ENABLE_ADMIN_CHAT_ACCESS or (candidate and is_internal_chat(candidate.meta)):
-                chat = candidate
-        else:
-            has_grant = await AccessGrants.has_access(
-                user_id=user.id,
-                resource_type='shared_chat',
-                resource_id=id,
-                permission='read',
-                db=db,
-            )
-            if has_grant:
-                chat = await Chats.get_chat_by_id(id, db=db)
+    if not chat and user.role == 'admin':
+        candidate = await Chats.get_chat_by_id(id, db=db)
+        if ENABLE_ADMIN_CHAT_ACCESS or (candidate and is_internal_chat(candidate.meta)):
+            chat = candidate
 
-            # Check folder-based access (shared folders)
-            if not chat:
-                candidate = await Chats.get_chat_by_id(id, db=db)
-                if candidate and candidate.folder_id:
-                    folder = await Folders.get_folder_by_id(candidate.folder_id, db=db)
-                    if folder and await has_folder_access(user.id, folder, 'read', db):
-                        chat = candidate
+    # Access explicitly granted to this user applies to admins too, so an admin
+    # does not lose a chat shared with them when ENABLE_ADMIN_CHAT_ACCESS is off.
+    if not chat:
+        has_grant = await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='shared_chat',
+            resource_id=id,
+            permission='read',
+            db=db,
+        )
+        if has_grant:
+            chat = await Chats.get_chat_by_id(id, db=db)
+
+        # Check folder-based access (shared folders)
+        if not chat:
+            candidate = await Chats.get_chat_by_id(id, db=db)
+            if candidate and candidate.folder_id:
+                folder = await Folders.get_folder_by_id(candidate.folder_id, db=db)
+                if folder and await has_folder_access(user.id, folder, 'read', db):
+                    chat = candidate
 
     if chat:
         data = ChatResponse(**chat.model_dump()).model_dump()
