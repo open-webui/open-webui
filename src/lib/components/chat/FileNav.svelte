@@ -535,7 +535,10 @@
 			const result = isDir
 				? await archiveFromTerminal(terminal.url, terminal.key, [path.replace(/\/$/, '')])
 				: await downloadFileBlob(terminal.url, terminal.key, path, chatId ?? undefined);
-			if (!result) return;
+			if (!result) {
+				toast.error($i18n.t('Download failed'));
+				return;
+			}
 			const url = URL.createObjectURL(result.blob);
 			const a = document.createElement('a');
 			a.href = url;
@@ -810,7 +813,10 @@
 		try {
 			// Archive everything into a single ZIP
 			const result = await archiveFromTerminal(terminal.url, terminal.key, paths);
-			if (!result) return;
+			if (!result) {
+				toast.error($i18n.t('Download failed'));
+				return;
+			}
 			const url = URL.createObjectURL(result.blob);
 			const a = document.createElement('a');
 			a.href = url;
