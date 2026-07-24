@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -438,9 +439,17 @@ def install_frontmatter_requirements(requirements: str):
                 return
 
             log.info(f'Installing requirements: {" ".join(new_reqs)}')
-            subprocess.check_call(
-                [sys.executable, '-m', 'pip', 'install'] + PIP_OPTIONS + new_reqs + PIP_PACKAGE_INDEX_OPTIONS
-            )
+            if util.find_spec('pip'):
+                install_command = [sys.executable, '-m', 'pip', 'install']
+            elif uv_path := shutil.which('uv'):
+                # uv-managed environments (e.g. uv tool install) ship without pip
+                install_command = [uv_path, 'pip', 'install', '--python', sys.executable]
+            else:
+                raise RuntimeError(
+                    'Cannot install requirements: this Python environment has no pip module and uv was not found '
+                    'on PATH. Install pip into the environment or make uv available.'
+                )
+            subprocess.check_call(install_command + PIP_OPTIONS + new_reqs + PIP_PACKAGE_INDEX_OPTIONS)
             _installed_requirements.update(new_reqs)
         except Exception as e:
             log.error(f'Error installing packages: {" ".join(new_reqs)}')
