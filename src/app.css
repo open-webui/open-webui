@@ -838,3 +838,53 @@ body {
 #note-content-container .ProseMirror {
 	padding-bottom: 2rem; /* space for the bottom toolbar */
 }
+
+/*
+  Accessibility: global keyboard focus indicator (WCAG 2.1 SC 2.4.7 Focus Visible).
+
+  Many interactive elements apply Tailwind's `outline-hidden` / `outline-none`,
+  which strips the browser's default focus ring, leaving keyboard and assistive
+  technology users with no visible indication of focus. We restore a visible
+  indicator using an inset `box-shadow` (not `outline`): an inset ring is painted
+  inside the element's own box, so it cannot be clipped by an ancestor's
+  `overflow` (e.g. horizontally scrollable toolbars). `:focus-visible` scopes it
+  to keyboard / AT navigation so mouse clicks don't get a persistent ring, and
+  `!important` ensures per-element shadow utilities can't hide it.
+*/
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible,
+[role='button']:focus-visible,
+[role='link']:focus-visible,
+[role='menuitem']:focus-visible,
+[role='tab']:focus-visible,
+[role='checkbox']:focus-visible,
+[role='switch']:focus-visible,
+[role='option']:focus-visible,
+[contenteditable='true']:focus-visible {
+	outline: 2px solid transparent; /* visible in Windows High Contrast / forced-colors mode */
+	box-shadow: inset 0 0 0 2px #3b82f6 !important; /* blue-500 */
+	border-radius: 2px;
+}
+
+html.dark a:focus-visible,
+html.dark button:focus-visible,
+html.dark input:focus-visible,
+html.dark select:focus-visible,
+html.dark textarea:focus-visible,
+html.dark summary:focus-visible,
+html.dark [tabindex]:focus-visible,
+html.dark [role='button']:focus-visible,
+html.dark [role='link']:focus-visible,
+html.dark [role='menuitem']:focus-visible,
+html.dark [role='tab']:focus-visible,
+html.dark [role='checkbox']:focus-visible,
+html.dark [role='switch']:focus-visible,
+html.dark [role='option']:focus-visible,
+html.dark [contenteditable='true']:focus-visible {
+	box-shadow: inset 0 0 0 2px #60a5fa !important; /* blue-400, brighter for dark backgrounds */
+}
