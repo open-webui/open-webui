@@ -54,10 +54,7 @@
 		'w-full resize-none rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const actionButtonClass =
 		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
-	const variableRowClass = (idx: number) =>
-		`flex min-h-7 w-full items-center gap-2 py-0.5 ${
-			idx > 0 ? 'border-t border-gray-50 dark:border-white/[0.04]' : ''
-		}`;
+	const variableRowClass = 'flex w-full items-center gap-1.5';
 	const variableKeyRegex = /^[a-z][a-z0-9_]*$/;
 
 	const setVariableRows = (variables = {}) => {
@@ -316,9 +313,9 @@
 					{$i18n.t('Add')}
 				</button>
 			</div>
-			<div class="flex flex-col">
+			<div class="flex flex-col gap-1 py-1">
 				{#each variableRows as row, idx}
-					<div class={variableRowClass(idx)}>
+					<div class={variableRowClass}>
 						<div class="min-w-0 truncate font-mono text-xs text-gray-700 dark:text-gray-300">
 							{row.key || $i18n.t('key_name')}
 						</div>
