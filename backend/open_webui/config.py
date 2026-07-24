@@ -1176,6 +1176,7 @@ WEB_SEARCH_TRUST_ENV = os.getenv('WEB_SEARCH_TRUST_ENV', 'True').lower() == 'tru
 OLLAMA_CLOUD_WEB_SEARCH_API_KEY = os.getenv('OLLAMA_CLOUD_API_KEY', '')
 
 SEARXNG_QUERY_URL = os.getenv('SEARXNG_QUERY_URL', '')
+OPENSERP_BASE_URL = os.getenv('OPENSERP_BASE_URL', 'http://localhost:7000')
 
 SEARXNG_LANGUAGE = os.getenv('SEARXNG_LANGUAGE', 'all')
 
@@ -2891,6 +2892,7 @@ DEFAULT_CONFIG = {
     'web.search.trust_env': WEB_SEARCH_TRUST_ENV,
     'web.search.ollama_cloud_api_key': OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
     'web.search.searxng_query_url': SEARXNG_QUERY_URL,
+    'web.search.openserp_base_url': OPENSERP_BASE_URL,
     'web.search.searxng_language': SEARXNG_LANGUAGE,
     'web.search.yacy_query_url': YACY_QUERY_URL,
     'web.search.yacy_username': YACY_USERNAME,
