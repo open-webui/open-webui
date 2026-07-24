@@ -534,10 +534,7 @@ async def delete_folder_by_id(
     folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
 
     if not folder:
-        # Caller is not the owner. Deletion cascades into the owner's chats and
-        # whole subfolder subtree, so a write-collaborator (whose grant is even
-        # inherited by subfolders) must not trigger it. Only the owner or an
-        # admin may delete, for root and subfolders alike.
+        # Deletion cascades into the owner's data, so only the owner or an admin may delete
         folder = await Folders.get_folder_by_id(id, db=db)
         if not folder:
             raise HTTPException(
