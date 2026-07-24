@@ -158,6 +158,11 @@ def _ssrf_safe_new_conn(self):
             if getattr(self, 'source_address', None):
                 sock.bind(self.source_address)
             for opt in getattr(self, 'socket_options', None) or ():
+                if len(opt) == 4 and isinstance(opt[3], str):
+                    # urllib3-future per-protocol form: (level, optname, value, "tcp"/"udp")
+                    if opt[3].lower() == 'tcp':
+                        sock.setsockopt(*opt[:3])
+                    continue
                 sock.setsockopt(*opt)
             sock.connect(sa)
             return sock
