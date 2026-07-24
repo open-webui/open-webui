@@ -594,6 +594,15 @@ try:
 except (ValueError, TypeError):
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = 10
 
+AIOHTTP_FILE_STREAM_CHUNK_SIZE = os.getenv('AIOHTTP_FILE_STREAM_CHUNK_SIZE', str(1024 * 1024))
+try:
+    AIOHTTP_FILE_STREAM_CHUNK_SIZE = int(AIOHTTP_FILE_STREAM_CHUNK_SIZE)
+except Exception:
+    AIOHTTP_FILE_STREAM_CHUNK_SIZE = 1024 * 1024
+
+if AIOHTTP_FILE_STREAM_CHUNK_SIZE <= 0:
+    AIOHTTP_FILE_STREAM_CHUNK_SIZE = 1024 * 1024
+
 
 # SSL verification for tool server connections specifically.
 # Accepts "True", "False", or a path to a CA bundle file.
