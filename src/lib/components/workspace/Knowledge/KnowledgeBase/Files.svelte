@@ -21,6 +21,7 @@
 	import Download from '$lib/components/icons/Download.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
+	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import DirectoryRow from './DirectoryRow.svelte';
 
@@ -32,6 +33,7 @@
 	export let onClick = (fileId) => {};
 	export let onDelete = (fileId) => {};
 	export let onRename = (fileId: string, name: string) => {};
+	export let onReindex = (fileId: string) => {};
 	export let onNavigateDirectory = (directoryId: string) => {};
 	export let onRenameDirectory = (id: string, name: string) => {};
 	export let onDeleteDirectory = (id: string) => {};
@@ -210,6 +212,16 @@
 								<button
 									type="button"
 									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-gray-900 dark:hover:text-gray-100"
+									on:click={() => {
+										onReindex(file?.id ?? file?.tempId);
+									}}
+								>
+									<ArrowPath className="size-3.5" />
+									{$i18n.t('Reindex')}
+								</button>
+								<button
+									type="button"
+									class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
 									on:click={() => {
 										onDelete(file?.id ?? file?.tempId);
 									}}
