@@ -797,11 +797,6 @@ class SafeWebBaseLoader(WebBaseLoader):
             final_results.append(BeautifulSoup(result, url_parser, **self.bs_kwargs))
         return final_results
 
-    async def ascrape_all(self, urls: List[str], parser: Union[str, None] = None) -> List[Any]:
-        """Async fetch all urls, then return soups for all results."""
-        results = await self.fetch_all(urls)
-        return self._unpack_fetch_results(results, urls, parser=parser)
-
     def lazy_load(self) -> Iterator[Document]:
         """Lazy load text from the url(s) in web_path with error handling."""
         for path in self.web_paths:
@@ -817,19 +812,20 @@ class SafeWebBaseLoader(WebBaseLoader):
                 # Log the error and continue with the next URL
                 log.exception(f'Error loading {path}: {e}')
 
+    def _document_from_html(self, html: str, url: str) -> Document:
+        """Build one Document."""
+        soup = self._unpack_fetch_results([html], [url])[0]
+        return Document(
+            page_content=soup.get_text(**self.bs_get_text_kwargs),
+            metadata=extract_metadata(soup, url),
+        )
+
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Async lazy load text from the url(s) in web_path."""
-        results = await self.ascrape_all(self.web_paths)
-        for path, soup in zip(self.web_paths, results):
-            text = soup.get_text(**self.bs_get_text_kwargs)
-            metadata = {'source': path}
-            if title := soup.find('title'):
-                metadata['title'] = title.get_text()
-            if description := soup.find('meta', attrs={'name': 'description'}):
-                metadata['description'] = description.get('content', 'No description found.')
-            if html := soup.find('html'):
-                metadata['language'] = html.get('lang', 'No language found.')
-            yield Document(page_content=text, metadata=metadata)
+        results = await self.fetch_all(self.web_paths)
+        for path, html in zip(self.web_paths, results):
+            # parsing a large page costs hundreds of ms, keep it off the event loop
+            yield await asyncio.to_thread(self._document_from_html, html, path)
 
     async def aload(self) -> list[Document]:
         """Load data into Document objects."""
