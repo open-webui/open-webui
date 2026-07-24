@@ -1171,7 +1171,7 @@
 			{:else if selectedTab === 'notifications'}
 				<Notifications {saveSettings} />
 			{:else if selectedTab === 'shortcuts'}
-				<Shortcuts />
+				<Shortcuts {saveSettings} />
 			{:else if selectedTab === 'connections'}
 				<Connections
 					saveSettings={async (updated: Record<string, any>) => {

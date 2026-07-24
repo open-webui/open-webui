@@ -1095,7 +1095,10 @@
 			shiftKey = true;
 		}
 
-		if (matchKeybinding(e) === Shortcut.TOGGLE_DICTATION) {
+		if (
+			$settings?.keyboardShortcuts !== false &&
+			matchKeybinding(e) === Shortcut.TOGGLE_DICTATION
+		) {
 			e.preventDefault();
 			if (recording) {
 				// Confirm and stop recording
