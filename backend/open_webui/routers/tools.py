@@ -56,32 +56,6 @@ async def get_tool_module(request, tool_id, load_from_db=True):
     return tool_module
 
 
-def _tool_has_write_access(user, tool, user_group_ids: set) -> bool:
-    return (
-        (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
-        or user.id == tool.user_id
-        or any(
-            g.permission == 'write'
-            and (
-                (g.principal_type == 'user' and g.principal_id in (user.id, '*'))
-                or (g.principal_type == 'group' and g.principal_id in user_group_ids)
-            )
-            for g in tool.access_grants
-        )
-    )
-
-
-def _tool_response_data(tool, has_write: bool) -> dict:
-    # `content` (Python source) and `specs` are writer-only. The read schema omits
-    # them, but ConfigDict(extra='allow') re-admits them when the response is built
-    # from model_dump(), so strip them here for non-writers.
-    data = tool.model_dump()
-    if not has_write:
-        data.pop('content', None)
-        data.pop('specs', None)
-    return data
-
-
 ############################
 # GetTools
 # The danger is not in having tools, but in reaching
@@ -100,7 +74,6 @@ async def get_tools(
     # Local Tools
     if ENABLE_PLUGINS:
         tools_cache = get_tools_cache(request)
-        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
         for tool in await Tools.get_tools(defer_content=True, db=db):
             tool_module = tools_cache.get(tool.id)
             has_user_valves = (
@@ -108,11 +81,10 @@ async def get_tools(
                 if tool_module
                 else (tool.meta.has_user_valves if tool.meta else False)
             )
-            data = _tool_response_data(tool, _tool_has_write_access(user, tool, user_group_ids))
             tools.append(
                 ToolUserResponse(
                     **{
-                        **data,
+                        **tool.model_dump(),
                         'has_user_valves': has_user_valves,
                     }
                 )
@@ -242,10 +214,21 @@ async def get_tool_list(user=Depends(get_verified_user), db: AsyncSession = Depe
 
     result = []
     for tool in tools:
-        has_write = _tool_has_write_access(user, tool, user_group_ids)
+        has_write = (
+            (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+            or user.id == tool.user_id
+            or any(
+                g.permission == 'write'
+                and (
+                    (g.principal_type == 'user' and (g.principal_id == user.id or g.principal_id == '*'))
+                    or (g.principal_type == 'group' and g.principal_id in user_group_ids)
+                )
+                for g in tool.access_grants
+            )
+        )
         result.append(
             ToolAccessResponse(
-                **_tool_response_data(tool, has_write),
+                **tool.model_dump(),
                 write_access=has_write,
             )
         )
@@ -474,10 +457,11 @@ async def get_tools_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
                     db=db,
                 )
             )
-            return ToolAccessResponse(
-                **_tool_response_data(tools, write_access),
-                write_access=write_access,
-            )
+            data = tools.model_dump()
+            if not write_access:
+                # extra='allow' re-admits content from model_dump; source is writer-only
+                data.pop('content', None)
+            return ToolAccessResponse(**data, write_access=write_access)
         else:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
