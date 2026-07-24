@@ -11,6 +11,8 @@ from open_webui.utils.geotizer_orchestration import (
     bounded_text,
     build_batch_tasks,
     extract_json_object,
+    extract_output_message_text,
+    normalize_delegator_message,
     validate_owner_envelope,
 )
 
@@ -117,6 +119,49 @@ def test_batch_plan_rejects_unknown_owner():
 )
 def test_extract_json_object_accepts_one_unambiguous_object(rendered):
     assert extract_json_object(rendered)['batch_id'] == 'GIS-DC'
+
+
+def test_extract_output_message_text_reads_latest_openwebui_output_text():
+    message = {
+        'content': '',
+        'done': True,
+        'output': [
+            {'type': 'message', 'content': [{'type': 'output_text', 'text': ''}]},
+            {
+                'type': 'message',
+                'content': [{'type': 'output_text', 'text': '{"batch_id":"GIS-DC"}'}],
+            },
+        ],
+    }
+    assert extract_output_message_text(message) == '{"batch_id":"GIS-DC"}'
+
+
+def test_extract_output_message_text_preserves_legacy_content():
+    message = {
+        'content': 'legacy final response',
+        'output': [
+            {
+                'type': 'message',
+                'content': [{'type': 'output_text', 'text': 'new response'}],
+            }
+        ],
+    }
+    assert extract_output_message_text(message) == 'legacy final response'
+
+
+def test_normalize_delegator_message_is_non_mutating():
+    message = {
+        'content': '',
+        'output': [
+            {
+                'type': 'message',
+                'content': [{'type': 'text', 'text': 'final response'}],
+            }
+        ],
+    }
+    normalized = normalize_delegator_message(message)
+    assert normalized == {**message, 'content': 'final response'}
+    assert message['content'] == ''
 
 
 def test_owner_envelope_requires_exact_field_partition():

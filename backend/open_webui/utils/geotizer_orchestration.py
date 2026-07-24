@@ -131,6 +131,46 @@ def _decode_embedded_object(text: str) -> dict[str, Any]:
     return next(iter(unique.values()))
 
 
+def extract_output_message_text(message: Mapping[str, Any]) -> str:
+    """Normalize Open WebUI 0.10 output arrays into legacy message content."""
+    content = message.get('content')
+    if isinstance(content, str) and content.strip():
+        return content.strip()
+
+    output = message.get('output')
+    if not isinstance(output, list):
+        return ''
+    for item in reversed(output):
+        if not isinstance(item, Mapping) or item.get('type') != 'message':
+            continue
+        parts = item.get('content')
+        if isinstance(parts, str) and parts.strip():
+            return parts.strip()
+        if not isinstance(parts, list):
+            continue
+        texts = [
+            str(part.get('text')).strip()
+            for part in parts
+            if isinstance(part, Mapping)
+            and part.get('type') in {'output_text', 'text'}
+            and isinstance(part.get('text'), str)
+            and str(part.get('text')).strip()
+        ]
+        if texts:
+            return '\n'.join(texts)
+    return ''
+
+
+def normalize_delegator_message(message: Mapping[str, Any] | None) -> Mapping[str, Any] | None:
+    """Expose persisted output text where older delegators expect content."""
+    if not isinstance(message, Mapping):
+        return message
+    recovered = extract_output_message_text(message)
+    if not recovered or recovered == message.get('content'):
+        return message
+    return {**message, 'content': recovered}
+
+
 def validate_owner_envelope(
     next_batch: Mapping[str, Any],
     envelope: Mapping[str, Any],

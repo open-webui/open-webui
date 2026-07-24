@@ -16,6 +16,7 @@ from open_webui.utils.geotizer_orchestration import (
     compact_batch_context,
     ensure_state_can_continue,
     extract_json_object,
+    normalize_delegator_message,
     owner_submission,
     validate_owner_envelope,
     xlsx_download_path,
@@ -347,6 +348,13 @@ async def _build_agent_caller(runtime) -> AgentCall:
     delegator_valves = await Tools.get_tool_valves_by_id(DELEGATOR_TOOL_ID) or {}
     if hasattr(delegator, 'Valves'):
         delegator.valves = delegator.Valves(**delegator_valves)
+    original_extract_message = getattr(delegator, '_extract_chat_history_message', None)
+    if callable(original_extract_message):
+
+        def extract_normalized_message(chat_data, message_id):
+            return normalize_delegator_message(original_extract_message(chat_data, message_id))
+
+        delegator._extract_chat_history_message = extract_normalized_message
 
     sub_agent, _ = await load_tool_module_by_id(SUB_AGENT_TOOL_ID)
     sub_agent_valves = await Tools.get_tool_valves_by_id(SUB_AGENT_TOOL_ID) or {}
