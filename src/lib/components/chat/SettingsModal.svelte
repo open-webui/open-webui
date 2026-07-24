@@ -259,8 +259,13 @@
 				'pastelargetextasfile',
 				'reset background',
 				'resetbackground',
+				'disable auto scroll',
+				'disableautoscroll',
 				'response auto copy',
+				'response auto scroll',
+				'response auto-scroll',
 				'responseautocopy',
+				'responseautoscroll',
 				'rich text input for chat',
 				'richtextinputforchat',
 				'right to left',
@@ -1171,7 +1176,7 @@
 			{:else if selectedTab === 'notifications'}
 				<Notifications {saveSettings} />
 			{:else if selectedTab === 'shortcuts'}
-				<Shortcuts />
+				<Shortcuts {saveSettings} />
 			{:else if selectedTab === 'connections'}
 				<Connections
 					saveSettings={async (updated: Record<string, any>) => {

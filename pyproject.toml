@@ -9,7 +9,7 @@ dependencies = [
     "fastapi==0.136.3",
     "uvicorn[standard]==0.41.0",
     "pydantic==2.13.4",
-    "python-multipart==0.0.27",
+    "python-multipart==0.0.32",
     "itsdangerous==2.2.0",
 
     "python-socketio==5.16.2",
@@ -19,6 +19,7 @@ dependencies = [
     "argon2-cffi==25.1.0",
     "PyJWT[crypto]==2.13.0",
     "authlib==1.7.2",
+    "joserfc==1.7.4",
 
     "requests==2.34.2",
     "aiohttp==3.13.5", # do not update to 3.13.3 - broken
@@ -97,7 +98,7 @@ dependencies = [
 
     "pillow==12.2.0",
     "opencv-python-headless==4.13.0.92",
-    "rapidocr-onnxruntime==1.4.4",
+    "rapidocr==3.9.2",
     "rank-bm25==0.2.2",
 
     "onnxruntime==1.26.0",
