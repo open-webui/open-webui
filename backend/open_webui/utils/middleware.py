@@ -229,7 +229,15 @@ def _split_tool_calls(
     independently. Single-object arguments pass through unchanged.
     """
 
-    def split_json_objects(raw: str) -> list[str]:
+    def split_json_objects(raw: str | None) -> list[str]:
+        # Some providers stream tool_calls with arguments: null. Treat as empty.
+        if raw is None:
+            return ['{}']
+        if not isinstance(raw, str):
+            try:
+                raw = json.dumps(raw)
+            except Exception:
+                raw = str(raw)
         decoder = json.JSONDecoder()
         results = []
         position = 0
@@ -250,7 +258,17 @@ def _split_tool_calls(
 
     expanded = []
     for tool_call in tool_calls:
-        arguments = tool_call.get('function', {}).get('arguments', '')
+        arguments = tool_call.get('function', {}).get('arguments')
+        if arguments is None:
+            arguments = '{}'
+        elif not isinstance(arguments, str):
+            try:
+                arguments = json.dumps(arguments)
+            except Exception:
+                arguments = str(arguments)
+        # Normalize so downstream never sees None
+        tool_call.setdefault('function', {})
+        tool_call['function']['arguments'] = arguments
         split_arguments = split_json_objects(arguments)
 
         if len(split_arguments) <= 1:
@@ -4341,6 +4359,9 @@ async def streaming_chat_response_handler(response, ctx):
                                                     delta_tool_call.setdefault('function', {})
                                                     delta_tool_call['function'].setdefault('name', '')
                                                     delta_tool_call['function'].setdefault('arguments', '')
+                                                    # Providers may send arguments: null; setdefault won't replace null.
+                                                    if delta_tool_call['function'].get('arguments') is None:
+                                                        delta_tool_call['function']['arguments'] = ''
                                                     response_tool_calls.append(delta_tool_call)
                                                 else:
                                                     # Update the existing tool call
@@ -4353,8 +4374,13 @@ async def streaming_chat_response_handler(response, ctx):
                                                         current_response_tool_call['function']['name'] = delta_name
 
                                                     if delta_arguments:
-                                                        current_response_tool_call['function']['arguments'] += (
-                                                            delta_arguments
+                                                        existing_args = current_response_tool_call['function'].get(
+                                                            'arguments'
+                                                        )
+                                                        if existing_args is None:
+                                                            existing_args = ''
+                                                        current_response_tool_call['function']['arguments'] = (
+                                                            existing_args + delta_arguments
                                                         )
 
                                         # Emit pending tool calls in real-time
