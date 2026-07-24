@@ -36,10 +36,12 @@ from open_webui.routers.memories import (
     AddMemoryForm,
     ListMemoryPathsForm,
     MemoryUpdateModel,
+    QueryMemoryForm,
     ReadMemoryPathForm,
     SearchMemoriesForm,
     UpdateMemoriesForm,
     list_memory_paths as _list_memory_paths,
+    query_memory,
     read_memory_path as _read_memory_path,
     search_memories as _search_memories,
     update_memories as _update_memories,
@@ -52,6 +54,7 @@ from open_webui.routers.retrieval import search_web as _search_web
 from open_webui.tasks import stop_item_tasks
 from open_webui.events import EVENTS, publish_event
 from open_webui.socket.main import sio
+from open_webui.utils.memory import search_memory_rows
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
 
@@ -742,17 +745,32 @@ async def search_memories(
 
     try:
         user = UserModel(**__user__) if __user__ else None
+        memory_type = type if type in {'user', 'context', 'all'} else 'all'
 
         memories = await _search_memories(
             SearchMemoriesForm(
                 query=query or None,
-                type=type if type in {'user', 'context', 'all'} else 'all',
+                type=memory_type,
                 path=path,
                 memory_id=memory_id,
                 limit=count,
             ),
             user,
         )
+
+        if query and not memory_id:
+            try:
+                results = await query_memory(__request__, QueryMemoryForm(content=query, k=count), user)
+                vector_ids = results.ids[0] if results and results.ids else []
+                rows_by_id = {row.id: row for row in await Memories.get_memories_by_user_id(user.id)}
+                vector_rows = [rows_by_id[vector_id] for vector_id in vector_ids if vector_id in rows_by_id]
+                # search_memory_rows applies the path/type filters; keep vector similarity order
+                matching = search_memory_rows(vector_rows, path=path, memory_type=memory_type, limit=count)
+                matching_ids = {row.id for row in matching}
+                vector_hits = [row for row in vector_rows if row.id in matching_ids]
+                memories = (vector_hits + [row for row in memories if row.id not in matching_ids])[:count]
+            except Exception as e:
+                log.debug(f'search_memories vector search unavailable: {e}')
 
         if not memories:
             return json.dumps([])
