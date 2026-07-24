@@ -13,6 +13,7 @@
 	import '@xyflow/svelte/dist/style.css';
 
 	import CustomNode from './Node.svelte';
+	import AgentNode from './AgentNode.svelte';
 	import Flow from './Flow.svelte';
 	import XMark from '../../icons/XMark.svelte';
 	import ArrowLeft from '../../icons/ArrowLeft.svelte';
@@ -32,18 +33,137 @@
 	const edges = writable([]);
 
 	let layoutDirection = 'vertical';
+	let viewMode: 'chat' | 'execution' = 'execution';
+
+	// Store the graph data extracted from messages
+	let executionGraph: { nodes: any[]; edges: any[] } | null = null;
 
 	const nodeTypes = {
-		custom: CustomNode
+		custom: CustomNode,
+		agent: AgentNode
 	};
 
 	$: if (history) {
-		drawFlow(layoutDirection);
+		if (viewMode === 'execution') {
+			drawExecutionFlow(layoutDirection);
+		} else {
+			drawFlow(layoutDirection);
+		}
 	}
 
 	$: if (history && history.currentId) {
 		focusNode();
 	}
+
+	// Extract execution-graph from any message output
+	const extractExecutionGraph = (): { nodes: any[]; edges: any[] } | null => {
+		if (!history?.messages) return null;
+		for (const id of Object.keys(history.messages)) {
+			const msg = history.messages[id];
+			let text: string = '';
+			// Try direct string properties first
+			if (typeof msg?.output === 'string') text = msg.output;
+			else if (typeof msg?.content === 'string' && msg.content.length > 0) text = msg.content;
+			else if (Array.isArray(msg?.content)) {
+				text = msg.content.map((c: any) => (typeof c === 'string' ? c : c?.text || '')).join('\n');
+			}
+			// OWUI stores assistant messages in output as an array of message objects
+			if (!text && Array.isArray(msg?.output)) {
+				for (const part of msg.output) {
+					if (part?.content) {
+						const parts = Array.isArray(part.content) ? part.content : [part.content];
+						for (const c of parts) {
+							if (c?.text) text += c.text;
+							else if (typeof c === 'string') text += c;
+						}
+					}
+				}
+			}
+			if (!text && typeof msg?.output === 'object' && msg.output) {
+				text = msg.output.text || msg.output.content || msg.output.markdown || '';
+				if (typeof text !== 'string') text = JSON.stringify(text);
+			}
+			if (!text) continue;
+			const match = text.match(/```execution-graph\s*\n([\s\S]*?)```/);
+			if (match) {
+				try {
+					const parsed = JSON.parse(match[1]);
+					if (parsed.nodes && parsed.edges) return parsed;
+				} catch (e) { /* ignore parse errors */ }
+			}
+		}
+		return null;
+	};
+
+	// Build the execution flow from graph JSON
+	const drawExecutionFlow = async (direction: string) => {
+		const graph = extractExecutionGraph();
+		if (!graph) {
+			executionGraph = null;
+			// Don't flip viewMode — stay in 'execution' so history updates re-trigger extraction
+			drawFlow(direction);
+			return;
+		}
+		executionGraph = graph;
+
+		const nodeList: any[] = [];
+		const edgeList: any[] = [];
+		const spacingX = direction === 'vertical' ? 220 : 350;
+		const spacingY = direction === 'vertical' ? 180 : 180;
+
+		// Simple layered layout: group by nodeType
+		const layerOrder = ['router', 'agent', 'critique', 'synthesis', 'output'];
+		const layerMap = new Map<string, number>();
+		const layerCounts = new Map<number, number>();
+
+		graph.nodes.forEach((n: any) => {
+			const layer = layerOrder.indexOf(n.nodeType ?? 'agent');
+			const effectiveLayer = layer >= 0 ? layer : 2;
+			layerMap.set(n.id, effectiveLayer);
+			layerCounts.set(effectiveLayer, (layerCounts.get(effectiveLayer) ?? 0) + 1);
+		});
+
+		// Track position within each layer
+		const layerPos = new Map<number, number>();
+		layerCounts.forEach((_, k) => layerPos.set(k, 0));
+
+		graph.nodes.forEach((n: any, i: number) => {
+			const layer = layerMap.get(n.id) ?? 2;
+			const pos = layerPos.get(layer) ?? 0;
+			const x = direction === 'vertical' ? pos * spacingX : layer * spacingY;
+			const y = direction === 'vertical' ? layer * spacingY : pos * spacingX;
+
+			nodeList.push({
+				id: n.id,
+				type: 'agent',
+				data: {
+					label: n.label,
+					nodeType: n.nodeType ?? 'agent',
+					tools: n.tools ?? [],
+					status: n.status ?? 'done',
+					round: n.round ?? 1
+				},
+				position: { x, y }
+			});
+
+			layerPos.set(layer, pos + 1);
+		});
+
+		graph.edges.forEach((e: any) => {
+			edgeList.push({
+				id: `${e.source}-${e.target}`,
+				source: e.source,
+				target: e.target,
+				selectable: false,
+				class: 'dark:fill-gray-400 fill-gray-400',
+				type: 'smoothstep',
+				animated: e.animated ?? true
+			});
+		});
+
+		await edges.set([...edgeList]);
+		await nodes.set([...nodeList]);
+	};
 
 	const focusNode = async () => {
 		if (selectedMessageId === null) {
@@ -172,6 +292,23 @@
 </script>
 
 <div class="w-full h-full relative">
+	<!-- Toggle: Chat / Execution -->
+	{#if executionGraph || extractExecutionGraph()}
+		<div class="absolute top-2 left-2 z-10 flex gap-1">
+			<button
+				class="px-2 py-1 text-xs rounded-md {viewMode === 'chat' ? 'bg-gray-200 dark:bg-gray-700 font-medium' : 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}"
+				on:click={() => { viewMode = 'chat'; drawFlow(layoutDirection); }}
+			>
+				💬 Chat
+			</button>
+			<button
+				class="px-2 py-1 text-xs rounded-md {viewMode === 'execution' ? 'bg-gray-200 dark:bg-gray-700 font-medium' : 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}"
+				on:click={() => { viewMode = 'execution'; drawExecutionFlow(layoutDirection); }}
+			>
+				🧪 Execution
+			</button>
+		</div>
+	{/if}
 	{#if $nodes.length > 0}
 		<Flow
 			{nodes}
