@@ -19,6 +19,7 @@ from open_webui.utils.geotizer_orchestration import (
     extract_owner_envelope,
     merge_owner_envelopes,
     normalize_delegator_message,
+    owner_failure_envelope,
     owner_submission,
     partition_owner_batch,
     repair_negative_provenance,
@@ -327,19 +328,12 @@ async def _produce_valid_owner_envelope(
             return envelope
         feedback = list(violations)
 
-    chunk = next_batch.get('owner_chunk') or {}
-    chunk_label = (
-        f" part {chunk.get('index')}/{chunk.get('total')}"
-        if chunk
-        else ''
+    return owner_failure_envelope(
+        next_batch,
+        run_id=run_id,
+        attempts=MAX_OWNER_ATTEMPTS,
+        feedback=feedback or [],
     )
-    error = GeotizerOrchestrationError(
-        f'Owner {owner.producer} failed batch {owner.task_id}{chunk_label} after '
-        f'{MAX_OWNER_ATTEMPTS} attempts: '
-        f'{json.dumps(feedback, ensure_ascii=False)}'
-    )
-    error.run_id = run_id
-    raise error
 
 
 async def _resolve_geotizer_callable(request, user, runtime) -> GisCall:

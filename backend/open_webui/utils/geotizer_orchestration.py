@@ -273,6 +273,72 @@ def repair_negative_provenance(
     return repaired
 
 
+def owner_failure_envelope(
+    next_batch: Mapping[str, Any],
+    *,
+    run_id: str,
+    attempts: int,
+    feedback: Sequence[Any],
+) -> dict[str, Any]:
+    """Fail closed after invalid owner output without aborting the whole run."""
+    chunk = next_batch.get('owner_chunk') or {}
+    chunk_index = int(chunk.get('index') or 1)
+    chunk_total = int(chunk.get('total') or 1)
+    batch_id = str(next_batch.get('batch_id') or '')
+    producer = str(next_batch.get('producer') or '')
+    source_id = (
+        f'orchestration-review-{batch_id.lower()}-part-{chunk_index}'
+    )
+    locator = (
+        f'run_id={run_id}; batch_id={batch_id}; '
+        f'owner_chunk={chunk_index}/{chunk_total}; attempts={attempts}'
+    )
+    feedback_text = bounded_text(
+        json.dumps(list(feedback), ensure_ascii=False),
+        max_chars=1200,
+    )
+    return {
+        'run_id': run_id,
+        'batch_id': batch_id,
+        'producer': producer,
+        'policy_version': str(next_batch.get('policy_version') or ''),
+        'template_version': str(next_batch.get('template_version') or ''),
+        'source_inventory': [
+            {
+                'source_id': source_id,
+                'source_type': 'orchestration',
+                'title': (
+                    f'{producer} owner output failed deterministic validation '
+                    f'for {batch_id}'
+                ),
+                'locator': locator,
+                'url': None,
+            }
+        ],
+        'patches': [
+            {
+                'field_key': str(field.get('field_key') or ''),
+                'value': None,
+                'unit': None,
+                'status': 'requires_expert_review',
+                'source_refs': [source_id],
+                'source_locator': {
+                    'run_id': run_id,
+                    'batch_id': batch_id,
+                    'owner_chunk': f'{chunk_index}/{chunk_total}',
+                    'attempts': attempts,
+                },
+                'retrieval_note': (
+                    'Specialist evidence was requested, but the owner response '
+                    'did not satisfy the deterministic field contract after '
+                    f'{attempts} attempts. Validation feedback: {feedback_text}'
+                ),
+            }
+            for field in next_batch.get('fields') or []
+        ],
+    }
+
+
 def extract_json_object(text: str) -> dict[str, Any]:
     """Extract exactly one JSON object from a model response."""
     if not isinstance(text, str) or not text.strip():

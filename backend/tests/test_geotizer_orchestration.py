@@ -15,6 +15,7 @@ from open_webui.utils.geotizer_orchestration import (
     extract_owner_envelope,
     merge_owner_envelopes,
     normalize_delegator_message,
+    owner_failure_envelope,
     partition_owner_batch,
     repair_negative_provenance,
     validate_owner_envelope,
@@ -598,3 +599,79 @@ def test_workflow_repairs_invalid_owner_output_before_submission():
     )
     assert owner_attempts == 2
     assert gis_actions.count('submit_batch') == 1
+
+
+def test_workflow_fails_closed_after_invalid_owner_attempts():
+    owner_attempts = 0
+    submitted = []
+
+    async def gis_call(payload):
+        if payload['action'] == 'start':
+            return {
+                'workflow_status': 'collecting',
+                'run_id': 'run-fail-closed',
+                'object_name': 'Object',
+                'datacube': {},
+                'next_batch': batch(),
+            }
+        if payload['action'] == 'submit_batch':
+            submitted.append(payload)
+            return {
+                'workflow_status': 'collecting',
+                'run_id': 'run-fail-closed',
+                'next_batch': None,
+            }
+        return {
+            'workflow_status': 'finalized',
+            'run_id': 'run-fail-closed',
+            'xlsx': {
+                'download_path': (
+                    '/geotizer/files/run-fail-closed/geotizer.xlsx'
+                ),
+            },
+        }
+
+    async def agent_call(task, prompt, object_name, datacube):
+        nonlocal owner_attempts
+        if task.role == 'contributor':
+            return 'bounded evidence'
+        owner_attempts += 1
+        return '{"patches": []}'
+
+    final = asyncio.run(
+        run_geotizer_workflow(
+            object_name='Object',
+            project_id=None,
+            model_run_id=None,
+            run_id=None,
+            allow_draft=True,
+            gis_call=gis_call,
+            agent_call=agent_call,
+        )
+    )
+    assert final['workflow_status'] == 'finalized'
+    assert owner_attempts == 3
+    assert len(submitted) == 1
+    assert {
+        patch['status'] for patch in submitted[0]['patches']
+    } == {'requires_expert_review'}
+    assert submitted[0]['source_inventory'][0]['source_type'] == 'orchestration'
+    assert validate_owner_envelope(batch(), submitted[0]) == ()
+
+
+def test_owner_failure_envelope_is_deterministic_and_field_complete():
+    first = owner_failure_envelope(
+        batch(),
+        run_id='run-1',
+        attempts=3,
+        feedback=['invalid patches'],
+    )
+    second = owner_failure_envelope(
+        batch(),
+        run_id='run-1',
+        attempts=3,
+        feedback=['invalid patches'],
+    )
+    assert first == second
+    assert [patch['field_key'] for patch in first['patches']] == ['f1', 'f2']
+    assert validate_owner_envelope(batch(), first) == ()
