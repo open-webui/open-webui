@@ -1345,6 +1345,10 @@ async def generate_chat_completion(
                     part.get('text', '') for part in message['content'] if part.get('type') in ('input_text', 'text')
                 )
 
+    # Model params may have overridden stream; upstreams reject stream_options on non-streaming requests
+    if not payload.get('stream'):
+        payload.pop('stream_options', None)
+
     payload = json.dumps(payload)
 
     r = None
