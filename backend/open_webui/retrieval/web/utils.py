@@ -547,6 +547,20 @@ class SafeMicrosoftWebIQLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 raise e
 
 
+# Playwright follows redirects inside route.fetch() without re-entering
+# validate_url(), so when redirects are enabled we follow them manually and
+# re-validate every hop against the SSRF filter. Cap the chain length.
+MAX_WEB_LOADER_REDIRECTS = 20
+
+
+def _redirect_location(resp) -> str | None:
+    """Absolute redirect target of a 3xx Playwright APIResponse, or None if absent."""
+    location = resp.headers.get('location')
+    if not location:
+        return None
+    return urllib.parse.urljoin(resp.url, location)
+
+
 class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessingMixin):
     """Load HTML pages safely with Playwright, supporting SSL verification, rate limiting, and remote browser connection.
 
@@ -615,18 +629,27 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
             route.abort()
             return
 
-        if AIOHTTP_CLIENT_ALLOW_REDIRECTS:
-            resp = route.fetch()
-        else:
-            try:
-                resp = route.fetch(max_redirects=0)
-            except TypeError:
-                route.abort()
-                return
+        try:
+            resp = route.fetch(max_redirects=0)
+        except TypeError:
+            route.abort()
+            return
 
-            if 300 <= resp.status < 400:
+        redirects = 0
+        while 300 <= resp.status < 400:
+            if not AIOHTTP_CLIENT_ALLOW_REDIRECTS or redirects >= MAX_WEB_LOADER_REDIRECTS:
                 route.abort()
                 return
+            next_url = _redirect_location(resp)
+            if not next_url:
+                break
+            try:
+                validate_url(next_url)
+                resp = route.fetch(url=next_url, max_redirects=0)
+            except Exception:
+                route.abort()
+                return
+            redirects += 1
 
         route.fulfill(response=resp)
 
@@ -643,18 +666,27 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
             await route.abort()
             return
 
-        if AIOHTTP_CLIENT_ALLOW_REDIRECTS:
-            resp = await route.fetch()
-        else:
-            try:
-                resp = await route.fetch(max_redirects=0)
-            except TypeError:
-                await route.abort()
-                return
+        try:
+            resp = await route.fetch(max_redirects=0)
+        except TypeError:
+            await route.abort()
+            return
 
-            if 300 <= resp.status < 400:
+        redirects = 0
+        while 300 <= resp.status < 400:
+            if not AIOHTTP_CLIENT_ALLOW_REDIRECTS or redirects >= MAX_WEB_LOADER_REDIRECTS:
                 await route.abort()
                 return
+            next_url = _redirect_location(resp)
+            if not next_url:
+                break
+            try:
+                await run_in_threadpool(validate_url, next_url)
+                resp = await route.fetch(url=next_url, max_redirects=0)
+            except Exception:
+                await route.abort()
+                return
+            redirects += 1
 
         await route.fulfill(response=resp)
 
