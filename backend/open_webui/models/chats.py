@@ -13,7 +13,7 @@ from open_webui.models.automations import AutomationRun
 from open_webui.models.chat_messages import ChatMessage, ChatMessages
 from open_webui.models.folders import Folders
 from open_webui.models.tags import Tag, TagModel, Tags
-from open_webui.utils.misc import sanitize_data_for_db, sanitize_text_for_db
+from open_webui.utils.misc import get_output_text, sanitize_data_for_db, sanitize_text_for_db
 from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import (
     JSON,
@@ -839,6 +839,11 @@ class ChatTable:
         chat = await self.get_chat_by_id(id)
         if chat is None:
             return None
+
+        if not message.get('content'):
+            output_text = get_output_text(message.get('output'))
+            if output_text:
+                message['content'] = output_text
 
         # Sanitize message content for null characters before upserting
         if isinstance(message.get('content'), str):

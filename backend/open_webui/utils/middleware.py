@@ -107,6 +107,7 @@ from open_webui.utils.misc import (
     get_last_user_message,
     get_last_user_message_item,
     get_message_list,
+    get_output_text,
     get_system_message,
     is_string_allowed,
     merge_system_messages,
@@ -137,17 +138,6 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
-def _last_output_text(output: list | None) -> str:
-    for item in reversed(output or []):
-        if item.get('type') != 'message':
-            continue
-        parts = item.get('content') or []
-        text = ''.join(str(part.get('text') or '') for part in parts if part.get('type') == 'output_text')
-        if text:
-            return text
-    return ''
-
-
 async def publish_chat_finished_event(
     request: Request, user: UserModel, metadata: dict, title: str, content: str, output: list | None = None
 ):
@@ -155,7 +145,7 @@ async def publish_chat_finished_event(
     if getattr(request.state, 'internal', False) is True or not chat_id or chat_id.startswith(('channel:', 'local:')):
         return
 
-    content = content or _last_output_text(output)
+    content = content or get_output_text(output)
     webui_url = await Config.get('webui.url')
     await publish_event(
         request,
@@ -3398,7 +3388,7 @@ async def outlet_filter_handler(ctx):
             message_list = [
                 {
                     'role': m.get('role'),
-                    'content': m.get('content', ''),
+                    'content': m.get('content') or get_output_text(m.get('output')),
                 }
                 for m in form_messages
             ]
@@ -3431,7 +3421,7 @@ async def outlet_filter_handler(ctx):
                 {
                     'id': m.get('id'),
                     'role': m.get('role'),
-                    'content': m.get('content', ''),
+                    'content': m.get('content') or get_output_text(m.get('output')),
                     'info': m.get('info'),
                     'timestamp': m.get('timestamp'),
                     **({'output': m['output']} if m.get('output') else {}),
@@ -3483,17 +3473,21 @@ async def outlet_filter_handler(ctx):
                     outlet_message_id = message.get('id')
                     if outlet_message_id and outlet_message_id in messages_map:
                         original_message = messages_map[outlet_message_id]
-                        content_changed = original_message.get('content') != message.get('content')
+                        original_content = original_message.get('content') or get_output_text(
+                            original_message.get('output')
+                        )
+                        message_content = message.get('content') or get_output_text(message.get('output'))
+                        content_changed = original_content != message_content
                         output_changed = message.get('output') and message.get('output') != original_message.get(
                             'output'
                         )
                         if content_changed or output_changed:
                             message_update = {
-                                'originalContent': original_message.get('content'),
+                                'originalContent': original_content,
                                 **({'output': message['output']} if output_changed else {}),
                             }
                             if content_changed:
-                                message_update['content'] = message.get('content', '')
+                                message_update['content'] = message_content or ''
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 chat_id,
                                 outlet_message_id,

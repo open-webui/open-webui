@@ -160,13 +160,40 @@ def get_last_user_message_item(messages: list[dict]) -> dict | None:
 
 
 def get_content_from_message(message: dict) -> str | None:
-    if isinstance(message.get('content'), list):
-        for item in message['content']:
-            if item['type'] == 'text':
-                return item['text']
-    else:
-        return message.get('content')
-    return None
+    content = message.get('content')
+    if isinstance(content, list):
+        for item in content:
+            if isinstance(item, dict) and item.get('type') == 'text':
+                return item.get('text')
+    elif content:
+        return content
+
+    output_text = get_output_text(message.get('output'))
+    return output_text or (content if isinstance(content, str) else None)
+
+
+def get_output_text(output: list | None) -> str:
+    if not isinstance(output, list):
+        return ''
+
+    texts = []
+    for item in output:
+        if not isinstance(item, dict) or item.get('type') != 'message':
+            continue
+
+        parts = item.get('content') or []
+        if not isinstance(parts, list):
+            continue
+
+        text = ''.join(
+            str(part.get('text'))
+            for part in parts
+            if isinstance(part, dict) and part.get('text') is not None
+        )
+        if text.strip():
+            texts.append(text)
+
+    return '\n'.join(texts)
 
 
 def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
@@ -213,7 +240,7 @@ def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
 
         # All tool_calls were orphans — keep the message only if it
         # carries meaningful text or reasoning content.
-        content = message.get('content', '')
+        content = get_content_from_message(message) or ''
         has_meaningful_content = content.strip() if isinstance(content, str) else content
         if has_meaningful_content or message.get('reasoning_content'):
             reconciled_messages.append({key: value for key, value in message.items() if key != 'tool_calls'})

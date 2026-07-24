@@ -51,7 +51,7 @@ from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.headers import include_user_info_headers
-from open_webui.utils.misc import get_message_list
+from open_webui.utils.misc import get_content_from_message, get_message_list
 
 log = logging.getLogger(__name__)
 
@@ -1409,7 +1409,10 @@ async def get_sources_from_items(
                     # Reconstruct the message list in order
                     message_list = get_message_list(messages_map, message_id)
                     message_history = '\n'.join(
-                        [f'#### {m.get("role", "user").capitalize()}\n{m.get("content")}\n' for m in message_list]
+                        [
+                            f'#### {m.get("role", "user").capitalize()}\n{get_content_from_message(m) or ""}\n'
+                            for m in message_list
+                        ]
                     )
 
                     # User has access to the chat
