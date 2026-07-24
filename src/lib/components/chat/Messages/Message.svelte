@@ -42,6 +42,7 @@
 	export let forkHandler: Function | null = null;
 	export let triggerScroll;
 	export let readOnly = false;
+	export let allowDelete = true;
 	export let compactPreview = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
@@ -76,6 +77,7 @@
 				{showNextMessage}
 				{editMessage}
 				{deleteMessage}
+				{allowDelete}
 				{readOnly}
 				{compactPreview}
 				{editCodeBlock}
@@ -101,6 +103,7 @@
 				{actionMessage}
 				{submitMessage}
 				{deleteMessage}
+				{allowDelete}
 				{continueResponse}
 				{regenerateResponse}
 				{addMessages}
@@ -126,6 +129,7 @@
 					{actionMessage}
 					{submitMessage}
 					{deleteMessage}
+					{allowDelete}
 					{continueResponse}
 					{regenerateResponse}
 					{mergeResponses}

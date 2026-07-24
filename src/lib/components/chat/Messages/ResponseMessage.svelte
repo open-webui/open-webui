@@ -165,6 +165,7 @@
 
 	export let isLastMessage = true;
 	export let readOnly = false;
+	export let allowDelete = true;
 	export let compactPreview = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
@@ -1482,7 +1483,7 @@
 									{/if}
 
 									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete_message ?? true)}
-										{#if siblings.length > 1}
+										{#if allowDelete && siblings.length > 1}
 											<Tooltip content={$i18n.t('Delete')} placement="bottom">
 												<button
 													type="button"

@@ -3881,6 +3881,7 @@
 										{mergeResponses}
 										{chatActionHandler}
 										{addMessages}
+										allowDelete={!(generating || taskIds?.length)}
 										forkHandler={generating || taskIds?.length ? null : handleForkChat}
 										topPadding={!embedded}
 										bottomPadding={files.length > 0}

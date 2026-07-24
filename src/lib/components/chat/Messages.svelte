@@ -43,6 +43,7 @@
 	export let forkHandler: Function | null = null;
 
 	export let readOnly = false;
+	export let allowDelete = true;
 	export let compactPreview = false;
 	export let editCodeBlock = true;
 
@@ -555,6 +556,7 @@
 								{mergeResponses}
 								{addMessages}
 								{forkHandler}
+								{allowDelete}
 								{triggerScroll}
 								{readOnly}
 								{compactPreview}
