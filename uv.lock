@@ -2997,6 +2997,7 @@ wheels = [
 
 [[package]]
 name = "open-webui"
+version = "0.10.2"
 source = { editable = "." }
 dependencies = [
     { name = "accelerate" },
