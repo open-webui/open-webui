@@ -4935,14 +4935,32 @@ async def streaming_chat_response_handler(response, ctx):
                             'metadata': metadata,
                         }
 
-                        if ENABLE_RESPONSES_API_STATEFUL and last_response_id:
+                        # Resolve previous_response_id for stateful Responses API.
+                        # Prefer the locally-tracked id from the current request
+                        # (tool-call loop); otherwise look up the last assistant
+                        # message in the database (cross-request continuation).
+                        previous_response_id = None
+                        if ENABLE_RESPONSES_API_STATEFUL:
+                            if last_response_id:
+                                previous_response_id = last_response_id
+                            elif form_data.get('parent_id'):
+                                previous_response_id = await Chats.get_last_assistant_response_id(
+                                    metadata['chat_id'],
+                                    parent_id=form_data['parent_id'],
+                                )
+                            else:
+                                previous_response_id = await Chats.get_last_assistant_response_id(
+                                    metadata['chat_id']
+                                )
+
+                        if previous_response_id:
                             system_message = get_system_message(form_data['messages'])
                             new_form_data['messages'] = (
                                 [system_message] if system_message else []
                             ) + convert_output_to_messages(
                                 output, raw=True, reasoning_format=get_reasoning_format(model)
                             )
-                            new_form_data['previous_response_id'] = last_response_id
+                            new_form_data['previous_response_id'] = previous_response_id
                         else:
                             tool_messages = convert_output_to_messages(
                                 output, raw=True, reasoning_format=get_reasoning_format(model)
@@ -5232,6 +5250,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 'done': True,
                                 'output': output,
                                 **({'usage': usage} if usage else {}),
+                                **({'response_id': last_response_id} if ENABLE_RESPONSES_API_STATEFUL and last_response_id else {}),
                             },
                         )
                     elif usage:

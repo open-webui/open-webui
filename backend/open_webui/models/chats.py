@@ -701,6 +701,33 @@ class ChatTable:
 
         return chat.chat.get('history', {}).get('messages', {}).get(message_id, {})
 
+    async def get_last_assistant_response_id(self, chat_id: str, parent_id: str | None = None) -> str | None:
+        """Return the response_id of the most recent assistant message.
+
+        When ``parent_id`` is given, walks up from that parent; otherwise
+        scans all messages in reverse chronological order.
+        """
+        chat = await self.get_chat_by_id(chat_id)
+        if chat is None:
+            return None
+        messages = chat.chat.get('history', {}).get('messages', {})
+        if not messages:
+            return None
+        # Walk up from parent_id if provided
+        if parent_id:
+            current = parent_id
+            while current in messages:
+                msg = messages[current]
+                if msg.get('role') == 'assistant' and msg.get('response_id'):
+                    return msg['response_id']
+                current = msg.get('parentId')
+            return None
+        # Scan all messages, returning the most recent assistant response_id
+        for msg in sorted(messages.values(), key=lambda m: m.get('timestamp', 0), reverse=True):
+            if msg.get('role') == 'assistant' and msg.get('response_id'):
+                return msg['response_id']
+        return None
+
     async def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict
     ) -> ChatModel | None:
