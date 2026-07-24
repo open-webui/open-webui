@@ -83,6 +83,7 @@
 
 	export let save = false;
 	export let preview = false;
+	export let compactPreview = false;
 	export let floatingButtons = true;
 
 	export let editCodeBlock = true;
@@ -270,6 +271,7 @@
 			{model}
 			{save}
 			{preview}
+			{compactPreview}
 			{done}
 			{editCodeBlock}
 			{topPadding}
@@ -290,6 +292,7 @@
 				{model}
 				{save}
 				{preview}
+				{compactPreview}
 				{done}
 				{editCodeBlock}
 				{topPadding}
@@ -307,7 +310,7 @@
 		{#if extracted.detailsContent}
 			<!-- Render structural blocks (tool calls, reasoning, etc.) through Markdown -->
 			<div class="markdown-prose">
-				<Markdown {id} content={extracted.detailsContent} {preview} {done} />
+				<Markdown {id} content={extracted.detailsContent} {preview} {compactPreview} {done} />
 			</div>
 		{/if}
 		{#if extracted.plainContent}

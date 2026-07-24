@@ -2,13 +2,15 @@
 	import { onMount } from 'svelte';
 	import { formatChord, isConfigurableShortcut, keybindings, shortcuts } from '$lib/shortcuts';
 	import type { Shortcut } from '$lib/shortcuts';
+	import { settings } from '$lib/stores';
 
 	export let name: string;
 	export let className = '';
 
 	let isMac = false;
 	let mounted = false;
-	let isVisible = true;
+
+	$: isVisible = $settings?.keyboardShortcuts !== false;
 
 	onMount(() => {
 		isMac = /Mac/i.test(navigator.userAgent);

@@ -36,6 +36,7 @@
 
 	export let save = false;
 	export let preview = false;
+	export let compactPreview = false;
 
 	export let paragraphTag = 'p';
 
@@ -98,7 +99,7 @@
 	};
 
 	$: detailButtonClassName = `w-fit py-0.5 ${
-		preview ? 'text-xs' : 'text-[0.9375rem]'
+		compactPreview ? 'text-xs' : 'text-[0.9375rem]'
 	} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition`;
 
 	$: displayTokens = getDisplayTokens(tokens);
@@ -283,6 +284,7 @@
 					tokens={token.tokens}
 					{done}
 					{preview}
+					{compactPreview}
 					{editCodeBlock}
 					{onTaskClick}
 					{sourceIds}
@@ -319,6 +321,7 @@
 							top={token.loose}
 							{done}
 							{preview}
+							{compactPreview}
 							{editCodeBlock}
 							{onTaskClick}
 							{sourceIds}
@@ -355,6 +358,7 @@
 									top={token.loose}
 									{done}
 									{preview}
+									{compactPreview}
 									{editCodeBlock}
 									{onTaskClick}
 									{sourceIds}
@@ -368,6 +372,7 @@
 								top={token.loose}
 								{done}
 								{preview}
+								{compactPreview}
 								{editCodeBlock}
 								{onTaskClick}
 								{sourceIds}
@@ -383,7 +388,7 @@
 			id={`${id}-${tokenIdx}-detail-group`}
 			tokens={token.items}
 			messageDone={done}
-			{preview}
+			{compactPreview}
 			{allowEmbeds}
 		>
 			<div slot="content">
@@ -417,6 +422,7 @@
 									attributes={detailToken?.attributes}
 									{done}
 									{preview}
+									{compactPreview}
 									{editCodeBlock}
 									{onTaskClick}
 									{sourceIds}
@@ -469,6 +475,7 @@
 						attributes={token?.attributes}
 						{done}
 						{preview}
+						{compactPreview}
 						{editCodeBlock}
 						{onTaskClick}
 						{sourceIds}

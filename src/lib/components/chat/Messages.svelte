@@ -43,7 +43,8 @@
 	export let forkHandler: Function | null = null;
 
 	export let readOnly = false;
-	export let preview = false;
+	export let allowDelete = true;
+	export let compactPreview = false;
 	export let editCodeBlock = true;
 
 	export let topPadding = false;
@@ -89,7 +90,7 @@
 		let message = history.messages[history.currentId];
 		const visitedMessageIds = new Set();
 
-		while (message && (messagesCount !== null ? _messages.length <= messagesCount : true)) {
+		while (message && (messagesCount !== null ? _messages.length < messagesCount : true)) {
 			if (visitedMessageIds.has(message.id)) {
 				console.warn('Circular dependency detected in message history', message.id);
 				break;
@@ -555,9 +556,10 @@
 								{mergeResponses}
 								{addMessages}
 								{forkHandler}
+								{allowDelete}
 								{triggerScroll}
 								{readOnly}
-								{preview}
+								{compactPreview}
 								{editCodeBlock}
 								{topPadding}
 								{onInsertToNote}

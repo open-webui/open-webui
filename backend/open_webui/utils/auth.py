@@ -356,6 +356,8 @@ async def get_current_user(
                 current_span.set_attribute('client.user.role', user.role)
                 current_span.set_attribute('client.auth.type', 'api_key')
 
+        # Scope-backed, so outer middleware (audit) can reuse the resolved user
+        request.state.user = user
         return user
 
     # auth by jwt token
@@ -403,9 +405,10 @@ async def get_current_user(
 
                 # Refresh the user's last active timestamp
                 # Fire-and-forget via asyncio.create_task to avoid blocking
-                import asyncio
-
                 asyncio.create_task(Users.update_last_active_by_id(user.id))
+
+            # Scope-backed, so outer middleware (audit) can reuse the resolved user
+            request.state.user = user
             return user
         else:
             raise HTTPException(
@@ -437,11 +440,18 @@ async def get_current_user_by_api_key(request, api_key: str):
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
 
-    if not await Config.get('auth.enable_api_keys'):
+    config_values = await Config.get_many(
+        'auth.enable_api_keys',
+        'user.permissions',
+        'auth.api_key.endpoint_restrictions',
+        'auth.api_key.allowed_endpoints',
+    )
+
+    if not config_values.get('auth.enable_api_keys'):
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED)
 
     if user.role != 'admin':
-        user_permissions = await Config.get('user.permissions')
+        user_permissions = config_values.get('user.permissions')
         if not await has_permission(
             user.id,
             'features.api_keys',
@@ -452,9 +462,8 @@ async def get_current_user_by_api_key(request, api_key: str):
     # Enforce endpoint restrictions — checked here (not in middleware)
     # so it applies regardless of how the API key was transported
     # (Authorization header, cookie, x-api-key header, etc.).
-    enable_endpoint_restrictions = await Config.get('auth.api_key.endpoint_restrictions')
-    if enable_endpoint_restrictions:
-        allowed_endpoints = await Config.get('auth.api_key.allowed_endpoints', '')
+    if config_values.get('auth.api_key.endpoint_restrictions'):
+        allowed_endpoints = config_values.get('auth.api_key.allowed_endpoints', '')
         allowed_paths = [path.strip() for path in str(allowed_endpoints).split(',') if path.strip()]
         request_path = request.scope['path']  # Use raw ASGI path — not spoofable via Host header (CVE-2026-48710)
         is_allowed = any(request_path == allowed or request_path.startswith(allowed + '/') for allowed in allowed_paths)

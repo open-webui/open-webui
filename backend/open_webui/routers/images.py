@@ -13,6 +13,7 @@ from types import SimpleNamespace
 from typing import Optional
 from urllib.parse import quote, urlparse
 
+import aiofiles
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
@@ -940,10 +941,10 @@ async def image_edits(
                 if isinstance(file_response, FileResponse):
                     file_path = file_response.path
 
-                    with open(file_path, 'rb') as f:
-                        file_bytes = f.read()
-                        image_data = base64.b64encode(file_bytes).decode('utf-8')
-                        mime_type, _ = mimetypes.guess_type(file_path)
+                    async with aiofiles.open(file_path, 'rb') as f:
+                        file_bytes = await f.read()
+                    image_data = base64.b64encode(file_bytes).decode('utf-8')
+                    mime_type, _ = mimetypes.guess_type(file_path)
 
                     return f'data:{mime_type};base64,{image_data}'
             return data

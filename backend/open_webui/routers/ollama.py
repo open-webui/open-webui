@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Optional, Union
 from urllib.parse import urlparse
 
+import aiofiles
 import aiohttp
 from aiocache import cached
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
@@ -25,6 +26,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
+    AIOHTTP_FILE_STREAM_CHUNK_SIZE,
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
@@ -364,6 +366,12 @@ def merge_models_lists(model_lists) -> list[dict]:
 def resolve_api_config(api_configs: dict, idx: int, url: str) -> dict:
     """Look up the API config for a backend by numeric index, falling back to URL key (legacy)."""
     return api_configs.get(str(idx), api_configs.get(url, {}))
+
+
+async def get_ollama_connection_config() -> tuple[list, dict]:
+    """Base URLs and per-connection API configs in one batched SELECT."""
+    config = await Config.get_many('ollama.base_urls', 'ollama.api_configs')
+    return config.get('ollama.base_urls', []), config.get('ollama.api_configs', {})
 
 
 @cached(
@@ -882,12 +890,10 @@ async def embed(
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model))
         url_idx = random.choice(models[model]['urls'])
 
-    url = (await Config.get('ollama.base_urls', []))[url_idx]
-    api_config = (await Config.get('ollama.api_configs', {})).get(
-        str(url_idx),
-        (await Config.get('ollama.api_configs', {})).get(url, {}),
-    )
-    key = get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {})))
+    base_urls, api_configs = await get_ollama_connection_config()
+    url = base_urls[url_idx]
+    api_config = api_configs.get(str(url_idx), api_configs.get(url, {}))
+    key = get_api_key(url_idx, url, api_configs)
 
     prefix_id = api_config.get('prefix_id')
     if prefix_id:
@@ -936,12 +942,10 @@ async def embeddings(
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model))
         url_idx = random.choice(models[model]['urls'])
 
-    url = (await Config.get('ollama.base_urls', []))[url_idx]
-    api_config = (await Config.get('ollama.api_configs', {})).get(
-        str(url_idx),
-        (await Config.get('ollama.api_configs', {})).get(url, {}),
-    )
-    key = get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {})))
+    base_urls, api_configs = await get_ollama_connection_config()
+    url = base_urls[url_idx]
+    api_config = api_configs.get(str(url_idx), api_configs.get(url, {}))
+    key = get_api_key(url_idx, url, api_configs)
 
     prefix_id = api_config.get('prefix_id')
     if prefix_id:
@@ -995,11 +999,9 @@ async def generate_completion(
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.MODEL_NOT_FOUND(form_data.model))
         url_idx = random.choice(models[model]['urls'])
 
-    url = (await Config.get('ollama.base_urls', []))[url_idx]
-    api_config = (await Config.get('ollama.api_configs', {})).get(
-        str(url_idx),
-        (await Config.get('ollama.api_configs', {})).get(url, {}),
-    )
+    base_urls, api_configs = await get_ollama_connection_config()
+    url = base_urls[url_idx]
+    api_config = api_configs.get(str(url_idx), api_configs.get(url, {}))
 
     prefix_id = api_config.get('prefix_id')
     if prefix_id:
@@ -1008,7 +1010,7 @@ async def generate_completion(
     return await send_request(
         f'{url}/api/generate',
         payload=form_data.model_dump_json(exclude_none=True).encode(),
-        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=True,
     )
@@ -1130,7 +1132,8 @@ async def generate_chat_completion(
         await check_model_access(user, None, bypass_filter)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx, user)
-    api_config = resolve_api_config((await Config.get('ollama.api_configs', {})), url_idx, url)
+    api_configs = await Config.get('ollama.api_configs', {})
+    api_config = resolve_api_config(api_configs, url_idx, url)
 
     prefix_id = api_config.get('prefix_id')
     if prefix_id:
@@ -1139,7 +1142,7 @@ async def generate_chat_completion(
     return await send_request(
         f'{url}/api/chat',
         payload=json.dumps(payload),
-        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=form_data.stream,
         content_type='application/x-ndjson',
@@ -1226,7 +1229,8 @@ async def generate_openai_completion(
         await check_model_access(user, None)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx, user)
-    api_config = resolve_api_config((await Config.get('ollama.api_configs', {})), url_idx, url)
+    api_configs = await Config.get('ollama.api_configs', {})
+    api_config = resolve_api_config(api_configs, url_idx, url)
 
     prefix_id = api_config.get('prefix_id')
     if prefix_id:
@@ -1235,7 +1239,7 @@ async def generate_openai_completion(
     return await send_request(
         f'{url}/v1/completions',
         payload=json.dumps(payload),
-        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
         metadata=metadata,
@@ -1335,7 +1339,8 @@ async def generate_openai_chat_completion(
         await check_model_access(user, None)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx, user)
-    api_config = resolve_api_config((await Config.get('ollama.api_configs', {})), url_idx, url)
+    api_configs = await Config.get('ollama.api_configs', {})
+    api_config = resolve_api_config(api_configs, url_idx, url)
 
     prefix_id = api_config.get('prefix_id')
     if prefix_id:
@@ -1344,7 +1349,7 @@ async def generate_openai_chat_completion(
     return await send_request(
         f'{url}/v1/chat/completions',
         payload=json.dumps(payload),
-        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
         metadata=metadata,
@@ -1386,10 +1391,8 @@ async def generate_anthropic_messages(
         await check_model_access(user, None)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx, user)
-    api_config = (await Config.get('ollama.api_configs', {})).get(
-        str(url_idx),
-        (await Config.get('ollama.api_configs', {})).get(url, {}),  # Legacy support
-    )
+    api_configs = await Config.get('ollama.api_configs', {})
+    api_config = api_configs.get(str(url_idx), api_configs.get(url, {}))  # Legacy support
 
     prefix_id = api_config.get('prefix_id', None)
     if prefix_id:
@@ -1398,7 +1401,7 @@ async def generate_anthropic_messages(
     return await send_request(
         f'{url}/v1/messages',
         payload=json.dumps(payload),
-        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
         content_type='text/event-stream' if payload.get('stream', False) else None,
@@ -1446,10 +1449,8 @@ async def generate_responses(
         await check_model_access(user, None)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx, user)
-    api_config = (await Config.get('ollama.api_configs', {})).get(
-        str(url_idx),
-        (await Config.get('ollama.api_configs', {})).get(url, {}),  # Legacy support
-    )
+    api_configs = await Config.get('ollama.api_configs', {})
+    api_config = api_configs.get(str(url_idx), api_configs.get(url, {}))  # Legacy support
 
     prefix_id = api_config.get('prefix_id', None)
     if prefix_id:
@@ -1458,7 +1459,7 @@ async def generate_responses(
     return await send_request(
         f'{url}/v1/responses',
         payload=json.dumps(payload),
-        key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
+        key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
         content_type='text/event-stream' if payload.get('stream', False) else None,
@@ -1531,7 +1532,7 @@ async def download_file_stream(
     file_url: str,
     file_path: str,
     file_name: str,
-    chunk_size: int = 1024 * 1024,
+    chunk_size: int = AIOHTTP_FILE_STREAM_CHUNK_SIZE,
 ):
     """Stream a model file download from *file_url*, then push the blob to Ollama."""
     current_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
@@ -1546,37 +1547,38 @@ async def download_file_stream(
     ) as response:
         total_size = int(response.headers.get('content-length', 0)) + current_size
 
-        with open(file_path, 'ab+') as f:
+        async with aiofiles.open(file_path, 'ab') as f:
             async for data in response.content.iter_chunked(chunk_size):
                 current_size += len(data)
-                f.write(data)
+                await f.write(data)
 
-                done = current_size == total_size
-                progress = round((current_size / total_size) * 100, 2)
+                progress_total = total_size or current_size
+                progress = round((current_size / progress_total) * 100, 2)
                 yield f'data: {{"progress": {progress}, "completed": {current_size}, "total": {total_size}}}\n\n'
 
-            if done:
-                f.close()
-                hashed = await asyncio.to_thread(calculate_sha256, file_path, chunk_size)
+            done = True
+            hashed = await asyncio.to_thread(calculate_sha256, file_path, chunk_size)
 
-                def _read_blob():
-                    with open(file_path, 'rb') as blob_f:
-                        return blob_f.read()
+            blob_url = f'{ollama_url}/api/blobs/sha256:{hashed}'
+            blob_size = await asyncio.to_thread(os.path.getsize, file_path)
 
-                blob_data = await asyncio.to_thread(_read_blob)
+            async def blob_chunks():
+                async with aiofiles.open(file_path, 'rb') as blob_file:
+                    while chunk := await blob_file.read(chunk_size):
+                        yield chunk
 
-                blob_url = f'{ollama_url}/api/blobs/sha256:{hashed}'
-                async with session.post(
-                    blob_url,
-                    data=blob_data,
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                    timeout=aiohttp.ClientTimeout(total=30),
-                ) as blob_resp:
-                    if blob_resp.ok:
-                        os.remove(file_path)
-                        yield f'data: {json.dumps({"done": done, "blob": f"sha256:{hashed}", "name": file_name})}\n\n'
-                    else:
-                        raise RuntimeError('Ollama: Could not create blob, Please try again.')
+            async with session.post(
+                blob_url,
+                data=blob_chunks(),
+                headers={'Content-Length': str(blob_size)},
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                timeout=aiohttp.ClientTimeout(total=30),
+            ) as blob_resp:
+                if blob_resp.ok:
+                    await asyncio.to_thread(os.remove, file_path)
+                    yield f'data: {json.dumps({"done": done, "blob": f"sha256:{hashed}", "name": file_name})}\n\n'
+                else:
+                    raise RuntimeError('Ollama: Could not create blob, Please try again.')
 
 
 @router.post('/models/download')
@@ -1623,17 +1625,11 @@ async def upload_model(
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
     # Stage 1: persist the uploaded file to disk
-    chunk_size = 1024 * 1024 * 2  # 2 MiB
+    chunk_size = AIOHTTP_FILE_STREAM_CHUNK_SIZE
 
-    def _persist_upload():
-        with open(file_path, 'wb') as out_f:
-            while True:
-                chunk = file.file.read(chunk_size)
-                if not chunk:
-                    break
-                out_f.write(chunk)
-
-    await asyncio.to_thread(_persist_upload)
+    async with aiofiles.open(file_path, 'wb') as out_f:
+        while chunk := await file.read(chunk_size):
+            await out_f.write(chunk)
 
     async def file_process_stream():
         nonlocal ollama_url
@@ -1645,25 +1641,26 @@ async def upload_model(
         log.info(f'Model Hash: {file_hash}')
 
         try:
-            with open(file_path, 'rb') as f:
-                bytes_read = 0
-                while chunk := f.read(chunk_size):
+            bytes_read = 0
+            async with aiofiles.open(file_path, 'rb') as f:
+                while chunk := await f.read(chunk_size):
                     bytes_read += len(chunk)
                     progress = round(bytes_read / total_size * 100, 2)
-                    yield f'data: {json.dumps({"progress": progress, "total": total_size, "completed": bytes_read})}\n\n'
-
-            # Stage 3: push blob to Ollama
-            def _read_blob():
-                with open(file_path, 'rb') as f:
-                    return f.read()
-
-            blob_data = await asyncio.to_thread(_read_blob)
+                    event = json.dumps({'progress': progress, 'total': total_size, 'completed': bytes_read})
+                    yield f'data: {event}\n\n'
 
             session = await get_session()
             blob_url = f'{ollama_url}/api/blobs/sha256:{file_hash}'
+
+            async def blob_chunks():
+                async with aiofiles.open(file_path, 'rb') as blob_file:
+                    while chunk := await blob_file.read(chunk_size):
+                        yield chunk
+
             async with session.post(
                 blob_url,
-                data=blob_data,
+                data=blob_chunks(),
+                headers={'Content-Length': str(total_size)},
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
             ) as resp:
@@ -1671,7 +1668,7 @@ async def upload_model(
                     raise Exception('Ollama: Could not create blob, Please try again.')
 
             log.info('Uploaded to /api/blobs')
-            os.remove(file_path)
+            await asyncio.to_thread(os.remove, file_path)
 
             # Stage 4: create the model
             model, _ext = os.path.splitext(filename)
@@ -1692,7 +1689,10 @@ async def upload_model(
             ) as create_resp:
                 if create_resp.ok:
                     log.info('API SUCCESS!')
-                    yield f'data: {json.dumps({"done": True, "blob": f"sha256:{file_hash}", "name": filename, "model_created": model})}\n\n'
+                    event = json.dumps(
+                        {'done': True, 'blob': f'sha256:{file_hash}', 'name': filename, 'model_created': model}
+                    )
+                    yield f'data: {event}\n\n'
                 else:
                     resp_text = await create_resp.text()
                     raise Exception(f'Failed to create model in Ollama. {resp_text}')

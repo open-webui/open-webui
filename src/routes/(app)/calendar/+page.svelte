@@ -206,7 +206,7 @@
 </script>
 
 <svelte:head>
-	<title>{$i18n.t('Calendar')} • {$WEBUI_NAME}</title>
+	<title>{$i18n.t('Calendar')} / {$WEBUI_NAME}</title>
 </svelte:head>
 
 <CalendarEventModal

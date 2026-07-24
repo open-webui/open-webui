@@ -40,12 +40,21 @@ from open_webui.models.models import (
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.chat_variables import get_chat_variables_schema
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def add_chat_variables_schema(model_dict: dict) -> dict:
+    system = ((model_dict.get('params') or {}).get('system') if isinstance(model_dict.get('params'), dict) else None)
+    schema = get_chat_variables_schema(system)
+    if schema:
+        model_dict.setdefault('meta', {})['chat_variables_schema'] = schema
+    return model_dict
 
 
 def _safe_static_redirect_path(url: str) -> str | None:
@@ -177,7 +186,7 @@ async def get_models(
     # Strip profile_image_url from meta — images are served via /model/profile/image.
     items = []
     for model in result.items:
-        data = model.model_dump()
+        data = add_chat_variables_schema(model.model_dump())
         if data.get('meta'):
             data['meta'].pop('profile_image_url', None)
         items.append(
@@ -527,6 +536,7 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
             db=db,
         ):
             model_dict = model.model_dump()
+            model_dict = add_chat_variables_schema(model_dict)
             # Strip params (system prompt and other admin-curated config)
             # for read-only callers — matches the params strip already
             # enforced on /api/models in utils/models.py.  Owners, admins

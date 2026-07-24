@@ -41,6 +41,7 @@
 	export let model = null;
 	export let save = false;
 	export let preview = false;
+	export let compactPreview = false;
 
 	export let paragraphTag = 'p';
 	export let editCodeBlock = true;
@@ -103,6 +104,7 @@
 		{done}
 		{save}
 		{preview}
+		{compactPreview}
 		{paragraphTag}
 		{editCodeBlock}
 		{sourceIds}

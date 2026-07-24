@@ -49,6 +49,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
+    AIOHTTP_FILE_STREAM_CHUNK_SIZE,
     BYPASS_PYDUB_PREPROCESSING,
     DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
@@ -678,15 +679,19 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
                 for key, value in payload.items():
                     form_data.add_field(key, str(value))
 
-                with open(file_path, 'rb') as audio_file:
-                    form_data.add_field('file', audio_file, filename=filename)
+                async def audio_chunks():
+                    async with aiofiles.open(file_path, 'rb') as audio_file:
+                        while chunk := await audio_file.read(AIOHTTP_FILE_STREAM_CHUNK_SIZE):
+                            yield chunk
 
-                    r = await session.post(
-                        url=f'{api_base_url}/audio/transcriptions',
-                        headers=headers,
-                        data=form_data,
-                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                    )
+                form_data.add_field('file', audio_chunks(), filename=filename)
+
+                r = await session.post(
+                    url=f'{api_base_url}/audio/transcriptions',
+                    headers=headers,
+                    data=form_data,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                )
             if r.status == 200:
                 break
 
@@ -823,13 +828,18 @@ async def _transcribe_azure(request, file_path, filename, file_dir, id):
         base_url or f'https://{region}.api.cognitive.microsoft.com'
     ) + '/speechtotext/transcriptions:transcribe?api-version=2024-11-15'
 
-    form_data = aiohttp.FormData()
-    form_data.add_field('definition', definition)
-    form_data.add_field('audio', open(file_path, 'rb'), filename=filename)
-
     r = None
     try:
         session = await get_session()
+        form_data = aiohttp.FormData()
+        form_data.add_field('definition', definition)
+
+        async def audio_chunks():
+            async with aiofiles.open(file_path, 'rb') as audio_file:
+                while chunk := await audio_file.read(AIOHTTP_FILE_STREAM_CHUNK_SIZE):
+                    yield chunk
+
+        form_data.add_field('audio', audio_chunks(), filename=filename)
         r = await session.post(
             url=endpoint,
             data=form_data,
@@ -1002,7 +1012,12 @@ async def _transcribe_mistral(request, file_path, filename, metadata, file_dir, 
             if language:
                 form_data.add_field('language', language)
 
-            form_data.add_field('file', open(file_path, 'rb'), filename=filename, content_type=mime_type)
+            async def audio_chunks():
+                async with aiofiles.open(file_path, 'rb') as audio_file:
+                    while chunk := await audio_file.read(AIOHTTP_FILE_STREAM_CHUNK_SIZE):
+                        yield chunk
+
+            form_data.add_field('file', audio_chunks(), filename=filename, content_type=mime_type)
 
             r = await session.post(
                 url=f'{api_base_url}/audio/transcriptions',
@@ -1094,7 +1109,7 @@ async def transcribe(request: Request, file_path: str, metadata: Optional[dict] 
         for chunk_path in chunk_paths:
             if chunk_path != file_path and os.path.isfile(chunk_path):
                 try:
-                    os.remove(chunk_path)
+                    await asyncio.to_thread(os.remove, chunk_path)
                 except Exception:
                     pass
 
@@ -1208,12 +1223,8 @@ async def transcription(
         if not os.path.realpath(file_path).startswith(os.path.realpath(file_dir)):
             raise ValueError('Invalid file path detected')
 
-        def _write_upload():
-            with open(file_path, 'wb') as f:
-                f.write(contents)
-
-        # Audio uploads can be large; write to disk off the event loop.
-        await asyncio.to_thread(_write_upload)
+        async with aiofiles.open(file_path, 'wb') as f:
+            await f.write(contents)
 
         try:
             metadata = None

@@ -221,7 +221,7 @@
 </script>
 
 <svelte:head>
-	<title>{automation.name || $i18n.t('Automation')} • {$WEBUI_NAME}</title>
+	<title>{automation.name || $i18n.t('Automation')} / {$WEBUI_NAME}</title>
 </svelte:head>
 
 <DeleteConfirmDialog

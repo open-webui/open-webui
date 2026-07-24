@@ -4,6 +4,7 @@
 
 	import { user, config } from '$lib/stores';
 	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
+	import { getUserVariables, updateUserVariables } from '$lib/apis/users';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
@@ -14,6 +15,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import Modal from '$lib/components/common/Modal.svelte';
 	import UserProfileImage from './Account/UserProfileImage.svelte';
 	import UserSettingField from './UserSettingField.svelte';
 	import UserSettingRow from './UserSettingRow.svelte';
@@ -38,15 +40,96 @@
 
 	let APIKey = '';
 	let APIKeyCopied = false;
+	let variableRows: { key: string; value: string }[] = [];
+	let variableModalOpen = false;
+	let variableFormIndex: number | null = null;
+	let variableFormKey = '';
+	let variableFormValue = '';
 
 	const textareaClass =
 		'w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const inputClass =
 		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const variableValueClass =
+		'w-full resize-none rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const actionButtonClass =
 		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+	const variableRowClass = 'flex w-full items-center gap-1.5';
+	const variableKeyRegex = /^[a-z][a-z0-9_]*$/;
+
+	const setVariableRows = (variables = {}) => {
+		variableRows = Object.entries(variables).map(([key, value]) => ({
+			key,
+			value: String(value ?? '')
+		}));
+	};
+
+	const openVariableModal = (idx: number | null = null) => {
+		const row = idx === null ? null : variableRows[idx];
+		variableFormIndex = idx;
+		variableFormKey = row?.key ?? '';
+		variableFormValue = row?.value ?? '';
+		variableModalOpen = true;
+	};
+
+	const removeVariable = (idx: number) => {
+		variableRows = variableRows.filter((_, rowIdx) => rowIdx !== idx);
+	};
+
+	const saveVariableForm = () => {
+		const key = variableFormKey.trim();
+
+		if (!variableKeyRegex.test(key)) {
+			toast.error($i18n.t('Variable keys must use lowercase snake case.'));
+			return;
+		}
+		if (variableRows.some((row, idx) => idx !== variableFormIndex && row.key === key)) {
+			toast.error($i18n.t('Variable keys must be unique.'));
+			return;
+		}
+
+		const row = { key, value: variableFormValue ?? '' };
+		variableRows =
+			variableFormIndex === null
+				? [...variableRows, row]
+				: variableRows.map((current, idx) => (idx === variableFormIndex ? row : current));
+		variableModalOpen = false;
+	};
+
+	const deleteVariableForm = () => {
+		if (variableFormIndex !== null) {
+			removeVariable(variableFormIndex);
+		}
+		variableModalOpen = false;
+	};
+
+	const getVariablesPayload = () => {
+		const variables: Record<string, string> = {};
+		for (const row of variableRows) {
+			const key = row.key.trim();
+			if (!key && !row.value) {
+				continue;
+			}
+			if (!variableKeyRegex.test(key)) {
+				throw $i18n.t('Variable keys must use lowercase snake case.');
+			}
+			if (Object.prototype.hasOwnProperty.call(variables, key)) {
+				throw $i18n.t('Variable keys must be unique.');
+			}
+			variables[key] = row.value ?? '';
+		}
+		return variables;
+	};
 
 	const submitHandler = async () => {
+		let variables: Record<string, string>;
+		try {
+			variables = getVariablesPayload();
+		} catch (error) {
+			toast.error(`${error}`);
+			return false;
+		}
+
 		if (name !== $user?.name) {
 			if (profileImageUrl === generateInitialsImage($user?.name) || profileImageUrl === '') {
 				profileImageUrl = generateInitialsImage(name);
@@ -63,7 +146,13 @@
 			toast.error(`${error}`);
 		});
 
-		if (updatedUser) {
+		const variablesRes = await updateUserVariables(localStorage.token, variables).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (updatedUser && variablesRes) {
+			setVariableRows(variablesRes.variables ?? {});
 			// Get Session User Info
 			const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
 				toast.error(`${error}`);
@@ -101,6 +190,12 @@
 
 			dateOfBirth = user?.date_of_birth ?? '';
 		}
+
+		const userVariables = await getUserVariables(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		setVariableRows(userVariables?.variables ?? {});
 
 		// Only fetch API key if the feature is enabled and user has permission
 		if (
@@ -197,7 +292,7 @@
 				description={$i18n.t('Set the birth date saved with your profile.')}
 			>
 				<input
-					class={inputClass}
+					class="{inputClass} dark:scheme-dark"
 					type="date"
 					aria-label={$i18n.t('Birth Date')}
 					bind:value={dateOfBirth}
@@ -205,6 +300,47 @@
 				/>
 			</UserSettingField>
 		</UserSettingSection>
+
+		<section class="mt-4 w-full">
+			<div
+				class="mb-0.5 flex items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-400"
+			>
+				<div class="flex min-w-0 items-center gap-1.5">
+					{$i18n.t('User Variables')}
+					<span class="text-gray-400 dark:text-gray-600">{variableRows.length}</span>
+				</div>
+				<button class={actionButtonClass} type="button" on:click={() => openVariableModal()}>
+					{$i18n.t('Add')}
+				</button>
+			</div>
+			<div class="flex flex-col gap-1 py-1">
+				{#each variableRows as row, idx}
+					<div class={variableRowClass}>
+						<div class="min-w-0 truncate font-mono text-xs text-gray-700 dark:text-gray-300">
+							{row.key || $i18n.t('key_name')}
+						</div>
+						<div class="min-w-0 flex-1 truncate text-xs text-gray-500 dark:text-gray-500">
+							{row.value || $i18n.t('Empty')}
+						</div>
+						<button class={actionButtonClass} type="button" on:click={() => openVariableModal(idx)}>
+							{$i18n.t('Edit')}
+						</button>
+					</div>
+				{/each}
+
+				{#if variableRows.length === 0}
+					<div class="text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('No user variables configured.')}
+					</div>
+				{/if}
+			</div>
+
+			<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+				{$i18n.t('Use these in model system prompts as {{example}}.', {
+					example: '{{user.variables.key_name}}'
+				})}
+			</div>
+		</section>
 
 		{#if $config?.features.enable_login_form && $config?.features.enable_password_change_form}
 			<UserSettingSection title={$i18n.t('Password')}>
@@ -397,3 +533,68 @@
 		</button>
 	</div>
 </div>
+
+<Modal size="sm" bind:show={variableModalOpen}>
+	<form class="p-4" on:submit|preventDefault={saveVariableForm}>
+		<h2 class="mb-3 text-sm font-medium text-gray-900 dark:text-white">
+			{variableFormIndex === null ? $i18n.t('Add User Variable') : $i18n.t('Edit User Variable')}
+		</h2>
+
+		<div class="mb-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
+			{$i18n.t('Key')}
+		</div>
+		<input
+			class={inputClass}
+			type="text"
+			bind:value={variableFormKey}
+			aria-label={$i18n.t('Variable key')}
+			placeholder={$i18n.t('key_name')}
+			autocomplete="off"
+			spellcheck="false"
+		/>
+
+		<div class="mb-1 mt-3 text-[0.625rem] text-gray-400 dark:text-gray-600">
+			{$i18n.t('Value')}
+		</div>
+		<Textarea
+			className={variableValueClass}
+			rows="6"
+			minSize={132}
+			bind:value={variableFormValue}
+			ariaLabel={$i18n.t('Variable value')}
+			placeholder={$i18n.t('Value')}
+		/>
+
+		<div class="mt-4 flex items-center justify-between gap-2">
+			<div>
+				{#if variableFormIndex !== null}
+					<button
+						class="text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+						type="button"
+						on:click={deleteVariableForm}
+					>
+						{$i18n.t('Delete')}
+					</button>
+				{/if}
+			</div>
+
+			<div class="flex items-center gap-3">
+				<button
+					class="text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+					type="button"
+					on:click={() => {
+						variableModalOpen = false;
+					}}
+				>
+					{$i18n.t('Cancel')}
+				</button>
+				<button
+					class="rounded-full bg-black px-3.5 py-1.5 text-sm font-normal text-white transition hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100"
+					type="submit"
+				>
+					{$i18n.t('Done')}
+				</button>
+			</div>
+		</div>
+	</form>
+</Modal>

@@ -166,9 +166,7 @@ def upgrade() -> None:
 
             for chat_id, messages in messages_by_chat.items():
                 parent_ids = {
-                    message['parent_id']
-                    for message in messages.values()
-                    if message.get('parent_id') in messages
+                    message['parent_id'] for message in messages.values() if message.get('parent_id') in messages
                 }
                 leaf_ids = [message_id for message_id in messages if message_id not in parent_ids]
                 resolved[chat_id] = max(
@@ -189,9 +187,7 @@ def upgrade() -> None:
                 resolved[chat_id] = valid_candidate
             elif messages:
                 parent_ids = {
-                    message['parent_id']
-                    for message in messages.values()
-                    if message.get('parent_id') in messages
+                    message['parent_id'] for message in messages.values() if message.get('parent_id') in messages
                 }
                 leaf_ids = [message_id for message_id in messages if message_id not in parent_ids]
                 resolved[chat_id] = max(

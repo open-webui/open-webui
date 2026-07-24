@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import uuid
 
-import orjson
 import pycrdt as Y
 from open_webui.utils.json_codec import ORJSONCodec
 from open_webui.utils.redis import get_redis_connection
@@ -104,16 +102,18 @@ class RedisDict:
 
         # Serialize values once — reused for both the fingerprint and the write.
         serialized = {k: ORJSONCodec.dumps(v) for k, v in mapping.items()}
+        digest = hashlib.sha256()
+        for key in sorted(serialized):
+            digest.update(key.encode())
+            digest.update(b'\0')
+            digest.update(serialized[key].encode())
+            digest.update(b'\0')
+        signature = digest.hexdigest()
 
         # Skip the write when the prepared mapping is identical to the last one
         # this process wrote.  The check is per-instance (not distributed), but
         # still eliminates the majority of redundant writes because each pod
         # typically produces the same model list on consecutive refreshes.
-        try:
-            canonical = orjson.dumps(serialized, option=orjson.OPT_SORT_KEYS)
-        except TypeError:
-            canonical = json.dumps(serialized, sort_keys=True).encode()
-        signature = hashlib.sha256(canonical).hexdigest()
         if signature == self._last_signature:
             return
 

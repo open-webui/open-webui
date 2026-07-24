@@ -128,7 +128,7 @@
 						user={$user}
 						prompt=""
 						readOnly={true}
-						preview={true}
+						compactPreview={true}
 						{selectedModels}
 						atSelectedModel={null}
 						{history}
