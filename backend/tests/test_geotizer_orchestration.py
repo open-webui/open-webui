@@ -8,6 +8,7 @@ import pytest
 from open_webui.tools.geotizer import run_geotizer_workflow
 from open_webui.utils.geotizer_orchestration import (
     GeotizerOrchestrationError,
+    bounded_text,
     build_batch_tasks,
     extract_json_object,
     validate_owner_envelope,
@@ -131,6 +132,14 @@ def test_owner_envelope_requires_registered_provenance_for_negative_result():
     value['patches'][1]['source_refs'] = ['missing']
     violations = validate_owner_envelope(batch(), value)
     assert any('unregistered source_refs' in item for item in violations)
+
+
+def test_bounded_evidence_keeps_head_and_provenance_tail():
+    value = 'A' * 100 + 'TAIL'
+    result = bounded_text(value, max_chars=40)
+    assert result.startswith('A' * 30)
+    assert result.endswith('TAIL')
+    assert 'omitted by orchestrator' in result
 
 
 def test_workflow_drives_start_contributors_owner_submit_finalize():

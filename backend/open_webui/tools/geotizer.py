@@ -450,6 +450,10 @@ def _contributor_prompt(
                 'or GIS layer/feature locators, units, conflicts and '
                 'negative-search notes.'
             ),
+            (
+                'Keep the evidence report under 12000 characters; prioritize '
+                'exact locators and facts for bounded_fields.'
+            ),
         ],
     }
     return json.dumps(payload, ensure_ascii=False, indent=2)

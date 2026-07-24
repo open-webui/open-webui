@@ -25,6 +25,7 @@ ALLOWED_FIELD_STATUSES = frozenset(
         'requires_expert_review',
     }
 )
+MAX_CONTRIBUTOR_EVIDENCE_CHARS = 20_000
 
 
 class GeotizerOrchestrationError(ValueError):
@@ -280,5 +281,28 @@ def compact_batch_context(
         'run_id': run_id,
         'batch': dict(next_batch),
         'datacube': dict(datacube or {}),
-        'contributor_evidence': [dict(item) for item in contributor_evidence],
+        'contributor_evidence': [
+            {
+                **dict(item),
+                'output': bounded_text(
+                    str(item.get('output') or ''),
+                    max_chars=MAX_CONTRIBUTOR_EVIDENCE_CHARS,
+                ),
+            }
+            for item in contributor_evidence
+        ],
     }
+
+
+def bounded_text(value: str, *, max_chars: int) -> str:
+    """Keep the beginning and provenance-rich tail of oversized evidence."""
+    if len(value) <= max_chars:
+        return value
+    tail_chars = min(4_000, max_chars // 4)
+    head_chars = max_chars - tail_chars
+    removed = len(value) - max_chars
+    return (
+        f'{value[:head_chars]}\n\n'
+        f'[... {removed} evidence characters omitted by orchestrator ...]\n\n'
+        f'{value[-tail_chars:]}'
+    )
