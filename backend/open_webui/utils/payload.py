@@ -7,6 +7,7 @@ from open_webui.utils.misc import (
     deep_update,
     replace_system_message_content,
 )
+from open_webui.utils.chat_variables import render_chat_variables, render_user_variables
 from open_webui.utils.task import prompt_template, prompt_variables_template
 
 
@@ -17,6 +18,15 @@ async def resolve_system_prompt(
 ) -> str:
     if not system:
         return ''
+
+    if metadata:
+        system = render_chat_variables(
+            system,
+            metadata.get('chat_variables', {}),
+            required=False,
+        )
+
+    system = render_user_variables(system, getattr(user, 'variables', {}) if user else {})
 
     # Metadata (WebUI Usage)
     if metadata:

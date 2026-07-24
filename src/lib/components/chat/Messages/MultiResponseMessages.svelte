@@ -28,6 +28,7 @@
 
 	export let isLastMessage;
 	export let readOnly = false;
+	export let allowDelete = true;
 	export let compactPreview = false;
 	export let editCodeBlock = true;
 
@@ -377,6 +378,7 @@
 										{saveMessage}
 										{rateMessage}
 										{deleteMessage}
+										{allowDelete}
 										{actionMessage}
 										{submitMessage}
 										{continueResponse}

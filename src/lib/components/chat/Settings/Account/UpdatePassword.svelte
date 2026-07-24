@@ -55,7 +55,7 @@
 			}}>{show ? $i18n.t('Hide') : $i18n.t('Show')}</button
 		>
 	</div>
-	<p class="-mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+	<p class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 		{$i18n.t('Update the password used for email and password sign-in.')}
 	</p>
 
@@ -113,10 +113,8 @@
 			</div>
 		</div>
 
-		<div class="mt-3 flex justify-end">
-			<button
-				class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-			>
+		<div class="flex justify-end">
+			<button class={actionButtonClass}>
 				{$i18n.t('Update password')}
 			</button>
 		</div>

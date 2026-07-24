@@ -116,13 +116,14 @@ const sandboxScript = String.raw`
 			'_old_show = matplotlib.pyplot.show',
 			'assert _old_show, "matplotlib.pyplot.show"',
 			'def show(*, block=None):',
-			'\\tbuf = BytesIO()',
-			'\\tmatplotlib.pyplot.savefig(buf, format="png")',
-			'\\tbuf.seek(0)',
-			'\\timg_str = base64.b64encode(buf.read()).decode("utf-8")',
-			'\\tmatplotlib.pyplot.clf()',
-			'\\tbuf.close()',
-			'\\tprint(f"data:image/png;base64,{img_str}")',
+			// String.raw keeps \t as-is; the sandbox's JS parser turns it into a real tab
+			'\tbuf = BytesIO()',
+			'\tmatplotlib.pyplot.savefig(buf, format="png")',
+			'\tbuf.seek(0)',
+			'\timg_str = base64.b64encode(buf.read()).decode("utf-8")',
+			'\tmatplotlib.pyplot.clf()',
+			'\tbuf.close()',
+			'\tprint(f"data:image/png;base64,{img_str}")',
 			'matplotlib.pyplot.show = show'
 		].join('\n'));
 	}
