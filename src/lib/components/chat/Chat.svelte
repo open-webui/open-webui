@@ -2770,9 +2770,11 @@
 				: selectedModels;
 
 		// Create response messages for each selected model
-		// Build message_ids list: [{model_id, message_id}, ...]
+		// Build message_ids list: [{model_id, message_id, modelIdx}, ...]
 		// Uses an array instead of a dict to support duplicate model IDs in side-by-side chat.
-		const messageIdsList: Array<{ model_id: string; message_id: string }> = [];
+		// modelIdx identifies each side-by-side column so the backend can persist it; without
+		// it, duplicate models collapse into one another when the chat is reloaded.
+		const messageIdsList: Array<{ model_id: string; message_id: string; modelIdx: number }> = [];
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
@@ -2804,7 +2806,11 @@
 				}
 
 				responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`] = responseMessageId;
-				messageIdsList.push({ model_id: modelId, message_id: responseMessageId });
+				messageIdsList.push({
+					model_id: modelId,
+					message_id: responseMessageId,
+					modelIdx: modelIdx ? modelIdx : _modelIdx
+				});
 			}
 		}
 		history = history;
@@ -2883,7 +2889,11 @@
 					primaryResponseMessageId,
 					_chatId,
 					{
-						messageIdsList: selectedModelIds.length > 1 ? messageIdsList : undefined,
+						// Always forward the message_ids list (not just for multi-model sends) so the
+						// backend persists each response's modelIdx — including single-column
+						// regenerations in a duplicate-model chat, which would otherwise lose their
+						// column identity and collapse on reload.
+						messageIdsList: messageIdsList.length > 0 ? messageIdsList : undefined,
 						regenerationPrompt
 					}
 				);
