@@ -335,8 +335,10 @@ def _week_start(date: datetime) -> datetime:
 def _build_weekly_heatmap(heatmap: list[dict]) -> list[dict]:
     weeks: dict[str, dict] = {}
     for day in heatmap:
-        week = _week_start(datetime.strptime(day['date'], '%Y-%m-%d')).strftime('%Y-%m-%d')
-        entry = weeks.setdefault(week, {'date': week, 'messages': 0, 'chats': 0, 'tokens': 0, 'models': Counter()})
+        week = _week_start(datetime.strptime(
+            day['date'], '%Y-%m-%d')).strftime('%Y-%m-%d')
+        entry = weeks.setdefault(
+            week, {'date': week, 'messages': 0, 'chats': 0, 'tokens': 0, 'models': Counter()})
         entry['messages'] += day.get('messages', 0)
         entry['chats'] += day.get('chats', 0)
         entry['tokens'] += day.get('tokens', 0)
@@ -478,7 +480,8 @@ async def update_user_settings_by_session_user(
         # If the user is not an admin and does not have permission to use tool servers, remove the key
         updated_user_settings['ui'].pop('toolServers', None)
 
-    ui_notifications = ui_settings.get('notifications') if isinstance(ui_settings, dict) else None
+    ui_notifications = ui_settings.get(
+        'notifications') if isinstance(ui_settings, dict) else None
     if (
         user.role != 'admin'
         and (
@@ -668,7 +671,8 @@ async def get_user_usage_by_session_user(
     elif days is not None:
         period_start = period_end - ((days - 1) * 86400)
     else:
-        period_start = max(user.created_at or (period_end - (364 * 86400)), period_end - (729 * 86400))
+        period_start = max(user.created_at or (
+            period_end - (364 * 86400)), period_end - (729 * 86400))
 
     if period_start > period_end:
         raise HTTPException(
@@ -699,7 +703,8 @@ async def get_user_usage_by_session_user(
             lifetime_tokens=lifetime_summary.get('total_tokens', 0),
             input_tokens=lifetime_summary.get('input_tokens', 0),
             output_tokens=lifetime_summary.get('output_tokens', 0),
-            peak_daily_tokens=max((day.get('tokens', 0) for day in heatmap), default=0),
+            peak_daily_tokens=max((day.get('tokens', 0)
+                                  for day in heatmap), default=0),
             longest_chat_seconds=chat_stats.get('longest_chat_seconds', 0),
             current_streak=streaks['current'],
             longest_streak=streaks['longest'],
@@ -716,15 +721,20 @@ async def get_user_usage_by_session_user(
         insights=UserUsageInsights(
             most_used_model=top_models[0]['model_id'] if top_models else None,
             average_tokens_per_chat=(
-                round(lifetime_summary.get('total_tokens', 0) / total_chats, 1) if total_chats else 0
+                round(lifetime_summary.get('total_tokens', 0) /
+                      total_chats, 1) if total_chats else 0
             ),
-            average_messages_per_active_day=round(total_messages / active_days, 1) if active_days else 0,
-            user_message_share=round((user_messages / total_messages) * 100, 1) if total_messages else 0,
-            assistant_message_share=round((assistant_messages / total_messages) * 100, 1) if total_messages else 0,
+            average_messages_per_active_day=round(
+                total_messages / active_days, 1) if active_days else 0,
+            user_message_share=round(
+                (user_messages / total_messages) * 100, 1) if total_messages else 0,
+            assistant_message_share=round(
+                (assistant_messages / total_messages) * 100, 1) if total_messages else 0,
         ),
         top_models=top_models,
         top_tools=top_tools,
-        period=UserUsagePeriod(start_date=period_start, end_date=period_end, days=period_days),
+        period=UserUsagePeriod(start_date=period_start,
+                               end_date=period_end, days=period_days),
     )
 
 
@@ -1108,7 +1118,7 @@ async def get_user_preview(
             'total': len(active_models),
         },
         'knowledge': {
-            'items': [{'id': k.id, 'name': k.name} for k in all_knowledge if k.id in accessible_knowledge_ids],
+            'items': [{'id': k.id, 'name': k.name} for k in all_knowledge if k.user_id == user_id or k.id in accessible_knowledge_ids],
             'total': len(all_knowledge),
         },
         'tools': {
