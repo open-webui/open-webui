@@ -29,18 +29,26 @@ def deep_update(d, u):
     return d
 
 
+def _strip_filter_entry(entry):
+    # Compose list-form env syntax passes surrounding quotes through verbatim
+    return (entry or '').strip().strip('"\'').strip()
+
+
 def get_allow_block_lists(filter_list):
     allow_list = []
     block_list = []
 
-    if filter_list:
-        for d in filter_list:
-            if d.startswith('!'):
-                # Domains starting with "!" → blocked
-                block_list.append(d[1:].strip())
-            else:
-                # Domains starting without "!" → allowed
-                allow_list.append(d.strip())
+    for raw_entry in filter_list or []:
+        entry = _strip_filter_entry(raw_entry)
+        is_blocked = entry.startswith('!')
+        if is_blocked:
+            entry = _strip_filter_entry(entry[1:])
+        if not entry:
+            continue
+        if is_blocked:
+            block_list.append(entry)
+        else:
+            allow_list.append(entry)
 
     return allow_list, block_list
 
