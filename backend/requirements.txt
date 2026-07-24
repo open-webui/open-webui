@@ -5,7 +5,6 @@ python-multipart==0.0.32
 itsdangerous==2.2.0
 
 python-socketio==5.16.2
-python-jose==3.5.0
 cryptography==48.0.0
 bcrypt==5.0.0
 argon2-cffi==25.1.0
