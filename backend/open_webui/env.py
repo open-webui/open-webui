@@ -389,6 +389,12 @@ try:
 except ValueError:
     REDIS_SOCKET_CONNECT_TIMEOUT = None
 
+REDIS_SOCKET_TIMEOUT = os.getenv('REDIS_SOCKET_TIMEOUT', '')
+try:
+    REDIS_SOCKET_TIMEOUT = float(REDIS_SOCKET_TIMEOUT)
+except ValueError:
+    REDIS_SOCKET_TIMEOUT = None
+
 # Whether to enable TCP SO_KEEPALIVE on Redis client sockets. Opt-in:
 # defaults to off so behavior is unchanged for existing deployments. When
 # enabled, the kernel sends TCP keepalive probes on idle connections so
