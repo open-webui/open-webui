@@ -1068,12 +1068,11 @@ class NotificationEventSink:
             schedule_notification_dispatch(app, event)
 
 
-# Keyed on the underlying function: reflection is expensive and runs per
-# dispatched event per handler; reloads create new functions and evict.
+# Weak-keyed on __func__ so reloaded plugins drop their cached entries
 _signature_cache = weakref.WeakKeyDictionary()
 
 
-def _handler_signature(handler):
+def _handler_signature(handler: Any) -> inspect.Signature:
     func = getattr(handler, '__func__', handler)
     try:
         signature = _signature_cache.get(func)

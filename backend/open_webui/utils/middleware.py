@@ -4782,8 +4782,6 @@ async def streaming_chat_response_handler(response, ctx):
                         tool_args = tool_call.get('function', {}).get('arguments', '{}')
                         params = {}
                         if tool_args and tool_args.strip():
-                            # Arguments are almost always JSON; literal_eval is
-                            # kept as fallback for Python-repr-style payloads
                             try:
                                 params = json.loads(tool_args)
                             except Exception:
