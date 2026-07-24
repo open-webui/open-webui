@@ -102,6 +102,7 @@ from open_webui.utils.misc import (
     convert_output_to_messages,
     deep_update,
     extract_urls,
+    flatten_multimodal_tool_messages,
     get_content_from_message,
     get_last_assistant_message,
     get_last_user_message,
@@ -1586,7 +1587,7 @@ async def add_file_context(messages: list, chat_id: str, user) -> list:
     # the payload message list longer than the stored message list. A naive
     # positional zip() would pair user messages with wrong stored messages,
     # causing later images to lose their file context (see #21878).
-    user_messages = [m for m in messages if m.get('role') == 'user']
+    user_messages = [m for m in messages if m.get('role') == 'user' and not m.get('_tool_result_image')]
     stored_user_messages = [m for m in stored_messages if m.get('role') == 'user']
 
     for message, stored_message in zip(user_messages, stored_user_messages):
@@ -2081,7 +2082,7 @@ def process_messages_with_output(
                 reasoning_format=reasoning_format,
             )
             if output_messages:
-                processed.extend(output_messages)
+                processed.extend(flatten_multimodal_tool_messages(output_messages, mark_image_messages=True))
                 continue
 
         # Strip 'output' field before adding (LLM shouldn't see it)
@@ -2924,6 +2925,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Strip empty text content blocks from multimodal messages
     # to prevent errors from providers like Gemini and Claude
     form_data['messages'] = strip_empty_content_blocks(form_data.get('messages', []))
+    for message in form_data['messages']:
+        message.pop('_tool_result_image', None)
 
     # Merge any duplicate system messages into a single message at position 0
     # to prevent template parsing errors with strict chat templates (e.g. Qwen)
@@ -5071,38 +5074,12 @@ async def streaming_chat_response_handler(response, ctx):
                             tool_messages = convert_output_to_messages(
                                 output, raw=True, reasoning_format=get_reasoning_format(model)
                             )
-
-                            # Chat Completions providers don't support multimodal
-                            # tool messages.  Extract images into a user message.
-                            image_urls = []
-                            for message in tool_messages:
-                                if message.get('role') == 'tool' and isinstance(message.get('content'), list):
-                                    text_parts = []
-                                    for part in message['content']:
-                                        if part.get('type') == 'input_text':
-                                            text_parts.append(part.get('text', ''))
-                                        elif part.get('type') == 'input_image':
-                                            image_urls.append(part.get('image_url', ''))
-                                    message['content'] = ''.join(text_parts)
+                            tool_messages = flatten_multimodal_tool_messages(tool_messages)
 
                             new_form_data['messages'] = [
                                 *form_data['messages'],
                                 *tool_messages,
                             ]
-
-                            if image_urls:
-                                new_form_data['messages'].append(
-                                    {
-                                        'role': 'user',
-                                        'content': [
-                                            {
-                                                'type': 'text',
-                                                'text': 'Here are the images from the tool results above. Please analyze them.',
-                                            },
-                                            *[{'type': 'image_url', 'image_url': {'url': url}} for url in image_urls],
-                                        ],
-                                    }
-                                )
 
                         res = await generate_chat_completion(
                             request,

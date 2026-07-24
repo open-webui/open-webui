@@ -221,6 +221,52 @@ def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
     return reconciled_messages
 
 
+def flatten_multimodal_tool_messages(messages: list[dict], mark_image_messages: bool = False) -> list[dict]:
+    """Move tool-result images into a provider-compatible user message."""
+    flattened_messages = []
+    image_urls = []
+
+    def append_image_message():
+        nonlocal image_urls
+        if not image_urls:
+            return
+        flattened_messages.append(
+            {
+                'role': 'user',
+                **({'_tool_result_image': True} if mark_image_messages else {}),
+                'content': [
+                    {
+                        'type': 'text',
+                        'text': 'Here are the images from the tool results above. Please analyze them.',
+                    },
+                    *[{'type': 'image_url', 'image_url': {'url': url}} for url in image_urls],
+                ],
+            }
+        )
+        image_urls = []
+
+    for message in messages:
+        if message.get('role') != 'tool':
+            append_image_message()
+            flattened_messages.append(message)
+            continue
+
+        if isinstance(message.get('content'), list):
+            text_parts = []
+            for part in message['content']:
+                if part.get('type') == 'input_text':
+                    text_parts.append(part.get('text', ''))
+                elif part.get('type') == 'input_image' and part.get('image_url'):
+                    image_urls.append(part['image_url'])
+
+            message = {**message, 'content': ''.join(text_parts)}
+
+        flattened_messages.append(message)
+
+    append_image_message()
+    return flattened_messages
+
+
 def convert_output_to_messages(
     output: list,
     raw: bool = False,
