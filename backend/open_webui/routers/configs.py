@@ -421,6 +421,13 @@ class TerminalServerRefreshForm(BaseModel):
     reset: bool = False
 
 
+class TerminalServerPolicyGetForm(BaseModel):
+    url: str
+    key: str | None = ''
+    auth_type: str | None = 'bearer'
+    policy_id: str
+
+
 @router.post('/terminal_servers/policy')
 async def put_terminal_server_policy(
     request: Request, form_data: TerminalServerPolicyForm, user=Depends(get_admin_user)
@@ -493,6 +500,72 @@ async def put_terminal_server_lifecycle(
     except Exception as e:
         log.debug(f'Failed to access lifecycle on terminal server: {e}')
         raise HTTPException(status_code=400, detail='Failed to access lifecycle on terminal server')
+
+
+@router.post('/terminal_servers/policy/get')
+async def get_terminal_server_policy(
+    request: Request, form_data: TerminalServerPolicyGetForm, user=Depends(get_admin_user)
+):
+    """
+    Proxy a policy GET from an orchestrator terminal server.
+    """
+    base_url = (form_data.url or '').rstrip('/')
+    if not base_url:
+        raise HTTPException(status_code=400, detail='Terminal server URL is required')
+
+    headers = {}
+    if form_data.auth_type == 'bearer' and form_data.key:
+        headers.update(bearer_auth_header(form_data.key))
+
+    try:
+        async with aiohttp.ClientSession(
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+        ) as session:
+            policy_url = f'{base_url}/api/v1/policies/{form_data.policy_id}'
+            async with session.get(policy_url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL) as resp:
+                if resp.ok:
+                    return await resp.json()
+                detail = await resp.text()
+                raise HTTPException(status_code=resp.status, detail=detail)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.debug(f'Failed to get policy from terminal server: {e}')
+        raise HTTPException(status_code=400, detail='Failed to get policy from terminal server')
+
+
+@router.post('/terminal_servers/lifecycle/get')
+async def get_terminal_server_lifecycle(
+    request: Request, form_data: TerminalServerPolicyGetForm, user=Depends(get_admin_user)
+):
+    """
+    Proxy a policy lifecycle GET from an orchestrator terminal server.
+    """
+    base_url = (form_data.url or '').rstrip('/')
+    if not base_url:
+        raise HTTPException(status_code=400, detail='Terminal server URL is required')
+
+    headers = {}
+    if form_data.auth_type == 'bearer' and form_data.key:
+        headers.update(bearer_auth_header(form_data.key))
+
+    try:
+        async with aiohttp.ClientSession(
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+        ) as session:
+            lifecycle_url = f'{base_url}/api/v1/policies/{form_data.policy_id}/lifecycle'
+            async with session.get(lifecycle_url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL) as resp:
+                if resp.ok:
+                    return await resp.json()
+                detail = await resp.text()
+                raise HTTPException(status_code=resp.status, detail=detail)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.debug(f'Failed to get lifecycle from terminal server: {e}')
+        raise HTTPException(status_code=400, detail='Failed to get lifecycle from terminal server')
 
 
 @router.post('/terminal_servers/refresh')
