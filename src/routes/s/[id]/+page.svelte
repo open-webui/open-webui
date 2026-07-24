@@ -149,7 +149,7 @@
 <svelte:head>
 	<title>
 		{title
-			? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} • ${$WEBUI_NAME}`
+			? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} / ${$WEBUI_NAME}`
 			: `${$WEBUI_NAME}`}
 	</title>
 </svelte:head>
@@ -163,10 +163,10 @@
 				<div
 					class="pt-5 px-2 w-full {($settings?.widescreenMode ?? null)
 						? 'max-w-full'
-						: 'max-w-5xl'} mx-auto"
+						: 'max-w-[52rem]'} mx-auto"
 				>
 					<div class="px-3">
-						<h1 class=" text-2xl font-medium line-clamp-1 m-0">
+						<h1 class=" text-2xl font-normal line-clamp-1 m-0">
 							{title}
 						</h1>
 
@@ -208,7 +208,7 @@
 				>
 					<div class="pb-5">
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 							on:click={cloneSharedChat}
 						>
 							{$i18n.t('Clone Chat')}

@@ -83,6 +83,7 @@
 
 	export let save = false;
 	export let preview = false;
+	export let compactPreview = false;
 	export let floatingButtons = true;
 
 	export let editCodeBlock = true;
@@ -270,6 +271,7 @@
 			{model}
 			{save}
 			{preview}
+			{compactPreview}
 			{done}
 			{editCodeBlock}
 			{topPadding}
@@ -283,31 +285,36 @@
 			onPreview={previewHandler}
 		/>
 	{:else if $settings?.renderMarkdownInAssistantMessages ?? true}
-		<Markdown
-			{id}
-			content={formatMessageContent(content)}
-			{model}
-			{save}
-			{preview}
-			{done}
-			{editCodeBlock}
-			{topPadding}
-			{sourceIds}
-			{onSourceClick}
-			{onTaskClick}
-			{onSave}
-			onUpdate={markdownUpdateHandler}
-			onPreview={previewHandler}
-		/>
+		<div class="markdown-prose">
+			<Markdown
+				{id}
+				content={formatMessageContent(content)}
+				{model}
+				{save}
+				{preview}
+				{compactPreview}
+				{done}
+				{editCodeBlock}
+				{topPadding}
+				{sourceIds}
+				{onSourceClick}
+				{onTaskClick}
+				{onSave}
+				onUpdate={markdownUpdateHandler}
+				onPreview={previewHandler}
+			/>
+		</div>
 	{:else}
 		{@const extracted = extractDetailsBlocks(content)}
 
 		{#if extracted.detailsContent}
 			<!-- Render structural blocks (tool calls, reasoning, etc.) through Markdown -->
-			<Markdown {id} content={extracted.detailsContent} {done} />
+			<div class="markdown-prose">
+				<Markdown {id} content={extracted.detailsContent} {preview} {compactPreview} {done} />
+			</div>
 		{/if}
 		{#if extracted.plainContent}
-			<div class="whitespace-pre-wrap">{extracted.plainContent}</div>
+			<div class="whitespace-pre-wrap text-[0.9375rem]">{extracted.plainContent}</div>
 		{/if}
 	{/if}
 </div>

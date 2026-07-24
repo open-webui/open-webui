@@ -4,6 +4,7 @@
 
 	import Minus from '$lib/components/icons/Minus.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	export let title = '';
 	export let tooltip = '';
@@ -40,10 +41,9 @@
 		</div>
 
 		<div class="flex items-center -mr-1">
-			<select
-				class="w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
-					? ''
-					: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+			<SettingsSelect
+				className="w-full"
+				selectClassName="text-sm"
 				bind:value={selectedModelId}
 				on:change={() => {
 					if (selectedModelId && !modelIds.includes(selectedModelId)) {
@@ -58,7 +58,7 @@
 						<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
 					{/if}
 				{/each}
-			</select>
+			</SettingsSelect>
 		</div>
 
 		<!-- <hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" /> -->

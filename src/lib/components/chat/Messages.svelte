@@ -1,19 +1,12 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import {
-		chats,
-		config,
-		settings,
-		user as _user,
-		mobile,
-		currentChatPage,
-		temporaryChatEnabled
-	} from '$lib/stores';
+	import { config, settings, user as _user, mobile, temporaryChatEnabled } from '$lib/stores';
+	import { refreshChatList } from '$lib/stores/chatList';
 	import { tick, getContext, onMount, onDestroy, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import { toast } from 'svelte-sonner';
-	import { deleteChatMessageById, getChatList, updateChatById } from '$lib/apis/chats';
+	import { deleteChatMessageById, updateChatById } from '$lib/apis/chats';
 	import { copyToClipboard, extractCurlyBraceWords } from '$lib/utils';
 
 	import Message from './Messages/Message.svelte';
@@ -24,7 +17,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let className = 'h-full flex pt-8';
+	export let className = 'h-full flex pt-18';
 
 	export let chatId = '';
 	export let user = $_user;
@@ -47,18 +40,25 @@
 	export let showMessage: Function = () => {};
 	export let submitMessage: Function = () => {};
 	export let addMessages: Function = () => {};
+	export let forkHandler: Function | null = null;
 
 	export let readOnly = false;
+	export let allowDelete = true;
+	export let compactPreview = false;
 	export let editCodeBlock = true;
 
 	export let topPadding = false;
 	export let bottomPadding = false;
 	export let autoScroll;
+	export let messagesContainerId = 'messages-container';
 
 	export let onSelect = (e) => {};
+	export let onInsertToNote: ((content: string) => void) | null = null;
 
 	export let messagesCount: number | null = 8;
 	let messagesLoading = false;
+
+	const getMessagesContainer = () => document.getElementById(messagesContainerId);
 
 	onDestroy(() => {
 		cancelAnimationFrame(pendingRebuild);
@@ -66,8 +66,10 @@
 
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
-		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollTop + 100;
+		const element = getMessagesContainer();
+		if (element) {
+			element.scrollTop = element.scrollTop + 100;
+		}
 
 		messagesLoading = true;
 		messagesCount += 8;
@@ -88,7 +90,7 @@
 		let message = history.messages[history.currentId];
 		const visitedMessageIds = new Set();
 
-		while (message && (messagesCount !== null ? _messages.length <= messagesCount : true)) {
+		while (message && (messagesCount !== null ? _messages.length < messagesCount : true)) {
 			if (visitedMessageIds.has(message.id)) {
 				console.warn('Circular dependency detected in message history', message.id);
 				break;
@@ -139,7 +141,7 @@
 	}
 
 	const scrollToBottom = () => {
-		const element = document.getElementById('messages-container');
+		const element = getMessagesContainer();
 		if (element) {
 			element.scrollTop = element.scrollHeight;
 
@@ -183,8 +185,7 @@
 				history = history;
 			}
 
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			await refreshChatList(localStorage.token);
 		}
 	};
 
@@ -220,8 +221,10 @@
 
 		// Optional auto-scroll
 		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			const element = getMessagesContainer();
+			autoScroll = element
+				? element.scrollHeight - element.scrollTop <= element.clientHeight + 50
+				: false;
 
 			setTimeout(() => {
 				scrollToBottom();
@@ -267,8 +270,10 @@
 		await tick();
 
 		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			const element = getMessagesContainer();
+			autoScroll = element
+				? element.scrollHeight - element.scrollTop <= element.clientHeight + 50
+				: false;
 
 			setTimeout(() => {
 				scrollToBottom();
@@ -318,8 +323,10 @@
 		await tick();
 
 		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+			const element = getMessagesContainer();
+			autoScroll = element
+				? element.scrollHeight - element.scrollTop <= element.clientHeight + 50
+				: false;
 
 			setTimeout(() => {
 				scrollToBottom();
@@ -484,18 +491,19 @@
 				history = res.chat.history;
 			}
 
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			await refreshChatList(localStorage.token);
 		}
 	};
 
 	const triggerScroll = () => {
 		if (autoScroll) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-			setTimeout(() => {
-				scrollToBottom();
-			}, 100);
+			const element = getMessagesContainer();
+			if (element) {
+				autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+				setTimeout(() => {
+					scrollToBottom();
+				}, 100);
+			}
 		}
 	};
 </script>
@@ -547,10 +555,14 @@
 								{continueResponse}
 								{mergeResponses}
 								{addMessages}
+								{forkHandler}
+								{allowDelete}
 								{triggerScroll}
 								{readOnly}
+								{compactPreview}
 								{editCodeBlock}
 								{topPadding}
+								{onInsertToNote}
 							/>
 						{/each}
 					</ul>

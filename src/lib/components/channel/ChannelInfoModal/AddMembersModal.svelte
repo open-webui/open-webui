@@ -52,19 +52,19 @@
 {#if channel}
 	<Modal size="sm" bind:show>
 		<div>
-			<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 mb-1.5">
+			<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 mb-1">
 				<div class="self-center text-base">
 					<div class="flex items-center gap-0.5 shrink-0">
 						{$i18n.t('Add Members')}
 					</div>
 				</div>
 				<button
-					class="self-center"
+					class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 					on:click={() => {
 						show = false;
 					}}
 				>
-					<XMark className={'size-5'} />
+					<XMark className={'size-4'} />
 				</button>
 			</div>
 
@@ -81,9 +81,9 @@
 							<MemberSelector bind:userIds bind:groupIds includeGroups={true} />
 						</div>
 
-						<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+						<div class="flex justify-end pt-3 text-sm font-normal gap-1.5">
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+								class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
 									? ' cursor-not-allowed'
 									: ''}"
 								type="submit"

@@ -30,7 +30,7 @@
 	$: loadLocale($i18n.languages);
 
 	import { goto } from '$app/navigation';
-	import { WEBUI_NAME, config, user, pinnedNotes } from '$lib/stores';
+	import { WEBUI_NAME, config, user, pinnedNotes, mobile, showSidebar } from '$lib/stores';
 	import {
 		createNewNote,
 		deleteNoteById,
@@ -40,14 +40,12 @@
 		toggleNotePinnedStatusById,
 		getPinnedNoteList
 	} from '$lib/apis/notes';
-	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';
+	import { capitalizeFirstLetter, copyToClipboard, formatNumber, getTimeRange } from '$lib/utils';
 	import { downloadPdf, createNoteHandler } from './utils';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Search from '../icons/Search.svelte';
-	import Plus from '../icons/Plus.svelte';
-	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
@@ -55,11 +53,18 @@
 	import XMark from '../icons/XMark.svelte';
 	import DropdownOptions from '../common/DropdownOptions.svelte';
 	import Loader from '../common/Loader.svelte';
+	import SidebarIcon from '../icons/Sidebar.svelte';
+	import SplitCreateButton from '../common/SplitCreateButton.svelte';
+	import ChevronDown from '../icons/ChevronDown.svelte';
+	import ChevronUp from '../icons/ChevronUp.svelte';
 
 	let loaded = false;
 
 	let importFiles = '';
+	let importDocumentFiles: FileList | null = null;
+	let notesImportInputElement: HTMLInputElement;
 	let selectedNote = null;
+	let openNoteMenuId: string | null = null;
 	let showDeleteConfirm = false;
 
 	let notes = {};
@@ -70,7 +75,8 @@
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
-	let sortKey = null;
+	let sortKey = 'updated_at';
+	let sortDirection = 'desc';
 	let displayOption = null;
 	let viewOption = null;
 	let permission = null;
@@ -116,48 +122,46 @@
 		}
 	};
 
-	const inputFilesHandler = async (inputFiles) => {
-		// Check if all the file is a markdown file and extract name and content
+	const inputFilesHandler = async (inputFiles: File[]) => {
+		let imported = false;
 
 		for (const file of inputFiles) {
-			if (file.type !== 'text/markdown') {
-				toast.error($i18n.t('Only markdown files are allowed'));
+			const isSupportedFile =
+				file.type === 'text/markdown' ||
+				file.type === 'text/plain' ||
+				/\.(md|txt)$/i.test(file.name);
+
+			if (!isSupportedFile) {
+				toast.error('Only txt and md files are allowed');
 				return;
 			}
 
-			const reader = new FileReader();
-			reader.onload = async (event) => {
-				const content = event.target.result;
-				let name = file.name.replace(/\.md$/, '');
+			const content = await file.text();
+			const name = file.name.replace(/\.(md|txt)$/i, '');
 
-				if (typeof content !== 'string') {
-					toast.error($i18n.t('Invalid file content'));
-					return;
-				}
+			const res = await createNewNote(localStorage.token, {
+				title: name,
+				data: {
+					content: {
+						json: null,
+						html: marked.parse(content ?? ''),
+						md: content
+					}
+				},
+				meta: null,
+				access_grants: []
+			}).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
 
-				// Create a new note with the content
-				const res = await createNewNote(localStorage.token, {
-					title: name,
-					data: {
-						content: {
-							json: null,
-							html: marked.parse(content ?? ''),
-							md: content
-						}
-					},
-					meta: null,
-					access_grants: []
-				}).catch((error) => {
-					toast.error(`${error}`);
-					return null;
-				});
+			if (res) {
+				imported = true;
+			}
+		}
 
-				if (res) {
-					init();
-				}
-			};
-
-			reader.readAsText(file);
+		if (imported) {
+			init();
 		}
 	};
 
@@ -190,7 +194,13 @@
 		}, 300);
 	};
 
-	$: if (loaded && sortKey !== undefined && permission !== undefined && viewOption !== undefined) {
+	$: if (
+		loaded &&
+		sortKey !== undefined &&
+		sortDirection !== undefined &&
+		permission !== undefined &&
+		viewOption !== undefined
+	) {
 		init();
 	}
 
@@ -207,13 +217,13 @@
 			viewOption,
 			permission,
 			sortKey,
-			page
+			page,
+			sortKey ? sortDirection : null
 		).catch(() => {
 			return [];
 		});
 
 		if (res) {
-			console.log(res);
 			total = res.total;
 			const pageItems = res.items;
 
@@ -261,6 +271,15 @@
 		return orderedKeys.map((key) => [key, grouped[key]] as [string, any[]]);
 	};
 
+	const setSortKey = (key: string) => {
+		if (sortKey === key) {
+			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortKey = key;
+			sortDirection = key === 'updated_at' ? 'desc' : 'asc';
+		}
+	};
+
 	let dragged = false;
 
 	const onDragOver = (e) => {
@@ -278,15 +297,15 @@
 		dragged = false;
 	};
 
-	const onDrop = async (e) => {
+	const onDrop = async (e: DragEvent) => {
 		e.preventDefault();
 		console.log(e);
 
 		if (e.dataTransfer?.files) {
-			const inputFiles = Array.from(e.dataTransfer?.files);
+			const inputFiles = Array.from(e.dataTransfer.files) as File[];
 			if (inputFiles && inputFiles.length > 0) {
 				console.log(inputFiles);
-				inputFilesHandler(inputFiles);
+				await inputFilesHandler(inputFiles);
 			}
 		}
 
@@ -318,14 +337,37 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Notes')} • {$WEBUI_NAME}
+		{$i18n.t('Notes')} / {$WEBUI_NAME}
 	</title>
 </svelte:head>
 
 <FilesOverlay show={dragged} />
 
-<div id="notes-container" class="w-full min-h-full h-full px-3 md:px-[18px]">
+<div id="notes-container" class="w-full min-h-full h-full">
 	{#if loaded}
+		<input
+			id="notes-import-input"
+			bind:this={notesImportInputElement}
+			bind:files={importDocumentFiles}
+			type="file"
+			accept=".txt,.md,text/plain,text/markdown"
+			multiple
+			hidden
+			on:change={async () => {
+				if (!importDocumentFiles || importDocumentFiles.length === 0) return;
+
+				try {
+					await inputFilesHandler(Array.from(importDocumentFiles));
+					toast.success($i18n.t('Imported notes successfully'));
+				} catch (error) {
+					toast.error(`${error}`);
+				} finally {
+					importDocumentFiles = null;
+					notesImportInputElement.value = '';
+				}
+			}}
+		/>
+
 		<DeleteConfirmDialog
 			bind:show={showDeleteConfirm}
 			title={$i18n.t('Delete note?')}
@@ -335,46 +377,68 @@
 			}}
 		>
 			<div class=" text-sm text-gray-500 truncate">
-				{$i18n.t('This will delete')} <span class="  font-semibold">{selectedNote.title}</span>.
+				{$i18n.t('This will delete')} <span class="  font-normal">{selectedNote.title}</span>.
 			</div>
 		</DeleteConfirmDialog>
 
-		<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3">
-			<div class="flex justify-between items-center">
-				<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
-					<div>
-						{$i18n.t('Notes')}
-					</div>
+		<div class="flex items-center gap-0.5 md:gap-1 mb-1">
+			{#if $mobile}
+				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
+					<Tooltip
+						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+						interactive={true}
+					>
+						<button
+							id="sidebar-toggle-button"
+							class="cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							on:click={() => {
+								showSidebar.set(!$showSidebar);
+							}}
+						>
+							<div class="self-center p-1.5">
+								<SidebarIcon className="size-4" />
+							</div>
+						</button>
+					</Tooltip>
+				</div>
+			{/if}
 
-					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
-						{total}
-					</div>
+			<div class="flex w-full items-center">
+				<div class="flex items-center gap-1 py-1 min-w-0">
+					<span class="min-w-fit px-1 text-sm select-none">{$i18n.t('Notes')}</span>
+					<span class="text-sm text-gray-500 dark:text-gray-500">
+						{total === null ? '' : formatNumber(total)}
+					</span>
 				</div>
 
-				<div class="flex w-full justify-end gap-1.5">
-					<button
-						class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
-						on:click={async () => {
-							const res = await createNoteHandler(dayjs().format('YYYY-MM-DD'));
+				<div class="ml-auto flex items-center gap-1">
+					<SplitCreateButton
+						actions={[
+							{
+								id: 'notes-new',
+								label: $i18n.t('Create'),
+								onClick: async () => {
+									const res = await createNoteHandler(dayjs().format('YYYY-MM-DD'));
 
-							if (res) {
-								goto(`/notes/${res.id}`);
+									if (res) {
+										goto(`/notes/${res.id}`);
+									}
+								}
+							},
+							{
+								id: 'notes-import',
+								label: $i18n.t('Import txt/md'),
+								onClick: () => notesImportInputElement?.click()
 							}
-						}}
-					>
-						<Plus className="size-3" strokeWidth="2.5" />
-
-						<div class=" ml-1 text-xs">{$i18n.t('New Note')}</div>
-					</button>
+						]}
+					/>
 				</div>
 			</div>
 		</div>
 
-		<div
-			class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30"
-		>
-			<div class="px-3.5 flex flex-1 items-center w-full space-x-2 py-0.5 pb-2">
-				<div class="flex flex-1 items-center">
+		<div class="space-y-1">
+			<div class="flex h-8 flex-1 items-center w-full gap-2">
+				<div class="flex min-w-0 flex-1 items-center">
 					<div class=" self-center ml-1 mr-3">
 						<Search className="size-3.5" />
 					</div>
@@ -399,11 +463,9 @@
 						</div>
 					{/if}
 				</div>
-			</div>
 
-			<div class="px-3 flex justify-between">
 				<div
-					class="flex w-full bg-transparent overflow-x-auto scrollbar-none"
+					class="flex max-w-[55%] shrink-0 overflow-x-auto scrollbar-none"
 					on:wheel={(e) => {
 						if (e.deltaY !== 0) {
 							e.preventDefault();
@@ -412,11 +474,10 @@
 					}}
 				>
 					<div
-						class="flex gap-3 w-fit text-center text-sm rounded-full bg-transparent px-0.5 whitespace-nowrap"
+						class="flex w-fit gap-0.5 text-center text-sm rounded-full bg-transparent whitespace-nowrap"
 					>
 						<DropdownOptions
-							align="start"
-							className="flex shrink-0 items-center gap-2 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-850 rounded-xl placeholder-gray-400 outline-hidden focus:outline-hidden"
+							align="end"
 							bind:value={viewOption}
 							items={[
 								{ value: null, label: $i18n.t('All') },
@@ -434,7 +495,7 @@
 
 						{#if [null, 'shared'].includes(viewOption)}
 							<DropdownOptions
-								align="start"
+								align="end"
 								bind:value={permission}
 								items={[
 									{ value: null, label: $i18n.t('Write') },
@@ -442,25 +503,23 @@
 								]}
 							/>
 						{/if}
-					</div>
-				</div>
 
-				<div class="shrink-0">
-					<DropdownOptions
-						align="start"
-						bind:value={displayOption}
-						items={[
-							{ value: null, label: $i18n.t('List') },
-							{ value: 'grid', label: $i18n.t('Grid') }
-						]}
-						onChange={() => {
-							if (displayOption) {
-								localStorage.noteDisplayOption = displayOption;
-							} else {
-								delete localStorage.noteDisplayOption;
-							}
-						}}
-					/>
+						<DropdownOptions
+							align="end"
+							bind:value={displayOption}
+							items={[
+								{ value: null, label: $i18n.t('List') },
+								{ value: 'grid', label: $i18n.t('Grid') }
+							]}
+							onChange={() => {
+								if (displayOption) {
+									localStorage.noteDisplayOption = displayOption;
+								} else {
+									delete localStorage.noteDisplayOption;
+								}
+							}}
+						/>
+					</div>
 				</div>
 			</div>
 
@@ -468,105 +527,152 @@
 				{#if (items ?? []).length > 0}
 					{@const groupedNotes = groupNotes(items)}
 
-					<div class="@container h-full py-2.5 px-2.5">
-						<div class="">
-							{#each groupedNotes as [timeRange, notesList], idx}
+					<div class="@container h-full my-1">
+						<div>
+							{#if displayOption === null}
 								<div
-									class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium px-2.5 pb-2.5"
+									class="flex w-full items-center gap-2 px-2 pb-2 text-xs text-gray-400 dark:text-gray-600"
 								>
+									<div class="flex min-w-0 flex-1 items-center">
+										<button
+											class="flex min-w-0 items-center gap-1 py-0.5 text-left"
+											type="button"
+											on:click={() => setSortKey('name')}
+										>
+											{$i18n.t('Title')}
+											{#if sortKey === 'name'}
+												{#if sortDirection === 'asc'}
+													<ChevronUp className="size-2" />
+												{:else}
+													<ChevronDown className="size-2" />
+												{/if}
+											{/if}
+										</button>
+									</div>
+
+									<div class="ml-2 flex shrink-0 items-center justify-end gap-2">
+										<div class="hidden w-44 shrink-0 md:block"></div>
+										<div class="size-5 shrink-0"></div>
+										<button
+											class="flex w-24 shrink-0 items-center justify-end gap-1 py-0.5 text-right"
+											type="button"
+											on:click={() => setSortKey('updated_at')}
+										>
+											{$i18n.t('Updated at')}
+											{#if sortKey === 'updated_at'}
+												{#if sortDirection === 'asc'}
+													<ChevronUp className="size-2" />
+												{:else}
+													<ChevronDown className="size-2" />
+												{/if}
+											{/if}
+										</button>
+									</div>
+								</div>
+							{/if}
+
+							{#each groupedNotes as [timeRange, notesList], idx}
+								<div class="w-full px-2 pb-1 text-xs text-gray-500 dark:text-gray-500">
 									{$i18n.t(timeRange)}
 								</div>
 
 								{#if displayOption === null}
 									<div
-										class="{groupedNotes.length - 1 !== idx ? 'mb-3' : ''} gap-1.5 flex flex-col"
+										class="{groupedNotes.length - 1 !== idx ? 'mb-3' : ''} gap-y-0.5 flex flex-col"
 									>
 										{#each notesList as note, idx (note.id)}
-											<div
-												class=" flex cursor-pointer w-full px-3.5 py-1.5 border border-gray-50 dark:border-gray-850/30 bg-transparent dark:hover:bg-gray-850 hover:bg-white rounded-2xl transition"
+											<button
+												type="button"
+												aria-label={$i18n.t('Open note')}
+												class="group flex min-h-8 w-full items-center gap-2 rounded-xl px-2 py-[6px] text-left transition hover:bg-gray-50 focus-within:bg-gray-50 dark:hover:bg-gray-900 dark:focus-within:bg-gray-900"
+												on:click={() => {
+													goto(`/notes/${note.id}`);
+												}}
 											>
-												<a href={`/notes/${note.id}`} class="w-full flex flex-col justify-between">
-													<div class="flex-1">
-														<div class="  flex items-center gap-2 self-center justify-between">
-															<Tooltip
-																content={note.title}
-																className="flex-1"
-																placement="top-start"
-															>
-																<div
-																	class=" text-sm font-medium capitalize flex-1 w-full line-clamp-1"
-																>
-																	{note.title}
-																</div>
-															</Tooltip>
-
-															<div class="flex shrink-0 items-center text-xs gap-2.5">
-																<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
-																	<div>
-																		{dayjs(note.updated_at / 1000000).fromNow()}
-																	</div>
-																</Tooltip>
-																<Tooltip
-																	content={note?.user?.email ?? $i18n.t('Deleted User')}
-																	className="flex shrink-0"
-																	placement="top-start"
-																>
-																	<div class="shrink-0 text-gray-500">
-																		{$i18n.t('By {{name}}', {
-																			name: capitalizeFirstLetter(
-																				note?.user?.name ??
-																					note?.user?.email ??
-																					$i18n.t('Deleted User')
-																			)
-																		})}
-																	</div>
-																</Tooltip>
-
-																<div>
-																	<NoteMenu
-																		onDownload={(type) => {
-																			selectedNote = note;
-
-																			downloadHandler(type);
-																		}}
-																		onCopyLink={async () => {
-																			const baseUrl = window.location.origin;
-																			const res = await copyToClipboard(
-																				`${baseUrl}/notes/${note.id}`
-																			);
-
-																			if (res) {
-																				toast.success($i18n.t('Copied link to clipboard'));
-																			} else {
-																				toast.error($i18n.t('Failed to copy link'));
-																			}
-																		}}
-																		onDelete={() => {
-																			selectedNote = note;
-																			showDeleteConfirm = true;
-																		}}
-																		isPinned={note.is_pinned ?? false}
-																		onPin={async () => {
-																			await toggleNotePinnedStatusById(localStorage.token, note.id);
-																			pinnedNotes.set(
-																				await getPinnedNoteList(localStorage.token).catch(() => [])
-																			);
-																			init();
-																		}}
-																	>
-																		<button
-																			class="self-center w-fit text-sm p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																			type="button"
-																		>
-																			<EllipsisHorizontal className="size-5" />
-																		</button>
-																	</NoteMenu>
-																</div>
-															</div>
+												<div class="flex min-w-0 flex-1 items-center gap-2">
+													<Tooltip content={note.title} className="min-w-0" placement="top-start">
+														<div
+															dir="auto"
+															class="h-[20px] truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+														>
+															{note.title}
 														</div>
+													</Tooltip>
+
+													<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
+														<div
+															class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+														>
+															{dayjs(note.updated_at / 1000000).fromNow()}
+														</div>
+													</Tooltip>
+												</div>
+
+												<div class="ml-2 flex shrink-0 items-center justify-end gap-2">
+													<div
+														class="hidden max-w-44 shrink-0 truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
+													>
+														<Tooltip
+															content={note?.user?.email ?? $i18n.t('Deleted User')}
+															className="min-w-0"
+															placement="top-start"
+														>
+															<div class="truncate">
+																{capitalizeFirstLetter(
+																	note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
+																)}
+															</div>
+														</Tooltip>
 													</div>
-												</a>
-											</div>
+
+													<NoteMenu
+														show={openNoteMenuId === note.id}
+														onDownload={(type) => {
+															selectedNote = note;
+
+															downloadHandler(type);
+														}}
+														onCopyLink={async () => {
+															const baseUrl = window.location.origin;
+															const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
+
+															if (res) {
+																toast.success($i18n.t('Copied link to clipboard'));
+															} else {
+																toast.error($i18n.t('Failed to copy link'));
+															}
+														}}
+														onDelete={() => {
+															selectedNote = note;
+															showDeleteConfirm = true;
+														}}
+														isPinned={note.is_pinned ?? false}
+														onPin={async () => {
+															await toggleNotePinnedStatusById(localStorage.token, note.id);
+															pinnedNotes.set(
+																await getPinnedNoteList(localStorage.token).catch(() => [])
+															);
+															init();
+														}}
+														onChange={(state) => {
+															openNoteMenuId = state ? note.id : null;
+														}}
+													>
+														<button
+															class="flex size-5 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
+															type="button"
+															aria-label={$i18n.t('Note Menu')}
+															on:click={(e) => {
+																e.preventDefault();
+																e.stopPropagation();
+																openNoteMenuId = openNoteMenuId === note.id ? null : note.id;
+															}}
+														>
+															<EllipsisHorizontal className="size-3.5" />
+														</button>
+													</NoteMenu>
+												</div>
+											</button>
 										{/each}
 									</div>
 								{:else if displayOption === 'grid'}
@@ -577,96 +683,91 @@
 									>
 										{#each notesList as note, idx (note.id)}
 											<div
-												class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 border border-gray-50 dark:border-gray-850/30 bg-transparent dark:hover:bg-gray-850 hover:bg-white rounded-2xl transition"
+												class="group flex min-h-32 w-full flex-col rounded-lg bg-gray-50/40 p-2.5 text-left transition hover:bg-gray-100/60 focus-within:bg-gray-100/60 dark:bg-gray-900/30 dark:hover:bg-gray-900 dark:focus-within:bg-gray-900"
 											>
-												<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-													<a
-														href={`/notes/${note.id}`}
-														class="w-full -translate-y-0.5 flex flex-col justify-between"
+												<div class="flex items-start gap-2">
+													<a href={`/notes/${note.id}`} class="min-w-0 flex-1">
+														<Tooltip content={note.title} placement="top-start">
+															<div
+																class="truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+															>
+																{note.title}
+															</div>
+														</Tooltip>
+													</a>
+
+													<NoteMenu
+														onDownload={(type) => {
+															selectedNote = note;
+
+															downloadHandler(type);
+														}}
+														onCopyLink={async () => {
+															const baseUrl = window.location.origin;
+															const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
+
+															if (res) {
+																toast.success($i18n.t('Copied link to clipboard'));
+															} else {
+																toast.error($i18n.t('Failed to copy link'));
+															}
+														}}
+														onDelete={() => {
+															selectedNote = note;
+															showDeleteConfirm = true;
+														}}
+														isPinned={note.is_pinned ?? false}
+														onPin={async () => {
+															await toggleNotePinnedStatusById(localStorage.token, note.id);
+															pinnedNotes.set(
+																await getPinnedNoteList(localStorage.token).catch(() => [])
+															);
+															init();
+														}}
 													>
-														<div class="flex-1">
-															<div
-																class="  flex items-center gap-2 self-center mb-1 justify-between"
-															>
-																<div class=" font-semibold line-clamp-1 capitalize">
-																	{note.title}
-																</div>
+														<button
+															class="flex size-5 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
+															type="button"
+															aria-label={$i18n.t('Note Menu')}
+														>
+															<EllipsisHorizontal className="size-3.5" />
+														</button>
+													</NoteMenu>
+												</div>
 
-																<div>
-																	<NoteMenu
-																		onDownload={(type) => {
-																			selectedNote = note;
+												<a href={`/notes/${note.id}`} class="mt-1 flex min-h-0 flex-1 flex-col">
+													<div
+														class="line-clamp-3 text-xs leading-5 text-gray-500 dark:text-gray-500"
+													>
+														{#if note.data?.content?.md}
+															{note.data?.content?.md}
+														{:else}
+															{$i18n.t('No content')}
+														{/if}
+													</div>
 
-																			downloadHandler(type);
-																		}}
-																		onCopyLink={async () => {
-																			const baseUrl = window.location.origin;
-																			const res = await copyToClipboard(
-																				`${baseUrl}/notes/${note.id}`
-																			);
-
-																			if (res) {
-																				toast.success($i18n.t('Copied link to clipboard'));
-																			} else {
-																				toast.error($i18n.t('Failed to copy link'));
-																			}
-																		}}
-																		onDelete={() => {
-																			selectedNote = note;
-																			showDeleteConfirm = true;
-																		}}
-																		isPinned={note.is_pinned ?? false}
-																		onPin={async () => {
-																			await toggleNotePinnedStatusById(localStorage.token, note.id);
-																			pinnedNotes.set(
-																				await getPinnedNoteList(localStorage.token).catch(() => [])
-																			);
-																			init();
-																		}}
-																	>
-																		<button
-																			class="self-center w-fit text-sm p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-																			type="button"
-																		>
-																			<EllipsisHorizontal className="size-5" />
-																		</button>
-																	</NoteMenu>
-																</div>
+													<div
+														class="mt-auto flex w-full items-center justify-between gap-2 pt-3 text-[11px] leading-4 text-gray-500 dark:text-gray-500"
+													>
+														<Tooltip
+															content={note?.user?.email ?? $i18n.t('Deleted User')}
+															className="min-w-0"
+															placement="top-start"
+														>
+															<div class="truncate">
+																{capitalizeFirstLetter(
+																	note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
+																)}
 															</div>
+														</Tooltip>
 
-															<div
-																class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-3 min-h-10"
-															>
-																{#if note.data?.content?.md}
-																	{note.data?.content?.md}
-																{:else}
-																	{$i18n.t('No content')}
-																{/if}
-															</div>
-														</div>
-
-														<div class=" text-xs px-0.5 w-full flex justify-between items-center">
-															<div>
+														<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
+															<div class="shrink-0">
 																{dayjs(note.updated_at / 1000000).fromNow()}
 															</div>
-															<Tooltip
-																content={note?.user?.email ?? $i18n.t('Deleted User')}
-																className="flex shrink-0"
-																placement="top-start"
-															>
-																<div class="shrink-0 text-gray-500">
-																	{$i18n.t('By {{name}}', {
-																		name: capitalizeFirstLetter(
-																			note?.user?.name ??
-																				note?.user?.email ??
-																				$i18n.t('Deleted User')
-																		)
-																	})}
-																</div>
-															</Tooltip>
-														</div>
-													</a>
-												</div>
+														</Tooltip>
+													</div>
+												</a>
 											</div>
 										{/each}
 									</div>
@@ -692,14 +793,14 @@
 						</div>
 					</div>
 				{:else}
-					<div class="w-full h-full flex flex-col items-center justify-center">
-						<div class="py-20 text-center">
-							<div class=" text-sm text-gray-400 dark:text-gray-600">
+					<div class="flex min-h-[calc(100dvh-13rem)] w-full flex-col items-center justify-center">
+						<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
+							<div class="mb-1.5 text-sm">
 								{$i18n.t('No Notes')}
 							</div>
 
-							<div class="mt-1 text-xs text-gray-300 dark:text-gray-700">
-								{$i18n.t('Create your first note by clicking on the plus button below.')}
+							<div class="text-xs leading-5 text-gray-500">
+								{$i18n.t('Create your first note from the Create menu.')}
 							</div>
 						</div>
 					</div>

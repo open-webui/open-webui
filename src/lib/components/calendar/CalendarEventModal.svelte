@@ -4,7 +4,6 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	import type { CalendarModel, CalendarEventModel, CalendarEventForm } from '$lib/apis/calendar';
@@ -188,25 +187,16 @@
 
 <Modal size="md" bind:show>
 	<div>
-		<!-- Header -->
-		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
+		<div class="dark:text-gray-100 px-4 pt-3 pb-1">
 			<input
-				class="w-full text-lg bg-transparent outline-hidden font-primary placeholder:text-gray-300 dark:placeholder:text-gray-700"
+				class="w-full text-base bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
 				type="text"
 				bind:value={title}
 				placeholder={$i18n.t('Event title')}
 			/>
-			<button
-				class="self-center shrink-0 ml-2"
-				aria-label={$i18n.t('Close')}
-				on:click={() => (show = false)}
-			>
-				<XMark className="size-5" />
-			</button>
 		</div>
 
-		<!-- Details -->
-		<div class="px-5 pb-2 flex flex-col gap-3">
+		<div class="px-4 pb-2 flex flex-col gap-2.5">
 			<!-- Calendar -->
 			<div>
 				<div class="mb-1 text-xs text-gray-500">{$i18n.t('Calendar')}</div>
@@ -224,11 +214,11 @@
 			<div>
 				<div class="mb-1 text-xs text-gray-500">{$i18n.t('When')}</div>
 				<div class="flex items-center gap-2 text-sm flex-wrap">
-					<input type="date" class="bg-transparent outline-hidden" bind:value={startDate} />
+					<input type="date" class="bg-transparent outline-hidden dark:scheme-dark" bind:value={startDate} />
 					{#if !allDay}
-						<input type="time" class="bg-transparent outline-hidden" bind:value={startTime} />
+						<input type="time" class="bg-transparent outline-hidden dark:scheme-dark" bind:value={startTime} />
 						<span class="text-gray-300 dark:text-gray-600">–</span>
-						<input type="time" class="bg-transparent outline-hidden" bind:value={endTime} />
+						<input type="time" class="bg-transparent outline-hidden dark:scheme-dark" bind:value={endTime} />
 					{/if}
 					<label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-400 ml-auto">
 						<input type="checkbox" class="accent-blue-500" bind:checked={allDay} />
@@ -292,8 +282,7 @@
 			</div>
 		</div>
 
-		<!-- Bottom toolbar -->
-		<div class="flex items-center justify-between px-4 pb-3.5 pt-1 gap-2">
+		<div class="flex items-center justify-between px-4 pb-3 pt-1 gap-2">
 			<div class="flex items-center gap-0.5 flex-1 min-w-0">
 				{#if event && !event.meta?.automation_id}
 					<button

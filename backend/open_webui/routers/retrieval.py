@@ -127,6 +127,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
+TIKTOKEN_DISALLOWED_SPECIAL = ()
+
 ##########################################
 #
 # Utility functions
@@ -1582,7 +1584,7 @@ def get_splitter_length_function(
 ) -> Callable[[str], int]:
     if config.TEXT_SPLITTER == 'token':
         encoding = tiktoken.get_encoding(str(config.TIKTOKEN_ENCODING_NAME))
-        return lambda text: len(encoding.encode(text, disallowed_special=()))
+        return lambda text: len(encoding.encode(text, disallowed_special=TIKTOKEN_DISALLOWED_SPECIAL))
 
     if config.TEXT_SPLITTER == 'token_transformers':
         tokenizer = get_transformers_tokenizer(request, config)
@@ -1689,6 +1691,7 @@ def save_docs_to_vector_db(
                 chunk_size=config.CHUNK_SIZE,
                 chunk_overlap=config.CHUNK_OVERLAP,
                 add_start_index=True,
+                disallowed_special=TIKTOKEN_DISALLOWED_SPECIAL,
             )
             docs = text_splitter.split_documents(docs)
         elif config.TEXT_SPLITTER == 'token_transformers':
@@ -2609,6 +2612,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                 verify_ssl=config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
                 requests_per_second=config.WEB_LOADER_CONCURRENT_REQUESTS,
                 trust_env=config.WEB_SEARCH_TRUST_ENV,
+                loader_config=await get_loader_config(),
             )
             docs = await loader.aload()
 
@@ -2910,21 +2914,24 @@ async def reset_upload_dir(request: Request, user=Depends(get_admin_user)) -> bo
     folder = f'{UPLOAD_DIR}'
     try:
         # Check if the directory exists
-        if os.path.exists(folder):
+        if await asyncio.to_thread(os.path.exists, folder):
             # Iterate over all the files and directories in the specified directory
-            for filename in os.listdir(folder):
+            for filename in await asyncio.to_thread(os.listdir, folder):
                 file_path = os.path.join(folder, filename)
                 try:
-                    if os.path.isfile(file_path) or os.path.islink(file_path):
-                        os.unlink(file_path)  # Remove the file or link
-                    elif os.path.isdir(file_path):
-                        shutil.rmtree(file_path)  # Remove the directory
+                    if await asyncio.to_thread(os.path.isfile, file_path) or await asyncio.to_thread(
+                        os.path.islink, file_path
+                    ):
+                        await asyncio.to_thread(os.unlink, file_path)  # Remove the file or link
+                    elif await asyncio.to_thread(os.path.isdir, file_path):
+                        await asyncio.to_thread(shutil.rmtree, file_path)  # Remove the directory
                 except Exception as e:
                     log.exception(f'Failed to delete {file_path}. Reason: {e}')
         else:
             log.warning(f'The directory {folder} does not exist')
     except Exception as e:
         log.exception(f'Failed to process the directory {folder}. Reason: {e}')
+
     await publish_event(
         request,
         EVENTS.RETRIEVAL_UPLOADS_RESET,

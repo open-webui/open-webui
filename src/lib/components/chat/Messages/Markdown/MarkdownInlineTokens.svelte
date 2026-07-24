@@ -96,7 +96,7 @@
 			>
 		{/if}
 	{:else if token.type === 'image'}
-		<Image src={token.href} alt={token.text} />
+		<Image src={token.href} alt={token.text} allowExternal={true} />
 	{:else if token.type === 'strong'}
 		<strong><svelte:self id={`${id}-strong`} tokens={token.tokens} {onSourceClick} /></strong>
 	{:else if token.type === 'em'}

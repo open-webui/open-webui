@@ -8,7 +8,6 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { getChatList } from '$lib/apis/chats';
 	import { updateFolderById } from '$lib/apis/folders';
 
 	import {
@@ -16,10 +15,9 @@
 		user,
 		models as _models,
 		temporaryChatEnabled,
-		selectedFolder,
-		chats,
-		currentChatPage
+		selectedFolder
 	} from '$lib/stores';
+	import { refreshChatList } from '$lib/stores/chatList';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
@@ -80,39 +78,32 @@
 		$selectedFolder != null &&
 		$selectedFolder.user_id !== $user?.id &&
 		$selectedFolder.permission !== 'write';
-
-	// True when the current user does NOT own this folder (hide management menus)
-	$: folderNotOwned = $selectedFolder != null && $selectedFolder.user_id !== $user?.id;
 </script>
 
-<div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
+<div class="m-auto w-full max-w-[58rem] px-2 @2xl:px-20 translate-y-6 py-24 text-center">
 	{#if $temporaryChatEnabled}
 		<Tooltip
 			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
 			className="w-full flex justify-center mb-0.5"
 			placement="top"
 		>
-			<div class="flex items-center gap-2 text-gray-500 text-base my-2 w-fit">
-				<EyeSlash strokeWidth="2.5" className="size-4" />{$i18n.t('Temporary Chat')}
+			<div class="flex items-center gap-1.5 text-gray-500 text-xs my-1 w-fit">
+				<EyeSlash strokeWidth="2" className="size-3.5" />{$i18n.t('Temporary Chat')}
 			</div>
 		</Tooltip>
 	{/if}
 
-	<div
-		class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4 font-primary"
-	>
+	<div class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4">
 		<div class="w-full flex flex-col justify-center items-center">
 			{#if $selectedFolder}
 				<FolderTitle
 					folder={$selectedFolder}
-					readOnly={folderNotOwned}
+					readOnly={folderReadOnly}
 					onUpdate={async (folder) => {
-						await chats.set(await getChatList(localStorage.token, $currentChatPage));
-						currentChatPage.set(1);
+						await refreshChatList(localStorage.token);
 					}}
 					onDelete={async () => {
-						await chats.set(await getChatList(localStorage.token, $currentChatPage));
-						currentChatPage.set(1);
+						await refreshChatList(localStorage.token);
 
 						selectedFolder.set(null);
 					}}
@@ -139,7 +130,7 @@
 									>
 										<img
 											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
-											class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
+											class=" size-9 @sm:size-10 rounded-2xl"
 											aria-hidden="true"
 											draggable="false"
 											on:error={(e) => {
@@ -153,7 +144,7 @@
 					</div>
 
 					<div
-						class=" text-3xl @sm:text-3xl line-clamp-1 flex items-center"
+						class=" text-2xl @sm:text-2xl line-clamp-1 flex items-center"
 						in:fade={{ duration: 100 }}
 					>
 						{#if models[selectedModelIdx]?.name}
@@ -225,7 +216,7 @@
 					<MessageInput
 						bind:this={messageInput}
 						{history}
-						{selectedModels}
+						bind:selectedModels
 						bind:files
 						bind:prompt
 						bind:autoScroll
@@ -246,6 +237,7 @@
 						{onChange}
 						{onUpload}
 						{onWebSearchToggle}
+						on:chatVariables
 						on:submit={(e) => {
 							dispatch('submit', e.detail);
 						}}
@@ -256,14 +248,11 @@
 	</div>
 
 	{#if $selectedFolder}
-		<div
-			class="mx-auto px-4 md:max-w-3xl md:px-6 font-primary min-h-62"
-			in:fade={{ duration: 200, delay: 200 }}
-		>
+		<div class="mx-auto px-4 md:max-w-3xl md:px-6 min-h-62" in:fade={{ duration: 200, delay: 200 }}>
 			<FolderPlaceholder folder={$selectedFolder} />
 		</div>
 	{:else}
-		<div class="mx-auto max-w-2xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
+		<div class="mx-auto max-w-2xl mt-2" in:fade={{ duration: 200, delay: 200 }}>
 			<div class="mx-5">
 				<Suggestions
 					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??

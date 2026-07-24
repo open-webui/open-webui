@@ -32,7 +32,8 @@ export const DEFAULT_PERMISSIONS = {
 		public_calendars: false
 	},
 	access_grants: {
-		allow_users: true
+		allow_users: true,
+		allow_groups: true
 	},
 	chat: {
 		controls: true,
