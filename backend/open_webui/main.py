@@ -1030,6 +1030,15 @@ async def embeddings(request: Request, form_data: dict, user=Depends(get_verifie
     return await generate_embeddings(request, form_data, user)
 
 
+async def _restrict_direct_model_knowledge(model_item: dict, user) -> None:
+    # Direct models are request-defined and skip persisted models' create-time file/KB access check; drop refs the caller can't read.
+    knowledge_items = ((model_item.get('info') or {}).get('meta') or {}).get('knowledge')
+    if knowledge_items:
+        from open_webui.utils.access_control.files import get_accessible_folder_files
+
+        model_item['info']['meta']['knowledge'] = await get_accessible_folder_files(knowledge_items, user)
+
+
 @app.post('/api/chat/completions')
 @app.post('/api/v1/chat/completions')  # Experimental: Compatibility with OpenAI API
 async def chat_completion(
@@ -1062,6 +1071,7 @@ async def chat_completion(
                     raise e
         else:
             model = model_item
+            await _restrict_direct_model_knowledge(model, user)
 
             request.state.direct = True
             request.state.model = model
@@ -1860,6 +1870,7 @@ async def chat_completed(request: Request, form_data: dict, user=Depends(get_ver
         model_item = form_data.pop('model_item', {})
 
         if model_item.get('direct', False):
+            await _restrict_direct_model_knowledge(model_item, user)
             request.state.direct = True
             request.state.model = model_item
 
@@ -1877,6 +1888,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user=De
         model_item = form_data.pop('model_item', {})
 
         if model_item.get('direct', False):
+            await _restrict_direct_model_knowledge(model_item, user)
             request.state.direct = True
             request.state.model = model_item
 
