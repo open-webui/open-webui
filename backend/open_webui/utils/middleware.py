@@ -5375,7 +5375,21 @@ async def streaming_chat_response_handler(response, ctx):
                     }
                 )
 
+                assistant_content = (
+                    content
+                    or '\n'.join(
+                        message.get('content', '')
+                        for message in convert_output_to_messages(
+                            output,
+                            raw=False,
+                            reasoning_format=get_reasoning_format(model),
+                        )
+                        if message.get('role') == 'assistant' and isinstance(message.get('content'), str)
+                    ).strip()
+                )
+
                 ctx['assistant_message'] = {
+                    'content': assistant_content,
                     'output': output,
                     **({'usage': usage} if usage else {}),
                 }
