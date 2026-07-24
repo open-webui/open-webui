@@ -1693,6 +1693,41 @@ async def process_file(
             )
             hash = calculate_sha256_string(text_content)
 
+            # AI ingestion-eligibility analysis (opt-in): runs after extraction
+            # and before embedding, so ineligible files skip the costly vector
+            # write. analyze_file persists the description and fails open.
+            #
+            # Only on FIRST ingestion (the freshly-extracted file path) — not on
+            # content-update reprocesses (form_data.content) or knowledge-base
+            # re-adds (form_data.collection_name). Re-running it there would fire
+            # redundant LLM calls, could flip a completed file to 'skipped', and
+            # (for KB re-adds, whose old vectors were already deleted) could drop
+            # the file's embeddings entirely.
+            if (
+                getattr(request.app.state.config, 'ENABLE_INGESTION_ANALYSIS', False)
+                and not form_data.content
+                and not form_data.collection_name
+            ):
+                from open_webui.services.file_analysis import analyze_file
+
+                eligible, _description = await analyze_file(
+                    request, file.id, user, content=text_content, db=db
+                )
+                if not eligible:
+                    log.info(f'File {file.id} deemed ineligible for ingestion; skipping embedding')
+                    await Files.update_file_data_by_id(
+                        file.id,
+                        {'status': 'skipped', 'skipped_reason': 'ineligible'},
+                        db=db,
+                    )
+                    await Files.update_file_hash_by_id(file.id, hash, db=db)
+                    return {
+                        'status': True,
+                        'collection_name': None,
+                        'filename': file.filename,
+                        'content': text_content,
+                    }
+
             if request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
                 await Files.update_file_data_by_id(file.id, {'status': 'completed'}, db=db)
                 await Files.update_file_hash_by_id(file.id, hash, db=db)

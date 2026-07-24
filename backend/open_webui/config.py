@@ -3219,6 +3219,15 @@ ENABLE_TITLE_GENERATION = ConfigVar(
     os.getenv('ENABLE_TITLE_GENERATION', 'True').lower() == 'true',
 )
 
+# When enabled, each uploaded file is passed to the task model after extraction
+# (and before embedding) to decide whether its content is worth ingesting and to
+# produce a short description. Off by default.
+ENABLE_INGESTION_ANALYSIS = ConfigVar(
+    'ENABLE_INGESTION_ANALYSIS',
+    'task.ingestion_analysis.enable',
+    os.getenv('ENABLE_INGESTION_ANALYSIS', 'False').lower() == 'true',
+)
+
 
 ENABLE_SEARCH_QUERY_GENERATION = ConfigVar(
     'ENABLE_SEARCH_QUERY_GENERATION',
