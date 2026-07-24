@@ -2214,6 +2214,7 @@ async def connect_mcp_server(
     )
 
     client = MCPClient()
+    client._event_caller = extra_params.get('__event_call__')
     await client.connect(
         url=mcp_server_connection.get('url', ''),
         headers=headers if headers else None,
@@ -2722,6 +2723,21 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
                         client, tool_specs = result
                         mcp_clients[server_id] = client
+
+                        if client.instructions:
+                            # Sanitize to prevent label-breakout injection
+                            safe_server_id = server_id.replace(']', '').replace('\n', '')
+                            safe_instructions = client.instructions.replace(
+                                '[/MCP_SERVER_INSTRUCTIONS', '[/MCP\\_SERVER\\_INSTRUCTIONS'
+                            ).replace('[MCP_SERVER_INSTRUCTIONS', '[MCP\\_SERVER\\_INSTRUCTIONS')
+                            labeled_instructions = (
+                                f'[MCP_SERVER_INSTRUCTIONS: {safe_server_id}]\n'
+                                f'{safe_instructions}\n'
+                                f'[/MCP_SERVER_INSTRUCTIONS: {safe_server_id}]'
+                            )
+                            form_data['messages'] = add_or_update_system_message(
+                                labeled_instructions, form_data['messages'], append=True
+                            )
 
                         for tool_spec in tool_specs:
 
