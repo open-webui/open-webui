@@ -4056,6 +4056,7 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal last_response_id
 
                     response_tool_calls = []
+                    stream_filter_state = {}
 
                     delta_count = 0
                     delta_chunk_size = max(
@@ -4140,6 +4141,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 filter_type='stream',
                                 form_data=data,
                                 extra_params={'__body__': form_data, **extra_params},
+                                state=stream_filter_state,
                             )
 
                             if data:
@@ -5432,6 +5434,7 @@ async def streaming_chat_response_handler(response, ctx):
                 return f'data: {item}\n\n'
 
             assistant_message = {}
+            stream_filter_state = {}
             has_api_outlet_filters = ENABLE_API_OUTLET_FILTERS and bool(filter_functions)
             if ENABLE_API_OUTLET_FILTERS and not has_api_outlet_filters:
                 try:
@@ -5450,6 +5453,7 @@ async def streaming_chat_response_handler(response, ctx):
                     filter_type='stream',
                     form_data=event,
                     extra_params=extra_params,
+                    state=stream_filter_state,
                 )
 
                 if event:
@@ -5462,6 +5466,7 @@ async def streaming_chat_response_handler(response, ctx):
                     filter_type='stream',
                     form_data=data,
                     extra_params=extra_params,
+                    state=stream_filter_state,
                 )
 
                 if data:
