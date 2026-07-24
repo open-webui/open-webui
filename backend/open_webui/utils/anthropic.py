@@ -898,7 +898,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
             'stop_reason': stop_reason,
             'stop_sequence': None,
         },
-        'usage': {'output_tokens': output_tokens},
+        'usage': {'input_tokens': input_tokens, 'output_tokens': output_tokens},
     }
     yield f'event: message_delta\ndata: {json.dumps(message_delta)}\n\n'.encode()
 
