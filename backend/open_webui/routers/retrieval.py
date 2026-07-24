@@ -127,6 +127,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
+TIKTOKEN_DISALLOWED_SPECIAL = ()
+
 ##########################################
 #
 # Utility functions
@@ -1582,7 +1584,7 @@ def get_splitter_length_function(
 ) -> Callable[[str], int]:
     if config.TEXT_SPLITTER == 'token':
         encoding = tiktoken.get_encoding(str(config.TIKTOKEN_ENCODING_NAME))
-        return lambda text: len(encoding.encode(text, disallowed_special=()))
+        return lambda text: len(encoding.encode(text, disallowed_special=TIKTOKEN_DISALLOWED_SPECIAL))
 
     if config.TEXT_SPLITTER == 'token_transformers':
         tokenizer = get_transformers_tokenizer(request, config)
@@ -1689,6 +1691,7 @@ def save_docs_to_vector_db(
                 chunk_size=config.CHUNK_SIZE,
                 chunk_overlap=config.CHUNK_OVERLAP,
                 add_start_index=True,
+                disallowed_special=TIKTOKEN_DISALLOWED_SPECIAL,
             )
             docs = text_splitter.split_documents(docs)
         elif config.TEXT_SPLITTER == 'token_transformers':
