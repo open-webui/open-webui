@@ -2258,6 +2258,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data['model'] = selected_model_id
             metadata['selected_model_id'] = selected_model_id
 
+    # Captured before apply_params_to_form_data pops 'params'; feeds metadata['system_prompt'] below
+    model_system_prompt = (form_data.get('params') or {}).get('system')
+
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f'form_data: {form_data}')
 
@@ -2873,13 +2876,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # than a snapshot that already has the RAG template baked in.
     system_message = get_system_message(form_data['messages'])
     system_content = get_content_from_message(system_message) if system_message else ''
-    model_system_prompt = await resolve_system_prompt(
-        (form_data.get('params') or {}).get('system'),
+    resolved_model_system_prompt = await resolve_system_prompt(
+        model_system_prompt,
         metadata,
         user,
     )
-    if model_system_prompt:
-        system_content = f'{model_system_prompt}\n{system_content}' if system_content else model_system_prompt
+    if resolved_model_system_prompt:
+        system_content = (
+            f'{resolved_model_system_prompt}\n{system_content}'
+            if system_content
+            else resolved_model_system_prompt
+        )
     metadata['system_prompt'] = system_content or None
     metadata['user_prompt'] = get_last_user_message(form_data['messages'])
     metadata['sources'] = sources[:] if sources else []
