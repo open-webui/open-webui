@@ -895,8 +895,8 @@ async def embed(
     key = get_api_key(url_idx, url, api_configs)
 
     prefix_id = api_config.get('prefix_id')
-    if prefix_id:
-        form_data.model = form_data.model.replace(f'{prefix_id}.', '')
+    if prefix_id and form_data.model.startswith(f'{prefix_id}.'):
+        form_data.model = form_data.model[len(f'{prefix_id}.'):]
 
     return await send_request(
         f'{url}/api/embed',
@@ -947,8 +947,8 @@ async def embeddings(
     key = get_api_key(url_idx, url, api_configs)
 
     prefix_id = api_config.get('prefix_id')
-    if prefix_id:
-        form_data.model = form_data.model.replace(f'{prefix_id}.', '')
+    if prefix_id and form_data.model.startswith(f'{prefix_id}.'):
+        form_data.model = form_data.model[len(f'{prefix_id}.'):]
 
     return await send_request(
         f'{url}/api/embeddings',
@@ -1003,8 +1003,8 @@ async def generate_completion(
     api_config = api_configs.get(str(url_idx), api_configs.get(url, {}))
 
     prefix_id = api_config.get('prefix_id')
-    if prefix_id:
-        form_data.model = form_data.model.replace(f'{prefix_id}.', '')
+    if prefix_id and form_data.model.startswith(f'{prefix_id}.'):
+        form_data.model = form_data.model[len(f'{prefix_id}.'):]
 
     return await send_request(
         f'{url}/api/generate',
@@ -1063,6 +1063,9 @@ async def get_ollama_url(request: Request, model: str, url_idx: int | None = Non
     await validate_ollama_backend_idx(request, model, url_idx, user)
     if url_idx is None:
         models = request.app.state.OLLAMA_MODELS
+        if not models or model not in models:
+            await get_all_models(request, user=user)
+            models = request.app.state.OLLAMA_MODELS
         if model not in models:
             raise HTTPException(
                 status_code=400,
@@ -1136,7 +1139,8 @@ async def generate_chat_completion(
 
     prefix_id = api_config.get('prefix_id')
     if prefix_id:
-        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+        if payload['model'].startswith(f'{prefix_id}.'):
+            payload['model'] = payload['model'][len(f'{prefix_id}.'):]
 
     return await send_request(
         f'{url}/api/chat',
@@ -1233,7 +1237,8 @@ async def generate_openai_completion(
 
     prefix_id = api_config.get('prefix_id')
     if prefix_id:
-        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+        if payload['model'].startswith(f'{prefix_id}.'):
+            payload['model'] = payload['model'][len(f'{prefix_id}.'):]
 
     return await send_request(
         f'{url}/v1/completions',
@@ -1343,7 +1348,8 @@ async def generate_openai_chat_completion(
 
     prefix_id = api_config.get('prefix_id')
     if prefix_id:
-        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+        if payload['model'].startswith(f'{prefix_id}.'):
+            payload['model'] = payload['model'][len(f'{prefix_id}.'):]
 
     return await send_request(
         f'{url}/v1/chat/completions',
@@ -1395,7 +1401,8 @@ async def generate_anthropic_messages(
 
     prefix_id = api_config.get('prefix_id', None)
     if prefix_id:
-        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+        if payload['model'].startswith(f'{prefix_id}.'):
+            payload['model'] = payload['model'][len(f'{prefix_id}.'):]
 
     return await send_request(
         f'{url}/v1/messages',
@@ -1453,7 +1460,8 @@ async def generate_responses(
 
     prefix_id = api_config.get('prefix_id', None)
     if prefix_id:
-        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+        if payload['model'].startswith(f'{prefix_id}.'):
+            payload['model'] = payload['model'][len(f'{prefix_id}.'):]
 
     return await send_request(
         f'{url}/v1/responses',
