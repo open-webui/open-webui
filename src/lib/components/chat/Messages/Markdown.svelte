@@ -34,6 +34,7 @@
 	import { user } from '$lib/stores';
 
 	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
+	import { createMarkdownUpdateScheduler } from './markdown-update-scheduler';
 
 	export let id = '';
 	export let content;
@@ -59,7 +60,6 @@
 	export let onTaskClick = () => {};
 
 	let tokens = [];
-	let pendingUpdate = null;
 	let lastContent = '';
 	let lastParsedContent = '';
 
@@ -74,27 +74,12 @@
 		tokens = marked.lexer(processed);
 	};
 
-	const updateHandler = (content) => {
-		if (content) {
-			if (done) {
-				cancelAnimationFrame(pendingUpdate);
-				pendingUpdate = null;
-				parseTokens();
-			} else if (!pendingUpdate) {
-				pendingUpdate = requestAnimationFrame(() => {
-					pendingUpdate = null;
-					parseTokens();
-				});
-			}
-		}
-	};
+	const updateScheduler = createMarkdownUpdateScheduler(parseTokens);
 
-	$: updateHandler(content);
+	$: updateScheduler.update(content);
 
 	// Throttle parsing to once per animation frame while streaming
-	onDestroy(() => {
-		cancelAnimationFrame(pendingUpdate);
-	});
+	onDestroy(updateScheduler.cancel);
 </script>
 
 {#key id}
