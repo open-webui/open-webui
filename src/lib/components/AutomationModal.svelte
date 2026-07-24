@@ -138,14 +138,16 @@
 		</div>
 
 		<!-- Bottom toolbar -->
-		<div class="flex items-center justify-between px-4 pb-3.5 pt-1 gap-2">
-			<div class="flex items-center gap-0.5 flex-wrap flex-1 min-w-0">
+		<div
+			class="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 pb-3.5 pt-1 gap-2"
+		>
+			<div class="flex items-center gap-0.5 flex-wrap min-w-0 sm:flex-1">
 				<ScheduleDropdown bind:this={scheduleDropdown} side="top" align="start" />
 
 				<ModelDropdown bind:model_id side="top" align="start" />
 			</div>
 
-			<div class="flex items-center gap-2 shrink-0">
+			<div class="flex items-center justify-end gap-2 shrink-0">
 				<button
 					class="px-3 py-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition"
 					type="button"
