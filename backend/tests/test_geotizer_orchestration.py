@@ -203,12 +203,12 @@ def test_merge_owner_envelopes_namespaces_conflicting_source_ids():
         run_id='run-1',
     )
     assert [source['source_id'] for source in merged['source_inventory']] == [
-        'source',
-        'source__part_2',
+        'gis-dc__part_1__source',
+        'gis-dc__part_2__source',
     ]
     assert [patch['source_refs'] for patch in merged['patches']] == [
-        ['source'],
-        ['source__part_2'],
+        ['gis-dc__part_1__source'],
+        ['gis-dc__part_2__source'],
     ]
     assert validate_owner_envelope(value, merged) == ()
 
@@ -549,6 +549,22 @@ def test_workflow_chunks_large_owner_output_and_submits_one_atomic_batch():
     assert len(submitted) == 1
     assert len(submitted[0]['patches']) == 81
     assert len(submitted[0]['source_inventory']) == 3
+    assert {
+        source['source_id']
+        for source in submitted[0]['source_inventory']
+    } == {
+        'kb-resource-tech__part_1__shared-source',
+        'kb-resource-tech__part_2__shared-source',
+        'kb-resource-tech__part_3__shared-source',
+    }
+    assert {
+        patch['source_refs'][0]
+        for patch in submitted[0]['patches']
+    } == {
+        'kb-resource-tech__part_1__shared-source',
+        'kb-resource-tech__part_2__shared-source',
+        'kb-resource-tech__part_3__shared-source',
+    }
 
 
 def test_workflow_repairs_invalid_owner_output_before_submission():

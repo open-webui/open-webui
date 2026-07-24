@@ -163,23 +163,19 @@ def merge_owner_envelopes(
             raise GeotizerOrchestrationError('; '.join(violations))
 
         renamed_refs: dict[str, str] = {}
+        batch_namespace = str(next_batch.get('batch_id') or '').lower()
         for raw_source in envelope.get('source_inventory') or []:
             source = dict(raw_source)
             source_id = str(source.get('source_id') or '')
-            existing = source_by_id.get(source_id)
-            if existing is None:
-                source_by_id[source_id] = source
-                sources.append(source)
-                renamed_refs[source_id] = source_id
-                continue
-            if existing == source:
-                renamed_refs[source_id] = source_id
-                continue
-
-            candidate = f'{source_id}__part_{chunk_index}'
+            candidate = (
+                f'{batch_namespace}__part_{chunk_index}__{source_id}'
+            )
             suffix = 2
             while candidate in source_by_id:
-                candidate = f'{source_id}__part_{chunk_index}_{suffix}'
+                candidate = (
+                    f'{batch_namespace}__part_{chunk_index}__'
+                    f'{source_id}__{suffix}'
+                )
                 suffix += 1
             source['source_id'] = candidate
             source_by_id[candidate] = source
