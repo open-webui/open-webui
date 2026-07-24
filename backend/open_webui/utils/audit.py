@@ -132,8 +132,12 @@ class AuditLoggingMiddleware:
     ) -> None:
         self.app = app
         self.audit_logger = AuditLogger(logger)
-        self.excluded_paths = excluded_paths or []
-        self.included_paths = included_paths or []
+
+        def normalize_paths(paths: Optional[list[str]]) -> list[str]:
+            return [path for path in (path.strip().lstrip('/') for path in paths or []) if path]
+
+        self.excluded_paths = normalize_paths(excluded_paths)
+        self.included_paths = normalize_paths(included_paths)
         self.max_body_size = max_body_size
         self.audited_methods = set(self.DEFAULT_AUDITED_METHODS)
         if audit_get_requests:
