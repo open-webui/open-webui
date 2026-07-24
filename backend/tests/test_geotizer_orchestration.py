@@ -15,6 +15,7 @@ from open_webui.utils.geotizer_orchestration import (
     merge_owner_envelopes,
     normalize_delegator_message,
     partition_owner_batch,
+    repair_negative_provenance,
     validate_owner_envelope,
 )
 
@@ -208,6 +209,60 @@ def test_merge_owner_envelopes_namespaces_conflicting_source_ids():
         ['source__part_2'],
     ]
     assert validate_owner_envelope(value, merged) == ()
+
+
+def test_repair_negative_provenance_registers_actual_owner_execution():
+    value = batch()
+    raw = envelope()
+    raw['source_inventory'] = []
+    for patch in raw['patches']:
+        patch['value'] = None
+        patch['status'] = 'not_found'
+        patch['source_refs'] = []
+    repaired = repair_negative_provenance(
+        value,
+        raw,
+        run_id='run-1',
+        attempt=2,
+    )
+    assert validate_owner_envelope(value, repaired) == ()
+    assert repaired['source_inventory'] == [
+        {
+            'source_id': 'derived-negative-gis-dc-part-1-attempt-2',
+            'source_type': 'derived',
+            'title': 'GISagent_yulong completed negative search for GIS-DC',
+            'locator': (
+                'run_id=run-1; batch_id=GIS-DC; '
+                'owner_chunk=1/1; attempt=2'
+            ),
+            'url': None,
+        }
+    ]
+    assert all(
+        patch['source_refs']
+        == ['derived-negative-gis-dc-part-1-attempt-2']
+        for patch in repaired['patches']
+    )
+    assert raw['source_inventory'] == []
+    assert all(patch['source_refs'] == [] for patch in raw['patches'])
+
+
+def test_repair_negative_provenance_does_not_mask_positive_or_unknown_refs():
+    value = batch()
+    raw = envelope()
+    raw['source_inventory'] = []
+    raw['patches'][0]['source_refs'] = []
+    raw['patches'][1]['source_refs'] = ['unknown']
+    repaired = repair_negative_provenance(
+        value,
+        raw,
+        run_id='run-1',
+        attempt=1,
+    )
+    violations = validate_owner_envelope(value, repaired)
+    assert any('source_refs must be non-empty' in item for item in violations)
+    assert any('unregistered source_refs' in item for item in violations)
+    assert repaired['source_inventory'] == []
 
 
 @pytest.mark.parametrize(

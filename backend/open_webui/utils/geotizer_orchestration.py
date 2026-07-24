@@ -209,6 +209,70 @@ def merge_owner_envelopes(
     return merged
 
 
+def repair_negative_provenance(
+    next_batch: Mapping[str, Any],
+    envelope: Mapping[str, Any],
+    *,
+    run_id: str,
+    attempt: int,
+) -> dict[str, Any]:
+    """Register the actual specialist execution for unreferenced not-found patches."""
+    repaired = {
+        **dict(envelope),
+        'source_inventory': [
+            dict(source)
+            for source in envelope.get('source_inventory') or []
+        ],
+        'patches': [
+            dict(patch)
+            for patch in envelope.get('patches') or []
+        ],
+    }
+    missing = [
+        patch
+        for patch in repaired['patches']
+        if patch.get('status') == 'not_found'
+        and patch.get('source_refs') == []
+    ]
+    if not missing:
+        return repaired
+
+    chunk = next_batch.get('owner_chunk') or {}
+    chunk_index = int(chunk.get('index') or 1)
+    chunk_total = int(chunk.get('total') or 1)
+    batch_id = str(next_batch.get('batch_id') or '')
+    producer = str(next_batch.get('producer') or '')
+    source_id = (
+        f'derived-negative-{batch_id.lower()}-'
+        f'part-{chunk_index}-attempt-{attempt}'
+    )
+    existing_ids = {
+        str(source.get('source_id') or '')
+        for source in repaired['source_inventory']
+    }
+    suffix = 2
+    candidate = source_id
+    while candidate in existing_ids:
+        candidate = f'{source_id}-{suffix}'
+        suffix += 1
+    source_id = candidate
+    repaired['source_inventory'].append(
+        {
+            'source_id': source_id,
+            'source_type': 'derived',
+            'title': f'{producer} completed negative search for {batch_id}',
+            'locator': (
+                f'run_id={run_id}; batch_id={batch_id}; '
+                f'owner_chunk={chunk_index}/{chunk_total}; attempt={attempt}'
+            ),
+            'url': None,
+        }
+    )
+    for patch in missing:
+        patch['source_refs'] = [source_id]
+    return repaired
+
+
 def extract_json_object(text: str) -> dict[str, Any]:
     """Extract exactly one JSON object from a model response."""
     if not isinstance(text, str) or not text.strip():

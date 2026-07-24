@@ -20,6 +20,7 @@ from open_webui.utils.geotizer_orchestration import (
     normalize_delegator_message,
     owner_submission,
     partition_owner_batch,
+    repair_negative_provenance,
     validate_owner_envelope,
     xlsx_download_path,
 )
@@ -313,6 +314,12 @@ async def _produce_valid_owner_envelope(
             feedback = [str(exc)]
             continue
 
+        envelope = repair_negative_provenance(
+            next_batch,
+            envelope,
+            run_id=run_id,
+            attempt=attempt,
+        )
         envelope['run_id'] = run_id
         violations = validate_owner_envelope(next_batch, envelope)
         if not violations:
