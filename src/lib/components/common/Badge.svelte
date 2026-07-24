@@ -12,7 +12,7 @@
 </script>
 
 <div
-	class=" text-xs font-medium {classNames[type] ??
+	class=" text-xs font-normal {classNames[type] ??
 		classNames['info']} w-fit px-[5px] rounded-lg uppercase line-clamp-1 mr-0.5"
 >
 	{content}

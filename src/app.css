@@ -7,24 +7,6 @@
 }
 
 @font-face {
-	font-family: 'Archivo';
-	src: url('/assets/fonts/Archivo-Variable.ttf');
-	font-display: swap;
-}
-
-@font-face {
-	font-family: 'Mona Sans';
-	src: url('/assets/fonts/Mona-Sans.woff2');
-	font-display: swap;
-}
-
-@font-face {
-	font-family: 'InstrumentSerif';
-	src: url('/assets/fonts/InstrumentSerif-Regular.ttf');
-	font-display: swap;
-}
-
-@font-face {
 	font-family: 'Vazirmatn';
 	src: url('/assets/fonts/Vazirmatn-Variable.ttf');
 	font-display: swap;
@@ -70,8 +52,16 @@ code {
 	border-radius: 2px;
 }
 
-.font-secondary {
-	font-family: 'InstrumentSerif', sans-serif;
+.app-muted {
+	@apply text-gray-500 dark:text-gray-400;
+}
+
+.app-icon-muted {
+	@apply text-gray-500 dark:text-gray-400;
+}
+
+.app-interactive-active {
+	@apply bg-gray-50/40 dark:bg-gray-800/40;
 }
 
 .marked a {
@@ -94,32 +84,41 @@ textarea::placeholder {
 	direction: auto;
 }
 
+textarea {
+	color-scheme: light;
+}
+
+.dark textarea {
+	color-scheme: dark;
+}
+
+textarea::-webkit-resizer,
+textarea::-webkit-scrollbar-corner {
+	background: transparent;
+}
+
 .input-prose {
-	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
+	@apply prose dark:prose-invert !text-[0.9375rem] prose-headings:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
 }
 
 .input-prose-sm {
-	@apply prose dark:prose-invert prose-headings:font-medium prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-1 whitespace-pre-line text-sm;
+	@apply prose dark:prose-invert prose-headings:font-normal prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-1 whitespace-pre-line text-sm;
 }
 
 .markdown-prose {
-	@apply prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply prose prose-sm dark:prose-invert max-w-none break-words !text-[0.9375rem] font-normal leading-relaxed prose-p:mt-0 prose-p:mb-2 prose-p:font-normal prose-p:leading-relaxed prose-headings:mt-2 prose-headings:mb-1 prose-headings:font-normal prose-headings:leading-snug prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-strong:font-medium prose-code:before:content-none prose-code:after:content-none prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:font-normal prose-pre:my-3 prose-table:my-0 prose-blockquote:my-3 prose-blockquote:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850/30 prose-img:my-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0 [&_p:first-child]:mt-0 [&_h1:first-child]:mt-0 [&_h2:first-child]:mt-0 [&_h3:first-child]:mt-0 [&_h4:first-child]:mt-0 [&_h5:first-child]:mt-0 [&_h6:first-child]:mt-0;
 }
 
 .markdown-prose-sm {
-	@apply text-sm prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-2  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply text-sm prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-normal prose-hr:my-2  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown-prose-xs {
-	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-0.5  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-normal prose-hr:my-0.5  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown a {
 	@apply underline;
-}
-
-.font-primary {
-	font-family: 'Archivo', 'Vazirmatn', sans-serif;
 }
 
 .drag-region {
@@ -673,7 +672,7 @@ input[type='number'] {
 }
 
 .tiptap th {
-	@apply cursor-pointer text-start text-xs text-gray-700 dark:text-gray-400 font-semibold uppercase bg-gray-50 dark:bg-gray-850;
+	@apply cursor-pointer text-start text-xs text-gray-700 dark:text-gray-400 font-normal uppercase bg-gray-50 dark:bg-gray-850;
 }
 
 .tiptap td {

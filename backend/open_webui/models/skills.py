@@ -137,7 +137,6 @@ class SkillsTable:
                 )
                 db.add(result)
                 await db.commit()
-                await db.refresh(result)
                 await AccessGrants.set_access_grants('skill', result.id, form_data.access_grants, db=db)
                 if result:
                     return await self._to_skill_model(result, db=db)
@@ -259,7 +258,26 @@ class SkillsTable:
                         permission='read',
                     )
 
-                stmt = stmt.order_by(Skill.updated_at.desc())
+                order_by = filter.get('order_by')
+                direction = filter.get('direction')
+
+                if order_by == 'name':
+                    if direction == 'asc':
+                        stmt = stmt.order_by(Skill.name.asc())
+                    else:
+                        stmt = stmt.order_by(Skill.name.desc())
+                elif order_by == 'created_at':
+                    if direction == 'asc':
+                        stmt = stmt.order_by(Skill.created_at.asc())
+                    else:
+                        stmt = stmt.order_by(Skill.created_at.desc())
+                elif order_by == 'updated_at':
+                    if direction == 'asc':
+                        stmt = stmt.order_by(Skill.updated_at.asc())
+                    else:
+                        stmt = stmt.order_by(Skill.updated_at.desc())
+                else:
+                    stmt = stmt.order_by(Skill.updated_at.desc())
 
                 # Count BEFORE pagination
                 count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
@@ -307,8 +325,8 @@ class SkillsTable:
                 if access_grants is not None:
                     await AccessGrants.set_access_grants('skill', id, access_grants, db=db)
 
-                skill = await db.get(Skill, id)
-                await db.refresh(skill)
+                # populate_existing: the Core update above bypasses any identity-map copy
+                skill = await db.get(Skill, id, populate_existing=True)
                 return await self._to_skill_model(skill, db=db)
         except Exception:
             return None
@@ -324,7 +342,6 @@ class SkillsTable:
                 skill.is_active = not skill.is_active
                 skill.updated_at = int(time.time())
                 await db.commit()
-                await db.refresh(skill)
 
                 return await self._to_skill_model(skill, db=db)
             except Exception:

@@ -16,20 +16,28 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Banners from './Interface/Banners.svelte';
 	import Events from './Events.svelte';
+	import AdminSettingField from './AdminSettingField.svelte';
+	import AdminSettingRow from './AdminSettingRow.svelte';
+	import AdminSettingSection from './AdminSettingSection.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	export let saveHandler: Function;
 
-	let updateAvailable = false;
+	let updateAvailable: boolean | null = false;
 	let version = {
 		current: WEBUI_VERSION,
 		latest: WEBUI_VERSION
 	};
 
-	let adminConfig = null;
+	let adminConfig: any = null;
 
 	let banners: Banner[] = [];
+	const inputClass =
+		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const textareaClass =
+		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 
 	const checkForVersionUpdates = async () => {
 		updateAvailable = null;
@@ -72,376 +80,296 @@
 </script>
 
 <form
-	class="flex flex-col h-full justify-between space-y-3 text-sm"
+	class="flex h-full flex-col justify-between text-sm"
 	on:submit|preventDefault={async () => {
 		updateHandler();
 	}}
 >
-	<div class="space-y-3 overflow-y-scroll scrollbar-hidden h-full">
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('General')}</h2>
+
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if adminConfig !== null}
-			<div class="">
-				<div class="mb-3.5">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
-
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
-					<div class="mb-2.5">
-						<div class=" mb-1 text-xs font-medium flex space-x-2 items-center">
-							<div>
-								{$i18n.t('Version')}
-							</div>
-						</div>
-						<div class="flex w-full justify-between items-center">
-							<div class="flex flex-col text-xs text-gray-700 dark:text-gray-200">
-								<div class="flex gap-1">
-									<Tooltip content={WEBUI_BUILD_HASH}>
-										v{WEBUI_VERSION}
-									</Tooltip>
-
-									{#if $config?.features?.enable_version_update_check}
-										<a
-											href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
-											target="_blank"
-										>
-											{updateAvailable === null
-												? $i18n.t('Checking for updates...')
-												: updateAvailable
-													? `(v${version.latest} ${$i18n.t('available!')})`
-													: $i18n.t('(latest)')}
-										</a>
-									{/if}
-								</div>
-
-								<button
-									class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
-									type="button"
-									on:click={() => {
-										showChangelog.set(true);
-									}}
-								>
-									<div>{$i18n.t("See what's new")}</div>
-								</button>
-							</div>
+			<AdminSettingSection first>
+				<div class="flex items-start justify-between gap-4">
+					<div class="min-w-0 text-xs">
+						<div class="text-gray-600 dark:text-gray-400">{$i18n.t('Version')}</div>
+						<div class="mt-1 flex flex-wrap gap-x-1 text-gray-700 dark:text-gray-200">
+							<Tooltip content={WEBUI_BUILD_HASH}>v{WEBUI_VERSION}</Tooltip>
 
 							{#if $config?.features?.enable_version_update_check}
-								<button
-									class=" text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
-									type="button"
-									on:click={() => {
-										checkForVersionUpdates();
-									}}
+								<a
+									href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
+									target="_blank"
+									class="text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 								>
-									{$i18n.t('Check for updates')}
-								</button>
+									{updateAvailable === null
+										? $i18n.t('Checking for updates...')
+										: updateAvailable
+											? `(v${version.latest} ${$i18n.t('available!')})`
+											: $i18n.t('(latest)')}
+								</a>
 							{/if}
 						</div>
+
+						<button
+							class="mt-0.5 text-xs text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+							type="button"
+							on:click={() => {
+								showChangelog.set(true);
+							}}
+						>
+							{$i18n.t("See what's new")}
+						</button>
 					</div>
 
-					<div class="mb-2.5">
-						<div class="flex w-full justify-between items-center">
-							<div class="text-xs pr-2">
-								<div class="">
-									{$i18n.t('Help')}
-								</div>
-								<div class=" text-xs text-gray-500">
-									{$i18n.t('Discover how to use Open WebUI and seek support from the community.')}
-								</div>
-							</div>
+					{#if $config?.features?.enable_version_update_check}
+						<button
+							class="shrink-0 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+							type="button"
+							on:click={() => {
+								checkForVersionUpdates();
+							}}
+						>
+							{$i18n.t('Check for updates')}
+						</button>
+					{/if}
+				</div>
 
-							<a
-								class="flex-shrink-0 text-xs font-medium underline"
-								href="https://docs.openwebui.com/"
-								target="_blank"
-							>
-								{$i18n.t('Documentation')}
-							</a>
-						</div>
-
-						<div class="mt-1">
-							<div class="flex space-x-1">
-								<a href="https://discord.gg/5rJgQTnV4s" target="_blank">
-									<img
-										alt="Discord"
-										src="https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white"
-									/>
-								</a>
-
-								<a href="https://twitter.com/OpenWebUI" target="_blank">
-									<img
-										alt="X (formerly Twitter) Follow"
-										src="https://img.shields.io/twitter/follow/OpenWebUI"
-									/>
-								</a>
-
-								<a href="https://github.com/open-webui/open-webui" target="_blank">
-									<img
-										alt="Github Repo"
-										src="https://img.shields.io/github/stars/open-webui/open-webui?style=social&label=Star us on Github"
-									/>
-								</a>
+				<div class="text-xs">
+					<div class="flex items-start justify-between gap-4">
+						<div class="min-w-0">
+							<div class="text-gray-600 dark:text-gray-400">{$i18n.t('Help')}</div>
+							<div class="mt-0.5 text-gray-400 dark:text-gray-600">
+								{$i18n.t('Discover how to use Open WebUI and seek support from the community.')}
 							</div>
 						</div>
+
+						<a
+							class="shrink-0 text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+							href="https://docs.openwebui.com/"
+							target="_blank"
+						>
+							{$i18n.t('Documentation')}
+						</a>
 					</div>
 
-					<div class="mb-2.5">
-						<div class="flex w-full justify-between items-center">
-							<div class="text-xs pr-2">
-								<div class="">
-									{$i18n.t('License')}
-								</div>
-
-								{#if $config?.license_metadata}
-									<a
-										href="https://docs.openwebui.com/enterprise"
-										target="_blank"
-										class="text-gray-500 mt-0.5"
-									>
-										<span class=" capitalize text-black dark:text-white"
-											>{$config?.license_metadata?.type}
-											license</span
-										>
-										registered to
-										<span class=" capitalize text-black dark:text-white"
-											>{$config?.license_metadata?.organization_name}</span
-										>
-										for
-										<span class=" font-medium text-black dark:text-white"
-											>{$config?.license_metadata?.seats ?? 'Unlimited'} users.</span
-										>
-									</a>
-									{#if $config?.license_metadata?.html}
-										<div class="mt-0.5">
-											{@html DOMPurify.sanitize($config?.license_metadata?.html)}
-										</div>
-									{/if}
-								{:else}
-									<a
-										class=" text-xs hover:underline"
-										href="https://docs.openwebui.com/enterprise"
-										target="_blank"
-									>
-										<span class="text-gray-500">
-											{$i18n.t(
-												'Upgrade to a licensed plan for enhanced capabilities, including custom theming and branding, and dedicated support.'
-											)}
-										</span>
-									</a>
-								{/if}
-							</div>
-
-							<!-- <button
-								class="flex-shrink-0 text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
-							>
-								{$i18n.t('Activate')}
-							</button> -->
-						</div>
+					<div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-gray-400 dark:text-gray-600">
+						<a
+							class="hover:text-gray-700 dark:hover:text-gray-300"
+							href="https://discord.gg/5rJgQTnV4s"
+							target="_blank">Discord</a
+						>
+						<a
+							class="hover:text-gray-700 dark:hover:text-gray-300"
+							href="https://twitter.com/OpenWebUI"
+							target="_blank">X</a
+						>
+						<a
+							class="hover:text-gray-700 dark:hover:text-gray-300"
+							href="https://github.com/open-webui/open-webui"
+							target="_blank">GitHub</a
+						>
 					</div>
 				</div>
 
-				<div class="mb-3">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('Features')}</div>
+				<div class="text-xs">
+					<div class="text-gray-600 dark:text-gray-400">{$i18n.t('License')}</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
-
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Enable Community Sharing')}
-						</div>
-
-						<Switch bind:state={adminConfig.ENABLE_COMMUNITY_SHARING} />
-					</div>
-
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Enable Message Rating')}</div>
-
-						<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
-					</div>
-
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Folders')}
-						</div>
-
-						<Switch bind:state={adminConfig.ENABLE_FOLDERS} />
-					</div>
-
-					{#if adminConfig.ENABLE_FOLDERS}
-						<div class="mb-2.5 w-full justify-between">
-							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
-									{$i18n.t('Folder Max File Count')}
-								</div>
+					{#if $config?.license_metadata}
+						<a
+							href="https://docs.openwebui.com/enterprise"
+							target="_blank"
+							class="mt-0.5 block text-gray-500"
+						>
+							<span class="capitalize text-black dark:text-white"
+								>{$config?.license_metadata?.type} license</span
+							>
+							registered to
+							<span class="capitalize text-black dark:text-white"
+								>{$config?.license_metadata?.organization_name}</span
+							>
+							for
+							<span class="text-black dark:text-white"
+								>{$config?.license_metadata?.seats ?? 'Unlimited'} users.</span
+							>
+						</a>
+						{#if $config?.license_metadata?.html}
+							<div class="mt-0.5 text-gray-500">
+								{@html DOMPurify.sanitize($config?.license_metadata?.html)}
 							</div>
-
-							<div class="flex mt-2 space-x-2">
-								<input
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-									type="number"
-									min="0"
-									placeholder={$i18n.t('Leave empty for unlimited')}
-									bind:value={adminConfig.FOLDER_MAX_FILE_COUNT}
-								/>
-							</div>
-
-							<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-								{$i18n.t('Maximum number of files allowed per folder.')}
-							</div>
-						</div>
-					{/if}
-
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Memories')}
-						</div>
-
-						<Switch bind:state={adminConfig.ENABLE_MEMORIES} />
-					</div>
-
-					{#if adminConfig.ENABLE_MEMORIES}
-						<div class="mb-2.5 flex w-full items-center justify-between pr-2 pl-4">
-							<div class=" self-center text-xs font-medium text-gray-500 dark:text-gray-400">
-								{$i18n.t('Memory System Context')}
-							</div>
-
-							<Switch bind:state={adminConfig.ENABLE_MEMORY_SYSTEM_CONTEXT} />
-						</div>
-					{/if}
-
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Notes')}
-						</div>
-
-						<Switch bind:state={adminConfig.ENABLE_NOTES} />
-					</div>
-
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Channels')}
-						</div>
-
-						<Switch bind:state={adminConfig.ENABLE_CHANNELS} />
-					</div>
-
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Calendar')}
-						</div>
-
-						<Switch bind:state={adminConfig.ENABLE_CALENDAR} />
-					</div>
-
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Automations')}
-						</div>
-
-						<Switch bind:state={adminConfig.ENABLE_AUTOMATIONS} />
-					</div>
-
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('User Webhooks')}
-						</div>
-
-						<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
-					</div>
-
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('User Status')}
-						</div>
-
-						<Switch bind:state={adminConfig.ENABLE_USER_STATUS} />
-					</div>
-
-					<div class="mb-2.5">
-						<div class=" self-center text-xs font-medium mb-2">
-							{$i18n.t('Response Watermark')}
-						</div>
-						<Textarea
-							placeholder={$i18n.t('Enter a watermark for the response. Leave empty for none.')}
-							bind:value={adminConfig.RESPONSE_WATERMARK}
-						/>
-					</div>
-
-					<div class="mb-2.5 w-full justify-between">
-						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('WebUI URL')}</div>
-						</div>
-
-						<div class="flex mt-2 space-x-2">
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								type="text"
-								placeholder={`e.g.) "http://localhost:3000"`}
-								bind:value={adminConfig.WEBUI_URL}
-							/>
-						</div>
-
-						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+						{/if}
+					{:else}
+						<a
+							class="mt-0.5 block text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+							href="https://docs.openwebui.com/enterprise"
+							target="_blank"
+						>
 							{$i18n.t(
-								'Enter the public URL of your WebUI. This URL will be used to generate links in the notifications.'
+								'Upgrade to a licensed plan for enhanced capabilities, including custom theming and branding, and dedicated support.'
 							)}
-						</div>
-					</div>
+						</a>
+					{/if}
 				</div>
+			</AdminSettingSection>
 
-				<Events />
+			<AdminSettingSection title={$i18n.t('Features')}>
+				<AdminSettingRow
+					label={$i18n.t('Community Sharing')}
+					description={$i18n.t('Allow users to share chats with the Open WebUI community.')}
+				>
+					<Switch bind:state={adminConfig.ENABLE_COMMUNITY_SHARING} />
+				</AdminSettingRow>
+				<AdminSettingRow
+					label={$i18n.t('Message Rating')}
+					description={$i18n.t('Let users rate assistant responses.')}
+				>
+					<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
+				</AdminSettingRow>
+				<AdminSettingRow
+					label={$i18n.t('Folders')}
+					description={$i18n.t('Allow users to organize chats into folders.')}
+				>
+					<Switch bind:state={adminConfig.ENABLE_FOLDERS} />
+				</AdminSettingRow>
 
-				<div class="mb-3.5">
-					<div class=" mt-0.5 mb-2.5 text-base font-medium">{$i18n.t('UI')}</div>
+				{#if adminConfig.ENABLE_FOLDERS}
+					<AdminSettingField
+						label={$i18n.t('Folder Max File Count')}
+						description={$i18n.t('Maximum number of files allowed per folder.')}
+					>
+						<input
+							class={inputClass}
+							type="number"
+							min="0"
+							placeholder={$i18n.t('Leave empty for unlimited')}
+							bind:value={adminConfig.FOLDER_MAX_FILE_COUNT}
+						/>
+					</AdminSettingField>
+				{/if}
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+				<AdminSettingRow
+					label={$i18n.t('Memories')}
+					description={$i18n.t('Allow users to save memories for more personalized responses.')}
+				>
+					<Switch bind:state={adminConfig.ENABLE_MEMORIES} />
+				</AdminSettingRow>
+				{#if adminConfig.ENABLE_MEMORIES}
+					<AdminSettingRow
+						label={$i18n.t('Memory System Context')}
+						description={$i18n.t('Include saved memories in the system context.')}
+						labelClassName="text-gray-500 dark:text-gray-500"
+					>
+						<Switch bind:state={adminConfig.ENABLE_MEMORY_SYSTEM_CONTEXT} />
+					</AdminSettingRow>
+				{/if}
+				<AdminSettingRow
+					label={$i18n.t('Notes')}
+					description={$i18n.t('Allow users to create and manage notes.')}
+				>
+					<Switch bind:state={adminConfig.ENABLE_NOTES} />
+				</AdminSettingRow>
+				<AdminSettingRow
+					label={$i18n.t('Channels')}
+					description={$i18n.t('Allow users to use channels for shared conversations.')}
+				>
+					<Switch bind:state={adminConfig.ENABLE_CHANNELS} />
+				</AdminSettingRow>
+				<AdminSettingRow
+					label={$i18n.t('Calendar')}
+					description={$i18n.t('Allow users to access calendar features.')}
+				>
+					<Switch bind:state={adminConfig.ENABLE_CALENDAR} />
+				</AdminSettingRow>
+				<AdminSettingRow
+					label={$i18n.t('Automations')}
+					description={$i18n.t('Allow users to create and run automations.')}
+				>
+					<Switch bind:state={adminConfig.ENABLE_AUTOMATIONS} />
+				</AdminSettingRow>
+				<AdminSettingRow
+					label={$i18n.t('User Webhooks')}
+					description={$i18n.t('Allow users to configure webhooks from their account.')}
+				>
+					<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
+				</AdminSettingRow>
+				<AdminSettingRow
+					label={$i18n.t('User Status')}
+					description={$i18n.t('Show user status information in the app.')}
+				>
+					<Switch bind:state={adminConfig.ENABLE_USER_STATUS} />
+				</AdminSettingRow>
 
-					<div class="mb-2.5">
-						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs">
-								{$i18n.t('Banners')}
+				<AdminSettingField
+					label={$i18n.t('Response Watermark')}
+					description={$i18n.t('Append a watermark to assistant responses when configured.')}
+				>
+					<Textarea
+						className={textareaClass}
+						placeholder={$i18n.t('Enter a watermark for the response. Leave empty for none.')}
+						bind:value={adminConfig.RESPONSE_WATERMARK}
+					/>
+				</AdminSettingField>
+
+				<AdminSettingField
+					label={$i18n.t('WebUI URL')}
+					description={$i18n.t(
+						'Enter the public URL of your WebUI. This URL will be used to generate links in the notifications.'
+					)}
+				>
+					<input
+						class={inputClass}
+						type="text"
+						placeholder={`e.g.) "http://localhost:3000"`}
+						bind:value={adminConfig.WEBUI_URL}
+					/>
+				</AdminSettingField>
+			</AdminSettingSection>
+
+			<Events />
+
+			<AdminSettingSection title={$i18n.t('UI')}>
+				<div>
+					<div class="mb-2 flex w-full items-start justify-between gap-4">
+						<div class="min-w-0">
+							<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Banners')}</div>
+							<div class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+								{$i18n.t('Create announcements shown to users in the app.')}
 							</div>
-
-							<button
-								class="p-1 px-3 text-xs flex rounded-sm transition"
-								type="button"
-								on:click={() => {
-									if (banners.length === 0 || banners.at(-1).content !== '') {
-										banners = [
-											...banners,
-											{
-												id: uuidv4(),
-												type: '',
-												title: '',
-												content: '',
-												dismissible: true,
-												timestamp: Math.floor(Date.now() / 1000)
-											}
-										];
-									}
-								}}
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 20 20"
-									fill="currentColor"
-									class="w-4 h-4"
-								>
-									<path
-										d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-									/>
-								</svg>
-							</button>
 						</div>
 
-						<Banners bind:banners />
+						<button
+							class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+							type="button"
+							aria-label={$i18n.t('Add banner')}
+							on:click={() => {
+								if (banners.length === 0 || banners[banners.length - 1]?.content !== '') {
+									banners = [
+										...banners,
+										{
+											id: uuidv4(),
+											type: '',
+											title: '',
+											content: '',
+											dismissible: true,
+											timestamp: Math.floor(Date.now() / 1000)
+										}
+									];
+								}
+							}}
+						>
+							<Plus />
+						</button>
 					</div>
+
+					<Banners bind:banners />
 				</div>
-			</div>
+			</AdminSettingSection>
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-6 text-sm font-normal">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"
 		>
 			{$i18n.t('Save')}

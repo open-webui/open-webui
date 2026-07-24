@@ -869,7 +869,6 @@ class ChannelTable:
                 result = ChannelFile(**channel_file.model_dump())
                 db.add(result)
                 await db.commit()
-                await db.refresh(result)
                 if result:
                     return ChannelFileModel.model_validate(result)
                 else:

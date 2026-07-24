@@ -554,6 +554,7 @@ class Loader:
                 api_key=self.kwargs.get('MISTRAL_OCR_API_KEY'),
                 file_path=file_path,
                 use_base64=self.kwargs.get('MISTRAL_OCR_USE_BASE64', False),
+                user=self.user,
             )
         elif self.engine == 'paddleocr_vl' and self.kwargs.get('PADDLEOCR_VL_TOKEN') != '':
             loader = PaddleOCRVLLoader(

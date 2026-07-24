@@ -230,13 +230,10 @@
 	}
 </script>
 
-<!-- Header with title and period selector -->
-<div
-	class="pt-0.5 pb-1 gap-1 flex flex-row justify-between items-center sticky top-0 z-10 bg-white dark:bg-gray-900"
->
-	<div class="text-lg font-medium px-0.5 shrink-0">
+<div class="flex items-center justify-between mb-2 gap-2">
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white shrink-0">
 		{$i18n.t('Analytics')}
-	</div>
+	</h2>
 	<div class="flex items-center gap-2 flex-wrap justify-end min-w-0">
 		{#if groups.length > 0}
 			<select
@@ -254,14 +251,14 @@
 				type="date"
 				bind:value={customStart}
 				max={customEnd || undefined}
-				class="w-fit rounded-sm px-2 text-xs bg-transparent outline-none"
+				class="w-fit rounded-sm px-2 text-xs bg-transparent outline-none dark:scheme-dark"
 			/>
 			<span class="text-xs text-gray-400">–</span>
 			<input
 				type="date"
 				bind:value={customEnd}
 				min={customStart || undefined}
-				class="w-fit rounded-sm px-2 text-xs bg-transparent outline-none"
+				class="w-fit rounded-sm px-2 text-xs bg-transparent outline-none dark:scheme-dark"
 			/>
 		{/if}
 		<select
@@ -287,27 +284,27 @@
 {#if !loading}
 	<div class="flex gap-3 text-xs text-gray-500 dark:text-gray-400 px-0.5 pb-2">
 		<span
-			><span class="font-medium text-gray-900 dark:text-gray-300"
+			><span class="font-normal text-gray-900 dark:text-gray-300"
 				>{summary.total_messages.toLocaleString()}</span
 			>
 			{$i18n.t('messages')}</span
 		>
 		<Tooltip content={$i18n.t('Token counts are estimates and may not reflect actual API usage')}>
 			<span class="cursor-help"
-				><span class="font-medium text-gray-900 dark:text-gray-300"
+				><span class="font-normal text-gray-900 dark:text-gray-300"
 					>{formatNumber(totalTokens.total)}</span
 				>
 				{$i18n.t('tokens')}</span
 			>
 		</Tooltip>
 		<span
-			><span class="font-medium text-gray-900 dark:text-gray-300"
+			><span class="font-normal text-gray-900 dark:text-gray-300"
 				>{summary.total_chats.toLocaleString()}</span
 			>
 			{$i18n.t('chats')}</span
 		>
 		<span
-			><span class="font-medium text-gray-900 dark:text-gray-300">{summary.total_users}</span>
+			><span class="font-normal text-gray-900 dark:text-gray-300">{summary.total_users}</span>
 			{$i18n.t('users')}</span
 		>
 	</div>
@@ -328,7 +325,7 @@
 		]}
 		{@const periodMap = { '24h': 'hour', '7d': 'week', '30d': 'month', '90d': 'year', all: 'all' }}
 		<div class="mb-4">
-			<div class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 px-0.5">
+			<div class="text-xs font-normal text-gray-600 dark:text-gray-400 mb-2 px-0.5">
 				{selectedPeriod === '24h' ? $i18n.t('Hourly Messages') : $i18n.t('Daily Messages')}
 			</div>
 			<ChartLine
@@ -350,7 +347,7 @@
 	<div class="grid md:grid-cols-2 gap-4">
 		<!-- Model Usage Table -->
 		<div>
-			<div class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 px-0.5">
+			<div class="text-xs font-normal text-gray-700 dark:text-gray-300 mb-1 px-0.5">
 				{$i18n.t('Model Usage')}
 			</div>
 			<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
@@ -478,7 +475,7 @@
 								}}
 							>
 								<td class="px-3 py-1 text-gray-400">{idx + 1}</td>
-								<td class="px-3 py-1 font-medium text-gray-900 dark:text-white">
+								<td class="px-3 py-1 font-normal text-gray-900 dark:text-white">
 									<div class="flex items-center gap-2">
 										<img
 											src="{WEBUI_API_BASE_URL}/models/model/profile/image?id={model.model_id}"
@@ -518,7 +515,7 @@
 
 		<!-- User Activity Table -->
 		<div>
-			<div class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 px-0.5">
+			<div class="text-xs font-normal text-gray-700 dark:text-gray-300 mb-1 px-0.5">
 				{$i18n.t('User Activity')}
 			</div>
 			<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
@@ -586,7 +583,7 @@
 						{#each sortedUsers as user, idx (user.user_id)}
 							<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
 								<td class="px-3 py-1 text-gray-400">{idx + 1}</td>
-								<td class="px-3 py-1 font-medium text-gray-900 dark:text-white">
+								<td class="px-3 py-1 font-normal text-gray-900 dark:text-white">
 									<div class="flex items-center gap-2">
 										<img
 											src="{WEBUI_API_BASE_URL}/users/{user.user_id}/profile/image"

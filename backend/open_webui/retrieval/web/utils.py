@@ -158,6 +158,11 @@ def _ssrf_safe_new_conn(self):
             if getattr(self, 'source_address', None):
                 sock.bind(self.source_address)
             for opt in getattr(self, 'socket_options', None) or ():
+                if len(opt) == 4 and isinstance(opt[3], str):
+                    # urllib3-future per-protocol form: (level, optname, value, "tcp"/"udp")
+                    if opt[3].lower() == 'tcp':
+                        sock.setsockopt(*opt[:3])
+                    continue
                 sock.setsockopt(*opt)
             sock.connect(sa)
             return sock
@@ -785,13 +790,11 @@ class SafeWebBaseLoader(WebBaseLoader):
         final_results = []
         for i, result in enumerate(results):
             url = urls[i]
-            if parser is None:
-                if url.endswith('.xml'):
-                    parser = 'xml'
-                else:
-                    parser = self.default_parser
-                self._check_parser(parser)
-            final_results.append(BeautifulSoup(result, parser, **self.bs_kwargs))
+            url_parser = parser
+            if url_parser is None:
+                url_parser = 'xml' if url.endswith('.xml') else self.default_parser
+                self._check_parser(url_parser)
+            final_results.append(BeautifulSoup(result, url_parser, **self.bs_kwargs))
         return final_results
 
     async def ascrape_all(self, urls: List[str], parser: Union[str, None] = None) -> List[Any]:

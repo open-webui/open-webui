@@ -17,6 +17,7 @@ import mimeparse
 from open_webui.env import CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
 
 log = logging.getLogger(__name__)
+SURROGATE_RE = re.compile('[\ud800-\udfff]')
 
 
 def deep_update(d, u):
@@ -715,18 +716,10 @@ def sanitize_text_for_db(text: str) -> str:
     """Remove null bytes and invalid UTF-8 surrogates from text for PostgreSQL storage."""
     if not isinstance(text, str):
         return text
-    # Fast path: skip work when there are no null bytes (the common case)
-    if '\x00' not in text:
+    # Fast path: skip work when there are no null bytes or surrogate code points.
+    if '\x00' not in text and not SURROGATE_RE.search(text):
         return text
-    # Remove null bytes
-    text = text.replace('\x00', '').replace('\u0000', '')
-    # Remove invalid UTF-8 surrogate characters that can cause encoding errors
-    # This handles cases where binary data or encoding issues introduced surrogates
-    try:
-        text = text.encode('utf-8', errors='surrogatepass').decode('utf-8', errors='ignore')
-    except (UnicodeEncodeError, UnicodeDecodeError):
-        pass
-    return text
+    return SURROGATE_RE.sub('', text.replace('\x00', ''))
 
 
 def _strip_null_bytes_deep(obj):
@@ -734,7 +727,10 @@ def _strip_null_bytes_deep(obj):
     if isinstance(obj, str):
         return sanitize_text_for_db(obj)
     elif isinstance(obj, dict):
-        return {k: _strip_null_bytes_deep(v) for k, v in obj.items()}
+        cleaned = {}
+        for k, v in obj.items():
+            cleaned[sanitize_text_for_db(k) if isinstance(k, str) else k] = _strip_null_bytes_deep(v)
+        return cleaned
     elif isinstance(obj, list):
         return [_strip_null_bytes_deep(v) for v in obj]
     return obj
@@ -744,19 +740,21 @@ def sanitize_data_for_db(obj):
     """Recursively sanitize all strings in a data structure for database storage.
 
     Performs a fast pre-check: serializes the structure once and scans for
-    null bytes.  If none are found (the overwhelmingly common case), the
+    null bytes or invalid UTF-8 surrogates. If none are found, the
     original object is returned immediately, skipping the expensive
     recursive walk.
     """
     if isinstance(obj, str):
         return sanitize_text_for_db(obj)
-    # Fast path: check for null bytes in the serialized form.
+    # Fast path: check for null bytes and surrogate code points in the serialized form.
     # json.dumps is implemented in C and much faster than a Python-level
     # recursive walk over every leaf string.
     try:
-        if '\\u0000' not in json.dumps(obj, ensure_ascii=False):
+        serialized = json.dumps(obj, ensure_ascii=False)
+        if '\\u0000' not in serialized:
+            serialized.encode('utf-8')
             return obj
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, UnicodeEncodeError):
         pass
     return _strip_null_bytes_deep(obj)
 

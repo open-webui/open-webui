@@ -39,17 +39,24 @@
 	export let mergeResponses;
 
 	export let addMessages;
+	export let forkHandler: Function | null = null;
 	export let triggerScroll;
 	export let readOnly = false;
+	export let compactPreview = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
+	export let onInsertToNote: ((content: string) => void) | null = null;
+
+	// Safari's content-visibility implementation has paint bugs that leave
+	// on-screen messages blank (#26712), so skip virtualization there
+	const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 </script>
 
 <div
 	role="listitem"
 	class="flex flex-col justify-between px-5 mb-3 w-full {($settings?.widescreenMode ?? null)
 		? 'max-w-full'
-		: 'max-w-5xl'} mx-auto rounded-lg group message-listitem"
+		: 'max-w-[58rem]'} mx-auto rounded-lg group {isSafari ? '' : 'message-listitem'}"
 >
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}
@@ -70,8 +77,10 @@
 				{editMessage}
 				{deleteMessage}
 				{readOnly}
+				{compactPreview}
 				{editCodeBlock}
 				{topPadding}
+				{onInsertToNote}
 			/>
 		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}
 			<ResponseMessage
@@ -95,7 +104,9 @@
 				{continueResponse}
 				{regenerateResponse}
 				{addMessages}
+				{forkHandler}
 				{readOnly}
+				{compactPreview}
 				{editCodeBlock}
 				{topPadding}
 			/>
@@ -120,9 +131,12 @@
 					{mergeResponses}
 					{triggerScroll}
 					{addMessages}
+					{forkHandler}
 					{readOnly}
+					{compactPreview}
 					{editCodeBlock}
 					{topPadding}
+					{onInsertToNote}
 				/>
 			{/key}
 		{/if}

@@ -70,7 +70,6 @@ class MemoriesTable:
             )
             db.add(record)
             await db.commit()
-            await db.refresh(record)
             return MemoryModel.model_validate(record) if record else None
 
     async def update_memory_by_id_and_user_id(
@@ -101,7 +100,6 @@ class MemoriesTable:
                 memory.updated_at = int(time.time())
 
                 await db.commit()
-                await db.refresh(memory)
                 return MemoryModel.model_validate(memory)
             except Exception:
                 return None

@@ -83,6 +83,7 @@ from open_webui.env import (
     ENABLE_COMPRESSION_MIDDLEWARE,
     ENABLE_CUSTOM_MODEL_FALLBACK,
     ENABLE_EASTER_EGGS,
+    ENABLE_PLUGINS,
     EXTERNAL_PWA_MANIFEST_URL,
     # OAuth Back-Channel Logout
     ENABLE_OAUTH_BACKCHANNEL_LOGOUT,
@@ -153,6 +154,7 @@ from open_webui.routers import (
     knowledge,
     memories,
     models,
+    notifications,
     notes,
     ollama,
     openai,
@@ -258,6 +260,15 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
+async def emit_chat_list_event(metadata: dict, chat_id: str):
+    if not chat_id or chat_id.startswith(('channel:', 'local:')):
+        return
+
+    event_emitter = await get_event_emitter(metadata, update_db=False)
+    if event_emitter:
+        await event_emitter({'type': 'chat:list', 'data': {'chat_id': chat_id}})
+
+
 class SPAStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
         try:
@@ -319,8 +330,9 @@ async def lifespan(app: FastAPI):
     await migrate_legacy_webhook_config()
     await publish_event(app, EVENTS.SYSTEM_STARTUP_STARTED, source='system')
 
+    license_task = None
     if LICENSE_KEY:
-        get_license_data(app, LICENSE_KEY)
+        license_task = asyncio.create_task(asyncio.to_thread(get_license_data, app, LICENSE_KEY))
 
     # Create admin account from env vars if specified and no users exist
     if WEBUI_ADMIN_EMAIL and WEBUI_ADMIN_PASSWORD:
@@ -408,6 +420,14 @@ async def lifespan(app: FastAPI):
             log.warning(f'Failed to initialize terminal servers at startup: {e}')
 
     # Mark application as ready to accept traffic from a startup perspective.
+    if license_task:
+        try:
+            await asyncio.wait_for(asyncio.shield(license_task), timeout=2)
+        except asyncio.TimeoutError:
+            log.warning('License data retrieval is still pending; continuing startup without it')
+        except Exception as e:
+            log.warning(f'License data retrieval failed during startup: {e}')
+
     app.state.startup_complete = True
     await publish_event(app, EVENTS.SYSTEM_STARTUP_COMPLETED, source='system')
 
@@ -697,6 +717,25 @@ app.state.speech_speaker_embeddings_dataset = None
 app.state.MODELS = MODELS
 
 # Add the middleware to the app
+try:
+    audit_level = AuditLevel(AUDIT_LOG_LEVEL)
+except ValueError as e:
+    logger.error(f'Invalid audit level: {AUDIT_LOG_LEVEL}. Error: {e}')
+    audit_level = AuditLevel.NONE
+
+# Added before CompressMiddleware so audit sits inside compression and
+# captures response bodies before they are compressed (last added runs
+# outermost).
+if audit_level != AuditLevel.NONE:
+    app.add_middleware(
+        AuditLoggingMiddleware,
+        audit_level=audit_level,
+        excluded_paths=AUDIT_EXCLUDED_PATHS,
+        included_paths=AUDIT_INCLUDED_PATHS,
+        audit_get_requests=ENABLE_AUDIT_GET_REQUESTS,
+        max_body_size=MAX_BODY_LOG_SIZE,
+    )
+
 if ENABLE_COMPRESSION_MIDDLEWARE:
     app.add_middleware(CompressMiddleware)
 
@@ -751,6 +790,7 @@ app.include_router(notes.router, prefix='/api/v1/notes', tags=['notes'])
 
 
 app.include_router(models.router, prefix='/api/v1/models', tags=['models'])
+app.include_router(notifications.router, prefix='/api/v1/notifications', tags=['notifications'])
 app.include_router(knowledge.router, prefix='/api/v1/knowledge', tags=['knowledge'])
 app.include_router(prompts.router, prefix='/api/v1/prompts', tags=['prompts'])
 app.include_router(tools.router, prefix='/api/v1/tools', tags=['tools'])
@@ -774,21 +814,6 @@ if ENABLE_SCIM:
     app.include_router(scim.router, prefix='/api/v1/scim/v2', tags=['scim'])
 
 
-try:
-    audit_level = AuditLevel(AUDIT_LOG_LEVEL)
-except ValueError as e:
-    logger.error(f'Invalid audit level: {AUDIT_LOG_LEVEL}. Error: {e}')
-    audit_level = AuditLevel.NONE
-
-if audit_level != AuditLevel.NONE:
-    app.add_middleware(
-        AuditLoggingMiddleware,
-        audit_level=audit_level,
-        excluded_paths=AUDIT_EXCLUDED_PATHS,
-        included_paths=AUDIT_INCLUDED_PATHS,
-        audit_get_requests=ENABLE_AUDIT_GET_REQUESTS,
-        max_body_size=MAX_BODY_LOG_SIZE,
-    )
 ##################################
 #
 # Chat Endpoints
@@ -801,12 +826,18 @@ if audit_level != AuditLevel.NONE:
 async def get_models(request: Request, refresh: bool = False, user=Depends(get_verified_user)):
     all_models = await get_all_models(request, refresh=refresh, user=user)
 
-    models = []
-    for model in all_models:
-        # Filter out filter pipelines
-        if 'pipeline' in model and model['pipeline'].get('type', None) == 'filter':
-            continue
+    # Filter out filter pipelines
+    models = [model for model in all_models if not ('pipeline' in model and model['pipeline'].get('type', None) == 'filter')]
 
+    # Chat requests resolve models by ID from request.app.state.MODELS, where
+    # duplicate IDs collapse to the last model. Return the same effective list.
+    models = list({model['id']: model for model in models}.values())
+
+    # Access-filter first so the per-model payload work below only runs for
+    # models the caller can actually see.
+    models = await get_filtered_models(models, user)
+
+    for model in models:
         # Remove profile image URL to reduce payload size
         if model.get('info', {}).get('meta', {}).get('profile_image_url'):
             model['info']['meta'].pop('profile_image_url', None)
@@ -820,13 +851,6 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
         except Exception as e:
             log.debug(f'Error processing model tags: {e}')
             model['tags'] = []
-            pass
-
-        models.append(model)
-
-    # Chat requests resolve models by ID from request.app.state.MODELS, where
-    # duplicate IDs collapse to the last model. Return the same effective list.
-    models = list({model['id']: model for model in models}.values())
 
     model_order_list = await Config.get('ui.model_order_list')
     if model_order_list:
@@ -839,11 +863,10 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
             )
         )
 
-    models = await get_filtered_models(models, user)
-
-    log.debug(
-        f'/api/models returned filtered models accessible to the user: {json.dumps([model.get("id") for model in models])}'
-    )
+    if log.isEnabledFor(logging.DEBUG):
+        log.debug(
+            f'/api/models returned filtered models accessible to the user: {json.dumps([model.get("id") for model in models])}'
+        )
     return {'data': models}
 
 
@@ -1130,6 +1153,7 @@ async def chat_completion(
         metadata = {
             'user_id': user.id,
             'user_agent': request.headers.get('user-agent', '') or '',
+            'internal': getattr(request.state, 'internal', False) is True,
             'chat_id': form_data.pop('chat_id', None) or '',
             'user_message': user_message,
             'user_message_id': user_message.get('id') if user_message else None,
@@ -1266,6 +1290,7 @@ async def chat_completion(
                         subject_id=chat_id,
                         data={'title': 'New Chat'},
                     )
+                    await emit_chat_list_event(metadata, chat_id)
                     if user_message_id:
                         await publish_event(
                             request,
@@ -1367,6 +1392,7 @@ async def chat_completion(
                             user_message['id'],
                             user_message,
                         )
+                        await emit_chat_list_event({**metadata, 'message_id': user_message['id']}, chat_id)
                         await publish_event(
                             request,
                             EVENTS.MESSAGE_CREATED,
@@ -1378,6 +1404,15 @@ async def chat_completion(
                                 'content_preview': user_message.get('content', '')[:300],
                             },
                         )
+                        if not getattr(request.state, 'internal', False) and not (user_message.get('meta') or {}).get(
+                            'internal'
+                        ):
+                            try:
+                                from open_webui.utils.timers import cancel_timers_for_chat
+
+                                await cancel_timers_for_chat(chat_id, 'chat.user_message')
+                            except Exception:
+                                log.exception('Failed to cancel chat.user_message timers for chat %s', chat_id)
 
                         # Link grandparent → user message (childrenIds)
                         grandparent_id = user_message.get('parentId')
@@ -1589,9 +1624,39 @@ async def chat_completion(
             except Exception:
                 pass
 
+            try:
+                chat_id = metadata.get('chat_id')
+                if (
+                    chat_id
+                    and getattr(request.state, 'internal', False) is not True
+                    and not await has_active_tasks(request.app.state.redis, chat_id)
+                ):
+                    from open_webui.utils.subagents import process_pending_internal_messages
+
+                    await process_pending_internal_messages(
+                        request,
+                        chat_id,
+                        user.id,
+                        {
+                            'model_id': metadata.get('model_id') or form_data.get('model'),
+                            'session_id': metadata.get('session_id'),
+                            'tool_ids': metadata.get('tool_ids') or [],
+                            'skill_ids': metadata.get('skill_ids') or [],
+                            'system_prompt': metadata.get('system_prompt'),
+                            'filter_ids': metadata.get('filter_ids') or [],
+                            'terminal_id': metadata.get('terminal_id'),
+                            'features': metadata.get('features') or {},
+                            'variables': metadata.get('variables') or {},
+                        },
+                    )
+            except Exception:
+                log.exception('Failed to process pending internal messages for chat %s', metadata.get('chat_id'))
+
     # Fan out: one task per model
     if metadata.get('session_id') and metadata.get('chat_id'):
         task_ids = []
+        subagent_results = []
+        is_internal = getattr(request.state, 'internal', False) is True
         chat_id = metadata['chat_id']
 
         for idx, entry in enumerate(message_ids):
@@ -1618,27 +1683,38 @@ async def chat_completion(
 
             # Only the first model runs chat-level background tasks;
             # subsequent models only run follow-ups.
+            process = process_chat(
+                request,
+                model_form_data,
+                user,
+                per_model_metadata,
+                resolved_model,
+                tasks
+                if idx == 0
+                else {
+                    k: v for k, v in (tasks or {}).items() if k not in (TASKS.TITLE_GENERATION, TASKS.TAGS_GENERATION)
+                }
+                or None,
+            )
+            if is_internal:
+                subagent_results.append(await process)
+                continue
+
             task_id, _ = await create_task(
                 request.app.state.redis,
-                process_chat(
-                    request,
-                    model_form_data,
-                    user,
-                    per_model_metadata,
-                    resolved_model,
-                    tasks
-                    if idx == 0
-                    else {
-                        k: v
-                        for k, v in (tasks or {}).items()
-                        if k not in (TASKS.TITLE_GENERATION, TASKS.TAGS_GENERATION)
-                    }
-                    or None,
-                ),
+                process,
                 id=chat_id,
             )
             per_model_metadata['task_id'] = task_id
             task_ids.append(task_id)
+
+        if is_internal:
+            return {
+                'status': True,
+                'task_ids': [],
+                'chat_id': chat_id,
+                'results': subagent_results,
+            }
 
         # Emit chat:active=true
         if task_ids:
@@ -1683,6 +1759,16 @@ from open_webui.utils.anthropic import (
 )
 
 
+@app.post('/api/message/count_tokens')
+@app.post('/api/v1/messages/count_tokens')  # Anthropic Messages token-count endpoint
+async def count_message_tokens(
+    request: Request,
+    form_data: dict,
+    user=Depends(get_verified_user),
+):
+    return {'input_tokens': await openai.count_anthropic_tokens(request, form_data, user)}
+
+
 @app.post('/api/message')
 @app.post('/api/v1/messages')  # Anthropic Messages API compatible endpoint
 async def generate_messages(
@@ -1703,10 +1789,31 @@ async def generate_messages(
     Authentication: Supports both standard Authorization header and
     Anthropic's x-api-key header (via middleware translation).
     """
-    # Convert Anthropic payload to OpenAI format
     requested_model = form_data.get('model', '')
+    input_tokens = None
+    try:
+        input_tokens = await openai.count_anthropic_tokens(request, form_data, user)
+    except Exception:
+        # Counting must not turn a compatible generation request into an outage.
+        log.warning('Unable to count Anthropic input tokens for model %s', requested_model, exc_info=True)
 
-    openai_payload = convert_anthropic_to_openai_payload(form_data)
+    model_id = requested_model
+    model_info = await Models.get_model_by_id(model_id)
+    if model_info and model_info.base_model_id:
+        model_id = model_info.base_model_id
+
+    passthrough_params = []
+    models = request.app.state.OPENAI_MODELS
+    if not models or model_id not in models:
+        await openai.get_all_models(request, user=user)
+        models = request.app.state.OPENAI_MODELS
+    model = models.get(model_id)
+    if model:
+        _, _, api_config = await openai.get_openai_connection(model['urlIdx'])
+        passthrough_params = api_config.get('passthrough_params') or []
+
+    # Convert Anthropic payload to OpenAI format
+    openai_payload = convert_anthropic_to_openai_payload(form_data, passthrough_params)
 
     # Route through the existing chat_completion handler
     response = await chat_completion(request, openai_payload, user)
@@ -1715,7 +1822,9 @@ async def generate_messages(
     if isinstance(response, StreamingResponse):
         # Streaming response: wrap the generator to convert SSE format
         return StreamingResponse(
-            openai_stream_to_anthropic_stream(response.body_iterator, model=requested_model),
+            openai_stream_to_anthropic_stream(
+                response.body_iterator, model=requested_model, input_tokens=input_tokens or 0
+            ),
             media_type='text/event-stream',
             headers={
                 'Cache-Control': 'no-cache',
@@ -1723,7 +1832,7 @@ async def generate_messages(
             },
         )
     elif isinstance(response, dict):
-        return convert_openai_to_anthropic_response(response, model=requested_model)
+        return convert_openai_to_anthropic_response(response, model=requested_model, input_tokens=input_tokens)
     else:
         # Passthrough for error responses (JSONResponse, PlainTextResponse, etc.)
         return response
@@ -1865,6 +1974,7 @@ async def get_app_config(request: Request):
         'calendar.enable',
         'automations.enable',
         'notes.enable',
+        'chat.context_compaction.enable',
         'web.search.enable',
         'web.search.confirmation.enable',
         'web.search.confirmation.content',
@@ -1927,12 +2037,14 @@ async def get_app_config(request: Request):
                     'enable_public_active_users_count': ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
                     'enable_easter_eggs': ENABLE_EASTER_EGGS,
                     'enable_direct_connections': config.get('direct.enable'),
+                    'enable_plugins': ENABLE_PLUGINS,
                     'enable_folders': config.get('folders.enable'),
                     'folder_max_file_count': config.get('folders.max_file_count'),
                     'enable_channels': config.get('channels.enable'),
                     'enable_calendar': config.get('calendar.enable'),
                     'enable_automations': config.get('automations.enable'),
                     'enable_notes': config.get('notes.enable'),
+                    'enable_context_compaction': config.get('chat.context_compaction.enable'),
                     'enable_web_search': config.get('web.search.enable'),
                     'enable_web_search_confirmation': config.get('web.search.confirmation.enable'),
                     'web_search_confirmation_content': config.get('web.search.confirmation.content'),
