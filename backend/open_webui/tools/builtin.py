@@ -103,7 +103,7 @@ async def _has_read_access_to_file(
     return await has_access_to_file(
         file_id=file.id,
         access_type='read',
-        user=UserModel(**{'id': user_id, 'role': user_role}),
+        user=UserModel.model_construct(id=user_id, role=user_role),
     )
 
 
@@ -2941,6 +2941,122 @@ async def query_knowledge_files(
         return json.dumps(chunks, ensure_ascii=False)
     except Exception as e:
         log.exception(f'query_knowledge_files error: {e}')
+        return json.dumps({'error': str(e)})
+
+
+async def query_chat_file(
+    query: str,
+    file_id: Optional[str] = None,
+    count: Optional[int] = None,
+    __request__: Request = None,
+    __user__: dict = None,
+    __metadata__: dict = None,
+    __model_knowledge__: list[dict] = None,
+) -> str:
+    """
+    Search files attached to the current chat using semantic/vector search.
+    Pass the file id from the url attribute of an <attached_files> block to search a single file,
+    or omit file_id to search across all files attached to the chat.
+    Helpful for retrieving relevant passages from documents the user attached to the conversation.
+
+    :param query: The search query to find semantically relevant content
+    :param file_id: The id of the attached file to search; omit to search all attached files
+    :param count: Maximum number of results to return (defaults to the server-configured top k)
+    :return: JSON with relevant chunks containing content, source filename, and relevance score
+    """
+    if __request__ is None:
+        return json.dumps({'error': 'Request context not available'})
+
+    if not __user__:
+        return json.dumps({'error': 'User context not available'})
+
+    # Coerce parameters from LLM tool calls (may come as strings)
+    if isinstance(file_id, str) and file_id.lower() in ('none', 'null', ''):
+        file_id = None
+    if isinstance(count, str):
+        if count.lower() in ('none', 'null', ''):
+            count = None
+        else:
+            try:
+                count = int(count)
+            except ValueError:
+                count = None
+
+    try:
+        from open_webui.models.files import Files
+        from open_webui.retrieval.utils import query_collection
+
+        user_id = __user__.get('id')
+        user_role = __user__.get('role', 'user')
+
+        embedding_function = __request__.app.state.EMBEDDING_FUNCTION
+        if not embedding_function:
+            return json.dumps({'error': 'Embedding function not configured'})
+
+        # The admin-configured RAG top k is both the default and the upper bound
+        top_k = await Config.get('rag.top_k')
+        count = top_k if count is None else max(1, min(count, top_k))
+
+        if file_id:
+            file_ids = [file_id]
+        else:
+            # No id given: target every file attached to the chat
+            attached_files = (__metadata__ or {}).get('files') or []
+            file_ids = list(
+                dict.fromkeys(
+                    item.get('id') for item in attached_files if item.get('type') == 'file' and item.get('id')
+                )
+            )
+            if not file_ids:
+                return json.dumps({'error': 'No files are attached to this chat'})
+
+        filenames = {}
+        collection_names = []
+        for fid in file_ids:
+            file = await Files.get_file_by_id(fid)
+            if not file or not await _has_read_access_to_file(file, user_id, user_role, __model_knowledge__):
+                if file_id:
+                    return json.dumps({'error': 'File not found'})
+                continue
+            filenames[file.id] = file.filename
+            collection_names.append(f'file-{file.id}')
+
+        if not collection_names:
+            return json.dumps({'error': 'No accessible files are attached to this chat'})
+
+        query_results = await query_collection(
+            __request__,
+            collection_names=collection_names,
+            queries=[query],
+            embedding_function=embedding_function,
+            k=count,
+        )
+
+        chunks = []
+        if query_results and 'documents' in query_results:
+            documents = query_results.get('documents', [[]])[0]
+            metadatas = query_results.get('metadatas', [[]])[0]
+            distances = query_results.get('distances', [[]])[0]
+
+            single_file_id = file_ids[0] if len(file_ids) == 1 else ''
+            for idx, doc in enumerate(documents):
+                metadata = metadatas[idx] if idx < len(metadatas) else {}
+                chunk_file_id = metadata.get('file_id', single_file_id)
+                chunk_info = {
+                    'content': doc,
+                    'source': metadata.get('source', metadata.get('name', filenames.get(chunk_file_id, 'Unknown'))),
+                    'file_id': chunk_file_id,
+                }
+                if idx < len(distances):
+                    chunk_info['distance'] = distances[idx]
+                chunks.append(chunk_info)
+
+        # Limit to requested count
+        chunks = chunks[:count]
+
+        return json.dumps(chunks, ensure_ascii=False)
+    except Exception as e:
+        log.exception(f'query_chat_file error: {e}')
         return json.dumps({'error': str(e)})
 
 

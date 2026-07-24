@@ -69,6 +69,7 @@ from open_webui.tools.builtin import (
     list_memories,
     list_memory_paths,
     notify,
+    query_chat_file,
     query_knowledge_bases,
     query_knowledge_files,
     read_memory_path,
@@ -566,6 +567,11 @@ async def get_builtin_tools(
                     view_knowledge_file,
                 ]
             )
+
+        # Chat-attached files are auto-retrieved when file_context is on;
+        # only expose on-demand querying of them when it's off
+        if not get_model_capability('file_context'):
+            builtin_functions.append(query_chat_file)
 
     # Chats tools - search and fetch user's chat history
     if is_builtin_tool_enabled('chats'):
