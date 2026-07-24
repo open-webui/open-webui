@@ -6,9 +6,8 @@
 
 <section class="w-full {first ? '' : 'mt-4'} {className}">
 	{#if title}
-		<h3 class="mb-2 flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+		<h3 class="mb-2 text-xs text-gray-600 dark:text-gray-400">
 			{title}
-			<slot name="suffix" />
 		</h3>
 	{/if}
 

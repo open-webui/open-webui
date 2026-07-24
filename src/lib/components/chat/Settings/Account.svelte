@@ -304,51 +304,46 @@
 			</UserSettingField>
 		</UserSettingSection>
 
-		<UserSettingSection title={$i18n.t('User Variables')}>
-			<span slot="suffix" class="text-gray-400 dark:text-gray-600">{variableRows.length}</span>
-
-			<div>
-				<div class="flex items-center justify-between gap-2">
-					<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
-						{$i18n.t('Use these in model system prompts as {{example}}.', {
-							example: '{{user.variables.key_name}}'
-						})}
-					</div>
-
-					<div class="flex shrink-0 items-center gap-2">
-						<button class={actionButtonClass} type="button" on:click={() => openVariableModal()}>
-							{$i18n.t('Add')}
+		<section class="mt-4 w-full">
+			<div
+				class="mb-0.5 flex items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-400"
+			>
+				<div class="flex min-w-0 items-center gap-1.5">
+					{$i18n.t('User Variables')}
+					<span class="text-gray-400 dark:text-gray-600">{variableRows.length}</span>
+				</div>
+				<button class={actionButtonClass} type="button" on:click={() => openVariableModal()}>
+					{$i18n.t('Add')}
+				</button>
+			</div>
+			<div class="flex flex-col">
+				{#each variableRows as row, idx}
+					<div class={variableRowClass(idx)}>
+						<div class="min-w-0 truncate font-mono text-xs text-gray-700 dark:text-gray-300">
+							{row.key || $i18n.t('key_name')}
+						</div>
+						<div class="min-w-0 flex-1 truncate text-xs text-gray-500 dark:text-gray-500">
+							{row.value || $i18n.t('Empty')}
+						</div>
+						<button class={actionButtonClass} type="button" on:click={() => openVariableModal(idx)}>
+							{$i18n.t('Edit')}
 						</button>
 					</div>
-				</div>
+				{/each}
 
-				<div class="flex flex-col">
-					{#each variableRows as row, idx}
-						<div class={variableRowClass(idx)}>
-							<div class="min-w-0 truncate font-mono text-xs text-gray-700 dark:text-gray-300">
-								{row.key || $i18n.t('key_name')}
-							</div>
-							<div class="min-w-0 flex-1 truncate text-xs text-gray-500 dark:text-gray-500">
-								{row.value || $i18n.t('Empty')}
-							</div>
-							<button
-								class={actionButtonClass}
-								type="button"
-								on:click={() => openVariableModal(idx)}
-							>
-								{$i18n.t('Edit')}
-							</button>
-						</div>
-					{/each}
-
-					{#if variableRows.length === 0}
-						<div class="text-xs text-gray-400 dark:text-gray-600">
-							{$i18n.t('No user variables configured.')}
-						</div>
-					{/if}
-				</div>
+				{#if variableRows.length === 0}
+					<div class="text-xs text-gray-400 dark:text-gray-600">
+						{$i18n.t('No user variables configured.')}
+					</div>
+				{/if}
 			</div>
-		</UserSettingSection>
+
+			<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+				{$i18n.t('Use these in model system prompts as {{example}}.', {
+					example: '{{user.variables.key_name}}'
+				})}
+			</div>
+		</section>
 
 		{#if $config?.features.enable_login_form && $config?.features.enable_password_change_form}
 			<UserSettingSection title={$i18n.t('Password')}>
