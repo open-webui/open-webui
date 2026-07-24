@@ -51,16 +51,24 @@ async def compact_messages_for_request(
     if not config['enable']:
         return messages, None, False
 
+    # Exempt a leading system message from compaction; re-prepend on every return.
+    system_message = None
+    if messages and messages[0].get('role') == 'system':
+        system_message, messages = messages[0], messages[1:]
+
+    def _restore(msgs: list[dict]) -> list[dict]:
+        return [system_message, *msgs] if system_message else msgs
+
     messages, previous_summary = _apply_latest_summary_checkpoint(messages)
     token_threshold = _resolve_token_threshold(config['token_threshold'], config['token_cap'], metadata)
     if not _exceeds_token_threshold(messages, system_prompt, previous_summary, token_threshold) or len(messages) <= 3:
-        return messages, previous_summary, False
+        return _restore(messages), previous_summary, False
 
     boundary = _find_compaction_boundary(messages, config['retention_percentage'])
     compacted_messages = messages[:boundary]
     recent_messages = messages[boundary:]
     if not compacted_messages or not recent_messages:
-        return messages, previous_summary, False
+        return _restore(messages), previous_summary, False
 
     event_emitter = None
     if metadata.get('chat_id') and metadata.get('message_id'):
@@ -140,7 +148,7 @@ async def compact_messages_for_request(
             }
         )
 
-    return recent_messages, summary, True
+    return _restore(recent_messages), summary, True
 
 
 async def compact_chat_branch(request, user, chat: Any, model_id: str, models: dict) -> dict:
