@@ -911,7 +911,7 @@
 									: ''}"
 								id="model-item-{model.id}"
 							>
-								<div class="self-center pr-1 text-gray-400 dark:text-gray-600">
+								<div class="self-center pr-1 -ml-1 text-gray-400 dark:text-gray-600">
 									<Tooltip
 										content={canReorderModels
 											? $i18n.t('Drag to reorder')
