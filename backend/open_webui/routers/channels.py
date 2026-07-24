@@ -993,7 +993,10 @@ async def model_response_handler(request, channel, message, user, db=None):
                     channel.id,
                     MessageForm(
                         **{
-                            'parent_id': (message.parent_id if message.parent_id else message.id),
+                            # Reply in the channel root when the model was tagged
+                            # at the top level; only stay in a thread when the
+                            # triggering message was itself in one.
+                            'parent_id': message.parent_id,
                             'content': f'',
                             'data': {},
                             'meta': {
