@@ -7,6 +7,7 @@ from typing import Any
 
 CHAT_VARIABLE_KEY_RE = re.compile(r'^[a-z][a-z0-9_]*$')
 CHAT_VARIABLE_ANY_RE = re.compile(r'{{\s*chat\.variables\.([^\s|}]+)(?:\s*\|\s*([^}]*))?\s*}}')
+USER_VARIABLE_ANY_RE = re.compile(r'{{\s*user\.variables\.([^\s|}]+)(?:\s*\|\s*([^}]*))?\s*}}')
 MAX_VARIABLE_VALUE_LENGTH = 20_000
 MAX_VARIABLES_JSON_LENGTH = 100_000
 
@@ -173,6 +174,36 @@ def normalize_chat_variables(variables: Any) -> dict[str, Any]:
     return variables
 
 
+def normalize_user_variables(variables: Any) -> dict[str, str]:
+    if not isinstance(variables, dict):
+        return {}
+    return {key: value for key, value in variables.items() if isinstance(key, str) and isinstance(value, str)}
+
+
+def validate_user_variables(variables: Any) -> dict[str, str]:
+    if not isinstance(variables, dict):
+        raise ChatVariablesError('User variables must be an object.')
+
+    try:
+        if len(json.dumps(variables)) > MAX_VARIABLES_JSON_LENGTH:
+            raise ChatVariablesError('User variables are too large.')
+    except TypeError:
+        raise ChatVariablesError('User variables must be JSON serializable.')
+
+    validated: dict[str, str] = {}
+    for key, value in variables.items():
+        if not isinstance(key, str) or not CHAT_VARIABLE_KEY_RE.match(key):
+            raise ChatVariablesError(f'Invalid user variable key: {key}')
+        if not isinstance(value, str):
+            raise ChatVariablesError(f'User variable must be a string: {key}')
+        value = value.replace('\r\n', '\n')
+        if len(value) > MAX_VARIABLE_VALUE_LENGTH:
+            raise ChatVariablesError(f'User variable is too long: {key}')
+        validated[key] = value
+
+    return validated
+
+
 def validate_chat_variables(
     system_prompt: str | None,
     variables: Any,
@@ -240,3 +271,18 @@ def render_chat_variables(
         return '' if value is None else str(value)
 
     return CHAT_VARIABLE_ANY_RE.sub(replace, system_prompt)
+
+
+def render_user_variables(system_prompt: str | None, variables: Any) -> str | None:
+    if not system_prompt:
+        return system_prompt
+
+    variables = normalize_user_variables(variables)
+
+    def replace(match: re.Match) -> str:
+        key = match.group(1).strip()
+        if not CHAT_VARIABLE_KEY_RE.match(key):
+            return ''
+        return variables.get(key, '')
+
+    return USER_VARIABLE_ANY_RE.sub(replace, system_prompt)

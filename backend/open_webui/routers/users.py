@@ -44,6 +44,7 @@ from open_webui.utils.auth import (
     get_verified_user,
     validate_password,
 )
+from open_webui.utils.chat_variables import ChatVariablesError, normalize_user_variables, validate_user_variables
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -572,6 +573,52 @@ async def update_user_status_by_session_user(
 async def get_user_info_by_session_user(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     # user already fetched by get_verified_user — no need to refetch
     return user.info
+
+
+class UserVariablesForm(BaseModel):
+    variables: dict = Field(default_factory=dict)
+
+
+class UserVariablesResponse(BaseModel):
+    variables: dict[str, str] = Field(default_factory=dict)
+
+
+############################
+# GetUserVariablesBySessionUser
+############################
+
+
+@router.get('/user/variables', response_model=UserVariablesResponse)
+async def get_user_variables_by_session_user(user=Depends(get_verified_user)):
+    return UserVariablesResponse(variables=normalize_user_variables(user.variables))
+
+
+############################
+# UpdateUserVariablesBySessionUser
+############################
+
+
+@router.post('/user/variables/update', response_model=UserVariablesResponse)
+async def update_user_variables_by_session_user(
+    form_data: UserVariablesForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    try:
+        variables = validate_user_variables(form_data.variables)
+    except ChatVariablesError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+
+    updated = await Users.update_user_by_id(user.id, {'variables': variables}, db=db)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+    return UserVariablesResponse(variables=variables)
 
 
 ############################

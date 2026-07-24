@@ -120,6 +120,7 @@
 		const warnings: string[] = [];
 		const seenDefinitions: Record<string, string> = {};
 		const typedRegex = /{{\s*chat\.variables\.([a-zA-Z0-9_.-]+)\s*\|\s*([^}]*)\s*}}/g;
+		const typedUserRegex = /{{\s*user\.variables\.([a-zA-Z0-9_.-]+)\s*\|\s*([^}]*)\s*}}/g;
 
 		for (const match of prompt.matchAll(typedRegex)) {
 			const key = match[1];
@@ -133,6 +134,13 @@
 		const fields = Object.entries(variables)
 			.filter(([name]) => name.startsWith('chat.variables.'))
 			.map(([name, field]) => ({ key: name.replace('chat.variables.', ''), ...(field as any) }));
+		const userFields = Object.entries(variables)
+			.filter(([name]) => name.startsWith('user.variables.'))
+			.map(([name]) => ({ key: name.replace('user.variables.', '') }));
+
+		for (const match of prompt.matchAll(typedUserRegex)) {
+			warnings.push(`${match[1]} uses metadata, but User Variables are configured by each user`);
+		}
 
 		for (const field of fields) {
 			const key = field.key;
@@ -149,7 +157,13 @@
 			}
 		}
 
-		return { fields, warnings };
+		for (const field of userFields) {
+			if (!chatVariableKeyRegex.test(field.key)) {
+				warnings.push(`${field.key} must be lowercase snake case`);
+			}
+		}
+
+		return { fields, userFields, warnings };
 	};
 
 	$: chatVariablesPreview = getChatVariablesPreview(system ?? '');
@@ -762,20 +776,24 @@
 											bind:value={system}
 										/>
 									</div>
-									{#if chatVariablesPreview.fields.length > 0 || chatVariablesPreview.warnings.length > 0}
+									{#if chatVariablesPreview.fields.length > 0 || chatVariablesPreview.userFields.length > 0 || chatVariablesPreview.warnings.length > 0}
 										<div class="mt-2 border-t border-gray-100/60 pt-2 dark:border-gray-850/60">
 											<div class="mb-1.5 flex items-center justify-between gap-2">
 												<div class="text-xs text-gray-500 dark:text-gray-400">
-													{$i18n.t('Detected Chat Variables')}
+													{$i18n.t('Detected Variables')}
 												</div>
-												{#if chatVariablesPreview.fields.length > 0}
+												{#if chatVariablesPreview.fields.length + chatVariablesPreview.userFields.length > 0}
 													<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
-														{chatVariablesPreview.fields.length}
+														{chatVariablesPreview.fields.length +
+															chatVariablesPreview.userFields.length}
 													</div>
 												{/if}
 											</div>
 
 											{#if chatVariablesPreview.fields.length > 0}
+												<div class="mb-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+													{$i18n.t('Chat Variables')}
+												</div>
 												<div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
 													{#each chatVariablesPreview.fields as field}
 														<div class="flex items-center gap-1 text-gray-600 dark:text-gray-300">
@@ -784,6 +802,19 @@
 															{#if field.required}
 																<span class="text-amber-600 dark:text-amber-400">required</span>
 															{/if}
+														</div>
+													{/each}
+												</div>
+											{/if}
+
+											{#if chatVariablesPreview.userFields.length > 0}
+												<div class="mb-1 mt-2 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+													{$i18n.t('User Variables')}
+												</div>
+												<div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
+													{#each chatVariablesPreview.userFields as field}
+														<div class="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+															<span class="font-medium">{field.key}</span>
 														</div>
 													{/each}
 												</div>

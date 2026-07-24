@@ -55,7 +55,7 @@
 			}}>{show ? $i18n.t('Hide') : $i18n.t('Show')}</button
 		>
 	</div>
-	<p class="-mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+	<p class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 		{$i18n.t('Update the password used for email and password sign-in.')}
 	</p>
 
