@@ -1252,7 +1252,7 @@ async def filter_accessible_collections(
       - any name with characters outside [A-Za-z0-9_-] → rejected
       - file-*          → validated via has_access_to_file
       - user-memory-*   → must match user's own memory collection
-      - web-search-*    → ephemeral per-query collections, always allowed
+      - web-search-*    → ephemeral per-query collections, owner-bound to web-search-{user.id}-*
       - knowledge-bases → always denied (system meta-collection)
       - everything else → if the name matches a knowledge base, validated
                           via Knowledges.check_access_by_user_id; if no
@@ -1287,10 +1287,10 @@ async def filter_accessible_collections(
             if name == f'user-memory-{user.id}':
                 validated.add(name)
         elif name.startswith('web-search-'):
-            # Ephemeral collections created by process_web_search — safe
-            # to allow because they contain only transient web-search
-            # results scoped to the requesting user's session.
-            validated.add(name)
+            # Ephemeral per-query collections, owner-bound: process_web_search mints
+            # them as web-search-{user.id}-<hash>, so only the creator may read/write.
+            if name.startswith(f'web-search-{user.id}-'):
+                validated.add(name)
         else:
             # May be a knowledge-base ID or a legacy/ephemeral collection.
             # If it IS a KB, enforce access control.  If no such KB
