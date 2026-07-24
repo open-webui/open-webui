@@ -8,7 +8,7 @@ from typing import Literal
 
 from open_webui.internal.db import Base, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Column, String, Text, delete, select
+from sqlalchemy import JSON, BigInteger, Column, Index, String, Text, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -16,6 +16,7 @@ class Memory(Base):  # user memory store
     """Stores user-created memory entries linked to a vector collection."""
 
     __tablename__ = 'memory'
+    __table_args__ = (Index('ix_memory_id_user_id', 'id', 'user_id'),)
 
     id = Column(String, primary_key=True, unique=True)
     user_id = Column(String, index=True)
