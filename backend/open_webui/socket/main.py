@@ -329,6 +329,132 @@ async def enter_room_for_users(room: str, user_ids: list[str]):
         log.debug(f'Failed to make users {user_ids} join room {room}: {e}')
 
 
+async def leave_rooms_for_users(room: str, user_ids: list[str]):
+    """
+    Make all active sessions of each user leave a specific Socket.IO room.
+
+    Call this when an access basis (group membership, channel membership,
+    access grant) is revoked — the user's open sessions still hold the
+    room subscriptions established at join time and would otherwise keep
+    receiving real-time events from a resource they no longer access.
+
+    leave_room is a no-op when the sid is not actually a member, so it is
+    safe to call optimistically.
+    """
+    try:
+        for user_id in user_ids:
+            for sid in get_session_ids_from_room(f'user:{user_id}'):
+                await sio.leave_room(sid, room)
+    except Exception as e:
+        log.debug(f'Failed to leave room {room} for users {user_ids}: {e}')
+
+
+async def resync_channel_rooms_for_users(user_ids: list[str]):
+    """
+    Recompute each user's channel access and evict their active sessions
+    from channel:* rooms they no longer have access to.
+
+    Used by access-control mutations that do not name a specific channel
+    but can still revoke channel access indirectly — removing a user from
+    a group, deleting a group that held grants, or channel access-grant
+    updates where the exact delta is cheaper to re-derive than to diff.
+
+    Uses the manager's local room map (available in both the in-memory
+    and Redis-backed managers) to enumerate candidate rooms. Degrades
+    gracefully if the attribute is not present in a future library
+    version — in that case no eviction happens and callers should rely
+    on targeted leave_rooms_for_users calls instead.
+    """
+    if not user_ids:
+        return
+
+    try:
+        ns_rooms = getattr(sio.manager, 'rooms', {}).get('/', {}) or {}
+    except Exception as e:
+        log.debug(f'resync_channel_rooms_for_users: could not read manager rooms: {e}')
+        return
+
+    channel_rooms = [r for r in list(ns_rooms.keys()) if isinstance(r, str) and r.startswith('channel:')]
+    if not channel_rooms:
+        return
+
+    for user_id in user_ids:
+        session_ids = get_session_ids_from_room(f'user:{user_id}')
+        if not session_ids:
+            continue
+        try:
+            user = await Users.get_user_by_id(user_id)
+        except Exception:
+            user = None
+        allowed_ids: set[str] = set()
+        if user is not None and (user.role == 'admin' or await has_permission(user.id, 'features.channels')):
+            try:
+                allowed_ids = {c.id for c in await Channels.get_channels_by_user_id(user.id)}
+            except Exception as e:
+                log.debug(f'resync_channel_rooms_for_users: channel lookup failed for {user_id}: {e}')
+                continue
+        for room in channel_rooms:
+            channel_id = room[len('channel:'):]
+            if channel_id in allowed_ids:
+                continue
+            for sid in session_ids:
+                try:
+                    await sio.leave_room(sid, room)
+                except Exception as e:
+                    log.debug(f'Failed to leave {room} for sid {sid}: {e}')
+
+
+async def evict_users_from_note(note_id: str, user_ids: list[str]):
+    """
+    Evict users from both note rooms for a given note: the events-bus
+    room (note:{id}) and the ydoc collaboration room (doc_{id}). Call
+    this when a note's access grants change or the note is deleted.
+    """
+    await leave_rooms_for_users(f'note:{note_id}', user_ids)
+    await leave_rooms_for_users(f'doc_{note_id}', user_ids)
+
+
+async def resync_note_rooms_for_users(user_ids: list[str], note_ids: list[str]):
+    """
+    For each (user, note) pair, leave the note's rooms if the user no
+    longer has access. Use this after access-grant changes that affect
+    specific notes.
+    """
+    if not user_ids or not note_ids:
+        return
+    for user_id in user_ids:
+        session_ids = get_session_ids_from_room(f'user:{user_id}')
+        if not session_ids:
+            continue
+        try:
+            user = await Users.get_user_by_id(user_id)
+        except Exception:
+            user = None
+        if user is None:
+            continue
+        for note_id in note_ids:
+            try:
+                note = await Notes.get_note_by_id(note_id)
+            except Exception:
+                note = None
+            has_access = False
+            if note is not None:
+                if user.role == 'admin' or user.id == note.user_id:
+                    has_access = True
+                else:
+                    try:
+                        has_access = await AccessGrants.has_access(
+                            user_id=user.id,
+                            resource_type='note',
+                            resource_id=note.id,
+                            permission='read',
+                        )
+                    except Exception:
+                        has_access = False
+            if not has_access:
+                await evict_users_from_note(note_id, [user_id])
+
+
 async def disconnect_user_sessions(user_id: str):
     """Disconnect all Socket.IO sessions belonging to a user.
 

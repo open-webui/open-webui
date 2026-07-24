@@ -24,7 +24,7 @@ from open_webui.models.notes import (
     NoteUserResponse,
 )
 from open_webui.models.users import UserResponse, Users
-from open_webui.socket.main import sio
+from open_webui.socket.main import sio, evict_users_from_note, get_user_ids_from_room
 from open_webui.utils.access_control import (
     filter_allowed_access_grants,
     has_permission,
@@ -655,6 +655,27 @@ async def update_note_access_by_id(
 
     await AccessGrants.set_access_grants('note', id, form_data.access_grants, db=db)
 
+    # Access grants just changed. Sweep every user currently subscribed to
+    # either note room and drop the ones whose access no longer stands.
+    # The note owner and admins are never evicted by has_access — the check
+    # below only returns False for users who truly lost the grant.
+    participant_user_ids = set(get_user_ids_from_room(f'note:{id}')) | set(get_user_ids_from_room(f'doc_{id}'))
+    for participant_user_id in participant_user_ids:
+        if participant_user_id == note.user_id:
+            continue
+        participant = await Users.get_user_by_id(participant_user_id, db=db)
+        if participant is None or participant.role == 'admin':
+            continue
+        still_has_access = await AccessGrants.has_access(
+            user_id=participant_user_id,
+            resource_type='note',
+            resource_id=id,
+            permission='read',
+            db=db,
+        )
+        if not still_has_access:
+            await evict_users_from_note(id, [participant_user_id])
+
     note = await Notes.get_note_by_id(id, db=db)
     pinned_note_ids = await Notes.get_pinned_note_ids(user.id, db=db)
     note.is_pinned = note.id in pinned_note_ids
@@ -754,6 +775,12 @@ async def delete_note_by_id(
 
     try:
         note = await Notes.delete_note_by_id(id, db=db)
+        # Close both note rooms — with the note gone, no one retains access.
+        for room_name in (f'note:{id}', f'doc_{id}'):
+            try:
+                await sio.close_room(room_name)
+            except Exception as e:
+                log.debug(f'Failed to close room {room_name}: {e}')
         await publish_event(
             request,
             EVENTS.NOTE_DELETED,

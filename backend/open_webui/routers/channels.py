@@ -41,6 +41,7 @@ from open_webui.socket.main import (
     emit_to_users,
     enter_room_for_users,
     get_user_ids_from_room,
+    leave_rooms_for_users,
     sio,
 )
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
@@ -580,6 +581,10 @@ async def update_is_active_member_by_id_and_user_id(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
     await Channels.update_member_active_status(channel.id, user.id, form_data.is_active, db=db)
+    if not form_data.is_active:
+        # Deactivating membership revokes live subscription; evict the user's
+        # open sessions from the channel room so they stop receiving events.
+        await leave_rooms_for_users(f'channel:{channel.id}', [user.id])
     await publish_event(
         request,
         EVENTS.CHANNEL_MEMBER_ACTIVE_UPDATED,
@@ -663,6 +668,9 @@ async def remove_members_by_id(
     try:
         deleted = await Channels.remove_members_from_channel(channel.id, form_data.user_ids, db=db)
 
+        if form_data.user_ids:
+            await leave_rooms_for_users(f'channel:{channel.id}', form_data.user_ids)
+
         await publish_event(
             request,
             EVENTS.CHANNEL_MEMBER_REMOVED,
@@ -708,6 +716,18 @@ async def update_channel_by_id(
 
     try:
         channel = await Channels.update_channel_by_id(id, form_data, db=db)
+
+        # Access grants may have changed. Evict live subscribers who no longer
+        # belong — checked against the current membership/grant resolution.
+        room_name = f'channel:{id}'
+        for participant_user_id in get_user_ids_from_room(room_name):
+            try:
+                still_member = await Channels.is_user_channel_member(id, participant_user_id, db=db)
+            except Exception:
+                still_member = True  # Fail-open on transient errors; next mutation retries.
+            if not still_member:
+                await leave_rooms_for_users(room_name, [participant_user_id])
+
         await publish_event(
             request,
             EVENTS.CHANNEL_UPDATED,
@@ -744,6 +764,12 @@ async def delete_channel_by_id(
 
     try:
         await Channels.delete_channel_by_id(id, db=db)
+        # Tear down every open subscription to this channel room — no one has
+        # access after deletion.
+        try:
+            await sio.close_room(f'channel:{id}')
+        except Exception as e:
+            log.debug(f'Failed to close channel room {id}: {e}')
         await publish_event(
             request,
             EVENTS.CHANNEL_DELETED,

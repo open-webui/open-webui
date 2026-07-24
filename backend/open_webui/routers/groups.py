@@ -22,6 +22,7 @@ from open_webui.models.models import Models
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserInfoResponse, Users
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.socket.main import resync_channel_rooms_for_users
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -268,8 +269,13 @@ async def remove_users_from_group(
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
+        removed_user_ids = list(form_data.user_ids or [])
         group = await Groups.remove_users_from_group(id, form_data.user_ids, db=db)
         if group:
+            # Group membership backs channel access grants; evict the removed
+            # users from any channel:* rooms they no longer qualify for.
+            if removed_user_ids:
+                await resync_channel_rooms_for_users(removed_user_ids)
             await publish_event(
                 request,
                 EVENTS.GROUP_MEMBER_REMOVED,
@@ -306,8 +312,18 @@ async def delete_group_by_id(
     request: Request, id: str, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
 ):
     try:
+        # Capture members before deletion so we can resync their live rooms
+        # afterwards — the group is the access basis, not the members.
+        try:
+            members_before = await Users.get_users_by_group_id(id, db=db)
+            affected_user_ids = [m.id for m in members_before]
+        except Exception:
+            affected_user_ids = []
+
         result = await Groups.delete_group_by_id(id, db=db)
         if result:
+            if affected_user_ids:
+                await resync_channel_rooms_for_users(affected_user_ids)
             await publish_event(
                 request,
                 EVENTS.GROUP_DELETED,
