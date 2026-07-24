@@ -317,6 +317,7 @@ type Config = {
 		enable_web_search?: boolean;
 		enable_web_search_confirmation?: boolean;
 		web_search_confirmation_content?: string;
+		enable_tool_call_confirmation?: boolean;
 		enable_google_drive_integration: boolean;
 		enable_onedrive_integration: boolean;
 		enable_image_generation: boolean;
