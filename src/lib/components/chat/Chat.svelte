@@ -991,7 +991,7 @@
 				} else if (type === 'chat:message:follow_ups') {
 					message.followUps = data.follow_ups;
 
-					if (autoScroll) {
+					if (shouldAutoScrollResponse()) {
 						scrollToBottom('smooth');
 					}
 				} else if (type === 'chat:outlet') {
@@ -2105,9 +2105,14 @@
 		await messagesRef?.scrollToTop();
 	};
 
+	const shouldAutoScrollResponse = () =>
+		autoScroll && ($settings?.scrollOnResponseGeneration ?? true);
+
 	let scrollRAF = null;
 	let contentsRAF = null;
-	const scheduleScrollToBottom = () => {
+	const scheduleResponseScrollToBottom = () => {
+		if (!shouldAutoScrollResponse()) return;
+
 		if (!scrollRAF) {
 			scrollRAF = requestAnimationFrame(async () => {
 				scrollRAF = null;
@@ -2426,7 +2431,7 @@
 			history.messages[message.id] = message;
 
 			await tick();
-			if (autoScroll) {
+			if (shouldAutoScrollResponse()) {
 				scrollToBottom();
 			}
 
@@ -2447,9 +2452,7 @@
 		console.log(data);
 		await tick();
 
-		if (autoScroll) {
-			scheduleScrollToBottom();
-		}
+		scheduleResponseScrollToBottom();
 	};
 
 	//////////////////////////
@@ -3209,7 +3212,9 @@
 		}
 
 		await tick();
-		scrollToBottom();
+		if (shouldAutoScrollResponse()) {
+			scrollToBottom();
+		}
 	};
 
 	const handleOpenAIError = async (error, responseMessage) => {
@@ -3282,7 +3287,7 @@
 
 			history.messages[history.currentId] = responseMessage;
 
-			if (autoScroll) {
+			if (shouldAutoScrollResponse()) {
 				scrollToBottom();
 			}
 		}
@@ -3430,9 +3435,7 @@
 						history.messages[messageId] = message;
 					}
 
-					if (autoScroll) {
-						scheduleScrollToBottom();
-					}
+					scheduleResponseScrollToBottom();
 				}
 
 				await saveChatHandler(_chatId, history);
