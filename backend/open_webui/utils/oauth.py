@@ -82,7 +82,7 @@ from open_webui.models.config import Config
 from open_webui.models.groups import GroupForm, GroupModel, Groups, GroupUpdateForm
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import Users
-from open_webui.retrieval.web.utils import validate_url
+from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 from open_webui.utils.auth import create_token, get_password_hash
 from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration
@@ -1641,8 +1641,8 @@ class OAuthManager:
                 get_kwargs['headers'] = {
                     'Authorization': f'Bearer {access_token}',
                 }
-            async with aiohttp.ClientSession(trust_env=True) as session:
-                # allow_redirects=False prevents redirect-based SSRF: validate_url() only vetted the initial URL (CVE-2026-45401 cohort).
+            # get_ssrf_safe_session pins the connect-time IP (defeats DNS rebinding); allow_redirects=False keeps validate_url's vet authoritative.
+            async with get_ssrf_safe_session() as session:
                 async with session.get(
                     picture_url,
                     **get_kwargs,
