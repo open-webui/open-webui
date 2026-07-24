@@ -135,6 +135,7 @@
 			const { lang = '', text: code = '' } = token;
 
 			if (
+				done &&
 				($settings?.detectArtifacts ?? true) &&
 				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
 				!$mobile &&
