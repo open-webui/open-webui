@@ -20,6 +20,10 @@
 
 	let loading = true;
 	let variableValues = {};
+	let variablesKey = '';
+
+	const getVariableLabel = (variable) => variables[variable]?.label ?? variable;
+	const getVariablesKey = (value) => JSON.stringify(value ?? {});
 
 	const submitHandler = async () => {
 		// Normalize Windows CRLF (\r\n) to LF (\n) for all string values
@@ -60,8 +64,16 @@
 		}
 	};
 
+	$: if (!show) {
+		variablesKey = '';
+	}
+
 	$: if (show) {
-		init();
+		const key = getVariablesKey(variables);
+		if (key !== variablesKey) {
+			variablesKey = key;
+			init();
+		}
 	}
 </script>
 
@@ -98,10 +110,10 @@
 									<div class=" py-0.5 w-full justify-between">
 										<div class="flex w-full justify-between mb-1.5">
 											<div class=" self-center text-xs font-normal">
-												{variable}
+												{getVariableLabel(variable)}
 
 												{#if variables[variable]?.required ?? false}
-													<span class=" text-gray-500">*{$i18n.t('required')}</span>
+													<span class="ml-1 text-gray-500">* {$i18n.t('required')}</span>
 												{/if}
 											</div>
 										</div>
@@ -114,13 +126,11 @@
 														bind:value={variableValues[variable]}
 														id="input-variable-{idx}"
 													>
-														{#if variables[variable]?.placeholder}
-															<option value="" disabled selected>
-																{variables[variable].placeholder}
-															</option>
-														{/if}
+														<option value="" disabled>
+															{variables[variable]?.placeholder ?? $i18n.t('Select an option')}
+														</option>
 														{#each variables[variable]?.options ?? [] as option}
-															<option value={option} selected={option === variableValues[variable]}>
+															<option value={option}>
 																{option}
 															</option>
 														{/each}
