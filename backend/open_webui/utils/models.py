@@ -456,7 +456,7 @@ async def check_model_access(user, model, db=None):
             raise Exception('Model not found')
 
         # Enforce access on chained base models
-        if not await has_base_model_access(user.id, model_info, db=db):
+        if not await has_base_model_access(user.id, model_info, user_role=user.role, db=db):
             raise Exception('Model not found')
 
 
