@@ -87,6 +87,128 @@ def build_batch_tasks(next_batch: Mapping[str, Any]) -> tuple[AgentTask, ...]:
     return tuple(tasks)
 
 
+def partition_owner_batch(
+    next_batch: Mapping[str, Any],
+    *,
+    max_fields: int,
+) -> tuple[dict[str, Any], ...]:
+    """Split one GIS-owned batch into bounded LLM calls without changing ownership."""
+    if max_fields < 1:
+        raise GeotizerOrchestrationError('max_fields must be positive')
+    fields = [dict(field) for field in next_batch.get('fields') or []]
+    if not fields:
+        return (dict(next_batch),)
+
+    total = (len(fields) + max_fields - 1) // max_fields
+    chunks: list[dict[str, Any]] = []
+    for offset in range(0, len(fields), max_fields):
+        chunk_fields = fields[offset : offset + max_fields]
+        field_keys = {str(field.get('field_key') or '') for field in chunk_fields}
+        row_ids = {field.get('row_id') for field in chunk_fields}
+        evidence_routes = []
+        for route in next_batch.get('evidence_routes') or []:
+            route_keys = [
+                str(field_key)
+                for field_key in route.get('field_keys') or []
+                if str(field_key) in field_keys
+            ]
+            if not route_keys:
+                continue
+            evidence_routes.append(
+                {
+                    **dict(route),
+                    'field_keys': route_keys,
+                    'row_ids': [
+                        row_id
+                        for row_id in route.get('row_ids') or []
+                        if row_id in row_ids
+                    ],
+                }
+            )
+        index = len(chunks) + 1
+        chunks.append(
+            {
+                **dict(next_batch),
+                'fields': chunk_fields,
+                'field_count': len(chunk_fields),
+                'evidence_routes': evidence_routes,
+                'owner_chunk': {'index': index, 'total': total},
+            }
+        )
+    return tuple(chunks)
+
+
+def merge_owner_envelopes(
+    next_batch: Mapping[str, Any],
+    chunks: Sequence[Mapping[str, Any]],
+    envelopes: Sequence[Mapping[str, Any]],
+    *,
+    run_id: str,
+) -> dict[str, Any]:
+    """Merge validated chunk envelopes into one atomic GIS batch submission."""
+    if len(chunks) != len(envelopes) or not chunks:
+        raise GeotizerOrchestrationError(
+            'Owner chunks and envelopes must form one non-empty partition'
+        )
+
+    sources: list[dict[str, Any]] = []
+    source_by_id: dict[str, dict[str, Any]] = {}
+    patches: list[dict[str, Any]] = []
+    for chunk_index, (chunk, envelope) in enumerate(
+        zip(chunks, envelopes),
+        start=1,
+    ):
+        violations = validate_owner_envelope(chunk, envelope)
+        if violations:
+            raise GeotizerOrchestrationError('; '.join(violations))
+
+        renamed_refs: dict[str, str] = {}
+        for raw_source in envelope.get('source_inventory') or []:
+            source = dict(raw_source)
+            source_id = str(source.get('source_id') or '')
+            existing = source_by_id.get(source_id)
+            if existing is None:
+                source_by_id[source_id] = source
+                sources.append(source)
+                renamed_refs[source_id] = source_id
+                continue
+            if existing == source:
+                renamed_refs[source_id] = source_id
+                continue
+
+            candidate = f'{source_id}__part_{chunk_index}'
+            suffix = 2
+            while candidate in source_by_id:
+                candidate = f'{source_id}__part_{chunk_index}_{suffix}'
+                suffix += 1
+            source['source_id'] = candidate
+            source_by_id[candidate] = source
+            sources.append(source)
+            renamed_refs[source_id] = candidate
+
+        for raw_patch in envelope.get('patches') or []:
+            patch = dict(raw_patch)
+            patch['source_refs'] = [
+                renamed_refs.get(str(source_ref), str(source_ref))
+                for source_ref in patch.get('source_refs') or []
+            ]
+            patches.append(patch)
+
+    merged = {
+        'run_id': run_id,
+        'batch_id': next_batch['batch_id'],
+        'producer': next_batch['producer'],
+        'policy_version': next_batch['policy_version'],
+        'template_version': next_batch['template_version'],
+        'source_inventory': sources,
+        'patches': patches,
+    }
+    violations = validate_owner_envelope(next_batch, merged)
+    if violations:
+        raise GeotizerOrchestrationError('; '.join(violations))
+    return merged
+
+
 def extract_json_object(text: str) -> dict[str, Any]:
     """Extract exactly one JSON object from a model response."""
     if not isinstance(text, str) or not text.strip():

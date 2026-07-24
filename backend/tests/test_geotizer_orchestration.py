@@ -12,7 +12,9 @@ from open_webui.utils.geotizer_orchestration import (
     build_batch_tasks,
     extract_json_object,
     extract_output_message_text,
+    merge_owner_envelopes,
     normalize_delegator_message,
+    partition_owner_batch,
     validate_owner_envelope,
 )
 
@@ -107,6 +109,105 @@ def test_batch_plan_rejects_unknown_owner():
     value['producer'] = 'InventedAgent'
     with pytest.raises(GeotizerOrchestrationError, match='Unsupported'):
         build_batch_tasks(value)
+
+
+def test_partition_owner_batch_is_ordered_bounded_and_filters_routes():
+    value = batch()
+    value['fields'] = [
+        {'field_key': f'f{index}', 'row_id': index // 2}
+        for index in range(85)
+    ]
+    value['evidence_routes'] = [
+        {
+            'route_id': 'KB-EVIDENCE',
+            'producer': 'KBagent_yulong',
+            'satisfied_by': 'contributor_call',
+            'field_keys': [f'f{index}' for index in range(85)],
+            'row_ids': list(range(43)),
+        }
+    ]
+    chunks = partition_owner_batch(value, max_fields=40)
+    assert [chunk['field_count'] for chunk in chunks] == [40, 40, 5]
+    assert [chunk['owner_chunk'] for chunk in chunks] == [
+        {'index': 1, 'total': 3},
+        {'index': 2, 'total': 3},
+        {'index': 3, 'total': 3},
+    ]
+    assert [
+        field['field_key']
+        for chunk in chunks
+        for field in chunk['fields']
+    ] == [f'f{index}' for index in range(85)]
+    assert chunks[-1]['evidence_routes'][0]['field_keys'] == [
+        f'f{index}' for index in range(80, 85)
+    ]
+
+
+def test_partition_owner_batch_preserves_exact_field_partition():
+    for field_count in range(1, 181):
+        for max_fields in (1, 2, 3, 7, 17, 40, 59, 60):
+            value = batch()
+            value['fields'] = [
+                {'field_key': f'f{index}', 'row_id': index}
+                for index in range(field_count)
+            ]
+            chunks = partition_owner_batch(value, max_fields=max_fields)
+            flattened = [
+                field['field_key']
+                for chunk in chunks
+                for field in chunk['fields']
+            ]
+            assert flattened == [f'f{index}' for index in range(field_count)]
+            assert all(
+                1 <= chunk['field_count'] <= max_fields
+                for chunk in chunks
+            )
+            assert len(flattened) == len(set(flattened))
+
+
+def test_merge_owner_envelopes_namespaces_conflicting_source_ids():
+    value = batch()
+    chunks = partition_owner_batch(value, max_fields=1)
+    envelopes = []
+    for index, chunk in enumerate(chunks, start=1):
+        envelopes.append(
+            {
+                'batch_id': value['batch_id'],
+                'producer': value['producer'],
+                'policy_version': value['policy_version'],
+                'template_version': value['template_version'],
+                'source_inventory': [
+                    {
+                        'source_id': 'source',
+                        'source_type': 'gis',
+                        'title': f'chunk {index}',
+                    }
+                ],
+                'patches': [
+                    {
+                        'field_key': chunk['fields'][0]['field_key'],
+                        'value': None,
+                        'status': 'not_found',
+                        'source_refs': ['source'],
+                    }
+                ],
+            }
+        )
+    merged = merge_owner_envelopes(
+        value,
+        chunks,
+        envelopes,
+        run_id='run-1',
+    )
+    assert [source['source_id'] for source in merged['source_inventory']] == [
+        'source',
+        'source__part_2',
+    ]
+    assert [patch['source_refs'] for patch in merged['patches']] == [
+        ['source'],
+        ['source__part_2'],
+    ]
+    assert validate_owner_envelope(value, merged) == ()
 
 
 @pytest.mark.parametrize(
@@ -269,6 +370,94 @@ def test_workflow_drives_start_contributors_owner_submit_finalize():
         ('gis', 'submit_batch'),
         ('gis', 'finalize'),
     ]
+
+
+def test_workflow_chunks_large_owner_output_and_submits_one_atomic_batch():
+    large = {
+        'batch_id': 'KB-RESOURCE-TECH',
+        'producer': 'KBagent_yulong',
+        'policy_version': 'geotizer_assignments.v1',
+        'template_version': 'geotizer_object.v1',
+        'fields': [
+            {'field_key': f'f{index}', 'row_id': index}
+            for index in range(81)
+        ],
+        'evidence_routes': [],
+    }
+    owner_calls = 0
+    submitted = []
+
+    async def gis_call(payload):
+        if payload['action'] == 'start':
+            return {
+                'workflow_status': 'collecting',
+                'run_id': 'run-large',
+                'object_name': 'Object',
+                'datacube': {},
+                'next_batch': large,
+            }
+        if payload['action'] == 'submit_batch':
+            submitted.append(payload)
+            return {
+                'workflow_status': 'collecting',
+                'run_id': 'run-large',
+                'next_batch': None,
+            }
+        return {
+            'workflow_status': 'finalized',
+            'run_id': 'run-large',
+            'xlsx': {
+                'download_path': '/geotizer/files/run-large/geotizer.xlsx',
+            },
+        }
+
+    async def agent_call(task, prompt, object_name, datacube):
+        nonlocal owner_calls
+        owner_calls += 1
+        request = json.loads(prompt)
+        chunk = request['context']['batch']
+        source_id = 'shared-source'
+        return json.dumps(
+            {
+                'batch_id': large['batch_id'],
+                'producer': large['producer'],
+                'policy_version': large['policy_version'],
+                'template_version': large['template_version'],
+                'source_inventory': [
+                    {
+                        'source_id': source_id,
+                        'source_type': 'knowledge_base',
+                        'title': f"chunk {chunk['owner_chunk']['index']}",
+                    }
+                ],
+                'patches': [
+                    {
+                        'field_key': field['field_key'],
+                        'value': None,
+                        'status': 'not_found',
+                        'source_refs': [source_id],
+                    }
+                    for field in chunk['fields']
+                ],
+            }
+        )
+
+    final = asyncio.run(
+        run_geotizer_workflow(
+            object_name='Object',
+            project_id=None,
+            model_run_id=None,
+            run_id=None,
+            allow_draft=True,
+            gis_call=gis_call,
+            agent_call=agent_call,
+        )
+    )
+    assert final['workflow_status'] == 'finalized'
+    assert owner_calls == 3
+    assert len(submitted) == 1
+    assert len(submitted[0]['patches']) == 81
+    assert len(submitted[0]['source_inventory']) == 3
 
 
 def test_workflow_repairs_invalid_owner_output_before_submission():

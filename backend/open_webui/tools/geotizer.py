@@ -16,8 +16,10 @@ from open_webui.utils.geotizer_orchestration import (
     compact_batch_context,
     ensure_state_can_continue,
     extract_json_object,
+    merge_owner_envelopes,
     normalize_delegator_message,
     owner_submission,
+    partition_owner_batch,
     validate_owner_envelope,
     xlsx_download_path,
 )
@@ -28,6 +30,7 @@ SUB_AGENT_TOOL_ID = 'sub_agent'
 SKILLED_MODEL_ID = 'skilledagent-sakana'
 MAX_OWNER_ATTEMPTS = 3
 MAX_BATCHES = 12
+MAX_OWNER_FIELDS_PER_CALL = 40
 
 GisCall = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
 AgentCall = Callable[
@@ -255,6 +258,44 @@ async def _produce_and_submit_owner_batch(
     agent_call: AgentCall,
     datacube: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
+    chunks = partition_owner_batch(
+        next_batch,
+        max_fields=MAX_OWNER_FIELDS_PER_CALL,
+    )
+    envelopes = []
+    for chunk in chunks:
+        chunk_context = {**dict(context), 'batch': chunk}
+        envelopes.append(
+            await _produce_valid_owner_envelope(
+                owner=owner,
+                context=chunk_context,
+                next_batch=chunk,
+                object_name=object_name,
+                run_id=run_id,
+                agent_call=agent_call,
+                datacube=datacube,
+            )
+        )
+
+    envelope = merge_owner_envelopes(
+        next_batch,
+        chunks,
+        envelopes,
+        run_id=run_id,
+    )
+    return await gis_call(owner_submission(next_batch, envelope))
+
+
+async def _produce_valid_owner_envelope(
+    *,
+    owner: AgentTask,
+    context: Mapping[str, Any],
+    next_batch: Mapping[str, Any],
+    object_name: str,
+    run_id: str,
+    agent_call: AgentCall,
+    datacube: Mapping[str, Any] | None,
+) -> dict[str, Any]:
     previous_output = ''
     feedback: Any = None
     for attempt in range(1, MAX_OWNER_ATTEMPTS + 1):
@@ -274,18 +315,18 @@ async def _produce_and_submit_owner_batch(
 
         envelope['run_id'] = run_id
         violations = validate_owner_envelope(next_batch, envelope)
-        if violations:
-            feedback = list(violations)
-            continue
+        if not violations:
+            return envelope
+        feedback = list(violations)
 
-        submission = owner_submission(next_batch, envelope)
-        result = await gis_call(submission)
-        if result.get('workflow_status') != 'validation_failed':
-            return result
-        feedback = result.get('violations') or [result]
-
+    chunk = next_batch.get('owner_chunk') or {}
+    chunk_label = (
+        f" part {chunk.get('index')}/{chunk.get('total')}"
+        if chunk
+        else ''
+    )
     error = GeotizerOrchestrationError(
-        f'Owner {owner.producer} failed batch {owner.task_id} after '
+        f'Owner {owner.producer} failed batch {owner.task_id}{chunk_label} after '
         f'{MAX_OWNER_ATTEMPTS} attempts: '
         f'{json.dumps(feedback, ensure_ascii=False)}'
     )
