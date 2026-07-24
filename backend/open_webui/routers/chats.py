@@ -1259,6 +1259,8 @@ async def update_chat_by_id(
             )
 
         chat = await Chats.update_chat_by_id(id, updated_chat, db=db)
+        if form_data.variables is not None:
+            chat = await Chats.update_chat_variables_by_id(id, form_data.variables, db=db) or chat
 
         # Reconcile chat_message rows without inferring deletes from missing IDs.
         # Message deletion has its own endpoint below.
@@ -1642,6 +1644,9 @@ async def fork_chat_by_id(
         internal_meta=meta,
     )
 
+    if fork and chat.variables:
+        fork = await Chats.update_chat_variables_by_id(fork.id, chat.variables, db=db, touch=False) or fork
+
     if not fork:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.DEFAULT())
 
@@ -1684,6 +1689,7 @@ async def clone_chat_by_id(
                     **{
                         'chat': updated_chat,
                         'meta': chat.meta,
+                        'variables': chat.variables or {},
                         'pinned': chat.pinned,
                         'folder_id': chat.folder_id,
                     }
@@ -1767,6 +1773,7 @@ async def clone_shared_chat_by_id(
                 **{
                     'chat': updated_chat,
                     'meta': chat.meta,
+                    'variables': chat.variables or {},
                     'pinned': chat.pinned,
                     'folder_id': chat.folder_id,
                 }
