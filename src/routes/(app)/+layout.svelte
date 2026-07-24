@@ -243,8 +243,15 @@
 			}).catch((e) => console.error('Failed to load user settings:', e))
 		]);
 
-		// Tool servers can be slow or unreachable; they are not needed to initialize chat.
-		setToolServers().catch((e) => console.error('Failed to load tool servers:', e));
+		const loadToolServers = setToolServers().catch((e) =>
+			console.error('Failed to load tool servers:', e)
+		);
+		if (
+			$page.url.searchParams.get('q') &&
+			($page.url.searchParams.get('submit') ?? 'true') === 'true'
+		) {
+			await loadToolServers;
+		}
 
 		const setupKeyboardShortcuts = () => {
 			document.addEventListener('keydown', async (event) => {
