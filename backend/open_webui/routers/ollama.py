@@ -121,7 +121,7 @@ async def send_request(
 
         # Custom per-connection headers last so admin-set headers take precedence.
         if api_config and api_config.get('headers'):
-            headers.update(get_custom_headers(api_config['headers'], user, metadata, request=request))
+            headers.update(await get_custom_headers(api_config['headers'], user, metadata, request=request))
 
         r = await session.request(
             method,

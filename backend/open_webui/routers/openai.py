@@ -210,7 +210,7 @@ async def get_headers_and_cookies(
         headers['Authorization'] = f'Bearer {token}'
 
     if config.get('headers') and isinstance(config.get('headers'), dict):
-        custom_headers = get_custom_headers(config.get('headers'), user, metadata, request=request)
+        custom_headers = await get_custom_headers(config.get('headers'), user, metadata, request=request)
         headers.update(custom_headers)
 
     return headers, cookies
