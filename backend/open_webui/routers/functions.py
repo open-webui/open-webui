@@ -11,7 +11,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT, ENABLE_PLUGINS
-from open_webui.events import EVENTS, publish_event
+from open_webui.events import (
+    EVENTS,
+    build_event,
+    dispatch_event_functions,
+    publish_event,
+    schedule_webhook_dispatch,
+)
 from open_webui.internal.db import get_async_session
 from open_webui.models.functions import (
     FunctionForm,
@@ -293,6 +299,39 @@ async def toggle_function_by_id(
 ):
     function = await Functions.get_function_by_id(id, db=db)
     if function:
+        if function.is_active:
+            # Dispatch pre-disable event synchronously so event functions
+            # (including the one being disabled) can perform cleanup before
+            # the is_active flag is committed to the database.
+            disabling_event = build_event(
+                request,
+                EVENTS.FUNCTION_DISABLING,
+                actor=user,
+                subject_id=function.id,
+                subject_type='function',
+                data={'type': function.type, 'name': function.name},
+            )
+            await dispatch_event_functions(request.app, disabling_event, request=request)
+            schedule_webhook_dispatch(request.app, disabling_event)
+        else:
+            # Dispatch pre-enable event synchronously so event functions
+            # (including the one being enabled) can perform setup before
+            # the is_active flag is committed to the database.  The function
+            # is still is_active=False, so we pass its ID via
+            # extra_function_ids to include it in the dispatch.
+            enabling_event = build_event(
+                request,
+                EVENTS.FUNCTION_ENABLING,
+                actor=user,
+                subject_id=function.id,
+                subject_type='function',
+                data={'type': function.type, 'name': function.name},
+            )
+            await dispatch_event_functions(
+                request.app, enabling_event, request=request, extra_function_ids=[function.id]
+            )
+            schedule_webhook_dispatch(request.app, enabling_event)
+
         function = await Functions.update_function_by_id(id, {'is_active': not function.is_active}, db=db)
 
         if function:
