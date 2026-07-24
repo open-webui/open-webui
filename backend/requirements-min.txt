@@ -14,6 +14,7 @@ bcrypt==5.0.0
 argon2-cffi==25.1.0
 PyJWT[crypto]==2.13.0
 authlib==1.7.2
+joserfc==1.7.4
 
 requests==2.34.2
 aiohttp==3.13.5 # do not update to 3.13.3 - broken
