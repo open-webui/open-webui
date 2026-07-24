@@ -286,14 +286,14 @@ def get_session_ids_from_room(room):
 def get_user_ids_from_room(room):
     active_session_ids = get_session_ids_from_room(room)
 
+    # Single pool lookup per session (each .get is a Redis round trip
+    # when the session pool is Redis-backed).
     active_user_ids = list(
-        set(
-            [
-                SESSION_POOL.get(session_id)['id']
-                for session_id in active_session_ids
-                if SESSION_POOL.get(session_id) is not None
-            ]
-        )
+        {
+            entry['id']
+            for entry in (SESSION_POOL.get(session_id) for session_id in active_session_ids)
+            if entry is not None
+        }
     )
     return active_user_ids
 
@@ -357,7 +357,7 @@ async def usage(sid, data):
 
         # Store the new usage data and task
         USAGE_POOL[model_id] = {
-            **(USAGE_POOL[model_id] if model_id in USAGE_POOL else {}),
+            **(USAGE_POOL.get(model_id) or {}),
             sid: {'updated_at': current_time},
         }
 
