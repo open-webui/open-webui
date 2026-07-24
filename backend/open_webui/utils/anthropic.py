@@ -107,46 +107,36 @@ async def get_anthropic_models(url: str, key: str, user: UserModel = None) -> di
 
 
 def _usage_int(value) -> int | None:
-    """Return value as a non-negative int, or None when missing or invalid."""
+    """Return value as a positive int; missing, invalid or 0 counts are unreported (None)."""
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
     value = int(value)
-    return value if value >= 0 else None
+    return value if value > 0 else None
 
 
 def _extract_anthropic_usage(
     usage: dict,
 ) -> tuple[int | None, int | None, int | None, int | None]:
     """
-    Convert an OpenAI-compatible usage payload to Anthropic usage fields:
-    (input_tokens, output_tokens, cache_creation_input_tokens, cache_read_input_tokens).
-
-    OpenAI's prompt_tokens includes cached tokens, while Anthropic's
-    input_tokens excludes them (total input = input_tokens +
-    cache_creation_input_tokens + cache_read_input_tokens), so the cache
-    counts are subtracted whenever the input count is derived from
-    prompt_tokens. An Anthropic-native input_tokens key is taken as already
-    exclusive. The cache-read count falls back to OpenAI's
-    prompt_tokens_details.cached_tokens.
-
-    A count that is missing, null, or 0 is treated as unreported (None) so
-    callers can keep previously known values; a 0 produced by the cache
-    subtraction is kept, since the upstream did report usage.
+    Map OpenAI-compatible usage to Anthropic (input_tokens, output_tokens,
+    cache_creation_input_tokens, cache_read_input_tokens); None means unreported.
+    OpenAI's prompt_tokens includes cached tokens while Anthropic's input_tokens
+    excludes them, so cache counts are subtracted when deriving from prompt_tokens.
     """
-    cache_creation = _usage_int(usage.get('cache_creation_input_tokens')) or None
-    cache_read = _usage_int(usage.get('cache_read_input_tokens')) or None
+    cache_creation = _usage_int(usage.get('cache_creation_input_tokens'))
+    cache_read = _usage_int(usage.get('cache_read_input_tokens'))
     if cache_read is None:
         prompt_details = usage.get('prompt_tokens_details')
         if isinstance(prompt_details, dict):
-            cache_read = _usage_int(prompt_details.get('cached_tokens')) or None
+            cache_read = _usage_int(prompt_details.get('cached_tokens'))
 
-    input_tokens = _usage_int(usage.get('input_tokens')) or None
+    input_tokens = _usage_int(usage.get('input_tokens'))
     if input_tokens is None:
-        prompt_tokens = _usage_int(usage.get('prompt_tokens')) or None
+        prompt_tokens = _usage_int(usage.get('prompt_tokens'))
         if prompt_tokens is not None:
             input_tokens = max(prompt_tokens - (cache_creation or 0) - (cache_read or 0), 0)
 
-    output_tokens = _usage_int(usage.get('output_tokens')) or _usage_int(usage.get('completion_tokens')) or None
+    output_tokens = _usage_int(usage.get('output_tokens')) or _usage_int(usage.get('completion_tokens'))
 
     return input_tokens, output_tokens, cache_creation, cache_read
 
@@ -464,8 +454,7 @@ def convert_anthropic_to_openai_payload(
             else:
                 openai_payload[param] = anthropic_payload[param]
 
-    # Anthropic streaming clients always expect token usage in the final
-    # message_delta event, so ask OpenAI-compatible upstreams to report it.
+    # Anthropic clients expect usage in the final message_delta, so ask the upstream to report it
     if openai_payload.get('stream'):
         openai_payload['stream_options'] = {'include_usage': True}
 
@@ -579,11 +568,8 @@ def convert_openai_to_anthropic_response(
             }
         )
 
-    # Usage: prefer upstream-reported statistics; the locally counted
-    # input_tokens is only a fallback for upstreams that report nothing.
-    openai_usage = openai_response.get('usage')
-    if not isinstance(openai_usage, dict):
-        openai_usage = {}
+    # Prefer upstream-reported usage; the locally counted input_tokens is only a fallback
+    openai_usage = openai_response.get('usage') or {}
     usage_input, usage_output, cache_creation, cache_read = _extract_anthropic_usage(openai_usage)
     usage = {
         'input_tokens': usage_input if usage_input is not None else (input_tokens or 0),
@@ -949,9 +935,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
             block_stop = {'type': 'content_block_stop', 'index': tool['block_index']}
             yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
 
-    # Emit message_delta with stop reason and final usage. input_tokens and
-    # cache statistics are included so clients receive the upstream-reported
-    # values even when they differ from the estimate sent in message_start.
+    # Emit message_delta with stop reason and the upstream-reported usage
     final_usage = {'input_tokens': input_tokens, 'output_tokens': output_tokens}
     if cache_creation_input_tokens is not None:
         final_usage['cache_creation_input_tokens'] = cache_creation_input_tokens
