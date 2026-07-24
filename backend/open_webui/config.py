@@ -2418,6 +2418,11 @@ if JWT_EXPIRES_IN == '-1':
 # OAuth config
 ####################################
 
+# Master switch for OAuth/OIDC sign-in. Defaults to enabled so existing
+# deployments that already have a provider configured keep working; admins can
+# turn it off to disable OAuth login without clearing their provider settings.
+ENABLE_OAUTH = os.getenv('ENABLE_OAUTH', 'True').lower() == 'true'
+
 ENABLE_OAUTH_SIGNUP = os.getenv('ENABLE_OAUTH_SIGNUP', 'False').lower() == 'true'
 
 OAUTH_AUTO_REDIRECT = os.getenv('OAUTH_AUTO_REDIRECT', 'False').lower() == 'true'
@@ -3080,6 +3085,7 @@ DEFAULT_CONFIG = {
     'auth.api_key.endpoint_restrictions': ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS,
     'auth.api_key.allowed_endpoints': API_KEYS_ALLOWED_ENDPOINTS,
     'auth.jwt_expiry': JWT_EXPIRES_IN,
+    'oauth.enable': ENABLE_OAUTH,
     'oauth.enable_signup': ENABLE_OAUTH_SIGNUP,
     'oauth.auto_redirect': OAUTH_AUTO_REDIRECT,
     'oauth.refresh_token.include_scope': OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE,

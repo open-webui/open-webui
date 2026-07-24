@@ -511,259 +511,274 @@
 
 		{#if oauthConfig}
 			<AdminSettingSection title={$i18n.t('OAuth / OIDC')}>
-				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
-					<AdminSettingField
-						label={$i18n.t('Provider Name')}
-						description={$i18n.t('Display name shown for the OAuth provider.')}
-					>
-						<input
-							class={inputClass}
-							placeholder="SSO"
-							bind:value={oauthConfig.OAUTH_PROVIDER_NAME}
-						/>
-					</AdminSettingField>
-
-					<AdminSettingField
-						label={$i18n.t('Provider URL')}
-						description={$i18n.t('OpenID discovery URL for this provider.')}
-					>
-						<input
-							class={inputClass}
-							placeholder="https://accounts.google.com/.well-known/openid-configuration"
-							bind:value={oauthConfig.OPENID_PROVIDER_URL}
-						/>
-					</AdminSettingField>
-				</div>
-
-				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
-					<AdminSettingField
-						label={$i18n.t('Client ID')}
-						description={$i18n.t('OAuth client identifier from the provider.')}
-					>
-						<input
-							class={inputClass}
-							placeholder={$i18n.t('Enter Client ID')}
-							bind:value={oauthConfig.OAUTH_CLIENT_ID}
-						/>
-					</AdminSettingField>
-
-					<AdminSettingField
-						label={$i18n.t('Client Secret')}
-						description={$i18n.t('OAuth client secret from the provider.')}
-					>
-						<SensitiveInput
-							variant="settings"
-							placeholder={$i18n.t('Enter Client Secret')}
-							required={false}
-							bind:value={oauthConfig.OAUTH_CLIENT_SECRET}
-						/>
-					</AdminSettingField>
-				</div>
-
-				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
-					<AdminSettingField
-						label={$i18n.t('Redirect URI')}
-						description={$i18n.t('Callback URI registered with the provider.')}
-					>
-						<input
-							class={inputClass}
-							placeholder={$i18n.t('Enter Redirect URI')}
-							bind:value={oauthConfig.OPENID_REDIRECT_URI}
-						/>
-					</AdminSettingField>
-
-					<AdminSettingField
-						label={$i18n.t('Scopes')}
-						description={$i18n.t('OAuth scopes requested during sign-in.')}
-					>
-						<input
-							class={inputClass}
-							placeholder="openid email profile"
-							bind:value={oauthConfig.OAUTH_SCOPES}
-						/>
-					</AdminSettingField>
-				</div>
-
-				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
-					<AdminSettingField
-						label={$i18n.t('Email Claim')}
-						description={$i18n.t('Claim used as the user email address.')}
-					>
-						<input
-							class={inputClass}
-							placeholder="email"
-							bind:value={oauthConfig.OAUTH_EMAIL_CLAIM}
-						/>
-					</AdminSettingField>
-
-					<AdminSettingField
-						label={$i18n.t('Username Claim')}
-						description={$i18n.t('Claim used as the display name.')}
-					>
-						<input
-							class={inputClass}
-							placeholder="name"
-							bind:value={oauthConfig.OAUTH_USERNAME_CLAIM}
-						/>
-					</AdminSettingField>
-				</div>
-
-				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
-					<AdminSettingField
-						label={$i18n.t('Picture Claim')}
-						description={$i18n.t('Claim used as the profile picture URL.')}
-					>
-						<input
-							class={inputClass}
-							placeholder="picture"
-							bind:value={oauthConfig.OAUTH_PICTURE_CLAIM}
-						/>
-					</AdminSettingField>
-
-					<AdminSettingField
-						label={$i18n.t('Sub Claim')}
-						description={$i18n.t('Claim used as the stable user identifier.')}
-					>
-						<input class={inputClass} placeholder="sub" bind:value={oauthConfig.OAUTH_SUB_CLAIM} />
-					</AdminSettingField>
-				</div>
-
 				<AdminSettingRow
-					label={$i18n.t('OAuth Signup')}
-					description={$i18n.t('Allow users to create accounts through OAuth.')}
+					label={$i18n.t('OAuth / OIDC')}
+					description={$i18n.t('Allow users to authenticate with an OAuth / OIDC provider.')}
 				>
-					<Switch bind:state={oauthConfig.ENABLE_OAUTH_SIGNUP} />
+					<Switch bind:state={oauthConfig.ENABLE_OAUTH} />
 				</AdminSettingRow>
 
-				<AdminSettingRow
-					label={$i18n.t('Merge Accounts by Email')}
-					description={$i18n.t('Link OAuth sign-ins to existing accounts with the same email.')}
-				>
-					<Switch bind:state={oauthConfig.OAUTH_MERGE_ACCOUNTS_BY_EMAIL} />
-				</AdminSettingRow>
-
-				<AdminSettingRow
-					label={$i18n.t('Auto Redirect')}
-					description={$i18n.t('Send users directly to the OAuth provider from the sign-in page.')}
-				>
-					<Switch bind:state={oauthConfig.OAUTH_AUTO_REDIRECT} />
-				</AdminSettingRow>
-
-				<AdminSettingField
-					label={$i18n.t('Allowed Domains')}
-					description={$i18n.t('Email domains allowed to sign in with OAuth.')}
-				>
-					<input
-						class={inputClass}
-						placeholder="* (all domains)"
-						bind:value={oauthConfig.OAUTH_ALLOWED_DOMAINS}
-					/>
-				</AdminSettingField>
-
-				<AdminSettingRow
-					label={$i18n.t('Role Mapping')}
-					description={$i18n.t('Map OAuth claims to Open WebUI roles.')}
-				>
-					<Switch bind:state={oauthConfig.ENABLE_OAUTH_ROLE_MANAGEMENT} />
-				</AdminSettingRow>
-
-				{#if oauthConfig.ENABLE_OAUTH_ROLE_MANAGEMENT}
+				{#if oauthConfig.ENABLE_OAUTH}
 					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 						<AdminSettingField
-							label={$i18n.t('Roles Claim')}
-							description={$i18n.t('Claim containing provider roles.')}
+							label={$i18n.t('Provider Name')}
+							description={$i18n.t('Display name shown for the OAuth provider.')}
 						>
 							<input
 								class={inputClass}
-								placeholder="roles"
-								bind:value={oauthConfig.OAUTH_ROLES_CLAIM}
+								placeholder="SSO"
+								bind:value={oauthConfig.OAUTH_PROVIDER_NAME}
 							/>
 						</AdminSettingField>
 
 						<AdminSettingField
-							label={$i18n.t('Admin Roles')}
-							description={$i18n.t('Provider roles that grant admin access.')}
+							label={$i18n.t('Provider URL')}
+							description={$i18n.t('OpenID discovery URL for this provider.')}
 						>
 							<input
 								class={inputClass}
-								placeholder="admin"
-								bind:value={oauthConfig.OAUTH_ADMIN_ROLES}
+								placeholder="https://accounts.google.com/.well-known/openid-configuration"
+								bind:value={oauthConfig.OPENID_PROVIDER_URL}
 							/>
 						</AdminSettingField>
 					</div>
 
-					<AdminSettingField
-						label={$i18n.t('Allowed Roles')}
-						description={$i18n.t('Provider roles allowed to sign in.')}
-					>
-						<input
-							class={inputClass}
-							placeholder="*"
-							bind:value={oauthConfig.OAUTH_ALLOWED_ROLES}
-						/>
-					</AdminSettingField>
-				{/if}
+					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+						<AdminSettingField
+							label={$i18n.t('Client ID')}
+							description={$i18n.t('OAuth client identifier from the provider.')}
+						>
+							<input
+								class={inputClass}
+								placeholder={$i18n.t('Enter Client ID')}
+								bind:value={oauthConfig.OAUTH_CLIENT_ID}
+							/>
+						</AdminSettingField>
 
-				<AdminSettingRow
-					label={$i18n.t('Group Mapping')}
-					description={$i18n.t('Map OAuth claims to Open WebUI groups.')}
-				>
-					<Switch bind:state={oauthConfig.ENABLE_OAUTH_GROUP_MANAGEMENT} />
-				</AdminSettingRow>
+						<AdminSettingField
+							label={$i18n.t('Client Secret')}
+							description={$i18n.t('OAuth client secret from the provider.')}
+						>
+							<SensitiveInput
+								variant="settings"
+								placeholder={$i18n.t('Enter Client Secret')}
+								required={false}
+								bind:value={oauthConfig.OAUTH_CLIENT_SECRET}
+							/>
+						</AdminSettingField>
+					</div>
 
-				{#if oauthConfig.ENABLE_OAUTH_GROUP_MANAGEMENT}
+					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+						<AdminSettingField
+							label={$i18n.t('Redirect URI')}
+							description={$i18n.t('Callback URI registered with the provider.')}
+						>
+							<input
+								class={inputClass}
+								placeholder={$i18n.t('Enter Redirect URI')}
+								bind:value={oauthConfig.OPENID_REDIRECT_URI}
+							/>
+						</AdminSettingField>
+
+						<AdminSettingField
+							label={$i18n.t('Scopes')}
+							description={$i18n.t('OAuth scopes requested during sign-in.')}
+						>
+							<input
+								class={inputClass}
+								placeholder="openid email profile"
+								bind:value={oauthConfig.OAUTH_SCOPES}
+							/>
+						</AdminSettingField>
+					</div>
+
+					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+						<AdminSettingField
+							label={$i18n.t('Email Claim')}
+							description={$i18n.t('Claim used as the user email address.')}
+						>
+							<input
+								class={inputClass}
+								placeholder="email"
+								bind:value={oauthConfig.OAUTH_EMAIL_CLAIM}
+							/>
+						</AdminSettingField>
+
+						<AdminSettingField
+							label={$i18n.t('Username Claim')}
+							description={$i18n.t('Claim used as the display name.')}
+						>
+							<input
+								class={inputClass}
+								placeholder="name"
+								bind:value={oauthConfig.OAUTH_USERNAME_CLAIM}
+							/>
+						</AdminSettingField>
+					</div>
+
+					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+						<AdminSettingField
+							label={$i18n.t('Picture Claim')}
+							description={$i18n.t('Claim used as the profile picture URL.')}
+						>
+							<input
+								class={inputClass}
+								placeholder="picture"
+								bind:value={oauthConfig.OAUTH_PICTURE_CLAIM}
+							/>
+						</AdminSettingField>
+
+						<AdminSettingField
+							label={$i18n.t('Sub Claim')}
+							description={$i18n.t('Claim used as the stable user identifier.')}
+						>
+							<input
+								class={inputClass}
+								placeholder="sub"
+								bind:value={oauthConfig.OAUTH_SUB_CLAIM}
+							/>
+						</AdminSettingField>
+					</div>
+
 					<AdminSettingRow
-						label={$i18n.t('Auto-Create Groups')}
-						description={$i18n.t('Create missing groups from OAuth claims.')}
+						label={$i18n.t('OAuth Signup')}
+						description={$i18n.t('Allow users to create accounts through OAuth.')}
 					>
-						<Switch bind:state={oauthConfig.ENABLE_OAUTH_GROUP_CREATION} />
+						<Switch bind:state={oauthConfig.ENABLE_OAUTH_SIGNUP} />
 					</AdminSettingRow>
 
-					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
-						<AdminSettingField
-							label={$i18n.t('Group Claim')}
-							description={$i18n.t('Claim containing provider groups.')}
-						>
-							<input
-								class={inputClass}
-								placeholder="groups"
-								bind:value={oauthConfig.OAUTH_GROUP_CLAIM}
-							/>
-						</AdminSettingField>
+					<AdminSettingRow
+						label={$i18n.t('Merge Accounts by Email')}
+						description={$i18n.t('Link OAuth sign-ins to existing accounts with the same email.')}
+					>
+						<Switch bind:state={oauthConfig.OAUTH_MERGE_ACCOUNTS_BY_EMAIL} />
+					</AdminSettingRow>
+
+					<AdminSettingRow
+						label={$i18n.t('Auto Redirect')}
+						description={$i18n.t(
+							'Send users directly to the OAuth provider from the sign-in page.'
+						)}
+					>
+						<Switch bind:state={oauthConfig.OAUTH_AUTO_REDIRECT} />
+					</AdminSettingRow>
+
+					<AdminSettingField
+						label={$i18n.t('Allowed Domains')}
+						description={$i18n.t('Email domains allowed to sign in with OAuth.')}
+					>
+						<input
+							class={inputClass}
+							placeholder="* (all domains)"
+							bind:value={oauthConfig.OAUTH_ALLOWED_DOMAINS}
+						/>
+					</AdminSettingField>
+
+					<AdminSettingRow
+						label={$i18n.t('Role Mapping')}
+						description={$i18n.t('Map OAuth claims to Open WebUI roles.')}
+					>
+						<Switch bind:state={oauthConfig.ENABLE_OAUTH_ROLE_MANAGEMENT} />
+					</AdminSettingRow>
+
+					{#if oauthConfig.ENABLE_OAUTH_ROLE_MANAGEMENT}
+						<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+							<AdminSettingField
+								label={$i18n.t('Roles Claim')}
+								description={$i18n.t('Claim containing provider roles.')}
+							>
+								<input
+									class={inputClass}
+									placeholder="roles"
+									bind:value={oauthConfig.OAUTH_ROLES_CLAIM}
+								/>
+							</AdminSettingField>
+
+							<AdminSettingField
+								label={$i18n.t('Admin Roles')}
+								description={$i18n.t('Provider roles that grant admin access.')}
+							>
+								<input
+									class={inputClass}
+									placeholder="admin"
+									bind:value={oauthConfig.OAUTH_ADMIN_ROLES}
+								/>
+							</AdminSettingField>
+						</div>
 
 						<AdminSettingField
-							label={$i18n.t('Blocked Groups')}
-							description={$i18n.t('Provider groups blocked from signing in.')}
+							label={$i18n.t('Allowed Roles')}
+							description={$i18n.t('Provider roles allowed to sign in.')}
 						>
 							<input
 								class={inputClass}
-								placeholder={$i18n.t('Comma-separated group names')}
-								bind:value={oauthConfig.OAUTH_BLOCKED_GROUPS}
+								placeholder="*"
+								bind:value={oauthConfig.OAUTH_ALLOWED_ROLES}
 							/>
 						</AdminSettingField>
-					</div>
+					{/if}
+
+					<AdminSettingRow
+						label={$i18n.t('Group Mapping')}
+						description={$i18n.t('Map OAuth claims to Open WebUI groups.')}
+					>
+						<Switch bind:state={oauthConfig.ENABLE_OAUTH_GROUP_MANAGEMENT} />
+					</AdminSettingRow>
+
+					{#if oauthConfig.ENABLE_OAUTH_GROUP_MANAGEMENT}
+						<AdminSettingRow
+							label={$i18n.t('Auto-Create Groups')}
+							description={$i18n.t('Create missing groups from OAuth claims.')}
+						>
+							<Switch bind:state={oauthConfig.ENABLE_OAUTH_GROUP_CREATION} />
+						</AdminSettingRow>
+
+						<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+							<AdminSettingField
+								label={$i18n.t('Group Claim')}
+								description={$i18n.t('Claim containing provider groups.')}
+							>
+								<input
+									class={inputClass}
+									placeholder="groups"
+									bind:value={oauthConfig.OAUTH_GROUP_CLAIM}
+								/>
+							</AdminSettingField>
+
+							<AdminSettingField
+								label={$i18n.t('Blocked Groups')}
+								description={$i18n.t('Provider groups blocked from signing in.')}
+							>
+								<input
+									class={inputClass}
+									placeholder={$i18n.t('Comma-separated group names')}
+									bind:value={oauthConfig.OAUTH_BLOCKED_GROUPS}
+								/>
+							</AdminSettingField>
+						</div>
+					{/if}
+
+					<AdminSettingRow
+						label={$i18n.t('Update Email')}
+						description={$i18n.t('Refresh the account email from OAuth on sign-in.')}
+					>
+						<Switch bind:state={oauthConfig.OAUTH_UPDATE_EMAIL_ON_LOGIN} />
+					</AdminSettingRow>
+
+					<AdminSettingRow
+						label={$i18n.t('Update Name')}
+						description={$i18n.t('Refresh the account name from OAuth on sign-in.')}
+					>
+						<Switch bind:state={oauthConfig.OAUTH_UPDATE_NAME_ON_LOGIN} />
+					</AdminSettingRow>
+
+					<AdminSettingRow
+						label={$i18n.t('Update Picture')}
+						description={$i18n.t('Refresh the profile picture from OAuth on sign-in.')}
+					>
+						<Switch bind:state={oauthConfig.OAUTH_UPDATE_PICTURE_ON_LOGIN} />
+					</AdminSettingRow>
 				{/if}
-
-				<AdminSettingRow
-					label={$i18n.t('Update Email')}
-					description={$i18n.t('Refresh the account email from OAuth on sign-in.')}
-				>
-					<Switch bind:state={oauthConfig.OAUTH_UPDATE_EMAIL_ON_LOGIN} />
-				</AdminSettingRow>
-
-				<AdminSettingRow
-					label={$i18n.t('Update Name')}
-					description={$i18n.t('Refresh the account name from OAuth on sign-in.')}
-				>
-					<Switch bind:state={oauthConfig.OAUTH_UPDATE_NAME_ON_LOGIN} />
-				</AdminSettingRow>
-
-				<AdminSettingRow
-					label={$i18n.t('Update Picture')}
-					description={$i18n.t('Refresh the profile picture from OAuth on sign-in.')}
-				>
-					<Switch bind:state={oauthConfig.OAUTH_UPDATE_PICTURE_ON_LOGIN} />
-				</AdminSettingRow>
 			</AdminSettingSection>
 		{/if}
 	</div>
