@@ -37,6 +37,7 @@ from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
 from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import decode_token, is_valid_token
+from open_webui.utils.misc import convert_output_to_messages, get_content_from_message
 from open_webui.utils.redis import (
     build_sentinel_url,
     get_redis_connection,
@@ -925,6 +926,19 @@ async def _make_channel_emitter(request_info):
         if event_type == 'chat:completion':
             data = event_data.get('data', {})
             content = data.get('content', '')
+            # Streaming completions emit Responses-API output blocks under
+            # data['output'] rather than data['content']; flatten so channel
+            # messages persist the assistant text.
+            if not content and data.get('output'):
+                content = '\n'.join(
+                    text
+                    for text in (
+                        get_content_from_message(message)
+                        for message in convert_output_to_messages(data['output'])
+                        if message.get('role') == 'assistant'
+                    )
+                    if text
+                )
             done = data.get('done', False)
 
             if not content and not done:
