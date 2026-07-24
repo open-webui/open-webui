@@ -875,6 +875,48 @@ async def disconnect(sid, reason=None):
         # print(f"Unknown session ID {sid} disconnected")
 
 
+def _channel_completion_content(data):
+    """Extract the visible assistant text from a chat:completion event payload.
+
+    The channel emitter historically read only ``data['content']``. Streaming
+    and external OpenAI-compatible backends instead deliver their text in a
+    structured ``data['output']`` array, so their channel replies were persisted
+    empty (``content=''`` with ``done=True``) and never rendered — while 1:1
+    chats worked. Fall back to reconstructing the assistant text from ``output``
+    (and, defensively, a raw ``choices`` payload). Returns the full accumulated
+    string; the caller does a full-replace update, matching existing semantics.
+    """
+    content = data.get('content')
+    if isinstance(content, str) and content:
+        return content
+
+    output = data.get('output')
+    if isinstance(output, list):
+        parts = []
+        for item in output:
+            if not isinstance(item, dict) or item.get('type') != 'message':
+                continue
+            for block in item.get('content', []) or []:
+                if isinstance(block, dict) and block.get('type') in ('output_text', 'text'):
+                    parts.append(block.get('text', '') or '')
+                elif isinstance(block, str):
+                    parts.append(block)
+        if parts:
+            return ''.join(parts)
+
+    choices = data.get('choices')
+    if isinstance(choices, list) and choices:
+        choice = choices[0] or {}
+        message = choice.get('message') or {}
+        if isinstance(message.get('content'), str) and message.get('content'):
+            return message['content']
+        delta = choice.get('delta') or {}
+        if isinstance(delta.get('content'), str):
+            return delta['content']
+
+    return ''
+
+
 async def _make_channel_emitter(request_info):
     """Event emitter that routes pipeline output to a channel message.
 
@@ -924,7 +966,7 @@ async def _make_channel_emitter(request_info):
 
         if event_type == 'chat:completion':
             data = event_data.get('data', {})
-            content = data.get('content', '')
+            content = _channel_completion_content(data)
             done = data.get('done', False)
 
             if not content and not done:
