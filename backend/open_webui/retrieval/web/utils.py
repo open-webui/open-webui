@@ -547,6 +547,16 @@ class SafeMicrosoftWebIQLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 raise e
 
 
+MAX_WEB_LOADER_REDIRECTS = 20
+
+
+def _redirect_location(resp) -> str | None:
+    location = resp.headers.get('location')
+    if not location:
+        return None
+    return urllib.parse.urljoin(resp.url, location)
+
+
 class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessingMixin):
     """Load HTML pages safely with Playwright, supporting SSL verification, rate limiting, and remote browser connection.
 
@@ -605,56 +615,70 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
     def _intercept_navigation_sync(self, route, request=None):
         req = request or route.request
 
-        if req.resource_type != 'document':
-            route.continue_()
-            return
-
+        # Fetch and fulfill instead of continue_(): browser-followed redirects of a
+        # continued request are not re-intercepted, so every hop must be validated here.
         try:
             validate_url(req.url)
         except Exception:
             route.abort()
             return
 
-        if AIOHTTP_CLIENT_ALLOW_REDIRECTS:
-            resp = route.fetch()
-        else:
-            try:
-                resp = route.fetch(max_redirects=0)
-            except TypeError:
-                route.abort()
-                return
+        try:
+            resp = route.fetch(max_redirects=0)
+        except TypeError:
+            route.abort()
+            return
 
-            if 300 <= resp.status < 400:
+        redirects = 0
+        while 300 <= resp.status < 400:
+            if not AIOHTTP_CLIENT_ALLOW_REDIRECTS or redirects >= MAX_WEB_LOADER_REDIRECTS:
                 route.abort()
                 return
+            next_url = _redirect_location(resp)
+            if not next_url:
+                break
+            try:
+                validate_url(next_url)
+                resp = route.fetch(url=next_url, max_redirects=0)
+            except Exception:
+                route.abort()
+                return
+            redirects += 1
 
         route.fulfill(response=resp)
 
     async def _intercept_navigation(self, route, request=None):
         req = request or route.request
 
-        if req.resource_type != 'document':
-            await route.continue_()
-            return
-
+        # Fetch and fulfill instead of continue_(): browser-followed redirects of a
+        # continued request are not re-intercepted, so every hop must be validated here.
         try:
             await run_in_threadpool(validate_url, req.url)
         except Exception:
             await route.abort()
             return
 
-        if AIOHTTP_CLIENT_ALLOW_REDIRECTS:
-            resp = await route.fetch()
-        else:
-            try:
-                resp = await route.fetch(max_redirects=0)
-            except TypeError:
-                await route.abort()
-                return
+        try:
+            resp = await route.fetch(max_redirects=0)
+        except TypeError:
+            await route.abort()
+            return
 
-            if 300 <= resp.status < 400:
+        redirects = 0
+        while 300 <= resp.status < 400:
+            if not AIOHTTP_CLIENT_ALLOW_REDIRECTS or redirects >= MAX_WEB_LOADER_REDIRECTS:
                 await route.abort()
                 return
+            next_url = _redirect_location(resp)
+            if not next_url:
+                break
+            try:
+                await run_in_threadpool(validate_url, next_url)
+                resp = await route.fetch(url=next_url, max_redirects=0)
+            except Exception:
+                await route.abort()
+                return
+            redirects += 1
 
         await route.fulfill(response=resp)
 
@@ -672,8 +696,11 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
             for url in self.urls:
                 try:
                     self._safe_process_url_sync(url)
-                    page = browser.new_page()
+                    # Service worker requests bypass page.route interception
+                    page = browser.new_page(service_workers='block')
                     page.route('**/*', self._intercept_navigation_sync)
+                    # WebSockets are not covered by page.route; block them entirely
+                    page.route_web_socket('**/*', lambda ws_route: None)
                     response = page.goto(url, timeout=self.playwright_timeout)
                     if response is None:
                         raise ValueError(f'page.goto() returned None for url {url}')
@@ -702,8 +729,11 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
             for url in self.urls:
                 try:
                     await self._safe_process_url(url)
-                    page = await browser.new_page()
+                    # Service worker requests bypass page.route interception
+                    page = await browser.new_page(service_workers='block')
                     await page.route('**/*', self._intercept_navigation)
+                    # WebSockets are not covered by page.route; block them entirely
+                    await page.route_web_socket('**/*', lambda ws_route: None)
                     response = await page.goto(url, timeout=self.playwright_timeout)
                     if response is None:
                         raise ValueError(f'page.goto() returned None for url {url}')
