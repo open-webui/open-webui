@@ -16,6 +16,7 @@ from open_webui.models.config import Config
 from open_webui.models.functions import Functions
 from open_webui.models.groups import Groups
 from open_webui.models.models import Models
+from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.models.users import UserModel
 from open_webui.routers import ollama, openai
 from open_webui.socket.utils import RedisDict
@@ -162,6 +163,9 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 if custom_model.is_active:
                     model['name'] = custom_model.name
                     model['info'] = custom_model.model_dump()
+                    schema = get_chat_variables_schema(custom_model.params.model_dump().get('system'))
+                    if schema:
+                        model['info'].setdefault('meta', {})['chat_variables_schema'] = schema
 
                     action_ids = []
                     filter_ids = []
@@ -211,6 +215,9 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             }
 
             info = custom_model.model_dump()
+            schema = get_chat_variables_schema(custom_model.params.model_dump().get('system'))
+            if schema:
+                info.setdefault('meta', {})['chat_variables_schema'] = schema
             if 'params' in info:
                 # Remove params to avoid exposing sensitive info
                 del info['params']

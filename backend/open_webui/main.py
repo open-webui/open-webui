@@ -220,6 +220,9 @@ from open_webui.utils.chat import (
 from open_webui.utils.chat import (
     generate_chat_completion as chat_completion_handler,
 )
+from open_webui.utils.chat_variables import (
+    normalize_chat_variables,
+)
 from open_webui.utils.embeddings import generate_embeddings
 from open_webui.utils.logger import start_logger
 from open_webui.utils.middleware import (
@@ -1135,6 +1138,13 @@ async def chat_completion(
             message_ids = [{'model_id': model_id, 'message_id': form_data.pop('id', None)}]
 
         user_message = form_data.pop('user_message', None) or form_data.pop('parent_message', None)
+        chat_id = form_data.get('chat_id') or ''
+        chat_variables = form_data.pop('chat_variables', None)
+        if chat_variables is None:
+            existing_chat = await Chats.get_chat_by_id(chat_id) if chat_id else None
+            chat_variables = existing_chat.variables if existing_chat else {}
+
+        chat_variables = normalize_chat_variables(chat_variables)
 
         # Drop tool_servers if caller lacks features.direct_tool_servers —
         # mirrors the storage-side strip in user/settings/update.
@@ -1166,6 +1176,7 @@ async def chat_completion(
             'files': form_data.get('files', None),
             'features': form_data.get('features', {}),
             'variables': form_data.get('variables', {}),
+            'chat_variables': chat_variables,
             'model': model,
             'direct': model_item.get('direct', False),
             'params': {
@@ -1280,6 +1291,7 @@ async def chat_completion(
                                 'tags': [],
                                 'timestamp': int(time.time() * 1000),
                             },
+                            variables=chat_variables,
                             folder_id=metadata.get('folder_id'),
                         ),
                     )
@@ -1384,6 +1396,8 @@ async def chat_completion(
                             if selected_chat_models:
                                 updated['models'] = selected_chat_models
                             await Chats.update_chat_by_id(chat_id, updated)
+
+                    await Chats.update_chat_variables_by_id(chat_id, chat_variables)
 
                     # Save user message to DB
                     if user_message and user_message.get('id'):
