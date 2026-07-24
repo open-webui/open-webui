@@ -9,6 +9,7 @@ import re
 import shutil
 import uuid
 from datetime import datetime
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Callable, Iterator, Optional, Sequence, Union
@@ -1899,6 +1900,24 @@ async def process_file(
                 file_path = file.path
                 if file_path:
                     file_path = await asyncio.to_thread(Storage.get_file, file_path)
+
+                    # Mark as actively processing and record start time so the
+                    # UI polling loop can show meaningful status information.
+                    await Files.update_file_data_by_id(
+                        file.id,
+                        {"status": "processing", "started_at": int(time.time())},
+                        db=db,
+                    )
+
+                    # Callback used by DoclingLoader to persist queue position
+                    # and task_id so they appear in the UI tooltip.
+                    _file_id_for_callback = file.id
+
+                    async def _docling_status_callback(data: dict) -> None:
+                        await Files.update_file_data_by_id(
+                            _file_id_for_callback, data, db=db
+                        )
+
                     loader_config = await get_loader_config()
                     loader = build_loader_from_config(request, loader_config)
                     loader.user = user
@@ -1907,6 +1926,7 @@ async def process_file(
                         'file_name': file.filename,
                         'file_content_type': file.meta.get('content_type'),
                     }
+                    loader.kwargs['DOCLING_STATUS_CALLBACK'] = _docling_status_callback
                     docs = await loader.aload(file.filename, file.meta.get('content_type'), file_path)
 
                     docs = [
@@ -1991,6 +2011,37 @@ async def process_file(
                     log.info(f'added {len(docs)} items to collection {collection_name}')
 
                     if result:
+                        # Guard: check that the file record still exists before
+                        # committing the final status.  The user may have pressed
+                        # the delete button while docling/embedding was running.
+                        async with get_async_db() as _guard_session:
+                            if await Files.get_file_by_id(file.id, db=_guard_session) is None:
+                                log.warning(
+                                    "File %s was deleted during processing; "
+                                    "discarding embeddings to prevent orphaned vectors.",
+                                    file.id,
+                                )
+                                try:
+                                    if form_data.collection_name:
+                                        # Shared knowledge collection – remove only this file's chunks
+                                        VECTOR_DB_CLIENT.delete(
+                                            collection_name=collection_name,
+                                            filter={"file_id": file.id},
+                                        )
+                                    else:
+                                        # Private file collection – drop entirely
+                                        VECTOR_DB_CLIENT.delete_collection(
+                                            collection_name=collection_name
+                                        )
+                                except Exception as _cleanup_err:
+                                    log.debug(
+                                        "Vector DB cleanup after user-delete: %s",
+                                        _cleanup_err,
+                                    )
+                                return {
+                                    "status": False,
+                                    "reason": "file_deleted_during_processing",
+                                }
                         # Fresh session for the final update.
                         async with get_async_db() as session:
                             await Files.update_file_metadata_by_id(

@@ -58,6 +58,55 @@
 	const cancelRename = () => {
 		editingFileId = null;
 	};
+
+	/** Build the HTML tooltip for files that are pending, processing, or failed. */
+	function getStatusTooltip(file: any): string {
+		// Local upload-in-progress item — data is not yet populated from server
+		if (file?.status === 'uploading') {
+			// If the SSE stream has already delivered a server-side status (e.g.
+			// 'processing' once docling picks up the job), show that instead of
+			// the generic "Uploading…" so the tooltip stays meaningful.
+			const serverStatus = file?.data?.status;
+			if (!serverStatus || serverStatus === 'pending') {
+				return '<strong>Uploading…</strong>';
+			}
+			// fall through: real server status available, show it below
+		}
+
+		const status = file?.data?.status;
+		if (!status || status === 'completed') return '';
+
+		const parts: string[] = [];
+
+		if (status === 'pending') {
+			parts.push('<strong>Queued for processing</strong>');
+		} else if (status === 'processing') {
+			parts.push('<strong>Processing…</strong>');
+		} else if (status === 'failed') {
+			parts.push('<strong style="color:#f87171">Processing failed</strong>');
+		}
+
+		// started_at is written by process_file() just before loader.load()
+		if (file?.data?.started_at) {
+			parts.push(`Started: ${dayjs(file.data.started_at * 1000).fromNow()}`);
+		} else if (status === 'pending' && file?.created_at) {
+			parts.push(`Uploaded: ${dayjs(file.created_at * 1000).fromNow()}`);
+		}
+
+		// Docling-specific fields written by the status_callback during polling
+		if (file?.data?.task_position != null) {
+			parts.push(`Queue position: ${file.data.task_position}`);
+		}
+		if (file?.data?.task_id) {
+			parts.push(`Task ID: ${String(file.data.task_id).slice(0, 8)}…`);
+		}
+
+		if (status === 'failed' && file?.data?.error) {
+			parts.push(`<span style="color:#f87171">${file.data.error}</span>`);
+		}
+
+		return parts.join('<br>');
+	}
 </script>
 
 <div class=" max-h-full flex flex-col w-full gap-[0.5px]">
@@ -76,6 +125,11 @@
 
 	<!-- Files -->
 	{#each files as file (file?.id ?? file?.itemId ?? file?.tempId)}
+		{@const fileStatus = file?.data?.status}
+		{@const isInFlight =
+			file?.status === 'uploading' || fileStatus === 'pending' || fileStatus === 'processing'}
+		{@const isFailed = fileStatus === 'failed'}
+		{@const statusTooltip = getStatusTooltip(file)}
 		<div
 			class=" flex cursor-pointer w-full px-2 bg-transparent dark:hover:bg-gray-850/50 hover:bg-white rounded-xl transition {selectedFileId
 				? ''
@@ -89,28 +143,58 @@
 			}}
 		>
 			<div class="flex items-center">
-				{#if file?.status !== 'uploading'}
-					<button
-						class="p-1 rounded-full transition"
-						type="button"
-						on:click={() => {
-							let fileId = file?.id ?? file?.tempId;
-							onClick(fileId);
-						}}
-					>
-						<DocumentPage className="size-3.5" />
-					</button>
+				{#if file?.status === 'uploading' && (!file?.data?.status || file?.data?.status === 'pending')}
+					<!-- No file ID yet — show spinner with status tooltip, no link -->
+					<Tooltip content={statusTooltip} placement="top-start">
+						<div class="p-1">
+							<Spinner className="size-3.5" />
+						</div>
+					</Tooltip>
+				{:else if isInFlight || isFailed}
+					<!-- File exists but still processing / failed — link to PDF, carry status tooltip -->
+					<Tooltip content={statusTooltip} placement="top-start">
+						<button
+							class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition {isFailed
+								? 'text-red-500 dark:text-red-400'
+								: ''}"
+							type="button"
+							on:click={() => {
+								let fileId = file?.id ?? file?.tempId;
+								if (fileId) window.open(`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`, '_blank');
+							}}
+						>
+							{#if isInFlight}
+								<Spinner className="size-3.5" />
+							{:else}
+								<DocumentPage className="size-3.5" />
+							{/if}
+						</button>
+					</Tooltip>
 				{:else}
-					<Spinner className="size-3.5" />
+					<Tooltip content={$i18n.t('Open file')}>
+						<button
+							class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							type="button"
+							on:click={() => {
+								let fileId = file?.id ?? file?.tempId;
+								window.open(`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`, '_blank');
+							}}
+						>
+							<DocumentPage className="size-3.5" />
+						</button>
+					</Tooltip>
 				{/if}
 			</div>
 
 			<button
-				class="relative flex items-center gap-1 rounded-xl p-2 text-left flex-1 justify-between"
+				class="relative group flex items-center gap-1 rounded-xl p-2 text-left flex-1 justify-between {isFailed
+					? 'text-red-500 dark:text-red-400'
+					: ''}"
 				type="button"
-				on:click={() => {
+				on:click={async () => {
 					if (editingFileId) return;
-					onClick(file?.id ?? file?.tempId);
+					if (isInFlight || !file?.id) return;
+					onClick(file.id);
 				}}
 				on:dblclick={() => {
 					if (knowledge?.write_access) startRename(file);
