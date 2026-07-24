@@ -47,6 +47,9 @@ def normalize_usage(usage: dict) -> dict:
     result['input_tokens'] = int(input_tokens)
     result['output_tokens'] = int(output_tokens)
     result['total_tokens'] = int(total_tokens)
+    # Last call's real counts, not summed across a tool loop
+    result['last_input_tokens'] = int(usage.get('last_input_tokens') or input_tokens)
+    result['last_output_tokens'] = int(usage.get('last_output_tokens') or output_tokens)
 
     return result
 
@@ -132,6 +135,10 @@ def merge_usage(current: dict | None, incoming: dict | None) -> dict:
                 current_usage.get(key) if isinstance(current_usage.get(key), dict) else {},
                 incoming_usage.get(key) if isinstance(incoming_usage.get(key), dict) else {},
             )
+
+    # A call that reports no usage must not zero the last-call context fields
+    for key in ('last_input_tokens', 'last_output_tokens'):
+        result[key] = incoming_usage.get(key) or current_usage.get(key, 0)
 
     return result
 
