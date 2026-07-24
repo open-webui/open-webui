@@ -90,6 +90,15 @@
 	let shiftKey = false;
 
 	let selectedChatId = null;
+
+	// Keep the optimistic sidebar highlight in sync with the active chat. Leaving the
+	// chat view (e.g. navigating to an admin page) clears chatId, and programmatic
+	// navigation such as cloning moves chatId to a different chat — in both cases the
+	// previously-selected item must not stay highlighted. The optimistic on-click
+	// highlight is preserved because a click sets selectedChatId without changing
+	// chatId, so this reactive only re-runs once chatId catches up to the same value.
+	$: selectedChatId = $chatId || null;
+
 	let showCreateChannel = false;
 
 	// Pagination variables

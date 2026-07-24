@@ -13,6 +13,7 @@
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 
 	import { deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
+	import { deleteModelById } from '$lib/apis/models';
 	import { unloadModel } from '$lib/apis';
 
 	import {
@@ -629,12 +630,25 @@
 		const model = deleteModelTarget;
 		if (!model) return;
 
-		const res = await deleteModel(localStorage.token, model.id).catch((error) => {
-			toast.error($i18n.t('Error deleting model: {{error}}', { error }));
-		});
+		let success = false;
 
-		if (res) {
-			// $i18n.t('Model {{modelId}} not found')
+		if (model?.info?.base_model_id) {
+			// Workspace model: only delete the workspace model record, not the underlying base model
+			const res = await deleteModelById(localStorage.token, model.id).catch((error) => {
+				toast.error($i18n.t('Error deleting model: {{error}}', { error }));
+				return null;
+			});
+			success = !!res;
+		} else {
+			// Base Ollama model: delete from Ollama directly
+			const res = await deleteModel(localStorage.token, model.id).catch((error) => {
+				toast.error($i18n.t('Error deleting model: {{error}}', { error }));
+				return null;
+			});
+			success = !!res;
+		}
+
+		if (success) {
 			toast.success(
 				$i18n.t('Model {{modelName}} deleted successfully', { modelName: model.name ?? model.id })
 			);

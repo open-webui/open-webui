@@ -13,8 +13,8 @@ from open_webui.models.automations import AutomationRun
 from open_webui.models.chat_messages import ChatMessage, ChatMessages
 from open_webui.models.folders import Folders
 from open_webui.models.tags import Tag, TagModel, Tags
-from open_webui.utils.misc import sanitize_data_for_db, sanitize_text_for_db
-from pydantic import BaseModel, ConfigDict
+from open_webui.utils.misc import get_output_text, sanitize_data_for_db, sanitize_text_for_db
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import (
     JSON,
     BigInteger,
@@ -58,6 +58,7 @@ class Chat(Base):  # database table mapping for chat entity
     pinned = Column(Boolean, default=False, nullable=True)
 
     meta = Column(JSON, server_default='{}')
+    variables = Column(JSON, nullable=True)
     folder_id = Column(Text, nullable=True)
 
     tasks = Column(JSON, nullable=True)
@@ -95,6 +96,7 @@ class ChatModel(BaseModel):
     pinned: bool | None = False
 
     meta: dict = {}
+    variables: dict = {}
     folder_id: str | None = None
 
     tasks: list | None = None
@@ -102,6 +104,11 @@ class ChatModel(BaseModel):
     current_message_id: str | None = None
 
     last_read_at: int | None = None
+
+    @field_validator('variables', mode='before')
+    @classmethod
+    def normalize_variables(cls, value):
+        return value if isinstance(value, dict) else {}
 
 
 class ChatFile(Base):
@@ -141,6 +148,7 @@ class ChatFileModel(BaseModel):
 
 class ChatForm(BaseModel):
     chat: dict
+    variables: dict | None = None
     folder_id: str | None = None
 
 
@@ -176,12 +184,18 @@ class ChatResponse(BaseModel):
     archived: bool
     pinned: bool | None = False
     meta: dict = {}
+    variables: dict = {}
     folder_id: str | None = None
 
     tasks: list | None = None
     summary: str | None = None
     current_message_id: str | None = None
     context_usage: dict | None = None
+
+    @field_validator('variables', mode='before')
+    @classmethod
+    def normalize_variables(cls, value):
+        return value if isinstance(value, dict) else {}
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -394,6 +408,7 @@ class ChatTable:
                     'chat': self._clean_null_bytes(form_data.chat),
                     'folder_id': form_data.folder_id,
                     'meta': internal_meta or {},
+                    'variables': form_data.variables or {},
                     'current_message_id': self.get_current_message_id(form_data.chat),
                     'created_at': int(time.time()),
                     'updated_at': int(time.time()),
@@ -404,7 +419,6 @@ class ChatTable:
             chat_item = Chat(**chat.model_dump())
             session.add(chat_item)
             await session.commit()
-            await session.refresh(chat_item)
 
             # Dual-write initial messages to chat_message table
             try:
@@ -482,6 +496,7 @@ class ChatTable:
                 'title': self._clean_null_bytes(form_data.chat['title'] if 'title' in form_data.chat else 'New Chat'),
                 'chat': self._clean_null_bytes(form_data.chat),
                 'meta': form_data.meta,
+                'variables': form_data.variables or {},
                 'pinned': form_data.pinned,
                 'folder_id': form_data.folder_id,
                 'current_message_id': form_data.current_message_id or self.get_current_message_id(form_data.chat),
@@ -575,6 +590,29 @@ class ChatTable:
         except Exception:
             return
 
+    async def update_chat_variables_by_id(
+        self,
+        id: str,
+        variables: dict | None,
+        db: AsyncSession | None = None,
+        *,
+        touch: bool = True,
+    ) -> ChatModel | None:
+        try:
+            async with get_async_db_context(db) as session:
+                chat_item = await session.get(Chat, id)
+                if chat_item is None:
+                    return None
+
+                chat_item.variables = variables if isinstance(variables, dict) else {}
+                if touch:
+                    chat_item.updated_at = int(time.time())
+
+                await session.commit()
+                return ChatModel.model_validate(chat_item)
+        except Exception:
+            return None
+
     async def update_chat_last_read_at_by_id(self, id: str, user_id: str, db: AsyncSession | None = None) -> bool:
         try:
             async with get_async_db_context(db) as session:
@@ -597,7 +635,6 @@ class ChatTable:
                 chat_item.title = clean_title
                 chat_item.chat = {**(chat_item.chat or {}), 'title': clean_title}
                 await session.commit()
-                await session.refresh(chat_item)
                 return ChatModel.model_validate(chat_item)
         except Exception:
             return None
@@ -615,7 +652,6 @@ class ChatTable:
             # Single meta update
             chat.meta = {**chat.meta, 'tags': new_tag_ids}
             await session.commit()
-            await session.refresh(chat)
 
             # Batch-create any missing tag rows
             await Tags.ensure_tags_exist(new_tags, user.id, db=session)
@@ -804,6 +840,11 @@ class ChatTable:
         if chat is None:
             return None
 
+        if not message.get('content'):
+            output_text = get_output_text(message.get('output'))
+            if output_text:
+                message['content'] = output_text
+
         # Sanitize message content for null characters before upserting
         if isinstance(message.get('content'), str):
             message['content'] = sanitize_text_for_db(message['content'])
@@ -947,7 +988,6 @@ class ChatTable:
             # Set share_id on the original chat
             chat.share_id = shared.id
             await session.commit()
-            await session.refresh(chat)
             return ChatModel.model_validate(chat)  # return the updated original
 
     # refresh helper
@@ -994,7 +1034,6 @@ class ChatTable:
                 chat = await session.get(Chat, id)
                 chat.share_id = share_id
                 await session.commit()
-                await session.refresh(chat)
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
@@ -1007,7 +1046,6 @@ class ChatTable:
                 chat.updated_at = int(time.time())
                 chat.last_read_at = int(time.time())
                 await session.commit()
-                await session.refresh(chat)
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
@@ -1021,7 +1059,6 @@ class ChatTable:
                 chat.updated_at = int(time.time())
                 chat.last_read_at = int(time.time())
                 await session.commit()
-                await session.refresh(chat)
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
@@ -1327,7 +1364,6 @@ class ChatTable:
                     flag_modified(chat_item, 'chat')
                 if self._sanitize_chat_row(chat_item) or repaired_history:
                     await session.commit()
-                    await session.refresh(chat_item)
 
                 return ChatModel.model_validate(chat_item)
         except Exception:
@@ -1369,7 +1405,6 @@ class ChatTable:
                     flag_modified(chat, 'chat')
                 if self._sanitize_chat_row(chat) or repaired_history:
                     await session.commit()
-                    await session.refresh(chat)
 
                 return ChatModel.model_validate(chat)
         except Exception:
@@ -1851,7 +1886,6 @@ class ChatTable:
                 chat.last_read_at = int(time.time())
                 chat.pinned = False
                 await session.commit()
-                await session.refresh(chat)
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
@@ -1931,7 +1965,6 @@ class ChatTable:
                         'tags': list(set(chat.meta.get('tags', []) + [tag_id])),
                     }
                 await session.commit()
-                await session.refresh(chat)
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
@@ -2231,7 +2264,6 @@ class ChatTable:
                     return None
                 chat.tasks = tasks
                 await session.commit()
-                await session.refresh(chat)
                 return ChatModel.model_validate(chat)
         except Exception:
             return None

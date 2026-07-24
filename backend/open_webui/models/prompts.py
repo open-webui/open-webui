@@ -132,7 +132,6 @@ class PromptsTable:
                 )
                 session.add(record)
                 await session.commit()
-                await session.refresh(record)  # populate generated defaults
 
                 await AccessGrants.set_access_grants(
                     'prompt',
@@ -169,7 +168,6 @@ class PromptsTable:
                 if history_entry:
                     record.version_id = history_entry.id
                     await session.commit()
-                    await session.refresh(record)  # re-read version_id
 
                 return await self._to_prompt_model(record, db=session)
             except Exception as e:
@@ -637,7 +635,6 @@ class PromptsTable:
                     prompt.is_active = not prompt.is_active
                     prompt.updated_at = int(time.time())
                     await session.commit()
-                    await session.refresh(prompt)
                     return await self._to_prompt_model(prompt, db=session)
                 return None
         except Exception:

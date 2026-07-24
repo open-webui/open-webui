@@ -16,6 +16,7 @@ from open_webui.models.config import Config
 from open_webui.models.functions import Functions
 from open_webui.models.groups import Groups
 from open_webui.models.models import Models
+from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.models.users import UserModel
 from open_webui.routers import ollama, openai
 from open_webui.socket.utils import RedisDict
@@ -129,13 +130,13 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     # One query per type: the global sets are subsets of the active sets, so
     # deriving them from the same rows halves the function-table queries.
     if ENABLE_PLUGINS:
-        active_actions = await Functions.get_functions_by_type('action', active_only=True)
-        global_action_ids = {function.id for function in active_actions if function.is_global}
-        enabled_action_ids = {function.id for function in active_actions}
+        active_actions = await Functions.get_active_function_ids_by_type('action')
+        global_action_ids = {function_id for function_id, is_global in active_actions if is_global}
+        enabled_action_ids = {function_id for function_id, _ in active_actions}
 
-        active_filters = await Functions.get_functions_by_type('filter', active_only=True)
-        global_filter_ids = {function.id for function in active_filters if function.is_global}
-        enabled_filter_ids = {function.id for function in active_filters}
+        active_filters = await Functions.get_active_function_ids_by_type('filter')
+        global_filter_ids = {function_id for function_id, is_global in active_filters if is_global}
+        enabled_filter_ids = {function_id for function_id, _ in active_filters}
     else:
         global_action_ids = set()
         enabled_action_ids = set()
@@ -162,6 +163,9 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 if custom_model.is_active:
                     model['name'] = custom_model.name
                     model['info'] = custom_model.model_dump()
+                    schema = get_chat_variables_schema(custom_model.params.model_dump().get('system'))
+                    if schema:
+                        model['info'].setdefault('meta', {})['chat_variables_schema'] = schema
 
                     action_ids = []
                     filter_ids = []
@@ -211,6 +215,9 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             }
 
             info = custom_model.model_dump()
+            schema = get_chat_variables_schema(custom_model.params.model_dump().get('system'))
+            if schema:
+                info.setdefault('meta', {})['chat_variables_schema'] = schema
             if 'params' in info:
                 # Remove params to avoid exposing sensitive info
                 del info['params']
@@ -328,16 +335,27 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     all_function_valves = await Functions.get_function_valves_by_ids(list(all_function_ids))
     functions_cache = get_functions_cache(request)
 
+    # Global actions and filters appear in every model, so priorities and item
+    # lists are memoized across the loop instead of rebuilt per model.
+    action_priorities = {}
+
     def get_action_priority(action_id):
+        if action_id in action_priorities:
+            return action_priorities[action_id]
+        priority = 0
         try:
             function_module = functions_cache.get(action_id)
             if function_module and hasattr(function_module, 'Valves'):
                 valves_db = all_function_valves.get(action_id)
                 valves = function_module.Valves(**(valves_db if valves_db else {}))
-                return getattr(valves, 'priority', 0)
+                priority = getattr(valves, 'priority', 0)
         except Exception:
-            pass
-        return 0
+            priority = 0
+        action_priorities[action_id] = priority
+        return priority
+
+    action_items_by_id = {}
+    filter_items_by_id = {}
 
     for model in models:
         action_ids = [
@@ -355,30 +373,45 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
         model['actions'] = []
         for action_id in action_ids:
-            action_function = functions_by_id.get(action_id)
-            if action_function is None:
-                log.info(f'Action not found: {action_id}')
-                continue
+            items = action_items_by_id.get(action_id)
+            if items is None:
+                action_function = functions_by_id.get(action_id)
+                if action_function is None:
+                    log.info(f'Action not found: {action_id}')
+                    action_items_by_id[action_id] = []
+                    continue
 
-            function_module = functions_cache.get(action_id)
-            if function_module is None:
-                log.info(f'Failed to load action module: {action_id}')
-                continue
-            model['actions'].extend(get_action_items_from_module(action_function, function_module))
+                function_module = functions_cache.get(action_id)
+                if function_module is None:
+                    log.info(f'Failed to load action module: {action_id}')
+                    action_items_by_id[action_id] = []
+                    continue
+                items = get_action_items_from_module(action_function, function_module)
+                action_items_by_id[action_id] = items
+            # Shallow copies keep per-model item dicts independent, as before
+            model['actions'].extend({**item} for item in items)
 
         model['filters'] = []
         for filter_id in filter_ids:
-            filter_function = functions_by_id.get(filter_id)
-            if filter_function is None:
-                log.info(f'Filter not found: {filter_id}')
-                continue
+            items = filter_items_by_id.get(filter_id)
+            if items is None:
+                filter_function = functions_by_id.get(filter_id)
+                if filter_function is None:
+                    log.info(f'Filter not found: {filter_id}')
+                    filter_items_by_id[filter_id] = []
+                    continue
 
-            function_module = functions_cache.get(filter_id)
-            if function_module is None:
-                log.info(f'Failed to load filter module: {filter_id}')
-                continue
-            if getattr(function_module, 'toggle', None):
-                model['filters'].extend(get_filter_items_from_module(filter_function, function_module))
+                function_module = functions_cache.get(filter_id)
+                if function_module is None:
+                    log.info(f'Failed to load filter module: {filter_id}')
+                    filter_items_by_id[filter_id] = []
+                    continue
+                if getattr(function_module, 'toggle', None):
+                    items = get_filter_items_from_module(filter_function, function_module)
+                else:
+                    items = []
+                filter_items_by_id[filter_id] = items
+            model['filters'].extend({**item} for item in items)
 
     log.debug(f'get_all_models() returned {len(models)} models')
 
@@ -433,7 +466,9 @@ async def check_model_access(user, model, model_info=None, db=None):
             raise Exception('Model not found')
 
         # Enforce access on chained base models
-        if not await has_base_model_access(user.id, model_info, user_group_ids=user_group_ids, db=db):
+        if not await has_base_model_access(
+            user.id, model_info, user_role=user.role, user_group_ids=user_group_ids, db=db
+        ):
             raise Exception('Model not found')
 
 

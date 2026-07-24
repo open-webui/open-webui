@@ -316,7 +316,6 @@ class AccessGrantsTable:
             )
             db.add(grant)
             await db.commit()
-            await db.refresh(grant)
             return AccessGrantModel.model_validate(grant)
 
     async def revoke_access(

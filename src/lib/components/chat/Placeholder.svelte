@@ -237,6 +237,7 @@
 						{onChange}
 						{onUpload}
 						{onWebSearchToggle}
+						on:chatVariables
 						on:submit={(e) => {
 							dispatch('submit', e.detail);
 						}}

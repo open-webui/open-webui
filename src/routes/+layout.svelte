@@ -849,6 +849,8 @@
 		}
 		user.set(null);
 		localStorage.removeItem('token');
+		// Clear the OAuth token cookie so /auth doesn't auto-login and redirect-loop
+		document.cookie = 'token=; Max-Age=0; path=/';
 		userSignOut().catch((error) => {
 			console.error('Error signing out expired session:', error);
 		});

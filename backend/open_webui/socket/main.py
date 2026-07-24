@@ -5,7 +5,6 @@ import logging
 import random
 import sys
 import time
-from typing import Dict
 
 import pycrdt as Y
 import socketio
@@ -16,7 +15,6 @@ from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     GLOBAL_LOG_LEVEL,
     REDIS_KEY_PREFIX,
-    VERSION,
     WEBSOCKET_EVENT_CALLER_TIMEOUT,
     WEBSOCKET_MANAGER,
     WEBSOCKET_REDIS_CLUSTER,
@@ -44,7 +42,6 @@ from open_webui.utils.redis import (
     get_redis_connection,
     get_sentinels_from_env,
 )
-from redis import asyncio as aioredis
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -56,6 +53,11 @@ REDIS = None
 
 # Configure CORS for Socket.IO
 SOCKETIO_CORS_ORIGINS = '*' if CORS_ALLOW_ORIGIN == ['*'] else CORS_ALLOW_ORIGIN
+
+
+def get_room_sid_map(manager, namespace: str, room: str):
+    """Return this process's Socket.IO sid map for a room, without copying it."""
+    return manager.rooms.get(namespace, {}).get(room)
 
 
 class LocalFilteredRedisManager(socketio.AsyncRedisManager):
@@ -76,7 +78,7 @@ class LocalFilteredRedisManager(socketio.AsyncRedisManager):
         room = message.get('room')
         if isinstance(room, str):
             namespace = message.get('namespace') or '/'
-            if next(self.get_participants(namespace, room), None) is None:
+            if not get_room_sid_map(self, namespace, room):
                 return
         await super()._handle_emit(message)
 
@@ -229,16 +231,18 @@ async def periodic_usage_pool_cleanup():
     try:
         while True:
             if not renew_func():
-                log.error(f'Unable to renew cleanup lock. Exiting usage pool cleanup.')
+                log.error('Unable to renew cleanup lock. Exiting usage pool cleanup.')
                 raise Exception('Unable to renew usage pool cleanup lock.')
 
             now = int(time.time())
-            send_usage = False
             for model_id, connections in list(USAGE_POOL.items()):
                 # Creating a list of sids to remove if they have timed out
                 expired_sids = [
                     sid for sid, details in connections.items() if now - details['updated_at'] > TIMEOUT_DURATION
                 ]
+
+                if connections and not expired_sids:
+                    continue
 
                 for sid in expired_sids:
                     del connections[sid]
@@ -248,8 +252,6 @@ async def periodic_usage_pool_cleanup():
                     del USAGE_POOL[model_id]
                 else:
                     USAGE_POOL[model_id] = connections
-
-                send_usage = True
             await asyncio.sleep(TIMEOUT_DURATION)
     finally:
         release_func()
@@ -276,24 +278,21 @@ def get_user_id_from_session_pool(sid):
 
 def get_session_ids_from_room(room):
     """Get all session IDs from a specific room."""
-    active_session_ids = sio.manager.get_participants(
-        namespace='/',
-        room=room,
-    )
-    return [session_id[0] for session_id in active_session_ids]
+    members = get_room_sid_map(sio.manager, '/', room)
+    return list(members) if members else []
 
 
 def get_user_ids_from_room(room):
     active_session_ids = get_session_ids_from_room(room)
 
+    # Single pool lookup per session (each .get is a Redis round trip
+    # when the session pool is Redis-backed).
     active_user_ids = list(
-        set(
-            [
-                SESSION_POOL.get(session_id)['id']
-                for session_id in active_session_ids
-                if SESSION_POOL.get(session_id) is not None
-            ]
-        )
+        {
+            entry['id']
+            for entry in (SESSION_POOL.get(session_id) for session_id in active_session_ids)
+            if entry is not None
+        }
     )
     return active_user_ids
 
@@ -357,7 +356,7 @@ async def usage(sid, data):
 
         # Store the new usage data and task
         USAGE_POOL[model_id] = {
-            **(USAGE_POOL[model_id] if model_id in USAGE_POOL else {}),
+            **(USAGE_POOL.get(model_id) or {}),
             sid: {'updated_at': current_time},
         }
 
@@ -404,33 +403,38 @@ async def user_join(sid, data):
     if token_data is None or 'id' not in token_data or not await is_valid_token(token_data, redis):
         return
 
-    user = await Users.get_user_by_id(token_data['id'])
-    if not user:
-        return
+    existing = SESSION_POOL.get(sid)
+    if existing and existing.get('id') == token_data['id']:
+        SESSION_POOL[sid] = {**existing, 'last_seen_at': int(time.time())}
+        user_id, user_name, user_role = existing['id'], existing['name'], existing['role']
+    else:
+        user = await Users.get_user_by_id(token_data['id'])
+        if not user:
+            return
 
-    SESSION_POOL[sid] = {
-        **user.model_dump(
-            exclude=[
-                'profile_image_url',
-                'profile_banner_image_url',
-                'date_of_birth',
-                'bio',
-                'gender',
-            ]
-        ),
-        'last_seen_at': int(time.time()),
-    }
-
-    await sio.enter_room(sid, f'user:{user.id}')
+        SESSION_POOL[sid] = {
+            **user.model_dump(
+                exclude=[
+                    'profile_image_url',
+                    'profile_banner_image_url',
+                    'date_of_birth',
+                    'bio',
+                    'gender',
+                ]
+            ),
+            'last_seen_at': int(time.time()),
+        }
+        await sio.enter_room(sid, f'user:{user.id}')
+        user_id, user_name, user_role = user.id, user.name, user.role
 
     # Join all the channels only if user has channels permission
-    if user.role == 'admin' or await has_permission(user.id, 'features.channels'):
-        channels = await Channels.get_channels_by_user_id(user.id)
+    if user_role == 'admin' or await has_permission(user_id, 'features.channels'):
+        channels = await Channels.get_channels_by_user_id(user_id)
         log.debug(f'{channels=}')
         for channel in channels:
             await sio.enter_room(sid, f'channel:{channel.id}')
 
-    return {'id': user.id, 'name': user.name}
+    return {'id': user_id, 'name': user_name}
 
 
 @sio.on('heartbeat')
@@ -510,13 +514,7 @@ async def join_note(sid, data):
 @sio.on('events:channel')
 async def channel_events(sid, data):
     room = f'channel:{data["channel_id"]}'
-    participants = sio.manager.get_participants(
-        namespace='/',
-        room=room,
-    )
-
-    sids = [sid for sid, _ in participants]
-    if sid not in sids:
+    if sid not in (get_room_sid_map(sio.manager, '/', room) or {}):
         return
 
     event_data = data['data']
@@ -859,7 +857,6 @@ async def yjs_awareness_update(sid, data):
 @sio.event
 async def disconnect(sid, reason=None):
     if sid in SESSION_POOL:
-        user = SESSION_POOL[sid]
         del SESSION_POOL[sid]
 
         # Clean up USAGE_POOL entries for this session
@@ -960,16 +957,19 @@ async def get_event_emitter(request_info, update_db=True):
         if internal and event_data.get('type') == 'notification':
             return
 
-        await sio.emit(
-            'events',
-            {
-                'chat_id': chat_id,
-                'message_id': message_id,
-                **({'internal': True} if internal else {}),
-                'data': event_data,
-            },
-            room=f'user:{user_id}',
-        )
+        room = f'user:{user_id}'
+        # Local rooms are authoritative; Redis may have listeners on another instance.
+        if WEBSOCKET_MANAGER == 'redis' or room in sio.manager.rooms.get('/', {}):
+            await sio.emit(
+                'events',
+                {
+                    'chat_id': chat_id,
+                    'message_id': message_id,
+                    **({'internal': True} if internal else {}),
+                    'data': event_data,
+                },
+                room=room,
+            )
 
         if update_db and message_id and not (request_info.get('chat_id') or '').startswith('local:'):
             event_type = event_data.get('type')
