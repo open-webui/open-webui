@@ -2565,7 +2565,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Mentioned skills get full content; selected/default skills can be loaded through view_skill.
     mentioned_skill_ids = extract_skill_ids_from_messages(form_data.get('messages', []))
-    skill_ids = (
+    skill_ids = sorted(
         set(form_data.pop('skill_ids', None) or [])
         | set(model.get('info', {}).get('meta', {}).get('skillIds', []))
         | mentioned_skill_ids
@@ -2668,7 +2668,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         {
             'model_id': form_data.get('model'),
             'tool_ids': tool_ids,
-            'skill_ids': list(skill_ids),
+            'skill_ids': skill_ids,
             'terminal_id': terminal_id,
             'files': files,
             'features': features,
