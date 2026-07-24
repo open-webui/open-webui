@@ -220,6 +220,9 @@ from open_webui.utils.chat import (
 from open_webui.utils.chat import (
     generate_chat_completion as chat_completion_handler,
 )
+from open_webui.utils.chat_variables import (
+    normalize_chat_variables,
+)
 from open_webui.utils.embeddings import generate_embeddings
 from open_webui.utils.logger import start_logger
 from open_webui.utils.middleware import (
@@ -717,6 +720,25 @@ app.state.speech_speaker_embeddings_dataset = None
 app.state.MODELS = MODELS
 
 # Add the middleware to the app
+try:
+    audit_level = AuditLevel(AUDIT_LOG_LEVEL)
+except ValueError as e:
+    logger.error(f'Invalid audit level: {AUDIT_LOG_LEVEL}. Error: {e}')
+    audit_level = AuditLevel.NONE
+
+# Added before CompressMiddleware so audit sits inside compression and
+# captures response bodies before they are compressed (last added runs
+# outermost).
+if audit_level != AuditLevel.NONE:
+    app.add_middleware(
+        AuditLoggingMiddleware,
+        audit_level=audit_level,
+        excluded_paths=AUDIT_EXCLUDED_PATHS,
+        included_paths=AUDIT_INCLUDED_PATHS,
+        audit_get_requests=ENABLE_AUDIT_GET_REQUESTS,
+        max_body_size=MAX_BODY_LOG_SIZE,
+    )
+
 if ENABLE_COMPRESSION_MIDDLEWARE:
     app.add_middleware(CompressMiddleware)
 
@@ -795,21 +817,6 @@ if ENABLE_SCIM:
     app.include_router(scim.router, prefix='/api/v1/scim/v2', tags=['scim'])
 
 
-try:
-    audit_level = AuditLevel(AUDIT_LOG_LEVEL)
-except ValueError as e:
-    logger.error(f'Invalid audit level: {AUDIT_LOG_LEVEL}. Error: {e}')
-    audit_level = AuditLevel.NONE
-
-if audit_level != AuditLevel.NONE:
-    app.add_middleware(
-        AuditLoggingMiddleware,
-        audit_level=audit_level,
-        excluded_paths=AUDIT_EXCLUDED_PATHS,
-        included_paths=AUDIT_INCLUDED_PATHS,
-        audit_get_requests=ENABLE_AUDIT_GET_REQUESTS,
-        max_body_size=MAX_BODY_LOG_SIZE,
-    )
 ##################################
 #
 # Chat Endpoints
@@ -822,12 +829,18 @@ if audit_level != AuditLevel.NONE:
 async def get_models(request: Request, refresh: bool = False, user=Depends(get_verified_user)):
     all_models = await get_all_models(request, refresh=refresh, user=user)
 
-    models = []
-    for model in all_models:
-        # Filter out filter pipelines
-        if 'pipeline' in model and model['pipeline'].get('type', None) == 'filter':
-            continue
+    # Filter out filter pipelines
+    models = [model for model in all_models if not ('pipeline' in model and model['pipeline'].get('type', None) == 'filter')]
 
+    # Chat requests resolve models by ID from request.app.state.MODELS, where
+    # duplicate IDs collapse to the last model. Return the same effective list.
+    models = list({model['id']: model for model in models}.values())
+
+    # Access-filter first so the per-model payload work below only runs for
+    # models the caller can actually see.
+    models = await get_filtered_models(models, user)
+
+    for model in models:
         # Remove profile image URL to reduce payload size
         if model.get('info', {}).get('meta', {}).get('profile_image_url'):
             model['info']['meta'].pop('profile_image_url', None)
@@ -841,13 +854,6 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
         except Exception as e:
             log.debug(f'Error processing model tags: {e}')
             model['tags'] = []
-            pass
-
-        models.append(model)
-
-    # Chat requests resolve models by ID from request.app.state.MODELS, where
-    # duplicate IDs collapse to the last model. Return the same effective list.
-    models = list({model['id']: model for model in models}.values())
 
     model_order_list = await Config.get('ui.model_order_list')
     if model_order_list:
@@ -860,11 +866,10 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
             )
         )
 
-    models = await get_filtered_models(models, user)
-
-    log.debug(
-        f'/api/models returned filtered models accessible to the user: {json.dumps([model.get("id") for model in models])}'
-    )
+    if log.isEnabledFor(logging.DEBUG):
+        log.debug(
+            f'/api/models returned filtered models accessible to the user: {json.dumps([model.get("id") for model in models])}'
+        )
     return {'data': models}
 
 
@@ -1133,6 +1138,13 @@ async def chat_completion(
             message_ids = [{'model_id': model_id, 'message_id': form_data.pop('id', None)}]
 
         user_message = form_data.pop('user_message', None) or form_data.pop('parent_message', None)
+        chat_id = form_data.get('chat_id') or ''
+        chat_variables = form_data.pop('chat_variables', None)
+        if chat_variables is None:
+            existing_chat = await Chats.get_chat_by_id(chat_id) if chat_id else None
+            chat_variables = existing_chat.variables if existing_chat else {}
+
+        chat_variables = normalize_chat_variables(chat_variables)
 
         # Drop tool_servers if caller lacks features.direct_tool_servers —
         # mirrors the storage-side strip in user/settings/update.
@@ -1164,6 +1176,7 @@ async def chat_completion(
             'files': form_data.get('files', None),
             'features': form_data.get('features', {}),
             'variables': form_data.get('variables', {}),
+            'chat_variables': chat_variables,
             'model': model,
             'direct': model_item.get('direct', False),
             'params': {
@@ -1278,6 +1291,7 @@ async def chat_completion(
                                 'tags': [],
                                 'timestamp': int(time.time() * 1000),
                             },
+                            variables=chat_variables,
                             folder_id=metadata.get('folder_id'),
                         ),
                     )
@@ -1382,6 +1396,8 @@ async def chat_completion(
                             if selected_chat_models:
                                 updated['models'] = selected_chat_models
                             await Chats.update_chat_by_id(chat_id, updated)
+
+                    await Chats.update_chat_variables_by_id(chat_id, chat_variables)
 
                     # Save user message to DB
                     if user_message and user_message.get('id'):

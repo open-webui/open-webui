@@ -370,6 +370,8 @@ if sys.platform == 'win32' and _is_postgres_url(DATABASE_URL):
 
 if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
     # Generous default — async coroutines + no session sharing = high connection demand.
+    # No pool_pre_ping: a local SQLite file cannot drop connections, and the
+    # ping costs a worker-thread hop plus a SELECT 1 on every checkout.
     _sqlite_pool_size = DATABASE_POOL_SIZE if isinstance(DATABASE_POOL_SIZE, int) and DATABASE_POOL_SIZE > 0 else 512
     async_engine = create_async_engine(
         ASYNC_SQLALCHEMY_DATABASE_URL,
@@ -377,7 +379,6 @@ if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
         pool_size=_sqlite_pool_size,
         pool_timeout=DATABASE_POOL_TIMEOUT,
         pool_recycle=DATABASE_POOL_RECYCLE,
-        pool_pre_ping=True,
     )
 
     @event.listens_for(async_engine.sync_engine, 'connect')

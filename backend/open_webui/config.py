@@ -2143,6 +2143,10 @@ CONTEXT_COMPACTION_TOKEN_THRESHOLD = int(os.getenv('CONTEXT_COMPACTION_TOKEN_THR
 _CONTEXT_COMPACTION_TOKEN_CAP = os.getenv('CONTEXT_COMPACTION_TOKEN_CAP')
 CONTEXT_COMPACTION_TOKEN_CAP = int(_CONTEXT_COMPACTION_TOKEN_CAP) if _CONTEXT_COMPACTION_TOKEN_CAP else None
 
+CONTEXT_COMPACTION_RETENTION_PERCENTAGE = min(
+    50, max(10, int(os.getenv('CONTEXT_COMPACTION_RETENTION_PERCENTAGE', '40')))
+)
+
 CONTEXT_COMPACTION_PROMPT_TEMPLATE = os.getenv('CONTEXT_COMPACTION_PROMPT_TEMPLATE', '')
 
 TITLE_GENERATION_PROMPT_TEMPLATE = os.getenv('TITLE_GENERATION_PROMPT_TEMPLATE', '')
@@ -2567,6 +2571,24 @@ if _oauth_authorize_params:
         log.warning('OAUTH_AUTHORIZE_PARAMS is not valid JSON, ignoring')
 
 
+def oauth_client_kwargs(scope: str, **kwargs):
+    client_kwargs = {
+        'scope': scope,
+        **kwargs,
+        **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
+    }
+
+    if OAUTH_CODE_CHALLENGE_METHOD == 'S256':
+        client_kwargs['code_challenge_method'] = 'S256'
+    elif OAUTH_CODE_CHALLENGE_METHOD:
+        raise Exception(
+            'Code challenge methods other than "%s" not supported. Given: "%s"'
+            % ('S256', OAUTH_CODE_CHALLENGE_METHOD)
+        )
+
+    return client_kwargs
+
+
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
     if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
@@ -2577,10 +2599,7 @@ def load_oauth_providers():
                 client_id=GOOGLE_CLIENT_ID,
                 client_secret=GOOGLE_CLIENT_SECRET,
                 server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-                client_kwargs={
-                    'scope': GOOGLE_OAUTH_SCOPE,
-                    **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
-                },
+                client_kwargs=oauth_client_kwargs(GOOGLE_OAUTH_SCOPE),
                 redirect_uri=GOOGLE_REDIRECT_URI,
                 **({'authorize_params': GOOGLE_OAUTH_AUTHORIZE_PARAMS} if GOOGLE_OAUTH_AUTHORIZE_PARAMS else {}),
             )
@@ -2598,10 +2617,7 @@ def load_oauth_providers():
                 client_id=MICROSOFT_CLIENT_ID,
                 client_secret=MICROSOFT_CLIENT_SECRET,
                 server_metadata_url=f'{MICROSOFT_CLIENT_LOGIN_BASE_URL}/{MICROSOFT_CLIENT_TENANT_ID}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID}',
-                client_kwargs={
-                    'scope': MICROSOFT_OAUTH_SCOPE,
-                    **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
-                },
+                client_kwargs=oauth_client_kwargs(MICROSOFT_OAUTH_SCOPE),
                 redirect_uri=MICROSOFT_REDIRECT_URI,
             )
             return client
@@ -2622,10 +2638,7 @@ def load_oauth_providers():
                 authorize_url='https://github.com/login/oauth/authorize',
                 api_base_url='https://api.github.com',
                 userinfo_endpoint='https://api.github.com/user',
-                client_kwargs={
-                    'scope': GITHUB_CLIENT_SCOPE,
-                    **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
-                },
+                client_kwargs=oauth_client_kwargs(GITHUB_CLIENT_SCOPE),
                 redirect_uri=GITHUB_CLIENT_REDIRECT_URI,
             )
             return client
@@ -2638,30 +2651,19 @@ def load_oauth_providers():
     if OAUTH_CLIENT_ID and (OAUTH_CLIENT_SECRET or OAUTH_CODE_CHALLENGE_METHOD) and OPENID_PROVIDER_URL:
 
         def oidc_oauth_register(oauth: OAuth):
-            client_kwargs = {
-                'scope': OAUTH_SCOPES,
-                **(
-                    {'token_endpoint_auth_method': OAUTH_TOKEN_ENDPOINT_AUTH_METHOD}
-                    if OAUTH_TOKEN_ENDPOINT_AUTH_METHOD
-                    else {}
-                ),
-                **({'timeout': int(OAUTH_TIMEOUT)} if OAUTH_TIMEOUT else {}),
-            }
-
-            if OAUTH_CODE_CHALLENGE_METHOD and OAUTH_CODE_CHALLENGE_METHOD == 'S256':
-                client_kwargs['code_challenge_method'] = 'S256'
-            elif OAUTH_CODE_CHALLENGE_METHOD:
-                raise Exception(
-                    'Code challenge methods other than "%s" not supported. Given: "%s"'
-                    % ('S256', OAUTH_CODE_CHALLENGE_METHOD)
-                )
-
             client = oauth.register(
                 name='oidc',
                 client_id=OAUTH_CLIENT_ID,
                 client_secret=OAUTH_CLIENT_SECRET,
                 server_metadata_url=OPENID_PROVIDER_URL,
-                client_kwargs=client_kwargs,
+                client_kwargs=oauth_client_kwargs(
+                    OAUTH_SCOPES,
+                    **(
+                        {'token_endpoint_auth_method': OAUTH_TOKEN_ENDPOINT_AUTH_METHOD}
+                        if OAUTH_TOKEN_ENDPOINT_AUTH_METHOD
+                        else {}
+                    ),
+                ),
                 redirect_uri=OPENID_REDIRECT_URI,
             )
             return client
@@ -3056,6 +3058,7 @@ DEFAULT_CONFIG = {
     'chat.context_compaction.enable': ENABLE_CONTEXT_COMPACTION,
     'chat.context_compaction.token_threshold': CONTEXT_COMPACTION_TOKEN_THRESHOLD,
     'chat.context_compaction.token_cap': CONTEXT_COMPACTION_TOKEN_CAP,
+    'chat.context_compaction.retention_percentage': CONTEXT_COMPACTION_RETENTION_PERCENTAGE,
     'chat.context_compaction.prompt_template': CONTEXT_COMPACTION_PROMPT_TEMPLATE,
     'task.title.prompt_template': TITLE_GENERATION_PROMPT_TEMPLATE,
     'task.tags.prompt_template': TAGS_GENERATION_PROMPT_TEMPLATE,

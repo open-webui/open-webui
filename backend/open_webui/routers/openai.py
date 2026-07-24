@@ -8,6 +8,7 @@ import re
 from typing import Optional
 from urllib.parse import quote, urlparse
 
+import aiofiles
 import aiohttp
 from aiocache import cached
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
@@ -491,13 +492,12 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
             r.raise_for_status()
 
-            # Save the streaming content to a file
-            with open(file_path, 'wb') as f:
+            async with aiofiles.open(file_path, 'wb') as f:
                 async for chunk in r.content.iter_chunked(8192):
-                    f.write(chunk)
+                    await f.write(chunk)
 
-            with open(file_body_path, 'w') as f:
-                json.dump(json.loads(body.decode('utf-8')), f)
+            async with aiofiles.open(file_body_path, 'w') as f:
+                await f.write(json.dumps(json.loads(body.decode('utf-8'))))
 
             # Return the saved file
             return FileResponse(file_path)

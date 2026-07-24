@@ -1,0 +1,43 @@
+name: Issue Labeler
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  label-bug-reports:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add "bug" label to unlabeled bug reports
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+
+            // Web-form submissions already carry the label from the issue template
+            if (issue.labels.some((label) => label.name === 'bug')) {
+              return;
+            }
+
+            const title = issue.title ?? '';
+            const body = issue.body ?? '';
+
+            // Freeform bug reports: "issue: ...", "bug: ...", "fix: ...", "[Bug] ...", "issue/UX: ..."
+            const bugLikeTitle = /^\s*\[?(bug|issue|fix)\]?\s*[:/\-]/i.test(title);
+
+            // API/CLI-created issues that reproduce the bug report form structure.
+            // Only headings distinctive to the bug form (both are required fields there) —
+            // generic headings like "Expected Behavior" also appear in freeform feature requests.
+            const bugFormBody = /###\s*(Installation Method|Open WebUI Version)/i.test(body);
+
+            if (bugLikeTitle || bugFormBody) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['bug']
+              });
+            }

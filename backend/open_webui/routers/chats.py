@@ -55,6 +55,7 @@ CHAT_CONFIG_KEYS = {
     'ENABLE_CONTEXT_COMPACTION': 'chat.context_compaction.enable',
     'CONTEXT_COMPACTION_TOKEN_THRESHOLD': 'chat.context_compaction.token_threshold',
     'CONTEXT_COMPACTION_TOKEN_CAP': 'chat.context_compaction.token_cap',
+    'CONTEXT_COMPACTION_RETENTION_PERCENTAGE': 'chat.context_compaction.retention_percentage',
     'CONTEXT_COMPACTION_PROMPT_TEMPLATE': 'chat.context_compaction.prompt_template',
 }
 
@@ -76,6 +77,7 @@ class ChatConfigForm(BaseModel):
     ENABLE_CONTEXT_COMPACTION: bool
     CONTEXT_COMPACTION_TOKEN_THRESHOLD: int
     CONTEXT_COMPACTION_TOKEN_CAP: int | None = None
+    CONTEXT_COMPACTION_RETENTION_PERCENTAGE: int = 40
     CONTEXT_COMPACTION_PROMPT_TEMPLATE: str
 
 
@@ -125,6 +127,8 @@ async def get_chat_config_values() -> dict:
     config = {field: values[storage_key] for field, storage_key in CHAT_CONFIG_KEYS.items() if storage_key in values}
     if config.get('CONTEXT_COMPACTION_TOKEN_CAP') is None:
         config['CONTEXT_COMPACTION_TOKEN_CAP'] = config.get('CONTEXT_COMPACTION_TOKEN_THRESHOLD', 80000)
+    if config.get('CONTEXT_COMPACTION_RETENTION_PERCENTAGE') is None:
+        config['CONTEXT_COMPACTION_RETENTION_PERCENTAGE'] = 40
     return config
 
 
@@ -738,12 +742,14 @@ async def get_chat_config(user=Depends(get_admin_user)):
 async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user)):
     threshold = max(1, int(form_data.CONTEXT_COMPACTION_TOKEN_THRESHOLD))
     token_cap = max(1, int(form_data.CONTEXT_COMPACTION_TOKEN_CAP or threshold))
+    retention_percentage = min(50, max(10, int(form_data.CONTEXT_COMPACTION_RETENTION_PERCENTAGE)))
     await Config.upsert(
         chat_config_updates(
             {
                 **form_data.model_dump(),
                 'CONTEXT_COMPACTION_TOKEN_THRESHOLD': threshold,
                 'CONTEXT_COMPACTION_TOKEN_CAP': token_cap,
+                'CONTEXT_COMPACTION_RETENTION_PERCENTAGE': retention_percentage,
             }
         )
     )
@@ -1203,30 +1209,31 @@ async def compact_chat_by_id(
 async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
 
-    if not chat:
-        # Check if user has access via access grants (shared_chat grants)
-        if user.role == 'admin':
-            candidate = await Chats.get_chat_by_id(id, db=db)
-            if ENABLE_ADMIN_CHAT_ACCESS or (candidate and is_internal_chat(candidate.meta)):
-                chat = candidate
-        else:
-            has_grant = await AccessGrants.has_access(
-                user_id=user.id,
-                resource_type='shared_chat',
-                resource_id=id,
-                permission='read',
-                db=db,
-            )
-            if has_grant:
-                chat = await Chats.get_chat_by_id(id, db=db)
+    if not chat and user.role == 'admin':
+        candidate = await Chats.get_chat_by_id(id, db=db)
+        if ENABLE_ADMIN_CHAT_ACCESS or (candidate and is_internal_chat(candidate.meta)):
+            chat = candidate
 
-            # Check folder-based access (shared folders)
-            if not chat:
-                candidate = await Chats.get_chat_by_id(id, db=db)
-                if candidate and candidate.folder_id:
-                    folder = await Folders.get_folder_by_id(candidate.folder_id, db=db)
-                    if folder and await has_folder_access(user.id, folder, 'read', db):
-                        chat = candidate
+    # Access explicitly granted to this user applies to admins too, so an admin
+    # does not lose a chat shared with them when ENABLE_ADMIN_CHAT_ACCESS is off.
+    if not chat:
+        has_grant = await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='shared_chat',
+            resource_id=id,
+            permission='read',
+            db=db,
+        )
+        if has_grant:
+            chat = await Chats.get_chat_by_id(id, db=db)
+
+        # Check folder-based access (shared folders)
+        if not chat:
+            candidate = await Chats.get_chat_by_id(id, db=db)
+            if candidate and candidate.folder_id:
+                folder = await Folders.get_folder_by_id(candidate.folder_id, db=db)
+                if folder and await has_folder_access(user.id, folder, 'read', db):
+                    chat = candidate
 
     if chat:
         data = ChatResponse(**chat.model_dump()).model_dump()
@@ -1259,6 +1266,8 @@ async def update_chat_by_id(
             )
 
         chat = await Chats.update_chat_by_id(id, updated_chat, db=db)
+        if form_data.variables is not None:
+            chat = await Chats.update_chat_variables_by_id(id, form_data.variables, db=db) or chat
 
         # Reconcile chat_message rows without inferring deletes from missing IDs.
         # Message deletion has its own endpoint below.
@@ -1642,6 +1651,9 @@ async def fork_chat_by_id(
         internal_meta=meta,
     )
 
+    if fork and chat.variables:
+        fork = await Chats.update_chat_variables_by_id(fork.id, chat.variables, db=db, touch=False) or fork
+
     if not fork:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.DEFAULT())
 
@@ -1684,6 +1696,7 @@ async def clone_chat_by_id(
                     **{
                         'chat': updated_chat,
                         'meta': chat.meta,
+                        'variables': chat.variables or {},
                         'pinned': chat.pinned,
                         'folder_id': chat.folder_id,
                     }
@@ -1767,6 +1780,7 @@ async def clone_shared_chat_by_id(
                 **{
                     'chat': updated_chat,
                     'meta': chat.meta,
+                    'variables': chat.variables or {},
                     'pinned': chat.pinned,
                     'folder_id': chat.folder_id,
                 }

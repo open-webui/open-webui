@@ -132,13 +132,26 @@ class AuditLoggingMiddleware:
     ) -> None:
         self.app = app
         self.audit_logger = AuditLogger(logger)
-        self.excluded_paths = excluded_paths or []
-        self.included_paths = included_paths or []
+
+        def normalize_paths(paths: Optional[list[str]]) -> list[str]:
+            return [path for path in (path.strip().lstrip('/') for path in paths or []) if path]
+
+        self.excluded_paths = normalize_paths(excluded_paths)
+        self.included_paths = normalize_paths(included_paths)
         self.max_body_size = max_body_size
         self.audited_methods = set(self.DEFAULT_AUDITED_METHODS)
         if audit_get_requests:
             self.audited_methods.add('GET')
         self.audit_level = audit_level
+
+        # Paths are fixed for the process lifetime; compile once instead of
+        # per request. None means the corresponding mode has nothing to match.
+        self._included_pattern = (
+            re.compile(r'^/api(?:/v1)?/(' + '|'.join(self.included_paths) + r')\b') if self.included_paths else None
+        )
+        self._excluded_pattern = (
+            re.compile(r'^/api(?:/v1)?/(' + '|'.join(self.excluded_paths) + r')\b') if self.excluded_paths else None
+        )
 
         if self.included_paths and self.excluded_paths:
             logger.warning(
@@ -196,6 +209,13 @@ class AuditLoggingMiddleware:
             await self._log_audit_entry(request, context)
 
     async def _get_authenticated_user(self, request: Request) -> Optional[UserModel]:
+        # get_current_user stashes the resolved user on the scope-backed state;
+        # reuse it instead of running the full auth pipeline (JWT decode, Redis
+        # revocation checks, DB fetch, last-active write) a second time.
+        user = getattr(request.state, 'user', None)
+        if isinstance(user, UserModel):
+            return user
+
         auth_header = request.headers.get('Authorization')
 
         try:
@@ -206,6 +226,12 @@ class AuditLoggingMiddleware:
 
         return None
 
+    ALWAYS_LOG_ENDPOINTS = (
+        '/api/v1/auths/signin',
+        '/api/v1/auths/signout',
+        '/api/v1/auths/signup',
+    )
+
     def _should_skip_auditing(self, request: Request) -> bool:
         if AUDIT_LOG_LEVEL == 'NONE':
             return True
@@ -213,13 +239,8 @@ class AuditLoggingMiddleware:
         if request.method not in self.audited_methods:
             return True
 
-        ALWAYS_LOG_ENDPOINTS = {
-            '/api/v1/auths/signin',
-            '/api/v1/auths/signout',
-            '/api/v1/auths/signup',
-        }
         path = request.url.path.lower()
-        for endpoint in ALWAYS_LOG_ENDPOINTS:
+        for endpoint in self.ALWAYS_LOG_ENDPOINTS:
             if path.startswith(endpoint):
                 return False  # Do NOT skip logging for auth endpoints
 
@@ -229,15 +250,11 @@ class AuditLoggingMiddleware:
             return True
 
         # Whitelist mode: only log paths that match included_paths
-        if self.included_paths:
-            pattern = re.compile(r'^/api(?:/v1)?/(' + '|'.join(self.included_paths) + r')\b')
-            if not pattern.match(request.url.path):
-                return True  # Skip: path not in whitelist
-            return False  # Do NOT skip: path is in whitelist
+        if self._included_pattern:
+            return not self._included_pattern.match(request.url.path)
 
         # Blacklist mode: skip paths that match excluded_paths
-        pattern = re.compile(r'^/api(?:/v1)?/(' + '|'.join(self.excluded_paths) + r')\b')
-        if pattern.match(request.url.path):
+        if self._excluded_pattern and self._excluded_pattern.match(request.url.path):
             return True
 
         return False
