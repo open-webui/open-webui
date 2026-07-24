@@ -556,25 +556,17 @@ async def delete_folder_by_id(
     folder = await Folders.get_folder_by_id_and_user_id(id, user.id, db=db)
 
     if not folder:
-        # Check if it's a shared subfolder with write access
+        # Deletion cascades into the owner's data, so only the owner or an admin may delete
         folder = await Folders.get_folder_by_id(id, db=db)
-        if folder and folder.parent_id:
-            if user.role != 'admin' and not await _has_folder_access(user.id, folder, 'write', db):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-                )
-        elif folder and not folder.parent_id:
-            # Root shared folders can only be deleted by owner/admin
-            if user.role != 'admin':
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-                )
-        else:
+        if not folder:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+        if user.role != 'admin':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
     folder_owner_id = folder.user_id
