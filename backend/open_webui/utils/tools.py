@@ -1266,15 +1266,19 @@ async def get_terminal_tools(
             headers.update(bearer_auth_header(oauth_token.get('access_token', '')))
     # auth_type == "none": no Authorization header
 
-    system_prompt = server_data.get('system_prompt')
-
     # Use chat_id as the per-session key for cwd tracking
     metadata = extra_params.get('__metadata__', {})
     session_id = metadata.get('chat_id')
     if session_id:
         headers['X-Session-Id'] = session_id
 
-    terminal_cwd = await get_terminal_cwd(server_data['url'], headers, cookies)
+    # Fetch live with the user's credentials so prompt changes apply without a restart
+    terminal_cwd, system_prompt = await asyncio.gather(
+        get_terminal_cwd(server_data['url'], headers, cookies),
+        get_terminal_system_prompt(server_data['url'], headers, cookies),
+    )
+    if not system_prompt:
+        system_prompt = server_data.get('system_prompt')
 
     tools_dict = {}
     for spec in specs:
