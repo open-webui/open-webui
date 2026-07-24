@@ -4406,13 +4406,26 @@ async def streaming_chat_response_handler(response, ctx):
                                         or delta.get('thinking')
                                     )
                                     reasoning_details = delta.get('reasoning_details')
-                                    if reasoning_content or reasoning_details:
+                                    # Skip orphan details (e.g. a lone signature) with nothing to render and no block to merge into.
+                                    if reasoning_content or (
+                                        reasoning_details
+                                        and (
+                                            any(item.get('type') == 'reasoning' for item in output)
+                                            or any(
+                                                isinstance(d, dict)
+                                                and (d.get('text') or d.get('summary') or d.get('data'))
+                                                for d in reasoning_details
+                                            )
+                                        )
+                                    ):
+                                        # Merge late reasoning into the pre-message block so the answer isn't split.
+                                        answer_started = any(item.get('type') == 'message' for item in output)
                                         reasoning_item = (
                                             next(
                                                 (item for item in reversed(output) if item.get('type') == 'reasoning'),
                                                 None,
                                             )
-                                            if reasoning_details and not reasoning_content
+                                            if (reasoning_details and not reasoning_content) or answer_started
                                             else None
                                         )
 
@@ -4429,7 +4442,13 @@ async def streaming_chat_response_handler(response, ctx):
                                                     'summary': None,
                                                     'started_at': time.time(),
                                                 }
-                                                output.append(reasoning_item)
+                                                if answer_started:
+                                                    message_index = next(
+                                                        i for i, x in enumerate(output) if x.get('type') == 'message'
+                                                    )
+                                                    output.insert(message_index, reasoning_item)
+                                                else:
+                                                    output.append(reasoning_item)
                                             else:
                                                 reasoning_item = output[-1]
 
