@@ -96,8 +96,25 @@ export const sanitizeResponseContent = (content: string) => {
 
 export const processResponseContent = (content: string) => {
 	content = processChineseContent(content);
+	content = normalizeDetailsBlock(content);
 	return content.trim();
 };
+
+// Ensure a `<details>` block (optionally with attributes) is always preceded by a
+// blank line so the markdown parser treats it as a standalone HTML block.
+//
+// Without this, when a paragraph is *directly* followed by a `<details>` block and
+// that block's content contains a bare `---` or `===` line, marked's Setext-heading
+// rule fires first and swallows both the preceding paragraph text and the literal
+// `<details>`/`<summary>` source into one (escaped) heading, destroying the
+// collapsible widget. See open-webui/open-webui#27001.
+//
+// A blank line makes the parser commit to raw-HTML-block mode for `<details>` before
+// the Setext rule can misinterpret the content, matching the behavior users already
+// get when they separate the prose from the block with an empty line.
+function normalizeDetailsBlock(content: string): string {
+	return content.replace(/^([^\n]+)\n(<details(?:\s[^>]*)?>)/gim, '$1\n\n$2');
+}
 
 function isChineseChar(char: string): boolean {
 	return /\p{Script=Han}/u.test(char);
