@@ -374,14 +374,14 @@
 	let loadedChatIdProp = '';
 	let currentDraftKey = '';
 
-	const mergeChatVariableSchemas = (modelIds = []) => {
+	const mergeChatVariableSchemas = (modelIds = [], availableModels = []) => {
 		const byKey: Record<string, any> = {};
 		const conflicts: any[] = [];
 
 		for (const modelId of modelIds.filter(Boolean)) {
 			const fields =
-				$models.find((model) => model.id === modelId)?.info?.meta?.chat_variables_schema?.fields ??
-				[];
+				availableModels.find((model) => model.id === modelId)?.info?.meta?.chat_variables_schema
+					?.fields ?? [];
 			for (const rawField of fields) {
 				const field = {
 					...rawField,
@@ -425,20 +425,20 @@
 
 	const hasValue = (value) => value !== undefined && value !== null && value !== '';
 
-	const getChatVariablesForm = () => {
-		const { fields, conflicts } = mergeChatVariableSchemas(selectedModelIds);
+	const getChatVariablesForm = (modelIds = [], values = {}, availableModels = []) => {
+		const { fields, conflicts } = mergeChatVariableSchemas(modelIds, availableModels);
 		const empty =
 			fields.length > 0 &&
-			fields.every((field) => !hasValue(chatVariables?.[field.key]) && !hasValue(field.default));
+			fields.every((field) => !hasValue(values?.[field.key]) && !hasValue(field.default));
 		const missing = fields.some(
-			(field) => field.required && !hasValue(chatVariables?.[field.key]) && !hasValue(field.default)
+			(field) => field.required && !hasValue(values?.[field.key]) && !hasValue(field.default)
 		);
 		const variables = fields.reduce(
 			(acc, field) => {
 				const { key, ...inputField } = field;
 				acc[key] = {
 					...inputField,
-					default: hasValue(chatVariables?.[key]) ? chatVariables[key] : inputField.default
+					default: hasValue(values?.[key]) ? values[key] : inputField.default
 				};
 				return acc;
 			},
@@ -462,8 +462,6 @@
 			if (res) chat = res;
 		}
 	};
-
-	$: chatVariablesForm = getChatVariablesForm();
 
 	let oldSelectedModelIds = [''];
 	$: if (!equal(selectedModelIds, oldSelectedModelIds)) {
@@ -2650,12 +2648,13 @@
 			toast.error($i18n.t('Model not selected'));
 			return;
 		}
-		if (chatVariablesForm.conflicts.length > 0) {
+		const form = getChatVariablesForm(selectedModelIds, chatVariables, $models);
+		if (form.conflicts.length > 0) {
 			showChatVariablesModal = true;
 			toast.error($i18n.t('Chat Variables have conflicting model definitions'));
 			return;
 		}
-		if (chatVariablesForm.missing || chatVariablesForm.empty) {
+		if (form.missing || form.empty) {
 			showChatVariablesModal = true;
 			return;
 		}
@@ -3626,7 +3625,7 @@
 
 <audio id="audioElement" style="display: none;"></audio>
 
-{#if chatVariablesForm.conflicts.length > 0}
+{#if getChatVariablesForm(selectedModelIds, chatVariables, $models).conflicts.length > 0}
 	<Modal bind:show={showChatVariablesModal} size="md">
 		<div>
 			<div class="flex justify-between px-4 pt-3 pb-1 dark:text-gray-300">
@@ -3646,7 +3645,7 @@
 					{$i18n.t('Selected models define incompatible Chat Variables.')}
 				</div>
 				<div class="flex flex-col gap-1">
-					{#each chatVariablesForm.conflicts as conflict}
+					{#each getChatVariablesForm(selectedModelIds, chatVariables, $models).conflicts as conflict}
 						<div class="rounded-lg border border-red-200 px-3 py-2 text-xs dark:border-red-900/60">
 							<div class="font-medium text-red-600 dark:text-red-400">{conflict.key}</div>
 							<div class="mt-1 text-gray-500 dark:text-gray-400">
@@ -3662,7 +3661,7 @@
 	<InputVariablesModal
 		bind:show={showChatVariablesModal}
 		title={$i18n.t('Chat Variables')}
-		variables={chatVariablesForm.variables}
+		variables={getChatVariablesForm(selectedModelIds, chatVariables, $models).variables}
 		onSave={saveChatVariables}
 	/>
 {/if}
