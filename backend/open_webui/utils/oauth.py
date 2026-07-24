@@ -188,13 +188,10 @@ async def get_oauth_runtime_config() -> SimpleNamespace:
 # Matches the value recommended by Authlib's compliance_fix documentation.
 DEFAULT_TOKEN_EXPIRY_SECONDS = 3600
 
-# Fallback for tokens without expiry metadata AND without a refresh_token
-# (e.g. Slack xoxp user tokens): long-lived until revoked, cannot be refreshed.
+# Local expiry for tokens without expiry metadata and without a refresh_token (e.g. Slack user tokens)
 NON_REFRESHABLE_TOKEN_EXPIRY_SECONDS = 365 * 24 * 3600
 
-# Marker key stamped on tokens that carry no expiry metadata and no
-# refresh_token. It flags the token as long-lived so the refresh path can
-# renew the local expiry in place instead of deleting the session (#26141).
+# Flags such tokens so the refresh path renews the local expiry instead of deleting the session
 NON_REFRESHABLE_TOKEN_MARKER = 'non_refreshable'
 
 
@@ -232,9 +229,7 @@ def _normalize_token_expiry(token: dict) -> dict:
         token['expires_at'] = int(datetime.now().timestamp() + token['expires_in'])
         return token
 
-    # Neither field present — conservative fallback, but only if the token
-    # can actually be refreshed; otherwise a short fabricated expiry would
-    # guarantee session deletion once the impossible refresh fails (#26141)
+    # Fabricating a short expiry for a non-refreshable token would guarantee session deletion (#26141)
     if token.get('refresh_token'):
         log.warning(
             "OAuth token response missing both 'expires_in' and 'expires_at'; "
@@ -251,18 +246,12 @@ def _normalize_token_expiry(token: dict) -> dict:
 
 
 def _renew_non_refreshable_token(token_data: dict, session_id: str):
-    """Renew the local expiry of a long-lived, non-refreshable token.
-
-    Providers such as Slack issue user tokens that never expire and never
-    carry a ``refresh_token`` (see ``_normalize_token_expiry`` case 4). When
-    such a token approaches its fabricated expiry it reaches the refresh path,
-    which can only fail — deleting the session and forcing a needless
-    re-authentication (#26141). Instead of failing, re-stamp the local expiry
-    in place so the session keeps renewing itself.
-
-    Returns the (mutated) token dict when it was flagged long-lived, else
-    ``None`` so the caller falls through to its normal no-refresh-token
-    handling (tokens with a real provider-declared expiry are left to expire).
+    """
+    Re-stamp the local expiry of a token flagged long-lived by
+    ``_normalize_token_expiry``, since refreshing it can only fail and would
+    delete the session (#26141). Returns the mutated token dict, or ``None``
+    when the token is not flagged so the caller falls through to its normal
+    no-refresh-token handling.
     """
     if not token_data.get(NON_REFRESHABLE_TOKEN_MARKER):
         return None
