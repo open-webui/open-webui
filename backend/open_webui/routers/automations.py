@@ -19,10 +19,11 @@ from open_webui.models.config import Config
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.automations import (
+    AutomationLimitError,
+    enforce_automation_limits,
     execute_automation,
     next_n_runs_ns,
     next_run_ns,
-    rrule_interval_seconds,
     validate_rrule,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -70,31 +71,19 @@ def check_automation_access(automation, user):
 
 async def check_automation_limits(request, user, rrule_str: str, db, is_create: bool = False):
     """Enforce global automation limits. Admins bypass all checks."""
-    if user.role == 'admin':
-        return
-
-    # Max count (create only)
-    if is_create:
-        max_count = await Config.get('automations.max_count')
-        if max_count:
-            max_count = int(max_count)
-            if max_count > 0 and await Automations.count_by_user(user.id, db=db) >= max_count:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=ERROR_MESSAGES.AUTOMATION_LIMIT_EXCEEDED(max_count),
-                )
-
-    # Min interval (create + update)
-    min_interval = await Config.get('automations.min_interval')
-    if min_interval:
-        min_interval = int(min_interval)
-        if min_interval > 0:
-            interval = rrule_interval_seconds(rrule_str)
-            if interval is not None and interval < min_interval:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.AUTOMATION_TOO_FREQUENT(min_interval),
-                )
+    try:
+        await enforce_automation_limits(
+            user_role=user.role,
+            user_id=user.id,
+            rrule_str=rrule_str,
+            is_create=is_create,
+            db=db,
+        )
+    except AutomationLimitError as e:
+        raise HTTPException(
+            status_code=e.status_code,
+            detail=e.message,
+        )
 
 
 async def enrich_automation(automation: AutomationModel, db: AsyncSession, tz: str = None) -> AutomationResponse:
