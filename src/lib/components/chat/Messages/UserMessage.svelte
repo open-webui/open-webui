@@ -39,6 +39,7 @@
 
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
+	export let allowDelete = true;
 	export let compactPreview = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
@@ -578,7 +579,7 @@
 					{/if}
 
 					{#if $_user?.role === 'admin' || ($_user?.permissions?.chat?.delete_message ?? false)}
-						{#if !compactPreview && !readOnly && (!isFirstMessage || siblings.length > 1)}
+						{#if !compactPreview && !readOnly && allowDelete && (!isFirstMessage || siblings.length > 1)}
 							<Tooltip content={$i18n.t('Delete')} placement="bottom">
 								<button
 									class="{($settings?.highContrastMode ?? false)

@@ -7,18 +7,6 @@
 }
 
 @font-face {
-	font-family: 'Mona Sans';
-	src: url('/assets/fonts/Mona-Sans.woff2');
-	font-display: swap;
-}
-
-@font-face {
-	font-family: 'InstrumentSerif';
-	src: url('/assets/fonts/InstrumentSerif-Regular.ttf');
-	font-display: swap;
-}
-
-@font-face {
 	font-family: 'Vazirmatn';
 	src: url('/assets/fonts/Vazirmatn-Variable.ttf');
 	font-display: swap;
@@ -62,10 +50,6 @@ code {
 .editor-selection {
 	background: rgba(180, 213, 255, 0.5);
 	border-radius: 2px;
-}
-
-.font-secondary {
-	font-family: 'InstrumentSerif', sans-serif;
 }
 
 .app-muted {

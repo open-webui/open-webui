@@ -75,7 +75,7 @@
 
 		<div slot="content">
 			<div
-				class="z-[10000] flex w-64 flex-col rounded-xl border border-gray-200 bg-white p-0.5 text-black shadow-lg dark:border-gray-800 dark:bg-gray-850 dark:text-white"
+				class="z-[10000] flex w-96 max-w-[calc(100vw-2rem)] flex-col rounded-xl border border-gray-200 bg-white p-0.5 text-black shadow-lg dark:border-gray-800 dark:bg-gray-850 dark:text-white"
 			>
 				<div class="flex w-full space-x-1.5 px-1.5 pb-0.5">
 					<div class="flex flex-1">

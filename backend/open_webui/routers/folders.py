@@ -76,7 +76,6 @@ async def get_folders(
     await check_folders_permission(request, user, db=db)
 
     folders = await Folders.get_folders_by_user_id(user.id, db=db)
-    # The full folder set is already loaded; parents can be validated against it
     folder_ids = {folder.id for folder in folders}
 
     # Verify folder data integrity
