@@ -2198,10 +2198,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data['model'] = selected_model_id
             metadata['selected_model_id'] = selected_model_id
 
-    # Capture the model's default system prompt before apply_params_to_form_data
-    # pops 'params'. The provider layer applies it fresh from model_info.params,
-    # but the native tool-call loop runs with bypass_system_prompt=True and relies
-    # on metadata['system_prompt'] (built below) to carry it forward instead.
+    # Captured before apply_params_to_form_data pops 'params'; feeds metadata['system_prompt'] below
     model_system_prompt = (form_data.get('params') or {}).get('system')
 
     form_data = apply_params_to_form_data(form_data, model)
