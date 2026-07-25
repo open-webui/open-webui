@@ -22,6 +22,7 @@
 	import Badge from '../common/Badge.svelte';
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
+	import InfoCircle from '../icons/InfoCircle.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import XMark from '../icons/XMark.svelte';
@@ -123,6 +124,15 @@
 			init();
 		}
 	};
+
+	// Escape + preserve line breaks for the AI-overview tooltip (DOMPurify also
+	// sanitizes the rendered content).
+	const overviewHtml = (text: string) =>
+		(text ?? '')
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/\n/g, '<br/>');
 
 	const exportHandler = async (item) => {
 		try {
@@ -267,18 +277,32 @@
 										class=" grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-4 px-1.5 h-8"
 									>
 										<!-- Name -->
-										<Tooltip content={item?.description ?? item.name} className="min-w-0">
-											<div class=" flex items-center gap-2 min-w-0">
-												<div
-													class=" text-sm font-medium line-clamp-1 capitalize text-green-700 dark:text-green-200"
-												>
-													{item.name}
+										<div class=" flex items-center gap-1.5 min-w-0">
+											<Tooltip content={item?.description ?? item.name} className="min-w-0">
+												<div class=" flex items-center gap-2 min-w-0">
+													<div
+														class=" text-sm font-medium line-clamp-1 capitalize text-green-700 dark:text-green-200"
+													>
+														{item.name}
+													</div>
+													{#if !item?.write_access}
+														<Badge type="muted" content={$i18n.t('Read Only')} />
+													{/if}
 												</div>
-												{#if !item?.write_access}
-													<Badge type="muted" content={$i18n.t('Read Only')} />
-												{/if}
-											</div>
-										</Tooltip>
+											</Tooltip>
+
+											{#if item?.ai_overwiew}
+												<Tooltip
+													content={overviewHtml(item.ai_overwiew)}
+													placement="top"
+													className="flex shrink-0"
+												>
+													<InfoCircle
+														className="size-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+													/>
+												</Tooltip>
+											{/if}
+										</div>
 
 										<!-- Registration number -->
 										<div class=" text-xs text-gray-500 line-clamp-1">
