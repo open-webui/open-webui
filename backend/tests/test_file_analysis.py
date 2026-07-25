@@ -129,14 +129,16 @@ async def test_analyze_file_empty_content_short_circuits(async_client, app, test
 # ── gate inside process_file (end-to-end via the worker) ───────────────────
 
 
-async def test_process_file_skips_ineligible(async_client, app, test_user, analysis_enabled, monkeypatch):
+async def test_process_file_skips_non_embeddable_type(async_client, app, test_user, analysis_enabled, monkeypatch):
+    """Embedding eligibility is an extension allowlist: a code file is not embedded,
+    but its AI context/description is still generated and kept."""
     monkeypatch.setattr(
         'open_webui.services.file_analysis.generate_chat_completion',
-        _fake_completion('{"eligible": false, "description": "junk"}'),
+        _fake_completion('{"eligible": true, "description": "Python script."}'),
     )
     resp = await async_client.post(
         '/api/v1/files/',
-        files={'file': ('junk.txt', b'zzz garbage', 'text/plain')},
+        files={'file': ('script.py', b'print("hello world")', 'text/x-python')},
     )
     file_id = resp.json()['id']
     job = get_file_processing_queue().get_nowait()
@@ -145,7 +147,9 @@ async def test_process_file_skips_ineligible(async_client, app, test_user, analy
 
     file = await Files.get_file_by_id(file_id)
     assert file.data['status'] == 'skipped'
-    assert file.data.get('skipped_reason') == 'ineligible'
+    assert file.data.get('skipped_reason') == 'not_embeddable_type'
+    # Context is kept even though it wasn't embedded.
+    assert file.data.get('description') == 'Python script.'
     # Never embedded — no collection recorded.
     assert (file.meta or {}).get('collection_name') is None
 

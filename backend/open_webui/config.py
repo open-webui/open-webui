@@ -1334,6 +1334,18 @@ RAG_EMBEDDING_QUERY_PREFIX = os.getenv('RAG_EMBEDDING_QUERY_PREFIX', None)
 
 RAG_EMBEDDING_CONTENT_PREFIX = os.getenv('RAG_EMBEDDING_CONTENT_PREFIX', None)
 
+# File extensions eligible for embedding into a knowledge base. Only document
+# types add value for chat retrieval; code/binaries are skipped (their AI context
+# description is still generated). Empty string disables the allowlist (embed all).
+RAG_EMBEDDABLE_EXTENSIONS = [
+    ext.strip().lower().lstrip('.')
+    for ext in os.getenv(
+        'RAG_EMBEDDABLE_EXTENSIONS',
+        'pdf,doc,docx,xls,xlsx,ppt,pptx,txt,md,markdown,csv,rtf,odt',
+    ).split(',')
+    if ext.strip()
+]
+
 RAG_EMBEDDING_PREFIX_FIELD_NAME = os.getenv('RAG_EMBEDDING_PREFIX_FIELD_NAME', None)
 
 RAG_RERANKING_ENGINE = ConfigVar(
