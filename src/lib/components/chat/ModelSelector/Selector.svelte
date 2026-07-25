@@ -197,6 +197,8 @@
 							return item.model?.connection_type === 'external';
 						} else if (selectedConnectionType === 'direct') {
 							return item.model?.direct;
+						} else if (selectedConnectionType === 'workspace') {
+							return item.model?.preset === true;
 						}
 					})
 			: items
@@ -217,6 +219,8 @@
 							return item.model?.connection_type === 'external';
 						} else if (selectedConnectionType === 'direct') {
 							return item.model?.direct;
+						} else if (selectedConnectionType === 'workspace') {
+							return item.model?.preset === true;
 						}
 					})
 	).filter((item) => includeHidden || !(item.model?.info?.meta?.hidden ?? false));
@@ -671,6 +675,22 @@
 											}}
 										>
 											{$i18n.t('Direct')}
+										</button>
+									{/if}
+
+									{#if items.find((item) => item.model?.preset)}
+										<button
+											class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType ===
+											'workspace'
+												? ''
+												: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+											aria-pressed={selectedConnectionType === 'workspace'}
+											on:click={() => {
+												selectedTag = '';
+												selectedConnectionType = 'workspace';
+											}}
+										>
+											{$i18n.t('Workspace')}
 										</button>
 									{/if}
 
