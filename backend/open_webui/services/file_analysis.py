@@ -65,11 +65,16 @@ File descriptions:
 {descriptions}
 """
 
-_KNOWLEDGE_SUMMARY_PROMPT = """You describe an entire knowledge base.
+_KNOWLEDGE_SUMMARY_PROMPT = """You write a detailed overview of an entire knowledge base.
 
-Given the summaries of its top-level folders and files below, respond with ONLY
-a short paragraph (2-4 sentences, max 80 words), written in Ukrainian,
-summarizing what this knowledge base is about as a whole.
+Given the summaries of its top-level folders and files below, respond with ONLY a
+detailed overview written in Ukrainian (2-3 short paragraphs, up to ~180 words)
+that covers:
+- what this knowledge base is about overall;
+- the main topics and the kinds of documents it contains;
+- how it is organized (its main folders and what they hold).
+
+Base it strictly on the summaries below — do not invent content.
 
 Contents:
 {descriptions}

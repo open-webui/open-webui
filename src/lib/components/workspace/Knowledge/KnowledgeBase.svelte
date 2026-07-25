@@ -1362,7 +1362,9 @@
 
 					{#if knowledge?.ai_overwiew || knowledge?.write_access}
 						<div class="flex items-start gap-2 mt-1 px-1.5">
-							<div class="flex-1 min-w-0 text-xs text-gray-500 line-clamp-3">
+							<div
+								class="flex-1 min-w-0 text-xs text-gray-500 whitespace-pre-line max-h-32 overflow-y-auto scrollbar-hidden"
+							>
 								{knowledge?.ai_overwiew || $i18n.t('No overview yet.')}
 							</div>
 							{#if knowledge?.write_access}
