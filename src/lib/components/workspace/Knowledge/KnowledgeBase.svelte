@@ -46,7 +46,7 @@
 	} from '$lib/apis/knowledge';
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
-	import { blobToFile, isYoutubeUrl, copyToClipboard } from '$lib/utils';
+	import { blobToFile, isYoutubeUrl, copyToClipboard, formatFileSize } from '$lib/utils';
 	import { computeFileHash } from '$lib/utils/hash';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -101,6 +101,7 @@
 		access_grants?: any[];
 		write_access?: boolean;
 		ai_overwiew?: string;
+		meta?: { stats?: { file_count?: number; directory_count?: number; total_size?: number } } | null;
 	};
 
 	let id = null;
@@ -266,7 +267,11 @@
 		try {
 			const res = await describeKnowledge(localStorage.token, knowledge.id);
 			if (res) {
-				knowledge = { ...knowledge, ai_overwiew: res.ai_overwiew };
+				knowledge = {
+					...knowledge,
+					ai_overwiew: res.ai_overwiew,
+					meta: { ...(knowledge.meta || {}), stats: res.stats }
+				};
 				toast.success($i18n.t('Overview generated.'));
 			}
 		} catch (e) {
@@ -1359,6 +1364,20 @@
 							</div>
 						{/if}
 					</div>
+
+					{#if knowledge?.meta?.stats}
+						<div class="mt-1 px-1.5 text-xs text-gray-500 flex items-center gap-2 flex-wrap">
+							<span>
+								{$i18n.t('{{count}} files', { count: knowledge.meta.stats.file_count ?? 0 })}
+							</span>
+							<span>·</span>
+							<span>
+								{$i18n.t('{{count}} folders', { count: knowledge.meta.stats.directory_count ?? 0 })}
+							</span>
+							<span>·</span>
+							<span>{formatFileSize(knowledge.meta.stats.total_size ?? 0)}</span>
+						</div>
+					{/if}
 
 					{#if knowledge?.ai_overwiew || knowledge?.write_access}
 						<div class="flex items-start gap-2 mt-1 px-1.5">

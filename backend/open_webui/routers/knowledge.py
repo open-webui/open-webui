@@ -1520,7 +1520,12 @@ async def describe_knowledge_base(
 
     overview = await describe_knowledge(request, id, user, db=db)
     await Knowledges.set_ai_overview(id, overview, db=db)
-    return {'ai_overwiew': overview}
+
+    # Refresh KB stats (file/folder counts + total size) alongside the overview.
+    stats = await Knowledges.get_knowledge_stats(id, db=db)
+    await Knowledges.set_knowledge_stats(id, stats, db=db)
+
+    return {'ai_overwiew': overview, 'stats': stats}
 
 
 @router.post('/{id}/dirs/{dir_id}/update', response_model=KnowledgeDirectoryModel)

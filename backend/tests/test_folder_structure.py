@@ -306,3 +306,25 @@ async def test_describe_knowledge_folds_folder_and_root_summaries(_user, monkeyp
     assert result == 'Огляд бази'
     # Rollup included the folder summary and the root file description.
     assert 'docs' in cap['content'] and 'опис кореневого файлу' in cap['content']
+
+
+async def test_get_knowledge_stats(_user):
+    from open_webui.models.files import FileForm, Files
+
+    kb = await _new_kb(_user.id)
+    docs = await Knowledges.ensure_directory_path(kb.id, 'a/b', _user.id)  # 2 folders
+
+    async def _mk(fid, size):
+        f = await Files.insert_new_file(
+            _user.id, FileForm(id=fid, filename=f'{fid}.txt', path=f'/tmp/{fid}', meta={'size': size})
+        )
+        return f.id
+
+    await Knowledges.add_file_to_knowledge_by_id(kb.id, await _mk('s1', 100), _user.id, directory_id=None)
+    await Knowledges.add_file_to_knowledge_by_id(kb.id, await _mk('s2', 250), _user.id, directory_id=docs)
+
+    stats = await Knowledges.get_knowledge_stats(kb.id)
+    assert stats == {'file_count': 2, 'directory_count': 2, 'total_size': 350}
+
+    updated = await Knowledges.set_knowledge_stats(kb.id, stats)
+    assert updated.meta.get('stats') == stats

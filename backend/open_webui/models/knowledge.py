@@ -808,6 +808,54 @@ class KnowledgeTable:
             log.exception(e)
             return None
 
+    async def get_knowledge_stats(self, knowledge_id: str, db: Optional[AsyncSession] = None) -> dict:
+        """Aggregate stats for a KB: number of files, number of folders, and the
+        total size (bytes) occupied by its files."""
+        async with get_async_db_context(db) as db:
+            file_count = (
+                await db.execute(
+                    select(func.count()).select_from(KnowledgeFile).filter(KnowledgeFile.knowledge_id == knowledge_id)
+                )
+            ).scalar() or 0
+            directory_count = (
+                await db.execute(
+                    select(func.count())
+                    .select_from(KnowledgeDirectory)
+                    .filter(KnowledgeDirectory.knowledge_id == knowledge_id)
+                )
+            ).scalar() or 0
+
+            total_size = 0
+            result = await db.execute(
+                select(File.meta)
+                .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
+                .filter(KnowledgeFile.knowledge_id == knowledge_id)
+            )
+            for (meta,) in result.all():
+                size = (meta or {}).get('size') if isinstance(meta, dict) else None
+                if isinstance(size, (int, float)):
+                    total_size += int(size)
+
+            return {'file_count': file_count, 'directory_count': directory_count, 'total_size': total_size}
+
+    async def set_knowledge_stats(
+        self, id: str, stats: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[KnowledgeModel]:
+        """Store computed stats under knowledge.meta['stats'] (merge)."""
+        try:
+            async with get_async_db_context(db) as db:
+                row = (await db.execute(select(Knowledge.meta).filter_by(id=id))).first()
+                meta = dict(row[0]) if row and row[0] else {}
+                meta['stats'] = stats
+                await db.execute(
+                    update(Knowledge).filter_by(id=id).values(meta=meta, updated_at=int(time.time()))
+                )
+                await db.commit()
+                return await self.get_knowledge_by_id(id=id, db=db)
+        except Exception as e:
+            log.exception(e)
+            return None
+
     async def set_ai_overview(
         self, id: str, ai_overview: str, db: Optional[AsyncSession] = None
     ) -> Optional[KnowledgeModel]:
