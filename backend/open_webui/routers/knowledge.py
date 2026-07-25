@@ -21,6 +21,7 @@ from open_webui.models.config import Config
 from open_webui.models.files import FileMetadataResponse, FileModel, FileModelResponse, Files
 from open_webui.models.groups import Groups
 from open_webui.models.knowledge import (
+    KNOWLEDGE_SORTABLE_FIELDS,
     KnowledgeDirectoryForm,
     KnowledgeDirectoryModel,
     KnowledgeFileListResponse,
@@ -181,6 +182,8 @@ async def search_knowledge_bases(
     view_option: str | None = None,
     source: str | None = None,
     page: int | None = 1,
+    order_by: str | None = None,
+    direction: str | None = None,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -195,6 +198,10 @@ async def search_knowledge_bases(
         filter['view_option'] = view_option
     if source in {'local', 'external'}:
         filter['source'] = source
+    if order_by in KNOWLEDGE_SORTABLE_FIELDS:
+        filter['order_by'] = order_by
+    if direction in {'asc', 'desc'}:
+        filter['direction'] = direction
 
     groups = await Groups.get_groups_by_member_id(user.id, db=db)
     user_group_ids = {group.id for group in groups}
