@@ -2210,7 +2210,17 @@
 												<Tooltip content={$i18n.t('Click to connect')} placement="top">
 													<button
 														on:click|preventDefault={() => {
-															initiateOAuthRedirect(pendingTool);
+															initiateOAuthRedirect(pendingTool, {
+																selectedModels,
+																selectedToolIds,
+																selectedSkillIds,
+																selectedFilterIds,
+																webSearchEnabled,
+																imageGenerationEnabled,
+																codeInterpreterEnabled,
+																prompt,
+																returnTo: window.location.pathname + window.location.search
+															});
 														}}
 														type="button"
 														class="group px-2 py-[5px] flex gap-1.5 items-center text-xs rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden

@@ -399,12 +399,24 @@
 									e.preventDefault();
 
 									const parts = toolId.split(':');
-									initiateOAuthRedirect({
-										id: toolId,
-										serverId: parts.at(-1) ?? toolId,
-										authType:
-											parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null
-									});
+									initiateOAuthRedirect(
+										{
+											id: toolId,
+											serverId: parts.at(-1) ?? toolId,
+											authType:
+												parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null
+										},
+										{
+											selectedModels,
+											selectedToolIds,
+											selectedSkillIds,
+											selectedFilterIds,
+											webSearchEnabled,
+											imageGenerationEnabled,
+											codeInterpreterEnabled,
+											returnTo: window.location.pathname + window.location.search
+										}
+									);
 								} else {
 									tools[toolId].enabled = !tools[toolId].enabled;
 

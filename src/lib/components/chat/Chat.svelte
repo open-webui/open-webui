@@ -97,7 +97,11 @@
 	import { uploadFile } from '$lib/apis/files';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { getFunctions } from '$lib/apis/functions';
-	import { initiateOAuthRedirect } from '$lib/apis/configs';
+	import {
+		initiateOAuthRedirect,
+		isSafeOAuthReturnPath,
+		PENDING_OAUTH_CHAT_STATE_VERSION
+	} from '$lib/apis/configs';
 	import { updateFolderById } from '$lib/apis/folders';
 
 	import Banner from '../common/Banner.svelte';
@@ -704,7 +708,17 @@
 
 		saveSessionSelectedModels();
 		await tick();
-		initiateOAuthRedirect(nextTool);
+		initiateOAuthRedirect(nextTool, {
+			selectedModels: selectedModelIds,
+			selectedToolIds,
+			selectedSkillIds,
+			selectedFilterIds,
+			webSearchEnabled,
+			imageGenerationEnabled,
+			codeInterpreterEnabled,
+			prompt,
+			returnTo: window.location.pathname + window.location.search
+		});
 	};
 
 	const resetInput = async () => {
@@ -1866,12 +1880,59 @@
 				.filter((id) => id);
 		}
 
-		// Restore tool selection after OAuth redirect
-		const pendingToolId = sessionStorage.getItem('pendingOAuthToolId');
-		if (pendingToolId) {
+		// Restore chat state captured before an OAuth redirect. The snapshot form
+		// supersedes the legacy single-tool form; the latter is kept as a fallback
+		// for redirects started by an older client still in flight.
+		const oauthSnapshotRaw = sessionStorage.getItem('pendingOAuthChatState');
+		if (oauthSnapshotRaw) {
+			sessionStorage.removeItem('pendingOAuthChatState');
 			sessionStorage.removeItem('pendingOAuthToolId');
-			if (!selectedToolIds.includes(pendingToolId)) {
-				selectedToolIds = [...selectedToolIds, pendingToolId];
+			try {
+				const snap = JSON.parse(oauthSnapshotRaw);
+				if (snap?.version === PENDING_OAUTH_CHAT_STATE_VERSION) {
+					if (Array.isArray(snap.selectedToolIds)) {
+						selectedToolIds = [...snap.selectedToolIds];
+					}
+					if (typeof snap.pendingOAuthToolId === 'string' && snap.pendingOAuthToolId) {
+						if (!selectedToolIds.includes(snap.pendingOAuthToolId)) {
+							selectedToolIds = [...selectedToolIds, snap.pendingOAuthToolId];
+						}
+					}
+					if (Array.isArray(snap.selectedSkillIds)) {
+						selectedSkillIds = [...snap.selectedSkillIds];
+					}
+					if (Array.isArray(snap.selectedFilterIds)) {
+						selectedFilterIds = [...snap.selectedFilterIds];
+					}
+					if (typeof snap.webSearchEnabled === 'boolean') {
+						webSearchEnabled = snap.webSearchEnabled;
+					}
+					if (typeof snap.imageGenerationEnabled === 'boolean') {
+						imageGenerationEnabled = snap.imageGenerationEnabled;
+					}
+					if (typeof snap.codeInterpreterEnabled === 'boolean') {
+						codeInterpreterEnabled = snap.codeInterpreterEnabled;
+					}
+					if (typeof snap.prompt === 'string' && snap.prompt) {
+						messageInput?.setText(snap.prompt);
+					}
+					if (
+						isSafeOAuthReturnPath(snap.returnTo) &&
+						snap.returnTo !== $page.url.pathname + $page.url.search
+					) {
+						goto(snap.returnTo);
+					}
+				}
+			} catch (e) {
+				console.error('Failed to restore OAuth chat snapshot:', e);
+			}
+		} else {
+			const pendingToolId = sessionStorage.getItem('pendingOAuthToolId');
+			if (pendingToolId) {
+				sessionStorage.removeItem('pendingOAuthToolId');
+				if (!selectedToolIds.includes(pendingToolId)) {
+					selectedToolIds = [...selectedToolIds, pendingToolId];
+				}
 			}
 		}
 

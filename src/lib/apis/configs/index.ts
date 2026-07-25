@@ -565,13 +565,69 @@ export const getOAuthClientAuthorizationUrl = (clientId: string, type: null | st
 	return `${WEBUI_BASE_URL}/oauth/clients/${oauthClientId}/authorize`;
 };
 
-export const initiateOAuthRedirect = (tool: {
-	id: string;
-	serverId: string;
-	authType?: string | null;
-}) => {
+// Restore reads this to reject snapshots written by an older, incompatible client.
+export const PENDING_OAUTH_CHAT_STATE_VERSION = 1;
+
+export type PendingOAuthChatState = {
+	selectedModels?: string[];
+	selectedToolIds?: string[];
+	selectedSkillIds?: string[];
+	selectedFilterIds?: string[];
+	webSearchEnabled?: boolean;
+	imageGenerationEnabled?: boolean;
+	codeInterpreterEnabled?: boolean;
+	prompt?: string;
+	returnTo?: string;
+};
+
+// Rejects absolute and protocol-relative ("//host") paths to prevent open redirects.
+export const isSafeOAuthReturnPath = (path: unknown): path is string => {
+	return typeof path === 'string' && path.startsWith('/') && !path.startsWith('//');
+};
+
+export const initiateOAuthRedirect = (
+	tool: {
+		id: string;
+		serverId: string;
+		authType?: string | null;
+	},
+	chatState: PendingOAuthChatState = {}
+) => {
 	sessionStorage.setItem('pendingOAuthToolId', tool.id);
 	sessionStorage.setItem('oauthRedirectInProgressToolId', tool.id);
+
+	// The OAuth callback always redirects to the site root, discarding the active
+	// chat. Snapshot the chat config here so it survives the round-trip.
+	try {
+		// Models ride the existing one-shot sessionStorage.selectedModels channel
+		// (consumed by new-chat init) rather than the snapshot, so restoring them
+		// does not re-trigger the model-change reactive that wipes tool selection.
+		const models = chatState.selectedModels?.filter(
+			(id): id is string => typeof id === 'string' && id !== ''
+		);
+		if (models?.length) {
+			sessionStorage.setItem('selectedModels', JSON.stringify(models));
+		}
+
+		sessionStorage.setItem(
+			'pendingOAuthChatState',
+			JSON.stringify({
+				version: PENDING_OAUTH_CHAT_STATE_VERSION,
+				pendingOAuthToolId: tool.id,
+				selectedToolIds: chatState.selectedToolIds ?? [],
+				selectedSkillIds: chatState.selectedSkillIds ?? [],
+				selectedFilterIds: chatState.selectedFilterIds ?? [],
+				webSearchEnabled: chatState.webSearchEnabled ?? false,
+				imageGenerationEnabled: chatState.imageGenerationEnabled ?? false,
+				codeInterpreterEnabled: chatState.codeInterpreterEnabled ?? false,
+				prompt: chatState.prompt ?? '',
+				returnTo: chatState.returnTo ?? ''
+			})
+		);
+	} catch (err) {
+		console.error('Failed to persist chat state before OAuth redirect:', err);
+	}
+
 	const authUrl = getOAuthClientAuthorizationUrl(tool.serverId, tool.authType ?? 'mcp');
 	window.open(authUrl, '_self', 'noopener');
 };
