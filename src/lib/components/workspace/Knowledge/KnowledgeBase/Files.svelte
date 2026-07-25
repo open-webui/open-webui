@@ -165,7 +165,7 @@
 					</div>
 					{#if file?.data?.description}
 						<!-- AI-generated context summary (analyze_file) -->
-						<div class=" text-xs text-gray-500 line-clamp-1">{file.data.description}</div>
+						<div class=" text-xs text-gray-500 line-clamp-2">{file.data.description}</div>
 					{/if}
 				</div>
 

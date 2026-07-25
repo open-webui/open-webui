@@ -2487,6 +2487,8 @@ async def get_app_config(request: Request):
                 'file': {
                     'max_size': app.state.config.FILE_MAX_SIZE,
                     'max_count': app.state.config.FILE_MAX_COUNT,
+                    # When on S3, the browser uploads directly via a presigned URL.
+                    's3_presigned_upload': os.environ.get('STORAGE_PROVIDER', 'local') == 's3',
                     'image_compression': {
                         'width': app.state.config.FILE_IMAGE_COMPRESSION_WIDTH,
                         'height': app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT,

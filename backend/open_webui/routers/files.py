@@ -229,6 +229,130 @@ async def upload_file_handler(
 
 
 ############################
+# Presigned direct-to-S3 upload
+#
+# Three steps so the browser uploads bytes straight to S3, bypassing the backend:
+#   1. POST /presign      → create a pending File row, return a presigned PUT URL
+#   2. (browser)          → PUT the bytes directly to S3
+#   3. POST /{id}/finalize → backend pulls the object back, hashes it, and enqueues
+#                            the same processing pipeline as a normal upload.
+############################
+
+
+class PresignForm(BaseModel):
+    filename: str
+    metadata: Optional[dict] = None
+
+
+@router.post('/presign')
+async def presign_upload(
+    request: Request,
+    form_data: PresignForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if STORAGE_PROVIDER != 's3' or not hasattr(Storage, 'get_presigned_upload_url'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('Presigned upload is only available with the S3 storage provider'),
+        )
+
+    file_metadata = form_data.metadata or {}
+    unsanitized_filename = form_data.filename
+    name = os.path.basename(unsanitized_filename)
+    relative_path = sanitize_relative_path(
+        file_metadata.get('relative_path')
+        or (unsanitized_filename if '/' in unsanitized_filename or '\\' in unsanitized_filename else None)
+    )
+
+    id = str(uuid.uuid4())
+    stored_filename = f'{id}_{name}'
+    upload_url, file_path = await asyncio.to_thread(Storage.get_presigned_upload_url, stored_filename)
+
+    file_item = await Files.insert_new_file(
+        user.id,
+        FileForm(
+            **{
+                'id': id,
+                'filename': name,
+                'path': file_path,
+                'data': {'status': 'pending_upload'},
+                'meta': {
+                    'name': name,
+                    'content_type': file_metadata.get('content_type'),
+                    'relative_path': relative_path,
+                    'data': file_metadata,
+                },
+            }
+        ),
+        db=db,
+    )
+    if not file_item:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('Error creating file record'),
+        )
+
+    return {'id': id, 'upload_url': upload_url, 'method': 'PUT'}
+
+
+@router.post('/{id}/finalize', response_model=FileModelResponse)
+async def finalize_upload(
+    request: Request,
+    id: str,
+    background_tasks: BackgroundTasks,
+    process: bool = Query(True),
+    process_in_background: bool = Query(True),
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    file_item = await Files.get_file_by_id(id, db=db)
+    if not file_item or file_item.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    # Pull the object the browser uploaded back down and hash it (source of truth).
+    try:
+        local_path = await asyncio.to_thread(Storage.get_file, file_item.path)
+        contents = await asyncio.to_thread(lambda: open(local_path, 'rb').read())
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('Uploaded object not found in storage'),
+        )
+
+    if not contents:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.EMPTY_CONTENT)
+
+    file_metadata = (file_item.meta or {}).get('data') or {}
+    file_hash = file_metadata.get('file_hash') or hashlib.sha256(contents).hexdigest()
+    content_type = (file_item.meta or {}).get('content_type')
+
+    await Files.update_file_hash_by_id(id, file_hash, db=db)
+    await Files.update_file_metadata_by_id(id, {'size': len(contents), 'file_hash': file_hash}, db=db)
+    if process:
+        await Files.update_file_data_by_id(id, {'status': 'pending'}, db=db)
+
+    file_item = await Files.get_file_by_id(id, db=db)
+
+    if process:
+        if background_tasks and process_in_background:
+            await enqueue_file_processing(
+                {
+                    'file_id': id,
+                    'user_id': user.id,
+                    'content_type': content_type,
+                    'file_path': file_item.path,
+                    'file_metadata': file_metadata,
+                }
+            )
+            return {'status': True, **file_item.model_dump()}
+        await process_uploaded_file(request, content_type, file_item.path, file_item, file_metadata, user, db=db)
+
+    return file_item
+
+
+############################
 # List Files
 ############################
 

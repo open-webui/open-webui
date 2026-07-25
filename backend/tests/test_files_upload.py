@@ -266,3 +266,10 @@ async def test_folder_upload_is_idempotent_across_files(async_client, app, test_
     assert len(dirs) == 1
     linked = {f.filename: dir_id for f, dir_id in await Knowledges.get_files_with_directory_ids(kb.id)}
     assert linked['a.txt'] == linked['b.txt'] == dirs[0].id
+
+
+async def test_presign_requires_s3_provider(async_client):
+    """Presigned direct upload is only offered on the S3 provider; the test env
+    uses local storage, so /presign must reject it."""
+    resp = await async_client.post('/api/v1/files/presign', json={'filename': 'a.txt'})
+    assert resp.status_code == 400

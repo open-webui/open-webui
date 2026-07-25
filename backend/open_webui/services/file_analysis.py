@@ -33,11 +33,12 @@ MAX_CONTENT_CHARS = 8000
 _FILE_ANALYSIS_PROMPT = """You are classifying a document for a knowledge base.
 
 Given the file content below, respond with ONLY a JSON object, no prose:
-{{"eligible": <true|false>, "description": "<one sentence, max 20 words>"}}
+{{"eligible": <true|false>, "description": "<summary>"}}
 
 - "eligible": false only if the content is empty, corrupted, binary junk, or has
   no meaningful text worth retrieving; true otherwise.
-- "description": a short summary of what this file is about.
+- "description": {length_hint}, written in Ukrainian, summarizing what this file is
+  about (key topics/purpose).
 
 Content:
 \"\"\"
@@ -45,10 +46,20 @@ Content:
 \"\"\"
 """
 
+
+def _description_length_hint(content_length: int) -> str:
+    """Longer summaries for larger files."""
+    if content_length < 2000:
+        return 'one concise sentence (max 20 words)'
+    if content_length < 6000:
+        return 'two or three sentences (max 50 words)'
+    return 'a short paragraph of 3-4 sentences (max 90 words)'
+
 _FOLDER_SUMMARY_PROMPT = """You describe the contents of a folder in a knowledge base.
 
 Given the short descriptions of the files it contains, respond with ONLY a
-single sentence (max 30 words) summarizing what the folder is about.
+single sentence (max 30 words), written in Ukrainian, summarizing what the folder
+is about.
 
 File descriptions:
 {descriptions}
@@ -117,7 +128,15 @@ async def analyze_file(
 
     payload = {
         'model': model_id,
-        'messages': [{'role': 'user', 'content': _FILE_ANALYSIS_PROMPT.format(content=content[:MAX_CONTENT_CHARS])}],
+        'messages': [
+            {
+                'role': 'user',
+                'content': _FILE_ANALYSIS_PROMPT.format(
+                    content=content[:MAX_CONTENT_CHARS],
+                    length_hint=_description_length_hint(len(content)),
+                ),
+            }
+        ],
         'stream': False,
         'metadata': {'task': 'file_ingestion_analysis'},
     }

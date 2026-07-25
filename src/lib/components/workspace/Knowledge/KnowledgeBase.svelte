@@ -123,6 +123,10 @@
 	let fileItems = null;
 	let fileItemsTotal = null;
 
+	// In-flight (not-yet-linked) files, shown as a separate section at the very
+	// top of the list regardless of the current folder.
+	let pendingItems = [];
+
 	// Directory state
 	let currentDirectoryId: string | null = null;
 	let directoryItems = [];
@@ -214,35 +218,33 @@
 			directoryItems = res.directories ?? [];
 			breadcrumbs = res.breadcrumbs ?? [];
 
-			// Merge in-flight files not yet linked to the knowledge base
+			// In-flight (not-yet-linked) files are kept in a separate list rendered
+			// at the top of the file list, independent of the current folder.
 			try {
-				const pendingFiles = await getPendingKnowledgeFiles(localStorage.token, knowledgeId);
-				if (pendingFiles && pendingFiles.length > 0) {
-					const existingIds = new Set(fileItems.map((f) => f.id));
-					const newPending = pendingFiles
-						.filter((f) => !existingIds.has(f.id))
-						.map((f) => ({
-							...f,
-							name: f.meta?.name ?? f.filename,
-							status: 'uploading'
-						}));
-					if (newPending.length > 0) {
-						fileItems = [...newPending, ...fileItems];
+				const mapPending = (list) =>
+					(list ?? []).map((f) => ({ ...f, name: f.meta?.name ?? f.filename, status: 'uploading' }));
 
-						// Start polling for completion (if not already polling)
-						if (!pendingPollTimer) {
-							pendingPollTimer = setInterval(async () => {
-								try {
-									const still = await getPendingKnowledgeFiles(localStorage.token, knowledgeId);
-									if (!still || still.length === 0) {
-										clearInterval(pendingPollTimer);
-										pendingPollTimer = null;
-										init();
-									}
-								} catch {}
-							}, 5000);
-						}
-					}
+				pendingItems = mapPending(await getPendingKnowledgeFiles(localStorage.token, knowledgeId));
+
+				if (pendingItems.length > 0 && !pendingPollTimer) {
+					pendingPollTimer = setInterval(async () => {
+						try {
+							const prevCount = pendingItems.length;
+							const still = await getPendingKnowledgeFiles(localStorage.token, knowledgeId).catch(
+								() => []
+							);
+							pendingItems = mapPending(still);
+
+							if (pendingItems.length === 0) {
+								clearInterval(pendingPollTimer);
+								pendingPollTimer = null;
+							}
+							// Something finished & got linked -> refresh the current folder's linked files.
+							if (pendingItems.length < prevCount) {
+								getItemsPage();
+							}
+						} catch {}
+					}, 5000);
 				}
 			} catch (e) {
 				console.warn('Failed to fetch pending files:', e);
@@ -391,7 +393,17 @@
 					: {})
 			};
 
-			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
+			const uploadedFile = await uploadFile(
+				localStorage.token,
+				file,
+				metadata,
+				undefined,
+				// Resolve once the upload (presigned PUT + finalize) is accepted; don't
+				// block on the processing/embedding stream. The backend worker drains
+				// the queue sequentially and the pending-poller updates status badges.
+				false,
+				$config?.file?.s3_presigned_upload ?? false
+			).catch((e) => {
 				toast.error(`${e}`);
 				return null;
 			});

@@ -149,7 +149,7 @@
 			</div>
 			{#if !editing}
 				{#if directoryContext}
-					<div class="text-xs text-gray-500 line-clamp-1">{directoryContext}</div>
+					<div class="text-xs text-gray-500 line-clamp-2">{directoryContext}</div>
 				{/if}
 				<div class="text-xs text-gray-400 line-clamp-1">
 					{directoryCount === 1
