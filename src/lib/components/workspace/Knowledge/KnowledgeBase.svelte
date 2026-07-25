@@ -301,6 +301,14 @@
 		}
 	};
 
+	// On add/delete of a file or folder, flag the cached KB stats as outdated
+	// locally (no backend call, no numeric patch). The user refreshes via the
+	// "Update statistics" button; the "(outdated)" hint shows meanwhile.
+	const markStatsOutdatedLocal = () => {
+		if (!knowledge?.meta?.stats) return;
+		knowledge = { ...knowledge, meta: { ...(knowledge.meta || {}), statistics_outdated: true } };
+	};
+
 	const fileSelectHandler = async (file) => {
 		try {
 			selectedFile = file;
@@ -461,6 +469,7 @@
 					toast.warning(uploadedFile.error);
 				} else {
 					toast.success($i18n.t('File added successfully.'));
+					markStatsOutdatedLocal();
 					getItemsPage();
 				}
 			} else {
@@ -899,6 +908,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Directory created.'));
+			markStatsOutdatedLocal();
 			getItemsPage();
 		}
 	};
@@ -939,6 +949,8 @@
 			toast.success($i18n.t('Directory deleted.'));
 			// Remove the deleted folder locally instead of refetching the page.
 			directoryItems = (directoryItems ?? []).filter((d) => d.id !== pendingDeleteDirectoryId);
+			// Subtree size/counts aren't known client-side — flag stats as outdated.
+			markStatsOutdatedLocal();
 		}
 		pendingDeleteDirectoryId = null;
 	};
@@ -988,6 +1000,7 @@
 				// Remove the file locally instead of refetching the page.
 				fileItems = (fileItems ?? []).filter((f) => (f?.id ?? f?.tempId) !== fileId);
 				if (typeof fileItemsTotal === 'number') fileItemsTotal = Math.max(0, fileItemsTotal - 1);
+				markStatsOutdatedLocal();
 			}
 		} catch (e) {
 			console.error('Error in deleteFileHandler:', e);
