@@ -1,6 +1,8 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Backend CI — Python formatting checks via Ruff
+# Backend CI — Ruff formatting checks + the pytest suite
 # Runs on pushes and PRs to main/dev when backend files change
+#
+# See docs/architecture/testing.md for the coverage policy this enforces.
 # ─────────────────────────────────────────────────────────────────────────────
 name: Python CI
 
@@ -38,3 +40,47 @@ jobs:
 
       - name: Verify formatting
         run: ruff format --check . --exclude .venv --exclude venv
+
+  # ── Pytest suite (backend/tests) ─────────────────────────────────────────
+  #
+  # Runs the full suite, including the nothing-mocked test that does real
+  # extraction + local sentence-transformers embeddings into chroma. That test
+  # pulls all-MiniLM-L6-v2 (~90MB) on a cold cache, hence the HF cache step.
+  #
+  # PYTHONPATH=backend makes `open_webui` importable without installing the
+  # project — a `pip install -e .` would invoke hatch_build.py, which
+  # force-includes the frontend `build/` dir that doesn't exist in this job.
+  tests:
+    name: Pytest (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+    env:
+      PYTHONPATH: backend
+      WEBUI_SECRET_KEY: ci-test-secret
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Cache HuggingFace models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-${{ runner.os }}-all-MiniLM-L6-v2
+
+      - name: Install dependencies
+        # pytest-asyncio lives in the pyproject `dev` group, not requirements.txt.
+        run: |
+          pip install -r backend/requirements.txt
+          pip install "pytest-asyncio>=1.0.0"
+
+      - name: Run tests
+        run: pytest -q
