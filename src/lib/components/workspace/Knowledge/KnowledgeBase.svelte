@@ -48,6 +48,7 @@
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
 	import { blobToFile, isYoutubeUrl, copyToClipboard, formatFileSize } from '$lib/utils';
+	import { withStatsOutdated } from '$lib/utils/knowledge';
 	import { computeFileHash } from '$lib/utils/hash';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -305,8 +306,7 @@
 	// locally (no backend call, no numeric patch). The user refreshes via the
 	// "Update statistics" button; the "(outdated)" hint shows meanwhile.
 	const markStatsOutdatedLocal = () => {
-		if (!knowledge?.meta?.stats) return;
-		knowledge = { ...knowledge, meta: { ...(knowledge.meta || {}), statistics_outdated: true } };
+		knowledge = withStatsOutdated(knowledge);
 	};
 
 	const fileSelectHandler = async (file) => {
