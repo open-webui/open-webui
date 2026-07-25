@@ -274,33 +274,39 @@
 							<div class=" w-full">
 								<div class=" self-center flex-1 justify-between">
 									<div
-										class=" grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-4 px-1.5 h-8"
+										class=" grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-4 px-1.5 min-h-8"
 									>
-										<!-- Name -->
-										<div class=" flex items-center gap-1.5 min-w-0">
-											<Tooltip content={item?.description ?? item.name} className="min-w-0">
-												<div class=" flex items-center gap-2 min-w-0">
-													<div
-														class=" text-sm font-medium line-clamp-1 capitalize text-green-700 dark:text-green-200"
-													>
-														{item.name}
+										<!-- Name + description -->
+										<div class=" flex flex-col min-w-0 gap-0.5">
+											<div class=" flex items-center gap-1.5 min-w-0">
+												<Tooltip content={item.name} className="min-w-0">
+													<div class=" flex items-center gap-2 min-w-0">
+														<div
+															class=" text-sm font-medium line-clamp-1 capitalize text-green-700 dark:text-green-200"
+														>
+															{item.name}
+														</div>
+														{#if !item?.write_access}
+															<Badge type="muted" content={$i18n.t('Read Only')} />
+														{/if}
 													</div>
-													{#if !item?.write_access}
-														<Badge type="muted" content={$i18n.t('Read Only')} />
-													{/if}
-												</div>
-											</Tooltip>
-
-											{#if item?.ai_overwiew}
-												<Tooltip
-													content={overviewHtml(item.ai_overwiew)}
-													placement="top"
-													className="flex shrink-0"
-												>
-													<InfoCircle
-														className="size-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-													/>
 												</Tooltip>
+
+												{#if item?.ai_overwiew}
+													<Tooltip
+														content={overviewHtml(item.ai_overwiew)}
+														placement="top"
+														className="flex shrink-0"
+													>
+														<InfoCircle
+															className="size-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+														/>
+													</Tooltip>
+												{/if}
+											</div>
+
+											{#if item?.description}
+												<div class=" text-xs text-gray-500 line-clamp-1">{item.description}</div>
 											{/if}
 										</div>
 
