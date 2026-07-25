@@ -94,6 +94,10 @@ async def process_uploaded_file(
     async def _process_handler(db_session):
         nonlocal content_type
         try:
+            # The worker is sequential, so exactly one file is 'processing' at a
+            # time; queued files stay 'pending' ("in queue") until picked up.
+            await Files.update_file_data_by_id(file_item.id, {'status': 'processing'}, db=db_session)
+
             # Detect mis-labeled text files (e.g. .ts → video/mp2t)
             if content_type and content_type.startswith(('image/', 'video/')):
                 if _is_text_file(file_path):

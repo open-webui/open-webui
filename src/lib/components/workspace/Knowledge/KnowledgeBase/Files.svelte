@@ -37,10 +37,12 @@
 			case 'failed':
 			case 'error':
 				return { type: 'error', label: $i18n.t('Failed') };
-			case 'pending':
 			case 'processing':
-			case 'uploading':
 				return { type: 'info', label: $i18n.t('Processing') };
+			case 'pending':
+			case 'uploading':
+				// Uploaded/linked but waiting for the sequential worker.
+				return { type: 'muted', label: $i18n.t('In queue') };
 			default:
 				return null;
 		}

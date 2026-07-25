@@ -1154,6 +1154,7 @@
 	"Includes SharePoint": "",
 	"Increase UI Scale": "",
 	"Influences how quickly the algorithm responds to feedback from the generated text. A lower learning rate will result in slower adjustments, while a higher learning rate will make the algorithm more responsive.": "",
+	"In queue": "",
 	"Info": "",
 	"Initials": "",
 	"Inject file content into conversation context": "",
