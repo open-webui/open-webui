@@ -295,6 +295,8 @@
 							return item.model?.connection_type === 'external';
 						} else if (selectedConnectionType === 'direct') {
 							return item.model?.direct;
+						} else if (selectedConnectionType === 'workspace') {
+							return item.model?.preset === true;
 						}
 					})
 			: items
@@ -315,6 +317,8 @@
 							return item.model?.connection_type === 'external';
 						} else if (selectedConnectionType === 'direct') {
 							return item.model?.direct;
+						} else if (selectedConnectionType === 'workspace') {
+							return item.model?.preset === true;
 						}
 					})
 	).filter((item) => includeHidden || !(item.model?.info?.meta?.hidden ?? false));
@@ -336,6 +340,9 @@
 			: []),
 		...(items.find((item) => item.model?.direct)
 			? [{ value: 'connection:direct', label: $i18n.t('Direct') }]
+			: []),
+		...(items.find((item) => item.model?.preset)
+			? [{ value: 'connection:workspace', label: $i18n.t('Workspace') }]
 			: []),
 		...tags.map((tag) => ({ value: `tag:${tag}`, label: tag }))
 	];
