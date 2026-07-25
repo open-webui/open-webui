@@ -1311,19 +1311,19 @@
 							}}
 						/>
 
-						<div class="hidden md:block">
-							<Tooltip content={$i18n.t('Click to copy ID')}>
-								<button
-									class="text-xs text-gray-500 font-mono shrink-0 px-2 py-1 rounded-lg cursor-pointer hover:underline transition whitespace-nowrap"
-									on:click={() => {
-										copyToClipboard(id);
-										toast.success($i18n.t('ID copied to clipboard'));
-									}}
-								>
-									{id}
-								</button>
-							</Tooltip>
-						</div>
+						{#if knowledge?.registration_number || knowledge?.registration_date}
+							<div class="hidden md:block text-xs text-gray-500 shrink-0 px-2 py-1 whitespace-nowrap">
+								{#if knowledge?.registration_number}
+									{$i18n.t('Reg. No.')}: {knowledge.registration_number}
+								{/if}
+								{#if knowledge?.registration_number && knowledge?.registration_date}
+									·
+								{/if}
+								{#if knowledge?.registration_date}
+									{knowledge.registration_date}
+								{/if}
+							</div>
+						{/if}
 					</div>
 				</div>
 			</div>
@@ -1340,8 +1340,8 @@
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={query}
-						aria-label={$i18n.t('Search Collection')}
-						placeholder={$i18n.t('Search Collection')}
+						aria-label={$i18n.t('Search Documents')}
+						placeholder={$i18n.t('Search Documents')}
 						on:focus={() => {
 							selectedFileId = null;
 						}}

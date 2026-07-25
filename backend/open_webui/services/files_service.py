@@ -151,6 +151,23 @@ async def process_uploaded_file(
                         db=db_session,
                     )
                     log.info(f'Linked file {file_item.id} to knowledge {knowledge_id}')
+
+                    # Refresh the folder's AI summary from its files' descriptions
+                    # (the per-file description was persisted by analyze_file in the
+                    # extraction pass above). Runs in the sequential worker, gated by
+                    # the same analysis flag, so no extra cost unless analysis is on.
+                    if directory_id and getattr(
+                        request.app.state.config, 'ENABLE_INGESTION_ANALYSIS', False
+                    ):
+                        try:
+                            from open_webui.services.file_analysis import describe_folder
+
+                            file_ids = await Knowledges.get_file_ids_in_directory(directory_id, db=db_session)
+                            summary = await describe_folder(request, file_ids, user, db=db_session)
+                            if summary:
+                                await Knowledges.set_directory_description(directory_id, summary, db=db_session)
+                        except Exception as e:
+                            log.warning(f'Failed to summarize folder {directory_id}: {e}')
                 except Exception as e:
                     log.warning(f'Failed to link file {file_item.id} to knowledge {knowledge_id}: {e}')
 

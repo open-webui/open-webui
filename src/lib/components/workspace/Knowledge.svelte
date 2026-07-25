@@ -245,7 +245,7 @@
 		{#if items !== null && total !== null}
 			{#if (items ?? []).length !== 0}
 				<!-- The Aleph dreams itself into being, and the void learns its own name -->
-				<div class=" my-2 px-3 grid grid-cols-1 lg:grid-cols-2 gap-2">
+				<div class=" my-2 px-3 grid grid-cols-1 gap-0">
 					{#each items as item}
 						<button
 							class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
@@ -263,21 +263,36 @@
 						>
 							<div class=" w-full">
 								<div class=" self-center flex-1 justify-between">
-									<div class="flex items-center justify-between -my-1 h-8">
-										<div class=" flex gap-2 items-center justify-between w-full">
-											<div>
-												<Badge type="success" content={$i18n.t('Collection')} />
-											</div>
-
-											{#if !item?.write_access}
-												<div>
-													<Badge type="muted" content={$i18n.t('Read Only')} />
+									<div
+										class=" grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-4 px-1.5 h-8"
+									>
+										<!-- Name -->
+										<Tooltip content={item?.description ?? item.name} className="min-w-0">
+											<div class=" flex items-center gap-2 min-w-0">
+												<div
+													class=" text-sm font-medium line-clamp-1 capitalize text-green-700 dark:text-green-200"
+												>
+													{item.name}
 												</div>
-											{/if}
+												{#if !item?.write_access}
+													<Badge type="muted" content={$i18n.t('Read Only')} />
+												{/if}
+											</div>
+										</Tooltip>
+
+										<!-- Registration number -->
+										<div class=" text-xs text-gray-500 line-clamp-1">
+											{item?.registration_number ?? ''}
 										</div>
 
-										{#if item?.write_access || $user?.role === 'admin'}
-											<div class="flex items-center gap-2">
+										<!-- Registration date -->
+										<div class=" text-xs text-gray-500 line-clamp-1">
+											{item?.registration_date ? dayjs(item.registration_date).format('YYYY-MM-DD') : ''}
+										</div>
+
+										<!-- Menu -->
+										<div class=" flex justify-end">
+											{#if item?.write_access || $user?.role === 'admin'}
 												<div class=" flex self-center">
 													<ItemMenu
 														onExport={$user.role === 'admin'
@@ -291,38 +306,7 @@
 														}}
 													/>
 												</div>
-											</div>
-										{/if}
-									</div>
-
-									<div class=" flex items-center gap-1 justify-between px-1.5">
-										<Tooltip content={item?.description ?? item.name}>
-											<div class=" flex items-center gap-2">
-												<div class=" text-sm font-medium line-clamp-1 capitalize">{item.name}</div>
-											</div>
-										</Tooltip>
-
-										<div class="flex items-center gap-2 shrink-0">
-											<Tooltip content={dayjs(item.updated_at * 1000).format('LLLL')}>
-												<div class=" text-xs text-gray-500 line-clamp-1 hidden sm:block">
-													{$i18n.t('Updated')}
-													{dayjs(item.updated_at * 1000).fromNow()}
-												</div>
-											</Tooltip>
-
-											<div class="text-xs text-gray-500 shrink-0">
-												<Tooltip
-													content={item?.user?.email ?? $i18n.t('Deleted User')}
-													className="flex shrink-0"
-													placement="top-start"
-												>
-													{$i18n.t('By {{name}}', {
-														name: capitalizeFirstLetter(
-															item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
-														)
-													})}
-												</Tooltip>
-											</div>
+											{/if}
 										</div>
 									</div>
 								</div>

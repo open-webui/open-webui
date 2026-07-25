@@ -39,12 +39,20 @@ def _bulk(client, actions):
     try:
         bulk(client, actions)
     except BulkIndexError as e:
-        for err in e.errors[:5]:
+        details = []
+        for err in e.errors[:3]:
             op = next(iter(err.values()), {})
-            reason = (op.get('error') or {}).get('reason')
-            field = (op.get('error') or {}).get('caused_by', {}).get('reason')
-            log.error(f'ES bulk index failure id={op.get("_id")} status={op.get("status")}: {reason} | {field}')
-        raise
+            err_obj = op.get('error') or {}
+            caused_by = (err_obj.get('caused_by') or {}).get('reason')
+            details.append(
+                f"[{op.get('status')}] {err_obj.get('type')}: {err_obj.get('reason')}"
+                + (f' (caused_by: {caused_by})' if caused_by else '')
+            )
+        summary = ' || '.join(details)
+        log.error(f'ES bulk index failure ({len(e.errors)} docs): {summary}')
+        # Re-raise with the reason inline so it is visible in the traceback, not
+        # just the opaque "N document(s) failed to index".
+        raise RuntimeError(f'ES bulk index failed: {summary}') from e
 
 
 class ElasticsearchClient(VectorDBBase):
@@ -128,6 +136,13 @@ class ElasticsearchClient(VectorDBBase):
     def _create_index(self, dimension: int):
         body = {
             'mappings': {
+                # Metadata is arbitrary parser output (e.g. PDF 'creationdate' in
+                # PDF-date format 'D:2023...'). Let ES auto-detect dates/numbers and
+                # it maps such a field as `date`/`long`, then rejects the next doc
+                # whose value doesn't match. Disable detection so every dynamic
+                # metadata field is a plain keyword — no parsing, no conflicts.
+                'date_detection': False,
+                'numeric_detection': False,
                 'dynamic_templates': [
                     {
                         'strings': {

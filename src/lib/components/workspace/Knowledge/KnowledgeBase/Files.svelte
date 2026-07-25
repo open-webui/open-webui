@@ -21,7 +21,30 @@
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Badge from '$lib/components/common/Badge.svelte';
 	import DirectoryRow from './DirectoryRow.svelte';
+
+	// Map a file's ingestion status (data.status, or the transient top-level
+	// status on in-flight rows) to a colored label. Returns null when unknown.
+	const statusBadge = (file) => {
+		const s = file?.data?.status ?? file?.status;
+		switch (s) {
+			case 'completed':
+			case 'success':
+				return { type: 'success', label: $i18n.t('Embedded') };
+			case 'skipped':
+				return { type: 'warning', label: $i18n.t('Skipped') };
+			case 'failed':
+			case 'error':
+				return { type: 'error', label: $i18n.t('Failed') };
+			case 'pending':
+			case 'processing':
+			case 'uploading':
+				return { type: 'info', label: $i18n.t('Processing') };
+			default:
+				return null;
+		}
+	};
 
 	export let knowledge = null;
 	export let selectedFileId = null;
@@ -75,6 +98,7 @@
 
 	<!-- Files -->
 	{#each files as file (file?.id ?? file?.itemId ?? file?.tempId)}
+		{@const badge = statusBadge(file)}
 		<div
 			class=" flex cursor-pointer w-full px-2 bg-transparent dark:hover:bg-gray-850/50 hover:bg-white rounded-xl transition {selectedFileId
 				? ''
@@ -139,9 +163,17 @@
 							</div>
 						{/if}
 					</div>
+					{#if file?.data?.description}
+						<!-- AI-generated context summary (analyze_file) -->
+						<div class=" text-xs text-gray-500 line-clamp-1">{file.data.description}</div>
+					{/if}
 				</div>
 
 				<div class="flex items-center gap-2 shrink-0">
+					{#if badge}
+						<Badge type={badge.type} content={badge.label} />
+					{/if}
+
 					{#if file?.updated_at}
 						<Tooltip content={dayjs(file.updated_at * 1000).format('LLLL')}>
 							<div class="text-xs text-gray-400">

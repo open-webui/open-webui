@@ -855,11 +855,41 @@ class KnowledgeTable:
                     .filter(KnowledgeDirectory.parent_id == directory_id)
                 )
             ).scalar() or 0
-            await db.execute(
-                update(KnowledgeDirectory)
-                .filter_by(id=directory_id)
-                .values(meta={'file_count': file_count, 'directory_count': directory_count})
-            )
+            # Merge into existing meta so non-count keys (e.g. description) survive.
+            row = (await db.execute(select(KnowledgeDirectory.meta).filter_by(id=directory_id))).first()
+            meta = dict(row[0]) if row and row[0] else {}
+            meta['file_count'] = file_count
+            meta['directory_count'] = directory_count
+            await db.execute(update(KnowledgeDirectory).filter_by(id=directory_id).values(meta=meta))
+            await db.commit()
+
+    async def get_file_ids_in_directory(
+        self,
+        directory_id: str,
+        db: Optional[AsyncSession] = None,
+    ) -> list[str]:
+        """Immediate file_ids in a directory (not descendants)."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(KnowledgeFile.file_id).filter_by(directory_id=directory_id))
+            return [row[0] for row in result.all()]
+
+    async def set_directory_description(
+        self,
+        directory_id: Optional[str],
+        description: str,
+        db: Optional[AsyncSession] = None,
+    ) -> None:
+        """Store an AI-generated folder summary in the directory's meta,
+        preserving the cached counts."""
+        if not directory_id:
+            return
+        async with get_async_db_context(db) as db:
+            row = (await db.execute(select(KnowledgeDirectory.meta).filter_by(id=directory_id))).first()
+            if row is None:
+                return
+            meta = dict(row[0]) if row[0] else {}
+            meta['description'] = description
+            await db.execute(update(KnowledgeDirectory).filter_by(id=directory_id).values(meta=meta))
             await db.commit()
 
     async def ensure_directory_path(

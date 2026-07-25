@@ -21,13 +21,15 @@
 		name: string;
 		created_at: number;
 		updated_at: number;
-		meta?: { file_count?: number; directory_count?: number } | null;
+		meta?: { file_count?: number; directory_count?: number; description?: string } | null;
 	};
 	export let writeAccess = false;
 
 	// Cached immediate-children counts (see knowledge_directory.meta).
 	$: fileCount = directory?.meta?.file_count ?? 0;
 	$: directoryCount = directory?.meta?.directory_count ?? 0;
+	// AI-generated folder summary (describe_folder), when available.
+	$: directoryContext = directory?.meta?.description ?? '';
 
 	export let onNavigate: (id: string) => void = () => {};
 	export let onRename: (id: string, name: string) => void = () => {};
@@ -146,6 +148,9 @@
 				{/if}
 			</div>
 			{#if !editing}
+				{#if directoryContext}
+					<div class="text-xs text-gray-500 line-clamp-1">{directoryContext}</div>
+				{/if}
 				<div class="text-xs text-gray-400 line-clamp-1">
 					{directoryCount === 1
 						? $i18n.t('{{count}} folder', { count: directoryCount })
