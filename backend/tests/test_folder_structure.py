@@ -235,3 +235,74 @@ async def test_describe_knowledge_empty_returns_blank(_user):
 
     kb = await _new_kb(_user.id)
     assert await describe_knowledge(None, kb.id, _user, db=None) == ''
+
+
+# ── AI summary generation (LLM mocked) ──
+
+
+def _mock_llm(monkeypatch, reply, capture=None):
+    """Force a usable task model and stub the chat completion with `reply`."""
+    from open_webui.services import file_analysis
+
+    monkeypatch.setattr(file_analysis, '_resolve_task_model_id', lambda request: 'test-model')
+
+    async def fake_gcc(request, form_data=None, user=None):
+        if capture is not None:
+            capture['content'] = form_data['messages'][0]['content']
+        return {'choices': [{'message': {'content': reply}}]}
+
+    monkeypatch.setattr(file_analysis, 'generate_chat_completion', fake_gcc)
+
+
+async def test_analyze_file_parses_and_persists_description(_user, monkeypatch):
+    from open_webui.models.files import FileForm, Files
+    from open_webui.services.file_analysis import analyze_file
+
+    await Files.insert_new_file(
+        _user.id, FileForm(id='an1', filename='c.txt', path='/tmp/c', data={'content': 'hello content'})
+    )
+    _mock_llm(monkeypatch, '{"eligible": true, "description": "Короткий опис"}')
+
+    eligible, desc = await analyze_file(None, 'an1', _user, content='hello content', db=None)
+    assert eligible is True
+    assert desc == 'Короткий опис'
+    # Persisted to file.data for later folder/KB rollups.
+    assert (await Files.get_file_by_id('an1')).data['description'] == 'Короткий опис'
+
+
+async def test_describe_folder_folds_file_descriptions(_user, monkeypatch):
+    from open_webui.models.files import FileForm, Files
+    from open_webui.services.file_analysis import describe_folder
+
+    await Files.insert_new_file(_user.id, FileForm(id='fd1', filename='a.txt', path='/tmp/a'))
+    await Files.update_file_data_by_id('fd1', {'description': 'опис A'})
+    await Files.insert_new_file(_user.id, FileForm(id='fd2', filename='b.txt', path='/tmp/b'))
+    await Files.update_file_data_by_id('fd2', {'description': 'опис B'})
+
+    cap = {}
+    _mock_llm(monkeypatch, 'Підсумок папки', capture=cap)
+
+    result = await describe_folder(None, ['fd1', 'fd2'], _user, db=None)
+    assert result == 'Підсумок папки'
+    assert 'опис A' in cap['content'] and 'опис B' in cap['content']
+
+
+async def test_describe_knowledge_folds_folder_and_root_summaries(_user, monkeypatch):
+    from open_webui.models.files import FileForm, Files
+    from open_webui.services.file_analysis import describe_knowledge
+
+    kb = await _new_kb(_user.id)
+    docs = await Knowledges.ensure_directory_path(kb.id, 'docs', _user.id)
+    await Knowledges.set_directory_description(docs, 'Підсумок docs')
+    await Files.insert_new_file(
+        _user.id, FileForm(id='rk1', filename='r.txt', path='/tmp/r', data={'description': 'опис кореневого файлу'})
+    )
+    await Knowledges.add_file_to_knowledge_by_id(kb.id, 'rk1', _user.id, directory_id=None)
+
+    cap = {}
+    _mock_llm(monkeypatch, 'Огляд бази', capture=cap)
+
+    result = await describe_knowledge(None, kb.id, _user, db=None)
+    assert result == 'Огляд бази'
+    # Rollup included the folder summary and the root file description.
+    assert 'docs' in cap['content'] and 'опис кореневого файлу' in cap['content']
