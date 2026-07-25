@@ -62,6 +62,19 @@ async def check_folders_permission(request: Request, user, db=None):
         )
 
 
+async def _reject_inaccessible_files(data: dict | None, user, db=None):
+    """Reject attaching files/collections the caller cannot read, since folder attachments are
+    served back as RAG context to everyone who can read the folder."""
+    if not data or not isinstance(data.get('files'), list):
+        return
+    accessible_files = await get_accessible_folder_files(data['files'], user, db=db)
+    if len(accessible_files) != len(data['files']):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+
 ############################
 # Get Folders
 ############################
@@ -119,6 +132,8 @@ async def create_folder(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT('Folder already exists'),
         )
+
+    await _reject_inaccessible_files(form_data.data, user, db=db)
 
     # Check if creating a subfolder in a shared folder
     if form_data.parent_id:
@@ -289,15 +304,7 @@ async def update_folder_name_by_id(
                     detail=ERROR_MESSAGES.DEFAULT('Folder already exists'),
                 )
 
-        # Validate read access to every file/collection being attached.
-        # Folder files are consumed by chat middleware as RAG context.
-        if form_data.data and isinstance(form_data.data.get('files'), list):
-            accessible_files = await get_accessible_folder_files(form_data.data['files'], user, db=db)
-            if len(accessible_files) != len(form_data.data['files']):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-                )
+        await _reject_inaccessible_files(form_data.data, user, db=db)
 
         try:
             folder = await Folders.update_folder_by_id_and_user_id(id, folder.user_id, form_data, db=db)
