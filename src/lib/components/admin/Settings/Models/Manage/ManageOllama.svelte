@@ -809,9 +809,7 @@
 				<div>
 					<div class=" mb-2 text-sm font-normal">{$i18n.t('Delete a model')}</div>
 					<div class="flex w-full">
-						<div
-							class="flex-1 mr-2 pr-1.5 rounded-lg bg-gray-50 dark:text-gray-300 dark:bg-gray-850"
-						>
+						<div class="flex-1 mr-2 rounded-lg bg-gray-50 dark:text-gray-300 dark:bg-gray-850">
 							<SettingsSelect
 								bind:value={deleteModelTag}
 								className="w-full"
