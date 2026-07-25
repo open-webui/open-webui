@@ -127,12 +127,12 @@
 	let direction = null;
 
 	let currentPage = 1;
-	let fileItems = null;
-	let fileItemsTotal = null;
+	let fileItems: any[] | null = null;
+	let fileItemsTotal: number | null = null;
 
 	// Directory state
 	let currentDirectoryId: string | null = null;
-	let directoryItems = [];
+	let directoryItems: any[] = [];
 	let breadcrumbs = [];
 
 	// Files currently being uploaded, surfaced in a single tooltip indicator
@@ -937,7 +937,8 @@
 
 		if (res) {
 			toast.success($i18n.t('Directory deleted.'));
-			getItemsPage();
+			// Remove the deleted folder locally instead of refetching the page.
+			directoryItems = (directoryItems ?? []).filter((d) => d.id !== pendingDeleteDirectoryId);
 		}
 		pendingDeleteDirectoryId = null;
 	};
@@ -984,9 +985,9 @@
 
 			if (res) {
 				toast.success($i18n.t('File removed successfully.'));
-				// Refresh the list in place (same as folder delete) — stay on the
-				// current page/folder instead of resetting to page 1.
-				getItemsPage();
+				// Remove the file locally instead of refetching the page.
+				fileItems = (fileItems ?? []).filter((f) => (f?.id ?? f?.tempId) !== fileId);
+				if (typeof fileItemsTotal === 'number') fileItemsTotal = Math.max(0, fileItemsTotal - 1);
 			}
 		} catch (e) {
 			console.error('Error in deleteFileHandler:', e);
