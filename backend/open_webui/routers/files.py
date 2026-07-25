@@ -47,6 +47,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from open_webui.services.process_file_queue import enqueue_file_processing, process_uploaded_file
+from open_webui.services.files_service import link_file_to_knowledge
 
 log = logging.getLogger(__name__)
 
@@ -181,6 +182,14 @@ async def upload_file_handler(
             channel = await Channels.get_channel_by_id_and_user_id(file_metadata['channel_id'], user.id, db=db)
             if channel:
                 await Channels.add_file_to_channel_by_id(channel.id, file_item.id, user.id, db=db)
+
+        # Link to its knowledge folder now (upload is complete) so it shows in the
+        # correct folder immediately; content processing/embedding happens later.
+        if file_item and file_metadata.get('knowledge_id'):
+            try:
+                await link_file_to_knowledge(file_metadata['knowledge_id'], file_item, file_metadata, user, db=db)
+            except Exception as e:
+                log.warning(f'Failed to link file {file_item.id} to knowledge at upload: {e}')
 
         content_type = file.content_type if isinstance(file.content_type, str) else None
         if process:
@@ -334,6 +343,14 @@ async def finalize_upload(
         await Files.update_file_data_by_id(id, {'status': 'pending'}, db=db)
 
     file_item = await Files.get_file_by_id(id, db=db)
+
+    # Link to its knowledge folder now that the upload is complete; processing
+    # happens later in the worker.
+    if file_metadata.get('knowledge_id'):
+        try:
+            await link_file_to_knowledge(file_metadata['knowledge_id'], file_item, file_metadata, user, db=db)
+        except Exception as e:
+            log.warning(f'Failed to link file {id} to knowledge on finalize: {e}')
 
     if process:
         if background_tasks and process_in_background:

@@ -51,6 +51,37 @@ def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
         return False
 
 
+async def link_file_to_knowledge(knowledge_id, file_item, file_metadata, user, db=None):
+    """Link an uploaded file into a knowledge base at its correct folder.
+
+    Resolves the target directory from the file's ``relative_path`` (created
+    under the current base directory), then links the file. Idempotent — safe to
+    call at upload time *and* again from the worker. Returns the resolved
+    directory_id (None = KB root). Content processing/embedding happens
+    separately; this only establishes the folder link so the file shows in its
+    folder immediately.
+    """
+    base_directory_id = (file_metadata or {}).get('directory_id')
+    relative_path = (file_item.meta or {}).get('relative_path')
+    dir_part = relative_path.rsplit('/', 1)[0] if relative_path and '/' in relative_path else None
+    directory_id = (
+        await Knowledges.ensure_directory_path(
+            knowledge_id, dir_part, user.id, parent_id=base_directory_id, db=db
+        )
+        if dir_part
+        else base_directory_id
+    )
+    if not await Knowledges.has_file(knowledge_id=knowledge_id, file_id=file_item.id, db=db):
+        await Knowledges.add_file_to_knowledge_by_id(
+            knowledge_id=knowledge_id,
+            file_id=file_item.id,
+            user_id=user.id,
+            directory_id=directory_id,
+            db=db,
+        )
+    return directory_id
+
+
 async def process_uploaded_file(
     request,
     content_type,
@@ -123,26 +154,11 @@ async def process_uploaded_file(
             knowledge_id = file_metadata.get('knowledge_id')
             if knowledge_id:
                 try:
-                    # Recreate the uploaded folder tree under the current folder:
-                    # the sanitized virtual path lives on the file's meta; its
-                    # directory portion maps to a knowledge_directory chain created
-                    # beneath the current directory_id. Files without a relative
-                    # path land directly in the current directory.
-                    base_directory_id = file_metadata.get('directory_id')
-                    relative_path = (file_item.meta or {}).get('relative_path')
-                    dir_part = relative_path.rsplit('/', 1)[0] if relative_path and '/' in relative_path else None
-                    directory_id = (
-                        await Knowledges.ensure_directory_path(
-                            knowledge_id, dir_part, user.id, parent_id=base_directory_id, db=db_session
-                        )
-                        if dir_part
-                        else base_directory_id
-                    )
-                    await Knowledges.add_file_to_knowledge_by_id(
-                        knowledge_id=knowledge_id,
-                        file_id=file_item.id,
-                        user_id=user.id,
-                        directory_id=directory_id,
+                    # Ensure the KB link exists (normally already created at upload
+                    # time so the file shows in its folder immediately; idempotent
+                    # here). Returns the resolved folder for the summary below.
+                    directory_id = await link_file_to_knowledge(
+                        knowledge_id, file_item, file_metadata, user, db=db_session
                     )
                     await process_file(
                         request,

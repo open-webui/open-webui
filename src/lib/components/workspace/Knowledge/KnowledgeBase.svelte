@@ -123,10 +123,6 @@
 	let fileItems = null;
 	let fileItemsTotal = null;
 
-	// In-flight (not-yet-linked) files, shown as a separate section at the very
-	// top of the list regardless of the current folder.
-	let pendingItems = [];
-
 	// Directory state
 	let currentDirectoryId: string | null = null;
 	let directoryItems = [];
@@ -218,36 +214,43 @@
 			directoryItems = res.directories ?? [];
 			breadcrumbs = res.breadcrumbs ?? [];
 
-			// In-flight (not-yet-linked) files are kept in a separate list rendered
-			// at the top of the file list, independent of the current folder.
-			try {
-				const mapPending = (list) =>
-					(list ?? []).map((f) => ({ ...f, name: f.meta?.name ?? f.filename, status: 'uploading' }));
-
-				pendingItems = mapPending(await getPendingKnowledgeFiles(localStorage.token, knowledgeId));
-
-				if (pendingItems.length > 0 && !pendingPollTimer) {
-					pendingPollTimer = setInterval(async () => {
-						try {
-							const prevCount = pendingItems.length;
-							const still = await getPendingKnowledgeFiles(localStorage.token, knowledgeId).catch(
-								() => []
+			// Files are linked to their folder at upload time, so a still-processing
+			// file already appears here with a "pending/processing" status. Poll and
+			// patch just those items' status label in place — no full refetch, no
+			// separate section.
+			const inFlight = (s) => ['pending', 'processing', 'uploading'].includes(s);
+			if ((fileItems ?? []).some((it) => inFlight(it?.data?.status ?? it?.status)) && !pendingPollTimer) {
+				pendingPollTimer = setInterval(async () => {
+					try {
+						const busy = (fileItems ?? []).filter(
+							(it) => it?.id && inFlight(it?.data?.status ?? it?.status)
+						);
+						if (busy.length === 0) {
+							clearInterval(pendingPollTimer);
+							pendingPollTimer = null;
+							return;
+						}
+						const updates = {};
+						await Promise.all(
+							busy.map(async (it) => {
+								const u = await getFileById(localStorage.token, it.id).catch(() => null);
+								if (u) updates[it.id] = u;
+							})
+						);
+						if (Object.keys(updates).length) {
+							fileItems = (fileItems ?? []).map((it) =>
+								updates[it.id]
+									? {
+											...it,
+											data: updates[it.id].data,
+											meta: updates[it.id].meta ?? it.meta,
+											status: updates[it.id]?.data?.status
+										}
+									: it
 							);
-							pendingItems = mapPending(still);
-
-							if (pendingItems.length === 0) {
-								clearInterval(pendingPollTimer);
-								pendingPollTimer = null;
-							}
-							// Something finished & got linked -> refresh the current folder's linked files.
-							if (pendingItems.length < prevCount) {
-								getItemsPage();
-							}
-						} catch {}
-					}, 5000);
-				}
-			} catch (e) {
-				console.warn('Failed to fetch pending files:', e);
+						}
+					} catch {}
+				}, 5000);
 			}
 		}
 
