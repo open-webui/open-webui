@@ -260,7 +260,17 @@ async def toggle_automation_by_id(
     await check_automations_permission(request, user)
     automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
-    toggled = await Automations.toggle(id, next_run_ns(automation.data['rrule'], tz=user.timezone), db=db)
+    # The scheduler deactivates rows whose stored rule no longer parses, so re-enabling one has
+    # to report that rather than fail with a 500.
+    try:
+        next_run_at = next_run_ns(automation.data['rrule'], tz=user.timezone)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    toggled = await Automations.toggle(id, next_run_at, db=db)
     response = await enrich_automation(toggled, db, tz=user.timezone)
     await publish_event(
         request,

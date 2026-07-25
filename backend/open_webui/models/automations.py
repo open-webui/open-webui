@@ -289,7 +289,15 @@ class AutomationTable:
 
             for row in rows:
                 row.last_run_at = now_ns
-                row.next_run_at = next_run_ns(row.data.get('rrule', ''), tz=timezone_by_user_id.get(row.user_id))
+                try:
+                    row.next_run_at = next_run_ns(row.data.get('rrule', ''), tz=timezone_by_user_id.get(row.user_id))
+                except Exception:
+                    # A stored rule that no longer parses would otherwise abort the batch before
+                    # it commits, leaving this row due forever and starving every other one.
+                    # Deactivate rather than clearing next_run_at, so the row also leaves the
+                    # calendar view and shows as disabled instead of silently never running.
+                    log.exception('Deactivating automation %s: unusable recurrence rule', row.id)
+                    row.is_active = False
 
             await db.commit()
 

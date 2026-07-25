@@ -19,12 +19,14 @@ import asyncio
 import logging
 import os
 import random
+import re
 import time
 from datetime import datetime, timedelta
 from typing import Optional
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
+from dateutil import parser as date_parser
 from dateutil.rrule import rrulestr
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
@@ -46,6 +48,23 @@ log = logging.getLogger(__name__)
 SCHEDULER_POLL_INTERVAL = int(os.getenv('SCHEDULER_POLL_INTERVAL', os.getenv('AUTOMATION_POLL_INTERVAL', '10')))
 TIMER_POLL_INTERVAL = int(os.getenv('TIMER_POLL_INTERVAL', '1'))
 CALENDAR_ALERT_LOOKAHEAD_MINUTES = int(os.getenv('CALENDAR_ALERT_LOOKAHEAD_MINUTES', '10'))
+
+# Frequencies fine-grained enough that enumerating from a far-past anchor is expensive.
+_SUBDAILY_PERIODS = {
+    'SECONDLY': timedelta(seconds=1),
+    'MINUTELY': timedelta(minutes=1),
+    'HOURLY': timedelta(hours=1),
+}
+
+# Matched against the upper-cased rule, since dateutil upper-cases before parsing and splits
+# components on any whitespace, not just newlines.
+_RRULE_FREQ_RE = re.compile(r'\bFREQ=([A-Z]+)')
+_RRULE_INTERVAL_RE = re.compile(r'\bINTERVAL=([+-]?\d+)')
+_RRULE_DTSTART_RE = re.compile(r'\bDTSTART[^\s]*\s*', re.IGNORECASE)
+
+# How many occurrences dateutil may walk from an embedded DTSTART before the rule is re-anchored
+# on the clock instead. A security budget: it caps the work one rule can put on the event loop.
+_MAX_ANCHOR_STEPS = 100_000
 
 
 ####################
@@ -69,33 +88,76 @@ def _resolve_tz(tz: str = None) -> Optional[ZoneInfo]:
         return None
 
 
+def _embedded_dtstart(s: str) -> Optional[datetime]:
+    """The DTSTART carried inside the rule, which silently overrides any dtstart argument."""
+    matches = _RRULE_DTSTART_RE.findall(s)
+    if not matches:
+        return None
+    try:
+        return date_parser.parse(matches[-1].strip().rsplit(':', 1)[-1], ignoretz=True)
+    except (ValueError, OverflowError):
+        return None
+
+
+def _instants_per_step(rule_upper: str, freq: str) -> int:
+    """Occurrences dateutil emits per frequency step, which BYMINUTE/BYSECOND multiply."""
+
+    def listed(name: str) -> int:
+        match = re.search(rf'\b{name}=([^;\s]+)', rule_upper)
+        return len(match.group(1).split(',')) if match else 1
+
+    if freq == 'HOURLY':
+        return listed('BYMINUTE') * listed('BYSECOND')
+    if freq == 'MINUTELY':
+        return listed('BYSECOND')
+    return 1
+
+
 def _parse_rule(s: str, now: Optional[datetime] = None):
     """Parse RRULE with clock-aligned DTSTART for sub-daily frequencies.
 
-    MINUTELY/HOURLY rules use a fixed epoch DTSTART (2000-01-01 00:00)
-    so intervals snap to clock boundaries (e.g. every 5min = :00, :05, :10).
+    SECONDLY/MINUTELY/HOURLY rules snap to clock boundaries derived from a fixed epoch
+    (2000-01-01 00:00), e.g. every 5min = :00, :05, :10. The anchor is the last such boundary
+    before *now*, which keeps that alignment without enumerating from the epoch itself: every
+    BY* part filters the resulting instant rather than shifting the series, so moving the anchor
+    by whole intervals leaves the occurrences unchanged.
     """
-    raw = s.replace('RRULE:', '')
-    parts = dict(p.split('=', 1) for p in raw.split(';') if '=' in p)
-    freq = parts.get('FREQ', '')
+    rule_upper = s.upper()
 
-    if freq in ('MINUTELY', 'HOURLY'):
+    # Shapes that make dateutil advance forever, or that leave no single anchor to align to.
+    # None of them are emitted by the product, and each one blocks the shared event loop.
+    if 'EXRULE' in rule_upper:
+        raise ValueError('EXRULE is not supported in recurrence rules')
+    freqs = _RRULE_FREQ_RE.findall(rule_upper)
+    if len(freqs) > 1:
+        raise ValueError('only one RRULE is supported per recurrence rule')
+    interval_match = _RRULE_INTERVAL_RE.search(rule_upper)
+    interval = int(interval_match.group(1)) if interval_match else 1
+    if interval < 1:
+        raise ValueError('RRULE INTERVAL must be a positive integer')
+
+    freq = freqs[0] if freqs else ''
+    if freq in _SUBDAILY_PERIODS and now is not None:
+        step = _SUBDAILY_PERIODS[freq] * interval
+        embedded = _embedded_dtstart(s)
+        if embedded is not None:
+            # Budget the occurrences dateutil would actually emit, not just the frequency steps:
+            # BYMINUTE/BYSECOND multiply each step. Divide rather than multiply the step, so a
+            # huge INTERVAL cannot overflow.
+            emitted = ((now - embedded) // step) * _instants_per_step(rule_upper, freq)
+            if emitted <= _MAX_ANCHOR_STEPS:
+                # Cheap to walk from, so keep the start date: a rule that begins later still does.
+                return rrulestr(s, ignoretz=True)
+
+        # Either no start date, or one so far back that dateutil would enumerate the whole gap.
+        # An embedded DTSTART overrides the keyword argument, so it has to go.
         epoch = datetime(2000, 1, 1, 0, 0, 0)
-        if (
-            now is not None
-            and s.startswith('RRULE:')
-            and '\n' not in s
-            and '\r' not in s
-            and set(parts) <= {'FREQ', 'INTERVAL', 'BYMINUTE', 'BYSECOND'}
-        ):
-            try:
-                interval = int(parts.get('INTERVAL', '1'))
-                if interval > 0:
-                    step = timedelta(minutes=interval) if freq == 'MINUTELY' else timedelta(hours=interval)
-                    return rrulestr(s, dtstart=epoch + ((now - epoch) // step) * step, ignoretz=True)
-            except (TypeError, ValueError):
-                pass
-        return rrulestr(s, dtstart=epoch, ignoretz=True)
+        return rrulestr(
+            _RRULE_DTSTART_RE.sub('', s),
+            dtstart=epoch + ((now - epoch) // step) * step,
+            ignoretz=True,
+        )
+
     return rrulestr(s, ignoretz=True)
 
 
