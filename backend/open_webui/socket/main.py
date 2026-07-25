@@ -550,11 +550,12 @@ async def chat_events(sid, data):
     event_type = event_data.get('type')
 
     if event_type == 'last_read_at':
-        await Chats.update_chat_last_read_at_by_id(data['chat_id'], user['id'])
+        if not await Chats.update_chat_last_read_at_by_id(data['chat_id'], user['id']):
+            return
         try:
             from open_webui.utils.timers import cancel_timers_for_chat
 
-            await cancel_timers_for_chat(data['chat_id'], 'chat.read')
+            await cancel_timers_for_chat(data['chat_id'], 'chat.read', user['id'])
         except Exception:
             log.exception('Failed to cancel chat.read timers for chat %s', data.get('chat_id'))
 
