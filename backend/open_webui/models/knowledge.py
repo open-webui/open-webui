@@ -93,6 +93,9 @@ class KnowledgeModel(BaseModel):
     name: str
     description: str
 
+    # AI-generated overview of the whole knowledge base (on-demand rollup).
+    ai_overwiew: Optional[str] = None
+
     meta: Optional[dict] = None
 
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
@@ -798,6 +801,20 @@ class KnowledgeTable:
                         data=data,
                         updated_at=int(time.time()),
                     )
+                )
+                await db.commit()
+                return await self.get_knowledge_by_id(id=id, db=db)
+        except Exception as e:
+            log.exception(e)
+            return None
+
+    async def set_ai_overview(
+        self, id: str, ai_overview: str, db: Optional[AsyncSession] = None
+    ) -> Optional[KnowledgeModel]:
+        try:
+            async with get_async_db_context(db) as db:
+                await db.execute(
+                    update(Knowledge).filter_by(id=id).values(ai_overwiew=ai_overview, updated_at=int(time.time()))
                 )
                 await db.commit()
                 return await self.get_knowledge_by_id(id=id, db=db)

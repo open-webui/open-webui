@@ -35,6 +35,7 @@
 		updateKnowledgeById,
 		updateKnowledgeAccessGrants,
 		searchKnowledgeFilesById,
+		describeKnowledge,
 		createKnowledgeDirectory,
 		ensureKnowledgeDirectories,
 		updateKnowledgeDirectory,
@@ -99,6 +100,7 @@
 		files: any[];
 		access_grants?: any[];
 		write_access?: boolean;
+		ai_overwiew?: string;
 	};
 
 	let id = null;
@@ -255,6 +257,23 @@
 		}
 
 		return res;
+	};
+
+	let describingKnowledge = false;
+	const describeKnowledgeHandler = async () => {
+		if (!knowledge?.id) return;
+		describingKnowledge = true;
+		try {
+			const res = await describeKnowledge(localStorage.token, knowledge.id);
+			if (res) {
+				knowledge = { ...knowledge, ai_overwiew: res.ai_overwiew };
+				toast.success($i18n.t('Overview generated.'));
+			}
+		} catch (e) {
+			toast.error(`${e}`);
+		} finally {
+			describingKnowledge = false;
+		}
 	};
 
 	const fileSelectHandler = async (file) => {
@@ -1340,6 +1359,29 @@
 							</div>
 						{/if}
 					</div>
+
+					{#if knowledge?.ai_overwiew || knowledge?.write_access}
+						<div class="flex items-start gap-2 mt-1 px-1.5">
+							<div class="flex-1 min-w-0 text-xs text-gray-500 line-clamp-3">
+								{knowledge?.ai_overwiew || $i18n.t('No overview yet.')}
+							</div>
+							{#if knowledge?.write_access}
+								<button
+									class="shrink-0 flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition px-2 py-1 rounded-lg"
+									type="button"
+									on:click={describeKnowledgeHandler}
+									disabled={describingKnowledge}
+								>
+									{#if describingKnowledge}
+										<Spinner className="size-3" />
+									{/if}
+									{knowledge?.ai_overwiew
+										? $i18n.t('Regenerate overview')
+										: $i18n.t('Generate overview')}
+								</button>
+							{/if}
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>

@@ -1505,6 +1505,24 @@ async def ensure_knowledge_directories(
     return result
 
 
+@router.post('/{id}/describe')
+async def describe_knowledge_base(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """On-demand: generate an AI overview of the whole knowledge base by folding
+    its top-level folder/file summaries, and store it on ``ai_overwiew``."""
+    await _verify_knowledge_write_access(id, user, db)
+
+    from open_webui.services.file_analysis import describe_knowledge
+
+    overview = await describe_knowledge(request, id, user, db=db)
+    await Knowledges.set_ai_overview(id, overview, db=db)
+    return {'ai_overwiew': overview}
+
+
 @router.post('/{id}/dirs/{dir_id}/update', response_model=KnowledgeDirectoryModel)
 async def update_knowledge_directory(
     id: str,

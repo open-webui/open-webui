@@ -65,6 +65,16 @@ File descriptions:
 {descriptions}
 """
 
+_KNOWLEDGE_SUMMARY_PROMPT = """You describe an entire knowledge base.
+
+Given the summaries of its top-level folders and files below, respond with ONLY
+a short paragraph (2-4 sentences, max 80 words), written in Ukrainian,
+summarizing what this knowledge base is about as a whole.
+
+Contents:
+{descriptions}
+"""
+
 
 def _resolve_task_model_id(request) -> str | None:
     """Pick a model for the analysis call in a background (no-request) context.
@@ -191,4 +201,52 @@ async def describe_folder(
         return _extract_message_content(response).strip()
     except Exception as e:
         log.warning(f'describe_folder: summary failed, returning empty: {e}')
+        return ''
+
+
+async def describe_knowledge(request, knowledge_id: str, user, db: AsyncSession | None = None) -> str:
+    """Summarize a whole knowledge base from the summaries already computed for
+    its top-level folders and root-level files (a cheap rollup, not a re-read of
+    every file). Returns an empty string if there's nothing to summarize.
+    """
+    from open_webui.models.knowledge import Knowledges
+
+    # Root-level folder summaries.
+    root_dirs = await Knowledges.get_directories(knowledge_id, parent_id=None, db=db)
+    folder_parts = [
+        f'Folder "{d.name}": {(d.meta or {}).get("description", "").strip()}'
+        for d in root_dirs
+        if (d.meta or {}).get('description', '').strip()
+    ]
+
+    # Root-level file descriptions (files not in any folder).
+    files_with_dirs = await Knowledges.get_files_with_directory_ids(knowledge_id, db=db)
+    file_parts = [
+        (f.data or {}).get('description', '').strip()
+        for f, directory_id in files_with_dirs
+        if directory_id is None and (f.data or {}).get('description', '').strip()
+    ]
+
+    parts = folder_parts + file_parts
+    if not parts:
+        return ''
+
+    model_id = _resolve_task_model_id(request)
+    if not model_id:
+        log.warning('describe_knowledge: no usable task model')
+        return ''
+
+    joined = '\n'.join(f'- {p}' for p in parts)
+    payload = {
+        'model': model_id,
+        'messages': [{'role': 'user', 'content': _KNOWLEDGE_SUMMARY_PROMPT.format(descriptions=joined)}],
+        'stream': False,
+        'metadata': {'task': 'knowledge_summary'},
+    }
+
+    try:
+        response = await generate_chat_completion(request, form_data=payload, user=user)
+        return _extract_message_content(response).strip()
+    except Exception as e:
+        log.warning(f'describe_knowledge: summary failed, returning empty: {e}')
         return ''
