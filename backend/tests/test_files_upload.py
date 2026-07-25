@@ -273,3 +273,60 @@ async def test_presign_requires_s3_provider(async_client):
     uses local storage, so /presign must reject it."""
     resp = await async_client.post('/api/v1/files/presign', json={'filename': 'a.txt'})
     assert resp.status_code == 400
+
+
+# ── Link-on-upload: file appears in its folder immediately (before processing) ──
+
+
+async def test_upload_links_file_to_folder_immediately(async_client, test_user):
+    """A file uploaded into a KB is linked to its folder during the request
+    (link-on-finalize), before the worker processes it — so it shows in the
+    correct folder with an 'in queue' (pending) status right away."""
+    from open_webui.models.knowledge import KnowledgeForm, Knowledges
+
+    kb = await Knowledges.insert_new_knowledge(test_user.id, KnowledgeForm(name='KB', description=''))
+
+    resp = await _upload(
+        async_client,
+        name='report.pdf',
+        content=b'body',
+        metadata={'knowledge_id': kb.id, 'relative_path': 'Q3/report.pdf'},
+    )
+    assert resp.status_code == 200
+    file_id = resp.json()['id']
+
+    # Linked to the Q3 folder already — without draining the processing queue.
+    dirs = {d.name: d for d in await Knowledges.get_all_directories(kb.id)}
+    assert 'Q3' in dirs
+    linked = {f.id: dir_id for f, dir_id in await Knowledges.get_files_with_directory_ids(kb.id)}
+    assert linked.get(file_id) == dirs['Q3'].id
+
+    # And it's queued, not yet processed.
+    file = await Files.get_file_by_id(file_id)
+    assert file.data.get('status') == 'pending'
+
+
+async def test_worker_marks_file_processing_when_started(async_client, app, monkeypatch):
+    """Sequential worker sets status 'processing' at the start of handling a
+    file (so only the active one shows 'Processing'; queued stay 'pending')."""
+    seen = {}
+
+    async def fake_process_file(request, form_data, user=None, db=None):
+        f = await Files.get_file_by_id(form_data.file_id, db=db)
+        seen[form_data.file_id] = (f.data or {}).get('status')
+        await Files.update_file_data_by_id(form_data.file_id, {'status': 'completed'}, db=db)
+        return {'status': True}
+
+    monkeypatch.setattr('open_webui.services.files_service.process_file', fake_process_file)
+
+    resp = await _upload(async_client, name='doc.txt', content=b'body')
+    file_id = resp.json()['id']
+
+    # Before draining: queued → pending ("in queue").
+    assert (await Files.get_file_by_id(file_id)).data.get('status') == 'pending'
+
+    await _process_queued_file(app, get_file_processing_queue().get_nowait())
+
+    # The worker flipped it to 'processing' before doing the work.
+    assert seen[file_id] == 'processing'
+    assert (await Files.get_file_by_id(file_id)).data['status'] == 'completed'

@@ -214,3 +214,24 @@ async def test_directory_counts_after_move_directory(_user):
     await Knowledges.move_directory(leaf.id, dst)
     assert _counts(await _dir_by_name(kb.id, 'src')) == (0, 0)
     assert _counts(await _dir_by_name(kb.id, 'dst')) == (0, 1)
+
+
+# ── Knowledge-base AI overview (ai_overwiew) ──
+
+
+async def test_set_and_read_ai_overview(_user):
+    kb = await _new_kb(_user.id)
+    updated = await Knowledges.set_ai_overview(kb.id, 'Огляд бази знань', db=None)
+    assert updated is not None and updated.ai_overwiew == 'Огляд бази знань'
+    # Round-trips through the model/response.
+    fetched = await Knowledges.get_knowledge_by_id(id=kb.id)
+    assert fetched.ai_overwiew == 'Огляд бази знань'
+
+
+async def test_describe_knowledge_empty_returns_blank(_user):
+    """With nothing to summarize, describe_knowledge short-circuits to '' without
+    needing a model (request unused on the empty path)."""
+    from open_webui.services.file_analysis import describe_knowledge
+
+    kb = await _new_kb(_user.id)
+    assert await describe_knowledge(None, kb.id, _user, db=None) == ''
