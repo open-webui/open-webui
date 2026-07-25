@@ -1334,6 +1334,18 @@ RAG_EMBEDDING_QUERY_PREFIX = os.getenv('RAG_EMBEDDING_QUERY_PREFIX', None)
 
 RAG_EMBEDDING_CONTENT_PREFIX = os.getenv('RAG_EMBEDDING_CONTENT_PREFIX', None)
 
+# File extensions eligible for embedding into a knowledge base. Only document
+# types add value for chat retrieval; code/binaries are skipped (their AI context
+# description is still generated). Empty string disables the allowlist (embed all).
+RAG_EMBEDDABLE_EXTENSIONS = [
+    ext.strip().lower().lstrip('.')
+    for ext in os.getenv(
+        'RAG_EMBEDDABLE_EXTENSIONS',
+        'pdf,doc,docx,xls,xlsx,ppt,pptx,txt,md,markdown,csv,rtf,odt',
+    ).split(',')
+    if ext.strip()
+]
+
 RAG_EMBEDDING_PREFIX_FIELD_NAME = os.getenv('RAG_EMBEDDING_PREFIX_FIELD_NAME', None)
 
 RAG_RERANKING_ENGINE = ConfigVar(
@@ -3217,6 +3229,15 @@ ENABLE_TITLE_GENERATION = ConfigVar(
     'ENABLE_TITLE_GENERATION',
     'task.title.enable',
     os.getenv('ENABLE_TITLE_GENERATION', 'True').lower() == 'true',
+)
+
+# When enabled, each uploaded file is passed to the task model after extraction
+# (and before embedding) to decide whether its content is worth ingesting and to
+# produce a short description. Off by default.
+ENABLE_INGESTION_ANALYSIS = ConfigVar(
+    'ENABLE_INGESTION_ANALYSIS',
+    'task.ingestion_analysis.enable',
+    os.getenv('ENABLE_INGESTION_ANALYSIS', 'False').lower() == 'true',
 )
 
 

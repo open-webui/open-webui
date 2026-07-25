@@ -35,7 +35,10 @@
 		updateKnowledgeById,
 		updateKnowledgeAccessGrants,
 		searchKnowledgeFilesById,
+		describeKnowledge,
+		refreshKnowledgeStats,
 		createKnowledgeDirectory,
+		ensureKnowledgeDirectories,
 		updateKnowledgeDirectory,
 		deleteKnowledgeDirectory,
 		moveFileInKnowledge,
@@ -44,7 +47,8 @@
 	} from '$lib/apis/knowledge';
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
-	import { blobToFile, isYoutubeUrl, copyToClipboard } from '$lib/utils';
+	import { blobToFile, isYoutubeUrl, copyToClipboard, formatFileSize } from '$lib/utils';
+	import { withStatsOutdated } from '$lib/utils/knowledge';
 	import { computeFileHash } from '$lib/utils/hash';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -98,6 +102,11 @@
 		files: any[];
 		access_grants?: any[];
 		write_access?: boolean;
+		ai_overwiew?: string;
+		meta?: {
+			stats?: { file_count?: number; directory_count?: number; total_size?: number };
+			statistics_outdated?: boolean;
+		} | null;
 	};
 
 	let id = null;
@@ -119,13 +128,17 @@
 	let direction = null;
 
 	let currentPage = 1;
-	let fileItems = null;
-	let fileItemsTotal = null;
+	let fileItems: any[] | null = null;
+	let fileItemsTotal: number | null = null;
 
 	// Directory state
 	let currentDirectoryId: string | null = null;
-	let directoryItems = [];
+	let directoryItems: any[] = [];
 	let breadcrumbs = [];
+
+	// Files currently being uploaded, surfaced in a single tooltip indicator
+	// rather than as placeholder rows in the list.
+	let uploadingFiles: { id: string; name: string }[] = [];
 
 	let showDeleteDirectoryConfirm = false;
 	let pendingDeleteDirectoryId: string | null = null;
@@ -136,6 +149,12 @@
 	const reset = () => {
 		currentPage = 1;
 	};
+
+	// One name per line for the uploading-files tooltip (escaped; DOMPurify also
+	// sanitizes the rendered content).
+	$: uploadingTooltip = uploadingFiles
+		.map((f) => f.name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'))
+		.join('<br/>');
 
 	const init = async () => {
 		reset();
@@ -175,8 +194,9 @@
 	const getItemsPage = async () => {
 		if (knowledgeId === null) return;
 
-		fileItems = null;
-		fileItemsTotal = null;
+		// Keep already-rendered items visible while refetching (delete, move,
+		// navigate, filter). The full-panel spinner only shows on the initial
+		// load, when fileItems is still null — refreshes swap data in place.
 
 		if (sortKey === null) {
 			direction = null;
@@ -202,42 +222,91 @@
 			directoryItems = res.directories ?? [];
 			breadcrumbs = res.breadcrumbs ?? [];
 
-			// Merge in-flight files not yet linked to the knowledge base
-			try {
-				const pendingFiles = await getPendingKnowledgeFiles(localStorage.token, knowledgeId);
-				if (pendingFiles && pendingFiles.length > 0) {
-					const existingIds = new Set(fileItems.map((f) => f.id));
-					const newPending = pendingFiles
-						.filter((f) => !existingIds.has(f.id))
-						.map((f) => ({
-							...f,
-							name: f.meta?.name ?? f.filename,
-							status: 'uploading'
-						}));
-					if (newPending.length > 0) {
-						fileItems = [...newPending, ...fileItems];
-
-						// Start polling for completion (if not already polling)
-						if (!pendingPollTimer) {
-							pendingPollTimer = setInterval(async () => {
-								try {
-									const still = await getPendingKnowledgeFiles(localStorage.token, knowledgeId);
-									if (!still || still.length === 0) {
-										clearInterval(pendingPollTimer);
-										pendingPollTimer = null;
-										init();
-									}
-								} catch {}
-							}, 5000);
+			// Files are linked to their folder at upload time, so a still-processing
+			// file already appears here with a "pending/processing" status. Poll and
+			// patch just those items' status label in place — no full refetch, no
+			// separate section.
+			const inFlight = (s) => ['pending', 'processing', 'uploading'].includes(s);
+			if ((fileItems ?? []).some((it) => inFlight(it?.data?.status ?? it?.status)) && !pendingPollTimer) {
+				pendingPollTimer = setInterval(async () => {
+					try {
+						const busy = (fileItems ?? []).filter(
+							(it) => it?.id && inFlight(it?.data?.status ?? it?.status)
+						);
+						if (busy.length === 0) {
+							clearInterval(pendingPollTimer);
+							pendingPollTimer = null;
+							return;
 						}
-					}
-				}
-			} catch (e) {
-				console.warn('Failed to fetch pending files:', e);
+						const updates = {};
+						await Promise.all(
+							busy.map(async (it) => {
+								const u = await getFileById(localStorage.token, it.id).catch(() => null);
+								if (u) updates[it.id] = u;
+							})
+						);
+						if (Object.keys(updates).length) {
+							fileItems = (fileItems ?? []).map((it) =>
+								updates[it.id]
+									? {
+											...it,
+											data: updates[it.id].data,
+											meta: updates[it.id].meta ?? it.meta,
+											status: updates[it.id]?.data?.status
+										}
+									: it
+							);
+						}
+					} catch {}
+				}, 5000);
 			}
 		}
 
 		return res;
+	};
+
+	let describingKnowledge = false;
+	const describeKnowledgeHandler = async () => {
+		if (!knowledge?.id) return;
+		describingKnowledge = true;
+		try {
+			const res = await describeKnowledge(localStorage.token, knowledge.id);
+			if (res) {
+				knowledge = { ...knowledge, ai_overwiew: res.ai_overwiew };
+				toast.success($i18n.t('Overview generated.'));
+			}
+		} catch (e) {
+			toast.error(`${e}`);
+		} finally {
+			describingKnowledge = false;
+		}
+	};
+
+	let refreshingStats = false;
+	const refreshStatsHandler = async () => {
+		if (!knowledge?.id) return;
+		refreshingStats = true;
+		try {
+			const res = await refreshKnowledgeStats(localStorage.token, knowledge.id);
+			if (res) {
+				knowledge = {
+					...knowledge,
+					meta: { ...(knowledge.meta || {}), stats: res.stats, statistics_outdated: false }
+				};
+				toast.success($i18n.t('Statistics updated.'));
+			}
+		} catch (e) {
+			toast.error(`${e}`);
+		} finally {
+			refreshingStats = false;
+		}
+	};
+
+	// On add/delete of a file or folder, flag the cached KB stats as outdated
+	// locally (no backend call, no numeric patch). The user refreshes via the
+	// "Update statistics" button; the "(outdated)" hint shows meanwhile.
+	const markStatsOutdatedLocal = () => {
+		knowledge = withStatsOutdated(knowledge);
 	};
 
 	const fileSelectHandler = async (file) => {
@@ -337,22 +406,8 @@
 		}
 	};
 
-	const uploadFileHandler = async (file) => {
-		console.log(file);
-
-		const fileItem = {
-			type: 'file',
-			file: '',
-			id: null,
-			url: '',
-			name: file.name,
-			size: file.size,
-			status: 'uploading',
-			error: '',
-			itemId: uuidv4()
-		};
-
-		if (fileItem.size == 0) {
+	const uploadFileHandler = async (file, relativePath = null) => {
+		if (file.size == 0) {
 			toast.error($i18n.t('You cannot upload an empty file.'));
 			return null;
 		}
@@ -373,11 +428,17 @@
 			return;
 		}
 
-		fileItems = [fileItem, ...(fileItems ?? [])];
+		// Track in-progress uploads in the tooltip indicator instead of adding
+		// placeholder rows to the list.
+		const uploadId = uuidv4();
+		uploadingFiles = [...uploadingFiles, { id: uploadId, name: relativePath || file.name }];
 		try {
 			let metadata = {
 				knowledge_id: knowledge.id,
 				directory_id: currentDirectoryId,
+				// When uploading a folder, carry the file's relative path so the
+				// backend recreates the folder tree (physical storage stays flat).
+				...(relativePath ? { relative_path: relativePath } : {}),
 				// If the file is an audio file, provide the language for STT.
 				...((file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
 				$settings?.audio?.stt?.language
@@ -387,33 +448,37 @@
 					: {})
 			};
 
-			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
+			const uploadedFile = await uploadFile(
+				localStorage.token,
+				file,
+				metadata,
+				undefined,
+				// Resolve once the upload (presigned PUT + finalize) is accepted; don't
+				// block on the processing/embedding stream. The backend worker drains
+				// the queue sequentially and the pending-poller updates status badges.
+				false,
+				$config?.file?.s3_presigned_upload ?? false
+			).catch((e) => {
 				toast.error(`${e}`);
 				return null;
 			});
 
 			if (uploadedFile) {
-				console.log(uploadedFile);
-				fileItems = fileItems.map((item) => {
-					if (item.itemId === fileItem.itemId) {
-						item.id = uploadedFile.id;
-					}
-					return item;
-				});
-
 				if (uploadedFile.error) {
 					console.warn('File upload warning:', uploadedFile.error);
 					toast.warning(uploadedFile.error);
-					fileItems = fileItems.filter((file) => file.id !== uploadedFile.id);
 				} else {
 					toast.success($i18n.t('File added successfully.'));
-					init();
+					markStatsOutdatedLocal();
+					getItemsPage();
 				}
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));
 			}
 		} catch (e) {
 			toast.error(`${e}`);
+		} finally {
+			uploadingFiles = uploadingFiles.filter((f) => f.id !== uploadId);
 		}
 	};
 
@@ -437,6 +502,26 @@
 	// Helper function to check if a path contains hidden folders
 	const hasHiddenFolder = (path) => {
 		return path.split('/').some((part) => part.startsWith('.'));
+	};
+
+	// Directory portion of a file's relative path ('' for a root-level file).
+	const dirPathOf = (relativePath: string): string => {
+		const idx = relativePath.lastIndexOf('/');
+		return idx === -1 ? '' : relativePath.slice(0, idx);
+	};
+
+	// Create the folder tree (root first) under the current directory before
+	// uploading its files, so the folders appear immediately and each file lands
+	// into an existing directory instead of being materialized lazily.
+	const ensureFolderTree = async (relativePaths: string[]) => {
+		const dirPaths = [...new Set(relativePaths.map(dirPathOf).filter(Boolean))];
+		if (dirPaths.length === 0) return;
+		try {
+			await ensureKnowledgeDirectories(localStorage.token, knowledge.id, dirPaths, currentDirectoryId);
+			await getItemsPage();
+		} catch (e) {
+			console.error('Failed to pre-create folder tree', e);
+		}
 	};
 
 	// Modern browsers implementation using File System Access API
@@ -474,8 +559,10 @@
 			}
 		}
 
-		// Recursive function to process directories excluding hidden files and folders
-		async function processDirectory(dirHandle, path = '') {
+		// Recursively collect files (without uploading yet) so the folder tree
+		// can be created first. entryPath is the file's relative path.
+		const collected: { file: File; relativePath: string }[] = [];
+		async function collect(dirHandle, path = '') {
 			for await (const entry of dirHandle.values()) {
 				// Skip hidden files and directories
 				if (entry.name.startsWith('.')) continue;
@@ -487,16 +574,9 @@
 
 				if (entry.kind === 'file') {
 					const file = await entry.getFile();
-					const fileWithPath = new File([file], entryPath, { type: file.type });
-
-					await uploadFileHandler(fileWithPath);
-					uploadedFiles++;
-					updateProgress();
+					collected.push({ file, relativePath: entryPath });
 				} else if (entry.kind === 'directory') {
-					// Only process non-hidden directories
-					if (!entry.name.startsWith('.')) {
-						await processDirectory(entry, entryPath);
-					}
+					await collect(entry, entryPath);
 				}
 			}
 		}
@@ -505,7 +585,19 @@
 		updateProgress();
 
 		if (totalFiles > 0) {
-			await processDirectory(dirHandle);
+			// Seed with the picked folder's name so the selected folder itself
+			// becomes the root directory (matching the Firefox webkitRelativePath
+			// path, which includes the top-level folder).
+			await collect(dirHandle, dirHandle.name);
+
+			// Create the folder tree (root first) before uploading files.
+			await ensureFolderTree(collected.map((c) => c.relativePath));
+
+			for (const { file, relativePath } of collected) {
+				await uploadFileHandler(file, relativePath);
+				uploadedFiles++;
+				updateProgress();
+			}
 		} else {
 			console.log('No files to upload.');
 		}
@@ -548,17 +640,18 @@
 
 					updateProgress();
 
-					// Process all files
-					for (const file of files) {
-						// Skip hidden files (additional check)
-						if (!file.name.startsWith('.')) {
-							const relativePath = file.webkitRelativePath || file.name;
-							const fileWithPath = new File([file], relativePath, { type: file.type });
+					const visible = files.filter((file) => !file.name.startsWith('.'));
 
-							await uploadFileHandler(fileWithPath);
-							uploadedFiles++;
-							updateProgress();
-						}
+					// Create the folder tree (root first) before uploading files.
+					await ensureFolderTree(visible.map((file) => file.webkitRelativePath || file.name));
+
+					// Process all files
+					for (const file of visible) {
+						const relativePath = file.webkitRelativePath || file.name;
+
+						await uploadFileHandler(file, relativePath);
+						uploadedFiles++;
+						updateProgress();
 					}
 
 					// Clean up
@@ -815,6 +908,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Directory created.'));
+			markStatsOutdatedLocal();
 			getItemsPage();
 		}
 	};
@@ -853,7 +947,10 @@
 
 		if (res) {
 			toast.success($i18n.t('Directory deleted.'));
-			getItemsPage();
+			// Remove the deleted folder locally instead of refetching the page.
+			directoryItems = (directoryItems ?? []).filter((d) => d.id !== pendingDeleteDirectoryId);
+			// Subtree size/counts aren't known client-side — flag stats as outdated.
+			markStatsOutdatedLocal();
 		}
 		pendingDeleteDirectoryId = null;
 	};
@@ -900,7 +997,10 @@
 
 			if (res) {
 				toast.success($i18n.t('File removed successfully.'));
-				await init();
+				// Remove the file locally instead of refetching the page.
+				fileItems = (fileItems ?? []).filter((f) => (f?.id ?? f?.tempId) !== fileId);
+				if (typeof fileItemsTotal === 'number') fileItemsTotal = Math.max(0, fileItemsTotal - 1);
+				markStatsOutdatedLocal();
 			}
 		} catch (e) {
 			console.error('Error in deleteFileHandler:', e);
@@ -1284,20 +1384,81 @@
 							}}
 						/>
 
-						<div class="hidden md:block">
-							<Tooltip content={$i18n.t('Click to copy ID')}>
-								<button
-									class="text-xs text-gray-500 font-mono shrink-0 px-2 py-1 rounded-lg cursor-pointer hover:underline transition whitespace-nowrap"
-									on:click={() => {
-										copyToClipboard(id);
-										toast.success($i18n.t('ID copied to clipboard'));
-									}}
-								>
-									{id}
-								</button>
-							</Tooltip>
-						</div>
+						{#if knowledge?.registration_number || knowledge?.registration_date}
+							<div class="hidden md:block text-xs text-gray-500 shrink-0 px-2 py-1 whitespace-nowrap">
+								{#if knowledge?.registration_number}
+									{$i18n.t('Reg. No.')}: {knowledge.registration_number}
+								{/if}
+								{#if knowledge?.registration_number && knowledge?.registration_date}
+									·
+								{/if}
+								{#if knowledge?.registration_date}
+									{knowledge.registration_date}
+								{/if}
+							</div>
+						{/if}
 					</div>
+
+					{#if knowledge?.meta?.stats || knowledge?.write_access}
+						<div class="mt-1 px-1.5 text-xs text-gray-500 flex items-center gap-2 flex-wrap">
+							{#if knowledge?.meta?.stats}
+								<span>
+									{$i18n.t('{{count}} files', { count: knowledge.meta.stats.file_count ?? 0 })}
+								</span>
+								<span>·</span>
+								<span>
+									{$i18n.t('{{count}} folders', { count: knowledge.meta.stats.directory_count ?? 0 })}
+								</span>
+								<span>·</span>
+								<span>{formatFileSize(knowledge.meta.stats.total_size ?? 0)}</span>
+							{:else}
+								<span>{$i18n.t('No statistics yet.')}</span>
+							{/if}
+
+							{#if knowledge?.meta?.statistics_outdated}
+								<span class="text-amber-600 dark:text-amber-400">({$i18n.t('outdated')})</span>
+							{/if}
+
+							{#if knowledge?.write_access}
+								<button
+									class="shrink-0 flex items-center gap-1 text-gray-600 dark:text-gray-300 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition px-2 py-0.5 rounded-lg"
+									type="button"
+									on:click={refreshStatsHandler}
+									disabled={refreshingStats}
+								>
+									{#if refreshingStats}
+										<Spinner className="size-3" />
+									{/if}
+									{$i18n.t('Update statistics')}
+								</button>
+							{/if}
+						</div>
+					{/if}
+
+					{#if knowledge?.ai_overwiew || knowledge?.write_access}
+						<div class="flex items-start gap-2 mt-1 px-1.5">
+							<div
+								class="flex-1 min-w-0 text-xs text-gray-500 whitespace-pre-line max-h-32 overflow-y-auto scrollbar-hidden"
+							>
+								{knowledge?.ai_overwiew || $i18n.t('No overview yet.')}
+							</div>
+							{#if knowledge?.write_access}
+								<button
+									class="shrink-0 flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition px-2 py-1 rounded-lg"
+									type="button"
+									on:click={describeKnowledgeHandler}
+									disabled={describingKnowledge}
+								>
+									{#if describingKnowledge}
+										<Spinner className="size-3" />
+									{/if}
+									{knowledge?.ai_overwiew
+										? $i18n.t('Regenerate overview')
+										: $i18n.t('Generate overview')}
+								</button>
+							{/if}
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -1313,8 +1474,8 @@
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={query}
-						aria-label={$i18n.t('Search Collection')}
-						placeholder={$i18n.t('Search Collection')}
+						aria-label={$i18n.t('Search Documents')}
+						placeholder={$i18n.t('Search Documents')}
 						on:focus={() => {
 							selectedFileId = null;
 						}}
@@ -1458,6 +1619,24 @@
 							{syncing}
 						</div>
 					</div>
+				</div>
+			{/if}
+
+			{#if uploadingFiles.length > 0}
+				<!-- Fixed at the very top of the viewport so it stays visible while scrolling. -->
+				<div class="fixed top-2 left-1/2 -translate-x-1/2 z-[9999]">
+					<Tooltip content={uploadingTooltip} placement="bottom" className="w-fit">
+						<div
+							class="flex items-center gap-2.5 rounded-xl py-2 px-3 bg-white dark:bg-gray-850 shadow-lg border border-gray-100 dark:border-gray-800"
+						>
+							<Spinner className="size-3.5 shrink-0" />
+							<div class="text-xs text-gray-600 dark:text-gray-300 truncate max-w-[60vw]">
+								{uploadingFiles.length === 1
+									? $i18n.t('Uploading {{name}}', { name: uploadingFiles[0].name })
+									: $i18n.t('Uploading {{count}} files', { count: uploadingFiles.length })}
+							</div>
+						</div>
+					</Tooltip>
 				</div>
 			{/if}
 

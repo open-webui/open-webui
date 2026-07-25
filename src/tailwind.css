@@ -2,6 +2,13 @@
 
 @config '../tailwind.config.js';
 
+/* Flowbite (Tailwind v4): scan flowbite-svelte's markup so the utility classes
+   its components emit (e.g. the Datepicker) get generated.
+   NOTE: we intentionally do NOT load `@plugin 'flowbite/plugin'` — it injects a
+   global @tailwindcss/forms base reset that overrides the app's own form/label
+   styles (broke AccessControl's public/private select & labels). */
+@source '../node_modules/flowbite-svelte';
+
 @theme {
 	--color-gray-50: oklch(0.98 0 0);
 	--color-gray-100: oklch(0.94 0 0);

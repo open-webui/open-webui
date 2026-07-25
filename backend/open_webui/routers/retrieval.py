@@ -37,6 +37,7 @@ from open_webui.config import (
     DEFAULT_LOCALE,
     ENV,
     RAG_EMBEDDING_CONTENT_PREFIX,
+    RAG_EMBEDDABLE_EXTENSIONS,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_QUERY_PREFIX,
@@ -1692,6 +1693,44 @@ async def process_file(
                 db=db,
             )
             hash = calculate_sha256_string(text_content)
+
+            # AI context/description (opt-in): generate and persist for EVERY file
+            # on first ingestion — even ones we won't embed — so file/folder/KB
+            # overviews cover the whole knowledge base. analyze_file fails open.
+            #
+            # Only on FIRST ingestion (freshly-extracted path) — not on content
+            # updates (form_data.content) or KB re-adds (form_data.collection_name),
+            # to avoid redundant LLM calls.
+            if (
+                getattr(request.app.state.config, 'ENABLE_INGESTION_ANALYSIS', False)
+                and not form_data.content
+                and not form_data.collection_name
+            ):
+                from open_webui.services.file_analysis import analyze_file
+
+                await analyze_file(request, file.id, user, content=text_content, db=db)
+
+            # Embedding eligibility is an extension allowlist: only document types
+            # are worth embedding for chat retrieval (code/binaries add noise).
+            # Non-allowed files keep their AI context but are not embedded. Applies
+            # to any file-based ingestion (first pass and KB re-add), not to text
+            # content updates.
+            if not form_data.content and RAG_EMBEDDABLE_EXTENSIONS:
+                ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in (file.filename or '') else ''
+                if ext not in RAG_EMBEDDABLE_EXTENSIONS:
+                    log.info(f'File {file.id} (.{ext}) is not an embeddable type; keeping context, skipping embedding')
+                    await Files.update_file_data_by_id(
+                        file.id,
+                        {'status': 'skipped', 'skipped_reason': 'not_embeddable_type'},
+                        db=db,
+                    )
+                    await Files.update_file_hash_by_id(file.id, hash, db=db)
+                    return {
+                        'status': True,
+                        'collection_name': None,
+                        'filename': file.filename,
+                        'content': text_content,
+                    }
 
             if request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
                 await Files.update_file_data_by_id(file.id, {'status': 'completed'}, db=db)

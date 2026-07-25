@@ -1,33 +1,16 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { splitStream } from '$lib/utils';
 
-export const uploadFile = async (
-	token: string,
-	file: File,
-	metadata?: object | null,
-	process?: boolean | null,
-	stream: boolean = true
-) => {
-	const data = new FormData();
-	data.append('file', file);
-	if (metadata) {
-		data.append('metadata', JSON.stringify(metadata));
-	}
-
-	const searchParams = new URLSearchParams();
-	if (process !== undefined && process !== null) {
-		searchParams.append('process', String(process));
-	}
-
+export const getPresignedUpload = async (token: string, filename: string, metadata?: object | null) => {
 	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/?${searchParams.toString()}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/presign`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
+			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: data
+		body: JSON.stringify({ filename, metadata: metadata ?? {} })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -38,6 +21,98 @@ export const uploadFile = async (
 			console.error(err);
 			return null;
 		});
+	if (error) throw error;
+	return res;
+};
+
+export const finalizeUpload = async (token: string, id: string, process?: boolean | null) => {
+	const searchParams = new URLSearchParams();
+	if (process !== undefined && process !== null) {
+		searchParams.append('process', String(process));
+	}
+	let error = null;
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}/finalize?${searchParams.toString()}`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail || err.message;
+			console.error(err);
+			return null;
+		});
+	if (error) throw error;
+	return res;
+};
+
+export const uploadFile = async (
+	token: string,
+	file: File,
+	metadata?: object | null,
+	process?: boolean | null,
+	stream: boolean = true,
+	presigned: boolean = false
+) => {
+	let res = null;
+	let error = null;
+
+	if (presigned) {
+		// Direct-to-S3: presign → PUT bytes straight to storage → finalize
+		// (backend pulls the object back, hashes it, and runs the pipeline).
+		try {
+			const presign = await getPresignedUpload(token, file.name, {
+				...(metadata ?? {}),
+				content_type: file.type
+			});
+			const putRes = await fetch(presign.upload_url, {
+				method: presign.method ?? 'PUT',
+				headers: file.type ? { 'Content-Type': file.type } : {},
+				body: file
+			});
+			if (!putRes.ok) {
+				throw new Error(`Direct upload to storage failed (${putRes.status})`);
+			}
+			res = await finalizeUpload(token, presign.id, process);
+		} catch (err: any) {
+			error = err?.detail || err?.message || err;
+			console.error(err);
+		}
+	} else {
+		const data = new FormData();
+		data.append('file', file);
+		if (metadata) {
+			data.append('metadata', JSON.stringify(metadata));
+		}
+
+		const searchParams = new URLSearchParams();
+		if (process !== undefined && process !== null) {
+			searchParams.append('process', String(process));
+		}
+
+		res = await fetch(`${WEBUI_API_BASE_URL}/files/?${searchParams.toString()}`, {
+			method: 'POST',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			},
+			body: data
+		})
+			.then(async (res) => {
+				if (!res.ok) throw await res.json();
+				return res.json();
+			})
+			.catch((err) => {
+				error = err.detail || err.message;
+				console.error(err);
+				return null;
+			});
+	}
 
 	if (error) {
 		throw error;

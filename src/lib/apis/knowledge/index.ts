@@ -2,9 +2,13 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const createNewKnowledge = async (
 	token: string,
-	name: string,
-	description: string,
-	accessGrants: object[]
+	data: {
+		name: string,
+		description: string,
+		accessGrants: object[],
+		registrationDate?: Date | null
+		registrationNumber?: string | null
+	}
 ) => {
 	let error = null;
 
@@ -16,9 +20,11 @@ export const createNewKnowledge = async (
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			name: name,
-			description: description,
-			access_grants: accessGrants
+			name: data.name,
+			description: data.description,
+			access_grants: data.accessGrants,
+			...(data.registrationNumber ? {registration_number: data.registrationNumber} : {}),
+			...(data.registrationDate ? {registration_date: data.registrationDate.toLocaleDateString('en-CA')} : {}),
 		})
 	})
 		.then(async (res) => {
@@ -678,6 +684,86 @@ export const exportKnowledgeById = async (token: string, id: string) => {
 };
 
 // ── Directory API ───────────────────────────────────────────────────
+
+export const refreshKnowledgeStats = async (token: string, id: string) => {
+	let error = null;
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/stats`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+	if (error) throw error;
+	return res;
+};
+
+export const describeKnowledge = async (token: string, id: string) => {
+	let error = null;
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/describe`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+	if (error) throw error;
+	return res;
+};
+
+export const ensureKnowledgeDirectories = async (
+	token: string,
+	id: string,
+	paths: string[],
+	parentId?: string | null
+): Promise<Record<string, string>> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/dirs/ensure`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ paths, ...(parentId ? { parent_id: parentId } : {}) })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res ?? {};
+};
 
 export const createKnowledgeDirectory = async (
 	token: string,

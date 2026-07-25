@@ -2,6 +2,7 @@ import json
 import logging
 import time
 import uuid
+from datetime import date
 from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
@@ -21,10 +22,10 @@ from sqlalchemy import (
     Column,
     ForeignKey,
     Index,
-    String,
     Text,
     UniqueConstraint,
     delete,
+    Date,
     func,
     or_,
     select,
@@ -50,6 +51,10 @@ class Knowledge(Base):
     name = Column(Text)
     description = Column(Text)
 
+    ai_overwiew = Column(Text, nullable=True)
+    registration_number = Column(Text, nullable=True)
+    registration_date = Column(Date, nullable=True)
+
     meta = Column(JSON, nullable=True)
 
     created_at = Column(BigInteger)
@@ -64,6 +69,10 @@ class KnowledgeDirectory(Base):
     parent_id = Column(Text, ForeignKey('knowledge_directory.id', ondelete='CASCADE'), nullable=True)
     name = Column(Text, nullable=False)
     user_id = Column(Text, nullable=False)
+    # Cached counts of the directory's *immediate* children:
+    # {'file_count': int, 'directory_count': int}. Kept in sync by
+    # _recompute_directory_counts after every mutation touching this level.
+    meta = Column(JSON, nullable=True)
 
     created_at = Column(BigInteger, nullable=False)
     updated_at = Column(BigInteger, nullable=False)
@@ -84,9 +93,15 @@ class KnowledgeModel(BaseModel):
     name: str
     description: str
 
+    # AI-generated overview of the whole knowledge base (on-demand rollup).
+    ai_overwiew: Optional[str] = None
+
     meta: Optional[dict] = None
 
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
+
+    registration_number: Optional[str] = None
+    registration_date: Optional[date] = None
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -132,6 +147,8 @@ class KnowledgeDirectoryModel(BaseModel):
     parent_id: Optional[str] = None
     name: str
     user_id: str
+    # {'file_count': int, 'directory_count': int} for immediate children.
+    meta: Optional[dict] = None
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -161,6 +178,8 @@ class KnowledgeForm(BaseModel):
     name: str
     description: str
     access_grants: Optional[list[dict]] = None
+    registration_number: Optional[str] = None
+    registration_date: Optional[date] = None
 
 
 class FileUserResponse(FileModelResponse):
@@ -206,6 +225,7 @@ class KnowledgeTable:
                     'user_id': user_id,
                     'created_at': int(time.time()),
                     'updated_at': int(time.time()),
+                    'registration_date': form_data.registration_date if form_data.registration_date else None,
                     'access_grants': [],
                 }
             )
@@ -670,6 +690,8 @@ class KnowledgeTable:
                 await db.commit()
                 await db.refresh(result)
                 if result:
+                    await self._recompute_directory_counts(directory_id, db=db)
+                    await self.mark_stats_outdated(knowledge_id, db=db)
                     return KnowledgeFileModel.model_validate(result)
                 else:
                     return None
@@ -687,13 +709,36 @@ class KnowledgeTable:
         except Exception:
             return False
 
+    async def is_file_linked_to_any_knowledge(self, file_id: str, db: Optional[AsyncSession] = None) -> bool:
+        """Whether a file is still linked to *any* knowledge base. Used as a
+        reference guard before physically deleting the file's bytes: the same
+        File row can be shared across KBs via the knowledge_file join."""
+        try:
+            async with get_async_db_context(db) as db:
+                result = await db.execute(select(KnowledgeFile.id).filter_by(file_id=file_id).limit(1))
+                return result.first() is not None
+        except Exception:
+            # Fail safe: assume still referenced so we never delete bytes on error.
+            return True
+
     async def remove_file_from_knowledge_by_id(
         self, knowledge_id: str, file_id: str, db: Optional[AsyncSession] = None
     ) -> bool:
         try:
             async with get_async_db_context(db) as db:
+                # Capture the directory the file lived in so its count can be
+                # refreshed after removal.
+                row = (
+                    await db.execute(
+                        select(KnowledgeFile.directory_id).filter_by(knowledge_id=knowledge_id, file_id=file_id)
+                    )
+                ).first()
+                directory_id = row[0] if row else None
+
                 await db.execute(delete(KnowledgeFile).filter_by(knowledge_id=knowledge_id, file_id=file_id))
                 await db.commit()
+                await self._recompute_directory_counts(directory_id, db=db)
+                await self.mark_stats_outdated(knowledge_id, db=db)
                 return True
         except Exception:
             return False
@@ -765,6 +810,87 @@ class KnowledgeTable:
             log.exception(e)
             return None
 
+    async def get_knowledge_stats(self, knowledge_id: str, db: Optional[AsyncSession] = None) -> dict:
+        """Aggregate stats for a KB: number of files, number of folders, and the
+        total size (bytes) occupied by its files."""
+        async with get_async_db_context(db) as db:
+            file_count = (
+                await db.execute(
+                    select(func.count()).select_from(KnowledgeFile).filter(KnowledgeFile.knowledge_id == knowledge_id)
+                )
+            ).scalar() or 0
+            directory_count = (
+                await db.execute(
+                    select(func.count())
+                    .select_from(KnowledgeDirectory)
+                    .filter(KnowledgeDirectory.knowledge_id == knowledge_id)
+                )
+            ).scalar() or 0
+
+            total_size = 0
+            result = await db.execute(
+                select(File.meta)
+                .join(KnowledgeFile, File.id == KnowledgeFile.file_id)
+                .filter(KnowledgeFile.knowledge_id == knowledge_id)
+            )
+            for (meta,) in result.all():
+                size = (meta or {}).get('size') if isinstance(meta, dict) else None
+                if isinstance(size, (int, float)):
+                    total_size += int(size)
+
+            return {'file_count': file_count, 'directory_count': directory_count, 'total_size': total_size}
+
+    async def set_knowledge_stats(
+        self, id: str, stats: dict, db: Optional[AsyncSession] = None
+    ) -> Optional[KnowledgeModel]:
+        """Store computed stats under knowledge.meta['stats'] (merge) and clear
+        the 'statistics_outdated' flag."""
+        try:
+            async with get_async_db_context(db) as db:
+                row = (await db.execute(select(Knowledge.meta).filter_by(id=id))).first()
+                meta = dict(row[0]) if row and row[0] else {}
+                meta['stats'] = stats
+                meta['statistics_outdated'] = False
+                await db.execute(
+                    update(Knowledge).filter_by(id=id).values(meta=meta, updated_at=int(time.time()))
+                )
+                await db.commit()
+                return await self.get_knowledge_by_id(id=id, db=db)
+        except Exception as e:
+            log.exception(e)
+            return None
+
+    async def mark_stats_outdated(self, knowledge_id: str, db: Optional[AsyncSession] = None) -> None:
+        """Flag a KB's cached stats as stale (e.g. after a file/folder is added
+        or removed). Cleared when stats are recomputed via set_knowledge_stats."""
+        try:
+            async with get_async_db_context(db) as db:
+                row = (await db.execute(select(Knowledge.meta).filter_by(id=knowledge_id))).first()
+                if row is None:
+                    return
+                meta = dict(row[0]) if row[0] else {}
+                if meta.get('statistics_outdated') is True:
+                    return
+                meta['statistics_outdated'] = True
+                await db.execute(update(Knowledge).filter_by(id=knowledge_id).values(meta=meta))
+                await db.commit()
+        except Exception as e:
+            log.exception(e)
+
+    async def set_ai_overview(
+        self, id: str, ai_overview: str, db: Optional[AsyncSession] = None
+    ) -> Optional[KnowledgeModel]:
+        try:
+            async with get_async_db_context(db) as db:
+                await db.execute(
+                    update(Knowledge).filter_by(id=id).values(ai_overwiew=ai_overview, updated_at=int(time.time()))
+                )
+                await db.commit()
+                return await self.get_knowledge_by_id(id=id, db=db)
+        except Exception as e:
+            log.exception(e)
+            return None
+
     async def delete_knowledge_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
         try:
             async with get_async_db_context(db) as db:
@@ -791,6 +917,122 @@ class KnowledgeTable:
 
     # ── Directory CRUD ────────────────────────────────────────────────
 
+    async def _recompute_directory_counts(
+        self,
+        directory_id: Optional[str],
+        db: Optional[AsyncSession] = None,
+    ) -> None:
+        """Refresh a directory's cached immediate-children counts from the
+        source of truth. A no-op for the KB root (directory_id=None), which is
+        not a stored directory row. Recomputing (rather than +/- deltas) keeps
+        the cached counts self-healing and drift-free."""
+        if not directory_id:
+            return
+        async with get_async_db_context(db) as db:
+            file_count = (
+                await db.execute(
+                    select(func.count()).select_from(KnowledgeFile).filter(KnowledgeFile.directory_id == directory_id)
+                )
+            ).scalar() or 0
+            directory_count = (
+                await db.execute(
+                    select(func.count())
+                    .select_from(KnowledgeDirectory)
+                    .filter(KnowledgeDirectory.parent_id == directory_id)
+                )
+            ).scalar() or 0
+            # Merge into existing meta so non-count keys (e.g. description) survive.
+            row = (await db.execute(select(KnowledgeDirectory.meta).filter_by(id=directory_id))).first()
+            meta = dict(row[0]) if row and row[0] else {}
+            meta['file_count'] = file_count
+            meta['directory_count'] = directory_count
+            await db.execute(update(KnowledgeDirectory).filter_by(id=directory_id).values(meta=meta))
+            await db.commit()
+
+    async def get_file_ids_in_directory(
+        self,
+        directory_id: str,
+        db: Optional[AsyncSession] = None,
+    ) -> list[str]:
+        """Immediate file_ids in a directory (not descendants)."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(KnowledgeFile.file_id).filter_by(directory_id=directory_id))
+            return [row[0] for row in result.all()]
+
+    async def set_directory_description(
+        self,
+        directory_id: Optional[str],
+        description: str,
+        db: Optional[AsyncSession] = None,
+    ) -> None:
+        """Store an AI-generated folder summary in the directory's meta,
+        preserving the cached counts."""
+        if not directory_id:
+            return
+        async with get_async_db_context(db) as db:
+            row = (await db.execute(select(KnowledgeDirectory.meta).filter_by(id=directory_id))).first()
+            if row is None:
+                return
+            meta = dict(row[0]) if row[0] else {}
+            meta['description'] = description
+            await db.execute(update(KnowledgeDirectory).filter_by(id=directory_id).values(meta=meta))
+            await db.commit()
+
+    async def ensure_directory_path(
+        self,
+        knowledge_id: str,
+        path: Optional[str],
+        user_id: str,
+        parent_id: Optional[str] = None,
+        db: Optional[AsyncSession] = None,
+    ) -> Optional[str]:
+        """Resolve a POSIX-style folder path to a directory id, creating any
+        missing levels beneath ``parent_id`` (the base directory, or the KB root
+        when None). Idempotent: existing levels are reused. Returns the leaf
+        directory id, or ``parent_id`` for an empty path."""
+        if not path:
+            return parent_id
+
+        segments = [s for s in path.split('/') if s]
+        if not segments:
+            return parent_id
+
+        async with get_async_db_context(db) as db:
+            for name in segments:
+                stmt = select(KnowledgeDirectory).filter(
+                    KnowledgeDirectory.knowledge_id == knowledge_id,
+                    KnowledgeDirectory.name == name,
+                )
+                stmt = stmt.filter(
+                    KnowledgeDirectory.parent_id == parent_id
+                    if parent_id
+                    else KnowledgeDirectory.parent_id.is_(None)
+                )
+                existing = (await db.execute(stmt)).scalars().first()
+
+                if existing:
+                    parent_id = existing.id
+                    continue
+
+                directory = await self.create_directory(
+                    knowledge_id=knowledge_id,
+                    name=name,
+                    user_id=user_id,
+                    parent_id=parent_id,
+                    db=db,
+                )
+                if directory:
+                    parent_id = directory.id
+                else:
+                    # Lost a create race against a concurrent upload; re-query the
+                    # level the unique constraint now guarantees exists.
+                    existing = (await db.execute(stmt)).scalars().first()
+                    if not existing:
+                        return parent_id
+                    parent_id = existing.id
+
+            return parent_id
+
     async def create_directory(
         self,
         knowledge_id: str,
@@ -808,12 +1050,16 @@ class KnowledgeTable:
                     parent_id=parent_id,
                     name=name,
                     user_id=user_id,
+                    meta={'file_count': 0, 'directory_count': 0},
                     created_at=now,
                     updated_at=now,
                 )
                 db.add(directory)
                 await db.commit()
                 await db.refresh(directory)
+                # The new folder adds one subdirectory to its parent's count.
+                await self._recompute_directory_counts(parent_id, db=db)
+                await self.mark_stats_outdated(knowledge_id, db=db)
                 return KnowledgeDirectoryModel.model_validate(directory)
             except Exception as e:
                 log.exception(e)
@@ -942,12 +1188,22 @@ class KnowledgeTable:
                         row = result.first()
                         current = row[0] if row else None
 
+                # Old parent (for its subdirectory count) before the move.
+                old_row = (
+                    await db.execute(select(KnowledgeDirectory.parent_id).filter_by(id=directory_id))
+                ).first()
+                old_parent_id = old_row[0] if old_row else None
+
                 await db.execute(
                     update(KnowledgeDirectory)
                     .filter_by(id=directory_id)
                     .values(parent_id=new_parent_id, updated_at=int(time.time()))
                 )
                 await db.commit()
+                # Refresh both ends of the move.
+                await self._recompute_directory_counts(old_parent_id, db=db)
+                if new_parent_id != old_parent_id:
+                    await self._recompute_directory_counts(new_parent_id, db=db)
                 return await self.get_directory_by_id(directory_id, db=db)
             except Exception as e:
                 log.exception(e)
@@ -992,6 +1248,7 @@ class KnowledgeTable:
                     return False
 
                 parent_id = directory.parent_id
+                knowledge_id = directory.knowledge_id
 
                 if move_files_to_parent:
                     # Move files in this directory to its parent (or root)
@@ -1007,6 +1264,10 @@ class KnowledgeTable:
                 # CASCADE on parent_id will handle deleting subdirectories
                 await db.execute(delete(KnowledgeDirectory).filter_by(id=directory_id))
                 await db.commit()
+                # Parent loses a subdirectory and (when move_files_to_parent)
+                # gains this subtree's files — recompute covers both.
+                await self._recompute_directory_counts(parent_id, db=db)
+                await self.mark_stats_outdated(knowledge_id, db=db)
                 return True
             except Exception as e:
                 log.exception(e)
@@ -1040,6 +1301,28 @@ class KnowledgeTable:
         for child_id in child_ids:
             await self._delete_files_in_subtree(child_id, db=db)
 
+    async def get_file_ids_in_directory_subtree(
+        self,
+        directory_id: str,
+        db: Optional[AsyncSession] = None,
+    ) -> list[str]:
+        """Collect every file_id linked anywhere within a directory's subtree
+        (the directory itself and all descendants). Used to fully tear down
+        files when a folder is deleted without moving them to the parent."""
+        async with get_async_db_context(db) as db:
+            dir_ids = [directory_id]
+            frontier = [directory_id]
+            while frontier:
+                result = await db.execute(
+                    select(KnowledgeDirectory.id).filter(KnowledgeDirectory.parent_id.in_(frontier))
+                )
+                children = [row[0] for row in result.all()]
+                dir_ids.extend(children)
+                frontier = children
+
+            result = await db.execute(select(KnowledgeFile.file_id).filter(KnowledgeFile.directory_id.in_(dir_ids)))
+            return [row[0] for row in result.all()]
+
     async def move_file_to_directory(
         self,
         knowledge_id: str,
@@ -1050,12 +1333,23 @@ class KnowledgeTable:
         """Move a file to a different directory within the same KB."""
         async with get_async_db_context(db) as db:
             try:
+                # Source directory (for its count) before the move.
+                row = (
+                    await db.execute(
+                        select(KnowledgeFile.directory_id).filter_by(knowledge_id=knowledge_id, file_id=file_id)
+                    )
+                ).first()
+                old_directory_id = row[0] if row else None
+
                 await db.execute(
                     update(KnowledgeFile)
                     .filter_by(knowledge_id=knowledge_id, file_id=file_id)
                     .values(directory_id=directory_id, updated_at=int(time.time()))
                 )
                 await db.commit()
+                await self._recompute_directory_counts(old_directory_id, db=db)
+                if directory_id != old_directory_id:
+                    await self._recompute_directory_counts(directory_id, db=db)
                 return True
             except Exception as e:
                 log.exception(e)

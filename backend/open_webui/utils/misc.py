@@ -753,6 +753,35 @@ def sanitize_metadata(metadata: dict) -> dict:
     return _sanitize(metadata)
 
 
+def sanitize_relative_path(raw: str | None) -> str | None:
+    """
+    Return a safe, POSIX-style relative path for a virtual folder tree, or None.
+
+    Physical storage stays flat; this value is metadata used to recreate a
+    logical directory hierarchy. It must never let a caller escape the virtual
+    root, so any ``..`` segment collapses the result to the basename only.
+
+    Normalizes backslashes to ``/``, strips a Windows drive prefix and leading
+    slashes, drops ``.`` segments, and rejects ``..`` traversal.
+    """
+    if not raw or not isinstance(raw, str):
+        return None
+
+    # Normalize separators and drop a Windows drive prefix (e.g. "C:\a\b").
+    path = raw.replace('\\', '/')
+    if len(path) >= 2 and path[1] == ':' and path[0].isalpha():
+        path = path[2:]
+
+    segments = [s for s in path.split('/') if s not in ('', '.')]
+
+    # Traversal is never allowed; fall back to the last real segment.
+    if any(s == '..' for s in segments):
+        segments = [s for s in segments if s not in ('..',)]
+        segments = segments[-1:] if segments else []
+
+    return '/'.join(segments) or None
+
+
 def extract_folders_after_data_docs(path):
     # Convert the path to a Path object if it's not already
     path = Path(path)

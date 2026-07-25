@@ -1,9 +1,11 @@
-<script>
+<script lang="ts">
 	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
+	import { Datepicker, type DateOrRange } from "flowbite-svelte";
+
 
 	import { user } from '$lib/stores';
 	import { createNewKnowledge } from '$lib/apis/knowledge';
@@ -15,7 +17,13 @@
 
 	let name = '';
 	let description = '';
+	let registrationNumber = ''
 	let accessGrants = [];
+	let registrationDate = new Date();
+
+	const onDateSelect = (date: DateOrRange) => {
+		registrationDate = date;
+	};
 
 	const submitHandler = async () => {
 		loading = true;
@@ -28,7 +36,13 @@
 			return;
 		}
 
-		const res = await createNewKnowledge(localStorage.token, name, description, accessGrants).catch(
+		const res = await createNewKnowledge(localStorage.token, {
+			name, 
+			description, 
+			accessGrants, 
+			registrationDate, 
+			registrationNumber, 
+		}).catch(
 			(e) => {
 				toast.error(`${e}`);
 			}
@@ -84,28 +98,55 @@
 
 					<div class="w-full mt-1">
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							class="w-full placeholder:text-gray-400 rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							type="text"
 							bind:value={name}
-							placeholder={$i18n.t('Name your knowledge base')}
+							placeholder={$i18n.t('Name')}
 							required
 						/>
 					</div>
 				</div>
 
 				<div>
-					<div class="text-sm mb-2">{$i18n.t('What are you trying to achieve?')}</div>
+					<div class="text-sm mb-2">{$i18n.t('Describe what this knowledge base is about, for what purposes....')}</div>
 
 					<div class=" w-full mt-1">
 						<textarea
-							class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							class="w-full placeholder:text-gray-400 resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							rows="4"
 							bind:value={description}
-							placeholder={$i18n.t('Describe your knowledge base and objectives')}
-							required
+							placeholder={$i18n.t('Put objectives here...')}
 						/>
 					</div>
 				</div>
+
+				<div class="flex gap-3 justify-between">
+<div class="mb-6">
+					<div class="text-sm mb-2">{$i18n.t('Enter registration identifier')}</div>
+
+					<div class=" w-full mt-1">
+						<input
+							type="text"
+							class="w-full placeholder:text-gray-400 rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							bind:value={registrationNumber}
+							placeholder={$i18n.t('registration identifier')}
+						/>
+					</div>
+				</div>
+				<div class="md:w-1/2">
+					<div class="text-sm mb-2">{$i18n.t('Enter registration date')}</div>
+					<Datepicker
+						bind:value={registrationDate}
+						color="dark"
+						placeholder={$i18n.t('Select registration date')}
+						firstDayOfWeek={1}
+						onselect={onDateSelect}
+						availableTo={new Date()}
+					/>
+				</div>
+				</div>
+
+			
 			</div>
 		</div>
 

@@ -32,4 +32,9 @@ echo "==> Done. Bucket '${S3_BUCKET_NAME}' is ready."
 
 # CORS_ALLOW_ORIGIN / WEBUI_SECRET_KEY / OLLAMA_BASE_URL now come from .lde.env
 PORT="${PORT:-8080}"
-uvicorn open_webui.main:app --port $PORT --host 0.0.0.0 --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-*}" --reload
+# Watch only the source package. Without --reload-dir, uvicorn watches the whole
+# CWD including DATA_DIR (data/uploads), so uploading a file — e.g. a *.py — would
+# trip the reloader and restart the server. --reload-exclude is a belt-and-suspenders
+# guard in case DATA_DIR is relocated under the source tree.
+uvicorn open_webui.main:app --port $PORT --host 0.0.0.0 --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-*}" \
+  --reload --reload-dir open_webui --reload-exclude 'data/*'

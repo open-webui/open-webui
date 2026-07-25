@@ -101,6 +101,10 @@ class LocalStorageProvider(StorageProvider):
 class S3StorageProvider(StorageProvider):
     def __init__(self):
         config = Config(
+            # Force SigV4 so presigned URLs use X-Amz-Signature (SigV2's
+            # AWSAccessKeyId/Signature form is rejected by MinIO with
+            # SignatureDoesNotMatch on browser PUTs).
+            signature_version='s3v4',
             s3={
                 'use_accelerate_endpoint': S3_USE_ACCELERATE_ENDPOINT,
                 'addressing_style': S3_ADDRESSING_STYLE,
@@ -158,6 +162,24 @@ class S3StorageProvider(StorageProvider):
             )
         except ClientError as e:
             raise RuntimeError(f'Error uploading file to S3: {e}')
+
+    def get_presigned_upload_url(self, filename: str, expires_in: int = 3600) -> Tuple[str, str]:
+        """Return ``(upload_url, file_path)`` for a direct browser PUT to S3.
+
+        The browser uploads bytes straight to S3 with the returned URL (bypassing
+        the backend); ``file_path`` is the ``s3://bucket/key`` we store on the
+        File record and later read back for processing.
+        """
+        s3_key = os.path.join(self.key_prefix, filename)
+        try:
+            upload_url = self.s3_client.generate_presigned_url(
+                'put_object',
+                Params={'Bucket': self.bucket_name, 'Key': s3_key},
+                ExpiresIn=expires_in,
+            )
+        except ClientError as e:
+            raise RuntimeError(f'Error generating presigned upload URL: {e}')
+        return upload_url, f's3://{self.bucket_name}/{s3_key}'
 
     def get_file(self, file_path: str) -> str:
         """Handles downloading of the file from S3 storage."""

@@ -2,11 +2,12 @@
 NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
 """
 
+import logging
 import ssl
 from typing import Optional
 
 from elasticsearch import BadRequestError, Elasticsearch
-from elasticsearch.helpers import bulk, scan
+from elasticsearch.helpers import BulkIndexError, bulk, scan
 from open_webui.config import (
     ELASTICSEARCH_API_KEY,
     ELASTICSEARCH_CA_CERTS,
@@ -24,6 +25,34 @@ from open_webui.retrieval.vector.main import (
     VectorItem,
 )
 from open_webui.retrieval.vector.utils import process_metadata
+
+log = logging.getLogger(__name__)
+
+
+def _bulk(client, actions):
+    """Wrap elasticsearch bulk() so per-document failures are actually visible.
+
+    bulk() raises BulkIndexError('N document(s) failed to index.') with the real
+    reasons buried in .errors; without unpacking them the cause (immense keyword
+    term, mapping conflict, …) is impossible to diagnose from the traceback.
+    """
+    try:
+        bulk(client, actions)
+    except BulkIndexError as e:
+        details = []
+        for err in e.errors[:3]:
+            op = next(iter(err.values()), {})
+            err_obj = op.get('error') or {}
+            caused_by = (err_obj.get('caused_by') or {}).get('reason')
+            details.append(
+                f"[{op.get('status')}] {err_obj.get('type')}: {err_obj.get('reason')}"
+                + (f' (caused_by: {caused_by})' if caused_by else '')
+            )
+        summary = ' || '.join(details)
+        log.error(f'ES bulk index failure ({len(e.errors)} docs): {summary}')
+        # Re-raise with the reason inline so it is visible in the traceback, not
+        # just the opaque "N document(s) failed to index".
+        raise RuntimeError(f'ES bulk index failed: {summary}') from e
 
 
 class ElasticsearchClient(VectorDBBase):
@@ -107,6 +136,13 @@ class ElasticsearchClient(VectorDBBase):
     def _create_index(self, dimension: int):
         body = {
             'mappings': {
+                # Metadata is arbitrary parser output (e.g. PDF 'creationdate' in
+                # PDF-date format 'D:2023...'). Let ES auto-detect dates/numbers and
+                # it maps such a field as `date`/`long`, then rejects the next doc
+                # whose value doesn't match. Disable detection so every dynamic
+                # metadata field is a plain keyword — no parsing, no conflicts.
+                'date_detection': False,
+                'numeric_detection': False,
                 'dynamic_templates': [
                     {
                         'strings': {
@@ -244,7 +280,7 @@ class ElasticsearchClient(VectorDBBase):
                 }
                 for item in batch
             ]
-            bulk(self.client, actions)
+            _bulk(self.client, actions)
 
     # Upsert documents using the update API with doc_as_upsert=True.
     def upsert(self, collection_name: str, items: list[VectorItem]):
@@ -266,7 +302,7 @@ class ElasticsearchClient(VectorDBBase):
                 }
                 for item in batch
             ]
-            bulk(self.client, actions)
+            _bulk(self.client, actions)
 
     # Delete specific documents from a collection by filtering on both collection and document IDs.
     def delete(

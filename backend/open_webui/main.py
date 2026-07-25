@@ -204,6 +204,7 @@ from open_webui.config import (
     ENABLE_RETRIEVAL_QUERY_GENERATION,
     ENABLE_SEARCH_QUERY_GENERATION,
     ENABLE_SIGNUP,
+    ENABLE_INGESTION_ANALYSIS,
     ENABLE_TAGS_GENERATION,
     ENABLE_TITLE_GENERATION,
     ENABLE_USER_STATUS,
@@ -676,6 +677,10 @@ async def lifespan(app: FastAPI):
     from open_webui.utils.automations import scheduler_worker_loop
 
     asyncio.create_task(scheduler_worker_loop(app))
+
+    from open_webui.services.process_file_queue import file_processing_worker_loop
+
+    asyncio.create_task(file_processing_worker_loop(app))
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         try:
@@ -1354,6 +1359,7 @@ app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION = ENABLE_RETRIEVAL_QUERY_GENE
 app.state.config.ENABLE_AUTOCOMPLETE_GENERATION = ENABLE_AUTOCOMPLETE_GENERATION
 app.state.config.ENABLE_TAGS_GENERATION = ENABLE_TAGS_GENERATION
 app.state.config.ENABLE_TITLE_GENERATION = ENABLE_TITLE_GENERATION
+app.state.config.ENABLE_INGESTION_ANALYSIS = ENABLE_INGESTION_ANALYSIS
 app.state.config.ENABLE_FOLLOW_UP_GENERATION = ENABLE_FOLLOW_UP_GENERATION
 
 
@@ -2481,6 +2487,8 @@ async def get_app_config(request: Request):
                 'file': {
                     'max_size': app.state.config.FILE_MAX_SIZE,
                     'max_count': app.state.config.FILE_MAX_COUNT,
+                    # When on S3, the browser uploads directly via a presigned URL.
+                    's3_presigned_upload': os.environ.get('STORAGE_PROVIDER', 'local') == 's3',
                     'image_compression': {
                         'width': app.state.config.FILE_IMAGE_COMPRESSION_WIDTH,
                         'height': app.state.config.FILE_IMAGE_COMPRESSION_HEIGHT,
