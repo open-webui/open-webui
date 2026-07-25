@@ -24,25 +24,55 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	import DirectoryRow from './DirectoryRow.svelte';
 
+	const SKIP_REASONS = {
+		not_embeddable_type: 'File type is not embedded (context kept)',
+		ineligible: 'No meaningful content to embed'
+	};
+
 	// Map a file's ingestion status (data.status, or the transient top-level
-	// status on in-flight rows) to a colored label. Returns null when unknown.
+	// status on in-flight rows) to a colored label. `tooltip` explains failures /
+	// skips on hover. Returns null when unknown.
 	const statusBadge = (file) => {
 		const s = file?.data?.status ?? file?.status;
 		switch (s) {
 			case 'completed':
 			case 'success':
-				return { type: 'success', label: $i18n.t('Embedded') };
-			case 'skipped':
-				return { type: 'warning', label: $i18n.t('Skipped') };
+				return {
+					type: 'success',
+					label: $i18n.t('Embedded'),
+					tooltip: $i18n.t('Embedded and available for retrieval')
+				};
+			case 'skipped': {
+				const reason = file?.data?.skipped_reason;
+				return {
+					type: 'warning',
+					label: $i18n.t('Skipped'),
+					tooltip: reason
+						? $i18n.t(SKIP_REASONS[reason] ?? '') || SKIP_REASONS[reason] || reason
+						: $i18n.t('Not embedded')
+				};
+			}
 			case 'failed':
 			case 'error':
-				return { type: 'error', label: $i18n.t('Failed') };
+				return {
+					type: 'error',
+					label: $i18n.t('Failed'),
+					tooltip: file?.data?.error ?? file?.error ?? $i18n.t('Processing failed')
+				};
 			case 'processing':
-				return { type: 'info', label: $i18n.t('Processing') };
+				return {
+					type: 'info',
+					label: $i18n.t('Processing'),
+					tooltip: $i18n.t('Extracting and embedding')
+				};
 			case 'pending':
 			case 'uploading':
 				// Uploaded/linked but waiting for the sequential worker.
-				return { type: 'muted', label: $i18n.t('In queue') };
+				return {
+					type: 'muted',
+					label: $i18n.t('In queue'),
+					tooltip: $i18n.t('Waiting in the processing queue')
+				};
 			default:
 				return null;
 		}
@@ -173,7 +203,13 @@
 
 				<div class="flex items-center gap-2 shrink-0">
 					{#if badge}
-						<Badge type={badge.type} content={badge.label} />
+						{#if badge.tooltip}
+							<Tooltip content={badge.tooltip} placement="top" className="flex shrink-0">
+								<Badge type={badge.type} content={badge.label} />
+							</Tooltip>
+						{:else}
+							<Badge type={badge.type} content={badge.label} />
+						{/if}
 					{/if}
 
 					{#if file?.updated_at}
