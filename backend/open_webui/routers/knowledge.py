@@ -1520,12 +1520,21 @@ async def describe_knowledge_base(
 
     overview = await describe_knowledge(request, id, user, db=db)
     await Knowledges.set_ai_overview(id, overview, db=db)
+    return {'ai_overwiew': overview}
 
-    # Refresh KB stats (file/folder counts + total size) alongside the overview.
+
+@router.post('/{id}/stats')
+async def refresh_knowledge_stats(
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Recompute KB stats (file/folder counts + total size), store them, and
+    clear the 'statistics_outdated' flag."""
+    await _verify_knowledge_write_access(id, user, db)
     stats = await Knowledges.get_knowledge_stats(id, db=db)
     await Knowledges.set_knowledge_stats(id, stats, db=db)
-
-    return {'ai_overwiew': overview, 'stats': stats}
+    return {'stats': stats, 'statistics_outdated': False}
 
 
 @router.post('/{id}/dirs/{dir_id}/update', response_model=KnowledgeDirectoryModel)

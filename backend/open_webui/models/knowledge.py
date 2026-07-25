@@ -691,6 +691,7 @@ class KnowledgeTable:
                 await db.refresh(result)
                 if result:
                     await self._recompute_directory_counts(directory_id, db=db)
+                    await self.mark_stats_outdated(knowledge_id, db=db)
                     return KnowledgeFileModel.model_validate(result)
                 else:
                     return None
@@ -737,6 +738,7 @@ class KnowledgeTable:
                 await db.execute(delete(KnowledgeFile).filter_by(knowledge_id=knowledge_id, file_id=file_id))
                 await db.commit()
                 await self._recompute_directory_counts(directory_id, db=db)
+                await self.mark_stats_outdated(knowledge_id, db=db)
                 return True
         except Exception:
             return False
@@ -841,12 +843,14 @@ class KnowledgeTable:
     async def set_knowledge_stats(
         self, id: str, stats: dict, db: Optional[AsyncSession] = None
     ) -> Optional[KnowledgeModel]:
-        """Store computed stats under knowledge.meta['stats'] (merge)."""
+        """Store computed stats under knowledge.meta['stats'] (merge) and clear
+        the 'statistics_outdated' flag."""
         try:
             async with get_async_db_context(db) as db:
                 row = (await db.execute(select(Knowledge.meta).filter_by(id=id))).first()
                 meta = dict(row[0]) if row and row[0] else {}
                 meta['stats'] = stats
+                meta['statistics_outdated'] = False
                 await db.execute(
                     update(Knowledge).filter_by(id=id).values(meta=meta, updated_at=int(time.time()))
                 )
@@ -855,6 +859,23 @@ class KnowledgeTable:
         except Exception as e:
             log.exception(e)
             return None
+
+    async def mark_stats_outdated(self, knowledge_id: str, db: Optional[AsyncSession] = None) -> None:
+        """Flag a KB's cached stats as stale (e.g. after a file/folder is added
+        or removed). Cleared when stats are recomputed via set_knowledge_stats."""
+        try:
+            async with get_async_db_context(db) as db:
+                row = (await db.execute(select(Knowledge.meta).filter_by(id=knowledge_id))).first()
+                if row is None:
+                    return
+                meta = dict(row[0]) if row[0] else {}
+                if meta.get('statistics_outdated') is True:
+                    return
+                meta['statistics_outdated'] = True
+                await db.execute(update(Knowledge).filter_by(id=knowledge_id).values(meta=meta))
+                await db.commit()
+        except Exception as e:
+            log.exception(e)
 
     async def set_ai_overview(
         self, id: str, ai_overview: str, db: Optional[AsyncSession] = None
@@ -1038,6 +1059,7 @@ class KnowledgeTable:
                 await db.refresh(directory)
                 # The new folder adds one subdirectory to its parent's count.
                 await self._recompute_directory_counts(parent_id, db=db)
+                await self.mark_stats_outdated(knowledge_id, db=db)
                 return KnowledgeDirectoryModel.model_validate(directory)
             except Exception as e:
                 log.exception(e)
@@ -1226,6 +1248,7 @@ class KnowledgeTable:
                     return False
 
                 parent_id = directory.parent_id
+                knowledge_id = directory.knowledge_id
 
                 if move_files_to_parent:
                     # Move files in this directory to its parent (or root)
@@ -1244,6 +1267,7 @@ class KnowledgeTable:
                 # Parent loses a subdirectory and (when move_files_to_parent)
                 # gains this subtree's files — recompute covers both.
                 await self._recompute_directory_counts(parent_id, db=db)
+                await self.mark_stats_outdated(knowledge_id, db=db)
                 return True
             except Exception as e:
                 log.exception(e)

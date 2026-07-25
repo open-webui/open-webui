@@ -328,3 +328,20 @@ async def test_get_knowledge_stats(_user):
 
     updated = await Knowledges.set_knowledge_stats(kb.id, stats)
     assert updated.meta.get('stats') == stats
+
+
+async def test_stats_outdated_flag_set_on_add_and_cleared_on_refresh(_user):
+    from open_webui.models.files import FileForm, Files
+
+    kb = await _new_kb(_user.id)
+    await Files.insert_new_file(_user.id, FileForm(id='so1', filename='x.txt', path='/tmp/x', meta={'size': 10}))
+    await Knowledges.add_file_to_knowledge_by_id(kb.id, 'so1', _user.id, directory_id=None)
+
+    # Adding a file flags the KB stats as outdated.
+    assert ((await Knowledges.get_knowledge_by_id(id=kb.id)).meta or {}).get('statistics_outdated') is True
+
+    # Refreshing stats clears the flag.
+    stats = await Knowledges.get_knowledge_stats(kb.id)
+    updated = await Knowledges.set_knowledge_stats(kb.id, stats)
+    assert updated.meta.get('statistics_outdated') is False
+    assert updated.meta.get('stats') == stats

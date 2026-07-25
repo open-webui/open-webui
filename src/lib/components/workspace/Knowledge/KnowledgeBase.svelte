@@ -36,6 +36,7 @@
 		updateKnowledgeAccessGrants,
 		searchKnowledgeFilesById,
 		describeKnowledge,
+		refreshKnowledgeStats,
 		createKnowledgeDirectory,
 		ensureKnowledgeDirectories,
 		updateKnowledgeDirectory,
@@ -101,7 +102,10 @@
 		access_grants?: any[];
 		write_access?: boolean;
 		ai_overwiew?: string;
-		meta?: { stats?: { file_count?: number; directory_count?: number; total_size?: number } } | null;
+		meta?: {
+			stats?: { file_count?: number; directory_count?: number; total_size?: number };
+			statistics_outdated?: boolean;
+		} | null;
 	};
 
 	let id = null;
@@ -267,17 +271,33 @@
 		try {
 			const res = await describeKnowledge(localStorage.token, knowledge.id);
 			if (res) {
-				knowledge = {
-					...knowledge,
-					ai_overwiew: res.ai_overwiew,
-					meta: { ...(knowledge.meta || {}), stats: res.stats }
-				};
+				knowledge = { ...knowledge, ai_overwiew: res.ai_overwiew };
 				toast.success($i18n.t('Overview generated.'));
 			}
 		} catch (e) {
 			toast.error(`${e}`);
 		} finally {
 			describingKnowledge = false;
+		}
+	};
+
+	let refreshingStats = false;
+	const refreshStatsHandler = async () => {
+		if (!knowledge?.id) return;
+		refreshingStats = true;
+		try {
+			const res = await refreshKnowledgeStats(localStorage.token, knowledge.id);
+			if (res) {
+				knowledge = {
+					...knowledge,
+					meta: { ...(knowledge.meta || {}), stats: res.stats, statistics_outdated: false }
+				};
+				toast.success($i18n.t('Statistics updated.'));
+			}
+		} catch (e) {
+			toast.error(`${e}`);
+		} finally {
+			refreshingStats = false;
 		}
 	};
 
@@ -1365,17 +1385,39 @@
 						{/if}
 					</div>
 
-					{#if knowledge?.meta?.stats}
+					{#if knowledge?.meta?.stats || knowledge?.write_access}
 						<div class="mt-1 px-1.5 text-xs text-gray-500 flex items-center gap-2 flex-wrap">
-							<span>
-								{$i18n.t('{{count}} files', { count: knowledge.meta.stats.file_count ?? 0 })}
-							</span>
-							<span>·</span>
-							<span>
-								{$i18n.t('{{count}} folders', { count: knowledge.meta.stats.directory_count ?? 0 })}
-							</span>
-							<span>·</span>
-							<span>{formatFileSize(knowledge.meta.stats.total_size ?? 0)}</span>
+							{#if knowledge?.meta?.stats}
+								<span>
+									{$i18n.t('{{count}} files', { count: knowledge.meta.stats.file_count ?? 0 })}
+								</span>
+								<span>·</span>
+								<span>
+									{$i18n.t('{{count}} folders', { count: knowledge.meta.stats.directory_count ?? 0 })}
+								</span>
+								<span>·</span>
+								<span>{formatFileSize(knowledge.meta.stats.total_size ?? 0)}</span>
+							{:else}
+								<span>{$i18n.t('No statistics yet.')}</span>
+							{/if}
+
+							{#if knowledge?.meta?.statistics_outdated}
+								<span class="text-amber-600 dark:text-amber-400">({$i18n.t('outdated')})</span>
+							{/if}
+
+							{#if knowledge?.write_access}
+								<button
+									class="shrink-0 flex items-center gap-1 text-gray-600 dark:text-gray-300 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition px-2 py-0.5 rounded-lg"
+									type="button"
+									on:click={refreshStatsHandler}
+									disabled={refreshingStats}
+								>
+									{#if refreshingStats}
+										<Spinner className="size-3" />
+									{/if}
+									{$i18n.t('Update statistics')}
+								</button>
+							{/if}
 						</div>
 					{/if}
 
