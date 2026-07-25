@@ -670,9 +670,15 @@ async def get_builtin_tools(
     if is_builtin_tool_enabled('tasks'):
         builtin_functions.extend([create_tasks, update_task])
 
-    # Automation tools - create and manage scheduled automations from chat
+    # Automation tools - create and manage scheduled automations from chat.
+    # Skip during automation runs so a scheduled prompt cannot spawn more
+    # automations (which would grow exponentially when the model has this tool).
+    metadata = extra_params.get('__metadata__') or {}
+    session_id = metadata.get('session_id') or ''
+    is_automation_run = isinstance(session_id, str) and session_id.startswith('automation:')
     if (
-        is_builtin_tool_enabled('automations')
+        not is_automation_run
+        and is_builtin_tool_enabled('automations')
         and config.get('automations.enable')
         and await has_user_permission('automations')
     ):

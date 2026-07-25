@@ -171,6 +171,56 @@ def rrule_interval_seconds(s: str) -> Optional[int]:
     return int((second - first).total_seconds())
 
 
+class AutomationLimitError(Exception):
+    """Raised when automation count or schedule frequency limits are exceeded."""
+
+    def __init__(self, message: str, status_code: int = 403):
+        self.message = message
+        self.status_code = status_code
+        super().__init__(message)
+
+
+async def enforce_automation_limits(
+    user_role: str,
+    user_id: str,
+    rrule_str: str,
+    is_create: bool = False,
+    db=None,
+) -> None:
+    """Enforce global automation limits for non-admin users.
+
+    Admins bypass all checks. Raises AutomationLimitError on violation.
+    Used by both the automations API and the create_automation/update_automation
+    builtin tools so AUTOMATION_MAX_COUNT / AUTOMATION_MIN_INTERVAL cannot be
+    bypassed via the chat tool path.
+    """
+    if user_role == 'admin':
+        return
+
+    # Max count (create only)
+    if is_create:
+        max_count = await Config.get('automations.max_count')
+        if max_count:
+            max_count = int(max_count)
+            if max_count > 0 and await Automations.count_by_user(user_id, db=db) >= max_count:
+                raise AutomationLimitError(
+                    ERROR_MESSAGES.AUTOMATION_LIMIT_EXCEEDED(max_count),
+                    status_code=403,
+                )
+
+    # Min interval (create + update)
+    min_interval = await Config.get('automations.min_interval')
+    if min_interval:
+        min_interval = int(min_interval)
+        if min_interval > 0:
+            interval = rrule_interval_seconds(rrule_str)
+            if interval is not None and interval < min_interval:
+                raise AutomationLimitError(
+                    ERROR_MESSAGES.AUTOMATION_TOO_FREQUENT(min_interval),
+                    status_code=400,
+                )
+
+
 ############################
 # Worker Loop
 ############################
