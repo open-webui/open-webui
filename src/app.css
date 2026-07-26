@@ -867,3 +867,37 @@ body {
 html.high-contrast:not(.dark) :is(.app-muted, .app-icon-muted, .tiptap table) {
 	color: var(--color-gray-600);
 }
+
+/* High Contrast Mode: the lightest muted pair, 1.58:1 in light and 2.14:1 in dark.
+   text-gray-400/70 is an icon colour, so 1.4.11 governs it, and 2.07:1 misses that too. */
+@layer utilities {
+	html:where(.high-contrast):not(:where(.dark)) :is(.text-gray-300, .text-gray-400\/70) {
+		color: var(--color-gray-600);
+	}
+
+	html:where(.high-contrast).dark .dark\:text-gray-700 {
+		color: var(--color-gray-400);
+	}
+
+	/* Hover states that land lighter than the new resting colour. */
+	html:where(.high-contrast):not(:where(.dark)) .hover\:text-gray-500:hover {
+		color: var(--color-gray-800);
+	}
+
+	html:where(.high-contrast):not(:where(.dark)) .group:hover .group-hover\:text-gray-500 {
+		color: var(--color-gray-800);
+	}
+}
+
+/* Autocompletion ghost text is 2.65:1 in light; the dark canvas already passes. */
+html.high-contrast:not(.dark) .ai-autocompletion::after {
+	color: var(--color-gray-600);
+}
+
+/* The shimmer gradient is 2.10:1 in light, and clipping it to the text leaves no
+   solid colour to raise; render it as flat text instead. */
+html.high-contrast:not(.dark) .shimmer {
+	background: none;
+	color: var(--color-gray-700);
+	-webkit-text-fill-color: var(--color-gray-700);
+}
