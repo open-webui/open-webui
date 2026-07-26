@@ -35,6 +35,7 @@ from mcp.shared.auth import (
 from open_webui.config import (
     DEFAULT_USER_ROLE,
     ENABLE_OAUTH_GROUP_CREATION,
+    ENABLE_OAUTH,
     ENABLE_OAUTH_GROUP_MANAGEMENT,
     ENABLE_OAUTH_ROLE_MANAGEMENT,
     ENABLE_OAUTH_SIGNUP,
@@ -120,6 +121,7 @@ OAUTH_RESOURCE_PARAMETER_MODES = {'auto', 'include', 'omit'}
 
 OAUTH_RUNTIME_CONFIG = {
     'DEFAULT_USER_ROLE': ('ui.default_user_role', DEFAULT_USER_ROLE),
+    'ENABLE_OAUTH': ('oauth.enable', ENABLE_OAUTH),
     'ENABLE_OAUTH_SIGNUP': ('oauth.enable_signup', ENABLE_OAUTH_SIGNUP),
     'OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE': (
         'oauth.refresh_token.include_scope',
@@ -1670,6 +1672,8 @@ class OAuthManager:
 
     async def handle_login(self, request, provider):
         auth_config = await get_oauth_runtime_config()
+        if not auth_config.ENABLE_OAUTH:
+            raise HTTPException(404)
         if provider not in OAUTH_PROVIDERS:
             raise HTTPException(404)
         # If the provider has a custom redirect URL, use that, otherwise automatically generate one
@@ -1690,6 +1694,8 @@ class OAuthManager:
 
     async def handle_callback(self, request, provider, response, db=None):
         auth_config = await get_oauth_runtime_config()
+        if not auth_config.ENABLE_OAUTH:
+            raise HTTPException(404)
         if provider not in OAUTH_PROVIDERS:
             raise HTTPException(404)
 
