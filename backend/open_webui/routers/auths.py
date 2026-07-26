@@ -84,6 +84,9 @@ log = logging.getLogger(__name__)
 # Forgive us our failed attempts, as we forgive those
 # who exceed their allotted rate against this gate.
 signin_rate_limiter = RateLimiter(redis_client=get_redis_client(), limit=5 * 3, window=60 * 3)
+# Best-effort throttle only. There is no caller identity before the provider answers, and the
+# source address is client-controlled via X-Forwarded-For under forwarded_allow_ips='*'.
+token_exchange_rate_limiter = RateLimiter(redis_client=get_redis_client(), limit=5 * 3, window=60 * 3)
 
 ADMIN_CONFIG_KEYS = {
     'SHOW_ADMIN_DETAILS': 'auth.admin.show',
@@ -1516,6 +1519,12 @@ async def token_exchange(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Token exchange is disabled',
+        )
+
+    if token_exchange_rate_limiter.is_limited(request.client.host if request.client else 'unknown'):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
         )
 
     provider = provider.lower()
