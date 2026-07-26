@@ -621,7 +621,6 @@
 		</LinkPreview.Root>
 	{/if}
 
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	{#if !readonly}
 		<div
 			id="sidebar-chat-item-menu"
@@ -630,12 +629,6 @@
 				: 'invisible group-hover:visible'} absolute {className === 'pr-2'
 				? 'right-[8px]'
 				: 'right-1'} inset-y-0 mr-1.5 flex items-center"
-			on:mouseenter={(e) => {
-				mouseOver = true;
-			}}
-			on:mouseleave={(e) => {
-				mouseOver = false;
-			}}
 		>
 			{#if confirmEdit}
 				<div
