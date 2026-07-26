@@ -854,3 +854,20 @@ body {
 		color: var(--color-gray-500);
 	}
 }
+
+/* High Contrast Mode: muted text fails WCAG 1.4.3 (2.07:1 light, 3.12:1 dark).
+   :where() keeps these at low specificity so hover variants still win. */
+@layer utilities {
+	html:where(.high-contrast):not(:where(.dark)) .text-gray-400 {
+		color: var(--color-gray-600);
+	}
+
+	html:where(.high-contrast).dark .dark\:text-gray-600 {
+		color: var(--color-gray-400);
+	}
+
+	/* Elements that hover to a lighter grey than the new resting colour. */
+	html:where(.high-contrast):not(:where(.dark)) .hover\:text-gray-500:hover {
+		color: var(--color-gray-800);
+	}
+}
