@@ -415,8 +415,9 @@
 					description={$i18n.t(
 						'Use /v1/chat/completions endpoint instead of /v1/audio/transcriptions for potentially better accuracy.'
 					)}
+					let:labelId
 				>
-					<Switch bind:state={STT_MISTRAL_USE_CHAT_COMPLETIONS} />
+					<Switch bind:state={STT_MISTRAL_USE_CHAT_COMPLETIONS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 			{:else if STT_ENGINE === ''}
 				<AdminSettingField

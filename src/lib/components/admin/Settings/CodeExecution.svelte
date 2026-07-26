@@ -53,8 +53,9 @@
 				<AdminSettingRow
 					label={$i18n.t('Enable Code Execution')}
 					description={$i18n.t('Allow models to run generated code and return execution results.')}
+					let:labelId
 				>
-					<Switch bind:state={config.ENABLE_CODE_EXECUTION} />
+					<Switch bind:state={config.ENABLE_CODE_EXECUTION} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 
 				{#if config.ENABLE_CODE_EXECUTION}
@@ -153,8 +154,9 @@
 				<AdminSettingRow
 					label={$i18n.t('Enable Code Interpreter')}
 					description={$i18n.t('Allow models to use the code interpreter tool during chats.')}
+					let:labelId
 				>
-					<Switch bind:state={config.ENABLE_CODE_INTERPRETER} />
+					<Switch bind:state={config.ENABLE_CODE_INTERPRETER} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 
 				{#if config.ENABLE_CODE_INTERPRETER}

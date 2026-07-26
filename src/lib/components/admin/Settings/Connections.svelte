@@ -223,12 +223,13 @@
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && connectionsConfig !== null}
 			<AdminSettingSection first>
-				<AdminSettingRow label={$i18n.t('OpenAI API')}>
+				<AdminSettingRow label={$i18n.t('OpenAI API')} let:labelId>
 					<Switch
 						bind:state={ENABLE_OPENAI_API}
 						on:change={async () => {
 							updateOpenAIHandler();
 						}}
+						ariaLabelledbyId={labelId}
 					/>
 				</AdminSettingRow>
 
@@ -281,12 +282,13 @@
 					</div>
 				{/if}
 
-				<AdminSettingRow label={$i18n.t('Ollama API')}>
+				<AdminSettingRow label={$i18n.t('Ollama API')} let:labelId>
 					<Switch
 						bind:state={ENABLE_OLLAMA_API}
 						on:change={async () => {
 							updateOllamaHandler();
 						}}
+						ariaLabelledbyId={labelId}
 					/>
 				</AdminSettingRow>
 
@@ -352,12 +354,14 @@
 					description={$i18n.t(
 						'Direct Connections allow users to connect to their own OpenAI compatible API endpoints.'
 					)}
+					let:labelId
 				>
 					<Switch
 						bind:state={connectionsConfig.ENABLE_DIRECT_CONNECTIONS}
 						on:change={async () => {
 							updateConnectionsHandler();
 						}}
+						ariaLabelledbyId={labelId}
 					/>
 				</AdminSettingRow>
 
@@ -366,12 +370,14 @@
 					description={$i18n.t(
 						'Base Model List Cache speeds up access by fetching base models only at startup or on settings save—faster, but may not show recent base model changes.'
 					)}
+					let:labelId
 				>
 					<Switch
 						bind:state={connectionsConfig.ENABLE_BASE_MODELS_CACHE}
 						on:change={async () => {
 							updateConnectionsHandler();
 						}}
+						ariaLabelledbyId={labelId}
 					/>
 				</AdminSettingRow>
 			</AdminSettingSection>

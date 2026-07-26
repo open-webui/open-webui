@@ -239,8 +239,9 @@
 					description={$i18n.t(
 						'Summarize older chat history when the conversation context grows large.'
 					)}
+					let:labelId
 				>
-					<Switch bind:state={chatConfig.ENABLE_CONTEXT_COMPACTION} />
+					<Switch bind:state={chatConfig.ENABLE_CONTEXT_COMPACTION} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 
 				{#if chatConfig.ENABLE_CONTEXT_COMPACTION}
@@ -319,8 +320,9 @@
 				<AdminSettingRow
 					label={$i18n.t('Title Generation')}
 					description={$i18n.t('Allow automatic names for new chats.')}
+					let:labelId
 				>
-					<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} />
+					<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 
 				{#if taskConfig.ENABLE_TITLE_GENERATION}
@@ -341,8 +343,9 @@
 				<AdminSettingRow
 					label={$i18n.t('Voice Mode Prompt')}
 					description={$i18n.t('Apply voice-specific instructions while voice mode is active.')}
+					let:labelId
 				>
-					<Switch bind:state={taskConfig.ENABLE_VOICE_MODE_PROMPT} />
+					<Switch bind:state={taskConfig.ENABLE_VOICE_MODE_PROMPT} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 
 				{#if taskConfig.ENABLE_VOICE_MODE_PROMPT}
@@ -363,8 +366,9 @@
 				<AdminSettingRow
 					label={$i18n.t('Follow Up Generation')}
 					description={$i18n.t('Show suggested next questions after assistant responses.')}
+					let:labelId
 				>
-					<Switch bind:state={taskConfig.ENABLE_FOLLOW_UP_GENERATION} />
+					<Switch bind:state={taskConfig.ENABLE_FOLLOW_UP_GENERATION} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 
 				{#if taskConfig.ENABLE_FOLLOW_UP_GENERATION}
@@ -385,8 +389,9 @@
 				<AdminSettingRow
 					label={$i18n.t('Tags Generation')}
 					description={$i18n.t('Create chat tags from conversation content.')}
+					let:labelId
 				>
-					<Switch bind:state={taskConfig.ENABLE_TAGS_GENERATION} />
+					<Switch bind:state={taskConfig.ENABLE_TAGS_GENERATION} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 
 				{#if taskConfig.ENABLE_TAGS_GENERATION}
@@ -407,15 +412,23 @@
 				<AdminSettingRow
 					label={$i18n.t('Retrieval Query Generation')}
 					description={$i18n.t('Rewrite user requests for knowledge retrieval.')}
+					let:labelId
 				>
-					<Switch bind:state={taskConfig.ENABLE_RETRIEVAL_QUERY_GENERATION} />
+					<Switch
+						bind:state={taskConfig.ENABLE_RETRIEVAL_QUERY_GENERATION}
+						ariaLabelledbyId={labelId}
+					/>
 				</AdminSettingRow>
 
 				<AdminSettingRow
 					label={$i18n.t('Web Search Query Generation')}
 					description={$i18n.t('Rewrite user requests into web-search queries.')}
+					let:labelId
 				>
-					<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION} />
+					<Switch
+						bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION}
+						ariaLabelledbyId={labelId}
+					/>
 				</AdminSettingRow>
 
 				<AdminSettingField
@@ -432,8 +445,12 @@
 				<AdminSettingRow
 					label={$i18n.t('Autocomplete Generation')}
 					description={$i18n.t('Suggest completions while users type chat messages.')}
+					let:labelId
 				>
-					<Switch bind:state={taskConfig.ENABLE_AUTOCOMPLETE_GENERATION} />
+					<Switch
+						bind:state={taskConfig.ENABLE_AUTOCOMPLETE_GENERATION}
+						ariaLabelledbyId={labelId}
+					/>
 				</AdminSettingRow>
 
 				{#if taskConfig.ENABLE_AUTOCOMPLETE_GENERATION}

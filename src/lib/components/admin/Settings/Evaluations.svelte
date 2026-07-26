@@ -112,9 +112,13 @@
 				<AdminSettingRow
 					label={$i18n.t('Arena Models')}
 					description={$i18n.t('Message rating should be enabled to use this feature')}
+					let:labelId
 				>
 					<Tooltip content={$i18n.t(`Message rating should be enabled to use this feature`)}>
-						<Switch bind:state={evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS} />
+						<Switch
+							bind:state={evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS}
+							ariaLabelledbyId={labelId}
+						/>
 					</Tooltip>
 				</AdminSettingRow>
 			</AdminSettingSection>
