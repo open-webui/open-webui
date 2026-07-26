@@ -222,7 +222,7 @@
 					{#if isDeletable(cal)}
 						<!-- svelte-ignore a11y-click-events-have-key-events -->
 						<span
-							class="shrink-0 p-0.5 rounded opacity-0 group-hover:opacity-100
+							class="shrink-0 p-0.5 rounded opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
 								transition-all duration-150"
 							role="button"
 							tabindex="-1"

@@ -601,9 +601,7 @@
 	{#if !readonly}
 		<div
 			id="sidebar-chat-item-menu"
-			class="{showInlineActions
-				? 'selected'
-				: 'invisible group-hover:visible'} absolute {className === 'pr-2'
+			class="{showInlineActions ? 'selected' : 'hover-reveal'} absolute {className === 'pr-2'
 				? 'right-[8px]'
 				: 'right-1'} inset-y-0 mr-1.5 flex items-center"
 			on:mouseenter={(e) => {

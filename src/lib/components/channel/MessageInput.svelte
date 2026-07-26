@@ -849,7 +849,7 @@
 												</div>
 												<div class=" absolute -top-1 -right-1">
 													<button
-														class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+														class=" bg-white text-black border border-white rounded-full hover-reveal transition"
 														type="button"
 														on:click={() => {
 															files.splice(fileIdx, 1);

@@ -40,7 +40,7 @@
 			{label}
 		</span>
 
-		<div class="invisible group-hover:visible flex gap-0.5">
+		<div class="hover-reveal flex gap-0.5">
 			<Tooltip content={copied ? $i18n.t('Copied') : $i18n.t('Copy')}>
 				<button
 					class="p-1 rounded-lg bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition"

@@ -125,7 +125,7 @@
 							<span
 								role="button"
 								tabindex="-1"
-								class="text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition shrink-0 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+								class="text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition shrink-0 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
 								on:click|stopPropagation={() => openPortExternal(port.port)}
 							>
 								<svg
