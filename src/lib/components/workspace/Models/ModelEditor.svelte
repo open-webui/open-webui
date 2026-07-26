@@ -657,7 +657,7 @@
 									<div class="min-w-0 flex-1">
 										<div class="flex min-w-0 items-center gap-2">
 											<input
-												class="min-w-0 flex-1 bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
+												class="min-w-0 flex-1 bg-transparent text-base leading-tight text-gray-900 outline-hidden dark:text-white md:text-lg"
 												placeholder={$i18n.t('Model Name')}
 												bind:value={name}
 												required
@@ -671,7 +671,7 @@
 										</div>
 
 										<input
-											class="block w-full bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
+											class="block w-full bg-transparent py-0.5 text-xs text-gray-500 outline-hidden dark:text-gray-500"
 											placeholder={$i18n.t('Model ID')}
 											bind:value={id}
 											disabled={edit}
@@ -727,7 +727,7 @@
 
 								{#if enableDescription}
 									<Textarea
-										className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+										className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden dark:text-gray-300"
 										placeholder={$i18n.t('Add a short description about what this model does')}
 										minSize={32}
 										bind:value={info.meta.description}
@@ -767,7 +767,7 @@
 									</div>
 									<div>
 										<Textarea
-											className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+											className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden dark:text-gray-300"
 											placeholder={$i18n.t(
 												'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
 											)}

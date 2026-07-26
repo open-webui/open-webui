@@ -133,7 +133,7 @@
 					<div class=" text-gray-500 text-xs">{$i18n.t('Name')}</div>
 					<input
 						type="text"
-						class="w-full text-sm bg-transparent outline-none placeholder:text-gray-300 dark:placeholder:text-gray-700"
+						class="w-full text-sm bg-transparent outline-none"
 						bind:value={name}
 						placeholder={$i18n.t('Webhook Name')}
 					/>

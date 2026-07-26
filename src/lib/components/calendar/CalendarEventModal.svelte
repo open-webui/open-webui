@@ -189,7 +189,7 @@
 	<div>
 		<div class="dark:text-gray-100 px-4 pt-3 pb-1">
 			<input
-				class="w-full text-base bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+				class="w-full text-base bg-transparent outline-hidden"
 				type="text"
 				bind:value={title}
 				placeholder={$i18n.t('Event title')}
@@ -231,7 +231,7 @@
 			<div>
 				<div class="mb-1 text-xs text-gray-500">{$i18n.t('Location')}</div>
 				<input
-					class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+					class="w-full text-sm bg-transparent outline-hidden"
 					placeholder={$i18n.t('Add location')}
 					bind:value={location}
 				/>
@@ -274,7 +274,7 @@
 			<div>
 				<div class="mb-1 text-xs text-gray-500">{$i18n.t('Description')}</div>
 				<textarea
-					class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 resize-none min-h-[4rem]"
+					class="w-full text-sm bg-transparent outline-hidden resize-none min-h-[4rem]"
 					placeholder={$i18n.t('Add description')}
 					bind:value={description}
 					rows="3"

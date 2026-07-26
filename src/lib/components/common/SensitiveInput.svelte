@@ -25,7 +25,7 @@
 			: outerClassName;
 	$: inputBaseClass =
 		variant === 'settings'
-			? 'min-w-0 flex-1 bg-transparent text-xs text-gray-700 outline-hidden placeholder:text-gray-300 disabled:text-gray-500 dark:text-gray-300 dark:placeholder:text-gray-700'
+			? 'min-w-0 flex-1 bg-transparent text-xs text-gray-700 outline-hidden disabled:text-gray-500 dark:text-gray-300'
 			: 'w-full bg-transparent py-0.5 text-sm outline-hidden';
 	$: resolvedInputClass = `${inputBaseClass} ${variant === 'plain' ? className : ''} ${inputClassName} ${
 		show ? '' : 'password'

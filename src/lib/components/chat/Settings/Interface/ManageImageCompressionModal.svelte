@@ -71,7 +71,7 @@
 											id="image-comp-width"
 											bind:value={size.width}
 											type="number"
-											class="h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-center text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500"
+											class="h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-center text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 											min="0"
 											placeholder={$i18n.t('Width')}
 										/>
@@ -89,7 +89,7 @@
 											id="image-comp-height"
 											bind:value={size.height}
 											type="number"
-											class="h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-center text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500"
+											class="h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-center text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 											min="0"
 											placeholder={$i18n.t('Height')}
 										/>

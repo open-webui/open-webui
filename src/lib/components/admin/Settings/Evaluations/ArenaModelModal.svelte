@@ -249,7 +249,7 @@
 
 								<div class="flex-1">
 									<input
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										class="w-full text-sm bg-transparent outline-hidden"
 										type="text"
 										bind:value={name}
 										placeholder={$i18n.t('Model Name')}
@@ -264,7 +264,7 @@
 
 								<div class="flex-1">
 									<input
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										class="w-full text-sm bg-transparent outline-hidden"
 										type="text"
 										bind:value={id}
 										placeholder={$i18n.t('Model ID')}
@@ -281,7 +281,7 @@
 
 							<div class="flex-1">
 								<input
-									class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+									class="w-full text-sm bg-transparent outline-hidden"
 									type="text"
 									bind:value={description}
 									placeholder={$i18n.t('Enter description')}
@@ -352,7 +352,7 @@
 							<select
 								class="w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
 									? ''
-									: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+									: 'text-gray-500'} outline-hidden"
 								bind:value={selectedModelId}
 							>
 								<option value="">{$i18n.t('Select a model')}</option>

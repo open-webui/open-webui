@@ -165,7 +165,7 @@
 									<Search className="size-3.5 shrink-0 text-gray-400 dark:text-gray-600" />
 									<input
 										data-settings-search
-										class="min-w-0 flex-1 bg-transparent py-0.5 text-xs text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+										class="min-w-0 flex-1 bg-transparent py-0.5 text-xs text-gray-700 outline-hidden dark:text-gray-300"
 										bind:value={query}
 										placeholder={$i18n.t('Search Memories')}
 										maxlength="500"

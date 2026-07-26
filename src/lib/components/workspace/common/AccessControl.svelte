@@ -492,7 +492,7 @@
 				>
 					<select
 						id="models"
-						class="outline-none bg-transparent text-sm font-normal block w-fit pr-8 max-w-full placeholder-gray-400"
+						class="outline-none bg-transparent text-sm font-normal block w-fit pr-8 max-w-full"
 						value={!hasPublicReadGrant(accessGrants ?? []) ? 'private' : 'public'}
 						on:change={(e) => {
 							setPublic((e.target as HTMLSelectElement).value === 'public');

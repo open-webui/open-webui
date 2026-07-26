@@ -90,7 +90,7 @@
 
 						<textarea
 							bind:value={content}
-							class="bg-transparent w-full text-sm outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+							class="bg-transparent w-full text-sm outline-hidden"
 							rows="6"
 							style="resize: vertical;"
 							placeholder={type === 'user'
@@ -107,7 +107,7 @@
 							<input
 								id="memory-path"
 								bind:value={path}
-								class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+								class="w-full text-sm bg-transparent outline-hidden"
 								placeholder={$i18n.t('Path')}
 								autocomplete="off"
 							/>

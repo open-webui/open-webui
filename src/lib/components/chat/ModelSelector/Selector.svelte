@@ -741,7 +741,7 @@
 			class="flex w-full min-w-0 text-left px-0.5 bg-transparent {triggerClassName} justify-between {($settings?.highContrastMode ??
 			false)
 				? 'dark:placeholder-gray-100 placeholder-gray-800'
-				: 'placeholder-gray-400'}"
+				: ''}"
 			on:mouseenter={async () => {
 				models.set(
 					await getModels(
@@ -777,7 +777,7 @@
 							<input
 								id="model-search-input"
 								bind:value={searchValue}
-								class="w-full bg-transparent text-[13px] font-normal outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
+								class="w-full bg-transparent text-[13px] font-normal outline-hidden dark:placeholder:text-gray-500"
 								placeholder={searchPlaceholder}
 								autocomplete="off"
 								aria-label={$i18n.t('Search In Models')}

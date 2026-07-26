@@ -181,10 +181,7 @@
 												)}
 									placement="top-start"
 								>
-									<select
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-										bind:value={type}
-									>
+									<select class="w-full text-sm bg-transparent outline-hidden" bind:value={type}>
 										{#each channelTypes as channelType, channelTypeIdx (channelType)}
 											<option value={channelType} selected={channelTypeIdx === 0}>
 												{#if channelType === 'group'}
@@ -222,7 +219,7 @@
 
 						<div class="flex-1">
 							<input
-								class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+								class="w-full text-sm bg-transparent outline-hidden"
 								type="text"
 								bind:value={name}
 								placeholder={`${$i18n.t('new-channel')}`}
@@ -264,7 +261,7 @@
 							<div class="text-xs text-gray-500">{$i18n.t('Webhooks')}</div>
 
 							<button
-								class="text-xs bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden text-left"
+								class="text-xs bg-transparent outline-hidden text-left"
 								type="button"
 								on:click={() => {
 									showWebhooksModal = true;

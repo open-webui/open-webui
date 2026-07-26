@@ -112,7 +112,7 @@
 		<!-- Header -->
 		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
 			<input
-				class="w-full text-sm font-medium bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+				class="w-full text-sm font-medium bg-transparent outline-hidden"
 				type="text"
 				bind:value={name}
 				placeholder={$i18n.t('Automation title')}
@@ -130,7 +130,7 @@
 		<div class="px-5 pb-2">
 			<div class="mb-1 text-xs text-gray-500">{$i18n.t('Instructions')}</div>
 			<textarea
-				class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 resize-none min-h-[12rem]"
+				class="w-full text-sm bg-transparent outline-hidden resize-none min-h-[12rem]"
 				bind:value={prompt}
 				rows={8}
 				placeholder={$i18n.t('Enter prompt here.')}

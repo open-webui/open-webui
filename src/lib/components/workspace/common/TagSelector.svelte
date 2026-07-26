@@ -33,7 +33,7 @@
 >
 	<svelte:fragment slot="trigger" let:selectedLabel>
 		<div
-			class="inline-flex h-input min-w-0 flex-1 outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden capitalize"
+			class="inline-flex h-input min-w-0 flex-1 outline-hidden bg-transparent truncate focus:outline-hidden capitalize"
 		>
 			{#if value}
 				{selectedLabel}

@@ -27,7 +27,7 @@
 			<div>
 				<select
 					id="models"
-					class="outline-hidden bg-transparent text-sm font-normal block w-fit pr-10 max-w-full placeholder-gray-400"
+					class="outline-hidden bg-transparent text-sm font-normal block w-fit pr-10 max-w-full"
 					value={state === 'private' ? 'private' : 'public'}
 					on:change={(e) => {
 						if (e.target.value === 'public') {

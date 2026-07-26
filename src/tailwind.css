@@ -54,7 +54,12 @@
 
 	input::placeholder,
 	textarea::placeholder {
-		color: theme(--color-gray-400);
+		color: theme(--color-gray-600);
+	}
+
+	.dark input::placeholder,
+	.dark textarea::placeholder {
+		color: theme(--color-gray-500);
 	}
 
 	input[type='checkbox'] {

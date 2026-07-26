@@ -352,7 +352,7 @@
 			placeholder={$i18n.t('Target ID')}
 			autocomplete="off"
 			spellcheck="false"
-			class="block w-full bg-transparent py-0.5 font-mono text-[0.8125rem] text-gray-700 outline-none placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+			class="block w-full bg-transparent py-0.5 font-mono text-[0.8125rem] text-gray-700 outline-none dark:text-gray-300"
 		/>
 
 		<div class="mt-2 text-[0.625rem] text-gray-400 dark:text-gray-600">
@@ -366,7 +366,7 @@
 				: 'https://hooks.slack.com/services/...'}
 			autocomplete="off"
 			spellcheck="false"
-			class="block w-full bg-transparent py-0.5 font-mono text-[0.8125rem] text-gray-700 outline-none placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+			class="block w-full bg-transparent py-0.5 font-mono text-[0.8125rem] text-gray-700 outline-none dark:text-gray-300"
 		/>
 
 		<div class="mt-3 mb-1 text-[0.625rem] text-gray-400 dark:text-gray-600">

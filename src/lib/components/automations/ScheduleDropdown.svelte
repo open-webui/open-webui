@@ -217,7 +217,7 @@
 					type="text"
 					bind:value={customRrule}
 					placeholder="RRULE:FREQ=DAILY;BYHOUR=9;BYMINUTE=0"
-					class="w-full bg-transparent outline-hidden text-[13px] placeholder:text-gray-400 dark:placeholder:text-gray-600"
+					class="w-full bg-transparent outline-hidden text-[13px]"
 					on:click={(e) => e.stopPropagation()}
 					on:input={onChange}
 				/>

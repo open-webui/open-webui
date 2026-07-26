@@ -113,7 +113,7 @@
 					<div class="w-full mt-1">
 						<input
 							class={modal
-								? 'w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'
+								? 'w-full text-sm bg-transparent outline-hidden'
 								: 'w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden'}
 							type="text"
 							bind:value={name}
@@ -131,7 +131,7 @@
 					<div class="w-full mt-1">
 						<textarea
 							class={modal
-								? 'w-full resize-none text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'
+								? 'w-full resize-none text-sm bg-transparent outline-hidden'
 								: 'w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden'}
 							rows={modal ? 6 : 4}
 							bind:value={description}

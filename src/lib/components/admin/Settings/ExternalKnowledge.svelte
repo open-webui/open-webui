@@ -443,7 +443,7 @@
 								<div class="flex flex-1 items-center">
 									<input
 										id="external-source-name"
-										class="w-full flex-1 text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+										class="w-full flex-1 text-sm bg-transparent outline-hidden"
 										bind:value={sourceForm.name}
 										on:input={markUntested}
 										placeholder={$i18n.t('Research Knowledge')}
@@ -480,7 +480,7 @@
 							>
 							<textarea
 								id="external-source-description"
-								class="w-full text-sm bg-transparent outline-hidden resize-none placeholder:text-gray-300 dark:placeholder:text-gray-700"
+								class="w-full text-sm bg-transparent outline-hidden resize-none"
 								rows="2"
 								bind:value={sourceForm.description}
 							></textarea>
@@ -496,7 +496,7 @@
 								<div class="flex flex-1 items-center">
 									<input
 										id="external-source-endpoint"
-										class="w-full flex-1 text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+										class="w-full flex-1 text-sm bg-transparent outline-hidden"
 										bind:value={sourceForm.endpoint}
 										on:input={markUntested}
 										placeholder={endpointPlaceholder()}
@@ -534,7 +534,7 @@
 									<div class="flex flex-1 items-center">
 										<input
 											id="external-source-api-key"
-											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											class="w-full text-sm bg-transparent outline-hidden"
 											type="password"
 											bind:value={sourceForm.apiKey}
 											on:input={markUntested}
@@ -578,7 +578,7 @@
 								<div class="flex flex-1 items-center">
 									<input
 										id="external-source-collection"
-										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+										class="w-full text-sm bg-transparent outline-hidden"
 										bind:value={sourceForm.sourceName}
 										on:input={markUntested}
 										placeholder="research-docs"
@@ -599,7 +599,7 @@
 									<div class="flex flex-1 items-center">
 										<input
 											id="external-source-table"
-											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											class="w-full text-sm bg-transparent outline-hidden"
 											bind:value={sourceForm.tableName}
 											on:input={markUntested}
 											placeholder="document_chunk"
@@ -617,7 +617,7 @@
 									<div class="flex flex-1 items-center">
 										<input
 											id="external-source-collection-field"
-											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											class="w-full text-sm bg-transparent outline-hidden"
 											bind:value={sourceForm.collectionField}
 											on:input={markUntested}
 											placeholder="collection_name"
@@ -638,7 +638,7 @@
 								<div class="flex flex-1 items-center">
 									<input
 										id="external-source-content-field"
-										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+										class="w-full text-sm bg-transparent outline-hidden"
 										bind:value={sourceForm.contentField}
 										on:input={markUntested}
 										placeholder={sourceForm.provider === 'pgvector' ? 'text' : 'payload.text'}
@@ -656,7 +656,7 @@
 								<div class="flex flex-1 items-center">
 									<input
 										id="external-source-vector-field"
-										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+										class="w-full text-sm bg-transparent outline-hidden"
 										bind:value={sourceForm.vectorField}
 										on:input={markUntested}
 										placeholder={sourceForm.provider === 'qdrant' ? $i18n.t('Default') : 'vector'}
@@ -676,7 +676,7 @@
 								<div class="flex flex-1 items-center">
 									<input
 										id="external-source-metadata-field"
-										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+										class="w-full text-sm bg-transparent outline-hidden"
 										bind:value={sourceForm.metadataField}
 										on:input={markUntested}
 										placeholder={sourceForm.provider === 'pgvector'
@@ -695,7 +695,7 @@
 								<div class="flex flex-1 items-center">
 									<input
 										id="external-source-document-id-field"
-										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+										class="w-full text-sm bg-transparent outline-hidden"
 										bind:value={sourceForm.documentIdField}
 										on:input={markUntested}
 										placeholder="id"
@@ -714,7 +714,7 @@
 								<div class="flex flex-1 items-center">
 									<input
 										id="external-source-test-query"
-										class="w-full flex-1 text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+										class="w-full flex-1 text-sm bg-transparent outline-hidden"
 										bind:value={sourceForm.testQuery}
 										on:input={markUntested}
 										placeholder={$i18n.t('Ask a test question')}

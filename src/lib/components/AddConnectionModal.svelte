@@ -60,10 +60,8 @@
 	let showDeleteConfirmDialog = false;
 	let showAdvanced = false;
 
-	const inputClass =
-		'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
-	const selectClass =
-		'dark:bg-gray-900 bg-transparent pr-5 outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
+	const inputClass = 'bg-transparent outline-hidden';
+	const selectClass = 'dark:bg-gray-900 bg-transparent pr-5 outline-hidden';
 
 	const parsePassthroughParams = (value: string) =>
 		value

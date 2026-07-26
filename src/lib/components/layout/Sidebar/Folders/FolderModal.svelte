@@ -142,7 +142,7 @@
 						<div class="flex-1">
 							<input
 								id="folder-name"
-								class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+								class="w-full text-sm bg-transparent outline-hidden"
 								type="text"
 								bind:value={name}
 								placeholder={$i18n.t('Enter folder name')}

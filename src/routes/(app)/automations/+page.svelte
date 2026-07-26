@@ -448,7 +448,7 @@
 						>
 							<svelte:fragment slot="trigger" let:selectedLabel>
 								<span
-									class="inline-flex h-input w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+									class="inline-flex h-input w-full outline-hidden bg-transparent truncate focus:outline-hidden"
 								>
 									{selectedLabel}
 								</span>

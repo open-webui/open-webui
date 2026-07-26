@@ -39,7 +39,7 @@
 		<input
 			bind:this={inputElement}
 			bind:value={tagName}
-			class="w-20 text-sm bg-transparent outline-hidden text-gray-700 dark:text-blue-400 placeholder:text-gray-400 dark:placeholder:text-blue-400/50"
+			class="w-20 text-sm bg-transparent outline-hidden text-gray-700 dark:text-blue-400 dark:placeholder:text-blue-400/50"
 			placeholder={$i18n.t('Add tag')}
 			aria-label={$i18n.t('Add a tag')}
 			list="tagOptions"
