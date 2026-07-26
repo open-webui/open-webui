@@ -835,7 +835,7 @@
 						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 					>
 						<div
-							class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-50 dark:group-hover:bg-gray-900"
+							class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-white/[0.06]"
 						>
 							<img
 								src="{WEBUI_BASE_URL}/static/favicon.png"
@@ -866,7 +866,7 @@
 							aria-label={$i18n.t('New Chat')}
 						>
 							<div
-								class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-50 dark:group-hover:bg-gray-900"
+								class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-white/[0.06]"
 							>
 								<EditPencilIcon className="size-4" strokeWidth="1.5" />
 							</div>
@@ -888,7 +888,7 @@
 							aria-label={$i18n.t('Search')}
 						>
 							<div
-								class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-50 dark:group-hover:bg-gray-900"
+								class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-white/[0.06]"
 							>
 								<SearchIcon className="size-4" strokeWidth="1.5" />
 							</div>
@@ -917,9 +917,9 @@
 										class=" self-center flex size-[30px] items-center justify-center rounded-lg transition {itemId ===
 										activeMenuItemId
 											? ($settings?.highContrastMode ?? false)
-												? 'bg-black/[0.035] dark:bg-white/[0.06]'
-												: 'bg-black/[0.035] dark:bg-white/[0.045]'
-											: 'group-hover:bg-gray-50 dark:group-hover:bg-gray-900'}"
+												? 'bg-black/[0.08] dark:bg-white/[0.08] outline outline-1 -outline-offset-1 outline-gray-700 dark:outline-gray-300'
+												: 'bg-black/[0.08] dark:bg-white/[0.08]'
+											: 'group-hover:bg-gray-100 dark:group-hover:bg-white/[0.06]'}"
 									>
 										{#if itemId === 'notes'}
 											<NotesIcon className="size-4" strokeWidth="1.5" />
@@ -952,7 +952,7 @@
 								aria-label={$i18n.t('User menu')}
 							>
 								<div
-									class="self-center relative flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-50 dark:group-hover:bg-gray-900"
+									class="self-center relative flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-white/[0.06]"
 								>
 									<img
 										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
@@ -1007,7 +1007,7 @@
 				class="sidebar px-1 pt-1.5 pb-1 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-2"
 			>
 				<a
-					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-50 dark:hover:bg-gray-900 transition no-drag-region"
+					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100 dark:hover:bg-white/[0.06] transition no-drag-region"
 					href="/"
 					draggable="false"
 					on:click={newChatHandler}
@@ -1033,7 +1033,7 @@
 					placement="bottom"
 				>
 					<button
-						class="flex size-[30px] justify-center items-center rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900 transition {isWindows
+						class="flex size-[30px] justify-center items-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/[0.06] transition {isWindows
 							? 'cursor-pointer'
 							: 'cursor-[w-resize]'}"
 						on:click={() => {
@@ -1068,7 +1068,7 @@
 					<div class="px-1 flex justify-center text-gray-700 dark:text-gray-300">
 						<a
 							id="sidebar-new-chat-button"
-							class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition outline-none"
 							href="/"
 							draggable="false"
 							on:click={newChatHandler}
@@ -1089,7 +1089,7 @@
 					<div class="px-1 flex justify-center text-gray-700 dark:text-gray-300">
 						<button
 							id="sidebar-search-button"
-							class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-900 transition outline-none"
+							class="group grow flex items-center space-x-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition outline-none"
 							on:click={() => {
 								showSearch.set(true);
 							}}
@@ -1120,9 +1120,9 @@
 										class="grow flex items-center space-x-2 rounded-xl px-2 py-1.5 transition {itemId ===
 										activeMenuItemId
 											? ($settings?.highContrastMode ?? false)
-												? 'bg-black/[0.035] dark:bg-white/[0.06]'
-												: 'bg-black/[0.035] dark:bg-white/[0.045]'
-											: 'hover:bg-gray-50 dark:hover:bg-gray-900'}"
+												? 'bg-black/[0.08] dark:bg-white/[0.08] outline outline-1 -outline-offset-1 outline-gray-700 dark:outline-gray-300'
+												: 'bg-black/[0.08] dark:bg-white/[0.08]'
+											: 'hover:bg-gray-100 dark:hover:bg-white/[0.06]'}"
 										href={meta.href}
 										on:click={itemClickHandler}
 										draggable="false"
@@ -1535,7 +1535,7 @@
 						>
 							<button
 								type="button"
-								class=" flex items-center rounded-xl py-1.5 px-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-900 transition"
+								class=" flex items-center rounded-xl py-1.5 px-1.5 w-full hover:bg-gray-100 dark:hover:bg-white/[0.06] transition"
 								aria-label={$i18n.t('User menu')}
 							>
 								<div class=" self-center mr-3 relative flex-shrink-0">

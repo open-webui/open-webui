@@ -465,15 +465,13 @@
 	{#if confirmEdit}
 		<div
 			id="sidebar-chat-item"
-			class=" w-full flex justify-between rounded-xl px-2 py-[6px] {id === $chatId || confirmEdit
+			class=" w-full flex justify-between rounded-xl px-2 py-[6px] {id === $chatId ||
+			confirmEdit ||
+			selected
 				? ($settings?.highContrastMode ?? false)
-					? 'bg-black/[0.035] dark:bg-white/[0.06] selected'
-					: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
-				: selected
-					? ($settings?.highContrastMode ?? false)
-						? 'bg-black/[0.035] dark:bg-white/[0.055] selected'
-						: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
-					: 'hover:bg-gray-50 dark:hover:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-900'}  whitespace-nowrap text-ellipsis relative transition {generating
+					? 'bg-black/[0.08] dark:bg-white/[0.08] outline outline-1 -outline-offset-1 outline-gray-700 dark:outline-gray-300 selected'
+					: 'bg-black/[0.08] dark:bg-white/[0.08] selected'
+				: 'hover:bg-gray-100 dark:hover:bg-white/[0.06] group-hover:bg-gray-100 dark:group-hover:bg-white/[0.06]'}  whitespace-nowrap text-ellipsis relative transition {generating
 				? 'cursor-not-allowed'
 				: ''}"
 		>
@@ -510,15 +508,13 @@
 		>
 			<LinkPreview.Trigger
 				id="sidebar-chat-item"
-				class=" w-full flex justify-between rounded-xl px-2 py-[6px] {id === $chatId || confirmEdit
+				class=" w-full flex justify-between rounded-xl px-2 py-[6px] {id === $chatId ||
+				confirmEdit ||
+				selected
 					? ($settings?.highContrastMode ?? false)
-						? 'bg-black/[0.035] dark:bg-white/[0.06] selected'
-						: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
-					: selected
-						? ($settings?.highContrastMode ?? false)
-							? 'bg-black/[0.035] dark:bg-white/[0.055] selected'
-							: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
-						: ' hover:bg-gray-50 dark:hover:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-900'}  whitespace-nowrap text-ellipsis transition"
+						? 'bg-black/[0.08] dark:bg-white/[0.08] outline outline-1 -outline-offset-1 outline-gray-700 dark:outline-gray-300 selected'
+						: 'bg-black/[0.08] dark:bg-white/[0.08] selected'
+					: 'hover:bg-gray-100 dark:hover:bg-white/[0.06] group-hover:bg-gray-100 dark:group-hover:bg-white/[0.06]'}  whitespace-nowrap text-ellipsis transition"
 				href="/c/{id}"
 				onclick={() => {
 					openPreview = false;
