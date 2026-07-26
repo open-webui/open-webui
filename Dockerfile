@@ -40,6 +40,7 @@ RUN npm ci --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
+ENV SKIP_PYODIDE_FETCH=1
 RUN npm run build
 
 ######## WebUI backend ########
