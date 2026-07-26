@@ -166,15 +166,20 @@
 				<AdminSettingRow
 					label={$i18n.t('Web Search')}
 					description={$i18n.t('Allow users to search the web from chats.')}
+					let:labelId
 				>
-					<Switch bind:state={webConfig.ENABLE_WEB_SEARCH} />
+					<Switch bind:state={webConfig.ENABLE_WEB_SEARCH} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 
 				<AdminSettingRow
 					label={$i18n.t('Web Search Confirmation')}
 					description={$i18n.t('Require users to confirm before using Web Search.')}
+					let:labelId
 				>
-					<Switch bind:state={webConfig.ENABLE_WEB_SEARCH_CONFIRMATION} />
+					<Switch
+						bind:state={webConfig.ENABLE_WEB_SEARCH_CONFIRMATION}
+						ariaLabelledbyId={labelId}
+					/>
 				</AdminSettingRow>
 
 				{#if webConfig.ENABLE_WEB_SEARCH_CONFIRMATION}
@@ -1111,15 +1116,20 @@
 					description={webConfig.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
 						? $i18n.t('Inject the entire content as context for comprehensive processing.')
 						: $i18n.t('Use segmented retrieval for focused and relevant content extraction.')}
+					let:labelId
 				>
-					<Switch bind:state={webConfig.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL} />
+					<Switch
+						bind:state={webConfig.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL}
+						ariaLabelledbyId={labelId}
+					/>
 				</AdminSettingRow>
 
 				<AdminSettingRow
 					label={$i18n.t('Bypass Web Loader')}
 					description={$i18n.t('Use search results without fetching page contents.')}
+					let:labelId
 				>
-					<Switch bind:state={webConfig.BYPASS_WEB_SEARCH_WEB_LOADER} />
+					<Switch bind:state={webConfig.BYPASS_WEB_SEARCH_WEB_LOADER} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 
 				<AdminSettingRow
@@ -1127,8 +1137,9 @@
 					description={webConfig.WEB_SEARCH_TRUST_ENV
 						? $i18n.t('Use proxy environment variables to fetch page contents.')
 						: $i18n.t('Fetch page contents without proxy environment variables.')}
+					let:labelId
 				>
-					<Switch bind:state={webConfig.WEB_SEARCH_TRUST_ENV} />
+					<Switch bind:state={webConfig.WEB_SEARCH_TRUST_ENV} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 			</AdminSettingSection>
 
@@ -1163,8 +1174,12 @@
 					<AdminSettingRow
 						label={$i18n.t('Verify SSL Certificate')}
 						description={$i18n.t('Validate SSL certificates when fetching web content.')}
+						let:labelId
 					>
-						<Switch bind:state={webConfig.ENABLE_WEB_LOADER_SSL_VERIFICATION} />
+						<Switch
+							bind:state={webConfig.ENABLE_WEB_LOADER_SSL_VERIFICATION}
+							ariaLabelledbyId={labelId}
+						/>
 					</AdminSettingRow>
 				{:else if webConfig.WEB_LOADER_ENGINE === 'playwright'}
 					<div class="mb-2.5 flex w-full flex-col">

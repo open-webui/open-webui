@@ -307,8 +307,9 @@
 					<AdminSettingRow
 						label={$i18n.t('Image Generation')}
 						description={$i18n.t('Allow users to generate images from prompts.')}
+						let:labelId
 					>
-						<Switch bind:state={config.ENABLE_IMAGE_GENERATION} />
+						<Switch bind:state={config.ENABLE_IMAGE_GENERATION} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
 				</AdminSettingSection>
 
@@ -369,8 +370,12 @@
 						<AdminSettingRow
 							label={$i18n.t('Image Prompt Generation')}
 							description={$i18n.t('Generate an image prompt before sending the request.')}
+							let:labelId
 						>
-							<Switch bind:state={config.ENABLE_IMAGE_PROMPT_GENERATION} />
+							<Switch
+								bind:state={config.ENABLE_IMAGE_PROMPT_GENERATION}
+								ariaLabelledbyId={labelId}
+							/>
 						</AdminSettingRow>
 					{/if}
 
@@ -708,8 +713,9 @@
 					<AdminSettingRow
 						label={$i18n.t('Image Edit')}
 						description={$i18n.t('Allow users to edit existing images.')}
+						let:labelId
 					>
-						<Switch bind:state={config.ENABLE_IMAGE_EDIT} />
+						<Switch bind:state={config.ENABLE_IMAGE_EDIT} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
 
 					<AdminSettingRow
