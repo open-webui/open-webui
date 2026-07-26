@@ -143,7 +143,8 @@ export const downloadFileBlob = async (
 	if (!res || !res.ok) return null;
 
 	const filename = path.split('/').pop() ?? 'file';
-	const blob = await res.blob();
+	const blob = await res.blob().catch(() => null);
+	if (!blob) return null;
 	return { blob, filename };
 };
 
@@ -170,7 +171,8 @@ export const archiveFromTerminal = async (
 	const disposition = res.headers.get('content-disposition') ?? '';
 	const match = disposition.match(/filename="?([^"]+)"?/);
 	const filename = match?.[1] ?? 'download.zip';
-	const blob = await res.blob();
+	const blob = await res.blob().catch(() => null);
+	if (!blob) return null;
 	return { blob, filename };
 };
 
