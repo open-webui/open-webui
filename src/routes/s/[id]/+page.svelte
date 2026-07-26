@@ -43,6 +43,8 @@
 	};
 
 	$: messages = createMessagesList(history, history.currentId);
+	$: canClone =
+		$sessionUser && ($sessionUser.role === 'admin' || ($sessionUser.permissions?.chat?.import ?? true));
 
 	$: if ($page.params.id) {
 		(async () => {
@@ -60,10 +62,16 @@
 	//////////////////////////
 
 	const loadSharedChat = async () => {
-		const userSettings = await getUserSettings(localStorage.token).catch((error) => {
-			console.error(error);
-			return null;
-		});
+		const token = localStorage.token ?? '';
+		const shareId = $page.params.id;
+		if (!shareId) return null;
+
+		const userSettings = token
+			? await getUserSettings(token).catch((error) => {
+					console.error(error);
+					return null;
+				})
+			: null;
 
 		if (userSettings) {
 			settings.set(userSettings.ui);
@@ -80,22 +88,31 @@
 		}
 
 		await models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
+			token
+				? await getModels(
+						token,
+						$config?.features?.enable_direct_connections
+							? ($settings?.directConnections ?? null)
+							: null
+					).catch((error) => {
+						console.error(error);
+						return [];
+					})
+				: []
 		);
-		await chatId.set($page.params.id);
-		chat = await getChatByShareId(localStorage.token, $chatId).catch(async (error) => {
+		await chatId.set(shareId);
+		chat = await getChatByShareId(token, shareId).catch(async (error) => {
 			await goto('/');
 			return null;
 		});
 
 		if (chat) {
-			user = await getUserInfoById(localStorage.token, chat.user_id).catch((error) => {
-				console.error(error);
-				return null;
-			});
+			user = token
+				? await getUserInfoById(token, chat.user_id).catch((error) => {
+						console.error(error);
+						return null;
+					})
+				: null;
 
 			const chatContent = chat.chat;
 
@@ -128,7 +145,7 @@
 	};
 
 	const cloneSharedChat = async () => {
-		if (!($sessionUser?.role === 'admin' || ($sessionUser?.permissions?.chat?.import ?? true))) {
+		if (!canClone) {
 			toast.error($i18n.t('Access prohibited'));
 			return;
 		}
@@ -152,6 +169,7 @@
 			? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} / ${$WEBUI_NAME}`
 			: `${$WEBUI_NAME}`}
 	</title>
+	<meta name="robots" content="noindex,nofollow" />
 </svelte:head>
 
 {#if loaded}
@@ -202,7 +220,7 @@
 				</div>
 			</div>
 
-			{#if $sessionUser?.role === 'admin' || ($sessionUser?.permissions?.chat?.import ?? true)}
+			{#if canClone}
 				<div
 					class="absolute bottom-0 right-0 left-0 flex justify-center w-full bg-linear-to-b from-transparent to-white dark:to-gray-900"
 				>

@@ -494,6 +494,25 @@
 					</div>
 				{/if}
 			</div>
+
+			<div class="flex flex-col w-full">
+				<div class="flex w-full justify-between my-1">
+					<div class=" self-center text-xs font-normal">
+						{$i18n.t('Chats Open Sharing')}
+					</div>
+					<Switch
+						bind:state={permissions.sharing.open_chats}
+						ariaLabel={$i18n.t('Chats Open Sharing')}
+					/>
+				</div>
+				{#if defaultPermissions?.sharing?.open_chats && !permissions.sharing.open_chats}
+					<div>
+						<div class="text-xs text-gray-500">
+							{$i18n.t('This is a default user permission and will remain enabled.')}
+						</div>
+					</div>
+				{/if}
+			</div>
 		{/if}
 
 		{#if permissions.features.calendar}
