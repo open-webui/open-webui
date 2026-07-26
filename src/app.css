@@ -410,6 +410,11 @@ input[type='number'] {
 	@apply line-clamp-1 absolute;
 }
 
+/* #676767 is 3.17:1 on the dark canvas; the light value already passes. */
+html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
+	color: var(--color-gray-500);
+}
+
 .tiptap ul[data-type='taskList'] {
 	list-style: none;
 	margin-left: 0;
@@ -837,4 +842,15 @@ body {
 
 #note-content-container .ProseMirror {
 	padding-bottom: 2rem; /* space for the bottom toolbar */
+}
+
+/* High Contrast Mode: placeholders bottom out at 1.58:1 (WCAG 1.4.3 wants 4.5:1). */
+@layer utilities {
+	html.high-contrast:not(.dark) :is(input, textarea)::placeholder {
+		color: var(--color-gray-600);
+	}
+
+	html.high-contrast.dark :is(input, textarea)::placeholder {
+		color: var(--color-gray-500);
+	}
 }
