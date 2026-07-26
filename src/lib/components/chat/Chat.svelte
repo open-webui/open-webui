@@ -48,7 +48,7 @@
 		chatRequestQueues,
 		desktopEvent
 	} from '$lib/stores';
-	import { refreshChatList } from '$lib/stores/chatList';
+	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -3566,6 +3566,7 @@
 
 			if (res) {
 				await refreshChatList(localStorage.token, { refreshPinned: true });
+				await refreshFolderChatLists();
 
 				toast.success($i18n.t('Chat moved successfully'));
 			}
@@ -3580,6 +3581,7 @@
 			initNewChat();
 			await goto('/');
 			await refreshChatList(localStorage.token, { refreshPinned: true });
+			await refreshFolderChatLists();
 			toast.success($i18n.t('Chat archived.'));
 		} catch (error) {
 			console.error('Error archiving chat:', error);

@@ -1885,6 +1885,11 @@ class ChatTable:
                 chat.updated_at = int(time.time())
                 chat.last_read_at = int(time.time())
                 chat.pinned = False
+                if folder_id is not None:
+                    # Folder listings only show unarchived chats, so moving an archived
+                    # chat into a folder would otherwise have no visible effect: the chat
+                    # stays in the archived list and never appears in the folder.
+                    chat.archived = False
                 await session.commit()
                 return ChatModel.model_validate(chat)
         except Exception:
