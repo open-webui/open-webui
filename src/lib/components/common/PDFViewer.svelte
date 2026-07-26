@@ -307,7 +307,7 @@
 				</svg>
 			</button>
 			<button
-				class="px-1.5 py-1 min-w-[3rem] text-center text-[11px] font-medium text-gray-500 dark:text-gray-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition tabular-nums"
+				class="px-1.5 py-1 min-w-[3rem] text-center text-[11px] font-normal text-gray-500 dark:text-gray-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition tabular-nums"
 				on:click={resetView}
 				aria-label="Reset zoom"
 			>

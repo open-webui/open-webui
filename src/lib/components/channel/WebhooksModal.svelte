@@ -99,7 +99,7 @@
 {#if channel}
 	<Modal size="sm" bind:show>
 		<div>
-			<div class="flex justify-between dark:text-gray-100 px-5 pt-4 mb-1.5">
+			<div class="flex justify-between dark:text-gray-100 px-4 pt-3 mb-1">
 				<div class="flex w-full justify-between items-center mr-3">
 					<div class="self-center text-base flex gap-1.5 items-center">
 						<div>{$i18n.t('Webhooks')}</div>
@@ -108,7 +108,7 @@
 
 					<button
 						type="button"
-						class="px-3 py-1.5 gap-1 rounded-xl bg-gray-100/50 dark:bg-gray-850/50 text-black dark:text-white transition font-medium text-xs flex items-center justify-center"
+						class="px-3 py-1.5 gap-1 rounded-xl bg-gray-100/50 dark:bg-gray-850/50 text-black dark:text-white transition font-normal text-xs flex items-center justify-center"
 						on:click={createHandler}
 						disabled={isSaving}
 					>
@@ -117,8 +117,11 @@
 					</button>
 				</div>
 
-				<button class="self-center" on:click={() => (show = false)}>
-					<XMark className="size-5" />
+				<button
+					class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+					on:click={() => (show = false)}
+				>
+					<XMark className="size-4" />
 				</button>
 			</div>
 
@@ -158,9 +161,9 @@
 						</div>
 					{/if}
 
-					<div class="flex justify-end text-sm font-medium gap-1.5">
+					<div class="flex justify-end text-sm font-normal gap-1.5">
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {isSaving
+							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {isSaving
 								? 'cursor-not-allowed'
 								: ''}"
 							type="submit"

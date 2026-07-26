@@ -133,9 +133,8 @@ class AuthsTable:
                 oauth=oauth,
                 db=session,
             )
-            # persist both records and reload generated defaults
+            # persist both records
             await session.commit()
-            await session.refresh(credential)
             return created_user if credential and created_user else None
 
     async def authenticate_user(

@@ -27,7 +27,7 @@ from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
 from open_webui.retrieval.loaders.mineru import MinerULoader
 from open_webui.retrieval.loaders.mistral import MistralLoader
-from open_webui.retrieval.loaders.paddleocr_vl import PaddleOCRVLLoader
+from open_webui.retrieval.loaders.paddleocr_vl import PADDLEOCR_VL_SUPPORTED_EXTENSIONS, PaddleOCRVLLoader
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -303,13 +303,20 @@ class Loader:
         try:
             raw.decode('utf-8')
             return 'utf-8'
-        except UnicodeDecodeError:
-            pass
+        except UnicodeDecodeError as e:
+            first_non_utf8 = e.start
 
         # Use chardet as a hint, not as ground truth
         import chardet
 
-        detected = chardet.detect(raw)
+        # chardet is pure Python (~1.3s/MB), so sample around the first bad byte
+        window = 256 * 1024
+        sample_start = max(0, first_non_utf8 - window // 2)
+        sample = raw[sample_start : sample_start + window]
+        detected = chardet.detect(sample)
+        # A stray byte can sit far from the real payload, leaving the sample with nothing to read
+        if len(sample.translate(None, delete=bytes(range(128)))) < 64 and len(sample) < len(raw):
+            detected = chardet.detect(raw)
         detected_enc = (detected.get('encoding') or '').lower().replace('-', '').replace('_', '')
 
         # Map chardet's detected encoding to the correct superset codec.
@@ -554,8 +561,14 @@ class Loader:
                 api_key=self.kwargs.get('MISTRAL_OCR_API_KEY'),
                 file_path=file_path,
                 use_base64=self.kwargs.get('MISTRAL_OCR_USE_BASE64', False),
+                user=self.user,
             )
-        elif self.engine == 'paddleocr_vl' and self.kwargs.get('PADDLEOCR_VL_TOKEN') != '':
+        elif (
+            self.engine == 'paddleocr_vl'
+            and self.kwargs.get('PADDLEOCR_VL_BASE_URL')
+            and self.kwargs.get('PADDLEOCR_VL_TOKEN')
+            and file_ext in PADDLEOCR_VL_SUPPORTED_EXTENSIONS
+        ):
             loader = PaddleOCRVLLoader(
                 api_url=self.kwargs.get('PADDLEOCR_VL_BASE_URL'),
                 token=self.kwargs.get('PADDLEOCR_VL_TOKEN'),

@@ -4,9 +4,11 @@ import base64
 import io
 import logging
 import time
+from collections import Counter
+from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
@@ -14,6 +16,8 @@ from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_AL
 from open_webui.internal.db import get_async_session
 from open_webui.models.auths import Auths
 from open_webui.models.config import Config
+from open_webui.models.chat_messages import ChatMessages
+from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import (
@@ -40,6 +44,7 @@ from open_webui.utils.auth import (
     get_verified_user,
     validate_password,
 )
+from open_webui.utils.chat_variables import ChatVariablesError, normalize_user_variables, validate_user_variables
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -196,12 +201,14 @@ class SharingPermissions(BaseModel):
     public_skills: bool = False
     notes: bool = False
     public_notes: bool = True
+    folders: bool = False
     public_chats: bool = False
     public_calendars: bool = False
 
 
 class AccessGrantsPermissions(BaseModel):
     allow_users: bool = True
+    allow_groups: bool = True
 
 
 class ChatPermissions(BaseModel):
@@ -257,6 +264,129 @@ class UserPermissions(BaseModel):
     chat: ChatPermissions
     features: FeaturesPermissions
     settings: SettingsPermissions
+
+
+class UserUsageTotals(BaseModel):
+    lifetime_tokens: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    peak_daily_tokens: int = 0
+    longest_chat_seconds: int = 0
+    current_streak: int = 0
+    longest_streak: int = 0
+    total_chats: int = 0
+    active_days: int = 0
+    models_used: int = 0
+    messages: int = 0
+    user_messages: int = 0
+    assistant_messages: int = 0
+
+
+class UserUsageHeatmapEntry(BaseModel):
+    date: str
+    messages: int = 0
+    chats: int = 0
+    tokens: int = 0
+    models: dict[str, int] = Field(default_factory=dict)
+
+
+class UserUsageModelEntry(BaseModel):
+    model_id: str
+    messages: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
+
+
+class UserUsageToolEntry(BaseModel):
+    name: str
+    count: int
+
+
+class UserUsageInsights(BaseModel):
+    most_used_model: Optional[str] = None
+    average_tokens_per_chat: float = 0
+    average_messages_per_active_day: float = 0
+    user_message_share: float = 0
+    assistant_message_share: float = 0
+
+
+class UserUsagePeriod(BaseModel):
+    start_date: int
+    end_date: int
+    days: int
+
+
+class UserUsageResponse(BaseModel):
+    totals: UserUsageTotals
+    heatmap: list[UserUsageHeatmapEntry]
+    weekly_heatmap: list[UserUsageHeatmapEntry]
+    cumulative_heatmap: list[UserUsageHeatmapEntry]
+    insights: UserUsageInsights
+    top_models: list[UserUsageModelEntry]
+    top_tools: list[UserUsageToolEntry] = []
+    period: UserUsagePeriod
+
+
+def _week_start(date: datetime) -> datetime:
+    return date - timedelta(days=date.weekday())
+
+
+def _build_weekly_heatmap(heatmap: list[dict]) -> list[dict]:
+    weeks: dict[str, dict] = {}
+    for day in heatmap:
+        week = _week_start(datetime.strptime(day['date'], '%Y-%m-%d')).strftime('%Y-%m-%d')
+        entry = weeks.setdefault(week, {'date': week, 'messages': 0, 'chats': 0, 'tokens': 0, 'models': Counter()})
+        entry['messages'] += day.get('messages', 0)
+        entry['chats'] += day.get('chats', 0)
+        entry['tokens'] += day.get('tokens', 0)
+        entry['models'].update(day.get('models', {}))
+
+    return [
+        {
+            **weeks[key],
+            'models': dict(weeks[key]['models']),
+        }
+        for key in sorted(weeks)
+    ]
+
+
+def _build_cumulative_heatmap(heatmap: list[dict]) -> list[dict]:
+    totals = {'messages': 0, 'chats': 0, 'tokens': 0}
+    models: Counter[str] = Counter()
+    cumulative = []
+    for day in heatmap:
+        totals['messages'] += day.get('messages', 0)
+        totals['chats'] += day.get('chats', 0)
+        totals['tokens'] += day.get('tokens', 0)
+        models.update(day.get('models', {}))
+        cumulative.append(
+            {
+                'date': day['date'],
+                **totals,
+                'models': dict(models),
+            }
+        )
+    return cumulative
+
+
+def _calculate_streaks(heatmap: list[dict]) -> dict[str, int]:
+    longest = 0
+    current_run = 0
+    for day in heatmap:
+        if day.get('messages', 0) > 0:
+            current_run += 1
+            longest = max(longest, current_run)
+        else:
+            current_run = 0
+
+    current = 0
+    for day in reversed(heatmap):
+        if day.get('messages', 0) <= 0:
+            break
+        current += 1
+
+    return {'current': current, 'longest': longest}
 
 
 @router.get('/default/permissions', response_model=UserPermissions)
@@ -348,6 +478,23 @@ async def update_user_settings_by_session_user(
         # If the user is not an admin and does not have permission to use tool servers, remove the key
         updated_user_settings['ui'].pop('toolServers', None)
 
+    ui_notifications = ui_settings.get('notifications') if isinstance(ui_settings, dict) else None
+    if (
+        user.role != 'admin'
+        and (
+            'notifications' in updated_user_settings
+            or (isinstance(ui_notifications, dict) and 'webhook_url' in ui_notifications)
+        )
+        and not await has_permission(
+            user.id,
+            'features.webhooks',
+            await Config.get('user.permissions'),
+        )
+    ):
+        updated_user_settings.pop('notifications', None)
+        if isinstance(ui_notifications, dict):
+            ui_notifications.pop('webhook_url', None)
+
     user = await Users.update_user_settings_by_id(user.id, updated_user_settings, db=db)
     if user:
         await publish_event(
@@ -428,6 +575,52 @@ async def get_user_info_by_session_user(user=Depends(get_verified_user), db: Asy
     return user.info
 
 
+class UserVariablesForm(BaseModel):
+    variables: dict = Field(default_factory=dict)
+
+
+class UserVariablesResponse(BaseModel):
+    variables: dict[str, str] = Field(default_factory=dict)
+
+
+############################
+# GetUserVariablesBySessionUser
+############################
+
+
+@router.get('/user/variables', response_model=UserVariablesResponse)
+async def get_user_variables_by_session_user(user=Depends(get_verified_user)):
+    return UserVariablesResponse(variables=normalize_user_variables(user.variables))
+
+
+############################
+# UpdateUserVariablesBySessionUser
+############################
+
+
+@router.post('/user/variables/update', response_model=UserVariablesResponse)
+async def update_user_variables_by_session_user(
+    form_data: UserVariablesForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    try:
+        variables = validate_user_variables(form_data.variables)
+    except ChatVariablesError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+
+    updated = await Users.update_user_by_id(user.id, {'variables': variables}, db=db)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+    return UserVariablesResponse(variables=variables)
+
+
 ############################
 # UpdateUserInfoBySessionUser
 ############################
@@ -453,6 +646,86 @@ async def update_user_info_by_session_user(  # PATCH-style merge
             detail=ERROR_MESSAGES.USER_NOT_FOUND,
         )
     return updated.info
+
+
+############################
+# GetUserUsageBySessionUser
+############################
+
+
+@router.get('/usage', response_model=UserUsageResponse)
+async def get_user_usage_by_session_user(
+    days: Optional[int] = Query(None, ge=7, le=732),
+    start_date: Optional[int] = Query(None),
+    end_date: Optional[int] = Query(None),
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    now = int(time.time())
+    period_end = end_date or now
+    if start_date is not None:
+        period_start = start_date
+    elif days is not None:
+        period_start = period_end - ((days - 1) * 86400)
+    else:
+        period_start = max(user.created_at or (period_end - (364 * 86400)), period_end - (729 * 86400))
+
+    if period_start > period_end:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='start_date must be before end_date',
+        )
+
+    period_days = max(1, int((period_end - period_start) / 86400) + 1)
+
+    lifetime_summary = await ChatMessages.get_user_usage_summary(user.id, include_active_days=False, db=db)
+    period_summary = await ChatMessages.get_user_usage_summary(
+        user.id, period_start, period_end, timezone=user.timezone, db=db
+    )
+    chat_stats = await Chats.get_user_usage_chat_stats(user.id, db=db)
+    heatmap = await ChatMessages.get_user_daily_usage(user.id, period_start, period_end, timezone=user.timezone, db=db)
+    top_models = await ChatMessages.get_user_top_models(user.id, period_start, period_end, db=db)
+    top_tools = await ChatMessages.get_user_top_tools(user.id, period_start, period_end, db=db)
+
+    streaks = _calculate_streaks(heatmap)
+    total_messages = period_summary.get('messages', 0)
+    total_chats = chat_stats.get('total_chats', 0)
+    active_days = period_summary.get('active_days', 0)
+    assistant_messages = period_summary.get('assistant_messages', 0)
+    user_messages = period_summary.get('user_messages', 0)
+
+    return UserUsageResponse(
+        totals=UserUsageTotals(
+            lifetime_tokens=lifetime_summary.get('total_tokens', 0),
+            input_tokens=lifetime_summary.get('input_tokens', 0),
+            output_tokens=lifetime_summary.get('output_tokens', 0),
+            peak_daily_tokens=max((day.get('tokens', 0) for day in heatmap), default=0),
+            longest_chat_seconds=chat_stats.get('longest_chat_seconds', 0),
+            current_streak=streaks['current'],
+            longest_streak=streaks['longest'],
+            total_chats=total_chats,
+            active_days=active_days,
+            models_used=lifetime_summary.get('models_used', 0),
+            messages=total_messages,
+            user_messages=user_messages,
+            assistant_messages=assistant_messages,
+        ),
+        heatmap=heatmap,
+        weekly_heatmap=_build_weekly_heatmap(heatmap),
+        cumulative_heatmap=_build_cumulative_heatmap(heatmap),
+        insights=UserUsageInsights(
+            most_used_model=top_models[0]['model_id'] if top_models else None,
+            average_tokens_per_chat=(
+                round(lifetime_summary.get('total_tokens', 0) / total_chats, 1) if total_chats else 0
+            ),
+            average_messages_per_active_day=round(total_messages / active_days, 1) if active_days else 0,
+            user_message_share=round((user_messages / total_messages) * 100, 1) if total_messages else 0,
+            assistant_message_share=round((assistant_messages / total_messages) * 100, 1) if total_messages else 0,
+        ),
+        top_models=top_models,
+        top_tools=top_tools,
+        period=UserUsagePeriod(start_date=period_start, end_date=period_end, days=period_days),
+    )
 
 
 ############################

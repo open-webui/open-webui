@@ -33,7 +33,7 @@
 	}}
 />
 
-<div class="flex w-full gap-2 items-center">
+<div class="flex w-full items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
 	<Tooltip className="w-full relative" content={''} placement="top-start">
 		<div class="flex w-full">
 			<div
@@ -46,7 +46,7 @@
 				</Tooltip>
 
 				{#if connection?.info?.name}
-					<div class=" capitalize outline-hidden w-full bg-transparent">
+					<div class="w-full bg-transparent capitalize outline-hidden">
 						{connection?.info?.name ?? connection?.url}
 						<span class="text-gray-500">{connection?.info?.id ?? ''}</span>
 					</div>
@@ -59,10 +59,10 @@
 		</div>
 	</Tooltip>
 
-	<div class="flex gap-1 items-center">
+	<div class="flex shrink-0 items-center gap-1">
 		<Tooltip content={$i18n.t('Configure')} className="self-start">
 			<button
-				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
+				class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
 				on:click={() => {
 					showConfigModal = true;
 				}}

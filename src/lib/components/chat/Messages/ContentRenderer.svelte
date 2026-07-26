@@ -83,6 +83,7 @@
 
 	export let save = false;
 	export let preview = false;
+	export let compactPreview = false;
 	export let floatingButtons = true;
 
 	export let editCodeBlock = true;
@@ -129,16 +130,31 @@
 				)
 			: messageContent;
 
+	let autoOpenedArtifactIds = new Set();
+
+	const hasClosingCodeFence = (raw = '') => /(?:^|\n)```[ \t]*$/.test(raw.trimEnd());
+
 	const markdownUpdateHandler = /** @type {any} */ (
-		async (/** @type {{ lang?: string; text?: string }} */ token) => {
-			const { lang = '', text: code = '' } = token;
+		async (
+			/** @type {{ lang?: string; raw?: string; text?: string }} */ token,
+			codeBlockId = ''
+		) => {
+			const { lang = '', raw = '', text: code = '' } = token;
+			const normalizedLang = lang.toLowerCase();
+			const isArtifact =
+				['html', 'svg'].includes(normalizedLang) ||
+				(normalizedLang === 'xml' && code.toLowerCase().includes('<svg'));
+			const artifactId = codeBlockId || `${normalizedLang}:${raw}`;
 
 			if (
 				($settings?.detectArtifacts ?? true) &&
-				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
+				isArtifact &&
+				hasClosingCodeFence(raw) &&
+				!autoOpenedArtifactIds.has(artifactId) &&
 				!$mobile &&
 				$chatId
 			) {
+				autoOpenedArtifactIds.add(artifactId);
 				await tick();
 				showArtifacts.set(true);
 				showControls.set(true);
@@ -270,6 +286,7 @@
 			{model}
 			{save}
 			{preview}
+			{compactPreview}
 			{done}
 			{editCodeBlock}
 			{topPadding}
@@ -283,31 +300,36 @@
 			onPreview={previewHandler}
 		/>
 	{:else if $settings?.renderMarkdownInAssistantMessages ?? true}
-		<Markdown
-			{id}
-			content={formatMessageContent(content)}
-			{model}
-			{save}
-			{preview}
-			{done}
-			{editCodeBlock}
-			{topPadding}
-			{sourceIds}
-			{onSourceClick}
-			{onTaskClick}
-			{onSave}
-			onUpdate={markdownUpdateHandler}
-			onPreview={previewHandler}
-		/>
+		<div class="markdown-prose">
+			<Markdown
+				{id}
+				content={formatMessageContent(content)}
+				{model}
+				{save}
+				{preview}
+				{compactPreview}
+				{done}
+				{editCodeBlock}
+				{topPadding}
+				{sourceIds}
+				{onSourceClick}
+				{onTaskClick}
+				{onSave}
+				onUpdate={markdownUpdateHandler}
+				onPreview={previewHandler}
+			/>
+		</div>
 	{:else}
 		{@const extracted = extractDetailsBlocks(content)}
 
 		{#if extracted.detailsContent}
 			<!-- Render structural blocks (tool calls, reasoning, etc.) through Markdown -->
-			<Markdown {id} content={extracted.detailsContent} {done} />
+			<div class="markdown-prose">
+				<Markdown {id} content={extracted.detailsContent} {preview} {compactPreview} {done} />
+			</div>
 		{/if}
 		{#if extracted.plainContent}
-			<div class="whitespace-pre-wrap">{extracted.plainContent}</div>
+			<div class="whitespace-pre-wrap text-[0.9375rem]">{extracted.plainContent}</div>
 		{/if}
 	{/if}
 </div>

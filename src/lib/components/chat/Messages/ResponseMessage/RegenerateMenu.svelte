@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import LineSpace from '$lib/components/icons/LineSpace.svelte';
 	import LineSpaceSmaller from '$lib/components/icons/LineSpaceSmaller.svelte';
 
@@ -27,14 +28,12 @@
 	<slot></slot>
 
 	<div slot="content">
-		<div
-			class="max-w-[200px] rounded-2xl px-1 py-1 border border-gray-100 dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
-		>
-			<div class="py-1.5 px-2.5 flex dark:text-gray-100">
+		<DropdownMenu className="max-w-[200px] transition">
+			<div class="py-1 px-2 flex dark:text-gray-100">
 				<input
 					type="text"
 					id="floating-message-input"
-					class="bg-transparent outline-hidden w-full flex-1 text-sm"
+					class="bg-transparent outline-hidden w-full flex-1 text-[13px]"
 					placeholder={$i18n.t('Suggest a change')}
 					bind:value={inputValue}
 					autocomplete="off"
@@ -72,9 +71,9 @@
 					</button>
 				</div>
 			</div>
-			<hr class="border-gray-50/30 dark:border-gray-800/30 my-1 mx-2" />
+			<hr class="border-gray-50/30 dark:border-gray-800/30 my-0.5 mx-1" />
 			<button
-				class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 				on:click={() => {
 					onRegenerate();
 					show = false;
@@ -87,7 +86,7 @@
 					stroke-width="2"
 					aria-hidden="true"
 					stroke="currentColor"
-					class="w-4 h-4"
+					class="size-3.5"
 				>
 					<path
 						stroke-linecap="round"
@@ -99,24 +98,24 @@
 			</button>
 
 			<button
-				class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 				on:click={() => {
 					onRegenerate($i18n.t('Add Details'));
 				}}
 			>
-				<LineSpace strokeWidth="2" />
+				<LineSpace className="size-3.5" strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('Add Details')}</div>
 			</button>
 
 			<button
-				class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 				on:click={() => {
 					onRegenerate($i18n.t('More Concise'));
 				}}
 			>
-				<LineSpaceSmaller strokeWidth="2" />
+				<LineSpaceSmaller className="size-3.5" strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('More Concise')}</div>
 			</button>
-		</div>
+		</DropdownMenu>
 	</div>
 </Dropdown>

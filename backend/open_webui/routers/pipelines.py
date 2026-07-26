@@ -1,9 +1,9 @@
 import asyncio
 import logging
 import os
-import shutil
 from typing import Optional
 
+import aiofiles
 import aiohttp
 from fastapi import (
     APIRouter,
@@ -18,7 +18,7 @@ from fastapi import (
 )
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_FILE_STREAM_CHUNK_SIZE
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.routers.openai import get_all_models_responses
@@ -237,35 +237,37 @@ async def upload_pipeline(
 
     response = None
     try:
-        # Save the uploaded file off the event loop (uploads can be large).
-        def _save_upload():
-            with open(file_path, 'wb') as buffer:
-                shutil.copyfileobj(file.file, buffer)
-
-        await asyncio.to_thread(_save_upload)
+        async with aiofiles.open(file_path, 'wb') as buffer:
+            while chunk := await file.read(AIOHTTP_FILE_STREAM_CHUNK_SIZE):
+                await buffer.write(chunk)
 
         url, key = await get_openai_connection(urlIdx)
 
         headers = {'Authorization': f'Bearer {key}'}
 
         async with aiohttp.ClientSession(trust_env=True) as session:
-            with open(file_path, 'rb') as f:
-                form_data = aiohttp.FormData()
-                form_data.add_field(
-                    'file',
-                    f,
-                    filename=filename,
-                    content_type='application/octet-stream',
-                )
+            form_data = aiohttp.FormData()
 
-                async with session.post(
-                    f'{url}/pipelines/upload',
-                    headers=headers,
-                    data=form_data,
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                ) as response:
-                    response.raise_for_status()
-                    data = await response.json()
+            async def pipeline_chunks():
+                async with aiofiles.open(file_path, 'rb') as pipeline_file:
+                    while chunk := await pipeline_file.read(AIOHTTP_FILE_STREAM_CHUNK_SIZE):
+                        yield chunk
+
+            form_data.add_field(
+                'file',
+                pipeline_chunks(),
+                filename=filename,
+                content_type='application/octet-stream',
+            )
+
+            async with session.post(
+                f'{url}/pipelines/upload',
+                headers=headers,
+                data=form_data,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as response:
+                response.raise_for_status()
+                data = await response.json()
 
         await publish_event(
             request,
@@ -297,7 +299,7 @@ async def upload_pipeline(
     finally:
         # Ensure the file is deleted after the upload is completed or on failure
         if os.path.exists(file_path):
-            os.remove(file_path)
+            await asyncio.to_thread(os.remove, file_path)
 
 
 class AddPipelineForm(BaseModel):

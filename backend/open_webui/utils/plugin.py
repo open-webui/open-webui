@@ -207,6 +207,7 @@ async def load_tool_module_by_id(tool_id, content=None):
     if not ENABLE_PLUGINS:
         raise RuntimeError('Plugins are disabled by ENABLE_PLUGINS=false')
 
+    frontmatter = None
     if content is None:
         tool = await Tools.get_tool_by_id(tool_id)
         if not tool:
@@ -238,7 +239,8 @@ async def load_tool_module_by_id(tool_id, content=None):
 
         # Executing the modified content in the created module's namespace
         exec(content, module.__dict__)
-        frontmatter = extract_frontmatter(content)
+        if frontmatter is None:
+            frontmatter = extract_frontmatter(content)
         log.info(f'Loaded module: {module.__name__}')
 
         # Create and return the object if the class 'Tools' is found in the module
@@ -258,6 +260,7 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
     if not ENABLE_PLUGINS:
         raise RuntimeError('Plugins are disabled by ENABLE_PLUGINS=false')
 
+    frontmatter = None
     if content is None:
         function = await Functions.get_function_by_id(function_id)
         if not function:
@@ -286,7 +289,8 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
 
         # Execute the modified content in the created module's namespace
         exec(content, module.__dict__)
-        frontmatter = extract_frontmatter(content)
+        if frontmatter is None:
+            frontmatter = extract_frontmatter(content)
         log.info(f'Loaded module: {module.__name__}')
 
         # Create appropriate object based on available class type in the module

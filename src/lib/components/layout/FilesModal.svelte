@@ -202,21 +202,21 @@
 
 <Modal size="xl" bind:show>
 	<div>
-		<div class="flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class="flex items-center gap-2 text-lg font-medium self-center">
+		<div class="flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+			<div class="flex items-center gap-2 text-sm font-medium self-center">
 				<div>{$i18n.t('Files')}</div>
 				{#if query && files}
-					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
 						{files.length}
 					</div>
 				{:else if fileCount !== null}
-					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
 						{fileCount}
 					</div>
 				{/if}
 			</div>
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={() => {
 					show = false;
 				}}
@@ -225,7 +225,7 @@
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
 					fill="currentColor"
-					class="w-5 h-5"
+					class="size-4"
 				>
 					<path
 						fill-rule="evenodd"
@@ -281,7 +281,7 @@
 				{#if files !== null}
 					<div class="w-full">
 						{#if files.length > 0}
-							<div class="flex text-xs font-medium mb-1.5">
+							<div class="flex text-xs font-normal mb-1.5">
 								<button
 									class="px-1.5 py-1 cursor-pointer select-none basis-3/5"
 									on:click={() => setSortKey('filename')}
@@ -338,7 +338,7 @@
 
 							{#each files as file (file.id)}
 								<div
-									class="w-full flex justify-between items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 cursor-pointer"
+									class="w-full flex justify-between items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50/70 dark:hover:bg-gray-850/50 cursor-pointer"
 									on:click={() => openFileViewer(file)}
 								>
 									<div class="basis-3/5 min-w-0">

@@ -3,9 +3,10 @@ import ipaddress
 import logging
 import socket
 import ssl
+import time
 import urllib.parse
 import urllib.request
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 from typing import (
     Any,
     AsyncIterator,
@@ -158,6 +159,11 @@ def _ssrf_safe_new_conn(self):
             if getattr(self, 'source_address', None):
                 sock.bind(self.source_address)
             for opt in getattr(self, 'socket_options', None) or ():
+                if len(opt) == 4 and isinstance(opt[3], str):
+                    # urllib3-future per-protocol form: (level, optname, value, "tcp"/"udp")
+                    if opt[3].lower() == 'tcp':
+                        sock.setsockopt(*opt[:3])
+                    continue
                 sock.setsockopt(*opt)
             sock.connect(sa)
             return sock
@@ -688,27 +694,27 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
             else:
                 browser = p.chromium.launch(headless=self.headless, proxy=self.proxy)
 
-            for url in self.urls:
-                try:
-                    self._safe_process_url_sync(url)
-                    # Service worker requests bypass page.route interception
-                    page = browser.new_page(service_workers='block')
-                    page.route('**/*', self._intercept_navigation_sync)
-                    # WebSockets are not covered by page.route; block them entirely
-                    page.route_web_socket('**/*', lambda ws_route: None)
-                    response = page.goto(url, timeout=self.playwright_timeout)
-                    if response is None:
-                        raise ValueError(f'page.goto() returned None for url {url}')
+            with browser:
+                for url in self.urls:
+                    try:
+                        self._safe_process_url_sync(url)
+                        # Service worker requests bypass page.route interception
+                        with browser.new_page(service_workers='block') as page:
+                            page.route('**/*', self._intercept_navigation_sync)
+                            # WebSockets are not covered by page.route; block them entirely
+                            page.route_web_socket('**/*', lambda ws_route: None)
+                            response = page.goto(url, timeout=self.playwright_timeout)
+                            if response is None:
+                                raise ValueError(f'page.goto() returned None for url {url}')
 
-                    text = self.evaluator.evaluate(page, browser, response)
-                    metadata = {'source': url}
-                    yield Document(page_content=text, metadata=metadata)
-                except Exception as e:
-                    if self.continue_on_failure:
-                        log.exception(f'Error loading {url}: {e}')
-                        continue
-                    raise e
-            browser.close()
+                            text = self.evaluator.evaluate(page, browser, response)
+                            metadata = {'source': url}
+                            yield Document(page_content=text, metadata=metadata)
+                    except Exception as e:
+                        if self.continue_on_failure:
+                            log.exception(f'Error loading {url}: {e}')
+                            continue
+                        raise e
 
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Safely load URLs asynchronously with support for remote browser."""
@@ -721,27 +727,27 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
             else:
                 browser = await p.chromium.launch(headless=self.headless, proxy=self.proxy)
 
-            for url in self.urls:
-                try:
-                    await self._safe_process_url(url)
-                    # Service worker requests bypass page.route interception
-                    page = await browser.new_page(service_workers='block')
-                    await page.route('**/*', self._intercept_navigation)
-                    # WebSockets are not covered by page.route; block them entirely
-                    await page.route_web_socket('**/*', lambda ws_route: None)
-                    response = await page.goto(url, timeout=self.playwright_timeout)
-                    if response is None:
-                        raise ValueError(f'page.goto() returned None for url {url}')
+            async with browser:
+                for url in self.urls:
+                    try:
+                        await self._safe_process_url(url)
+                        # Service worker requests bypass page.route interception
+                        async with await browser.new_page(service_workers='block') as page:
+                            await page.route('**/*', self._intercept_navigation)
+                            # WebSockets are not covered by page.route; block them entirely
+                            await page.route_web_socket('**/*', lambda ws_route: None)
+                            response = await page.goto(url, timeout=self.playwright_timeout)
+                            if response is None:
+                                raise ValueError(f'page.goto() returned None for url {url}')
 
-                    text = await self.evaluator.evaluate_async(page, browser, response)
-                    metadata = {'source': url}
-                    yield Document(page_content=text, metadata=metadata)
-                except Exception as e:
-                    if self.continue_on_failure:
-                        log.exception(f'Error loading {url}: {e}')
-                        continue
-                    raise e
-            await browser.close()
+                            text = await self.evaluator.evaluate_async(page, browser, response)
+                            metadata = {'source': url}
+                            yield Document(page_content=text, metadata=metadata)
+                    except Exception as e:
+                        if self.continue_on_failure:
+                            log.exception(f'Error loading {url}: {e}')
+                            continue
+                        raise e
 
 
 class SafeWebBaseLoader(WebBaseLoader):
@@ -753,6 +759,8 @@ class SafeWebBaseLoader(WebBaseLoader):
             trust_env (bool, optional): set to True if using proxy to make web requests, for example
                 using http(s)_proxy environment variables. Defaults to False.
         """
+        # lxml parses scraped pages far faster than the html.parser default
+        kwargs.setdefault('default_parser', 'lxml')
         super().__init__(*args, **kwargs)
         self.trust_env = trust_env
 
@@ -815,19 +823,12 @@ class SafeWebBaseLoader(WebBaseLoader):
         final_results = []
         for i, result in enumerate(results):
             url = urls[i]
-            if parser is None:
-                if url.endswith('.xml'):
-                    parser = 'xml'
-                else:
-                    parser = self.default_parser
-                self._check_parser(parser)
-            final_results.append(BeautifulSoup(result, parser, **self.bs_kwargs))
+            url_parser = parser
+            if url_parser is None:
+                url_parser = 'xml' if url.endswith('.xml') else self.default_parser
+                self._check_parser(url_parser)
+            final_results.append(BeautifulSoup(result, url_parser, **self.bs_kwargs))
         return final_results
-
-    async def ascrape_all(self, urls: List[str], parser: Union[str, None] = None) -> List[Any]:
-        """Async fetch all urls, then return soups for all results."""
-        results = await self.fetch_all(urls)
-        return self._unpack_fetch_results(results, urls, parser=parser)
 
     def lazy_load(self) -> Iterator[Document]:
         """Lazy load text from the url(s) in web_path with error handling."""
@@ -844,19 +845,20 @@ class SafeWebBaseLoader(WebBaseLoader):
                 # Log the error and continue with the next URL
                 log.exception(f'Error loading {path}: {e}')
 
+    def _document_from_html(self, html: str, url: str) -> Document:
+        """Build one Document."""
+        soup = self._unpack_fetch_results([html], [url])[0]
+        return Document(
+            page_content=soup.get_text(**self.bs_get_text_kwargs),
+            metadata=extract_metadata(soup, url),
+        )
+
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Async lazy load text from the url(s) in web_path."""
-        results = await self.ascrape_all(self.web_paths)
-        for path, soup in zip(self.web_paths, results):
-            text = soup.get_text(**self.bs_get_text_kwargs)
-            metadata = {'source': path}
-            if title := soup.find('title'):
-                metadata['title'] = title.get_text()
-            if description := soup.find('meta', attrs={'name': 'description'}):
-                metadata['description'] = description.get('content', 'No description found.')
-            if html := soup.find('html'):
-                metadata['language'] = html.get('lang', 'No language found.')
-            yield Document(page_content=text, metadata=metadata)
+        results = await self.fetch_all(self.web_paths)
+        for path, html in zip(self.web_paths, results):
+            # parsing a large page costs hundreds of ms, keep it off the event loop
+            yield await asyncio.to_thread(self._document_from_html, html, path)
 
     async def aload(self) -> list[Document]:
         """Load data into Document objects."""
@@ -868,6 +870,7 @@ def get_web_loader(
     verify_ssl: bool = True,
     requests_per_second: int = 2,
     trust_env: bool = False,
+    loader_config: Optional[dict] = None,
 ):
     # Check if the URLs are valid
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
@@ -875,6 +878,16 @@ def get_web_loader(
     if not safe_urls:
         log.warning(f'All provided URLs were blocked or invalid: {urls}')
         raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
+    loader_config = loader_config or {}
+
+    def cfg(key, env_value):
+        # Admin-saved DB value wins; env constant covers keys never saved.
+        value = loader_config.get(key)
+        return env_value if value is None else value
+
+    engine = cfg('web_loader_engine', WEB_LOADER_ENGINE)
+    web_loader_timeout = cfg('web_loader_timeout', WEB_LOADER_TIMEOUT)
 
     web_loader_args = {
         'web_paths': safe_urls,
@@ -884,13 +897,15 @@ def get_web_loader(
         'trust_env': trust_env,
     }
 
-    if WEB_LOADER_ENGINE == '' or WEB_LOADER_ENGINE == 'safe_web':
+    WebLoaderClass = None
+
+    if engine == '' or engine == 'safe_web':
         WebLoaderClass = SafeWebBaseLoader
 
         request_kwargs = {}
-        if WEB_LOADER_TIMEOUT:
+        if web_loader_timeout:
             try:
-                timeout_value = float(WEB_LOADER_TIMEOUT)
+                timeout_value = float(web_loader_timeout)
             except ValueError:
                 timeout_value = None
 
@@ -900,42 +915,44 @@ def get_web_loader(
         if request_kwargs:
             web_loader_args['requests_kwargs'] = request_kwargs
 
-    if WEB_LOADER_ENGINE == 'playwright':
+    if engine == 'playwright':
         WebLoaderClass = SafePlaywrightURLLoader
-        web_loader_args['playwright_timeout'] = PLAYWRIGHT_TIMEOUT
-        if PLAYWRIGHT_WS_URL:
-            web_loader_args['playwright_ws_url'] = PLAYWRIGHT_WS_URL
+        web_loader_args['playwright_timeout'] = cfg('playwright_timeout', PLAYWRIGHT_TIMEOUT)
+        playwright_ws_url = cfg('playwright_ws_url', PLAYWRIGHT_WS_URL)
+        if playwright_ws_url:
+            web_loader_args['playwright_ws_url'] = playwright_ws_url
 
-    if WEB_LOADER_ENGINE == 'firecrawl':
+    if engine == 'firecrawl':
         WebLoaderClass = SafeFireCrawlLoader
-        web_loader_args['api_key'] = FIRECRAWL_API_KEY
-        web_loader_args['api_url'] = FIRECRAWL_API_BASE_URL
-        if FIRECRAWL_TIMEOUT:
+        web_loader_args['api_key'] = cfg('firecrawl_api_key', FIRECRAWL_API_KEY)
+        web_loader_args['api_url'] = cfg('firecrawl_api_url', FIRECRAWL_API_BASE_URL)
+        firecrawl_timeout = cfg('firecrawl_timeout', FIRECRAWL_TIMEOUT)
+        if firecrawl_timeout:
             try:
-                web_loader_args['timeout'] = int(FIRECRAWL_TIMEOUT)
+                web_loader_args['timeout'] = int(firecrawl_timeout)
             except ValueError:
                 pass
 
-    if WEB_LOADER_ENGINE == 'tavily':
+    if engine == 'tavily':
         WebLoaderClass = SafeTavilyLoader
-        web_loader_args['api_key'] = TAVILY_API_KEY
-        web_loader_args['extract_depth'] = TAVILY_EXTRACT_DEPTH
+        web_loader_args['api_key'] = cfg('tavily_api_key', TAVILY_API_KEY)
+        web_loader_args['extract_depth'] = cfg('tavily_extract_depth', TAVILY_EXTRACT_DEPTH)
 
-    if WEB_LOADER_ENGINE == 'microsoft_web_iq':
+    if engine == 'microsoft_web_iq':
         WebLoaderClass = SafeMicrosoftWebIQLoader
-        web_loader_args['api_base_url'] = MICROSOFT_WEB_IQ_API_BASE_URL
-        web_loader_args['api_key'] = MICROSOFT_WEB_IQ_API_KEY
-        web_loader_args['language'] = MICROSOFT_WEB_IQ_LANGUAGE
-        if WEB_LOADER_TIMEOUT:
+        web_loader_args['api_base_url'] = cfg('microsoft_web_iq_api_base_url', MICROSOFT_WEB_IQ_API_BASE_URL)
+        web_loader_args['api_key'] = cfg('microsoft_web_iq_api_key', MICROSOFT_WEB_IQ_API_KEY)
+        web_loader_args['language'] = cfg('microsoft_web_iq_language', MICROSOFT_WEB_IQ_LANGUAGE)
+        if web_loader_timeout:
             try:
-                web_loader_args['timeout'] = int(WEB_LOADER_TIMEOUT)
+                web_loader_args['timeout'] = int(web_loader_timeout)
             except ValueError:
                 pass
 
-    if WEB_LOADER_ENGINE == 'external':
+    if engine == 'external':
         WebLoaderClass = ExternalWebLoader
-        web_loader_args['external_url'] = EXTERNAL_WEB_LOADER_URL
-        web_loader_args['external_api_key'] = EXTERNAL_WEB_LOADER_API_KEY
+        web_loader_args['external_url'] = cfg('external_web_loader_url', EXTERNAL_WEB_LOADER_URL)
+        web_loader_args['external_api_key'] = cfg('external_web_loader_api_key', EXTERNAL_WEB_LOADER_API_KEY)
 
     if WebLoaderClass:
         web_loader = WebLoaderClass(**web_loader_args)
@@ -949,6 +966,6 @@ def get_web_loader(
         return web_loader
     else:
         raise ValueError(
-            f'Invalid WEB_LOADER_ENGINE: {WEB_LOADER_ENGINE}. '
+            f'Invalid WEB_LOADER_ENGINE: {engine}. '
             "Please set it to 'safe_web', 'playwright', 'firecrawl', 'tavily', 'external', or 'microsoft_web_iq'."
         )
