@@ -126,6 +126,13 @@ def _finalize_openai_content(blocks: list) -> str | list:
     return blocks
 
 
+def is_anthropic_messages_passthrough(url: str, api_config: dict | None = None) -> bool:
+    api_config = api_config or {}
+    provider = str(api_config.get('provider', '')).lower()
+
+    return is_anthropic_url(url or '') or provider == 'litellm'
+
+
 def convert_anthropic_to_openai_payload(
     anthropic_payload: dict, passthrough_params: list[str] | str | None = None
 ) -> dict:
@@ -192,6 +199,8 @@ def convert_anthropic_to_openai_payload(
                             },
                         )
                     )
+                elif block_type in ('thinking', 'redacted_thinking'):
+                    openai_content.append(_copy_cache_control(block, dict(block)))
                 elif block_type == 'image':
                     source = block.get('source', {})
                     if source.get('type') == 'base64':
@@ -490,6 +499,11 @@ def convert_openai_to_anthropic_response(
     has_thinking = False
     for block in thinking_blocks:
         if not isinstance(block, dict):
+            continue
+
+        if block.get('type') == 'redacted_thinking':
+            content.append({k: v for k, v in block.items() if k in {'type', 'data'}})
+            has_thinking = True
             continue
 
         thinking = block.get('thinking') or block.get('content') or block.get('text')
