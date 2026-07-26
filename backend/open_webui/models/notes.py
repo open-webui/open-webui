@@ -194,16 +194,11 @@ class NoteTable:
                     stmt = stmt.filter(Note.user_id != user_id)
 
                 # Apply access control filtering
-                if 'permission' in filter:
-                    permission = filter['permission']
-                else:
-                    permission = 'write'
-
                 stmt = self._has_permission(
                     db,
                     stmt,
                     filter,
-                    permission=permission,
+                    permission=filter.get('permission', 'read'),
                 )
 
                 order_by = filter.get('order_by')

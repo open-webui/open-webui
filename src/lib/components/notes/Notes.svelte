@@ -498,7 +498,8 @@
 								align="end"
 								bind:value={permission}
 								items={[
-									{ value: null, label: $i18n.t('Write') },
+									{ value: null, label: $i18n.t('All') },
+									{ value: 'write', label: $i18n.t('Write') },
 									{ value: 'read_only', label: $i18n.t('Read Only') }
 								]}
 							/>
