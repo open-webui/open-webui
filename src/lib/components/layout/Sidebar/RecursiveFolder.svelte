@@ -420,7 +420,7 @@
 			} finally {
 				chatsLoading = false;
 			}
-		} else {
+		} else if (!open) {
 			chats = null;
 			chatsPage = 1;
 			hasMoreChats = false;
