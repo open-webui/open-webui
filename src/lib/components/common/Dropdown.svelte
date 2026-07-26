@@ -31,6 +31,7 @@
 
 	let triggerEl: HTMLElement | null = null;
 	let contentEl: HTMLElement | null = null;
+	let previouslyFocused: HTMLElement | null = null;
 	let positionFrame: number | undefined;
 	let settleTimers: number[] = [];
 	let resolvedMaxHeight = maxHeight;
@@ -201,31 +202,51 @@
 		}
 	}
 
-	async function toggleOpen() {
-		show = !show;
-		onOpenChange(show);
-		if (show) {
-			await tick();
-			positionContent();
-			// Re-check after transition renders real dimensions
-			if (visualViewportAware) {
-				scheduleSettledPositionUpdates();
-			} else {
-				setTimeout(positionContent, 50);
-			}
+	const FOCUSABLE =
+		'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+	async function afterOpen() {
+		previouslyFocused = document.activeElement as HTMLElement | null;
+
+		await tick();
+		positionContent();
+		// the content is portaled to the end of <body>, so Tab would skip past it
+		contentEl?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+
+		// Re-check after transition renders real dimensions
+		if (visualViewportAware) {
+			scheduleSettledPositionUpdates();
+		} else {
+			setTimeout(positionContent, 50);
 		}
 	}
 
-	// React to external show changes (e.g. bind:show toggled by parent component)
+	function closeDropdown() {
+		// only take focus back if the dropdown still holds it
+		const restoreFocus = !!contentEl?.contains(document.activeElement);
+
+		show = false;
+		onOpenChange(false);
+
+		if (restoreFocus) {
+			previouslyFocused?.focus();
+		}
+		previouslyFocused = null;
+	}
+
+	function toggleOpen() {
+		if (show) {
+			closeDropdown();
+			return;
+		}
+
+		show = true;
+		onOpenChange(true);
+	}
+
+	// Also covers external show changes (e.g. bind:show toggled by parent component)
 	$: if (show) {
-		tick().then(() => {
-			positionContent();
-			if (visualViewportAware) {
-				scheduleSettledPositionUpdates();
-			} else {
-				setTimeout(positionContent, 50);
-			}
-		});
+		afterOpen();
 	}
 
 	function handleWindowPointerDown(event: PointerEvent) {
@@ -233,21 +254,18 @@
 		if (!(event.target instanceof Node)) return;
 		if (triggerEl?.contains(event.target)) return;
 		if (contentEl?.contains(event.target)) return;
-		show = false;
-		onOpenChange(false);
+		closeDropdown();
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape' && show) {
-			show = false;
-			onOpenChange(false);
+			closeDropdown();
 		}
 	}
 
 	/** Close the dropdown programmatically */
 	export function close() {
-		show = false;
-		onOpenChange(false);
+		closeDropdown();
 	}
 
 	import { onMount, onDestroy } from 'svelte';
@@ -297,7 +315,6 @@
 		use:portal
 		bind:this={contentEl}
 		class={contentClass}
-		role="menu"
 		tabindex="-1"
 		style:max-height={resolvedMaxHeight}
 		style:overflow-y="auto"
