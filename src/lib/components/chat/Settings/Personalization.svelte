@@ -37,7 +37,7 @@
 	let showDeleteConfirm = false;
 	let query = '';
 	const actionButtonClass =
-		'shrink-0 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+		'shrink-0 text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
 	type Memory = {
 		id: string;
@@ -192,7 +192,7 @@
 							<Dropdown align="end">
 								<Tooltip content={$i18n.t('Actions')}>
 									<button
-										class="flex h-7 items-center gap-1.5 rounded-lg bg-transparent px-1.5 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+										class="flex h-7 items-center gap-1.5 rounded-lg bg-transparent px-1.5 text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
 										type="button"
 									>
 										<span>{$i18n.t('Actions')}</span>

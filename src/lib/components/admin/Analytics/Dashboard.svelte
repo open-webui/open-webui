@@ -282,7 +282,7 @@
 
 <!-- Summary stats -->
 {#if !loading}
-	<div class="flex gap-3 text-xs text-gray-500 dark:text-gray-400 px-0.5 pb-2">
+	<div class="flex gap-3 text-xs text-gray-600 dark:text-gray-400 px-0.5 pb-2">
 		<span
 			><span class="font-normal text-gray-900 dark:text-gray-300"
 				>{summary.total_messages.toLocaleString()}</span
@@ -351,7 +351,7 @@
 				{$i18n.t('Model Usage')}
 			</div>
 			<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
-				<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto">
+				<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
 					<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
 						<tr class="border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
 							<th scope="col" class="px-2.5 py-2 w-8">#</th>
@@ -519,7 +519,7 @@
 				{$i18n.t('User Activity')}
 			</div>
 			<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
-				<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto">
+				<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
 					<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
 						<tr class="border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
 							<th scope="col" class="px-2.5 py-2 w-8">#</th>

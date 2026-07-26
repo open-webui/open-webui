@@ -130,7 +130,7 @@
 				{/if}
 			</div>
 			<button
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center rounded-lg p-1 text-gray-600 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close citation modal')}
 				on:click={() => {
 					show = false;
@@ -196,7 +196,7 @@
 													</span>
 												{/if}
 											{:else if typeof document?.distance === 'number'}
-												<span class="text-gray-500 dark:text-gray-500">
+												<span class="text-gray-600 dark:text-gray-500">
 													({(document?.distance ?? 0).toFixed(4)})
 												</span>
 											{/if}
@@ -205,7 +205,7 @@
 								{/if}
 
 								{#if Number.isInteger(document?.metadata?.page)}
-									<span class="text-sm text-gray-500 dark:text-gray-400">
+									<span class="text-sm text-gray-600 dark:text-gray-400">
 										({$i18n.t('page')}
 										{document.metadata.page + 1})
 									</span>

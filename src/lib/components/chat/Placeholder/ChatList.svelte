@@ -131,7 +131,7 @@
 	<div class="text-left text-sm w-full mb-3">
 		{#if chatList.length === 0}
 			<div
-				class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 min-h-20 w-full h-full flex justify-center items-center"
+				class="text-xs text-gray-600 dark:text-gray-400 text-center px-5 min-h-20 w-full h-full flex justify-center items-center"
 			>
 				{$i18n.t('No chats found')}
 			</div>
@@ -140,7 +140,7 @@
 		{#each chatList as chat, idx (chat.id)}
 			{#if (idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)) && chat?.time_range}
 				<div
-					class="w-full text-xs text-gray-500 dark:text-gray-500 font-normal {idx === 0
+					class="w-full text-xs text-gray-600 dark:text-gray-500 font-normal {idx === 0
 						? ''
 						: 'pt-5'} pb-2 px-2"
 				>
@@ -176,7 +176,7 @@
 				</div>
 
 				<div class="hidden sm:flex sm:basis-2/5 items-center justify-end gap-2">
-					<div class=" text-gray-500 dark:text-gray-400 text-xs">
+					<div class=" text-gray-600 dark:text-gray-400 text-xs">
 						{dayjs(chat?.updated_at * 1000).calendar()}
 					</div>
 
@@ -196,7 +196,7 @@
 		{#if totalPages > 1}
 			<div class="flex items-center justify-center gap-1.5 pt-2">
 				<button
-					class="inline-flex size-7 items-center justify-center rounded-lg text-xs font-medium text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-25 dark:text-gray-500 dark:hover:bg-gray-850 dark:hover:text-gray-300"
+					class="inline-flex size-7 items-center justify-center rounded-lg text-xs font-medium text-gray-600 transition hover:bg-gray-50 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-25 dark:text-gray-500 dark:hover:bg-gray-850 dark:hover:text-gray-300"
 					disabled={chatListLoading || page <= 1}
 					aria-label={$i18n.t('Previous page')}
 					on:click={() => onPageChange(page - 1)}
@@ -227,7 +227,7 @@
 				{/each}
 
 				<button
-					class="inline-flex size-7 items-center justify-center rounded-lg text-xs font-medium text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-25 dark:text-gray-500 dark:hover:bg-gray-850 dark:hover:text-gray-300"
+					class="inline-flex size-7 items-center justify-center rounded-lg text-xs font-medium text-gray-600 transition hover:bg-gray-50 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-25 dark:text-gray-500 dark:hover:bg-gray-850 dark:hover:text-gray-300"
 					disabled={chatListLoading || page >= totalPages}
 					aria-label={$i18n.t('Next page')}
 					on:click={() => onPageChange(page + 1)}

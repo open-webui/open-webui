@@ -97,17 +97,17 @@
 			<div class="flex items-center gap-2 text-sm font-medium self-center">
 				<div>{title}</div>
 				{#if count !== null}
-					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-sm font-medium text-gray-600 dark:text-gray-500">
 						{formatNumber(count)}
 					</div>
 				{:else if chatList}
-					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-sm font-medium text-gray-600 dark:text-gray-500">
 						{formatNumber(chatList.length)}
 					</div>
 				{/if}
 			</div>
 			<button
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center rounded-lg p-1 text-gray-600 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={() => {
 					show = false;
 				}}
@@ -232,7 +232,7 @@
 						<div class="text-left text-sm w-full mb-3 max-h-[22rem] overflow-y-scroll">
 							{#if chatList.length === 0}
 								<div
-									class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 min-h-20 w-full h-full flex justify-center items-center"
+									class="text-xs text-gray-600 dark:text-gray-400 text-center px-5 min-h-20 w-full h-full flex justify-center items-center"
 								>
 									{$i18n.t('No results found')}
 								</div>
@@ -241,7 +241,7 @@
 							{#each chatList as chat, idx (chat.id)}
 								{#if (idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)) && chat?.time_range}
 									<div
-										class="w-full text-xs text-gray-500 dark:text-gray-500 font-normal {idx === 0
+										class="w-full text-xs text-gray-600 dark:text-gray-500 font-normal {idx === 0
 											? ''
 											: 'pt-5'} pb-2 px-2"
 									>
@@ -294,7 +294,7 @@
 									</a>
 
 									<div class="{showUserInfo ? 'w-28' : 'basis-2/5'} flex items-center justify-end">
-										<div class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs">
+										<div class="hidden sm:flex text-gray-600 dark:text-gray-400 text-xs">
 											{$i18n.t(
 												dayjs(chat?.updated_at * 1000).calendar(null, {
 													sameDay: '[Today]',

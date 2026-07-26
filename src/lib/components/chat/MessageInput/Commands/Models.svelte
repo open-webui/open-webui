@@ -60,7 +60,7 @@
 	};
 </script>
 
-<div class="px-2 py-1 text-[11px] text-gray-500 dark:text-gray-400">
+<div class="px-2 py-1 text-[11px] text-gray-600 dark:text-gray-400">
 	{$i18n.t('Models')}
 </div>
 

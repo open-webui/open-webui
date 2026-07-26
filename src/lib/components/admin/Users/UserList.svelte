@@ -88,7 +88,7 @@
 		if (role === 'user') {
 			return 'text-[#4f7a5a] dark:text-[#8db395]';
 		}
-		return 'text-gray-500 dark:text-gray-400';
+		return 'text-gray-600 dark:text-gray-400';
 	};
 
 	const getUserList = async () => {
@@ -218,7 +218,7 @@
 	</div>
 
 	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
-		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
+		<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto max-w-full">
 			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
 				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
 					<th
@@ -482,12 +482,12 @@
 							'You have more than 50 users, which often means this workspace is supporting organizational use. Open WebUI is free to use as-is, with no restrictions or hidden limits, and we want to keep it that way.'
 						)}
 					</p>
-					<p class="text-gray-500 dark:text-gray-400">
+					<p class="text-gray-600 dark:text-gray-400">
 						{$i18n.t(
 							'By supporting the project through sponsorship or an enterprise license, you help us stay independent, ship new features faster, improve stability, and grow Open WebUI for the long haul.'
 						)}
 					</p>
-					<p class="text-gray-500 dark:text-gray-400">
+					<p class="text-gray-600 dark:text-gray-400">
 						{$i18n.t(
 							'Enterprise licenses also include dedicated support, customization options, and more, at a fraction of the cost of building and maintaining this stack internally.'
 						)}
@@ -504,7 +504,7 @@
 						{$i18n.t('Enterprise licensing')}
 					</a>
 					<a
-						class="text-xs text-gray-500 underline transition hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-100"
+						class="text-xs text-gray-600 underline transition hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-100"
 						href="https://github.com/sponsors/open-webui"
 						target="_blank"
 						rel="noreferrer"

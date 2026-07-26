@@ -200,7 +200,7 @@
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 16 16"
 								fill="currentColor"
-								class="size-3 text-gray-500 dark:text-gray-400 transition-transform {sortAsc
+								class="size-3 text-gray-600 dark:text-gray-400 transition-transform {sortAsc
 									? ''
 									: 'rotate-180'}"
 							>
@@ -223,7 +223,7 @@
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 16 16"
 								fill="currentColor"
-								class="size-3 text-gray-500 dark:text-gray-400 transition-transform {sortAsc
+								class="size-3 text-gray-600 dark:text-gray-400 transition-transform {sortAsc
 									? ''
 									: 'rotate-180'}"
 							>

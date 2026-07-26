@@ -357,7 +357,7 @@
 								$i18n.t('Unknown User')}
 						</div>
 
-						<div class="italic text-sm text-gray-500 dark:text-gray-400 line-clamp-1 w-full flex-1">
+						<div class="italic text-sm text-gray-600 dark:text-gray-400 line-clamp-1 w-full flex-1">
 							<Markdown
 								id={`${renderedMessageId}-reply-to`}
 								content={message?.reply_to_message?.content}
@@ -595,7 +595,7 @@
 												<Emoji shortCode={reaction.name} />
 
 												{#if reaction.users.length > 0}
-													<div class="text-xs font-normal text-gray-500 dark:text-gray-400">
+													<div class="text-xs font-normal text-gray-600 dark:text-gray-400">
 														{reaction.users?.length}
 													</div>
 												{/if}
@@ -611,7 +611,7 @@
 										>
 											<Tooltip content={$i18n.t('Add Reaction')}>
 												<div
-													class="flex items-center gap-1.5 bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1 transition rounded-xl px-1 py-1 cursor-pointer text-gray-500 dark:text-gray-400"
+													class="flex items-center gap-1.5 bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1 transition rounded-xl px-1 py-1 cursor-pointer text-gray-600 dark:text-gray-400"
 												>
 													<FaceSmile />
 												</div>
@@ -625,7 +625,7 @@
 						{#if !thread && message.reply_count > 0}
 							<div class="flex items-center gap-1.5 -mt-0.5 mb-1.5">
 								<button
-									class="flex items-center text-xs py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
+									class="flex items-center text-xs py-1 text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
 									on:click={() => {
 										onThread(message.id);
 									}}

@@ -106,7 +106,7 @@
 						{:else}
 							<span class="min-w-fit px-1 text-sm select-none">{$i18n.t('Automations')}</span>
 						{/if}
-						<span class="text-sm text-gray-500 dark:text-gray-500">
+						<span class="text-sm text-gray-600 dark:text-gray-500">
 							{$total === null ? '' : formatNumber($total)}
 						</span>
 						{#if itemName}

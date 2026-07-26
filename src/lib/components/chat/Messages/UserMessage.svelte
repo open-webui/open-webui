@@ -337,7 +337,7 @@
 				<div class="w-full min-w-0">
 					<button
 						type="button"
-						class="flex w-full min-w-0 items-center gap-2 text-left text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+						class="flex w-full min-w-0 items-center gap-2 text-left text-gray-600 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
 						aria-expanded={timerExpanded}
 						on:click={() => {
 							timerExpanded = !timerExpanded;

@@ -76,7 +76,7 @@
 					</div>
 				</div>
 				<button
-					class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+					class="self-center rounded-lg p-1 text-gray-600 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 					on:click={() => {
 						show = false;
 					}}
@@ -97,7 +97,7 @@
 								class="flex flex-col gap-2 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent py-2"
 							>
 								{#if pinnedMessages.length === 0}
-									<div class=" text-center text-xs text-gray-500 dark:text-gray-400 py-6">
+									<div class=" text-center text-xs text-gray-600 dark:text-gray-400 py-6">
 										{$i18n.t('No pinned messages')}
 									</div>
 								{:else}

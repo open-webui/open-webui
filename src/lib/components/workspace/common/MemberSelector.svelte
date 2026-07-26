@@ -197,7 +197,7 @@
 
 		{#if users.length > 0 || filteredGroups.length > 0}
 			<div class="scrollbar-hidden relative whitespace-nowrap w-full max-w-full">
-				<div class=" text-sm text-left text-gray-500 dark:text-gray-400 w-full max-w-full">
+				<div class=" text-sm text-left text-gray-600 dark:text-gray-400 w-full max-w-full">
 					<div class="w-full max-h-96 overflow-y-auto rounded-lg">
 						{#if includeGroups && filteredGroups.length > 0}
 							<div class="text-xs text-gray-500 mb-1 mx-1">

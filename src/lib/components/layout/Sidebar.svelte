@@ -1440,7 +1440,7 @@
 								{#each $chats as chat, idx (`chat-${chat?.id ?? idx}`)}
 									{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
 										<div
-											class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-normal {idx ===
+											class="w-full pl-2.5 text-xs text-gray-600 dark:text-gray-500 font-normal {idx ===
 											0
 												? ''
 												: 'pt-4'} pb-1"

@@ -42,7 +42,7 @@
 	</svelte:fragment>
 
 	<svelte:fragment slot="item" let:item let:selected>
-		<span class={`min-w-0 truncate ${selected ? '' : 'text-gray-500 dark:text-gray-400'}`}
+		<span class={`min-w-0 truncate ${selected ? '' : 'text-gray-600 dark:text-gray-400'}`}
 			>{item.label}</span
 		>
 	</svelte:fragment>

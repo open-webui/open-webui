@@ -1545,7 +1545,7 @@
 							class="flex items-center gap-2 rounded-xl py-1.5 px-2.5 bg-gray-50 dark:bg-gray-850"
 						>
 							<Spinner className="size-3.5 shrink-0" />
-							<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
+							<div class="text-xs text-gray-600 dark:text-gray-400 truncate">
 								{syncing}
 							</div>
 						</div>

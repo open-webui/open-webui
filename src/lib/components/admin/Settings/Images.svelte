@@ -565,7 +565,7 @@
 								<div class="flex items-center justify-end gap-2">
 									{#if config.COMFYUI_WORKFLOW}
 										<button
-											class="text-xs text-gray-500 transition-colors hover:text-gray-900 hover:underline dark:text-gray-500 dark:hover:text-white"
+											class="text-xs text-gray-600 transition-colors hover:text-gray-900 hover:underline dark:text-gray-500 dark:hover:text-white"
 											type="button"
 											aria-label={$i18n.t('Edit workflow.json content')}
 											on:click={() => {
@@ -579,7 +579,7 @@
 
 									<Tooltip content={$i18n.t('Click here to upload a workflow.json file.')}>
 										<button
-											class="text-xs text-gray-500 transition-colors hover:text-gray-900 hover:underline dark:text-gray-500 dark:hover:text-white"
+											class="text-xs text-gray-600 transition-colors hover:text-gray-900 hover:underline dark:text-gray-500 dark:hover:text-white"
 											type="button"
 											aria-label={$i18n.t('Click here to upload a workflow.json file.')}
 											on:click={() => {
@@ -862,7 +862,7 @@
 								<div class="flex items-center justify-end gap-2">
 									{#if config.IMAGES_EDIT_COMFYUI_WORKFLOW}
 										<button
-											class="text-xs text-gray-500 transition-colors hover:text-gray-900 hover:underline dark:text-gray-500 dark:hover:text-white"
+											class="text-xs text-gray-600 transition-colors hover:text-gray-900 hover:underline dark:text-gray-500 dark:hover:text-white"
 											type="button"
 											aria-label={$i18n.t('Edit workflow.json content')}
 											on:click={() => {
@@ -876,7 +876,7 @@
 
 									<Tooltip content={$i18n.t('Click here to upload a workflow.json file.')}>
 										<button
-											class="text-xs text-gray-500 transition-colors hover:text-gray-900 hover:underline dark:text-gray-500 dark:hover:text-white"
+											class="text-xs text-gray-600 transition-colors hover:text-gray-900 hover:underline dark:text-gray-500 dark:hover:text-white"
 											type="button"
 											aria-label={$i18n.t('Click here to upload a workflow.json file.')}
 											on:click={() => {

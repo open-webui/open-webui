@@ -401,7 +401,7 @@
 			</h1>
 
 			<button
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center rounded-lg p-1 text-gray-600 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close')}
 				type="button"
 				on:click={resetForm}
@@ -654,7 +654,7 @@
 					<div>
 						{#if editing}
 							<button
-								class="px-1 py-1.5 text-sm font-normal text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
+								class="px-1 py-1.5 text-sm font-normal text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
 								type="button"
 								on:click={() => {
 									showDeleteConfirmDialog = true;

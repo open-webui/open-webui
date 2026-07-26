@@ -185,7 +185,7 @@
 		<h2 class="text-sm font-medium text-gray-900 dark:text-white">
 			{$i18n.t('Archived Chats')}
 			{#if chatCount !== null}
-				<span class="ml-2 font-normal text-gray-500 dark:text-gray-500">
+				<span class="ml-2 font-normal text-gray-600 dark:text-gray-500">
 					{formatNumber(chatCount)}
 				</span>
 			{/if}
@@ -223,7 +223,7 @@
 		<Dropdown align="end">
 			<Tooltip content={$i18n.t('Actions')}>
 				<button
-					class="flex h-7 items-center gap-1.5 rounded-lg bg-transparent px-1.5 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+					class="flex h-7 items-center gap-1.5 rounded-lg bg-transparent px-1.5 text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
 					type="button"
 				>
 					<span>{$i18n.t('Actions')}</span>
@@ -270,7 +270,7 @@
 			</div>
 		{:else if chatList.length === 0}
 			<div
-				class="flex min-h-20 items-center justify-center px-4 text-center text-xs text-gray-500 dark:text-gray-400"
+				class="flex min-h-20 items-center justify-center px-4 text-center text-xs text-gray-600 dark:text-gray-400"
 			>
 				{$i18n.t('You have no archived conversations.')}
 			</div>
@@ -335,7 +335,7 @@
 								})
 							)}
 						</div>
-						<div class="flex shrink-0 items-center justify-end text-gray-500 dark:text-gray-500">
+						<div class="flex shrink-0 items-center justify-end text-gray-600 dark:text-gray-500">
 							<Tooltip content={$i18n.t('Unarchive Chat')}>
 								<button
 									class="rounded-lg p-1 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"

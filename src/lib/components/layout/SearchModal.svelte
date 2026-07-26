@@ -600,7 +600,7 @@
 			<div
 				class="flex flex-col overflow-y-auto h-96 md:h-[40rem] max-h-full scrollbar-hidden w-full flex-1 pr-2"
 			>
-				<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-normal pb-2 px-2">
+				<div class="w-full text-xs text-gray-600 dark:text-gray-500 font-normal pb-2 px-2">
 					{$i18n.t('Actions')}
 				</div>
 
@@ -634,7 +634,7 @@
 					<div aria-hidden="true" class="h-px my-3" />
 
 					{#if chatList.length === 0}
-						<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 py-4">
+						<div class="text-xs text-gray-600 dark:text-gray-400 text-center px-5 py-4">
 							{$i18n.t('No results found')}
 						</div>
 					{/if}
@@ -642,7 +642,7 @@
 					{#each chatList as chat, idx (chat.id)}
 						{#if idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)}
 							<div
-								class="w-full text-xs text-gray-500 dark:text-gray-500 font-normal {idx === 0
+								class="w-full text-xs text-gray-600 dark:text-gray-500 font-normal {idx === 0
 									? ''
 									: 'pt-4'} pb-1.5 px-2"
 							>
@@ -738,7 +738,7 @@
 										{chat?.title}
 									</div>
 									{#if chat?.snippet}
-										<div class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">
+										<div class="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mt-0.5">
 											{#each getHighlightedSnippet(chat.snippet, query) as part}
 												{#if part.highlight}
 													<mark
@@ -758,7 +758,7 @@
 							<div
 								class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-3 pl-6 shrink-0"
 							>
-								<div class="text-gray-500 dark:text-gray-400 text-xs">
+								<div class="text-gray-600 dark:text-gray-400 text-xs">
 									{$i18n.t(
 										dayjs(chat?.updated_at * 1000).calendar(null, {
 											sameDay: '[Today]',
@@ -877,7 +877,7 @@
 			>
 				{#if messages === null}
 					<div
-						class="w-full h-full flex justify-center items-center text-gray-500 dark:text-gray-400 text-sm"
+						class="w-full h-full flex justify-center items-center text-gray-600 dark:text-gray-400 text-sm"
 					>
 						{$i18n.t('Select a conversation to preview')}
 					</div>

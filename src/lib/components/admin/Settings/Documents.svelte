@@ -73,7 +73,7 @@
 	const inputClass =
 		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const actionButtonClass =
-		'shrink-0 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+		'shrink-0 text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 	const textareaClass =
 		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 
@@ -570,7 +570,7 @@
 							{$i18n.t('Header variables')}
 						</button>
 						{#if showExternalDocumentLoaderHeadersHint}
-							<div class="mt-1 text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-400">
+							<div class="mt-1 text-[0.6875rem] leading-5 text-gray-600 dark:text-gray-400">
 								<div>{$i18n.t('No additional headers are sent unless configured.')}</div>
 								<div>
 									{$i18n.t('Example')}:
@@ -1041,7 +1041,7 @@
 
 							{#if RAG_EMBEDDING_ENGINE === ''}
 								<button
-									class="flex size-7 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-white"
+									class="flex size-7 shrink-0 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-white"
 									type="button"
 									on:click={() => {
 										embeddingModelUpdateHandler();

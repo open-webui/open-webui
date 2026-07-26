@@ -57,7 +57,7 @@
 	};
 </script>
 
-<div class="px-2 py-1 text-[11px] text-gray-500 dark:text-gray-400">
+<div class="px-2 py-1 text-[11px] text-gray-600 dark:text-gray-400">
 	{$i18n.t('Prompts')}
 </div>
 
@@ -84,7 +84,7 @@
 						{promptItem.command}
 					</span>
 
-					<span class="min-w-0 truncate text-xs text-gray-500 dark:text-gray-400">
+					<span class="min-w-0 truncate text-xs text-gray-600 dark:text-gray-400">
 						{promptItem.name}
 					</span>
 				</button>

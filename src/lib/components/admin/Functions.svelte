@@ -342,7 +342,7 @@
 							{$i18n.t('Functions')}
 						</div>
 
-						<div class="text-sm font-normal text-gray-500 dark:text-gray-500 opacity-60">
+						<div class="text-sm font-normal text-gray-600 dark:text-gray-500">
 							{filteredItems.length}
 						</div>
 					</div>
@@ -555,7 +555,7 @@
 								</div>
 
 								<div
-									class="hidden max-w-44 shrink-0 self-center truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
+									class="hidden max-w-44 shrink-0 self-center truncate text-right text-[11px] leading-5 text-gray-600 dark:text-gray-500 md:block"
 								>
 									<Tooltip
 										content={func?.user?.email ?? $i18n.t('Deleted User')}

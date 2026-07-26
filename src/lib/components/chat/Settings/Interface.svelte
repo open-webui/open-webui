@@ -111,7 +111,7 @@
 	const firstSectionHeadingClass = 'text-xs text-gray-400 dark:text-gray-600';
 	const settingDescriptionClass = 'mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600';
 	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+		'text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
 	const toggleLandingPageMode = async () => {
 		landingPageMode = landingPageMode === '' ? 'chat' : '';

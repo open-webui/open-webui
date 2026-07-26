@@ -118,7 +118,7 @@
 								}`}
 								className="self-end"
 							>
-								<span class="line-clamp-1 text-[11px] font-normal text-gray-500 dark:text-gray-400"
+								<span class="line-clamp-1 text-[11px] font-normal text-gray-600 dark:text-gray-400"
 									>{item.model.ollama?.details?.parameter_size ?? ''}</span
 								>
 							</Tooltip>

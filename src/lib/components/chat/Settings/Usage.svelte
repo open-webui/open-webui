@@ -407,7 +407,7 @@
 
 			{#if !hasUsage}
 				<UserSettingSection title={$i18n.t('Activity')}>
-					<div class="text-xs text-gray-500 dark:text-gray-400">
+					<div class="text-xs text-gray-600 dark:text-gray-400">
 						{$i18n.t('No usage data found')}
 					</div>
 				</UserSettingSection>
@@ -448,13 +448,13 @@
 
 				<UserSettingSection title={$i18n.t('Top models')}>
 					{#if usage.top_models.length === 0}
-						<div class="text-xs text-gray-500 dark:text-gray-400">
+						<div class="text-xs text-gray-600 dark:text-gray-400">
 							{$i18n.t('No model usage found')}
 						</div>
 					{:else}
 						{#each usage.top_models as model}
 							<UserSettingRow label={modelName(model.model_id)}>
-								<span class="text-xs text-gray-500 dark:text-gray-400">
+								<span class="text-xs text-gray-600 dark:text-gray-400">
 									{model.messages.toLocaleString()}
 									{$i18n.t('messages')} · {formatNumber(model.total_tokens)}
 								</span>
@@ -467,7 +467,7 @@
 					<UserSettingSection title={$i18n.t('Most used tools')}>
 						{#each usage.top_tools as tool}
 							<UserSettingRow label={tool.name}>
-								<span class="text-xs text-gray-500 dark:text-gray-400">
+								<span class="text-xs text-gray-600 dark:text-gray-400">
 									{tool.count.toLocaleString()}
 									{$i18n.t('runs')}
 								</span>

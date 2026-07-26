@@ -324,7 +324,7 @@
 									? 'bg-emerald-500'
 									: 'bg-red-400'}"
 							></span>
-							<span class="text-gray-500 dark:text-gray-400">{formatTime(run.created_at)}</span>
+							<span class="text-gray-600 dark:text-gray-400">{formatTime(run.created_at)}</span>
 							{#if run.chat_id}
 								<button
 									class="group flex items-center gap-1 text-[0.6875rem] text-gray-400"

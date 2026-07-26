@@ -311,7 +311,7 @@
 		<div class="flex justify-between items-center mb-2 dark:text-gray-100">
 			<div class="text-xs">{$i18n.t('Edit Prompt')}</div>
 			<button
-				class="rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="rounded-lg p-1 text-gray-600 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close')}
 				on:click={() => (showEditModal = false)}
 			>
@@ -363,7 +363,7 @@
 				<div>
 					<button
 						class="px-3 py-1.5 text-xs transition rounded-full {loading
-							? 'cursor-not-allowed bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+							? 'cursor-not-allowed bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
 							: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex justify-center"
 						type="submit"
 						disabled={loading}
@@ -680,7 +680,7 @@
 						class="group relative w-full px-1.5 py-1.5 pl-3 text-left transition {selectedHistoryEntry?.id ===
 						entry.id
 							? 'text-gray-900 dark:text-white'
-							: 'text-gray-500 hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-200'}"
+							: 'text-gray-600 hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-200'}"
 						on:click={() => (selectedHistoryEntry = entry)}
 					>
 						<span

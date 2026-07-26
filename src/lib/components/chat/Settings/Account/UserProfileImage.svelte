@@ -125,7 +125,7 @@
 			<span class="text-xs text-gray-600 dark:text-gray-400">{displayName || user?.name}</span>
 			<div class="flex flex-wrap items-center gap-2">
 				<button
-					class="text-[0.6875rem] text-gray-500 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+					class="text-[0.6875rem] text-gray-600 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 					type="button"
 					on:click={() => {
 						profileImageInputElement.click();
@@ -133,7 +133,7 @@
 				>
 				<span class="text-[0.6875rem] text-gray-300 dark:text-gray-700">·</span>
 				<button
-					class="text-[0.6875rem] text-gray-500 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+					class="text-[0.6875rem] text-gray-600 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 					type="button"
 					on:click={async () => {
 						profileImageUrl = `${WEBUI_BASE_URL}/user.png`;
@@ -141,7 +141,7 @@
 				>
 				<span class="text-[0.6875rem] text-gray-300 dark:text-gray-700">·</span>
 				<button
-					class="text-[0.6875rem] text-gray-500 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+					class="text-[0.6875rem] text-gray-600 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 					type="button"
 					on:click={async () => {
 						if (canvasPixelTest()) {
@@ -160,7 +160,7 @@
 				>
 				<span class="text-[0.6875rem] text-gray-300 dark:text-gray-700">·</span>
 				<button
-					class="text-[0.6875rem] text-gray-500 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+					class="text-[0.6875rem] text-gray-600 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 					type="button"
 					on:click={async () => {
 						const url = await getGravatarUrl(localStorage.token, user?.email);

@@ -172,11 +172,11 @@
 			>
 				<span class="truncate">{voice.id}</span>
 				{#if voice.name && voice.name !== voice.id}
-					<span class="truncate text-gray-500 dark:text-gray-400">{voice.name}</span>
+					<span class="truncate text-gray-600 dark:text-gray-400">{voice.name}</span>
 				{/if}
 				{#if selectedIds !== null && selectedIds.includes(voice.id)}
 					<svg
-						class="h-3.5 w-3.5 shrink-0 text-gray-500 dark:text-gray-400"
+						class="h-3.5 w-3.5 shrink-0 text-gray-600 dark:text-gray-400"
 						aria-hidden="true"
 						xmlns="http://www.w3.org/2000/svg"
 						fill="none"

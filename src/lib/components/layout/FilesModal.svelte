@@ -206,17 +206,17 @@
 			<div class="flex items-center gap-2 text-sm font-medium self-center">
 				<div>{$i18n.t('Files')}</div>
 				{#if query && files}
-					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-sm font-medium text-gray-600 dark:text-gray-500">
 						{files.length}
 					</div>
 				{:else if fileCount !== null}
-					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-sm font-medium text-gray-600 dark:text-gray-500">
 						{fileCount}
 					</div>
 				{/if}
 			</div>
 			<button
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center rounded-lg p-1 text-gray-600 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={() => {
 					show = false;
 				}}
@@ -330,7 +330,7 @@
 						<div class="text-left text-sm w-full mb-3 max-h-[32rem] overflow-y-scroll">
 							{#if files.length === 0}
 								<div
-									class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 min-h-20 w-full h-full flex justify-center items-center"
+									class="text-xs text-gray-600 dark:text-gray-400 text-center px-5 min-h-20 w-full h-full flex justify-center items-center"
 								>
 									{$i18n.t('No files found')}
 								</div>
@@ -349,7 +349,7 @@
 									</div>
 
 									<div class="basis-2/5 flex items-center justify-end">
-										<div class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs">
+										<div class="hidden sm:flex text-gray-600 dark:text-gray-400 text-xs">
 											{dayjs(file.created_at * 1000).format('MMM D, YYYY')}
 										</div>
 

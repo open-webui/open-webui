@@ -110,7 +110,7 @@
 		</h2>
 
 		<button
-			class="text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+			class="text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
 			on:click={resetBindings}
 		>
 			{$i18n.t('Reset Defaults')}
@@ -209,13 +209,13 @@
 								{#if configurable}
 									{#if recordingShortcut === id}
 										<span
-											class="inline-flex min-h-[1.125rem] items-center rounded-full bg-gray-100 px-[0.4375rem] py-0.5 text-[0.625rem] font-medium leading-none text-gray-500 dark:bg-white/6 dark:text-gray-400"
+											class="inline-flex min-h-[1.125rem] items-center rounded-full bg-gray-100 px-[0.4375rem] py-0.5 text-[0.625rem] font-medium leading-none text-gray-600 dark:bg-white/6 dark:text-gray-400"
 										>
 											{$i18n.t('Press keys...')}
 										</span>
 									{:else if chord}
 										<button
-											class="inline-flex min-h-[1.125rem] items-center rounded-full bg-gray-100 px-[0.4375rem] py-0.5 text-center text-[0.625rem] font-medium leading-none text-gray-500 dark:bg-white/6 dark:text-gray-400"
+											class="inline-flex min-h-[1.125rem] items-center rounded-full bg-gray-100 px-[0.4375rem] py-0.5 text-center text-[0.625rem] font-medium leading-none text-gray-600 dark:bg-white/6 dark:text-gray-400"
 											title={$i18n.t('Click to rebind')}
 											on:click={() => (recordingShortcut = id)}
 										>

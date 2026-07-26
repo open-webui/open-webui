@@ -111,7 +111,7 @@
 			</div>
 
 			<div
-				class="shrink-0 px-1.5 text-xs text-gray-500 transition group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200"
+				class="shrink-0 px-1.5 text-xs text-gray-600 transition group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200"
 			>
 				{$i18n.t('Edit')}
 			</div>

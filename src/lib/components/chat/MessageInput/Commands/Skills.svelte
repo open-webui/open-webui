@@ -69,7 +69,7 @@
 	};
 </script>
 
-<div class="px-2 py-1 text-[11px] text-gray-500 dark:text-gray-400">
+<div class="px-2 py-1 text-[11px] text-gray-600 dark:text-gray-400">
 	{$i18n.t('Skills')}
 </div>
 
@@ -102,7 +102,7 @@
 					<div class="truncate min-w-0 flex-1">
 						{skill.name}
 					</div>
-					<div class="ml-2 max-w-24 shrink-0 truncate text-xs text-gray-500 dark:text-gray-400">
+					<div class="ml-2 max-w-24 shrink-0 truncate text-xs text-gray-600 dark:text-gray-400">
 						{skill.id}
 					</div>
 				</div>

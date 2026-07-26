@@ -21,7 +21,7 @@
 			style="background-color: {event.color || calendarColor || '#3b82f6'};"
 		></span>
 		<span class="truncate">
-			{#if !event.all_day}<span class="text-gray-500 dark:text-gray-400"
+			{#if !event.all_day}<span class="text-gray-600 dark:text-gray-400"
 					>{new Date(event.start_at / 1_000_000)
 						.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 						.replace(' ', '')}</span

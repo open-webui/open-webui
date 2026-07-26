@@ -190,7 +190,7 @@
 							}}
 						>
 							<div
-								class="flex min-w-0 items-center bg-transparent text-xs text-gray-500 outline-hidden hover:underline dark:text-gray-400"
+								class="flex min-w-0 items-center bg-transparent text-xs text-gray-600 outline-hidden hover:underline dark:text-gray-400"
 							>
 								<span class="truncate">{$i18n.t('Select Knowledge')}</span>
 							</div>
@@ -199,7 +199,7 @@
 
 					{#if $user?.role === 'admin' || $user?.permissions?.chat?.file_upload}
 						<button
-							class="self-center bg-transparent text-xs text-gray-500 hover:underline dark:text-gray-400"
+							class="self-center bg-transparent text-xs text-gray-600 hover:underline dark:text-gray-400"
 							type="button"
 							aria-label={$i18n.t('Upload Files')}
 							on:click={() => {
@@ -222,7 +222,7 @@
 						<div
 							class="flex max-w-56 items-center gap-1.5 py-0.5 pr-2 text-xs text-gray-700 dark:text-gray-200"
 						>
-							<div class="shrink-0 text-gray-500 dark:text-gray-400">
+							<div class="shrink-0 text-gray-600 dark:text-gray-400">
 								{#if file.status === 'uploading'}
 									<Spinner className="size-3.5" />
 								{:else if file.type === 'collection'}

@@ -68,7 +68,7 @@
 		}}
 	>
 		<div
-			class="flex min-w-0 items-center bg-transparent text-xs text-gray-500 outline-hidden hover:underline dark:text-gray-400"
+			class="flex min-w-0 items-center bg-transparent text-xs text-gray-600 outline-hidden hover:underline dark:text-gray-400"
 		>
 			<span class="truncate">{triggerLabel || placeholder}</span>
 		</div>
@@ -106,7 +106,7 @@
 					{/if}
 
 					{#if matchedItems.length === 0}
-						<div class="pt-4 pb-6 text-center text-xs text-gray-500 dark:text-gray-400">
+						<div class="pt-4 pb-6 text-center text-xs text-gray-600 dark:text-gray-400">
 							{emptyLabel || placeholder}
 						</div>
 					{:else}
@@ -122,7 +122,7 @@
 								<span class="min-w-0 flex-1 truncate">{item.name || item.id}</span>
 								{#if selectedIds !== null && selectedIds.includes(item.id)}
 									<svg
-										class="size-3.5 shrink-0 text-gray-500 dark:text-gray-400"
+										class="size-3.5 shrink-0 text-gray-600 dark:text-gray-400"
 										aria-hidden="true"
 										xmlns="http://www.w3.org/2000/svg"
 										fill="none"

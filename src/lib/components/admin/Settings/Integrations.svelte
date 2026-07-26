@@ -301,7 +301,7 @@
 						)}
 					</div>
 					<a
-						class="mt-0.5 block text-[0.6875rem] text-gray-500 underline hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+						class="mt-0.5 block text-[0.6875rem] text-gray-600 underline hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 						href="https://github.com/open-webui/open-terminal"
 						target="_blank">{$i18n.t('Learn more about Open Terminal')} ↗</a
 					>

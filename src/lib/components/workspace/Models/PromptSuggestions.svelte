@@ -46,7 +46,7 @@
 
 <div class="space-y-2">
 	<div class="mb-1 flex h-6 w-full items-center justify-between">
-		<div class="min-w-0 flex-1 self-center text-xs text-gray-500 dark:text-gray-400">
+		<div class="min-w-0 flex-1 self-center text-xs text-gray-600 dark:text-gray-400">
 			{$i18n.t('Default Prompt Suggestions')}
 		</div>
 
@@ -93,7 +93,7 @@
 			/>
 
 			<button
-				class="flex items-center rounded-xl bg-transparent px-1 py-0.5 text-xs text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+				class="flex items-center rounded-xl bg-transparent px-1 py-0.5 text-xs text-gray-600 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
 				type="button"
 				on:click={() => {
 					const input = document.getElementById('prompt-suggestions-import-input');
@@ -109,7 +109,7 @@
 
 			{#if promptSuggestions.length}
 				<button
-					class="flex items-center rounded-xl bg-transparent px-1 py-0.5 text-xs text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+					class="flex items-center rounded-xl bg-transparent px-1 py-0.5 text-xs text-gray-600 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
 					type="button"
 					on:click={async () => {
 						let blob = new Blob([JSON.stringify(promptSuggestions)], {
@@ -125,7 +125,7 @@
 			{/if}
 
 			<button
-				class="flex size-6 items-center justify-center text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+				class="flex size-6 items-center justify-center text-gray-600 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
 				type="button"
 				aria-label={$i18n.t('Add prompt suggestion')}
 				on:click={() => {
@@ -158,7 +158,7 @@
 
 							<Tooltip content={$i18n.t('e.g. about the Roman Empire')} placement="top-start">
 								<input
-									class="w-full bg-transparent text-[13px] leading-5 text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
+									class="w-full bg-transparent text-[13px] leading-5 text-gray-600 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
 									placeholder={$i18n.t('Subtitle')}
 									aria-label={$i18n.t('Subtitle')}
 									bind:value={prompt.title[1]}

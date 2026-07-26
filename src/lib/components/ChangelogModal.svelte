@@ -97,7 +97,7 @@
 					{$i18n.t("What's New in")}
 					{$WEBUI_NAME}
 				</h2>
-				<div class="mt-1 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+				<div class="mt-1 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
 					<span>{$i18n.t('Release Notes')}</span>
 					<span class="h-1 w-1 rounded-full bg-gray-300 dark:bg-gray-700"></span>
 					<span>v{WEBUI_VERSION}</span>
@@ -139,7 +139,7 @@
 													? 'text-yellow-700 dark:text-yellow-300'
 													: section === 'removed'
 														? 'text-red-600 dark:text-red-300'
-														: 'text-gray-500 dark:text-gray-400'}"
+														: 'text-gray-600 dark:text-gray-400'}"
 									>
 										{section}
 									</div>
@@ -166,7 +166,7 @@
 				</div>
 			{:else if error}
 				<div class="flex flex-col items-center justify-center gap-3 py-16 text-center">
-					<p class="text-sm text-gray-500 dark:text-gray-400">
+					<p class="text-sm text-gray-600 dark:text-gray-400">
 						{$i18n.t('Could not load release notes.')}
 					</p>
 					<button

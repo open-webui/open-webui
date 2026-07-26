@@ -70,7 +70,7 @@
 		<div class="text-center text-xs text-gray-500 py-1">{$i18n.t('No data found')}</div>
 	{:else if userStats.length}
 		<table
-			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 {loading
+			class="w-full text-sm text-left text-gray-600 dark:text-gray-400 {loading
 				? 'opacity-20'
 				: ''}"
 		>

@@ -204,7 +204,7 @@
 			{/if}
 
 			{#if (valvesSpec.properties[property]?.description ?? null) !== null}
-				<div class="markdown-prose-xs max-w-full text-gray-500 dark:text-gray-400">
+				<div class="markdown-prose-xs max-w-full text-gray-600 dark:text-gray-400">
 					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 					{@html DOMPurify.sanitize(
 						marked.parse(valvesSpec.properties[property].description ?? '', { async: false })

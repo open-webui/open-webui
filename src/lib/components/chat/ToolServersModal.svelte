@@ -36,7 +36,7 @@
 		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
 			<div class=" text-sm font-medium self-center">{$i18n.t('Available Tools')}</div>
 			<button
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center rounded-lg p-1 text-gray-600 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					show = false;
@@ -73,7 +73,7 @@
 									{/if}
 									{#if toolSpecs.length > 0}
 										<span
-											class="inline-flex min-w-3 items-center justify-center text-center text-[11px] leading-none text-gray-500 dark:text-gray-400 shrink-0"
+											class="inline-flex min-w-3 items-center justify-center text-center text-[11px] leading-none text-gray-600 dark:text-gray-400 shrink-0"
 										>
 											{toolSpecs.length}
 										</span>
@@ -90,7 +90,7 @@
 								{/if}
 							</div>
 
-							<div slot="content" class="pl-4 pr-2 pb-2 text-xs text-gray-500 dark:text-gray-400">
+							<div slot="content" class="pl-4 pr-2 pb-2 text-xs text-gray-600 dark:text-gray-400">
 								{#if toolSpecs.length > 0}
 									{#each toolSpecs as toolSpec}
 										<div class="mt-1 truncate">

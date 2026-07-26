@@ -671,7 +671,7 @@
 										</div>
 
 										<input
-											class="block w-full bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
+											class="block w-full bg-transparent py-0.5 text-xs text-gray-600 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
 											placeholder={$i18n.t('Model ID')}
 											bind:value={id}
 											disabled={edit}
@@ -779,7 +779,7 @@
 									{#if chatVariablesPreview.fields.length > 0 || chatVariablesPreview.userFields.length > 0 || chatVariablesPreview.warnings.length > 0}
 										<div class="mt-2 border-t border-gray-100/60 pt-2 dark:border-gray-850/60">
 											<div class="mb-1.5 flex items-center justify-between gap-2">
-												<div class="text-xs text-gray-500 dark:text-gray-400">
+												<div class="text-xs text-gray-600 dark:text-gray-400">
 													{$i18n.t('Detected Variables')}
 												</div>
 												{#if chatVariablesPreview.fields.length + chatVariablesPreview.userFields.length > 0}

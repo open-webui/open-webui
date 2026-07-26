@@ -36,7 +36,7 @@
 						<Image src={fileUrl} alt="" imageClassName="size-6 rounded-md object-cover" />
 					{:else}
 						<div
-							class="flex items-center px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400"
+							class="flex items-center px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-400"
 						>
 							<span class="max-w-[80px] truncate">{file.name ?? 'file'}</span>
 						</div>

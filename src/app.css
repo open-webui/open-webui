@@ -659,7 +659,7 @@ input[type='number'] {
 
 /* Table styling for tiptap editors */
 .tiptap table {
-	@apply w-full text-sm text-start text-gray-500 dark:text-gray-400 max-w-full;
+	@apply w-full text-sm text-start text-gray-600 dark:text-gray-400 max-w-full;
 }
 
 .tiptap thead {

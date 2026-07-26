@@ -180,7 +180,7 @@
 			<!-- Virtualized Emoji List -->
 			<div class="w-full flex justify-start h-96 overflow-y-auto px-2.5 pb-2.5 text-[13px]">
 				{#if emojiRows.length === 0}
-					<div class="text-center text-xs text-gray-500 dark:text-gray-400">
+					<div class="text-center text-xs text-gray-600 dark:text-gray-400">
 						{$i18n.t('No results')}
 					</div>
 				{:else}
@@ -189,7 +189,7 @@
 							<div class="w-full mb-2.5">
 								{#if item.length === 1 && item[0].type === 'group'}
 									<!-- Render group header -->
-									<div class="text-xs font-normal -mb-1 text-gray-500 dark:text-gray-400">
+									<div class="text-xs font-normal -mb-1 text-gray-600 dark:text-gray-400">
 										{item[0].label}
 									</div>
 								{:else}

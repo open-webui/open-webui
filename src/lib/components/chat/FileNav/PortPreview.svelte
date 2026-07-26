@@ -128,7 +128,7 @@
 		<Tooltip content={$i18n.t('Back')}>
 			<button
 				class="p-1 rounded transition {canGoBack
-					? 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300'
+					? 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300'
 					: 'text-gray-300 dark:text-gray-700 cursor-default'}"
 				on:click={goBack}
 				disabled={!canGoBack}
@@ -153,7 +153,7 @@
 		<Tooltip content={$i18n.t('Forward')}>
 			<button
 				class="p-1 rounded transition {canGoForward
-					? 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300'
+					? 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300'
 					: 'text-gray-300 dark:text-gray-700 cursor-default'}"
 				on:click={goForward}
 				disabled={!canGoForward}
@@ -177,7 +177,7 @@
 		<!-- Refresh -->
 		<Tooltip content={$i18n.t('Refresh')}>
 			<button
-				class="p-1 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 transition"
+				class="p-1 rounded text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 transition"
 				on:click={refresh}
 				aria-label={$i18n.t('Refresh')}
 			>
@@ -210,7 +210,7 @@
 		<!-- Open in new tab -->
 		<Tooltip content={$i18n.t('Open in new tab')}>
 			<button
-				class="p-1 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 transition"
+				class="p-1 rounded text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 transition"
 				on:click={openExternal}
 				aria-label={$i18n.t('Open in new tab')}
 			>
@@ -232,7 +232,7 @@
 		<!-- Close -->
 		<Tooltip content={$i18n.t('Close')}>
 			<button
-				class="p-1 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 transition"
+				class="p-1 rounded text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 transition"
 				on:click={onClose}
 				aria-label={$i18n.t('Close')}
 			>

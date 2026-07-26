@@ -100,7 +100,7 @@
 								<a
 									href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
 									target="_blank"
-									class="text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+									class="text-gray-600 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 								>
 									{updateAvailable === null
 										? $i18n.t('Checking for updates...')
@@ -124,7 +124,7 @@
 
 					{#if $config?.features?.enable_version_update_check}
 						<button
-							class="shrink-0 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+							class="shrink-0 text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
 							type="button"
 							on:click={() => {
 								checkForVersionUpdates();
@@ -145,7 +145,7 @@
 						</div>
 
 						<a
-							class="shrink-0 text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+							class="shrink-0 text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
 							href="https://docs.openwebui.com/"
 							target="_blank"
 						>
@@ -257,7 +257,6 @@
 					<AdminSettingRow
 						label={$i18n.t('Memory System Context')}
 						description={$i18n.t('Include saved memories in the system context.')}
-						labelClassName="text-gray-500 dark:text-gray-500"
 					>
 						<Switch bind:state={adminConfig.ENABLE_MEMORY_SYSTEM_CONTEXT} />
 					</AdminSettingRow>

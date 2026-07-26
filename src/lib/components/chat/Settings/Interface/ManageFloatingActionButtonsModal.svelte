@@ -35,7 +35,7 @@
 				{$i18n.t('Quick Actions')}
 			</h1>
 			<button
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center rounded-lg p-1 text-gray-600 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close modal')}
 				on:click={() => {
 					show = false;
@@ -60,7 +60,7 @@
 						<div class="text-xs flex items-center justify-between mb-2">
 							<div class="font-normal">{$i18n.t('Actions')}</div>
 
-							<div class="flex items-center gap-2 text-gray-500 dark:text-gray-500">
+							<div class="flex items-center gap-2 text-gray-600 dark:text-gray-500">
 								<button
 									type="button"
 									on:click={() => {
@@ -122,7 +122,7 @@
 						</div>
 
 						{#if floatingActionButtons === null || floatingActionButtons.length === 0}
-							<div class="text-gray-500 dark:text-gray-400 text-xs w-full text-center py-5">
+							<div class="text-gray-600 dark:text-gray-400 text-xs w-full text-center py-5">
 								{$i18n.t('Default action buttons will be used.')}
 							</div>
 						{:else}

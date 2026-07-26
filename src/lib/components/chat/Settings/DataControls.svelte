@@ -30,7 +30,7 @@
 
 	let chatImportInputElement: HTMLInputElement;
 	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+		'text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
 	$: if (importFiles) {
 		console.log(importFiles);

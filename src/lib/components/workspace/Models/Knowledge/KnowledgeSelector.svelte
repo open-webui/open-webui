@@ -137,7 +137,7 @@
 
 			<div class="max-h-56 overflow-y-scroll gap-0.5 flex flex-col">
 				{#if items.length === 0}
-					<div class="text-center text-xs text-gray-500 dark:text-gray-400 pt-4 pb-6">
+					<div class="text-center text-xs text-gray-600 dark:text-gray-400 pt-4 pb-6">
 						{$i18n.t('No knowledge found')}
 					</div>
 				{:else}

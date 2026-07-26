@@ -129,7 +129,7 @@
 		if (isSharedModel(model)) {
 			return 'text-[#4f6f93] dark:text-[#8ba6c6]';
 		}
-		return 'text-gray-500 dark:text-gray-400';
+		return 'text-gray-600 dark:text-gray-400';
 	};
 
 	$: defaultModelIdSet = new Set(defaultModelIds);
@@ -677,7 +677,7 @@
 			<div class="mb-2 flex items-center justify-between">
 				<h2 class="text-sm font-medium text-gray-900 dark:text-white">
 					{$i18n.t('Models')}
-					<span class="ml-2 font-normal text-gray-500 dark:text-gray-500">
+					<span class="ml-2 font-normal text-gray-600 dark:text-gray-500">
 						{filteredModels.length}
 					</span>
 				</h2>
@@ -984,7 +984,7 @@
 
 												{#if defaultModelIdSet.has(model.id)}
 													<span
-														class="shrink-0 text-[11px] font-normal leading-4 text-gray-500 dark:text-gray-400"
+														class="shrink-0 text-[11px] font-normal leading-4 text-gray-600 dark:text-gray-400"
 													>
 														{$i18n.t('Selected')}
 													</span>
@@ -992,7 +992,7 @@
 
 												{#if defaultPinnedModelIdSet.has(model.id)}
 													<span
-														class="shrink-0 text-[11px] font-normal leading-4 text-gray-500 dark:text-gray-400"
+														class="shrink-0 text-[11px] font-normal leading-4 text-gray-600 dark:text-gray-400"
 													>
 														{$i18n.t('Pinned')}
 													</span>
@@ -1029,7 +1029,7 @@
 													model.id
 												)
 													? 'text-gray-900 dark:text-white'
-													: 'text-gray-500 dark:text-gray-400 dark:hover:text-white'}"
+													: 'text-gray-600 dark:text-gray-400 dark:hover:text-white'}"
 												type="button"
 												aria-label={defaultModelIdSet.has(model.id)
 													? $i18n.t('Remove Selected Model')
@@ -1052,7 +1052,7 @@
 													model.id
 												)
 													? 'text-gray-900 dark:text-white'
-													: 'text-gray-500 dark:text-gray-400 dark:hover:text-white'}"
+													: 'text-gray-600 dark:text-gray-400 dark:hover:text-white'}"
 												type="button"
 												aria-label={defaultPinnedModelIdSet.has(model.id)
 													? $i18n.t('Remove Pinned Model')
@@ -1075,7 +1075,7 @@
 												: $i18n.t('Make Public')}
 										>
 											<button
-												class="self-center w-fit text-sm p-1.5 rounded-xl text-gray-500 hover:bg-black/5 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white"
+												class="self-center w-fit text-sm p-1.5 rounded-xl text-gray-600 hover:bg-black/5 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white"
 												type="button"
 												aria-label={isPublicModel(model)
 													? $i18n.t('Make Private')

@@ -33,7 +33,7 @@
 <div class="w-full min-w-0 pb-1">
 	<button
 		type="button"
-		class="w-full min-w-0 flex items-center gap-2 text-left text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+		class="w-full min-w-0 flex items-center gap-2 text-left text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
 		aria-expanded={expanded}
 		on:click={() => (expanded = !expanded)}
 	>

@@ -651,7 +651,7 @@
 										</div>
 										<button
 											type="button"
-											class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
+											class="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
 											on:click={() =>
 												(policyEnvPairs = [...policyEnvPairs, { key: '', value: '' }])}
 										>
@@ -703,7 +703,7 @@
 							</div>
 
 							<div class="flex flex-wrap items-center justify-between gap-2 mt-2">
-								<div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+								<div class="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
 									<label class="flex items-center gap-1.5">
 										<input type="checkbox" bind:checked={refreshOnlyIdle} />
 										<span>{$i18n.t('Idle only')}</span>
@@ -713,7 +713,7 @@
 										<span>{$i18n.t('Reset persisted files')}</span>
 									</label>
 								</div>
-								<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+								<div class="mt-2 text-xs text-gray-600 dark:text-gray-400">
 									{$i18n.t(
 										'Policy changes apply to newly provisioned terminals. Refresh matching terminals to apply them to existing terminals.'
 									)}
@@ -732,7 +732,7 @@
 						<div class="flex items-center justify-between">
 							<button
 								type="button"
-								class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition mt-2"
+								class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition mt-2"
 								on:click={() => (showAdvanced = !showAdvanced)}
 							>
 								<svg
@@ -852,7 +852,7 @@
 							<div>
 								{#if edit}
 									<button
-										class="px-1 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
+										class="px-1 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
 										type="button"
 										on:click={() => {
 											showDeleteConfirmDialog = true;

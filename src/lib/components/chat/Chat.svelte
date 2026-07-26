@@ -3641,7 +3641,7 @@
 			<div class="flex justify-between px-4 pt-3 pb-1 dark:text-gray-300">
 				<div class="self-center text-sm font-medium">{$i18n.t('Chat Variables')}</div>
 				<button
-					class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+					class="self-center rounded-lg p-1 text-gray-600 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 					on:click={() => {
 						showChatVariablesModal = false;
 					}}
@@ -3651,14 +3651,14 @@
 			</div>
 
 			<div class="px-5 pb-4 text-sm text-gray-600 dark:text-gray-300">
-				<div class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+				<div class="mb-2 text-xs text-gray-600 dark:text-gray-400">
 					{$i18n.t('Selected models define incompatible Chat Variables.')}
 				</div>
 				<div class="flex flex-col gap-1">
 					{#each getChatVariablesForm(selectedModelIds, chatVariables, $models).conflicts as conflict}
 						<div class="rounded-lg border border-red-200 px-3 py-2 text-xs dark:border-red-900/60">
 							<div class="font-medium text-red-600 dark:text-red-400">{conflict.key}</div>
-							<div class="mt-1 text-gray-500 dark:text-gray-400">
+							<div class="mt-1 text-gray-600 dark:text-gray-400">
 								{conflict.modelIds.join(', ')}
 							</div>
 						</div>
@@ -4014,7 +4014,7 @@
 												{#each suggestedPrompts as suggestion}
 													<button
 														type="button"
-														class="flex min-h-8 w-full items-center justify-between py-1 text-left text-[13px] leading-5 text-gray-500 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+														class="flex min-h-8 w-full items-center justify-between py-1 text-left text-[13px] leading-5 text-gray-600 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 														on:click={async () => {
 															await tick();
 															await submitHandler(withSelectedText(suggestion));

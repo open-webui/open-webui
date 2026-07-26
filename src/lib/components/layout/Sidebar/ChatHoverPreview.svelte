@@ -111,13 +111,13 @@
 			>
 				{#if loading}
 					<div
-						class="flex w-full items-center justify-center py-8 text-gray-500 dark:text-gray-400"
+						class="flex w-full items-center justify-center py-8 text-gray-600 dark:text-gray-400"
 					>
 						<Spinner className="size-5" />
 					</div>
 				{:else if error}
 					<div
-						class="flex w-full items-center justify-center px-6 py-6 text-center text-sm text-gray-500 dark:text-gray-400"
+						class="flex w-full items-center justify-center px-6 py-6 text-center text-sm text-gray-600 dark:text-gray-400"
 					>
 						{error}
 					</div>

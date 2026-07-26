@@ -53,7 +53,7 @@
 	const variableValueClass =
 		'w-full resize-none rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+		'text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 	const variableRowClass = 'flex w-full items-center gap-1.5';
 	const variableKeyRegex = /^[a-z][a-z0-9_]*$/;
 
@@ -319,7 +319,7 @@
 						<div class="min-w-0 truncate font-mono text-xs text-gray-700 dark:text-gray-300">
 							{row.key || $i18n.t('key_name')}
 						</div>
-						<div class="min-w-0 flex-1 truncate text-xs text-gray-500 dark:text-gray-500">
+						<div class="min-w-0 flex-1 truncate text-xs text-gray-600 dark:text-gray-500">
 							{row.value || $i18n.t('Empty')}
 						</div>
 						<button class={actionButtonClass} type="button" on:click={() => openVariableModal(idx)}>
@@ -569,7 +569,7 @@
 			<div>
 				{#if variableFormIndex !== null}
 					<button
-						class="text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+						class="text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
 						type="button"
 						on:click={deleteVariableForm}
 					>
@@ -580,7 +580,7 @@
 
 			<div class="flex items-center gap-3">
 				<button
-					class="text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+					class="text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
 					type="button"
 					on:click={() => {
 						variableModalOpen = false;

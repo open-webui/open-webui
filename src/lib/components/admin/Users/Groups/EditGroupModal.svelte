@@ -146,7 +146,7 @@
 				{/if}
 			</div>
 			<button
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center rounded-lg p-1 text-gray-600 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={() => {
 					show = false;
 				}}
@@ -298,7 +298,7 @@
 													: $i18n.t('Reset all permissions to their initial configuration values')}
 											>
 												<button
-													class="text-sm font-normal text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition hover:underline"
+													class="text-sm font-normal text-gray-600 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition hover:underline"
 													type="button"
 													on:click={() => {
 														showResetConfirmDialog = true;
