@@ -24,6 +24,8 @@
 	import ItemMenu from './Knowledge/ItemMenu.svelte';
 	import CreateKnowledgeBase from './Knowledge/CreateKnowledgeBase.svelte';
 	import Badge from '../common/Badge.svelte';
+	import ChevronDown from '../icons/ChevronDown.svelte';
+	import ChevronUp from '../icons/ChevronUp.svelte';
 	import Modal from '../common/Modal.svelte';
 	import Search from '../icons/Search.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -62,6 +64,8 @@
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let viewOption = '';
 	let sourceOption = '';
+	let sortKey = 'updated_at';
+	let sortDirection = 'desc';
 
 	let items: KnowledgeListItem[] | null = null;
 	let total: number | null = null;
@@ -92,9 +96,24 @@
 		clearTimeout(searchDebounceTimer);
 	});
 
-	$: if (loaded && viewOption !== undefined && sourceOption !== undefined) {
+	$: if (
+		loaded &&
+		viewOption !== undefined &&
+		sourceOption !== undefined &&
+		sortKey !== undefined &&
+		sortDirection !== undefined
+	) {
 		init();
 	}
+
+	const setSortKey = (key: string) => {
+		if (sortKey === key) {
+			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortKey = key;
+			sortDirection = key === 'updated_at' ? 'desc' : 'asc';
+		}
+	};
 
 	const reset = () => {
 		page = 1;
@@ -124,7 +143,9 @@
 			query,
 			viewOption,
 			page,
-			sourceOption
+			sourceOption,
+			sortKey,
+			sortDirection
 		).catch(() => {
 			return [];
 		});
@@ -355,15 +376,37 @@
 					<div
 						class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-600"
 					>
-						<div class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left">
+						<button
+							class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
+							type="button"
+							on:click={() => setSortKey('name')}
+						>
 							{$i18n.t('Title')}
-						</div>
+							{#if sortKey === 'name'}
+								{#if sortDirection === 'asc'}
+									<ChevronUp className="size-2" />
+								{:else}
+									<ChevronDown className="size-2" />
+								{/if}
+							{/if}
+						</button>
 
 						<div class="hidden w-44 shrink-0 md:block"></div>
 
-						<div class="flex w-36 shrink-0 items-center justify-end gap-1 py-0.5 text-right">
+						<button
+							class="flex w-36 shrink-0 items-center justify-end gap-1 py-0.5 text-right"
+							type="button"
+							on:click={() => setSortKey('updated_at')}
+						>
 							{$i18n.t('Updated at')}
-						</div>
+							{#if sortKey === 'updated_at'}
+								{#if sortDirection === 'asc'}
+									<ChevronUp className="size-2" />
+								{:else}
+									<ChevronDown className="size-2" />
+								{/if}
+							{/if}
+						</button>
 					</div>
 
 					<div class="grid gap-y-0.5">

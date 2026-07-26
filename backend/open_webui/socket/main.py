@@ -36,7 +36,7 @@ from open_webui.models.users import UserNameResponse, Users
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
 from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.access_control import has_permission
-from open_webui.utils.auth import decode_token, is_valid_token
+from open_webui.utils.auth import get_verified_user_by_token
 from open_webui.utils.redis import (
     build_sentinel_url,
     get_redis_connection,
@@ -368,10 +368,7 @@ async def connect(sid, environ, auth):
         scope = (environ or {}).get('asgi.scope') or {}
         fastapi_app = scope.get('app')
         redis = getattr(getattr(fastapi_app, 'state', None), 'redis', None) or REDIS
-        data = decode_token(auth['token'])
-
-        if data is not None and 'id' in data and await is_valid_token(data, redis):
-            user = await Users.get_user_by_id(data['id'])
+        user = await get_verified_user_by_token(auth['token'], redis)
 
         if user:
             SESSION_POOL[sid] = {
@@ -399,19 +396,14 @@ async def user_join(sid, data):
     scope = environ.get('asgi.scope') or {}
     fastapi_app = scope.get('app')
     redis = getattr(getattr(fastapi_app, 'state', None), 'redis', None) or REDIS
-    token_data = decode_token(auth['token'])
-    if token_data is None or 'id' not in token_data or not await is_valid_token(token_data, redis):
+    user = await get_verified_user_by_token(auth['token'], redis)
+    if not user:
         return
 
     existing = SESSION_POOL.get(sid)
-    if existing and existing.get('id') == token_data['id']:
+    if existing and existing.get('id') == user.id:
         SESSION_POOL[sid] = {**existing, 'last_seen_at': int(time.time())}
-        user_id, user_name, user_role = existing['id'], existing['name'], existing['role']
     else:
-        user = await Users.get_user_by_id(token_data['id'])
-        if not user:
-            return
-
         SESSION_POOL[sid] = {
             **user.model_dump(
                 exclude=[
@@ -425,16 +417,15 @@ async def user_join(sid, data):
             'last_seen_at': int(time.time()),
         }
         await sio.enter_room(sid, f'user:{user.id}')
-        user_id, user_name, user_role = user.id, user.name, user.role
 
     # Join all the channels only if user has channels permission
-    if user_role == 'admin' or await has_permission(user_id, 'features.channels'):
-        channels = await Channels.get_channels_by_user_id(user_id)
+    if user.role == 'admin' or await has_permission(user.id, 'features.channels'):
+        channels = await Channels.get_channels_by_user_id(user.id)
         log.debug(f'{channels=}')
         for channel in channels:
             await sio.enter_room(sid, f'channel:{channel.id}')
 
-    return {'id': user_id, 'name': user_name}
+    return {'id': user.id, 'name': user.name}
 
 
 @sio.on('heartbeat')
@@ -455,11 +446,7 @@ async def join_channel(sid, data):
     scope = environ.get('asgi.scope') or {}
     fastapi_app = scope.get('app')
     redis = getattr(getattr(fastapi_app, 'state', None), 'redis', None) or REDIS
-    data = decode_token(auth['token'])
-    if data is None or 'id' not in data or not await is_valid_token(data, redis):
-        return
-
-    user = await Users.get_user_by_id(data['id'])
+    user = await get_verified_user_by_token(auth['token'], redis)
     if not user:
         return
 
@@ -481,11 +468,7 @@ async def join_note(sid, data):
     scope = environ.get('asgi.scope') or {}
     fastapi_app = scope.get('app')
     redis = getattr(getattr(fastapi_app, 'state', None), 'redis', None) or REDIS
-    token_data = decode_token(auth['token'])
-    if token_data is None or 'id' not in token_data or not await is_valid_token(token_data, redis):
-        return
-
-    user = await Users.get_user_by_id(token_data['id'])
+    user = await get_verified_user_by_token(auth['token'], redis)
     if not user:
         return
 
@@ -550,11 +533,12 @@ async def chat_events(sid, data):
     event_type = event_data.get('type')
 
     if event_type == 'last_read_at':
-        await Chats.update_chat_last_read_at_by_id(data['chat_id'], user['id'])
+        if not await Chats.update_chat_last_read_at_by_id(data['chat_id'], user['id']):
+            return
         try:
             from open_webui.utils.timers import cancel_timers_for_chat
 
-            await cancel_timers_for_chat(data['chat_id'], 'chat.read')
+            await cancel_timers_for_chat(data['chat_id'], 'chat.read', user['id'])
         except Exception:
             log.exception('Failed to cancel chat.read timers for chat %s', data.get('chat_id'))
 

@@ -18,17 +18,23 @@
 			return;
 		}
 
-		const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
+		// The sidebar click handler already fetches the folder and sets
+		// `selectedFolder` before navigating here; refetching would duplicate
+		// the request and re-trigger the sidebar's folder refresh.
+		if ($selectedFolder?.id !== folderId) {
+			const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
 
-		if (!folder) {
-			await goto('/');
-			return;
+			if (!folder) {
+				await goto('/');
+				return;
+			}
+
+			await selectedFolder.set(folder);
 		}
 
-		await selectedFolder.set(folder);
 		ready = true;
 	});
 

@@ -420,7 +420,7 @@
 			} finally {
 				chatsLoading = false;
 			}
-		} else {
+		} else if (!open) {
 			chats = null;
 			chatsPage = 1;
 			hasMoreChats = false;
@@ -591,7 +591,7 @@
 				}}
 				role="button"
 				tabindex="0"
-				on:click={(e) => {
+				on:click={async (e) => {
 					if (shouldIgnoreRowClick(e.target)) return;
 					if (clickTimer) {
 						clearTimeout(clickTimer);

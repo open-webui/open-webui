@@ -1424,7 +1424,7 @@ async def chat_completion(
                             try:
                                 from open_webui.utils.timers import cancel_timers_for_chat
 
-                                await cancel_timers_for_chat(chat_id, 'chat.user_message')
+                                await cancel_timers_for_chat(chat_id, 'chat.user_message', user.id)
                             except Exception:
                                 log.exception('Failed to cancel chat.user_message timers for chat %s', chat_id)
 
@@ -1852,10 +1852,31 @@ async def generate_messages(
         return response
 
 
+async def verify_chat_ownership(chat_id: str | None, user) -> None:
+    """`local:` chats are per-socket and never persisted, so they have no owner to check."""
+    if not chat_id or chat_id.startswith('local:'):
+        return
+
+    # Channel messages need the membership and write-access gate that only /api/chat/completions has.
+    if chat_id.startswith('channel:'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Channel chats are not supported on this endpoint',
+        )
+
+    if user.role != 'admin' and not await Chats.is_chat_owner(chat_id, user.id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
+
+
 @app.post('/api/chat/completed')
 async def chat_completed(request: Request, form_data: dict, user=Depends(get_verified_user)):
     """Deprecated: outlet filters now run inline during chat completion.
     Kept for backward compatibility with external integrations."""
+    await verify_chat_ownership(form_data.get('chat_id'), user)
+
     try:
         model_item = form_data.pop('model_item', {})
 
@@ -1873,6 +1894,8 @@ async def chat_completed(request: Request, form_data: dict, user=Depends(get_ver
 
 @app.post('/api/chat/actions/{action_id}')
 async def chat_action(request: Request, action_id: str, form_data: dict, user=Depends(get_verified_user)):
+    await verify_chat_ownership(form_data.get('chat_id'), user)
+
     try:
         model_item = form_data.pop('model_item', {})
 

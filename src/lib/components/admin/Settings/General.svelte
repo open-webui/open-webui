@@ -216,20 +216,23 @@
 				<AdminSettingRow
 					label={$i18n.t('Community Sharing')}
 					description={$i18n.t('Allow users to share chats with the Open WebUI community.')}
+					let:labelId
 				>
-					<Switch bind:state={adminConfig.ENABLE_COMMUNITY_SHARING} />
+					<Switch bind:state={adminConfig.ENABLE_COMMUNITY_SHARING} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 				<AdminSettingRow
 					label={$i18n.t('Message Rating')}
 					description={$i18n.t('Let users rate assistant responses.')}
+					let:labelId
 				>
-					<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
+					<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 				<AdminSettingRow
 					label={$i18n.t('Folders')}
 					description={$i18n.t('Allow users to organize chats into folders.')}
+					let:labelId
 				>
-					<Switch bind:state={adminConfig.ENABLE_FOLDERS} />
+					<Switch bind:state={adminConfig.ENABLE_FOLDERS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 
 				{#if adminConfig.ENABLE_FOLDERS}
@@ -250,53 +253,64 @@
 				<AdminSettingRow
 					label={$i18n.t('Memories')}
 					description={$i18n.t('Allow users to save memories for more personalized responses.')}
+					let:labelId
 				>
-					<Switch bind:state={adminConfig.ENABLE_MEMORIES} />
+					<Switch bind:state={adminConfig.ENABLE_MEMORIES} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 				{#if adminConfig.ENABLE_MEMORIES}
 					<AdminSettingRow
 						label={$i18n.t('Memory System Context')}
 						description={$i18n.t('Include saved memories in the system context.')}
 						labelClassName="text-gray-500 dark:text-gray-500"
+						let:labelId
 					>
-						<Switch bind:state={adminConfig.ENABLE_MEMORY_SYSTEM_CONTEXT} />
+						<Switch
+							bind:state={adminConfig.ENABLE_MEMORY_SYSTEM_CONTEXT}
+							ariaLabelledbyId={labelId}
+						/>
 					</AdminSettingRow>
 				{/if}
 				<AdminSettingRow
 					label={$i18n.t('Notes')}
 					description={$i18n.t('Allow users to create and manage notes.')}
+					let:labelId
 				>
-					<Switch bind:state={adminConfig.ENABLE_NOTES} />
+					<Switch bind:state={adminConfig.ENABLE_NOTES} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 				<AdminSettingRow
 					label={$i18n.t('Channels')}
 					description={$i18n.t('Allow users to use channels for shared conversations.')}
+					let:labelId
 				>
-					<Switch bind:state={adminConfig.ENABLE_CHANNELS} />
+					<Switch bind:state={adminConfig.ENABLE_CHANNELS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 				<AdminSettingRow
 					label={$i18n.t('Calendar')}
 					description={$i18n.t('Allow users to access calendar features.')}
+					let:labelId
 				>
-					<Switch bind:state={adminConfig.ENABLE_CALENDAR} />
+					<Switch bind:state={adminConfig.ENABLE_CALENDAR} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 				<AdminSettingRow
 					label={$i18n.t('Automations')}
 					description={$i18n.t('Allow users to create and run automations.')}
+					let:labelId
 				>
-					<Switch bind:state={adminConfig.ENABLE_AUTOMATIONS} />
+					<Switch bind:state={adminConfig.ENABLE_AUTOMATIONS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 				<AdminSettingRow
 					label={$i18n.t('User Webhooks')}
 					description={$i18n.t('Allow users to configure webhooks from their account.')}
+					let:labelId
 				>
-					<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
+					<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 				<AdminSettingRow
 					label={$i18n.t('User Status')}
 					description={$i18n.t('Show user status information in the app.')}
+					let:labelId
 				>
-					<Switch bind:state={adminConfig.ENABLE_USER_STATUS} />
+					<Switch bind:state={adminConfig.ENABLE_USER_STATUS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 
 				<AdminSettingField
