@@ -666,8 +666,9 @@ async def get_builtin_tools(
     if extra_params.get('__skill_ids__'):
         builtin_functions.append(view_skill)
 
-    # Task management - break down complex work into trackable steps
-    if is_builtin_tool_enabled('tasks'):
+    # Task management - break down complex work into trackable steps.
+    # Temporary chats have no DB record to store the task list in, so the tools cannot work there.
+    if is_builtin_tool_enabled('tasks') and not chat_id.startswith(('local:', 'channel:')):
         builtin_functions.extend([create_tasks, update_task])
 
     # Automation tools - create and manage scheduled automations from chat
