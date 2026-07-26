@@ -1,7 +1,8 @@
 <script lang="ts">
 	const i18n = getContext('i18n');
 	import { getContext } from 'svelte';
-	export let id = 'password-input';
+	import { v4 as uuidv4 } from 'uuid';
+	export let id = `password-input-${uuidv4()}`;
 	export let value: string = '';
 	export let placeholder = '';
 	export let type = 'text';
