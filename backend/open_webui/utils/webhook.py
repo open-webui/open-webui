@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from urllib.parse import urlparse
 
 from open_webui.config import WEBUI_FAVICON_URL
 from open_webui.env import (
@@ -11,6 +12,14 @@ from open_webui.env import (
 from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 
 log = logging.getLogger(__name__)
+
+
+# Log the host only, webhook URLs carry secrets in the path; urlparse itself raises on malformed URLs.
+def _host(url: str) -> str:
+    try:
+        return urlparse(url).hostname or 'unknown'
+    except ValueError:
+        return 'unknown'
 
 
 # Let this message reach those for whom it was written, and
@@ -28,12 +37,18 @@ def _event_text(message: str, description: str | None = None, event_data: dict |
 
 
 async def post_webhook(name: str, url: str, message: str, event_data: dict, description: str | None = None) -> bool:
+    log.debug(f'post_webhook: {url}, {message}, {event_data}')
+    # Block private-IP / loopback / cloud-metadata targets — the URL is
+    # caller-controlled (user notification settings under
+    # ENABLE_USER_WEBHOOKS, automation notification triggers).
     try:
-        log.debug(f'post_webhook: {url}, {message}, {event_data}')
-        # Block private-IP / loopback / cloud-metadata targets — the URL is
-        # caller-controlled (user notification settings under
-        # ENABLE_USER_WEBHOOKS, automation notification triggers).
         await asyncio.to_thread(validate_url, url)
+    except Exception:
+        # Rejected target, not a fault: warn without a traceback.
+        log.warning(f'Webhook skipped, URL invalid or not publicly resolvable: {_host(url)}')
+        return False
+
+    try:
         payload = {}
 
         # Slack and Google Chat Webhooks
