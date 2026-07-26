@@ -431,6 +431,27 @@
 		setFolderItems();
 	}
 
+	const shouldIgnoreRowClick = (target) => {
+		return target instanceof Element && !!target.closest('button, a, input, [role="menu"]');
+	};
+
+	const openFolderHandler = async () => {
+		const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (folder) {
+			await selectedFolder.set({ ...folders[folderId], ...folder });
+		}
+
+		await goto(`/folders/${folderId}`);
+
+		if ($mobile) {
+			showSidebar.set(!$showSidebar);
+		}
+	};
+
 	const renameHandler = async () => {
 		console.log('Edit');
 		await tick();
@@ -568,30 +589,26 @@
 					}
 					renameHandler();
 				}}
-				on:click={async (e) => {
-					(e) => e.stopPropagation();
+				role="button"
+				tabindex="0"
+				on:click={(e) => {
+					if (shouldIgnoreRowClick(e.target)) return;
 					if (clickTimer) {
 						clearTimeout(clickTimer);
 						clickTimer = null;
 					}
 
 					clickTimer = setTimeout(async () => {
-						const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
-							toast.error(`${error}`);
-							return null;
-						});
-
-						if (folder) {
-							await selectedFolder.set({ ...folders[folderId], ...folder });
-						}
-
-						await goto(`/folders/${folderId}`);
-
-						if ($mobile) {
-							showSidebar.set(!$showSidebar);
-						}
+						await openFolderHandler();
 						clickTimer = null;
 					}, 100); // 100ms delay (typical double-click threshold)
+				}}
+				on:keydown={(e) => {
+					if (e.currentTarget !== e.target) return;
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						openFolderHandler();
+					}
 				}}
 				on:pointerup={(e) => {
 					e.stopPropagation();
