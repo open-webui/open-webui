@@ -1293,6 +1293,13 @@
 		};
 	});
 
+	$: if (typeof document !== 'undefined') {
+		document.documentElement.classList.toggle(
+			'high-contrast',
+			$settings?.highContrastMode ?? false
+		);
+	}
+
 	onDestroy(() => {
 		bc.close();
 	});
