@@ -36,6 +36,9 @@ from sqlalchemy.orm import defer
 
 log = logging.getLogger(__name__)
 
+# Columns the knowledge base list may be ordered by; anything else falls back to the default.
+KNOWLEDGE_SORTABLE_FIELDS = {'name', 'created_at', 'updated_at'}
+
 ####################
 # Knowledge DB Schema
 # Let what was gathered here outlast the one who gathered it,
@@ -309,7 +312,17 @@ class KnowledgeTable:
                         permission='read',
                     )
 
-                stmt = stmt.order_by(Knowledge.updated_at.desc(), Knowledge.id.asc())
+                order_by = (filter or {}).get('order_by')
+                direction = (filter or {}).get('direction')
+
+                if order_by in KNOWLEDGE_SORTABLE_FIELDS:
+                    column = getattr(Knowledge, order_by)
+                    if (direction or 'desc').lower() == 'asc':
+                        stmt = stmt.order_by(column.asc(), Knowledge.id.asc())
+                    else:
+                        stmt = stmt.order_by(column.desc(), Knowledge.id.asc())
+                else:
+                    stmt = stmt.order_by(Knowledge.updated_at.desc(), Knowledge.id.asc())
 
                 count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
                 total = count_result.scalar()

@@ -1424,7 +1424,7 @@ async def chat_completion(
                             try:
                                 from open_webui.utils.timers import cancel_timers_for_chat
 
-                                await cancel_timers_for_chat(chat_id, 'chat.user_message')
+                                await cancel_timers_for_chat(chat_id, 'chat.user_message', user.id)
                             except Exception:
                                 log.exception('Failed to cancel chat.user_message timers for chat %s', chat_id)
 

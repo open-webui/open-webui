@@ -199,10 +199,14 @@ async def claim_due_timers(now_ns: int, limit: int = 10) -> list[tuple[str, str]
         return claimed
 
 
-async def cancel_timers_for_chat(parent_chat_id: str, event: Literal['chat.read', 'chat.user_message']) -> None:
+async def cancel_timers_for_chat(
+    parent_chat_id: str, event: Literal['chat.read', 'chat.user_message'], user_id: str
+) -> None:
+    """Owner-scoped: without the user filter, reading a chat cancels every user's timers on it."""
     async with get_async_db() as db:
         result = await db.execute(
             select(Chat)
+            .where(Chat.user_id == user_id)
             .where(Chat.meta['internal'].as_boolean().is_(True))
             .where(Chat.meta['type'].as_string() == 'timer')
             .where(Chat.meta['parent_chat_id'].as_string() == parent_chat_id)
