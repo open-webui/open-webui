@@ -1259,7 +1259,7 @@ async def chat_completion(
                         target_model_id = entry['model_id']
                         assistant_message_id = entry['message_id']
                         if assistant_message_id:
-                            history_messages[assistant_message_id] = {
+                            assistant_message = {
                                 'id': assistant_message_id,
                                 'parentId': user_message_id,
                                 'childrenIds': [],
@@ -1269,6 +1269,11 @@ async def chat_completion(
                                 'model': target_model_id,
                                 'timestamp': int(time.time()),
                             }
+                            # Preserve the side-by-side column index so duplicate
+                            # models don't collapse into one another on reload.
+                            if entry.get('modelIdx') is not None:
+                                assistant_message['modelIdx'] = entry['modelIdx']
+                            history_messages[assistant_message_id] = assistant_message
 
                     await Chats.insert_new_chat(
                         chat_id,
@@ -1481,19 +1486,24 @@ async def chat_completion(
                         target_model_id = entry['model_id']
                         assistant_message_id = entry['message_id']
                         if assistant_message_id:
+                            assistant_message = {
+                                'id': assistant_message_id,
+                                'parentId': user_message_id,
+                                'childrenIds': [],
+                                'role': 'assistant',
+                                'content': '',
+                                'done': False,
+                                'model': target_model_id,
+                                'timestamp': int(time.time()),
+                            }
+                            # Preserve the side-by-side column index so duplicate
+                            # models don't collapse into one another on reload.
+                            if entry.get('modelIdx') is not None:
+                                assistant_message['modelIdx'] = entry['modelIdx']
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 chat_id,
                                 assistant_message_id,
-                                {
-                                    'id': assistant_message_id,
-                                    'parentId': user_message_id,
-                                    'childrenIds': [],
-                                    'role': 'assistant',
-                                    'content': '',
-                                    'done': False,
-                                    'model': target_model_id,
-                                    'timestamp': int(time.time()),
-                                },
+                                assistant_message,
                             )
                             await publish_event(
                                 request,
