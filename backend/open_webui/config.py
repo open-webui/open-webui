@@ -1664,7 +1664,13 @@ if default_prompt_suggestions == []:
 
 DEFAULT_PROMPT_SUGGESTIONS = default_prompt_suggestions
 
-MODEL_ORDER_LIST = []
+try:
+    model_order_list = json.loads(os.getenv('MODEL_ORDER_LIST', '[]'))
+except Exception as e:
+    log.exception(f'Error loading MODEL_ORDER_LIST: {e}')
+    model_order_list = []
+
+MODEL_ORDER_LIST = model_order_list
 
 try:
     default_model_metadata = json.loads(os.getenv('DEFAULT_MODEL_METADATA', '{}'))
