@@ -3424,7 +3424,8 @@ async def outlet_filter_handler(ctx):
                     'content': m.get('content') or get_output_text(m.get('output')),
                     'info': m.get('info'),
                     'timestamp': m.get('timestamp'),
-                    **({'output': m['output']} if m.get('output') else {}),
+                    # Deepcopy so in-place filter mutations do not alias messages_map's baseline
+                    **({'output': copy.deepcopy(m['output'])} if m.get('output') else {}),
                     **({'usage': m['usage']} if m.get('usage') else {}),
                     **({'sources': m['sources']} if m.get('sources') else {}),
                 }
