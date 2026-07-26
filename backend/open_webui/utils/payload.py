@@ -2,6 +2,7 @@ import copy
 import json
 from typing import Callable, Optional
 
+from open_webui.models.config import Config
 from open_webui.utils.misc import (
     add_or_update_system_message,
     deep_update,
@@ -9,6 +10,25 @@ from open_webui.utils.misc import (
 )
 from open_webui.utils.chat_variables import render_chat_variables, render_user_variables
 from open_webui.utils.task import prompt_template, prompt_variables_template
+
+
+async def resolve_model_params(model_info=None, request_params: dict | None = None) -> dict:
+    """Merge global default, per-model, and per-request model params.
+
+    Precedence (highest last): models.default_params < model.info.params < request_params.
+    """
+    default_model_params = await Config.get('models.default_params', {}) or {}
+    model_params = (
+        model_info.params.model_dump() if model_info is not None and model_info.params else {}
+    )
+    request_params = {
+        key: value for key, value in (request_params or {}).items() if value is not None
+    }
+    return {
+        **default_model_params,
+        **model_params,
+        **request_params,
+    }
 
 
 async def resolve_system_prompt(

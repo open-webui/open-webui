@@ -46,6 +46,7 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
+    resolve_model_params,
 )
 from open_webui.utils.session_pool import cleanup_response, get_session, stream_wrapper
 
@@ -1100,6 +1101,7 @@ async def generate_chat_completion(
     bypass_system_prompt = getattr(request.state, 'bypass_system_prompt', False)
 
     metadata = form_data.pop('metadata', None)
+    request_params = form_data.pop('params', None)
     try:
         form_data = GenerateChatCompletionForm(**form_data)
     except Exception as exc:
@@ -1119,16 +1121,16 @@ async def generate_chat_completion(
             base_model_id = request.base_model_id if hasattr(request, 'base_model_id') else model_info.base_model_id
             payload['model'] = base_model_id
 
-        params = model_info.params.model_dump()
-        if params:
-            system = params.pop('system', None)
-            payload = apply_model_params_to_body_ollama(params, payload)
-            if not bypass_system_prompt:
-                payload = await apply_system_prompt_to_body(system, payload, metadata, user)
-
         await check_model_access(user, model_info, bypass_filter)
     else:
         await check_model_access(user, None, bypass_filter)
+
+    params = await resolve_model_params(model_info, request_params)
+    if params:
+        system = params.pop('system', None)
+        payload = apply_model_params_to_body_ollama(params, payload)
+        if not bypass_system_prompt:
+            payload = await apply_system_prompt_to_body(system, payload, metadata, user)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx, user)
     api_configs = await Config.get('ollama.api_configs', {})
@@ -1205,6 +1207,7 @@ async def generate_openai_completion(
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
     # which would exhaust the connection pool under concurrent load.
     metadata = form_data.pop('metadata', None)
+    request_params = form_data.pop('params', None)
 
     try:
         form_data = OpenAICompletionForm(**form_data)
@@ -1220,12 +1223,13 @@ async def generate_openai_completion(
     if model_info is not None:
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
-        params = model_info.params.model_dump()
-        if params:
-            payload = apply_model_params_to_body_openai(params, payload)
         await check_model_access(user, model_info)
     else:
         await check_model_access(user, None)
+
+    params = await resolve_model_params(model_info, request_params)
+    if params:
+        payload = apply_model_params_to_body_openai(params, payload)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx, user)
     api_configs = await Config.get('ollama.api_configs', {})
@@ -1311,6 +1315,7 @@ async def generate_openai_chat_completion(
     # This prevents holding a connection during the entire LLM call (30-60+ seconds),
     # which would exhaust the connection pool under concurrent load.
     metadata = form_data.pop('metadata', None)
+    request_params = form_data.pop('params', None)
 
     try:
         form_data = OpenAIChatCompletionForm(**form_data)
@@ -1327,15 +1332,15 @@ async def generate_openai_chat_completion(
         if model_info.base_model_id:
             payload['model'] = model_info.base_model_id
 
-        params = model_info.params.model_dump()
-        if params:
-            system = params.pop('system', None)
-            payload = apply_model_params_to_body_openai(params, payload)
-            payload = await apply_system_prompt_to_body(system, payload, metadata, user)
-
         await check_model_access(user, model_info)
     else:
         await check_model_access(user, None)
+
+    params = await resolve_model_params(model_info, request_params)
+    if params:
+        system = params.pop('system', None)
+        payload = apply_model_params_to_body_openai(params, payload)
+        payload = await apply_system_prompt_to_body(system, payload, metadata, user)
 
     url, url_idx = await get_ollama_url(request, payload['model'], url_idx, user)
     api_configs = await Config.get('ollama.api_configs', {})
