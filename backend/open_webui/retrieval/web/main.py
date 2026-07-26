@@ -1,16 +1,33 @@
 from __future__ import annotations
 
+import ipaddress
 from urllib.parse import urlparse
 
 import validators
 from open_webui.retrieval.web.utils import resolve_hostname
-from open_webui.utils.misc import is_host_allowed
+from open_webui.utils.misc import get_allow_block_lists, is_host_allowed
 from pydantic import BaseModel
+
+
+def _filter_list_has_ip_entry(filter_list) -> bool:
+    allow_list, block_list = get_allow_block_lists(filter_list)
+
+    for entry in allow_list + block_list:
+        try:
+            ipaddress.ip_address(entry)
+        except ValueError:
+            continue
+        return True
+
+    return False
 
 
 def get_filtered_results(results, filter_list):
     if not filter_list:
         return results
+
+    # A resolved IP can only ever match an IP filter entry, so skip the blocking lookup otherwise.
+    resolve_ips = _filter_list_has_ip_entry(filter_list)
 
     filtered_results = []
 
@@ -25,12 +42,13 @@ def get_filtered_results(results, filter_list):
 
         hostnames = [domain]
 
-        try:
-            ipv4_addresses, ipv6_addresses = resolve_hostname(domain)
-            hostnames.extend(ipv4_addresses)
-            hostnames.extend(ipv6_addresses)
-        except Exception:
-            pass
+        if resolve_ips:
+            try:
+                ipv4_addresses, ipv6_addresses = resolve_hostname(domain)
+                hostnames.extend(ipv4_addresses)
+                hostnames.extend(ipv6_addresses)
+            except Exception:
+                pass
 
         if is_host_allowed(hostnames, filter_list):
             filtered_results.append(result)
