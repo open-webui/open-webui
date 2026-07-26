@@ -4048,6 +4048,20 @@ async def streaming_chat_response_handler(response, ctx):
                         },
                     )
 
+                async def emit_error(error_content):
+                    if not metadata.get('chat_id', '').startswith('channel:'):
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata['chat_id'],
+                            metadata['message_id'],
+                            {'error': {'content': error_content}},
+                        )
+                    await event_emitter(
+                        {
+                            'type': 'chat:message:error',
+                            'data': {'error': {'content': error_content}},
+                        }
+                    )
+
                 async def stream_body_handler(response, form_data):
                     nonlocal content_parts
                     nonlocal usage
@@ -5131,7 +5145,8 @@ async def streaming_chat_response_handler(response, ctx):
                         else:
                             break
                     except Exception as e:
-                        log.debug(e)
+                        log.exception('Tool-call continuation failed')
+                        await emit_error(f'Generation failed after tool execution: {e}')
                         break
 
                 if (
@@ -5140,19 +5155,7 @@ async def streaming_chat_response_handler(response, ctx):
                     and tool_call_iterations >= max_tool_call_iterations
                 ):
                     log.warning('Tool-call iteration limit reached (%s)', max_tool_call_iterations)
-                    error_content = f'Tool-call limit reached ({max_tool_call_iterations} iterations).'
-                    if not metadata.get('chat_id', '').startswith('channel:'):
-                        await Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata['chat_id'],
-                            metadata['message_id'],
-                            {'error': {'content': error_content}},
-                        )
-                    await event_emitter(
-                        {
-                            'type': 'chat:message:error',
-                            'data': {'error': {'content': error_content}},
-                        }
-                    )
+                    await emit_error(f'Tool-call limit reached ({max_tool_call_iterations} iterations).')
 
                 if DETECT_CODE_INTERPRETER:
                     MAX_RETRIES = 5
@@ -5321,7 +5324,8 @@ async def streaming_chat_response_handler(response, ctx):
                             else:
                                 break
                         except Exception as e:
-                            log.debug(e)
+                            log.exception('Code-interpreter continuation failed')
+                            await emit_error(f'Generation failed after code execution: {e}')
                             break
 
                 # Mark all in-progress items as completed

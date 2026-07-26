@@ -565,6 +565,14 @@ try:
 except (ValueError, TypeError):
     AIOHTTP_CLIENT_TIMEOUT = 300
 
+# Seconds a streaming model call may go without producing a chunk before it is
+# aborted. Unset = no idle cap, only AIOHTTP_CLIENT_TIMEOUT applies.
+_stream_idle_timeout_raw = os.getenv('AIOHTTP_CLIENT_TIMEOUT_STREAM_IDLE', '')
+try:
+    AIOHTTP_CLIENT_TIMEOUT_STREAM_IDLE = int(_stream_idle_timeout_raw) if _stream_idle_timeout_raw else None
+except (ValueError, TypeError):
+    AIOHTTP_CLIENT_TIMEOUT_STREAM_IDLE = None
+
 
 # SSL verification for general outbound requests (OpenAI, OAuth, etc.).
 # Accepts "True", "False", or a path to a CA bundle file.

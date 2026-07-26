@@ -54,6 +54,7 @@ from open_webui.utils.payload import (
 )
 from open_webui.utils.session_pool import (
     cleanup_response,
+    get_client_timeout,
     get_session,
     stream_wrapper,
 )
@@ -1345,6 +1346,7 @@ async def generate_chat_completion(
                     part.get('text', '') for part in message['content'] if part.get('type') in ('input_text', 'text')
                 )
 
+    requested_stream = bool(payload.get('stream'))
     payload = json.dumps(payload)
 
     r = None
@@ -1361,7 +1363,7 @@ async def generate_chat_completion(
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            timeout=get_client_timeout(stream=requested_stream),
         )
 
         # Check if response is SSE
@@ -1638,7 +1640,7 @@ async def responses(
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            timeout=get_client_timeout(stream=bool(payload.get('stream'))),
         )
 
         # Check if response is SSE

@@ -47,7 +47,12 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
 )
-from open_webui.utils.session_pool import cleanup_response, get_session, stream_wrapper
+from open_webui.utils.session_pool import (
+    cleanup_response,
+    get_client_timeout,
+    get_session,
+    stream_wrapper,
+)
 
 log = logging.getLogger(__name__)
 
@@ -99,6 +104,7 @@ async def send_request(
     key: str | None = None,
     user: UserModel = None,
     stream: bool = False,
+    inference: bool = False,
     content_type: str | None = None,
     metadata: dict | None = None,
     api_config: dict | None = None,
@@ -129,7 +135,7 @@ async def send_request(
             data=payload,
             headers=headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            timeout=get_client_timeout(stream=stream and inference),
         )
 
         if not r.ok:
@@ -1012,6 +1018,7 @@ async def generate_completion(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=True,
+        inference=True,
     )
 
 
@@ -1144,6 +1151,7 @@ async def generate_chat_completion(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=form_data.stream,
+        inference=True,
         content_type='application/x-ndjson',
         metadata=metadata,
         api_config=api_config,
@@ -1241,6 +1249,7 @@ async def generate_openai_completion(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
+        inference=True,
         metadata=metadata,
         api_config=api_config,
         request=request,
@@ -1351,6 +1360,7 @@ async def generate_openai_chat_completion(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
+        inference=True,
         metadata=metadata,
         api_config=api_config,
         request=request,
@@ -1403,6 +1413,7 @@ async def generate_anthropic_messages(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
+        inference=True,
         content_type='text/event-stream' if payload.get('stream', False) else None,
         api_config=api_config,
         request=request,
@@ -1461,6 +1472,7 @@ async def generate_responses(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
+        inference=True,
         content_type='text/event-stream' if payload.get('stream', False) else None,
         api_config=api_config,
         request=request,

@@ -29,6 +29,7 @@ from typing import Optional
 import aiohttp
 from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
+    AIOHTTP_CLIENT_TIMEOUT_STREAM_IDLE,
     AIOHTTP_POOL_CONNECTIONS,
     AIOHTTP_POOL_CONNECTIONS_PER_HOST,
     AIOHTTP_POOL_DNS_TTL,
@@ -78,6 +79,14 @@ async def close_session():
         await _session.close()
         log.info('Closed shared aiohttp session pool')
         _session = None
+
+
+def get_client_timeout(stream: bool) -> aiohttp.ClientTimeout:
+    """Whole-call cap, plus a between-chunks idle cap for streaming calls."""
+    return aiohttp.ClientTimeout(
+        total=AIOHTTP_CLIENT_TIMEOUT,
+        sock_read=AIOHTTP_CLIENT_TIMEOUT_STREAM_IDLE if stream else None,
+    )
 
 
 async def cleanup_response(
