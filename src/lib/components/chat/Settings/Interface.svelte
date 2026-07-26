@@ -32,6 +32,7 @@
 	let widescreenMode = false;
 	let splitLargeChunks = false;
 	let scrollOnBranchChange = true;
+	let scrollOnResponseGeneration = true;
 	let showFilesOnTerminalSelect = true;
 	let userLocation = false;
 
@@ -250,6 +251,7 @@
 		widescreenMode = $settings?.widescreenMode ?? false;
 		splitLargeChunks = $settings?.splitLargeChunks ?? false;
 		scrollOnBranchChange = $settings?.scrollOnBranchChange ?? true;
+		scrollOnResponseGeneration = $settings?.scrollOnResponseGeneration ?? true;
 		showFilesOnTerminalSelect = $settings?.showFilesOnTerminalSelect ?? true;
 
 		temporaryChatByDefault = $settings?.temporaryChatByDefault ?? false;
@@ -926,6 +928,28 @@
 				</div>
 				<p class={settingDescriptionClass}>
 					{$i18n.t('Copy the latest assistant response when it completes.')}
+				</p>
+			</div>
+
+			<div>
+				<div class={settingRowClass}>
+					<div id="response-auto-scroll-label" class={settingLabelClass}>
+						{$i18n.t('Response Auto-Scroll')}
+					</div>
+
+					<div class={settingControlClass}>
+						<Switch
+							ariaLabelledbyId="response-auto-scroll-label"
+							tooltip={true}
+							bind:state={scrollOnResponseGeneration}
+							on:change={() => {
+								saveSettings({ scrollOnResponseGeneration });
+							}}
+						/>
+					</div>
+				</div>
+				<p class={settingDescriptionClass}>
+					{$i18n.t('Follow assistant responses as they are generated.')}
 				</p>
 			</div>
 

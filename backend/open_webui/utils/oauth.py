@@ -16,7 +16,6 @@ from typing import Literal, Optional
 
 import aiohttp
 from authlib.integrations.starlette_client import OAuth
-from authlib.jose.errors import BadSignatureError
 from authlib.oauth2.rfc6749.errors import OAuth2Error
 from authlib.oidc.core import UserInfo
 from cryptography.fernet import Fernet
@@ -24,6 +23,7 @@ from fastapi import (
     HTTPException,
     status,
 )
+from joserfc.errors import BadSignatureError
 from joserfc.jws import JWSRegistry
 from joserfc.registry import HeaderParameter
 from mcp.shared.auth import (

@@ -259,7 +259,6 @@ class ChatMessageTable:
                     existing.usage = existing_usage if usage == existing_usage else merge_usage(existing_usage, usage)
                 existing.updated_at = now
                 await db.commit()
-                await db.refresh(existing)
                 return ChatMessageModel.model_validate(existing)
             else:
                 # Insert new
@@ -288,7 +287,6 @@ class ChatMessageTable:
                 )
                 db.add(message)
                 await db.commit()
-                await db.refresh(message)
                 return ChatMessageModel.model_validate(message)
 
     async def get_message_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[ChatMessageModel]:

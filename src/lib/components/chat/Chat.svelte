@@ -111,12 +111,14 @@
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import Modal from '../common/Modal.svelte';
 	import { isEmbedWindow } from '../common/FullHeightIframe.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import EmbeddedChatHistoryDropdown from './EmbeddedChatHistoryDropdown.svelte';
+	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 
 	export let chatIdProp = '';
 	export let embedded = false;
@@ -367,8 +369,109 @@
 	let chatFiles = [];
 	let files = [];
 	let params = {};
+	let chatVariables = {};
+	let showChatVariablesModal = false;
 	let loadedChatIdProp = '';
 	let currentDraftKey = '';
+
+	const mergeChatVariableSchemas = (modelIds = [], availableModels = []) => {
+		const byKey: Record<string, any> = {};
+		const conflicts: any[] = [];
+
+		for (const modelId of modelIds.filter(Boolean)) {
+			const fields =
+				availableModels.find((model) => model.id === modelId)?.info?.meta?.chat_variables_schema
+					?.fields ?? [];
+			for (const rawField of fields) {
+				const field = {
+					...rawField,
+					type: rawField?.type ?? 'text',
+					required: Boolean(rawField?.required)
+				};
+				if (!field?.key) continue;
+				const { required, ...shape } = field;
+
+				const existing = byKey[field.key];
+				if (!existing) {
+					byKey[field.key] = {
+						field,
+						modelIds: [modelId],
+						shape
+					};
+					continue;
+				}
+
+				if (!equal(existing.shape, shape)) {
+					conflicts.push({
+						key: field.key,
+						modelIds: [...existing.modelIds, modelId]
+					});
+					continue;
+				}
+
+				existing.field = {
+					...existing.field,
+					required: existing.field.required || field.required
+				};
+				existing.modelIds.push(modelId);
+			}
+		}
+
+		return {
+			fields: Object.values(byKey).map((item: any) => item.field),
+			conflicts
+		};
+	};
+
+	const hasValue = (value) => value !== undefined && value !== null && value !== '';
+
+	const getChatVariablesForm = (modelIds = [], values = {}, availableModels = []) => {
+		const { fields, conflicts } = mergeChatVariableSchemas(modelIds, availableModels);
+		const empty =
+			fields.length > 0 &&
+			fields.every((field) => !hasValue(values?.[field.key]) && !hasValue(field.default));
+		const missing = fields.some(
+			(field) => field.required && !hasValue(values?.[field.key]) && !hasValue(field.default)
+		);
+		const variables = fields.reduce(
+			(acc, field) => {
+				const { key, ...inputField } = field;
+				acc[key] = {
+					...inputField,
+					default: hasValue(values?.[key]) ? values[key] : inputField.default
+				};
+				return acc;
+			},
+			{} as Record<string, any>
+		);
+
+		return { conflicts, empty, missing, variables };
+	};
+
+	const saveChatVariables = async (values) => {
+		chatVariables = { ...chatVariables, ...values };
+
+		if ($chatId && !$temporaryChatEnabled && !$chatId.startsWith('local:')) {
+			const res = await updateChatById(localStorage.token, $chatId, {}, chatVariables).catch(
+				(err) => {
+					console.error('[chat variables save]', err);
+					toast.error($i18n.t('Failed to save chat variables'));
+					return null;
+				}
+			);
+			if (res) chat = res;
+		}
+	};
+
+	let oldSelectedModelIds = [''];
+	$: if (!equal(selectedModelIds, oldSelectedModelIds)) {
+		onSelectedModelIdsChange();
+	}
+
+	const onSelectedModelIdsChange = () => {
+		resetInput();
+		oldSelectedModelIds = structuredClone(selectedModelIds);
+	};
 
 	const mergeFiles = (current, incoming) => {
 		const seen = new Set();
@@ -514,6 +617,7 @@
 			currentId: null
 		};
 		params = {};
+		chatVariables = {};
 		chatFiles = [];
 		files = [];
 		selectedToolIds = [];
@@ -583,16 +687,6 @@
 		saveSessionSelectedModels();
 		await tick();
 		initiateOAuthRedirect(nextTool);
-	};
-
-	let oldSelectedModelIds = [''];
-	$: if (!equal(selectedModelIds, oldSelectedModelIds)) {
-		onSelectedModelIdsChange();
-	}
-
-	const onSelectedModelIdsChange = () => {
-		resetInput();
-		oldSelectedModelIds = structuredClone(selectedModelIds);
 	};
 
 	const resetInput = async () => {
@@ -897,7 +991,7 @@
 				} else if (type === 'chat:message:follow_ups') {
 					message.followUps = data.follow_ups;
 
-					if (autoScroll) {
+					if (shouldAutoScrollResponse()) {
 						scrollToBottom('smooth');
 					}
 				} else if (type === 'chat:outlet') {
@@ -1268,6 +1362,13 @@
 				pageSubscribe();
 				showControlsSubscribe();
 				selectedFolderSubscribe();
+
+				// Clear the selected chat when leaving the chat surface (e.g. navigating
+				// to the admin panel), otherwise the previously-viewed chat stays selected
+				// in the sidebar and deleting/archiving it wrongly navigates away.
+				chatId.set('');
+				chatTitle.set('');
+
 				window.removeEventListener('message', onMessageHandler);
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('connect', handleSocketConnect);
@@ -1703,6 +1804,7 @@
 
 		chatFiles = [];
 		params = {};
+		chatVariables = {};
 		taskIds = null;
 		chatTasks = [];
 
@@ -1854,6 +1956,7 @@
 			noteChatDebug('getTagsById completed', { tagCount: tags?.length ?? 0 });
 
 			const chatContent = chat.chat;
+			chatVariables = chat?.variables ?? {};
 
 			if (chatContent) {
 				noteChatDebug('chat payload found', {
@@ -2009,9 +2112,14 @@
 		await messagesRef?.scrollToTop();
 	};
 
+	const shouldAutoScrollResponse = () =>
+		autoScroll && ($settings?.scrollOnResponseGeneration ?? true);
+
 	let scrollRAF = null;
 	let contentsRAF = null;
-	const scheduleScrollToBottom = () => {
+	const scheduleResponseScrollToBottom = () => {
+		if (!shouldAutoScrollResponse()) return;
+
 		if (!scrollRAF) {
 			scrollRAF = requestAnimationFrame(async () => {
 				scrollRAF = null;
@@ -2060,7 +2168,7 @@
 			messages: messages.map((m) => ({
 				id: m.id,
 				role: m.role,
-				content: m.content,
+				content: getOutputText(m.output) || m.content,
 				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp,
 				...(m.sources ? { sources: m.sources } : {})
@@ -2330,7 +2438,7 @@
 			history.messages[message.id] = message;
 
 			await tick();
-			if (autoScroll) {
+			if (shouldAutoScrollResponse()) {
 				scrollToBottom();
 			}
 
@@ -2351,9 +2459,7 @@
 		console.log(data);
 		await tick();
 
-		if (autoScroll) {
-			scheduleScrollToBottom();
-		}
+		scheduleResponseScrollToBottom();
 	};
 
 	//////////////////////////
@@ -2550,6 +2656,16 @@
 		}
 		if (selectedModels.includes('')) {
 			toast.error($i18n.t('Model not selected'));
+			return;
+		}
+		const form = getChatVariablesForm(selectedModelIds, chatVariables, $models);
+		if (form.conflicts.length > 0) {
+			showChatVariablesModal = true;
+			toast.error($i18n.t('Chat Variables have conflicting model definitions'));
+			return;
+		}
+		if (form.missing || form.empty) {
+			showChatVariablesModal = true;
 			return;
 		}
 
@@ -2968,6 +3084,8 @@
 
 		// Only send terminal_id if the model has terminal capability enabled
 		const terminalEnabled = model.info?.meta?.capabilities?.terminal ?? true;
+		const useChatVariablesFallback =
+			!_chatId || $temporaryChatEnabled || _chatId.startsWith('local:');
 
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
@@ -3002,6 +3120,7 @@
 						$user?.email
 					)
 				},
+				...(useChatVariablesFallback ? { chat_variables: chatVariables } : {}),
 				model_item: $models.find((m) => m.id === model.id),
 
 				session_id: $socket?.id,
@@ -3100,7 +3219,9 @@
 		}
 
 		await tick();
-		scrollToBottom();
+		if (shouldAutoScrollResponse()) {
+			scrollToBottom();
+		}
 	};
 
 	const handleOpenAIError = async (error, responseMessage) => {
@@ -3173,7 +3294,7 @@
 
 			history.messages[history.currentId] = responseMessage;
 
-			if (autoScroll) {
+			if (shouldAutoScrollResponse()) {
 				scrollToBottom();
 			}
 		}
@@ -3321,9 +3442,7 @@
 						history.messages[messageId] = message;
 					}
 
-					if (autoScroll) {
-						scheduleScrollToBottom();
-					}
+					scheduleResponseScrollToBottom();
 				}
 
 				await saveChatHandler(_chatId, history);
@@ -3352,7 +3471,8 @@
 					tags: [],
 					timestamp: Date.now()
 				},
-				$selectedFolder?.id
+				$selectedFolder?.id,
+				chatVariables
 			);
 
 			_chatId = chat.id;
@@ -3515,6 +3635,47 @@
 
 <audio id="audioElement" style="display: none;"></audio>
 
+{#if getChatVariablesForm(selectedModelIds, chatVariables, $models).conflicts.length > 0}
+	<Modal bind:show={showChatVariablesModal} size="md">
+		<div>
+			<div class="flex justify-between px-4 pt-3 pb-1 dark:text-gray-300">
+				<div class="self-center text-sm font-medium">{$i18n.t('Chat Variables')}</div>
+				<button
+					class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+					on:click={() => {
+						showChatVariablesModal = false;
+					}}
+				>
+					<XMark className="size-4" />
+				</button>
+			</div>
+
+			<div class="px-5 pb-4 text-sm text-gray-600 dark:text-gray-300">
+				<div class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+					{$i18n.t('Selected models define incompatible Chat Variables.')}
+				</div>
+				<div class="flex flex-col gap-1">
+					{#each getChatVariablesForm(selectedModelIds, chatVariables, $models).conflicts as conflict}
+						<div class="rounded-lg border border-red-200 px-3 py-2 text-xs dark:border-red-900/60">
+							<div class="font-medium text-red-600 dark:text-red-400">{conflict.key}</div>
+							<div class="mt-1 text-gray-500 dark:text-gray-400">
+								{conflict.modelIds.join(', ')}
+							</div>
+						</div>
+					{/each}
+				</div>
+			</div>
+		</div>
+	</Modal>
+{:else}
+	<InputVariablesModal
+		bind:show={showChatVariablesModal}
+		title={$i18n.t('Chat Variables')}
+		variables={getChatVariablesForm(selectedModelIds, chatVariables, $models).variables}
+		onSave={saveChatVariables}
+	/>
+{/if}
+
 <WebSearchConfirmDialog
 	bind:show={showWebSearchConfirm}
 	title={$i18n.t('Use Web Search?')}
@@ -3673,7 +3834,8 @@
 											messages: messages,
 											timestamp: Date.now()
 										},
-										null
+										null,
+										chatVariables
 									);
 
 									if (savedChat) {
@@ -3726,6 +3888,7 @@
 										{mergeResponses}
 										{chatActionHandler}
 										{addMessages}
+										allowDelete={!(generating || taskIds?.length)}
 										forkHandler={generating || taskIds?.length ? null : handleForkChat}
 										topPadding={!embedded}
 										bottomPadding={files.length > 0}
@@ -3819,6 +3982,9 @@
 											}
 										}}
 										onWebSearchToggle={handleWebSearchToggle}
+										on:chatVariables={() => {
+											showChatVariablesModal = true;
+										}}
 										on:submit={async (e) => {
 											clearDraft($chatId);
 											if (e.detail || files.length > 0) {
@@ -3895,6 +4061,9 @@
 										messageQueue={$chatRequestQueues[$chatId] ?? []}
 										{chatTasks}
 										onWebSearchToggle={handleWebSearchToggle}
+										on:chatVariables={() => {
+											showChatVariablesModal = true;
+										}}
 										on:submit={async (e) => {
 											clearDraft($chatId);
 											if (e.detail || files.length > 0) {
@@ -3930,6 +4099,9 @@
 									{onSelect}
 									{onUpload}
 									onWebSearchToggle={handleWebSearchToggle}
+									on:chatVariables={() => {
+										showChatVariablesModal = true;
+									}}
 									onChange={(data) => {
 										if (!$temporaryChatEnabled) {
 											saveDraft(data);

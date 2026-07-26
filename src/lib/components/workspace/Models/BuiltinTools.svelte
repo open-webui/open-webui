@@ -81,6 +81,7 @@
 					</Tooltip>
 				</div>
 				<Checkbox
+					ariaLabel={$i18n.t(toolLabels[tool].label)}
 					state={builtinTools[tool] !== false ? 'checked' : 'unchecked'}
 					on:change={(e) => {
 						if (e.detail === 'checked') {

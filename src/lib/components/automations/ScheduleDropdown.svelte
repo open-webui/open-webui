@@ -230,7 +230,7 @@
 							type="date"
 							bind:value={onceDate}
 							min={new Date().toISOString().split('T')[0]}
-							class="bg-transparent outline-hidden text-xs dark:color-scheme-dark"
+							class="bg-transparent outline-hidden text-xs dark:scheme-dark"
 							on:click={(e) => e.stopPropagation()}
 							on:input={onChange}
 						/>
@@ -239,7 +239,7 @@
 						<input
 							type="time"
 							bind:value={onceTime}
-							class="bg-transparent outline-hidden text-xs dark:color-scheme-dark"
+							class="bg-transparent outline-hidden text-xs dark:scheme-dark"
 							on:click={(e) => e.stopPropagation()}
 							on:input={onChange}
 						/>
@@ -256,7 +256,7 @@
 								minute = m;
 								onChange();
 							}}
-							class="bg-transparent text-center outline-hidden text-xs dark:color-scheme-dark"
+							class="bg-transparent text-center outline-hidden text-xs dark:scheme-dark"
 							on:click={(e) => e.stopPropagation()}
 						/>
 					</div>

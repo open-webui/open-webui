@@ -130,14 +130,14 @@
 		</button>
 	</div>
 
-	<div class="w-full flex justify-center">
-		<div class=" relative w-fit overflow-x-auto scrollbar-none">
-			<div class="mt-1.5 w-fit flex gap-1 pb-2">
+	<div class="w-full overflow-x-auto">
+		<div class="relative mx-auto min-w-[19rem] max-w-80">
+			<div class="mt-1.5 grid grid-cols-10 gap-1 pb-2">
 				<!-- 1-10 scale -->
 				{#each Array.from({ length: 10 }).map((_, i) => i + 1) as rating}
 					<button
 						aria-label={$i18n.t('Rate {{rating}} out of 10', { rating })}
-						class="size-7 text-sm border border-gray-100/30 dark:border-gray-850/30 hover:bg-gray-50 dark:hover:bg-gray-850 {detailedRating ===
+						class="aspect-square w-full text-sm border border-gray-100/30 dark:border-gray-850/30 hover:bg-gray-50 dark:hover:bg-gray-850 {detailedRating ===
 						rating
 							? 'bg-gray-100 dark:bg-gray-800'
 							: ''} transition rounded-full disabled:cursor-not-allowed disabled:text-gray-500 disabled:bg-white dark:disabled:bg-gray-900"

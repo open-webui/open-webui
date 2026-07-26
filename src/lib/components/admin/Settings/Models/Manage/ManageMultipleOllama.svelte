@@ -1,5 +1,5 @@
 <script>
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import ManageOllama from './ManageOllama.svelte';
@@ -11,12 +11,13 @@
 </script>
 
 {#if ollamaConfig}
-	<div class="flex-1 mb-2.5 pr-1.5 rounded-lg bg-gray-50 dark:text-gray-300 dark:bg-gray-850">
+	<div class=" mb-2 text-sm font-normal">{$i18n.t('Ollama')}</div>
+
+	<div class="flex-1 mb-2.5">
 		<SettingsSelect
 			bind:value={selectedUrlIdx}
 			className="w-full"
 			placeholder={$i18n.t('Select an Ollama instance')}
-			selectClassName="text-sm"
 		>
 			{#each ollamaConfig.OLLAMA_BASE_URLS as url, idx}
 				<option value={idx}>{url}</option>

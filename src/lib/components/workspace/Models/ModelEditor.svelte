@@ -33,6 +33,7 @@
 	import TTSVoiceInput from './TTSVoiceInput.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
+	import { extractInputVariables } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 
@@ -112,6 +113,60 @@
 	let tts = { voice: '' };
 	export let suggestionTags: { name: string }[] = [];
 	let voices: { id: string; name?: string }[] = [];
+
+	const chatVariableKeyRegex = /^[a-z][a-z0-9_]*$/;
+	const getChatVariablesPreview = (prompt: string) => {
+		const variables = extractInputVariables(prompt);
+		const warnings: string[] = [];
+		const seenDefinitions: Record<string, string> = {};
+		const typedRegex = /{{\s*chat\.variables\.([a-zA-Z0-9_.-]+)\s*\|\s*([^}]*)\s*}}/g;
+		const typedUserRegex = /{{\s*user\.variables\.([a-zA-Z0-9_.-]+)\s*\|\s*([^}]*)\s*}}/g;
+
+		for (const match of prompt.matchAll(typedRegex)) {
+			const key = match[1];
+			const definition = match[2].trim();
+			if (seenDefinitions[key] && seenDefinitions[key] !== definition) {
+				warnings.push(`${key} has conflicting duplicate definitions`);
+			}
+			seenDefinitions[key] = definition;
+		}
+
+		const fields = Object.entries(variables)
+			.filter(([name]) => name.startsWith('chat.variables.'))
+			.map(([name, field]) => ({ key: name.replace('chat.variables.', ''), ...(field as any) }));
+		const userFields = Object.entries(variables)
+			.filter(([name]) => name.startsWith('user.variables.'))
+			.map(([name]) => ({ key: name.replace('user.variables.', '') }));
+
+		for (const match of prompt.matchAll(typedUserRegex)) {
+			warnings.push(`${match[1]} uses metadata, but User Variables are configured by each user`);
+		}
+
+		for (const field of fields) {
+			const key = field.key;
+			if (!chatVariableKeyRegex.test(key)) {
+				warnings.push(`${key} must be lowercase snake case`);
+				continue;
+			}
+
+			if (
+				field.type === 'select' &&
+				(!Array.isArray(field.options) || field.options.length === 0)
+			) {
+				warnings.push(`${key} select needs options=[...]`);
+			}
+		}
+
+		for (const field of userFields) {
+			if (!chatVariableKeyRegex.test(field.key)) {
+				warnings.push(`${field.key} must be lowercase snake case`);
+			}
+		}
+
+		return { fields, userFields, warnings };
+	};
+
+	$: chatVariablesPreview = getChatVariablesPreview(system ?? '');
 
 	const getBaseModelItems = (models: any[] = []) => {
 		const currentModelId = (model as any)?.id;
@@ -721,6 +776,61 @@
 											bind:value={system}
 										/>
 									</div>
+									{#if chatVariablesPreview.fields.length > 0 || chatVariablesPreview.userFields.length > 0 || chatVariablesPreview.warnings.length > 0}
+										<div class="mt-2 border-t border-gray-100/60 pt-2 dark:border-gray-850/60">
+											<div class="mb-1.5 flex items-center justify-between gap-2">
+												<div class="text-xs text-gray-500 dark:text-gray-400">
+													{$i18n.t('Detected Variables')}
+												</div>
+												{#if chatVariablesPreview.fields.length + chatVariablesPreview.userFields.length > 0}
+													<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+														{chatVariablesPreview.fields.length +
+															chatVariablesPreview.userFields.length}
+													</div>
+												{/if}
+											</div>
+
+											{#if chatVariablesPreview.fields.length > 0}
+												<div class="mb-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+													{$i18n.t('Chat Variables')}
+												</div>
+												<div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
+													{#each chatVariablesPreview.fields as field}
+														<div class="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+															<span class="font-medium">{field.key}</span>
+															<span class="text-gray-400 dark:text-gray-600">{field.type}</span>
+															{#if field.required}
+																<span class="text-amber-600 dark:text-amber-400">required</span>
+															{/if}
+														</div>
+													{/each}
+												</div>
+											{/if}
+
+											{#if chatVariablesPreview.userFields.length > 0}
+												<div class="mb-1 mt-2 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+													{$i18n.t('User Variables')}
+												</div>
+												<div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
+													{#each chatVariablesPreview.userFields as field}
+														<div class="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+															<span class="font-medium">{field.key}</span>
+														</div>
+													{/each}
+												</div>
+											{/if}
+
+											{#if chatVariablesPreview.warnings.length > 0}
+												<div
+													class="mt-2 flex flex-col gap-1 text-xs text-amber-600 dark:text-amber-400"
+												>
+													{#each chatVariablesPreview.warnings as warning}
+														<div>{warning}</div>
+													{/each}
+												</div>
+											{/if}
+										</div>
+									{/if}
 								</div>
 
 								<div class="flex h-7 w-full justify-between">

@@ -356,6 +356,8 @@ async def get_current_user(
                 current_span.set_attribute('client.user.role', user.role)
                 current_span.set_attribute('client.auth.type', 'api_key')
 
+        # Scope-backed, so outer middleware (audit) can reuse the resolved user
+        request.state.user = user
         return user
 
     # auth by jwt token
@@ -404,6 +406,9 @@ async def get_current_user(
                 # Refresh the user's last active timestamp
                 # Fire-and-forget via asyncio.create_task to avoid blocking
                 asyncio.create_task(Users.update_last_active_by_id(user.id))
+
+            # Scope-backed, so outer middleware (audit) can reuse the resolved user
+            request.state.user = user
             return user
         else:
             raise HTTPException(
@@ -483,12 +488,28 @@ async def get_current_user_by_api_key(request, api_key: str):
     return user
 
 
+VERIFIED_USER_ROLES = {'user', 'admin'}
+
+
 def get_verified_user(user=Depends(get_current_user)):
-    if user.role not in {'user', 'admin'}:
+    if user.role not in VERIFIED_USER_ROLES:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+    return user
+
+
+async def get_verified_user_by_token(token: str, redis=None):
+    """Resolve a verified user from a raw token, for WebSocket handshakes that run outside the HTTP dependency chain."""
+    decoded = decode_token(token)
+    if decoded is None or 'id' not in decoded or not await is_valid_token(decoded, redis):
+        return None
+
+    user = await Users.get_user_by_id(decoded['id'])
+    if user is None or user.role not in VERIFIED_USER_ROLES:
+        return None
+
     return user
 
 

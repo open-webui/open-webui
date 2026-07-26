@@ -56,7 +56,7 @@ async def compact_messages_for_request(
     if not _exceeds_token_threshold(messages, system_prompt, previous_summary, token_threshold) or len(messages) <= 3:
         return messages, previous_summary, False
 
-    boundary = _find_compaction_boundary(messages)
+    boundary = _find_compaction_boundary(messages, config['retention_percentage'])
     compacted_messages = messages[:boundary]
     recent_messages = messages[boundary:]
     if not compacted_messages or not recent_messages:
@@ -196,6 +196,7 @@ async def _load_config() -> dict:
         'chat.context_compaction.enable',
         'chat.context_compaction.token_threshold',
         'chat.context_compaction.token_cap',
+        'chat.context_compaction.retention_percentage',
         'chat.context_compaction.prompt_template',
     )
     token_threshold = _parse_positive_int(values.get('chat.context_compaction.token_threshold')) or 80000
@@ -203,6 +204,9 @@ async def _load_config() -> dict:
         'enable': bool(values.get('chat.context_compaction.enable', False)),
         'token_threshold': token_threshold,
         'token_cap': _parse_positive_int(values.get('chat.context_compaction.token_cap')) or token_threshold,
+        'retention_percentage': _clamp_retention_percentage(
+            values.get('chat.context_compaction.retention_percentage')
+        ),
         'prompt_template': values.get('chat.context_compaction.prompt_template', '') or '',
     }
 
@@ -213,6 +217,14 @@ def _parse_positive_int(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return parsed if parsed > 0 else None
+
+
+def _clamp_retention_percentage(value: Any) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = 40
+    return min(50, max(10, parsed))
 
 
 def _resolve_token_threshold(global_threshold: int, global_cap: int, metadata: dict) -> int:
@@ -297,8 +309,9 @@ def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: 
     return estimated > threshold
 
 
-def _find_compaction_boundary(messages: list[dict]) -> int:
-    keep_count = max(2, len(messages) * 2 // 5)
+def _find_compaction_boundary(messages: list[dict], retention_percentage: int = 40) -> int:
+    retention_percentage = _clamp_retention_percentage(retention_percentage)
+    keep_count = max(2, len(messages) * retention_percentage // 100)
     target = max(1, len(messages) - keep_count)
     boundaries = [idx for idx, message in enumerate(messages) if message.get('role') == 'user'][1:]
     return next((idx for idx in reversed(boundaries) if idx <= target), 0)

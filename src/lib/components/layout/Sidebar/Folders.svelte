@@ -4,7 +4,7 @@
 	const dispatch = createEventDispatcher();
 
 	import RecursiveFolder from './RecursiveFolder.svelte';
-	import { chatId, selectedFolder } from '$lib/stores';
+	import { chatId } from '$lib/stores';
 
 	export let folderRegistry = {};
 
@@ -49,7 +49,7 @@
 		}
 	};
 
-	$: if (folders || ($selectedFolder && $chatId)) {
+	$: if (folders || $chatId) {
 		loadFolderItems();
 	}
 </script>

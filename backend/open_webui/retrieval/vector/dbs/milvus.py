@@ -25,7 +25,7 @@ from open_webui.retrieval.vector.main import (
     VectorItem,
 )
 from open_webui.retrieval.vector.utils import process_metadata
-from pymilvus import Collection, DataType, FieldSchema, connections
+from pymilvus import DataType
 from pymilvus import MilvusClient as Client
 from pymilvus.exceptions import MilvusException
 
@@ -202,8 +202,6 @@ class MilvusClient(VectorDBBase):
         return self._result_to_search_result(result)
 
     def query(self, collection_name: str, filter: dict, limit: int = -1):
-        connections.connect(uri=MILVUS_URI, token=MILVUS_TOKEN, db_name=MILVUS_DB)
-
         collection_name = collection_name.replace('-', '_')
         if not self.has_collection(collection_name):
             log.warning(f'Query attempted on non-existent collection: {self.collection_prefix}_{collection_name}')
@@ -218,16 +216,16 @@ class MilvusClient(VectorDBBase):
 
         filter_string = ' && '.join(filter_expressions)
 
-        collection = Collection(f'{self.collection_prefix}_{collection_name}')
-        collection.load()
+        self.client.load_collection(collection_name=f'{self.collection_prefix}_{collection_name}')
 
         try:
             log.info(
                 f"Querying collection {self.collection_prefix}_{collection_name} with filter: '{filter_string}', limit: {limit}"
             )
 
-            iterator = collection.query_iterator(
-                expr=filter_string,
+            iterator = self.client.query_iterator(
+                collection_name=f'{self.collection_prefix}_{collection_name}',
+                filter=filter_string,
                 output_fields=[
                     'id',
                     'data',

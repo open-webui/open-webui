@@ -34,12 +34,27 @@
 	let positionFrame: number | undefined;
 	let settleTimers: number[] = [];
 	let resolvedMaxHeight = maxHeight;
+	let lastContentHeight = 0;
 
-	/** Svelte action: moves the node to document.body */
+	/** Svelte action: moves the node to document.body and keeps it positioned as it resizes */
 	function portal(node: HTMLElement) {
 		document.body.appendChild(node);
+
+		// Content can grow after the dropdown is positioned - a submenu is opened, or an
+		// async list finishes loading - which would otherwise leave it overflowing the
+		// viewport. Compare scrollHeight (the natural content height) so that clamping
+		// max-height here cannot feed back into another reposition.
+		const resizeObserver = new ResizeObserver(() => {
+			if (node.scrollHeight === lastContentHeight) return;
+			lastContentHeight = node.scrollHeight;
+			schedulePositionUpdate();
+		});
+		resizeObserver.observe(node);
+
 		return {
 			destroy() {
+				resizeObserver.disconnect();
+				lastContentHeight = 0;
 				if (node.parentNode) {
 					node.parentNode.removeChild(node);
 				}
@@ -70,6 +85,17 @@
 		};
 	}
 
+	/**
+	 * Height the content wants, independent of any max-height already applied here.
+	 * Measuring offsetHeight alone would feed the previous clamp back into the next
+	 * calculation, so the dropdown could flip between clamped and unclamped on every
+	 * repositioning pass.
+	 */
+	function naturalContentHeight() {
+		if (!contentEl) return 0;
+		return Math.max(contentEl.scrollHeight || 0, contentEl.offsetHeight || 0);
+	}
+
 	function visualViewportRect() {
 		const viewport = window.visualViewport;
 		return {
@@ -88,7 +114,7 @@
 		contentEl.style.position = 'fixed';
 		contentEl.style.zIndex = '9999';
 
-		const contentHeight = contentEl.offsetHeight || 0;
+		const contentHeight = naturalContentHeight();
 		const spaceBelow = window.innerHeight - rect.bottom - sideOffset;
 		const spaceAbove = rect.top - sideOffset;
 
@@ -139,9 +165,8 @@
 
 		contentEl.style.position = 'fixed';
 		contentEl.style.zIndex = '9999';
-		contentEl.style.maxHeight = maxHeight;
 
-		const contentHeight = contentEl.offsetHeight || 0;
+		const contentHeight = naturalContentHeight();
 		const spaceBelow = viewportBottom - rect.bottom - sideOffset - pad;
 		const spaceAbove = rect.top - viewport.top - sideOffset - pad;
 

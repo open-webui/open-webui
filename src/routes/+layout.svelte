@@ -837,8 +837,8 @@
 		}
 	};
 
-	const redirectToAuthAfterUnauthorized = () => {
-		if (isAuthRedirectInProgress || window.location.pathname === '/auth') {
+	const clearExpiredSession = () => {
+		if (isAuthRedirectInProgress) {
 			return;
 		}
 
@@ -849,15 +849,13 @@
 		}
 		user.set(null);
 		localStorage.removeItem('token');
+		// Clear the OAuth token cookie so /auth doesn't auto-login and redirect-loop
+		document.cookie = 'token=; Max-Age=0; path=/';
 		userSignOut().catch((error) => {
 			console.error('Error signing out expired session:', error);
 		});
 		toast.error($i18n.t('Session expired. Please sign in again.'));
-
-		const currentPath = `${window.location.pathname}${window.location.search}`;
-		goto(`/auth?redirect=${encodeURIComponent(currentPath)}`).finally(() => {
-			isAuthRedirectInProgress = false;
-		});
+		isAuthRedirectInProgress = false;
 	};
 
 	const isCurrentSessionUnauthorized = async (originalFetch) => {
@@ -883,7 +881,7 @@
 		}
 
 		if (now >= exp - TOKEN_EXPIRY_BUFFER) {
-			redirectToAuthAfterUnauthorized();
+			clearExpiredSession();
 		}
 	};
 
@@ -1001,7 +999,7 @@
 				isAuthenticatedBackendFetch(input, init) &&
 				(await isCurrentSessionUnauthorized(originalFetch))
 			) {
-				redirectToAuthAfterUnauthorized();
+				clearExpiredSession();
 			}
 
 			return response;
@@ -1187,9 +1185,6 @@
 			if ($config) {
 				await setupSocket($config.features?.enable_websocket ?? true);
 
-				const currentUrl = `${window.location.pathname}${window.location.search}`;
-				const encodedUrl = encodeURIComponent(currentUrl);
-
 				if (localStorage.token) {
 					// Get Session User Info
 					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
@@ -1221,15 +1216,8 @@
 								.catch(() => {});
 						}
 					} else {
-						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
-						await goto(`/auth?redirect=${encodedUrl}`);
-					}
-				} else {
-					// Don't redirect if we're already on the auth page
-					// Needed because we pass in tokens from OAuth logins via URL fragments
-					if ($page.url.pathname !== '/auth') {
-						await goto(`/auth?redirect=${encodedUrl}`);
+						await user.set(null);
 					}
 				}
 			}
@@ -1290,6 +1278,13 @@
 			window.removeEventListener('pageshow', handlePageVisible);
 		};
 	});
+
+	$: if (typeof document !== 'undefined') {
+		document.documentElement.classList.toggle(
+			'high-contrast',
+			$settings?.highContrastMode ?? false
+		);
+	}
 
 	onDestroy(() => {
 		bc.close();

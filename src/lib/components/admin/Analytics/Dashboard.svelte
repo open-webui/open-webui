@@ -251,14 +251,14 @@
 				type="date"
 				bind:value={customStart}
 				max={customEnd || undefined}
-				class="w-fit rounded-sm px-2 text-xs bg-transparent outline-none"
+				class="w-fit rounded-sm px-2 text-xs bg-transparent outline-none dark:scheme-dark"
 			/>
 			<span class="text-xs text-gray-400">–</span>
 			<input
 				type="date"
 				bind:value={customEnd}
 				min={customStart || undefined}
-				class="w-fit rounded-sm px-2 text-xs bg-transparent outline-none"
+				class="w-fit rounded-sm px-2 text-xs bg-transparent outline-none dark:scheme-dark"
 			/>
 		{/if}
 		<select

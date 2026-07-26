@@ -300,6 +300,9 @@
 		if (transcribe) {
 			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
 				if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+					// reset accumulated transcription from previous sessions
+					transcription = '';
+
 					// Create a SpeechRecognition object
 					speechRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
 
@@ -353,11 +356,19 @@
 						toast.error($i18n.t(`Speech recognition error: {{error}}`, { error: event.error }));
 						onCancel();
 
-						stopRecording();
+						cancelRecording();
 					};
 				}
 			}
 		}
+	};
+
+	const cancelRecording = async () => {
+		if (speechRecognition) {
+			// detach onend so cancelling does not confirm the transcription
+			speechRecognition.onend = null;
+		}
+		await stopRecording();
 	};
 
 	const stopRecording = async () => {
@@ -411,7 +422,7 @@
 	const handleKeyDown = (e) => {
 		if (e.key === 'Escape') {
 			e.preventDefault();
-			stopRecording();
+			cancelRecording();
 			onCancel();
 		}
 	};
@@ -468,7 +479,7 @@
 
              rounded-full"
 			on:click={async () => {
-				stopRecording();
+				cancelRecording();
 				onCancel();
 			}}
 		>

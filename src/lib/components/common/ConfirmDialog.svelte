@@ -46,12 +46,16 @@
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
-			console.log('Escape');
 			cancelHandler();
 		}
 
 		if (event.key === 'Enter') {
-			console.log('Enter');
+			// let the focused control act on Enter itself
+			const target = event.target;
+			if (target instanceof Element && target.closest('a, button, textarea')) {
+				return;
+			}
+
 			event.preventDefault();
 			event.stopPropagation();
 			confirmHandler();

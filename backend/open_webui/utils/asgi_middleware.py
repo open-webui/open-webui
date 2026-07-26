@@ -100,13 +100,19 @@ class CommitSessionMiddleware:
             # Downstream did not complete successfully. Roll back any
             # pending sync writes, release the connection, and let the
             # exception propagate.
-            try:
-                ScopedSession.rollback()
-            except Exception:
-                log.exception('CommitSessionMiddleware: rollback failed after downstream error')
-            finally:
-                ScopedSession.remove()
+            if ScopedSession.registry.has():
+                try:
+                    ScopedSession.rollback()
+                except Exception:
+                    log.exception('CommitSessionMiddleware: rollback failed after downstream error')
+                finally:
+                    ScopedSession.remove()
             raise
+
+        # Nothing in this request touched the sync session: committing would
+        # only instantiate one to run an empty transaction.
+        if not ScopedSession.registry.has():
+            return
 
         # Downstream completed. Commit pending sync work.
         try:
@@ -166,9 +172,9 @@ class AuthTokenMiddleware:
 
         async def send_with_timing(message: Message) -> None:
             if message['type'] == 'http.response.start':
-                process_time = int(time.monotonic() - start_time)
+                process_time = time.monotonic() - start_time
                 headers = MutableHeaders(scope=message)
-                headers['X-Process-Time'] = str(process_time)
+                headers['X-Process-Time'] = f'{process_time:.6f}'
             await send(message)
 
         await self.app(scope, receive, send_with_timing)

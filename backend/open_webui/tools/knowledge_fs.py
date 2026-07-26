@@ -33,9 +33,9 @@ MAX_GREP_MATCHES = 50
 
 
 def is_regex_pattern(pattern: str) -> bool:
-    """Detect if a pattern looks like regex (\|, .*, .+, \d, \w, \s, [...])."""
+    """Detect if a pattern looks like regex (|, .*, .+, \d, \w, \s, [...])."""
     return (
-        '\|' in pattern
+        '|' in pattern
         or '.*' in pattern
         or '.+' in pattern
         or '.?' in pattern
@@ -691,6 +691,10 @@ async def _kb_grep(
         for i, line in enumerate(lines, 1):
             if _matches(line):
                 matched.append(f'{i}: {line}')
+        if count_only:
+            return str(len(matched))
+        if filenames_only:
+            return '(standard input)' if matched else f'No matches for "{pattern}"'
         return '\n'.join(matched) if matched else f'No matches for "{pattern}"'
 
     # Single file grep

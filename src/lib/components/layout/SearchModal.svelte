@@ -271,6 +271,8 @@
 	let selectedModels = [''];
 	let history = null;
 	let messages = null;
+	let messagesContainerElement: HTMLElement | null = null;
+	const messagesContainerId = 'chat-preview';
 
 	const searchFilterPrefixes = ['tag:', 'folder:', 'pinned:', 'archived:', 'shared:'];
 
@@ -311,6 +313,26 @@
 		loadChatPreview(selectedIdx);
 	}
 
+	const scrollPreviewToBottom = async () => {
+		await tick();
+		requestAnimationFrame(() => {
+			if (messagesContainerElement) {
+				messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+
+				requestAnimationFrame(() => {
+					if (messagesContainerElement) {
+						messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+					}
+				});
+			}
+		});
+		setTimeout(() => {
+			if (messagesContainerElement) {
+				messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+			}
+		}, 80);
+	};
+
 	const loadChatPreview = async (selectedIdx) => {
 		if (!chatList || chatList.length === 0 || selectedIdx === null) {
 			selectedChat = null;
@@ -336,6 +358,8 @@
 		});
 
 		if (chat) {
+			selectedChat = chat;
+
 			if (chat?.chat?.history) {
 				selectedModels =
 					(chat?.chat?.models ?? undefined) !== undefined
@@ -343,14 +367,8 @@
 						: [chat?.chat?.models ?? ''];
 
 				history = chat?.chat?.history;
-				messages = createMessagesList(chat?.chat?.history, chat?.chat?.history?.currentId);
-
-				// scroll to the bottom of the messages container
-				await tick();
-				const messagesContainerElement = document.getElementById('chat-preview');
-				if (messagesContainerElement) {
-					messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
-				}
+				messages = [];
+				await scrollPreviewToBottom();
 			} else {
 				messages = [];
 			}
@@ -853,7 +871,8 @@
 				{/if}
 			</div>
 			<div
-				id="chat-preview"
+				id={messagesContainerId}
+				bind:this={messagesContainerElement}
 				class="hidden md:flex md:flex-1 w-full overflow-y-auto h-96 md:h-[40rem] scrollbar-hidden @container"
 			>
 				{#if messages === null}
@@ -871,8 +890,9 @@
 							readOnly={true}
 							{selectedModels}
 							bind:history
-							bind:messages
 							autoScroll={true}
+							{messagesContainerId}
+							messagesCount={8}
 							sendMessage={() => {}}
 							continueResponse={() => {}}
 							regenerateResponse={() => {}}

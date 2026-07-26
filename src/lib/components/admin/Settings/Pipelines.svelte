@@ -422,8 +422,9 @@
 														<AdminSettingRow
 															label={valves[property] ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 															labelClassName="text-gray-400 dark:text-gray-600"
+															let:labelId
 														>
-															<Switch bind:state={valves[property]} />
+															<Switch bind:state={valves[property]} ariaLabelledbyId={labelId} />
 														</AdminSettingRow>
 													{:else}
 														<input
