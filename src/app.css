@@ -854,3 +854,16 @@ body {
 		color: var(--color-gray-500);
 	}
 }
+
+/* High Contrast Mode: gray-500 muted text is 2.77:1 in light (WCAG 1.4.3 wants 4.5:1).
+   The utility stays in the layer so hover variants still outrank it; the classes below
+   are unlayered, so their override has to be too. */
+@layer utilities {
+	html:where(.high-contrast):not(:where(.dark)) .text-gray-500 {
+		color: var(--color-gray-600);
+	}
+}
+
+html.high-contrast:not(.dark) :is(.app-muted, .app-icon-muted, .tiptap table) {
+	color: var(--color-gray-600);
+}
