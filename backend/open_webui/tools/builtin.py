@@ -14,7 +14,7 @@ import logging
 import time
 from typing import Literal, Optional
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 
 from open_webui.models.channels import Channel, ChannelMember, Channels
 from open_webui.models.chats import Chats
@@ -3292,6 +3292,7 @@ async def create_automation(
     try:
         from open_webui.models.automations import AutomationData, AutomationForm, Automations
         from open_webui.models.users import Users
+        from open_webui.routers.automations import check_automation_limits
         from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
 
         user_id = __user__.get('id')
@@ -3312,6 +3313,11 @@ async def create_automation(
             validate_rrule(rrule, tz=user.timezone)
         except ValueError as e:
             return json.dumps({'error': f'Invalid schedule: {e}'})
+
+        try:
+            await check_automation_limits(__request__, user, rrule, None, is_create=True)
+        except HTTPException as e:
+            return json.dumps({'error': e.detail})
 
         tz = user.timezone
         form = AutomationForm(
@@ -3370,10 +3376,13 @@ async def update_automation(
     try:
         from open_webui.models.automations import AutomationData, AutomationForm, Automations
         from open_webui.models.users import Users
+        from open_webui.routers.automations import check_automation_limits
         from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
 
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
+        if not user:
+            return json.dumps({'error': 'User not found'})
 
         automation = await Automations.get_by_id(automation_id)
         if not automation:
@@ -3390,11 +3399,16 @@ async def update_automation(
         # Validate RRULE if changed
         if rrule is not None:
             try:
-                validate_rrule(new_rrule, tz=user.timezone if user else None)
+                validate_rrule(new_rrule, tz=user.timezone)
             except ValueError as e:
                 return json.dumps({'error': f'Invalid schedule: {e}'})
 
-        tz = user.timezone if user else None
+        try:
+            await check_automation_limits(__request__, user, new_rrule, None)
+        except HTTPException as e:
+            return json.dumps({'error': e.detail})
+
+        tz = user.timezone
         form = AutomationForm(
             name=new_name,
             data=AutomationData(
