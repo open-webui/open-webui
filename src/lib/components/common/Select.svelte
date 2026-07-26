@@ -114,8 +114,8 @@
 <button
 	bind:this={triggerEl}
 	class={triggerClass}
-	aria-label={placeholder}
 	type="button"
+	aria-expanded={open}
 	on:click={toggleOpen}
 >
 	<slot name="trigger" {selectedLabel} {open}>
