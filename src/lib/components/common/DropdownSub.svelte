@@ -71,12 +71,33 @@
 		contentEl.style.top = `${top}px`;
 	}
 
-	async function handleMouseEnter() {
+	const FOCUSABLE =
+		'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+	async function openSub() {
 		open = true;
 		await tick();
 		positionContent();
 		// Re-position after transition starts rendering real dimensions
 		setTimeout(positionContent, 50);
+	}
+
+	async function handleMouseEnter() {
+		await openSub();
+	}
+
+	async function handleTriggerClick() {
+		await openSub();
+		contentEl?.querySelector(FOCUSABLE)?.focus();
+	}
+
+	function handleKeydown(event) {
+		if (event.key === 'Escape' && open) {
+			// keep the parent menu open
+			event.stopPropagation();
+			open = false;
+			triggerEl?.firstElementChild?.focus();
+		}
 	}
 
 	function handleMouseLeave(event) {
@@ -112,6 +133,10 @@
 	class="w-full"
 	on:mouseenter={handleMouseEnter}
 	on:mouseleave={handleMouseLeave}
+	on:click={handleTriggerClick}
+	on:keydown={handleKeydown}
+	aria-haspopup="true"
+	aria-expanded={open}
 >
 	<slot name="trigger" />
 </div>
@@ -119,7 +144,12 @@
 {#if open}
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<!-- Outer wrapper: positioned flush with trigger, invisible padding bridges the gap -->
-	<div use:portal bind:this={contentEl} on:mouseleave={handleContentMouseLeave}>
+	<div
+		use:portal
+		bind:this={contentEl}
+		on:mouseleave={handleContentMouseLeave}
+		on:keydown={handleKeydown}
+	>
 		<!-- Inner content: visual styles and transition -->
 		<div transition:flyAndScale>
 			<DropdownMenu className={contentClass} style="max-width: {maxWidth}px;">
