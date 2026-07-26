@@ -5,7 +5,8 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { WEBUI_NAME, user, config } from '$lib/stores';
+	import { WEBUI_NAME, user, config, folders } from '$lib/stores';
+	import { getFolders } from '$lib/apis/folders';
 
 	import {
 		createAutomation,
@@ -65,6 +66,7 @@
 	let page = 1;
 	let importFiles: FileList | null = null;
 	let automationsImportInputElement: HTMLInputElement;
+	let foldersLoaded = false;
 
 	const syncHeader = () => {
 		automationsLayout?.setHeader({
@@ -141,6 +143,16 @@
 			loading = false;
 		}
 	};
+
+	const ensureFolders = async () => {
+		if (foldersLoaded || ($folders ?? []).length > 0) return;
+		const res = await getFolders(localStorage.token).catch(() => null);
+		if (res) folders.set(res);
+		foldersLoaded = true;
+	};
+
+	const getFolderName = (folderId: string | null): string | null =>
+		folderId ? (($folders ?? []).find((folder) => folder.id === folderId)?.name ?? null) : null;
 
 	const toggleHandler = async (automation: AutomationResponse) => {
 		const res = await toggleAutomationById(localStorage.token, automation.id).catch((err) => {
@@ -227,6 +239,7 @@
 
 	const toAutomationForm = (automation: AutomationResponse): AutomationForm => ({
 		name: automation.name,
+		folder_id: automation.folder_id,
 		data: automation.data,
 		meta: automation.meta ?? undefined,
 		is_active: automation.is_active
@@ -257,9 +270,13 @@
 			throw new Error($i18n.t('Invalid JSON format'));
 		}
 
+		await ensureFolders();
+		const validFolderIds = new Set(($folders ?? []).map((folder) => folder.id));
+
 		for (const automation of automationItems) {
 			await createAutomation(localStorage.token, {
 				name: automation.name,
+				folder_id: validFolderIds.has(automation.folder_id) ? automation.folder_id : null,
 				data: automation.data,
 				meta: automation.meta ?? undefined,
 				is_active: automation.is_active ?? true
@@ -327,6 +344,7 @@
 
 		loaded = true;
 		syncHeader();
+		void ensureFolders();
 
 		return () => {
 			clearTimeout(searchDebounceTimer);
@@ -519,6 +537,7 @@
 			{:else}
 				<div class="gap-y-0.5 grid my-1">
 					{#each automations as automation (automation.id)}
+						{@const folderName = getFolderName(automation.folder_id)}
 						<div
 							role="button"
 							tabindex="0"
@@ -545,6 +564,15 @@
 													{automation.name}
 												</div>
 											</Tooltip>
+
+											{#if folderName}
+												<div
+													class="max-w-32 shrink-0 truncate rounded-md bg-sky-500/10 px-1.5 py-0.5 text-[10px] leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
+													title={folderName}
+												>
+													{folderName}
+												</div>
+											{/if}
 
 											<Tooltip
 												content={automation.last_run_at

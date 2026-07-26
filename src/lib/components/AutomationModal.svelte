@@ -8,6 +8,9 @@
 
 	import ScheduleDropdown from '$lib/components/automations/ScheduleDropdown.svelte';
 	import ModelDropdown from '$lib/components/automations/ModelDropdown.svelte';
+	import FolderDropdown from '$lib/components/automations/FolderDropdown.svelte';
+	import { getFolders } from '$lib/apis/folders';
+	import { folders } from '$lib/stores';
 
 	import {
 		createAutomation,
@@ -26,9 +29,11 @@
 	let name = '';
 	let prompt = '';
 	let model_id = '';
+	let folder_id = '';
 	let is_active = true;
 
 	let loading = false;
+	let foldersLoaded = false;
 
 	// Schedule dropdown ref
 	let scheduleDropdown: ScheduleDropdown;
@@ -49,6 +54,7 @@
 		try {
 			const form: AutomationForm = {
 				name: name.trim(),
+				folder_id: folder_id || null,
 				data: {
 					prompt: prompt.trim(),
 					model_id: model_id.trim(),
@@ -77,11 +83,17 @@
 
 	const init = async () => {
 		await tick();
+		if (!foldersLoaded && ($folders ?? []).length === 0) {
+			const res = await getFolders(localStorage.token).catch(() => null);
+			if (res) folders.set(res);
+			foldersLoaded = true;
+		}
 
 		if (automation) {
 			name = automation.name;
 			prompt = automation.data.prompt;
 			model_id = automation.data.model_id;
+			folder_id = automation.folder_id ?? '';
 			is_active = automation.is_active;
 			if (scheduleDropdown) {
 				scheduleDropdown.parseRrule(automation.data.rrule);
@@ -90,6 +102,9 @@
 			name = cloneFrom.name;
 			prompt = cloneFrom.data.prompt;
 			model_id = cloneFrom.data.model_id;
+			folder_id = ($folders ?? []).some((folder) => folder.id === cloneFrom.folder_id)
+				? (cloneFrom.folder_id ?? '')
+				: '';
 			is_active = true;
 			if (scheduleDropdown) {
 				scheduleDropdown.parseRrule(cloneFrom.data.rrule);
@@ -98,6 +113,7 @@
 			name = '';
 			prompt = '';
 			model_id = '';
+			folder_id = '';
 			is_active = true;
 		}
 	};
@@ -145,6 +161,8 @@
 				<ScheduleDropdown bind:this={scheduleDropdown} side="top" align="start" />
 
 				<ModelDropdown bind:model_id side="top" align="start" />
+
+				<FolderDropdown bind:folder_id side="top" align="start" />
 			</div>
 
 			<div class="flex items-center justify-end gap-2 shrink-0">

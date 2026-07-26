@@ -386,6 +386,7 @@
 	const refreshChatRows = async () => {
 		const result = await refreshChatList(localStorage.token, { refreshPinned: true });
 		if (result.accepted) {
+			await initFolders();
 			await Promise.all(Object.values(folderRegistry).map((folder) => folder?.setFolderItems?.()));
 			allChatsLoaded = result.allLoaded;
 			chatListReady = true;

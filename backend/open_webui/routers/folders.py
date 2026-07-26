@@ -12,6 +12,7 @@ from open_webui.config import UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
+from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.config import Config
 from open_webui.models.chats import Chats
 from open_webui.models.folders import (
@@ -22,6 +23,7 @@ from open_webui.models.folders import (
     FolderUpdateForm,
 )
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.automations import Automations
 from open_webui.models.groups import Groups
 from open_webui.models.users import Users
 from open_webui.utils.access_control import has_permission
@@ -30,6 +32,7 @@ from open_webui.utils.access_control import (
 )
 from open_webui.utils.access_control.files import get_accessible_folder_files
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.tasks import has_active_tasks
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -92,9 +95,26 @@ async def get_folders(
                     folder.id, user.id, FolderUpdateForm(data=folder.data), db=db
                 )
 
-        folder_list.append(FolderNameIdResponse(**folder.model_dump()))
+        folder_list.append(folder)
 
-    return folder_list
+    direct_unread_counts = await Chats.count_unread_by_folder_ids(
+        user.id, [folder.id for folder in folder_list], db=db
+    )
+    parent_by_id = {folder.id: folder.parent_id for folder in folder_list}
+    unread_counts = dict.fromkeys(parent_by_id.keys(), 0)
+    for unread_folder_id, unread_count in direct_unread_counts.items():
+        current_id = unread_folder_id
+        seen = set()
+        while current_id and current_id not in seen:
+            seen.add(current_id)
+            if current_id in unread_counts:
+                unread_counts[current_id] += unread_count
+            current_id = parent_by_id.get(current_id)
+
+    return [
+        FolderNameIdResponse(**folder.model_dump(), unread_count=unread_counts.get(folder.id, 0))
+        for folder in folder_list
+    ]
 
 
 ############################
@@ -529,6 +549,9 @@ async def get_shared_folder_chats(
             u = await Users.get_user_by_id(uid, db=db)
             owner_cache[uid] = u.name if u else 'Unknown'
         chat['owner_name'] = owner_cache[uid]
+        chat['active'] = False
+        if await has_active_tasks(request.app.state.redis, chat['id']):
+            chat['active'] = await ChatMessages.has_unfinished_assistant_by_chat_id(chat['id'], db=db)
 
     response = {
         'chats': [{**chat, 'readonly': chat['user_id'] != user.id} for chat in chats],
@@ -606,6 +629,8 @@ async def delete_folder_by_id(
 
                     # Clean up access grants for this folder
                     await AccessGrants.revoke_all_access('folder', folder_id, db=db)
+
+                await Automations.clear_folder_ids(folder_owner_id, folder_ids, db=db)
 
                 await publish_event(
                     request,

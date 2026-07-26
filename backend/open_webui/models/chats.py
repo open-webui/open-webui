@@ -27,6 +27,7 @@ from sqlalchemy import (
     UniqueConstraint,
     and_,
     delete,
+    exists,
     func,
     or_,
     select,
@@ -1434,6 +1435,37 @@ class ChatTable:
                 return row[0] if row else None
         except Exception:
             return None
+
+    async def count_unread_by_folder_ids(
+        self,
+        user_id: str,
+        folder_ids: list[str],
+        db: AsyncSession | None = None,
+    ) -> dict[str, int]:
+        if not folder_ids:
+            return {}
+
+        unfinished_assistant = (
+            select(ChatMessage.id)
+            .where(ChatMessage.chat_id == Chat.id)
+            .where(ChatMessage.role == 'assistant')
+            .where(ChatMessage.done.is_(False))
+            .exists()
+        )
+
+        async with get_async_db_context(db) as session:
+            result = await session.execute(
+                select(Chat.folder_id, func.count(Chat.id))
+                .where(
+                    Chat.user_id == user_id,
+                    Chat.folder_id.in_(folder_ids),
+                    Chat.archived == False,
+                    Chat.updated_at > func.coalesce(Chat.last_read_at, 0),
+                    ~unfinished_assistant,
+                )
+                .group_by(Chat.folder_id)
+            )
+            return {folder_id: count for folder_id, count in result.all() if folder_id}
 
     async def get_chats(self, skip: int = 0, limit: int = 50, db: AsyncSession | None = None) -> list[ChatModel]:
         async with get_async_db_context(db) as session:

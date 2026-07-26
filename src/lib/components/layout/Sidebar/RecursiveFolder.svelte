@@ -77,6 +77,12 @@
 
 	let name = '';
 
+	const formatUnreadCount = (count) =>
+		new Intl.NumberFormat(undefined, {
+			notation: 'compact',
+			compactDisplay: 'short'
+		}).format(count);
+
 	const onDragOver = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
@@ -632,7 +638,9 @@
 					{/if}
 				</button>
 
-				<div class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1">
+				<div
+					class="translate-y-[0.5px] flex min-w-0 flex-1 items-center gap-1.5 pr-6 text-start"
+				>
 					{#if edit}
 						<input
 							id="folder-{folderId}-input"
@@ -660,7 +668,18 @@
 							class="w-full h-full bg-transparent outline-hidden"
 						/>
 					{:else}
-						{folders[folderId].name}
+						<div class="min-w-0 truncate">
+							{folders[folderId].name}
+						</div>
+
+						{#if !folders[folderId]?.shared && (folders[folderId]?.unread_count ?? 0) > 0}
+							<div
+								class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-sky-500/10 px-1 text-[10px] font-semibold leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
+								title={$i18n.t('Unread')}
+							>
+								{formatUnreadCount(folders[folderId].unread_count)}
+							</div>
+						{/if}
 					{/if}
 				</div>
 

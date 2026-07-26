@@ -535,6 +535,14 @@ async def chat_events(sid, data):
     if event_type == 'last_read_at':
         if not await Chats.update_chat_last_read_at_by_id(data['chat_id'], user['id']):
             return
+        await sio.emit(
+            'events',
+            {
+                'chat_id': data['chat_id'],
+                'data': {'type': 'chat:list'},
+            },
+            room=f'user:{user["id"]}',
+        )
         try:
             from open_webui.utils.timers import cancel_timers_for_chat
 

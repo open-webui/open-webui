@@ -34,6 +34,7 @@ from open_webui.internal.db import get_async_db
 from open_webui.models.automations import AutomationModel, AutomationRuns, Automations
 from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.config import Config
+from open_webui.models.folders import Folders
 from open_webui.models.users import Users
 from open_webui.utils.auth import create_token
 from open_webui.utils.misc import parse_duration
@@ -430,7 +431,10 @@ async def execute_automation(app, automation: AutomationModel) -> None:
 
         prompt = await prompt_template(automation.data['prompt'], user)
         model_id = automation.data['model_id']
-        terminal_config = automation.data.get('terminal')
+        folder_id = automation.folder_id
+        if folder_id and not await Folders.get_folder_by_id_and_user_id(folder_id, automation.user_id):
+            await Automations.clear_folder_ids(automation.user_id, [folder_id])
+            folder_id = None
 
         # Generate proper UUIDs for messages (same as frontend)
         user_msg_id = str(uuid4())
@@ -441,6 +445,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             chat_id,
             automation.user_id,
             ChatForm(
+                folder_id=folder_id,
                 chat={
                     'title': automation.name,
                     'models': [model_id],

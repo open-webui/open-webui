@@ -12,6 +12,8 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { chatId } from '$lib/stores';
 
 	dayjs.extend(localizedFormat);
 
@@ -138,6 +140,11 @@
 		{/if}
 
 		{#each chatList as chat, idx (chat.id)}
+			{@const unread =
+				chat.id !== $chatId &&
+				!chat.active &&
+				(chat.last_read_at == null ||
+					(chat.updated_at != null && chat.updated_at > chat.last_read_at))}
 			{#if (idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)) && chat?.time_range}
 				<div
 					class="w-full text-xs text-gray-500 dark:text-gray-500 font-normal {idx === 0
@@ -171,8 +178,24 @@
 				draggable="false"
 				href={`/c/${chat.id}`}
 			>
-				<div class="text-ellipsis line-clamp-1 w-full sm:basis-3/5">
-					{chat?.title}
+				<div class="flex min-w-0 items-center w-full sm:basis-3/5">
+					{#if chat.active}
+						<div class="shrink-0 self-center pr-2">
+							<Spinner className="size-3" />
+						</div>
+					{:else if unread}
+						<div class="shrink-0 self-center pr-2.5 flex transition-opacity duration-300">
+							<div class="size-1.5 bg-sky-500 rounded-full"></div>
+						</div>
+					{/if}
+
+					<div
+						class="text-ellipsis line-clamp-1 min-w-0 {unread
+							? 'font-normal text-gray-800 dark:text-gray-200'
+							: ''}"
+					>
+						{chat?.title}
+					</div>
 				</div>
 
 				<div class="hidden sm:flex sm:basis-2/5 items-center justify-end gap-2">
