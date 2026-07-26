@@ -4,8 +4,12 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import { getContext } from 'svelte';
+	import { v4 as uuidv4 } from 'uuid';
 
 	const i18n = getContext('i18n');
+
+	// ids must be unique per instance: this panel renders in several places at once
+	const uid = uuidv4();
 
 	export let onChange: (params: any) => void = () => {};
 
@@ -106,7 +110,7 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-xs" id={`${uid}-stream_delta_chunk_size-label`}>
 						{$i18n.t('Stream Delta Chunk Size')}
 					</div>
 					<button
@@ -130,7 +134,7 @@
 				<div class="flex mt-0.5 space-x-2">
 					<div class=" flex-1">
 						<input
-							id="steps-range"
+							aria-labelledby={`${uid}-stream_delta_chunk_size-label`}
 							type="range"
 							min="1"
 							max="128"
@@ -143,6 +147,7 @@
 						<input
 							bind:value={params.stream_delta_chunk_size}
 							type="number"
+							aria-labelledby={`${uid}-stream_delta_chunk_size-label`}
 							class=" bg-transparent text-center w-14"
 							min="1"
 							step="any"
@@ -399,7 +404,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-temperature-label`}>
 					{$i18n.t('Temperature')}
 				</div>
 				<button
@@ -422,7 +427,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-temperature-label`}
 						type="range"
 						min="0"
 						max="2"
@@ -435,6 +440,7 @@
 					<input
 						bind:value={params.temperature}
 						type="number"
+						aria-labelledby={`${uid}-temperature-label`}
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="2"
@@ -542,7 +548,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-max_tokens-label`}>
 					{'max_tokens'}
 				</div>
 
@@ -566,7 +572,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-max_tokens-label`}
 						type="range"
 						min="-2"
 						max="131072"
@@ -579,6 +585,7 @@
 					<input
 						bind:value={params.max_tokens}
 						type="number"
+						aria-labelledby={`${uid}-max_tokens-label`}
 						class=" bg-transparent text-center w-14"
 						min="-2"
 						step="1"
@@ -597,7 +604,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-top_k-label`}>
 					{'top_k'}
 				</div>
 				<button
@@ -620,7 +627,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-top_k-label`}
 						type="range"
 						min="0"
 						max="1000"
@@ -633,6 +640,7 @@
 					<input
 						bind:value={params.top_k}
 						type="number"
+						aria-labelledby={`${uid}-top_k-label`}
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="100"
@@ -652,7 +660,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-top_p-label`}>
 					{'top_p'}
 				</div>
 
@@ -676,7 +684,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-top_p-label`}
 						type="range"
 						min="0"
 						max="1"
@@ -689,6 +697,7 @@
 					<input
 						bind:value={params.top_p}
 						type="number"
+						aria-labelledby={`${uid}-top_p-label`}
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="1"
@@ -708,7 +717,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-min_p-label`}>
 					{'min_p'}
 				</div>
 				<button
@@ -731,7 +740,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-min_p-label`}
 						type="range"
 						min="0"
 						max="1"
@@ -744,6 +753,7 @@
 					<input
 						bind:value={params.min_p}
 						type="number"
+						aria-labelledby={`${uid}-min_p-label`}
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="1"
@@ -763,7 +773,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-frequency_penalty-label`}>
 					{'frequency_penalty'}
 				</div>
 
@@ -787,7 +797,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-frequency_penalty-label`}
 						type="range"
 						min="-2"
 						max="2"
@@ -800,6 +810,7 @@
 					<input
 						bind:value={params.frequency_penalty}
 						type="number"
+						aria-labelledby={`${uid}-frequency_penalty-label`}
 						class=" bg-transparent text-center w-14"
 						min="-2"
 						max="2"
@@ -819,7 +830,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-presence_penalty-label`}>
 					{'presence_penalty'}
 				</div>
 
@@ -843,7 +854,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-presence_penalty-label`}
 						type="range"
 						min="-2"
 						max="2"
@@ -856,6 +867,7 @@
 					<input
 						bind:value={params.presence_penalty}
 						type="number"
+						aria-labelledby={`${uid}-presence_penalty-label`}
 						class=" bg-transparent text-center w-14"
 						min="-2"
 						max="2"
@@ -873,7 +885,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-mirostat-label`}>
 					{'mirostat'}
 				</div>
 				<button
@@ -896,7 +908,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-mirostat-label`}
 						type="range"
 						min="0"
 						max="2"
@@ -909,6 +921,7 @@
 					<input
 						bind:value={params.mirostat}
 						type="number"
+						aria-labelledby={`${uid}-mirostat-label`}
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="2"
@@ -928,7 +941,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-mirostat_eta-label`}>
 					{'mirostat_eta'}
 				</div>
 				<button
@@ -951,7 +964,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-mirostat_eta-label`}
 						type="range"
 						min="0"
 						max="1"
@@ -964,6 +977,7 @@
 					<input
 						bind:value={params.mirostat_eta}
 						type="number"
+						aria-labelledby={`${uid}-mirostat_eta-label`}
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="1"
@@ -983,7 +997,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-mirostat_tau-label`}>
 					{'mirostat_tau'}
 				</div>
 
@@ -1007,7 +1021,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-mirostat_tau-label`}
 						type="range"
 						min="0"
 						max="10"
@@ -1020,6 +1034,7 @@
 					<input
 						bind:value={params.mirostat_tau}
 						type="number"
+						aria-labelledby={`${uid}-mirostat_tau-label`}
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="10"
@@ -1037,7 +1052,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-repeat_last_n-label`}>
 					{'repeat_last_n'}
 				</div>
 
@@ -1061,7 +1076,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-repeat_last_n-label`}
 						type="range"
 						min="-1"
 						max="128"
@@ -1074,6 +1089,7 @@
 					<input
 						bind:value={params.repeat_last_n}
 						type="number"
+						aria-labelledby={`${uid}-repeat_last_n-label`}
 						class=" bg-transparent text-center w-14"
 						min="-1"
 						max="128"
@@ -1093,7 +1109,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-tfs_z-label`}>
 					{'tfs_z'}
 				</div>
 
@@ -1117,7 +1133,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-tfs_z-label`}
 						type="range"
 						min="0"
 						max="2"
@@ -1130,6 +1146,7 @@
 					<input
 						bind:value={params.tfs_z}
 						type="number"
+						aria-labelledby={`${uid}-tfs_z-label`}
 						class=" bg-transparent text-center w-14"
 						min="0"
 						max="2"
@@ -1149,7 +1166,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-repeat_penalty-label`}>
 					{'repeat_penalty'}
 				</div>
 
@@ -1173,7 +1190,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-repeat_penalty-label`}
 						type="range"
 						min="-2"
 						max="2"
@@ -1186,6 +1203,7 @@
 					<input
 						bind:value={params.repeat_penalty}
 						type="number"
+						aria-labelledby={`${uid}-repeat_penalty-label`}
 						class=" bg-transparent text-center w-14"
 						min="-2"
 						max="2"
@@ -1206,7 +1224,7 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-xs" id={`${uid}-use_mmap-label`}>
 						{'use_mmap'}
 					</div>
 					<button
@@ -1231,7 +1249,7 @@
 						{params.use_mmap ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 					</div>
 					<div class=" pr-2">
-						<Switch bind:state={params.use_mmap} />
+						<Switch bind:state={params.use_mmap} ariaLabelledbyId={`${uid}-use_mmap-label`} />
 					</div>
 				</div>
 			{/if}
@@ -1246,7 +1264,7 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-xs" id={`${uid}-use_mlock-label`}>
 						{'use_mlock'}
 					</div>
 
@@ -1273,7 +1291,7 @@
 					</div>
 
 					<div class=" pr-2">
-						<Switch bind:state={params.use_mlock} />
+						<Switch bind:state={params.use_mlock} ariaLabelledbyId={`${uid}-use_mlock-label`} />
 					</div>
 				</div>
 			{/if}
@@ -1381,7 +1399,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-num_keep-label`}>
 					{'num_keep'} ({$i18n.t('Ollama')})
 				</div>
 
@@ -1405,7 +1423,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-num_keep-label`}
 						type="range"
 						min="-1"
 						max="10240000"
@@ -1418,6 +1436,7 @@
 					<input
 						bind:value={params.num_keep}
 						type="number"
+						aria-labelledby={`${uid}-num_keep-label`}
 						class=" bg-transparent text-center w-14"
 						min="-1"
 						step="1"
@@ -1434,7 +1453,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-num_ctx-label`}>
 					{'num_ctx'} ({$i18n.t('Ollama')})
 				</div>
 
@@ -1458,7 +1477,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-num_ctx-label`}
 						type="range"
 						min="-1"
 						max="10240000"
@@ -1471,6 +1490,7 @@
 					<input
 						bind:value={params.num_ctx}
 						type="number"
+						aria-labelledby={`${uid}-num_ctx-label`}
 						class=" bg-transparent text-center w-14"
 						min="-1"
 						step="1"
@@ -1489,7 +1509,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs">
+				<div class=" self-center text-xs" id={`${uid}-num_batch-label`}>
 					{'num_batch'} ({$i18n.t('Ollama')})
 				</div>
 
@@ -1513,7 +1533,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
+						aria-labelledby={`${uid}-num_batch-label`}
 						type="range"
 						min="256"
 						max="8192"
@@ -1526,6 +1546,7 @@
 					<input
 						bind:value={params.num_batch}
 						type="number"
+						aria-labelledby={`${uid}-num_batch-label`}
 						class=" bg-transparent text-center w-14"
 						min="256"
 						step="256"
@@ -1545,7 +1566,7 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-xs" id={`${uid}-num_thread-label`}>
 						{'num_thread'} ({$i18n.t('Ollama')})
 					</div>
 
@@ -1569,7 +1590,7 @@
 				<div class="flex mt-0.5 space-x-2">
 					<div class=" flex-1">
 						<input
-							id="steps-range"
+							aria-labelledby={`${uid}-num_thread-label`}
 							type="range"
 							min="1"
 							max="256"
@@ -1582,6 +1603,7 @@
 						<input
 							bind:value={params.num_thread}
 							type="number"
+							aria-labelledby={`${uid}-num_thread-label`}
 							class=" bg-transparent text-center w-14"
 							min="1"
 							max="256"
@@ -1601,7 +1623,7 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-xs" id={`${uid}-num_gpu-label`}>
 						{'num_gpu'} ({$i18n.t('Ollama')})
 					</div>
 
@@ -1625,7 +1647,7 @@
 				<div class="flex mt-0.5 space-x-2">
 					<div class=" flex-1">
 						<input
-							id="steps-range"
+							aria-labelledby={`${uid}-num_gpu-label`}
 							type="range"
 							min="0"
 							max="256"
@@ -1638,6 +1660,7 @@
 						<input
 							bind:value={params.num_gpu}
 							type="number"
+							aria-labelledby={`${uid}-num_gpu-label`}
 							class=" bg-transparent text-center w-14"
 							min="0"
 							max="256"
