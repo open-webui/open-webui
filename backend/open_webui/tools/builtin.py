@@ -3115,6 +3115,34 @@ from pydantic import BaseModel, Field
 
 VALID_TASK_STATUSES = {'pending', 'in_progress', 'completed', 'cancelled'}
 
+# Temporary chats (chat_id prefixed "local:"/"channel:") have no row in the `chats`
+# table, so Chats.update_chat_tasks_by_id is a silent no-op and get_chat_tasks_by_id
+# returns []. That breaks the create_tasks -> update_task flow (update_task can never
+# find the task it just created). Back those chats with a bounded in-memory store so
+# the task checklist still works. create_tasks and update_task for a temporary chat
+# run within the same assistant turn (one request, one worker), so this is sufficient;
+# temporary chats are never persisted, so tasks intentionally do not survive a reload.
+from collections import OrderedDict
+
+_TEMP_CHAT_TASKS: "OrderedDict[str, list[dict]]" = OrderedDict()
+_TEMP_CHAT_TASKS_MAX = 1000
+
+
+def _is_temporary_chat(chat_id: Optional[str]) -> bool:
+    """True for per-socket temporary/channel chats that have no persisted DB row."""
+    return bool(chat_id) and chat_id.startswith(('local:', 'channel:'))
+
+
+def _store_temp_chat_tasks(chat_id: str, tasks: list[dict]) -> None:
+    _TEMP_CHAT_TASKS[chat_id] = tasks
+    _TEMP_CHAT_TASKS.move_to_end(chat_id)
+    while len(_TEMP_CHAT_TASKS) > _TEMP_CHAT_TASKS_MAX:
+        _TEMP_CHAT_TASKS.popitem(last=False)
+
+
+def _load_temp_chat_tasks(chat_id: str) -> list[dict]:
+    return _TEMP_CHAT_TASKS.get(chat_id, [])
+
 
 class TaskItem(BaseModel):
     id: Optional[str] = Field(None, description='Unique identifier for the task. Auto-generated if omitted.')
@@ -3188,7 +3216,10 @@ async def create_tasks(
 
             all_tasks.append({'id': item_id, 'content': content, 'status': status})
 
-        await Chats.update_chat_tasks_by_id(__chat_id__, all_tasks)
+        if _is_temporary_chat(__chat_id__):
+            _store_temp_chat_tasks(__chat_id__, all_tasks)
+        else:
+            await Chats.update_chat_tasks_by_id(__chat_id__, all_tasks)
         await _emit_tasks(__event_emitter__, all_tasks)
 
         return json.dumps(
@@ -3226,7 +3257,8 @@ async def update_task(
                 {'error': f'Invalid status: {status}. Must be one of: {", ".join(sorted(VALID_TASK_STATUSES))}'}
             )
 
-        all_tasks = await Chats.get_chat_tasks_by_id(__chat_id__)
+        is_temp = _is_temporary_chat(__chat_id__)
+        all_tasks = _load_temp_chat_tasks(__chat_id__) if is_temp else await Chats.get_chat_tasks_by_id(__chat_id__)
 
         found = False
         for task in all_tasks:
@@ -3238,7 +3270,10 @@ async def update_task(
         if not found:
             return json.dumps({'error': f'Task with id "{id}" not found'})
 
-        await Chats.update_chat_tasks_by_id(__chat_id__, all_tasks)
+        if is_temp:
+            _store_temp_chat_tasks(__chat_id__, all_tasks)
+        else:
+            await Chats.update_chat_tasks_by_id(__chat_id__, all_tasks)
         await _emit_tasks(__event_emitter__, all_tasks)
 
         return json.dumps(
