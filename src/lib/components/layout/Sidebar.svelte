@@ -27,7 +27,12 @@
 		WEBUI_NAME,
 		sidebarWidth
 	} from '$lib/stores';
-	import { loadNextChatListPage, refreshChatList, setChatActive } from '$lib/stores/chatList';
+	import {
+		loadNextChatListPage,
+		refreshChatList,
+		registerFolderRefreshHandler,
+		setChatActive
+	} from '$lib/stores/chatList';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -649,6 +654,10 @@
 		socketInstance?.on('events', chatActiveEventHandler);
 		socketInstance?.on('connect', refreshChatRows);
 
+		const unregisterFolderRefreshHandler = registerFolderRefreshHandler(() =>
+			Promise.all(Object.values(folderRegistry).map((folder) => folder?.setFolderItems?.()))
+		);
+
 		await tick();
 		initPinnedMenuSortable();
 
@@ -672,6 +681,8 @@
 
 			socketInstance?.off('events', chatActiveEventHandler);
 			socketInstance?.off('connect', refreshChatRows);
+
+			unregisterFolderRefreshHandler();
 		};
 	});
 
