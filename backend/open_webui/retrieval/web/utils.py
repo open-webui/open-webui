@@ -606,56 +606,62 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
     def _intercept_navigation_sync(self, route, request=None):
         req = request or route.request
 
-        if req.resource_type != 'document':
-            route.continue_()
-            return
-
         try:
             validate_url(req.url)
+            resp = route.fetch(max_redirects=0)
+
+            if 300 <= resp.status < 400:
+                for _ in range(20):
+                    if not AIOHTTP_CLIENT_ALLOW_REDIRECTS:
+                        route.abort()
+                        return
+
+                    location = resp.headers.get('location')
+                    if not location:
+                        break
+
+                    url = urllib.parse.urljoin(resp.url, location)
+                    validate_url(url)
+                    resp = route.fetch(url=url, max_redirects=0)
+                    if not 300 <= resp.status < 400:
+                        break
+                else:
+                    route.abort()
+                    return
         except Exception:
             route.abort()
             return
-
-        if AIOHTTP_CLIENT_ALLOW_REDIRECTS:
-            resp = route.fetch()
-        else:
-            try:
-                resp = route.fetch(max_redirects=0)
-            except TypeError:
-                route.abort()
-                return
-
-            if 300 <= resp.status < 400:
-                route.abort()
-                return
 
         route.fulfill(response=resp)
 
     async def _intercept_navigation(self, route, request=None):
         req = request or route.request
 
-        if req.resource_type != 'document':
-            await route.continue_()
-            return
-
         try:
             await run_in_threadpool(validate_url, req.url)
+            resp = await route.fetch(max_redirects=0)
+
+            if 300 <= resp.status < 400:
+                for _ in range(20):
+                    if not AIOHTTP_CLIENT_ALLOW_REDIRECTS:
+                        await route.abort()
+                        return
+
+                    location = resp.headers.get('location')
+                    if not location:
+                        break
+
+                    url = urllib.parse.urljoin(resp.url, location)
+                    await run_in_threadpool(validate_url, url)
+                    resp = await route.fetch(url=url, max_redirects=0)
+                    if not 300 <= resp.status < 400:
+                        break
+                else:
+                    await route.abort()
+                    return
         except Exception:
             await route.abort()
             return
-
-        if AIOHTTP_CLIENT_ALLOW_REDIRECTS:
-            resp = await route.fetch()
-        else:
-            try:
-                resp = await route.fetch(max_redirects=0)
-            except TypeError:
-                await route.abort()
-                return
-
-            if 300 <= resp.status < 400:
-                await route.abort()
-                return
 
         await route.fulfill(response=resp)
 
@@ -674,8 +680,9 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                 for url in self.urls:
                     try:
                         self._safe_process_url_sync(url)
-                        with browser.new_page() as page:
+                        with browser.new_page(service_workers='block') as page:
                             page.route('**/*', self._intercept_navigation_sync)
+                            page.route_web_socket('**/*', lambda ws_route: ws_route.close())
                             response = page.goto(url, timeout=self.playwright_timeout)
                             if response is None:
                                 raise ValueError(f'page.goto() returned None for url {url}')
@@ -704,8 +711,9 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                 for url in self.urls:
                     try:
                         await self._safe_process_url(url)
-                        async with await browser.new_page() as page:
+                        async with await browser.new_page(service_workers='block') as page:
                             await page.route('**/*', self._intercept_navigation)
+                            await page.route_web_socket('**/*', lambda ws_route: ws_route.close())
                             response = await page.goto(url, timeout=self.playwright_timeout)
                             if response is None:
                                 raise ValueError(f'page.goto() returned None for url {url}')
