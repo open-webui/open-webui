@@ -15,6 +15,7 @@ from types import SimpleNamespace
 from typing import Literal, Optional
 
 import aiohttp
+import jwt
 from authlib.integrations.starlette_client import OAuth
 from authlib.oauth2.rfc6749.errors import OAuth2Error
 from authlib.oidc.core import UserInfo
@@ -211,19 +212,28 @@ def _normalize_token_expiry(token: dict) -> dict:
     token['issued_at'] = datetime.now().timestamp()
 
     if token.get('expires_at') is not None:
-        token['expires_at'] = int(token['expires_at'])
-        return token
+        expires_at = int(token['expires_at'])
+    elif token.get('expires_in') is not None:
+        expires_at = int(datetime.now().timestamp() + token['expires_in'])
+    else:
+        # Neither field present — conservative fallback
+        log.warning(
+            "OAuth token response missing both 'expires_in' and 'expires_at'; "
+            f'defaulting to {DEFAULT_TOKEN_EXPIRY_SECONDS}s from now'
+        )
+        expires_at = int(datetime.now().timestamp() + DEFAULT_TOKEN_EXPIRY_SECONDS)
 
-    if token.get('expires_in') is not None:
-        token['expires_at'] = int(datetime.now().timestamp() + token['expires_in'])
-        return token
+    id_token = token.get('id_token')
+    if id_token:
+        # Cap at the id_token expiry so pipes and tools never receive an expired JWT
+        try:
+            exp = jwt.decode(id_token, options={'verify_signature': False}).get('exp')
+            if exp is not None:
+                expires_at = min(expires_at, int(exp))
+        except Exception as e:
+            log.debug(f'Could not read exp from id_token: {e}')
 
-    # Neither field present — conservative fallback
-    log.warning(
-        "OAuth token response missing both 'expires_in' and 'expires_at'; "
-        f'defaulting to {DEFAULT_TOKEN_EXPIRY_SECONDS}s from now'
-    )
-    token['expires_at'] = int(datetime.now().timestamp() + DEFAULT_TOKEN_EXPIRY_SECONDS)
+    token['expires_at'] = expires_at
     return token
 
 
