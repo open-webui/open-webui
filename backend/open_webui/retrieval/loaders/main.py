@@ -27,7 +27,7 @@ from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
 from open_webui.retrieval.loaders.mineru import MinerULoader
 from open_webui.retrieval.loaders.mistral import MistralLoader
-from open_webui.retrieval.loaders.paddleocr_vl import PaddleOCRVLLoader
+from open_webui.retrieval.loaders.paddleocr_vl import PADDLEOCR_VL_SUPPORTED_EXTENSIONS, PaddleOCRVLLoader
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -556,7 +556,12 @@ class Loader:
                 use_base64=self.kwargs.get('MISTRAL_OCR_USE_BASE64', False),
                 user=self.user,
             )
-        elif self.engine == 'paddleocr_vl' and self.kwargs.get('PADDLEOCR_VL_TOKEN') != '':
+        elif (
+            self.engine == 'paddleocr_vl'
+            and self.kwargs.get('PADDLEOCR_VL_BASE_URL')
+            and self.kwargs.get('PADDLEOCR_VL_TOKEN')
+            and file_ext in PADDLEOCR_VL_SUPPORTED_EXTENSIONS
+        ):
             loader = PaddleOCRVLLoader(
                 api_url=self.kwargs.get('PADDLEOCR_VL_BASE_URL'),
                 token=self.kwargs.get('PADDLEOCR_VL_TOKEN'),
