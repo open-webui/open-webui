@@ -199,6 +199,9 @@
 	const openSettingsFromUrl = async () => {
 		const requestedSettings = $page.url.searchParams.get('settings');
 		if (!requestedSettings) {
+			// Param handled and stripped; allow the same deep link to be
+			// handled again later in this session.
+			handledSettingsUrl = '';
 			return;
 		}
 
@@ -382,7 +385,10 @@
 		loaded = true;
 	});
 
-	$: if (loaded) {
+	// `$page.url` must be referenced here: `$:` only tracks variables used in
+	// the statement itself, and reads inside openSettingsFromUrl don't count —
+	// without it, client-side navigations to `?settings=...` are never handled.
+	$: if (loaded && $page.url) {
 		void openSettingsFromUrl();
 	}
 
