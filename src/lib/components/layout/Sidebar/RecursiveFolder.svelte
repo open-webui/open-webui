@@ -569,7 +569,6 @@
 					renameHandler();
 				}}
 				on:click={async (e) => {
-					(e) => e.stopPropagation();
 					if (clickTimer) {
 						clearTimeout(clickTimer);
 						clickTimer = null;
