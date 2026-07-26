@@ -131,8 +131,7 @@ class MilvusClient(VectorDBBase):
         self.client.create_collection(collection_name=mt_collection_name, schema=schema)
         self.client.create_index(collection_name=mt_collection_name, index_params=vector_index)
         try:
-            # A Milvus server auto-selects the scalar index type; embedded
-            # Milvus Lite requires an explicit one.
+            # A Milvus server auto-selects the scalar index type from a parameterless call.
             self.client.create_index(
                 collection_name=mt_collection_name,
                 index_params=self.client.prepare_index_params(field_name=RESOURCE_ID_FIELD),
