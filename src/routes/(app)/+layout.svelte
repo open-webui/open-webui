@@ -199,6 +199,9 @@
 	const openSettingsFromUrl = async () => {
 		const requestedSettings = $page.url.searchParams.get('settings');
 		if (!requestedSettings) {
+			// Param handled and stripped; allow the same deep link to be
+			// handled again later in this session.
+			handledSettingsUrl = '';
 			return;
 		}
 
@@ -224,9 +227,14 @@
 		});
 	};
 
+	const gotoAuth = async () => {
+		const currentUrl = `${$page.url.pathname}${$page.url.search}`;
+		await goto(`/auth?redirect=${encodeURIComponent(currentUrl)}`);
+	};
+
 	onMount(async () => {
 		if ($user === undefined || $user === null) {
-			await goto('/auth');
+			await gotoAuth();
 			return;
 		}
 		if (!['user', 'admin'].includes($user?.role)) {
@@ -382,8 +390,15 @@
 		loaded = true;
 	});
 
-	$: if (loaded) {
+	// `$page.url` must be referenced here: `$:` only tracks variables used in
+	// the statement itself, and reads inside openSettingsFromUrl don't count —
+	// without it, client-side navigations to `?settings=...` are never handled.
+	$: if (loaded && $page.url) {
 		void openSettingsFromUrl();
+	}
+
+	$: if (loaded && ($user === undefined || $user === null)) {
+		void gotoAuth();
 	}
 
 	const checkForVersionUpdates = async () => {

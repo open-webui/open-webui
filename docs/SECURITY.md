@@ -44,7 +44,7 @@ If your report describes a real vulnerability under this policy, here's what you
 - **Coordinated disclosure.** We won't publish out from under you while you're still working the issue with us. Status moves visibly on the advisory itself — including the CVE request — and GitHub notifies you of those updates, so you can follow it through to publication.
 - **A real fix, handled responsibly.** For findings with broad or severe real-world impact, we may hold publication for up to ~2 weeks after the patched release so administrators can update before details are public.
 
-We're a small volunteer team, so what we _can't_ offer is a bounty or a guaranteed turnaround. What you get is a serious fix, honest credit, and a process that treats your work as the contribution it is.
+What we _can't_ offer is a bounty or a guaranteed turnaround. What you get is a serious fix, honest credit, and a process that treats your work as the contribution it is.
 
 ## Alignment with the CVE Program
 
@@ -54,7 +54,7 @@ The **CVE Program rules** (and CNA operational rules) are the **baseline** for a
 
 We accept vulnerability reports **only** through [GitHub Security Advisories](https://github.com/open-webui/open-webui/security/advisories/new). Reports submitted through **any** other platform — including but not limited to third-party vulnerability reporting platforms, vulnerability brokers, social media, email, Discord, or Reddit — will not be processed.
 
-This is not a procedural preference. As a volunteer- and community-driven project, our security process is built around the same transparency and direct community interaction as the rest of our work, and GitHub Security Advisories is where that process lives. We do not and cannot monitor or engage with external reporting platforms, and reports arriving through them will be closed without review.
+This is not a procedural preference. Our security process is built around the same transparency as the rest of our work, and GitHub Security Advisories is the single authoritative channel where that process lives. We do not and cannot monitor or engage with external reporting platforms, and reports arriving through them will be closed without review.
 
 A report filed on another platform has no standing here: it confers no priority, establishes no filing date, and creates no obligation for us to triage, publish, or otherwise consider it. Only the GitHub Security Advisory record exists for the purposes of this policy — including determining who filed first.
 
@@ -159,11 +159,11 @@ If you want to report something that does not fulfill our rules and guidelines l
 
 ## Expected Timeframe
 
-We aim to triage new reports, ship fixes, and publish advisories promptly. However, due to the very high volume of incoming vulnerability reports, issues, discussions, pull requests, and general project maintenance — lately compounded by a high number of (AI-generated) reports — our capacity to respond is limited. Open WebUI is a community-driven project maintained by a small team, and security reports are handled alongside all other project responsibilities.
+We aim to triage new reports, ship fixes, and publish advisories promptly. However, due to the very high volume of incoming vulnerability reports, issues, discussions, pull requests, and general project maintenance — lately compounded by a high number of (AI-generated) reports — not every report can be handled immediately. Open WebUI is led and maintained by a small core team, and security reports are handled alongside all other project responsibilities.
 
-**Please expect several weeks** for your report to be triaged, investigated, fixed, and published. While we aim to respond to every report as quickly as possible, it is normal to experience periods of silence lasting up to several weeks. **This does not mean your report has been ignored** — it means we have not yet had the capacity to address it. Feel free to post a follow-up comment on your advisory for visibility if you feel your report may have been lost; we'll get to you as soon as our capacity allows. The entire process can realistically take multiple weeks from initial submission to final publication. We appreciate your patience and understanding.
+**Please expect several weeks** for your report to be triaged, investigated, fixed, and published. While we aim to respond to every report as quickly as possible, it is normal to experience periods of silence lasting up to several weeks. **This does not mean your report has been ignored** — it means it has not yet been picked up. Feel free to post a follow-up comment on your advisory for visibility if you feel your report may have been lost; we'll get to you as we work through the reports. The entire process can realistically take multiple weeks from initial submission to final publication. We appreciate your patience and understanding.
 
-**We do not accept reporter-imposed publishing deadlines.** We coordinate disclosure on our own schedule, and we will triage, fix, and publish as fast as we reasonably can. Externally-imposed hard timelines do not speed this up — they do the opposite: they pull our limited time away from actually fixing issues and toward managing a clock, **at the expense of every other report (even ones that might be more serious)** in the queue and the project as a whole. A deadline attached to your report will not change when or how fast it is handled.
+**We do not accept reporter-imposed publishing deadlines.** We coordinate disclosure on our own schedule, and we will triage, fix, and publish as fast as we reasonably can. Externally-imposed hard timelines do not speed this up — they do the opposite: they pull our time away from actually fixing issues and toward managing a clock, **at the expense of every other report (even ones that might be more serious)** in the queue and the project as a whole. A deadline attached to your report will not change when or how fast it is handled.
 
 For findings we judge to have **broad or severe real-world impact** — regardless of CVSS score — we may hold off on publishing for a couple of days, max ~2 weeks after the patched version is released, to give administrators time to update their instances.
 
@@ -206,4 +206,4 @@ For any other immediate concerns and questions, please create an issue in our [i
 
 ---
 
-_Last updated on **2026-06-13**._
+_Last updated on **2026-07-24**._

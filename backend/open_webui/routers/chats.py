@@ -6,8 +6,9 @@ import logging
 from typing import Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.responses import StreamingResponse
+from fastapi.security import HTTPAuthorizationCredentials
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
@@ -37,7 +38,7 @@ from open_webui.socket.main import get_event_emitter
 from open_webui.tasks import has_active_tasks, stop_item_tasks
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.folders import has_folder_access
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import bearer_security, get_admin_user, get_current_user, get_verified_user
 from open_webui.utils.chat_fork import build_fork_history
 from open_webui.utils.context_compaction import compact_chat_branch, get_chat_context_usage
 from open_webui.utils.misc import get_message_list
@@ -58,6 +59,47 @@ CHAT_CONFIG_KEYS = {
     'CONTEXT_COMPACTION_RETENTION_PERCENTAGE': 'chat.context_compaction.retention_percentage',
     'CONTEXT_COMPACTION_PROMPT_TEMPLATE': 'chat.context_compaction.prompt_template',
 }
+
+
+async def get_optional_verified_user(
+    request: Request,
+    response: Response,
+    background_tasks: BackgroundTasks,
+    auth_token: HTTPAuthorizationCredentials | None = Depends(bearer_security),
+):
+    try:
+        user = await get_current_user(request, response, background_tasks, auth_token)
+    except HTTPException:
+        return None
+
+    if user.role not in {'user', 'admin'}:
+        return None
+    return user
+
+
+async def is_open_shared_chat(shared, db: AsyncSession) -> bool:
+    return await AccessGrants.has_anyone_access(
+        resource_type='shared_chat',
+        resource_id=shared.chat_id,
+        permission='read',
+        db=db,
+    )
+
+
+async def can_read_shared_chat(user, shared, db: AsyncSession) -> bool:
+    if user.role == 'pending':
+        return False
+    if user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
+        return True
+    if shared.user_id == user.id:
+        return True
+    return await AccessGrants.has_access(
+        user_id=user.id,
+        resource_type='shared_chat',
+        resource_id=shared.chat_id,
+        permission='read',
+        db=db,
+    )
 
 
 async def add_active_state_to_chat_list(
@@ -1082,38 +1124,30 @@ async def get_shared_session_user_chat_list(
 
 @router.get('/share/{share_id}', response_model=ChatResponse | None)
 async def get_shared_chat_by_id(
-    share_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    share_id: str, user=Depends(get_optional_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
-    if user.role == 'pending':
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
+    shared = await SharedChats.get_by_id(share_id, db=db)
+    if shared:
+        if await is_open_shared_chat(shared, db=db) or (
+            user is not None and await can_read_shared_chat(user, shared, db=db)
+        ):
+            chat = await Chats.get_chat_by_share_id(share_id, db=db)
+            if chat:
+                return ChatResponse(**chat.model_dump())
 
-    chat = await Chats.get_chat_by_share_id(share_id, db=db)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED if user else ERROR_MESSAGES.INVALID_TOKEN,
+        )
 
     # Fallback: admins can also access any chat directly by chat ID
-    if not chat and user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
+    chat = None
+    if user is not None and user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS:
         chat = await Chats.get_chat_by_id(share_id, db=db)
+        if chat:
+            return ChatResponse(**chat.model_dump())
 
-    if not chat:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
-
-    # Look up the original chat_id to check access grants (admins bypass)
-    if user.role != 'admin' or not ENABLE_ADMIN_CHAT_ACCESS:
-        shared = await SharedChats.get_by_id(share_id, db=db)
-        if shared and shared.user_id != user.id:
-            has_grant = await AccessGrants.has_access(
-                user_id=user.id,
-                resource_type='shared_chat',
-                resource_id=shared.chat_id,
-                permission='read',
-                db=db,
-            )
-            if not has_grant:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-                )
-
-    return ChatResponse(**chat.model_dump())
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
 
 ############################
@@ -1753,7 +1787,7 @@ async def clone_shared_chat_by_id(
     # Enforce access grants (owner and admins bypass)
     shared = await SharedChats.get_by_id(id, db=db)
     if shared and user.role != 'admin' and shared.user_id != user.id:
-        has_grant = await AccessGrants.has_access(
+        has_grant = await is_open_shared_chat(shared, db=db) or await AccessGrants.has_access(
             user_id=user.id,
             resource_type='shared_chat',
             resource_id=shared.chat_id,
@@ -1948,6 +1982,8 @@ async def update_shared_chat_access_by_id(
         user.role,
         form_data.access_grants,
         'sharing.public_chats',
+        'sharing.open_chats',
+        db=db,
     )
 
     await AccessGrants.set_access_grants('shared_chat', id, form_data.access_grants, db=db)

@@ -913,23 +913,22 @@ def resolve_schema(schema, components, resolved_schemas=None):
             # Avoid infinite recursion on circular references
             return {}
 
-        resolved_schemas.add(schema_name)
-
         ref_parts = ref_path.strip('#/').split('/')
         resolved = components
         for part in ref_parts[1:]:  # Skip the initial 'components'
             resolved = resolved.get(part, {})
-        return resolve_schema(resolved, components, resolved_schemas)
+        # Per-path visited set so sibling refs to the same schema still resolve
+        return resolve_schema(resolved, components, resolved_schemas | {schema_name})
 
     resolved_schema = copy.deepcopy(schema)
 
     # Recursively resolve inner schemas
     if 'properties' in resolved_schema:
         for prop, prop_schema in resolved_schema['properties'].items():
-            resolved_schema['properties'][prop] = resolve_schema(prop_schema, components)
+            resolved_schema['properties'][prop] = resolve_schema(prop_schema, components, resolved_schemas)
 
     if 'items' in resolved_schema:
-        resolved_schema['items'] = resolve_schema(resolved_schema['items'], components)
+        resolved_schema['items'] = resolve_schema(resolved_schema['items'], components, resolved_schemas)
 
     # Resolve composition keywords (oneOf, anyOf, allOf) which may contain $ref
     for keyword in ('oneOf', 'anyOf', 'allOf'):

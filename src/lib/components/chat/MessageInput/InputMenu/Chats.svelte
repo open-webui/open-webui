@@ -25,11 +25,13 @@
 	let itemsLoading = false;
 	let allItemsLoaded = false;
 	let initialized = false;
+	let searchedQuery = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let requestId = 0;
 
-	$: if (initialized) {
-		query;
+	// Only re-run the search when the query actually changes. Flipping `initialized`
+	// after the initial load would otherwise trigger a second, identical request.
+	$: if (initialized && query !== searchedQuery) {
 		scheduleSearch();
 	}
 
@@ -40,6 +42,7 @@
 
 	const init = async () => {
 		requestId += 1;
+		searchedQuery = query;
 		page = 1;
 		items = [];
 		selectedIdx = 0;

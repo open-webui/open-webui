@@ -7,14 +7,13 @@ authors = [
 license = { file = "LICENSE" }
 dependencies = [
     "fastapi==0.136.3",
-    "uvicorn[standard]==0.41.0",
+    "uvicorn[standard]==0.51.0",
     "pydantic==2.13.4",
     "python-multipart==0.0.32",
     "itsdangerous==2.2.0",
 
     "python-socketio==5.16.2",
     "orjson==3.11.9",
-    "python-jose==3.5.0",
     "cryptography==48.0.0",
     "bcrypt==5.0.0",
     "argon2-cffi==25.1.0",
@@ -86,6 +85,7 @@ dependencies = [
     "nltk==3.9.4",
     "Markdown==3.10.2",
     "beautifulsoup4==4.14.3",
+    "lxml==6.1.1",
     "pypandoc==1.17",
     "pandas==3.0.3",
     "openpyxl==3.1.5",

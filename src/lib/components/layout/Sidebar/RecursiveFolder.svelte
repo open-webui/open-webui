@@ -420,7 +420,7 @@
 			} finally {
 				chatsLoading = false;
 			}
-		} else {
+		} else if (!open) {
 			chats = null;
 			chatsPage = 1;
 			hasMoreChats = false;
@@ -569,7 +569,6 @@
 					renameHandler();
 				}}
 				on:click={async (e) => {
-					(e) => e.stopPropagation();
 					if (clickTimer) {
 						clearTimeout(clickTimer);
 						clickTimer = null;

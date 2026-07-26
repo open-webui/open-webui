@@ -17,7 +17,6 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
-from open_webui.models.users import Users
 from open_webui.utils.access_control import has_connection_access
 from open_webui.utils.auth import get_verified_user
 from open_webui.utils.terminals import get_terminal_server_url
@@ -208,7 +207,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     import asyncio
     import json
 
-    from open_webui.utils.auth import decode_token, is_valid_token
+    from open_webui.utils.auth import get_verified_user_by_token
 
     # First-message authentication
     try:
@@ -217,14 +216,9 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
         if payload.get('type') != 'auth':
             await ws.close(code=4001, reason='Expected auth message')
             return None
-        token = payload.get('token', '')
-        data = decode_token(token)
-        if data is None or 'id' not in data or not await is_valid_token(data, getattr(ws.app.state, 'redis', None)):
-            await ws.close(code=4001, reason='Invalid token')
-            return None
-        user = await Users.get_user_by_id(data['id'])
+        user = await get_verified_user_by_token(payload.get('token', ''), getattr(ws.app.state, 'redis', None))
         if user is None:
-            await ws.close(code=4001, reason='User not found')
+            await ws.close(code=4001, reason='Invalid token')
             return None
     except (asyncio.TimeoutError, json.JSONDecodeError):
         await ws.close(code=4001, reason='Auth timeout or invalid payload')
