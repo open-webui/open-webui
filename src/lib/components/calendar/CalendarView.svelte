@@ -145,7 +145,7 @@
 		<div class="flex-1 flex flex-col min-h-0 px-3 pb-3">
 			<div class="grid grid-cols-7">
 				{#each DAY_NAMES as day}
-					<div class="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500 text-left truncate">
+					<div class="px-2 py-1.5 text-xs text-gray-600 dark:text-gray-500 text-left truncate">
 						{$i18n.t(day)}
 					</div>
 				{/each}
@@ -188,7 +188,7 @@
 							{#if dayEvents.length > 3}
 								<!-- svelte-ignore a11y-click-events-have-key-events --><!-- svelte-ignore a11y-no-static-element-interactions -->
 								<div
-									class="text-[10px] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
+									class="text-[10px] text-gray-600 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
 									on:click|stopPropagation={() => goToDayView(day)}
 								>
 									+{dayEvents.length - 3} more
@@ -218,7 +218,7 @@
 										? 'border-l border-gray-100/20 dark:border-gray-850/20'
 										: ''}"
 								>
-									<div class="text-[11px] text-gray-400 dark:text-gray-500">
+									<div class="text-[11px] text-gray-600 dark:text-gray-500">
 										{DAY_NAMES[day.getDay()]}
 									</div>
 									<div
@@ -242,7 +242,7 @@
 										: ''}"
 								>
 									<div
-										class="text-[10px] text-gray-400 dark:text-gray-500 text-right pr-2 select-none -mt-1.5 z-10"
+										class="text-[10px] text-gray-600 dark:text-gray-500 text-right pr-2 select-none -mt-1.5 z-10"
 									>
 										{hour > 0 ? formatHour(hour) : ''}
 									</div>
@@ -265,7 +265,7 @@
 												{#if hourEvents.length > 3}
 													<!-- svelte-ignore a11y-click-events-have-key-events --><!-- svelte-ignore a11y-no-static-element-interactions -->
 													<div
-														class="text-[10px] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
+														class="text-[10px] text-gray-600 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
 														on:click|stopPropagation={() => goToDayView(day)}
 													>
 														+{hourEvents.length - 3} more
@@ -296,7 +296,7 @@
 							: ''}"
 					>
 						<div
-							class="w-14 shrink-0 text-[10px] text-gray-400 dark:text-gray-500 text-right pr-3 mt-1 select-none"
+							class="w-14 shrink-0 text-[10px] text-gray-600 dark:text-gray-500 text-right pr-3 mt-1 select-none"
 						>
 							{formatHour(hour)}
 						</div>

@@ -307,7 +307,7 @@
 			>
 				<div class="flex min-w-0 items-center gap-1.5">
 					{$i18n.t('User Variables')}
-					<span class="text-gray-400 dark:text-gray-600">{variableRows.length}</span>
+					<span class="text-gray-600 dark:text-gray-400">{variableRows.length}</span>
 				</div>
 				<button class={actionButtonClass} type="button" on:click={() => openVariableModal()}>
 					{$i18n.t('Add')}
@@ -329,13 +329,13 @@
 				{/each}
 
 				{#if variableRows.length === 0}
-					<div class="text-xs text-gray-400 dark:text-gray-600">
+					<div class="text-xs text-gray-600 dark:text-gray-400">
 						{$i18n.t('No user variables configured.')}
 					</div>
 				{/if}
 			</div>
 
-			<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+			<div class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 				{$i18n.t('Use these in model system prompts as {{example}}.', {
 					example: '{{user.variables.key_name}}'
 				})}
@@ -540,7 +540,7 @@
 			{variableFormIndex === null ? $i18n.t('Add User Variable') : $i18n.t('Edit User Variable')}
 		</h2>
 
-		<div class="mb-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
+		<div class="mb-1 text-[0.625rem] text-gray-600 dark:text-gray-400">
 			{$i18n.t('Key')}
 		</div>
 		<input
@@ -553,7 +553,7 @@
 			spellcheck="false"
 		/>
 
-		<div class="mb-1 mt-3 text-[0.625rem] text-gray-400 dark:text-gray-600">
+		<div class="mb-1 mt-3 text-[0.625rem] text-gray-600 dark:text-gray-400">
 			{$i18n.t('Value')}
 		</div>
 		<Textarea

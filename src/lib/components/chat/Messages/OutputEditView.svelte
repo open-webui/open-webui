@@ -235,7 +235,7 @@
 				: $i18n.t('Switch to visual editor')}
 		>
 			<button
-				class="text-xs px-2 py-0.5 rounded-full transition-all text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
+				class="text-xs px-2 py-0.5 rounded-full transition-all text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
 				on:click={() => (viewMode === 'visual' ? switchToJson() : switchToVisual())}
 			>
 				{viewMode === 'visual' ? $i18n.t('Visual') : 'JSON'}
@@ -259,7 +259,7 @@
 					<!-- Role label -->
 					<div class="flex items-start pt-1.5">
 						<div
-							class="text-[11px] font-normal uppercase tracking-wide min-w-[4.5rem] text-gray-400 dark:text-gray-500"
+							class="text-[11px] font-normal uppercase tracking-wide min-w-[4.5rem] text-gray-600 dark:text-gray-500"
 						>
 							{getItemLabel(di)}
 						</div>
@@ -335,7 +335,7 @@
 					<!-- Delete -->
 					<div class="pt-1.5">
 						<button
-							class="invisible group-hover:visible p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-lg"
+							class="invisible group-hover:visible p-1 text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-lg"
 							on:click={() => deleteIndices(di.indices)}
 						>
 							<svg
@@ -358,7 +358,7 @@
 			{/each}
 
 			{#if displayItems.length === 0}
-				<div class="text-sm text-gray-400 dark:text-gray-500 italic px-1">
+				<div class="text-sm text-gray-600 dark:text-gray-500 italic px-1">
 					{$i18n.t('No output items')}
 				</div>
 			{/if}

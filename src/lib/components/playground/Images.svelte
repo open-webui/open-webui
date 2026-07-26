@@ -164,7 +164,7 @@
 							</div>
 						{:else}
 							<div
-								class="h-full flex items-center justify-center text-gray-400 dark:text-gray-600 text-sm"
+								class="h-full flex items-center justify-center text-gray-600 dark:text-gray-400 text-sm"
 							>
 								{$i18n.t('Generated images will appear here')}
 							</div>

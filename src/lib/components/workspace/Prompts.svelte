@@ -504,7 +504,7 @@
 		{:else if (prompts ?? []).length !== 0}
 			<div class="my-1">
 				<div
-					class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-600"
+					class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-600 dark:text-gray-400"
 				>
 					<button
 						class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
@@ -581,7 +581,7 @@
 												)}
 											>
 												<div
-													class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+													class="shrink-0 truncate text-[11px] leading-5 text-gray-600 dark:text-gray-400"
 												>
 													{dayjs((prompt.updated_at ?? prompt.created_at) * 1000).fromNow()}
 												</div>
@@ -596,7 +596,7 @@
 									{#if prompt.content}
 										<Tooltip content={prompt.content} className="min-w-0" placement="top-start">
 											<div
-												class="mt-0.5 truncate text-[0.6875rem] leading-4 text-gray-400 dark:text-gray-600"
+												class="mt-0.5 truncate text-[0.6875rem] leading-4 text-gray-600 dark:text-gray-400"
 											>
 												{prompt.content}
 											</div>

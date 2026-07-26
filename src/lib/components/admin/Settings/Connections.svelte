@@ -332,7 +332,7 @@
 							{/each}
 						</div>
 
-						<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-1 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{$i18n.t('Trouble accessing Ollama?')}
 							<a
 								class="font-normal underline hover:text-gray-700 dark:hover:text-gray-300"

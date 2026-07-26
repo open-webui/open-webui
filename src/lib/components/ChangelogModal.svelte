@@ -122,7 +122,7 @@
 						<section class="pr-1">
 							<div class="mb-2">
 								<h3 class="m-0 text-sm font-normal text-gray-950 dark:text-white">v{version}</h3>
-								<div class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-500">
+								<div class="mt-0.5 text-[0.6875rem] text-gray-600 dark:text-gray-500">
 									{formatDate(changelog[version].date)}
 								</div>
 							</div>
@@ -181,7 +181,7 @@
 				</div>
 			{:else}
 				<div
-					class="flex items-center justify-center py-16 text-sm text-gray-400 dark:text-gray-500"
+					class="flex items-center justify-center py-16 text-sm text-gray-600 dark:text-gray-500"
 				>
 					{$i18n.t('Loading release notes...')}
 				</div>

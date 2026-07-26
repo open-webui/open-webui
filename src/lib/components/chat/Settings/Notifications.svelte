@@ -202,7 +202,7 @@
 					on:change={toggleNotifications}
 				/>
 			</label>
-			<p class="-mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+			<p class="-mt-1 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 				{$i18n.t('Allow browser notifications for completed responses.')}
 			</p>
 
@@ -236,9 +236,9 @@
 				</div>
 
 				{#if loadingTargets}
-					<p class="text-[0.6875rem] text-gray-400 dark:text-gray-600">{$i18n.t('Loading...')}</p>
+					<p class="text-[0.6875rem] text-gray-600 dark:text-gray-400">{$i18n.t('Loading...')}</p>
 				{:else if !targets.length}
-					<p class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+					<p class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 						{$i18n.t('No notification targets configured.')}
 					</p>
 				{:else}
@@ -254,22 +254,22 @@
 										<span class="truncate text-[0.71875rem] text-gray-700 dark:text-gray-300">
 											{target.id}
 										</span>
-										<span class="shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600">
+										<span class="shrink-0 text-[0.625rem] text-gray-600 dark:text-gray-400">
 											{$i18n.t('Webhook')}
 										</span>
 										{#if target.is_default}
-											<span class="shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600">
+											<span class="shrink-0 text-[0.625rem] text-gray-600 dark:text-gray-400">
 												{$i18n.t('Default')}
 											</span>
 										{/if}
 									</div>
 									<div
-										class="truncate text-[0.625rem] leading-tight text-gray-400 dark:text-gray-600"
+										class="truncate text-[0.625rem] leading-tight text-gray-600 dark:text-gray-400"
 									>
 										{target.config?.url_masked}
 									</div>
 									<div
-										class="truncate text-[0.625rem] leading-tight text-gray-400 dark:text-gray-600"
+										class="truncate text-[0.625rem] leading-tight text-gray-600 dark:text-gray-400"
 									>
 										{alertLabels || $i18n.t('No chat alerts')}
 										{#if target.events.length}
@@ -344,7 +344,7 @@
 			{editingId ? $i18n.t('Edit') : $i18n.t('Add Notification Target')}
 		</h2>
 
-		<div class="text-[0.625rem] text-gray-400 dark:text-gray-600">
+		<div class="text-[0.625rem] text-gray-600 dark:text-gray-400">
 			{$i18n.t('Target ID for notify')}
 		</div>
 		<input
@@ -355,7 +355,7 @@
 			class="block w-full bg-transparent py-0.5 font-mono text-[0.8125rem] text-gray-700 outline-none placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
 		/>
 
-		<div class="mt-2 text-[0.625rem] text-gray-400 dark:text-gray-600">
+		<div class="mt-2 text-[0.625rem] text-gray-600 dark:text-gray-400">
 			{$i18n.t('Webhook')}
 		</div>
 		<input
@@ -369,7 +369,7 @@
 			class="block w-full bg-transparent py-0.5 font-mono text-[0.8125rem] text-gray-700 outline-none placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
 		/>
 
-		<div class="mt-3 mb-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
+		<div class="mt-3 mb-1 text-[0.625rem] text-gray-600 dark:text-gray-400">
 			{$i18n.t('Automatic Events')}
 		</div>
 		<div class="flex flex-wrap gap-1">
@@ -389,7 +389,7 @@
 		</div>
 
 		{#if form.events.length}
-			<div class="mt-3 mb-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
+			<div class="mt-3 mb-1 text-[0.625rem] text-gray-600 dark:text-gray-400">
 				{$i18n.t('Automatic Delivery')}
 			</div>
 			<div class="flex gap-1">
@@ -407,7 +407,7 @@
 			</div>
 		{/if}
 
-		<p class="mt-3 text-[0.625rem] text-gray-400 dark:text-gray-600">
+		<p class="mt-3 text-[0.625rem] text-gray-600 dark:text-gray-400">
 			{$i18n.t(
 				'The notify tool always sends to an enabled target, regardless of automatic event settings.'
 			)}

@@ -129,7 +129,7 @@
 				>
 					<div class="flex items-center gap-2">
 						{$i18n.t('Memory')}
-						<span class="text-[0.625rem] uppercase text-gray-400 dark:text-gray-600"
+						<span class="text-[0.625rem] uppercase text-gray-600 dark:text-gray-400"
 							>{$i18n.t('Experimental')}</span
 						>
 					</div>
@@ -149,7 +149,7 @@
 						<div class="text-xs text-gray-600 dark:text-gray-400">
 							{$i18n.t('Saved Memories')}
 							{#if !loadingMemories}
-								<span class="ml-1 text-gray-400 dark:text-gray-600">{memories.length}</span>
+								<span class="ml-1 text-gray-600 dark:text-gray-400">{memories.length}</span>
 							{/if}
 						</div>
 					</div>
@@ -162,7 +162,7 @@
 						<div class="mb-2 flex min-w-0 items-center justify-between gap-3">
 							{#if memories.length > 0}
 								<div class="flex min-w-0 flex-1 items-center gap-2">
-									<Search className="size-3.5 shrink-0 text-gray-400 dark:text-gray-600" />
+									<Search className="size-3.5 shrink-0 text-gray-600 dark:text-gray-400" />
 									<input
 										data-settings-search
 										class="min-w-0 flex-1 bg-transparent py-0.5 text-xs text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
@@ -231,7 +231,7 @@
 						</div>
 
 						{#if sortedMemories.length === 0}
-							<div class="min-h-16 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+							<div class="min-h-16 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 								{#if memories.length === 0}
 									{$i18n.t('Memories accessible by LLMs will be shown here.')}
 								{:else}

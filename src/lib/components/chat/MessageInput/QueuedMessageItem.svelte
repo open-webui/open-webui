@@ -48,7 +48,7 @@
 		{#if content}
 			<p class="text-sm text-gray-600 dark:text-gray-300 truncate">{content}</p>
 		{:else if files.length === 0}
-			<p class="text-sm text-gray-400 dark:text-gray-500 truncate italic">
+			<p class="text-sm text-gray-600 dark:text-gray-500 truncate italic">
 				{$i18n.t('Empty message')}
 			</p>
 		{/if}

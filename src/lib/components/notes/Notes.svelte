@@ -531,7 +531,7 @@
 						<div>
 							{#if displayOption === null}
 								<div
-									class="flex w-full items-center gap-2 px-2 pb-2 text-xs text-gray-400 dark:text-gray-600"
+									class="flex w-full items-center gap-2 px-2 pb-2 text-xs text-gray-600 dark:text-gray-400"
 								>
 									<div class="flex min-w-0 flex-1 items-center">
 										<button
@@ -601,7 +601,7 @@
 
 													<Tooltip content={dayjs(note.updated_at / 1000000).format('LLLL')}>
 														<div
-															class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+															class="shrink-0 truncate text-[11px] leading-5 text-gray-600 dark:text-gray-400"
 														>
 															{dayjs(note.updated_at / 1000000).fromNow()}
 														</div>

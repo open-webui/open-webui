@@ -643,7 +643,7 @@
 			{#if (models ?? []).length !== 0}
 				<div class="my-1" id="model-list">
 					<div
-						class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-600"
+						class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-600 dark:text-gray-400"
 					>
 						<button
 							class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
@@ -735,7 +735,7 @@
 
 												<Tooltip content={dayjs(model.updated_at * 1000).format('LLLL')}>
 													<div
-														class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+														class="shrink-0 truncate text-[11px] leading-5 text-gray-600 dark:text-gray-400"
 													>
 														{dayjs(model.updated_at * 1000).fromNow()}
 													</div>
@@ -755,7 +755,7 @@
 											placement="top-start"
 										>
 											<div
-												class="truncate text-[0.6875rem] leading-4 text-gray-400 dark:text-gray-600"
+												class="truncate text-[0.6875rem] leading-4 text-gray-600 dark:text-gray-400"
 											>
 												{(model?.meta?.description ?? '').trim() ||
 													model.base_model_id ||

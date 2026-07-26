@@ -21,7 +21,7 @@
 
 	<Tooltip content={$i18n.t('Select All')}>
 		<button
-			class="p-1 rounded transition text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400"
+			class="p-1 rounded transition text-gray-600 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400"
 			on:click={onSelectAll}
 			aria-label={$i18n.t('Select All')}
 		>
@@ -42,7 +42,7 @@
 
 	<Tooltip content={$i18n.t('Download')}>
 		<button
-			class="p-1 rounded transition text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400"
+			class="p-1 rounded transition text-gray-600 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400"
 			on:click={onDownload}
 			aria-label={$i18n.t('Download')}
 		>
@@ -64,7 +64,7 @@
 
 	<Tooltip content={$i18n.t('Delete')}>
 		<button
-			class="p-1 rounded transition text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400"
+			class="p-1 rounded transition text-gray-600 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400"
 			on:click={onDelete}
 			aria-label={$i18n.t('Delete')}
 		>
@@ -74,7 +74,7 @@
 
 	<Tooltip content={$i18n.t('Deselect')}>
 		<button
-			class="p-1 rounded transition text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400"
+			class="p-1 rounded transition text-gray-600 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400"
 			on:click={onClear}
 			aria-label={$i18n.t('Deselect')}
 		>

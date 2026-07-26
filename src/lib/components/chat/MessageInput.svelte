@@ -1522,7 +1522,7 @@
 										<div class="flex min-h-4 items-center gap-3">
 											<span class="min-w-0 flex-1 truncate">Context usage</span>
 											<span
-												class="shrink-0 font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
+												class="shrink-0 font-mono text-[0.625rem] text-gray-600 dark:text-gray-400"
 											>
 												{contextValue}
 											</span>
@@ -1542,7 +1542,7 @@
 									{#if messageQueue.length}
 										<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
 											<span class="min-w-0 flex-1 truncate">Queued messages</span>
-											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+											<span class="font-mono text-[0.625rem] text-gray-600 dark:text-gray-400">
 												{messageQueue.length}
 											</span>
 										</div>
@@ -1551,7 +1551,7 @@
 									{#if chatTasks.length}
 										<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
 											<span class="min-w-0 flex-1 truncate">Tasks</span>
-											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+											<span class="font-mono text-[0.625rem] text-gray-600 dark:text-gray-400">
 												{chatTasks.length}
 											</span>
 										</div>
@@ -1568,7 +1568,7 @@
 												{copiedStatusChatId ? $i18n.t('Copied') : chatId}
 											</button>
 										{:else}
-											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+											<span class="font-mono text-[0.625rem] text-gray-600 dark:text-gray-400">
 												none
 											</span>
 										{/if}

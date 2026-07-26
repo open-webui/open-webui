@@ -86,7 +86,7 @@
 	</div>
 
 	{#if servers.length === 0}
-		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+		<div class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 			{$i18n.t('No terminal connections configured.')}
 		</div>
 	{/if}

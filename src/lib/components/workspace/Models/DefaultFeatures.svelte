@@ -26,7 +26,7 @@
 </script>
 
 <div>
-	<div class="mb-1.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Default Features')}</div>
+	<div class="mb-1.5 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Default Features')}</div>
 	<div class="grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
 		{#each availableFeatures as feature}
 			<div class="flex min-h-6 items-center justify-between gap-2.5">

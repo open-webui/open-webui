@@ -352,7 +352,7 @@
 		<div
 			class="tabs flex min-w-0 flex-1 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto lg:flex-col p-1 lg:pt-4 gap-px"
 		>
-			<span class="hidden lg:block text-[0.625rem] text-gray-400 dark:text-gray-600 px-2 mb-1">
+			<span class="hidden lg:block text-[0.625rem] text-gray-600 dark:text-gray-400 px-2 mb-1">
 				{$i18n.t('Admin')}
 			</span>
 

@@ -194,7 +194,7 @@
 
 	<div class="flex h-7 shrink-0 items-center w-full gap-2">
 		<div class="flex min-w-0 flex-1 items-center gap-2">
-			<Search className="size-3.5 shrink-0 text-gray-400 dark:text-gray-600" />
+			<Search className="size-3.5 shrink-0 text-gray-600 dark:text-gray-400" />
 			<input
 				data-settings-search
 				class="min-w-0 flex-1 bg-transparent py-0.5 text-xs text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
@@ -275,7 +275,7 @@
 				{$i18n.t('You have no archived conversations.')}
 			</div>
 		{:else}
-			<div class="flex items-center px-1 text-xs text-gray-400 dark:text-gray-600">
+			<div class="flex items-center px-1 text-xs text-gray-600 dark:text-gray-400">
 				<button
 					class="flex flex-1 items-center gap-1 py-0.5 text-left"
 					type="button"
@@ -322,7 +322,7 @@
 							{chat?.title}
 						</a>
 						<div
-							class="hidden w-24 shrink-0 self-center justify-end text-gray-400 dark:text-gray-600 sm:flex"
+							class="hidden w-24 shrink-0 self-center justify-end text-gray-600 dark:text-gray-400 sm:flex"
 						>
 							{$i18n.t(
 								dayjs(chat?.updated_at * 1000).calendar(null, {

@@ -1069,7 +1069,7 @@
 								</button>
 							{/if}
 						</div>
-						<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-1 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{$i18n.t(
 								'After changing the embedding model, reindex the knowledge base for changes to take effect.'
 							)}
@@ -1297,7 +1297,7 @@
 											class="h-2 w-full cursor-pointer appearance-none rounded-lg dark:bg-gray-700"
 										/>
 										<div
-											class="flex justify-between py-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600"
+											class="flex justify-between py-0.5 text-[0.6875rem] text-gray-600 dark:text-gray-400"
 										>
 											<div>{$i18n.t('semantic')}</div>
 											<div>{$i18n.t('lexical')}</div>
@@ -1336,7 +1336,7 @@
 					</Tooltip>
 
 					{#if RAGConfig.RAG_TEMPLATE && (RAGConfig.RAG_TEMPLATE.match(/\[context\]/g) || []).length + (RAGConfig.RAG_TEMPLATE.match(/\{\{CONTEXT\}\}/g) || []).length > 1}
-						<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-1 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{$i18n.t(
 								'This template contains multiple context placeholders ([context] or {{CONTEXT}}). Context will be injected at each occurrence.'
 							)}

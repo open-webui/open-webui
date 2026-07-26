@@ -46,7 +46,7 @@
 		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const actionButtonClass =
 		'shrink-0 text-xs text-gray-500 transition-colors hover:text-gray-900 disabled:opacity-50 dark:text-gray-500 dark:hover:text-white';
-	const mutedMessageClass = 'text-xs text-gray-400 dark:text-gray-600';
+	const mutedMessageClass = 'text-xs text-gray-600 dark:text-gray-400';
 
 	const updateHandler = async () => {
 		if (!pipelines) {
@@ -421,7 +421,7 @@
 													{:else if (valves_spec.properties[property]?.type ?? null) === 'boolean'}
 														<AdminSettingRow
 															label={valves[property] ? $i18n.t('Enabled') : $i18n.t('Disabled')}
-															labelClassName="text-gray-400 dark:text-gray-600"
+															labelClassName="text-gray-600 dark:text-gray-400"
 														>
 															<Switch bind:state={valves[property]} />
 														</AdminSettingRow>

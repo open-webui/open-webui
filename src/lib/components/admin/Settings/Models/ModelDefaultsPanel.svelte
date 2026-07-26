@@ -148,7 +148,7 @@
 
 	{#if expanded}
 		{#if loading}
-			<div class="py-1 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Loading...')}</div>
+			<div class="py-1 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Loading...')}</div>
 		{:else}
 			<div class="space-y-1 mt-0.5">
 				<div>
@@ -162,7 +162,7 @@
 						<span class="text-xs text-gray-600 dark:text-gray-400">
 							{$i18n.t('Model Capabilities')}
 						</span>
-						<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<span class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{showCapabilities ? $i18n.t('Close') : $i18n.t('Configure')}
 						</span>
 					</button>
@@ -197,7 +197,7 @@
 						<span class="text-xs text-gray-600 dark:text-gray-400">
 							{$i18n.t('Model Parameters')}
 						</span>
-						<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<span class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{showParameters ? $i18n.t('Close') : $i18n.t('Configure')}
 						</span>
 					</button>
@@ -225,7 +225,7 @@
 						<span class="text-xs text-gray-600 dark:text-gray-400">
 							{$i18n.t('Prompt Suggestions')}
 						</span>
-						<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<span class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{showPromptSuggestions ? $i18n.t('Close') : $i18n.t('Configure')}
 						</span>
 					</button>

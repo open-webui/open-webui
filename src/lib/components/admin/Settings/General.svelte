@@ -139,7 +139,7 @@
 					<div class="flex items-start justify-between gap-4">
 						<div class="min-w-0">
 							<div class="text-gray-600 dark:text-gray-400">{$i18n.t('Help')}</div>
-							<div class="mt-0.5 text-gray-400 dark:text-gray-600">
+							<div class="mt-0.5 text-gray-600 dark:text-gray-400">
 								{$i18n.t('Discover how to use Open WebUI and seek support from the community.')}
 							</div>
 						</div>
@@ -153,7 +153,7 @@
 						</a>
 					</div>
 
-					<div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-gray-400 dark:text-gray-600">
+					<div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-gray-600 dark:text-gray-400">
 						<a
 							class="hover:text-gray-700 dark:hover:text-gray-300"
 							href="https://discord.gg/5rJgQTnV4s"
@@ -332,7 +332,7 @@
 					<div class="mb-2 flex w-full items-start justify-between gap-4">
 						<div class="min-w-0">
 							<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Banners')}</div>
-							<div class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+							<div class="mt-1.5 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 								{$i18n.t('Create announcements shown to users in the app.')}
 							</div>
 						</div>

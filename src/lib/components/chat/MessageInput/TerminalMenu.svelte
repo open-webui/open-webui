@@ -116,7 +116,7 @@
 				{#if directTerminals.length > 0 && ($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))}
 					<div class="flex items-center justify-between px-3 py-1">
 						<span
-							class="text-[10px] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
+							class="text-[10px] font-normal text-gray-600 dark:text-gray-500 uppercase tracking-wider"
 						>
 							{$i18n.t('Direct')}
 						</span>
@@ -182,7 +182,7 @@
 				{#if systemTerminals.length > 0}
 					<div class="flex items-center justify-between px-3 py-1">
 						<span
-							class="text-[10px] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
+							class="text-[10px] font-normal text-gray-600 dark:text-gray-500 uppercase tracking-wider"
 						>
 							{$i18n.t('System')}
 						</span>

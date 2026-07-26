@@ -136,7 +136,7 @@
 				<div>
 					<div class="mb-2">
 						<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Task Model')}</div>
-						<div class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-1.5 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{$i18n.t(
 								'Choose fallback models for background tasks. Current Model follows the active chat model.'
 							)}
@@ -303,7 +303,7 @@
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}
 						/>
-						<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-1 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{$i18n.t('Available variables')}:
 							<code>{'{{PREVIOUS_SUMMARY}}'}</code>,
 							<code>{'{{COMPACTED_MESSAGES}}'}</code>,

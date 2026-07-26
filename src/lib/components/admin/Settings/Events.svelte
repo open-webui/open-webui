@@ -687,13 +687,13 @@
 />
 
 <div class="mt-5">
-	<div class="mb-2 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Events')}</div>
+	<div class="mb-2 text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Events')}</div>
 
 	<div class="flex flex-col w-full justify-between gap-2.5">
 		<div class="flex w-full items-start justify-between gap-4">
 			<div class="min-w-0">
 				<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Webhooks')}</div>
-				<div class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+				<div class="mt-1.5 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 					{$i18n.t(
 						'Send product events as JSON to external services. Chat destinations receive readable messages.'
 					)}
@@ -751,7 +751,7 @@
 		</div>
 
 		{#if webhooks.length === 0}
-			<div class="text-xs text-gray-400 dark:text-gray-500">
+			<div class="text-xs text-gray-600 dark:text-gray-500">
 				{$i18n.t('No event webhooks configured.')}
 			</div>
 		{/if}

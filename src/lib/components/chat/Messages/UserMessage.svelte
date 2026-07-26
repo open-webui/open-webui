@@ -421,7 +421,7 @@
 									? ''
 									: 'invisible group-hover:visible'} {($settings?.chatBubble ?? true)
 									? 'mr-1'
-									: 'ml-1 shrink-0 whitespace-nowrap'} text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
+									: 'ml-1 shrink-0 whitespace-nowrap'} text-[0.6875rem] tabular-nums text-gray-600 dark:text-gray-400 select-none"
 							>
 								{formatMessageTimestamp(message.timestamp * 1000)}
 							</time>

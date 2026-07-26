@@ -133,7 +133,7 @@
 					<CheckCircle className="size-4" strokeWidth="2" />
 				</div>
 			{:else}
-				<div class="text-gray-400 dark:text-gray-500">
+				<div class="text-gray-600 dark:text-gray-500">
 					<Sparkles className="size-3.5" />
 				</div>
 			{/if}
@@ -144,12 +144,12 @@
 					>{prefixText}</span
 				>
 				{#if summaryText}
-					<span class="text-gray-400 dark:text-gray-500">{summaryText}</span>
+					<span class="text-gray-600 dark:text-gray-500">{summaryText}</span>
 				{/if}
 			</div>
 
 			<!-- Chevron -->
-			<div class="flex shrink-0 self-center text-gray-400 dark:text-gray-500">
+			<div class="flex shrink-0 self-center text-gray-600 dark:text-gray-500">
 				{#if open}
 					<ChevronUp strokeWidth="3.5" className="size-3" />
 				{:else}

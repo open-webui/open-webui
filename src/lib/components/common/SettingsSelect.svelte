@@ -28,7 +28,7 @@
 		<slot />
 	</select>
 	<ChevronDown
-		className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-gray-400 dark:text-gray-500"
+		className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-gray-600 dark:text-gray-500"
 		strokeWidth="2"
 	/>
 </div>

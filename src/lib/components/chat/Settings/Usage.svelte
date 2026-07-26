@@ -290,7 +290,7 @@
 						<div class="text-sm font-medium text-gray-900 dark:text-white">
 							{formatNumber(usage.totals.lifetime_tokens)}
 						</div>
-						<div class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-0.5 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{$i18n.t('Lifetime tokens')}
 						</div>
 					</div>
@@ -298,7 +298,7 @@
 						<div class="text-sm font-medium text-gray-900 dark:text-white">
 							{formatNumber(usage.totals.peak_daily_tokens)}
 						</div>
-						<div class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-0.5 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{$i18n.t('Peak tokens')}
 						</div>
 					</div>
@@ -306,7 +306,7 @@
 						<div class="text-sm font-medium text-gray-900 dark:text-white">
 							{formatDuration(usage.totals.longest_chat_seconds)}
 						</div>
-						<div class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-0.5 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{$i18n.t('Longest active chat')}
 						</div>
 					</div>
@@ -314,7 +314,7 @@
 						<div class="text-sm font-medium text-gray-900 dark:text-white">
 							{usage.totals.current_streak.toLocaleString()}
 						</div>
-						<div class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-0.5 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{$i18n.t('Current streak')}
 						</div>
 					</div>
@@ -322,7 +322,7 @@
 						<div class="text-sm font-medium text-gray-900 dark:text-white">
 							{usage.totals.longest_streak.toLocaleString()}
 						</div>
-						<div class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-0.5 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{$i18n.t('Longest streak')}
 						</div>
 					</div>
@@ -331,7 +331,7 @@
 
 			<section class="mt-4 w-full">
 				<div class="mb-2 flex min-w-0 items-center justify-between gap-3">
-					<h3 class="min-w-0 shrink truncate text-xs text-gray-400 dark:text-gray-600">
+					<h3 class="min-w-0 shrink truncate text-xs text-gray-600 dark:text-gray-400">
 						{$i18n.t('Token activity')}
 					</h3>
 					<div
@@ -378,7 +378,7 @@
 						</div>
 
 						<div
-							class="mx-auto mt-2 grid text-[0.6875rem] leading-none text-gray-400 dark:text-gray-600"
+							class="mx-auto mt-2 grid text-[0.6875rem] leading-none text-gray-600 dark:text-gray-400"
 							style="width: min(100%, {heatmapGridWidth}); column-gap: {HEATMAP_GAP_PX}px; grid-template-columns: repeat({heatmapColumns}, minmax(0, 1fr));"
 						>
 							{#each monthLabels as month}
@@ -391,7 +391,7 @@
 
 					{#if usage.top_models.length > 0}
 						<div
-							class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[0.6875rem] text-gray-400 dark:text-gray-600"
+							class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[0.6875rem] text-gray-600 dark:text-gray-400"
 						>
 							{#each usage.top_models.slice(0, 6) as model}
 								<div class="flex min-w-0 items-center gap-1.5">
@@ -477,7 +477,7 @@
 				{/if}
 			{/if}
 
-			<div class="mt-4 text-right text-[0.6875rem] text-gray-400 dark:text-gray-600">
+			<div class="mt-4 text-right text-[0.6875rem] text-gray-600 dark:text-gray-400">
 				{$i18n.t('Token counts are estimates and may not reflect actual API usage')}
 			</div>
 		</div>

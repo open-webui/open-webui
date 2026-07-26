@@ -795,7 +795,7 @@
 		<div class="flex items-center gap-2 leading-none text-gray-600 dark:text-gray-400">
 			<div>{$i18n.t('External Knowledge Sources')}</div>
 			<span
-				class="inline-flex items-center text-[0.625rem] font-normal uppercase leading-none text-gray-400 dark:text-gray-600"
+				class="inline-flex items-center text-[0.625rem] font-normal uppercase leading-none text-gray-600 dark:text-gray-400"
 			>
 				{$i18n.t('Experimental')}
 			</span>
@@ -875,13 +875,13 @@
 			<Spinner />
 		</div>
 	{:else if items.length === 0}
-		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+		<div class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 			{$i18n.t('No external knowledge sources configured.')}
 		</div>
 	{/if}
 
 	{#if items.length === 0}
-		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+		<div class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 			{$i18n.t('Test must pass before a source is created.')}
 		</div>
 	{/if}

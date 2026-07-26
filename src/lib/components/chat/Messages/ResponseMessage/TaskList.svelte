@@ -51,7 +51,7 @@
 			<div class="px-3.5 pb-2.5 space-y-0.5" transition:slide={{ duration: 150 }}>
 				{#each tasks as task, idx (task.id)}
 					<div class="flex items-start gap-2 py-0.5 text-xs">
-						<span class="flex-shrink-0 mt-0.5 text-gray-400 dark:text-gray-500">
+						<span class="flex-shrink-0 mt-0.5 text-gray-600 dark:text-gray-500">
 							{#if task.status === 'completed'}
 								<svg
 									class="w-3.5 h-3.5"
@@ -96,9 +96,9 @@
 						</span>
 						<span
 							class="line-clamp-2 {task.status === 'completed'
-								? 'line-through text-gray-400 dark:text-gray-500'
+								? 'line-through text-gray-600 dark:text-gray-500'
 								: task.status === 'cancelled'
-									? 'line-through text-gray-400 dark:text-gray-600'
+									? 'line-through text-gray-600 dark:text-gray-400'
 									: 'text-gray-700 dark:text-gray-300'}"
 						>
 							{idx + 1}. {task.content}

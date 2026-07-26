@@ -353,7 +353,7 @@
 			{#if (items ?? []).length !== 0}
 				<div class="my-1">
 					<div
-						class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-600"
+						class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-600 dark:text-gray-400"
 					>
 						<div class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left">
 							{$i18n.t('Title')}
@@ -415,7 +415,7 @@
 
 												<Tooltip content={dayjs(item.updated_at * 1000).format('LLLL')}>
 													<div
-														class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+														class="shrink-0 truncate text-[11px] leading-5 text-gray-600 dark:text-gray-400"
 													>
 														{dayjs(item.updated_at * 1000).fromNow()}
 													</div>
@@ -426,7 +426,7 @@
 										{#if metaPreview}
 											<Tooltip content={metaPreview} className="min-w-0" placement="top-start">
 												<div
-													class="mt-0.5 truncate text-[0.6875rem] leading-4 text-gray-400 dark:text-gray-600"
+													class="mt-0.5 truncate text-[0.6875rem] leading-4 text-gray-600 dark:text-gray-400"
 												>
 													{metaPreview}
 												</div>

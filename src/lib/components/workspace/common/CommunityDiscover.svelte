@@ -11,7 +11,7 @@
 </script>
 
 <div class="mt-6 px-2 pb-8">
-	<div class="mb-0.5 text-[11px] font-normal text-gray-400 dark:text-gray-600">
+	<div class="mb-0.5 text-[11px] font-normal text-gray-600 dark:text-gray-400">
 		{$i18n.t('Made by Open WebUI Community')}
 	</div>
 
@@ -29,6 +29,6 @@
 			</div>
 		</div>
 
-		<ChevronRight className="size-3.5 shrink-0 text-gray-400 dark:text-gray-600" />
+		<ChevronRight className="size-3.5 shrink-0 text-gray-600 dark:text-gray-400" />
 	</a>
 </div>

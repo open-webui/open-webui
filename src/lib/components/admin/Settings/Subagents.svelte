@@ -70,7 +70,7 @@
 					</span>
 					<Switch bind:state={enabled} />
 				</label>
-				<p class="-mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+				<p class="-mt-1 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 					{$i18n.t(
 						'Allow the AI to delegate tasks to sub-agents. Each sub-agent creates a real chat with full tool access. Uses additional LLM calls.'
 					)}
@@ -89,7 +89,7 @@
 								min="-1"
 								class="h-7 w-16 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 							/>
-							<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+							<span class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 								{$i18n.t('simultaneous sub-agents')}
 							</span>
 						</div>
@@ -102,7 +102,7 @@
 							</span>
 							<Switch bind:state={backgroundEnabled} />
 						</label>
-						<p class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<p class="mt-1 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{$i18n.t(
 								'Allow delegated sub-agents to keep running while the parent chat continues.'
 							)}
@@ -122,7 +122,7 @@
 									min="-1"
 									class="h-7 w-16 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 								/>
-								<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+								<span class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 									{$i18n.t('background sub-agents')}
 								</span>
 							</div>
@@ -142,7 +142,7 @@
 								max="100"
 								class="h-7 w-16 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 							/>
-							<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+							<span class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 								{$i18n.t('tool loops per sub-agent')}
 							</span>
 						</div>
@@ -162,7 +162,7 @@
 								step="1000"
 								class="h-7 w-20 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 							/>
-							<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">chars</span>
+							<span class="text-[0.6875rem] text-gray-600 dark:text-gray-400">chars</span>
 						</div>
 					</div>
 
@@ -177,7 +177,7 @@
 							placeholder={$i18n.t('You are a sub-agent...')}
 							class="mt-1 w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 font-mono text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 						></textarea>
-						<p class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<p class="mt-0.5 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{$i18n.t('Leave empty for the built-in default.')}
 						</p>
 					</div>

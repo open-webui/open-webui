@@ -683,7 +683,7 @@
 
 							{#if preset}
 								<div>
-									<div class="mb-1 text-xs text-gray-400 dark:text-gray-600">
+									<div class="mb-1 text-xs text-gray-600 dark:text-gray-400">
 										{$i18n.t('Base Model (From)')}
 									</div>
 
@@ -702,7 +702,7 @@
 
 							<div>
 								<div class="mb-1 flex w-full items-center justify-between">
-									<div class="self-center text-xs text-gray-400 dark:text-gray-600">
+									<div class="self-center text-xs text-gray-600 dark:text-gray-400">
 										{$i18n.t('Description')}
 									</div>
 
@@ -756,7 +756,7 @@
 						</div>
 
 						<section class="mt-2.5">
-							<div class="mb-2 text-xs text-gray-400 dark:text-gray-600">
+							<div class="mb-2 text-xs text-gray-600 dark:text-gray-400">
 								{$i18n.t('Model Params')}
 							</div>
 
@@ -783,7 +783,7 @@
 													{$i18n.t('Detected Variables')}
 												</div>
 												{#if chatVariablesPreview.fields.length + chatVariablesPreview.userFields.length > 0}
-													<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+													<div class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 														{chatVariablesPreview.fields.length +
 															chatVariablesPreview.userFields.length}
 													</div>
@@ -791,14 +791,14 @@
 											</div>
 
 											{#if chatVariablesPreview.fields.length > 0}
-												<div class="mb-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+												<div class="mb-1 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 													{$i18n.t('Chat Variables')}
 												</div>
 												<div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
 													{#each chatVariablesPreview.fields as field}
 														<div class="flex items-center gap-1 text-gray-600 dark:text-gray-300">
 															<span class="font-medium">{field.key}</span>
-															<span class="text-gray-400 dark:text-gray-600">{field.type}</span>
+															<span class="text-gray-600 dark:text-gray-400">{field.type}</span>
 															{#if field.required}
 																<span class="text-amber-600 dark:text-amber-400">required</span>
 															{/if}
@@ -808,7 +808,7 @@
 											{/if}
 
 											{#if chatVariablesPreview.userFields.length > 0}
-												<div class="mb-1 mt-2 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+												<div class="mb-1 mt-2 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 													{$i18n.t('User Variables')}
 												</div>
 												<div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
@@ -865,7 +865,7 @@
 
 						<section class="my-2.5">
 							<div class="flex w-full items-center justify-between">
-								<div class="self-center text-xs text-gray-400 dark:text-gray-600">
+								<div class="self-center text-xs text-gray-600 dark:text-gray-400">
 									{$i18n.t('Prompts')}
 								</div>
 

@@ -552,7 +552,7 @@
 													: $i18n.t('Never')}
 											>
 												<div
-													class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+													class="shrink-0 truncate text-[11px] leading-5 text-gray-600 dark:text-gray-400"
 												>
 													{formatLastRun(automation)}
 												</div>

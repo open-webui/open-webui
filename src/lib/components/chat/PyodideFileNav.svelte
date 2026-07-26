@@ -373,7 +373,7 @@
 				fill="none"
 				stroke="currentColor"
 				stroke-width="1.5"
-				class="size-5 text-gray-400 dark:text-gray-500"
+				class="size-5 text-gray-600 dark:text-gray-500"
 			>
 				<path
 					stroke-linecap="round"
@@ -381,7 +381,7 @@
 					d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
 				/>
 			</svg>
-			<span class="text-xs text-gray-400 dark:text-gray-500">{$i18n.t('Drop files here')}</span>
+			<span class="text-xs text-gray-600 dark:text-gray-500">{$i18n.t('Drop files here')}</span>
 		</div>
 	{/if}
 
@@ -417,7 +417,7 @@
 	>
 		<!-- File action buttons when a file is selected (slot content) -->
 		<button
-			class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+			class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
 			on:click={() => selectedFile && downloadFile(selectedFile)}
 			aria-label={$i18n.t('Download')}
 		>
@@ -452,7 +452,7 @@
 		{:else if entries.length === 0 && !creatingFolder && !creatingFile}
 			<div class="flex flex-col items-center justify-center flex-1 p-6 text-center gap-2">
 				<Folder className="size-5 text-gray-300 dark:text-gray-600" />
-				<div class="text-xs text-gray-400 dark:text-gray-500">
+				<div class="text-xs text-gray-600 dark:text-gray-500">
 					{$i18n.t('No files yet. Upload files or run Python code to create them.')}
 				</div>
 			</div>
@@ -480,7 +480,7 @@
 			{/if}
 			{#if creatingFile}
 				<div class="flex items-center gap-2 px-3 py-1.5">
-					<Document className="size-4 shrink-0 text-gray-400 dark:text-gray-500" />
+					<Document className="size-4 shrink-0 text-gray-600 dark:text-gray-500" />
 					<input
 						bind:this={newFileInput}
 						bind:value={newFileName}

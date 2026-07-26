@@ -17,7 +17,7 @@
 	</div>
 
 	{#if description}
-		<p class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+		<p class="mt-0.5 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 			{description}
 		</p>
 	{/if}

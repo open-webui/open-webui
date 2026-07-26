@@ -45,13 +45,13 @@
 		{/if}
 		{#if delegationLabel}
 			<span
-				class="hidden sm:inline text-[0.6875rem] font-mono text-gray-400 dark:text-gray-600 shrink-0"
+				class="hidden sm:inline text-[0.6875rem] font-mono text-gray-600 dark:text-gray-400 shrink-0"
 			>
 				{delegationLabel}
 			</span>
 		{/if}
 		<ChevronDown
-			className="size-3 text-gray-400 dark:text-gray-600 shrink-0 transition-transform duration-150 {expanded
+			className="size-3 text-gray-600 dark:text-gray-400 shrink-0 transition-transform duration-150 {expanded
 				? 'rotate-180'
 				: ''}"
 		/>

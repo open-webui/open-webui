@@ -201,12 +201,12 @@
 					</div>
 
 					{#if (servers ?? []).length === 0}
-						<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{$i18n.t('No tool server connections configured.')}
 						</div>
 					{/if}
 
-					<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+					<div class="mt-1 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 						{$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
 					</div>
 				</div>
@@ -290,12 +290,12 @@
 					</div>
 
 					{#if terminalConnections.length === 0}
-						<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 							{$i18n.t('No terminal connections configured.')}
 						</div>
 					{/if}
 
-					<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+					<div class="mt-1 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 						{$i18n.t(
 							'Connect to Open Terminal instances. All users will have access to file browsing and terminal tools through these servers.'
 						)}

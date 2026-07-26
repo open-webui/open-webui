@@ -34,7 +34,7 @@
 		<div class="min-w-0 truncate">{title}</div>
 
 		{#if selected}
-			<div class="shrink-0 text-[11px] text-gray-400 dark:text-gray-500">
+			<div class="shrink-0 text-[11px] text-gray-600 dark:text-gray-500">
 				{$i18n.t('Current')}
 			</div>
 		{/if}

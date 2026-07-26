@@ -184,7 +184,7 @@
 							>{queryError}</span
 						>
 					{:else}
-						<span class="text-[0.6rem] text-gray-400 dark:text-gray-600 select-none">⌘+Enter</span>
+						<span class="text-[0.6rem] text-gray-600 dark:text-gray-400 select-none">⌘+Enter</span>
 					{/if}
 					<button
 						class="shrink-0 px-2.5 py-0.5 text-[0.65rem] font-normal rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"

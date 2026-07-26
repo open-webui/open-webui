@@ -35,7 +35,7 @@
 	let servers: ToolServerConnection[] | null = null;
 	let terminalServerConfigs: TerminalServerConfig[] = [];
 	let showConnectionModal = false;
-	const helpTextClass = 'text-[0.6875rem] text-gray-400 dark:text-gray-600';
+	const helpTextClass = 'text-[0.6875rem] text-gray-600 dark:text-gray-400';
 
 	const addConnectionHandler = async (server: ToolServerConnection) => {
 		servers = [...(servers ?? []), server];

@@ -137,24 +137,24 @@
 				/>
 			</div>
 		</div>
-		<p class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+		<p class="mt-1.5 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 			{$i18n.t('When disabled, keyboard shortcuts will not trigger any actions.')}
 		</p>
 	</div>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		<div class="flex items-center gap-2 px-1 pb-1">
-			<span class="flex-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
+			<span class="flex-1 text-[0.625rem] text-gray-600 dark:text-gray-400">
 				{$i18n.t('Command')}
 			</span>
-			<span class="w-[9.5rem] shrink-0 text-right text-[0.625rem] text-gray-400 dark:text-gray-600">
+			<span class="w-[9.5rem] shrink-0 text-right text-[0.625rem] text-gray-600 dark:text-gray-400">
 				{$i18n.t('Key')}
 			</span>
 		</div>
 
 		{#each Object.entries(categorizedShortcuts) as [category, items], categoryIndex}
 			<div class={categoryIndex > 0 ? 'mt-3' : ''}>
-				<div class="px-1 pb-0.5 pt-1 text-xs text-gray-400 dark:text-gray-600">
+				<div class="px-1 pb-0.5 pt-1 text-xs text-gray-600 dark:text-gray-400">
 					{$i18n.t(category)}
 				</div>
 				<div class="divide-y divide-gray-100/70 dark:divide-white/[0.03]">
@@ -223,7 +223,7 @@
 										</button>
 									{:else}
 										<button
-											class="text-[0.625rem] text-gray-500 transition hover:text-gray-400 dark:text-gray-600"
+											class="text-[0.625rem] text-gray-600 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
 											on:click={() => (recordingShortcut = id)}
 										>
 											{$i18n.t('Unassigned')}

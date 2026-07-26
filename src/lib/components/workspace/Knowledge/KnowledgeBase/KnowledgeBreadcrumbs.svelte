@@ -60,7 +60,7 @@
 		class="text-xs shrink-0 py-0.5 hover:underline transition
 			{breadcrumbs.length === 0
 			? 'text-gray-700 dark:text-gray-300'
-			: 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}
+			: 'text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}
 			{dragOverCrumb === -1 ? 'bg-gray-100 dark:bg-gray-800 rounded-lg' : ''}"
 		on:click={() => onNavigate(null)}
 		on:dragover={(e) => handleDragOver(e, -1)}
@@ -76,7 +76,7 @@
 			class="text-xs shrink-0 py-0.5 hover:underline transition
 				{i === breadcrumbs.length - 1
 				? 'text-gray-700 dark:text-gray-300'
-				: 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}
+				: 'text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}
 				{dragOverCrumb === i ? 'bg-gray-100 dark:bg-gray-800 rounded-lg' : ''}"
 			on:click={() => onNavigate(crumb.id)}
 			on:dragover={(e) => handleDragOver(e, i)}

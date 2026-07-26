@@ -92,7 +92,7 @@
 					/>
 				{/each}
 			{:else}
-				<div class="px-2 py-1.5 text-[13px] text-gray-400 dark:text-gray-500">
+				<div class="px-2 py-1.5 text-[13px] text-gray-600 dark:text-gray-500">
 					{$i18n.t('No chat history')}
 				</div>
 			{/if}

@@ -50,7 +50,7 @@
 	<Tooltip content={$i18n.t('Back')}>
 		<button
 			class="shrink-0 p-1 rounded transition {canGoBack
-				? 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400'
+				? 'text-gray-600 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400'
 				: 'text-gray-200 dark:text-gray-700 cursor-default'}"
 			on:click={onGoBack}
 			disabled={!canGoBack}
@@ -75,7 +75,7 @@
 	<Tooltip content={$i18n.t('Forward')}>
 		<button
 			class="shrink-0 p-1 rounded transition {canGoForward
-				? 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400'
+				? 'text-gray-600 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400'
 				: 'text-gray-200 dark:text-gray-700 cursor-default'}"
 			on:click={onGoForward}
 			disabled={!canGoForward}
@@ -108,7 +108,7 @@
 				class="text-xs shrink-0 px-1 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition
 					{!selectedFile && i === breadcrumbs.length - 1
 					? 'text-gray-700 dark:text-gray-300'
-					: 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}
+					: 'text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}
 					{dragOverCrumb === i
 					? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-400 dark:ring-blue-500'
 					: ''}"
@@ -148,7 +148,7 @@
 
 	<Tooltip content={$i18n.t('Refresh')}>
 		<button
-			class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+			class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
 			on:click={onRefresh}
 			aria-label={$i18n.t('Refresh')}
 		>
@@ -171,7 +171,7 @@
 		<Dropdown align="end" sideOffset={4}>
 			<Tooltip content={$i18n.t('Sort')}>
 				<button
-					class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+					class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
 					aria-label={$i18n.t('Sort')}
 				>
 					<svg
@@ -240,7 +240,7 @@
 		</Dropdown>
 		<Tooltip content={$i18n.t('New Folder')}>
 			<button
-				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
 				on:click={onNewFolder}
 				aria-label={$i18n.t('New Folder')}
 			>
@@ -249,7 +249,7 @@
 		</Tooltip>
 		<Tooltip content={$i18n.t('New File')}>
 			<button
-				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
 				on:click={onNewFile}
 				aria-label={$i18n.t('New File')}
 			>
@@ -258,7 +258,7 @@
 		</Tooltip>
 		<Tooltip content={$i18n.t('Download')}>
 			<button
-				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
 				on:click={onDownloadDir}
 				aria-label={$i18n.t('Download')}
 			>
@@ -279,7 +279,7 @@
 		</Tooltip>
 		<Tooltip content={$i18n.t('Upload')}>
 			<button
-				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
 				on:click={() => uploadInput?.click()}
 				aria-label={$i18n.t('Upload')}
 			>

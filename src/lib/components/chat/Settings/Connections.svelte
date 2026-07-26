@@ -79,7 +79,7 @@
 		{#if config !== null}
 			<UserSettingSection title={$i18n.t('Manage Direct Connections')} first>
 				<div class="flex items-center justify-between gap-2.5">
-					<div class="min-w-0 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+					<div class="min-w-0 text-[0.6875rem] text-gray-600 dark:text-gray-400">
 						{$i18n.t('Connect to your own OpenAI compatible API endpoints.')}
 					</div>
 
@@ -124,7 +124,7 @@
 					{/each}
 				</div>
 
-				<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+				<div class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 					{$i18n.t(
 						'CORS must be properly configured by the provider to allow requests from Open WebUI.'
 					)}

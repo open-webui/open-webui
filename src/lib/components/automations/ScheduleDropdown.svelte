@@ -285,7 +285,7 @@
 							type="button"
 							class="flex-1 py-1 text-xs rounded-xl transition {selectedDays.includes(d.key)
 								? 'text-black dark:text-gray-100'
-								: 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'}"
+								: 'text-gray-600 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'}"
 							on:click={() => {
 								if (selectedDays.includes(d.key)) {
 									selectedDays = selectedDays.filter((x) => x !== d.key);

@@ -92,13 +92,13 @@
 			</div>
 
 			{#if folder.owner_name}
-				<div class="shrink-0 text-[10px] text-gray-400 dark:text-gray-600 pr-1">
+				<div class="shrink-0 text-[10px] text-gray-600 dark:text-gray-400 pr-1">
 					{folder.owner_name}
 				</div>
 			{/if}
 
 			{#if !isWritable}
-				<div class="shrink-0 text-[10px] text-gray-400 dark:text-gray-600" title="Read only">
+				<div class="shrink-0 text-[10px] text-gray-600 dark:text-gray-400" title="Read only">
 					<Eye className="size-3" />
 				</div>
 			{/if}
@@ -158,7 +158,7 @@
 				{/if}
 
 				{#if chats.length === 0 && children.length === 0 && !hasMoreChats}
-					<div class="text-[11px] text-gray-400 dark:text-gray-600 py-1 px-2">
+					<div class="text-[11px] text-gray-600 dark:text-gray-400 py-1 px-2">
 						{$i18n.t('Empty')}
 					</div>
 				{/if}

@@ -124,7 +124,7 @@
 				<Tooltip content={$i18n.t(shortcut.tooltip)}>
 					<span class="inline-flex max-w-full items-baseline gap-1">
 						<span class="truncate whitespace-pre-line">{$i18n.t(shortcut.name)}</span>
-						<span class="text-[0.625rem] text-gray-400 dark:text-gray-600">*</span>
+						<span class="text-[0.625rem] text-gray-600 dark:text-gray-400">*</span>
 					</span>
 				</Tooltip>
 			{:else}

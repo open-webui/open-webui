@@ -290,7 +290,7 @@
 				label={$i18n.t('Speech Playback Speed')}
 				description={$i18n.t('Adjust how quickly spoken responses are played.')}
 			>
-				<div class="relative flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-600">
+				<div class="relative flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
 					<input
 						type="number"
 						min="0"
@@ -339,7 +339,7 @@
 						</div>
 					</div>
 
-					<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+					<div class="text-[0.6875rem] text-gray-600 dark:text-gray-400">
 						{$i18n.t('Please do not close the settings page while loading the model.')}
 					</div>
 				</UserSettingSection>

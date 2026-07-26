@@ -492,7 +492,7 @@
 					{#if selectedHistoryEntry && !disabled}
 						<div class="flex items-center gap-2">
 							{#if selectedHistoryEntry.id === prompt?.version_id}
-								<span class="inline-flex items-center text-xs text-gray-400 dark:text-gray-500">
+								<span class="inline-flex items-center text-xs text-gray-600 dark:text-gray-500">
 									{$i18n.t('Live')}
 								</span>
 							{:else}
@@ -625,7 +625,7 @@
 							required
 						/>
 					{/if}
-					<div class="text-xs text-gray-400 dark:text-gray-500">
+					<div class="text-xs text-gray-600 dark:text-gray-500">
 						ⓘ {$i18n.t('Use')}
 						<span class="font-normal text-gray-600 dark:text-gray-300"
 							>{'{{'}{$i18n.t('variable')}{'}}'}</span
@@ -696,14 +696,14 @@
 							</div>
 							{#if entry.id === prompt?.version_id}
 								<span
-									class="inline-flex shrink-0 items-center text-xs text-gray-400 dark:text-gray-500"
+									class="inline-flex shrink-0 items-center text-xs text-gray-600 dark:text-gray-500"
 								>
 									{$i18n.t('Live')}
 								</span>
 							{/if}
 						</div>
 
-						<div class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+						<div class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-500">
 							{#if entry.user}
 								<img
 									src={`/api/v1/users/${entry.user.id}/profile/image`}

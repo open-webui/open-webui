@@ -147,7 +147,7 @@
 			</div>
 		</div>
 
-		<div class="grid grid-cols-7 text-center text-[9px] text-gray-400 dark:text-gray-500 mb-0.5">
+		<div class="grid grid-cols-7 text-center text-[9px] text-gray-600 dark:text-gray-500 mb-0.5">
 			{#each ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as d}
 				<div class="py-0.5">{d}</div>
 			{/each}
@@ -176,7 +176,7 @@
 	<!-- Calendar List -->
 	<div>
 		<div class="flex items-center justify-between mb-1 px-1">
-			<div class="text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+			<div class="text-[11px] text-gray-600 dark:text-gray-500 uppercase tracking-wider">
 				{$i18n.t('Calendars')}
 			</div>
 			<button
@@ -190,7 +190,7 @@
 					viewBox="0 0 24 24"
 					stroke-width="2"
 					stroke="currentColor"
-					class="size-3 text-gray-400 dark:text-gray-500"
+					class="size-3 text-gray-600 dark:text-gray-500"
 					><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg
 				>
 			</button>
@@ -214,7 +214,7 @@
 					<span
 						class="truncate flex-1 {visibleCalendarIds.has(cal.id)
 							? ''
-							: 'text-gray-400 dark:text-gray-500'}"
+							: 'text-gray-600 dark:text-gray-500'}"
 					>
 						{cal.name}
 					</span>

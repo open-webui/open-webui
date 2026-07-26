@@ -243,14 +243,14 @@
 							</div>
 
 							{#if file.status === 'uploading'}
-								<div class="shrink-0 text-gray-400 dark:text-gray-500">
+								<div class="shrink-0 text-gray-600 dark:text-gray-500">
 									{$i18n.t('Uploading')}
 								</div>
 							{/if}
 
 							<button
 								type="button"
-								class="flex size-4 shrink-0 items-center justify-center text-gray-400 dark:text-gray-500"
+								class="flex size-4 shrink-0 items-center justify-center text-gray-600 dark:text-gray-500"
 								aria-label={$i18n.t('Remove File')}
 								on:click={() => {
 									selectedItems = selectedItems.filter((_, idx) => idx !== fileIdx);
