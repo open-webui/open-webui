@@ -8,17 +8,31 @@ from open_webui.utils.plugin import get_function_module_from_cache
 log = logging.getLogger(__name__)
 
 
-async def get_function_module(request, function_id, load_from_db=True):
+async def get_function_module(request, function_id, load_from_db=True, function=None):
     """
-    Get the function module by its ID.
+    Get the function module by its ID. A prefetched row can be passed via
+    ``function`` to skip the per-id fetch inside the module cache.
     """
-    function_module, _, _ = await get_function_module_from_cache(request, function_id, load_from_db=load_from_db)
+    function_module, _, _ = await get_function_module_from_cache(
+        request, function_id, function=function, load_from_db=load_from_db
+    )
     return function_module
 
 
 async def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list = None):
     if not ENABLE_PLUGINS:
         return []
+
+    # The identical computation runs for the inlet, stream and outlet stages
+    # of one request; cache the result on the request.
+    request_state = getattr(request, 'state', None)
+    cache_key = (
+        model.get('id') if isinstance(model, dict) else str(model),
+        tuple(enabled_filter_ids) if enabled_filter_ids else (),
+    )
+    cache = getattr(request_state, 'sorted_filter_ids_cache', None)
+    if cache is not None and cache_key in cache:
+        return list(cache[cache_key])
 
     active_filters = await Functions.get_active_filter_ids()
     filter_ids = [fid for fid, is_global in active_filters if is_global]
@@ -27,26 +41,31 @@ async def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list =
         filter_ids = list(set(filter_ids))
     active_filter_ids = {fid for fid, _ in active_filters}
 
+    # Only ids that are both requested and active can survive; anything else
+    # would previously get its module loaded and verified for nothing.
+    filter_ids = [fid for fid in filter_ids if fid in active_filter_ids]
+    functions_by_id = {function.id: function for function in await Functions.get_functions_by_ids(filter_ids)}
+
     async def get_active_status(filter_id):
-        function_module = await get_function_module(request, filter_id)
+        function_module = await get_function_module(request, filter_id, function=functions_by_id.get(filter_id))
 
         if getattr(function_module, 'toggle', None):
             return filter_id in (enabled_filter_ids or set())
 
         return True
 
-    # Pre-compute active status for each filter (async functions can't be used in set comprehensions)
-    resolved_active = {}
-    for filter_id in active_filter_ids:
-        resolved_active[filter_id] = await get_active_status(filter_id)
-    active_filter_ids = {fid for fid, is_active in resolved_active.items() if is_active}
+    # Pre-compute active status for each filter (async functions can't be used in comprehensions)
+    resolved = []
+    for filter_id in filter_ids:
+        if await get_active_status(filter_id):
+            resolved.append(filter_id)
+    filter_ids = resolved
 
-    filter_ids = [fid for fid in filter_ids if fid in active_filter_ids]
     valves_by_id = await Functions.get_function_valves_by_ids(filter_ids)
 
     async def get_priority(function_id):
         try:
-            function_module = await get_function_module(request, function_id)
+            function_module = await get_function_module(request, function_id, function=functions_by_id.get(function_id))
             if function_module and hasattr(function_module, 'Valves'):
                 valves_db = valves_by_id.get(function_id)
                 valves = function_module.Valves(**(valves_db if valves_db else {}))
@@ -60,6 +79,12 @@ async def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list =
     for fid in filter_ids:
         priorities[fid] = await get_priority(fid)
     filter_ids.sort(key=lambda fid: (priorities.get(fid, 0), fid))
+
+    if request_state is not None:
+        if cache is None:
+            cache = {}
+            request_state.sorted_filter_ids_cache = cache
+        cache[cache_key] = list(filter_ids)
 
     return filter_ids
 
@@ -79,7 +104,11 @@ async def process_filter_functions(request, filter_functions, filter_type, form_
             continue
         filter_id = function.id
 
-        function_module = await get_function_module(request, filter_id, load_from_db=(filter_type != 'stream'))
+        # The caller batch-fetched these rows; passing one skips a per-filter
+        # re-fetch inside the module cache while keeping the freshness check.
+        function_module = await get_function_module(
+            request, filter_id, load_from_db=(filter_type != 'stream'), function=function
+        )
         # Prepare handler function
         handler = getattr(function_module, filter_type, None)
         if not handler:
