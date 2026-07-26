@@ -18,6 +18,7 @@
 	export let model = null;
 	export let save = false;
 	export let preview = false;
+	export let compactPreview = false;
 	export let renderMarkdown = true;
 	export let editCodeBlock = true;
 	export let topPadding = false;
@@ -32,38 +33,46 @@
 	const getDetailTitle = (detailToken: OutputDetailToken): any => detailToken.summary;
 	const getDetailAttributes = (detailToken: OutputDetailToken): any => detailToken.attributes;
 
+	$: detailButtonClassName = `w-fit py-0.5 ${
+		compactPreview ? 'text-xs' : 'text-[0.9375rem]'
+	} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition`;
+
 	$: displayItems = buildOutputDisplayItems(output) as OutputDisplayItem[];
 </script>
 
 {#each displayItems as displayItem (displayItem.id)}
 	{#if displayItem.type === 'message'}
 		{#if renderMarkdown}
-			<Markdown
-				id={`${id}-${displayItem.id}`}
-				content={formatMessageContent(displayItem.text)}
-				{model}
-				{save}
-				{preview}
-				{done}
-				{editCodeBlock}
-				{topPadding}
-				{sourceIds}
-				{onSourceClick}
-				{onTaskClick}
-				{onSave}
-				{onUpdate}
-				{onPreview}
-			/>
+			<div class="markdown-prose">
+				<Markdown
+					id={`${id}-${displayItem.id}`}
+					content={formatMessageContent(displayItem.text)}
+					{model}
+					{save}
+					{preview}
+					{compactPreview}
+					{done}
+					{editCodeBlock}
+					{topPadding}
+					{sourceIds}
+					{onSourceClick}
+					{onTaskClick}
+					{onSave}
+					{onUpdate}
+					{onPreview}
+				/>
+			</div>
 		{:else}
-			<div class="whitespace-pre-wrap">{displayItem.text}</div>
+			<div class="whitespace-pre-wrap text-[0.9375rem]">{displayItem.text}</div>
 		{/if}
 	{:else if displayItem.type === 'detail_group'}
 		<ConsecutiveDetailsGroup
 			id={`${id}-${displayItem.id}`}
 			tokens={displayItem.tokens}
 			messageDone={done}
+			{compactPreview}
 		>
-			<div slot="content" class="space-y-1">
+			<div slot="content">
 				{#each displayItem.tokens as detailToken, detailIndex}
 					{#if detailToken.attributes?.type === 'tool_calls'}
 						<ToolCallDisplay
@@ -72,7 +81,8 @@
 							resultContent={detailToken.text}
 							grouped={true}
 							open={$settings?.expandDetails ?? false}
-							className="w-full space-y-1"
+							className="w-full"
+							buttonClassName={detailButtonClassName}
 						/>
 					{:else if detailToken.text?.length > 0}
 						<Collapsible
@@ -80,15 +90,20 @@
 							open={$settings?.expandDetails ?? false}
 							attributes={getDetailAttributes(detailToken)}
 							messageDone={done}
-							className="w-full space-y-1"
+							className="w-full"
+							buttonClassName={detailButtonClassName}
 						>
 							<div class="mb-1.5" slot="content">
-								<Markdown
-									id={`${id}-${displayItem.id}-${detailIndex}-detail`}
-									content={detailToken.text}
-									{done}
-									{editCodeBlock}
-								/>
+								<div class="markdown-prose">
+									<Markdown
+										id={`${id}-${displayItem.id}-${detailIndex}-detail`}
+										content={detailToken.text}
+										{done}
+										{preview}
+										{compactPreview}
+										{editCodeBlock}
+									/>
+								</div>
 							</div>
 						</Collapsible>
 					{:else}
@@ -98,7 +113,8 @@
 							disabled={true}
 							attributes={getDetailAttributes(detailToken)}
 							messageDone={done}
-							className="w-full space-y-1"
+							className="w-full"
+							buttonClassName={detailButtonClassName}
 						/>
 					{/if}
 				{/each}
@@ -112,7 +128,8 @@
 				attributes={detailToken.attributes}
 				resultContent={detailToken.text}
 				open={$settings?.expandDetails ?? false}
-				className="w-full space-y-1"
+				className="w-full space-y-2"
+				buttonClassName={detailButtonClassName}
 			/>
 		{:else if detailToken.text?.length > 0}
 			<Collapsible
@@ -120,15 +137,20 @@
 				open={$settings?.expandDetails ?? false}
 				attributes={getDetailAttributes(detailToken)}
 				messageDone={done}
-				className="w-full space-y-1"
+				className="w-full space-y-2"
+				buttonClassName={detailButtonClassName}
 			>
 				<div class="mb-1.5" slot="content">
-					<Markdown
-						id={`${id}-${displayItem.id}-detail`}
-						content={detailToken.text}
-						{done}
-						{editCodeBlock}
-					/>
+					<div class="markdown-prose">
+						<Markdown
+							id={`${id}-${displayItem.id}-detail`}
+							content={detailToken.text}
+							{done}
+							{preview}
+							{compactPreview}
+							{editCodeBlock}
+						/>
+					</div>
 				</div>
 			</Collapsible>
 		{:else}
@@ -138,7 +160,8 @@
 				disabled={true}
 				attributes={getDetailAttributes(detailToken)}
 				messageDone={done}
-				className="w-full space-y-1"
+				className="w-full space-y-2"
+				buttonClassName={detailButtonClassName}
 			/>
 		{/if}
 	{/if}

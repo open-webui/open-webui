@@ -28,7 +28,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition"
+					class="px-2 py-1 text-xs flex rounded-lg transition hover:bg-gray-50/70 dark:hover:bg-gray-850/50"
 					type="button"
 					on:click={() => {
 						const propertySpec = valvesSpec.properties[property] ?? {};

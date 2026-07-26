@@ -45,8 +45,10 @@ from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
+from open_webui.models.notes import Notes
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import UserModel, Users
+from open_webui.events import EVENTS, publish_event
 from open_webui.retrieval.utils import get_sources_from_items
 from open_webui.routers.images import (
     CreateImageForm,
@@ -55,6 +57,7 @@ from open_webui.routers.images import (
     image_generations,
 )
 from open_webui.routers.pipelines import (
+    get_sorted_filters,
     process_pipeline_inlet_filter,
     process_pipeline_outlet_filter,
 )
@@ -74,6 +77,7 @@ from open_webui.socket.main import (
     get_event_emitter,
 )
 from open_webui.utils.access_control import has_connection_access, has_permission
+from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.code_interpreter import execute_code_jupyter
@@ -103,6 +107,7 @@ from open_webui.utils.misc import (
     get_last_user_message,
     get_last_user_message_item,
     get_message_list,
+    get_output_text,
     get_system_message,
     is_string_allowed,
     merge_system_messages,
@@ -127,11 +132,41 @@ from open_webui.utils.tools import (
     get_tools,
     get_updated_tool_function,
 )
-from open_webui.utils.webhook import post_webhook
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
+
+
+async def publish_chat_finished_event(
+    request: Request, user: UserModel, metadata: dict, title: str, content: str, output: list | None = None
+):
+    chat_id = metadata.get('chat_id')
+    if getattr(request.state, 'internal', False) is True or not chat_id or chat_id.startswith(('channel:', 'local:')):
+        return
+
+    content = content or get_output_text(output)
+    webui_url = await Config.get('webui.url')
+    await publish_event(
+        request,
+        EVENTS.CHAT_FINISHED,
+        actor=user,
+        subject_id=chat_id,
+        subject_type='chat',
+        data={
+            'user_id': user.id,
+            'chat_id': chat_id,
+            'message_id': metadata.get('message_id'),
+            'model_id': metadata.get('model_id'),
+            'title': title,
+            'url': f'{webui_url}/c/{chat_id}' if webui_url else f'/c/{chat_id}',
+            'message': content,
+        },
+        message=title or 'Chat finished',
+    )
+    event_emitter = await get_event_emitter(metadata, update_db=False)
+    if event_emitter:
+        await event_emitter({'type': 'chat:list', 'data': {'chat_id': chat_id}})
 
 
 # We believe in one maker of all models, seen and unseen,
@@ -1128,10 +1163,16 @@ async def chat_completion_tools_handler(
     event_emitter = extra_params['__event_emitter__']
     metadata = extra_params['__metadata__']
 
+    # One batched SELECT instead of four sequential round trips.
+    task_config = await Config.get_many(
+        'task.model.default',
+        'task.model.external',
+        'task.tools.prompt_template',
+    )
     task_model_id = get_task_model_id(
         body['model'],
-        await Config.get('task.model.default'),
-        await Config.get('task.model.external'),
+        task_config.get('task.model.default'),
+        task_config.get('task.model.external'),
         models,
     )
 
@@ -1141,8 +1182,9 @@ async def chat_completion_tools_handler(
     specs = [tool['spec'] for tool in tools.values()]
     tools_specs = json.dumps(specs, ensure_ascii=False)
 
-    if await Config.get('task.tools.prompt_template') != '':
-        template = await Config.get('task.tools.prompt_template')
+    tools_prompt_template = task_config.get('task.tools.prompt_template')
+    if tools_prompt_template != '':
+        template = tools_prompt_template
     else:
         template = DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
 
@@ -1815,6 +1857,15 @@ async def chat_completion_files_handler(
             queries = [get_last_user_message(body['messages']) or '']
 
         try:
+            # One batched SELECT instead of six sequential round trips.
+            rag_config = await Config.get_many(
+                'rag.top_k',
+                'rag.top_k_reranker',
+                'rag.relevance_threshold',
+                'rag.hybrid_bm25_weight',
+                'rag.enable_hybrid_search',
+                'rag.full_context',
+            )
             # Directly await async get_sources_from_items (no thread needed - fully async now)
             sources = await get_sources_from_items(
                 request=request,
@@ -1823,17 +1874,17 @@ async def chat_completion_files_handler(
                 embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
-                k=await Config.get('rag.top_k'),
+                k=rag_config.get('rag.top_k'),
                 reranking_function=(
                     (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents, user=user))
                     if request.app.state.RERANKING_FUNCTION
                     else None
                 ),
-                k_reranker=await Config.get('rag.top_k_reranker'),
-                r=await Config.get('rag.relevance_threshold'),
-                hybrid_bm25_weight=await Config.get('rag.hybrid_bm25_weight'),
-                hybrid_search=await Config.get('rag.enable_hybrid_search'),
-                full_context=all_full_context or await Config.get('rag.full_context'),
+                k_reranker=rag_config.get('rag.top_k_reranker'),
+                r=rag_config.get('rag.relevance_threshold'),
+                hybrid_bm25_weight=rag_config.get('rag.hybrid_bm25_weight'),
+                hybrid_search=rag_config.get('rag.enable_hybrid_search'),
+                full_context=all_full_context or rag_config.get('rag.full_context'),
                 user=user,
             )
         except Exception as e:
@@ -1881,6 +1932,7 @@ def apply_params_to_form_data(form_data, model):
         'reasoning_tags': list,
         'compact_token_threshold': int,
         'system': str,
+        'note_id': str,
     }
 
     for key in list(params.keys()):
@@ -2074,7 +2126,7 @@ def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
     return sanitized
 
 
-SKILL_MENTION_RE = re.compile(r'<\$([^|>]+)(?:\|[^>]*)?>')
+SKILL_MENTION_RE = re.compile(r'<(?:\$([^|>]+)(?:\|[^>]*)?|/([^|>]+)\|[^>]*)>')
 
 
 def _get_text_parts(message: dict) -> list[str]:
@@ -2088,27 +2140,33 @@ def _get_text_parts(message: dict) -> list[str]:
 
 
 def extract_skill_ids_from_messages(messages: list[dict]) -> set[str]:
-    """Extract skill IDs from <$skillId|label> mention tags in messages."""
+    """Extract skill IDs from <$skillId|label> and </skillId|label> mention tags."""
     ids: set[str] = set()
     for message in messages:
         for text in _get_text_parts(message):
-            ids.update(m.group(1) for m in SKILL_MENTION_RE.finditer(text))
+            ids.update(m.group(1) or m.group(2) for m in SKILL_MENTION_RE.finditer(text))
     return ids
 
 
+SKILL_MENTION_STRIP_RE = re.compile(r'<(?:\$[^|>]+(?:\|([^>]*))?|/[^|>]+\|([^>]*))>')
+
+
 def strip_skill_mentions(messages: list[dict]) -> None:
-    """Replace <$skillId|label> mention tags with the label in message content in-place."""
-    strip_re = re.compile(r'<\$[^|>]+(?:\|([^>]*))?>')
+    """Replace <$skillId|label> and </skillId|label> mention tags with the label in-place."""
+
+    def label(match):
+        return match.group(1) or match.group(2) or ''
+
     for message in messages:
         content = message.get('content')
-        if isinstance(content, str) and strip_re.search(content):
-            message['content'] = strip_re.sub(r'\1', content).strip()
+        if isinstance(content, str) and SKILL_MENTION_STRIP_RE.search(content):
+            message['content'] = SKILL_MENTION_STRIP_RE.sub(label, content).strip()
         elif isinstance(content, list):
             for part in content:
                 if isinstance(part, dict) and part.get('type') == 'text':
                     text = part.get('text', '')
-                    if strip_re.search(text):
-                        part['text'] = strip_re.sub(r'\1', text).strip()
+                    if SKILL_MENTION_STRIP_RE.search(text):
+                        part['text'] = SKILL_MENTION_STRIP_RE.sub(label, text).strip()
 
 
 async def connect_mcp_server(
@@ -2443,9 +2501,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if features:
         if 'voice' in features and features['voice']:
             if await Config.get('task.voice.prompt.enable'):
-                if await Config.get('task.voice.prompt_template'):
-                    template = await Config.get('task.voice.prompt_template')
-                else:
+                template = await Config.get('task.voice.prompt_template')
+                if not template:
                     template = DEFAULT_VOICE_MODE_PROMPT_TEMPLATE
 
                 form_data['messages'] = add_or_update_system_message(
@@ -2472,11 +2529,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             # Skip XML-tag prompt injection when native FC is enabled —
             # execute_code will be injected as a builtin tool instead
             if metadata.get('params', {}).get('function_calling') == 'legacy':
-                prompt = (
-                    await Config.get('code_interpreter.prompt_template')
-                    if await Config.get('code_interpreter.prompt_template') != ''
-                    else DEFAULT_CODE_INTERPRETER_PROMPT
-                )
+                ci_prompt_template = await Config.get('code_interpreter.prompt_template')
+                prompt = ci_prompt_template if ci_prompt_template != '' else DEFAULT_CODE_INTERPRETER_PROMPT
 
                 # Append filesystem awareness only for pyodide engine
                 if engine != 'jupyter':
@@ -2511,14 +2565,43 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Mentioned skills get full content; selected/default skills can be loaded through view_skill.
     mentioned_skill_ids = extract_skill_ids_from_messages(form_data.get('messages', []))
-    skill_ids = (
+    skill_ids = sorted(
         set(form_data.pop('skill_ids', None) or [])
         | set(model.get('info', {}).get('meta', {}).get('skillIds', []))
         | mentioned_skill_ids
     )
     available_skills = []
     view_skill_ids = []
+    chat = None
+    if metadata.get('chat_id') and not metadata['chat_id'].startswith(('local:', 'channel:')):
+        chat = await Chats.get_chat_by_id(metadata['chat_id'])
+
+    if chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note':
+        note_id = (chat.meta or {}).get('note_id')
+        note = await Notes.get_note_by_id(note_id) if note_id else None
+        if note and (
+            user.role == 'admin'
+            or note.user_id == user.id
+            or await AccessGrants.has_access(
+                user_id=user.id,
+                resource_type='note',
+                resource_id=note.id,
+                permission='read',
+            )
+        ):
+            note_files = [
+                file
+                for file in ((note.data or {}).get('files') or [])
+                if isinstance(file, dict)
+                and file.get('type') != 'image'
+                and not (file.get('content_type') or '').startswith('image/')
+            ]
+            if note_files:
+                files = [*(files or []), *note_files]
+
     use_builtin_tools = (
+        chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note'
+    ) or (
         bool(metadata.get('session_id'))
         and metadata.get('params', {}).get('function_calling') != 'legacy'
         and (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('builtin_tools', True)
@@ -2527,12 +2610,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if skill_ids:
         from open_webui.models.skills import Skills as SkillsModel
 
-        accessible_skill_ids = {s.id for s in await SkillsModel.get_skills_by_user_id(user.id, 'read')}
+        # Reuse the rows from the access query instead of re-fetching each
+        # skill by id.
+        accessible_skills = {s.id: s for s in await SkillsModel.get_skills_by_user_id(user.id, 'read')}
         for sid in skill_ids:
-            if sid in accessible_skill_ids:
-                s = await SkillsModel.get_skill_by_id(sid)
-                if s and s.is_active:
-                    available_skills.append(s)
+            s = accessible_skills.get(sid)
+            if s and s.is_active:
+                available_skills.append(s)
 
         skill_manifest = ''
         for skill in available_skills:
@@ -2584,7 +2668,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         {
             'model_id': form_data.get('model'),
             'tool_ids': tool_ids,
-            'skill_ids': list(skill_ids),
+            'skill_ids': skill_ids,
             'terminal_id': terminal_id,
             'files': files,
             'features': features,
@@ -3304,7 +3388,7 @@ async def outlet_filter_handler(ctx):
             message_list = [
                 {
                     'role': m.get('role'),
-                    'content': m.get('content', ''),
+                    'content': m.get('content') or get_output_text(m.get('output')),
                 }
                 for m in form_messages
             ]
@@ -3337,7 +3421,7 @@ async def outlet_filter_handler(ctx):
                 {
                     'id': m.get('id'),
                     'role': m.get('role'),
-                    'content': m.get('content', ''),
+                    'content': m.get('content') or get_output_text(m.get('output')),
                     'info': m.get('info'),
                     'timestamp': m.get('timestamp'),
                     **({'output': m['output']} if m.get('output') else {}),
@@ -3389,17 +3473,21 @@ async def outlet_filter_handler(ctx):
                     outlet_message_id = message.get('id')
                     if outlet_message_id and outlet_message_id in messages_map:
                         original_message = messages_map[outlet_message_id]
-                        content_changed = original_message.get('content') != message.get('content')
+                        original_content = original_message.get('content') or get_output_text(
+                            original_message.get('output')
+                        )
+                        message_content = message.get('content') or get_output_text(message.get('output'))
+                        content_changed = original_content != message_content
                         output_changed = message.get('output') and message.get('output') != original_message.get(
                             'output'
                         )
                         if content_changed or output_changed:
                             message_update = {
-                                'originalContent': original_message.get('content'),
+                                'originalContent': original_content,
                                 **({'output': message['output']} if output_changed else {}),
                             }
                             if content_changed:
-                                message_update['content'] = message.get('content', '')
+                                message_update['content'] = message_content or ''
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 chat_id,
                                 outlet_message_id,
@@ -3548,26 +3636,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                             },
                         )
 
-                    # Send a webhook notification if the user is not active
-                    if (
-                        getattr(request.state, 'internal', False) is not True
-                        and await Config.get('ui.enable_user_webhooks')
-                        and not await Users.is_user_active(user.id)
-                    ):
-                        webhook_url = await Users.get_user_webhook_url_by_id(user.id)
-                        if webhook_url:
-                            webui_url = await Config.get('webui.url')
-                            await post_webhook(
-                                request.app.state.WEBUI_NAME,
-                                webhook_url,
-                                f'{content}\n\n{title} - {webui_url}/c/{metadata["chat_id"]}',
-                                {
-                                    'action': 'chat',
-                                    'message': content,
-                                    'title': title,
-                                    'url': f'{webui_url}/c/{metadata["chat_id"]}',
-                                },
-                            )
+                    await publish_chat_finished_event(request, user, metadata, title, content, response_output)
 
                     ctx['assistant_message'] = {
                         'content': content,
@@ -3580,6 +3649,29 @@ async def non_streaming_chat_response_handler(response, ctx):
             response = build_response_object(response, merge_events_into_response(response_data, events))
         except Exception as e:
             log.debug(f'Error occurred while processing request: {e}')
+            chat_id = metadata.get('chat_id')
+            if (
+                getattr(request.state, 'internal', False) is not True
+                and chat_id
+                and not chat_id.startswith(('channel:', 'local:'))
+            ):
+                webui_url = await Config.get('webui.url')
+                await publish_event(
+                    request,
+                    EVENTS.CHAT_FAILED,
+                    actor=user,
+                    subject_id=chat_id,
+                    subject_type='chat',
+                    data={
+                        'user_id': user.id,
+                        'chat_id': chat_id,
+                        'message_id': metadata.get('message_id'),
+                        'model_id': metadata.get('model_id'),
+                        'url': f'{webui_url}/c/{chat_id}' if webui_url else f'/c/{chat_id}',
+                        'message': str(e),
+                    },
+                    message='Chat failed',
+                )
             pass
 
         return response
@@ -3627,10 +3719,9 @@ async def streaming_chat_response_handler(response, ctx):
     }
 
     filter_functions = (
-        [
-            await Functions.get_function_by_id(filter_id)
-            for filter_id in await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
-        ]
+        await Functions.get_functions_by_ids(
+            await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
+        )
         if ENABLE_PLUGINS
         else []
     )
@@ -3878,9 +3969,10 @@ async def streaming_chat_response_handler(response, ctx):
             except Exception as e:
                 pass
 
-            content = (
+            initial_content = (
                 message.get('content', '') if message else last_assistant_message if last_assistant_message else ''
             )
+            content_parts = [initial_content] if initial_content else []
 
             # Initialize output: use existing from message if continuing, else create new
             existing_output = message.get('output') if message else None
@@ -3888,14 +3980,14 @@ async def streaming_chat_response_handler(response, ctx):
                 output = existing_output
             else:
                 # Only create an initial message item if there is content to initialize with
-                if content:
+                if initial_content:
                     output = [
                         {
                             'type': 'message',
                             'id': output_id('msg'),
                             'status': 'in_progress',
                             'role': 'assistant',
-                            'content': [{'type': 'output_text', 'text': content}],
+                            'content': [{'type': 'output_text', 'text': initial_content}],
                         }
                     ]
                 else:
@@ -3957,7 +4049,7 @@ async def streaming_chat_response_handler(response, ctx):
                     )
 
                 async def stream_body_handler(response, form_data):
-                    nonlocal content
+                    nonlocal content_parts
                     nonlocal usage
                     nonlocal output
                     nonlocal prior_output
@@ -4022,7 +4114,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 raw_error = raw_obj.get('error') if isinstance(raw_obj, dict) else None
                                 if raw_error:
                                     try:
-                                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                                        await Chats.upsert_message_to_chat_by_id_and_message_id(
                                             metadata['chat_id'],
                                             metadata['message_id'],
                                             {
@@ -4408,7 +4500,8 @@ async def streaming_chat_response_handler(response, ctx):
                                                 user,
                                             )
 
-                                        content = f'{content}{value}'
+                                        # closure-cell str += recopies per chunk; append + join once at read is O(n)
+                                        content_parts.append(value if isinstance(value, str) else f'{value}')
 
                                         # Check if we're inside a tag-based block
                                         # (reasoning, code_interpreter, or solution).
@@ -4515,16 +4608,17 @@ async def streaming_chat_response_handler(response, ctx):
                                         if ENABLE_REALTIME_CHAT_SAVE and not metadata.get('chat_id', '').startswith(
                                             'channel:'
                                         ):
+                                            current_output = full_output()
                                             # Save message in the database
                                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                                 metadata['chat_id'],
                                                 metadata['message_id'],
                                                 {
-                                                    'output': full_output(),
+                                                    'output': current_output,
                                                 },
                                             )
                                             data = {
-                                                'output': full_output(),
+                                                'output': current_output,
                                             }
                                             delta_type = 'content'
                                         else:
@@ -4689,12 +4783,12 @@ async def streaming_chat_response_handler(response, ctx):
                         params = {}
                         if tool_args and tool_args.strip():
                             try:
-                                params = ast.literal_eval(tool_args)
-                            except Exception as e:
-                                log.debug(e)
+                                params = json.loads(tool_args)
+                            except Exception:
                                 try:
-                                    params = json.loads(tool_args)
-                                except Exception:
+                                    params = ast.literal_eval(tool_args)
+                                except Exception as e:
+                                    log.debug(e)
                                     return None
                         tool_call.setdefault('function', {})['arguments'] = json.dumps(params)
                         return params
@@ -5092,7 +5186,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
     
                                         _real_import = builtins.__import__
-                                        async def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
+                                        def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
                                             if name.split('.')[0] in BLOCKED_MODULES:
                                                 importer_name = globals.get('__name__') if globals else None
                                                 if importer_name == '__main__':
@@ -5105,7 +5199,8 @@ async def streaming_chat_response_handler(response, ctx):
                                     """)
                                     code = blocking_code + '\n' + code
 
-                                if await Config.get('code_interpreter.engine') == 'pyodide':
+                                ci_engine = await Config.get('code_interpreter.engine')
+                                if ci_engine == 'pyodide':
                                     ci_output = await event_caller(
                                         {
                                             'type': 'execute:python',
@@ -5117,7 +5212,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             },
                                         }
                                     )
-                                elif await Config.get('code_interpreter.engine') == 'jupyter':
+                                elif ci_engine == 'jupyter':
                                     ci_output = await execute_code_jupyter(
                                         await Config.get('code_interpreter.jupyter.url'),
                                         code,
@@ -5263,36 +5358,15 @@ async def streaming_chat_response_handler(response, ctx):
                             metadata['chat_id'],
                             metadata['message_id'],
                             {'done': True, 'usage': usage},
-                            touch=False,
                         )
                     else:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
                             {'done': True},
-                            touch=False,
                         )
 
-                # Send a webhook notification if the user is not active
-                if (
-                    getattr(request.state, 'internal', False) is not True
-                    and await Config.get('ui.enable_user_webhooks')
-                    and not await Users.is_user_active(user.id)
-                ):
-                    webhook_url = await Users.get_user_webhook_url_by_id(user.id)
-                    if webhook_url:
-                        webui_url = await Config.get('webui.url')
-                        await post_webhook(
-                            request.app.state.WEBUI_NAME,
-                            webhook_url,
-                            f'{content}\n\n{title} - {webui_url}/c/{metadata["chat_id"]}',
-                            {
-                                'action': 'chat',
-                                'message': content,
-                                'title': title,
-                                'url': f'{webui_url}/c/{metadata["chat_id"]}',
-                            },
-                        )
+                await publish_chat_finished_event(request, user, metadata, title, ''.join(content_parts), output)
 
                 await event_emitter(
                     {
@@ -5358,6 +5432,16 @@ async def streaming_chat_response_handler(response, ctx):
                 return f'data: {item}\n\n'
 
             assistant_message = {}
+            has_api_outlet_filters = ENABLE_API_OUTLET_FILTERS and bool(filter_functions)
+            if ENABLE_API_OUTLET_FILTERS and not has_api_outlet_filters:
+                try:
+                    model_id = model.get('id') if isinstance(model, dict) else model
+                    has_api_outlet_filters = bool(
+                        (isinstance(model, dict) and 'pipeline' in model)
+                        or get_sorted_filters(model_id, request.app.state.MODELS)
+                    )
+                except Exception:
+                    has_api_outlet_filters = True
 
             for event in events:
                 event, _ = await process_filter_functions(
@@ -5381,11 +5465,11 @@ async def streaming_chat_response_handler(response, ctx):
                 )
 
                 if data:
-                    if ENABLE_API_OUTLET_FILTERS:
+                    if has_api_outlet_filters:
                         update_assistant_message_from_stream(assistant_message, data)
                     yield data
 
-            if ENABLE_API_OUTLET_FILTERS and assistant_message:
+            if has_api_outlet_filters and assistant_message:
                 ctx['assistant_message'] = assistant_message
                 await outlet_filter_handler(ctx)
 

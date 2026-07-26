@@ -1,6 +1,7 @@
 import json
 import logging
 from typing import Optional
+from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from open_webui.config import (
@@ -12,6 +13,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.chats import ChatForm, ChatResponse, Chats
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.notes import (
@@ -303,6 +305,229 @@ async def get_note_by_id(
     )
 
 
+@router.get('/{id}/chat', response_model=ChatResponse)
+async def get_note_chat_by_id(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    log.info('[note-chat] get-or-create requested note_id=%s user_id=%s', id, user.id)
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', await Config.get('user.permissions'), db=db
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    note = await Notes.get_note_by_id(id, db=db)
+    if not note:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if user.role != 'admin' and (
+        user.id != note.user_id
+        and not await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='note',
+            resource_id=note.id,
+            permission='read',
+            db=db,
+        )
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
+    chat = await Chats.get_internal_chat_by_note_id(note.id, user.id, db=db)
+    if chat:
+        log.info('[note-chat] reusing hidden chat note_id=%s chat_id=%s user_id=%s', note.id, chat.id, user.id)
+        payload = {**(chat.chat or {})}
+        params = {**(payload.get('params') or {})}
+        changed = False
+
+        if params.pop('note_id', None) is not None:
+            changed = True
+
+        system = (
+            f'CONTEXT:\nCurrent note id: {note.id}\n'
+            'This chat is attached to the current note.\n'
+            'For edit requests like make this concise, rewrite, enhance, shorten, or update: call view_note then replace_note_content.\n'
+            'Do not say an edit is done unless replace_note_content succeeds.'
+        )
+        if params.get('system') != system:
+            params['system'] = system
+            changed = True
+
+        if payload.pop('system', None) is not None:
+            changed = True
+
+        payload['params'] = params
+        if changed:
+            updated_chat = await Chats.update_chat_by_id(chat.id, payload, db=db, touch=False)
+            if updated_chat:
+                return updated_chat
+
+        return chat
+
+    chat_id = str(uuid4())
+    chat = await Chats.insert_new_chat(
+        chat_id,
+        user.id,
+        ChatForm(
+            chat={
+                'id': chat_id,
+                'title': 'Chat',
+                'models': [''],
+                'params': {
+                    'system': (
+                        f'CONTEXT:\nCurrent note id: {note.id}\n'
+                        'This chat is attached to the current note.\n'
+                        'For edit requests like make this concise, rewrite, enhance, shorten, or update: call view_note then replace_note_content.\n'
+                        'Do not say an edit is done unless replace_note_content succeeds.'
+                    )
+                },
+                'history': {'messages': {}, 'currentId': None},
+                'messages': [],
+                'tags': [],
+            }
+        ),
+        db=db,
+        internal_meta={'internal': True, 'type': 'note', 'note_id': note.id},
+    )
+    if not chat:
+        log.error('[note-chat] failed creating hidden chat note_id=%s user_id=%s', note.id, user.id)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
+
+    log.info('[note-chat] created hidden chat note_id=%s chat_id=%s user_id=%s', note.id, chat.id, user.id)
+    return chat
+
+
+@router.get('/{id}/chats', response_model=list[ChatResponse])
+async def get_note_chats_by_id(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', await Config.get('user.permissions'), db=db
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    note = await Notes.get_note_by_id(id, db=db)
+    if not note:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if user.role != 'admin' and (
+        user.id != note.user_id
+        and not await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='note',
+            resource_id=note.id,
+            permission='read',
+            db=db,
+        )
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
+    chats = await Chats.get_internal_chats_by_note_id(note.id, user.id, db=db)
+    normalized_chats = []
+    for chat in chats:
+        payload = {**(chat.chat or {})}
+        params = {**(payload.get('params') or {})}
+        changed = False
+
+        if params.pop('note_id', None) is not None:
+            changed = True
+
+        system = (
+            f'CONTEXT:\nCurrent note id: {note.id}\n'
+            'This chat is attached to the current note.\n'
+            'For edit requests like make this concise, rewrite, enhance, shorten, or update: call view_note then replace_note_content.\n'
+            'Do not say an edit is done unless replace_note_content succeeds.'
+        )
+        if params.get('system') != system:
+            params['system'] = system
+            changed = True
+
+        if payload.pop('system', None) is not None:
+            changed = True
+
+        payload['params'] = params
+        if changed:
+            chat = await Chats.update_chat_by_id(chat.id, payload, db=db, touch=False) or chat
+
+        normalized_chats.append(chat)
+
+    return normalized_chats
+
+
+@router.post('/{id}/chat', response_model=ChatResponse)
+async def create_note_chat_by_id(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.notes', await Config.get('user.permissions'), db=db
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    note = await Notes.get_note_by_id(id, db=db)
+    if not note:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if user.role != 'admin' and (
+        user.id != note.user_id
+        and not await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='note',
+            resource_id=note.id,
+            permission='read',
+            db=db,
+        )
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
+    chat_id = str(uuid4())
+    chat = await Chats.insert_new_chat(
+        chat_id,
+        user.id,
+        ChatForm(
+            chat={
+                'id': chat_id,
+                'title': 'Chat',
+                'models': [''],
+                'params': {
+                    'system': (
+                        f'CONTEXT:\nCurrent note id: {note.id}\n'
+                        'This chat is attached to the current note.\n'
+                        'For edit requests like make this concise, rewrite, enhance, shorten, or update: call view_note then replace_note_content.\n'
+                        'Do not say an edit is done unless replace_note_content succeeds.'
+                    )
+                },
+                'history': {'messages': {}, 'currentId': None},
+                'messages': [],
+                'tags': [],
+            }
+        ),
+        db=db,
+        internal_meta={'internal': True, 'type': 'note', 'note_id': note.id},
+    )
+    if not chat:
+        log.error('[note-chat] failed creating hidden chat note_id=%s user_id=%s', note.id, user.id)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
+
+    log.info('[note-chat] created hidden chat note_id=%s chat_id=%s user_id=%s', note.id, chat.id, user.id)
+    return chat
+
+
 ############################
 # UpdateNoteById
 ############################
@@ -354,9 +579,15 @@ async def update_note_by_id(
         pinned_note_ids = await Notes.get_pinned_note_ids(user.id, db=db)
         note.is_pinned = note.id in pinned_note_ids
 
+        event_data = note.model_dump()
+        if form_data.data is not None:
+            event_data['data'] = {
+                key: note.data.get(key) for key in form_data.data.keys() if note.data is not None and key in note.data
+            }
+
         await sio.emit(
-            'note-events',
-            note.model_dump(),
+            'events:note',
+            event_data,
             to=f'note:{note.id}',
         )
 

@@ -16,7 +16,7 @@
 
 	type AccessGrant = {
 		id?: string;
-		principal_type: 'user' | 'group';
+		principal_type: 'user' | 'group' | 'anyone';
 		principal_id: string;
 		permission: 'read' | 'write';
 	};
@@ -34,6 +34,7 @@
 
 	export let share = true;
 	export let sharePublic = true;
+	export let shareOpen = false;
 	export let shareUsers = true;
 	export let allowGroups = true;
 	export let defaultPermission: 'read' | 'write' = 'read';
@@ -162,6 +163,14 @@
 				grant.principal_type === 'user' && grant.principal_id === '*' && grant.permission === 'read'
 		);
 
+	const hasAnyoneReadGrant = (grants: AccessGrant[]): boolean =>
+		grants.some(
+			(grant) =>
+				grant.principal_type === 'anyone' &&
+				grant.principal_id === '*' &&
+				grant.permission === 'read'
+		);
+
 	const hasPublicWriteGrant = (grants: AccessGrant[]): boolean =>
 		grants.some(
 			(grant) =>
@@ -170,16 +179,17 @@
 				grant.permission === 'write'
 		);
 
-	const currentGrants = (): AccessGrant[] =>
-		Array.isArray(accessGrants) ? (accessGrants as AccessGrant[]) : [];
+	const currentGrants = (grants: AccessGrant[] | any = accessGrants): AccessGrant[] =>
+		Array.isArray(grants) ? (grants as AccessGrant[]) : [];
 
 	const getPrincipalIdsByPermission = (
 		principalType: 'user' | 'group',
-		permission: 'read' | 'write'
+		permission: 'read' | 'write',
+		grants: AccessGrant[] | any = accessGrants
 	): string[] =>
 		Array.from(
 			new Set(
-				currentGrants()
+				currentGrants(grants)
 					.filter(
 						(grant) => grant.principal_type === principalType && grant.permission === permission
 					)
@@ -188,7 +198,7 @@
 		);
 
 	const hasPrincipalGrant = (
-		principalType: 'user' | 'group',
+		principalType: 'user' | 'group' | 'anyone',
 		principalId: string,
 		permission: 'read' | 'write'
 	): boolean =>
@@ -204,14 +214,29 @@
 		onChange(accessGrants);
 	};
 
-	const setPublic = (isPublic: boolean) => {
-		// Remove all user:* grants
+	const getVisibility = (grants: AccessGrant[]): 'private' | 'public' | 'open' => {
+		if (hasAnyoneReadGrant(grants)) return 'open';
+		if (hasPublicReadGrant(grants)) return 'public';
+		return 'private';
+	};
+
+	const setVisibility = (visibility: 'private' | 'public' | 'open') => {
 		const filtered = currentGrants().filter(
-			(grant) => !(grant.principal_type === 'user' && grant.principal_id === '*')
+			(grant) =>
+				!(
+					(grant.principal_type === 'user' || grant.principal_type === 'anyone') &&
+					grant.principal_id === '*'
+				)
 		);
-		if (isPublic) {
+		if (visibility === 'public') {
 			filtered.push({
 				principal_type: 'user',
+				principal_id: '*',
+				permission: 'read'
+			});
+		} else if (visibility === 'open') {
+			filtered.push({
+				principal_type: 'anyone',
 				principal_id: '*',
 				permission: 'read'
 			});
@@ -237,7 +262,7 @@
 	};
 
 	const upsertPrincipalGrant = (
-		principalType: 'user' | 'group',
+		principalType: 'user' | 'group' | 'anyone',
 		principalId: string,
 		permission: 'read' | 'write',
 		grants: AccessGrant[]
@@ -263,7 +288,7 @@
 	};
 
 	const removePrincipalGrant = (
-		principalType: 'user' | 'group',
+		principalType: 'user' | 'group' | 'anyone',
 		principalId: string,
 		permission: 'read' | 'write',
 		grants: AccessGrant[]
@@ -277,14 +302,14 @@
 				)
 		);
 
-	const removePrincipal = (principalType: 'user' | 'group', principalId: string) => {
+	const removePrincipal = (principalType: 'user' | 'group' | 'anyone', principalId: string) => {
 		let next = [...currentGrants()];
 		next = removePrincipalGrant(principalType, principalId, 'read', next);
 		next = removePrincipalGrant(principalType, principalId, 'write', next);
 		commitAccessGrants(next);
 	};
 
-	const togglePrincipalWrite = (principalType: 'user' | 'group', principalId: string) => {
+	const togglePrincipalWrite = (principalType: 'user' | 'group' | 'anyone', principalId: string) => {
 		let next = [...currentGrants()];
 		const hasWrite = hasPrincipalGrant(principalType, principalId, 'write');
 		if (hasWrite) {
@@ -379,12 +404,14 @@
 	$: if (readGroupIds.length > 0 || writeGroupIds.length > 0) {
 		void ensureGroupsByIds([...readGroupIds, ...writeGroupIds]);
 	}
-	$: readGroupIds = (accessGrants, getPrincipalIdsByPermission('group', 'read'));
-	$: writeGroupIds = (accessGrants, getPrincipalIdsByPermission('group', 'write'));
-	$: readUserIds =
-		(accessGrants, getPrincipalIdsByPermission('user', 'read').filter((id) => id !== '*'));
-	$: writeUserIds =
-		(accessGrants, getPrincipalIdsByPermission('user', 'write').filter((id) => id !== '*'));
+	$: readGroupIds = getPrincipalIdsByPermission('group', 'read', accessGrants);
+	$: writeGroupIds = getPrincipalIdsByPermission('group', 'write', accessGrants);
+	$: readUserIds = getPrincipalIdsByPermission('user', 'read', accessGrants).filter(
+		(id) => id !== '*'
+	);
+	$: writeUserIds = getPrincipalIdsByPermission('user', 'write', accessGrants).filter(
+		(id) => id !== '*'
+	);
 
 	$: selectedUserIds = Array.from(new Set([...readUserIds, ...writeUserIds]));
 
@@ -426,27 +453,14 @@
 	}
 
 	onMount(async () => {
-		console.log('AccessControl mounted', { accessGrants, accessControl });
 		const res = await getGroups(localStorage.token, true).catch((error) => {
 			console.error(error);
 			return [];
 		});
 
-		console.log('getGroups res', res);
-
 		groups = [...groups, ...res].filter(
 			(g, index, self) => index === self.findIndex((t) => t.id === g.id)
 		);
-	});
-
-	$: console.log('AccessControl state', {
-		accessGrants,
-		readGroupIds,
-		writeGroupIds,
-		selectedUserIds,
-		groups,
-		accessGroups,
-		selectedUsers
 	});
 </script>
 
@@ -458,19 +472,19 @@
 	onAdd={handleAddAccess}
 />
 
-<div class=" rounded-lg flex flex-col gap-1">
-	<div class="py-2">
-		<div class="flex gap-2.5 items-center">
+<div class="rounded-lg flex flex-col gap-1">
+	<div class="py-1.5">
+		<div class="flex gap-2 items-center">
 			<div>
-				<div class=" p-2 bg-black/5 dark:bg-white/5 rounded-full">
-					{#if !hasPublicReadGrant(accessGrants ?? [])}
+				<div class="p-2 bg-black/5 dark:bg-white/5 rounded-full">
+					{#if getVisibility(accessGrants ?? []) === 'private'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
 							viewBox="0 0 24 24"
 							stroke-width="1.5"
 							stroke="currentColor"
-							class="w-5 h-5"
+							class="size-5"
 						>
 							<path
 								stroke-linecap="round"
@@ -485,7 +499,7 @@
 							viewBox="0 0 24 24"
 							stroke-width="1.5"
 							stroke="currentColor"
-							class="w-5 h-5"
+							class="size-5"
 						>
 							<path
 								stroke-linecap="round"
@@ -499,37 +513,42 @@
 
 			<div>
 				<Tooltip
-					content={!(share && sharePublic) && !hasPublicReadGrant(accessGrants ?? [])
+					content={!(share && sharePublic) && getVisibility(accessGrants ?? []) === 'private'
 						? $i18n.t('You do not have permission to make this public')
 						: ''}
 				>
 					<select
 						id="models"
-						class="outline-none bg-transparent text-sm font-normal block w-fit pr-10 max-w-full placeholder-gray-400"
-						value={!hasPublicReadGrant(accessGrants ?? []) ? 'private' : 'public'}
+						class="outline-none bg-transparent text-sm font-normal block w-fit pr-8 max-w-full placeholder-gray-400"
+						value={getVisibility(accessGrants ?? [])}
 						on:change={(e) => {
-							setPublic((e.target as HTMLSelectElement).value === 'public');
+							setVisibility((e.target as HTMLSelectElement).value as 'private' | 'public' | 'open');
 						}}
 					>
 						<option class=" text-gray-700" value="private">{$i18n.t('Private')}</option>
 						{#if (share && sharePublic) || hasPublicReadGrant(accessGrants ?? [])}
 							<option class=" text-gray-700" value="public">{$i18n.t('Public')}</option>
 						{/if}
+						{#if (share && shareOpen) || hasAnyoneReadGrant(accessGrants ?? [])}
+							<option class=" text-gray-700" value="open">{$i18n.t('Open')}</option>
+						{/if}
 					</select>
 				</Tooltip>
 
 				<div class=" text-xs text-gray-400 font-normal">
-					{#if !hasPublicReadGrant(accessGrants ?? [])}
+					{#if getVisibility(accessGrants ?? []) === 'private'}
 						{$i18n.t('Only select users and groups with permission can access')}
-					{:else}
+					{:else if getVisibility(accessGrants ?? []) === 'public'}
 						{$i18n.t('Accessible to all users')}
+					{:else}
+						{$i18n.t('Anyone with the link can view')}
 					{/if}
 				</div>
 			</div>
 		</div>
 
-		{#if hasPublicReadGrant(accessGrants ?? []) && accessRoles.includes('write')}
-			<div class="flex w-full justify-between mt-2 ml-0.5">
+		{#if hasPublicReadGrant(accessGrants ?? []) && !hasAnyoneReadGrant(accessGrants ?? []) && accessRoles.includes('write')}
+			<div class="flex w-full justify-between mt-1.5 ml-0.5">
 				<div class="self-center text-xs">
 					{$i18n.t('Allow public write access')}
 				</div>
@@ -544,7 +563,7 @@
 	</div>
 
 	{#if share}
-		<div class="flex items-center justify-between text-xs font-normal text-gray-500 my-1">
+		<div class="flex items-center justify-between text-xs font-normal text-gray-500 my-0.5">
 			<div>
 				{$i18n.t('Access List')}
 			</div>
@@ -563,11 +582,11 @@
 		</div>
 
 		<!-- List -->
-		<div class="flex flex-col gap-2">
+		<div class="flex flex-col gap-1">
 			<!-- Groups -->
 			{#each accessGroups as group}
-				<div class="flex items-center gap-3 justify-between text-sm w-full transition pb-1">
-					<div class="flex items-center gap-2 w-full flex-1">
+				<div class="flex items-center gap-2 justify-between text-sm w-full transition pb-1">
+					<div class="flex items-center gap-2 min-w-0 flex-1">
 						<!-- Placeholder for group icon vs user icon -->
 						<div
 							class="size-5 rounded-full bg-gray-100 dark:bg-gray-850 flex items-center justify-center text-xs"
@@ -583,11 +602,11 @@
 						</div>
 					</div>
 
-					<div class="w-full flex justify-end items-center gap-2">
+					<div class="flex justify-end items-center gap-1.5 shrink-0">
 						{#if accessRoles.includes('write')}
 							<select
 								aria-label={$i18n.t('Access level')}
-								class="bg-transparent text-sm"
+								class="bg-transparent text-sm outline-none"
 								value={writeGroupIds.includes(group.id) ? 'write' : 'read'}
 								on:change={(e) => {
 									if (
@@ -606,7 +625,7 @@
 						{/if}
 
 						<button
-							class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							class="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 							type="button"
 							on:click={() => {
 								removePrincipal('group', group.id);
@@ -622,26 +641,26 @@
 			{#if shareUsers}
 				{#each selectedUsers as user}
 					<div
-						class="flex items-center gap-3 justify-between text-sm w-full transition border-b border-gray-50 dark:border-gray-850 pb-2 last:border-0"
+						class="flex items-center gap-2 justify-between text-sm w-full transition border-b border-gray-50 dark:border-gray-850 pb-1.5 last:border-0"
 					>
-						<div class="flex items-center gap-2 w-full flex-1">
+						<div class="flex items-center gap-2 min-w-0 flex-1">
 							<img
 								class="rounded-full size-5 object-cover"
 								src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
 								alt={user.name ?? user.id}
 							/>
-							<div class="w-full">
+							<div class="min-w-0 flex-1">
 								<Tooltip content={user.email} placement="top-start">
 									<div class="truncate text-sm">{user.name ?? user.id}</div>
 								</Tooltip>
 							</div>
 						</div>
 
-						<div class="w-full flex justify-end items-center gap-2">
+						<div class="flex justify-end items-center gap-1.5 shrink-0">
 							{#if accessRoles.includes('write')}
 								<select
 									aria-label={$i18n.t('Access level')}
-									class="bg-transparent text-sm"
+									class="bg-transparent text-sm outline-none"
 									value={writeUserIds.includes(user.id) ? 'write' : 'read'}
 									on:change={(e) => {
 										if (
@@ -660,7 +679,7 @@
 							{/if}
 
 							<button
-								class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+								class="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 								type="button"
 								on:click={() => {
 									removePrincipal('user', user.id);
@@ -673,8 +692,8 @@
 				{/each}
 			{/if}
 
-			{#if !hasPublicReadGrant(accessGrants ?? []) && accessGroups.length === 0 && selectedUsers.length === 0}
-				<div class="text-xs text-gray-500 text-center py-4">
+			{#if getVisibility(accessGrants ?? []) === 'private' && accessGroups.length === 0 && selectedUsers.length === 0}
+				<div class="text-xs text-gray-500 text-center py-3">
 					{$i18n.t('No access grants. Private to you.')}
 				</div>
 			{/if}

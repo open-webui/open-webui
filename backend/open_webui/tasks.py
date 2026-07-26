@@ -199,12 +199,3 @@ async def has_active_tasks(redis, chat_id: str) -> bool:
     """Check if a chat has any active tasks."""
     task_ids = await list_task_ids_by_item_id(redis, chat_id)
     return len(task_ids) > 0
-
-
-async def get_active_chat_ids(redis, chat_ids: List[str]) -> List[str]:
-    """Filter a list of chat_ids to only those with active tasks."""
-    active = []
-    for chat_id in chat_ids:
-        if await has_active_tasks(redis, chat_id):
-            active.append(chat_id)
-    return active

@@ -21,6 +21,7 @@
 
 <Dropdown
 	bind:show
+	align="end"
 	sideOffset={8}
 	onOpenChange={(state) => {
 		dispatch('change', state);

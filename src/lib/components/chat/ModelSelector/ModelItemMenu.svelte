@@ -9,7 +9,7 @@
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
 	import Link from '$lib/components/icons/Link.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
-	import { config, settings, user } from '$lib/stores';
+	import { config, settings, showSettings, user } from '$lib/stores';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 
 	const i18n = getContext('i18n');
@@ -53,11 +53,11 @@
 						e.stopPropagation();
 						e.preventDefault();
 
-						goto(
-							model?.preset || model?.info?.base_model_id
-								? `/workspace/models/edit?id=${encodeURIComponent(model?.id ?? '')}`
-								: `/admin/settings/models?id=${encodeURIComponent(model?.id ?? '')}`
-						);
+						if (model?.preset || model?.info?.base_model_id) {
+							goto(`/workspace/models/edit?id=${encodeURIComponent(model?.id ?? '')}`);
+						} else {
+							showSettings.set({ tab: 'admin:models', state: { id: model?.id ?? null } });
+						}
 						show = false;
 					}}
 				>

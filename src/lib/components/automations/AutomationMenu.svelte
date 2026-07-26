@@ -15,7 +15,7 @@
 	export let deleteHandler: Function;
 	export let onClose: Function = () => {};
 
-	let show = false;
+	export let show = false;
 </script>
 
 <Dropdown

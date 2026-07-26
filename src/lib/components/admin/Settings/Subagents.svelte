@@ -57,9 +57,9 @@
 </script>
 
 <form class="flex h-full flex-col justify-between text-sm" on:submit|preventDefault={save}>
-	<div class="h-full overflow-y-auto scrollbar-hidden">
-		<div class="mt-0.5 mb-4 text-base font-normal">{$i18n.t('Sub-agents')}</div>
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Sub-agents')}</h2>
 
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if loading}
 			<div class="flex justify-center py-8"><Spinner className="size-6" /></div>
 		{:else}
@@ -87,7 +87,7 @@
 								type="number"
 								bind:value={maxConcurrent}
 								min="-1"
-								class="h-7 w-16 rounded-lg border border-gray-200 bg-gray-100 px-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:focus:border-blue-500"
+								class="h-7 w-16 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 							/>
 							<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 								{$i18n.t('simultaneous sub-agents')}
@@ -120,7 +120,7 @@
 									type="number"
 									bind:value={maxAsync}
 									min="-1"
-									class="h-7 w-16 rounded-lg border border-gray-200 bg-gray-100 px-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:focus:border-blue-500"
+									class="h-7 w-16 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 								/>
 								<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 									{$i18n.t('background sub-agents')}
@@ -140,7 +140,7 @@
 								bind:value={maxIterations}
 								min="1"
 								max="100"
-								class="h-7 w-16 rounded-lg border border-gray-200 bg-gray-100 px-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:focus:border-blue-500"
+								class="h-7 w-16 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 							/>
 							<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 								{$i18n.t('tool loops per sub-agent')}
@@ -160,7 +160,7 @@
 								min="1000"
 								max="100000"
 								step="1000"
-								class="h-7 w-20 rounded-lg border border-gray-200 bg-gray-100 px-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:focus:border-blue-500"
+								class="h-7 w-20 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 							/>
 							<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">chars</span>
 						</div>
@@ -175,7 +175,7 @@
 							bind:value={systemPrompt}
 							rows="4"
 							placeholder={$i18n.t('You are a sub-agent...')}
-							class="mt-1 w-full resize-y rounded-lg border border-gray-200 bg-gray-100 px-2 py-1.5 font-mono text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:focus:border-blue-500"
+							class="mt-1 w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 font-mono text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 						></textarea>
 						<p class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 							{$i18n.t('Leave empty for the built-in default.')}

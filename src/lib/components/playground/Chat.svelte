@@ -320,16 +320,16 @@
 
 <Modal size="sm" bind:show={showControls}>
 	<div class="text-gray-700 dark:text-gray-100">
-		<div class="flex justify-between px-4.5 pt-4.5 pb-2">
-			<div class="text-lg font-normal self-center">{$i18n.t('Controls')}</div>
+		<div class="flex justify-between px-4 pt-3 pb-1">
+			<div class="text-sm font-medium self-center">{$i18n.t('Controls')}</div>
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					showControls = false;
 				}}
 			>
-				<XMark className="size-5" />
+				<XMark className="size-4" />
 			</button>
 		</div>
 		<div class="px-4.5 pb-5 overflow-y-auto max-h-[70vh]">
@@ -340,7 +340,7 @@
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full relative">
-		<div class=" flex flex-col h-full px-3.5">
+		<div class=" flex flex-col h-full px-2.5">
 			<div class="flex w-full items-center gap-1.5">
 				<Collapsible
 					className="w-full flex-1"

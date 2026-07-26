@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { onMount, getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import { getToolServersData } from '$lib/apis';
 
-	const dispatch = createEventDispatcher();
-	const i18n = getContext('i18n');
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { settings, toolServers, terminalServers } from '$lib/stores';
 
@@ -13,17 +14,31 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Connection from './Tools/Connection.svelte';
 	import Terminals from './Integrations/Terminals.svelte';
+	import UserSettingSection from './UserSettingSection.svelte';
 
 	import AddToolServerModal from '$lib/components/AddToolServerModal.svelte';
 
-	export let saveSettings: Function;
+	type TerminalServerConfig = {
+		url: string;
+		key?: string;
+		name?: string;
+		enabled: boolean;
+		auth_type?: string;
+		path?: string;
+		[key: string]: any;
+	};
 
-	let servers = null;
-	let terminalServerConfigs: { url: string; key: string; name?: string; enabled: boolean }[] = [];
+	type ToolServerConnection = any;
+
+	export let saveSettings: (settings: any) => void | Promise<void>;
+
+	let servers: ToolServerConnection[] | null = null;
+	let terminalServerConfigs: TerminalServerConfig[] = [];
 	let showConnectionModal = false;
+	const helpTextClass = 'text-[0.6875rem] text-gray-400 dark:text-gray-600';
 
-	const addConnectionHandler = async (server) => {
-		servers = [...servers, server];
+	const addConnectionHandler = async (server: ToolServerConnection) => {
+		servers = [...(servers ?? []), server];
 		await updateHandler();
 	};
 
@@ -34,7 +49,7 @@
 		});
 
 		let toolServersData = await getToolServersData($settings?.toolServers ?? []);
-		toolServersData = toolServersData.filter((data) => {
+		toolServersData = toolServersData.filter((data: any) => {
 			if (data.error) {
 				toast.error(
 					$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, { URL: data?.url })
@@ -43,10 +58,10 @@
 			}
 			return true;
 		});
-		toolServers.set(toolServersData);
+		toolServers.set(toolServersData as any);
 
 		// Refresh terminal servers store (preserve system terminals)
-		const existingSystemTerminals = ($terminalServers ?? []).filter((t) => t.id);
+		const existingSystemTerminals = (($terminalServers ?? []) as any[]).filter((t) => t.id);
 		const activeTerminals = terminalServerConfigs.filter((s) => s.enabled);
 		if (activeTerminals.length > 0) {
 			let terminalServersData = await getToolServersData(
@@ -58,16 +73,16 @@
 					config: { enable: true }
 				}))
 			);
-			terminalServersData = terminalServersData.filter((data) => data && !data.error);
-			terminalServers.set([...terminalServersData, ...existingSystemTerminals]);
+			terminalServersData = terminalServersData.filter((data: any) => data && !data.error);
+			terminalServers.set([...terminalServersData, ...existingSystemTerminals] as any);
 		} else {
-			terminalServers.set(existingSystemTerminals);
+			terminalServers.set(existingSystemTerminals as any);
 		}
 	};
 
 	onMount(async () => {
 		servers = $settings?.toolServers ?? [];
-		terminalServerConfigs = $settings?.terminalServers ?? [];
+		terminalServerConfigs = ($settings as any)?.terminalServers ?? [];
 	});
 </script>
 
@@ -80,86 +95,79 @@
 		updateHandler();
 	}}
 >
-	<div class="overflow-y-scroll scrollbar-hidden h-full">
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">{$i18n.t('Integrations')}</h2>
+
+	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if servers !== null}
-			<div>
-				<div class="pr-1.5">
-					<div class="">
-						<div class="flex justify-between items-center mb-0.5">
-							<div class="font-normal">{$i18n.t('Manage Tool Servers')}</div>
-
-							<Tooltip content={$i18n.t('Add Connection')}>
-								<button
-									aria-label={$i18n.t('Add Connection')}
-									class="px-1"
-									on:click={() => (showConnectionModal = true)}
-									type="button"
-								>
-									<Plus />
-								</button>
-							</Tooltip>
+			<UserSettingSection title={$i18n.t('Tools')} first>
+				<div>
+					<div class="mb-2 flex items-center justify-between">
+						<div class="text-xs text-gray-600 dark:text-gray-400">
+							{$i18n.t('External Tool Servers')}
 						</div>
 
-						<div class="flex flex-col gap-1.5">
-							{#each servers as server, idx}
-								<Connection
-									bind:connection={server}
-									direct
-									onSubmit={() => updateHandler()}
-									onDelete={() => {
-										servers = servers.filter((_, i) => i !== idx);
-										updateHandler();
-									}}
-								/>
-							{/each}
-						</div>
+						<Tooltip content={$i18n.t('Add Connection')}>
+							<button
+								aria-label={$i18n.t('Add Connection')}
+								class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+								on:click={() => (showConnectionModal = true)}
+								type="button"
+							>
+								<Plus />
+							</button>
+						</Tooltip>
 					</div>
 
-					<div class="my-1.5">
-						<div
-							class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-						>
-							{$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
-							<br />
-							{$i18n.t(
-								'CORS must be properly configured by the provider to allow requests from Open WebUI.'
-							)}
-						</div>
+					<div class="flex flex-col gap-1">
+						{#each servers as server, idx}
+							<Connection
+								bind:connection={server}
+								direct
+								onSubmit={() => updateHandler()}
+								onDelete={() => {
+									servers = (servers ?? []).filter((_, i) => i !== idx);
+									updateHandler();
+								}}
+							/>
+						{/each}
 					</div>
 
-					<div class="text-xs text-gray-600 dark:text-gray-300 mb-2">
+					{#if (servers ?? []).length === 0}
+						<div class={helpTextClass}>
+							{$i18n.t('No tool server connections configured.')}
+						</div>
+					{/if}
+
+					<div class="mt-1 {helpTextClass}">
+						{$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
+					</div>
+					<div class={helpTextClass}>
+						{$i18n.t(
+							'CORS must be properly configured by the provider to allow requests from Open WebUI.'
+						)}
 						<a
-							class="underline"
+							class="ml-1 text-gray-500 underline hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
 							href="https://github.com/open-webui/openapi-servers"
 							target="_blank">{$i18n.t('Learn more about OpenAPI tool servers.')} ↗</a
 						>
 					</div>
 				</div>
+			</UserSettingSection>
 
-				<hr class="border-gray-100/50 dark:border-gray-850/50 my-4" />
+			<UserSettingSection title={$i18n.t('Terminal')}>
+				<Terminals bind:servers={terminalServerConfigs} onChange={() => updateHandler()} />
 
-				<div class="pr-1.5">
-					<Terminals bind:servers={terminalServerConfigs} onChange={() => updateHandler()} />
-
-					<div class="mt-1.5">
-						<div
-							class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-						>
-							{$i18n.t(
-								'Connect to Open Terminal instances to browse files and use them as always-on tools. Only one can be active at a time.'
-							)}
-						</div>
-
-						<div class="text-xs text-gray-600 dark:text-gray-300 mt-1">
-							<a
-								class="underline"
-								href="https://github.com/open-webui/open-terminal"
-								target="_blank">{$i18n.t('Learn more about Open Terminal')} ↗</a
-							>
-						</div>
-					</div>
+				<div class="mt-1 {helpTextClass}">
+					{$i18n.t(
+						'Connect to Open Terminal instances to browse files and use them as always-on tools. Only one can be active at a time.'
+					)}
 				</div>
-			</div>
+				<a
+					class="mt-0.5 block text-[0.6875rem] text-gray-500 underline hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+					href="https://github.com/open-webui/open-terminal"
+					target="_blank">{$i18n.t('Learn more about Open Terminal')} ↗</a
+				>
+			</UserSettingSection>
 		{:else}
 			<div class="flex h-full justify-center">
 				<div class="my-auto">
@@ -169,7 +177,7 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-normal">
+	<div class="shrink-0 flex justify-end pt-3 text-sm font-normal">
 		<button
 			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"

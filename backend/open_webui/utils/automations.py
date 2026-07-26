@@ -7,9 +7,11 @@ Follows the utils/<feature>.py pattern (cf. utils/channels.py, utils/task.py).
 The scheduler_worker_loop handles all time-based background work:
   - Automation execution (claim_due → execute)
   - Calendar event alerts (upcoming events → socket + webhook notifications)
+  - One-shot chat timers
 
 Environment:
     SCHEDULER_POLL_INTERVAL             – seconds between polls (default: 10)
+    TIMER_POLL_INTERVAL                 – seconds between timer polls (default: 1)
     CALENDAR_ALERT_LOOKAHEAD_MINUTES   – default alert window (default: 5)
 """
 
@@ -42,6 +44,7 @@ from starlette.datastructures import Headers
 log = logging.getLogger(__name__)
 
 SCHEDULER_POLL_INTERVAL = int(os.getenv('SCHEDULER_POLL_INTERVAL', os.getenv('AUTOMATION_POLL_INTERVAL', '10')))
+TIMER_POLL_INTERVAL = int(os.getenv('TIMER_POLL_INTERVAL', '1'))
 CALENDAR_ALERT_LOOKAHEAD_MINUTES = int(os.getenv('CALENDAR_ALERT_LOOKAHEAD_MINUTES', '10'))
 
 
@@ -189,9 +192,30 @@ async def scheduler_worker_loop(app) -> None:
     Runs on every instance. Poll interval is configurable via
     SCHEDULER_POLL_INTERVAL env var (default: 10 seconds).
     """
-    log.info(f'Scheduler worker started (poll interval: {SCHEDULER_POLL_INTERVAL}s)')
+    log.info(
+        f'Scheduler worker started (timer poll interval: {TIMER_POLL_INTERVAL}s, '
+        f'scheduler poll interval: {SCHEDULER_POLL_INTERVAL}s)'
+    )
+    next_scheduler_poll = 0.0
+
     while True:
         try:
+            now = time.monotonic()
+            # ── Timers ──
+            try:
+                from open_webui.utils.timers import claim_due_timers, execute_due_timer
+
+                for timer_id, claim_id in await claim_due_timers(int(time.time_ns()), limit=10):
+                    asyncio.create_task(execute_due_timer(app, timer_id, claim_id))
+            except Exception:
+                log.exception('Scheduler: timer error')
+
+            if now < next_scheduler_poll:
+                await asyncio.sleep(max(1, TIMER_POLL_INTERVAL))
+                continue
+            # Jitter to spread automation/calendar load across instances; timers keep a tight poll.
+            next_scheduler_poll = now + SCHEDULER_POLL_INTERVAL + random.uniform(0, 2)
+
             # ── Automations ──
             if await Config.get('automations.enable'):
                 try:
@@ -214,8 +238,7 @@ async def scheduler_worker_loop(app) -> None:
         except Exception:
             log.exception('Scheduler worker error')
 
-        # Jitter to spread load across instances
-        await asyncio.sleep(SCHEDULER_POLL_INTERVAL + random.uniform(0, 2))
+        await asyncio.sleep(max(1, TIMER_POLL_INTERVAL))
 
 
 ##########################
@@ -624,40 +647,25 @@ async def _check_calendar_alerts(app) -> None:
         except Exception:
             log.debug(f'Failed to mark event {event.id} as alerted', exc_info=True)
 
-        # Send webhook notification if user has one configured
+        # Send target notification if user has one configured
         try:
-            webui_name = getattr(app.state, 'WEBUI_NAME', 'Open WebUI')
-            enable_user_webhooks = await Config.get('ui.enable_user_webhooks')
-
-            if enable_user_webhooks:
-                user = await Users.get_user_by_id(event.user_id)
-                if user and user.settings:
-                    webhook_url = (
-                        user.settings.get('ui', {}).get('notifications', {}).get('webhook_url', None)
-                        if isinstance(user.settings, dict)
-                        else getattr(getattr(user.settings, 'ui', None), 'get', lambda *a: None)(
-                            'notifications', {}
-                        ).get('webhook_url', None)
-                        if hasattr(user.settings, 'ui')
-                        else None
-                    )
-                    if webhook_url:
-                        from open_webui.utils.webhook import post_webhook
-
-                        time_str = f'in {minutes_until} min' if minutes_until > 0 else 'now'
-                        await post_webhook(
-                            webui_name,
-                            webhook_url,
-                            f'{event.title} — starting {time_str}',
-                            {
-                                'action': 'calendar_alert',
-                                'title': event.title,
-                                'minutes_until': minutes_until,
-                                'event_id': event.id,
-                            },
-                        )
+            time_str = f'in {minutes_until} min' if minutes_until > 0 else 'now'
+            await publish_event(
+                app,
+                EVENTS.CALENDAR_ALERT,
+                subject_id=event.id,
+                subject_type='calendar.event',
+                source='scheduler',
+                data={
+                    **alert_data,
+                    'user_id': event.user_id,
+                    'starts_in': time_str,
+                    'message': f'{event.title}: starting {time_str}',
+                },
+                message=event.title,
+            )
         except Exception:
-            log.debug(f'Failed to send webhook for calendar alert {event.id}', exc_info=True)
+            log.debug(f'Failed to send notification for calendar alert {event.id}', exc_info=True)
 
 
 async def _record_run(

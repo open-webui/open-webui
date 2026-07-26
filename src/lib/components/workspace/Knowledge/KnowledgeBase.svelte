@@ -65,7 +65,7 @@
 	import ConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import Drawer from '$lib/components/common/Drawer.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
-	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
@@ -1234,13 +1234,24 @@
 			accessRoles={['read', 'write']}
 		/>
 		<div class="w-full px-2">
+			<button
+				class="mb-1 flex h-6 w-fit items-center gap-1 rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+				type="button"
+				on:click={() => {
+					goto('/workspace/knowledge');
+				}}
+			>
+				<ChevronLeft className="size-3" strokeWidth="2" />
+				<span>{$i18n.t('Back')}</span>
+			</button>
+
 			<div class=" flex w-full">
-				<div class="flex-1">
+				<div class="flex-1 px-1">
 					<div class="flex items-center justify-between w-full">
 						<div class="w-full flex justify-between items-center">
 							<input
 								type="text"
-								class="text-left w-full text-lg bg-transparent outline-hidden flex-1"
+								class="text-left w-full text-sm bg-transparent outline-hidden flex-1"
 								bind:value={knowledge.name}
 								aria-label={$i18n.t('Knowledge Name')}
 								placeholder={$i18n.t('Knowledge Name')}
@@ -1264,19 +1275,11 @@
 
 						{#if knowledge?.write_access}
 							<div class="self-center shrink-0">
-								<button
-									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-									type="button"
+								<AccessButton
 									on:click={() => {
 										showAccessControlModal = true;
 									}}
-								>
-									<LockClosed strokeWidth="2.5" className="size-3.5" />
-
-									<div class="text-sm font-normal shrink-0">
-										{$i18n.t('Access')}
-									</div>
-								</button>
+								/>
 							</div>
 						{:else}
 							<div class="text-xs shrink-0 text-gray-500">
@@ -1317,7 +1320,7 @@
 		</div>
 
 		<div
-			class="mt-2 mb-2.5 py-2 -mx-0 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30 flex-1"
+			class="mt-1.5 mb-2 py-1.5 -mx-0 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/30 dark:border-gray-850/30 flex-1"
 		>
 			{#if isExternalKnowledge}
 				<div class="p-5 flex flex-col gap-4">
@@ -1358,15 +1361,15 @@
 					</div>
 
 					<div class="flex flex-col gap-2">
-						<div class="font-normal text-sm">{$i18n.t('Test Query')}</div>
+						<div class="text-xs">{$i18n.t('Test Query')}</div>
 						<div class="flex gap-2">
 							<input
-								class="w-full text-sm rounded-xl bg-gray-50 dark:bg-gray-850 px-3 py-2 outline-hidden"
+								class="w-full text-xs rounded-xl bg-gray-50 dark:bg-gray-850 px-3 py-2 outline-hidden"
 								bind:value={externalTestQuery}
 								placeholder={$i18n.t('Ask this knowledge source a test question')}
 							/>
 							<button
-								class="px-3 py-2 rounded-xl bg-black text-white dark:bg-white dark:text-black text-sm"
+								class="px-3 py-2 rounded-xl bg-black text-white dark:bg-white dark:text-black text-xs"
 								on:click={externalTestHandler}
 							>
 								{$i18n.t('Test')}
@@ -1376,7 +1379,7 @@
 
 					{#if externalTestResult}
 						<div class="rounded-xl bg-gray-50 dark:bg-gray-850 p-3 text-xs">
-							<div class="font-normal mb-2">{$i18n.t('Preview')}</div>
+							<div class="mb-2">{$i18n.t('Preview')}</div>
 							{#each externalTestResult.documents ?? [] as document, idx}
 								<div class="border-t border-gray-100 dark:border-gray-800 py-2">
 									<div class="line-clamp-4">{document}</div>
@@ -1389,13 +1392,13 @@
 					{/if}
 				</div>
 			{:else}
-				<div class="px-3.5 flex flex-1 items-center w-full space-x-2 py-0.5 pb-2">
+				<div class="px-3 flex flex-1 items-center w-full space-x-1.5">
 					<div class="flex flex-1 items-center">
-						<div class=" self-center ml-1 mr-3">
+						<div class=" self-center ml-1 mr-2">
 							<Search className="size-3.5" />
 						</div>
 						<input
-							class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+							class=" w-full text-xs pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 							bind:value={query}
 							on:input={handleSearchInput}
 							aria-label={$i18n.t('Search Collection')}
@@ -1468,7 +1471,7 @@
 					</div>
 				</div>
 
-				<div class="px-3 flex justify-between">
+				<div class="px-2.5 flex justify-between">
 					<div
 						class="flex w-full bg-transparent overflow-x-auto scrollbar-none"
 						on:wheel={(e) => {
@@ -1479,11 +1482,11 @@
 						}}
 					>
 						<div
-							class="flex gap-3 w-fit text-center text-sm rounded-full bg-transparent px-0.5 whitespace-nowrap"
+							class="flex gap-2 w-fit text-center text-sm rounded-full bg-transparent px-0.5 whitespace-nowrap"
 						>
 							<DropdownOptions
 								align="end"
-								className="flex h-8 shrink-0 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[13px] font-normal text-gray-700 transition placeholder-gray-400 outline-hidden hover:text-gray-900 focus:outline-hidden dark:text-gray-200 dark:hover:text-gray-100"
+								className="flex h-8 shrink-0 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-xs text-gray-700 transition placeholder-gray-400 outline-hidden hover:text-gray-900 focus:outline-hidden dark:text-gray-200 dark:hover:text-gray-100"
 								bind:value={viewOption}
 								items={[
 									{ value: null, label: $i18n.t('All') },
@@ -1525,7 +1528,7 @@
 				</div>
 
 				{#if currentDirectoryId !== null}
-					<div class="px-5 mt-2">
+					<div class="px-4 mb-1">
 						<KnowledgeBreadcrumbs
 							rootLabel={knowledge.name}
 							{breadcrumbs}
@@ -1537,8 +1540,10 @@
 				{/if}
 
 				{#if syncing}
-					<div class="mx-2.5 mt-2.5 -mb-0.5">
-						<div class="flex items-center gap-2.5 rounded-xl py-2 px-3 bg-gray-50 dark:bg-gray-850">
+					<div class="mx-2 mt-2 -mb-0.5">
+						<div
+							class="flex items-center gap-2 rounded-xl py-1.5 px-2.5 bg-gray-50 dark:bg-gray-850"
+						>
 							<Spinner className="size-3.5 shrink-0" />
 							<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
 								{syncing}
@@ -1548,7 +1553,7 @@
 				{/if}
 
 				{#if fileItems !== null && fileItemsTotal !== null}
-					<div class="flex flex-row flex-1 gap-3 px-2.5 mt-2">
+					<div class="flex flex-row flex-1 gap-2 px-2">
 						<div class="flex-1 flex">
 							<div class=" flex flex-col w-full space-x-2 rounded-lg h-full">
 								<div class="w-full h-full flex flex-col min-h-full">
@@ -1625,7 +1630,7 @@
 										<div class="shrink-0 flex items-center p-2">
 											<div class="mr-2">
 												<button
-													class="w-full text-left text-sm p-1.5 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
+													class="w-full text-left text-xs p-1.5 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
 													aria-label={$i18n.t('Close')}
 													on:click={() => {
 														selectedFileId = null;
@@ -1637,14 +1642,14 @@
 													<ChevronLeft strokeWidth="2.5" />
 												</button>
 											</div>
-											<div class=" flex-1 text-lg line-clamp-1">
+											<div class=" flex-1 text-sm line-clamp-1">
 												{selectedFile?.meta?.name}
 											</div>
 
 											{#if knowledge?.write_access}
 												<div>
 													<button
-														class="flex self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+														class="flex self-center w-fit text-xs py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
 														disabled={isSaving || loadingFileContent}
 														on:click={() => {
 															updateFileContentHandler();
@@ -1663,7 +1668,7 @@
 
 										{#key selectedFile?.id}
 											<textarea
-												class="w-full h-full text-sm outline-none resize-none px-3 py-2"
+												class="w-full h-full text-xs outline-none resize-none px-3 py-2"
 												bind:value={selectedFileContent}
 												disabled={!knowledge?.write_access || loadingFileContent}
 												aria-label={$i18n.t('File content')}

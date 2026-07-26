@@ -111,6 +111,7 @@
 
 <Dropdown
 	bind:show
+	visualViewportAware
 	on:change={(e) => {
 		if (e.detail === false) {
 			onClose();
@@ -122,11 +123,12 @@
 	</Tooltip>
 
 	<div slot="content">
-		<DropdownMenu
-			className="w-70 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
-		>
+		<DropdownMenu className="w-70 max-h-72 overflow-hidden transition">
 			{#if tab === ''}
-				<div in:fly={{ x: -20, duration: 150 }}>
+				<div
+					class="max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
+					in:fly={{ x: -20, duration: 150 }}
+				>
 					<Tooltip
 						content={fileUploadCapableModels.length !== selectedModels.length
 							? $i18n.t('Model(s) do not support file upload')
@@ -486,9 +488,9 @@
 					{/if}
 				</div>
 			{:else if tab === 'knowledge'}
-				<div in:fly={{ x: 20, duration: 150 }}>
+				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
 							tab = '';
 						}}
@@ -505,9 +507,9 @@
 					<Knowledge {onSelect} />
 				</div>
 			{:else if tab === 'notes'}
-				<div in:fly={{ x: 20, duration: 150 }}>
+				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
 							tab = '';
 						}}
@@ -524,9 +526,9 @@
 					<Notes {onSelect} />
 				</div>
 			{:else if tab === 'files'}
-				<div in:fly={{ x: 20, duration: 150 }}>
+				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
 							tab = '';
 						}}
@@ -543,9 +545,9 @@
 					<Files {onSelect} />
 				</div>
 			{:else if tab === 'chats'}
-				<div in:fly={{ x: 20, duration: 150 }}>
+				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
 							tab = '';
 						}}

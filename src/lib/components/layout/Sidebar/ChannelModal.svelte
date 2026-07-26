@@ -13,7 +13,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
+	import XMark from './icons/XMark.svelte';
 	import MemberSelector from '$lib/components/workspace/common/MemberSelector.svelte';
 	import Visibility from '$lib/components/workspace/common/Visibility.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -140,8 +140,8 @@
 
 <Modal size="md" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class=" text-lg font-normal self-center">
+		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+			<div class=" text-sm self-center">
 				{#if edit}
 					{$i18n.t('Edit Channel')}
 				{:else}
@@ -149,16 +149,16 @@
 				{/if}
 			</div>
 			<button
-				class="self-center"
+				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<XMark className={'size-5'} />
+				<XMark className={'size-4'} />
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-5 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"

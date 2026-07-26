@@ -99,7 +99,7 @@
 {#if channel}
 	<Modal size="sm" bind:show>
 		<div>
-			<div class="flex justify-between dark:text-gray-100 px-5 pt-4 mb-1.5">
+			<div class="flex justify-between dark:text-gray-100 px-4 pt-3 mb-1">
 				<div class="flex w-full justify-between items-center mr-3">
 					<div class="self-center text-base flex gap-1.5 items-center">
 						<div>{$i18n.t('Webhooks')}</div>
@@ -117,8 +117,11 @@
 					</button>
 				</div>
 
-				<button class="self-center" on:click={() => (show = false)}>
-					<XMark className="size-5" />
+				<button
+					class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+					on:click={() => (show = false)}
+				>
+					<XMark className="size-4" />
 				</button>
 			</div>
 

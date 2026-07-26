@@ -3,8 +3,8 @@
 	import { folders, tags } from '$lib/stores';
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import Search from '$lib/components/icons/Search.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
+	import Search from './icons/Search.svelte';
+	import XMark from './icons/XMark.svelte';
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
@@ -296,7 +296,7 @@
 					class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					on:click={clearSearchInput}
 				>
-					<XMark className="size-3" strokeWidth="2" />
+					<XMark className="size-3" strokeWidth="1.5" />
 				</button>
 			</div>
 		{/if}

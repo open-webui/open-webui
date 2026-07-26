@@ -594,6 +594,15 @@ try:
 except (ValueError, TypeError):
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = 10
 
+AIOHTTP_FILE_STREAM_CHUNK_SIZE = os.getenv('AIOHTTP_FILE_STREAM_CHUNK_SIZE', str(1024 * 1024))
+try:
+    AIOHTTP_FILE_STREAM_CHUNK_SIZE = int(AIOHTTP_FILE_STREAM_CHUNK_SIZE)
+except Exception:
+    AIOHTTP_FILE_STREAM_CHUNK_SIZE = 1024 * 1024
+
+if AIOHTTP_FILE_STREAM_CHUNK_SIZE <= 0:
+    AIOHTTP_FILE_STREAM_CHUNK_SIZE = 1024 * 1024
+
 
 # SSL verification for tool server connections specifically.
 # Accepts "True", "False", or a path to a CA bundle file.
@@ -1093,15 +1102,19 @@ except ValueError:
     MAX_BODY_LOG_SIZE = 2048
 
 # Comma separated list for urls to exclude from audit
-AUDIT_EXCLUDED_PATHS = os.getenv('AUDIT_EXCLUDED_PATHS', '/chats,/chat,/folders').split(',')
-AUDIT_EXCLUDED_PATHS = [path.strip() for path in AUDIT_EXCLUDED_PATHS]
-AUDIT_EXCLUDED_PATHS = [path.lstrip('/') for path in AUDIT_EXCLUDED_PATHS]
+AUDIT_EXCLUDED_PATHS = [
+    path
+    for path in (
+        path.strip().lstrip('/') for path in os.getenv('AUDIT_EXCLUDED_PATHS', '/chats,/chat,/folders').split(',')
+    )
+    if path
+]
 
 # Comma separated list of urls to include in audit (whitelist mode)
 # When set, only these paths are audited and AUDIT_EXCLUDED_PATHS is ignored
-AUDIT_INCLUDED_PATHS = os.getenv('AUDIT_INCLUDED_PATHS', '').split(',')
-AUDIT_INCLUDED_PATHS = [path.strip() for path in AUDIT_INCLUDED_PATHS]
-AUDIT_INCLUDED_PATHS = [path.lstrip('/') for path in AUDIT_INCLUDED_PATHS if path]
+AUDIT_INCLUDED_PATHS = [
+    path for path in (path.strip().lstrip('/') for path in os.getenv('AUDIT_INCLUDED_PATHS', '').split(',')) if path
+]
 
 # When enabled, GET requests are also audited (disabled by default to avoid log noise)
 ENABLE_AUDIT_GET_REQUESTS = os.getenv('ENABLE_AUDIT_GET_REQUESTS', 'False').lower() == 'true'

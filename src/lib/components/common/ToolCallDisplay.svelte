@@ -11,7 +11,6 @@
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
-	import Markdown from '../chat/Messages/Markdown.svelte';
 	import WrenchSolid from '../icons/WrenchSolid.svelte';
 	import CheckCircle from '../icons/CheckCircle.svelte';
 	import Image from './Image.svelte';
@@ -39,7 +38,7 @@
 
 	$: if (!open) expandedResult = false;
 	export let buttonClassName =
-		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
+		'w-fit py-1 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
 
 	const componentId = id || uuidv4();
 
@@ -154,19 +153,9 @@
 					<!-- Full label (md and above) -->
 					<span class="hidden @md:inline font-normal">
 						{#if isDone}
-							<Markdown
-								id={`${componentId}-tool-call-title`}
-								content={$i18n.t('View Result from **{{NAME}}**', {
-									NAME: attributes.name
-								})}
-							/>
+							{$i18n.t('View Result from {{NAME}}', { NAME: attributes.name })}
 						{:else}
-							<Markdown
-								id={`${componentId}-tool-call-executing`}
-								content={$i18n.t('Executing **{{NAME}}**...', {
-									NAME: attributes.name
-								})}
-							/>
+							{$i18n.t('Executing {{NAME}}...', { NAME: attributes.name })}
 						{/if}
 					</span>
 				</div>
@@ -174,9 +163,9 @@
 				<!-- Chevron -->
 				<div class="flex shrink-0 self-center translate-y-[1px]">
 					{#if open}
-						<ChevronUp strokeWidth="3.5" className="size-3.5" />
+						<ChevronUp strokeWidth="3.5" className="size-3" />
 					{:else}
-						<ChevronDown strokeWidth="3.5" className="size-3.5" />
+						<ChevronDown strokeWidth="3.5" className="size-3" />
 					{/if}
 				</div>
 			</div>
@@ -184,7 +173,9 @@
 
 		{#if open}
 			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-				<div class="border border-gray-50 dark:border-gray-850/30 rounded-2xl my-1.5 p-3 space-y-3">
+				<div
+					class="border border-gray-50 dark:border-gray-850/30 rounded-2xl my-1.5 p-2.5 space-y-2"
+				>
 					<!-- Input -->
 					{#if args}
 						<div>
@@ -210,7 +201,7 @@
 							{:else}
 								<div class="tool-call-body w-full max-w-none!">
 									<pre
-										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre font-mono bg-gray-50 dark:bg-gray-900 rounded-lg p-2.5 overflow-x-auto">{formatJSONString(
+										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre font-mono bg-gray-50 dark:bg-gray-900 rounded-lg p-2 overflow-x-auto">{formatJSONString(
 											args
 										)}</pre>
 								</div>
@@ -229,7 +220,7 @@
 							<div class="w-full max-w-none!">
 								{#if typeof parsedResult === 'object' && parsedResult !== null}
 									<pre
-										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre font-mono bg-gray-50 dark:bg-gray-900 rounded-lg p-2.5 overflow-x-auto">{JSON.stringify(
+										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre font-mono bg-gray-50 dark:bg-gray-900 rounded-lg p-2 overflow-x-auto">{JSON.stringify(
 											parsedResult,
 											null,
 											2

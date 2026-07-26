@@ -10,8 +10,7 @@
 	import citationExtension from '$lib/utils/marked/citation-extension';
 
 	const options = {
-		throwOnError: false,
-		breaks: true
+		throwOnError: false
 	};
 
 	marked.use(markedKatexExtension(options));
@@ -42,6 +41,7 @@
 	export let model = null;
 	export let save = false;
 	export let preview = false;
+	export let compactPreview = false;
 
 	export let paragraphTag = 'p';
 	export let editCodeBlock = true;
@@ -104,6 +104,7 @@
 		{done}
 		{save}
 		{preview}
+		{compactPreview}
 		{paragraphTag}
 		{editCodeBlock}
 		{sourceIds}

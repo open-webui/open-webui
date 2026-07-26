@@ -54,7 +54,7 @@
 <Modal bind:show size="sm">
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
-			<div class=" text-lg font-normal self-center">
+			<div class=" text-lg font-medium self-center">
 				{#if edit}
 					{$i18n.t('Edit Memory')}
 				{:else}
@@ -66,7 +66,7 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-5 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form class="flex flex-col w-full" on:submit|preventDefault={submitHandler}>
 					<div class="px-1">
@@ -114,9 +114,9 @@
 						</div>
 					</div>
 
-					<div class="flex justify-end pt-1 text-sm font-normal">
+					<div class="flex justify-end pt-1 text-sm font-medium">
 						<button
-							class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 whitespace-nowrap {loading
 								? ' cursor-not-allowed'
 								: ''}"
 							type="submit"

@@ -139,7 +139,6 @@ class AutomationTable:
             )
             db.add(row)
             await db.commit()
-            await db.refresh(row)
             return AutomationModel.model_validate(row)
 
     async def count_by_user(self, user_id: str, db: Optional[AsyncSession] = None) -> int:
@@ -224,7 +223,6 @@ class AutomationTable:
             row.next_run_at = next_run_at
             row.updated_at = int(time.time_ns())
             await db.commit()
-            await db.refresh(row)
             return AutomationModel.model_validate(row)
 
     async def toggle(
@@ -241,7 +239,6 @@ class AutomationTable:
             row.next_run_at = next_run_at if row.is_active else None
             row.updated_at = int(time.time_ns())
             await db.commit()
-            await db.refresh(row)
             return AutomationModel.model_validate(row)
 
     async def delete(self, id: str, db: Optional[AsyncSession] = None) -> bool:
@@ -324,7 +321,6 @@ class AutomationRunTable:
             )
             db.add(row)
             await db.commit()
-            await db.refresh(row)
             return AutomationRunModel.model_validate(row)
 
     async def get_latest(self, automation_id: str, db: Optional[AsyncSession] = None) -> Optional[AutomationRunModel]:

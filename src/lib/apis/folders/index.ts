@@ -290,17 +290,40 @@ export const getSharedFolders = async (token: string) => {
 	return res;
 };
 
-export const getSharedFolderChats = async (token: string, folderId: string) => {
+export const getSharedFolderChats = async (
+	token: string,
+	folderId: string,
+	params: {
+		page?: number | null;
+		sortBy?: 'title' | 'updated_at';
+		sortDir?: 'asc' | 'desc';
+	} = {}
+) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${folderId}/shared/chats`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+	const searchParams = new URLSearchParams();
+	if (params.page !== undefined && params.page !== null) {
+		searchParams.append('page', `${params.page}`);
+	}
+	if (params.sortBy) {
+		searchParams.append('sort_by', params.sortBy);
+	}
+	if (params.sortDir) {
+		searchParams.append('sort_dir', params.sortDir);
+	}
+	const query = searchParams.toString();
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/folders/${folderId}/shared/chats${query ? `?${query}` : ''}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
 		}
-	})
+	)
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();

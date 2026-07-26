@@ -36,7 +36,7 @@
 </script>
 
 {#key mounted}
-	<div class="m-auto w-full max-w-[52rem] px-8 lg:px-20">
+	<div class="m-auto w-full max-w-[58rem] px-8 lg:px-20">
 		<div class="flex justify-start">
 			<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 200 }}>
 				{#each models as model, modelIdx}
@@ -83,7 +83,7 @@
 		{/if}
 
 		<div
-			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 text-left flex items-center gap-4 "
+			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 text-left flex items-center gap-4"
 		>
 			<div>
 				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
@@ -132,7 +132,7 @@
 			</div>
 		</div>
 
-		<div class=" w-full " in:fade={{ duration: 200, delay: 300 }}>
+		<div class=" w-full" in:fade={{ duration: 200, delay: 300 }}>
 			<Suggestions
 				className="grid grid-cols-2"
 				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
