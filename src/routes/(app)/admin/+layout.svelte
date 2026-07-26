@@ -14,12 +14,12 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto('/', { replaceState: true });
 		} else if (
 			!$config?.features?.enable_plugins &&
 			$page.url.pathname.includes('/admin/functions')
 		) {
-			await goto('/admin');
+			await goto('/admin', { replaceState: true });
 		}
 		loaded = true;
 	});
