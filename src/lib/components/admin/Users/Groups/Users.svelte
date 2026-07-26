@@ -238,6 +238,7 @@
 								<td class=" px-3 py-1 w-8">
 									<div class="flex w-full justify-center">
 										<Checkbox
+											ariaLabel={user.name}
 											state={(user?.group_ids ?? []).includes(groupId) ? 'checked' : 'unchecked'}
 											on:change={(e) => {
 												toggleMember(user.id, e.detail);

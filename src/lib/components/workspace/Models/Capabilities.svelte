@@ -93,6 +93,7 @@
 					</Tooltip>
 				</div>
 				<Checkbox
+					ariaLabel={$i18n.t(capabilityLabels[capability].label)}
 					state={capabilities[capability] ? 'checked' : 'unchecked'}
 					on:change={(e) => {
 						capabilities[capability] = e.detail === 'checked';
