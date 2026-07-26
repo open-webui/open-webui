@@ -798,6 +798,15 @@ OAUTH_MAX_SESSIONS_PER_USER = int(os.getenv('OAUTH_MAX_SESSIONS_PER_USER', '10')
 # Allows external apps to exchange OAuth tokens for OpenWebUI tokens
 ENABLE_OAUTH_TOKEN_EXCHANGE = os.getenv('ENABLE_OAUTH_TOKEN_EXCHANGE', 'False').lower() == 'true'
 
+# OAuth client IDs whose tokens the exchange endpoint will accept. A provider's
+# userinfo endpoint confirms a token is valid, never which client it was minted
+# for, so without this allowlist any client of the same provider is trusted.
+OAUTH_TOKEN_EXCHANGE_ALLOWED_AUDIENCES = [
+    audience.strip()
+    for audience in os.getenv('OAUTH_TOKEN_EXCHANGE_ALLOWED_AUDIENCES', '').split(',')
+    if audience.strip()
+]
+
 # Back-Channel Logout Configuration
 # When enabled, exposes POST /oauth/backchannel-logout for IdP-initiated logout
 # per OpenID Connect Back-Channel Logout 1.0 spec.

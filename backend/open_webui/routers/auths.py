@@ -9,7 +9,7 @@ import urllib
 import uuid
 from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
-from aiohttp import ClientSession
+from aiohttp import BasicAuth, ClientSession
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse, Response
 from ldap3 import NONE, Connection, Server, Tls
@@ -25,6 +25,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     ENABLE_INITIAL_ADMIN_SIGNUP,
     ENABLE_OAUTH_TOKEN_EXCHANGE,
+    OAUTH_TOKEN_EXCHANGE_ALLOWED_AUDIENCES,
     WEBUI_AUTH,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
@@ -1500,6 +1501,39 @@ class TokenExchangeForm(BaseModel):
     token: str  # OAuth access token from external provider
 
 
+async def get_token_client_id(client, token: str) -> str | None:
+    """The OAuth client a token was issued to, via RFC 7662 introspection. None if undeterminable."""
+    try:
+        metadata = await client.load_server_metadata()
+        introspection_endpoint = metadata.get('introspection_endpoint')
+        if not introspection_endpoint:
+            log.error('Token exchange needs RFC 7662 introspection, which this provider does not advertise')
+            return None
+
+        async with ClientSession(trust_env=True) as session:
+            async with session.post(
+                introspection_endpoint,
+                data={'token': token, 'token_type_hint': 'access_token'},
+                auth=BasicAuth(client.client_id, client.client_secret or ''),
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
+                if r.status != 200:
+                    log.warning(f'Token introspection returned {r.status}')
+                    return None
+                introspection = await r.json()
+
+        if not introspection.get('active'):
+            log.warning('Token introspection reports the token is inactive')
+            return None
+
+        # Only client_id names the issuing client. `aud` names intended resource
+        # servers and some IdPs let any client put another client's id there.
+        return introspection.get('client_id')
+    except Exception as e:
+        log.warning(f'Token introspection failed: {e}')
+        return None
+
+
 @router.post('/oauth/{provider}/token/exchange', response_model=SessionUserResponse)
 async def token_exchange(
     request: Request,
@@ -1533,6 +1567,27 @@ async def token_exchange(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.OAUTH_NOT_CONFIGURED(provider),
+        )
+
+    # Only accept tokens minted for a trusted client; userinfo cannot tell us this.
+    if not OAUTH_TOKEN_EXCHANGE_ALLOWED_AUDIENCES:
+        log.error('Token exchange rejected: OAUTH_TOKEN_EXCHANGE_ALLOWED_AUDIENCES is not set')
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Token exchange has no trusted audiences configured',
+        )
+
+    token_client_id = await get_token_client_id(client, form_data.token)
+    if not token_client_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Unable to determine which client the token was issued to',
+        )
+    if token_client_id not in OAUTH_TOKEN_EXCHANGE_ALLOWED_AUDIENCES:
+        log.warning(f'Token exchange denied: token was issued to an untrusted client for {provider}')
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
     # Validate the token by calling the userinfo endpoint
