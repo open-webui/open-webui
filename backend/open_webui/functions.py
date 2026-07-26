@@ -39,6 +39,7 @@ from open_webui.utils.misc import (
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
+    resolve_model_params,
 )
 from open_webui.utils.plugin import (
     get_function_module_from_cache,
@@ -283,12 +284,12 @@ async def generate_function_chat_completion(request, form_data, user, models: di
             bypass = isinstance(user, UserModel) and user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL
             await check_model_access(user if isinstance(user, UserModel) else UserModel(**user), model_info, bypass)
 
-        params = model_info.params.model_dump()
-
-        if params:
-            system = params.pop('system', None)
-            form_data = apply_model_params_to_body_openai(params, form_data)
-            form_data = await apply_system_prompt_to_body(system, form_data, metadata, user)
+    request_params = form_data.pop('params', None)
+    params = await resolve_model_params(model_info, request_params)
+    if params:
+        system = params.pop('system', None)
+        form_data = apply_model_params_to_body_openai(params, form_data)
+        form_data = await apply_system_prompt_to_body(system, form_data, metadata, user)
 
     pipe_id = get_pipe_id(form_data)
     function_module = await get_function_module_by_id(request, pipe_id)

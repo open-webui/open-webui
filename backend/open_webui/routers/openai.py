@@ -51,6 +51,7 @@ from open_webui.utils.misc import (
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
+    resolve_model_params,
 )
 from open_webui.utils.session_pool import (
     cleanup_response,
@@ -1224,6 +1225,8 @@ async def generate_chat_completion(
 
     payload = {**form_data}
     metadata = payload.pop('metadata', None)
+    # Internal OWUI params (may already include DEFAULT_MODEL_PARAMS from main.py)
+    request_params = payload.pop('params', None)
 
     model_id = form_data.get('model')
     model_info = await Models.get_model_by_id(model_id)
@@ -1237,18 +1240,17 @@ async def generate_chat_completion(
             payload['model'] = base_model_id
             model_id = base_model_id
 
-        params = model_info.params.model_dump()
-
-        if params:
-            system = params.pop('system', None)
-
-            payload = apply_model_params_to_body_openai(params, payload)
-            if not bypass_system_prompt:
-                payload = await apply_system_prompt_to_body(system, payload, metadata, user)
-
         await check_model_access(user, model_info, bypass_filter)
     else:
         await check_model_access(user, None, bypass_filter)
+
+    params = await resolve_model_params(model_info, request_params)
+    if params:
+        system = params.pop('system', None)
+
+        payload = apply_model_params_to_body_openai(params, payload)
+        if not bypass_system_prompt:
+            payload = await apply_system_prompt_to_body(system, payload, metadata, user)
 
     # Check if model is already in app state cache to avoid expensive get_all_models() call
     models = request.app.state.OPENAI_MODELS
