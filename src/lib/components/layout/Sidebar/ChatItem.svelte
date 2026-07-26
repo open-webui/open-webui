@@ -3,6 +3,15 @@
 	const invisibleDragImage = new Image();
 	invisibleDragImage.src =
 		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+	/**
+	 * At most one chat hover preview may be open across all ChatItem instances.
+	 * bits-ui's safe-polygon close only re-evaluates on pointermove, so a
+	 * preview can be left open when the pointer stops on a neighboring row
+	 * while still inside the previous row's grace area; opening a preview
+	 * therefore force-closes whichever one is still up.
+	 */
+	let closeActiveHoverPreview: (() => void) | null = null;
 </script>
 
 <script lang="ts">
@@ -93,6 +102,17 @@
 
 	let mouseOver = false;
 	let openPreview = false;
+
+	const closeHoverPreview = () => {
+		if (openPreview) {
+			openPreview = false;
+		}
+	};
+
+	$: if (openPreview && closeActiveHoverPreview !== closeHoverPreview) {
+		closeActiveHoverPreview?.();
+		closeActiveHoverPreview = closeHoverPreview;
+	}
 
 	// Local state: tracks the last updatedAt seen while the user was viewing
 	// this chat.  Survives prop refreshes from sidebar data re-fetches that
@@ -311,6 +331,10 @@
 			el.removeEventListener('dragstart', onDragStart);
 			el.removeEventListener('drag', onDrag);
 			el.removeEventListener('dragend', onDragEndHandler);
+
+			if (closeActiveHoverPreview === closeHoverPreview) {
+				closeActiveHoverPreview = null;
+			}
 		};
 	});
 
