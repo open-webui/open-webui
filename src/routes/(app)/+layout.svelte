@@ -15,6 +15,7 @@
 	import { getTerminalServers } from '$lib/apis/terminal';
 	import { getUserSettings } from '$lib/apis/users';
 	import { setTextScale } from '$lib/utils/text-scale';
+	import { shouldShowUserDisclaimer } from '$lib/utils/disclaimer';
 
 	import { WEBUI_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
@@ -45,6 +46,7 @@
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
+	import UserDisclaimer from '$lib/components/layout/Overlay/UserDisclaimer.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { loadKeybindings, matchKeybinding, Shortcut } from '$lib/shortcuts';
@@ -54,6 +56,8 @@
 	let loaded = false;
 	let DB = null;
 	let localDBChats = [];
+
+	let showUserDisclaimer = false;
 
 	let version;
 	let handledSettingsUrl = '';
@@ -340,7 +344,10 @@
 		};
 		setupKeyboardShortcuts();
 
-		if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
+		showUserDisclaimer = shouldShowUserDisclaimer($config, $settings);
+
+		// Deferred while the disclaimer is up so it cannot stack on top of it.
+		if (!showUserDisclaimer && $user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
 			showChangelog.set($settings?.version !== $config.version);
 		}
 
@@ -433,6 +440,8 @@
 		>
 			{#if !['user', 'admin'].includes($user?.role)}
 				<AccountPending />
+			{:else if showUserDisclaimer}
+				<UserDisclaimer bind:show={showUserDisclaimer} />
 			{:else}
 				{#if localDBChats.length > 0}
 					<div class="fixed w-full h-full flex z-50">

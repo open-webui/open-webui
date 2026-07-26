@@ -205,6 +205,8 @@ type Settings = {
 	detectArtifacts?: boolean;
 	showUpdateToast?: boolean;
 	showChangelog?: boolean;
+	userDisclaimerVersion?: string;
+	userDisclaimerAcknowledgedAt?: number | null;
 	showEmojiInCall?: boolean;
 	voiceInterruption?: boolean;
 	collapseCodeBlocks?: boolean;
@@ -342,6 +344,9 @@ type Config = {
 	ui?: {
 		pending_user_overlay_title?: string;
 		pending_user_overlay_content?: string;
+		user_disclaimer_title?: string;
+		user_disclaimer_content?: string;
+		user_disclaimer_version?: string;
 		iframe_csp?: string;
 	};
 };

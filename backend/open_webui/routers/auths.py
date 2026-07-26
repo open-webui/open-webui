@@ -125,6 +125,9 @@ ADMIN_CONFIG_KEYS = {
     'ENABLE_USER_STATUS': 'users.enable_status',
     'PENDING_USER_OVERLAY_TITLE': 'ui.pending_user_overlay_title',
     'PENDING_USER_OVERLAY_CONTENT': 'ui.pending_user_overlay_content',
+    'USER_DISCLAIMER_TITLE': 'ui.user_disclaimer_title',
+    'USER_DISCLAIMER_CONTENT': 'ui.user_disclaimer_content',
+    'USER_DISCLAIMER_VERSION': 'ui.user_disclaimer_version',
     'RESPONSE_WATERMARK': 'ui.watermark',
 }
 
@@ -1169,6 +1172,36 @@ async def get_admin_details(
 
 
 ############################
+# AcknowledgeUserDisclaimer
+############################
+
+
+@router.post('/disclaimer/acknowledge')
+async def acknowledge_user_disclaimer(user=Depends(get_verified_user)):
+    """Record that the current user accepted the configured disclaimer.
+
+    Intentionally not behind the `settings.interface` permission: recording consent is
+    not an interface preference, and gating it there would leave users unable to clear
+    the disclaimer wherever that permission is revoked. Both the acknowledged version and
+    the timestamp come from the server rather than the request, so a client can neither
+    claim to have accepted a version it was never shown nor backdate its consent.
+    """
+    version = await Config.get('ui.user_disclaimer_version') or ''
+    acknowledged_at = int(time.time())
+
+    settings = user.settings.model_dump() if user.settings else {}
+    ui = dict(settings.get('ui') or {})
+    ui['userDisclaimerVersion'] = version
+    ui['userDisclaimerAcknowledgedAt'] = acknowledged_at
+
+    await Users.update_user_settings_by_id(user.id, {'ui': ui})
+    return {
+        'user_disclaimer_version': version,
+        'user_disclaimer_acknowledged_at': acknowledged_at,
+    }
+
+
+############################
 # ToggleSignUp
 ############################
 
@@ -1205,6 +1238,9 @@ class AdminConfig(BaseModel):
     ENABLE_USER_STATUS: bool
     PENDING_USER_OVERLAY_TITLE: str | None = None
     PENDING_USER_OVERLAY_CONTENT: str | None = None
+    USER_DISCLAIMER_TITLE: str | None = None
+    USER_DISCLAIMER_CONTENT: str | None = None
+    USER_DISCLAIMER_VERSION: str | None = None
     RESPONSE_WATERMARK: str | None = None
 
 
