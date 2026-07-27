@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
@@ -22,6 +23,7 @@ from open_webui.utils.geotizer_orchestration import (
     merge_owner_envelopes,
     normalize_delegator_message,
     normalize_gis_object_profile,
+    owner_completion_valves,
     owner_failure_envelope,
     owner_submission,
     partition_owner_batch,
@@ -456,6 +458,13 @@ async def _build_agent_caller(runtime) -> AgentCall:
     delegator_valves = await Tools.get_tool_valves_by_id(DELEGATOR_TOOL_ID) or {}
     if hasattr(delegator, 'Valves'):
         delegator.valves = delegator.Valves(**delegator_valves)
+    owner_delegator = copy.copy(delegator)
+    if hasattr(delegator, 'Valves'):
+        owner_delegator.valves = delegator.Valves(
+            **owner_completion_valves(
+                delegator.valves.model_dump(),
+            )
+        )
     original_extract_message = getattr(delegator, '_extract_chat_history_message', None)
     if callable(original_extract_message):
 
@@ -495,7 +504,8 @@ async def _build_agent_caller(runtime) -> AgentCall:
         object_name: str,
         datacube: Mapping[str, Any] | None,
     ) -> str:
-        if execution_mode_for_task(task) == 'tool_free_owner':
+        execution_mode = execution_mode_for_task(task)
+        if execution_mode == 'tool_free_owner':
             model = runtime['__request__'].app.state.MODELS.get(
                 SKILLED_MODEL_ID,
                 {'id': SKILLED_MODEL_ID},
@@ -520,7 +530,12 @@ async def _build_agent_caller(runtime) -> AgentCall:
             outer = extract_json_object(result)
             return str(outer.get('result') or result)
 
-        return await delegator.ask_specialist_agent(
+        active_delegator = (
+            owner_delegator
+            if execution_mode == 'specialist_owner_completion'
+            else delegator
+        )
+        return await active_delegator.ask_specialist_agent(
             agent=task.kind,
             task=prompt,
             original_user_request=f'Заполнить GeoTeaser для {object_name}',

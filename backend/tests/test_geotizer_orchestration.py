@@ -12,6 +12,7 @@ from open_webui.tools.geotizer import (
     run_geotizer_workflow,
 )
 from open_webui.utils.geotizer_orchestration import (
+    AgentTask,
     GeotizerOrchestrationError,
     bounded_text,
     build_batch_tasks,
@@ -24,6 +25,7 @@ from open_webui.utils.geotizer_orchestration import (
     normalize_contributor_evidence,
     normalize_delegator_message,
     normalize_gis_object_profile,
+    owner_completion_valves,
     owner_failure_envelope,
     partition_owner_batch,
     repair_negative_provenance,
@@ -123,7 +125,54 @@ def test_all_owners_are_tool_free_and_contributors_keep_specialist_tools():
         execution_mode_for_task(task) == 'specialist_contributor'
         for task in tasks[:-1]
     )
-    assert execution_mode_for_task(tasks[-1]) == 'tool_free_owner'
+    assert (
+        execution_mode_for_task(tasks[-1])
+        == 'specialist_owner_completion'
+    )
+
+
+def test_skilled_owner_uses_existing_tool_free_subagent():
+    task = AgentTask(
+        kind='skilled',
+        producer='SkilledAgent',
+        role='owner',
+        task_id='ASSEMBLE',
+        payload={},
+    )
+
+    assert execution_mode_for_task(task) == 'tool_free_owner'
+
+
+def test_owner_completion_valves_disable_all_retrieval_paths():
+    values = owner_completion_valves(
+        {
+            'use_ui_compatible_flow_for_builtin_agents': True,
+            'ui_flow_agents': 'kb,web,gis',
+            'gis_tool_ids': 'server:mcpgis',
+            'web_tool_ids': 'web',
+            'kb_tool_ids': 'kb',
+            'direct_tool_agents': 'gis',
+            'gis_openapi_base_url': 'http://gis',
+            'web_openapi_base_url': 'http://web',
+            'kb_openapi_base_url': 'http://kb',
+            'enable_web_search_feature': True,
+            'execute_kb_builtin_tools_in_process': True,
+            'gis_model': 'gisagentyulong',
+        }
+    )
+
+    assert values['gis_model'] == 'gisagentyulong'
+    assert values['use_ui_compatible_flow_for_builtin_agents'] is False
+    assert values['ui_flow_agents'] == ''
+    assert values['gis_tool_ids'] == ''
+    assert values['web_tool_ids'] == ''
+    assert values['kb_tool_ids'] == ''
+    assert values['direct_tool_agents'] == ''
+    assert values['gis_openapi_base_url'] == ''
+    assert values['web_openapi_base_url'] == ''
+    assert values['kb_openapi_base_url'] == ''
+    assert values['enable_web_search_feature'] is False
+    assert values['execute_kb_builtin_tools_in_process'] is False
 
 
 def test_linked_project_gis_evidence_has_direct_authority():

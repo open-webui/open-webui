@@ -43,11 +43,41 @@ class AgentTask:
 
 def execution_mode_for_task(
     task: AgentTask,
-) -> Literal['specialist_contributor', 'tool_free_owner']:
+) -> Literal[
+    'specialist_contributor',
+    'specialist_owner_completion',
+    'tool_free_owner',
+]:
     """Keep state-changing tools outside every bounded owner decision."""
-    if task.role == 'owner':
+    if task.role == 'owner' and task.kind == 'skilled':
         return 'tool_free_owner'
+    if task.role == 'owner':
+        return 'specialist_owner_completion'
     return 'specialist_contributor'
+
+
+def owner_completion_valves(
+    values: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Disable every retrieval/tool path for an evidence-complete owner."""
+    normalized = dict(values)
+    overrides = {
+        'use_ui_compatible_flow_for_builtin_agents': False,
+        'ui_flow_agents': '',
+        'gis_tool_ids': '',
+        'web_tool_ids': '',
+        'kb_tool_ids': '',
+        'direct_tool_agents': '',
+        'gis_openapi_base_url': '',
+        'web_openapi_base_url': '',
+        'kb_openapi_base_url': '',
+        'enable_web_search_feature': False,
+        'execute_kb_builtin_tools_in_process': False,
+    }
+    for name, value in overrides.items():
+        if name in normalized:
+            normalized[name] = value
+    return normalized
 
 
 @dataclass(frozen=True)
