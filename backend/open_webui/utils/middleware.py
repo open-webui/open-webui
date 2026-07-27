@@ -94,6 +94,7 @@ from open_webui.utils.filter import (
     process_filter_functions,
 )
 
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.memory import add_memory_context, review_memory_after_turn
 from open_webui.utils.misc import (
@@ -299,7 +300,7 @@ def get_citation_source_from_tool_result(
 
     try:
         try:
-            tool_result = json.loads(tool_result)
+            tool_result = JSONCodec.loads(tool_result)
         except (json.JSONDecodeError, TypeError):
             pass  # keep tool_result as-is (e.g. fetch_url returns plain text)
         if isinstance(tool_result, dict) and 'error' in tool_result:
@@ -1000,7 +1001,7 @@ async def process_tool_result(
                         text = item.get('text', '')
                         if isinstance(text, str):
                             try:
-                                text = json.loads(text)
+                                text = JSONCodec.loads(text)
                             except json.JSONDecodeError:
                                 pass
                         tool_response.append(text)
@@ -1028,7 +1029,7 @@ async def process_tool_result(
                         text = resource.get('text', '')
                         if isinstance(text, str) and text:
                             try:
-                                text = json.loads(text)
+                                text = JSONCodec.loads(text)
                             except json.JSONDecodeError:
                                 pass
                             tool_response.append(text)
@@ -1103,7 +1104,7 @@ async def terminal_event_handler(
         parsed = tool_result
         if isinstance(parsed, str):
             try:
-                parsed = json.loads(parsed)
+                parsed = JSONCodec.loads(parsed)
             except (json.JSONDecodeError, TypeError):
                 pass
         if isinstance(parsed, dict) and parsed.get('exists') is False:
@@ -1141,7 +1142,7 @@ async def chat_completion_tools_handler(
         content = None
         if hasattr(response, 'body_iterator'):
             async for chunk in response.body_iterator:
-                data = json.loads(chunk.decode('utf-8', 'replace'))
+                data = JSONCodec.loads(chunk.decode('utf-8', 'replace'))
                 content = data['choices'][0]['message']['content']
 
             # Cleanup any remaining background tasks if necessary
@@ -1221,7 +1222,7 @@ async def chat_completion_tools_handler(
             if not content:
                 raise Exception('No JSON object found in the response')
 
-            result = json.loads(content)
+            result = JSONCodec.loads(content)
 
             async def tool_call_handler(tool_call):
                 nonlocal skip_files
@@ -1390,7 +1391,7 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
         # user message as the search query.
         if isinstance(res, JSONResponse):
             try:
-                error_body = json.loads(res.body)
+                error_body = JSONCodec.loads(res.body)
                 detail = error_body.get('detail', 'Query generation failed')
             except Exception:
                 detail = 'Query generation failed'
@@ -1406,7 +1407,7 @@ async def chat_web_search_handler(request: Request, form_data: dict, extra_param
                 raise Exception('No JSON object found in the response')
 
             response = response[bracket_start:bracket_end]
-            queries = json.loads(response)
+            queries = JSONCodec.loads(response)
             queries = queries.get('queries', [])
         except Exception as e:
             queries = [response]
@@ -1735,7 +1736,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                 # Handle JSONResponse from error paths
                 if isinstance(res, JSONResponse):
                     try:
-                        error_body = json.loads(res.body)
+                        error_body = JSONCodec.loads(res.body)
                         detail = error_body.get('detail', 'Image prompt generation failed')
                     except Exception:
                         detail = 'Image prompt generation failed'
@@ -1751,7 +1752,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                         raise Exception('No JSON object found in the response')
 
                     response = response[bracket_start:bracket_end]
-                    response = json.loads(response)
+                    response = JSONCodec.loads(response)
                     prompt = response.get('prompt', [])
                 except Exception as e:
                     prompt = user_message
@@ -1855,7 +1856,7 @@ async def chat_completion_files_handler(
                         raise Exception('No JSON object found in the response')
 
                     queries_response = queries_response[bracket_start:bracket_end]
-                    queries_response = json.loads(queries_response)
+                    queries_response = JSONCodec.loads(queries_response)
                 except Exception as e:
                     queries_response = {'queries': [queries_response]}
 
@@ -1966,7 +1967,7 @@ def apply_params_to_form_data(form_data, model):
             if isinstance(value, str):
                 try:
                     # Attempt to parse the string as JSON
-                    custom_params[key] = json.loads(value)
+                    custom_params[key] = JSONCodec.loads(value)
                 except json.JSONDecodeError:
                     # If it fails, keep the original string
                     pass
@@ -1988,7 +1989,7 @@ def apply_params_to_form_data(form_data, model):
                 logit_bias = convert_logit_bias_input_to_json(params['logit_bias'])
 
                 if logit_bias:
-                    form_data['logit_bias'] = json.loads(logit_bias)
+                    form_data['logit_bias'] = JSONCodec.loads(logit_bias)
             except Exception as e:
                 log.exception(f'Error parsing logit_bias: {e}')
 
@@ -3031,7 +3032,7 @@ def get_response_data(response):
     if isinstance(response, JSONResponse):
         if isinstance(response.body, bytes):
             try:
-                response_data = json.loads(response.body.decode('utf-8', 'replace'))
+                response_data = JSONCodec.loads(response.body.decode('utf-8', 'replace'))
             except json.JSONDecodeError:
                 response_data = {'error': {'detail': 'Invalid JSON response'}}
         else:
@@ -3090,7 +3091,7 @@ def update_assistant_message_from_stream(assistant_message, raw):
             continue
 
         try:
-            data = json.loads(part)
+            data = JSONCodec.loads(part)
         except Exception:
             continue
 
@@ -3278,7 +3279,7 @@ async def background_tasks_handler(ctx):
                     ]
 
                     try:
-                        follow_ups = json.loads(follow_ups_string).get('follow_ups', [])
+                        follow_ups = JSONCodec.loads(follow_ups_string).get('follow_ups', [])
                         await event_emitter(
                             {
                                 'type': 'chat:message:follow_ups',
@@ -3336,7 +3337,7 @@ async def background_tasks_handler(ctx):
                             title_string = title_string[title_string.find('{') : title_string.rfind('}') + 1]
 
                             try:
-                                title = json.loads(title_string).get('title', user_message)
+                                title = JSONCodec.loads(title_string).get('title', user_message)
                             except Exception as e:
                                 title = ''
 
@@ -3388,7 +3389,7 @@ async def background_tasks_handler(ctx):
                         tags_string = tags_string[tags_string.find('{') : tags_string.rfind('}') + 1]
 
                         try:
-                            tags = json.loads(tags_string).get('tags', [])
+                            tags = JSONCodec.loads(tags_string).get('tags', [])
                             await Chats.update_chat_tags_by_id(metadata['chat_id'], tags, user)
 
                             await event_emitter(
@@ -4212,7 +4213,7 @@ async def streaming_chat_response_handler(response, ctx):
                             # (without SSE `data:` prefix). Try to normalize these into standard
                             # error events so frontend and DB paths still receive them.
                             try:
-                                raw_obj = json.loads(data)
+                                raw_obj = JSONCodec.loads(data)
                                 raw_error = raw_obj.get('error') if isinstance(raw_obj, dict) else None
                                 if raw_error:
                                     if save_to_chat:
@@ -4235,7 +4236,7 @@ async def streaming_chat_response_handler(response, ctx):
                         data = data[5:].strip()
 
                         try:
-                            data = json.loads(data)
+                            data = JSONCodec.loads(data)
 
                             if filter_functions:
                                 data, _ = await process_filter_functions(
@@ -4937,7 +4938,7 @@ async def streaming_chat_response_handler(response, ctx):
                         params = {}
                         if tool_args and tool_args.strip():
                             try:
-                                params = json.loads(tool_args)
+                                params = JSONCodec.loads(tool_args)
                             except Exception:
                                 try:
                                     params = ast.literal_eval(tool_args)
@@ -5613,7 +5614,7 @@ async def streaming_chat_response_handler(response, ctx):
                 )
 
                 if event:
-                    yield wrap_item(json.dumps(event))
+                    yield wrap_item(JSONCodec.dumps(event))
 
             async for data in original_generator:
                 data, _ = await process_filter_functions(
