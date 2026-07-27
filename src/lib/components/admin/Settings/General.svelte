@@ -5,6 +5,7 @@
 	import { getBackendConfig, getVersionUpdates } from '$lib/apis';
 	import { getAdminConfig, updateAdminConfig } from '$lib/apis/auths';
 	import { getBanners, setBanners } from '$lib/apis/configs';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
@@ -284,6 +285,24 @@
 				>
 					<Switch bind:state={adminConfig.ENABLE_CHANNELS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
+				{#if adminConfig.ENABLE_CHANNELS}
+					<AdminSettingRow
+						label={$i18n.t('Model Response Mode')}
+						description={$i18n.t(
+							'Choose where model responses to root-level channel mentions are posted.'
+						)}
+						labelClassName="text-gray-500 dark:text-gray-500"
+						let:labelId
+					>
+						<SettingsSelect
+							bind:value={adminConfig.CHANNEL_MODEL_RESPONSE_MODE}
+							aria-labelledby={labelId}
+						>
+							<option value="thread">{$i18n.t('Thread')}</option>
+							<option value="channel">{$i18n.t('Channel')}</option>
+						</SettingsSelect>
+					</AdminSettingRow>
+				{/if}
 				<AdminSettingRow
 					label={$i18n.t('Calendar')}
 					description={$i18n.t('Allow users to access calendar features.')}

@@ -987,13 +987,18 @@ async def model_response_handler(request, channel, message, user, db=None):
                         db=db,
                     )
                 )[::-1]
+                response_parent_id = (
+                    message.parent_id
+                    if message.parent_id
+                    else (message.id if await Config.get('channels.model_response_mode', 'thread') == 'thread' else None)
+                )
 
                 response_message, channel = await new_message_handler(
                     request,
                     channel.id,
                     MessageForm(
                         **{
-                            'parent_id': (message.parent_id if message.parent_id else message.id),
+                            'parent_id': response_parent_id,
                             'content': f'',
                             'data': {},
                             'meta': {

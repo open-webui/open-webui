@@ -265,6 +265,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'CHUNK_MIN_SIZE_TARGET': 'rag.chunk_min_size_target',
     'CHUNK_OVERLAP': 'rag.chunk_overlap',
     'CHUNK_SIZE': 'rag.chunk_size',
+    'CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES': 'rag.content_extraction.supported_media_mime_types',
     'CONTENT_EXTRACTION_ENGINE': 'rag.content_extraction_engine',
     'DATALAB_MARKER_ADDITIONAL_CONFIG': 'rag.datalab_marker_additional_config',
     'DATALAB_MARKER_API_BASE_URL': 'rag.datalab_marker_api_base_url',
@@ -630,6 +631,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'HYBRID_BM25_WEIGHT': config.HYBRID_BM25_WEIGHT,
         # Content extraction settings
         'CONTENT_EXTRACTION_ENGINE': config.CONTENT_EXTRACTION_ENGINE,
+        'CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES': config.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES,
         'PDF_EXTRACT_IMAGES': config.PDF_EXTRACT_IMAGES,
         'PDF_LOADER_MODE': config.PDF_LOADER_MODE,
         'DATALAB_MARKER_API_KEY': config.DATALAB_MARKER_API_KEY,
@@ -861,6 +863,7 @@ class ConfigForm(BaseModel):
 
     # Content extraction settings
     CONTENT_EXTRACTION_ENGINE: str | None = None
+    CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES: list[str] | None = None
     PDF_EXTRACT_IMAGES: bool | None = None
     PDF_LOADER_MODE: str | None = None
 
@@ -972,6 +975,11 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         form_data.CONTENT_EXTRACTION_ENGINE
         if form_data.CONTENT_EXTRACTION_ENGINE is not None
         else config.CONTENT_EXTRACTION_ENGINE
+    )
+    config.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES = (
+        form_data.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES
+        if form_data.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES is not None
+        else config.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES
     )
     config.PDF_EXTRACT_IMAGES = (
         form_data.PDF_EXTRACT_IMAGES if form_data.PDF_EXTRACT_IMAGES is not None else config.PDF_EXTRACT_IMAGES
@@ -1333,6 +1341,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'HYBRID_BM25_WEIGHT': config.HYBRID_BM25_WEIGHT,
         # Content extraction settings
         'CONTENT_EXTRACTION_ENGINE': config.CONTENT_EXTRACTION_ENGINE,
+        'CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES': config.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES,
         'PDF_EXTRACT_IMAGES': config.PDF_EXTRACT_IMAGES,
         'PDF_LOADER_MODE': config.PDF_LOADER_MODE,
         'DATALAB_MARKER_API_KEY': config.DATALAB_MARKER_API_KEY,

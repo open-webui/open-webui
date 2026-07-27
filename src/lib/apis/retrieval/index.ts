@@ -52,6 +52,7 @@ type YoutubeConfigForm = {
 
 type RAGConfigForm = {
 	PDF_EXTRACT_IMAGES?: boolean;
+	CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES?: string[];
 	ENABLE_GOOGLE_DRIVE_INTEGRATION?: boolean;
 	ENABLE_ONEDRIVE_INTEGRATION?: boolean;
 	EXTERNAL_DOCUMENT_LOADER_HEADERS?: Record<string, string>;

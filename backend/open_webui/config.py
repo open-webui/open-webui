@@ -853,6 +853,17 @@ ONEDRIVE_SHAREPOINT_TENANT_ID = os.getenv('ONEDRIVE_SHAREPOINT_TENANT_ID', '')
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = os.getenv('CONTENT_EXTRACTION_ENGINE', '').lower()
 
+content_extraction_supported_media_mime_types = os.getenv('CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES')
+CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES = (
+    [
+        mime_type.strip()
+        for mime_type in content_extraction_supported_media_mime_types.split(',')
+        if mime_type.strip()
+    ]
+    if content_extraction_supported_media_mime_types is not None
+    else None
+)
+
 DATALAB_MARKER_API_KEY = os.getenv('DATALAB_MARKER_API_KEY', '')
 
 DATALAB_MARKER_API_BASE_URL = os.getenv('DATALAB_MARKER_API_BASE_URL', '')
@@ -1999,6 +2010,8 @@ FOLDER_MAX_FILE_COUNT = os.getenv('FOLDER_MAX_FILE_COUNT', '')
 
 ENABLE_CHANNELS = os.getenv('ENABLE_CHANNELS', 'False').lower() == 'true'
 
+CHANNEL_MODEL_RESPONSE_MODE = os.getenv('CHANNEL_MODEL_RESPONSE_MODE', 'thread')
+
 ENABLE_CALENDAR = os.getenv('ENABLE_CALENDAR', 'True').lower() == 'true'
 
 ENABLE_AUTOMATIONS = os.getenv('ENABLE_AUTOMATIONS', 'True').lower() == 'true'
@@ -2817,6 +2830,7 @@ DEFAULT_CONFIG = {
     'onedrive.sharepoint_url': ONEDRIVE_SHAREPOINT_URL,
     'onedrive.sharepoint_tenant_id': ONEDRIVE_SHAREPOINT_TENANT_ID,
     'rag.content_extraction_engine': CONTENT_EXTRACTION_ENGINE,
+    'rag.content_extraction.supported_media_mime_types': CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES,
     'rag.datalab_marker_api_key': DATALAB_MARKER_API_KEY,
     'rag.datalab_marker_api_base_url': DATALAB_MARKER_API_BASE_URL,
     'rag.datalab_marker_additional_config': DATALAB_MARKER_ADDITIONAL_CONFIG,
@@ -3049,6 +3063,7 @@ DEFAULT_CONFIG = {
     'folders.enable': ENABLE_FOLDERS,
     'folders.max_file_count': FOLDER_MAX_FILE_COUNT,
     'channels.enable': ENABLE_CHANNELS,
+    'channels.model_response_mode': CHANNEL_MODEL_RESPONSE_MODE,
     'calendar.enable': ENABLE_CALENDAR,
     'automations.enable': ENABLE_AUTOMATIONS,
     'subagents.enable': ENABLE_SUBAGENTS,
