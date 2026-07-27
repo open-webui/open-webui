@@ -34,8 +34,13 @@ from open_webui.utils.geotizer_orchestration import (
     validate_owner_envelope,
     xlsx_download_path,
 )
+from open_webui.utils.geotizer_vision import (
+    apply_structured_visual_field_proposals,
+    normalize_visual_field_proposals,
+)
 
 GIS_TOOL_IDS = ('server:mcpgis', 'server:mcp:mcpgis')
+VISION_TOOL_IDS = ('geology_vision', 'geomas_geological_vision')
 DELEGATOR_TOOL_ID = 'mainagent_tool_yulong'
 SUB_AGENT_TOOL_ID = 'sub_agent'
 SKILLED_MODEL_ID = 'skilledagent-sakana'
@@ -47,6 +52,10 @@ GisCall = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
 AgentCall = Callable[
     [AgentTask, str, str, Mapping[str, Any] | None],
     Awaitable[str],
+]
+VisionEvidenceCall = Callable[
+    [str, str | None, Mapping[str, Any]],
+    Awaitable[Mapping[str, Any] | None],
 ]
 
 
@@ -64,6 +73,7 @@ async def fill_geotizer(
     model_run_id: str = '',
     run_id: str = '',
     allow_draft: bool = True,
+    vision_collection_url: str = '',
     __request__: Request = None,
     __user__: dict = None,
     __event_emitter__=None,
@@ -72,6 +82,7 @@ async def fill_geotizer(
     __chat_id__: str = None,
     __message_id__: str = None,
     __model_knowledge__: list[dict] = None,
+    __files__: list[dict] = None,
 ) -> str:
     """Fill GeoTeaser Object through the deterministic GIS state machine.
 
@@ -87,6 +98,8 @@ async def fill_geotizer(
     :param model_run_id: Optional exact DataCube run ID.
     :param run_id: Optional existing GeoTeaser run ID to resume.
     :param allow_draft: Allow final XLSX with explicit data gaps.
+    :param vision_collection_url: Optional exact Open WebUI collection URL or
+        ID containing project-specific maps and sections.
     :return: Markdown result with completeness counts and XLSX download link.
     """
     if __request__ is None or __user__ is None:
@@ -112,6 +125,7 @@ async def fill_geotizer(
         '__chat_id__': __chat_id__,
         '__message_id__': __message_id__,
         '__model_knowledge__': __model_knowledge__ or [],
+        '__files__': __files__ or [],
     }
     try:
         gis_call = await _resolve_geotizer_callable(
@@ -120,6 +134,10 @@ async def fill_geotizer(
             runtime,
         )
         agent_call = await _build_agent_caller(runtime)
+        vision_evidence_call = await _build_vision_evidence_caller(
+            runtime,
+            collection_url=vision_collection_url.strip(),
+        )
         final = await run_geotizer_workflow(
             object_name=object_name.strip(),
             project_id=project_id.strip() or None,
@@ -128,6 +146,7 @@ async def fill_geotizer(
             allow_draft=allow_draft,
             gis_call=gis_call,
             agent_call=agent_call,
+            vision_evidence_call=vision_evidence_call,
             event_emitter=__event_emitter__,
         )
     except Exception as exc:
@@ -164,6 +183,7 @@ async def run_geotizer_workflow(
     allow_draft: bool,
     gis_call: GisCall,
     agent_call: AgentCall,
+    vision_evidence_call: VisionEvidenceCall | None = None,
     event_emitter=None,
 ) -> dict[str, Any]:
     """Effect shell around the pure GeoTeaser planner and validators."""
@@ -283,6 +303,17 @@ async def run_geotizer_workflow(
                     )
                 ]
             evidence.append(item)
+        await _append_visual_evidence(
+            evidence,
+            vision_evidence_call,
+            object_name=object_name,
+            project_id=_resolved_vision_project_id(
+                gis_project,
+                project_id,
+            ),
+            next_batch=next_batch,
+            allowed_field_keys=allowed_field_keys,
+        )
         context = compact_batch_context(
             next_batch,
             object_name=object_name,
@@ -330,6 +361,54 @@ async def run_geotizer_workflow(
         done=True,
     )
     return final
+
+
+def _resolved_vision_project_id(
+    gis_project: Any,
+    requested_project_id: str | None,
+) -> str | None:
+    if isinstance(gis_project, Mapping) and gis_project.get('project_id'):
+        return str(gis_project['project_id'])
+    return requested_project_id
+
+
+async def _append_visual_evidence(
+    evidence: list[dict[str, Any]],
+    vision_evidence_call: VisionEvidenceCall | None,
+    *,
+    object_name: str,
+    project_id: str | None,
+    next_batch: Mapping[str, Any],
+    allowed_field_keys: list[str],
+) -> None:
+    if vision_evidence_call is None:
+        return
+    visual_result = await vision_evidence_call(
+        object_name,
+        project_id,
+        next_batch,
+    )
+    if not isinstance(visual_result, Mapping):
+        return
+    evidence.append(
+        {
+            'route_id': 'VISION-EVIDENCE',
+            'producer': 'GeoMAS Geological Vision',
+            'source_domain': 'vision',
+            'relation_to_object': str(
+                visual_result.get('project_match')
+                or 'source_declared'
+            ),
+            'output': json.dumps(visual_result, ensure_ascii=False),
+            'field_proposals': [
+                proposal.as_dict()
+                for proposal in normalize_visual_field_proposals(
+                    visual_result,
+                    allowed_field_keys=allowed_field_keys,
+                )
+            ],
+        }
+    )
 
 
 async def _produce_and_submit_owner_batch(
@@ -405,6 +484,11 @@ async def _produce_valid_owner_envelope(
             attempt=attempt,
         )
         envelope = correct_explicitly_derived_value_origins(envelope)
+        envelope = apply_structured_visual_field_proposals(
+            next_batch,
+            envelope,
+            context.get('contributor_evidence') or [],
+        )
         envelope = apply_structured_gis_field_proposals(
             next_batch,
             envelope,
@@ -469,6 +553,136 @@ async def _resolve_geotizer_callable(request, user, runtime) -> GisCall:
         return raw
 
     return call
+
+
+async def _build_vision_evidence_caller(
+    runtime: Mapping[str, Any],
+    *,
+    collection_url: str,
+) -> VisionEvidenceCall | None:
+    """Load the OCR-owned Geological Vision tool when visual inputs exist."""
+    supplied_files = list(runtime.get('__files__') or [])
+    if not supplied_files and not collection_url:
+        return None
+
+    from open_webui.models.tools import Tools
+    from open_webui.utils.plugin import load_tool_module_by_id
+
+    selected = _find_vision_tool_record(await Tools.get_tools())
+    if selected is None:
+        raise GeotizerOrchestrationError(
+            'GeoTeaser received visual sources, but the GeoMAS Geological '
+            'Vision tool is not installed.'
+        )
+
+    vision_tool, _ = await load_tool_module_by_id(selected.id)
+    valve_values = await Tools.get_tool_valves_by_id(selected.id) or {}
+    if hasattr(vision_tool, 'Valves'):
+        vision_tool.valves = vision_tool.Valves(**valve_values)
+    analyze = getattr(
+        vision_tool,
+        'analyze_geological_materials',
+        None,
+    )
+    prepare = getattr(
+        vision_tool,
+        '_prepare_geotizer_visual_evidence',
+        None,
+    )
+    if not callable(analyze) or not callable(prepare):
+        raise GeotizerOrchestrationError(
+            'Installed GeoMAS Geological Vision tool does not implement '
+            'the GeoTeaser evidence contract.'
+        )
+
+    analysis_payload: Mapping[str, Any] | None = None
+    analysis_project_id: str | None = None
+
+    async def call(
+        object_name: str,
+        project_id: str | None,
+        next_batch: Mapping[str, Any],
+    ) -> Mapping[str, Any] | None:
+        nonlocal analysis_payload, analysis_project_id
+        if analysis_payload is None:
+            raw = await analyze(
+                task=(
+                    'Извлеки из приложенных карт и разрезов только '
+                    'проверяемые сведения для заполнения Геотизера объекта '
+                    f'{object_name}.'
+                ),
+                knowledge_collection_url=collection_url,
+                project_id=project_id or '',
+                output_format='evidence_json',
+                __files__=supplied_files,
+                __request__=runtime.get('__request__'),
+            )
+            analysis_payload = _parse_vision_analysis(raw)
+            analysis_project_id = project_id
+        elif analysis_project_id != project_id:
+            raise GeotizerOrchestrationError(
+                'Geological Vision analysis project changed inside one '
+                'GeoTeaser run.'
+            )
+
+        project_match = (
+            'project_specific_source'
+            if supplied_files and not collection_url
+            else 'unverified'
+        )
+        prepared = prepare(
+            analysis_payload,
+            bounded_fields=list(next_batch.get('fields') or []),
+            object_name=object_name,
+            project_id=project_id or '',
+            project_match=project_match,
+        )
+        if not isinstance(prepared, Mapping):
+            raise GeotizerOrchestrationError(
+                'Geological Vision GeoTeaser evidence must be an object.'
+            )
+        return dict(prepared)
+
+    return call
+
+
+def _find_vision_tool_record(records):
+    selected = next(
+        (
+            record
+            for preferred_id in VISION_TOOL_IDS
+            for record in records
+            if record.id == preferred_id
+        ),
+        None,
+    )
+    if selected is not None:
+        return selected
+    return next(
+        (
+            record
+            for record in records
+            if (
+                'geological vision' in record.name.casefold()
+                or 'analyze_geological_materials' in record.content
+            )
+        ),
+        None,
+    )
+
+
+def _parse_vision_analysis(raw: Any) -> dict[str, Any]:
+    try:
+        parsed = json.loads(raw)
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise GeotizerOrchestrationError(
+            'Geological Vision did not return evidence_json.'
+        ) from exc
+    if not isinstance(parsed, Mapping):
+        raise GeotizerOrchestrationError(
+            'Geological Vision evidence_json must be an object.'
+        )
+    return dict(parsed)
 
 
 async def _build_agent_caller(runtime) -> AgentCall:
@@ -766,7 +980,9 @@ def _owner_prompt(
         'source_inventory': [
             {
                 'source_id': 'stable unique ID',
-                'source_type': 'knowledge_base|web|gis|datacube|derived',
+                'source_type': (
+                    'knowledge_base|web|gis|vision|datacube|derived'
+                ),
                 'title': 'source title',
                 'locator': 'human-readable locator',
                 'url': None,
@@ -817,6 +1033,17 @@ def _owner_prompt(
             (
                 'A knowledge-base or web miss cannot negate a fact confirmed '
                 'by an exact linked-project GIS layer/feature/query locator.'
+            ),
+            (
+                'Treat source_domain=vision only as calculated or analogue '
+                'evidence. It never overrides a direct object fact. A visual '
+                'claim is usable only when its source hash and page plus '
+                'bbox/source_region locator are present.'
+            ),
+            (
+                'Do not infer GIS weak labels from an unaligned map. Spatial '
+                'visual derivations require a matched project and either a '
+                'georeferenced or control-point-aligned source.'
             ),
             (
                 'For every bounded field explicitly supported by direct GIS '
