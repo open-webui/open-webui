@@ -952,6 +952,9 @@
 						if ($chatId && !$temporaryChatEnabled && hasPendingAssistantLeaf()) {
 							await loadChat();
 						}
+						if ($chatId && !$temporaryChatEnabled) {
+							updateLastReadAt($chatId);
+						}
 					}
 				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);

@@ -57,6 +57,7 @@
 	items={folderOptions.map((folder) => ({ value: folder.id, label: folderName(folder) }))}
 	placeholder={$i18n.t('Choose folder')}
 	{align}
+	{side}
 	triggerClass="relative h-8 max-w-[11rem] flex items-center gap-1.5 px-2.5 py-1.5 bg-transparent rounded-2xl text-xs font-normal text-gray-600 transition hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
 	contentClass="w-72 shadow-lg"
 	maxHeight="18rem"
