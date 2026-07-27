@@ -258,6 +258,7 @@ def convert_output_to_messages(
     output: list,
     raw: bool = False,
     reasoning_format: str | None = None,
+    flatten_tool_images: bool = False,
 ) -> list[dict]:
     """
     Convert OR-aligned output items to OpenAI Chat Completion-format messages.
@@ -276,6 +277,8 @@ def convert_output_to_messages(
               (for Ollama, which expects reasoning as tagged content).
             - ``'reasoning_content'``: set as ``reasoning_content`` top-level field
               (for llama.cpp, which routes it via the chat template).
+        flatten_tool_images: Move tool output images into a following user
+            message for Chat Completions providers.
     """
     if not output or not isinstance(output, list):
         return []
@@ -285,6 +288,10 @@ def convert_output_to_messages(
     pending_content = []
     pending_reasoning = []  # Only populated when reasoning_format == 'reasoning_content'
     pending_reasoning_details = []
+    pending_tool_image_urls = []
+    function_call_ids = {
+        item.get('call_id') for item in output if item.get('type') == 'function_call' and item.get('call_id')
+    }
 
     def flush_pending():
         nonlocal pending_content, pending_tool_calls, pending_reasoning, pending_reasoning_details
@@ -309,8 +316,29 @@ def convert_output_to_messages(
         pending_reasoning = []
         pending_reasoning_details = []
 
+    def flush_tool_images():
+        nonlocal pending_tool_image_urls
+        if not pending_tool_image_urls:
+            return
+
+        messages.append(
+            {
+                'role': 'user',
+                'content': [
+                    {
+                        'type': 'text',
+                        'text': 'Here are the images from the tool results above. Please analyze them.',
+                    },
+                    *[{'type': 'image_url', 'image_url': {'url': url}} for url in pending_tool_image_urls],
+                ],
+            }
+        )
+        pending_tool_image_urls = []
+
     for item in output:
         item_type = item.get('type', '')
+        if item_type != 'function_call_output':
+            flush_tool_images()
 
         if item_type == 'message':
             # Extract text from output_text content parts
@@ -356,8 +384,17 @@ def convert_output_to_messages(
                     if url:
                         image_urls.append(url)
 
-            if image_urls:
-                # Multimodal tool content with image(s)
+            if flatten_tool_images:
+                messages.append(
+                    {
+                        'role': 'tool',
+                        'tool_call_id': item.get('call_id', ''),
+                        'content': content,
+                    }
+                )
+                if item.get('call_id') in function_call_ids:
+                    pending_tool_image_urls.extend(image_urls)
+            elif image_urls:
                 messages.append(
                     {
                         'role': 'tool',
@@ -429,6 +466,7 @@ def convert_output_to_messages(
             pass
 
     # Flush remaining content/tool_calls
+    flush_tool_images()
     flush_pending()
 
     return reconcile_tool_pairs(messages)
