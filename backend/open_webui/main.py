@@ -229,6 +229,7 @@ from open_webui.utils.chat_variables import (
     normalize_chat_variables,
 )
 from open_webui.utils.embeddings import generate_embeddings
+from open_webui.utils.json_response import apply_orjson_http_json
 from open_webui.utils.logger import start_logger
 from open_webui.utils.middleware import (
     background_tasks_handler,
@@ -455,6 +456,10 @@ async def lifespan(app: FastAPI):
 
     await publish_event(app, EVENTS.SYSTEM_SHUTDOWN_COMPLETED, source='system')
 
+
+# Opt-in (ENABLE_ORJSON): orjson for request-body parsing and JSONResponse bodies;
+# response_model routes keep FastAPI's Pydantic fast path either way.
+apply_orjson_http_json()
 
 app = FastAPI(
     title='Open WebUI',

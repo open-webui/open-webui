@@ -2,6 +2,7 @@ import json
 from numbers import Number
 from uuid import uuid4
 
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import (
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
@@ -237,7 +238,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
     completion_id = f'chatcmpl-{str(uuid4())}'
     first = True
     async for data in ollama_streaming_response.body_iterator:
-        data = json.loads(data)
+        data = JSONCodec.loads(data)
 
         model = data.get('model', 'ollama')
         message = data.get('message') or {}
@@ -268,7 +269,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
         if done and has_tool_calls:
             data['choices'][0]['finish_reason'] = 'tool_calls'
 
-        line = f'data: {json.dumps(data)}\n\n'
+        line = f'data: {JSONCodec.dumps(data)}\n\n'
         yield line
 
     yield 'data: [DONE]\n\n'
