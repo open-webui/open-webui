@@ -1,0 +1,45 @@
+name: Studios Agent Hub Build and Deploy
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: studios-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    uses: ./.github/workflows/frontend.yaml
+  backend:
+    uses: ./.github/workflows/backend.yaml
+
+  build:
+    needs: [frontend, backend]
+    uses: ./.github/workflows/studios-build.yml
+    with:
+      productEcrRegistry: 590183674594.dkr.ecr.eu-west-1.amazonaws.com
+      awsRole: arn:aws:iam::590183674594:role/dev-ai-agent-hub-service-gha
+      serviceName: studios-agent-hub
+      pactsEnabled: false
+      integrationTests: false
+      dockerIntegrationTestStubs: false
+      publish: ${{ github.ref == 'refs/heads/main' }}
+      runsOn: 'dev-studios-agent-hub'
+  stg_deploy:
+    needs: build
+    uses: ./.github/workflows/studios-deploy.yml
+    with:
+      imageTag: ${{ needs.build.outputs.image_tag || 'latest' }}
+      ecosystem: dev
+      gitRef: ${{ github.ref }}
+
+  prd_deploy:
+    needs: [build, stg_deploy]
+    uses: ./.github/workflows/studios-deploy.yml
+    with:
+      imageTag: ${{ needs.build.outputs.image_tag || 'latest' }}
+      ecosystem: prd
+      prdPromoteImage: true
+      gitRef: ${{ github.ref }}

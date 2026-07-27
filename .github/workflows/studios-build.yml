@@ -1,0 +1,114 @@
+name: Studios Agent Hub Build
+on:
+  workflow_call:
+    inputs:
+      productEcrRegistry:
+        description: 'ECR Registry'
+        required: true
+        type: string
+      awsRole:
+        description: 'AWS IAM Role'
+        required: false
+        type: string
+      serviceName:
+        description: 'Name of service'
+        required: true
+        type: string
+      publish:
+        description: 'Publish to ECR'
+        required: false
+        type: boolean
+        default: false
+      runsOn:
+        description: 'Defaults to ubuntu-latest, for self hosted runners use cd-runner-$serviceName-$tShirtSize'
+        required: false
+        type: string
+        default: 'ubuntu-latest'
+    outputs:
+      image_tag:
+        description: 'Tag of the built image'
+        value: ${{ jobs.build.outputs.image_tag }}
+
+    secrets:
+      ARTIFACTORY_USERNAME:
+        description: 'Username to access JFrog.io published libraries in the build'
+        required: true
+      ARTIFACTORY_PASSWORD:
+        description: 'Password to access JFrog.io published libraries in the build'
+        required: true
+      AWS_ACCESS_KEY_ID:
+        description: 'AWS Access Key'
+        required: false
+      AWS_SECRET_ACCESS_KEY:
+        description: 'AWS Secret Key'
+        required: false
+
+env:
+  DOCKER_API_VERSION: "1.43"
+jobs:
+  build:
+    timeout-minutes: 60
+    permissions:
+      id-token: write
+      contents: write
+    runs-on: ${{ inputs.runsOn }}
+    outputs:
+      image_tag: ${{ steps.set-tag.outputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: eu-west-1
+          role-to-assume: ${{ inputs.awsRole }}
+          role-duration-seconds: 1200
+
+      - name: Log in to the root ECR
+        uses: docker/login-action@v2
+        with:
+          registry: 655028521085.dkr.ecr.eu-west-1.amazonaws.com
+
+      - name: Extract metadata (tags, labels) for service image
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ inputs.productEcrRegistry }}/${{ inputs.serviceName }}
+          tags: |
+            type=ref,event=branch,prefix=gha-,suffix=-{{sha}}-${{ github.run_number }}
+            type=ref,event=pr,prefix=gha-pr-,suffix=-{{sha}}-${{ github.run_number }}
+
+      - name: Log in to the ECR
+        if: ${{ inputs.publish }}
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ inputs.productEcrRegistry }}
+
+      - name: Set up docker context
+        run: docker context create builders
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+          endpoint: builders
+
+      - name: Build and push service image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: ${{ inputs.publish }}
+          tags:   ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            ARTIFACTORY_USERNAME=${{ secrets.ARTIFACTORY_USERNAME }}
+            ARTIFACTORY_PASSWORD=${{ secrets.ARTIFACTORY_PASSWORD }}
+
+      - name: Tag built version
+        id: set-tag
+        if: ${{ inputs.publish }}
+        env:
+          TAG_VALUE: ${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+        run: |
+          git tag $TAG_VALUE $GITHUB_SHA
+          git push origin $TAG_VALUE
+          echo "image_tag=$TAG_VALUE" >> $GITHUB_OUTPUT

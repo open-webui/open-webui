@@ -1,0 +1,110 @@
+name: Agent Hub Deploy
+
+on:
+  workflow_call:
+    inputs:
+      imageTag:
+        description: 'Docker image tag to deploy'
+        required: true
+        type: string
+      ecosystem:
+        description: 'Target APLO ecosystem (dev for stg, prd for production)'
+        required: true
+        type: string
+      prdPromoteImage:
+        description: 'Enable production image promotion'
+        required: false
+        type: boolean
+        default: false
+      gitRef:
+        description: 'Git reference override for APLO'
+        required: false
+        type: string
+        default: 'refs/heads/main'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to the root ECR
+        uses: docker/login-action@v2
+        with:
+          registry: 655028521085.dkr.ecr.eu-west-1.amazonaws.com
+
+      - name: Log in to the ECR
+        if: ${{ inputs.publish }}
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ inputs.productEcrRegistry }}
+
+      - name: Check prd testing image exists
+        if: inputs.ECOSYSTEM == 'prd' && needs.generate-values.outputs.ENABLE_TEST_IMAGE == 'true' && !inputs.BUILD_IN_PRD
+        run: |
+          TEST_TAG="${{ env.IMAGE_TO_DEPLOY }}-testing-image"
+          if ! PRD_TEST_DESCRIBE=$(aws ecr describe-images --repository-name "${{ inputs.SERVICE }}" --region "${{ env.AWS_REGION }}" --output json); then
+          echo "Unable to describe PRD ECR repository for $TEST_TAG" >&2
+          exit 1
+          fi
+          PRD_TEST_TAGS=$(echo "$PRD_TEST_DESCRIBE" | jq -r '.imageDetails[].imageTags[]?' || true)
+          
+          if echo "$PRD_TEST_TAGS" | grep -Fx "$TEST_TAG" >/dev/null; then
+          echo "TESTING_IMAGE_EXISTS=true" >> "$GITHUB_ENV"
+          echo "Detected testing image tag $TEST_TAG in PRD ECR"
+          else
+          echo "TESTING_IMAGE_EXISTS=" >> "$GITHUB_ENV"
+          echo "Testing image tag $TEST_TAG not found in PRD ECR; will attempt to copy from DEV if promotion is enabled"
+          fi
+
+      - name: Copy testing image to prd
+        if: inputs.ECOSYSTEM == 'prd' && needs.generate-values.outputs.ENABLE_TEST_IMAGE == 'true' && (inputs.GIT_REF_OVERRIDE == '' || inputs.PRD_PROMOTE_IMAGE) && !inputs.BUILD_IN_PRD
+        run: |
+          if [[ '${{ env.TESTING_IMAGE_EXISTS }}' == '' ]]; then
+            if docker pull ${{ needs.generate-values.outputs.DEV_REGISTRY }}/${{ inputs.SERVICE }}:${{ env.IMAGE_TO_DEPLOY }}-testing-image; then
+              docker tag ${{ needs.generate-values.outputs.DEV_REGISTRY }}/${{ inputs.SERVICE }}:${{ env.IMAGE_TO_DEPLOY }}-testing-image ${{ needs.generate-values.outputs.PRD_REGISTRY }}/${{ inputs.SERVICE }}:${{ env.IMAGE_TO_DEPLOY }}-testing-image
+              docker push ${{ needs.generate-values.outputs.PRD_REGISTRY }}/${{ inputs.SERVICE }}:${{ env.IMAGE_TO_DEPLOY }}-testing-image
+            else
+              if [[ '${{ env.IS_ROLLBACK }}' == 'true' ]]; then
+                echo "⚠️ Testing image ${{ env.IMAGE_TO_DEPLOY }}-testing-image not found in DEV ECR during rollback; deployment will continue but canary tests may be skipped or fail"
+              else
+                echo "Testing image ${{ env.IMAGE_TO_DEPLOY }}-testing-image missing in DEV ECR; rerun build or ensure testing images are available" >&2
+                exit 1
+              fi
+            fi
+          else
+            echo "Testing image with tag ${{ env.IMAGE_TO_DEPLOY }}-testing-image already exists in the repository ${{ inputs.SERVICE }}"
+            exit 0
+          fi
+
+      - name: Check prd image exists
+        if: inputs.ECOSYSTEM == 'prd' && !inputs.BUILD_IN_PRD
+        run: |
+          IMAGE_TAG="${{ env.IMAGE_TO_DEPLOY }}"
+          if ! PRD_DESCRIBE=$(aws ecr describe-images --repository-name "${{ inputs.SERVICE }}" --region "${{ env.AWS_REGION }}" --output json); then
+            echo "Unable to describe PRD ECR repository for $IMAGE_TAG" >&2
+            exit 1
+          fi
+          PRD_TAGS=$(echo "$PRD_DESCRIBE" | jq -r '.imageDetails[].imageTags[]?' || true)
+          
+          if echo "$PRD_TAGS" | grep -Fx "$IMAGE_TAG" >/dev/null; then
+            echo "IMAGE_EXISTS=true" >> "$GITHUB_ENV"
+            echo "Detected image tag $IMAGE_TAG in PRD ECR"
+          else
+            echo "IMAGE_EXISTS=" >> "$GITHUB_ENV"
+            echo "Image tag $IMAGE_TAG not found in PRD ECR; attempting copy from DEV"
+          fi
+
+      - name: Copy image to prd
+        if: inputs.ECOSYSTEM == 'prd' && (inputs.GIT_REF_OVERRIDE == '' || inputs.PRD_PROMOTE_IMAGE) && !inputs.BUILD_IN_PRD
+        run: |
+          if [[ '${{ env.IMAGE_EXISTS }}' == '' ]]; then
+            if docker pull ${{ needs.generate-values.outputs.DEV_REGISTRY }}/${{ inputs.SERVICE }}:${{ env.IMAGE_TO_DEPLOY }}; then
+              docker tag ${{ needs.generate-values.outputs.DEV_REGISTRY }}/${{ inputs.SERVICE }}:${{ env.IMAGE_TO_DEPLOY }} ${{ needs.generate-values.outputs.PRD_REGISTRY }}/${{ inputs.SERVICE }}:${{ env.IMAGE_TO_DEPLOY }}
+              docker push ${{ needs.generate-values.outputs.PRD_REGISTRY }}/${{ inputs.SERVICE }}:${{ env.IMAGE_TO_DEPLOY }}
+            else
+              echo "Failed to pull image ${{ env.IMAGE_TO_DEPLOY }} from DEV ECR; confirm the tag exists or rebuild the image before retrying."
+              exit 1
+            fi
+          else
+            echo "Image with tag ${{ env.IMAGE_TO_DEPLOY }} already exists in the repository ${{ inputs.SERVICE }}"
+            exit 0
+          fi
