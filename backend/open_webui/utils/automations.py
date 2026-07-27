@@ -73,30 +73,31 @@ def _resolve_tz(tz: str = None) -> Optional[ZoneInfo]:
 def _parse_rule(s: str, now: Optional[datetime] = None):
     """Parse RRULE with clock-aligned DTSTART for sub-daily frequencies.
 
-    MINUTELY/HOURLY rules use a fixed epoch DTSTART (2000-01-01 00:00)
+    SECONDLY/MINUTELY/HOURLY rules use a fixed epoch DTSTART (2000-01-01 00:00)
     so intervals snap to clock boundaries (e.g. every 5min = :00, :05, :10).
     """
-    raw = s.replace('RRULE:', '')
-    parts = dict(p.split('=', 1) for p in raw.split(';') if '=' in p)
+    rrule_line = next((line for line in s.splitlines() if line.upper().startswith('RRULE:')), s)
+    raw = rrule_line.split(':', 1)[1] if rrule_line.upper().startswith('RRULE:') else rrule_line
+    parts = {k.upper(): v for k, v in (p.split('=', 1) for p in raw.split(';') if '=' in p)}
     freq = parts.get('FREQ', '')
 
-    if freq in ('MINUTELY', 'HOURLY'):
+    if freq in ('SECONDLY', 'MINUTELY', 'HOURLY'):
         epoch = datetime(2000, 1, 1, 0, 0, 0)
-        if (
-            now is not None
-            and s.startswith('RRULE:')
-            and '\n' not in s
-            and '\r' not in s
-            and set(parts) <= {'FREQ', 'INTERVAL', 'BYMINUTE', 'BYSECOND'}
-        ):
-            try:
-                interval = int(parts.get('INTERVAL', '1'))
-                if interval > 0:
-                    step = timedelta(minutes=interval) if freq == 'MINUTELY' else timedelta(hours=interval)
-                    return rrulestr(s, dtstart=epoch + ((now - epoch) // step) * step, ignoretz=True)
-            except (TypeError, ValueError):
-                pass
-        return rrulestr(s, dtstart=epoch, ignoretz=True)
+        anchor = now or datetime.now()
+        rule = '\n'.join(line for line in s.splitlines() if not line.upper().startswith('DTSTART')) or s
+        try:
+            interval = int(parts.get('INTERVAL', '1'))
+            if interval > 0:
+                if freq == 'SECONDLY':
+                    step = timedelta(seconds=interval)
+                elif freq == 'MINUTELY':
+                    step = timedelta(minutes=interval)
+                else:
+                    step = timedelta(hours=interval)
+                anchor = epoch + ((anchor - epoch) // step) * step
+        except (TypeError, ValueError):
+            pass
+        return rrulestr(rule, dtstart=anchor, ignoretz=True)
     return rrulestr(s, ignoretz=True)
 
 
