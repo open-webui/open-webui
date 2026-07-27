@@ -77,7 +77,7 @@
 
 	export let ownerName: string | null = null;
 	export let ownerUserId: string | null = null;
-	export let onReadStateChange = (data) => {};
+	export let onReadStateChange: (data: Record<string, unknown>) => void = () => {};
 
 	export let onDragEnd = () => {};
 

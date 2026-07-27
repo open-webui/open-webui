@@ -59,9 +59,9 @@
 
 	export let parentDragged = false;
 
-	export let onDelete = (e) => {};
-	export let onItemMove = (e) => {};
-	export let onFolderUnreadCounts = (counts) => {};
+	export let onDelete = () => {};
+	export let onItemMove = () => {};
+	export let onFolderUnreadCounts = () => {};
 
 	let folderElement;
 
