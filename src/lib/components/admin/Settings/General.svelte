@@ -141,6 +141,9 @@
 						<div class="min-w-0">
 							<div class="text-gray-600 dark:text-gray-400">{$i18n.t('Help')}</div>
 							<div class="mt-0.5 text-gray-400 dark:text-gray-600">
+								<!-- LICENSE covers this Open WebUI wordmark.
+								Do not alter, remove, obscure, or replace it except as LICENSE permits:
+								https://docs.openwebui.com/license. -->
 								{$i18n.t('Discover how to use Open WebUI and seek support from the community.')}
 							</div>
 						</div>
@@ -222,6 +225,9 @@
 					description={$i18n.t('Allow users to share chats with the Open WebUI community.')}
 					let:labelId
 				>
+					<!-- LICENSE covers this Open WebUI Community wordmark.
+					Do not alter, remove, obscure, or replace it except as LICENSE permits:
+					https://docs.openwebui.com/license. -->
 					<Switch bind:state={adminConfig.ENABLE_COMMUNITY_SHARING} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 				<AdminSettingRow

@@ -179,6 +179,9 @@
 							alt="favicon"
 							class="size-4 rounded-full shrink-0 border border-white dark:border-gray-850 bg-white dark:bg-gray-900"
 							on:error={(e) => {
+								// LICENSE covers this Open WebUI fallback logo.
+								// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+								// https://docs.openwebui.com/license.
 								e.target.src = '/favicon.png';
 							}}
 						/>

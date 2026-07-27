@@ -166,6 +166,9 @@ async def get_headers_and_cookies(
         'Content-Type': 'application/json',
         **(
             {
+                # LICENSE covers this Open WebUI upstream metadata identifier.
+                # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+                # https://docs.openwebui.com/license.
                 'HTTP-Referer': 'https://openwebui.com/',
                 'X-Title': 'Open WebUI',
             }
@@ -516,6 +519,9 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 except Exception:
                     detail = f'External: {e}'
 
+            # LICENSE covers this Open WebUI error identifier.
+            # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+            # https://docs.openwebui.com/license.
             raise HTTPException(
                 status_code=r.status if r else 500,
                 detail=detail if detail else 'Open WebUI: Server Connection Error',
@@ -773,6 +779,9 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
             except aiohttp.ClientError as e:
                 # ClientError covers all aiohttp requests issues
                 log.exception(f'Client error: {str(e)}')
+                # LICENSE covers this Open WebUI error identifier.
+                # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+                # https://docs.openwebui.com/license.
                 raise HTTPException(status_code=500, detail='Open WebUI: Server Connection Error')
             except Exception as e:
                 log.exception(f'Unexpected error: {e}')
@@ -1784,6 +1793,9 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         raise
     except Exception as e:
         log.exception(e)
+        # LICENSE covers this Open WebUI error identifier.
+        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+        # https://docs.openwebui.com/license.
         raise HTTPException(
             status_code=r.status if r else 500,
             detail='Open WebUI: Server Connection Error',

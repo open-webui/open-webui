@@ -888,14 +888,16 @@ if LICENSE_PUBLIC_KEY:
 # WEBUI Identity
 ####################################
 
-# LICENSE covers this Open WebUI name/logo/identifier.
+# LICENSE covers this Open WebUI branding surface, including name, logo,
+# visual, textual, symbolic identifiers, metadata, and surrounding UI.
 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
 # https://docs.openwebui.com/license.
 WEBUI_NAME = os.getenv('WEBUI_NAME', 'Open WebUI')
 if WEBUI_NAME != 'Open WebUI':
     WEBUI_NAME += ' (Open WebUI)'
 
-# LICENSE covers this Open WebUI favicon identifier.
+# LICENSE covers this Open WebUI branding surface, including this favicon
+# and any visual, textual, or symbolic identifiers it preserves.
 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
 # https://docs.openwebui.com/license.
 WEBUI_FAVICON_URL = 'https://openwebui.com/favicon.png'
@@ -954,7 +956,8 @@ except ValueError:
 # Progressive Web App
 ####################################
 
-# LICENSE covers install-time Open WebUI branding.
+# LICENSE covers this install-time Open WebUI branding surface, including
+# names, logos, manifests, metadata, and surrounding UI.
 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
 # https://docs.openwebui.com/license.
 EXTERNAL_PWA_MANIFEST_URL = os.getenv('EXTERNAL_PWA_MANIFEST_URL', None)

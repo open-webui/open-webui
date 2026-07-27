@@ -420,6 +420,9 @@
 					<Switch bind:state={STT_MISTRAL_USE_CHAT_COMPLETIONS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 			{:else if STT_ENGINE === ''}
+				<!-- LICENSE covers this Open WebUI wordmark.
+					Do not alter, remove, obscure, or replace it except as LICENSE permits:
+					https://docs.openwebui.com/license. -->
 				<AdminSettingField
 					label={$i18n.t('STT Model')}
 					description={$i18n.t('Open WebUI uses faster-whisper internally.')}
@@ -592,6 +595,9 @@
 					</SettingsSelect>
 				</AdminSettingField>
 			{:else if TTS_ENGINE === 'transformers'}
+				<!-- LICENSE covers this Open WebUI wordmark.
+					Do not alter, remove, obscure, or replace it except as LICENSE permits:
+					https://docs.openwebui.com/license. -->
 				<AdminSettingField
 					label={$i18n.t('TTS Model')}
 					description={$i18n.t('Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.')}
