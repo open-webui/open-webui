@@ -129,6 +129,9 @@
 			if (valvesSpec) {
 				for (const property in valvesSpec.properties) {
 					if (valvesSpec.properties[property]?.type === 'array') {
+						if (valvesSpec.properties[property]?.input?.type === 'multiselect') {
+							continue;
+						}
 						if (valves[property] != null) {
 							valves[property] = (Array.isArray(valves[property]) ? valves[property] : []).join(
 								','
