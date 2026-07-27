@@ -18,6 +18,7 @@ from open_webui.utils.geotizer_orchestration import (
     bounded_text,
     build_batch_tasks,
     build_knowledge_search_plan,
+    correct_explicitly_derived_value_origins,
     execution_mode_for_task,
     extract_json_object,
     extract_output_message_text,
@@ -33,6 +34,76 @@ from open_webui.utils.geotizer_orchestration import (
     repair_negative_provenance,
     validate_owner_envelope,
 )
+
+
+@pytest.mark.parametrize(
+    ('retrieval_note', 'expected_origin'),
+    [
+        (
+            'Тип переработки по аналогии с рудно-россыпными месторождениями',
+            'analogue',
+        ),
+        (
+            'Главные нерудные минералы по региональному геологическому контексту',
+            'analogue',
+        ),
+        (
+            'Второстепенные минералы-носители на основе региональной геологии',
+            'analogue',
+        ),
+        (
+            'Вредные примеси по геохимическим данным региона',
+            'analogue',
+        ),
+        (
+            'Категория сложности по модели prospectivity',
+            'calculated',
+        ),
+        (
+            'Тип отработки по типу месторождения',
+            'calculated',
+        ),
+        (
+            'Прямое значение атрибута объекта',
+            'direct',
+        ),
+    ],
+)
+def test_explicit_derivation_note_corrects_false_direct_origin(
+    retrieval_note,
+    expected_origin,
+):
+    value = envelope()
+    value['patches'][0].update(
+        {
+            'status': 'filled',
+            'value': 'candidate',
+            'value_origin': 'direct',
+            'retrieval_note': retrieval_note,
+        }
+    )
+
+    corrected = correct_explicitly_derived_value_origins(value)
+
+    assert corrected['patches'][0]['value_origin'] == expected_origin
+    assert value['patches'][0]['value_origin'] == 'direct'
+
+
+@pytest.mark.parametrize('declared_origin', ['calculated', 'analogue'])
+def test_explicit_origin_is_never_downgraded(declared_origin):
+    value = envelope()
+    value['patches'][0].update(
+        {
+            'status': 'filled',
+            'value': 'candidate',
+            'value_origin': declared_origin,
+            'retrieval_note': 'Прямое значение атрибута объекта',
+        }
+    )
+
+    corrected = correct_explicitly_derived_value_origins(value)
+
+    assert corrected['patches'][0]['value_origin'] == declared_origin
 
 
 def batch():

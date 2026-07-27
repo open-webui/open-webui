@@ -17,6 +17,7 @@ from open_webui.utils.geotizer_orchestration import (
     build_batch_tasks,
     build_knowledge_search_plan,
     compact_batch_context,
+    correct_explicitly_derived_value_origins,
     ensure_state_can_continue,
     execution_mode_for_task,
     extract_json_object,
@@ -403,6 +404,7 @@ async def _produce_valid_owner_envelope(
             run_id=run_id,
             attempt=attempt,
         )
+        envelope = correct_explicitly_derived_value_origins(envelope)
         envelope = apply_structured_gis_field_proposals(
             next_batch,
             envelope,
