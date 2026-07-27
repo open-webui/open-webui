@@ -555,12 +555,12 @@ class ModelsTable:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(Model).filter_by(id=id))
-                model_obj = result.scalars().first()
-                if not model_obj:
+                model = result.scalars().first()
+                if not model:
                     return None
-                model_obj.updated_at = int(time.time())
+                model.updated_at = int(time.time())
                 await db.commit()
-                return await self._to_model_model(model_obj, db=db)
+                return await self._to_model_model(model, db=db)
         except Exception as e:
             log.exception(f'Failed to update the model updated_at by id {id}: {e}')
             return None

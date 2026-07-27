@@ -563,7 +563,7 @@ class ChatTable:
             await session.commit()
 
             # Dual-write messages to chat_message table
-            for form_data, chat_obj in zip(chat_import_forms, chats):
+            for form_data, imported_chat in zip(chat_import_forms, chats):
                 history = form_data.chat.get('history') if isinstance(form_data.chat.get('history'), dict) else {}
                 messages = history.get('messages') if isinstance(history.get('messages'), dict) else {}
                 if not messages and isinstance(form_data.chat.get('messages'), list):
@@ -577,12 +577,14 @@ class ChatTable:
                         try:
                             await ChatMessages.upsert_message(
                                 message_id=message_id,
-                                chat_id=chat_obj.id,
+                                chat_id=imported_chat.id,
                                 user_id=user_id,
                                 data=message,
                             )
                         except Exception as e:
-                            log.warning(f'Failed to write imported message {message_id} for chat {chat_obj.id}: {e}')
+                            log.warning(
+                                f'Failed to write imported message {message_id} for chat {imported_chat.id}: {e}'
+                            )
 
             return [ChatModel.model_validate(chat) for chat in chats]
 
@@ -830,6 +832,54 @@ class ChatTable:
         history['currentId'] = current_id if current_id in messages else None
         return deleted_ids
 
+    @staticmethod
+    def upsert_message_to_history(history: dict, message_id: str, message: dict) -> dict:
+        messages = history.setdefault('messages', {})
+
+        if message_id in messages:
+            messages[message_id] = {
+                **messages[message_id],
+                **message,
+            }
+        else:
+            message_parent_id = message.get('parentId')
+            parent_id = message_parent_id
+            if parent_id is None:
+                for existing_id, existing_message in messages.items():
+                    if message_id in existing_message.get('childrenIds', []):
+                        parent_id = existing_id
+                        break
+
+            parent = messages.get(parent_id) if parent_id else None
+            output = message.get('output') or []
+            output_role = next(
+                (item.get('role') for item in output if isinstance(item, dict) and item.get('role')),
+                None,
+            )
+            role = message.get('role') or output_role
+            if not role:
+                parent_role = parent.get('role') if parent else None
+                if parent_role == 'user':
+                    role = 'assistant'
+                elif parent_role == 'assistant':
+                    role = 'user'
+                else:
+                    role = 'assistant'
+
+            messages[message_id] = {
+                **message,
+                'id': message.get('id') or message_id,
+                'parentId': message_parent_id if message_parent_id is not None else parent_id,
+                'childrenIds': (
+                    message.get('childrenIds') if isinstance(message.get('childrenIds'), list) else []
+                ),
+                'role': role,
+                'timestamp': message.get('timestamp') or int(time.time()),
+            }
+
+        history['currentId'] = message_id
+        return messages[message_id]
+
     async def backfill_messages_by_chat_id(self, chat_id: str, user_id: str, messages: dict[str, dict]) -> None:
         """Write messages to the ``chat_message`` table so future lookups
         use the fast path.  Errors are logged but never raised.
@@ -921,10 +971,6 @@ class ChatTable:
     async def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict, *, touch: bool = True
     ) -> ChatModel | None:
-        chat = await self.get_chat_by_id(id)
-        if chat is None:
-            return None
-
         if not message.get('content'):
             output_text = get_output_text(message.get('output'))
             if output_text:
@@ -934,66 +980,45 @@ class ChatTable:
         if isinstance(message.get('content'), str):
             message['content'] = sanitize_text_for_db(message['content'])
 
-        user_id = chat.user_id
-        chat = chat.chat
-        history = chat.get('history', {})
-        messages = history.setdefault('messages', {})
-
-        if message_id in messages:
-            messages[message_id] = {
-                **messages[message_id],
-                **message,
-            }
-        else:
-            message_parent_id = message.get('parentId')
-            parent_id = message_parent_id
-            if parent_id is None:
-                for existing_id, existing_message in messages.items():
-                    if message_id in existing_message.get('childrenIds', []):
-                        parent_id = existing_id
-                        break
-
-            parent = messages.get(parent_id) if parent_id else None
-            output = message.get('output') or []
-            output_role = next(
-                (item.get('role') for item in output if isinstance(item, dict) and item.get('role')),
-                None,
-            )
-            role = message.get('role') or output_role
-            if not role:
-                parent_role = parent.get('role') if parent else None
-                if parent_role == 'user':
-                    role = 'assistant'
-                elif parent_role == 'assistant':
-                    role = 'user'
-                else:
-                    role = 'assistant'
-
-            messages[message_id] = {
-                **message,
-                'id': message.get('id') or message_id,
-                'parentId': message_parent_id if message_parent_id is not None else parent_id,
-                'childrenIds': message.get('childrenIds') if isinstance(message.get('childrenIds'), list) else [],
-                'role': role,
-                'timestamp': message.get('timestamp') or int(time.time()),
-            }
-
-        history['currentId'] = message_id
-
-        chat['history'] = history
-
-        # Dual-write to chat_message table
         try:
-            await ChatMessages.upsert_message(
-                message_id=message_id,
-                chat_id=id,
-                user_id=user_id,
-                data=messages[message_id],
-            )
-        except Exception as e:
-            log.warning(f'Failed to write to chat_message table: {e}')
+            async with get_async_db_context() as session:
+                chat_item = await session.get(Chat, id)
+                if chat_item is None:
+                    return None
 
-        return await self.update_chat_by_id(id, chat, touch=touch)
+                self._sanitize_chat_row(chat_item)
+                chat = chat_item.chat or {}
+                self._repair_chat_current_id(chat)
+
+                history = chat.get('history', {})
+                saved_message = self.upsert_message_to_history(history, message_id, message)
+                chat['history'] = history
+                clean_chat = self._clean_null_bytes(chat)
+                chat_item.chat = clean_chat
+                chat_item.title = self._clean_null_bytes(clean_chat['title']) if 'title' in clean_chat else 'New Chat'
+                chat_item.current_message_id = self.get_current_message_id(clean_chat)
+                flag_modified(chat_item, 'chat')
+
+                if touch:
+                    chat_item.updated_at = int(time.time())
+
+                await session.commit()
+                updated_chat = ChatModel.model_validate(chat_item)
+
+                # Dual-write to chat_message table
+                try:
+                    await ChatMessages.upsert_message(
+                        message_id=message_id,
+                        chat_id=id,
+                        user_id=chat_item.user_id,
+                        data=saved_message,
+                    )
+                except Exception as e:
+                    log.warning(f'Failed to write to chat_message table: {e}')
+
+                return updated_chat
+        except Exception:
+            return None
 
     async def delete_message_from_chat_by_id_and_message_id(self, id: str, message_id: str) -> ChatModel | None:
         chat_model = await self.get_chat_by_id(id)
