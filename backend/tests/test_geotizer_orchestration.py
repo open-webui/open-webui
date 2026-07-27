@@ -8,6 +8,7 @@ import pytest
 from open_webui.tools.geotizer import (
     _contributor_prompt,
     _gis_error_user_message,
+    _gis_infrastructure_rules,
     _owner_prompt,
     run_geotizer_workflow,
 )
@@ -569,6 +570,36 @@ def test_prompts_make_direct_gis_precedence_explicit():
     assert 'knowledge-base or web miss cannot negate' in rules
     assert 'do not return not_found solely because' in rules
     assert 'Calculated or analogue alternatives are allowed' in rules
+
+
+def test_gis_dc_prompt_requires_deterministic_infrastructure_calculations():
+    infrastructure_batch = {
+        **batch(),
+        'batch_id': 'GIS-DC',
+        'fields': [
+            {
+                'field_key': 'geotizer_object.v1.r078.a01',
+                'element': 'Расстояние до ближайшего населенного пункта',
+            },
+            {
+                'field_key': 'geotizer_object.v1.r084.a01',
+                'element': 'Объекты инфраструктуры в радиусе 50 км',
+            },
+        ],
+    }
+
+    rules = _gis_infrastructure_rules(infrastructure_batch)
+    rendered = '\n'.join(rules)
+
+    assert 'nearest_features or features_within_distance' in rendered
+    assert 'geotizer_object.v1.r078.a01' in rendered
+    assert 'rows r084 and r085' in rendered
+    assert 'value_origin=calculated' in rendered
+    assert 'raw distance in metres' in rendered
+
+
+def test_non_infrastructure_gis_batch_has_no_infrastructure_rules():
+    assert _gis_infrastructure_rules({**batch(), 'batch_id': 'GIS-GEO'}) == []
 
 
 def test_workflow_marks_gis_contributor_evidence_as_direct():
