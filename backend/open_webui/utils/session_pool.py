@@ -28,6 +28,7 @@ from typing import Optional
 
 import aiohttp
 from open_webui.env import (
+    AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_POOL_CONNECTIONS,
     AIOHTTP_POOL_CONNECTIONS_PER_HOST,
@@ -37,6 +38,13 @@ from open_webui.env import (
 log = logging.getLogger(__name__)
 
 _session: Optional[aiohttp.ClientSession] = None
+
+
+def get_client_timeout(stream: bool = False) -> aiohttp.ClientTimeout:
+    return aiohttp.ClientTimeout(
+        total=AIOHTTP_CLIENT_TIMEOUT,
+        sock_read=AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT if stream else None,
+    )
 
 
 async def get_session() -> aiohttp.ClientSession:
@@ -56,7 +64,7 @@ async def get_session() -> aiohttp.ClientSession:
         else:
             connector_kwargs['limit_per_host'] = 0  # aiohttp: 0 = unlimited
         connector = aiohttp.TCPConnector(**connector_kwargs)
-        timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        timeout = get_client_timeout()
         _session = aiohttp.ClientSession(
             connector=connector,
             timeout=timeout,

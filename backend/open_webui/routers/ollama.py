@@ -48,7 +48,7 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
 )
-from open_webui.utils.session_pool import cleanup_response, get_session, stream_wrapper
+from open_webui.utils.session_pool import cleanup_response, get_client_timeout, get_session, stream_wrapper
 
 log = logging.getLogger(__name__)
 
@@ -130,7 +130,7 @@ async def send_request(
             data=payload,
             headers=headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            timeout=get_client_timeout(stream=stream),
         )
 
         if not r.ok:

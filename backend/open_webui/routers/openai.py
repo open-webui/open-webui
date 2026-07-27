@@ -55,6 +55,7 @@ from open_webui.utils.payload import (
 )
 from open_webui.utils.session_pool import (
     cleanup_response,
+    get_client_timeout,
     get_session,
     stream_wrapper,
 )
@@ -1344,6 +1345,7 @@ async def generate_chat_completion(
                     part.get('text', '') for part in message['content'] if part.get('type') in ('input_text', 'text')
                 )
 
+    is_streaming_request = bool(payload.get('stream', False))
     payload = json.dumps(payload)
 
     r = None
@@ -1360,7 +1362,7 @@ async def generate_chat_completion(
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            timeout=get_client_timeout(stream=is_streaming_request),
         )
 
         # Check if response is SSE
@@ -1587,6 +1589,7 @@ async def responses(
     Routes to the correct upstream backend based on the model field.
     """
     payload = form_data.model_dump(exclude_none=True)
+    is_streaming_request = bool(payload.get('stream', False))
 
     idx = 0
     model_id = form_data.model
@@ -1637,7 +1640,7 @@ async def responses(
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            timeout=get_client_timeout(stream=is_streaming_request),
         )
 
         # Check if response is SSE
@@ -1707,6 +1710,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             payload = json.loads(body)
         except (json.JSONDecodeError, ValueError):
             payload = None
+    is_streaming_request = bool(payload.get('stream', False)) if isinstance(payload, dict) else False
 
     idx = 0
     model_id = payload.get('model') if isinstance(payload, dict) else None
@@ -1758,7 +1762,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            timeout=get_client_timeout(stream=is_streaming_request),
         )
 
         # Check if response is SSE
