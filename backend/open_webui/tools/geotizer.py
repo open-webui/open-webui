@@ -13,12 +13,14 @@ from open_webui.utils.geotizer_orchestration import (
     AgentTask,
     GeotizerOrchestrationError,
     build_batch_tasks,
+    build_knowledge_search_plan,
     compact_batch_context,
     ensure_state_can_continue,
     extract_json_object,
     extract_owner_envelope,
     merge_owner_envelopes,
     normalize_delegator_message,
+    normalize_gis_object_profile,
     owner_failure_envelope,
     owner_submission,
     partition_owner_batch,
@@ -40,6 +42,14 @@ AgentCall = Callable[
     [AgentTask, str, str, Mapping[str, Any] | None],
     Awaitable[str],
 ]
+
+
+class GeotizerGisError(GeotizerOrchestrationError):
+    """Structured GIS failure that must not be reinterpreted by the parent LLM."""
+
+    def __init__(self, details: Mapping[str, Any]):
+        self.details = dict(details)
+        super().__init__(json.dumps(self.details, ensure_ascii=False))
 
 
 async def fill_geotizer(
@@ -120,6 +130,7 @@ async def fill_geotizer(
             type(exc).__name__,
             str(exc),
             run_id=current_run_id,
+            details=getattr(exc, 'details', None),
         )
 
     proxy_path = _proxy_download_path(final)
@@ -164,6 +175,51 @@ async def run_geotizer_workflow(
         )
     _raise_for_gis_error(state)
     active_run_id = str(state.get('run_id') or run_id or '')
+    knowledge_search_plan: Mapping[str, Any] = {}
+    gis_project = state.get('gis_project')
+    if (
+        isinstance(gis_project, Mapping)
+        and gis_project.get('status') == 'resolved'
+        and gis_project.get('project_id')
+        and state.get('next_batch')
+    ):
+        await _emit_status(
+            event_emitter,
+            'GeoTeaser: derive GIS profile for related knowledge search',
+            done=False,
+        )
+        profile_task = AgentTask(
+            kind='gis',
+            producer='GISagent_yulong',
+            role='contributor',
+            task_id='GIS-OBJECT-PROFILE',
+            payload=dict(gis_project),
+        )
+        try:
+            raw_profile = await agent_call(
+                profile_task,
+                _object_profile_prompt(
+                    object_name=object_name,
+                    run_id=active_run_id,
+                    gis_project=gis_project,
+                ),
+                object_name,
+                state.get('datacube'),
+            )
+        except Exception as exc:
+            raw_profile = json.dumps(
+                {
+                    'profile_status': 'unavailable',
+                    'diagnostics': [f'{type(exc).__name__}: {exc}'],
+                },
+                ensure_ascii=False,
+            )
+        profile = normalize_gis_object_profile(
+            raw_profile,
+            object_name=str(gis_project.get('object_name') or object_name),
+            project_id=str(gis_project['project_id']),
+        )
+        knowledge_search_plan = build_knowledge_search_plan(profile)
 
     for batch_index in range(MAX_BATCHES):
         next_batch = state.get('next_batch')
@@ -187,6 +243,7 @@ async def run_geotizer_workflow(
                         run_id=active_run_id,
                         task=task,
                         next_batch=next_batch,
+                        knowledge_search_plan=knowledge_search_plan,
                     ),
                     object_name,
                     state.get('datacube'),
@@ -208,6 +265,7 @@ async def run_geotizer_workflow(
             run_id=active_run_id,
             datacube=state.get('datacube'),
             contributor_evidence=evidence,
+            knowledge_search_plan=knowledge_search_plan,
         )
 
         state = await _produce_and_submit_owner_batch(
@@ -481,6 +539,7 @@ def _contributor_prompt(
     run_id: str,
     task: AgentTask,
     next_batch: Mapping[str, Any],
+    knowledge_search_plan: Mapping[str, Any],
 ) -> str:
     payload = {
         'operation': 'geotizer_evidence_contribution',
@@ -507,7 +566,81 @@ def _contributor_prompt(
             ),
         ],
     }
+    if task.kind == 'kb':
+        payload['knowledge_search_plan'] = dict(knowledge_search_plan)
+        payload['rules'].extend(
+            [
+                (
+                    'Do not stop after an object-name or collection-name miss; '
+                    'execute every enabled tier in knowledge_search_plan.'
+                ),
+                (
+                    'Label each result as direct, regional_context or '
+                    'deposit_analogue and preserve the GIS descriptors used '
+                    'to establish that relation.'
+                ),
+            ]
+        )
     return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+def _object_profile_prompt(
+    *,
+    object_name: str,
+    run_id: str,
+    gis_project: Mapping[str, Any],
+) -> str:
+    return json.dumps(
+        {
+            'operation': 'geotizer_gis_object_search_profile',
+            'object_name': object_name,
+            'run_id': run_id,
+            'gis_project': dict(gis_project),
+            'output_contract': {
+                'location_terms': ['region', 'district', 'tectonic structure'],
+                'commodity_terms': ['commodity or target mineral'],
+                'deposit_type_terms': [
+                    'geological-genetic or mineral-system type'
+                ],
+                'geology_terms': [
+                    'host rocks, structures, age or geological setting'
+                ],
+                'evidence': [
+                    {
+                        'source_id': 'stable GIS source ID',
+                        'layer_id': 'exact layer ID',
+                        'feature_or_query': 'exact locator',
+                        'fact': 'descriptor supported by the GIS project',
+                    }
+                ],
+            },
+            'rules': [
+                (
+                    'Return one JSON object only, without Markdown or '
+                    'commentary.'
+                ),
+                (
+                    'The GIS project is already deterministically resolved '
+                    'and linked to the object. Never report it as missing.'
+                ),
+                (
+                    'Inspect relevant linked-project layers and attributes to '
+                    'derive only evidence-backed location, commodity, deposit '
+                    'type and geological search descriptors.'
+                ),
+                (
+                    'Do not invent descriptors; use empty arrays when the '
+                    'linked GIS project does not support them.'
+                ),
+                (
+                    'This profile expands knowledge retrieval and does not '
+                    'itself fill GeoTeaser fields.'
+                ),
+            ],
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
 
 
 def _owner_prompt(
@@ -561,6 +694,24 @@ def _owner_prompt(
             ('Do not call geotizer_fill; the orchestrator owns state ' 'transitions.'),
         ],
     }
+    if context.get('knowledge_search_plan'):
+        prompt['rules'].extend(
+            [
+                (
+                    'Follow knowledge_search_plan even when there is no '
+                    'collection directly named after the object.'
+                ),
+                (
+                    'For contextual or analogue evidence, record '
+                    'relation_to_object and GIS matching descriptors in '
+                    'retrieval_note and source_locator.'
+                ),
+                (
+                    'Never copy analogue resources, grades, geometry or study '
+                    'results into an object-specific factual field.'
+                ),
+            ]
+        )
     if feedback:
         prompt['repair_feedback'] = feedback
         prompt['previous_output'] = previous_output
@@ -569,7 +720,16 @@ def _owner_prompt(
 
 def _raise_for_gis_error(state: Mapping[str, Any]) -> None:
     if state.get('error') and not state.get('workflow_status'):
-        raise GeotizerOrchestrationError(json.dumps(state['error'], ensure_ascii=False))
+        raise GeotizerGisError(state['error'])
+    if state.get('workflow_status') == 'needs_input':
+        raise GeotizerGisError(state.get('error') or state)
+    if state.get('workflow_status') == 'validation_failed':
+        raise GeotizerGisError(
+            {
+                'code': 'gis_validation_failed',
+                'violations': list(state.get('violations') or []),
+            }
+        )
     ensure_state_can_continue(state)
 
 
@@ -591,15 +751,57 @@ async def _emit_status(emitter, description: str, *, done: bool) -> None:
         )
 
 
-def _error_result(code: str, message: str, *, run_id: str | None) -> str:
+def _error_result(
+    code: str,
+    message: str,
+    *,
+    run_id: str | None,
+    details: Mapping[str, Any] | None = None,
+) -> str:
+    structured_details = dict(details or {})
     return json.dumps(
         {
             'status': 'geotizer_failed',
             'code': code,
             'message': message,
+            'user_message': _gis_error_user_message(
+                structured_details,
+                fallback=message,
+            ),
+            'details': structured_details or None,
             'run_id': run_id or None,
             'resumable': bool(run_id),
         },
         ensure_ascii=False,
         indent=2,
     )
+
+
+def _gis_error_user_message(
+    details: Mapping[str, Any],
+    *,
+    fallback: str,
+) -> str:
+    resolution = details.get('project_resolution')
+    if isinstance(resolution, Mapping):
+        status = resolution.get('status')
+        if status == 'not_found':
+            return 'Связанный GIS-проект действительно не найден.'
+        if status == 'ambiguous':
+            return 'Найдено несколько подходящих GIS-проектов; нужен точный project_id.'
+
+    for violation in details.get('violations') or []:
+        if not isinstance(violation, Mapping):
+            continue
+        context = violation.get('context')
+        if not isinstance(context, Mapping):
+            continue
+        project = context.get('gis_project')
+        if isinstance(project, Mapping) and project.get('status') == 'resolved':
+            project_id = project.get('project_id')
+            return (
+                f"Связанный GIS-проект {project_id!r} найден. "
+                'Ошибка возникла на последующем этапе '
+                f"{context.get('failure_stage') or 'GIS processing'}."
+            )
+    return fallback

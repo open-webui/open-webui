@@ -41,6 +41,215 @@ class AgentTask:
     payload: Mapping[str, Any]
 
 
+@dataclass(frozen=True)
+class GisObjectSearchProfile:
+    """Bounded GIS-derived descriptors used to expand knowledge retrieval."""
+
+    object_name: str
+    project_id: str
+    profile_status: Literal['ready', 'partial', 'unavailable']
+    location_terms: tuple[str, ...]
+    commodity_terms: tuple[str, ...]
+    deposit_type_terms: tuple[str, ...]
+    geology_terms: tuple[str, ...]
+    evidence: tuple[Mapping[str, Any], ...]
+    diagnostics: tuple[str, ...] = ()
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            'schema_version': 1,
+            'profile_status': self.profile_status,
+            'project_resolution': {
+                'status': 'resolved',
+                'project_id': self.project_id,
+                'object_name': self.object_name,
+                'authority': 'geotizer_start',
+            },
+            'location_terms': list(self.location_terms),
+            'commodity_terms': list(self.commodity_terms),
+            'deposit_type_terms': list(self.deposit_type_terms),
+            'geology_terms': list(self.geology_terms),
+            'evidence': [dict(item) for item in self.evidence],
+            'diagnostics': list(self.diagnostics),
+        }
+
+
+def normalize_gis_object_profile(
+    raw_output: str,
+    *,
+    object_name: str,
+    project_id: str,
+) -> GisObjectSearchProfile:
+    """Decode optional GIS descriptors without reopening project resolution."""
+    try:
+        payload = extract_json_object(raw_output)
+    except GeotizerOrchestrationError as exc:
+        return GisObjectSearchProfile(
+            object_name=object_name,
+            project_id=project_id,
+            profile_status='unavailable',
+            location_terms=(),
+            commodity_terms=(),
+            deposit_type_terms=(),
+            geology_terms=(),
+            evidence=(),
+            diagnostics=(str(exc),),
+        )
+
+    location_terms = _normalized_terms(payload.get('location_terms'))
+    commodity_terms = _normalized_terms(payload.get('commodity_terms'))
+    deposit_type_terms = _normalized_terms(payload.get('deposit_type_terms'))
+    geology_terms = _normalized_terms(payload.get('geology_terms'))
+    raw_evidence = payload.get('evidence')
+    if (
+        not isinstance(raw_evidence, Sequence)
+        or isinstance(raw_evidence, str | bytes)
+    ):
+        raw_evidence = []
+    evidence = tuple(
+        dict(item)
+        for item in raw_evidence[:20]
+        if isinstance(item, Mapping)
+    )
+    diagnostics: tuple[str, ...] = ()
+    if not evidence and any(
+        (
+            location_terms,
+            commodity_terms,
+            deposit_type_terms,
+            geology_terms,
+        )
+    ):
+        location_terms = ()
+        commodity_terms = ()
+        deposit_type_terms = ()
+        geology_terms = ()
+        diagnostics = (
+            'GIS descriptors were ignored because no exact GIS evidence '
+            'locator was supplied.',
+        )
+    has_descriptors = any(
+        (
+            location_terms,
+            commodity_terms,
+            deposit_type_terms,
+            geology_terms,
+        )
+    )
+    return GisObjectSearchProfile(
+        object_name=object_name,
+        project_id=project_id,
+        profile_status='ready' if has_descriptors and evidence else 'partial',
+        location_terms=location_terms,
+        commodity_terms=commodity_terms,
+        deposit_type_terms=deposit_type_terms,
+        geology_terms=geology_terms,
+        evidence=evidence,
+        diagnostics=diagnostics,
+    )
+
+
+def build_knowledge_search_plan(
+    profile: GisObjectSearchProfile,
+) -> dict[str, Any]:
+    """Plan direct, contextual and analogue retrieval in decreasing authority."""
+    direct_terms = _normalized_terms(
+        [
+            profile.object_name,
+            profile.object_name.replace('_', ' '),
+            profile.project_id,
+            profile.project_id.replace('_', ' '),
+        ]
+    )
+    regional_terms = _normalized_terms(
+        [*profile.location_terms, *profile.geology_terms]
+    )
+    analogue_terms = _normalized_terms(
+        [
+            *profile.commodity_terms,
+            *profile.deposit_type_terms,
+            *profile.geology_terms,
+        ]
+    )
+    return {
+        'schema_version': 1,
+        'object_profile': profile.as_dict(),
+        'tiers': [
+            {
+                'tier_id': 'direct',
+                'relation_to_object': 'direct',
+                'query_terms': list(direct_terms),
+                'enabled': True,
+                'allowed_use': (
+                    'May support object-specific factual fields when the '
+                    'source explicitly identifies this object.'
+                ),
+            },
+            {
+                'tier_id': 'regional_context',
+                'relation_to_object': 'regional_context',
+                'query_terms': list(regional_terms),
+                'enabled': bool(regional_terms),
+                'allowed_use': (
+                    'May support regional setting and search hypotheses; '
+                    'must not be presented as a measured object value.'
+                ),
+            },
+            {
+                'tier_id': 'deposit_analogue',
+                'relation_to_object': 'deposit_analogue',
+                'query_terms': list(analogue_terms),
+                'enabled': bool(analogue_terms),
+                'allowed_use': (
+                    'May support analogue fields, expected types and expert '
+                    'hypotheses; must not be copied as an object-specific '
+                    'resource, grade, geometry or study result.'
+                ),
+            },
+        ],
+        'decision_rules': [
+            (
+                'Absence of a directly named collection is not proof that '
+                'the knowledge base has no relevant evidence.'
+            ),
+            (
+                'Search enabled tiers in order: direct, regional_context, '
+                'deposit_analogue.'
+            ),
+            (
+                'Record relation_to_object and the GIS descriptors used for '
+                'every contextual or analogue source in retrieval_note and '
+                'source_locator.'
+            ),
+            (
+                'If only contextual or analogue evidence exists for an '
+                'object-specific factual field, use '
+                'requires_expert_review or not_found rather than inventing '
+                'an object value.'
+            ),
+        ],
+    }
+
+
+def _normalized_terms(raw: Any) -> tuple[str, ...]:
+    if isinstance(raw, str):
+        values = [raw]
+    elif isinstance(raw, Sequence):
+        values = [value for value in raw if isinstance(value, str)]
+    else:
+        values = []
+    result: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        term = ' '.join(value.strip().split())
+        canonical = term.casefold().replace('ё', 'е')
+        if not term or canonical in seen:
+            continue
+        seen.add(canonical)
+        result.append(term)
+    return tuple(result)
+
+
 def agent_kind_for_producer(producer: str) -> AgentKind:
     try:
         return PRODUCER_AGENT_KIND[producer]
@@ -624,6 +833,7 @@ def compact_batch_context(
     run_id: str,
     datacube: Mapping[str, Any] | None,
     contributor_evidence: Sequence[Mapping[str, Any]],
+    knowledge_search_plan: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the bounded context an owner needs; omit unrelated run state."""
     return {
@@ -631,6 +841,7 @@ def compact_batch_context(
         'run_id': run_id,
         'batch': dict(next_batch),
         'datacube': dict(datacube or {}),
+        'knowledge_search_plan': dict(knowledge_search_plan or {}),
         'contributor_evidence': [
             {
                 **dict(item),
