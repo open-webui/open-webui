@@ -5,16 +5,21 @@ import json
 from itertools import permutations
 
 import pytest
-from open_webui.tools.geotizer import run_geotizer_workflow
+from open_webui.tools.geotizer import (
+    _gis_error_user_message,
+    run_geotizer_workflow,
+)
 from open_webui.utils.geotizer_orchestration import (
     GeotizerOrchestrationError,
     bounded_text,
     build_batch_tasks,
+    build_knowledge_search_plan,
     extract_json_object,
     extract_output_message_text,
     extract_owner_envelope,
     merge_owner_envelopes,
     normalize_delegator_message,
+    normalize_gis_object_profile,
     owner_failure_envelope,
     partition_owner_batch,
     repair_negative_provenance,
@@ -399,6 +404,135 @@ def test_bounded_evidence_keeps_head_and_provenance_tail():
     assert 'omitted by orchestrator' in result
 
 
+def test_gis_profile_keeps_deterministic_project_resolution_and_deduplicates():
+    profile = normalize_gis_object_profile(
+        json.dumps(
+            {
+                'project_resolution': {'status': 'not_found'},
+                'location_terms': ['ЯНАО', '  янао  ', 'Полярный Урал'],
+                'commodity_terms': ['золото'],
+                'deposit_type_terms': ['золото-кварцевый'],
+                'geology_terms': ['зеленокаменный пояс'],
+                'evidence': [
+                    {
+                        'source_id': 'gis-1',
+                        'layer_id': 'NiyaU_PLG',
+                        'feature_or_query': 'feature=0',
+                        'fact': 'ЯНАО',
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        object_name='Нияюская площадь',
+        project_id='Нияюская_площадь',
+    )
+
+    rendered = profile.as_dict()
+    assert rendered['project_resolution'] == {
+        'status': 'resolved',
+        'project_id': 'Нияюская_площадь',
+        'object_name': 'Нияюская площадь',
+        'authority': 'geotizer_start',
+    }
+    assert rendered['location_terms'] == ['ЯНАО', 'Полярный Урал']
+    assert rendered['profile_status'] == 'ready'
+
+
+def test_knowledge_search_plan_preserves_authority_order_and_direct_queries():
+    profile = normalize_gis_object_profile(
+        json.dumps(
+            {
+                'location_terms': ['ЯНАО'],
+                'commodity_terms': ['золото'],
+                'deposit_type_terms': ['золото-кварцевый'],
+                'geology_terms': ['Полярный Урал'],
+                'evidence': [{'source_id': 'gis-1'}],
+            },
+            ensure_ascii=False,
+        ),
+        object_name='Нияюская площадь',
+        project_id='Нияюская_площадь',
+    )
+    plan = build_knowledge_search_plan(profile)
+
+    assert [
+        tier['relation_to_object']
+        for tier in plan['tiers']
+    ] == ['direct', 'regional_context', 'deposit_analogue']
+    assert plan['tiers'][0]['enabled'] is True
+    assert 'Нияюская площадь' in plan['tiers'][0]['query_terms']
+    assert 'Нияюская_площадь' in plan['tiers'][0]['query_terms']
+    assert plan['tiers'][1]['query_terms'] == ['ЯНАО', 'Полярный Урал']
+    assert plan['tiers'][2]['query_terms'] == [
+        'золото',
+        'золото-кварцевый',
+        'Полярный Урал',
+    ]
+
+
+def test_unavailable_gis_profile_keeps_direct_knowledge_search_enabled():
+    profile = normalize_gis_object_profile(
+        'not JSON',
+        object_name='Нияюская площадь',
+        project_id='Нияюская_площадь',
+    )
+    plan = build_knowledge_search_plan(profile)
+
+    assert profile.profile_status == 'unavailable'
+    assert plan['tiers'][0]['enabled'] is True
+    assert plan['tiers'][1]['enabled'] is False
+    assert plan['tiers'][2]['enabled'] is False
+
+
+def test_gis_descriptors_without_exact_evidence_do_not_enable_indirect_search():
+    profile = normalize_gis_object_profile(
+        json.dumps(
+            {
+                'location_terms': ['ЯНАО'],
+                'commodity_terms': ['золото'],
+                'deposit_type_terms': ['золото-кварцевый'],
+                'evidence': [],
+            },
+            ensure_ascii=False,
+        ),
+        object_name='Нияюская площадь',
+        project_id='Нияюская_площадь',
+    )
+    plan = build_knowledge_search_plan(profile)
+
+    assert profile.profile_status == 'partial'
+    assert profile.location_terms == ()
+    assert profile.commodity_terms == ()
+    assert plan['tiers'][1]['enabled'] is False
+    assert plan['tiers'][2]['enabled'] is False
+    assert 'exact GIS evidence locator' in profile.diagnostics[0]
+
+
+def test_gis_error_message_never_calls_resolved_project_missing():
+    message = _gis_error_user_message(
+        {
+            'violations': [
+                {
+                    'context': {
+                        'gis_project': {
+                            'status': 'resolved',
+                            'project_id': 'Нияюская_площадь',
+                        },
+                        'failure_stage': 'licence_scope_binding',
+                    }
+                }
+            ]
+        },
+        fallback='generic failure',
+    )
+
+    assert 'Нияюская_площадь' in message
+    assert 'найден' in message
+    assert 'не найден' not in message
+    assert 'licence_scope_binding' in message
+
+
 def test_workflow_drives_start_contributors_owner_submit_finalize():
     calls = []
     current_batch = batch()
@@ -458,6 +592,95 @@ def test_workflow_drives_start_contributors_owner_submit_finalize():
         ('agent', 'contributor', 'KBagent_yulong'),
         ('agent', 'contributor', 'WEBagent_yulong'),
         ('agent', 'owner', 'GISagent_yulong'),
+        ('gis', 'submit_batch'),
+        ('gis', 'finalize'),
+    ]
+
+
+def test_workflow_derives_gis_profile_before_relation_aware_kb_owner():
+    calls = []
+    kb_batch = {
+        **batch(),
+        'batch_id': 'KB-GEO',
+        'producer': 'KBagent_yulong',
+        'evidence_routes': [],
+    }
+
+    async def gis_call(payload):
+        calls.append(('gis', payload['action']))
+        if payload['action'] == 'start':
+            return {
+                'workflow_status': 'collecting',
+                'run_id': 'run-profile',
+                'project_id': 'Нияюская_площадь',
+                'object_name': 'Нияюская площадь',
+                'gis_project': {
+                    'status': 'resolved',
+                    'project_id': 'Нияюская_площадь',
+                    'object_name': 'Нияюская площадь',
+                },
+                'datacube': {},
+                'next_batch': kb_batch,
+            }
+        if payload['action'] == 'submit_batch':
+            return {
+                'workflow_status': 'collecting',
+                'run_id': 'run-profile',
+                'next_batch': None,
+            }
+        return {
+            'workflow_status': 'finalized',
+            'run_id': 'run-profile',
+            'xlsx': {
+                'download_path': (
+                    '/geotizer/files/run-profile/geotizer.xlsx'
+                )
+            },
+        }
+
+    async def agent_call(task, prompt, object_name, datacube):
+        calls.append(('agent', task.task_id))
+        request = json.loads(prompt)
+        if task.task_id == 'GIS-OBJECT-PROFILE':
+            assert request['gis_project']['status'] == 'resolved'
+            return json.dumps(
+                {
+                    'location_terms': ['ЯНАО'],
+                    'commodity_terms': ['золото'],
+                    'deposit_type_terms': ['золото-кварцевый'],
+                    'geology_terms': ['Полярный Урал'],
+                    'evidence': [{'source_id': 'gis-profile'}],
+                },
+                ensure_ascii=False,
+            )
+
+        search_plan = request['context']['knowledge_search_plan']
+        assert [
+            tier['relation_to_object']
+            for tier in search_plan['tiers']
+        ] == ['direct', 'regional_context', 'deposit_analogue']
+        value = envelope()
+        value['batch_id'] = 'KB-GEO'
+        value['producer'] = 'KBagent_yulong'
+        return json.dumps(value)
+
+    final = asyncio.run(
+        run_geotizer_workflow(
+            object_name='Нияюская площадь',
+            project_id=None,
+            model_run_id=None,
+            run_id=None,
+            allow_draft=True,
+            gis_call=gis_call,
+            agent_call=agent_call,
+        )
+    )
+
+    assert final['workflow_status'] == 'finalized'
+    assert calls == [
+        ('gis', 'start'),
+        ('agent', 'GIS-OBJECT-PROFILE'),
+        ('agent', 'KB-GEO'),
         ('gis', 'submit_batch'),
         ('gis', 'finalize'),
     ]
