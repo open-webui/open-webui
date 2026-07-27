@@ -234,7 +234,7 @@
 					</thead>
 					<tbody class="">
 						{#each users as user, userIdx (user?.id ?? userIdx)}
-							<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+							<tr class="dark:border-gray-850 text-xs">
 								<td class=" px-3 py-1 w-8">
 									<div class="flex w-full justify-center">
 										<Checkbox
