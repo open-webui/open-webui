@@ -170,25 +170,31 @@ YDOC_MANAGER = YdocManager(
 
 async def periodic_session_pool_cleanup():
     """Reap orphaned SESSION_POOL entries that missed heartbeats (e.g. crashed instance)."""
-    if not session_aquire_func():
-        log.debug('Session cleanup lock held by another node. Skipping.')
-        return
+    retry_delay = random.uniform(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT)
+    while True:
+        if not session_aquire_func():
+            log.debug('Session cleanup lock held by another node. Retrying.')
+            await asyncio.sleep(retry_delay)
+            continue
 
-    try:
-        while True:
-            if not session_renew_func():
-                log.error('Unable to renew session cleanup lock. Exiting.')
-                return
+        try:
+            while True:
+                if not session_renew_func():
+                    log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
+                    break
 
-            now = int(time.time())
-            for sid in list(SESSION_POOL.keys()):
-                entry = SESSION_POOL.get(sid)
-                if entry and now - entry.get('last_seen_at', 0) > SESSION_POOL_TIMEOUT:
-                    log.warning(f'Reaping orphaned session {sid} (user {entry.get("id")})')
-                    del SESSION_POOL[sid]
-            await asyncio.sleep(SESSION_POOL_TIMEOUT)
-    finally:
-        session_release_func()
+                now = int(time.time())
+                for sid in list(SESSION_POOL.keys()):
+                    entry = SESSION_POOL.get(sid)
+                    if entry and now - entry.get('last_seen_at', 0) > SESSION_POOL_TIMEOUT:
+                        log.warning(f'Reaping orphaned session {sid} (user {entry.get("id")})')
+                        try:
+                            del SESSION_POOL[sid]
+                        except KeyError:
+                            pass
+                await asyncio.sleep(SESSION_POOL_TIMEOUT)
+        finally:
+            session_release_func()
 
 
 async def periodic_usage_pool_cleanup():
@@ -349,7 +355,7 @@ async def connect(sid, environ, auth):
         user = await get_verified_user_by_token(auth['token'], redis)
 
         if user:
-            SESSION_POOL[sid] = {
+            socket_user = {
                 **user.model_dump(
                     exclude=[
                         'profile_image_url',
@@ -361,6 +367,8 @@ async def connect(sid, environ, auth):
                 ),
                 'last_seen_at': int(time.time()),
             }
+            SESSION_POOL[sid] = socket_user
+            await sio.save_session(sid, {'user': socket_user})
             await sio.enter_room(sid, f'user:{user.id}')
 
 
@@ -378,23 +386,21 @@ async def user_join(sid, data):
     if not user:
         return
 
-    existing = SESSION_POOL.get(sid)
-    if existing and existing.get('id') == user.id:
-        SESSION_POOL[sid] = {**existing, 'last_seen_at': int(time.time())}
-    else:
-        SESSION_POOL[sid] = {
-            **user.model_dump(
-                exclude=[
-                    'profile_image_url',
-                    'profile_banner_image_url',
-                    'date_of_birth',
-                    'bio',
-                    'gender',
-                ]
-            ),
-            'last_seen_at': int(time.time()),
-        }
+    socket_user = {
+        **user.model_dump(
+            exclude=[
+                'profile_image_url',
+                'profile_banner_image_url',
+                'date_of_birth',
+                'bio',
+                'gender',
+            ]
+        ),
+        'last_seen_at': int(time.time()),
+    }
 
+    SESSION_POOL[sid] = socket_user
+    await sio.save_session(sid, {'user': socket_user})
     await sio.enter_room(sid, f'user:{user.id}')
 
     # Join all the channels only if user has channels permission
@@ -504,7 +510,15 @@ async def channel_events(sid, data):
 
 @sio.on('events:chat')
 async def chat_events(sid, data):
-    user = SESSION_POOL.get(sid)
+    try:
+        session = await sio.get_session(sid)
+        user = session.get('user')
+    except KeyError:
+        user = None
+
+    if not user:
+        user = SESSION_POOL.get(sid)
+
     if not user:
         return
 
@@ -1069,6 +1083,11 @@ async def get_event_call(request_info):
             )
         except TimeoutError:
             log.warning(f'Event caller timed out for session {session_id}')
+            if SESSION_POOL.get(session_id) == session:
+                try:
+                    del SESSION_POOL[session_id]
+                except KeyError:
+                    pass
             return {'error': 'Event call timed out. The browser tab may be inactive or closed.'}
 
     if 'session_id' in request_info and 'chat_id' in request_info and 'message_id' in request_info:
