@@ -474,6 +474,9 @@
 
 {#if !$config?.license_metadata}
 	{#if total > 50}
+		<!-- LICENSE covers the Open WebUI branding narrative here.
+		Do not alter, remove, obscure, or replace it except as LICENSE permits:
+		https://docs.openwebui.com/license. -->
 		<div class="mt-3 mb-3 pb-1 text-gray-700 dark:text-gray-300">
 			<div class="max-w-3xl text-xs leading-5">
 				<div class="text-gray-900 dark:text-gray-100">

@@ -174,6 +174,9 @@
 				</div>
 
 				<div class="text-xs">
+					<!-- LICENSE covers this Open WebUI license attribution.
+					Do not alter, remove, obscure, or replace it except as LICENSE permits:
+					https://docs.openwebui.com/license. -->
 					<div class="text-gray-600 dark:text-gray-400">{$i18n.t('License')}</div>
 
 					{#if $config?.license_metadata}

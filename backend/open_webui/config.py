@@ -114,6 +114,9 @@ for file_path in (FRONTEND_BUILD_DIR / 'static').glob('**/*'):
         except Exception as e:
             logging.error(f'An error occurred: {e}')
 
+# LICENSE covers copied Open WebUI logo/favicon assets.
+# Do not alter, remove, obscure, or replace them except as LICENSE permits:
+# https://docs.openwebui.com/license.
 frontend_favicon = FRONTEND_BUILD_DIR / 'static' / 'favicon.png'
 
 if frontend_favicon.exists():
@@ -181,6 +184,9 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 # CUSTOM_NAME (Legacy)
 ####################################
 
+# LICENSE covers this legacy Open WebUI branding path.
+# Do not alter, remove, obscure, or replace it except as LICENSE permits:
+# https://docs.openwebui.com/license.
 CUSTOM_NAME = os.getenv('CUSTOM_NAME', '')
 
 if CUSTOM_NAME:
