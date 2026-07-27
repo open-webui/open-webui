@@ -26,7 +26,6 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event, publish_model_provider_request_failed
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
-    AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_FORWARD_USER_INFO_HEADERS,
@@ -79,6 +78,8 @@ log = logging.getLogger(__name__)
 # clients to attempt decompression of an already-decoded payload, resulting
 # in ZlibError.  See https://github.com/aio-libs/aiohttp/issues/4462.
 _STRIP_PROXY_HEADERS = frozenset({'Content-Encoding', 'Content-Length', 'Transfer-Encoding'})
+_MODEL_LIST_TIMEOUT = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+_UNSUPPORTED_OPENAI_MODEL_KEYWORDS = ('babbage', 'dall-e', 'davinci', 'embedding', 'tts', 'whisper')
 
 
 def _clean_proxy_headers(raw_headers) -> dict:
@@ -93,9 +94,8 @@ async def send_get_request(
     user: UserModel = None,
     config=None,
 ):
-    timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
-        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+        async with aiohttp.ClientSession(timeout=_MODEL_LIST_TIMEOUT, trust_env=True) as session:
             if request and config:
                 headers, cookies = await get_headers_and_cookies(request, url, key, config, user=user)
             else:
@@ -354,7 +354,7 @@ async def count_anthropic_tokens(request: Request, form_data: dict, user: UserMo
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            timeout=get_client_timeout(),
         )
 
         try:
@@ -661,19 +661,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
         return None
 
     def is_supported_openai_models(model_id):
-        if any(
-            name in model_id
-            for name in [
-                'babbage',
-                'dall-e',
-                'davinci',
-                'embedding',
-                'tts',
-                'whisper',
-            ]
-        ):
-            return False
-        return True
+        return not any(name in model_id for name in _UNSUPPORTED_OPENAI_MODEL_KEYWORDS)
 
     def get_merged_models(model_lists):
         log.debug(f'merge_models_lists {model_lists}')
@@ -681,17 +669,18 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 
         for idx, model_list in enumerate(model_lists):
             if model_list is not None and 'error' not in model_list:
+                base_url = api_base_urls[idx]
+                hostname = urlparse(base_url).hostname if base_url else None
+                api_config = api_configs.get(str(idx), api_configs.get(base_url, {}))
+
                 for model in model_list:
                     model_id = model.get('id') or model.get('name')
 
-                    base_url = api_base_urls[idx]
-                    hostname = urlparse(base_url).hostname if base_url else None
                     if hostname == 'api.openai.com' and not is_supported_openai_models(model_id):
                         # Skip unwanted OpenAI models
                         continue
 
                     if model_id and model_id not in models:
-                        api_config = api_configs.get(str(idx), api_configs.get(base_url, {}))
                         provider = model.get('provider', '')
                         merged = {
                             **model,
@@ -740,7 +729,7 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
         r = None
         async with aiohttp.ClientSession(
             trust_env=True,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
+            timeout=_MODEL_LIST_TIMEOUT,
         ) as session:
             try:
                 headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
@@ -777,17 +766,7 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
                             response_data['data'] = [
                                 model
                                 for model in response_data.get('data', [])
-                                if not any(
-                                    name in model['id']
-                                    for name in [
-                                        'babbage',
-                                        'dall-e',
-                                        'davinci',
-                                        'embedding',
-                                        'tts',
-                                        'whisper',
-                                    ]
-                                )
+                                if not any(name in model['id'] for name in _UNSUPPORTED_OPENAI_MODEL_KEYWORDS)
                             ]
 
                         models = response_data
@@ -826,7 +805,7 @@ async def verify_connection(
 
     async with aiohttp.ClientSession(
         trust_env=True,
-        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
+        timeout=_MODEL_LIST_TIMEOUT,
     ) as session:
         try:
             headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
@@ -1517,7 +1496,7 @@ async def embeddings(request: Request, form_data: dict, user):
             data=body,
             headers=headers,
             cookies=cookies,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            timeout=get_client_timeout(),
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
 

@@ -39,12 +39,15 @@ log = logging.getLogger(__name__)
 
 _session: Optional[aiohttp.ClientSession] = None
 
+_CLIENT_TIMEOUT = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+_CLIENT_STREAM_TIMEOUT = aiohttp.ClientTimeout(
+    total=AIOHTTP_CLIENT_TIMEOUT,
+    sock_read=AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT,
+)
+
 
 def get_client_timeout(stream: bool = False) -> aiohttp.ClientTimeout:
-    return aiohttp.ClientTimeout(
-        total=AIOHTTP_CLIENT_TIMEOUT,
-        sock_read=AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT if stream else None,
-    )
+    return _CLIENT_STREAM_TIMEOUT if stream else _CLIENT_TIMEOUT
 
 
 async def get_session() -> aiohttp.ClientSession:
