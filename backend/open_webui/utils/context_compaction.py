@@ -364,11 +364,21 @@ async def _generate_summary(
 ) -> str:
     from open_webui.utils.chat import generate_chat_completion
 
-    task_model_id = get_task_model_id(
-        model_id,
-        await Config.get('task.model.default'),
-        await Config.get('task.model.external'),
-        models,
+    task_config = await Config.get_many(
+        'task.model.default',
+        'task.model.external',
+        'chat.context_compaction.model',
+    )
+    context_compaction_model = task_config.get('chat.context_compaction.model')
+    task_model_id = (
+        context_compaction_model
+        if context_compaction_model in models
+        else get_task_model_id(
+            model_id,
+            task_config.get('task.model.default'),
+            task_config.get('task.model.external'),
+            models,
+        )
     )
     if task_model_id not in models:
         task_model_id = model_id

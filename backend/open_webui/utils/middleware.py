@@ -2332,6 +2332,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if is_saved_chat_id(chat_id) and user_message_id:
         if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
             compaction_models = {
+                **request.app.state.MODELS,
                 request.state.model['id']: request.state.model,
             }
         else:

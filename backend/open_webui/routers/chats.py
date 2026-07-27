@@ -53,6 +53,7 @@ router = APIRouter()
 SEARCH_FILTER_PREFIXES = ('tag:', 'folder:', 'pinned:', 'archived:', 'shared:')
 
 CHAT_CONFIG_KEYS = {
+    'CONTEXT_COMPACTION_MODEL': 'chat.context_compaction.model',
     'ENABLE_CONTEXT_COMPACTION': 'chat.context_compaction.enable',
     'CONTEXT_COMPACTION_TOKEN_THRESHOLD': 'chat.context_compaction.token_threshold',
     'CONTEXT_COMPACTION_TOKEN_CAP': 'chat.context_compaction.token_cap',
@@ -134,6 +135,7 @@ async def get_folder_unread_counts(user_id: str, db: AsyncSession | None = None)
 
 
 class ChatConfigForm(BaseModel):
+    CONTEXT_COMPACTION_MODEL: str | None = ''
     ENABLE_CONTEXT_COMPACTION: bool
     CONTEXT_COMPACTION_TOKEN_THRESHOLD: int
     CONTEXT_COMPACTION_TOKEN_CAP: int | None = None
@@ -185,6 +187,8 @@ def chat_search_snippet(chat: dict, search_text: str, max_length: int = 200) -> 
 async def get_chat_config_values() -> dict:
     values = await Config.get_many(*CHAT_CONFIG_KEYS.values())
     config = {field: values[storage_key] for field, storage_key in CHAT_CONFIG_KEYS.items() if storage_key in values}
+    if config.get('CONTEXT_COMPACTION_MODEL') is None:
+        config['CONTEXT_COMPACTION_MODEL'] = ''
     if config.get('CONTEXT_COMPACTION_TOKEN_CAP') is None:
         config['CONTEXT_COMPACTION_TOKEN_CAP'] = config.get('CONTEXT_COMPACTION_TOKEN_THRESHOLD', 80000)
     if config.get('CONTEXT_COMPACTION_RETENTION_PERCENTAGE') is None:
@@ -824,6 +828,7 @@ async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user
         chat_config_updates(
             {
                 **form_data.model_dump(),
+                'CONTEXT_COMPACTION_MODEL': form_data.CONTEXT_COMPACTION_MODEL or '',
                 'CONTEXT_COMPACTION_TOKEN_THRESHOLD': threshold,
                 'CONTEXT_COMPACTION_TOKEN_CAP': token_cap,
                 'CONTEXT_COMPACTION_RETENTION_PERCENTAGE': retention_percentage,
