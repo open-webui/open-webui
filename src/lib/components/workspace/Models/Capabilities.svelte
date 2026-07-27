@@ -51,6 +51,10 @@
 			label: $i18n.t('Status Updates'),
 			description: $i18n.t('Displays status updates (e.g., web search progress) in the response')
 		},
+		memory: {
+			label: $i18n.t('Memory'),
+			description: $i18n.t('Inject stored memories into conversation context')
+		},
 		builtin_tools: {
 			label: $i18n.t('Builtin Tools'),
 			description: $i18n.t(
@@ -59,22 +63,12 @@
 		}
 	};
 
-	export let capabilities: {
-		file_context?: boolean;
-		vision?: boolean;
-		file_upload?: boolean;
-		web_search?: boolean;
-		image_generation?: boolean;
-		code_interpreter?: boolean;
-		terminal?: boolean;
-		usage?: boolean;
-		citations?: boolean;
-		status_updates?: boolean;
-		builtin_tools?: boolean;
-	} = {};
+	type Capability = keyof typeof capabilityLabels;
+
+	export let capabilities: Partial<Record<Capability, boolean>> = {};
 
 	// Hide file_context when file_upload is disabled
-	$: visibleCapabilities = Object.keys(capabilityLabels).filter((cap) => {
+	$: visibleCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter((cap) => {
 		if (cap === 'file_context' && !capabilities.file_upload) {
 			return false;
 		}
