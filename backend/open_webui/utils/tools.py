@@ -475,6 +475,45 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
     return tools_dict
 
 
+def get_attached_knowledge(model: dict, metadata: dict) -> list[dict]:
+    model_meta = model.get('info', {}).get('meta', {})
+    knowledge = []
+    seen = set()
+
+    for source, items in (
+        ('model', model_meta.get('knowledge') or []),
+        ('folder', metadata.get('folder_knowledge') or []),
+    ):
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            key = (item.get('type'), item.get('id'))
+            if not all(key) or key in seen:
+                continue
+            knowledge.append({**item, 'source': source})
+            seen.add(key)
+
+    file_context_enabled = (model_meta.get('capabilities') or {}).get('file_context', True)
+    if not file_context_enabled:
+        for item in metadata.get('files') or []:
+            if not isinstance(item, dict) or item.get('type') not in ('collection', 'note'):
+                continue
+            key = (item.get('type'), item.get('id'))
+            if not all(key) or key in seen:
+                continue
+            knowledge.append(
+                {
+                    'type': item.get('type'),
+                    'id': item.get('id'),
+                    'name': item.get('name'),
+                    'source': 'chat',
+                }
+            )
+            seen.add(key)
+
+    return knowledge
+
+
 async def get_builtin_tools(
     request: Request, extra_params: dict, features: dict = None, model: dict = None
 ) -> dict[str, dict]:
@@ -557,11 +596,7 @@ async def get_builtin_tools(
     # Knowledge base tools - conditional injection based on model knowledge
     # If model has attached knowledge (any type), only provide query_knowledge_files
     # Otherwise, provide all KB browsing tools
-    model_knowledge = model.get('info', {}).get('meta', {}).get('knowledge', [])
-    # Merge folder-attached knowledge so builtin tools can search it
-    folder_knowledge = extra_params.get('__metadata__', {}).get('folder_knowledge')
-    if folder_knowledge:
-        model_knowledge = list(model_knowledge or []) + list(folder_knowledge)
+    model_knowledge = get_attached_knowledge(model, metadata)
     if is_builtin_tool_enabled('knowledge'):
         from open_webui.env import ENABLE_KB_EXEC
 

@@ -128,6 +128,7 @@ from open_webui.utils.task import (
 )
 from open_webui.utils.tools import (
     build_tool_server_headers,
+    get_attached_knowledge,
     get_builtin_tools,
     get_terminal_tools,
     get_tools,
@@ -2828,6 +2829,31 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             # Add file context to user messages
             chat_id = metadata.get('chat_id')
             form_data['messages'] = await add_file_context(form_data.get('messages', []), chat_id, user)
+
+            if (model.get('info', {}).get('meta', {}).get('builtinTools') or {}).get('knowledge', True):
+                from html import escape
+
+                knowledge_tags = []
+                for item in get_attached_knowledge(model, metadata):
+                    if not item.get('id') or not item.get('type'):
+                        continue
+                    attrs = (
+                        f'type="{escape(str(item["type"]), quote=True)}" '
+                        f'id="{escape(str(item["id"]), quote=True)}"'
+                    )
+                    if item.get('name'):
+                        attrs += f' name="{escape(str(item["name"]), quote=True)}"'
+                    if item.get('source'):
+                        attrs += f' source="{escape(str(item["source"]), quote=True)}"'
+                    knowledge_tags.append(f'<knowledge {attrs}/>')
+
+                if knowledge_tags:
+                    form_data['messages'] = add_or_update_system_message(
+                        '<attached_knowledge>\n' + '\n'.join(knowledge_tags) + '\n</attached_knowledge>',
+                        form_data['messages'],
+                        append=True,
+                    )
+
             builtin_tools = await get_builtin_tools(
                 request,
                 {
