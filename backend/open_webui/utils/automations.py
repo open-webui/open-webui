@@ -25,6 +25,7 @@ from typing import Optional
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
+from dateutil import parser as date_parser
 from dateutil.rrule import rrulestr
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
@@ -76,7 +77,14 @@ def _parse_rule(s: str, now: Optional[datetime] = None):
     SECONDLY/MINUTELY/HOURLY rules use a fixed epoch DTSTART (2000-01-01 00:00)
     so intervals snap to clock boundaries (e.g. every 5min = :00, :05, :10).
     """
-    rrule_line = next((line for line in s.splitlines() if line.upper().startswith('RRULE:')), s)
+    lines = s.splitlines()
+    rule_count = sum(1 for line in lines if line.upper().startswith('RRULE:'))
+    if 'EXRULE' in s.upper():
+        raise ValueError('EXRULE is not supported in recurrence rules')
+    if rule_count > 1:
+        raise ValueError('only one RRULE is supported per recurrence rule')
+
+    rrule_line = next((line for line in lines if line.upper().startswith('RRULE:')), s)
     raw = rrule_line.split(':', 1)[1] if rrule_line.upper().startswith('RRULE:') else rrule_line
     parts = {k.upper(): v for k, v in (p.split('=', 1) for p in raw.split(';') if '=' in p)}
     freq = parts.get('FREQ', '')
@@ -84,19 +92,27 @@ def _parse_rule(s: str, now: Optional[datetime] = None):
     if freq in ('SECONDLY', 'MINUTELY', 'HOURLY'):
         epoch = datetime(2000, 1, 1, 0, 0, 0)
         anchor = now or datetime.now()
-        rule = '\n'.join(line for line in s.splitlines() if not line.upper().startswith('DTSTART')) or s
-        try:
-            interval = int(parts.get('INTERVAL', '1'))
-            if interval > 0:
-                if freq == 'SECONDLY':
-                    step = timedelta(seconds=interval)
-                elif freq == 'MINUTELY':
-                    step = timedelta(minutes=interval)
-                else:
-                    step = timedelta(hours=interval)
-                anchor = epoch + ((anchor - epoch) // step) * step
-        except (TypeError, ValueError):
-            pass
+        rule = '\n'.join(line for line in lines if not line.upper().startswith('DTSTART')) or s
+        dtstart = next((line.rsplit(':', 1)[-1] for line in lines if line.upper().startswith('DTSTART')), None)
+        interval = int(parts.get('INTERVAL', '1'))
+        if interval < 1:
+            raise ValueError('RRULE INTERVAL must be a positive integer')
+        if freq == 'SECONDLY':
+            step = timedelta(seconds=interval)
+        elif freq == 'MINUTELY':
+            step = timedelta(minutes=interval)
+        else:
+            step = timedelta(hours=interval)
+        if dtstart:
+            start = date_parser.parse(dtstart, ignoretz=True)
+            emitted = ((anchor - start) // step) if anchor > start else 0
+            if 'BYMINUTE' in parts:
+                emitted *= len(parts['BYMINUTE'].split(','))
+            if 'BYSECOND' in parts:
+                emitted *= len(parts['BYSECOND'].split(','))
+            if emitted <= 100_000:
+                return rrulestr(s, ignoretz=True)
+        anchor = epoch + ((anchor - epoch) // step) * step
         return rrulestr(rule, dtstart=anchor, ignoretz=True)
     return rrulestr(s, ignoretz=True)
 
