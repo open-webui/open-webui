@@ -46,6 +46,7 @@ from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
+from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.tools.builtin import (
     add_memory,
     calculate_timestamp,
@@ -642,7 +643,7 @@ async def get_builtin_tools(
     metadata = extra_params.get('__metadata__') or {}
     chat_id = metadata.get('chat_id') or ''
     chat = None
-    if chat_id and not chat_id.startswith(('local:', 'channel:')):
+    if is_saved_chat_id(chat_id):
         chat = await Chats.get_chat_by_id(chat_id)
 
     # Notes tools - search, view, create, and update user's notes
@@ -667,7 +668,8 @@ async def get_builtin_tools(
         builtin_functions.append(view_skill)
 
     # Task management - break down complex work into trackable steps
-    if is_builtin_tool_enabled('tasks'):
+    # Task state is stored on the chats row; local/channel IDs do not have one.
+    if is_builtin_tool_enabled('tasks') and is_saved_chat_id(chat_id):
         builtin_functions.extend([create_tasks, update_task])
 
     # Automation tools - create and manage scheduled automations from chat
