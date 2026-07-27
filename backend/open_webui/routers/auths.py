@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import datetime
-import hashlib
-import hmac
 import logging
 import re
 import time
@@ -38,7 +36,6 @@ from open_webui.env import (
     WEBUI_AUTH_TRUSTED_GROUPS_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
     WEBUI_AUTH_TRUSTED_ROLE_HEADER,
-    WEBUI_SECRET_KEY,
 )
 from open_webui.internal.db import get_async_session
 from open_webui.models.auths import (
@@ -102,15 +99,6 @@ token_exchange_rate_limiter = (
     if OAUTH_TOKEN_EXCHANGE_RATE_LIMIT is not None
     else None
 )
-
-
-def trusted_header_user_id(email: str) -> str:
-    digest = hmac.digest(
-        WEBUI_SECRET_KEY.encode(),
-        f'open-webui:trusted-header:{email.lower()}'.encode(),
-        hashlib.sha256,
-    )
-    return str(uuid.UUID(bytes=digest[:16], version=4))
 
 
 ADMIN_CONFIG_KEYS = {
@@ -761,7 +749,6 @@ async def signin(
                     name,
                     db=db,
                     source='trusted_header',
-                    user_id=trusted_header_user_id(email),
                 )
             except IntegrityError:
                 if not await Users.get_user_by_email(email.lower(), db=db):
@@ -846,7 +833,6 @@ async def signup_handler(
     *,
     db: AsyncSession,
     source: str = 'api',
-    user_id: str | None = None,
 ) -> UserModel:
     """
     Core user-creation logic shared by the signup endpoint and
@@ -867,7 +853,6 @@ async def signup_handler(
         profile_image_url=profile_image_url,
         role=await Config.get('ui.default_user_role'),
         db=db,
-        user_id=user_id,
     )
     if not user:
         raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
