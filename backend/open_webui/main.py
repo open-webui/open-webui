@@ -2115,6 +2115,9 @@ async def get_app_config(request: Request):
         'user.permissions',
         'ui.pending_user_overlay_title',
         'ui.pending_user_overlay_content',
+        'ui.user_disclaimer_title',
+        'ui.user_disclaimer_content',
+        'ui.user_disclaimer_version',
         'ui.watermark',
     )
 
@@ -2233,6 +2236,9 @@ async def get_app_config(request: Request):
                 'ui': {
                     'pending_user_overlay_title': config.get('ui.pending_user_overlay_title'),
                     'pending_user_overlay_content': config.get('ui.pending_user_overlay_content'),
+                    'user_disclaimer_title': config.get('ui.user_disclaimer_title'),
+                    'user_disclaimer_content': config.get('ui.user_disclaimer_content'),
+                    'user_disclaimer_version': config.get('ui.user_disclaimer_version'),
                     'response_watermark': config.get('ui.watermark'),
                     'iframe_csp': IFRAME_CSP,
                 },

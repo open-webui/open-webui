@@ -289,6 +289,41 @@
 					/>
 				</AdminSettingField>
 			</AdminSettingSection>
+
+			<AdminSettingSection title={$i18n.t('User Disclaimer')}>
+				<AdminSettingField
+					label={$i18n.t('User Disclaimer Title')}
+					description={$i18n.t('Heading of the disclaimer shown before a user reaches the app.')}
+				>
+					<Textarea
+						className={textareaClass}
+						placeholder={$i18n.t('Leave empty for the built-in default.')}
+						bind:value={adminConfig.USER_DISCLAIMER_TITLE}
+					/>
+				</AdminSettingField>
+
+				<AdminSettingField
+					label={$i18n.t('User Disclaimer Content')}
+					description={$i18n.t(
+						'Text each user must acknowledge once before reaching the app. Empty disables the disclaimer.'
+					)}
+				>
+					<Textarea className={textareaClass} bind:value={adminConfig.USER_DISCLAIMER_CONTENT} />
+				</AdminSettingField>
+
+				<AdminSettingField
+					label={$i18n.t('User Disclaimer Version')}
+					description={$i18n.t(
+						'Changing this asks every user to acknowledge the disclaimer again.'
+					)}
+				>
+					<Textarea
+						className={textareaClass}
+						placeholder={`e.g.) "v2"`}
+						bind:value={adminConfig.USER_DISCLAIMER_VERSION}
+					/>
+				</AdminSettingField>
+			</AdminSettingSection>
 		{/if}
 
 		<AdminSettingSection title={$i18n.t('LDAP')}>

@@ -1697,6 +1697,13 @@ PENDING_USER_OVERLAY_TITLE = os.getenv('PENDING_USER_OVERLAY_TITLE', '')
 
 PENDING_USER_OVERLAY_CONTENT = os.getenv('PENDING_USER_OVERLAY_CONTENT', '')
 
+USER_DISCLAIMER_TITLE = os.getenv('USER_DISCLAIMER_TITLE', '')
+
+USER_DISCLAIMER_CONTENT = os.getenv('USER_DISCLAIMER_CONTENT', '')
+
+# Bumping this re-prompts every user, e.g. after the disclaimer text changes.
+USER_DISCLAIMER_VERSION = os.getenv('USER_DISCLAIMER_VERSION', '')
+
 
 RESPONSE_WATERMARK = os.getenv('RESPONSE_WATERMARK', '')
 
@@ -3043,6 +3050,9 @@ DEFAULT_CONFIG = {
     'ui.default_group_id': DEFAULT_GROUP_ID,
     'ui.pending_user_overlay_title': PENDING_USER_OVERLAY_TITLE,
     'ui.pending_user_overlay_content': PENDING_USER_OVERLAY_CONTENT,
+    'ui.user_disclaimer_title': USER_DISCLAIMER_TITLE,
+    'ui.user_disclaimer_content': USER_DISCLAIMER_CONTENT,
+    'ui.user_disclaimer_version': USER_DISCLAIMER_VERSION,
     'ui.watermark': RESPONSE_WATERMARK,
     'user.permissions': USER_PERMISSIONS,
     'folders.enable': ENABLE_FOLDERS,
