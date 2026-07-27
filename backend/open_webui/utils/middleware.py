@@ -191,6 +191,12 @@ DEFAULT_SOLUTION_TAGS = [('<|begin_of_solution|>', '<|end_of_solution|>')]
 DEFAULT_CODE_INTERPRETER_TAGS = [('<code_interpreter>', '</code_interpreter>')]
 
 
+def _start_tag_pattern(start_tag: str) -> str:
+    if start_tag.startswith('<') and start_tag.endswith('>'):
+        return rf'<{re.escape(start_tag[1:-1])}(\s.*?)?>'
+    return re.escape(start_tag)
+
+
 def output_id(prefix: str) -> str:
     """Generate OR-style ID: prefix + 24-char hex UUID."""
     return f'{prefix}_{uuid4().hex[:24]}'
@@ -3786,6 +3792,7 @@ async def streaming_chat_response_handler(response, ctx):
         # Handle as a background task
         async def response_handler(response, events):
             filter_context = FilterContext()
+            tag_scan_positions = {}
 
             def tag_output_handler(content_type, tags, output):
                 """
@@ -3823,6 +3830,24 @@ async def streaming_chat_response_handler(response, ctx):
                         if parts and parts[-1].get('type') == 'output_text':
                             parts[-1]['text'] = text
 
+                def get_scanned_length(item, text):
+                    item_id = item.get('id')
+                    if not item_id:
+                        return 0
+
+                    scanned_length = tag_scan_positions.get((item_id, content_type), 0)
+                    return scanned_length if scanned_length <= len(text) else 0
+
+                def save_scanned_length(item, text):
+                    item_id = item.get('id')
+                    if item_id:
+                        tag_scan_positions[(item_id, content_type)] = len(text)
+
+                def clear_scanned_length(item):
+                    item_id = item.get('id')
+                    if item_id:
+                        tag_scan_positions.pop((item_id, content_type), None)
+
                 # Map content_type to output item type
                 output_type_map = {
                     'reasoning': 'reasoning',
@@ -3835,14 +3860,27 @@ async def streaming_chat_response_handler(response, ctx):
 
                 if last_type == 'message':
                     # Use the output item's own text for tag detection
+                    item = output[-1]
                     item_text = get_last_text(output)
-                    for start_tag, end_tag in tags:
-                        start_tag_pattern = rf'{re.escape(start_tag)}'
-                        if start_tag.startswith('<') and start_tag.endswith('>'):
-                            start_tag_pattern = rf'<{re.escape(start_tag[1:-1])}(\s.*?)?>'
+                    scanned_length = get_scanned_length(item, item_text)
+                    max_start_tag_length = max((len(start_tag) for start_tag, _ in tags), default=1)
+                    search_start = max(0, scanned_length - max_start_tag_length + 1)
 
-                        match = re.search(start_tag_pattern, item_text)
+                    if scanned_length and any(
+                        start_tag.startswith('<') and start_tag.endswith('>') for start_tag, _ in tags
+                    ):
+                        last_tag_boundary = max(
+                            item_text.rfind('>', 0, scanned_length),
+                            item_text.rfind('\n', 0, scanned_length),
+                        )
+                        open_tag_start = item_text.rfind('<', 0, scanned_length)
+                        if open_tag_start > last_tag_boundary:
+                            search_start = min(search_start, open_tag_start)
+
+                    for start_tag, end_tag in tags:
+                        match = re.compile(_start_tag_pattern(start_tag)).search(item_text, search_start)
                         if match:
+                            clear_scanned_length(item)
                             try:
                                 attr_content = match.group(1) if match.group(1) else ''
                             except Exception:
@@ -3922,6 +3960,8 @@ async def streaming_chat_response_handler(response, ctx):
                                     end_flag = True
 
                             break
+                    else:
+                        save_scanned_length(item, item_text)
 
                 elif (
                     (last_type == 'reasoning' and content_type == 'reasoning')
@@ -3931,8 +3971,6 @@ async def streaming_chat_response_handler(response, ctx):
                     item = output[-1]
                     start_tag = item.get('start_tag', '')
                     end_tag = item.get('end_tag', '')
-
-                    end_tag_pattern = rf'{re.escape(end_tag)}'
 
                     # Get the block content from the item itself
                     if last_type == 'reasoning':
@@ -3945,15 +3983,18 @@ async def streaming_chat_response_handler(response, ctx):
                     else:
                         block_content = get_last_text(output)
 
-                    if re.search(end_tag_pattern, block_content):
+                    scanned_length = get_scanned_length(item, block_content)
+                    end_tag_search_start = max(0, scanned_length - max(len(end_tag), 1) + 1)
+
+                    if block_content.find(end_tag, end_tag_search_start) != -1:
+                        clear_scanned_length(item)
                         end_flag = True
 
                         # Strip start and end tags from content
-                        start_tag_pattern = rf'{re.escape(start_tag)}'
-                        if start_tag.startswith('<') and start_tag.endswith('>'):
-                            start_tag_pattern = rf'<{re.escape(start_tag[1:-1])}(\s.*?)?>'
+                        start_tag_pattern = _start_tag_pattern(start_tag)
                         block_content = re.sub(start_tag_pattern, '', block_content).strip()
 
+                        end_tag_pattern = rf'{re.escape(end_tag)}'
                         end_tag_regex = re.compile(end_tag_pattern, re.DOTALL)
                         split_content = end_tag_regex.split(block_content, maxsplit=1)
 
@@ -4007,6 +4048,8 @@ async def streaming_chat_response_handler(response, ctx):
                                     ],
                                 }
                             )
+                    else:
+                        save_scanned_length(item, block_content)
 
                 return output, end_flag
 
