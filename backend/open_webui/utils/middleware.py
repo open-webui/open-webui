@@ -77,6 +77,7 @@ from open_webui.socket.main import (
 )
 from open_webui.utils.access_control import has_connection_access, has_permission
 from open_webui.models.access_grants import AccessGrants
+from open_webui.utils.access_control.files import get_owner_accessible_folder_files
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.chat_id import is_saved_chat_id
@@ -2456,7 +2457,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 else:
                     # Native FC: skip RAG injection, builtin tools
                     # will read folder knowledge from metadata.
-                    metadata['folder_knowledge'] = folder.data['files']
+                    metadata['folder_knowledge'] = await get_owner_accessible_folder_files(folder)
 
     # Model "Knowledge" handling
     user_message = get_last_user_message(form_data['messages'])
