@@ -614,17 +614,18 @@ class ChatTable:
         except Exception:
             return None
 
-    async def update_chat_last_read_at_by_id(self, id: str, user_id: str, db: AsyncSession | None = None) -> bool:
+    async def update_chat_last_read_at_by_id(self, id: str, user_id: str, db: AsyncSession | None = None) -> int | None:
         try:
             async with get_async_db_context(db) as session:
                 chat = await session.get(Chat, id)
                 if chat and chat.user_id == user_id:
-                    chat.last_read_at = int(time.time())
+                    last_read_at = int(time.time())
+                    chat.last_read_at = last_read_at
                     await session.commit()
-                    return True
-                return False
+                    return last_read_at
+                return None
         except Exception:
-            return False
+            return None
 
     async def update_chat_title_by_id(self, id: str, title: str) -> ChatModel | None:
         try:

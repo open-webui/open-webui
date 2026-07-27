@@ -31,6 +31,7 @@ from open_webui.env import (
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
+from open_webui.models.folders import Folders
 from open_webui.models.notes import Notes, NoteUpdateForm
 from open_webui.models.users import UserNameResponse, Users
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
@@ -508,6 +509,24 @@ async def channel_events(sid, data):
         await Channels.update_member_last_read_at(data['channel_id'], user['id'])
 
 
+async def get_folder_unread_counts(user_id: str) -> dict[str, int]:
+    folder_list = await Folders.get_folders_by_user_id(user_id)
+    parent_by_id = {folder.id: folder.parent_id for folder in folder_list}
+    unread_counts = dict.fromkeys(parent_by_id.keys(), 0)
+
+    direct_unread_counts = await Chats.count_unread_by_folder_ids(user_id, list(parent_by_id.keys()))
+    for unread_folder_id, unread_count in direct_unread_counts.items():
+        current_id = unread_folder_id
+        seen = set()
+        while current_id and current_id not in seen:
+            seen.add(current_id)
+            if current_id in unread_counts:
+                unread_counts[current_id] += unread_count
+            current_id = parent_by_id.get(current_id)
+
+    return unread_counts
+
+
 @sio.on('events:chat')
 async def chat_events(sid, data):
     try:
@@ -526,13 +545,21 @@ async def chat_events(sid, data):
     event_type = event_data.get('type')
 
     if event_type == 'last_read_at':
-        if not await Chats.update_chat_last_read_at_by_id(data['chat_id'], user['id']):
+        last_read_at = await Chats.update_chat_last_read_at_by_id(data['chat_id'], user['id'])
+        if not last_read_at:
             return
         await sio.emit(
             'events',
             {
                 'chat_id': data['chat_id'],
-                'data': {'type': 'chat:list'},
+                'data': {
+                    'type': 'chat:list',
+                    'data': {
+                        'chat_id': data['chat_id'],
+                        'last_read_at': last_read_at,
+                        'folder_unread_counts': await get_folder_unread_counts(user['id']),
+                    },
+                },
             },
             room=f'user:{user["id"]}',
         )

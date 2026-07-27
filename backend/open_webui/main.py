@@ -1402,7 +1402,7 @@ async def chat_completion(
                                 updated['files'] = chat_files
                             if selected_chat_models:
                                 updated['models'] = selected_chat_models
-                            await Chats.update_chat_by_id(chat_id, updated)
+                            await Chats.update_chat_by_id(chat_id, updated, touch=False)
 
                     await Chats.update_chat_variables_by_id(chat_id, chat_variables)
 

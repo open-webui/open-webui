@@ -4,7 +4,6 @@
 	const dispatch = createEventDispatcher();
 
 	import RecursiveFolder from './RecursiveFolder.svelte';
-	import { chatId } from '$lib/stores';
 
 	export let folderRegistry = {};
 
@@ -42,16 +41,6 @@
 			folderRegistry[e.originFolderId]?.setFolderItems();
 		}
 	};
-
-	const loadFolderItems = () => {
-		for (const folderId of Object.keys(folders)) {
-			folderRegistry[folderId]?.setFolderItems();
-		}
-	};
-
-	$: if (folders || $chatId) {
-		loadFolderItems();
-	}
 </script>
 
 {#each ownedList as folderId (folderId)}

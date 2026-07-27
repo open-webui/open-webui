@@ -433,8 +433,14 @@
 		}
 	};
 
-	$: if (open) {
+	$: if (open && chats === null) {
 		setFolderItems();
+	}
+
+	$: if (!open && chats !== null) {
+		chats = null;
+		chatsPage = 1;
+		hasMoreChats = false;
 	}
 
 	const renameHandler = async () => {

@@ -123,6 +123,21 @@ export const setChatActive = (chatId: string, active: boolean): boolean => {
 	return found;
 };
 
+export const setChatReadAt = (chatId: string, lastReadAt: number): boolean => {
+	let found = false;
+	const updateChat = (chat: ChatListItem) => {
+		if (chat.id !== chatId) {
+			return chat;
+		}
+		found = true;
+		return { ...chat, last_read_at: lastReadAt };
+	};
+
+	chatsStore.update((items) => (items ? items.map(updateChat) : items));
+	pinnedChatsStore.update((items) => items.map(updateChat));
+	return found;
+};
+
 export const resetChatListState = () => {
 	requestGeneration += 1;
 	currentPage = 1;

@@ -31,7 +31,8 @@
 		loadNextChatListPage,
 		refreshChatList,
 		registerFolderRefreshHandler,
-		setChatActive
+		setChatActive,
+		setChatReadAt
 	} from '$lib/stores/chatList';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -691,7 +692,14 @@
 	const chatActiveEventHandler = async (event: {
 		chat_id: string;
 		message_id: string;
-		data: { type: string; data: { active?: boolean } };
+		data: {
+			type: string;
+			data: {
+				active?: boolean;
+				last_read_at?: number;
+				folder_unread_counts?: Record<string, number>;
+			};
+		};
 	}) => {
 		if (event.data?.type === 'chat:active') {
 			const active = event.data.data.active ?? false;
@@ -700,6 +708,29 @@
 				await refreshChatRows();
 			}
 		} else if (event.data?.type === 'chat:list') {
+			const eventData = event.data.data ?? {};
+			const folderUnreadCounts = eventData.folder_unread_counts;
+			if (folderUnreadCounts) {
+				folders = Object.fromEntries(
+					Object.entries(folders).map(([id, folder]) => [
+						id,
+						id in folderUnreadCounts ? { ...folder, unread_count: folderUnreadCounts[id] } : folder
+					])
+				);
+				_folders.update((folderList) =>
+					folderList.map((folder) =>
+						folder.id in folderUnreadCounts
+							? { ...folder, unread_count: folderUnreadCounts[folder.id] }
+							: folder
+					)
+				);
+			}
+
+			if (typeof eventData.last_read_at === 'number') {
+				setChatReadAt(event.chat_id, eventData.last_read_at);
+				return;
+			}
+
 			refreshChatRows();
 		}
 	};
