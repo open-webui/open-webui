@@ -33,7 +33,7 @@
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	let updateEmbeddingModelLoading = false;
 	let updateRerankingModelLoading = false;
@@ -69,7 +69,7 @@
 		hybrid: false
 	};
 
-	let RAGConfig = null;
+	let RAGConfig: any = null;
 	const inputClass =
 		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const actionButtonClass =
@@ -272,6 +272,12 @@
 				RAGConfig.EXTERNAL_DOCUMENT_LOADER_HEADERS.trim() !== ''
 					? JSON.parse(RAGConfig.EXTERNAL_DOCUMENT_LOADER_HEADERS)
 					: {},
+			CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES:
+				RAGConfig.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES.trim() === ''
+					? undefined
+					: RAGConfig.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES.split(',')
+							.map((mimeType: string) => mimeType.trim())
+							.filter((mimeType: string) => mimeType !== ''),
 			MINERU_PARAMS:
 				typeof RAGConfig.MINERU_PARAMS === 'string' && RAGConfig.MINERU_PARAMS.trim() !== ''
 					? JSON.parse(RAGConfig.MINERU_PARAMS)
@@ -328,6 +334,9 @@
 				: config.EXTERNAL_DOCUMENT_LOADER_HEADERS;
 
 		config.MINERU_FILE_EXTENSIONS = (config?.MINERU_FILE_EXTENSIONS ?? ['pdf']).join(', ');
+		config.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES = (
+			config?.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES ?? []
+		).join(', ');
 		config.RAG_TOKENIZER_MODEL = config?.RAG_TOKENIZER_MODEL ?? '';
 
 		RAGConfig = config;
@@ -404,12 +413,24 @@
 					</SettingsSelect>
 				</AdminSettingRow>
 
+				<AdminSettingField
+					label={$i18n.t('Supported Media MIME Types')}
+					description={$i18n.t('Media upload MIME types the content extraction engine may process.')}
+				>
+					<input
+						class={inputClass}
+						placeholder={$i18n.t('image/*, video/*')}
+						bind:value={RAGConfig.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES}
+					/>
+				</AdminSettingField>
+
 				{#if RAGConfig.CONTENT_EXTRACTION_ENGINE === ''}
 					<AdminSettingRow
 						label={$i18n.t('PDF Extract Images (OCR)')}
 						description={$i18n.t('Extract images from PDFs so OCR can process image-only pages.')}
+						let:labelId
 					>
-						<Switch bind:state={RAGConfig.PDF_EXTRACT_IMAGES} />
+						<Switch bind:state={RAGConfig.PDF_EXTRACT_IMAGES} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
 
 					<AdminSettingRow
@@ -471,44 +492,57 @@
 						description={$i18n.t(
 							'Use an LLM to improve tables, forms, math, and layout detection.'
 						)}
+						let:labelId
 					>
-						<Switch bind:state={RAGConfig.DATALAB_MARKER_USE_LLM} />
+						<Switch bind:state={RAGConfig.DATALAB_MARKER_USE_LLM} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
 					<AdminSettingRow
 						label={$i18n.t('Skip Cache')}
 						description={$i18n.t('Skip cached Marker results and rerun inference.')}
+						let:labelId
 					>
-						<Switch bind:state={RAGConfig.DATALAB_MARKER_SKIP_CACHE} />
+						<Switch bind:state={RAGConfig.DATALAB_MARKER_SKIP_CACHE} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
 					<AdminSettingRow
 						label={$i18n.t('Force OCR')}
 						description={$i18n.t('Run OCR on all PDF pages, even pages with embedded text.')}
+						let:labelId
 					>
-						<Switch bind:state={RAGConfig.DATALAB_MARKER_FORCE_OCR} />
+						<Switch bind:state={RAGConfig.DATALAB_MARKER_FORCE_OCR} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
 					<AdminSettingRow
 						label={$i18n.t('Paginate')}
 						description={$i18n.t('Separate output by page with page markers.')}
+						let:labelId
 					>
-						<Switch bind:state={RAGConfig.DATALAB_MARKER_PAGINATE} />
+						<Switch bind:state={RAGConfig.DATALAB_MARKER_PAGINATE} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
 					<AdminSettingRow
 						label={$i18n.t('Strip Existing OCR')}
 						description={$i18n.t('Remove existing OCR text and rerun OCR when Force OCR is off.')}
+						let:labelId
 					>
-						<Switch bind:state={RAGConfig.DATALAB_MARKER_STRIP_EXISTING_OCR} />
+						<Switch
+							bind:state={RAGConfig.DATALAB_MARKER_STRIP_EXISTING_OCR}
+							ariaLabelledbyId={labelId}
+						/>
 					</AdminSettingRow>
 					<AdminSettingRow
 						label={$i18n.t('Disable Image Extraction')}
 						description={$i18n.t('Do not extract images from PDFs during Marker processing.')}
+						let:labelId
 					>
-						<Switch bind:state={RAGConfig.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION} />
+						<Switch
+							bind:state={RAGConfig.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION}
+							ariaLabelledbyId={labelId}
+						/>
 					</AdminSettingRow>
 					<AdminSettingRow
 						label={$i18n.t('Format Lines')}
 						description={$i18n.t('Format lines to detect inline math and styles.')}
+						let:labelId
 					>
-						<Switch bind:state={RAGConfig.DATALAB_MARKER_FORMAT_LINES} />
+						<Switch bind:state={RAGConfig.DATALAB_MARKER_FORMAT_LINES} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
 					<AdminSettingRow
 						label={$i18n.t('Output Format')}
@@ -695,8 +729,9 @@
 					<AdminSettingRow
 						label={$i18n.t('Use Base64')}
 						description={$i18n.t('Send PDFs as base64 data URLs instead of uploading first.')}
+						let:labelId
 					>
-						<Switch bind:state={RAGConfig.MISTRAL_OCR_USE_BASE64} />
+						<Switch bind:state={RAGConfig.MISTRAL_OCR_USE_BASE64} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
 				{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'paddleocr_vl'}
 					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
@@ -815,8 +850,12 @@
 					description={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL
 						? $i18n.t('Inject the entire content as context for comprehensive processing.')
 						: $i18n.t('Use segmented retrieval for focused and relevant context.')}
+					let:labelId
 				>
-					<Switch bind:state={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL} />
+					<Switch
+						bind:state={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
+						ariaLabelledbyId={labelId}
+					/>
 				</AdminSettingRow>
 
 				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
@@ -853,8 +892,12 @@
 						description={$i18n.t(
 							'Split documents by markdown headers before character or token splitting.'
 						)}
+						let:labelId
 					>
-						<Switch bind:state={RAGConfig.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER} />
+						<Switch
+							bind:state={RAGConfig.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER}
+							ariaLabelledbyId={labelId}
+						/>
 					</AdminSettingRow>
 
 					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
@@ -1094,8 +1137,9 @@
 						<AdminSettingRow
 							label={$i18n.t('Async Embedding Processing')}
 							description={$i18n.t('Run embedding tasks concurrently to speed up processing.')}
+							let:labelId
 						>
-							<Switch bind:state={ENABLE_ASYNC_EMBEDDING} />
+							<Switch bind:state={ENABLE_ASYNC_EMBEDDING} ariaLabelledbyId={labelId} />
 						</AdminSettingRow>
 						<AdminSettingRow
 							label={$i18n.t('Embedding Concurrent Requests')}
@@ -1122,16 +1166,18 @@
 						description={RAGConfig.RAG_FULL_CONTEXT
 							? $i18n.t('Inject entire documents as context for comprehensive processing.')
 							: $i18n.t('Use segmented retrieval for focused context.')}
+						let:labelId
 					>
-						<Switch bind:state={RAGConfig.RAG_FULL_CONTEXT} />
+						<Switch bind:state={RAGConfig.RAG_FULL_CONTEXT} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
 
 					{#if !RAGConfig.RAG_FULL_CONTEXT}
 						<AdminSettingRow
 							label={$i18n.t('Hybrid Search')}
 							description={$i18n.t('Combine semantic and keyword retrieval.')}
+							let:labelId
 						>
-							<Switch bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH} />
+							<Switch bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH} ariaLabelledbyId={labelId} />
 						</AdminSettingRow>
 
 						{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
@@ -1140,8 +1186,12 @@
 								description={$i18n.t(
 									'Add filenames, titles, sections, and snippets to improve lexical recall.'
 								)}
+								let:labelId
 							>
-								<Switch bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS} />
+								<Switch
+									bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS}
+									ariaLabelledbyId={labelId}
+								/>
 							</AdminSettingRow>
 
 							<AdminSettingRow
@@ -1428,14 +1478,19 @@
 				<AdminSettingRow
 					label={$i18n.t('Google Drive')}
 					description={$i18n.t('Allow Google Drive as a document source.')}
+					let:labelId
 				>
-					<Switch bind:state={RAGConfig.ENABLE_GOOGLE_DRIVE_INTEGRATION} />
+					<Switch
+						bind:state={RAGConfig.ENABLE_GOOGLE_DRIVE_INTEGRATION}
+						ariaLabelledbyId={labelId}
+					/>
 				</AdminSettingRow>
 				<AdminSettingRow
 					label={$i18n.t('OneDrive')}
 					description={$i18n.t('Allow OneDrive as a document source.')}
+					let:labelId
 				>
-					<Switch bind:state={RAGConfig.ENABLE_ONEDRIVE_INTEGRATION} />
+					<Switch bind:state={RAGConfig.ENABLE_ONEDRIVE_INTEGRATION} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 			</AdminSettingSection>
 

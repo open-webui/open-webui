@@ -1,19 +1,27 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
-	import type { Writable } from 'svelte/store';
+	import { onMount } from 'svelte';
 
-	const i18n: Writable<any> = getContext('i18n');
-
-	import { user } from '$lib/stores';
-
-	import { fade } from 'svelte/transition';
+	import { socket, user } from '$lib/stores';
 
 	import ChatList from './ChatList.svelte';
 	import FolderKnowledge from './FolderKnowledge.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { getSharedFolderChats } from '$lib/apis/folders';
 
-	export let folder: any = null;
+	type FolderPlaceholderFolder = {
+		id?: string;
+		shared?: boolean;
+		user_id?: string;
+		access_grants?: unknown[];
+	};
+
+	type FolderChat = {
+		id: string;
+		active?: boolean;
+		[key: string]: unknown;
+	};
+
+	export let folder: FolderPlaceholderFolder | null = null;
 
 	let selectedTab = 'chats';
 
@@ -24,8 +32,9 @@
 	let direction: 'asc' | 'desc' = 'desc';
 	let currentFolderId: string | null = null;
 
-	let chats: any[] | null = null;
+	let chats: FolderChat[] | null = null;
 	let chatListLoading = false;
+	let refreshQueued = false;
 
 	$: showOwnerInfo = Boolean(
 		folder?.shared ||
@@ -53,9 +62,44 @@
 		setChatList();
 	};
 
-	const setChatList = async () => {
+	const updateChatActive = (chatId: string, active: boolean) => {
+		if (!chats) {
+			return false;
+		}
+
+		let found = false;
+		chats = chats.map((chat) => {
+			if (chat.id !== chatId) {
+				return chat;
+			}
+			found = true;
+			return { ...chat, active };
+		});
+		return found;
+	};
+
+	const refreshChatListSoon = (resetPage = false) => {
+		if (refreshQueued) {
+			if (resetPage) {
+				page = 1;
+			}
+			return;
+		}
+		if (resetPage) {
+			page = 1;
+		}
+		refreshQueued = true;
+		queueMicrotask(async () => {
+			refreshQueued = false;
+			await setChatList();
+		});
+	};
+
+	const setChatList = async (clear = false) => {
 		const folderId = folder?.id;
-		chats = null;
+		if (clear) {
+			chats = null;
+		}
 
 		if (folderId) {
 			// Always use the shared folder endpoint so owners also see
@@ -69,7 +113,6 @@
 				console.error(error);
 				return null;
 			});
-			chatListLoading = false;
 
 			if (res && res.chats) {
 				chats = res.chats;
@@ -78,16 +121,43 @@
 				chats = [];
 				totalChats = 0;
 			}
+			chatListLoading = false;
 		} else {
 			chats = [];
 			totalChats = 0;
+			chatListLoading = false;
 		}
 	};
+
+	const chatEventHandler = (event: {
+		chat_id?: string;
+		data?: { type?: string; data?: { active?: boolean } };
+	}) => {
+		if (event.data?.type === 'chat:active' && event.chat_id) {
+			const active = event.data.data?.active ?? false;
+			if (!updateChatActive(event.chat_id, active) && active) {
+				refreshChatListSoon(true);
+			}
+		} else if (event.data?.type === 'chat:list') {
+			refreshChatListSoon(true);
+		}
+	};
+
+	onMount(() => {
+		const socketInstance = $socket;
+		socketInstance?.on('events', chatEventHandler);
+		socketInstance?.on('connect', refreshChatListSoon);
+
+		return () => {
+			socketInstance?.off('events', chatEventHandler);
+			socketInstance?.off('connect', refreshChatListSoon);
+		};
+	});
 
 	$: if (folder?.id && folder.id !== currentFolderId) {
 		currentFolderId = folder.id;
 		page = 1;
-		setChatList();
+		setChatList(true);
 	}
 
 	$: if (!folder?.id && currentFolderId !== null) {

@@ -8,7 +8,7 @@
 
 	type AccessGrant = {
 		id?: string;
-		principal_type: 'user' | 'group';
+		principal_type: 'user' | 'group' | 'anyone';
 		principal_id: string;
 		permission: 'read' | 'write';
 	};
@@ -20,6 +20,7 @@
 
 	export let share = true;
 	export let sharePublic = true;
+	export let shareOpen = false;
 	export let shareUsers = true;
 
 	export let onChange = () => {};
@@ -49,6 +50,7 @@
 				{accessRoles}
 				{share}
 				{sharePublic}
+				{shareOpen}
 				{shareUsers}
 			/>
 		</div>

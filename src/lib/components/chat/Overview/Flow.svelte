@@ -1,7 +1,9 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
+	import { getContext } from 'svelte';
 
 	const dispatch = createEventDispatcher();
+	const i18n = getContext('i18n');
 
 	import { theme } from '$lib/stores';
 	import {
@@ -11,15 +13,16 @@
 		BackgroundVariant,
 		ControlButton
 	} from '@xyflow/svelte';
-	import BarsArrowUp from '$lib/components/icons/BarsArrowUp.svelte';
-	import Bars3BottomLeft from '$lib/components/icons/Bars3BottomLeft.svelte';
 	import AlignVertical from '$lib/components/icons/AlignVertical.svelte';
 	import AlignHorizontal from '$lib/components/icons/AlignHorizontal.svelte';
+	import Pin from '$lib/components/icons/Pin.svelte';
+	import PinSlash from '$lib/components/icons/PinSlash.svelte';
 
 	export let nodes;
 	export let nodeTypes;
 	export let edges;
 	export let setLayoutDirection;
+	export let pinned = false;
 </script>
 
 <SvelteFlow
@@ -43,6 +46,16 @@
 	}}
 >
 	<Controls showLock={false}>
+		<ControlButton
+			on:click={() => (pinned = !pinned)}
+			title={pinned ? $i18n.t('Viewport Pinned') : $i18n.t('Viewport Unpinned')}
+		>
+			{#if pinned}
+				<Pin />
+			{:else}
+				<PinSlash />
+			{/if}
+		</ControlButton>
 		<ControlButton on:click={() => setLayoutDirection('vertical')} title="Vertical Layout">
 			<AlignVertical className="size-4" />
 		</ControlButton>

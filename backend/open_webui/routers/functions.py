@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT, ENABLE_PLUGINS
-from open_webui.events import EVENTS, publish_event
+from open_webui.events import EVENTS, build_event, dispatch_event_functions, publish_event, schedule_webhook_dispatch
 from open_webui.internal.db import get_async_session
 from open_webui.models.functions import (
     FunctionForm,
@@ -293,6 +293,22 @@ async def toggle_function_by_id(
 ):
     function = await Functions.get_function_by_id(id, db=db)
     if function:
+        lifecycle_event = build_event(
+            request,
+            EVENTS.FUNCTION_DISABLE_STARTED if function.is_active else EVENTS.FUNCTION_ENABLE_STARTED,
+            actor=user,
+            subject_id=function.id,
+            subject_type='function',
+            data={'type': function.type, 'name': function.name},
+        )
+        await dispatch_event_functions(
+            request.app,
+            lifecycle_event,
+            request=request,
+            extra_function_ids=[function.id] if not function.is_active else None,
+        )
+        schedule_webhook_dispatch(request.app, lifecycle_event)
+
         function = await Functions.update_function_by_id(id, {'is_active': not function.is_active}, db=db)
 
         if function:

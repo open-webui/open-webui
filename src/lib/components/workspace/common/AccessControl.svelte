@@ -16,7 +16,7 @@
 
 	type AccessGrant = {
 		id?: string;
-		principal_type: 'user' | 'group';
+		principal_type: 'user' | 'group' | 'anyone';
 		principal_id: string;
 		permission: 'read' | 'write';
 	};
@@ -34,6 +34,7 @@
 
 	export let share = true;
 	export let sharePublic = true;
+	export let shareOpen = false;
 	export let shareUsers = true;
 	export let allowGroups = true;
 	export let defaultPermission: 'read' | 'write' = 'read';
@@ -162,6 +163,14 @@
 				grant.principal_type === 'user' && grant.principal_id === '*' && grant.permission === 'read'
 		);
 
+	const hasAnyoneReadGrant = (grants: AccessGrant[]): boolean =>
+		grants.some(
+			(grant) =>
+				grant.principal_type === 'anyone' &&
+				grant.principal_id === '*' &&
+				grant.permission === 'read'
+		);
+
 	const hasPublicWriteGrant = (grants: AccessGrant[]): boolean =>
 		grants.some(
 			(grant) =>
@@ -170,16 +179,17 @@
 				grant.permission === 'write'
 		);
 
-	const currentGrants = (): AccessGrant[] =>
-		Array.isArray(accessGrants) ? (accessGrants as AccessGrant[]) : [];
+	const currentGrants = (grants: AccessGrant[] | any = accessGrants): AccessGrant[] =>
+		Array.isArray(grants) ? (grants as AccessGrant[]) : [];
 
 	const getPrincipalIdsByPermission = (
 		principalType: 'user' | 'group',
-		permission: 'read' | 'write'
+		permission: 'read' | 'write',
+		grants: AccessGrant[] | any = accessGrants
 	): string[] =>
 		Array.from(
 			new Set(
-				currentGrants()
+				currentGrants(grants)
 					.filter(
 						(grant) => grant.principal_type === principalType && grant.permission === permission
 					)
@@ -188,7 +198,7 @@
 		);
 
 	const hasPrincipalGrant = (
-		principalType: 'user' | 'group',
+		principalType: 'user' | 'group' | 'anyone',
 		principalId: string,
 		permission: 'read' | 'write'
 	): boolean =>
@@ -204,14 +214,29 @@
 		onChange(accessGrants);
 	};
 
-	const setPublic = (isPublic: boolean) => {
-		// Remove all user:* grants
+	const getVisibility = (grants: AccessGrant[]): 'private' | 'public' | 'open' => {
+		if (hasAnyoneReadGrant(grants)) return 'open';
+		if (hasPublicReadGrant(grants)) return 'public';
+		return 'private';
+	};
+
+	const setVisibility = (visibility: 'private' | 'public' | 'open') => {
 		const filtered = currentGrants().filter(
-			(grant) => !(grant.principal_type === 'user' && grant.principal_id === '*')
+			(grant) =>
+				!(
+					(grant.principal_type === 'user' || grant.principal_type === 'anyone') &&
+					grant.principal_id === '*'
+				)
 		);
-		if (isPublic) {
+		if (visibility === 'public') {
 			filtered.push({
 				principal_type: 'user',
+				principal_id: '*',
+				permission: 'read'
+			});
+		} else if (visibility === 'open') {
+			filtered.push({
+				principal_type: 'anyone',
 				principal_id: '*',
 				permission: 'read'
 			});
@@ -237,7 +262,7 @@
 	};
 
 	const upsertPrincipalGrant = (
-		principalType: 'user' | 'group',
+		principalType: 'user' | 'group' | 'anyone',
 		principalId: string,
 		permission: 'read' | 'write',
 		grants: AccessGrant[]
@@ -263,7 +288,7 @@
 	};
 
 	const removePrincipalGrant = (
-		principalType: 'user' | 'group',
+		principalType: 'user' | 'group' | 'anyone',
 		principalId: string,
 		permission: 'read' | 'write',
 		grants: AccessGrant[]
@@ -277,14 +302,17 @@
 				)
 		);
 
-	const removePrincipal = (principalType: 'user' | 'group', principalId: string) => {
+	const removePrincipal = (principalType: 'user' | 'group' | 'anyone', principalId: string) => {
 		let next = [...currentGrants()];
 		next = removePrincipalGrant(principalType, principalId, 'read', next);
 		next = removePrincipalGrant(principalType, principalId, 'write', next);
 		commitAccessGrants(next);
 	};
 
-	const togglePrincipalWrite = (principalType: 'user' | 'group', principalId: string) => {
+	const togglePrincipalWrite = (
+		principalType: 'user' | 'group' | 'anyone',
+		principalId: string
+	) => {
 		let next = [...currentGrants()];
 		const hasWrite = hasPrincipalGrant(principalType, principalId, 'write');
 		if (hasWrite) {
@@ -379,12 +407,14 @@
 	$: if (readGroupIds.length > 0 || writeGroupIds.length > 0) {
 		void ensureGroupsByIds([...readGroupIds, ...writeGroupIds]);
 	}
-	$: readGroupIds = (accessGrants, getPrincipalIdsByPermission('group', 'read'));
-	$: writeGroupIds = (accessGrants, getPrincipalIdsByPermission('group', 'write'));
-	$: readUserIds =
-		(accessGrants, getPrincipalIdsByPermission('user', 'read').filter((id) => id !== '*'));
-	$: writeUserIds =
-		(accessGrants, getPrincipalIdsByPermission('user', 'write').filter((id) => id !== '*'));
+	$: readGroupIds = getPrincipalIdsByPermission('group', 'read', accessGrants);
+	$: writeGroupIds = getPrincipalIdsByPermission('group', 'write', accessGrants);
+	$: readUserIds = getPrincipalIdsByPermission('user', 'read', accessGrants).filter(
+		(id) => id !== '*'
+	);
+	$: writeUserIds = getPrincipalIdsByPermission('user', 'write', accessGrants).filter(
+		(id) => id !== '*'
+	);
 
 	$: selectedUserIds = Array.from(new Set([...readUserIds, ...writeUserIds]));
 
@@ -450,7 +480,7 @@
 		<div class="flex gap-2 items-center">
 			<div>
 				<div class="p-2 bg-black/5 dark:bg-white/5 rounded-full">
-					{#if !hasPublicReadGrant(accessGrants ?? [])}
+					{#if getVisibility(accessGrants ?? []) === 'private'}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
@@ -486,36 +516,41 @@
 
 			<div>
 				<Tooltip
-					content={!(share && sharePublic) && !hasPublicReadGrant(accessGrants ?? [])
+					content={!(share && sharePublic) && getVisibility(accessGrants ?? []) === 'private'
 						? $i18n.t('You do not have permission to make this public')
 						: ''}
 				>
 					<select
 						id="models"
 						class="outline-none bg-transparent text-sm font-normal block w-fit pr-8 max-w-full placeholder-gray-400"
-						value={!hasPublicReadGrant(accessGrants ?? []) ? 'private' : 'public'}
+						value={getVisibility(accessGrants ?? [])}
 						on:change={(e) => {
-							setPublic((e.target as HTMLSelectElement).value === 'public');
+							setVisibility((e.target as HTMLSelectElement).value as 'private' | 'public' | 'open');
 						}}
 					>
 						<option class=" text-gray-700" value="private">{$i18n.t('Private')}</option>
 						{#if (share && sharePublic) || hasPublicReadGrant(accessGrants ?? [])}
 							<option class=" text-gray-700" value="public">{$i18n.t('Public')}</option>
 						{/if}
+						{#if (share && shareOpen) || hasAnyoneReadGrant(accessGrants ?? [])}
+							<option class=" text-gray-700" value="open">{$i18n.t('Open')}</option>
+						{/if}
 					</select>
 				</Tooltip>
 
 				<div class=" text-xs text-gray-400 font-normal">
-					{#if !hasPublicReadGrant(accessGrants ?? [])}
+					{#if getVisibility(accessGrants ?? []) === 'private'}
 						{$i18n.t('Only select users and groups with permission can access')}
-					{:else}
+					{:else if getVisibility(accessGrants ?? []) === 'public'}
 						{$i18n.t('Accessible to all users')}
+					{:else}
+						{$i18n.t('Anyone with the link can view')}
 					{/if}
 				</div>
 			</div>
 		</div>
 
-		{#if hasPublicReadGrant(accessGrants ?? []) && accessRoles.includes('write')}
+		{#if hasPublicReadGrant(accessGrants ?? []) && !hasAnyoneReadGrant(accessGrants ?? []) && accessRoles.includes('write')}
 			<div class="flex w-full justify-between mt-1.5 ml-0.5">
 				<div class="self-center text-xs">
 					{$i18n.t('Allow public write access')}
@@ -660,7 +695,7 @@
 				{/each}
 			{/if}
 
-			{#if !hasPublicReadGrant(accessGrants ?? []) && accessGroups.length === 0 && selectedUsers.length === 0}
+			{#if getVisibility(accessGrants ?? []) === 'private' && accessGroups.length === 0 && selectedUsers.length === 0}
 				<div class="text-xs text-gray-500 text-center py-3">
 					{$i18n.t('No access grants. Private to you.')}
 				</div>

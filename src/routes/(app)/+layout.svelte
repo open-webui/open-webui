@@ -38,7 +38,9 @@
 		showSearch,
 		showSidebar,
 		showControls,
-		mobile
+		mobile,
+		chatId,
+		chats
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -139,51 +141,49 @@
 		toolServers.set(toolServersData);
 
 		// Inject enabled terminal servers as always-on tool servers
-		const enabledTerminals = ($settings?.terminalServers ?? []).filter((s) => s.enabled);
-		if (enabledTerminals.length > 0) {
-			let terminalServersData = await getToolServersData(
-				enabledTerminals.map((t) => ({
-					url: t.url,
-					auth_type: t.auth_type ?? 'bearer',
-					key: t.key ?? '',
-					path: t.path ?? '/openapi.json',
-					config: { enable: true }
-				}))
-			);
-			terminalServersData = terminalServersData
-				.filter((data) => {
-					if (!data || data.error) {
-						toast.error(
-							$i18n.t(`Failed to connect to {{URL}} terminal server`, {
-								URL: data?.url
-							})
-						);
-						return false;
-					}
-					return true;
-				})
-				.map((data, i) => ({
-					...data,
-					key: enabledTerminals[i]?.key ?? ''
-				}));
-
-			terminalServers.set(terminalServersData);
-		} else {
-			terminalServers.set([]);
-		}
+		const enabledTerminals = (($settings as any)?.terminalServers ?? []).filter(
+			(s: any) => s.enabled || s.url === $selectedTerminalId
+		);
 
 		// Fetch terminal servers the user has access to (for FileNav + terminal_id)
 		const systemTerminals = await getTerminalServers(localStorage.token);
-		if (systemTerminals.length > 0) {
+		terminalServers.set([
+			...(enabledTerminals.length > 0
+				? (
+						await getToolServersData(
+							enabledTerminals.map((t: any) => ({
+								url: t.url,
+								auth_type: t.auth_type ?? 'bearer',
+								key: t.key ?? '',
+								path: t.path ?? '/openapi.json',
+								config: { enable: true }
+							}))
+						)
+					)
+						.filter((data) => {
+							if (!data || data.error) {
+								toast.error(
+									$i18n.t(`Failed to connect to {{URL}} terminal server`, {
+										URL: data?.url
+									})
+								);
+								return false;
+							}
+							return true;
+						})
+						.map((data, i) => ({
+							...data,
+							key: enabledTerminals[i]?.key ?? ''
+						}))
+				: []),
 			// Store with proxy URL and session key for FileNav file browsing
-			const terminalEntries = systemTerminals.map((t) => ({
+			...systemTerminals.map((t) => ({
 				id: t.id,
 				url: `${WEBUI_API_BASE_URL}/terminals/${t.id}`,
 				name: t.name,
 				key: localStorage.token
-			}));
-			terminalServers.update((existing) => [...existing, ...terminalEntries]);
-		}
+			}))
+		]);
 	};
 
 	const setBanners = async () => {
@@ -199,6 +199,9 @@
 	const openSettingsFromUrl = async () => {
 		const requestedSettings = $page.url.searchParams.get('settings');
 		if (!requestedSettings) {
+			// Param handled and stripped; allow the same deep link to be
+			// handled again later in this session.
+			handledSettingsUrl = '';
 			return;
 		}
 
@@ -224,9 +227,25 @@
 		});
 	};
 
+	const gotoAuth = async () => {
+		const currentUrl = `${$page.url.pathname}${$page.url.search}`;
+		await goto(`/auth?redirect=${encodeURIComponent(currentUrl)}`);
+	};
+
+	const navigateChat = async (direction: -1 | 1) => {
+		if (!$chats?.length) return;
+
+		const currentIndex = $chats.findIndex((chat) => chat.id === $chatId);
+		const nextChat = currentIndex === -1 ? $chats[0] : $chats[currentIndex + direction];
+
+		if (nextChat) {
+			await goto(`/c/${nextChat.id}`);
+		}
+	};
+
 	onMount(async () => {
 		if ($user === undefined || $user === null) {
-			await goto('/auth');
+			await gotoAuth();
 			return;
 		}
 		if (!['user', 'admin'].includes($user?.role)) {
@@ -243,9 +262,12 @@
 			}).catch((e) => console.error('Failed to load user settings:', e))
 		]);
 
-		const loadToolServers = setToolServers().catch((e) =>
-			console.error('Failed to load tool servers:', e)
-		);
+		selectedTerminalId.set(localStorage.selectedTerminalId ?? null);
+
+		const loadToolServers = setToolServers().catch((e) => {
+			console.error('Failed to load tool servers:', e);
+			terminalServers.set([]);
+		});
 		if (
 			$page.url.searchParams.get('q') &&
 			($page.url.searchParams.get('submit') ?? 'true') === 'true'
@@ -284,6 +306,18 @@
 					console.log('Shortcut triggered: TOGGLE_SIDEBAR');
 					event.preventDefault();
 					showSidebar.set(!$showSidebar);
+				} else if (shortcut === Shortcut.NAVIGATE_CHAT_UP) {
+					console.log('Shortcut triggered: NAVIGATE_CHAT_UP');
+					event.preventDefault();
+					await navigateChat(-1);
+				} else if (shortcut === Shortcut.NAVIGATE_CHAT_DOWN) {
+					console.log('Shortcut triggered: NAVIGATE_CHAT_DOWN');
+					event.preventDefault();
+					await navigateChat(1);
+				} else if (shortcut === Shortcut.TOGGLE_CONTROLS) {
+					console.log('Shortcut triggered: TOGGLE_CONTROLS');
+					event.preventDefault();
+					showControls.set(!$showControls);
 				} else if (shortcut === Shortcut.DELETE_CHAT) {
 					console.log('Shortcut triggered: DELETE_CHAT');
 					event.preventDefault();
@@ -368,7 +402,6 @@
 		});
 
 		// Persist selectedTerminalId across page loads
-		selectedTerminalId.set(localStorage.selectedTerminalId ?? null);
 		selectedTerminalId.subscribe((value) => {
 			if (value === null) {
 				delete localStorage.selectedTerminalId;
@@ -382,8 +415,15 @@
 		loaded = true;
 	});
 
-	$: if (loaded) {
+	// `$page.url` must be referenced here: `$:` only tracks variables used in
+	// the statement itself, and reads inside openSettingsFromUrl don't count —
+	// without it, client-side navigations to `?settings=...` are never handled.
+	$: if (loaded && $page.url) {
 		void openSettingsFromUrl();
+	}
+
+	$: if (loaded && ($user === undefined || $user === null)) {
+		void gotoAuth();
 	}
 
 	const checkForVersionUpdates = async () => {
@@ -477,7 +517,9 @@
 				<Sidebar />
 
 				{#if loaded}
-					<slot />
+					<main id="main-content" class="contents">
+						<slot />
+					</main>
 				{:else}
 					<div
 						class="w-full flex-1 h-full flex items-center justify-center {$showSidebar

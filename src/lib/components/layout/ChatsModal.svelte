@@ -107,6 +107,7 @@
 				{/if}
 			</div>
 			<button
+				aria-label={$i18n.t('Close')}
 				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				on:click={() => {
 					show = false;
@@ -312,6 +313,7 @@
 												{#if unarchiveHandler}
 													<Tooltip content={$i18n.t('Unarchive Chat')}>
 														<button
+															aria-label={$i18n.t('Unarchive Chat')}
 															class="self-center w-fit px-1 text-sm rounded-xl"
 															on:click={async (e) => {
 																e.stopImmediatePropagation();

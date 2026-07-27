@@ -7,7 +7,7 @@
 
 	onMount(() => {
 		if (!$config?.features?.enable_plugins) {
-			goto('/workspace');
+			goto('/workspace', { replaceState: true });
 		}
 	});
 </script>

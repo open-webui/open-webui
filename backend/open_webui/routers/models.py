@@ -50,7 +50,7 @@ router = APIRouter()
 
 
 def add_chat_variables_schema(model_dict: dict) -> dict:
-    system = ((model_dict.get('params') or {}).get('system') if isinstance(model_dict.get('params'), dict) else None)
+    system = (model_dict.get('params') or {}).get('system') if isinstance(model_dict.get('params'), dict) else None
     schema = get_chat_variables_schema(system)
     if schema:
         model_dict.setdefault('meta', {})['chat_variables_schema'] = schema
@@ -189,16 +189,16 @@ async def get_models(
         data = add_chat_variables_schema(model.model_dump())
         if data.get('meta'):
             data['meta'].pop('profile_image_url', None)
-        items.append(
-            ModelAccessResponse(
-                **data,
-                write_access=(
-                    (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or user.id == model.user_id
-                    or model.id in writable_model_ids
-                ),
-            )
+        write_access = (
+            (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+            or user.id == model.user_id
+            or model.id in writable_model_ids
         )
+        # Strip params (system prompt and other curated config) for read-only
+        # callers, mirroring the per-id endpoint.
+        if not write_access:
+            data['params'] = {}
+        items.append(ModelAccessResponse(**data, write_access=write_access))
 
     return ModelAccessListResponse(
         items=items,

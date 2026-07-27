@@ -24,7 +24,6 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event, publish_model_provider_request_failed
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
-    AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     AIOHTTP_FILE_STREAM_CHUNK_SIZE,
     BYPASS_MODEL_ACCESS_CONTROL,
@@ -41,13 +40,15 @@ from open_webui.models.users import UserModel
 from open_webui.utils.access_control import check_model_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
+from open_webui.utils.model_ids import strip_provider_model_prefix
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import calculate_sha256
 from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
 )
-from open_webui.utils.session_pool import cleanup_response, get_session, stream_wrapper
+from open_webui.utils.session_pool import cleanup_response, get_client_timeout, get_session, stream_wrapper
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +57,7 @@ log = logging.getLogger(__name__)
 # clients to attempt decompression of an already-decoded payload, resulting
 # in ZlibError.  See https://github.com/aio-libs/aiohttp/issues/4462.
 _STRIP_PROXY_HEADERS = frozenset({'Content-Encoding', 'Content-Length', 'Transfer-Encoding'})
+_MODEL_LIST_TIMEOUT = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
 
 
 def _clean_proxy_headers(raw_headers) -> dict:
@@ -83,9 +85,9 @@ async def send_get_request(
             url,
             headers=headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
+            timeout=_MODEL_LIST_TIMEOUT,
         ) as r:
-            return await r.json()
+            return await r.json(loads=JSONCodec.loads)
     except Exception as exc:
         log.error(f'Connection error: {exc}')
         return None
@@ -99,6 +101,8 @@ async def send_request(
     key: str | None = None,
     user: UserModel = None,
     stream: bool = False,
+    # passthrough must stay False for /api/chat: middleware parses it per line
+    passthrough: bool = False,
     content_type: str | None = None,
     metadata: dict | None = None,
     api_config: dict | None = None,
@@ -121,7 +125,7 @@ async def send_request(
 
         # Custom per-connection headers last so admin-set headers take precedence.
         if api_config and api_config.get('headers'):
-            headers.update(get_custom_headers(api_config['headers'], user, metadata, request=request))
+            headers.update(await get_custom_headers(api_config['headers'], user, metadata, request=request))
 
         r = await session.request(
             method,
@@ -129,12 +133,12 @@ async def send_request(
             data=payload,
             headers=headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            timeout=get_client_timeout(stream=stream),
         )
 
         if not r.ok:
             try:
-                res = await r.json()
+                res = await r.json(loads=JSONCodec.loads)
                 await publish_model_provider_request_failed(
                     request,
                     actor=user,
@@ -170,13 +174,13 @@ async def send_request(
 
             streaming = True
             return StreamingResponse(
-                stream_wrapper(r),
+                stream_wrapper(r, passthrough=passthrough),
                 status_code=r.status,
                 headers=response_headers,
             )
         else:
             try:
-                return await r.json()
+                return await r.json(loads=JSONCodec.loads)
             except Exception:
                 return None
 
@@ -263,16 +267,16 @@ async def verify_connection(
             f'{form_data.url}/api/version',
             headers=headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
+            timeout=_MODEL_LIST_TIMEOUT,
         ) as r:
             if r.status != 200:
                 detail = f'HTTP Error: {r.status}'
-                res = await r.json()
+                res = await r.json(loads=JSONCodec.loads)
                 if 'error' in res:
                     detail = f'External Error: {res["error"]}'
                 raise Exception(detail)
 
-            return await r.json()
+            return await r.json(loads=JSONCodec.loads)
     except aiohttp.ClientError as exc:
         log.exception(f'Client error: {exc}')
         raise HTTPException(status_code=500, detail=ERROR_MESSAGES.SERVER_CONNECTION_ERROR)
@@ -535,6 +539,7 @@ async def get_ollama_loaded_models(
 @router.get('/api/version/{url_idx}')
 async def get_ollama_versions(
     request: Request,
+    user=Depends(get_verified_user),
     url_idx: int | None = None,
 ):
     """Return the lowest Ollama version across all configured backends."""
@@ -656,6 +661,7 @@ async def pull_model(
         key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
         user=user,
         stream=True,
+        passthrough=True,
     )
 
 
@@ -695,6 +701,7 @@ async def push_model(
         key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
         user=user,
         stream=True,
+        passthrough=True,
     )
 
 
@@ -727,6 +734,7 @@ async def create_model(
         key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
         user=user,
         stream=True,
+        passthrough=True,
     )
 
 
@@ -895,8 +903,7 @@ async def embed(
     key = get_api_key(url_idx, url, api_configs)
 
     prefix_id = api_config.get('prefix_id')
-    if prefix_id:
-        form_data.model = form_data.model.replace(f'{prefix_id}.', '')
+    form_data.model = strip_provider_model_prefix(form_data.model, prefix_id)
 
     return await send_request(
         f'{url}/api/embed',
@@ -947,8 +954,7 @@ async def embeddings(
     key = get_api_key(url_idx, url, api_configs)
 
     prefix_id = api_config.get('prefix_id')
-    if prefix_id:
-        form_data.model = form_data.model.replace(f'{prefix_id}.', '')
+    form_data.model = strip_provider_model_prefix(form_data.model, prefix_id)
 
     return await send_request(
         f'{url}/api/embeddings',
@@ -1003,8 +1009,7 @@ async def generate_completion(
     api_config = api_configs.get(str(url_idx), api_configs.get(url, {}))
 
     prefix_id = api_config.get('prefix_id')
-    if prefix_id:
-        form_data.model = form_data.model.replace(f'{prefix_id}.', '')
+    form_data.model = strip_provider_model_prefix(form_data.model, prefix_id)
 
     return await send_request(
         f'{url}/api/generate',
@@ -1012,6 +1017,7 @@ async def generate_completion(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=True,
+        passthrough=True,
     )
 
 
@@ -1063,6 +1069,10 @@ async def get_ollama_url(request: Request, model: str, url_idx: int | None = Non
     await validate_ollama_backend_idx(request, model, url_idx, user)
     if url_idx is None:
         models = request.app.state.OLLAMA_MODELS
+        if not models or model not in models:
+            await get_all_models.cache.clear()
+            await get_all_models(request, user=user)
+            models = request.app.state.OLLAMA_MODELS
         if model not in models:
             raise HTTPException(
                 status_code=400,
@@ -1107,7 +1117,7 @@ async def generate_chat_completion(
         raise HTTPException(status_code=400, detail=str(exc))
 
     if isinstance(form_data, BaseModel):
-        payload = {**form_data.model_dump(exclude_none=True)}
+        payload = form_data.model_dump(exclude_none=True)
 
     payload.pop('metadata', None)
 
@@ -1135,8 +1145,7 @@ async def generate_chat_completion(
     api_config = resolve_api_config(api_configs, url_idx, url)
 
     prefix_id = api_config.get('prefix_id')
-    if prefix_id:
-        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+    payload['model'] = strip_provider_model_prefix(payload['model'], prefix_id)
 
     return await send_request(
         f'{url}/api/chat',
@@ -1212,8 +1221,7 @@ async def generate_openai_completion(
         log.exception(exc)
         raise HTTPException(status_code=400, detail=str(exc))
 
-    payload = {**form_data.model_dump(exclude_none=True, exclude=['metadata'])}
-    payload.pop('metadata', None)
+    payload = form_data.model_dump(exclude_none=True, exclude=['metadata'])
 
     model_id = form_data.model
     model_info = await Models.get_model_by_id(model_id)
@@ -1232,8 +1240,7 @@ async def generate_openai_completion(
     api_config = resolve_api_config(api_configs, url_idx, url)
 
     prefix_id = api_config.get('prefix_id')
-    if prefix_id:
-        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+    payload['model'] = strip_provider_model_prefix(payload['model'], prefix_id)
 
     return await send_request(
         f'{url}/v1/completions',
@@ -1241,6 +1248,7 @@ async def generate_openai_completion(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
+        passthrough=True,
         metadata=metadata,
         api_config=api_config,
         request=request,
@@ -1267,7 +1275,7 @@ async def generate_openai_embeddings(
         log.exception(exc)
         raise HTTPException(status_code=400, detail=str(exc))
 
-    payload = {**form_data.model_dump(exclude_none=True)}
+    payload = form_data.model_dump(exclude_none=True)
     payload.pop('metadata', None)
 
     model_id = form_data.model
@@ -1283,8 +1291,7 @@ async def generate_openai_embeddings(
     api_config = resolve_api_config((await Config.get('ollama.api_configs', {})), url_idx, url)
 
     prefix_id = api_config.get('prefix_id')
-    if prefix_id:
-        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+    payload['model'] = strip_provider_model_prefix(payload['model'], prefix_id)
 
     return await send_request(
         f'{url}/v1/embeddings',
@@ -1318,8 +1325,7 @@ async def generate_openai_chat_completion(
         log.exception(exc)
         raise HTTPException(status_code=400, detail=str(exc))
 
-    payload = {**form_data.model_dump(exclude_none=True, exclude=['metadata'])}
-    payload.pop('metadata', None)
+    payload = form_data.model_dump(exclude_none=True, exclude=['metadata'])
 
     model_id = form_data.model
     model_info = await Models.get_model_by_id(model_id)
@@ -1342,8 +1348,7 @@ async def generate_openai_chat_completion(
     api_config = resolve_api_config(api_configs, url_idx, url)
 
     prefix_id = api_config.get('prefix_id')
-    if prefix_id:
-        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+    payload['model'] = strip_provider_model_prefix(payload['model'], prefix_id)
 
     return await send_request(
         f'{url}/v1/chat/completions',
@@ -1351,6 +1356,7 @@ async def generate_openai_chat_completion(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
+        passthrough=True,
         metadata=metadata,
         api_config=api_config,
         request=request,
@@ -1394,8 +1400,7 @@ async def generate_anthropic_messages(
     api_config = api_configs.get(str(url_idx), api_configs.get(url, {}))  # Legacy support
 
     prefix_id = api_config.get('prefix_id', None)
-    if prefix_id:
-        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+    payload['model'] = strip_provider_model_prefix(payload['model'], prefix_id)
 
     return await send_request(
         f'{url}/v1/messages',
@@ -1403,6 +1408,7 @@ async def generate_anthropic_messages(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
+        passthrough=True,
         content_type='text/event-stream' if payload.get('stream', False) else None,
         api_config=api_config,
         request=request,
@@ -1452,8 +1458,7 @@ async def generate_responses(
     api_config = api_configs.get(str(url_idx), api_configs.get(url, {}))  # Legacy support
 
     prefix_id = api_config.get('prefix_id', None)
-    if prefix_id:
-        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+    payload['model'] = strip_provider_model_prefix(payload['model'], prefix_id)
 
     return await send_request(
         f'{url}/v1/responses',
@@ -1461,6 +1466,7 @@ async def generate_responses(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
+        passthrough=True,
         content_type='text/event-stream' if payload.get('stream', False) else None,
         api_config=api_config,
         request=request,
@@ -1661,7 +1667,7 @@ async def upload_model(
                 data=blob_chunks(),
                 headers={'Content-Length': str(total_size)},
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+                timeout=get_client_timeout(),
             ) as resp:
                 if not resp.ok:
                     raise Exception('Ollama: Could not create blob, Please try again.')
@@ -1684,7 +1690,7 @@ async def upload_model(
                 headers={'Content-Type': 'application/json'},
                 data=json.dumps(create_payload),
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+                timeout=get_client_timeout(),
             ) as create_resp:
                 if create_resp.ok:
                     log.info('API SUCCESS!')

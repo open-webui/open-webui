@@ -2,7 +2,11 @@
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 
-	const i18n: Writable<any> = getContext('i18n');
+	type ChatListI18n = {
+		t: (key: string, options?: Record<string, unknown>) => string;
+	};
+
+	const i18n: Writable<ChatListI18n> = getContext('i18n');
 
 	import dayjs from 'dayjs';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -12,10 +16,25 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { chatId, socket } from '$lib/stores';
 
 	dayjs.extend(localizedFormat);
 
-	export let chats: any[] = [];
+	type ChatListItem = {
+		id: string;
+		title?: string;
+		updated_at?: number | null;
+		created_at?: number | null;
+		last_read_at?: number | null;
+		active?: boolean;
+		time_range?: string;
+		user_id?: string;
+		owner_name?: string;
+		[key: string]: unknown;
+	};
+
+	export let chats: ChatListItem[] = [];
 
 	export let chatListLoading = false;
 	export let showOwnerInfo = false;
@@ -24,10 +43,10 @@
 	export let perPage = 10;
 	export let orderBy: 'title' | 'updated_at' = 'updated_at';
 	export let direction: 'asc' | 'desc' = 'desc';
-	export let onPageChange: Function = () => {};
-	export let onSort: Function = () => {};
+	export let onPageChange: (page: number) => void | Promise<void> = () => {};
+	export let onSort: (key: 'title' | 'updated_at') => void | Promise<void> = () => {};
 
-	let chatList: any[] | null = null;
+	let chatList: ChatListItem[] | null = null;
 	let totalPages = 1;
 	let pages: (number | 'ellipsis')[] = [];
 
@@ -44,6 +63,22 @@
 
 	const setSortKey = (key: 'title' | 'updated_at') => {
 		onSort(key);
+	};
+
+	const markChatRead = (chat: ChatListItem, unread: boolean) => {
+		if (!unread) {
+			return;
+		}
+
+		const lastReadAt = Date.now() / 1000;
+		chatList = (chatList ?? []).map((item) =>
+			item.id === chat.id ? { ...item, last_read_at: lastReadAt } : item
+		);
+
+		$socket?.emit('events:chat', {
+			chat_id: chat.id,
+			data: { type: 'last_read_at' }
+		});
 	};
 
 	const buildPages = (currentPage: number, pageCount: number): (number | 'ellipsis')[] => {
@@ -138,6 +173,11 @@
 		{/if}
 
 		{#each chatList as chat, idx (chat.id)}
+			{@const unread =
+				chat.id !== $chatId &&
+				!chat.active &&
+				(chat.last_read_at == null ||
+					(chat.updated_at != null && chat.updated_at > chat.last_read_at))}
 			{#if (idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)) && chat?.time_range}
 				<div
 					class="w-full text-xs text-gray-500 dark:text-gray-500 font-normal {idx === 0
@@ -170,14 +210,31 @@
 				class=" w-full flex justify-between items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850"
 				draggable="false"
 				href={`/c/${chat.id}`}
+				on:click={() => markChatRead(chat, unread)}
 			>
-				<div class="text-ellipsis line-clamp-1 w-full sm:basis-3/5">
-					{chat?.title}
+				<div class="flex min-w-0 items-center w-full sm:basis-3/5">
+					{#if chat.active}
+						<div class="shrink-0 self-center pr-2">
+							<Spinner className="size-3" />
+						</div>
+					{:else if unread}
+						<div class="shrink-0 self-center pr-2.5 flex transition-opacity duration-300">
+							<div class="size-1.5 bg-sky-500 rounded-full"></div>
+						</div>
+					{/if}
+
+					<div
+						class="text-ellipsis line-clamp-1 min-w-0 {unread
+							? 'font-normal text-gray-800 dark:text-gray-200'
+							: ''}"
+					>
+						{chat?.title}
+					</div>
 				</div>
 
 				<div class="hidden sm:flex sm:basis-2/5 items-center justify-end gap-2">
 					<div class=" text-gray-500 dark:text-gray-400 text-xs">
-						{dayjs(chat?.updated_at * 1000).calendar()}
+						{dayjs((chat.updated_at ?? chat.created_at ?? 0) * 1000).calendar()}
 					</div>
 
 					{#if showOwnerInfo && chat.user_id && chat.owner_name}

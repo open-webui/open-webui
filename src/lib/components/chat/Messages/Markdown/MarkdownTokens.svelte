@@ -193,9 +193,7 @@
 					class=" w-full text-sm text-start text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
 					dir="auto"
 				>
-					<thead
-						class="text-xs text-gray-700 uppercase bg-white dark:bg-gray-900 dark:text-gray-400 border-none"
-					>
+					<thead class="text-xs text-gray-700 uppercase dark:text-gray-400 border-none">
 						<tr class="">
 							{#each token.header as header, headerIdx}
 								<th
@@ -220,7 +218,7 @@
 					</thead>
 					<tbody>
 						{#each token.rows as row, rowIdx}
-							<tr class="bg-white dark:bg-gray-900 text-xs">
+							<tr class="text-xs">
 								{#each row ?? [] as cell, cellIdx}
 									<td
 										class="px-3! py-2! text-gray-900 dark:text-white w-max {token.rows.length -

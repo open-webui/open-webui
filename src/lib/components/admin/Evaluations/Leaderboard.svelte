@@ -201,7 +201,7 @@
 				<tbody>
 					{#each sortedModels as model, idx (model.id)}
 						<tr
-							class="bg-white dark:bg-gray-900 text-xs group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850/50 transition"
+							class="text-xs group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850/50 transition"
 							on:click={() => openModal(model)}
 						>
 							<td class="px-3 py-1.5 font-normal text-gray-900 dark:text-white">

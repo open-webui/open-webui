@@ -1,17 +1,21 @@
 <script lang="ts">
+	import { v4 as uuidv4 } from 'uuid';
+
 	export let label = '';
 	export let description = '';
 	export let className = '';
 	export let labelClassName = '';
+
+	const labelId = `admin-setting-${uuidv4()}`;
 </script>
 
 <div class="flex items-center justify-between gap-4 {className}">
-	<div class="min-w-0 text-xs text-gray-600 dark:text-gray-400 {labelClassName}">
+	<div id={labelId} class="min-w-0 text-xs text-gray-600 dark:text-gray-400 {labelClassName}">
 		<slot name="label">{label}</slot>
 	</div>
 
 	<div class="shrink-0">
-		<slot />
+		<slot {labelId} />
 	</div>
 </div>
 

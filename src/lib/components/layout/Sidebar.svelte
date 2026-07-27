@@ -27,7 +27,14 @@
 		WEBUI_NAME,
 		sidebarWidth
 	} from '$lib/stores';
-	import { loadNextChatListPage, refreshChatList, setChatActive } from '$lib/stores/chatList';
+	import {
+		loadNextChatListPage,
+		refreshChatList,
+		registerFolderRefreshHandler,
+		setAllChatsRead,
+		setChatActive,
+		setChatReadAt
+	} from '$lib/stores/chatList';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -41,7 +48,8 @@
 		updateChatFolderIdById,
 		importChats,
 		deleteAllChats,
-		getChatListBySearchText
+		getChatListBySearchText,
+		markChatsRead
 	} from '$lib/apis/chats';
 	import {
 		createNewFolder,
@@ -80,6 +88,10 @@
 	import WorkspaceIcon from './Sidebar/icons/Workspace.svelte';
 	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
+	import Dropdown from '../common/Dropdown.svelte';
+	import DropdownMenu from '../common/DropdownMenu.svelte';
+	import CheckIcon from '../icons/Check.svelte';
+	import MoreHorizontalIcon from './Sidebar/icons/MoreHorizontal.svelte';
 
 	const BREAKPOINT = 768;
 	const DEFAULT_PINNED_ITEMS = ['notes', 'workspace'];
@@ -115,9 +127,19 @@
 	let showChannels = false;
 	let showFolders = false;
 	let showSharedFolders = false;
+	let showChatsMenu = false;
 
 	let folders = {};
-	let folderRegistry: Record<string, { setFolderItems?: () => unknown }> = {};
+	let folderRegistry: Record<
+		string,
+		{
+			setFolderItems?: () => unknown;
+			upsertChat?: (chat: Record<string, unknown>) => unknown;
+			setChatActive?: (chatId: string, active: boolean) => boolean;
+			setChatReadAt?: (chatId: string, lastReadAt: number) => boolean;
+			setAllChatsRead?: () => unknown;
+		}
+	> = {};
 
 	let newFolderId = null;
 
@@ -381,6 +403,7 @@
 	const refreshChatRows = async () => {
 		const result = await refreshChatList(localStorage.token, { refreshPinned: true });
 		if (result.accepted) {
+			await initFolders();
 			await Promise.all(Object.values(folderRegistry).map((folder) => folder?.setFolderItems?.()));
 			allChatsLoaded = result.allLoaded;
 			chatListReady = true;
@@ -394,6 +417,52 @@
 		allChatsLoaded = result.allLoaded;
 
 		chatListLoading = false;
+	};
+
+	const applyFolderUnreadCounts = (folderUnreadCounts: Record<string, number>) => {
+		folders = Object.fromEntries(
+			Object.entries(folders).map(([id, folder]) => [
+				id,
+				id in folderUnreadCounts ? { ...folder, unread_count: folderUnreadCounts[id] } : folder
+			])
+		);
+		_folders.update((folderList) =>
+			folderList.map((folder) =>
+				folder.id in folderUnreadCounts
+					? { ...folder, unread_count: folderUnreadCounts[folder.id] }
+					: folder
+			)
+		);
+	};
+
+	const applyChatReadState = (data) => {
+		if (data?.folder_unread_counts) {
+			applyFolderUnreadCounts(data.folder_unread_counts);
+		}
+
+		if (data?.chat_id && typeof data?.last_read_at === 'number') {
+			setChatReadAt(data.chat_id, data.last_read_at);
+			for (const folder of Object.values(folderRegistry)) {
+				folder?.setChatReadAt?.(data.chat_id, data.last_read_at);
+			}
+		}
+	};
+
+	const markAllChatsReadHandler = async () => {
+		const res = await markChatsRead(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (!res) return;
+
+		showChatsMenu = false;
+		if (res.folder_unread_counts) {
+			applyFolderUnreadCounts(res.folder_unread_counts);
+		}
+		setAllChatsRead();
+		for (const folder of Object.values(folderRegistry)) {
+			folder?.setAllChatsRead?.();
+		}
 	};
 
 	const importChatHandler = async (items, pinned = false, folderId = null) => {
@@ -649,6 +718,18 @@
 		socketInstance?.on('events', chatActiveEventHandler);
 		socketInstance?.on('connect', refreshChatRows);
 
+		const unregisterFolderRefreshHandler = registerFolderRefreshHandler((folderId, chat) => {
+			if (folderId) {
+				if (chat) {
+					return folderRegistry[folderId]?.upsertChat?.(chat);
+				}
+
+				return folderRegistry[folderId]?.setFolderItems?.();
+			}
+
+			return Promise.all(Object.values(folderRegistry).map((folder) => folder?.setFolderItems?.()));
+		});
+
 		await tick();
 		initPinnedMenuSortable();
 
@@ -672,6 +753,8 @@
 
 			socketInstance?.off('events', chatActiveEventHandler);
 			socketInstance?.off('connect', refreshChatRows);
+
+			unregisterFolderRefreshHandler();
 		};
 	});
 
@@ -679,16 +762,49 @@
 	const chatActiveEventHandler = async (event: {
 		chat_id: string;
 		message_id: string;
-		data: { type: string; data: { active?: boolean } };
+		data: {
+			type: string;
+			data: {
+				active?: boolean;
+				folder_id?: string | null;
+				last_read_at?: number;
+				folder_unread_counts?: Record<string, number>;
+			};
+		};
 	}) => {
 		if (event.data?.type === 'chat:active') {
-			const active = event.data.data.active ?? false;
+			const eventData = event.data.data ?? {};
+			const active = eventData.active ?? false;
 			const found = setChatActive(event.chat_id, active);
+			let foundInFolder = false;
+			for (const folder of Object.values(folderRegistry)) {
+				foundInFolder = folder?.setChatActive?.(event.chat_id, active) || foundInFolder;
+			}
+			if (!foundInFolder && active && eventData.folder_id) {
+				await folderRegistry[eventData.folder_id]?.setFolderItems?.();
+			}
 			if (!found && active) {
 				await refreshChatRows();
 			}
 		} else if (event.data?.type === 'chat:list') {
-			refreshChatRows();
+			const eventData = event.data.data ?? {};
+			const folderUnreadCounts = eventData.folder_unread_counts;
+			if (folderUnreadCounts) {
+				applyFolderUnreadCounts(folderUnreadCounts);
+			}
+
+			if (typeof eventData.last_read_at === 'number') {
+				setChatReadAt(event.chat_id, eventData.last_read_at);
+				for (const folder of Object.values(folderRegistry)) {
+					folder?.setChatReadAt?.(event.chat_id, eventData.last_read_at);
+				}
+				return;
+			}
+
+			await refreshChatRows();
+			if (eventData.folder_id) {
+				await folderRegistry[eventData.folder_id]?.setFolderItems?.();
+			}
 		}
 	};
 
@@ -816,6 +932,8 @@
 	<div
 		class=" w-[42px] shrink-0 py-1 px-1 flex flex-col justify-between text-gray-700 dark:text-gray-300 hover:bg-gray-50/30 dark:hover:bg-gray-800/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
 		id="sidebar"
+		role="navigation"
+		aria-label={$i18n.t('Chat history')}
 	>
 		<button
 			class="flex flex-col flex-1 {isWindows ? 'cursor-pointer' : 'cursor-[e-resize]'}"
@@ -989,6 +1107,8 @@
 	<div
 		bind:this={navElement}
 		id="sidebar"
+		role="navigation"
+		aria-label={$i18n.t('Chat history')}
 		class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
 			? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-50/70 dark:bg-gray-950/70'} z-50`
 			: ' bg-transparent z-0 '} {$isApp
@@ -1252,6 +1372,7 @@
 							bind:folderRegistry
 							{folders}
 							{shiftKey}
+							onFolderUnreadCounts={applyFolderUnreadCounts}
 							onDelete={(folderId) => {
 								selectedFolder.set(null);
 								initChatList();
@@ -1342,6 +1463,33 @@
 						}
 					}}
 				>
+					<svelte:fragment slot="action">
+						<Dropdown bind:show={showChatsMenu} align="end">
+							<Tooltip content={$i18n.t('More')}>
+								<button
+									type="button"
+									class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 transition-colors duration-100"
+									aria-label={$i18n.t('More')}
+									on:pointerup|stopPropagation
+								>
+									<MoreHorizontalIcon className="size-3.5" strokeWidth="2" />
+								</button>
+							</Tooltip>
+
+							<div slot="content">
+								<DropdownMenu className="min-w-[170px]">
+									<button
+										class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+										on:click={markAllChatsReadHandler}
+									>
+										<CheckIcon className="size-3.5" />
+										<div class="flex items-center">{$i18n.t('Mark all as read')}</div>
+									</button>
+								</DropdownMenu>
+							</div>
+						</Dropdown>
+					</svelte:fragment>
+
 					{#if $pinnedChats.length > 0}
 						<div class="mb-1">
 							<div class="flex flex-col space-y-1 rounded-xl">
@@ -1422,6 +1570,7 @@
 												on:change={async () => {
 													initChatList();
 												}}
+												onReadStateChange={applyChatReadState}
 												on:tag={(e) => {
 													const { type, name } = e.detail;
 													tagEventHandler(type, name, chat.id);
@@ -1486,6 +1635,7 @@
 										on:change={async () => {
 											initChatList();
 										}}
+										onReadStateChange={applyChatReadState}
 										on:tag={(e) => {
 											const { type, name } = e.detail;
 											tagEventHandler(type, name, chat.id);

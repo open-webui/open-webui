@@ -25,6 +25,7 @@ from typing import Optional
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
+from dateutil import parser as date_parser
 from dateutil.rrule import rrulestr
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
@@ -34,6 +35,7 @@ from open_webui.internal.db import get_async_db
 from open_webui.models.automations import AutomationModel, AutomationRuns, Automations
 from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.config import Config
+from open_webui.models.folders import Folders
 from open_webui.models.users import Users
 from open_webui.utils.auth import create_token
 from open_webui.utils.misc import parse_duration
@@ -72,30 +74,46 @@ def _resolve_tz(tz: str = None) -> Optional[ZoneInfo]:
 def _parse_rule(s: str, now: Optional[datetime] = None):
     """Parse RRULE with clock-aligned DTSTART for sub-daily frequencies.
 
-    MINUTELY/HOURLY rules use a fixed epoch DTSTART (2000-01-01 00:00)
+    SECONDLY/MINUTELY/HOURLY rules use a fixed epoch DTSTART (2000-01-01 00:00)
     so intervals snap to clock boundaries (e.g. every 5min = :00, :05, :10).
     """
-    raw = s.replace('RRULE:', '')
-    parts = dict(p.split('=', 1) for p in raw.split(';') if '=' in p)
+    lines = s.splitlines()
+    rule_count = sum(1 for line in lines if line.upper().startswith('RRULE:'))
+    if 'EXRULE' in s.upper():
+        raise ValueError('EXRULE is not supported in recurrence rules')
+    if rule_count > 1:
+        raise ValueError('only one RRULE is supported per recurrence rule')
+
+    rrule_line = next((line for line in lines if line.upper().startswith('RRULE:')), s)
+    raw = rrule_line.split(':', 1)[1] if rrule_line.upper().startswith('RRULE:') else rrule_line
+    parts = {k.upper(): v for k, v in (p.split('=', 1) for p in raw.split(';') if '=' in p)}
     freq = parts.get('FREQ', '')
 
-    if freq in ('MINUTELY', 'HOURLY'):
+    if freq in ('SECONDLY', 'MINUTELY', 'HOURLY'):
         epoch = datetime(2000, 1, 1, 0, 0, 0)
-        if (
-            now is not None
-            and s.startswith('RRULE:')
-            and '\n' not in s
-            and '\r' not in s
-            and set(parts) <= {'FREQ', 'INTERVAL', 'BYMINUTE', 'BYSECOND'}
-        ):
-            try:
-                interval = int(parts.get('INTERVAL', '1'))
-                if interval > 0:
-                    step = timedelta(minutes=interval) if freq == 'MINUTELY' else timedelta(hours=interval)
-                    return rrulestr(s, dtstart=epoch + ((now - epoch) // step) * step, ignoretz=True)
-            except (TypeError, ValueError):
-                pass
-        return rrulestr(s, dtstart=epoch, ignoretz=True)
+        anchor = now or datetime.now()
+        rule = '\n'.join(line for line in lines if not line.upper().startswith('DTSTART')) or s
+        dtstart = next((line.rsplit(':', 1)[-1] for line in lines if line.upper().startswith('DTSTART')), None)
+        interval = int(parts.get('INTERVAL', '1'))
+        if interval < 1:
+            raise ValueError('RRULE INTERVAL must be a positive integer')
+        if freq == 'SECONDLY':
+            step = timedelta(seconds=interval)
+        elif freq == 'MINUTELY':
+            step = timedelta(minutes=interval)
+        else:
+            step = timedelta(hours=interval)
+        if dtstart:
+            start = date_parser.parse(dtstart, ignoretz=True)
+            emitted = ((anchor - start) // step) if anchor > start else 0
+            if 'BYMINUTE' in parts:
+                emitted *= len(parts['BYMINUTE'].split(','))
+            if 'BYSECOND' in parts:
+                emitted *= len(parts['BYSECOND'].split(','))
+            if emitted <= 100_000:
+                return rrulestr(s, ignoretz=True)
+        anchor = epoch + ((anchor - epoch) // step) * step
+        return rrulestr(rule, dtstart=anchor, ignoretz=True)
     return rrulestr(s, ignoretz=True)
 
 
@@ -430,7 +448,10 @@ async def execute_automation(app, automation: AutomationModel) -> None:
 
         prompt = await prompt_template(automation.data['prompt'], user)
         model_id = automation.data['model_id']
-        terminal_config = automation.data.get('terminal')
+        folder_id = automation.folder_id
+        if folder_id and not await Folders.get_folder_by_id_and_user_id(folder_id, automation.user_id):
+            await Automations.clear_folder_ids(automation.user_id, [folder_id])
+            folder_id = None
 
         # Generate proper UUIDs for messages (same as frontend)
         user_msg_id = str(uuid4())
@@ -441,6 +462,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             chat_id,
             automation.user_id,
             ChatForm(
+                folder_id=folder_id,
                 chat={
                     'title': automation.name,
                     'models': [model_id],
@@ -472,7 +494,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
                         {'role': 'user', 'content': prompt},
                     ],
                     'meta': {'automation_id': automation.id},
-                }
+                },
             ),
         )
 

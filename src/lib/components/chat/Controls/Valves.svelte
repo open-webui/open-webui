@@ -62,6 +62,9 @@
 			// Convert array to string
 			for (const property in valvesSpec.properties) {
 				if (valvesSpec.properties[property]?.type === 'array') {
+					if (valvesSpec.properties[property]?.input?.type === 'multiselect') {
+						continue;
+					}
 					valves[property] = (valves[property] ?? []).join(',');
 				}
 			}
@@ -75,6 +78,9 @@
 			// Convert string to array
 			for (const property in valvesSpec.properties) {
 				if (valvesSpec.properties[property]?.type === 'array') {
+					if (valvesSpec.properties[property]?.input?.type === 'multiselect') {
+						continue;
+					}
 					valves[property] = (valves[property] ?? '').split(',').map((v) => v.trim());
 				}
 			}

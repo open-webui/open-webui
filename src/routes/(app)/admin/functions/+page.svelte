@@ -8,7 +8,7 @@
 
 	onMount(async () => {
 		if (!$config?.features?.enable_plugins) {
-			await goto('/admin');
+			await goto('/admin', { replaceState: true });
 			return;
 		}
 
