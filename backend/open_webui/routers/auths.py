@@ -950,6 +950,9 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
     if token is None:
         token = request.cookies.get('token')
 
+    oauth_session_id = request.cookies.get('oauth_session_id')
+    session = await OAuthSessions.get_session_by_id(oauth_session_id, db=db) if oauth_session_id else None
+
     if token:
         actor = None
         data = decode_token(token)
@@ -962,17 +965,15 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
             actor=actor,
             subject_id=actor.id if actor else None,
             subject_type='user' if actor else None,
+            **({'source': 'oauth', 'data': {'auth_method': 'oauth', 'provider': session.provider}} if session else {}),
         )
 
     response.delete_cookie('token')
     response.delete_cookie('oui-session')
     response.delete_cookie('oauth_id_token')
 
-    oauth_session_id = request.cookies.get('oauth_session_id')
     if oauth_session_id:
         response.delete_cookie('oauth_session_id')
-
-        session = await OAuthSessions.get_session_by_id(oauth_session_id, db=db)
 
         # If a custom end_session_endpoint is configured (e.g. AWS Cognito), redirect
         # there directly instead of attempting OIDC discovery.
