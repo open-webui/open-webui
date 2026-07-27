@@ -61,29 +61,6 @@ def get_room_sid_map(manager, namespace: str, room: str):
     return manager.rooms.get(namespace, {}).get(room)
 
 
-class LocalFilteredRedisManager(socketio.AsyncRedisManager):
-    """AsyncRedisManager that drops pub/sub emits with no local recipients.
-
-    Every instance subscribed to the shared Socket.IO channel receives every
-    emit published by the whole fleet. Upstream ``_handle_emit`` re-encodes
-    the full packet before discovering the target room has no participants on
-    this instance, so each instance burns CPU serializing payloads addressed
-    to sessions it does not host — a cost that grows with instance count.
-    Bail out before that work when the room is empty here. Only string
-    rooms take the fast path; broadcasts (``room=None``) and any other
-    room shape (e.g. lists, which upstream indexes before validating)
-    always pass through unchanged.
-    """
-
-    async def _handle_emit(self, message):
-        room = message.get('room')
-        if isinstance(room, str):
-            namespace = message.get('namespace') or '/'
-            if not get_room_sid_map(self, namespace, room):
-                return
-        await super()._handle_emit(message)
-
-
 if WEBSOCKET_MANAGER == 'redis':
     sentinel_hosts = WEBSOCKET_SENTINEL_HOSTS or ''
     ws_redis_url = (
@@ -91,7 +68,7 @@ if WEBSOCKET_MANAGER == 'redis':
         if sentinel_hosts
         else WEBSOCKET_REDIS_URL
     )
-    redis_manager = LocalFilteredRedisManager(ws_redis_url, redis_options=WEBSOCKET_REDIS_OPTIONS)
+    redis_manager = socketio.AsyncRedisManager(ws_redis_url, redis_options=WEBSOCKET_REDIS_OPTIONS)
     sio = socketio.AsyncServer(
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode='asgi',
