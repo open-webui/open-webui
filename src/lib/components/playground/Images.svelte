@@ -190,6 +190,7 @@
 										<button
 											class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
 											type="button"
+											aria-label={$i18n.t('Remove image')}
 											on:click={() => removeImage(index)}
 										>
 											<svg
