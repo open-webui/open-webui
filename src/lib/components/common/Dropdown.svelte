@@ -31,6 +31,8 @@
 
 	let triggerEl: HTMLElement | null = null;
 	let contentEl: HTMLElement | null = null;
+	let previouslyFocused: HTMLElement | null = null;
+	let shouldFocusContent = false;
 	let positionFrame: number | undefined;
 	let settleTimers: number[] = [];
 	let resolvedMaxHeight = maxHeight;
@@ -226,31 +228,57 @@
 		}
 	}
 
-	async function toggleOpen() {
-		show = !show;
-		onOpenChange(show);
+	async function afterOpen() {
+		await tick();
+		positionContent();
+
+		// Re-check after transition renders real dimensions
+		if (visualViewportAware) {
+			scheduleSettledPositionUpdates();
+		} else {
+			setTimeout(positionContent, 50);
+		}
+
+		if (shouldFocusContent) {
+			shouldFocusContent = false;
+			contentEl?.focus();
+		}
+	}
+
+	function openDropdown(focusContent = false) {
+		if (show) return;
+		if (focusContent) {
+			previouslyFocused =
+				document.activeElement instanceof HTMLElement ? document.activeElement : null;
+			shouldFocusContent = true;
+		}
+		show = true;
+		onOpenChange(true);
+	}
+
+	function closeDropdown(restoreFocus = !!contentEl?.contains(document.activeElement)) {
+		if (!show) return;
+		show = false;
+		onOpenChange(false);
+		shouldFocusContent = false;
+
+		if (restoreFocus && previouslyFocused?.isConnected) {
+			previouslyFocused.focus();
+		}
+		previouslyFocused = null;
+	}
+
+	function toggleOpen() {
 		if (show) {
-			await tick();
-			positionContent();
-			// Re-check after transition renders real dimensions
-			if (visualViewportAware) {
-				scheduleSettledPositionUpdates();
-			} else {
-				setTimeout(positionContent, 50);
-			}
+			closeDropdown();
+		} else {
+			openDropdown(true);
 		}
 	}
 
 	// React to external show changes (e.g. bind:show toggled by parent component)
 	$: if (show) {
-		tick().then(() => {
-			positionContent();
-			if (visualViewportAware) {
-				scheduleSettledPositionUpdates();
-			} else {
-				setTimeout(positionContent, 50);
-			}
-		});
+		afterOpen();
 	}
 
 	function handleWindowPointerDown(event: PointerEvent) {
@@ -258,21 +286,18 @@
 		if (!(event.target instanceof Node)) return;
 		if (triggerEl?.contains(event.target)) return;
 		if (contentEl?.contains(event.target)) return;
-		show = false;
-		onOpenChange(false);
+		closeDropdown(false);
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape' && show) {
-			show = false;
-			onOpenChange(false);
+			closeDropdown();
 		}
 	}
 
 	/** Close the dropdown programmatically */
 	export function close() {
-		show = false;
-		onOpenChange(false);
+		closeDropdown();
 	}
 
 	import { onMount, onDestroy } from 'svelte';
@@ -317,7 +342,6 @@
 
 {#if show}
 	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		use:portal
 		bind:this={contentEl}
