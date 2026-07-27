@@ -257,7 +257,7 @@ async def run_geotizer_workflow(
             done=False,
         )
         tasks = build_batch_tasks(next_batch)
-        contributors = tuple(task for task in tasks if task.role == 'contributor')
+        contributors = _contributors_for_batch(next_batch, tasks)
         owner = next(task for task in tasks if task.role == 'owner')
 
         contributor_results = await asyncio.gather(
@@ -926,6 +926,24 @@ def _needs_deterministic_infrastructure(
     return any(
         str(field.get('field_key') or '').startswith(prefixes)
         for field in next_batch.get('fields') or []
+    )
+
+
+def _contributors_for_batch(
+    next_batch: Mapping[str, Any],
+    tasks: Sequence[AgentTask],
+) -> tuple[AgentTask, ...]:
+    deterministic_infrastructure = _needs_deterministic_infrastructure(
+        next_batch
+    )
+    return tuple(
+        task
+        for task in tasks
+        if task.role == 'contributor'
+        and not (
+            deterministic_infrastructure
+            and task.kind == 'gis'
+        )
     )
 
 
