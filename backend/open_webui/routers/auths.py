@@ -77,6 +77,7 @@ from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.rate_limit import RateLimiter
 from open_webui.utils.redis import get_redis_client
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
@@ -737,14 +738,25 @@ async def signin(
                 pass
 
         if not await Users.get_user_by_email(email.lower(), db=db):
-            await signup_handler(
-                request,
-                email,
-                str(uuid.uuid4()),
-                name,
-                db=db,
-                source='trusted_header',
-            )
+            try:
+                await signup_handler(
+                    request,
+                    email,
+                    str(uuid.uuid4()),
+                    name,
+                    db=db,
+                    source='trusted_header',
+                )
+            except IntegrityError:
+                # A concurrent trusted-header request won the race and created
+                # this user first. The DB-level unique constraint on user.email
+                # rejects our duplicate insert. Roll back the failed transaction
+                # and fall through to fetch the winning row, so all concurrent
+                # requests for the same new email resolve to a single account.
+                await db.rollback()
+                log.info(
+                    f'Trusted-header signup race for {email}; using the existing user.'
+                )
 
         user = await Auths.authenticate_user_by_email(email, db=db)
         if user:
