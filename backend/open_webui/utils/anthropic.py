@@ -588,7 +588,26 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
 
     message_id = f'msg_{_uuid.uuid4().hex[:24]}'
     output_tokens = 0
+    cache_creation_input_tokens = None
+    cache_read_input_tokens = None
+    output_tokens_details = None
+    server_tool_use = None
     stop_reason = 'end_turn'
+
+    def update_usage(usage_data: dict):
+        nonlocal input_tokens
+        nonlocal output_tokens
+        nonlocal cache_creation_input_tokens
+        nonlocal cache_read_input_tokens
+        nonlocal output_tokens_details
+        nonlocal server_tool_use
+
+        input_tokens = usage_data.get('input_tokens', usage_data.get('prompt_tokens', input_tokens))
+        output_tokens = usage_data.get('output_tokens', usage_data.get('completion_tokens', output_tokens))
+        cache_creation_input_tokens = usage_data.get('cache_creation_input_tokens', cache_creation_input_tokens)
+        cache_read_input_tokens = usage_data.get('cache_read_input_tokens', cache_read_input_tokens)
+        output_tokens_details = usage_data.get('output_tokens_details', output_tokens_details)
+        server_tool_use = usage_data.get('server_tool_use', server_tool_use)
 
     # Track content blocks with a running index.
     # Each text block or tool_use block gets its own index.
@@ -648,12 +667,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                 if not choices:
                     # Check for usage in the final chunk
                     if data.get('usage'):
-                        input_tokens = data['usage'].get(
-                            'input_tokens', data['usage'].get('prompt_tokens', input_tokens)
-                        )
-                        output_tokens = data['usage'].get(
-                            'output_tokens', data['usage'].get('completion_tokens', output_tokens)
-                        )
+                        update_usage(data['usage'])
                     continue
 
                 delta = choices[0].get('delta', {})
@@ -662,10 +676,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
 
                 # Update usage if present
                 if data.get('usage'):
-                    input_tokens = data['usage'].get('input_tokens', data['usage'].get('prompt_tokens', input_tokens))
-                    output_tokens = data['usage'].get(
-                        'output_tokens', data['usage'].get('completion_tokens', output_tokens)
-                    )
+                    update_usage(data['usage'])
 
                 reasoning_content = (
                     delta.get('reasoning_content')
@@ -909,6 +920,14 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
     usage = {'output_tokens': output_tokens}
     if input_tokens is not None:
         usage['input_tokens'] = input_tokens
+    if cache_creation_input_tokens is not None:
+        usage['cache_creation_input_tokens'] = cache_creation_input_tokens
+    if cache_read_input_tokens is not None:
+        usage['cache_read_input_tokens'] = cache_read_input_tokens
+    if output_tokens_details is not None:
+        usage['output_tokens_details'] = output_tokens_details
+    if server_tool_use is not None:
+        usage['server_tool_use'] = server_tool_use
 
     message_delta = {
         'type': 'message_delta',
