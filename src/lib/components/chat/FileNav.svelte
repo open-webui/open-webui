@@ -847,7 +847,6 @@
 	// ── Lifecycle ────────────────────────────────────────────────────────
 	onMount(async () => {
 		const terminal = getTerminal();
-		if (!terminal) return;
 
 		let handledDisplayFile = false;
 
@@ -902,7 +901,7 @@
 			}
 		});
 
-		if (!handledDisplayFile) {
+		if (!handledDisplayFile && terminal) {
 			loading = true;
 
 			// Discover server features on initial mount
@@ -1383,7 +1382,7 @@
 						<Spinner className="size-4" />
 						{$i18n.t('Uploading...')}
 					</div>
-				{:else if loading}
+				{:else if loading || ($selectedTerminalId && $terminalServers === null)}
 					<div class="flex justify-center pt-8"><Spinner className="size-4" /></div>
 				{:else if error}
 					<div class="p-4 text-xs">{error}</div>
@@ -1399,7 +1398,7 @@
 					</div>
 				{/if}
 
-				{#if !loading && !error && !uploading}
+				{#if !loading && !error && !uploading && !($selectedTerminalId && $terminalServers === null)}
 					{#if creatingFolder}
 						<div class="flex items-center gap-2 px-3 py-1.5">
 							<Folder className="size-4 shrink-0 text-blue-400 dark:text-blue-300" />
