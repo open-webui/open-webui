@@ -33,9 +33,9 @@
 					src={`${WEBUI_API_BASE_URL}/users/${data.user.id}/profile/image`}
 					className={'size-5 -translate-y-[1px] flex-shrink-0'}
 				/>
-				<div class="ml-2">
+				<div class="ml-2 flex-1 min-w-0">
 					<div class=" flex justify-between items-center">
-						<div class="text-xs text-black dark:text-white font-medium line-clamp-1">
+						<div class="text-xs text-black dark:text-white font-normal line-clamp-1">
 							{data?.user?.name ?? 'User'}
 						</div>
 					</div>
@@ -54,9 +54,9 @@
 					className={'size-5 -translate-y-[1px] flex-shrink-0'}
 				/>
 
-				<div class="ml-2">
+				<div class="ml-2 flex-1 min-w-0">
 					<div class=" flex justify-between items-center">
-						<div class="text-xs text-black dark:text-white font-medium line-clamp-1">
+						<div class="text-xs text-black dark:text-white font-normal line-clamp-1">
 							{data?.model?.name ?? data?.message?.model ?? 'Assistant'}
 						</div>
 

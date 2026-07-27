@@ -4,6 +4,7 @@ import re
 import time
 from typing import Any, Optional
 
+from open_webui.config import RAG_EMBEDDING_QUERY_PREFIX
 from open_webui.models.config import Config
 from open_webui.models.knowledge import KnowledgeModel
 
@@ -103,7 +104,7 @@ async def _retrieve_qdrant(connection, auth_config, knowledge, query, count, emb
     source_config = _source_config(knowledge)
     vector_field = source_config.get('vector_field') or None
 
-    vector = await embedding_function(query)
+    vector = await embedding_function(query, prefix=RAG_EMBEDDING_QUERY_PREFIX)
 
     def _search():
         client = QdrantClient(
@@ -152,7 +153,7 @@ async def _retrieve_milvus(connection, auth_config, knowledge, query, count, emb
     content_field = source_config.get('content_field') or 'data.text'
     metadata_field = source_config.get('metadata_field') or 'metadata'
 
-    vector = await embedding_function(query)
+    vector = await embedding_function(query, prefix=RAG_EMBEDDING_QUERY_PREFIX)
 
     def _search():
         client_kwargs = {
@@ -229,7 +230,7 @@ async def _retrieve_pgvector(connection, auth_config, knowledge, query, count, e
     metadata_field = source_config.get('metadata_field') or 'vmetadata'
     document_id_field = source_config.get('document_id_field') or 'id'
 
-    vector = await embedding_function(query)
+    vector = await embedding_function(query, prefix=RAG_EMBEDDING_QUERY_PREFIX)
 
     def _search():
         from psycopg import sql

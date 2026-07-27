@@ -14,7 +14,6 @@
 		archiveChatById,
 		updateChatById,
 		updateChatFolderIdById,
-		getPinnedChatList,
 		getAllTags
 	} from '$lib/apis/chats';
 	import Spinner from '../common/Spinner.svelte';
@@ -25,19 +24,12 @@
 	import Loader from '../common/Loader.svelte';
 	import { createMessagesList } from '$lib/utils';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
-	import {
-		config,
-		user,
-		chats,
-		chatId as currentChatId,
-		pinnedChats,
-		currentChatPage,
-		tags
-	} from '$lib/stores';
+	import { config, user, chatId as currentChatId, tags } from '$lib/stores';
+	import { refreshChatList } from '$lib/stores/chatList';
 	import Messages from '../chat/Messages.svelte';
 	import { goto } from '$app/navigation';
-	import PencilSquare from '../icons/PencilSquare.svelte';
-	import PageEdit from '../icons/PageEdit.svelte';
+	import EditPencilIcon from './Sidebar/icons/EditPencil.svelte';
+	import NotesIcon from './Sidebar/icons/Notes.svelte';
 
 	import ChatMenu from './Sidebar/ChatMenu.svelte';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
@@ -73,9 +65,7 @@
 	let generating = false;
 
 	const refreshSidebar = async () => {
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		await pinnedChats.set(await getPinnedChatList(localStorage.token));
+		await refreshChatList(localStorage.token, { refreshPinned: true });
 	};
 
 	const cloneChatHandler = async (id) => {
@@ -261,7 +251,7 @@
 				show = false;
 				onClose();
 			},
-			icon: PencilSquare
+			icon: EditPencilIcon
 		}
 	];
 
@@ -281,6 +271,8 @@
 	let selectedModels = [''];
 	let history = null;
 	let messages = null;
+	let messagesContainerElement: HTMLElement | null = null;
+	const messagesContainerId = 'chat-preview';
 
 	const searchFilterPrefixes = ['tag:', 'folder:', 'pinned:', 'archived:', 'shared:'];
 
@@ -321,6 +313,26 @@
 		loadChatPreview(selectedIdx);
 	}
 
+	const scrollPreviewToBottom = async () => {
+		await tick();
+		requestAnimationFrame(() => {
+			if (messagesContainerElement) {
+				messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+
+				requestAnimationFrame(() => {
+					if (messagesContainerElement) {
+						messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+					}
+				});
+			}
+		});
+		setTimeout(() => {
+			if (messagesContainerElement) {
+				messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+			}
+		}, 80);
+	};
+
 	const loadChatPreview = async (selectedIdx) => {
 		if (!chatList || chatList.length === 0 || selectedIdx === null) {
 			selectedChat = null;
@@ -346,6 +358,8 @@
 		});
 
 		if (chat) {
+			selectedChat = chat;
+
 			if (chat?.chat?.history) {
 				selectedModels =
 					(chat?.chat?.models ?? undefined) !== undefined
@@ -353,14 +367,8 @@
 						: [chat?.chat?.models ?? ''];
 
 				history = chat?.chat?.history;
-				messages = createMessagesList(chat?.chat?.history, chat?.chat?.history?.currentId);
-
-				// scroll to the bottom of the messages container
-				await tick();
-				const messagesContainerElement = document.getElementById('chat-preview');
-				if (messagesContainerElement) {
-					messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
-				}
+				messages = [];
+				await scrollPreviewToBottom();
 			} else {
 				messages = [];
 			}
@@ -518,7 +526,7 @@
 								show = false;
 								onClose();
 							},
-							icon: PageEdit
+							icon: NotesIcon
 						}
 					]
 				: [])
@@ -549,13 +557,13 @@
 	}}
 >
 	<div class="text-sm text-gray-500 flex-1 line-clamp-3">
-		{$i18n.t('This will delete')} <span class="font-semibold">{menuChatTitle}</span>.
+		{$i18n.t('This will delete')} <span class="font-normal">{menuChatTitle}</span>.
 	</div>
 </DeleteConfirmDialog>
 
 <Modal size="xl" bind:show>
-	<div class="py-3 dark:text-gray-300 text-gray-700">
-		<div class="px-4 pb-1.5">
+	<div class="py-2.5 dark:text-gray-300 text-gray-700">
+		<div class="px-3.5 pb-1">
 			<SearchInput
 				bind:value={query}
 				on:input={searchHandler}
@@ -566,8 +574,6 @@
 					messages = null;
 				}}
 				onKeydown={(e) => {
-					console.log('e', e);
-
 					if (e.code === 'Enter' && (chatList ?? []).length > 0) {
 						const item = document.querySelector(`[data-arrow-selected="true"]`);
 						if (item) {
@@ -590,24 +596,22 @@
 			/>
 		</div>
 
-		<!-- <hr class="border-gray-50 dark:border-gray-850/30 my-1" /> -->
-
-		<div class="flex px-4 pb-1">
+		<div class="flex px-3.5 pb-0.5">
 			<div
 				class="flex flex-col overflow-y-auto h-96 md:h-[40rem] max-h-full scrollbar-hidden w-full flex-1 pr-2"
 			>
-				<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2 px-2">
+				<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-normal pb-2 px-2">
 					{$i18n.t('Actions')}
 				</div>
 
 				{#each actions as action, idx (action.label)}
 					<button
-						class=" w-full flex items-center rounded-xl text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedIdx ===
+						class="w-full flex items-center rounded-lg text-sm py-1.5 px-2.5 hover:bg-gray-50/70 dark:hover:bg-gray-850/50 {selectedIdx ===
 						idx
-							? 'bg-gray-50 dark:bg-gray-850'
+							? 'bg-gray-50/70 dark:bg-gray-850/50'
 							: ''}"
 						data-arrow-selected={selectedIdx === idx ? 'true' : undefined}
-						dragabble="false"
+						draggable="false"
 						on:mouseenter={() => {
 							selectedIdx = idx;
 						}}
@@ -627,7 +631,7 @@
 				{/each}
 
 				{#if chatList}
-					<hr class="border-gray-50 dark:border-gray-850/30 my-3" />
+					<div aria-hidden="true" class="h-px my-3" />
 
 					{#if chatList.length === 0}
 						<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 py-4">
@@ -638,9 +642,9 @@
 					{#each chatList as chat, idx (chat.id)}
 						{#if idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)}
 							<div
-								class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
+								class="w-full text-xs text-gray-500 dark:text-gray-500 font-normal {idx === 0
 									? ''
-									: 'pt-5'} pb-2 px-2"
+									: 'pt-4'} pb-1.5 px-2"
 							>
 								{$i18n.t(chat.time_range)}
 								<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
@@ -666,9 +670,9 @@
 
 						<!-- svelte-ignore a11y-no-static-element-interactions -->
 						<div
-							class="w-full flex justify-between items-center rounded-xl text-sm py-2 pl-3 pr-32 hover:bg-gray-50 dark:hover:bg-gray-850 group/item relative {selectedIdx ===
+							class="w-full flex justify-between items-center rounded-lg text-sm py-1.5 pl-2.5 pr-32 hover:bg-gray-50/70 dark:hover:bg-gray-850/50 group/item relative {selectedIdx ===
 							idx + actions.length
-								? 'bg-gray-50 dark:bg-gray-850'
+								? 'bg-gray-50/70 dark:bg-gray-850/50'
 								: ''}"
 							data-arrow-selected={selectedIdx === idx + actions.length ? 'true' : undefined}
 							on:mouseenter={() => {
@@ -867,7 +871,8 @@
 				{/if}
 			</div>
 			<div
-				id="chat-preview"
+				id={messagesContainerId}
+				bind:this={messagesContainerElement}
 				class="hidden md:flex md:flex-1 w-full overflow-y-auto h-96 md:h-[40rem] scrollbar-hidden @container"
 			>
 				{#if messages === null}
@@ -885,8 +890,9 @@
 							readOnly={true}
 							{selectedModels}
 							bind:history
-							bind:messages
 							autoScroll={true}
+							{messagesContainerId}
+							messagesCount={8}
 							sendMessage={() => {}}
 							continueResponse={() => {}}
 							regenerateResponse={() => {}}

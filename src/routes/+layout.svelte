@@ -21,8 +21,6 @@
 		socket,
 		socketConnected,
 		chatId,
-		chats,
-		currentChatPage,
 		tags,
 		temporaryChatEnabled,
 		isLastActiveTab,
@@ -39,6 +37,7 @@
 		pyodideWorker,
 		desktopEvent
 	} from '$lib/stores';
+	import { refreshChatList } from '$lib/stores/chatList';
 	import { getFileContentById } from '$lib/apis/files';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -53,8 +52,9 @@
 
 	import { executeToolServer, getBackendConfig, getModels, getVersion } from '$lib/apis';
 	import { getSessionUser, updateUserTimezone, userSignOut } from '$lib/apis/auths';
-	import { getAllTags, getChatList } from '$lib/apis/chats';
+	import { getAllTags } from '$lib/apis/chats';
 	import { chatCompletion } from '$lib/apis/openai';
+	import { isTemporaryChatId } from '$lib/utils/chatId';
 	import {
 		addOpenAIConnection,
 		removeOpenAIConnection,
@@ -119,9 +119,48 @@
 	let heartbeatInterval = null;
 	let disconnectToastTimer = null;
 	let disconnectWarningShown = false;
+	let pageIsVisible = true;
+	let pageWasHidden = false;
+	let lastVisibleAt = Date.now();
+	let disconnectReason = null;
 
 	const BREAKPOINT = 768;
 	const DISCONNECT_TOAST_DELAY_MS = 2000;
+	const RECENT_RESUME_GRACE_MS = 8000;
+	const RESUME_DISCONNECT_REASONS = new Set(['ping timeout', 'transport close', 'transport error']);
+
+	const clearDisconnectToastTimer = () => {
+		if (disconnectToastTimer) {
+			clearTimeout(disconnectToastTimer);
+			disconnectToastTimer = null;
+		}
+	};
+
+	const recentlyResumed = () =>
+		pageWasHidden && Date.now() - lastVisibleAt < RECENT_RESUME_GRACE_MS;
+
+	const isLikelyResumeDisconnect = (reason) => {
+		return (!pageIsVisible || recentlyResumed()) && RESUME_DISCONNECT_REASONS.has(reason);
+	};
+
+	const scheduleDisconnectToast = () => {
+		clearDisconnectToastTimer();
+
+		const resumeDelay = isLikelyResumeDisconnect(disconnectReason)
+			? Math.max(RECENT_RESUME_GRACE_MS - (Date.now() - lastVisibleAt), 0)
+			: 0;
+
+		disconnectToastTimer = setTimeout(() => {
+			disconnectToastTimer = null;
+
+			if ($socket?.connected || !pageIsVisible || isLikelyResumeDisconnect(disconnectReason)) {
+				return;
+			}
+
+			disconnectWarningShown = true;
+			toast.warning($i18n.t('Connection lost. Reconnecting...'));
+		}, resumeDelay + DISCONNECT_TOAST_DELAY_MS);
+	};
 
 	const setupSocket = async (enableWebsocket) => {
 		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
@@ -145,19 +184,17 @@
 			console.log('connected', _socket.id);
 
 			// Cancel any pending disconnect toast if we reconnected quickly
-			if (disconnectToastTimer) {
-				clearTimeout(disconnectToastTimer);
-				disconnectToastTimer = null;
-			}
+			clearDisconnectToastTimer();
 
 			if (hasConnectedOnce) {
 				socketConnected.set(true);
 				// Only show "Reconnected" if the user actually saw the disconnect warning
 				if (disconnectWarningShown) {
 					toast.success($i18n.t('Reconnected'));
-					disconnectWarningShown = false;
 				}
 			}
+			disconnectWarningShown = false;
+			disconnectReason = null;
 			hasConnectedOnce = true;
 
 			const res = await getVersion(localStorage.token);
@@ -214,18 +251,15 @@
 		_socket.on('disconnect', (reason, details) => {
 			console.log(`Socket ${_socket.id} disconnected due to ${reason}`);
 			socketConnected.set(false);
-
-			// Delay showing the disconnect toast so brief interruptions
-			// (e.g. mobile tab backgrounding) don't flash a nuisance warning
-			if (disconnectToastTimer) {
-				clearTimeout(disconnectToastTimer);
-			}
+			disconnectReason = reason;
 			disconnectWarningShown = false;
-			disconnectToastTimer = setTimeout(() => {
-				disconnectToastTimer = null;
-				disconnectWarningShown = true;
-				toast.warning($i18n.t('Connection lost. Reconnecting...'));
-			}, DISCONNECT_TOAST_DELAY_MS);
+
+			// Delay visible warnings while mobile browsers resume suspended tabs.
+			if (isLikelyResumeDisconnect(reason)) {
+				clearDisconnectToastTimer();
+			} else {
+				scheduleDisconnectToast();
+			}
 
 			if (heartbeatInterval) {
 				clearInterval(heartbeatInterval);
@@ -464,7 +498,7 @@
 		// Skip events from temporary chats that are not the current chat.
 		// This prevents notifications from being sent to other tabs/devices
 		// for privacy, since temporary chats are not meant to be persisted or visible elsewhere.
-		const isTemporaryChat = event.chat_id?.startsWith('local:');
+		const isTemporaryChat = isTemporaryChatId(event.chat_id);
 		if (isTemporaryChat && event.chat_id !== $chatId) {
 			return;
 		}
@@ -506,7 +540,7 @@
 
 			if ($isLastActiveTab) {
 				if ($settings?.notificationEnabled ?? false) {
-					new Notification(`${data.title} • Open WebUI`, {
+					new Notification(`${data.title} / Open WebUI`, {
 						body: timeStr,
 						icon: `${WEBUI_BASE_URL}/static/favicon.png`
 					});
@@ -616,7 +650,10 @@
 			}
 		}
 
-		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isInBackground) {
+		if (
+			!event?.internal &&
+			((event.chat_id !== $chatId && !$temporaryChatEnabled) || isInBackground)
+		) {
 			if (type === 'chat:completion') {
 				const { done, content, output, title } = data;
 				const displayTitle = title || $i18n.t('New Chat');
@@ -638,7 +675,7 @@
 
 					if ($isLastActiveTab) {
 						if ($settings?.notificationEnabled ?? false) {
-							new Notification(`${displayTitle} • Open WebUI`, {
+							new Notification(`${displayTitle} / Open WebUI`, {
 								body: contentPreview,
 								icon: `${WEBUI_BASE_URL}/static/favicon.png`
 							});
@@ -658,8 +695,7 @@
 					});
 				}
 			} else if (type === 'chat:title') {
-				currentChatPage.set(1);
-				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				await refreshChatList(localStorage.token);
 			} else if (type === 'chat:tags') {
 				tags.set(await getAllTags(localStorage.token));
 			}
@@ -746,7 +782,7 @@
 
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
-						new Notification(`${title} • Open WebUI`, {
+						new Notification(`${title} / Open WebUI`, {
 							body: data?.content,
 							icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
 						});
@@ -802,20 +838,25 @@
 		}
 	};
 
-	const redirectToAuthAfterUnauthorized = () => {
-		if (isAuthRedirectInProgress || window.location.pathname === '/auth') {
+	const clearExpiredSession = () => {
+		if (isAuthRedirectInProgress) {
 			return;
 		}
 
 		isAuthRedirectInProgress = true;
+		if (tokenTimer) {
+			clearInterval(tokenTimer);
+			tokenTimer = null;
+		}
 		user.set(null);
 		localStorage.removeItem('token');
-		toast.error($i18n.t('Session expired. Please sign in again.'));
-
-		const currentPath = `${window.location.pathname}${window.location.search}`;
-		goto(`/auth?redirect=${encodeURIComponent(currentPath)}`).finally(() => {
-			isAuthRedirectInProgress = false;
+		// Clear the OAuth token cookie so /auth doesn't auto-login and redirect-loop
+		document.cookie = 'token=; Max-Age=0; path=/';
+		userSignOut().catch((error) => {
+			console.error('Error signing out expired session:', error);
 		});
+		toast.error($i18n.t('Session expired. Please sign in again.'));
+		isAuthRedirectInProgress = false;
 	};
 
 	const isCurrentSessionUnauthorized = async (originalFetch) => {
@@ -841,11 +882,7 @@
 		}
 
 		if (now >= exp - TOKEN_EXPIRY_BUFFER) {
-			const res = await userSignOut();
-			user.set(null);
-			localStorage.removeItem('token');
-
-			location.href = res?.redirect_url ?? '/auth';
+			clearExpiredSession();
 		}
 	};
 
@@ -963,7 +1000,7 @@
 				isAuthenticatedBackendFetch(input, init) &&
 				(await isCurrentSessionUnauthorized(originalFetch))
 			) {
-				redirectToAuthAfterUnauthorized();
+				clearExpiredSession();
 			}
 
 			return response;
@@ -1043,18 +1080,39 @@
 		};
 
 		// Set yourself as the last active tab when this tab is focused
+		const handlePageHidden = () => {
+			pageIsVisible = false;
+			pageWasHidden = true;
+			clearDisconnectToastTimer();
+		};
+
+		const handlePageVisible = () => {
+			pageIsVisible = true;
+			lastVisibleAt = Date.now();
+
+			isLastActiveTab.set(true); // This tab is now the active tab
+			bc.postMessage('active'); // Notify other tabs that this tab is active
+
+			// Check token expiry when the tab becomes active
+			checkTokenExpiry();
+
+			if ($socket && !$socket.connected) {
+				scheduleDisconnectToast();
+			}
+		};
+
 		const handleVisibilityChange = () => {
 			if (document.visibilityState === 'visible') {
-				isLastActiveTab.set(true); // This tab is now the active tab
-				bc.postMessage('active'); // Notify other tabs that this tab is active
-
-				// Check token expiry when the tab becomes active
-				checkTokenExpiry();
+				handlePageVisible();
+			} else {
+				handlePageHidden();
 			}
 		};
 
 		// Add event listener for visibility state changes
 		document.addEventListener('visibilitychange', handleVisibilityChange);
+		window.addEventListener('pagehide', handlePageHidden);
+		window.addEventListener('pageshow', handlePageVisible);
 
 		// Call visibility change handler initially to set state on load
 		handleVisibilityChange();
@@ -1128,9 +1186,6 @@
 			if ($config) {
 				await setupSocket($config.features?.enable_websocket ?? true);
 
-				const currentUrl = `${window.location.pathname}${window.location.search}`;
-				const encodedUrl = encodeURIComponent(currentUrl);
-
 				if (localStorage.token) {
 					// Get Session User Info
 					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
@@ -1162,15 +1217,8 @@
 								.catch(() => {});
 						}
 					} else {
-						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
-						await goto(`/auth?redirect=${encodedUrl}`);
-					}
-				} else {
-					// Don't redirect if we're already on the auth page
-					// Needed because we pass in tokens from OAuth logins via URL fragments
-					if ($page.url.pathname !== '/auth') {
-						await goto(`/auth?redirect=${encodedUrl}`);
+						await user.set(null);
 					}
 				}
 			}
@@ -1227,8 +1275,17 @@
 			document.removeEventListener('touchmove', touchmoveHandler);
 			document.removeEventListener('touchend', touchendHandler);
 			document.removeEventListener('visibilitychange', handleVisibilityChange);
+			window.removeEventListener('pagehide', handlePageHidden);
+			window.removeEventListener('pageshow', handlePageVisible);
 		};
 	});
+
+	$: if (typeof document !== 'undefined') {
+		document.documentElement.classList.toggle(
+			'high-contrast',
+			$settings?.highContrastMode ?? false
+		);
+	}
 
 	onDestroy(() => {
 		bc.close();
@@ -1249,6 +1306,13 @@
 		crossorigin="use-credentials"
 	/>
 </svelte:head>
+
+<a
+	href="#main-content"
+	class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-lg dark:focus:bg-gray-800 dark:focus:text-gray-100"
+>
+	{$i18n.t('Skip to main content')}
+</a>
 
 {#if showRefresh}
 	<div class=" py-5">

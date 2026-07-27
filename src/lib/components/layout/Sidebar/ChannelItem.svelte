@@ -9,13 +9,13 @@
 	import { updateChannelById, updateChannelMemberActiveStatusById } from '$lib/apis/channels';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import ChannelModal from './ChannelModal.svelte';
-	import Lock from '$lib/components/icons/Lock.svelte';
-	import Hashtag from '$lib/components/icons/Hashtag.svelte';
-	import Users from '$lib/components/icons/Users.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
+	import HashtagIcon from '$lib/components/icons/Hashtag.svelte';
+	import LockIcon from '$lib/components/icons/Lock.svelte';
+	import SettingsIcon from '$lib/components/icons/Settings.svelte';
+	import UserIcon from './icons/User.svelte';
+	import XMarkIcon from './icons/XMark.svelte';
 
 	export let onUpdate: Function = () => {};
 
@@ -78,7 +78,7 @@
 		.url.pathname === `/channels/${channel.id}`
 		? 'bg-gray-100 dark:bg-gray-900 selected'
 		: ''} {channel?.type === 'dm' ? 'px-1 py-[3px]' : 'p-1'}  {channel?.unread_count > 0
-		? 'font-medium dark:text-white text-black'
+		? 'font-normal dark:text-white text-black'
 		: ' dark:text-gray-400 text-gray-600'} cursor-pointer select-none"
 >
 	<a
@@ -139,14 +139,14 @@
 							{/if}
 						</div>
 					{:else}
-						<Users className="size-4 ml-1 mr-0.5" strokeWidth="2" />
+						<UserIcon className="size-4 ml-1 mr-0.5" strokeWidth="1.5" />
 					{/if}
 				{:else}
 					<div class=" size-4 justify-center flex items-center ml-1">
 						{#if isPublicChannel(channel)}
-							<Hashtag className="size-3.5" strokeWidth="2.5" />
+							<HashtagIcon className="size-3" strokeWidth="1.8" />
 						{:else}
-							<Lock className="size-[15px]" strokeWidth="2" />
+							<LockIcon className="size-3.5" strokeWidth="1.7" />
 						{/if}
 					</div>
 				{/if}
@@ -191,7 +191,7 @@
 		<div class="flex items-center">
 			{#if channel?.unread_count > 0}
 				<div
-					class="text-xs py-[1px] px-2 rounded-xl bg-gray-100 text-black dark:bg-gray-800 dark:text-white font-medium whitespace-nowrap"
+					class="text-xs py-[1px] px-2 rounded-xl bg-gray-100 text-black dark:bg-gray-800 dark:text-white font-normal whitespace-nowrap"
 				>
 					{new Intl.NumberFormat($i18n.locale, {
 						notation: 'compact',
@@ -226,7 +226,7 @@
 					);
 				}}
 			>
-				<XMark className="size-3.5" />
+				<XMarkIcon className="size-3.5" />
 			</button>
 		</div>
 	{:else if $user?.role === 'admin' || channel.user_id === $user?.id}
@@ -242,7 +242,7 @@
 					showEditChannelModal = true;
 				}}
 			>
-				<Cog6 className="size-3.5" />
+				<SettingsIcon className="size-3.5" strokeWidth="1.5" />
 			</button>
 		</div>
 	{/if}

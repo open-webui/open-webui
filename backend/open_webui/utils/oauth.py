@@ -15,8 +15,8 @@ from types import SimpleNamespace
 from typing import Literal, Optional
 
 import aiohttp
+import jwt
 from authlib.integrations.starlette_client import OAuth
-from authlib.jose.errors import BadSignatureError
 from authlib.oauth2.rfc6749.errors import OAuth2Error
 from authlib.oidc.core import UserInfo
 from cryptography.fernet import Fernet
@@ -24,6 +24,7 @@ from fastapi import (
     HTTPException,
     status,
 )
+from joserfc.errors import BadSignatureError
 from joserfc.jws import JWSRegistry
 from joserfc.registry import HeaderParameter
 from mcp.shared.auth import (
@@ -35,6 +36,7 @@ from mcp.shared.auth import (
 from open_webui.config import (
     DEFAULT_USER_ROLE,
     ENABLE_OAUTH_GROUP_CREATION,
+    ENABLE_OAUTH,
     ENABLE_OAUTH_GROUP_MANAGEMENT,
     ENABLE_OAUTH_ROLE_MANAGEMENT,
     ENABLE_OAUTH_SIGNUP,
@@ -82,7 +84,7 @@ from open_webui.models.config import Config
 from open_webui.models.groups import GroupForm, GroupModel, Groups, GroupUpdateForm
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import Users
-from open_webui.retrieval.web.utils import validate_url
+from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 from open_webui.utils.auth import create_token, get_password_hash
 from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration
@@ -120,6 +122,7 @@ OAUTH_RESOURCE_PARAMETER_MODES = {'auto', 'include', 'omit'}
 
 OAUTH_RUNTIME_CONFIG = {
     'DEFAULT_USER_ROLE': ('ui.default_user_role', DEFAULT_USER_ROLE),
+    'ENABLE_OAUTH': ('oauth.enable', ENABLE_OAUTH),
     'ENABLE_OAUTH_SIGNUP': ('oauth.enable_signup', ENABLE_OAUTH_SIGNUP),
     'OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE': (
         'oauth.refresh_token.include_scope',
@@ -187,6 +190,7 @@ async def get_oauth_runtime_config() -> SimpleNamespace:
 # Conservative default when the provider omits both expires_in and expires_at.
 # Matches the value recommended by Authlib's compliance_fix documentation.
 DEFAULT_TOKEN_EXPIRY_SECONDS = 3600
+NON_EXPIRING_TOKEN_EXPIRES_AT = 253402300799  # 9999-12-31 23:59:59 UTC
 
 
 # Apereo CAS includes client_id in ID token JWS headers; Authlib 1.7/joserfc
@@ -203,27 +207,43 @@ def _normalize_token_expiry(token: dict) -> dict:
     Resolution order:
     1. If *expires_at* is already present and non-None, trust it.
     2. Else if *expires_in* is present and non-None, compute *expires_at*.
-    3. Otherwise fall back to ``DEFAULT_TOKEN_EXPIRY_SECONDS`` and log a
-       warning so operators can identify providers that omit expiration.
+    3. Else if a *refresh_token* is present, fall back to
+       ``DEFAULT_TOKEN_EXPIRY_SECONDS`` and log a warning so operators can
+       identify providers that omit expiration.
+    4. Otherwise treat the token as non-expiring; there is no refresh path to
+       recover from a fabricated short expiry.
 
     Also stamps *issued_at* for auditing.
     """
     token['issued_at'] = datetime.now().timestamp()
 
     if token.get('expires_at') is not None:
-        token['expires_at'] = int(token['expires_at'])
-        return token
+        expires_at = int(token['expires_at'])
+    elif token.get('expires_in') is not None:
+        expires_at = int(datetime.now().timestamp() + token['expires_in'])
+    elif token.get('refresh_token'):
+        log.warning(
+            "OAuth token response missing both 'expires_in' and 'expires_at'; "
+            f'defaulting to {DEFAULT_TOKEN_EXPIRY_SECONDS}s from now'
+        )
+        expires_at = int(datetime.now().timestamp() + DEFAULT_TOKEN_EXPIRY_SECONDS)
+    else:
+        log.info(
+            "OAuth token response missing 'expires_in', 'expires_at' and 'refresh_token'; treating token as non-expiring"
+        )
+        expires_at = NON_EXPIRING_TOKEN_EXPIRES_AT
 
-    if token.get('expires_in') is not None:
-        token['expires_at'] = int(datetime.now().timestamp() + token['expires_in'])
-        return token
+    id_token = token.get('id_token')
+    if id_token:
+        # Cap at the id_token expiry so pipes and tools never receive an expired JWT
+        try:
+            exp = jwt.decode(id_token, options={'verify_signature': False}).get('exp')
+            if exp is not None:
+                expires_at = min(expires_at, int(exp))
+        except Exception as e:
+            log.debug(f'Could not read exp from id_token: {e}')
 
-    # Neither field present — conservative fallback
-    log.warning(
-        "OAuth token response missing both 'expires_in' and 'expires_at'; "
-        f'defaulting to {DEFAULT_TOKEN_EXPIRY_SECONDS}s from now'
-    )
-    token['expires_at'] = int(datetime.now().timestamp() + DEFAULT_TOKEN_EXPIRY_SECONDS)
+    token['expires_at'] = expires_at
     return token
 
 
@@ -536,6 +556,20 @@ async def get_oauth_client_info_with_dynamic_client_registration(
                             log.error(f'Error parsing OAuth metadata from {url}: {e}')
                             continue
 
+        # Fail fast if authorization server metadata discovery did not resolve an
+        # authorization endpoint. Otherwise registration can still "succeed" (via
+        # the /register fallback below) while issuer/server_metadata stay unset,
+        # which later crashes at authorize time with authlib's
+        # RuntimeError: Missing "authorize_url" value. (#26647)
+        if oauth_server_metadata is None or not oauth_server_metadata.authorization_endpoint:
+            log.error(f'OAuth authorization server metadata discovery failed for {oauth_server_url}')
+            raise Exception(
+                'Could not discover the OAuth authorization server metadata '
+                f'(authorization_endpoint) for {oauth_server_url}. The MCP server must '
+                'expose RFC 8414 / RFC 9728 discovery documents so Open WebUI can '
+                'resolve where to send users to authorize.'
+            )
+
         registration_url = None
         if oauth_server_metadata and oauth_server_metadata.registration_endpoint:
             registration_url = str(oauth_server_metadata.registration_endpoint)
@@ -801,6 +835,17 @@ class OAuthClientManager:
             },
             'server_metadata_url': (oauth_client_info.issuer if oauth_client_info.issuer else None),
         }
+
+        # Defense-in-depth: when the server metadata is already known, pass the
+        # authorization/token endpoints explicitly so authlib does not rely solely
+        # on refetching server_metadata_url (which may be missing/unreachable) to
+        # resolve them. Prevents RuntimeError: Missing "authorize_url". (#26647)
+        server_metadata = oauth_client_info.server_metadata
+        if server_metadata is not None:
+            if getattr(server_metadata, 'authorization_endpoint', None):
+                kwargs['authorize_url'] = str(server_metadata.authorization_endpoint)
+            if getattr(server_metadata, 'token_endpoint', None):
+                kwargs['access_token_url'] = str(server_metadata.token_endpoint)
 
         # Default to S256 for OAuth 2.1 (PKCE is mandatory per RFC 9700)
         kwargs['code_challenge_method'] = 'S256'
@@ -1138,7 +1183,22 @@ class OAuthClientManager:
         redirect_uri_str = str(redirect_uri) if redirect_uri else None
         # Pass explicit scope/resource parameters for providers that require them.
         kwargs = build_oauth_request_params(client_info)
-        return await client.authorize_redirect(request, redirect_uri_str, **kwargs)
+        try:
+            return await client.authorize_redirect(request, redirect_uri_str, **kwargs)
+        except RuntimeError as e:
+            # authlib raises RuntimeError('Missing "authorize_url" value') when the
+            # authorization endpoint could not be resolved from server metadata.
+            # Surface a clear 400 instead of an uncaught 500 for clients that were
+            # registered before discovery was validated. (#26647)
+            log.error(f'OAuth authorize failed for client {client_id}: {e}')
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    'OAuth authorization endpoint could not be resolved for this '
+                    'client. Re-register the MCP server; its OAuth discovery '
+                    'documents may be missing or unreachable.'
+                ),
+            )
 
     async def handle_callback(self, request, client_id: str, user_id: str, response):
         client = await self.get_client(client_id)
@@ -1641,8 +1701,8 @@ class OAuthManager:
                 get_kwargs['headers'] = {
                     'Authorization': f'Bearer {access_token}',
                 }
-            async with aiohttp.ClientSession(trust_env=True) as session:
-                # allow_redirects=False prevents redirect-based SSRF: validate_url() only vetted the initial URL (CVE-2026-45401 cohort).
+            # get_ssrf_safe_session pins the connect-time IP (defeats DNS rebinding); allow_redirects=False keeps validate_url's vet authoritative.
+            async with get_ssrf_safe_session() as session:
                 async with session.get(
                     picture_url,
                     **get_kwargs,
@@ -1670,6 +1730,8 @@ class OAuthManager:
 
     async def handle_login(self, request, provider):
         auth_config = await get_oauth_runtime_config()
+        if not auth_config.ENABLE_OAUTH:
+            raise HTTPException(404)
         if provider not in OAUTH_PROVIDERS:
             raise HTTPException(404)
         # If the provider has a custom redirect URL, use that, otherwise automatically generate one
@@ -1690,6 +1752,8 @@ class OAuthManager:
 
     async def handle_callback(self, request, provider, response, db=None):
         auth_config = await get_oauth_runtime_config()
+        if not auth_config.ENABLE_OAUTH:
+            raise HTTPException(404)
         if provider not in OAUTH_PROVIDERS:
             raise HTTPException(404)
 

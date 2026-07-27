@@ -11,6 +11,9 @@ from open_webui.env import GLOBAL_LOG_LEVEL
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
+PADDLEOCR_VL_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'bmp', 'tiff', 'webp']
+PADDLEOCR_VL_SUPPORTED_EXTENSIONS = ['pdf'] + PADDLEOCR_VL_IMAGE_EXTENSIONS
+
 
 class PaddleOCRVLLoader:
     """Loader that uses PaddleOCR-vl API to extract text from PDF/images."""
@@ -46,8 +49,7 @@ class PaddleOCRVLLoader:
 
         # Detect fileType based on file extension
         ext = self.file_path.lower().split('.')[-1]
-        image_extensions = ['png', 'jpg', 'jpeg', 'bmp', 'tiff', 'webp']
-        file_type = 1 if ext in image_extensions else 0
+        file_type = 1 if ext in PADDLEOCR_VL_IMAGE_EXTENSIONS else 0
 
         payload = {
             'file': file_data,

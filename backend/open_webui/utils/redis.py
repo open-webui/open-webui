@@ -14,7 +14,6 @@ from typing import Any
 from urllib.parse import ParseResult, urlparse
 
 import redis as _redis_sync
-
 from open_webui.env import (
     REDIS_CLUSTER,
     REDIS_HEALTH_CHECK_INTERVAL,
@@ -24,6 +23,7 @@ from open_webui.env import (
     REDIS_SENTINEL_PORT,
     REDIS_SOCKET_CONNECT_TIMEOUT,
     REDIS_SOCKET_KEEPALIVE,
+    REDIS_SOCKET_TIMEOUT,
     REDIS_URL,
 )
 
@@ -33,6 +33,7 @@ _ACCEPTED_SCHEMES = frozenset({'redis', 'rediss'})
 _SENTINEL_RETRYABLE = (
     _redis_sync.exceptions.ConnectionError,
     _redis_sync.exceptions.ReadOnlyError,
+    _redis_sync.exceptions.TimeoutError,
 )
 _FACTORY_METHODS = frozenset({'pipeline', 'pubsub', 'monitor', 'client', 'transaction'})
 _CONNECTION_POOL: dict[tuple, Any] = {}
@@ -126,10 +127,11 @@ class SentinelRedisProxy:
         self._sentinel = sentinel
         self._service_name = service_name
         self._async_mode = async_mode
+        self._master: Any | None = None
 
     def __getattr__(self, name: str) -> Any:
         """Proxy attribute access with automatic Sentinel failover retry."""
-        current_master = self._sentinel.master_for(self._service_name)
+        current_master = self._resolve_master()
         original = getattr(current_master, name)
 
         # Non-callable or factory attributes pass through without wrapping.
@@ -143,7 +145,12 @@ class SentinelRedisProxy:
 
     def _resolve_master(self) -> Any:
         """Ask Sentinel for the current master connection."""
-        return self._sentinel.master_for(self._service_name)
+        if self._master is None:
+            self._master = self._sentinel.master_for(self._service_name)
+        return self._master
+
+    def _clear_master(self) -> None:
+        self._master = None
 
     def _should_retry(self, attempt: int) -> bool:
         return attempt < REDIS_SENTINEL_MAX_RETRY_COUNT - 1
@@ -184,6 +191,7 @@ class SentinelRedisProxy:
                     except _SENTINEL_RETRYABLE as exc:
                         if proxy._should_retry(attempt):
                             proxy._log_retry(exc, attempt)
+                            proxy._clear_master()
                             if REDIS_RECONNECT_DELAY:
                                 await asyncio.sleep(REDIS_RECONNECT_DELAY / 1000)
                             continue
@@ -208,6 +216,7 @@ class SentinelRedisProxy:
                 except _SENTINEL_RETRYABLE as exc:
                     if proxy._should_retry(attempt):
                         proxy._log_retry(exc, attempt)
+                        proxy._clear_master()
                         if REDIS_RECONNECT_DELAY:
                             await asyncio.sleep(REDIS_RECONNECT_DELAY / 1000)
                         continue
@@ -229,6 +238,7 @@ class SentinelRedisProxy:
                 except _SENTINEL_RETRYABLE as exc:
                     if proxy._should_retry(attempt):
                         proxy._log_retry(exc, attempt)
+                        proxy._clear_master()
                         if REDIS_RECONNECT_DELAY:
                             time.sleep(REDIS_RECONNECT_DELAY / 1000)
                         continue
@@ -248,6 +258,8 @@ def _socket_options() -> dict[str, Any]:
     opts: dict[str, Any] = {}
     if REDIS_SOCKET_CONNECT_TIMEOUT is not None:
         opts['socket_connect_timeout'] = REDIS_SOCKET_CONNECT_TIMEOUT
+    if REDIS_SOCKET_TIMEOUT:
+        opts['socket_timeout'] = REDIS_SOCKET_TIMEOUT
     if REDIS_SOCKET_KEEPALIVE:
         opts['socket_keepalive'] = True
     if REDIS_HEALTH_CHECK_INTERVAL:
@@ -294,6 +306,7 @@ def get_redis_connection(
     cache_key = (
         redis_url,
         tuple(redis_sentinels) if redis_sentinels else (),
+        redis_cluster,
         async_mode,
         decode_responses,
     )

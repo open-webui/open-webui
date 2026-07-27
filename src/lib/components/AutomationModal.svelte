@@ -8,6 +8,9 @@
 
 	import ScheduleDropdown from '$lib/components/automations/ScheduleDropdown.svelte';
 	import ModelDropdown from '$lib/components/automations/ModelDropdown.svelte';
+	import FolderDropdown from '$lib/components/automations/FolderDropdown.svelte';
+	import { getFolders } from '$lib/apis/folders';
+	import { folders } from '$lib/stores';
 
 	import {
 		createAutomation,
@@ -26,9 +29,11 @@
 	let name = '';
 	let prompt = '';
 	let model_id = '';
+	let folder_id = '';
 	let is_active = true;
 
 	let loading = false;
+	let foldersLoaded = false;
 
 	// Schedule dropdown ref
 	let scheduleDropdown: ScheduleDropdown;
@@ -49,6 +54,7 @@
 		try {
 			const form: AutomationForm = {
 				name: name.trim(),
+				folder_id: folder_id || null,
 				data: {
 					prompt: prompt.trim(),
 					model_id: model_id.trim(),
@@ -77,11 +83,17 @@
 
 	const init = async () => {
 		await tick();
+		if (!foldersLoaded && ($folders ?? []).length === 0) {
+			const res = await getFolders(localStorage.token).catch(() => null);
+			if (res) folders.set(res);
+			foldersLoaded = true;
+		}
 
 		if (automation) {
 			name = automation.name;
 			prompt = automation.data.prompt;
 			model_id = automation.data.model_id;
+			folder_id = automation.folder_id ?? '';
 			is_active = automation.is_active;
 			if (scheduleDropdown) {
 				scheduleDropdown.parseRrule(automation.data.rrule);
@@ -90,6 +102,9 @@
 			name = cloneFrom.name;
 			prompt = cloneFrom.data.prompt;
 			model_id = cloneFrom.data.model_id;
+			folder_id = ($folders ?? []).some((folder) => folder.id === cloneFrom.folder_id)
+				? (cloneFrom.folder_id ?? '')
+				: '';
 			is_active = true;
 			if (scheduleDropdown) {
 				scheduleDropdown.parseRrule(cloneFrom.data.rrule);
@@ -98,6 +113,7 @@
 			name = '';
 			prompt = '';
 			model_id = '';
+			folder_id = '';
 			is_active = true;
 		}
 	};
@@ -110,9 +126,9 @@
 <Modal size="md" bind:show>
 	<div>
 		<!-- Header -->
-		<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
+		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
 			<input
-				class="w-full text-lg font-medium bg-transparent outline-hidden font-primary placeholder:text-gray-300 dark:placeholder:text-gray-700"
+				class="w-full text-sm font-medium bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
 				type="text"
 				bind:value={name}
 				placeholder={$i18n.t('Automation title')}
@@ -122,7 +138,7 @@
 				aria-label={$i18n.t('Close')}
 				on:click={() => (show = false)}
 			>
-				<XMark className="size-5" />
+				<XMark className="size-4" />
 			</button>
 		</div>
 
@@ -138,14 +154,18 @@
 		</div>
 
 		<!-- Bottom toolbar -->
-		<div class="flex items-center justify-between px-4 pb-3.5 pt-1 gap-2">
-			<div class="flex items-center gap-0.5 flex-wrap flex-1 min-w-0">
+		<div
+			class="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 pb-3.5 pt-1 gap-2"
+		>
+			<div class="flex items-center gap-0.5 flex-wrap min-w-0 sm:flex-1">
 				<ScheduleDropdown bind:this={scheduleDropdown} side="top" align="start" />
 
 				<ModelDropdown bind:model_id side="top" align="start" />
+
+				<FolderDropdown bind:folder_id side="top" align="start" />
 			</div>
 
-			<div class="flex items-center gap-2 shrink-0">
+			<div class="flex items-center justify-end gap-2 shrink-0">
 				<button
 					class="px-3 py-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition"
 					type="button"
@@ -154,7 +174,7 @@
 					{$i18n.t('Cancel')}
 				</button>
 				<button
-					class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 {loading
+					class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex items-center gap-2 {loading
 						? 'cursor-not-allowed'
 						: ''}"
 					on:click={submitHandler}

@@ -10,7 +10,13 @@
 
 	export let value = '';
 	export let placeholder = $i18n.t('Tag');
+	export let align = 'start';
 	export let onChange: (value: string) => void = () => {};
+	export let triggerClass =
+		'relative h-8 w-full flex items-center gap-0.5 px-1.5 py-1.5 bg-transparent rounded-xl text-[13px] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100';
+	export let itemClass =
+		'flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] capitalize hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100';
+	export let contentClass = 'min-w-[170px]';
 
 	export let items = [];
 </script>
@@ -19,16 +25,18 @@
 	bind:value
 	{items}
 	{placeholder}
-	triggerClass="relative w-full flex items-center gap-0.5 px-2.5 py-1.5 rounded-xl "
-	itemClass="flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl capitalize"
+	{align}
+	{triggerClass}
+	{itemClass}
+	{contentClass}
 	onChange={() => onChange(value)}
 >
 	<svelte:fragment slot="trigger" let:selectedLabel>
 		<div
-			class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden capitalize"
+			class="inline-flex h-input min-w-0 flex-1 outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden capitalize"
 		>
 			{#if value}
-				{value}
+				{selectedLabel}
 			{:else}
 				{placeholder}
 			{/if}
@@ -46,7 +54,7 @@
 				<XMark className="size-3.5" />
 			</button>
 		{:else}
-			<ChevronDown className=" size-3.5" strokeWidth="2.5" />
+			<ChevronDown className="size-2.5" strokeWidth="2.5" />
 		{/if}
 	</svelte:fragment>
 
