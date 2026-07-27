@@ -995,7 +995,10 @@ async def get_user_chats(user=Depends(get_verified_user)):
 
 @router.get('/all/archived', response_model=list[ChatResponse])
 async def get_user_archived_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    return [ChatResponse.model_validate(chat, from_attributes=True) for chat in await Chats.get_archived_chats_by_user_id(user.id, db=db)]
+    return [
+        ChatResponse.model_validate(chat, from_attributes=True)
+        for chat in await Chats.get_archived_chats_by_user_id(user.id, db=db)
+    ]
 
 
 ############################
@@ -1357,12 +1360,15 @@ async def update_chat_by_id(
         touch = 'history' in form_data.chat or 'messages' in form_data.chat
         chat = await Chats.update_chat_by_id(id, updated_chat, db=db, touch=touch)
         if form_data.variables is not None:
-            chat = await Chats.update_chat_variables_by_id(
-                id,
-                form_data.variables,
-                db=db,
-                touch=False,
-            ) or chat
+            chat = (
+                await Chats.update_chat_variables_by_id(
+                    id,
+                    form_data.variables,
+                    db=db,
+                    touch=False,
+                )
+                or chat
+            )
 
         # Reconcile chat_message rows without inferring deletes from missing IDs.
         # Message deletion has its own endpoint below.

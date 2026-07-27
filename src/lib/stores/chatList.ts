@@ -75,7 +75,10 @@ export const registerFolderRefreshHandler = (handler: FolderRefreshHandler) => {
 	};
 };
 
-export const refreshFolderChatLists = async (folderId?: string | null, chat?: ChatListItem | null) => {
+export const refreshFolderChatLists = async (
+	folderId?: string | null,
+	chat?: ChatListItem | null
+) => {
 	await Promise.all([...folderRefreshHandlers].map((handler) => handler(folderId, chat)));
 };
 

@@ -50,7 +50,7 @@ router = APIRouter()
 
 
 def add_chat_variables_schema(model_dict: dict) -> dict:
-    system = ((model_dict.get('params') or {}).get('system') if isinstance(model_dict.get('params'), dict) else None)
+    system = (model_dict.get('params') or {}).get('system') if isinstance(model_dict.get('params'), dict) else None
     schema = get_chat_variables_schema(system)
     if schema:
         model_dict.setdefault('meta', {})['chat_variables_schema'] = schema

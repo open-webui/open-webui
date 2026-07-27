@@ -837,7 +837,9 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
     all_models = await get_all_models(request, refresh=refresh, user=user)
 
     # Filter out filter pipelines
-    models = [model for model in all_models if not ('pipeline' in model and model['pipeline'].get('type', None) == 'filter')]
+    models = [
+        model for model in all_models if not ('pipeline' in model and model['pipeline'].get('type', None) == 'filter')
+    ]
 
     # Chat requests resolve models by ID from request.app.state.MODELS, where
     # duplicate IDs collapse to the last model. Return the same effective list.
@@ -1142,11 +1144,7 @@ async def chat_completion(
         chat_id = form_data.get('chat_id') or ''
         chat_variables = form_data.pop('chat_variables', None)
         if chat_variables is None:
-            existing_chat = (
-                await Chats.get_chat_by_id(chat_id)
-                if is_saved_chat_id(chat_id)
-                else None
-            )
+            existing_chat = await Chats.get_chat_by_id(chat_id) if is_saved_chat_id(chat_id) else None
             chat_variables = existing_chat.variables if existing_chat else {}
 
         chat_variables = normalize_chat_variables(chat_variables)

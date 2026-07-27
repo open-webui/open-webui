@@ -205,9 +205,7 @@ async def _load_config() -> dict:
         'enable': bool(values.get('chat.context_compaction.enable', False)),
         'token_threshold': token_threshold,
         'token_cap': _parse_positive_int(values.get('chat.context_compaction.token_cap')) or token_threshold,
-        'retention_percentage': _clamp_retention_percentage(
-            values.get('chat.context_compaction.retention_percentage')
-        ),
+        'retention_percentage': _clamp_retention_percentage(values.get('chat.context_compaction.retention_percentage')),
         'prompt_template': values.get('chat.context_compaction.prompt_template', '') or '',
     }
 
@@ -261,14 +259,9 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
 
     for idx in range(len(messages) - 1, -1, -1):
         usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-        input_tokens = (
-            (usage or {}).get('prompt_tokens')
-            or (usage or {}).get('input_tokens')
-        )
+        input_tokens = (usage or {}).get('prompt_tokens') or (usage or {}).get('input_tokens')
         if isinstance(usage, dict) and input_tokens:
-            tokens = int(input_tokens or 0) + int(
-                usage.get('completion_tokens') or usage.get('output_tokens') or 0
-            )
+            tokens = int(input_tokens or 0) + int(usage.get('completion_tokens') or usage.get('output_tokens') or 0)
             tokens += _estimate_messages_tokens(messages[idx + 1 :])
             return _build_context_usage(tokens, threshold)
 

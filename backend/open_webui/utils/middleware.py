@@ -3567,11 +3567,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                         }
                     )
 
-                    title = (
-                        await Chats.get_chat_title_by_id(metadata['chat_id'])
-                        if save_to_chat
-                        else ''
-                    )
+                    title = await Chats.get_chat_title_by_id(metadata['chat_id']) if save_to_chat else ''
 
                     # Use output from backend if provided (OR-compliant backends),
                     # otherwise generate from response content
@@ -3648,11 +3644,7 @@ async def non_streaming_chat_response_handler(response, ctx):
         except Exception as e:
             log.debug(f'Error occurred while processing request: {e}')
             chat_id = metadata.get('chat_id')
-            if (
-                getattr(request.state, 'internal', False) is not True
-                and chat_id
-                and is_saved_chat_id(chat_id)
-            ):
+            if getattr(request.state, 'internal', False) is not True and chat_id and is_saved_chat_id(chat_id):
                 webui_url = await Config.get('webui.url')
                 await publish_event(
                     request,
@@ -5337,11 +5329,7 @@ async def streaming_chat_response_handler(response, ctx):
                     if item.get('status') == 'in_progress':
                         item['status'] = 'completed'
 
-                title = (
-                    await Chats.get_chat_title_by_id(metadata['chat_id'])
-                    if save_to_chat
-                    else ''
-                )
+                title = await Chats.get_chat_title_by_id(metadata['chat_id']) if save_to_chat else ''
                 data = {
                     'done': True,
                     'output': output,

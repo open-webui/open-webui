@@ -70,7 +70,9 @@ def custom_headers_require_user_groups(custom_headers: Optional[dict]) -> bool:
     )
 
 
-async def get_user_groups_for_custom_headers(custom_headers: Optional[dict], user: Optional[Any] = None) -> Optional[list]:
+async def get_user_groups_for_custom_headers(
+    custom_headers: Optional[dict], user: Optional[Any] = None
+) -> Optional[list]:
     """Fetch the user's groups only when a header value actually references a groups placeholder."""
     if user is None or not custom_headers_require_user_groups(custom_headers):
         return None

@@ -477,7 +477,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
                         {'role': 'user', 'content': prompt},
                     ],
                     'meta': {'automation_id': automation.id},
-                }
+                },
             ),
         )
 

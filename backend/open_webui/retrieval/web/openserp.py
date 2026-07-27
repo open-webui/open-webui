@@ -21,25 +21,25 @@ async def search_openserp(
 
     No API key is required -- only a reachable OpenSERP base URL.
     """
-    url = f"{base_url.rstrip('/')}/mega/search"
-    params = {"text": query, "limit": count}
+    url = f'{base_url.rstrip("/")}/mega/search'
+    params = {'text': query, 'limit': count}
 
-    log.debug("searching OpenSERP at %s", url)
+    log.debug('searching OpenSERP at %s', url)
 
     session = await get_session()
     async with session.get(url, params=params) as response:
         response.raise_for_status()
         payload = await response.json()
 
-    results = payload.get("results", [])
+    results = payload.get('results', [])
     if filter_list:
         results = get_filtered_results(results, filter_list)
 
     return [
         SearchResult(
-            link=item.get("url", ""),
-            title=item.get("title"),
-            snippet=item.get("snippet"),
+            link=item.get('url', ''),
+            title=item.get('title'),
+            snippet=item.get('snippet'),
         )
         for item in results[:count]
     ]

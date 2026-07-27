@@ -777,9 +777,7 @@ class CalendarEventAttendeeTable:
             existing_status = {
                 row.user_id: row.status
                 for row in (
-                    await db.execute(
-                        select(CalendarEventAttendee).filter(CalendarEventAttendee.event_id == event_id)
-                    )
+                    await db.execute(select(CalendarEventAttendee).filter(CalendarEventAttendee.event_id == event_id))
                 ).scalars()
             }
 

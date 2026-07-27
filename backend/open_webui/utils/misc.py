@@ -194,9 +194,7 @@ def get_output_text(output: list | None) -> str:
             continue
 
         text = ''.join(
-            str(part.get('text'))
-            for part in parts
-            if isinstance(part, dict) and part.get('text') is not None
+            str(part.get('text')) for part in parts if isinstance(part, dict) and part.get('text') is not None
         )
         if text.strip():
             texts.append(text)

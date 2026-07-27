@@ -793,9 +793,7 @@
 					{/if}
 				</button>
 
-				<div
-					class="translate-y-[0.5px] flex min-w-0 flex-1 items-center gap-1.5 pr-6 text-start"
-				>
+				<div class="translate-y-[0.5px] flex min-w-0 flex-1 items-center gap-1.5 pr-6 text-start">
 					{#if edit}
 						<input
 							id="folder-{folderId}-input"
