@@ -25,6 +25,13 @@ ALLOWED_FIELD_STATUSES = frozenset(
         'requires_expert_review',
     }
 )
+ALLOWED_VALUE_ORIGINS = frozenset(
+    {
+        'direct',
+        'calculated',
+        'analogue',
+    }
+)
 MAX_CONTRIBUTOR_EVIDENCE_CHARS = 20_000
 
 
@@ -111,6 +118,109 @@ class GisObjectSearchProfile:
             'evidence': [dict(item) for item in self.evidence],
             'diagnostics': list(self.diagnostics),
         }
+
+
+@dataclass(frozen=True)
+class GisFieldProposal:
+    """Typed, locator-bound GIS proposal for one canonical GeoTeaser field."""
+
+    field_key: str
+    value: Any
+    unit: str | None
+    value_origin: Literal['direct', 'calculated', 'analogue']
+    relation_to_object: str
+    source_id: str
+    source_title: str
+    source_locator: Any
+    retrieval_note: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            'field_key': self.field_key,
+            'value': self.value,
+            'unit': self.unit,
+            'value_origin': self.value_origin,
+            'relation_to_object': self.relation_to_object,
+            'source_id': self.source_id,
+            'source_title': self.source_title,
+            'source_locator': self.source_locator,
+            'retrieval_note': self.retrieval_note,
+        }
+
+
+def normalize_gis_field_proposals(
+    raw_output: str,
+    *,
+    allowed_field_keys: Sequence[str],
+) -> tuple[GisFieldProposal, ...]:
+    """Decode valid GIS proposals and ignore foreign or untraceable claims."""
+    try:
+        payload = extract_json_object(raw_output)
+    except GeotizerOrchestrationError:
+        return ()
+    raw_proposals = payload.get('field_proposals')
+    if (
+        not isinstance(raw_proposals, Sequence)
+        or isinstance(raw_proposals, str | bytes)
+    ):
+        return ()
+
+    allowed = {str(field_key) for field_key in allowed_field_keys}
+    proposals: list[GisFieldProposal] = []
+    seen: set[str] = set()
+    for raw in raw_proposals:
+        if not isinstance(raw, Mapping):
+            continue
+        field_key = str(raw.get('field_key') or '')
+        value_origin = str(raw.get('value_origin') or '')
+        source_id = str(raw.get('source_id') or '')
+        source_locator = raw.get('source_locator')
+        retrieval_note = str(raw.get('retrieval_note') or '').strip()
+        value = raw.get('value')
+        if (
+            field_key not in allowed
+            or value in (None, '')
+            or value_origin not in ALLOWED_VALUE_ORIGINS
+            or not source_id
+            or source_locator in (None, '', {}, [])
+            or (
+                value_origin in {'calculated', 'analogue'}
+                and not retrieval_note
+            )
+        ):
+            continue
+        relation_to_object = str(
+            raw.get('relation_to_object')
+            or (
+                'deposit_analogue'
+                if value_origin == 'analogue'
+                else 'direct'
+            )
+        )
+        proposal = GisFieldProposal(
+            field_key=field_key,
+            value=value,
+            unit=(
+                str(raw.get('unit'))
+                if raw.get('unit') is not None
+                else None
+            ),
+            value_origin=value_origin,  # type: ignore[arg-type]
+            relation_to_object=relation_to_object,
+            source_id=source_id,
+            source_title=str(raw.get('source_title') or source_id),
+            source_locator=source_locator,
+            retrieval_note=retrieval_note,
+        )
+        identity = json.dumps(
+            proposal.as_dict(),
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        if identity not in seen:
+            seen.add(identity)
+            proposals.append(proposal)
+    return tuple(proposals)
 
 
 def normalize_gis_object_profile(
@@ -230,8 +340,8 @@ def build_knowledge_search_plan(
                 'query_terms': list(regional_terms),
                 'enabled': bool(regional_terms),
                 'allowed_use': (
-                    'May support regional setting and search hypotheses; '
-                    'must not be presented as a measured object value.'
+                    'May support regional setting and a calculated object '
+                    'alternative when value_origin=calculated is explicit.'
                 ),
             },
             {
@@ -240,9 +350,9 @@ def build_knowledge_search_plan(
                 'query_terms': list(analogue_terms),
                 'enabled': bool(analogue_terms),
                 'allowed_use': (
-                    'May support analogue fields, expected types and expert '
-                    'hypotheses; must not be copied as an object-specific '
-                    'resource, grade, geometry or study result.'
+                    'May support analogue fields and an object alternative '
+                    'when value_origin=analogue is explicit. The value must '
+                    'remain visibly distinguishable from a direct fact.'
                 ),
             },
         ],
@@ -261,10 +371,9 @@ def build_knowledge_search_plan(
                 'source_locator.'
             ),
             (
-                'If only contextual or analogue evidence exists for an '
-                'object-specific factual field, use '
-                'requires_expert_review or not_found rather than inventing '
-                'an object value.'
+                'Contextual or analogue evidence may fill an alternative '
+                'object value only with value_origin=calculated|analogue, '
+                'an exact locator and an explanation of the derivation.'
             ),
         ],
     }
@@ -807,6 +916,7 @@ def _patch_violations(
     value = patch.get('value')
     if status == 'filled' and value in (None, ''):
         violations.append(f'patches[{index}] filled without value')
+    violations.extend(_value_origin_violations(index, patch, status))
     if status in {'not_found', 'not_applicable', 'conflicted'} and value is not None:
         violations.append(f'patches[{index}] {status} must use value=null')
     refs = patch.get('source_refs')
@@ -823,6 +933,37 @@ def _patch_violations(
         [],
     ):
         violations.append(f'patches[{index}] filled without source_locator')
+    return violations
+
+
+def _value_origin_violations(
+    index: int,
+    patch: Mapping[str, Any],
+    status: str,
+) -> list[str]:
+    raw_value_origin = patch.get('value_origin')
+    value_origin = (
+        str(raw_value_origin or 'direct')
+        if status == 'filled'
+        else raw_value_origin
+    )
+    violations: list[str] = []
+    if status == 'filled' and value_origin not in ALLOWED_VALUE_ORIGINS:
+        violations.append(
+            f'patches[{index}].value_origin is unsupported: {value_origin}'
+        )
+    if status != 'filled' and raw_value_origin is not None:
+        violations.append(
+            f'patches[{index}] {status} must use value_origin=null'
+        )
+    if (
+        status == 'filled'
+        and value_origin in {'calculated', 'analogue'}
+        and not str(patch.get('retrieval_note') or '').strip()
+    ):
+        violations.append(
+            f'patches[{index}] {value_origin} requires retrieval_note'
+        )
     return violations
 
 
@@ -913,6 +1054,169 @@ def normalize_contributor_evidence(
         max_chars=MAX_CONTRIBUTOR_EVIDENCE_CHARS,
     )
     return normalized
+
+
+def apply_structured_gis_field_proposals(
+    next_batch: Mapping[str, Any],
+    envelope: Mapping[str, Any],
+    contributor_evidence: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Apply unambiguous GIS proposals with explicit origin precedence."""
+    proposals_by_key = _gis_proposals_by_field(
+        next_batch,
+        contributor_evidence,
+    )
+
+    result = {
+        **dict(envelope),
+        'source_inventory': [
+            dict(source)
+            for source in envelope.get('source_inventory') or []
+        ],
+        'patches': [
+            dict(patch)
+            for patch in envelope.get('patches') or []
+        ],
+    }
+    sources_by_id = {
+        str(source.get('source_id') or ''): source
+        for source in result['source_inventory']
+    }
+    patch_by_key = {
+        str(patch.get('field_key') or ''): patch
+        for patch in result['patches']
+    }
+    for field_key, proposals in proposals_by_key.items():
+        proposal = _select_unambiguous_gis_proposal(proposals)
+        patch = patch_by_key.get(field_key)
+        if proposal is None or patch is None:
+            continue
+        value_origin = str(proposal.get('value_origin') or '')
+        if not _proposal_may_replace_patch(proposal, patch):
+            continue
+
+        raw_source_id = str(proposal['source_id'])
+        source_id = f'{raw_source_id}__{field_key}'
+        source_locator = proposal['source_locator']
+        source = {
+            'source_id': source_id,
+            'source_type': 'gis',
+            'title': str(proposal.get('source_title') or source_id),
+            'locator': (
+                json.dumps(
+                    source_locator,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                )
+                if isinstance(source_locator, Mapping | list)
+                else str(source_locator)
+            ),
+            'url': None,
+        }
+        existing = sources_by_id.get(source_id)
+        if existing is None:
+            result['source_inventory'].append(source)
+            sources_by_id[source_id] = source
+        elif existing != source:
+            continue
+
+        locator = _proposal_locator(proposal)
+        patch.update(
+            {
+                'value': proposal['value'],
+                'unit': proposal.get('unit'),
+                'status': 'filled',
+                'value_origin': value_origin,
+                'source_refs': [source_id],
+                'source_locator': locator,
+                'retrieval_note': str(proposal['retrieval_note']),
+            }
+        )
+    return result
+
+
+def _gis_proposals_by_field(
+    next_batch: Mapping[str, Any],
+    contributor_evidence: Sequence[Mapping[str, Any]],
+) -> dict[str, list[Mapping[str, Any]]]:
+    allowed_keys = {
+        str(field.get('field_key') or '')
+        for field in next_batch.get('fields') or []
+    }
+    proposals_by_key: dict[str, list[Mapping[str, Any]]] = {}
+    for evidence in contributor_evidence:
+        if str(evidence.get('source_domain') or '').lower() != 'gis':
+            continue
+        for proposal in evidence.get('field_proposals') or []:
+            if not isinstance(proposal, Mapping):
+                continue
+            field_key = str(proposal.get('field_key') or '')
+            if field_key in allowed_keys:
+                proposals_by_key.setdefault(field_key, []).append(proposal)
+    return proposals_by_key
+
+
+def _proposal_may_replace_patch(
+    proposal: Mapping[str, Any],
+    patch: Mapping[str, Any],
+) -> bool:
+    value_origin = str(proposal.get('value_origin') or '')
+    return not (
+        value_origin in {'calculated', 'analogue'}
+        and patch.get('status') == 'filled'
+        and str(patch.get('value_origin') or 'direct') == 'direct'
+    )
+
+
+def _select_unambiguous_gis_proposal(
+    proposals: Sequence[Mapping[str, Any]],
+) -> Mapping[str, Any] | None:
+    priority = {'direct': 0, 'calculated': 1, 'analogue': 2}
+    ranked = [
+        proposal
+        for proposal in proposals
+        if str(proposal.get('value_origin') or '') in priority
+    ]
+    if not ranked:
+        return None
+    best_priority = min(
+        priority[str(proposal.get('value_origin'))]
+        for proposal in ranked
+    )
+    best = [
+        proposal
+        for proposal in ranked
+        if priority[str(proposal.get('value_origin'))] == best_priority
+    ]
+    unique_values = {
+        json.dumps(
+            {
+                'value': proposal.get('value'),
+                'unit': proposal.get('unit'),
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        for proposal in best
+    }
+    if len(unique_values) != 1:
+        return None
+    return best[0]
+
+
+def _proposal_locator(proposal: Mapping[str, Any]) -> Any:
+    raw_locator = proposal.get('source_locator')
+    metadata = {
+        'relation_to_object': str(
+            proposal.get('relation_to_object') or 'direct'
+        ),
+        'value_origin': str(proposal.get('value_origin') or ''),
+        'evidence_authority': 'linked_gis_project',
+        'proposal_source_id': str(proposal.get('source_id') or ''),
+    }
+    if isinstance(raw_locator, Mapping):
+        return {**dict(raw_locator), **metadata}
+    return {'locator': raw_locator, **metadata}
 
 
 def bounded_text(value: str, *, max_chars: int) -> str:
