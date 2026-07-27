@@ -163,10 +163,16 @@ async def has_connection_access(
     if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
         return True
 
+    access_grants = (connection.get('config') or {}).get('access_grants', [])
+    if not access_grants:
+        # No grants configured → private, admin-only: admins must keep access
+        # to connections only they can configure, even when they do not bypass
+        # access control globally.
+        return user.role == 'admin'
+
     if user_group_ids is None:
         user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
 
-    access_grants = (connection.get('config') or {}).get('access_grants', [])
     return await has_access(user.id, 'read', access_grants, user_group_ids)
 
 
