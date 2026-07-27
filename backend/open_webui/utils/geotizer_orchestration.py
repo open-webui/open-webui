@@ -41,6 +41,15 @@ class AgentTask:
     payload: Mapping[str, Any]
 
 
+def execution_mode_for_task(
+    task: AgentTask,
+) -> Literal['specialist_contributor', 'tool_free_owner']:
+    """Keep state-changing tools outside every bounded owner decision."""
+    if task.role == 'owner':
+        return 'tool_free_owner'
+    return 'specialist_contributor'
+
+
 @dataclass(frozen=True)
 class GisObjectSearchProfile:
     """Bounded GIS-derived descriptors used to expand knowledge retrieval."""
