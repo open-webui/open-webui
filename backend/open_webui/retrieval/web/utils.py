@@ -75,6 +75,34 @@ def resolve_hostname(hostname):
     return ipv4_addresses, ipv6_addresses
 
 
+def _is_global_addr(ip: str) -> bool:
+    addr = ipaddress.ip_address(ip)
+    if not addr.is_global:
+        return False
+    if not isinstance(addr, ipaddress.IPv6Address):
+        return True
+
+    embedded = []
+    if addr.ipv4_mapped:
+        embedded.append(addr.ipv4_mapped)
+    if addr.sixtofour:
+        embedded.append(addr.sixtofour)
+    if addr.teredo:
+        embedded.extend(addr.teredo)
+
+    b = addr.packed
+    if b[:12] == b"\x00" * 12:
+        embedded.append(ipaddress.IPv4Address(b[12:]))
+    elif b[:12] == b"\x00\x64\xff\x9b" + b"\x00" * 8:
+        embedded.append(ipaddress.IPv4Address(b[12:]))
+    elif b[:6] == b"\x00\x64\xff\x9b\x00\x01":
+        if b[8] != 0:
+            return False
+        embedded.append(ipaddress.IPv4Address(bytes((b[6], b[7], b[9], b[10]))))
+
+    return all(ip.is_global for ip in embedded)
+
+
 def validate_url(url: Union[str, Sequence[str]]):
     if isinstance(url, str):
         if isinstance(validators.url(url), validators.ValidationError):
@@ -111,8 +139,7 @@ def validate_url(url: Union[str, Sequence[str]]):
             # Check if any of the resolved addresses are private
             # DNS rebinding is mitigated at the connection layer; see _SSRFSafeResolver / _SSRFSafeAdapter
             for ip in ipv4_addresses + ipv6_addresses:
-                addr = ipaddress.ip_address(ip)
-                if not addr.is_global:
+                if not _is_global_addr(ip):
                     raise ValueError(ERROR_MESSAGES.INVALID_URL)
         return True
     elif isinstance(url, Sequence):
@@ -147,7 +174,7 @@ def _ssrf_safe_new_conn(self):
         raise OSError(f'getaddrinfo for {host!r} returned empty list')
     if not ENABLE_LOCAL_WEB_FETCH:
         for _, _, _, _, sa in infos:
-            if not ipaddress.ip_address(sa[0]).is_global:
+            if not _is_global_addr(sa[0]):
                 raise ValueError(ERROR_MESSAGES.INVALID_URL)
     err = None
     for fam, typ, proto, _, sa in infos:
@@ -208,7 +235,7 @@ class _SSRFSafeResolver(aiohttp.resolver.DefaultResolver):
         results = await super().resolve(host, port, family)
         if not ENABLE_LOCAL_WEB_FETCH:
             for entry in results:
-                if not ipaddress.ip_address(entry['host']).is_global:
+                if not _is_global_addr(entry['host']):
                     raise ValueError(ERROR_MESSAGES.INVALID_URL)
         return results
 
