@@ -1325,6 +1325,8 @@ async def get_terminal_tools(
     connection = next((c for c in connections if c.get('id') == terminal_id), None)
     if connection is None:
         raise RuntimeError(f"Terminal server '{terminal_id}' not found")
+    if not connection.get('enabled', True):
+        raise RuntimeError(f"Terminal server '{terminal_id}' is disabled")
 
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
     if not await has_connection_access(user, connection, user_group_ids):

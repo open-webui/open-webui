@@ -100,6 +100,9 @@ async def proxy_terminal(
     if connection is None:
         return JSONResponse({'error': f"Terminal server '{server_id}' not found"}, status_code=404)
 
+    if not connection.get('enabled', True):
+        return JSONResponse({'error': 'Terminal server disabled'}, status_code=403)
+
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
     if not await has_connection_access(user, connection, user_group_ids):
         return JSONResponse({'error': 'Access denied'}, status_code=403)
@@ -246,6 +249,10 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
 
     if connection is None:
         await ws.close(code=4004, reason='Terminal server not found')
+        return None
+
+    if not connection.get('enabled', True):
+        await ws.close(code=4003, reason='Terminal server disabled')
         return None
 
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id)}
