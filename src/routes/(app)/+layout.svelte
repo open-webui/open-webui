@@ -517,7 +517,9 @@
 				<Sidebar />
 
 				{#if loaded}
-					<slot />
+					<main id="main-content" class="contents">
+						<slot />
+					</main>
 				{:else}
 					<div
 						class="w-full flex-1 h-full flex items-center justify-center {$showSidebar
