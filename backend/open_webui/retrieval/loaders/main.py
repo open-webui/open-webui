@@ -206,7 +206,10 @@ class DoclingLoader:
                 data={
                     'image_export_mode': 'placeholder',
                     'md_page_break_placeholder': page_break_marker,
-                    **self.params,
+                    **{
+                        k: (json.dumps(v) if isinstance(v, (dict, list, bool)) else v)
+                        for k, v in self.params.items()
+                    },
                 },
                 headers=headers,
                 verify=AIOHTTP_CLIENT_SESSION_SSL,
