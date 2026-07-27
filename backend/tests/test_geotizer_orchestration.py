@@ -16,6 +16,7 @@ from open_webui.utils.geotizer_orchestration import (
     bounded_text,
     build_batch_tasks,
     build_knowledge_search_plan,
+    execution_mode_for_task,
     extract_json_object,
     extract_output_message_text,
     extract_owner_envelope,
@@ -113,6 +114,16 @@ def test_batch_plan_owner_is_last_for_every_route_permutation():
         assert tasks[-1].producer == value['producer']
         assert all(task.role == 'contributor' for task in tasks[:-1])
         assert all(task.producer != 'DataCube Reviewer' for task in tasks)
+
+
+def test_all_owners_are_tool_free_and_contributors_keep_specialist_tools():
+    tasks = build_batch_tasks(batch())
+
+    assert all(
+        execution_mode_for_task(task) == 'specialist_contributor'
+        for task in tasks[:-1]
+    )
+    assert execution_mode_for_task(tasks[-1]) == 'tool_free_owner'
 
 
 def test_linked_project_gis_evidence_has_direct_authority():

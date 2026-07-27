@@ -16,6 +16,7 @@ from open_webui.utils.geotizer_orchestration import (
     build_knowledge_search_plan,
     compact_batch_context,
     ensure_state_can_continue,
+    execution_mode_for_task,
     extract_json_object,
     extract_owner_envelope,
     merge_owner_envelopes,
@@ -494,13 +495,16 @@ async def _build_agent_caller(runtime) -> AgentCall:
         object_name: str,
         datacube: Mapping[str, Any] | None,
     ) -> str:
-        if task.kind == 'skilled':
+        if execution_mode_for_task(task) == 'tool_free_owner':
             model = runtime['__request__'].app.state.MODELS.get(
                 SKILLED_MODEL_ID,
                 {'id': SKILLED_MODEL_ID},
             )
             result = await sub_agent.run_sub_agent(
-                description=(f'GeoTeaser {task.task_id}: assemble owner batch'),
+                description=(
+                    f'GeoTeaser {task.task_id}: '
+                    f'{task.producer} tool-free owner decision'
+                ),
                 prompt=prompt,
                 __user__=runtime['__user__'],
                 __request__=runtime['__request__'],
