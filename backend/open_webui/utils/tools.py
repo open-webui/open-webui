@@ -187,13 +187,16 @@ async def build_tool_server_headers(
 # Let no function be called without need, and let what
 # it yields justify the cost of running it.
 async def get_async_tool_function_and_apply_extra_params(
-    function: Callable, extra_params: dict
+    function: Callable, extra_params: dict, function_introspection=None
 ) -> Callable[..., Awaitable]:
-    sig = inspect.signature(function)
-    try:
-        type_hints = get_type_hints(function)
-    except Exception:
-        type_hints = {}
+    if function_introspection is None:
+        sig = inspect.signature(function)
+        try:
+            type_hints = get_type_hints(function)
+        except Exception:
+            type_hints = {}
+    else:
+        sig, type_hints = function_introspection
 
     def coerce_kwargs(kwargs):
         for name, value in kwargs.items():
@@ -779,6 +782,7 @@ async def get_builtin_tools(
                 '__message_id__': extra_params.get('__message_id__'),
                 '__model_knowledge__': model_knowledge,
             },
+            get_builtin_function_introspection(func),
         )
 
         spec = get_builtin_tool_spec(func)
@@ -853,7 +857,7 @@ def parse_docstring(docstring):
     return param_descriptions
 
 
-def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
+def convert_function_to_pydantic_model(func: Callable, function_introspection=None) -> type[BaseModel]:
     """
     Converts a Python function's type hints and docstring to a Pydantic model,
     including support for nested types, default values, and descriptions.
@@ -865,8 +869,11 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
     Returns:
         A Pydantic model class.
     """
-    type_hints = get_type_hints(func)
-    signature = inspect.signature(func)
+    if function_introspection is None:
+        type_hints = get_type_hints(func)
+        signature = inspect.signature(func)
+    else:
+        signature, type_hints = function_introspection
     parameters = signature.parameters
 
     docstring = func.__doc__
@@ -933,8 +940,17 @@ def clean_openai_tool_schema(spec: dict) -> dict:
 
 
 @cache
+def get_builtin_function_introspection(func: Callable):
+    try:
+        type_hints = get_type_hints(func)
+    except Exception:
+        type_hints = {}
+    return inspect.signature(func), type_hints
+
+
+@cache
 def build_builtin_tool_spec(func: Callable) -> dict:
-    pydantic_model = convert_function_to_pydantic_model(func)
+    pydantic_model = convert_function_to_pydantic_model(func, get_builtin_function_introspection(func))
     spec = convert_pydantic_model_to_openai_function_spec(pydantic_model)
     return clean_openai_tool_schema(spec)
 
