@@ -39,6 +39,7 @@ from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user_by_token
 from open_webui.utils.chat_id import is_saved_chat_id
+from open_webui.utils.misc import get_output_text
 from open_webui.utils.redis import (
     build_sentinel_url,
     get_redis_connection,
@@ -903,19 +904,20 @@ async def _make_channel_emitter(request_info):
     state = {'last_emit_at': 0.0}
     THROTTLE_INTERVAL = 0.15  # ~6 updates/sec
 
-    async def _emit_channel_update(content: str, done: bool = False):
+    async def _emit_channel_update(content: str, done: bool = False, output: list | None = None):
         from open_webui.models.messages import MessageForm, Messages
 
         msg = await Messages.get_message_by_id(message_id)
         if not msg or msg.channel_id != channel_id:
             return
 
-        update_form = MessageForm(content=content)
+        update_form = MessageForm(content=content, data={'output': output} if output else None)
         if done:
             # Merge done flag into existing meta (preserve model_id etc.)
             existing_meta = msg.meta or {}
             update_form = MessageForm(
                 content=content,
+                data={'output': output} if output else None,
                 meta={**existing_meta, 'done': True},
             )
 
@@ -940,16 +942,17 @@ async def _make_channel_emitter(request_info):
 
         if event_type == 'chat:completion':
             data = event_data.get('data', {})
-            content = data.get('content', '')
+            output = data.get('output')
+            content = data.get('content') or get_output_text(output)
             done = data.get('done', False)
 
-            if not content and not done:
+            if not content and not output and not done:
                 return
 
             now = __import__('time').time()
             if done or (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
                 state['last_emit_at'] = now
-                await _emit_channel_update(content, done)
+                await _emit_channel_update(content, done, output if isinstance(output, list) else None)
 
         elif event_type == 'chat:message:error':
             error = event_data.get('data', {}).get('error', {})
