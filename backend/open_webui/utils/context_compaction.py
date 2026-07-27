@@ -52,8 +52,8 @@ async def compact_messages_for_request(
     if not config['enable']:
         return messages, None, False
 
-    system_messages = messages[:1] if messages and messages[0].get('role') == 'system' else []
-    messages = messages[len(system_messages) :]
+    system_messages = [messages[0]] if messages and messages[0].get('role') == 'system' else []
+    messages = messages[1:] if system_messages else messages
 
     messages, previous_summary = _apply_latest_summary_checkpoint(messages)
     token_threshold = _resolve_token_threshold(config['token_threshold'], config['token_cap'], metadata)
