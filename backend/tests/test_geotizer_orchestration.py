@@ -9,6 +9,7 @@ from open_webui.tools.geotizer import (
     _contributor_prompt,
     _gis_error_user_message,
     _gis_infrastructure_rules,
+    _needs_deterministic_infrastructure,
     _owner_prompt,
     run_geotizer_workflow,
 )
@@ -600,6 +601,27 @@ def test_gis_dc_prompt_requires_deterministic_infrastructure_calculations():
 
 def test_non_infrastructure_gis_batch_has_no_infrastructure_rules():
     assert _gis_infrastructure_rules({**batch(), 'batch_id': 'GIS-GEO'}) == []
+
+
+def test_only_real_infrastructure_fields_trigger_backend_calculation():
+    assert _needs_deterministic_infrastructure(
+        {
+            **batch(),
+            'fields': [
+                {'field_key': 'geotizer_object.v1.r078.a01'},
+            ],
+        }
+    )
+    assert not _needs_deterministic_infrastructure(batch())
+    assert not _needs_deterministic_infrastructure(
+        {
+            **batch(),
+            'batch_id': 'GIS-GEO',
+            'fields': [
+                {'field_key': 'geotizer_object.v1.r078.a01'},
+            ],
+        }
+    )
 
 
 def test_workflow_marks_gis_contributor_evidence_as_direct():
