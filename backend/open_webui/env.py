@@ -102,6 +102,7 @@ class JSONFormatter(logging.Formatter):
 
 
 LOG_FORMAT = os.getenv('LOG_FORMAT', '').lower()
+LOGURU_DIAGNOSE = os.getenv('LOGURU_DIAGNOSE', 'False').lower() == 'true'
 
 GLOBAL_LOG_LEVEL = os.getenv('GLOBAL_LOG_LEVEL', '').upper()
 if GLOBAL_LOG_LEVEL in logging.getLevelNamesMapping():
