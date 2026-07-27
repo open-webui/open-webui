@@ -106,11 +106,11 @@ class ToolsTable:
         access_grants: list[AccessGrantModel | None] = None,
         db: AsyncSession | None = None,
     ) -> ToolModel:
-        tool_data = ToolModel.model_validate(tool).model_dump(exclude={'access_grants'})
-        tool_data['access_grants'] = (
-            access_grants if access_grants is not None else await self._get_access_grants(tool_data['id'], db=db)
+        tool_model = ToolModel.model_validate(tool)
+        tool_model.access_grants = (
+            access_grants if access_grants is not None else await self._get_access_grants(tool_model.id, db=db)
         )
-        return ToolModel.model_validate(tool_data)
+        return tool_model
 
     async def insert_new_tool(
         self,
