@@ -2162,6 +2162,309 @@ DEFAULT_VIEW_FILE_MAX_CHARS = 10_000
 MAX_GREP_RESULTS = 50
 
 
+async def _get_accessible_chat_files(
+    files: Optional[list[dict]],
+    user: dict,
+    file_id: Optional[str] = None,
+) -> list[tuple[dict, object]]:
+    from open_webui.models.files import Files
+
+    user_id = user.get('id')
+    user_role = user.get('role', 'user')
+    accessible = []
+    seen = set()
+
+    for item in files or []:
+        if not isinstance(item, dict) or item.get('type', 'file') != 'file':
+            continue
+        fid = item.get('id') or item.get('url') or ''
+        if (
+            not isinstance(fid, str)
+            or not fid
+            or fid in seen
+            or fid.startswith(('http://', 'https://', 'data:'))
+            or (file_id and fid != file_id)
+        ):
+            continue
+        normalized = {**item, 'id': fid, 'type': 'file'}
+        if 'name' not in normalized and item.get('filename'):
+            normalized['name'] = item.get('filename')
+        seen.add(fid)
+
+        file = await Files.get_file_by_id(fid)
+        if file and await _has_read_access_to_file(file, user_id, user_role):
+            accessible.append((normalized, file))
+
+    return accessible
+
+
+def _grep_file_models(
+    files_to_search: list,
+    pattern: str,
+    case_insensitive: bool = False,
+    count_only: bool = False,
+) -> str:
+    from open_webui.tools.knowledge_fs import build_matcher
+
+    matches, err = build_matcher(pattern, case_insensitive)
+    if err:
+        return json.dumps({'error': err})
+
+    results = []
+    total_matches = 0
+    counts = []
+
+    for file in files_to_search:
+        content = ''
+        if file.data:
+            content = file.data.get('content', '')
+        if not content:
+            continue
+
+        lines = content.split('\n')
+        file_matches = 0
+
+        for i, line in enumerate(lines, 1):
+            if matches(line):
+                file_matches += 1
+                total_matches += 1
+                if not count_only and len(results) < MAX_GREP_RESULTS:
+                    results.append(f'{file.id}  {file.filename}:{i}: {line}')
+
+        if file_matches > 0 and count_only:
+            counts.append(f'{file.id}  {file.filename}: {file_matches}')
+
+    if count_only:
+        if not counts:
+            return f'No matches for "{pattern}"'
+        return '\n'.join(counts) + f'\n[{total_matches} total matches]'
+
+    if not results:
+        return f'No matches for "{pattern}"'
+
+    output = '\n'.join(results)
+    if total_matches > MAX_GREP_RESULTS:
+        output += f'\n[{MAX_GREP_RESULTS} of {total_matches} matches shown — use file_id to narrow]'
+    return output
+
+
+async def list_chat_files(
+    __request__: Request = None,
+    __user__: dict = None,
+    __files__: list[dict] = None,
+) -> str:
+    """
+    List files attached to the current chat.
+
+    :return: JSON with attached chat files containing id, filename, content type, size, and updated time when available
+    """
+    if __request__ is None:
+        return json.dumps({'error': 'Request context not available'})
+
+    if not __user__:
+        return json.dumps({'error': 'User context not available'})
+
+    try:
+        files = []
+        for item, file in await _get_accessible_chat_files(__files__, __user__):
+            file_info = {
+                'id': file.id,
+                'filename': file.filename,
+                'name': item.get('name') or file.filename,
+                'type': item.get('type', 'file'),
+                'updated_at': file.updated_at,
+            }
+            content_type = item.get('content_type') or (file.meta or {}).get('content_type')
+            size = item.get('size') or (file.meta or {}).get('size')
+            if content_type:
+                file_info['content_type'] = content_type
+            if size:
+                file_info['size'] = size
+            files.append(file_info)
+
+        return json.dumps(files, ensure_ascii=False)
+    except Exception as e:
+        log.exception(f'list_chat_files error: {e}')
+        return json.dumps({'error': str(e)})
+
+
+async def grep_chat_files(
+    pattern: str,
+    file_id: Optional[str] = None,
+    case_insensitive: bool = False,
+    count_only: bool = False,
+    __request__: Request = None,
+    __user__: dict = None,
+    __files__: list[dict] = None,
+) -> str:
+    """
+    Search exact text across files attached to the current chat.
+    Pass file_id from the attached_files block to search one file.
+
+    :param pattern: The text pattern to search for
+    :param file_id: Optional attached file ID to search within a single file
+    :param case_insensitive: If true, ignore case when matching
+    :param count_only: If true, return only match counts per file
+    :return: Matching lines with file IDs, filenames, and line numbers
+    """
+    if __request__ is None:
+        return json.dumps({'error': 'Request context not available'})
+
+    if not __user__:
+        return json.dumps({'error': 'User context not available'})
+
+    if not pattern or not pattern.strip():
+        return json.dumps({'error': 'Pattern is required'})
+
+    if isinstance(file_id, str) and file_id.lower() in ('none', 'null', ''):
+        file_id = None
+
+    try:
+        attached_ids = set()
+        for item in __files__ or []:
+            if not isinstance(item, dict) or item.get('type', 'file') != 'file':
+                continue
+            fid = item.get('id') or item.get('url')
+            if isinstance(fid, str) and fid and not fid.startswith(('http://', 'https://', 'data:')):
+                attached_ids.add(fid)
+
+        if not attached_ids:
+            return json.dumps({'error': 'No files are attached to this chat'})
+        if file_id and file_id not in attached_ids:
+            return json.dumps({'error': 'File not found'})
+
+        files_to_search = [file for _, file in await _get_accessible_chat_files(__files__, __user__, file_id)]
+        if not files_to_search:
+            return json.dumps({'error': 'No accessible files found'})
+
+        return _grep_file_models(files_to_search, pattern, case_insensitive, count_only)
+    except Exception as e:
+        log.exception(f'grep_chat_files error: {e}')
+        return json.dumps({'error': str(e)})
+
+
+async def query_chat_files(
+    query: str,
+    file_id: Optional[str] = None,
+    count: Optional[int] = None,
+    __request__: Request = None,
+    __user__: dict = None,
+    __files__: list[dict] = None,
+) -> str:
+    """
+    Search files attached to the current chat using semantic/vector search.
+    Pass file_id from the attached_files block to search one file, or omit it to search all attached chat files.
+
+    :param query: The search query to find semantically relevant content
+    :param file_id: Optional attached file ID to search within a single file
+    :param count: Maximum number of results to return, capped by the server RAG top k
+    :return: JSON with relevant chunks containing content, source filename, and relevance score
+    """
+    if __request__ is None:
+        return json.dumps({'error': 'Request context not available'})
+
+    if not __user__:
+        return json.dumps({'error': 'User context not available'})
+
+    if isinstance(file_id, str) and file_id.lower() in ('none', 'null', ''):
+        file_id = None
+    if isinstance(count, str):
+        if count.lower() in ('none', 'null', ''):
+            count = None
+        else:
+            try:
+                count = int(count)
+            except ValueError:
+                count = None
+
+    try:
+        from open_webui.retrieval.utils import get_sources_from_items
+
+        attached_ids = set()
+        for item in __files__ or []:
+            if not isinstance(item, dict) or item.get('type', 'file') != 'file':
+                continue
+            fid = item.get('id') or item.get('url')
+            if isinstance(fid, str) and fid and not fid.startswith(('http://', 'https://', 'data:')):
+                attached_ids.add(fid)
+
+        if not attached_ids:
+            return json.dumps({'error': 'No files are attached to this chat'})
+        if file_id and file_id not in attached_ids:
+            return json.dumps({'error': 'File not found'})
+
+        accessible = await _get_accessible_chat_files(__files__, __user__, file_id)
+        if not accessible:
+            return json.dumps({'error': 'No accessible files found'})
+
+        file_items = [{**item} for item, _ in accessible]
+        rag_config = await Config.get_many(
+            'rag.top_k',
+            'rag.top_k_reranker',
+            'rag.relevance_threshold',
+            'rag.hybrid_bm25_weight',
+            'rag.enable_hybrid_search',
+            'rag.full_context',
+        )
+        top_k = rag_config.get('rag.top_k') or 5
+        count = top_k if count is None else max(1, min(count, top_k))
+        full_context = all(item.get('context') == 'full' for item in file_items) or rag_config.get('rag.full_context')
+
+        embedding_function = getattr(__request__.app.state, 'EMBEDDING_FUNCTION', None)
+        if not embedding_function and not full_context:
+            return json.dumps({'error': 'Embedding function not configured'})
+
+        user_model = UserModel.model_construct(
+            id=__user__.get('id'),
+            role=__user__.get('role', 'user'),
+        )
+        sources = await get_sources_from_items(
+            request=__request__,
+            items=file_items,
+            queries=[query],
+            embedding_function=(
+                lambda queries, prefix: embedding_function(queries, prefix=prefix, user=user_model)
+                if embedding_function
+                else None
+            ),
+            k=count,
+            reranking_function=(
+                (lambda q, docs: __request__.app.state.RERANKING_FUNCTION(q, docs, user=user_model))
+                if getattr(__request__.app.state, 'RERANKING_FUNCTION', None)
+                else None
+            ),
+            k_reranker=rag_config.get('rag.top_k_reranker'),
+            r=rag_config.get('rag.relevance_threshold'),
+            hybrid_bm25_weight=rag_config.get('rag.hybrid_bm25_weight'),
+            hybrid_search=rag_config.get('rag.enable_hybrid_search'),
+            full_context=full_context,
+            user=user_model,
+        )
+
+        chunks = []
+        for source in sources or []:
+            documents = source.get('document') or []
+            metadatas = source.get('metadata') or []
+            distances = source.get('distances') or []
+            source_info = source.get('source') or {}
+
+            for idx, doc in enumerate(documents):
+                metadata = metadatas[idx] if idx < len(metadatas) and isinstance(metadatas[idx], dict) else {}
+                chunk = {
+                    'content': doc,
+                    'source': metadata.get('source', metadata.get('name', source_info.get('name', 'Unknown'))),
+                    'file_id': metadata.get('file_id', source_info.get('id', '')),
+                }
+                if idx < len(distances):
+                    chunk['distance'] = distances[idx]
+                chunks.append(chunk)
+
+        return json.dumps(chunks[:count], ensure_ascii=False)
+    except Exception as e:
+        log.exception(f'query_chat_files error: {e}')
+        return json.dumps({'error': str(e)})
+
+
 async def grep_knowledge_files(
     pattern: str,
     file_id: Optional[str] = None,
@@ -2195,15 +2498,10 @@ async def grep_knowledge_files(
     try:
         from open_webui.models.files import Files
         from open_webui.models.knowledge import Knowledges
-        from open_webui.tools.knowledge_fs import build_matcher
 
         user_id = __user__.get('id')
         user_role = __user__.get('role', 'user')
         user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
-
-        _matches, err = build_matcher(pattern, case_insensitive)
-        if err:
-            return json.dumps({'error': err})
 
         # Collect files to search
         files_to_search = []
@@ -2280,43 +2578,7 @@ async def grep_knowledge_files(
         if not files_to_search:
             return json.dumps({'error': 'No accessible files found'})
 
-        # Search
-        results = []
-        total_matches = 0
-        counts = []
-
-        for file in files_to_search:
-            content = ''
-            if file.data:
-                content = file.data.get('content', '')
-            if not content:
-                continue
-
-            lines = content.split('\n')
-            file_matches = 0
-
-            for i, line in enumerate(lines, 1):
-                if _matches(line):
-                    file_matches += 1
-                    total_matches += 1
-                    if not count_only and len(results) < MAX_GREP_RESULTS:
-                        results.append(f'{file.id}  {file.filename}:{i}: {line}')
-
-            if file_matches > 0 and count_only:
-                counts.append(f'{file.id}  {file.filename}: {file_matches}')
-
-        if count_only:
-            if not counts:
-                return f'No matches for "{pattern}"'
-            return '\n'.join(counts) + f'\n[{total_matches} total matches]'
-
-        if not results:
-            return f'No matches for "{pattern}"'
-
-        output = '\n'.join(results)
-        if total_matches > MAX_GREP_RESULTS:
-            output += f'\n[{MAX_GREP_RESULTS} of {total_matches} matches shown — use file_id to narrow]'
-        return output
+        return _grep_file_models(files_to_search, pattern, case_insensitive, count_only)
 
     except Exception as e:
         log.exception(f'grep_knowledge_files error: {e}')

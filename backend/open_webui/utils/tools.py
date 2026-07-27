@@ -62,14 +62,17 @@ from open_webui.tools.builtin import (
     fetch_url,
     generate_image,
     get_current_timestamp,
+    grep_chat_files,
     grep_knowledge_files,
     kb_exec,
+    list_chat_files,
     list_automations,
     list_knowledge,
     list_knowledge_bases,
     list_memories,
     list_memory_paths,
     notify,
+    query_chat_files,
     query_knowledge_bases,
     query_knowledge_files,
     read_memory_path,
@@ -519,9 +522,37 @@ async def get_builtin_tools(
             await Config.get('user.permissions'),
         )
 
+    async def has_user_chat_permission(permission_key: str) -> bool:
+        if user.get('role') == 'admin':
+            return True
+        return await has_permission(
+            user.get('id', ''),
+            f'chat.{permission_key}',
+            await Config.get('user.permissions'),
+        )
+
     # Time utilities - available for date calculations
     if is_builtin_tool_enabled('time'):
         builtin_functions.extend([get_current_timestamp, calculate_timestamp])
+
+    metadata = extra_params.get('__metadata__') or {}
+    chat_files = metadata.get('files') or extra_params.get('__files__') or []
+    has_chat_files = any(
+        isinstance(item, dict)
+        and item.get('type', 'file') == 'file'
+        and (item.get('id') or item.get('url'))
+        and not str(item.get('id') or item.get('url')).startswith(('http://', 'https://', 'data:'))
+        for item in chat_files
+    )
+
+    if (
+        is_builtin_tool_enabled('files')
+        and get_model_capability('file_upload')
+        and not get_model_capability('file_context')
+        and has_chat_files
+        and await has_user_chat_permission('file_upload')
+    ):
+        builtin_functions.extend([list_chat_files, query_chat_files, grep_chat_files, view_file])
 
     # Knowledge base tools - conditional injection based on model knowledge
     # If model has attached knowledge (any type), only provide query_knowledge_files
@@ -640,7 +671,6 @@ async def get_builtin_tools(
     ):
         builtin_functions.append(execute_code)
 
-    metadata = extra_params.get('__metadata__') or {}
     chat_id = metadata.get('chat_id') or ''
     chat = None
     if is_saved_chat_id(chat_id):
@@ -709,6 +739,7 @@ async def get_builtin_tools(
                 '__event_emitter__': extra_params.get('__event_emitter__'),
                 '__event_call__': extra_params.get('__event_call__'),
                 '__metadata__': extra_params.get('__metadata__'),
+                '__files__': chat_files,
                 '__chat_id__': extra_params.get('__chat_id__'),
                 '__message_id__': extra_params.get('__message_id__'),
                 '__model_knowledge__': model_knowledge,

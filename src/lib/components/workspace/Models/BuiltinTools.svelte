@@ -27,6 +27,10 @@
 			label: $i18n.t('Knowledge Base'),
 			description: $i18n.t('Browse and query knowledge bases')
 		},
+		files: {
+			label: $i18n.t('Files'),
+			description: $i18n.t('List, search, and read files attached to the current chat')
+		},
 		channels: {
 			label: $i18n.t('Channels'),
 			description: $i18n.t('Search channels and channel messages')
