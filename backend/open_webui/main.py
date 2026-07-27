@@ -1033,6 +1033,17 @@ async def embeddings(request: Request, form_data: dict, user=Depends(get_verifie
     return await generate_embeddings(request, form_data, user)
 
 
+async def _set_direct_model(request: Request, model_item: dict, user) -> None:
+    model_meta = (model_item.get('info') or {}).get('meta') or {}
+    knowledge_items = model_meta.get('knowledge')
+    if knowledge_items:
+        from open_webui.utils.access_control.files import get_accessible_folder_files
+
+        model_meta['knowledge'] = await get_accessible_folder_files(knowledge_items, user)
+    request.state.direct = True
+    request.state.model = model_item
+
+
 @app.post('/api/chat/completions')
 @app.post('/api/v1/chat/completions')  # Experimental: Compatibility with OpenAI API
 async def chat_completion(
@@ -1065,9 +1076,7 @@ async def chat_completion(
                     raise e
         else:
             model = model_item
-
-            request.state.direct = True
-            request.state.model = model
+            await _set_direct_model(request, model, user)
 
         # Model params: global defaults as base, per-model overrides win
         default_model_params = await Config.get('models.default_params', {}) or {}
@@ -1964,8 +1973,7 @@ async def chat_completed(request: Request, form_data: dict, user=Depends(get_ver
         model_item = form_data.pop('model_item', {})
 
         if model_item.get('direct', False):
-            request.state.direct = True
-            request.state.model = model_item
+            await _set_direct_model(request, model_item, user)
 
         return await chat_completed_handler(request, form_data, user)
     except Exception as e:
@@ -1983,8 +1991,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user=De
         model_item = form_data.pop('model_item', {})
 
         if model_item.get('direct', False):
-            request.state.direct = True
-            request.state.model = model_item
+            await _set_direct_model(request, model_item, user)
 
         return await chat_action_handler(request, action_id, form_data, user)
     except Exception as e:
