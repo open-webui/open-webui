@@ -576,7 +576,7 @@
 		}
 	};
 
-	export const focus = () => {
+	export const focus = (options: FocusOptions = {}) => {
 		if (editor && editor.view) {
 			// Check if the editor is destroyed
 			if (editor.isDestroyed) {
@@ -584,9 +584,13 @@
 			}
 
 			try {
-				editor.view.focus();
-				// Scroll to the current selection
-				editor.view.dispatch(editor.view.state.tr.scrollIntoView());
+				if (options.preventScroll && editor.view.dom instanceof HTMLElement) {
+					editor.view.dom.focus(options);
+				} else {
+					editor.view.focus();
+					// Scroll to the current selection
+					editor.view.dispatch(editor.view.state.tr.scrollIntoView());
+				}
 			} catch (e) {
 				// sometimes focusing throws an error, ignore
 				console.warn('Error focusing editor', e);

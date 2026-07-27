@@ -76,6 +76,9 @@
 				? ' -mt-1'
 				: 'text-center items-center justify-center'}  self-start text-gray-600 dark:text-gray-400"
 		>
+			<!-- LICENSE covers this Open WebUI footer identifier.
+			Do not alter, remove, obscure, or replace it except as LICENSE permits:
+			https://docs.openwebui.com/license. -->
 			{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
 		</div>
 	{/if}

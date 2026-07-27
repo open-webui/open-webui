@@ -266,6 +266,10 @@
 				heartbeatInterval = null;
 			}
 
+			if (reason === 'io server disconnect') {
+				_socket.connect();
+			}
+
 			if (details) {
 				console.log('Additional details:', details);
 			}
@@ -542,6 +546,9 @@
 				if ($settings?.notificationEnabled ?? false) {
 					new Notification(`${data.title} / Open WebUI`, {
 						body: timeStr,
+						// LICENSE covers this Open WebUI notification identifier.
+						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+						// https://docs.openwebui.com/license.
 						icon: `${WEBUI_BASE_URL}/static/favicon.png`
 					});
 				}
@@ -677,6 +684,9 @@
 						if ($settings?.notificationEnabled ?? false) {
 							new Notification(`${displayTitle} / Open WebUI`, {
 								body: contentPreview,
+								// LICENSE covers this Open WebUI notification identifier.
+								// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+								// https://docs.openwebui.com/license.
 								icon: `${WEBUI_BASE_URL}/static/favicon.png`
 							});
 						}
@@ -782,6 +792,9 @@
 
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
+						// LICENSE covers this Open WebUI notification identifier.
+						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+						// https://docs.openwebui.com/license.
 						new Notification(`${title} / Open WebUI`, {
 							body: data?.content,
 							icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
@@ -1181,6 +1194,10 @@
 		if (backendConfig) {
 			// Save Backend Status to Store
 			await config.set(backendConfig);
+			// LICENSE covers this Open WebUI branding surface, including name, logo,
+			// visual, textual, symbolic identifiers, metadata, and surrounding UI.
+			// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+			// https://docs.openwebui.com/license.
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
@@ -1293,6 +1310,10 @@
 </script>
 
 <svelte:head>
+	<!-- LICENSE covers this Open WebUI branding surface, including name, logo,
+	visual, textual, symbolic identifiers, metadata, and surrounding UI.
+	Do not alter, remove, obscure, or replace it except as LICENSE permits:
+	https://docs.openwebui.com/license. -->
 	<title>{$WEBUI_NAME}</title>
 	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
 

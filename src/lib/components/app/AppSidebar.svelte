@@ -29,6 +29,9 @@
 					}
 				}}
 			>
+				<!-- LICENSE covers this Open WebUI app navigation logo.
+				Do not alter, remove, obscure, or replace it except as LICENSE permits:
+				https://docs.openwebui.com/license. -->
 				<img
 					src="{WEBUI_BASE_URL}/static/splash.png"
 					class="size-11 dark:invert p-0.5"
@@ -54,6 +57,9 @@
 				selected = '';
 			}}
 		>
+			<!-- LICENSE covers this Open WebUI chat navigation logo.
+			Do not alter, remove, obscure, or replace it except as LICENSE permits:
+			https://docs.openwebui.com/license. -->
 			<img
 				src="{WEBUI_BASE_URL}/static/favicon.png"
 				class="size-10 {selected === '' ? 'rounded-2xl' : 'rounded-full'}"

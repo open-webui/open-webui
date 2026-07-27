@@ -1,15 +1,21 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { marked } from 'marked';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	const toolLabels = {
 		time: {
 			label: $i18n.t('Time & Calculation'),
 			description: $i18n.t('Get current time and perform date/time calculations')
+		},
+		user_input: {
+			label: $i18n.t('Ask User'),
+			description: $i18n.t('Pause a response to ask the user a clarifying question')
 		},
 		memory: {
 			label: $i18n.t('Memory'),
@@ -78,12 +84,7 @@
 	<div class="mb-1.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Builtin Tools')}</div>
 	<div class="grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
 		{#each allTools as tool}
-			<div class="flex min-h-6 items-center justify-between gap-2.5">
-				<div class="min-w-0 text-xs text-gray-600 dark:text-gray-400">
-					<Tooltip content={marked.parse(toolLabels[tool].description)}>
-						<span class="truncate">{$i18n.t(toolLabels[tool].label)}</span>
-					</Tooltip>
-				</div>
+			<div class="flex min-h-6 items-center gap-2.5">
 				<Checkbox
 					ariaLabel={$i18n.t(toolLabels[tool].label)}
 					state={builtinTools[tool] !== false ? 'checked' : 'unchecked'}
@@ -96,6 +97,11 @@
 						builtinTools = builtinTools;
 					}}
 				/>
+				<div class="min-w-0 text-xs text-gray-600 dark:text-gray-400">
+					<Tooltip content={marked.parse(toolLabels[tool].description)}>
+						<span class="truncate">{$i18n.t(toolLabels[tool].label)}</span>
+					</Tooltip>
+				</div>
 			</div>
 		{/each}
 	</div>

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import json
+import io
 import logging
 import mimetypes
 import os
@@ -12,6 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Callable, Iterator, Optional, Sequence, Union
+from urllib.parse import unquote, urlparse
 
 import tiktoken
 from fastapi import (
@@ -47,6 +48,8 @@ from open_webui.config import (
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
+    AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+    AIOHTTP_CLIENT_SESSION_SSL,
     DEVICE_TYPE,
     DOCKER,
     RAG_EMBEDDING_TIMEOUT,
@@ -63,7 +66,7 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.config import Config
 
 # Document loaders
-from open_webui.retrieval.loaders.youtube import YoutubeLoader
+from open_webui.retrieval.loaders.youtube import YoutubeLoader, YoutubeTranscriptError
 from open_webui.retrieval.utils import (
     build_loader_from_config,
     get_loader_config,
@@ -72,6 +75,7 @@ from open_webui.retrieval.utils import (
     get_embedding_function,
     get_model_path,
     get_reranking_function,
+    is_youtube_url,
     query_collection,
     query_collection_with_hybrid_search,
     query_doc,
@@ -92,6 +96,7 @@ from open_webui.retrieval.web.firecrawl import search_firecrawl
 from open_webui.retrieval.web.google_pse import search_google_pse
 from open_webui.retrieval.web.jina_search import search_jina
 from open_webui.retrieval.web.kagi import search_kagi
+from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 
 # Web search engines
 from open_webui.retrieval.web.main import SearchResult
@@ -231,7 +236,7 @@ def get_rf(
                             eos = getattr(cfg, 'eos_token_id', None)
                             if eos is not None:
                                 cfg.pad_token_id = eos
-                                log.debug(f'Missing pad_token_id detected; set to eos_token_id={eos}')
+                                log.debug('Missing pad_token_id detected; set to eos_token_id=%s', eos)
                             else:
                                 log.warning('Neither pad_token_id nor eos_token_id present in model config')
                 except Exception as e2:
@@ -444,6 +449,16 @@ class ProcessUrlForm(CollectionNameForm):
     url: str
 
 
+class ProcessUrlResponse(BaseModel):
+    status: bool
+    type: str
+    name: str
+    url: str
+    collection_name: str | None = None
+    content: str | None = None
+    file: dict | None = None
+
+
 class SearchForm(BaseModel):
     queries: list[str]
 
@@ -520,7 +535,7 @@ async def unload_embedding_model(request: Request):
 @router.post('/embedding/update')
 async def update_embedding_config(request: Request, form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)):
     config = await get_retrieval_config()
-    log.info(f'Updating embedding model: {config.RAG_EMBEDDING_MODEL} to {form_data.RAG_EMBEDDING_MODEL}')
+    log.info('Updating embedding model: %s to %s', config.RAG_EMBEDDING_MODEL, form_data.RAG_EMBEDDING_MODEL)
     await unload_embedding_model(request)
     try:
         config.RAG_EMBEDDING_ENGINE = form_data.RAG_EMBEDDING_ENGINE
@@ -1160,7 +1175,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         else config.RAG_RERANKING_BATCH_SIZE
     )
 
-    log.info(f'Updating reranking model: {config.RAG_RERANKING_MODEL} to {form_data.RAG_RERANKING_MODEL}')
+    log.info('Updating reranking model: %s to %s', config.RAG_RERANKING_MODEL, form_data.RAG_RERANKING_MODEL)
     try:
         config.RAG_RERANKING_MODEL = (
             form_data.RAG_RERANKING_MODEL if form_data.RAG_RERANKING_MODEL is not None else config.RAG_RERANKING_MODEL
@@ -1644,7 +1659,7 @@ def save_docs_to_vector_db(
 
         return ', '.join(docs_info)
 
-    log.debug(f'save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}')
+    log.debug('save_docs_to_vector_db: document %s %s', _get_docs_info(docs), collection_name)
 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and 'hash' in metadata:
@@ -1664,7 +1679,7 @@ def save_docs_to_vector_db(
                     existing_file_id = result.metadatas[0][0].get('file_id')
 
                 if existing_file_id != metadata.get('file_id'):
-                    log.info(f'Document with hash {metadata["hash"]} already exists')
+                    log.info('Document with hash %s already exists', metadata['hash'])
                     raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
@@ -1707,7 +1722,7 @@ def save_docs_to_vector_db(
             )
             docs = text_splitter.split_documents(docs)
         elif config.TEXT_SPLITTER == 'token':
-            log.info(f'Using token text splitter: {config.TIKTOKEN_ENCODING_NAME}')
+            log.info('Using token text splitter: %s', config.TIKTOKEN_ENCODING_NAME)
 
             tiktoken.get_encoding(str(config.TIKTOKEN_ENCODING_NAME))
             text_splitter = TokenTextSplitter(
@@ -1749,16 +1764,16 @@ def save_docs_to_vector_db(
 
     try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
-            log.info(f'collection {collection_name} already exists')
+            log.info('collection %s already exists', collection_name)
 
             if overwrite:
                 VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
-                log.info(f'deleting existing collection {collection_name}')
+                log.info('deleting existing collection %s', collection_name)
             elif add is False:
-                log.info(f'collection {collection_name} already exists, overwrite is False and add is False')
+                log.info('collection %s already exists, overwrite is False and add is False', collection_name)
                 return True
 
-        log.info(f'generating embeddings for {collection_name}')
+        log.info('generating embeddings for %s', collection_name)
         embedding_function = get_embedding_function(
             config.RAG_EMBEDDING_ENGINE,
             config.RAG_EMBEDDING_MODEL,
@@ -1802,7 +1817,7 @@ def save_docs_to_vector_db(
             request.app.state.main_loop,
         )
         embeddings = future.result(timeout=embedding_timeout)
-        log.info(f'embeddings generated {len(embeddings)} for {len(texts)} items')
+        log.info('embeddings generated %s for %s items', len(embeddings), len(texts))
 
         items = [
             {
@@ -1814,13 +1829,13 @@ def save_docs_to_vector_db(
             for idx, text in enumerate(texts)
         ]
 
-        log.info(f'adding to collection {collection_name}')
+        log.info('adding to collection %s', collection_name)
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
             items=items,
         )
 
-        log.info(f'added {len(items)} items to collection {collection_name}')
+        log.info('added %s items to collection %s', len(items), collection_name)
         return True
     except Exception as e:
         log.exception(e)
@@ -1833,6 +1848,10 @@ class ProcessFileForm(BaseModel):
     collection_name: str | None = None
 
 
+def has_vector_results(result) -> bool:
+    return bool(result and result.ids and result.ids[0])
+
+
 @router.post('/process/file')
 async def process_file(
     request: Request,
@@ -1841,7 +1860,6 @@ async def process_file(
     db: AsyncSession = Depends(get_async_session),
 ):
     """
-    Process a file and save its content to the vector database.
     Process a file and save its content to the vector database.
     Note: granular session management is used to prevent connection pool exhaustion.
     The session is committed before external API calls, and updates use a fresh session.
@@ -1855,11 +1873,13 @@ async def process_file(
     if file:
         try:
             collection_name = form_data.collection_name
+            file_collection_name = f'file-{file.id}'
 
             if collection_name is None:
-                collection_name = f'file-{file.id}'
+                collection_name = file_collection_name
             else:
                 await _validate_collection_access([collection_name], user, access_type='write')
+            collection_names = [collection_name]
 
             if form_data.content:
                 # Update the content in the file
@@ -1867,7 +1887,7 @@ async def process_file(
 
                 try:
                     # /files/{file_id}/data/content/update
-                    await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=f'file-{file.id}')
+                    await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection_name)
                 except Exception:
                     # Audio file upload pipeline
                     pass
@@ -1887,25 +1907,30 @@ async def process_file(
 
                 text_content = form_data.content
             elif form_data.collection_name:
-                # Check if the file has already been processed and save the content
+                # Add this file to a knowledge collection.
                 # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
+                # Reuse file-{id} chunks when they exist; otherwise restore file-{id}
+                # from stored file content while adding the file to the knowledge collection.
 
-                result = await ASYNC_VECTOR_DB_CLIENT.query(
-                    collection_name=f'file-{file.id}', filter={'file_id': file.id}
+                file_result = await ASYNC_VECTOR_DB_CLIENT.query(
+                    collection_name=file_collection_name, filter={'file_id': file.id}
                 )
+                stored_content = (file.data or {}).get('content')
 
-                if result is not None and len(result.ids[0]) > 0:
+                if has_vector_results(file_result):
+                    # Normal path: reuse the already-processed per-file chunks.
                     docs = [
                         Document(
-                            page_content=result.documents[0][idx],
-                            metadata=result.metadatas[0][idx],
+                            page_content=file_result.documents[0][idx],
+                            metadata=file_result.metadatas[0][idx],
                         )
-                        for idx, id in enumerate(result.ids[0])
+                        for idx, id in enumerate(file_result.ids[0])
                     ]
-                else:
+                elif stored_content is not None:
+                    # Repair path: vector chunks are missing, but SQL still has the file text.
                     docs = [
                         Document(
-                            page_content=file.data.get('content', ''),
+                            page_content=stored_content,
                             metadata={
                                 **file.meta,
                                 'name': file.filename,
@@ -1915,8 +1940,11 @@ async def process_file(
                             },
                         )
                     ]
+                    collection_names.append(file_collection_name)
+                else:
+                    raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
-                text_content = file.data.get('content', '')
+                text_content = stored_content or ''
             else:
                 # Process the file and save the content
                 # Usage: /files/
@@ -1998,21 +2026,23 @@ async def process_file(
                     # calls asyncio.run_coroutine_threadsafe(..., main_loop).result()
                     # which blocks the calling thread.  We MUST run it in a
                     # worker thread to avoid deadlocking the event loop.
-                    result = await run_in_threadpool(
-                        save_docs_to_vector_db,
-                        request,
-                        docs=docs,
-                        collection_name=collection_name,
-                        config=config,
-                        metadata={
-                            'file_id': file.id,
-                            'name': file.filename,
-                            'hash': hash,
-                        },
-                        add=(True if form_data.collection_name else False),
-                        user=user,
-                    )
-                    log.info(f'added {len(docs)} items to collection {collection_name}')
+                    result = True
+                    for name in collection_names:
+                        result = await run_in_threadpool(
+                            save_docs_to_vector_db,
+                            request,
+                            docs=docs,
+                            collection_name=name,
+                            config=config,
+                            metadata={
+                                'file_id': file.id,
+                                'name': file.filename,
+                                'hash': hash,
+                            },
+                            add=(True if form_data.collection_name else False),
+                            user=user,
+                        )
+                    log.info('added %s items to collection %s', len(docs), collection_name)
 
                     if result:
                         # Fresh session for the final update.
@@ -2128,6 +2158,189 @@ async def process_text(
         )
 
 
+async def _fetch_url(url: str, max_size_mb: int | str | None) -> dict:
+    await asyncio.to_thread(validate_url, url)
+    max_bytes = None
+    if max_size_mb:
+        try:
+            max_bytes = int(max_size_mb) * 1024 * 1024
+        except (TypeError, ValueError):
+            max_bytes = None
+
+    async with get_ssrf_safe_session() as session:
+        async with session.get(
+            url, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
+        ) as response:
+            response.raise_for_status()
+
+            content_type = response.headers.get('Content-Type', '')
+            content_disposition = response.headers.get('Content-Disposition', '')
+            content_length = response.headers.get('Content-Length')
+            base_content_type = content_type.split(';')[0].strip().lower()
+            is_attachment = content_disposition.split(';')[0].strip().lower() == 'attachment'
+
+            chunks = []
+            total = 0
+
+            iterator = response.content.iter_chunked(64 * 1024)
+            first_chunk = await anext(iterator, b'')
+
+            if not is_attachment and base_content_type in {'text/html', 'application/xhtml+xml'}:
+                return {'kind': 'web'}
+
+            if not is_attachment and base_content_type in {'', 'application/octet-stream', 'binary/octet-stream'}:
+                sample = first_chunk[:4096].lstrip().lower()
+                if sample.startswith(
+                    (b'<!doctype html', b'<html', b'<head', b'<body', b'<?xml')
+                ) or b'<html' in sample[:1024]:
+                    return {'kind': 'web'}
+
+            if max_bytes and content_length:
+                try:
+                    if int(content_length) > max_bytes:
+                        raise HTTPException(
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_size_mb} MB'),
+                        )
+                except ValueError:
+                    pass
+
+            if first_chunk:
+                chunks.append(first_chunk)
+                total += len(first_chunk)
+                if max_bytes and total > max_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_size_mb} MB'),
+                    )
+
+            async for chunk in iterator:
+                if not chunk:
+                    continue
+                chunks.append(chunk)
+                total += len(chunk)
+                if max_bytes and total > max_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_size_mb} MB'),
+                    )
+
+            data = b''.join(chunks)
+
+            image_mime = None
+            try:
+                from PIL import Image
+
+                image = Image.open(io.BytesIO(data))
+                image.verify()
+                image_mime = Image.MIME.get(image.format) if image.format else None
+            except Exception:
+                image_mime = None
+
+            if base_content_type.startswith('image/') and image_mime is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT('Invalid image content'),
+                )
+
+            filename = ''
+            filename_star = re.search(r"filename\*=UTF-8''([^;]+)", content_disposition, re.IGNORECASE)
+            filename_plain = re.search(r'filename="?([^";]+)"?', content_disposition, re.IGNORECASE)
+            if filename_star:
+                filename = unquote(filename_star.group(1))
+            elif filename_plain:
+                filename = filename_plain.group(1)
+            if not filename:
+                filename = os.path.basename(urlparse(url).path)
+            filename = os.path.basename(filename or 'download')
+
+            resolved_content_type = (
+                image_mime or base_content_type or mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+            )
+            if not os.path.splitext(filename)[1]:
+                filename = f'{filename}{mimetypes.guess_extension(resolved_content_type) or ".bin"}'
+
+            return {
+                'kind': 'file',
+                'data': data,
+                'filename': filename,
+                'content_type': resolved_content_type,
+            }
+
+
+@router.post('/process/url', response_model=ProcessUrlResponse)
+async def process_url(
+    request: Request,
+    form_data: ProcessUrlForm,
+    process: bool = Query(True, description='Whether to process and save the content'),
+    user=Depends(get_verified_user),
+):
+    try:
+        if is_youtube_url(form_data.url):
+            result = await process_web(request, form_data, process=process, user=user)
+            return {
+                'status': True,
+                'type': 'youtube',
+                'name': form_data.url,
+                'url': form_data.url,
+                'collection_name': result.get('collection_name'),
+                'content': result.get('content'),
+            }
+
+        config = await get_retrieval_config()
+        url_result = await _fetch_url(form_data.url, config.FILE_MAX_SIZE)
+
+        if url_result['kind'] == 'web':
+            result = await process_web(request, form_data, process=process, user=user)
+            return {
+                'status': True,
+                'type': 'web',
+                'name': form_data.url,
+                'url': form_data.url,
+                'collection_name': result.get('collection_name'),
+                'content': result.get('content'),
+            }
+
+        from open_webui.routers.files import upload_file_handler
+
+        is_image = url_result['content_type'].startswith('image/')
+        file = UploadFile(
+            file=io.BytesIO(url_result['data']),
+            filename=url_result['filename'],
+            headers={'content-type': url_result['content_type']},
+        )
+        uploaded_file = await upload_file_handler(
+            request,
+            file=file,
+            metadata={'source_url': form_data.url},
+            process=process and not is_image,
+            process_in_background=False,
+            user=user,
+        )
+        file_data = uploaded_file.model_dump() if hasattr(uploaded_file, 'model_dump') else uploaded_file
+        file_id = file_data.get('id') if isinstance(file_data, dict) else None
+        if file_id:
+            refreshed_file = await Files.get_file_by_id(file_id)
+            if refreshed_file:
+                file_data = refreshed_file.model_dump()
+        return {
+            'status': True,
+            'type': 'image' if is_image else 'file',
+            'name': url_result['filename'],
+            'url': form_data.url,
+            'collection_name': (file_data.get('meta') or {}).get('collection_name'),
+            'file': file_data,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error processing URL'),
+        )
+
+
 @router.post('/process/youtube')
 @router.post('/process/web')
 async def process_web(
@@ -2138,8 +2351,25 @@ async def process_web(
     user=Depends(get_verified_user),
 ):
     config = await get_retrieval_config()
+
     try:
         content, docs = await get_content_from_url(request, form_data.url)
+    except HTTPException:
+        raise
+    except YoutubeTranscriptError as e:
+        log.warning('YouTube transcript unavailable for %s: %s', form_data.url, e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e, f'Could not read content from {form_data.url}'),
+        )
+
+    try:
         log.debug('text_content: %s', content)
 
         if process:
@@ -2167,6 +2397,7 @@ async def process_web(
                 'status': True,
                 'collection_name': collection_name,
                 'filename': form_data.url,
+                'content': content,
                 'file': {
                     'data': {
                         'content': content,
@@ -2568,7 +2799,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
     result_items = []
 
     try:
-        logging.debug(f'trying to web search with {config.WEB_SEARCH_ENGINE, form_data.queries}')
+        logging.debug('trying to web search with %s', (config.WEB_SEARCH_ENGINE, form_data.queries))
 
         # Use semaphore to limit concurrent requests based on WEB_SEARCH_CONCURRENT_REQUESTS
         # 0 or None = unlimited (previous behavior), positive number = limited concurrency
@@ -2611,7 +2842,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                         urls.append(item.link)
 
         urls = list(dict.fromkeys(urls))
-        log.debug(f'urls: {urls}')
+        log.debug('urls: %s', urls)
 
     except Exception as e:
         log.exception('Web search failed')

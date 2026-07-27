@@ -365,7 +365,7 @@
 								{#if entry}
 									<Tooltip content={tooltipFor(entry)}>
 										<div
-											class="h-full w-full rounded-[2px] {modelPalette(topItem(entry))[
+											class="h-full w-full rounded-[0.125rem] {modelPalette(topItem(entry))[
 												intensity(entry)
 											]}"
 											aria-label={tooltipFor(entry)}
@@ -395,7 +395,7 @@
 						>
 							{#each usage.top_models.slice(0, 6) as model}
 								<div class="flex min-w-0 items-center gap-1.5">
-									<span class="size-2 shrink-0 rounded-[2px] {modelPalette(model.model_id)[3]}"
+									<span class="size-2 shrink-0 rounded-[0.125rem] {modelPalette(model.model_id)[3]}"
 									></span>
 									<span class="max-w-28 truncate">{modelName(model.model_id)}</span>
 								</div>

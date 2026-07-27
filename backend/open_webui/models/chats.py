@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import json
 import logging
+import re
 import time
 import uuid
 
@@ -41,6 +41,62 @@ from sqlalchemy.sql.expression import bindparam
 
 log = logging.getLogger(__name__)
 ACTIVE_CHAT_GAP_SECONDS = 30 * 60
+CHAT_SEARCH_FILTER_PREFIXES = ('tag:', 'folder:', 'pinned:', 'archived:', 'shared:')
+
+
+def chat_search_content_query(text: str) -> str:
+    words = sanitize_text_for_db(text).lower().strip().split()
+    return ' '.join(word for word in words if not word.startswith(CHAT_SEARCH_FILTER_PREFIXES)).strip()
+
+
+def chat_search_terms(text: str) -> list[str]:
+    return list(dict.fromkeys(re.findall(r'[a-z0-9]+', text.lower())))
+
+
+def chat_search_message_content_match_sql(dialect_name: str, key: str) -> str:
+    if dialect_name == 'sqlite':
+        return f"""
+        (
+            EXISTS (
+                SELECT 1
+                FROM json_each(Chat.chat, '$.history.messages') AS history_message
+                WHERE LOWER(history_message.value->>'content') LIKE '%' || :{key} || '%'
+            )
+            OR EXISTS (
+                SELECT 1
+                FROM json_each(Chat.chat, '$.messages') AS legacy_message
+                WHERE LOWER(legacy_message.value->>'content') LIKE '%' || :{key} || '%'
+            )
+        )
+        """
+
+    if dialect_name == 'postgresql':
+        return f"""
+        (
+            EXISTS (
+                SELECT 1
+                FROM chat_message AS message
+                WHERE message.chat_id = Chat.id
+                AND message.user_id = Chat.user_id
+                AND json_typeof(message.content) = 'string'
+                AND LOWER(message.content #>> '{{}}') LIKE '%' || :{key} || '%'
+            )
+            OR EXISTS (
+                SELECT 1
+                FROM json_each(Chat.chat#>'{{history,messages}}') AS history_message
+                WHERE json_typeof(history_message.value->'content') = 'string'
+                AND LOWER(history_message.value->>'content') LIKE '%' || :{key} || '%'
+            )
+            OR EXISTS (
+                SELECT 1
+                FROM json_array_elements(Chat.chat->'messages') AS legacy_message
+                WHERE json_typeof(legacy_message->'content') = 'string'
+                AND LOWER(legacy_message->>'content') LIKE '%' || :{key} || '%'
+            )
+        )
+        """
+
+    raise NotImplementedError(f'Unsupported dialect: {dialect_name}')
 
 
 def chat_list_order(sort_by: str = 'updated_at', sort_dir: str = 'desc', user_id: str | None = None):
@@ -361,6 +417,20 @@ class ChatTable:
 
         return changed
 
+    @staticmethod
+    def _last_descendant_id(messages: dict, message_id: str) -> str:
+        seen_ids = set()
+        while message_id in messages and message_id not in seen_ids:
+            seen_ids.add(message_id)
+            message = messages[message_id]
+            child_ids = message.get('childrenIds') if isinstance(message, dict) else []
+            child_ids = child_ids if isinstance(child_ids, list) else []
+            next_id = next((child_id for child_id in reversed(child_ids) if child_id in messages), None)
+            if not next_id:
+                break
+            message_id = next_id
+        return message_id
+
     def _repair_chat_current_id(self, chat: dict) -> bool:
         history = chat.get('history')
         if not isinstance(history, dict):
@@ -393,6 +463,12 @@ class ChatTable:
             and current_message.get('role')
             and not current_is_bad_leaf
         ):
+            if current_message.get('contextSummary') or current_message.get('context_summary'):
+                last_descendant_id = self._last_descendant_id(messages, current_id)
+                if last_descendant_id != current_id:
+                    history['currentId'] = last_descendant_id
+                    return True
+
             return False
 
         latest_leaf_id = None
@@ -874,8 +950,7 @@ class ChatTable:
                 'role': role,
                 'timestamp': message.get('timestamp') or int(time.time()),
             }
-
-        history['currentId'] = message_id
+            history['currentId'] = message_id
         return messages[message_id]
 
     async def backfill_messages_by_chat_id(self, chat_id: str, user_id: str, messages: dict[str, dict]) -> None:
@@ -960,6 +1035,10 @@ class ChatTable:
         return history_messages
 
     async def get_message_by_id_and_message_id(self, id: str, message_id: str) -> dict | None:
+        messages_map = await ChatMessages.get_messages_map_by_chat_id(id)
+        if messages_map and message_id in messages_map:
+            return messages_map[message_id]
+
         chat = await self.get_chat_by_id(id)
         if chat is None:
             return None
@@ -1508,6 +1587,7 @@ class ChatTable:
 
                 repaired_history = self._repair_chat_current_id(chat_item.chat or {})
                 if repaired_history:
+                    chat_item.current_message_id = self.get_current_message_id(chat_item.chat)
                     flag_modified(chat_item, 'chat')
                 if self._sanitize_chat_row(chat_item) or repaired_history:
                     await session.commit()
@@ -1549,6 +1629,7 @@ class ChatTable:
 
                 repaired_history = self._repair_chat_current_id(chat.chat or {})
                 if repaired_history:
+                    chat.current_message_id = self.get_current_message_id(chat.chat)
                     flag_modified(chat, 'chat')
                 if self._sanitize_chat_row(chat) or repaired_history:
                     await session.commit()
@@ -1732,7 +1813,7 @@ class ChatTable:
             return [ChatModel.model_validate(chat) for chat in result.scalars().all()]
 
     # search user conversations
-    async def get_chats_by_user_id_and_search_text(
+    async def get_chats_by_user_id_and_search_text(  # noqa: C901
         self,
         user_id: str,
         search_text: str,
@@ -1751,7 +1832,7 @@ class ChatTable:
                 user_id, include_archived, filter={}, skip=skip, limit=limit, db=db
             )
 
-        search_text_words = search_text.split(' ')
+        search_text_words = search_text.split()
 
         # search_text might contain 'tag:tag_name' format so we need to extract the tag_name
         tag_ids = [
@@ -1783,19 +1864,10 @@ class ChatTable:
         elif 'shared:false' in search_text_words:
             is_shared = False
 
-        search_text_words = [
-            word
-            for word in search_text_words
-            if (
-                not word.startswith('tag:')
-                and not word.startswith('folder:')
-                and not word.startswith('pinned:')
-                and not word.startswith('archived:')
-                and not word.startswith('shared:')
-            )
-        ]
+        search_text_words = [word for word in search_text_words if not word.startswith(CHAT_SEARCH_FILTER_PREFIXES)]
 
-        search_text = ' '.join(search_text_words)
+        phrase_query = ' '.join(search_text_words).strip()
+        search_terms = chat_search_terms(phrase_query)
 
         async with get_async_db_context(db) as session:
             stmt = select(Chat).filter(Chat.user_id == user_id)
@@ -1818,27 +1890,43 @@ class ChatTable:
             if folder_ids:
                 stmt = stmt.filter(Chat.folder_id.in_(folder_ids))
 
-            stmt = stmt.order_by(Chat.updated_at.desc(), Chat.id)
-
             # Check if the database dialect is either 'sqlite' or 'postgresql'
             bind = await session.connection()
             dialect_name = bind.dialect.name
-            if dialect_name == 'sqlite':
-                # SQLite case: using JSON1 extension for JSON searching
-                sqlite_content_sql = (
-                    'EXISTS ('
-                    '    SELECT 1 '
-                    "    FROM json_each(Chat.chat, '$.messages') AS message "
-                    "    WHERE LOWER(message.value->>'content') LIKE '%' || :content_key || '%'"
-                    ')'
+
+            search_params = {}
+            exact_match_clause = None
+            if phrase_query:
+                exact_match_clause = or_(
+                    Chat.title.ilike(bindparam('phrase_title_key')),
+                    text(chat_search_message_content_match_sql(dialect_name, 'phrase_content_key')),
                 )
-                sqlite_content_clause = text(sqlite_content_sql)
-                stmt = stmt.filter(
-                    or_(Chat.title.ilike(bindparam('title_key')), sqlite_content_clause).params(
-                        title_key=f'%{search_text}%', content_key=search_text
-                    )
+                search_params.update(
+                    {
+                        'phrase_title_key': f'%{phrase_query}%',
+                        'phrase_content_key': phrase_query,
+                    }
                 )
 
+                term_clauses = []
+                for term_idx, term in enumerate(search_terms):
+                    title_key = f'term_title_key_{term_idx}'
+                    content_key = f'term_content_key_{term_idx}'
+                    term_clauses.append(
+                        or_(
+                            Chat.title.ilike(bindparam(title_key)),
+                            text(chat_search_message_content_match_sql(dialect_name, content_key)),
+                        )
+                    )
+                    search_params[title_key] = f'%{term}%'
+                    search_params[content_key] = term
+
+                if term_clauses:
+                    stmt = stmt.filter(or_(exact_match_clause, and_(*term_clauses)))
+                else:
+                    stmt = stmt.filter(exact_match_clause)
+
+            if dialect_name == 'sqlite':
                 # Check if there are any tags to filter
                 if 'none' in tag_ids:
                     stmt = stmt.filter(
@@ -1872,38 +1960,6 @@ class ChatTable:
                 # Safety filter: title must not contain actual null bytes
                 stmt = stmt.filter(text("Chat.title::text NOT LIKE '%\\x00%'"))
 
-                postgres_content_sql = """
-                EXISTS (
-                    SELECT 1
-                    FROM chat_message AS message
-                    WHERE message.chat_id = Chat.id
-                    AND message.user_id = Chat.user_id
-                    AND json_typeof(message.content) = 'string'
-                    AND LOWER(message.content #>> '{}') LIKE '%' || :content_key || '%'
-                )
-                OR EXISTS (
-                    SELECT 1
-                    FROM json_each(Chat.chat#>'{history,messages}') AS history_message
-                    WHERE json_typeof(history_message.value->'content') = 'string'
-                    AND LOWER(history_message.value->>'content') LIKE '%' || :content_key || '%'
-                )
-                OR EXISTS (
-                    SELECT 1
-                    FROM json_array_elements(Chat.chat->'messages') AS legacy_message
-                    WHERE json_typeof(legacy_message->'content') = 'string'
-                    AND LOWER(legacy_message->>'content') LIKE '%' || :content_key || '%'
-                )
-                """
-
-                postgres_content_clause = text(postgres_content_sql)
-
-                stmt = stmt.filter(
-                    or_(
-                        Chat.title.ilike(bindparam('title_key')),
-                        postgres_content_clause,
-                    )
-                ).params(title_key=f'%{search_text}%', content_key=search_text.lower())
-
                 if 'none' in tag_ids:
                     stmt = stmt.filter(
                         text("""
@@ -1931,12 +1987,20 @@ class ChatTable:
             else:
                 raise NotImplementedError(f'Unsupported dialect: {dialect_name}')
 
+            if exact_match_clause is not None:
+                stmt = stmt.order_by(case((exact_match_clause, 0), else_=1), Chat.updated_at.desc(), Chat.id)
+            else:
+                stmt = stmt.order_by(Chat.updated_at.desc(), Chat.id)
+
+            if search_params:
+                stmt = stmt.params(**search_params)
+
             # Perform pagination at the SQL level
             stmt = stmt.offset(skip).limit(limit)
             result = await session.execute(stmt)
             all_chats = result.scalars().all()
 
-            log.info(f'The number of chats: {len(all_chats)}')
+            log.info('The number of chats: %s', len(all_chats))
 
             # Validate and return chats
             return [ChatModel.model_validate(chat) for chat in all_chats]
@@ -2101,7 +2165,7 @@ class ChatTable:
 
             bind = await session.connection()
             dialect_name = bind.dialect.name
-            log.info(f'DB dialect name: {dialect_name}')
+            log.info('DB dialect name: %s', dialect_name)
             if dialect_name == 'sqlite':
                 stmt = stmt.filter(
                     text(f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)")
@@ -2228,7 +2292,7 @@ class ChatTable:
             result = await session.execute(stmt.where(Chat.meta['internal'].as_boolean().is_not(True)))
             count = result.scalar()
 
-            log.info(f"Count of chats for folder '{folder_id}': {count}")
+            log.info("Count of chats for folder '%s': %s", folder_id, count)
             return count
 
     async def count_chats_by_folder_ids_and_user_id(
@@ -2242,7 +2306,7 @@ class ChatTable:
             result = await session.execute(stmt.where(Chat.meta['internal'].as_boolean().is_not(True)))
             count = result.scalar()
 
-            log.info(f"Count of chats for folders '{folder_ids}': {count}")
+            log.info("Count of chats for folders '%s': %s", folder_ids, count)
             return count
 
     async def delete_tag_by_id_and_user_id_and_tag_name(

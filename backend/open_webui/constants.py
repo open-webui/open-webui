@@ -118,9 +118,15 @@ class ERROR_MESSAGES(str, Enum):
     AUTOMATION_TOO_FREQUENT = lambda interval='': f'Schedule too frequent. Minimum interval is {interval} seconds.'
     AUTOMATION_INVALID_RRULE = lambda err='': f'Invalid RRULE: {err}'
     AUTOMATION_NO_FUTURE_RUNS = 'RRULE has no future occurrences'
+    AUTOMATION_COUNT_REQUIRES_DTSTART = (
+        'RRULE with COUNT requires an explicit DTSTART line to anchor the occurrence window'
+    )
 
     FEATURE_DISABLED = lambda name='': f'{name} is disabled'
     INPUT_TOO_LONG = lambda size='': f'Input prompt exceeds maximum length of {size}'
+    # LICENSE covers this Open WebUI error identifier.
+    # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+    # https://docs.openwebui.com/license.
     SERVER_CONNECTION_ERROR = 'Open WebUI: Server Connection Error'
     REQUIRED_FIELD_EMPTY = lambda name='': f'Required field {name} is empty'
     OAUTH_NOT_CONFIGURED = lambda name='': f"Provider '{name}' is not configured"

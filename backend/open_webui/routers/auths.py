@@ -111,6 +111,7 @@ ADMIN_CONFIG_KEYS = {
     'API_KEYS_ALLOWED_ENDPOINTS': 'auth.api_key.allowed_endpoints',
     'DEFAULT_USER_ROLE': 'ui.default_user_role',
     'DEFAULT_GROUP_ID': 'ui.default_group_id',
+    'DEFAULT_INTERFACE_SETTINGS': 'ui.default_interface_settings',
     'JWT_EXPIRES_IN': 'auth.jwt_expiry',
     'ENABLE_COMMUNITY_SHARING': 'ui.enable_community_sharing',
     'ENABLE_MESSAGE_RATING': 'ui.enable_message_rating',
@@ -548,8 +549,8 @@ async def ldap_auth(
         ]
         if ENABLE_LDAP_GROUP_MANAGEMENT:
             search_attributes.append(f'{LDAP_ATTRIBUTE_FOR_GROUPS}')
-            log.info(f'LDAP Group Management enabled. Adding {LDAP_ATTRIBUTE_FOR_GROUPS} to search attributes')
-        log.info(f'LDAP search attributes: {search_attributes}')
+            log.info('LDAP Group Management enabled. Adding %s to search attributes', LDAP_ATTRIBUTE_FOR_GROUPS)
+        log.info('LDAP search attributes: %s', search_attributes)
 
         search_success = await asyncio.to_thread(
             connection_app.search,
@@ -586,30 +587,30 @@ async def ldap_auth(
         user_groups = []
         if ENABLE_LDAP_GROUP_MANAGEMENT and LDAP_ATTRIBUTE_FOR_GROUPS in entry:
             group_dns = entry[LDAP_ATTRIBUTE_FOR_GROUPS]
-            log.info(f'LDAP raw group DNs for user {username_list}: {group_dns}')
+            log.info('LDAP raw group DNs for user %s: %s', username_list, group_dns)
 
             if group_dns:
-                log.info(f'LDAP group_dns original: {group_dns}')
-                log.info(f'LDAP group_dns type: {type(group_dns)}')
-                log.info(f'LDAP group_dns length: {len(group_dns)}')
+                log.info('LDAP group_dns original: %s', group_dns)
+                log.info('LDAP group_dns type: %s', type(group_dns))
+                log.info('LDAP group_dns length: %s', len(group_dns))
 
                 if hasattr(group_dns, 'value'):
                     group_dns = group_dns.value
-                    log.info(f'Extracted .value property: {group_dns}')
+                    log.info('Extracted .value property: %s', group_dns)
                 elif hasattr(group_dns, '__iter__') and not isinstance(group_dns, (str, bytes)):
                     group_dns = list(group_dns)
-                    log.info(f'Converted to list: {group_dns}')
+                    log.info('Converted to list: %s', group_dns)
 
                 if isinstance(group_dns, list):
                     group_dns = [str(item) for item in group_dns]
                 else:
                     group_dns = [str(group_dns)]
 
-                log.info(f'LDAP group_dns after processing - type: {type(group_dns)}, length: {len(group_dns)}')
+                log.info('LDAP group_dns after processing - type: %s, length: %s', type(group_dns), len(group_dns))
 
                 for group_idx, group_dn in enumerate(group_dns):
                     group_dn = str(group_dn)
-                    log.info(f'Processing group DN #{group_idx + 1}: {group_dn}')
+                    log.info('Processing group DN #%s: %s', group_idx + 1, group_dn)
 
                     try:
                         group_cn = extract_group_cn_from_dn(group_dn)
@@ -621,9 +622,9 @@ async def ldap_auth(
                     except Exception as e:
                         log.warning(f'Failed to extract group name from DN {group_dn}: {e}')
 
-                log.info(f'LDAP groups for user {username_list}: {user_groups} (total: {len(user_groups)})')
+                log.info('LDAP groups for user %s: %s (total: %s)', username_list, user_groups, len(user_groups))
             else:
-                log.info(f'No groups found for user {username_list}')
+                log.info('No groups found for user %s', username_list)
         elif ENABLE_LDAP_GROUP_MANAGEMENT:
             log.warning(
                 f'LDAP Group Management enabled but {LDAP_ATTRIBUTE_FOR_GROUPS} attribute not found in user entry'
@@ -691,7 +692,7 @@ async def ldap_auth(
                         if ENABLE_LDAP_GROUP_CREATION:
                             await Groups.create_groups_by_group_names(user.id, user_groups, db=db)
                         await Groups.sync_groups_by_group_names(user.id, user_groups, db=db)
-                        log.info(f'Successfully synced groups for user {user.id}: {user_groups}')
+                        log.info('Successfully synced groups for user %s: %s', user.id, user_groups)
                     except Exception as e:
                         log.error(f'Failed to sync groups for user {user.id}: {e}')
 
@@ -767,7 +768,17 @@ async def signin(
                 trusted_role = request.headers.get(WEBUI_AUTH_TRUSTED_ROLE_HEADER, '').lower().strip()
                 if trusted_role in {'admin', 'user', 'pending'}:
                     if user.role != trusted_role:
-                        await Users.update_user_role_by_id(user.id, trusted_role, db=db)
+                        updated_user = await Users.update_user_role_by_id(user.id, trusted_role, db=db)
+                        if updated_user:
+                            user = updated_user
+                            await publish_event(
+                                request,
+                                EVENTS.USER_ROLE_UPDATED,
+                                actor=updated_user,
+                                subject_id=updated_user.id,
+                                source='trusted_header',
+                                data={'role': updated_user.role},
+                            )
                 elif trusted_role:
                     log.warning(f'Ignoring invalid trusted role header value: {trusted_role}')
 
@@ -965,6 +976,11 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
         )
 
     response.delete_cookie('token')
+    try:
+        request.session.clear()
+    except Exception:
+        pass
+    response.delete_cookie('owui-session')
     response.delete_cookie('oui-session')
     response.delete_cookie('oauth_id_token')
 
@@ -1156,7 +1172,7 @@ async def get_admin_details(
         admin_email = await Config.get('auth.admin.email')
         admin_name = None
 
-        log.info(f'Admin details - Email: {admin_email}, Name: {admin_name}')
+        log.info('Admin details - Email: %s, Name: %s', admin_email, admin_name)
 
         if admin_email:
             admin = await Users.get_user_by_email(admin_email, db=db)
@@ -1196,6 +1212,7 @@ class AdminConfig(BaseModel):
     API_KEYS_ALLOWED_ENDPOINTS: str
     DEFAULT_USER_ROLE: str
     DEFAULT_GROUP_ID: str
+    DEFAULT_INTERFACE_SETTINGS: dict | None = None
     JWT_EXPIRES_IN: str
     ENABLE_COMMUNITY_SHARING: bool
     ENABLE_MESSAGE_RATING: bool
@@ -1220,6 +1237,7 @@ class AdminConfig(BaseModel):
 @router.post('/admin/config')
 async def update_admin_config(request: Request, form_data: AdminConfig, user=Depends(get_admin_user)):
     updates = config_updates(form_data.model_dump(), ADMIN_CONFIG_KEYS)
+    updates['ui.default_interface_settings'] = form_data.DEFAULT_INTERFACE_SETTINGS or {}
     updates['folders.max_file_count'] = int(form_data.FOLDER_MAX_FILE_COUNT) if form_data.FOLDER_MAX_FILE_COUNT else ''
     updates['automations.max_count'] = int(form_data.AUTOMATION_MAX_COUNT) if form_data.AUTOMATION_MAX_COUNT else ''
     updates['automations.min_interval'] = (
@@ -1425,11 +1443,13 @@ def _parse_oauth_update_value(field: str, value):
 
 async def get_oauth_config_values() -> dict:
     values = await Config.get_many(*OAUTH_CONFIG_KEYS.values())
-    return {
+    form_values = {
         field: _format_oauth_form_value(field, values[storage_key])
         for field, storage_key in OAUTH_CONFIG_KEYS.items()
         if storage_key in values
     }
+    form_values['ENABLE_OAUTH_PERSISTENT_CONFIG'] = Config.OAUTH_PERSISTENT_ENABLED
+    return form_values
 
 
 def oauth_config_updates(data: dict) -> dict:
@@ -1440,12 +1460,16 @@ def oauth_config_updates(data: dict) -> dict:
     }
 
 
-@router.get('/admin/config/oauth', response_model=OAuthConfigForm)
+class OAuthConfigResponse(OAuthConfigForm):
+    ENABLE_OAUTH_PERSISTENT_CONFIG: bool
+
+
+@router.get('/admin/config/oauth', response_model=OAuthConfigResponse)
 async def get_oauth_config(request: Request, user=Depends(get_admin_user)):
     return await get_oauth_config_values()
 
 
-@router.post('/admin/config/oauth', response_model=OAuthConfigForm)
+@router.post('/admin/config/oauth', response_model=OAuthConfigResponse)
 async def update_oauth_config(request: Request, form_data: OAuthConfigForm, user=Depends(get_admin_user)):
     await Config.upsert(oauth_config_updates(form_data.model_dump(exclude_none=True)))
     return await get_oauth_config_values()

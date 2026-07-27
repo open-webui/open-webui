@@ -142,7 +142,7 @@
 					bind:value={sortBy}
 					items={sortItems}
 					placeholder={$i18n.t('Sort')}
-					triggerClass="relative h-8 shrink-0 flex items-center gap-1 px-1.5 py-1.5 bg-transparent rounded-xl text-[13px] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
+					triggerClass="relative h-8 shrink-0 flex items-center gap-1 px-1.5 py-1.5 bg-transparent rounded-xl text-[0.8125rem] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
 					labelClass="inline-flex h-input outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
 					align="end"
 				>
@@ -184,11 +184,10 @@
 				{/each}
 			</div>
 		{:else}
-			<div class="w-full h-full flex flex-col justify-center items-center my-16 mb-24">
-				<div class="max-w-md text-center">
-					<div class="text-3xl mb-3">👥</div>
-					<div class="text-lg font-normal mb-1">{$i18n.t('No groups found')}</div>
-					<div class="text-gray-500 text-center text-xs">
+			<div class="flex w-full flex-col items-center justify-center py-16 pb-24">
+				<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
+					<div class="mb-1.5 text-sm">{$i18n.t('No groups found')}</div>
+					<div class="text-center text-xs leading-5 text-gray-500">
 						{$i18n.t('Use groups to organize your users and assign permissions.')}
 					</div>
 				</div>

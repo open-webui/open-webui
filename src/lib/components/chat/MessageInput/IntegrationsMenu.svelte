@@ -149,7 +149,7 @@
 					{#if tools}
 						{#if Object.keys(tools).length > 0}
 							<button
-								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 								on:click={() => {
 									tab = 'tools';
 								}}
@@ -171,7 +171,7 @@
 
 						{#if skills && Object.keys(skills).length > 0}
 							<button
-								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 								on:click={() => {
 									tab = 'skills';
 								}}
@@ -200,7 +200,8 @@
 						{#each toggleFilters.sort( (a, b) => a.name.localeCompare( b.name, undefined, { sensitivity: 'base' } ) ) as filter, filterIdx (filter.id)}
 							<Tooltip content={filter?.description} placement="top-start">
 								<button
-									class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+									class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+									aria-pressed={selectedFilterIds.includes(filter.id)}
 									on:click={() => {
 										if (selectedFilterIds.includes(filter.id)) {
 											selectedFilterIds = selectedFilterIds.filter((id) => id !== filter.id);
@@ -253,14 +254,8 @@
 										</div>
 									{/if}
 
-									<div class=" shrink-0">
-										<Switch
-											state={selectedFilterIds.includes(filter.id)}
-											on:change={async (e) => {
-												const state = e.detail;
-												await tick();
-											}}
-										/>
+									<div class=" shrink-0" inert>
+										<Switch state={selectedFilterIds.includes(filter.id)} />
 									</div>
 								</button>
 							</Tooltip>
@@ -270,11 +265,8 @@
 					{#if showWebSearchButton}
 						<Tooltip content={$i18n.t('Search the internet')} placement="top-start">
 							<button
-								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 								aria-pressed={webSearchEnabled}
-								aria-label={webSearchEnabled
-									? $i18n.t('Disable Web Search')
-									: $i18n.t('Enable Web Search')}
 								on:click={() => {
 									webSearchEnabled = !webSearchEnabled;
 									onWebSearchToggle(webSearchEnabled);
@@ -290,14 +282,8 @@
 									</div>
 								</div>
 
-								<div class=" shrink-0">
-									<Switch
-										state={webSearchEnabled}
-										on:change={async (e) => {
-											const state = e.detail;
-											await tick();
-										}}
-									/>
+								<div class=" shrink-0" inert>
+									<Switch state={webSearchEnabled} />
 								</div>
 							</button>
 						</Tooltip>
@@ -306,11 +292,8 @@
 					{#if showImageGenerationButton}
 						<Tooltip content={$i18n.t('Generate an image')} placement="top-start">
 							<button
-								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 								aria-pressed={imageGenerationEnabled}
-								aria-label={imageGenerationEnabled
-									? $i18n.t('Disable Image Generation')
-									: $i18n.t('Enable Image Generation')}
 								on:click={() => {
 									imageGenerationEnabled = !imageGenerationEnabled;
 								}}
@@ -325,14 +308,8 @@
 									</div>
 								</div>
 
-								<div class=" shrink-0">
-									<Switch
-										state={imageGenerationEnabled}
-										on:change={async (e) => {
-											const state = e.detail;
-											await tick();
-										}}
-									/>
+								<div class=" shrink-0" inert>
+									<Switch state={imageGenerationEnabled} />
 								</div>
 							</button>
 						</Tooltip>
@@ -341,11 +318,8 @@
 					{#if showCodeInterpreterButton}
 						<Tooltip content={$i18n.t('Execute code for analysis')} placement="top-start">
 							<button
-								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 								aria-pressed={codeInterpreterEnabled}
-								aria-label={codeInterpreterEnabled
-									? $i18n.t('Disable Code Interpreter')
-									: $i18n.t('Enable Code Interpreter')}
 								on:click={() => {
 									codeInterpreterEnabled = !codeInterpreterEnabled;
 								}}
@@ -360,14 +334,8 @@
 									</div>
 								</div>
 
-								<div class=" shrink-0">
-									<Switch
-										state={codeInterpreterEnabled}
-										on:change={async (e) => {
-											const state = e.detail;
-											await tick();
-										}}
-									/>
+								<div class=" shrink-0" inert>
+									<Switch state={codeInterpreterEnabled} />
 								</div>
 							</button>
 						</Tooltip>
@@ -376,7 +344,7 @@
 			{:else if tab === 'tools' && tools}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
 							tab = '';
 						}}
@@ -393,7 +361,10 @@
 
 					{#each Object.keys(tools) as toolId}
 						<button
-							class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+							class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+							aria-pressed={(tools[toolId]?.authenticated ?? true)
+								? tools[toolId].enabled
+								: undefined}
 							on:click={async (e) => {
 								if (!(tools[toolId]?.authenticated ?? true)) {
 									e.preventDefault();
@@ -490,7 +461,7 @@
 								</div>
 							{/if}
 
-							<div class=" shrink-0">
+							<div class=" shrink-0" inert>
 								<Switch state={tools[toolId].enabled} />
 							</div>
 						</button>
@@ -499,7 +470,7 @@
 			{:else if tab === 'skills' && skills}
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
-						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
 							tab = '';
 						}}
@@ -516,7 +487,8 @@
 
 					{#each Object.keys(skills) as skillId}
 						<button
-							class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+							class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+							aria-pressed={skills[skillId].enabled}
 							on:click={async () => {
 								skills[skillId].enabled = !skills[skillId].enabled;
 
@@ -543,7 +515,7 @@
 								</div>
 							</div>
 
-							<div class=" shrink-0">
+							<div class=" shrink-0" inert>
 								<Switch state={skills[skillId].enabled} />
 							</div>
 						</button>

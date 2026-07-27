@@ -52,9 +52,9 @@
 {/if}
 
 <button
-	class="relative group p-1.5 {className} flex items-center gap-1 {colorClassName} {small
-		? 'rounded-xl p-2'
-		: 'rounded-2xl'} text-left"
+	class="relative group {className} flex items-center {colorClassName} {small
+		? 'h-8 gap-1.5 rounded-xl px-2.5 text-[0.8125rem] leading-5'
+		: 'gap-1 rounded-2xl p-1.5'} text-left"
 	type="button"
 	on:click={async () => {
 		if (item?.file?.data?.content || item?.type === 'file' || item?.content || modal) {
@@ -102,7 +102,7 @@
 			{/if}
 		</div>
 	{:else}
-		<div class="pl-1.5">
+		<div class="shrink-0 text-gray-500 dark:text-gray-400">
 			{#if !loading}
 				<Tooltip
 					content={type === 'collection'
@@ -117,19 +117,19 @@
 					placement="top"
 				>
 					{#if type === 'collection'}
-						<Database />
+						<Database className="size-3.5" />
 					{:else if type === 'note'}
-						<PageEdit />
+						<PageEdit className="size-3.5" />
 					{:else if type === 'chat'}
-						<ChatBubble />
+						<ChatBubble className="size-3.5" />
 					{:else if type === 'folder'}
-						<Folder />
+						<Folder className="size-3.5" />
 					{:else}
-						<DocumentPage />
+						<DocumentPage className="size-3.5" />
 					{/if}
 				</Tooltip>
 			{:else}
-				<Spinner />
+				<Spinner className="size-3.5" />
 			{/if}
 		</div>
 	{/if}
@@ -162,14 +162,22 @@
 			</div>
 		</div>
 	{:else}
-		<Tooltip content={decodeString(name)} className="flex flex-col w-full" placement="top-start">
-			<div class="flex flex-col justify-center -space-y-0.5 px-1 w-full">
-				<div class=" dark:text-gray-100 text-sm flex justify-between items-center">
-					<div class="font-normal line-clamp-1 flex-1 pr-1">{decodeString(name)}</div>
+		<Tooltip
+			content={decodeString(name)}
+			className="flex min-w-0 flex-1 overflow-hidden"
+			placement="top-start"
+		>
+			<div class="flex min-w-0 flex-1 items-center overflow-hidden">
+				<div class="flex min-w-0 flex-1 items-center justify-between dark:text-gray-100">
+					<div class="min-w-0 flex-1 truncate pr-1 font-normal">{decodeString(name)}</div>
 					{#if size}
-						<div class="text-gray-500 text-xs capitalize shrink-0">{formatFileSize(size)}</div>
+						<div class="max-w-[35%] shrink-0 truncate text-[0.6875rem] capitalize text-gray-500">
+							{formatFileSize(size)}
+						</div>
 					{:else}
-						<div class="text-gray-500 text-xs capitalize shrink-0">{type}</div>
+						<div class="max-w-[35%] shrink-0 truncate text-[0.6875rem] capitalize text-gray-500">
+							{type}
+						</div>
 					{/if}
 				</div>
 			</div>
@@ -183,7 +191,7 @@
 				class=" bg-white text-black border border-gray-50 rounded-full {($settings?.highContrastMode ??
 				false)
 					? ''
-					: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
+					: 'hover-reveal transition'}"
 				type="button"
 				on:click|stopPropagation={() => {
 					dispatch('dismiss');

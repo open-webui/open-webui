@@ -227,7 +227,7 @@ if FROM_INIT_PY:
 
     # Check if the data directory exists in the package directory
     if DATA_DIR.exists() and DATA_DIR != NEW_DATA_DIR:
-        log.info(f'Moving {DATA_DIR} to {NEW_DATA_DIR}')
+        log.info('Moving %s to %s', DATA_DIR, NEW_DATA_DIR)
         for item in DATA_DIR.iterdir():
             dest = NEW_DATA_DIR / item.name
             if item.is_dir():
@@ -602,6 +602,18 @@ SEARXNG_CLIENT_KEY_FILE = os.getenv('SEARXNG_CLIENT_KEY_FILE', '').strip()
 # When False (default), outbound HTTP requests do not follow 3xx redirects.
 AIOHTTP_CLIENT_ALLOW_REDIRECTS = os.getenv('AIOHTTP_CLIENT_ALLOW_REDIRECTS', 'False').lower() == 'true'
 
+# Opt-in c-ares DNS resolution (aiodns). Off by default: c-ares breaks name
+# resolution in some environments (#28013, #28215). Must run before any
+# TCPConnector is constructed.
+AIOHTTP_CLIENT_ASYNC_DNS_RESOLVER = os.getenv('AIOHTTP_CLIENT_ASYNC_DNS_RESOLVER', 'False').lower() == 'true'
+
+if not AIOHTTP_CLIENT_ASYNC_DNS_RESOLVER:
+    import aiohttp
+
+    aiohttp.DefaultResolver = aiohttp.resolver.ThreadedResolver  # for plugin code
+    aiohttp.resolver.DefaultResolver = aiohttp.resolver.ThreadedResolver
+    aiohttp.connector.DefaultResolver = aiohttp.resolver.ThreadedResolver
+
 # Optional User-Agent override for outbound web-loader fetches.  When set,
 # SafeWebBaseLoader sends this value instead of the default python-requests UA
 # which is aggressively blocked by Cloudflare, Wikipedia, and similar services.
@@ -888,10 +900,18 @@ if LICENSE_PUBLIC_KEY:
 # WEBUI Identity
 ####################################
 
+# LICENSE covers this Open WebUI branding surface, including name, logo,
+# visual, textual, symbolic identifiers, metadata, and surrounding UI.
+# Do not alter, remove, obscure, or replace it except as LICENSE permits:
+# https://docs.openwebui.com/license.
 WEBUI_NAME = os.getenv('WEBUI_NAME', 'Open WebUI')
 if WEBUI_NAME != 'Open WebUI':
     WEBUI_NAME += ' (Open WebUI)'
 
+# LICENSE covers this Open WebUI branding surface, including this favicon
+# and any visual, textual, or symbolic identifiers it preserves.
+# Do not alter, remove, obscure, or replace it except as LICENSE permits:
+# https://docs.openwebui.com/license.
 WEBUI_FAVICON_URL = 'https://openwebui.com/favicon.png'
 WEBUI_BUILD_HASH = os.getenv('WEBUI_BUILD_HASH', 'dev-build')
 TRUSTED_SIGNATURE_KEY = os.getenv('TRUSTED_SIGNATURE_KEY', '')
@@ -948,6 +968,10 @@ except ValueError:
 # Progressive Web App
 ####################################
 
+# LICENSE covers this install-time Open WebUI branding surface, including
+# names, logos, manifests, metadata, and surrounding UI.
+# Do not alter, remove, obscure, or replace it except as LICENSE permits:
+# https://docs.openwebui.com/license.
 EXTERNAL_PWA_MANIFEST_URL = os.getenv('EXTERNAL_PWA_MANIFEST_URL', None)
 
 ####################################

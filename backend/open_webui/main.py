@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import json
+import copy
 import logging
 import mimetypes
 import os
@@ -83,19 +83,19 @@ from open_webui.env import (
     ENABLE_COMPRESSION_MIDDLEWARE,
     ENABLE_CUSTOM_MODEL_FALLBACK,
     ENABLE_EASTER_EGGS,
-    ENABLE_PLUGINS,
-    EXTERNAL_PWA_MANIFEST_URL,
     # OAuth Back-Channel Logout
     ENABLE_OAUTH_BACKCHANNEL_LOGOUT,
     ENABLE_OTEL,
+    ENABLE_PLUGINS,
     ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
+    ENABLE_PYODIDE_FILE_PERSISTENCE,
     # SCIM
     ENABLE_SCIM,
     ENABLE_SIGNUP_PASSWORD_CONFIRMATION,
     ENABLE_STAR_SESSIONS_MIDDLEWARE,
-    ENABLE_PYODIDE_FILE_PERSISTENCE,
     ENABLE_VERSION_UPDATE_CHECK,
     ENABLE_WEBSOCKET_SUPPORT,
+    EXTERNAL_PWA_MANIFEST_URL,
     GLOBAL_LOG_LEVEL,
     INSTANCE_ID,
     LICENSE_KEY,
@@ -121,11 +121,13 @@ from open_webui.env import (
 from open_webui.events import (
     EVENTS,
     delete_event_webhook,
-    get_event_catalog as get_event_catalog_items,
     get_event_webhooks,
     migrate_legacy_webhook_config,
     publish_event,
     upsert_event_webhook,
+)
+from open_webui.events import (
+    get_event_catalog as get_event_catalog_items,
 )
 from open_webui.internal.db import engine, get_async_session
 from open_webui.models.access_grants import AccessGrants
@@ -154,8 +156,8 @@ from open_webui.routers import (
     knowledge,
     memories,
     models,
-    notifications,
     notes,
+    notifications,
     ollama,
     openai,
     pipelines,
@@ -198,6 +200,7 @@ from open_webui.tasks import (
 )  # Import from tasks.py
 from open_webui.utils import logger
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control.folders import has_folder_write_access
 from open_webui.utils.actions import chat_action as chat_action_handler
 from open_webui.utils.asgi_middleware import (
     AuthTokenMiddleware,
@@ -229,14 +232,17 @@ from open_webui.utils.chat_variables import (
     normalize_chat_variables,
 )
 from open_webui.utils.embeddings import generate_embeddings
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.json_response import apply_orjson_http_json
 from open_webui.utils.logger import start_logger
 from open_webui.utils.middleware import (
     background_tasks_handler,
     build_chat_response_context,
+    drain_approved_tool_calls,
     process_chat_payload,
     process_chat_response,
 )
+from open_webui.utils.misc import merge_model_params
 from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.models import (
     check_model_access,
@@ -260,6 +266,11 @@ from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.redis import get_redis_client
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.session_pool import cleanup_response, get_session, stream_wrapper
+from open_webui.utils.tool_approval import (
+    ResolveToolCallForm,
+    build_tool_approval_resume_payload,
+    resolve_tool_call_output,
+)
 from open_webui.utils.tools import set_terminal_servers, set_tool_servers
 
 if SAFE_MODE:
@@ -320,6 +331,9 @@ https://github.com/open-webui/open-webui
         print(banner)
     except UnicodeEncodeError:
         # Stdout can't encode the box-drawing banner (Windows cp1252, redirected/headless stdout); fall back to ASCII.
+        # LICENSE covers this Open WebUI CLI identifier.
+        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+        # https://docs.openwebui.com/license.
         print(f'Open WebUI v{VERSION} - building the best AI user interface.\nhttps://github.com/open-webui/open-webui')
 
 
@@ -420,13 +434,13 @@ async def lifespan(app: FastAPI):
         log.info('Initializing tool servers...')
         try:
             await set_tool_servers(mock_request)
-            log.info(f'Initialized {len(app.state.TOOL_SERVERS)} tool server(s)')
+            log.info('Initialized %s tool server(s)', len(app.state.TOOL_SERVERS))
         except Exception as e:
             log.warning(f'Failed to initialize tool servers at startup: {e}')
 
         try:
             await set_terminal_servers(mock_request)
-            log.info(f'Initialized {len(app.state.TERMINAL_SERVERS)} terminal server(s)')
+            log.info('Initialized %s terminal server(s)', len(app.state.TERMINAL_SERVERS))
         except Exception as e:
             log.warning(f'Failed to initialize terminal servers at startup: {e}')
 
@@ -461,6 +475,9 @@ async def lifespan(app: FastAPI):
 # response_model routes keep FastAPI's Pydantic fast path either way.
 apply_orjson_http_json()
 
+# LICENSE covers this Open WebUI API metadata identifier.
+# Do not alter, remove, obscure, or replace it except as LICENSE permits:
+# https://docs.openwebui.com/license.
 app = FastAPI(
     title='Open WebUI',
     docs_url='/docs' if ENV == 'dev' else None,
@@ -483,6 +500,10 @@ app.state.oauth_client_manager = oauth_client_manager
 app.state.instance_id = None
 app.state.redis = None
 
+# LICENSE covers this Open WebUI branding surface, including name, logo,
+# visual, textual, symbolic identifiers, metadata, and surrounding UI.
+# Do not alter, remove, obscure, or replace it except as LICENSE permits:
+# https://docs.openwebui.com/license.
 app.state.WEBUI_NAME = WEBUI_NAME
 app.state.LICENSE_METADATA = None
 app.state.USER_COUNT = None
@@ -866,7 +887,7 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
             tags = list(set(model_tags + tags))
             model['tags'] = [{'name': tag} for tag in tags]
         except Exception as e:
-            log.debug(f'Error processing model tags: {e}')
+            log.debug('Error processing model tags: %s', e)
             model['tags'] = []
 
     model_order_list = await Config.get('ui.model_order_list')
@@ -882,7 +903,7 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
 
     if log.isEnabledFor(logging.DEBUG):
         log.debug(
-            f'/api/models returned filtered models accessible to the user: {json.dumps([model.get("id") for model in models])}'
+            f'/api/models returned filtered models accessible to the user: {JSONCodec.dumps([model.get("id") for model in models])}'
         )
     return {'data': models}
 
@@ -935,7 +956,7 @@ async def unload_model(request: Request, form_data: ModelUnloadForm, user=Depend
             prefix_id = api_config.get('prefix_id', None)
             actual_model = strip_provider_model_prefix(model_id, prefix_id)
 
-            payload = json.dumps({'model': actual_model, 'keep_alive': 0, 'prompt': ''})
+            payload = JSONCodec.dumps({'model': actual_model, 'keep_alive': 0, 'prompt': ''})
 
             try:
                 timeout = aiohttp.ClientTimeout(total=30)
@@ -1083,18 +1104,18 @@ async def chat_completion(
             model = model_item
             await _set_direct_model(request, model, user)
 
+        # Read before the fallback below can rebind model to a different one.
+        model_capabilities = ((model.get('info') or {}).get('meta') or {}).get('capabilities') or {}
+
         # Model params: global defaults as base, per-model overrides win
-        default_model_params = await Config.get('models.default_params', {}) or {}
-        model_info_params = {
-            **default_model_params,
-            **(model_info.params.model_dump() if model_info and model_info.params else {}),
-        }
+        default_model_params = copy.deepcopy(await Config.get('models.default_params', {}) or {})
+        model_info_params = merge_model_params(
+            default_model_params,
+            model_info.params.model_dump() if model_info and model_info.params else {},
+        )
         request_params = {key: value for key, value in (form_data.get('params') or {}).items() if value is not None}
         if model_info_params or request_params:
-            form_data['params'] = {
-                **model_info_params,
-                **request_params,
-            }
+            form_data['params'] = merge_model_params(model_info_params, request_params)
 
         # Check base model existence for custom models
         if model_info and model_info.base_model_id:
@@ -1122,6 +1143,10 @@ async def chat_completion(
         # Model Params
         if model_info_params.get('stream_response') is not None:
             form_data['stream'] = model_info_params.get('stream_response')
+
+        # Providers only report token counts when asked, so ask on every caller's behalf.
+        if form_data.get('stream') and model_capabilities.get('usage'):
+            form_data['stream_options'] = {**(form_data.get('stream_options') or {}), 'include_usage': True}
 
         if model_info_params.get('stream_delta_chunk_size'):
             stream_delta_chunk_size = model_info_params.get('stream_delta_chunk_size')
@@ -1155,7 +1180,7 @@ async def chat_completion(
             message_ids = [{'model_id': model_id, 'message_id': form_data.pop('id', None)}]
 
         user_message = form_data.pop('user_message', None) or form_data.pop('parent_message', None)
-        chat_id = form_data.get('chat_id') or ''
+        chat_id = form_data.pop('chat_id', None) or ''
         chat_variables = form_data.pop('chat_variables', None)
         if chat_variables is None:
             existing_chat = await Chats.get_chat_by_id(chat_id) if is_saved_chat_id(chat_id) else None
@@ -1177,15 +1202,28 @@ async def chat_completion(
         ):
             tool_servers = None
 
+        automation_id = form_data.pop('automation_id', None)
+        tool_approval_mode = (
+            'full'
+            if automation_id or chat_id.startswith('channel:')
+            else (
+                form_data.get('params', {}).get('tool_approval_mode')
+                if await Config.get('chat.tool_permissions.enable', False)
+                else 'full'
+            )
+            or 'full'
+        )
+
         metadata = {
             'user_id': user.id,
             'user_agent': request.headers.get('user-agent', '') or '',
             'internal': getattr(request.state, 'internal', False) is True,
-            'chat_id': form_data.pop('chat_id', None) or '',
+            'chat_id': chat_id,
             'user_message': user_message,
             'user_message_id': user_message.get('id') if user_message else None,
             'assistant_message_id': form_data.pop('assistant_message_id', None),
             'session_id': form_data.pop('session_id', None),
+            'automation_id': automation_id,
             'folder_id': form_data.pop('folder_id', None),
             'filter_ids': form_data.pop('filter_ids', []),
             'tool_ids': form_data.get('tool_ids', None),
@@ -1205,6 +1243,7 @@ async def chat_completion(
                     or model_info_params.get('function_calling')
                     or 'native'
                 ),
+                'tool_approval_mode': tool_approval_mode,
             },
         }
 
@@ -1259,6 +1298,14 @@ async def chat_completion(
 
             if is_saved_chat_id(chat_id):
                 if is_new_chat:
+                    # The chat created below is persisted with this folder_id.
+                    folder_id = metadata['folder_id']
+                    if folder_id is not None and not await has_folder_write_access(user.id, folder_id):
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail=ERROR_MESSAGES.NOT_FOUND,
+                        )
+
                     # Build the full history upfront with ALL assistant placeholders
                     user_message = metadata.get('user_message') or {}
                     user_message_id = user_message.get('id') if user_message else None
@@ -1365,7 +1412,7 @@ async def chat_completion(
                                 user.id,
                             )
                         except Exception as e:
-                            log.debug(f'Error inserting chat files: {e}')
+                            log.debug('Error inserting chat files: %s', e)
                             pass
 
                     if initial_title_generation is not None and all_assistant_ids:
@@ -1387,7 +1434,7 @@ async def chat_completion(
                             try:
                                 await background_tasks_handler(title_ctx)
                             except Exception as e:
-                                log.debug(f'Error generating initial chat title: {e}')
+                                log.debug('Error generating initial chat title: %s', e)
 
                         asyncio.create_task(run_initial_title_generation())
                 else:
@@ -1475,7 +1522,7 @@ async def chat_completion(
                                 user.id,
                             )
                         except Exception as e:
-                            log.debug(f'Error inserting chat files: {e}')
+                            log.debug('Error inserting chat files: %s', e)
                             pass
 
                     # Save ALL assistant placeholders
@@ -1500,6 +1547,8 @@ async def chat_completion(
                     for entry in message_ids:
                         target_model_id = entry['model_id']
                         assistant_message_id = entry['message_id']
+                        if assistant_message_id and assistant_message_id == metadata.get('assistant_message_id'):
+                            continue
                         if assistant_message_id:
                             assistant_message = {
                                 'id': assistant_message_id,
@@ -1548,6 +1597,9 @@ async def chat_completion(
         try:
             form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
 
+            if await drain_approved_tool_calls(request, form_data, user, model, metadata):
+                return {'status': True, 'chat_id': metadata.get('chat_id'), 'paused': True}
+
             response = await chat_completion_handler(request, form_data, user)
 
             # When the upstream provider returns an error (e.g. HTTP 400
@@ -1557,7 +1609,7 @@ async def chat_completion(
             # chat:tasks:cancel, unblocking the frontend.
             if isinstance(response, JSONResponse) and response.status_code >= 400:
                 try:
-                    error_body = json.loads(response.body.decode('utf-8', 'replace'))
+                    error_body = JSONCodec.loads(response.body.decode('utf-8', 'replace'))
                     detail = error_body.get('error', error_body) if isinstance(error_body, dict) else error_body
                     if isinstance(detail, dict):
                         detail = detail.get('message', detail.get('detail', str(detail)))
@@ -1641,9 +1693,9 @@ async def chat_completion(
                         try:
                             await client.disconnect()
                         except BaseException as e:
-                            log.debug(f'Error disconnecting MCP client: {e}')
+                            log.debug('Error disconnecting MCP client: %s', e)
             except BaseException as e:
-                log.debug(f'Error cleaning up MCP clients: {e}')
+                log.debug('Error cleaning up MCP clients: %s', e)
 
             # Deregister this task, then emit chat:active=false if no others remain
             try:
@@ -1789,6 +1841,26 @@ async def chat_completion(
 generate_chat_completions = chat_completion
 generate_chat_completion = chat_completion
 
+@app.post('/api/v1/chats/{id}/messages/{message_id}/resolve')
+async def resolve_chat_message_tool_call(
+    request: Request,
+    id: str,
+    message_id: str,
+    form_data: ResolveToolCallForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    resolution = await resolve_tool_call_output(id, message_id, form_data, user, db=db)
+    payload = await build_tool_approval_resume_payload(id, message_id, chat=resolution['chat'])
+    result = await chat_completion(request, payload, user)
+    return {
+        'status': True,
+        'chat_id': id,
+        'message_id': message_id,
+        **(result if isinstance(result, dict) else {}),
+    }
+
+
 # Expose as app.state so internal callers (e.g. automations) can
 # use the full pipeline without importing from main.py (avoids circular deps).
 app.state.CHAT_COMPLETION_HANDLER = chat_completion
@@ -1832,7 +1904,7 @@ async def passthrough_anthropic_messages(request: Request, form_data: dict, user
         response = await session.request(
             method='POST',
             url=request_url,
-            data=json.dumps(payload),
+            data=JSONCodec.dumps(payload),
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
@@ -1925,13 +1997,6 @@ async def generate_messages(
 
     # Convert Anthropic payload to OpenAI format
     openai_payload = convert_anthropic_to_openai_payload(form_data, passthrough_params)
-    model_meta = model_info.meta.model_dump() if model_info and model_info.meta else {}
-    if (model_meta.get('capabilities') or {}).get('usage') is True:
-        if openai_payload.get('stream'):
-            stream_options = openai_payload.get('stream_options')
-            if not isinstance(stream_options, dict):
-                stream_options = {}
-            openai_payload['stream_options'] = {**stream_options, 'include_usage': True}
 
     # Route through the existing chat_completion handler
     response = await chat_completion(request, openai_payload, user)
@@ -2039,13 +2104,14 @@ async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
 
     task_ids = await list_task_ids_by_item_id(request.app.state.redis, chat_id)
 
-    log.debug(f'Task IDs for chat {chat_id}: {task_ids}')
+    log.debug('Task IDs for chat %s: %s', chat_id, task_ids)
     return {'task_ids': task_ids}
 
 
 @app.post('/api/tasks/chat/{chat_id:path}/stop')
 async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
     socket_id = get_temporary_chat_session_id(chat_id)
+    chat = None
     if socket_id:
         owner_id = get_user_id_from_session_pool(socket_id)
         if owner_id != user.id and user.role != 'admin':
@@ -2055,6 +2121,47 @@ async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
         if chat is None or (chat.user_id != user.id and user.role != 'admin'):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
     result = await stop_item_tasks(request.app.state.redis, chat_id)
+
+    if not socket_id and str(result.get('message', '')).startswith('No tasks found'):
+        messages_map = await Chats.get_messages_map_by_chat_id(chat_id) or {}
+        for message_id, message in messages_map.items():
+            if message.get('role') != 'assistant' or message.get('done') is not False:
+                continue
+
+            output = message.get('output')
+            if isinstance(output, list):
+                for item in output:
+                    if item.get('type') == 'function_call' and item.get('status') in {
+                        'pending',
+                        'queued',
+                        'requires_approval',
+                    }:
+                        item['status'] = 'rejected'
+                        item.pop('approved', None)
+
+            await Chats.upsert_message_to_chat_by_id_and_message_id(
+                chat_id,
+                message_id,
+                {'done': True, **({'output': output} if isinstance(output, list) else {})},
+                touch=False,
+            )
+            result = {
+                'status': True,
+                'message': 'Finalized pending approval message.',
+            }
+
+            event_emitter = await get_event_emitter(
+                {
+                    'user_id': chat.user_id,
+                    'chat_id': chat_id,
+                    'message_id': message_id,
+                },
+                update_db=False,
+            )
+            if event_emitter:
+                await event_emitter({'type': 'chat:completion', 'data': {'done': True, 'output': output}})
+                await event_emitter({'type': 'chat:tasks:cancel'})
+
     return result
 
 
@@ -2113,6 +2220,7 @@ async def get_app_config(request: Request):
         'automations.enable',
         'notes.enable',
         'chat.context_compaction.enable',
+        'chat.tool_permissions.enable',
         'web.search.enable',
         'web.search.confirmation.enable',
         'web.search.confirmation.content',
@@ -2129,6 +2237,7 @@ async def get_app_config(request: Request):
         'memories.enable',
         'ui.default_models',
         'ui.default_pinned_models',
+        'ui.default_interface_settings',
         'ui.prompt_suggestions',
         'code_execution.engine',
         'code_interpreter.engine',
@@ -2189,6 +2298,7 @@ async def get_app_config(request: Request):
                     'enable_automations': config.get('automations.enable'),
                     'enable_notes': config.get('notes.enable'),
                     'enable_context_compaction': config.get('chat.context_compaction.enable'),
+                    'enable_tool_permissions': config.get('chat.tool_permissions.enable'),
                     'enable_web_search': config.get('web.search.enable'),
                     'enable_web_search_confirmation': config.get('web.search.confirmation.enable'),
                     'web_search_confirmation_content': config.get('web.search.confirmation.content'),
@@ -2259,6 +2369,7 @@ async def get_app_config(request: Request):
                     'sharepoint_tenant_id': ONEDRIVE_SHAREPOINT_TENANT_ID,
                 },
                 'ui': {
+                    'default_interface_settings': config.get('ui.default_interface_settings'),
                     'pending_user_overlay_title': config.get('ui.pending_user_overlay_title'),
                     'pending_user_overlay_content': config.get('ui.pending_user_overlay_content'),
                     'response_watermark': config.get('ui.watermark'),
@@ -2582,7 +2693,7 @@ async def register_client(request, client_id: str) -> bool:
         **apply_connection_oauth_options(connection, oauth_client_info.model_dump(mode='json'))
     )
     oauth_client_manager.add_client(client_id, oauth_client_info)
-    log.info(f'Re-registered OAuth client {client_id} for tool server')
+    log.info('Re-registered OAuth client %s for tool server', client_id)
     return True
 
 
@@ -2626,7 +2737,7 @@ async def oauth_client_authorize(
                 detail='OAuth client registration is still invalid after re-registration',
             )
 
-    return await oauth_client_manager.handle_authorize(request, client_id=client_id)
+    return await oauth_client_manager.handle_authorize(request, client_id=client_id, user_id=user.id)
 
 
 @app.get('/oauth/clients/{client_id}/callback')
@@ -2634,12 +2745,10 @@ async def oauth_client_callback(
     client_id: str,
     request: Request,
     response: Response,
-    user=Depends(get_verified_user),
 ):
     return await oauth_client_manager.handle_callback(
         request,
         client_id=client_id,
-        user_id=user.id if user else None,
         response=response,
     )
 
@@ -2688,6 +2797,10 @@ async def oauth_backchannel_logout(
 async def get_manifest_json():
     external_pwa_manifest_url = getattr(app.state, 'EXTERNAL_PWA_MANIFEST_URL', None)
     if external_pwa_manifest_url:
+        # LICENSE covers this install-time Open WebUI branding surface, including
+        # names, logos, manifests, metadata, and surrounding UI.
+        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+        # https://docs.openwebui.com/license.
         session = await get_session()
         async with session.get(
             external_pwa_manifest_url,
@@ -2696,6 +2809,10 @@ async def get_manifest_json():
             r.raise_for_status()
             return await r.json()
     else:
+        # LICENSE covers this generated Open WebUI install branding surface,
+        # including names, logos, manifests, metadata, and surrounding UI.
+        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+        # https://docs.openwebui.com/license.
         return {
             'name': app.state.WEBUI_NAME,
             'short_name': app.state.WEBUI_NAME,
@@ -2704,6 +2821,9 @@ async def get_manifest_json():
             'display': 'standalone',
             'background_color': '#343541',
             'icons': [
+                # LICENSE covers this Open WebUI install icon.
+                # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+                # https://docs.openwebui.com/license.
                 {
                     'src': '/static/logo.png',
                     'type': 'image/png',
@@ -2728,6 +2848,9 @@ async def get_manifest_json():
 @app.get('/opensearch.xml')
 async def get_opensearch_xml():
     webui_url = await Config.get('webui.url')
+    # LICENSE covers this Open WebUI search identifier.
+    # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+    # https://docs.openwebui.com/license.
     xml_content = rf"""
     <OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">
     <ShortName>{app.state.WEBUI_NAME}</ShortName>

@@ -81,6 +81,9 @@
 		base_model_id: null,
 		name: '',
 		meta: {
+			// LICENSE covers this Open WebUI fallback logo.
+			// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+			// https://docs.openwebui.com/license.
 			profile_image_url: `${WEBUI_BASE_URL}/static/favicon.png`,
 			description: '',
 			suggestion_prompts: null,
@@ -601,6 +604,9 @@
 						<div class="flex w-full flex-col gap-3">
 							<div class="flex w-full min-w-0 items-center gap-3 py-0.5">
 								<div class="flex min-w-0 flex-1 items-center gap-3">
+									<!-- LICENSE covers this Open WebUI fallback logo.
+									Do not alter, remove, obscure, or replace it except as LICENSE permits:
+									https://docs.openwebui.com/license. -->
 									<button
 										class="group relative flex size-12 shrink-0 items-center overflow-hidden rounded-xl md:size-14 {info
 											.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
@@ -627,7 +633,7 @@
 										{/if}
 
 										<div
-											class="absolute bottom-0 right-0 z-10 opacity-0 transition group-hover:opacity-100"
+											class="absolute bottom-0 right-0 z-10 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"
 										>
 											<div class="m-1">
 												<div

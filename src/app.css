@@ -64,6 +64,16 @@ code {
 	@apply bg-gray-50/40 dark:bg-gray-800/40;
 }
 
+/* visibility:hidden is not focusable, so a keyboard user could never reveal these */
+.hover-reveal {
+	@apply opacity-0 pointer-events-none;
+}
+
+.group:hover .hover-reveal,
+.group:focus-within .hover-reveal {
+	@apply opacity-100 pointer-events-auto;
+}
+
 .marked a {
 	@apply underline;
 }
@@ -399,6 +409,17 @@ input[type='number'] {
 	outline: none;
 }
 
+:focus-visible:not(.ProseMirror):not([contenteditable='true']):not(input):not(textarea),
+.focus-ring:focus-visible {
+	outline: 2px solid theme(--color-blue-500);
+	outline-offset: -2px;
+}
+
+html.high-contrast :is(input, textarea, [contenteditable='true'], .ProseMirror):focus-visible {
+	outline: 2px solid theme(--color-blue-500);
+	outline-offset: -2px;
+}
+
 .ProseMirror p.is-editor-empty:first-child::before {
 	content: attr(data-placeholder);
 	float: left;
@@ -694,7 +715,7 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 
 /* this is a rough fix for the first cursor position when the first paragraph is empty */
 .ProseMirror > .ProseMirror-yjs-cursor:first-child {
-	margin-top: 16px;
+	margin-top: 1rem;
 }
 /* This gives the remote user caret. The colors are automatically overwritten*/
 .ProseMirror-yjs-cursor {
@@ -712,12 +733,12 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 	position: absolute;
 	top: -1.05em;
 	left: -1px;
-	font-size: 13px;
+	font-size: 0.8125rem;
 	background-color: rgb(250, 129, 0);
 	user-select: none;
 	color: white;
-	padding-left: 2px;
-	padding-right: 2px;
+	padding-left: 0.125rem;
+	padding-right: 0.125rem;
 	white-space: nowrap;
 }
 
@@ -734,7 +755,7 @@ body {
 /* Position the handle relative to each LI */
 .pm-li--with-handle {
 	position: relative;
-	margin-left: 12px; /* make space for the handle */
+	margin-left: 0.75rem; /* make space for the handle */
 }
 
 .tiptap ul[data-type='taskList'] .pm-list-drag-handle {
@@ -744,16 +765,16 @@ body {
 /* The drag handle itself */
 .pm-list-drag-handle {
 	position: absolute;
-	left: -36px; /* pull into the left gutter */
+	left: -2.25rem; /* pull into the left gutter */
 	top: 1px;
-	width: 18px;
-	height: 18px;
+	width: 1.125rem;
+	height: 1.125rem;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 12px;
+	font-size: 0.75rem;
 	line-height: 1;
-	border-radius: 4px;
+	border-radius: 0.25rem;
 	cursor: grab;
 	user-select: none;
 	opacity: 0.35;
@@ -763,7 +784,7 @@ body {
 }
 
 .tiptap ul[data-type='taskList'] .pm-list-drag-handle {
-	left: -16px; /* pull into the left gutter more to avoid the checkbox */
+	left: -1rem; /* pull into the left gutter more to avoid the checkbox */
 }
 
 .pm-list-drag-handle:active {

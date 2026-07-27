@@ -46,9 +46,9 @@
 		syncKnowledgeCleanup,
 		testExternalKnowledgeRetrieval
 	} from '$lib/apis/knowledge';
-	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
+	import { processUrl } from '$lib/apis/retrieval';
 
-	import { blobToFile, isYoutubeUrl, copyToClipboard } from '$lib/utils';
+	import { blobToFile, copyToClipboard } from '$lib/utils';
 	import { computeFileHash } from '$lib/utils/hash';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -307,6 +307,11 @@
 	};
 
 	const uploadWeb = async (urls) => {
+		if (!knowledge) {
+			toast.error($i18n.t('Knowledge base not found.'));
+			return;
+		}
+
 		if (!Array.isArray(urls)) {
 			urls = [urls];
 		}
@@ -329,29 +334,47 @@
 		for (const fileItem of newFileItems) {
 			try {
 				console.log(fileItem);
-				const res = await processWeb(localStorage.token, '', fileItem.url, false).catch((e) => {
-					console.error('Error processing web URL:', e);
+				const res = await processUrl(localStorage.token, fileItem.url).catch((e) => {
+					console.error('Error processing URL:', e);
 					return null;
 				});
 
 				if (res) {
 					console.log(res);
-					const file = createFileFromText(
-						// Use URL as filename, sanitized
-						fileItem.url
-							.replace(/[^a-z0-9]/gi, '_')
-							.toLowerCase()
-							.slice(0, 50),
-						res.content
-					);
+					let uploadedFile = res.file;
 
-					const uploadedFile = await uploadFile(localStorage.token, file, {
-						knowledge_id: knowledge.id,
-						directory_id: currentDirectoryId
-					}).catch((e) => {
-						toast.error(`${e}`);
-						return null;
-					});
+					if (res.type === 'web' || res.type === 'youtube') {
+						const file = createFileFromText(
+							// Use URL as filename, sanitized
+							fileItem.url
+								.replace(/[^a-z0-9]/gi, '_')
+								.toLowerCase()
+								.slice(0, 50),
+							res.content ?? ''
+						);
+
+						uploadedFile = await uploadFile(localStorage.token, file, {
+							knowledge_id: knowledge.id,
+							directory_id: currentDirectoryId,
+							source_url: fileItem.url
+						}).catch((e) => {
+							toast.error(`${e}`);
+							return null;
+						});
+					} else if (uploadedFile?.id) {
+						const linkedKnowledge = await addFileToKnowledgeById(
+							localStorage.token,
+							knowledge.id,
+							uploadedFile.id,
+							currentDirectoryId
+						).catch((e) => {
+							toast.error(`${e}`);
+							return null;
+						});
+						if (!linkedKnowledge) {
+							uploadedFile = null;
+						}
+					}
 
 					if (uploadedFile) {
 						console.log(uploadedFile);
@@ -1355,6 +1378,9 @@
 					</div>
 
 					<div class="text-xs text-gray-500">
+						<!-- LICENSE covers this Open WebUI wordmark.
+						Do not alter, remove, obscure, or replace it except as LICENSE permits:
+						https://docs.openwebui.com/license. -->
 						{$i18n.t(
 							'This knowledge base retrieves from a connected source. Open WebUI can query it, but cannot upload, sync, edit, delete, reset, or reindex its source data.'
 						)}
@@ -1420,9 +1446,9 @@
 							</button>
 
 							<div slot="content">
-								<DropdownMenu className="min-w-[180px]">
+								<DropdownMenu className="min-w-[11.25rem]">
 									<button
-										class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:text-gray-900 dark:hover:text-gray-100"
+										class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
 										type="button"
 										on:click={() => {
 											includeContent = !includeContent;

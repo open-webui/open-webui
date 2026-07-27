@@ -6,7 +6,6 @@ import logging
 import os
 import re
 import time
-from concurrent.futures import ThreadPoolExecutor
 from typing import Awaitable, Optional, Union
 from urllib.parse import quote
 
@@ -311,7 +310,7 @@ class VectorSearchRetriever(BaseRetriever):
 
 def query_doc(collection_name: str, query_embedding: list[float], k: int, user: UserModel = None):
     try:
-        log.debug(f'query_doc:doc {collection_name}')
+        log.debug('query_doc:doc %s', collection_name)
         result = VECTOR_DB_CLIENT.search(
             collection_name=collection_name,
             vectors=[query_embedding],
@@ -319,7 +318,7 @@ def query_doc(collection_name: str, query_embedding: list[float], k: int, user: 
         )
 
         if result:
-            log.info(f'query_doc:result {result.ids} {result.metadatas}')
+            log.info('query_doc:result %s %s', result.ids, result.metadatas)
 
         return result
     except Exception as e:
@@ -329,11 +328,11 @@ def query_doc(collection_name: str, query_embedding: list[float], k: int, user: 
 
 def get_doc(collection_name: str, user: UserModel = None):
     try:
-        log.debug(f'get_doc:doc {collection_name}')
+        log.debug('get_doc:doc %s', collection_name)
         result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
 
         if result:
-            log.info(f'query_doc:result {result.ids} {result.metadatas}')
+            log.info('query_doc:result %s %s', result.ids, result.metadatas)
 
         return result
     except Exception as e:
@@ -458,7 +457,7 @@ async def query_doc_with_native_hybrid_search(
             'metadatas': [metadatas],
         }
     except Exception as e:
-        log.debug(f'Native hybrid search failed for {collection_name}, falling back to legacy hybrid search: {e}')
+        log.debug('Native hybrid search failed for %s, falling back to legacy hybrid search: %s', collection_name, e)
         return None
 
 
@@ -511,7 +510,7 @@ async def query_doc_with_hybrid_search(
             log.warning(f'query_doc_with_hybrid_search:no_docs {collection_name}')
             return {'documents': [], 'metadatas': [], 'distances': []}
 
-        log.debug(f'query_doc_with_hybrid_search:doc {collection_name}')
+        log.debug('query_doc_with_hybrid_search:doc %s', collection_name)
 
         original_texts = collection_result.documents[0]
         bm25_metadatas = [
@@ -586,7 +585,7 @@ async def query_doc_with_hybrid_search(
             'metadatas': [metadatas],
         }
 
-        log.info('query_doc_with_hybrid_search:result ' + f'{result["metadatas"]} {result["distances"]}')
+        log.info('query_doc_with_hybrid_search:result %s %s', result['metadatas'], result['distances'])
         return result
     except Exception as e:
         log.exception(f'Error querying doc {collection_name} with hybrid search: {e}')
@@ -708,7 +707,7 @@ async def query_collection(
                 enable_enriched_texts=config.get('rag.enable_hybrid_search_enriched_texts'),
             )
         except Exception as e:
-            log.debug(f'Hybrid search failed, falling back to vector search: {e}')
+            log.debug('Hybrid search failed, falling back to vector search: %s', e)
 
     results = []
     error = False
@@ -737,15 +736,15 @@ async def query_collection(
 
     # Generate all query embeddings (in one call)
     query_embeddings = await embedding_function(queries, prefix=RAG_EMBEDDING_QUERY_PREFIX)
-    log.debug(f'query_collection: processing {len(queries)} queries across {len(collection_names)} collections')
+    log.debug('query_collection: processing %s queries across %s collections', len(queries), len(collection_names))
 
-    with ThreadPoolExecutor() as executor:
-        future_results = []
-        for query_embedding in query_embeddings:
-            for collection_name in collection_names:
-                result = executor.submit(process_query_collection, collection_name, query_embedding)
-                future_results.append(result)
-        task_results = [future.result() for future in future_results]
+    task_results = await asyncio.gather(
+        *[
+            asyncio.to_thread(process_query_collection, collection_name, query_embedding)
+            for query_embedding in query_embeddings
+            for collection_name in collection_names
+        ]
+    )
 
     for result, err in task_results:
         if err is not None:
@@ -813,7 +812,7 @@ async def query_collection_with_hybrid_search(
 
     collection_results = dict(await asyncio.gather(*(_fetch_collection(name) for name in collection_names)))
 
-    log.info(f'Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections...')
+    log.info('Starting hybrid search for %s queries in %s collections...', len(queries), len(collection_names))
 
     async def process_query(collection_name, query):
         try:
@@ -867,7 +866,7 @@ def generate_openai_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
-    log.debug(f'generate_openai_batch_embeddings:model {model} batch size: {len(texts)}')
+    log.debug('generate_openai_batch_embeddings:model %s batch size: %s', model, len(texts))
     json_data = {'input': texts, 'model': model}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
         json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
@@ -900,7 +899,7 @@ async def agenerate_openai_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
-    log.debug(f'agenerate_openai_batch_embeddings:model {model} batch size: {len(texts)}')
+    log.debug('agenerate_openai_batch_embeddings:model %s batch size: %s', model, len(texts))
     form_data = {'input': texts, 'model': model}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
         form_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
@@ -938,7 +937,7 @@ def generate_azure_openai_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
-    log.debug(f'generate_azure_openai_batch_embeddings:deployment {model} batch size: {len(texts)}')
+    log.debug('generate_azure_openai_batch_embeddings:deployment %s batch size: %s', model, len(texts))
     json_data = {'input': texts}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
         json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
@@ -980,7 +979,7 @@ async def agenerate_azure_openai_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
-    log.debug(f'agenerate_azure_openai_batch_embeddings:deployment {model} batch size: {len(texts)}')
+    log.debug('agenerate_azure_openai_batch_embeddings:deployment %s batch size: %s', model, len(texts))
     form_data = {'input': texts}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
         form_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
@@ -1019,7 +1018,7 @@ def generate_ollama_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
-    log.debug(f'generate_ollama_batch_embeddings:model {model} batch size: {len(texts)}')
+    log.debug('generate_ollama_batch_embeddings:model %s batch size: %s', model, len(texts))
     json_data = {'input': texts, 'model': model, 'truncate': True}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
         json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
@@ -1055,7 +1054,7 @@ async def agenerate_ollama_batch_embeddings(
     prefix: str = None,
     user: UserModel = None,
 ) -> list[list[float]]:
-    log.debug(f'agenerate_ollama_batch_embeddings:model {model} batch size: {len(texts)}')
+    log.debug('agenerate_ollama_batch_embeddings:model %s batch size: %s', model, len(texts))
     form_data = {'input': texts, 'model': model, 'truncate': True}
     if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
         form_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
@@ -1139,7 +1138,7 @@ def get_embedding_function(
                 batches = [query[i : i + embedding_batch_size] for i in range(0, len(query), embedding_batch_size)]
 
                 if enable_async:
-                    log.debug(f'generate_multiple_async: Processing {len(batches)} batches in parallel')
+                    log.debug('generate_multiple_async: Processing %s batches in parallel', len(batches))
                     # Use semaphore to limit concurrent embedding API requests
                     # 0 = unlimited (no semaphore)
                     if concurrent_requests:
@@ -1154,7 +1153,7 @@ def get_embedding_function(
                         tasks = [embedding_function(batch, prefix=prefix, user=user) for batch in batches]
                     batch_results = await asyncio.gather(*tasks)
                 else:
-                    log.debug(f'generate_multiple_async: Processing {len(batches)} batches sequentially')
+                    log.debug('generate_multiple_async: Processing %s batches sequentially', len(batches))
                     batch_results = []
                     for batch in batches:
                         batch_results.append(await embedding_function(batch, prefix=prefix, user=user))
@@ -1167,7 +1166,9 @@ def get_embedding_function(
                     embeddings.extend(batch_embeddings)
 
                 log.debug(
-                    f'generate_multiple_async: Generated {len(embeddings)} embeddings from {len(batches)} parallel batches'
+                    'generate_multiple_async: Generated %s embeddings from %s parallel batches',
+                    len(embeddings),
+                    len(batches),
                 )
                 return embeddings
             else:
@@ -1415,8 +1416,21 @@ async def get_sources_from_items(
         elif item.get('type') == 'chat':
             # Chat Attached
             chat = await Chats.get_chat_by_id(item.get('id'))
+            has_read_access = bool(chat and (user.role == 'admin' or chat.user_id == user.id))
 
-            if chat and (user.role == 'admin' or chat.user_id == user.id):
+            if chat and not has_read_access:
+                has_read_access = await AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type='shared_chat',
+                    resource_id=chat.id,
+                    permission='read',
+                )
+
+            if chat and not has_read_access and chat.folder_id:
+                folder = await Folders.get_folder_by_id(chat.folder_id)
+                has_read_access = folder and await has_folder_access(user.id, folder, 'read', db=None)
+
+            if has_read_access:
                 messages_map = chat.chat.get('history', {}).get('messages', {})
                 message_id = chat.chat.get('history', {}).get('currentId')
 
@@ -1607,14 +1621,14 @@ async def get_sources_from_items(
         if query_result is None and collection_names:
             collection_names = set(collection_names).difference(extracted_collections)
             if not collection_names:
-                log.debug(f'skipping {item} as it has already been extracted')
+                log.debug('skipping %s as it has already been extracted', item)
                 continue
 
             # Filter out collections the user cannot read
             if user and (item.get('type'), item.get('id')) not in folder_items:
                 collection_names = await filter_accessible_collections(collection_names, user)
                 if not collection_names:
-                    log.debug(f'access denied for all collections in item {item}')
+                    log.debug('access denied for all collections in item %s', item)
                     continue
 
             try:
@@ -1673,8 +1687,8 @@ def get_model_path(model: str, update_model: bool = False):
         'local_files_only': local_files_only,
     }
 
-    log.debug(f'model: {model}')
-    log.debug(f'snapshot_kwargs: {snapshot_kwargs}')
+    log.debug('model: %s', model)
+    log.debug('snapshot_kwargs: %s', snapshot_kwargs)
 
     # Inspiration from upstream sentence_transformers
     if os.path.exists(model) or ('\\' in model or model.count('/') > 1) and local_files_only:
@@ -1689,7 +1703,7 @@ def get_model_path(model: str, update_model: bool = False):
     # Attempt to query the huggingface_hub library to determine the local path and/or to update
     try:
         model_repo_path = snapshot_download(**snapshot_kwargs)
-        log.debug(f'model_repo_path: {model_repo_path}')
+        log.debug('model_repo_path: %s', model_repo_path)
         return model_repo_path
     except Exception as e:
         log.exception(f'Cannot determine model snapshot path: {e}')

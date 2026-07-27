@@ -140,8 +140,8 @@
 			class="{buttonClassName} cursor-pointer"
 			on:click={(e) => {
 				e.stopPropagation();
+				toggleOpen();
 			}}
-			on:pointerup={toggleOpen}
 		>
 			<div>
 				<div class="flex items-start justify-between">
@@ -162,7 +162,7 @@
 					{#if open && !hide}
 						<div
 							transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}
-							on:pointerup={(e) => {
+							on:click={(e) => {
 								e.stopPropagation();
 							}}
 						>

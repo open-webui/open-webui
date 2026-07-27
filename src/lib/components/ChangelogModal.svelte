@@ -93,6 +93,9 @@
 			class="flex shrink-0 items-start justify-between gap-4 px-4 pb-2.5 pt-3.5 dark:text-white text-black"
 		>
 			<div class="min-w-0">
+				<!-- LICENSE covers this Open WebUI release identifier.
+				Do not alter, remove, obscure, or replace it except as LICENSE permits:
+				https://docs.openwebui.com/license. -->
 				<h2 class="m-0 truncate text-base font-normal">
 					{$i18n.t("What's New in")}
 					{$WEBUI_NAME}

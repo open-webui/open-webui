@@ -101,7 +101,7 @@
 	<!-- Close button (visible on hover) -->
 	<button
 		bind:this={closeButtonElement}
-		class="absolute -top-0.5 -left-0.5 p-0.5 rounded-full opacity-0 group-hover:opacity-100 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-opacity z-10"
+		class="absolute -top-0.5 -left-0.5 p-0.5 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-opacity z-10"
 		on:click|stopPropagation={closeHandler}
 		aria-label="Dismiss notification"
 	>
@@ -109,12 +109,15 @@
 	</button>
 
 	<div class="shrink-0 self-top -translate-y-0.5">
+		<!-- LICENSE covers this Open WebUI notification logo.
+		Do not alter, remove, obscure, or replace it except as LICENSE permits:
+		https://docs.openwebui.com/license. -->
 		<img src="{WEBUI_BASE_URL}/static/favicon.png" alt="favicon" class="size-6 rounded-full" />
 	</div>
 
 	<div>
 		{#if title}
-			<div class=" text-[13px] font-normal mb-0.5 line-clamp-1">{title}</div>
+			<div class=" text-[0.8125rem] font-normal mb-0.5 line-clamp-1">{title}</div>
 		{/if}
 
 		<div class=" line-clamp-2 text-xs self-center dark:text-gray-300 font-normal">

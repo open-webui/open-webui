@@ -17,12 +17,13 @@
 		updateRAGConfig
 	} from '$lib/apis/retrieval';
 
-	import { reindexKnowledgeFiles } from '$lib/apis/knowledge';
+	import { reindexKnowledgeFiles, reindexKnowledgeMetadata } from '$lib/apis/knowledge';
+	import { reindexMemoryVectors } from '$lib/apis/memories';
 	import { deleteAllFiles } from '$lib/apis/files';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import ReindexKnowledgeFilesConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import ReindexEmbeddingDataConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -371,15 +372,37 @@
 	}}
 />
 
-<ReindexKnowledgeFilesConfirmDialog
+<ReindexEmbeddingDataConfirmDialog
 	bind:show={showReindexConfirm}
+	title={$i18n.t('Reindex Embedding Data')}
+	message={$i18n.t(
+		'Rebuild knowledge file, knowledge search, and memory vectors using the current embedding model.'
+	)}
 	on:confirm={async () => {
-		const res = await reindexKnowledgeFiles(localStorage.token).catch((error) => {
+		const knowledgeRes = await reindexKnowledgeFiles(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (!knowledgeRes) {
+			return;
+		}
+
+		const knowledgeMetadataRes = await reindexKnowledgeMetadata(localStorage.token).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
+		if (!knowledgeMetadataRes) {
+			return;
+		}
+
+		const memoryRes = await reindexMemoryVectors(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
-		if (res) {
+		if (memoryRes) {
 			toast.success($i18n.t('Success'));
 		}
 	}}
@@ -1116,7 +1139,7 @@
 						</div>
 						<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 							{$i18n.t(
-								'After changing the embedding model, reindex the knowledge base for changes to take effect.'
+								'After changing the embedding model, reindex knowledge, knowledge search, and memory vectors for changes to take effect.'
 							)}
 						</div>
 					</AdminSettingField>
@@ -1526,8 +1549,10 @@
 					</button>
 				</AdminSettingRow>
 				<AdminSettingRow
-					label={$i18n.t('Reindex Knowledge Base Vectors')}
-					description={$i18n.t('Rebuild vectors for existing knowledge files.')}
+					label={$i18n.t('Reindex Knowledge and Memory Vectors')}
+					description={$i18n.t(
+						'Rebuild vectors for existing knowledge files, knowledge search, and memories.'
+					)}
 				>
 					<button
 						class={actionButtonClass}

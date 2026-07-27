@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import asyncio
-import json
 import logging
-from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
@@ -14,7 +11,6 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
-from open_webui.models.config import Config
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import (
     AggregateChatStats,
@@ -28,16 +24,19 @@ from open_webui.models.chats import (
     ChatStatsExport,
     ChatTitleIdResponse,
     ChatUsageStatsListResponse,
-    is_internal_chat,
     MessageStats,
+    chat_search_content_query,
+    chat_search_terms,
+    is_internal_chat,
 )
+from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.shared_chats import SharedChatResponse, SharedChats
 from open_webui.models.tags import TagModel, Tags
 from open_webui.socket.main import get_event_emitter
 from open_webui.tasks import has_active_tasks, stop_item_tasks
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
-from open_webui.utils.access_control.folders import has_folder_access
+from open_webui.utils.access_control.folders import has_folder_access, has_folder_write_access
 from open_webui.utils.auth import bearer_security, get_admin_user, get_current_user, get_verified_user
 from open_webui.utils.chat_fork import build_fork_history
 from open_webui.utils.context_compaction import compact_chat_branch, get_chat_context_usage
@@ -50,8 +49,6 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
-SEARCH_FILTER_PREFIXES = ('tag:', 'folder:', 'pinned:', 'archived:', 'shared:')
-
 CHAT_CONFIG_KEYS = {
     'CONTEXT_COMPACTION_MODEL': 'chat.context_compaction.model',
     'ENABLE_CONTEXT_COMPACTION': 'chat.context_compaction.enable',
@@ -59,6 +56,7 @@ CHAT_CONFIG_KEYS = {
     'CONTEXT_COMPACTION_TOKEN_CAP': 'chat.context_compaction.token_cap',
     'CONTEXT_COMPACTION_RETENTION_PERCENTAGE': 'chat.context_compaction.retention_percentage',
     'CONTEXT_COMPACTION_PROMPT_TEMPLATE': 'chat.context_compaction.prompt_template',
+    'ENABLE_TOOL_PERMISSIONS': 'chat.tool_permissions.enable',
 }
 
 
@@ -141,6 +139,7 @@ class ChatConfigForm(BaseModel):
     CONTEXT_COMPACTION_TOKEN_CAP: int | None = None
     CONTEXT_COMPACTION_RETENTION_PERCENTAGE: int = 40
     CONTEXT_COMPACTION_PROMPT_TEMPLATE: str
+    ENABLE_TOOL_PERMISSIONS: bool = False
 
 
 class CompactChatForm(BaseModel):
@@ -148,38 +147,42 @@ class CompactChatForm(BaseModel):
 
 
 def chat_search_content_text(text: str) -> str:
-    words = text.lower().strip().split(' ')
-    return ' '.join(word for word in words if not word.startswith(SEARCH_FILTER_PREFIXES)).strip()
+    return chat_search_content_query(text)
 
 
 def chat_search_snippet(chat: dict, search_text: str, max_length: int = 200) -> str | None:
     if not search_text:
         return None
 
-    messages = chat.get('messages', [])
+    history = chat.get('history', {})
+    messages = history.get('messages') if isinstance(history, dict) else None
+    if not messages:
+        messages = chat.get('messages', []) or []
     if isinstance(messages, dict):
         messages = messages.values()
 
-    for message in messages:
-        if not isinstance(message, dict):
-            continue
+    needles = list(dict.fromkeys([search_text, *chat_search_terms(search_text)]))
+    for needle in needles:
+        for message in messages:
+            if not isinstance(message, dict):
+                continue
 
-        content = message.get('content')
-        if not isinstance(content, str):
-            continue
+            content = message.get('content')
+            if not isinstance(content, str):
+                continue
 
-        index = content.lower().find(search_text)
-        if index == -1:
-            continue
+            index = content.lower().find(needle)
+            if index == -1:
+                continue
 
-        start = max(index - max_length // 2, 0)
-        end = min(start + max_length, len(content))
-        if index + len(search_text) > end:
-            end = min(index + len(search_text), len(content))
-            start = max(end - max_length, 0)
+            start = max(index - max_length // 2, 0)
+            end = min(start + max_length, len(content))
+            if index + len(needle) > end:
+                end = min(index + len(needle), len(content))
+                start = max(end - max_length, 0)
 
-        snippet = ' '.join(content[start:end].split())
-        return f'{"..." if start else ""}{snippet}{"..." if end < len(content) else ""}'
+            snippet = ' '.join(content[start:end].split())
+            return f'{"..." if start else ""}{snippet}{"..." if end < len(content) else ""}'
 
     return None
 
@@ -449,7 +452,7 @@ def _process_chat_for_export(chat) -> ChatStatsExport | None:
                             history_models[model] = 0
                         history_models[model] += 1
             except Exception as e:
-                log.debug(f'Error processing message {key}: {e}')
+                log.debug('Error processing message %s: %s', key, e)
                 continue
 
         # Calculate Averages
@@ -615,7 +618,7 @@ async def export_chat_stats(
             return ChatStatsExportList(items=chat_stats_export_list, total=total, page=page)
 
     except Exception as e:
-        log.debug(f'Error exporting chat stats: {e}')
+        log.debug('Error exporting chat stats: %s', e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
@@ -672,7 +675,7 @@ async def export_single_chat_stats(
     except HTTPException:
         raise
     except Exception as e:
-        log.debug(f'Error exporting single chat stats: {e}')
+        log.debug('Error exporting single chat stats: %s', e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
@@ -750,20 +753,11 @@ async def create_new_chat(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    # Reject a folder_id that doesn't belong to the caller. Without this the
-    # row is persisted with a dangling foreign reference — no read path
-    # surfaces it across users (all chat reads are user_id-filtered), but
-    # the row state is meaningless and downstream consumers shouldn't have
-    # to assume the column is clean. Also catches non-UUID / nonexistent IDs.
-    if form_data.folder_id is not None:
-        if not await Folders.get_folder_by_id_and_user_id(form_data.folder_id, user.id, db=db):
-            # Check shared folder write access
-            shared_folder = await Folders.get_folder_by_id(form_data.folder_id, db=db)
-            if not shared_folder or not await has_folder_access(user.id, shared_folder, 'write', db):
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=ERROR_MESSAGES.NOT_FOUND,
-                )
+    if form_data.folder_id is not None and not await has_folder_write_access(user.id, form_data.folder_id, db=db):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
 
     try:
         chat = await Chats.insert_new_chat(str(uuid4()), user.id, form_data, db=db)
@@ -878,7 +872,7 @@ async def search_user_chats(
         tag_id = words[0].replace('tag:', '')
         if len(chat_list) == 0:
             if await Tags.get_tag_by_name_and_user_id(tag_id, user.id, db=db):
-                log.debug(f'deleting tag: {tag_id}')
+                log.debug('deleting tag: %s', tag_id)
                 await Tags.delete_tag_by_name_and_user_id(tag_id, user.id, db=db)
 
     return await add_active_state_to_chat_list(request, chat_list)
@@ -2121,17 +2115,12 @@ async def update_chat_folder_id_by_id(
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        # Same ownership check as the create path — reject foreign / dangling
-        # folder_id values. None is allowed (moves the chat out of any folder).
-        if form_data.folder_id is not None:
-            if not await Folders.get_folder_by_id_and_user_id(form_data.folder_id, user.id, db=db):
-                # Check shared folder write access
-                shared_folder = await Folders.get_folder_by_id(form_data.folder_id, db=db)
-                if not shared_folder or not await has_folder_access(user.id, shared_folder, 'write', db):
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=ERROR_MESSAGES.NOT_FOUND,
-                    )
+        # None is allowed: it moves the chat out of any folder.
+        if form_data.folder_id is not None and not await has_folder_write_access(user.id, form_data.folder_id, db=db):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
 
         chat = await Chats.update_chat_folder_id_by_id_and_user_id(id, user.id, form_data.folder_id, db=db)
         await publish_event(

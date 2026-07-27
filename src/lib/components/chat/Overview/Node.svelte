@@ -61,7 +61,7 @@
 						</div>
 
 						<button
-							class={data?.message?.favorite ? '' : 'invisible group-hover:visible'}
+							class={data?.message?.favorite ? '' : 'hover-reveal'}
 							aria-label={data?.message?.favorite
 								? $i18n.t('Remove from favorites')
 								: $i18n.t('Add to favorites')}

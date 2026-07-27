@@ -155,7 +155,7 @@ def safe_validate_urls(url: Sequence[str]) -> Sequence[str]:
             if validate_url(u):
                 valid_urls.append(u)
         except Exception as e:
-            log.debug(f'Invalid URL {u}: {str(e)}')
+            log.debug('Invalid URL %s: %s', u, e)
             continue
     return valid_urls
 
@@ -404,7 +404,6 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
     def __init__(
         self,
         web_paths: Union[str, List[str]],
-        api_base_url: str,
         api_key: str,
         extract_depth: Literal['basic', 'advanced'] = 'basic',
         continue_on_failure: bool = True,
@@ -438,7 +437,6 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
 
         # Store parameters for creating TavilyLoader instances
         self.web_paths = web_paths if isinstance(web_paths, list) else [web_paths]
-        self.api_base_url = api_base_url
         self.api_key = api_key
         self.extract_depth = extract_depth
         self.continue_on_failure = continue_on_failure

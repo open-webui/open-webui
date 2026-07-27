@@ -57,7 +57,7 @@
 	};
 </script>
 
-<div class="px-2 py-1 text-[11px] text-gray-500 dark:text-gray-400">
+<div class="px-2 py-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
 	{$i18n.t('Prompts')}
 </div>
 
@@ -66,7 +66,7 @@
 		{#each filteredItems as promptItem, promptIdx}
 			<Tooltip content={promptItem.name} placement="top-start">
 				<button
-					class="flex h-[1.6875rem] w-full items-center gap-1.5 rounded-xl px-2 text-left text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {promptIdx ===
+					class="flex h-[1.6875rem] w-full items-center gap-1.5 rounded-xl px-2 text-left text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {promptIdx ===
 					selectedPromptIdx
 						? 'bg-gray-50/40 dark:bg-gray-800/40 selected-command-option-button'
 						: ''}"

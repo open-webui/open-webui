@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import collections.abc
 import hashlib
-import json
 import logging
 import re
 import threading
@@ -15,6 +14,7 @@ from typing import Callable, Optional, Sequence, Union
 import aiohttp
 import mimeparse
 from open_webui.env import CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
+from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
 SURROGATE_RE = re.compile('[\ud800-\udfff]')
@@ -27,6 +27,15 @@ def deep_update(d, u):
         else:
             d[k] = v
     return d
+
+
+def merge_model_params(base: dict, override: dict) -> dict:
+    params = {**base, **override}
+    base_custom = base.get('custom_params')
+    override_custom = override.get('custom_params')
+    if isinstance(base_custom, dict) and (override_custom is None or isinstance(override_custom, dict)):
+        params['custom_params'] = {**base_custom, **(override_custom or {})}
+    return params
 
 
 def _strip_filter_entry(entry):
@@ -139,18 +148,13 @@ def get_message_list(messages_map, message_id):
     message_list = []
     visited_message_ids = set()
 
-    while current_message:
-        message_id = current_message.get('id')
-        if message_id in visited_message_ids:
-            # Cycle detected, break to prevent infinite loop
-            break
-
-        if message_id is not None:
-            visited_message_ids.add(message_id)
-
+    # Track the map keys, not the messages' own 'id' field: a message may omit it
+    while current_message and message_id not in visited_message_ids:
+        visited_message_ids.add(message_id)
         message_list.append(current_message)
-        parent_id = current_message.get('parentId')  # Use .get() for safety
-        current_message = messages_map.get(parent_id) if parent_id else None
+
+        message_id = current_message.get('parentId')
+        current_message = messages_map.get(message_id) if message_id else None
 
     message_list.reverse()
     return message_list
@@ -289,9 +293,18 @@ def convert_output_to_messages(
     pending_reasoning = []  # Only populated when reasoning_format == 'reasoning_content'
     pending_reasoning_details = []
     pending_tool_image_urls = []
-    function_call_ids = {
-        item.get('call_id') for item in output if item.get('type') == 'function_call' and item.get('call_id')
+    pending_tool_outputs = []
+    completed_call_ids = {
+        item.get('call_id')
+        for item in output
+        if item.get('type') == 'function_call'
+        and item.get('call_id')
+        and item.get('status') in {'completed', 'rejected'}
     }
+    result_call_ids = {
+        item.get('call_id') for item in output if item.get('type') == 'function_call_output' and item.get('call_id')
+    }
+    function_call_ids = completed_call_ids & result_call_ids
 
     def flush_pending():
         nonlocal pending_content, pending_tool_calls, pending_reasoning, pending_reasoning_details
@@ -335,44 +348,14 @@ def convert_output_to_messages(
         )
         pending_tool_image_urls = []
 
-    for item in output:
-        item_type = item.get('type', '')
-        if item_type != 'function_call_output':
-            flush_tool_images()
+    def flush_tool_outputs():
+        nonlocal pending_tool_outputs
+        if not pending_tool_outputs:
+            return
 
-        if item_type == 'message':
-            # Extract text from output_text content parts
-            content_parts = item.get('content', [])
-            text = ''
-            for part in content_parts:
-                if part.get('type') == 'output_text':
-                    text += part.get('text', '')
-            if text:
-                pending_content.append(text)
-
-        elif item_type == 'function_call':
-            # Collect tool calls to batch into assistant message
-            arguments = item.get('arguments', '{}')
-            # Ensure arguments is always a JSON string
-            if not isinstance(arguments, str):
-                arguments = json.dumps(arguments)
-            pending_tool_calls.append(
-                {
-                    'id': item.get('call_id', ''),
-                    'type': 'function',
-                    'function': {
-                        'name': item.get('name', ''),
-                        'arguments': arguments,
-                    },
-                }
-            )
-
-        elif item_type == 'function_call_output':
-            # Flush any pending content/tool_calls before adding tool result
-            flush_pending()
-
-            # Extract text and images from output content parts
-            output_parts = item.get('output', [])
+        flush_pending()
+        for output_item in pending_tool_outputs:
+            output_parts = output_item.get('output', [])
             content = ''
             image_urls = []
             for part in output_parts:
@@ -388,17 +371,16 @@ def convert_output_to_messages(
                 messages.append(
                     {
                         'role': 'tool',
-                        'tool_call_id': item.get('call_id', ''),
+                        'tool_call_id': output_item.get('call_id', ''),
                         'content': content,
                     }
                 )
-                if item.get('call_id') in function_call_ids:
-                    pending_tool_image_urls.extend(image_urls)
+                pending_tool_image_urls.extend(image_urls)
             elif image_urls:
                 messages.append(
                     {
                         'role': 'tool',
-                        'tool_call_id': item.get('call_id', ''),
+                        'tool_call_id': output_item.get('call_id', ''),
                         'content': [
                             {'type': 'input_text', 'text': content},
                             *[{'type': 'input_image', 'image_url': url} for url in image_urls],
@@ -409,10 +391,54 @@ def convert_output_to_messages(
                 messages.append(
                     {
                         'role': 'tool',
-                        'tool_call_id': item.get('call_id', ''),
+                        'tool_call_id': output_item.get('call_id', ''),
                         'content': content,
                     }
                 )
+
+        pending_tool_outputs = []
+
+    for item in output:
+        item_type = item.get('type', '')
+        if item_type not in {'function_call', 'function_call_output'}:
+            flush_tool_outputs()
+            flush_tool_images()
+
+        if item_type == 'message':
+            # Extract text from output_text content parts
+            content_parts = item.get('content', [])
+            text = ''
+            for part in content_parts:
+                if part.get('type') == 'output_text':
+                    text += part.get('text', '')
+            if text:
+                pending_content.append(text)
+
+        elif item_type == 'function_call':
+            if item.get('call_id') not in function_call_ids:
+                continue
+
+            # Collect tool calls to batch into assistant message
+            arguments = item.get('arguments', '{}')
+            # Ensure arguments is always a JSON string
+            if not isinstance(arguments, str):
+                arguments = JSONCodec.dumps(arguments)
+            pending_tool_calls.append(
+                {
+                    'id': item.get('call_id', ''),
+                    'type': 'function',
+                    'function': {
+                        'name': item.get('name', ''),
+                        'arguments': arguments,
+                    },
+                }
+            )
+
+        elif item_type == 'function_call_output':
+            if item.get('call_id') not in function_call_ids:
+                continue
+
+            pending_tool_outputs.append(item)
 
         elif item_type == 'reasoning':
             reasoning_details = item.get('reasoning_details') if raw else None
@@ -466,6 +492,7 @@ def convert_output_to_messages(
             pass
 
     # Flush remaining content/tool_calls
+    flush_tool_outputs()
     flush_tool_images()
     flush_pending()
 
@@ -822,7 +849,7 @@ def sanitize_data_for_db(obj):
     # json.dumps is implemented in C and much faster than a Python-level
     # recursive walk over every leaf string.
     try:
-        serialized = json.dumps(obj, ensure_ascii=False)
+        serialized = JSONCodec.dumps(obj, ensure_ascii=False)
         if '\\u0000' not in serialized:
             serialized.encode('utf-8')
             return obj
@@ -854,7 +881,7 @@ def sanitize_metadata(metadata: dict) -> dict:
             return None
         # Last resort: try to see if it's serializable
         try:
-            json.dumps(obj)
+            JSONCodec.dumps(obj)
             return obj
         except (TypeError, ValueError):
             return None
@@ -864,7 +891,7 @@ def sanitize_metadata(metadata: dict) -> dict:
         if isinstance(obj, (str, int, float, bool, type(None), dict, list)):
             return True
         try:
-            json.dumps(obj)
+            JSONCodec.dumps(obj)
             return True
         except (TypeError, ValueError):
             return False
@@ -1018,7 +1045,7 @@ def convert_logit_bias_input_to_json(logit_bias_input) -> str | None:
         return None
 
     if isinstance(logit_bias_input, dict):
-        return json.dumps(logit_bias_input)
+        return JSONCodec.dumps(logit_bias_input)
 
     logit_bias_pairs = logit_bias_input.split(',')
     logit_bias_json = {}
@@ -1028,7 +1055,7 @@ def convert_logit_bias_input_to_json(logit_bias_input) -> str | None:
         bias = int(bias.strip())
         bias = 100 if bias > 100 else -100 if bias < -100 else bias
         logit_bias_json[token] = bias
-    return json.dumps(logit_bias_json)
+    return JSONCodec.dumps(logit_bias_json)
 
 
 def freeze(value):
@@ -1151,17 +1178,17 @@ async def stream_wrapper(response, session, content_handler=None):
 
 def stream_chunks_handler(stream: aiohttp.StreamReader):
     """
-    Handle stream response chunks, supporting large data chunks that exceed the original 16kb limit.
-    When a single line exceeds max_buffer_size, returns an empty JSON string {} and skips subsequent data
-    until encountering normally sized data.
+    Handle stream response chunks without using aiohttp's line reader.
+    When configured and a single line exceeds max_buffer_size, returns an empty
+    JSON string {} and skips subsequent data until encountering normally sized data.
 
     :param stream: The stream reader to handle.
     :return: An async generator that yields the stream data.
     """
 
     max_buffer_size = CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
-    if max_buffer_size is None or max_buffer_size <= 0:
-        return stream
+    if max_buffer_size is not None and max_buffer_size <= 0:
+        max_buffer_size = None
 
     async def yield_safe_stream_chunks():
         buffer = b''
@@ -1172,7 +1199,7 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
                 continue
 
             # In skip_mode, if buffer already exceeds the limit, clear it (it's part of an oversized line)
-            if skip_mode and len(buffer) > max_buffer_size:
+            if max_buffer_size is not None and skip_mode and len(buffer) > max_buffer_size:
                 buffer = b''
 
             lines = (buffer + data).split(b'\n')
@@ -1183,17 +1210,17 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
 
                 if skip_mode:
                     # Skip mode: check if current line is small enough to exit skip mode
-                    if len(line) <= max_buffer_size:
+                    if max_buffer_size is None or len(line) <= max_buffer_size:
                         skip_mode = False
                         yield line
                     else:
                         yield b'data: {}\n'
                 else:
                     # Normal mode: check if line exceeds limit
-                    if len(line) > max_buffer_size:
+                    if max_buffer_size is not None and len(line) > max_buffer_size:
                         skip_mode = True
                         yield b'data: {}\n'
-                        log.info(f'Skip mode triggered, line size: {len(line)}')
+                        log.info('Skip mode triggered, line size: %s', len(line))
                     else:
                         yield line + b'\n'
 
@@ -1201,9 +1228,9 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
             buffer = lines[-1]
 
             # Check if buffer exceeds limit
-            if not skip_mode and len(buffer) > max_buffer_size:
+            if max_buffer_size is not None and not skip_mode and len(buffer) > max_buffer_size:
                 skip_mode = True
-                log.info(f'Skip mode triggered, buffer size: {len(buffer)}')
+                log.info('Skip mode triggered, buffer size: %s', len(buffer))
                 # Clear oversized buffer to prevent unlimited growth
                 buffer = b''
 

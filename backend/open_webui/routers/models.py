@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import io
-import json
 import logging
 import posixpath
 from typing import Optional
@@ -609,6 +608,9 @@ async def get_model_profile_image(
 
                 # only serve known-safe raster types inline; reject SVG/unknown (can run script on our origin)
                 if media_type not in PROFILE_IMAGE_ALLOWED_MIME_TYPES:
+                    # LICENSE covers this Open WebUI fallback logo.
+                    # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+                    # https://docs.openwebui.com/license.
                     return RedirectResponse(
                         url='/static/favicon.png',
                         status_code=status.HTTP_302_FOUND,
@@ -636,6 +638,9 @@ async def get_model_profile_image(
                     status_code=status.HTTP_302_FOUND,
                 )
 
+    # LICENSE covers this Open WebUI fallback logo.
+    # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+    # https://docs.openwebui.com/license.
     return RedirectResponse(
         url='/static/favicon.png',
         status_code=status.HTTP_302_FOUND,

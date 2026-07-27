@@ -1,7 +1,6 @@
 """Prompt history model for version tracking."""
 
 import difflib
-import json
 import time
 import uuid
 from typing import Optional

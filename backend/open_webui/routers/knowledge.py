@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import io
-import json
 import logging
 import time
 import uuid
@@ -31,8 +30,8 @@ from open_webui.models.knowledge import (
     KnowledgeUserResponse,
 )
 from open_webui.models.models import ModelForm, Models
-from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.retrieval.external import retrieve_external_knowledge, retrieve_external_knowledge_for_connection
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
     BatchProcessFilesForm,
     ProcessFileForm,
@@ -43,6 +42,7 @@ from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.json_codec import JSONCodec
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -103,7 +103,7 @@ async def remove_knowledge_base_metadata_embedding(knowledge_base_id: str) -> bo
         )
         return True
     except Exception as e:
-        log.debug(f'Failed to remove embedding for {knowledge_base_id}: {e}')
+        log.debug('Failed to remove embedding for %s: %s', knowledge_base_id, e)
         return False
 
 
@@ -351,7 +351,7 @@ async def reindex_knowledge_files(
     failed_files = []
     start_time = time.monotonic()
 
-    log.info(f'Starting reindexing for {len(knowledge_bases)} knowledge bases ({total_files} files)')
+    log.info('Starting reindexing for %s knowledge bases (%s files)', len(knowledge_bases), total_files)
 
     for kb_idx, (knowledge_base, files) in enumerate(knowledge_base_files, start=1):
         try:
@@ -371,11 +371,22 @@ async def reindex_knowledge_files(
                     eta = f', ETA: {round(elapsed / (processed_files - 1) * remaining_files)}s'
 
                 log.info(
-                    f'Reindexing knowledge base {kb_idx}/{len(knowledge_bases)} '
-                    f'file {processed_files}/{total_files}{eta}: {file.filename}'
+                    'Reindexing knowledge base %s/%s file %s/%s%s: %s',
+                    kb_idx,
+                    len(knowledge_bases),
+                    processed_files,
+                    total_files,
+                    eta,
+                    file.filename,
                 )
 
                 try:
+                    # Force the KB add path to use stored SQL content instead of stale file-{id} chunks.
+                    # process_file recreates file-{id} only when that stored content exists.
+                    file_collection = f'file-{file.id}'
+                    if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+                        await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+
                     await process_file(
                         request,
                         ProcessFileForm(file_id=file.id, collection_name=knowledge_base.id),
@@ -397,7 +408,7 @@ async def reindex_knowledge_files(
         for failed in failed_files:
             log.warning(f'File ID: {failed["file_id"]}, Error: {failed["error"]}')
 
-    log.info(f'Reindexing completed in {round(time.monotonic() - start_time)}s.')
+    log.info('Reindexing completed in %ss.', round(time.monotonic() - start_time))
     await publish_event(
         request,
         EVENTS.KNOWLEDGE_REINDEXED,
@@ -426,14 +437,18 @@ async def reindex_knowledge_base_metadata_embeddings(
     this entire operation would exhaust the connection pool.
     """
     knowledge_bases = await Knowledges.get_knowledge_bases()
-    log.info(f'Reindexing embeddings for {len(knowledge_bases)} knowledge bases')
+    log.info('Reindexing embeddings for %s knowledge bases', len(knowledge_bases))
+    try:
+        await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=KNOWLEDGE_BASES_COLLECTION)
+    except Exception as e:
+        log.debug(e)
 
     success_count = 0
     for kb in knowledge_bases:
         if await embed_knowledge_base_metadata(request, kb.id, kb.name, kb.description):
             success_count += 1
 
-    log.info(f'Embedding reindex complete: {success_count}/{len(knowledge_bases)}')
+    log.info('Embedding reindex complete: %s/%s', success_count, len(knowledge_bases))
     return {'total': len(knowledge_bases), 'success': success_count}
 
 
@@ -1277,7 +1292,7 @@ async def get_pending_knowledge_files(
         for _ in range(MAX_POLL_DURATION // 3):
             pending = await Files.get_pending_files_for_knowledge(knowledge_id)
             data = [f.model_dump() for f in pending]
-            yield f'data: {json.dumps(data)}\n\n'
+            yield f'data: {JSONCodec.dumps(data)}\n\n'
             if len(pending) == 0:
                 break
             await asyncio.sleep(3)
@@ -1687,11 +1702,11 @@ async def delete_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    log.info(f'Deleting knowledge base: {id} (name: {knowledge.name})')
+    log.info('Deleting knowledge base: %s (name: %s)', id, knowledge.name)
 
     # Get all models
     models = await Models.get_all_models(db=db)
-    log.info(f'Found {len(models)} models to check for knowledge base {id}')
+    log.info('Found %s models to check for knowledge base %s', len(models), id)
 
     # Update models that reference this knowledge base
     for model in models:
@@ -1702,7 +1717,7 @@ async def delete_knowledge_by_id(
 
             # If the knowledge list changed, update the model
             if len(updated_knowledge) != len(knowledge_list):
-                log.info(f'Updating model {model.id} to remove knowledge base {id}')
+                log.info('Updating model %s to remove knowledge base %s', model.id, id)
                 model.meta.knowledge = updated_knowledge
                 model_form = ModelForm(**model.model_dump())
                 await Models.update_model_by_id(model.id, model_form, db=db)
@@ -2022,7 +2037,7 @@ async def add_files_to_knowledge_batch(
         )
 
     # Batch-fetch all files to avoid N+1 queries
-    log.info(f'files/batch/add - {len(form_data)} files')
+    log.info('files/batch/add - %s files', len(form_data))
     file_ids = [form.file_id for form in form_data]
     files = await Files.get_files_by_ids(file_ids, db=db)
 

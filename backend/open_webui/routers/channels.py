@@ -1,6 +1,5 @@
 import base64
 import io
-import json
 import logging
 from typing import Optional
 
@@ -177,7 +176,7 @@ async def get_channels(
         user_ids = None
         users = None
         if channel.type == 'dm':
-            user_ids = [member.user_id for member in await Channels.get_members_by_channel_id(channel.id, db=db)]
+            member_user_ids = [member.user_id for member in await Channels.get_members_by_channel_id(channel.id, db=db)]
             users = [
                 UserIdNameStatusResponse(
                     **{
@@ -185,8 +184,9 @@ async def get_channels(
                         'is_active': Users.is_active(u),
                     }
                 )
-                for u in await Users.get_users_by_user_ids(user_ids, db=db)
+                for u in await Users.get_users_by_user_ids(member_user_ids, db=db)
             ]
+            user_ids = [u.id for u in users]
 
         channel_list.append(
             ChannelListItemResponse(
@@ -383,7 +383,7 @@ async def get_channel_by_id(
         if not await Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
-        user_ids = [member.user_id for member in await Channels.get_members_by_channel_id(channel.id, db=db)]
+        member_user_ids = [member.user_id for member in await Channels.get_members_by_channel_id(channel.id, db=db)]
 
         users = [
             UserIdNameStatusResponse(
@@ -392,8 +392,9 @@ async def get_channel_by_id(
                     'is_active': Users.is_active(u),
                 }
             )
-            for u in await Users.get_users_by_user_ids(user_ids, db=db)
+            for u in await Users.get_users_by_user_ids(member_user_ids, db=db)
         ]
+        user_ids = [u.id for u in users]
 
         channel_member = await Channels.get_member_by_channel_and_user_id(channel.id, user.id, db=db)
         unread_count = await Messages.get_unread_message_count(
@@ -407,7 +408,7 @@ async def get_channel_by_id(
                 'users': users,
                 'is_manager': await Channels.is_user_channel_manager(channel.id, user.id, db=db),
                 'write_access': True,
-                'user_count': len(user_ids),
+                'user_count': len(users),
                 'last_read_at': channel_member.last_read_at if channel_member else None,
                 'unread_count': unread_count,
             }
@@ -1074,16 +1075,10 @@ async def model_response_handler(request, channel, message, user, db=None):
                         ],
                     ]
 
-                # Resolve model config (same helpers automations use)
-                from open_webui.utils.automations import (
-                    _resolve_model_features,
-                    _resolve_model_filter_ids,
-                    _resolve_model_tool_ids,
-                )
+                # Resolve model config (same path automations use)
+                from open_webui.utils.automations import _resolve_model_defaults
 
-                tool_ids = _resolve_model_tool_ids(request.app, model_id)
-                features = await _resolve_model_features(request.app, model_id)
-                filter_ids = _resolve_model_filter_ids(request.app, model_id)
+                tool_ids, features, filter_ids, _ = await _resolve_model_defaults(request.app, model_id)
 
                 # Build full form_data — same shape as frontend POST.
                 # The channel: prefix routes pipeline events to the
@@ -1809,6 +1804,9 @@ async def get_webhook_profile_image(webhook_id: str, user=Depends(get_verified_u
     webhook = await Channels.get_webhook_by_id(webhook_id)
     if not webhook:
         # Return default favicon if webhook not found
+        # LICENSE covers this Open WebUI fallback logo.
+        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+        # https://docs.openwebui.com/license.
         return FileResponse(f'{STATIC_DIR}/favicon.png')
 
     if webhook.profile_image_url:
@@ -1834,6 +1832,9 @@ async def get_webhook_profile_image(webhook_id: str, user=Depends(get_verified_u
                 pass
 
     # Return default favicon if no profile image
+    # LICENSE covers this Open WebUI fallback logo.
+    # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+    # https://docs.openwebui.com/license.
     return FileResponse(f'{STATIC_DIR}/favicon.png')
 
 
