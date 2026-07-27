@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { tick } from 'svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 
 	/** Currently selected value */
 	export let value = '';
@@ -21,18 +22,20 @@
 	export let labelClass = '';
 
 	/** CSS classes for the dropdown content container */
-	export let contentClass =
-		'rounded-2xl min-w-[170px] p-1 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 dark:text-white shadow-lg';
+	export let contentClass = 'min-w-[170px]';
 
 	/** Max height for the dropdown content */
 	export let maxHeight = '18rem';
 
 	/** CSS classes for each item button */
 	export let itemClass =
-		'flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl';
+		'flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100';
 
 	/** Alignment of the dropdown: 'start' | 'end' */
 	export let align = 'start';
+
+	/** Side to open on: 'bottom' | 'top' */
+	export let side = 'bottom';
 
 	/** Callback when dropdown closes */
 	export let onClose: () => void = () => {};
@@ -62,8 +65,14 @@
 
 		contentEl.style.position = 'fixed';
 		contentEl.style.zIndex = '9999';
-		contentEl.style.top = `${rect.bottom + 4}px`;
 		contentEl.style.minWidth = `${rect.width}px`;
+		if (side === 'top') {
+			contentEl.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+			contentEl.style.top = 'auto';
+		} else {
+			contentEl.style.top = `${rect.bottom + 4}px`;
+			contentEl.style.bottom = 'auto';
+		}
 
 		if (align === 'end') {
 			contentEl.style.right = `${window.innerWidth - rect.right}px`;
@@ -114,8 +123,8 @@
 <button
 	bind:this={triggerEl}
 	class={triggerClass}
-	aria-label={placeholder}
 	type="button"
+	aria-expanded={open}
 	on:click={toggleOpen}
 >
 	<slot name="trigger" {selectedLabel} {open}>
@@ -127,7 +136,7 @@
 
 {#if open}
 	<div use:portal bind:this={contentEl} transition:flyAndScale>
-		<div class={contentClass} style:max-height={maxHeight} style:overflow-y="auto">
+		<DropdownMenu className={contentClass} style={`max-height: ${maxHeight}; overflow-y: auto;`}>
 			<slot {open} {selectItem}>
 				{#each items as item}
 					<button class={itemClass} type="button" on:click={() => selectItem(item)}>
@@ -137,6 +146,6 @@
 					</button>
 				{/each}
 			</slot>
-		</div>
+		</DropdownMenu>
 	</div>
 {/if}

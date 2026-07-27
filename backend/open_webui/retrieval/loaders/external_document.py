@@ -6,7 +6,7 @@ from urllib.parse import quote
 import requests
 from langchain_core.document_loaders import BaseLoader
 from langchain_core.documents import Document
-from open_webui.utils.headers import get_custom_headers, include_user_info_headers
+from open_webui.utils.headers import include_user_info_headers, parse_custom_headers
 
 log = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ class ExternalDocumentLoader(BaseLoader):
         api_key: str,
         mime_type=None,
         user=None,
+        user_groups=None,
         headers=None,
         metadata=None,
         **kwargs,
@@ -30,6 +31,7 @@ class ExternalDocumentLoader(BaseLoader):
         self.mime_type = mime_type
 
         self.user = user
+        self.user_groups = user_groups
         self.headers = headers
         self.metadata = metadata
 
@@ -49,7 +51,7 @@ class ExternalDocumentLoader(BaseLoader):
         except Exception:
             pass
 
-        headers.update(get_custom_headers(self.headers, self.user, self.metadata))
+        headers.update(parse_custom_headers(self.headers, self.user, self.metadata, user_groups=self.user_groups))
 
         if self.user is not None:
             headers = include_user_info_headers(headers, self.user)

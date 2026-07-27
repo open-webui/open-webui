@@ -34,9 +34,9 @@ import { decode } from 'html-entities';
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const formatNumber = (num: number): string => {
-	return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(
-		num
-	);
+	return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 })
+		.format(num)
+		.toLowerCase();
 };
 
 function escapeRegExp(string: string): string {
@@ -203,23 +203,26 @@ export const convertMessagesToHistory = (messages) => {
 	let messageId = null;
 
 	for (const message of messages) {
-		messageId = uuidv4();
-
-		if (parentMessageId !== null) {
-			history.messages[parentMessageId].childrenIds = [
-				...history.messages[parentMessageId].childrenIds,
-				messageId
-			];
-		}
+		messageId = message?.id ?? uuidv4();
+		const parentId = message?.parentId ?? parentMessageId;
 
 		history.messages[messageId] = {
 			...message,
 			id: messageId,
-			parentId: parentMessageId,
+			parentId,
 			childrenIds: []
 		};
 
 		parentMessageId = messageId;
+	}
+
+	for (const message of Object.values(history.messages)) {
+		if (message.parentId && history.messages[message.parentId]) {
+			history.messages[message.parentId].childrenIds = [
+				...history.messages[message.parentId].childrenIds,
+				message.id
+			];
+		}
 	}
 
 	history.currentId = messageId;
@@ -492,6 +495,29 @@ export const formatDate = (inputDate) => {
 		return `{{LOCALIZED_DATE}} at {{LOCALIZED_TIME}}`;
 	}
 };
+
+const messageTimestampDate = (inputDate) => {
+	const date = new Date(inputDate < 1_000_000_000_000 ? inputDate * 1000 : inputDate);
+	return Number.isNaN(date.getTime()) ? null : date;
+};
+
+export const formatMessageTimestamp = (inputDate) =>
+	messageTimestampDate(inputDate)?.toLocaleString(undefined, {
+		month: 'short',
+		day: 'numeric',
+		hour: 'numeric',
+		minute: '2-digit'
+	}) ?? '';
+
+export const formatMessageTimestampFull = (inputDate) =>
+	messageTimestampDate(inputDate)?.toLocaleString(undefined, {
+		weekday: 'long',
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric',
+		hour: 'numeric',
+		minute: '2-digit'
+	}) ?? '';
 
 export const copyToClipboard = async (text, html = null, formatted = false) => {
 	if (formatted) {

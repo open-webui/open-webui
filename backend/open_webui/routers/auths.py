@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse, Response
 from ldap3 import NONE, Connection, Server, Tls
 from ldap3.utils.conv import escape_filter_chars
+from ldap3.utils.dn import parse_dn
 from open_webui.config import (
     ENABLE_PASSWORD_AUTH,
     OAUTH_PROVIDERS,
@@ -24,6 +25,8 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     ENABLE_INITIAL_ADMIN_SIGNUP,
     ENABLE_OAUTH_TOKEN_EXCHANGE,
+    OAUTH_TOKEN_EXCHANGE_RATE_LIMIT,
+    OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW,
     WEBUI_AUTH,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
@@ -83,6 +86,17 @@ log = logging.getLogger(__name__)
 # Forgive us our failed attempts, as we forgive those
 # who exceed their allotted rate against this gate.
 signin_rate_limiter = RateLimiter(redis_client=get_redis_client(), limit=5 * 3, window=60 * 3)
+# Best-effort throttle only: there is no caller identity before the provider answers,
+# and deployments may derive request.client from proxy headers.
+token_exchange_rate_limiter = (
+    RateLimiter(
+        redis_client=get_redis_client(),
+        limit=OAUTH_TOKEN_EXCHANGE_RATE_LIMIT,
+        window=OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW,
+    )
+    if OAUTH_TOKEN_EXCHANGE_RATE_LIMIT is not None
+    else None
+)
 
 ADMIN_CONFIG_KEYS = {
     'SHOW_ADMIN_DETAILS': 'auth.admin.show',
@@ -128,6 +142,9 @@ LDAP_SERVER_CONFIG_KEYS = {
     'certificate_path': 'ldap.server.ca_cert_file',
     'validate_cert': 'ldap.server.validate_cert',
     'ciphers': 'ldap.server.ciphers',
+    'enable_group_management': 'ldap.group.enable_management',
+    'enable_group_creation': 'ldap.group.enable_creation',
+    'attribute_for_groups': 'ldap.server.attribute_for_groups',
 }
 
 
@@ -398,6 +415,52 @@ async def update_password(
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
 
+def _unescape_ldap_dn_value(value: str) -> str:
+    """Resolve RFC 4514 escapes in a DN value, e.g. ``CN=Sales\\, EMEA`` -> ``Sales, EMEA``.
+
+    Consecutive ``\\XX`` hex escapes encode UTF-8 bytes and are decoded together.
+    """
+    hexdigits = '0123456789abcdefABCDEF'
+    result = []
+    pos = 0
+    length = len(value)
+    while pos < length:
+        char = value[pos]
+        if char == '\\' and pos + 1 < length:
+            if pos + 2 < length and value[pos + 1] in hexdigits and value[pos + 2] in hexdigits:
+                byte_values = bytearray()
+                while (
+                    pos + 2 < length
+                    and value[pos] == '\\'
+                    and value[pos + 1] in hexdigits
+                    and value[pos + 2] in hexdigits
+                ):
+                    byte_values.append(int(value[pos + 1 : pos + 3], 16))
+                    pos += 3
+                result.append(byte_values.decode('utf-8', errors='replace'))
+            else:
+                # Backslash escaping a literal special char, e.g. "\," or "\+".
+                result.append(value[pos + 1])
+                pos += 2
+        else:
+            result.append(char)
+            pos += 1
+    return ''.join(result)
+
+
+def extract_group_cn_from_dn(group_dn: str) -> str | None:
+    """Return the first CN component of an LDAP group DN, or None.
+
+    Uses ``parse_dn`` so escaped separators inside a value (e.g. a group whose
+    name contains a comma) are handled correctly instead of naively splitting
+    on ``,``.
+    """
+    for attr_type, attr_value, _ in parse_dn(group_dn):
+        if attr_type.upper() == 'CN':
+            return _unescape_ldap_dn_value(attr_value)
+    return None
+
+
 ############################
 # LDAP Authentication
 ############################
@@ -545,17 +608,10 @@ async def ldap_auth(
                     log.info(f'Processing group DN #{group_idx + 1}: {group_dn}')
 
                     try:
-                        group_cn = None
-
-                        for item in group_dn.split(','):
-                            item = item.strip()
-                            if item.upper().startswith('CN='):
-                                group_cn = item[3:]
-                                break
+                        group_cn = extract_group_cn_from_dn(group_dn)
 
                         if group_cn:
                             user_groups.append(group_cn)
-
                         else:
                             log.warning(f'Could not extract CN from group DN: {group_dn}')
                     except Exception as e:
@@ -627,9 +683,9 @@ async def ldap_auth(
 
             if user:
                 if ENABLE_LDAP_GROUP_MANAGEMENT and user_groups:
-                    if ENABLE_LDAP_GROUP_CREATION:
-                        await Groups.create_groups_by_group_names(user.id, user_groups, db=db)
                     try:
+                        if ENABLE_LDAP_GROUP_CREATION:
+                            await Groups.create_groups_by_group_names(user.id, user_groups, db=db)
                         await Groups.sync_groups_by_group_names(user.id, user_groups, db=db)
                         log.info(f'Successfully synced groups for user {user.id}: {user_groups}')
                     except Exception as e:
@@ -1188,6 +1244,9 @@ class LdapServerConfig(BaseModel):
     certificate_path: str | None = None
     validate_cert: bool = True
     ciphers: str | None = 'ALL'
+    enable_group_management: bool = False
+    enable_group_creation: bool = False
+    attribute_for_groups: str = 'memberOf'
 
 
 @router.get('/admin/config/ldap/server', response_model=LdapServerConfig)
@@ -1208,6 +1267,11 @@ async def update_ldap_server(request: Request, form_data: LdapServerConfig, user
         value = getattr(form_data, key)
         if not value:
             raise HTTPException(400, detail=ERROR_MESSAGES.REQUIRED_FIELD_EMPTY(key))
+
+    # The group attribute is what group management reads from the directory
+    # entry; an empty value would make group sync silently do nothing.
+    if form_data.enable_group_management and not (form_data.attribute_for_groups or '').strip():
+        raise HTTPException(400, detail=ERROR_MESSAGES.REQUIRED_FIELD_EMPTY('attribute_for_groups'))
 
     updates = config_updates(form_data.model_dump(), LDAP_SERVER_CONFIG_KEYS)
     updates['ldap.server.app_dn'] = form_data.app_dn or ''
@@ -1240,6 +1304,7 @@ class OAuthConfigForm(BaseModel):
     """All OAuth/OIDC settings exposed to the admin panel."""
 
     # General OAuth
+    ENABLE_OAUTH: bool | None = None
     ENABLE_OAUTH_SIGNUP: bool | None = None
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL: bool | None = None
     OAUTH_AUTO_REDIRECT: bool | None = None
@@ -1295,6 +1360,7 @@ OAUTH_COMMA_LIST_FIELDS = {
 
 
 OAUTH_CONFIG_KEYS = {
+    'ENABLE_OAUTH': 'oauth.enable',
     'ENABLE_OAUTH_SIGNUP': 'oauth.enable_signup',
     'OAUTH_MERGE_ACCOUNTS_BY_EMAIL': 'oauth.merge_accounts_by_email',
     'OAUTH_AUTO_REDIRECT': 'oauth.auto_redirect',
@@ -1465,6 +1531,14 @@ async def token_exchange(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Token exchange is disabled',
+        )
+
+    if token_exchange_rate_limiter and token_exchange_rate_limiter.is_limited(
+        request.client.host if request.client else 'unknown'
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
         )
 
     provider = provider.lower()

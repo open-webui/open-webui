@@ -7,14 +7,27 @@ import json
 import uuid
 
 import pycrdt as Y
-from open_webui.utils.redis import get_redis_connection
 from open_webui.env import REDIS_KEY_PREFIX
+from open_webui.utils.redis import get_redis_connection
 
 YDOC_KEY_PREFIX = f'{REDIS_KEY_PREFIX}:ydoc:documents'
 
 
 class RedisLock:
     """Distributed lock backed by a Redis SET with NX/EX semantics."""
+
+    _RENEW_SCRIPT = """
+    if redis.call('get', KEYS[1]) == ARGV[1] then
+        return redis.call('expire', KEYS[1], ARGV[2])
+    end
+    return 0
+    """
+    _RELEASE_SCRIPT = """
+    if redis.call('get', KEYS[1]) == ARGV[1] then
+        return redis.call('del', KEYS[1])
+    end
+    return 0
+    """
 
     def __init__(
         self,
@@ -41,13 +54,10 @@ class RedisLock:
         return self.lock_obtained
 
     def renew_lock(self):
-        # xx=True will only set this key if it _has_ already been set
-        return self.redis.set(self.lock_name, self.lock_id, xx=True, ex=self.timeout_secs)
+        return bool(self.redis.eval(self._RENEW_SCRIPT, 1, self.lock_name, self.lock_id, self.timeout_secs))
 
     def release_lock(self):
-        lock_value = self.redis.get(self.lock_name)
-        if lock_value and lock_value == self.lock_id:
-            self.redis.delete(self.lock_name)
+        self.redis.eval(self._RELEASE_SCRIPT, 1, self.lock_name, self.lock_id)
 
 
 class RedisDict:
@@ -102,12 +112,18 @@ class RedisDict:
 
         # Serialize values once — reused for both the fingerprint and the write.
         serialized = {k: json.dumps(v) for k, v in mapping.items()}
+        digest = hashlib.sha256()
+        for key in sorted(serialized):
+            digest.update(key.encode())
+            digest.update(b'\0')
+            digest.update(serialized[key].encode())
+            digest.update(b'\0')
+        signature = digest.hexdigest()
 
         # Skip the write when the prepared mapping is identical to the last one
         # this process wrote.  The check is per-instance (not distributed), but
         # still eliminates the majority of redundant writes because each pod
         # typically produces the same model list on consecutive refreshes.
-        signature = hashlib.sha256(json.dumps(serialized, sort_keys=True).encode()).hexdigest()
         if signature == self._last_signature:
             return
 

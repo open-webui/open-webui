@@ -1,11 +1,9 @@
 import inspect
 import logging
 
+from open_webui.env import ENABLE_PLUGINS
 from open_webui.models.functions import Functions
-from open_webui.utils.plugin import (
-    get_function_module_from_cache,
-    load_function_module_by_id,
-)
+from open_webui.utils.plugin import get_function_module_from_cache
 
 log = logging.getLogger(__name__)
 
@@ -19,22 +17,15 @@ async def get_function_module(request, function_id, load_from_db=True):
 
 
 async def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list = None):
-    async def get_priority(function_id):
-        try:
-            function_module = await get_function_module(request, function_id)
-            if function_module and hasattr(function_module, 'Valves'):
-                valves_db = await Functions.get_function_valves_by_id(function_id)
-                valves = function_module.Valves(**(valves_db if valves_db else {}))
-                return getattr(valves, 'priority', 0)
-        except Exception:
-            pass
-        return 0
+    if not ENABLE_PLUGINS:
+        return []
 
-    filter_ids = [function.id for function in await Functions.get_global_filter_functions()]
+    active_filters = await Functions.get_active_filter_ids()
+    filter_ids = [fid for fid, is_global in active_filters if is_global]
     if 'info' in model and 'meta' in model['info']:
         filter_ids.extend(model['info']['meta'].get('filterIds', []))
         filter_ids = list(set(filter_ids))
-    active_filter_ids = {function.id for function in await Functions.get_functions_by_type('filter', active_only=True)}
+    active_filter_ids = {fid for fid, _ in active_filters}
 
     async def get_active_status(filter_id):
         function_module = await get_function_module(request, filter_id)
@@ -51,6 +42,18 @@ async def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list =
     active_filter_ids = {fid for fid, is_active in resolved_active.items() if is_active}
 
     filter_ids = [fid for fid in filter_ids if fid in active_filter_ids]
+    valves_by_id = await Functions.get_function_valves_by_ids(filter_ids)
+
+    async def get_priority(function_id):
+        try:
+            function_module = await get_function_module(request, function_id)
+            if function_module and hasattr(function_module, 'Valves'):
+                valves_db = valves_by_id.get(function_id)
+                valves = function_module.Valves(**(valves_db if valves_db else {}))
+                return getattr(valves, 'priority', 0)
+        except Exception:
+            pass
+        return 0
 
     # Pre-compute priorities (async functions can't be used in sort keys)
     priorities = {}
@@ -64,13 +67,17 @@ async def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list =
 # Grant these filters the discernment to pass what serves
 # and refuse what harms, for every soul in the house.
 async def process_filter_functions(request, filter_functions, filter_type, form_data, extra_params):
+    if not ENABLE_PLUGINS:
+        return form_data, {}
+
     skip_files = None
+    valves_by_id = None
+    filter_ids = [function.id for function in filter_functions if function]
 
     for function in filter_functions:
-        filter = function
-        filter_id = function.id
-        if not filter:
+        if not function:
             continue
+        filter_id = function.id
 
         function_module = await get_function_module(request, filter_id, load_from_db=(filter_type != 'stream'))
         # Prepare handler function
@@ -84,7 +91,9 @@ async def process_filter_functions(request, filter_functions, filter_type, form_
 
         # Apply valves to the function
         if hasattr(function_module, 'valves') and hasattr(function_module, 'Valves'):
-            valves = await Functions.get_function_valves_by_id(filter_id)
+            if valves_by_id is None:
+                valves_by_id = await Functions.get_function_valves_by_ids(filter_ids)
+            valves = valves_by_id.get(filter_id)
             function_module.valves = function_module.Valves(**(valves if valves else {}))
 
         try:

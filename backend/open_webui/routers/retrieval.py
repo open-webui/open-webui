@@ -101,6 +101,7 @@ from open_webui.retrieval.web.ollama import search_ollama_cloud
 from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.perplexity_search import search_perplexity_search
 from open_webui.retrieval.web.searchapi import search_searchapi
+from open_webui.retrieval.web.openserp import search_openserp
 from open_webui.retrieval.web.searxng import search_searxng
 from open_webui.retrieval.web.serpapi import search_serpapi
 from open_webui.retrieval.web.serper import search_serper
@@ -126,6 +127,8 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
+
+TIKTOKEN_DISALLOWED_SPECIAL = ()
 
 ##########################################
 #
@@ -363,6 +366,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'SEARCHAPI_ENGINE': 'web.search.searchapi_engine',
     'SEARXNG_LANGUAGE': 'web.search.searxng_language',
     'SEARXNG_QUERY_URL': 'web.search.searxng_query_url',
+    'OPENSERP_BASE_URL': 'web.search.openserp_base_url',
     'SERPAPI_API_KEY': 'web.search.serpapi_api_key',
     'SERPAPI_ENGINE': 'web.search.serpapi_engine',
     'SERPER_API_KEY': 'web.search.serper_api_key',
@@ -701,6 +705,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'OLLAMA_CLOUD_WEB_SEARCH_API_KEY': config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
             'SEARXNG_QUERY_URL': config.SEARXNG_QUERY_URL,
             'SEARXNG_LANGUAGE': config.SEARXNG_LANGUAGE,
+            'OPENSERP_BASE_URL': config.OPENSERP_BASE_URL,
             'YACY_QUERY_URL': config.YACY_QUERY_URL,
             'YACY_USERNAME': config.YACY_USERNAME,
             'YACY_PASSWORD': config.YACY_PASSWORD,
@@ -779,6 +784,7 @@ class WebConfig(BaseModel):
     OLLAMA_CLOUD_WEB_SEARCH_API_KEY: str | None = None
     SEARXNG_QUERY_URL: str | None = None
     SEARXNG_LANGUAGE: str | None = None
+    OPENSERP_BASE_URL: str | None = None
     YACY_QUERY_URL: str | None = None
     YACY_USERNAME: str | None = None
     YACY_PASSWORD: str | None = None
@@ -1247,6 +1253,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY = form_data.web.OLLAMA_CLOUD_WEB_SEARCH_API_KEY
         config.SEARXNG_QUERY_URL = form_data.web.SEARXNG_QUERY_URL
         config.SEARXNG_LANGUAGE = form_data.web.SEARXNG_LANGUAGE
+        config.OPENSERP_BASE_URL = form_data.web.OPENSERP_BASE_URL
         config.YACY_QUERY_URL = form_data.web.YACY_QUERY_URL
         config.YACY_USERNAME = form_data.web.YACY_USERNAME
         config.YACY_PASSWORD = form_data.web.YACY_PASSWORD
@@ -1398,6 +1405,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'OLLAMA_CLOUD_WEB_SEARCH_API_KEY': config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
             'SEARXNG_QUERY_URL': config.SEARXNG_QUERY_URL,
             'SEARXNG_LANGUAGE': config.SEARXNG_LANGUAGE,
+            'OPENSERP_BASE_URL': config.OPENSERP_BASE_URL,
             'YACY_QUERY_URL': config.YACY_QUERY_URL,
             'YACY_USERNAME': config.YACY_USERNAME,
             'YACY_PASSWORD': config.YACY_PASSWORD,
@@ -1582,7 +1590,7 @@ def get_splitter_length_function(
 ) -> Callable[[str], int]:
     if config.TEXT_SPLITTER == 'token':
         encoding = tiktoken.get_encoding(str(config.TIKTOKEN_ENCODING_NAME))
-        return lambda text: len(encoding.encode(text, disallowed_special=()))
+        return lambda text: len(encoding.encode(text, disallowed_special=TIKTOKEN_DISALLOWED_SPECIAL))
 
     if config.TEXT_SPLITTER == 'token_transformers':
         tokenizer = get_transformers_tokenizer(request, config)
@@ -1689,6 +1697,7 @@ def save_docs_to_vector_db(
                 chunk_size=config.CHUNK_SIZE,
                 chunk_overlap=config.CHUNK_OVERLAP,
                 add_start_index=True,
+                disallowed_special=TIKTOKEN_DISALLOWED_SPECIAL,
             )
             docs = text_splitter.split_documents(docs)
         elif config.TEXT_SPLITTER == 'token_transformers':
@@ -2209,6 +2218,16 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             )
         else:
             raise Exception('No SEARXNG_QUERY_URL found in environment variables')
+    elif engine == 'openserp':
+        if config.OPENSERP_BASE_URL:
+            return await search_openserp(
+                config.OPENSERP_BASE_URL,
+                query,
+                config.WEB_SEARCH_RESULT_COUNT,
+                config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception('No OPENSERP_BASE_URL found in environment variables')
     elif engine == 'yacy':
         if config.YACY_QUERY_URL:
             return await asyncio.to_thread(
@@ -2609,6 +2628,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                 verify_ssl=config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
                 requests_per_second=config.WEB_LOADER_CONCURRENT_REQUESTS,
                 trust_env=config.WEB_SEARCH_TRUST_ENV,
+                loader_config=await get_loader_config(),
             )
             docs = await loader.aload()
 
@@ -2910,21 +2930,24 @@ async def reset_upload_dir(request: Request, user=Depends(get_admin_user)) -> bo
     folder = f'{UPLOAD_DIR}'
     try:
         # Check if the directory exists
-        if os.path.exists(folder):
+        if await asyncio.to_thread(os.path.exists, folder):
             # Iterate over all the files and directories in the specified directory
-            for filename in os.listdir(folder):
+            for filename in await asyncio.to_thread(os.listdir, folder):
                 file_path = os.path.join(folder, filename)
                 try:
-                    if os.path.isfile(file_path) or os.path.islink(file_path):
-                        os.unlink(file_path)  # Remove the file or link
-                    elif os.path.isdir(file_path):
-                        shutil.rmtree(file_path)  # Remove the directory
+                    if await asyncio.to_thread(os.path.isfile, file_path) or await asyncio.to_thread(
+                        os.path.islink, file_path
+                    ):
+                        await asyncio.to_thread(os.unlink, file_path)  # Remove the file or link
+                    elif await asyncio.to_thread(os.path.isdir, file_path):
+                        await asyncio.to_thread(shutil.rmtree, file_path)  # Remove the directory
                 except Exception as e:
                     log.exception(f'Failed to delete {file_path}. Reason: {e}')
         else:
             log.warning(f'The directory {folder} does not exist')
     except Exception as e:
         log.exception(f'Failed to process the directory {folder}. Reason: {e}')
+
     await publish_event(
         request,
         EVENTS.RETRIEVAL_UPLOADS_RESET,
