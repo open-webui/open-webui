@@ -685,7 +685,7 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 }
 
 .tiptap tr {
-	@apply bg-white dark:bg-gray-900 dark:border-gray-850 text-xs;
+	@apply dark:border-gray-850 text-xs;
 }
 
 .tippy-box[data-theme~='transparent'] {
