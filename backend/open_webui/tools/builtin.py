@@ -3045,9 +3045,10 @@ async def query_knowledge_files(
         user_role = __user__.get('role', 'user')
         user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
 
-        embedding_function = __request__.app.state.EMBEDDING_FUNCTION
+        embedding_function = getattr(__request__.app.state, 'EMBEDDING_FUNCTION', None)
         if not embedding_function:
             return json.dumps({'error': 'Embedding function not configured'})
+        user_model = UserModel.model_construct(id=user_id, role=user_role)
 
         collection_names = []
         external_knowledges = []
@@ -3155,7 +3156,9 @@ async def query_knowledge_files(
                 __request__,
                 collection_names=collection_names,
                 queries=[query],
-                embedding_function=embedding_function,
+                embedding_function=lambda queries, prefix: embedding_function(
+                    queries, prefix=prefix, user=user_model
+                ),
                 k=count,
             )
 
@@ -3180,7 +3183,7 @@ async def query_knowledge_files(
                 knowledge,
                 queries=[query],
                 count=count,
-                user=type('UserContext', (), {'id': user_id, 'role': user_role})(),
+                user=user_model,
             )
             documents = query_results.get('documents', [[]])[0]
             metadatas = query_results.get('metadatas', [[]])[0]
@@ -3238,7 +3241,11 @@ async def query_knowledge_bases(
 
         user_id = __user__.get('id')
         user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
-        query_embedding = await __request__.app.state.EMBEDDING_FUNCTION(query, prefix=RAG_EMBEDDING_QUERY_PREFIX)
+        embedding_function = getattr(__request__.app.state, 'EMBEDDING_FUNCTION', None)
+        if not embedding_function:
+            return json.dumps({'error': 'Embedding function not configured'})
+        user_model = UserModel.model_construct(id=user_id, role=__user__.get('role', 'user'))
+        query_embedding = await embedding_function(query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user_model)
 
         # Min-heap of (distance, knowledge_base_id) - only holds top `count` results
         top_results_heap = []
