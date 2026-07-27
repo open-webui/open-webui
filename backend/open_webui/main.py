@@ -1920,6 +1920,13 @@ async def generate_messages(
 
     # Convert Anthropic payload to OpenAI format
     openai_payload = convert_anthropic_to_openai_payload(form_data, passthrough_params)
+    model_meta = model_info.meta.model_dump() if model_info and model_info.meta else {}
+    if (model_meta.get('capabilities') or {}).get('usage') is True:
+        if openai_payload.get('stream'):
+            stream_options = openai_payload.get('stream_options')
+            if not isinstance(stream_options, dict):
+                stream_options = {}
+            openai_payload['stream_options'] = {**stream_options, 'include_usage': True}
 
     # Route through the existing chat_completion handler
     response = await chat_completion(request, openai_payload, user)
