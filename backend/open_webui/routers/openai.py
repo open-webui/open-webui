@@ -1346,6 +1346,9 @@ async def generate_chat_completion(
                 )
 
     is_streaming_request = bool(payload.get('stream', False))
+    if not is_streaming_request:
+        payload.pop('stream_options', None)
+
     payload = json.dumps(payload)
 
     r = None
