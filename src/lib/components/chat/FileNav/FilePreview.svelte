@@ -348,6 +348,7 @@
 					class="flex items-center justify-center gap-3 py-2 px-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500"
 				>
 					<button
+						aria-label={$i18n.t('Previous slide')}
 						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
 						disabled={currentSlide === 0}
 						on:click={() => {
@@ -370,6 +371,7 @@
 					</button>
 					<span>{currentSlide + 1} / {fileOfficeSlides.length}</span>
 					<button
+						aria-label={$i18n.t('Next slide')}
 						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
 						disabled={currentSlide === fileOfficeSlides.length - 1}
 						on:click={() => {
