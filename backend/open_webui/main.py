@@ -1698,6 +1698,7 @@ async def chat_completion(
             per_model_metadata = {
                 **metadata,
                 'message_id': assistant_message_id,
+                'task_id': str(uuid4()),
             }
 
             # Per-model form_data: own model
@@ -1733,8 +1734,8 @@ async def chat_completion(
                 request.app.state.redis,
                 process,
                 id=chat_id,
+                task_id=per_model_metadata['task_id'],
             )
-            per_model_metadata['task_id'] = task_id
             task_ids.append(task_id)
 
         if is_internal:
