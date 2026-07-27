@@ -696,7 +696,7 @@
 	}
 
 	// Clear selected terminal when model doesn't support terminal
-	$: if ($selectedTerminalId && terminalCapableModels.length === 0) {
+	$: if ($selectedTerminalId && selectedModelIds.length > 0 && terminalCapableModels.length === 0) {
 		selectedTerminalId.set(null);
 	}
 

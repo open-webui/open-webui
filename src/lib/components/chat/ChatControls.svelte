@@ -110,6 +110,7 @@
 	// Clear selected direct terminal if user lost permission
 	$: if (
 		$selectedTerminalId &&
+		$terminalServers !== null &&
 		!($terminalServers ?? []).some((t) => t.id && t.id === $selectedTerminalId) &&
 		!($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
 	) {

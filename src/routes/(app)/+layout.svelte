@@ -184,7 +184,7 @@
 				name: t.name,
 				key: localStorage.token
 			}));
-			terminalServers.update((existing) => [...existing, ...terminalEntries]);
+			terminalServers.update((existing) => [...(existing ?? []), ...terminalEntries]);
 		}
 	};
 
@@ -264,9 +264,10 @@
 			}).catch((e) => console.error('Failed to load user settings:', e))
 		]);
 
-		const loadToolServers = setToolServers().catch((e) =>
-			console.error('Failed to load tool servers:', e)
-		);
+		const loadToolServers = setToolServers().catch((e) => {
+			console.error('Failed to load tool servers:', e);
+			terminalServers.set([]);
+		});
 		if (
 			$page.url.searchParams.get('q') &&
 			($page.url.searchParams.get('submit') ?? 'true') === 'true'

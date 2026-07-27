@@ -729,6 +729,10 @@
 		);
 	};
 
+	$: if ($terminalServers !== null && $selectedTerminalId && !isTerminalAvailable($selectedTerminalId)) {
+		selectedTerminalId.set(null);
+	}
+
 	let settingDefaults = false;
 	const setDefaults = async () => {
 		if (settingDefaults) return;
@@ -1284,11 +1288,6 @@
 					enabled: $selectedTerminalId !== null && s.url === $selectedTerminalId
 				}))
 			});
-		}
-
-		// Clear stale selectedTerminalId if the referenced terminal no longer exists
-		if ($selectedTerminalId && !isTerminalAvailable($selectedTerminalId)) {
-			selectedTerminalId.set(null);
 		}
 
 		const pageSubscribe = page.subscribe(async (p) => {
