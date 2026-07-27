@@ -66,6 +66,7 @@
 		displayFileHandler
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
+	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import { getOutputText } from './Messages/structuredOutput';
 
 	import {
@@ -451,7 +452,7 @@
 	const saveChatVariables = async (values) => {
 		chatVariables = { ...chatVariables, ...values };
 
-		if ($chatId && !$temporaryChatEnabled && !$chatId.startsWith('local:')) {
+		if ($chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
 			const res = await updateChatById(localStorage.token, $chatId, {}, chatVariables).catch(
 				(err) => {
 					console.error('[chat variables save]', err);
@@ -2845,7 +2846,7 @@
 				chatFiles = mergeFiles(chatFiles, createdChat?.chat?.files ?? []);
 				await onSelectEmbeddedChat?.(_chatId);
 			} else if ($temporaryChatEnabled) {
-				_chatId = `local:${$socket?.id}`;
+				_chatId = createTemporaryChatId($socket?.id);
 				await chatId.set(_chatId);
 			}
 			await tick();
@@ -3098,7 +3099,7 @@
 		// Only send terminal_id if the model has terminal capability enabled
 		const terminalEnabled = model.info?.meta?.capabilities?.terminal ?? true;
 		const useChatVariablesFallback =
-			!_chatId || $temporaryChatEnabled || _chatId.startsWith('local:');
+			!_chatId || $temporaryChatEnabled || isTemporaryChatId(_chatId);
 
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
@@ -3503,7 +3504,7 @@
 
 			selectedFolder.set(null);
 		} else {
-			_chatId = `local:${$socket?.id}`; // Use socket id for temporary chat
+			_chatId = createTemporaryChatId($socket?.id);
 			await chatId.set(_chatId);
 		}
 		await tick();

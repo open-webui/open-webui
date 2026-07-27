@@ -7,6 +7,7 @@ from typing import Any
 from fastapi.responses import JSONResponse
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
+from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_message_list
 from open_webui.utils.task import (
     get_task_model_id,
@@ -110,7 +111,7 @@ async def compact_messages_for_request(
     checkpoint_message_id = (
         recent_messages[0].get('id') or metadata.get('user_message_id') or metadata.get('message_id')
     )
-    if chat_id and checkpoint_message_id and not chat_id.startswith(('local:', 'channel:')):
+    if is_saved_chat_id(chat_id) and checkpoint_message_id:
         await Chats.upsert_message_to_chat_by_id_and_message_id(
             chat_id,
             checkpoint_message_id,

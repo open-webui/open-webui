@@ -220,7 +220,11 @@ from open_webui.utils.chat import (
 from open_webui.utils.chat import (
     generate_chat_completion as chat_completion_handler,
 )
-from open_webui.utils.chat_id import is_saved_chat_id
+from open_webui.utils.chat_id import (
+    get_temporary_chat_session_id,
+    is_saved_chat_id,
+    is_temporary_chat_id,
+)
 from open_webui.utils.chat_variables import (
     normalize_chat_variables,
 )
@@ -1245,9 +1249,7 @@ async def chat_completion(
                             detail=ERROR_MESSAGES.DEFAULT(),
                         )
 
-            if not chat_id.startswith('local:') and not chat_id.startswith(
-                'channel:'
-            ):  # temporary/channel chats are not stored
+            if is_saved_chat_id(chat_id):
                 if is_new_chat:
                     # Build the full history upfront with ALL assistant placeholders
                     user_message = metadata.get('user_message') or {}
@@ -1577,9 +1579,7 @@ async def chat_completion(
             if metadata.get('chat_id') and metadata.get('message_id'):
                 # Update the chat message with the error
                 try:
-                    if not metadata.get('chat_id', '').startswith('local:') and not metadata.get(
-                        'chat_id', ''
-                    ).startswith('channel:'):
+                    if is_saved_chat_id(metadata.get('chat_id')):
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
@@ -1930,8 +1930,8 @@ async def generate_messages(
 
 
 async def verify_chat_ownership(chat_id: str | None, user) -> None:
-    """`local:` chats are per-socket and never persisted, so they have no owner to check."""
-    if not chat_id or chat_id.startswith('local:'):
+    """Temporary chats are per-socket and unsaved, so they have no owner to check."""
+    if not chat_id or is_temporary_chat_id(chat_id):
         return
 
     # Channel messages need the membership and write-access gate that only /api/chat/completions has.
@@ -2004,8 +2004,8 @@ async def list_tasks_endpoint(request: Request, user=Depends(get_admin_user)):
 
 @app.get('/api/tasks/chat/{chat_id:path}')
 async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
-    if chat_id.startswith('local:') or chat_id.startswith('channel:'):
-        socket_id = chat_id[len('local:') :]
+    socket_id = get_temporary_chat_session_id(chat_id)
+    if socket_id:
         owner_id = get_user_id_from_session_pool(socket_id)
         if owner_id != user.id and user.role != 'admin':
             return {'task_ids': []}
@@ -2022,8 +2022,8 @@ async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
 
 @app.post('/api/tasks/chat/{chat_id:path}/stop')
 async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
-    if chat_id.startswith('local:') or chat_id.startswith('channel:'):
-        socket_id = chat_id[len('local:') :]
+    socket_id = get_temporary_chat_session_id(chat_id)
+    if socket_id:
         owner_id = get_user_id_from_session_pool(socket_id)
         if owner_id != user.id and user.role != 'admin':
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)

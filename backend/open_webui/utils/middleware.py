@@ -1553,7 +1553,7 @@ async def add_file_context(messages: list, chat_id: str, user) -> list:
     """
     Add file URLs to messages for native function calling.
     """
-    if not chat_id or chat_id.startswith('local:') or chat_id.startswith('channel:'):
+    if not is_saved_chat_id(chat_id):
         return messages
 
     chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
@@ -1609,7 +1609,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
     if not chat_id or not isinstance(chat_id, str) or not __event_emitter__:
         return form_data
 
-    if chat_id.startswith('local:') or chat_id.startswith('channel:'):
+    if not is_saved_chat_id(chat_id):
         message_list = form_data.get('messages', [])
     else:
         chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
@@ -2270,7 +2270,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     chat_id = metadata.get('chat_id')
     user_message_id = metadata.get('user_message_id')
 
-    if chat_id and user_message_id and not chat_id.startswith('local:') and not chat_id.startswith('channel:'):
+    if is_saved_chat_id(chat_id) and user_message_id:
         db_messages = await load_messages_from_db(chat_id, user_message_id)
         if db_messages:
             # Continue: frontend sends assistant_message_id when continuing
@@ -2317,7 +2317,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if regeneration_prompt:
         form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
 
-    if chat_id and user_message_id and not chat_id.startswith('local:') and not chat_id.startswith('channel:'):
+    if is_saved_chat_id(chat_id) and user_message_id:
         if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
             compaction_models = {
                 request.state.model['id']: request.state.model,
@@ -2574,7 +2574,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     available_skills = []
     view_skill_ids = []
     chat = None
-    if metadata.get('chat_id') and not metadata['chat_id'].startswith(('local:', 'channel:')):
+    if is_saved_chat_id(metadata.get('chat_id')):
         chat = await Chats.get_chat_by_id(metadata['chat_id'])
 
     if chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note':
@@ -3138,11 +3138,7 @@ async def background_tasks_handler(ctx):
     message = None
     messages = []
 
-    if (
-        'chat_id' in metadata
-        and not metadata.get('chat_id', '').startswith('local:')
-        and not metadata.get('chat_id', '').startswith('channel:')
-    ):
+    if is_saved_chat_id(metadata.get('chat_id')):
         messages_map = await Chats.get_messages_map_by_chat_id(metadata['chat_id'])
         if not messages_map:
             # Chat was deleted while the response was streaming — skip background tasks
@@ -3225,9 +3221,7 @@ async def background_tasks_handler(ctx):
                             }
                         )
 
-                        if not metadata.get('chat_id', '').startswith('local:') and not metadata.get(
-                            'chat_id', ''
-                        ).startswith('channel:'):
+                        if is_saved_chat_id(metadata.get('chat_id')):
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata['chat_id'],
                                 metadata['message_id'],
@@ -3240,9 +3234,7 @@ async def background_tasks_handler(ctx):
                     except Exception as e:
                         pass
 
-            if not metadata.get('chat_id', '').startswith('local:') and not metadata.get('chat_id', '').startswith(
-                'channel:'
-            ):  # Only update titles and tags for non-temp chats
+            if is_saved_chat_id(metadata.get('chat_id')):  # Only update titles and tags for saved chats
                 if TASKS.TITLE_GENERATION in tasks:
                     user_message = get_last_user_message(messages)
                     if user_message and len(user_message) > 100:
@@ -3378,11 +3370,11 @@ async def outlet_filter_handler(ctx):
     if not message_id:
         message_id = output_id('msg')
 
-    is_temp_chat = chat_id.startswith('local:') or chat_id.startswith('channel:')
+    is_unsaved_chat = not is_saved_chat_id(chat_id)
     try:
         messages_map = None
 
-        if is_temp_chat or not chat_id:
+        if is_unsaved_chat:
             form_messages = ctx.get('form_data', {}).get('messages', [])
             assistant_message = ctx.get('assistant_message', {})
 
@@ -3658,7 +3650,7 @@ async def non_streaming_chat_response_handler(response, ctx):
             if (
                 getattr(request.state, 'internal', False) is not True
                 and chat_id
-                and not chat_id.startswith(('channel:', 'local:'))
+                and is_saved_chat_id(chat_id)
             ):
                 webui_url = await Config.get('webui.url')
                 await publish_event(

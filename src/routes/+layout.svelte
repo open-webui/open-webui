@@ -54,6 +54,7 @@
 	import { getSessionUser, updateUserTimezone, userSignOut } from '$lib/apis/auths';
 	import { getAllTags } from '$lib/apis/chats';
 	import { chatCompletion } from '$lib/apis/openai';
+	import { isTemporaryChatId } from '$lib/utils/chatId';
 	import {
 		addOpenAIConnection,
 		removeOpenAIConnection,
@@ -497,7 +498,7 @@
 		// Skip events from temporary chats that are not the current chat.
 		// This prevents notifications from being sent to other tabs/devices
 		// for privacy, since temporary chats are not meant to be persisted or visible elsewhere.
-		const isTemporaryChat = event.chat_id?.startsWith('local:');
+		const isTemporaryChat = isTemporaryChatId(event.chat_id);
 		if (isTemporaryChat && event.chat_id !== $chatId) {
 			return;
 		}
