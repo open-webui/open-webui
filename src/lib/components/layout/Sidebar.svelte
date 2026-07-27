@@ -137,6 +137,7 @@
 			upsertChat?: (chat: Record<string, unknown>) => unknown;
 			setChatActive?: (chatId: string, active: boolean) => boolean;
 			setChatReadAt?: (chatId: string, lastReadAt: number) => boolean;
+			setAllChatsRead?: () => unknown;
 		}
 	> = {};
 
@@ -455,7 +456,13 @@
 		if (!res) return;
 
 		showChatsMenu = false;
+		if (res.folder_unread_counts) {
+			applyFolderUnreadCounts(res.folder_unread_counts);
+		}
 		setAllChatsRead();
+		for (const folder of Object.values(folderRegistry)) {
+			folder?.setAllChatsRead?.();
+		}
 	};
 
 	const importChatHandler = async (items, pinned = false, folderId = null) => {

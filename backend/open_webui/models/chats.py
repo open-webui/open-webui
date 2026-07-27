@@ -694,13 +694,12 @@ class ChatTable:
             await session.commit()
             return result.rowcount or 0
 
-    async def mark_root_chats_read_by_user_id(self, user_id: str, db: AsyncSession | None = None) -> int:
+    async def mark_chats_read_by_user_id(self, user_id: str, db: AsyncSession | None = None) -> int:
         async with get_async_db_context(db) as session:
             result = await session.execute(
                 update(Chat)
                 .where(
                     Chat.user_id == user_id,
-                    Chat.folder_id.is_(None),
                     Chat.archived == False,
                     Chat.meta['internal'].as_boolean().is_not(True),
                 )

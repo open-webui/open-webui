@@ -256,11 +256,14 @@ async def get_session_user_chat_list(
 
 
 @router.post('/read')
-async def mark_root_chats_read_by_user_id(
+async def mark_chats_read_by_user_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    return {'updated_count': await Chats.mark_root_chats_read_by_user_id(user.id, db=db)}
+    return {
+        'updated_count': await Chats.mark_chats_read_by_user_id(user.id, db=db),
+        'folder_unread_counts': await get_folder_unread_counts(user.id, db=db),
+    }
 
 
 ############################
