@@ -14,6 +14,7 @@ from open_webui.tools.geotizer import (
 from open_webui.utils.geotizer_orchestration import (
     AgentTask,
     GeotizerOrchestrationError,
+    apply_structured_gis_field_proposals,
     bounded_text,
     build_batch_tasks,
     build_knowledge_search_plan,
@@ -24,6 +25,7 @@ from open_webui.utils.geotizer_orchestration import (
     merge_owner_envelopes,
     normalize_contributor_evidence,
     normalize_delegator_message,
+    normalize_gis_field_proposals,
     normalize_gis_object_profile,
     owner_completion_valves,
     owner_failure_envelope,
@@ -209,6 +211,190 @@ def test_non_gis_evidence_cannot_self_promote_to_linked_project_authority():
     assert evidence['evidence_authority'] == 'contributor'
 
 
+def test_gis_field_proposals_require_bounded_key_value_origin_and_locator():
+    proposals = normalize_gis_field_proposals(
+        json.dumps(
+            {
+                'field_proposals': [
+                    {
+                        'field_key': 'f1',
+                        'value': 150,
+                        'unit': 'km',
+                        'value_origin': 'calculated',
+                        'relation_to_object': 'direct',
+                        'source_id': 'gis-calc',
+                        'source_title': 'GIS calculation',
+                        'source_locator': {
+                            'project_id': 'project',
+                            'layer_id': 'routes',
+                            'feature_or_query': 'sum(length)',
+                        },
+                        'retrieval_note': 'Calculated from route geometry.',
+                    },
+                    {
+                        'field_key': 'foreign',
+                        'value': 'must be ignored',
+                        'value_origin': 'direct',
+                        'source_id': 'foreign',
+                        'source_locator': {'layer_id': 'foreign'},
+                    },
+                    {
+                        'field_key': 'f2',
+                        'value': 'untraceable',
+                        'value_origin': 'analogue',
+                        'source_id': 'missing-locator',
+                        'retrieval_note': 'Analogue transfer.',
+                    },
+                ]
+            }
+        ),
+        allowed_field_keys=['f1', 'f2'],
+    )
+
+    assert len(proposals) == 1
+    assert proposals[0].field_key == 'f1'
+    assert proposals[0].value == 150
+    assert proposals[0].value_origin == 'calculated'
+
+
+@pytest.mark.parametrize(
+    ('value_origin', 'expected_applied'),
+    (
+        ('direct', True),
+        ('calculated', True),
+        ('analogue', True),
+    ),
+)
+def test_structured_gis_proposals_fill_negative_owner_alternatives(
+    value_origin,
+    expected_applied,
+):
+    raw = envelope()
+    raw['patches'][0] = {
+        'field_key': 'f1',
+        'value': None,
+        'status': 'not_found',
+        'source_refs': ['s1'],
+        'source_locator': {'query': 'negative owner result'},
+    }
+    relation = (
+        'deposit_analogue'
+        if value_origin == 'analogue'
+        else 'direct'
+    )
+    proposal = {
+        'field_key': 'f1',
+        'value': 42,
+        'unit': 'km',
+        'value_origin': value_origin,
+        'relation_to_object': relation,
+        'source_id': f'gis-{value_origin}',
+        'source_title': 'GIS proposal',
+        'source_locator': {
+            'project_id': 'project',
+            'layer_id': 'layer',
+            'feature_or_query': 'feature=1',
+        },
+        'retrieval_note': f'{value_origin} basis',
+    }
+    result = apply_structured_gis_field_proposals(
+        batch(),
+        raw,
+        [
+            {
+                'source_domain': 'gis',
+                'field_proposals': [proposal],
+            }
+        ],
+    )
+
+    assert (result['patches'][0]['status'] == 'filled') is expected_applied
+    assert result['patches'][0]['value'] == 42
+    assert result['patches'][0]['value_origin'] == value_origin
+    assert (
+        result['patches'][0]['source_locator']['value_origin']
+        == value_origin
+    )
+    assert validate_owner_envelope(batch(), result) == ()
+
+
+def test_calculated_gis_proposal_does_not_replace_direct_owner_fact():
+    raw = envelope()
+    raw['patches'][0]['value_origin'] = 'direct'
+    result = apply_structured_gis_field_proposals(
+        batch(),
+        raw,
+        [
+            {
+                'source_domain': 'gis',
+                'field_proposals': [
+                    {
+                        'field_key': 'f1',
+                        'value': 'alternative',
+                        'value_origin': 'calculated',
+                        'relation_to_object': 'direct',
+                        'source_id': 'gis-calc',
+                        'source_title': 'GIS calculation',
+                        'source_locator': {'layer_id': 'layer'},
+                        'retrieval_note': 'Calculated fallback.',
+                    }
+                ],
+            }
+        ],
+    )
+
+    assert result['patches'][0]['value'] == 'value'
+    assert result['patches'][0]['value_origin'] == 'direct'
+    assert {source['source_id'] for source in result['source_inventory']} == {
+        's1'
+    }
+
+
+def test_owner_envelope_requires_explanation_for_derived_value():
+    value = envelope()
+    value['patches'][0]['value_origin'] = 'calculated'
+    value['patches'][0].pop('retrieval_note', None)
+
+    violations = validate_owner_envelope(batch(), value)
+
+    assert any(
+        'calculated requires retrieval_note' in violation
+        for violation in violations
+    )
+
+
+def test_conflicting_equal_priority_gis_proposals_do_not_override_owner():
+    raw = envelope()
+    raw['patches'][0] = {
+        'field_key': 'f1',
+        'value': None,
+        'status': 'not_found',
+        'source_refs': ['s1'],
+        'source_locator': {'query': 'negative owner result'},
+    }
+    proposals = [
+        {
+            'field_key': 'f1',
+            'value': value,
+            'value_origin': 'direct',
+            'relation_to_object': 'direct',
+            'source_id': f'gis-{value}',
+            'source_title': 'GIS direct',
+            'source_locator': {'layer_id': 'layer'},
+            'retrieval_note': 'Direct fact.',
+        }
+        for value in ('left', 'right')
+    ]
+    result = apply_structured_gis_field_proposals(
+        batch(),
+        raw,
+        [{'source_domain': 'gis', 'field_proposals': proposals}],
+    )
+
+    assert result['patches'][0]['status'] == 'not_found'
+    assert len(result['source_inventory']) == 1
+
+
 def test_prompts_make_direct_gis_precedence_explicit():
     tasks = build_batch_tasks(
         {
@@ -237,6 +423,12 @@ def test_prompts_make_direct_gis_precedence_explicit():
         'direct object evidence' in rule
         for rule in contributor_request['rules']
     )
+    assert (
+        contributor_request['output_contract']['field_proposals'][0][
+            'value_origin'
+        ]
+        == 'direct|calculated|analogue'
+    )
 
     context = {
         'batch': batch(),
@@ -261,6 +453,7 @@ def test_prompts_make_direct_gis_precedence_explicit():
     rules = '\n'.join(owner_request['rules'])
     assert 'knowledge-base or web miss cannot negate' in rules
     assert 'do not return not_found solely because' in rules
+    assert 'Calculated or analogue alternatives are allowed' in rules
 
 
 def test_workflow_marks_gis_contributor_evidence_as_direct():
@@ -324,6 +517,107 @@ def test_workflow_marks_gis_contributor_evidence_as_direct():
     )
 
     assert final['workflow_status'] == 'finalized'
+
+
+def test_workflow_applies_structured_calculated_gis_proposal_before_submit():
+    submitted = []
+    gis_batch = {
+        **batch(),
+        'evidence_routes': [
+            {
+                'route_id': 'GIS-EVIDENCE',
+                'producer': 'GISagent_yulong',
+                'output': 'evidence_bundle',
+                'satisfied_by': 'contributor_call',
+            }
+        ],
+    }
+
+    async def gis_call(payload):
+        if payload['action'] == 'start':
+            return {
+                'workflow_status': 'collecting',
+                'run_id': 'run-gis-proposal',
+                'object_name': 'Object',
+                'datacube': {},
+                'next_batch': gis_batch,
+            }
+        if payload['action'] == 'submit_batch':
+            submitted.append(payload)
+            return {
+                'workflow_status': 'collecting',
+                'run_id': 'run-gis-proposal',
+                'next_batch': None,
+            }
+        return {
+            'workflow_status': 'finalized',
+            'run_id': 'run-gis-proposal',
+            'xlsx': {
+                'download_path': (
+                    '/geotizer/files/run-gis-proposal/geotizer.xlsx'
+                )
+            },
+        }
+
+    async def agent_call(task, prompt, object_name, datacube):
+        if task.role == 'contributor':
+            return json.dumps(
+                {
+                    'field_proposals': [
+                        {
+                            'field_key': 'f1',
+                            'value': 150,
+                            'unit': 'km',
+                            'value_origin': 'calculated',
+                            'relation_to_object': 'direct',
+                            'source_id': 'gis-routes',
+                            'source_title': 'GIS route calculation',
+                            'source_locator': {
+                                'project_id': 'project',
+                                'layer_id': 'routes',
+                                'feature_or_query': 'sum(length)',
+                            },
+                            'retrieval_note': (
+                                'Calculated from linked-project route '
+                                'geometry.'
+                            ),
+                        }
+                    ]
+                }
+            )
+        value = envelope()
+        value['patches'][0] = {
+            'field_key': 'f1',
+            'value': None,
+            'status': 'not_found',
+            'source_refs': ['s1'],
+            'source_locator': {'query': 'owner negative result'},
+        }
+        return json.dumps(value)
+
+    asyncio.run(
+        run_geotizer_workflow(
+            object_name='Object',
+            project_id=None,
+            model_run_id=None,
+            run_id=None,
+            allow_draft=True,
+            gis_call=gis_call,
+            agent_call=agent_call,
+        )
+    )
+
+    patch = next(
+        patch
+        for patch in submitted[0]['patches']
+        if patch['field_key'] == 'f1'
+    )
+    assert patch['status'] == 'filled'
+    assert patch['value'] == 150
+    assert patch['value_origin'] == 'calculated'
+    assert patch['source_locator']['evidence_authority'] == (
+        'linked_gis_project'
+    )
 
 
 def test_batch_plan_rejects_unknown_owner():

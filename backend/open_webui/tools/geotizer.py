@@ -13,6 +13,7 @@ from fastapi import Request
 from open_webui.utils.geotizer_orchestration import (
     AgentTask,
     GeotizerOrchestrationError,
+    apply_structured_gis_field_proposals,
     build_batch_tasks,
     build_knowledge_search_plan,
     compact_batch_context,
@@ -22,6 +23,7 @@ from open_webui.utils.geotizer_orchestration import (
     extract_owner_envelope,
     merge_owner_envelopes,
     normalize_delegator_message,
+    normalize_gis_field_proposals,
     normalize_gis_object_profile,
     owner_completion_valves,
     owner_failure_envelope,
@@ -254,8 +256,13 @@ async def run_geotizer_workflow(
                 for task in contributors
             ]
         )
-        evidence = [
-            {
+        allowed_field_keys = [
+            str(field.get('field_key') or '')
+            for field in next_batch.get('fields') or []
+        ]
+        evidence = []
+        for task, result in zip(contributors, contributor_results):
+            item = {
                 'route_id': task.task_id,
                 'producer': task.producer,
                 'source_domain': task.kind,
@@ -266,8 +273,15 @@ async def run_geotizer_workflow(
                 ),
                 'output': result,
             }
-            for task, result in zip(contributors, contributor_results)
-        ]
+            if task.kind == 'gis':
+                item['field_proposals'] = [
+                    proposal.as_dict()
+                    for proposal in normalize_gis_field_proposals(
+                        result,
+                        allowed_field_keys=allowed_field_keys,
+                    )
+                ]
+            evidence.append(item)
         context = compact_batch_context(
             next_batch,
             object_name=object_name,
@@ -388,6 +402,11 @@ async def _produce_valid_owner_envelope(
             envelope,
             run_id=run_id,
             attempt=attempt,
+        )
+        envelope = apply_structured_gis_field_proposals(
+            next_batch,
+            envelope,
+            context.get('contributor_evidence') or [],
         )
         envelope['run_id'] = run_id
         violations = validate_owner_envelope(next_batch, envelope)
@@ -592,8 +611,39 @@ def _contributor_prompt(
         ],
     }
     if task.kind == 'gis':
+        payload['output_contract'] = {
+            'field_proposals': [
+                {
+                    'field_key': 'exact bounded field_key',
+                    'value': 'typed proposed value',
+                    'unit': None,
+                    'value_origin': 'direct|calculated|analogue',
+                    'relation_to_object': (
+                        'direct|regional_context|deposit_analogue'
+                    ),
+                    'source_id': 'stable GIS source ID',
+                    'source_title': 'GIS project/layer title',
+                    'source_locator': {
+                        'project_id': 'exact project ID',
+                        'layer_id': 'exact layer ID',
+                        'feature_or_query': 'exact feature/query locator',
+                    },
+                    'retrieval_note': (
+                        'basis or calculation/analogue explanation'
+                    ),
+                }
+            ],
+            'negative_search_notes': [
+                {
+                    'field_key': 'exact bounded field_key',
+                    'query': 'performed GIS query',
+                    'result': 'not_found',
+                }
+            ],
+        }
         payload['rules'].extend(
             [
+                'Return one JSON object only, without Markdown.',
                 (
                     'A relevant record from the linked GIS project is direct '
                     'object evidence, not regional or analogue evidence.'
@@ -602,6 +652,22 @@ def _contributor_prompt(
                     'For every supported bounded field, state the exact '
                     'field_key, value and GIS layer/feature/query locator; '
                     'mark it confirmed_by_linked_gis_project.'
+                ),
+                (
+                    'Use value_origin=direct for an extracted object fact, '
+                    'calculated for an object estimate derived from GIS, and '
+                    'analogue for an alternative transferred from a stated '
+                    'analogue.'
+                ),
+                (
+                    'Calculated and analogue proposals are allowed, but must '
+                    'include the derivation basis in retrieval_note. The XLSX '
+                    'renderer will label them РАСЧЕТНОЕ ЗНАЧЕНИЕ.'
+                ),
+                (
+                    'Do not emit a proposal without an exact source_locator. '
+                    'Use negative_search_notes when a bounded field cannot be '
+                    'supported.'
                 ),
             ]
         )
@@ -710,6 +776,7 @@ def _owner_prompt(
                 'value': None,
                 'unit': None,
                 'status': ('filled|not_found|not_applicable|conflicted|' 'requires_expert_review'),
+                'value_origin': 'direct|calculated|analogue|null',
                 'source_refs': ['registered source_id'],
                 'source_locator': {'page_or_chunk_or_layer_or_feature_or_query': 'exact locator'},
                 'retrieval_note': 'short evidence decision note',
@@ -725,9 +792,18 @@ def _owner_prompt(
             'Return one JSON object only, without Markdown fences or commentary.',
             ('Echo batch_id, producer, policy_version and template_version ' 'exactly.'),
             ('Return exactly one patch for every field in batch.fields and ' 'no other fields.'),
-            ('Use only supplied or personally retrieved evidence; never ' 'infer an absent factual value.'),
+            (
+                'Use direct evidence for factual values. Calculated or '
+                'analogue alternatives are allowed only with '
+                'value_origin=calculated|analogue and an explicit derivation '
+                'basis in retrieval_note.'
+            ),
             ('Register every positive and negative evidence source in ' 'source_inventory.'),
             'filled requires a non-empty value and exact source_locator.',
+            (
+                'filled requires value_origin=direct|calculated|analogue. '
+                'Non-filled statuses use value_origin=null.'
+            ),
             'not_found/not_applicable/conflicted require value=null.',
             'For GIS evidence, the linked GIS project is already the object scope.',
             (
@@ -762,8 +838,10 @@ def _owner_prompt(
                     'retrieval_note and source_locator.'
                 ),
                 (
-                    'Never copy analogue resources, grades, geometry or study '
-                    'results into an object-specific factual field.'
+                    'An analogue may provide an alternative object value only '
+                    'with value_origin=analogue, the analogue identity, exact '
+                    'locator and transfer rationale. Never present it as a '
+                    'direct object fact.'
                 ),
             ]
         )
