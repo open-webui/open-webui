@@ -80,6 +80,7 @@ from open_webui.utils.access_control import has_connection_access, has_permissio
 from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.chat import generate_chat_completion
+from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.context_compaction import compact_messages_for_request
 from open_webui.utils.files import (
@@ -142,7 +143,7 @@ async def publish_chat_finished_event(
     request: Request, user: UserModel, metadata: dict, title: str, content: str, output: list | None = None
 ):
     chat_id = metadata.get('chat_id')
-    if getattr(request.state, 'internal', False) is True or not chat_id or chat_id.startswith(('channel:', 'local:')):
+    if getattr(request.state, 'internal', False) is True or not is_saved_chat_id(chat_id):
         return
 
     content = content or get_output_text(output)
@@ -2404,7 +2405,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Uses lightweight column query — only fetches folder_id, not the full chat JSON blob
     chat_id = metadata.get('chat_id', None)
     folder_id = None
-    if chat_id and user:
+    if user and is_saved_chat_id(chat_id):
         folder_id = await Chats.get_chat_folder_id(chat_id, user.id)
 
     # Fallback: use folder_id from metadata (temporary chats have no DB record)
@@ -3519,6 +3520,9 @@ async def non_streaming_chat_response_handler(response, ctx):
     if response_data is None:
         return response
 
+    chat_id = metadata.get('chat_id') or ''
+    save_to_chat = is_saved_chat_id(chat_id)
+
     if event_emitter:
         try:
             if 'error' in response_data:
@@ -3531,7 +3535,7 @@ async def non_streaming_chat_response_handler(response, ctx):
 
                 log.error('Provider returned error (non-streaming): %s', error)
 
-                if not metadata.get('chat_id', '').startswith('channel:'):
+                if save_to_chat:
                     await Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata['chat_id'],
                         metadata['message_id'],
@@ -3547,7 +3551,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                         }
                     )
 
-            if 'selected_model_id' in response_data and not metadata.get('chat_id', '').startswith('channel:'):
+            if 'selected_model_id' in response_data and save_to_chat:
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata['chat_id'],
                     metadata['message_id'],
@@ -3572,7 +3576,7 @@ async def non_streaming_chat_response_handler(response, ctx):
 
                     title = (
                         await Chats.get_chat_title_by_id(metadata['chat_id'])
-                        if not metadata.get('chat_id', '').startswith('channel:')
+                        if save_to_chat
                         else ''
                     )
 
@@ -3625,7 +3629,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                     # Save message in the database
                     usage = normalize_usage(response_data.get('usage', {}) or {})
 
-                    if not metadata.get('chat_id', '').startswith('channel:'):
+                    if save_to_chat:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
@@ -3708,6 +3712,8 @@ async def streaming_chat_response_handler(response, ctx):
 
     event_emitter = ctx['event_emitter']
     event_caller = ctx['event_caller']
+    chat_id = metadata.get('chat_id') or ''
+    save_to_chat = is_saved_chat_id(chat_id)
 
     extra_params = {
         '__event_emitter__': event_emitter,
@@ -3959,7 +3965,11 @@ async def streaming_chat_response_handler(response, ctx):
 
                 return output, end_flag
 
-            message = await Chats.get_message_by_id_and_message_id(metadata['chat_id'], metadata['message_id'])
+            message = (
+                await Chats.get_message_by_id_and_message_id(metadata['chat_id'], metadata['message_id'])
+                if save_to_chat
+                else None
+            )
 
             tool_calls = []
 
@@ -4041,13 +4051,14 @@ async def streaming_chat_response_handler(response, ctx):
                     )
 
                     # Save message in the database
-                    await Chats.upsert_message_to_chat_by_id_and_message_id(
-                        metadata['chat_id'],
-                        metadata['message_id'],
-                        {
-                            **event,
-                        },
-                    )
+                    if save_to_chat:
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata['chat_id'],
+                            metadata['message_id'],
+                            {
+                                **event,
+                            },
+                        )
 
                 async def stream_body_handler(response, form_data):
                     nonlocal content_parts
@@ -4114,16 +4125,17 @@ async def streaming_chat_response_handler(response, ctx):
                                 raw_obj = json.loads(data)
                                 raw_error = raw_obj.get('error') if isinstance(raw_obj, dict) else None
                                 if raw_error:
-                                    try:
-                                        await Chats.upsert_message_to_chat_by_id_and_message_id(
-                                            metadata['chat_id'],
-                                            metadata['message_id'],
-                                            {
-                                                'error': {'content': raw_error},
-                                            },
-                                        )
-                                    except Exception:
-                                        pass
+                                    if save_to_chat:
+                                        try:
+                                            await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                                metadata['chat_id'],
+                                                metadata['message_id'],
+                                                {
+                                                    'error': {'content': raw_error},
+                                                },
+                                            )
+                                        except Exception:
+                                            pass
                                     await event_emitter({'type': 'chat:completion', 'data': {'error': raw_error}})
                             except Exception:
                                 pass
@@ -4149,14 +4161,15 @@ async def streaming_chat_response_handler(response, ctx):
 
                                 if 'selected_model_id' in data:
                                     model_id = data['selected_model_id']
-                                    await Chats.upsert_message_to_chat_by_id_and_message_id(
-                                        metadata['chat_id'],
-                                        metadata['message_id'],
-                                        {
-                                            'selectedModelId': model_id,
-                                        },
-                                        touch=False,
-                                    )
+                                    if save_to_chat:
+                                        await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                            metadata['chat_id'],
+                                            metadata['message_id'],
+                                            {
+                                                'selectedModelId': model_id,
+                                            },
+                                            touch=False,
+                                        )
                                     await event_emitter(
                                         {
                                             'type': 'chat:completion',
@@ -4269,16 +4282,17 @@ async def streaming_chat_response_handler(response, ctx):
                                         error = data.get('error', {})
                                         if error:
                                             log.error('Provider returned error (streaming): %s', error)
-                                            try:
-                                                await Chats.upsert_message_to_chat_by_id_and_message_id(
-                                                    metadata['chat_id'],
-                                                    metadata['message_id'],
-                                                    {
-                                                        'error': {'content': error},
-                                                    },
-                                                )
-                                            except Exception:
-                                                pass
+                                            if save_to_chat:
+                                                try:
+                                                    await Chats.upsert_message_to_chat_by_id_and_message_id(
+                                                        metadata['chat_id'],
+                                                        metadata['message_id'],
+                                                        {
+                                                            'error': {'content': error},
+                                                        },
+                                                    )
+                                                except Exception:
+                                                    pass
                                             await event_emitter(
                                                 {
                                                     'type': 'chat:completion',
@@ -4384,13 +4398,15 @@ async def streaming_chat_response_handler(response, ctx):
                                     image_urls = await get_image_urls(delta.get('images', []), request, metadata, user)
                                     if image_urls:
                                         image_file_list = [{'type': 'image', 'url': url} for url in image_urls]
-                                        message_files = await Chats.add_message_files_by_id_and_message_id(
-                                            metadata['chat_id'],
-                                            metadata['message_id'],
-                                            image_file_list,
-                                        )
-                                        if message_files is None:
-                                            message_files = image_file_list
+                                        message_files = image_file_list
+                                        if save_to_chat:
+                                            message_files = await Chats.add_message_files_by_id_and_message_id(
+                                                metadata['chat_id'],
+                                                metadata['message_id'],
+                                                image_file_list,
+                                            )
+                                            if message_files is None:
+                                                message_files = image_file_list
 
                                         await event_emitter(
                                             {
@@ -4606,9 +4622,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             if end:
                                                 break
 
-                                        if ENABLE_REALTIME_CHAT_SAVE and not metadata.get('chat_id', '').startswith(
-                                            'channel:'
-                                        ):
+                                        if ENABLE_REALTIME_CHAT_SAVE and save_to_chat:
                                             current_output = full_output()
                                             # Save message in the database
                                             await Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -5142,7 +5156,7 @@ async def streaming_chat_response_handler(response, ctx):
                 ):
                     log.warning('Tool-call iteration limit reached (%s)', max_tool_call_iterations)
                     error_content = f'Tool-call limit reached ({max_tool_call_iterations} iterations).'
-                    if not metadata.get('chat_id', '').startswith('channel:'):
+                    if save_to_chat:
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata['chat_id'],
                             metadata['message_id'],
@@ -5332,7 +5346,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                 title = (
                     await Chats.get_chat_title_by_id(metadata['chat_id'])
-                    if not metadata.get('chat_id', '').startswith('channel:')
+                    if save_to_chat
                     else ''
                 )
                 data = {
@@ -5342,7 +5356,7 @@ async def streaming_chat_response_handler(response, ctx):
                     **({'usage': usage} if usage else {}),
                 }
 
-                if not metadata.get('chat_id', '').startswith('channel:'):
+                if save_to_chat:
                     if not ENABLE_REALTIME_CHAT_SAVE:
                         # Save message in the database
                         await Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -5397,7 +5411,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                 async def save_cancelled_state():
                     await event_emitter({'type': 'chat:tasks:cancel'})
-                    if not metadata.get('chat_id', '').startswith('channel:'):
+                    if save_to_chat:
                         if not ENABLE_REALTIME_CHAT_SAVE:
                             await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata['chat_id'],
