@@ -1579,12 +1579,21 @@ def get_transformers_tokenizer(request: Request, config: RetrievalConfig):
         if not os.path.exists(tokenizer_model) and '/' not in tokenizer_model:
             tokenizer_model = f'sentence-transformers/{tokenizer_model}'
 
-        return AutoTokenizer.from_pretrained(
+        cache_dir = os.getenv('SENTENCE_TRANSFORMERS_HOME') or os.getenv('HF_HUB_CACHE')
+        local_files_only = not RAG_EMBEDDING_MODEL_AUTO_UPDATE
+        tokenizer_key = (tokenizer_model, cache_dir, local_files_only)
+        cached_tokenizer = getattr(request.app.state, 'transformers_tokenizer', None)
+        if cached_tokenizer and cached_tokenizer[0] == tokenizer_key:
+            return cached_tokenizer[1]
+
+        tokenizer = AutoTokenizer.from_pretrained(
             tokenizer_model,
-            cache_dir=os.getenv('SENTENCE_TRANSFORMERS_HOME') or os.getenv('HF_HUB_CACHE'),
+            cache_dir=cache_dir,
             trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-            local_files_only=not RAG_EMBEDDING_MODEL_AUTO_UPDATE,
+            local_files_only=local_files_only,
         )
+        request.app.state.transformers_tokenizer = (tokenizer_key, tokenizer)
+        return tokenizer
 
     tokenizer = getattr(getattr(request.app.state, 'ef', None), 'tokenizer', None)
     if tokenizer is not None:
@@ -1952,7 +1961,7 @@ async def process_file(
                     ]
                 text_content = ' '.join([doc.page_content for doc in docs])
 
-            log.debug(f'text_content: {text_content}')
+            log.debug('text_content: %s', text_content)
             await Files.update_file_data_by_id(
                 file.id,
                 {'content': text_content},
@@ -2094,7 +2103,7 @@ async def process_text(
         )
     ]
     text_content = form_data.content
-    log.debug(f'text_content: {text_content}')
+    log.debug('text_content: %s', text_content)
 
     config = await get_retrieval_config()
     result = await run_in_threadpool(save_docs_to_vector_db, request, docs, collection_name, config, user=user)
@@ -2131,7 +2140,7 @@ async def process_web(
     config = await get_retrieval_config()
     try:
         content, docs = await get_content_from_url(request, form_data.url)
-        log.debug(f'text_content: {content}')
+        log.debug('text_content: %s', content)
 
         if process:
             collection_name = form_data.collection_name
@@ -2645,8 +2654,9 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
         urls = [
             doc.metadata.get('source') for doc in docs if doc.metadata.get('source')
         ]  # only keep the urls returned by the loader
+        url_set = set(urls)
         result_items = [
-            dict(item) for item in result_items if item.link in urls
+            dict(item) for item in result_items if item.link in url_set
         ]  # only keep the search results that have been loaded
 
         if config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
