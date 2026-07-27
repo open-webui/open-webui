@@ -845,7 +845,7 @@
 	};
 
 	// ── Lifecycle ────────────────────────────────────────────────────────
-	onMount(async () => {
+	onMount(() => {
 		const terminal = getTerminal();
 
 		let handledDisplayFile = false;
@@ -904,16 +904,18 @@
 		if (!handledDisplayFile && terminal) {
 			loading = true;
 
-			// Discover server features on initial mount
-			const config = await getTerminalConfig(terminal.url, terminal.key);
-			terminalEnabled = config?.features?.terminal !== false;
+			void (async () => {
+				// Discover server features on initial mount
+				const config = await getTerminalConfig(terminal.url, terminal.key);
+				terminalEnabled = config?.features?.terminal !== false;
 
-			if (chatId || savedPath === '/') {
-				// Fetch session-specific cwd from the server (or global default for new chats)
-				savedPath = applyCwd(await getCwd(terminal.url, terminal.key, chatId ?? undefined));
-			}
-			savedPath = clampToFileRoot(savedPath);
-			loadDir(savedPath);
+				if (chatId || savedPath === '/') {
+					// Fetch session-specific cwd from the server (or global default for new chats)
+					savedPath = applyCwd(await getCwd(terminal.url, terminal.key, chatId ?? undefined));
+				}
+				savedPath = clampToFileRoot(savedPath);
+				loadDir(savedPath);
+			})();
 		}
 
 		mounted = true;
