@@ -73,6 +73,7 @@ from open_webui.config import (
 from open_webui.constants import ERROR_MESSAGES, TASKS
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
+    AIOHTTP_CLIENT_TIMEOUT,
     AUDIT_EXCLUDED_PATHS,
     AUDIT_INCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
@@ -1836,7 +1837,7 @@ async def passthrough_anthropic_messages(request: Request, form_data: dict, user
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=openai.AIOHTTP_CLIENT_TIMEOUT),
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
         )
 
         if 'text/event-stream' in response.headers.get('Content-Type', ''):
