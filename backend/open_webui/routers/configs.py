@@ -15,6 +15,7 @@ from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers
 from open_webui.utils.mcp.client import MCPClient
+from open_webui.utils.oauth_metadata import normalize_oauth_metadata
 from open_webui.utils.oauth import (
     OAuthClientInformationFull,
     apply_connection_oauth_options,
@@ -568,7 +569,9 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
                             if oauth_server_metadata_response.status == 200:
                                 try:
                                     oauth_server_metadata = OAuthMetadata.model_validate(
-                                        await oauth_server_metadata_response.json()
+                                        normalize_oauth_metadata(
+                                            await oauth_server_metadata_response.json(), discovery_url
+                                        )
                                     )
                                     return {
                                         'status': True,

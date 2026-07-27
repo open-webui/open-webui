@@ -88,6 +88,7 @@ from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 from open_webui.utils.auth import create_token, get_password_hash
 from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration
+from open_webui.utils.oauth_metadata import normalize_oauth_metadata
 from open_webui.utils.validate import validate_profile_image_url
 from starlette.responses import RedirectResponse
 
@@ -535,7 +536,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
                     if oauth_server_metadata_response.status == 200:
                         try:
                             oauth_server_metadata = OAuthMetadata.model_validate(
-                                await oauth_server_metadata_response.json()
+                                normalize_oauth_metadata(await oauth_server_metadata_response.json(), url)
                             )
                             oauth_server_metadata_url = url
                             if (
@@ -663,7 +664,9 @@ async def get_oauth_client_info_with_static_credentials(
                 async with session.get(url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as resp:
                     if resp.status == 200:
                         try:
-                            oauth_server_metadata = OAuthMetadata.model_validate(await resp.json())
+                            oauth_server_metadata = OAuthMetadata.model_validate(
+                                normalize_oauth_metadata(await resp.json(), url)
+                            )
                             oauth_server_metadata_url = url
                             break
                         except Exception as e:
