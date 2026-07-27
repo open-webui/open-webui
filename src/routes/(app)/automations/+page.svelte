@@ -151,9 +151,6 @@
 		foldersLoaded = true;
 	};
 
-	const getFolderName = (folderId: string | null): string | null =>
-		folderId ? (($folders ?? []).find((folder) => folder.id === folderId)?.name ?? null) : null;
-
 	const toggleHandler = async (automation: AutomationResponse) => {
 		const res = await toggleAutomationById(localStorage.token, automation.id).catch((err) => {
 			toast.error(`${err}`);
@@ -344,7 +341,6 @@
 
 		loaded = true;
 		syncHeader();
-		void ensureFolders();
 
 		return () => {
 			clearTimeout(searchDebounceTimer);
@@ -537,7 +533,6 @@
 			{:else}
 				<div class="gap-y-0.5 grid my-1">
 					{#each automations as automation (automation.id)}
-						{@const folderName = getFolderName(automation.folder_id)}
 						<div
 							role="button"
 							tabindex="0"
@@ -564,15 +559,6 @@
 													{automation.name}
 												</div>
 											</Tooltip>
-
-											{#if folderName}
-												<div
-													class="max-w-32 shrink-0 truncate rounded-md bg-sky-500/10 px-1.5 py-0.5 text-[10px] leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
-													title={folderName}
-												>
-													{folderName}
-												</div>
-											{/if}
 
 											<Tooltip
 												content={automation.last_run_at
