@@ -107,6 +107,7 @@ class NoteTable:
     ) -> NoteModel:
         # We exclude access_grants to inject them
         note_data = NoteModel.model_validate(note).model_dump(exclude={'access_grants'})
+        note_data['data'] = note_data.get('data') or {}
         note_data['access_grants'] = (
             access_grants if access_grants is not None else await self._get_access_grants(note_data['id'], db=db)
         )
@@ -308,9 +309,9 @@ class NoteTable:
             if 'title' in form_data:
                 note.title = form_data['title']
             if 'data' in form_data:
-                note.data = {**note.data, **form_data['data']}
+                note.data = {**(note.data or {}), **(form_data['data'] or {})}
             if 'meta' in form_data:
-                note.meta = {**note.meta, **form_data['meta']}
+                note.meta = {**(note.meta or {}), **(form_data['meta'] or {})}
 
             if not db.is_modified(note) and 'access_grants' not in form_data:
                 return await self._to_note_model(note, db=db)
