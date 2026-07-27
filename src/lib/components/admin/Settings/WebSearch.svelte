@@ -1022,7 +1022,7 @@
 									<input
 										class="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
 										type="text"
-										placeholder={$i18n.t('Enter OpenSERP URL')}
+										placeholder={$i18n.t('Enter OpenSERP Base URL')}
 										bind:value={webConfig.OPENSERP_BASE_URL}
 										autocomplete="off"
 										required
