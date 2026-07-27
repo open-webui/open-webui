@@ -31,6 +31,7 @@
 		loadNextChatListPage,
 		refreshChatList,
 		registerFolderRefreshHandler,
+		setAllChatsRead,
 		setChatActive,
 		setChatReadAt
 	} from '$lib/stores/chatList';
@@ -47,7 +48,8 @@
 		updateChatFolderIdById,
 		importChats,
 		deleteAllChats,
-		getChatListBySearchText
+		getChatListBySearchText,
+		markChatsRead
 	} from '$lib/apis/chats';
 	import {
 		createNewFolder,
@@ -86,6 +88,10 @@
 	import WorkspaceIcon from './Sidebar/icons/Workspace.svelte';
 	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
+	import Dropdown from '../common/Dropdown.svelte';
+	import DropdownMenu from '../common/DropdownMenu.svelte';
+	import CheckIcon from '../icons/Check.svelte';
+	import MoreHorizontalIcon from './Sidebar/icons/MoreHorizontal.svelte';
 
 	const BREAKPOINT = 768;
 	const DEFAULT_PINNED_ITEMS = ['notes', 'workspace'];
@@ -121,6 +127,7 @@
 	let showChannels = false;
 	let showFolders = false;
 	let showSharedFolders = false;
+	let showChatsMenu = false;
 
 	let folders = {};
 	let folderRegistry: Record<
@@ -438,6 +445,17 @@
 				folder?.setChatReadAt?.(data.chat_id, data.last_read_at);
 			}
 		}
+	};
+
+	const markAllChatsReadHandler = async () => {
+		const res = await markChatsRead(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (!res) return;
+
+		showChatsMenu = false;
+		setAllChatsRead();
 	};
 
 	const importChatHandler = async (items, pinned = false, folderId = null) => {
@@ -1434,6 +1452,33 @@
 						}
 					}}
 				>
+					<svelte:fragment slot="action">
+						<Dropdown bind:show={showChatsMenu} align="end">
+							<Tooltip content={$i18n.t('More')}>
+								<button
+									type="button"
+									class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 transition-colors duration-100"
+									aria-label={$i18n.t('More')}
+									on:pointerup|stopPropagation
+								>
+									<MoreHorizontalIcon className="size-3.5" strokeWidth="2" />
+								</button>
+							</Tooltip>
+
+							<div slot="content">
+								<DropdownMenu className="min-w-[170px]">
+									<button
+										class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+										on:click={markAllChatsReadHandler}
+									>
+										<CheckIcon className="size-3.5" />
+										<div class="flex items-center">{$i18n.t('Mark all as read')}</div>
+									</button>
+								</DropdownMenu>
+							</div>
+						</Dropdown>
+					</svelte:fragment>
+
 					{#if $pinnedChats.length > 0}
 						<div class="mb-1">
 							<div class="flex flex-col space-y-1 rounded-xl">

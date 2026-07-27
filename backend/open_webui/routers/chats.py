@@ -255,6 +255,14 @@ async def get_session_user_chat_list(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
+@router.post('/read')
+async def mark_root_chats_read_by_user_id(
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    return {'updated_count': await Chats.mark_root_chats_read_by_user_id(user.id, db=db)}
+
+
 ############################
 # GetChatUsageStats
 # EXPERIMENTAL: may be removed in future releases

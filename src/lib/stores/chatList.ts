@@ -138,6 +138,13 @@ export const setChatReadAt = (chatId: string, lastReadAt: number): boolean => {
 	return found;
 };
 
+export const setAllChatsRead = () => {
+	const updateChat = (chat: ChatListItem) => ({ ...chat, last_read_at: chat.updated_at });
+
+	chatsStore.update((items) => (items ? items.map(updateChat) : items));
+	pinnedChatsStore.update((items) => items.map(updateChat));
+};
+
 export const resetChatListState = () => {
 	requestGeneration += 1;
 	currentPage = 1;
