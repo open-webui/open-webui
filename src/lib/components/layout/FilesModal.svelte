@@ -349,9 +349,12 @@
 									</div>
 
 									<div class="basis-2/5 flex items-center justify-end">
-										<div class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs">
+										<Tooltip
+											content={dayjs(file.created_at * 1000).format('MMM D, YYYY h:mm A')}
+											className="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs"
+										>
 											{dayjs(file.created_at * 1000).format('MMM D, YYYY')}
-										</div>
+										</Tooltip>
 
 										<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
 											<Tooltip content={shiftKey ? $i18n.t('Delete File') : $i18n.t('Delete File')}>
