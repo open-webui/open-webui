@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import re
-from functools import partial, update_wrapper
+from functools import cache, partial, update_wrapper
 from typing import (
     Any,
     Awaitable,
@@ -781,10 +781,7 @@ async def get_builtin_tools(
             },
         )
 
-        # Generate spec from function
-        pydantic_model = convert_function_to_pydantic_model(func)
-        spec = convert_pydantic_model_to_openai_function_spec(pydantic_model)
-        spec = clean_openai_tool_schema(spec)
+        spec = get_builtin_tool_spec(func)
         if func.__name__ == 'delegate_task' and not config.get('subagents.background_enabled'):
             parameters = spec.get('parameters', {})
             parameters.get('properties', {}).pop('background', None)
@@ -933,6 +930,17 @@ def clean_openai_tool_schema(spec: dict) -> dict:
         clean_properties(cleaned_spec['parameters'])
 
     return cleaned_spec
+
+
+@cache
+def build_builtin_tool_spec(func: Callable) -> dict:
+    pydantic_model = convert_function_to_pydantic_model(func)
+    spec = convert_pydantic_model_to_openai_function_spec(pydantic_model)
+    return clean_openai_tool_schema(spec)
+
+
+def get_builtin_tool_spec(func: Callable) -> dict:
+    return copy.deepcopy(build_builtin_tool_spec(func))
 
 
 def get_functions_from_tool(tool: object) -> list[Callable]:
