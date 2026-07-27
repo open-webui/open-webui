@@ -5460,6 +5460,7 @@ async def streaming_chat_response_handler(response, ctx):
                 )
 
                 ctx['assistant_message'] = {
+                    'content': ''.join(content_parts) or get_output_text(output),
                     'output': output,
                     **({'usage': usage} if usage else {}),
                 }
