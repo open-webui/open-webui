@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from typing import Optional
 
@@ -12,6 +13,7 @@ from open_webui.models.users import User, UserModel, UserProfileImageResponse, U
 from open_webui.utils.validate import validate_profile_image_url
 from pydantic import BaseModel, field_validator
 from sqlalchemy import Boolean, Column, String, Text, delete, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -109,12 +111,13 @@ class AuthsTable:
         role: str = 'pending',
         oauth: dict | None = None,
         db: AsyncSession | None = None,
+        user_id: str | None = None,
     ) -> UserModel | None:
         """Create an Auth + User pair inside a single transaction."""
         async with get_async_db_context(db) as session:
             log.info('insert_new_auth')
 
-            new_id = str(uuid.uuid4())
+            new_id = user_id or str(uuid.uuid4())
 
             credential = Auth(
                 id=new_id,
@@ -124,17 +127,30 @@ class AuthsTable:
             )
             session.add(credential)
 
-            created_user = await Users.insert_new_user(
-                new_id,
-                name,
-                email,
-                profile_image_url,
-                role,
+            try:
+                profile_image_url = validate_profile_image_url(profile_image_url)
+            except ValueError:
+                profile_image_url = '/user.png'
+
+            now = int(time.time())
+            created_user = UserModel(
+                id=new_id,
+                email=email,
+                name=name,
+                role=role,
+                profile_image_url=profile_image_url,
+                last_active_at=now,
+                created_at=now,
+                updated_at=now,
                 oauth=oauth,
-                db=session,
             )
-            # persist both records
-            await session.commit()
+            session.add(User(**created_user.model_dump()))
+
+            try:
+                await session.commit()
+            except IntegrityError:
+                await session.rollback()
+                raise
             return created_user if credential and created_user else None
 
     async def authenticate_user(
