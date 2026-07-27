@@ -180,7 +180,7 @@
 		$models.filter((m) => !(m?.info?.meta?.hidden ?? false)).map((m) => m.id);
 	const getDefaultModelIds = () =>
 		$config?.default_models ? $config.default_models.split(',') : [];
-	const normalizeSelectedModels = (modelIds = []) => {
+	const normalizeSelectedModels = (modelIds: string[] = []) => {
 		const availableModels = getAvailableModelIds();
 		const defaultModels = getDefaultModelIds();
 		let normalized = (modelIds ?? []).filter(
@@ -199,6 +199,23 @@
 
 		return normalized;
 	};
+
+	$: {
+		const modelSearchParam =
+			$page.url.searchParams.get('models') || $page.url.searchParams.get('model');
+
+		if (
+			chatIdProp === '' &&
+			$models.length > 0 &&
+			!selectedModels?.some((modelId) => modelId) &&
+			!modelSearchParam
+		) {
+			const fallbackModels = normalizeSelectedModels(selectedModels);
+			if (!equal(fallbackModels, selectedModels)) {
+				selectedModels = fallbackModels;
+			}
+		}
+	}
 
 	const estimateTokens = (value) => {
 		if (value === null || value === undefined || value === '') {
