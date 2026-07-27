@@ -319,7 +319,7 @@
 						<button
 							class="shrink-0 px-3 py-1 text-xs rounded-md transition-colors
 								{selectedExcelSheet === sheet
-								? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium'
+								? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-normal'
 								: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 							on:click={() => onSheetChange?.(sheet)}
 						>
@@ -348,6 +348,7 @@
 					class="flex items-center justify-center gap-3 py-2 px-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500"
 				>
 					<button
+						aria-label={$i18n.t('Previous slide')}
 						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
 						disabled={currentSlide === 0}
 						on:click={() => {
@@ -370,6 +371,7 @@
 					</button>
 					<span>{currentSlide + 1} / {fileOfficeSlides.length}</span>
 					<button
+						aria-label={$i18n.t('Next slide')}
 						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
 						disabled={currentSlide === fileOfficeSlides.length - 1}
 						on:click={() => {
@@ -400,10 +402,9 @@
 			{/if}
 			<iframe
 				src={serveUrl}
-				sandbox="allow-scripts allow-same-origin allow-downloads{($settings?.iframeSandboxAllowForms ??
-				false)
+				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
 					? ' allow-forms'
-					: ''}"
+					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
 				class="w-full h-full border-none bg-white"
 				title="HTML Preview"
 			/>

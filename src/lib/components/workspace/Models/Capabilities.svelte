@@ -51,6 +51,10 @@
 			label: $i18n.t('Status Updates'),
 			description: $i18n.t('Displays status updates (e.g., web search progress) in the response')
 		},
+		memory: {
+			label: $i18n.t('Memory'),
+			description: $i18n.t('Inject stored memories into conversation context')
+		},
 		builtin_tools: {
 			label: $i18n.t('Builtin Tools'),
 			description: $i18n.t(
@@ -59,22 +63,12 @@
 		}
 	};
 
-	export let capabilities: {
-		file_context?: boolean;
-		vision?: boolean;
-		file_upload?: boolean;
-		web_search?: boolean;
-		image_generation?: boolean;
-		code_interpreter?: boolean;
-		terminal?: boolean;
-		usage?: boolean;
-		citations?: boolean;
-		status_updates?: boolean;
-		builtin_tools?: boolean;
-	} = {};
+	type Capability = keyof typeof capabilityLabels;
+
+	export let capabilities: Partial<Record<Capability, boolean>> = {};
 
 	// Hide file_context when file_upload is disabled
-	$: visibleCapabilities = Object.keys(capabilityLabels).filter((cap) => {
+	$: visibleCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter((cap) => {
 		if (cap === 'file_context' && !capabilities.file_upload) {
 			return false;
 		}
@@ -83,24 +77,22 @@
 </script>
 
 <div>
-	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-xs font-medium text-gray-500">{$i18n.t('Capabilities')}</div>
-	</div>
-	<div class="flex items-center mt-2 flex-wrap">
+	<div class="mb-1.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Capabilities')}</div>
+	<div class="grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
 		{#each visibleCapabilities as capability}
-			<div class=" flex items-center gap-2 mr-3">
+			<div class="flex min-h-6 items-center justify-between gap-2.5">
+				<div class="min-w-0 text-xs text-gray-600 dark:text-gray-400">
+					<Tooltip content={marked.parse(capabilityLabels[capability].description)}>
+						<span class="truncate">{$i18n.t(capabilityLabels[capability].label)}</span>
+					</Tooltip>
+				</div>
 				<Checkbox
+					ariaLabel={$i18n.t(capabilityLabels[capability].label)}
 					state={capabilities[capability] ? 'checked' : 'unchecked'}
 					on:change={(e) => {
 						capabilities[capability] = e.detail === 'checked';
 					}}
 				/>
-
-				<div class=" py-0.5 text-sm capitalize">
-					<Tooltip content={marked.parse(capabilityLabels[capability].description)}>
-						{$i18n.t(capabilityLabels[capability].label)}
-					</Tooltip>
-				</div>
 			</div>
 		{/each}
 	</div>

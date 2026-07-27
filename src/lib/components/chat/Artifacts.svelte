@@ -134,6 +134,7 @@
 					<div class="flex items-center space-x-2">
 						<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
 							<button
+								aria-label={$i18n.t('Previous version')}
 								class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition disabled:cursor-not-allowed"
 								on:click={() => navigateContent('prev')}
 								disabled={contents.length <= 1}
@@ -162,6 +163,7 @@
 							</div>
 
 							<button
+								aria-label={$i18n.t('Next version')}
 								class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition disabled:cursor-not-allowed"
 								on:click={() => navigateContent('next')}
 								disabled={contents.length <= 1}
@@ -264,7 +266,7 @@
 						{/if}
 					</div>
 				{:else}
-					<div class="m-auto font-medium text-xs text-gray-900 dark:text-white">
+					<div class="m-auto font-normal text-xs text-gray-900 dark:text-white">
 						{$i18n.t('No HTML, CSS, or JavaScript content found.')}
 					</div>
 				{/if}

@@ -15,8 +15,12 @@
 	export let voices: Voice[] = [];
 	export let placeholder = '';
 	export let className = 'w-full';
+	export let selectedIds: string[] | null = null;
 
-	const dispatch = createEventDispatcher<{ select: Voice }>();
+	const dispatch = createEventDispatcher<{
+		select: Voice;
+		enableall: Voice[];
+	}>();
 	const listboxId = `${id}-options`;
 
 	let inputElement: HTMLInputElement | null = null;
@@ -24,18 +28,17 @@
 	let suggestionsOpen = false;
 
 	$: query = value.trim().toLowerCase();
-	$: filteredVoices = (voices ?? [])
-		.filter((voice) => {
-			const id = voice.id.toLowerCase();
-			const name = (voice.name ?? '').toLowerCase();
-			const description = (voice.description ?? voice.meta?.description ?? '').toLowerCase();
+	$: matchedVoices = (voices ?? []).filter((voice) => {
+		const id = voice.id.toLowerCase();
+		const name = (voice.name ?? '').toLowerCase();
+		const description = (voice.description ?? voice.meta?.description ?? '').toLowerCase();
 
-			return (
-				query === '' || id.includes(query) || name.includes(query) || description.includes(query)
-			);
-		})
-		.slice(0, 8);
-	$: if (suggestionsOpen && filteredVoices.length > 0) {
+		return (
+			query === '' || id.includes(query) || name.includes(query) || description.includes(query)
+		);
+	});
+	$: optionVoices = selectedIds === null ? matchedVoices.slice(0, 8) : matchedVoices;
+	$: if (suggestionsOpen && optionVoices.length > 0) {
 		tick().then(positionPopup);
 	}
 
@@ -60,9 +63,16 @@
 	};
 
 	const selectVoice = (voice: Voice) => {
-		value = voice.id;
+		if (selectedIds === null) {
+			value = voice.id;
+		}
 		suggestionsOpen = false;
 		dispatch('select', voice);
+	};
+
+	const enableVoices = () => {
+		suggestionsOpen = false;
+		dispatch('enableall', matchedVoices);
 	};
 
 	const handlePointerDown = (event: PointerEvent) => {
@@ -93,9 +103,13 @@
 	role="combobox"
 	aria-autocomplete="list"
 	aria-controls={listboxId}
-	aria-expanded={suggestionsOpen && filteredVoices.length > 0}
+	aria-expanded={suggestionsOpen && optionVoices.length > 0}
 	autocomplete="off"
 	on:focus={() => {
+		suggestionsOpen = true;
+		positionPopup();
+	}}
+	on:click={() => {
 		suggestionsOpen = true;
 		positionPopup();
 	}}
@@ -117,7 +131,7 @@
 	}}
 />
 
-{#if suggestionsOpen && filteredVoices.length > 0}
+{#if suggestionsOpen && optionVoices.length > 0}
 	<div
 		use:portal
 		bind:this={popupElement}
@@ -126,12 +140,29 @@
 		role="listbox"
 		style="z-index: 9999; top: 0; left: 0;"
 	>
-		{#each filteredVoices as voice (voice.id)}
+		{#if selectedIds !== null}
+			{#if matchedVoices.length > 0}
+				<button
+					type="button"
+					class="flex w-full items-center justify-between gap-3 rounded-xl px-2 py-[5px] text-left text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
+					role="option"
+					on:mousedown={(event) => {
+						event.preventDefault();
+					}}
+					on:click={() => {
+						enableVoices();
+					}}
+				>
+					<span class="truncate">Enable all ({matchedVoices.length})</span>
+				</button>
+			{/if}
+		{/if}
+		{#each optionVoices as voice (voice.id)}
 			<button
 				type="button"
 				class="flex w-full items-center justify-between gap-3 rounded-xl px-2 py-[5px] text-left text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
 				role="option"
-				aria-selected={value === voice.id}
+				aria-selected={selectedIds?.includes(voice.id) ?? value === voice.id}
 				on:mousedown={(event) => {
 					event.preventDefault();
 				}}
@@ -142,6 +173,23 @@
 				<span class="truncate">{voice.id}</span>
 				{#if voice.name && voice.name !== voice.id}
 					<span class="truncate text-gray-500 dark:text-gray-400">{voice.name}</span>
+				{/if}
+				{#if selectedIds !== null && selectedIds.includes(voice.id)}
+					<svg
+						class="h-3.5 w-3.5 shrink-0 text-gray-500 dark:text-gray-400"
+						aria-hidden="true"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke="currentColor"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="3"
+							d="m5 12 4.7 4.5 9.3-9"
+						/>
+					</svg>
 				{/if}
 			</button>
 		{/each}

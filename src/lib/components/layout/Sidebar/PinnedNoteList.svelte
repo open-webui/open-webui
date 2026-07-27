@@ -6,7 +6,8 @@
 	import { chatId, mobile, pinnedNotes, settings, showSidebar } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { getPinnedNoteList, toggleNotePinnedStatusById } from '$lib/apis/notes';
-	import Note from '$lib/components/icons/Note.svelte';
+	import NotesIcon from './icons/Notes.svelte';
+	import XMarkIcon from './icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -62,11 +63,11 @@
 	{#each sortedPinnedNotes as note (note.id)}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
-			class="flex items-center text-gray-800 dark:text-gray-200 cursor-grab relative group rounded-xl px-2.5 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+			class="flex items-center text-gray-800 dark:text-gray-200 cursor-grab relative group rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 			data-id={note.id}
 		>
 			<a
-				class="grow flex items-center gap-2.5 text-sm"
+				class="grow flex items-center gap-2.5 text-[13px] leading-5"
 				href={`/notes/${note.id}`}
 				on:click={() => {
 					selectedChatId = null;
@@ -78,7 +79,7 @@
 				draggable="false"
 			>
 				<div class="self-center">
-					<Note className="size-4" strokeWidth="2" />
+					<NotesIcon className="size-3.5" strokeWidth="1.5" />
 				</div>
 				<div class="flex-1 text-ellipsis line-clamp-1">
 					{note.title}
@@ -93,16 +94,7 @@
 				}}
 				aria-label={$i18n.t('Unpin')}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke-width="2"
-					stroke="currentColor"
-					class="size-3.5"
-				>
-					<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-				</svg>
+				<XMarkIcon className="size-3.5" strokeWidth="1.5" />
 			</button>
 		</div>
 	{/each}

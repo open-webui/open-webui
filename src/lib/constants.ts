@@ -108,6 +108,7 @@ export const DEFAULT_CAPABILITIES = {
 	citations: true,
 	status_updates: true,
 	usage: undefined,
+	memory: true,
 	builtin_tools: true
 };
 

@@ -179,8 +179,10 @@ async def generate_chat_completion(
         # Merge the direct connection model into server models so that
         # task functions (title, tags, etc.) can resolve a server-side
         # task model while still having the direct model available.
+        # dict(...items()) is one HGETALL on a Redis-backed pool; ``{**pool}``
+        # would issue HKEYS plus one HGET per model.
         models = {
-            **request.app.state.MODELS,
+            **dict(request.app.state.MODELS.items()),
             request.state.model['id']: request.state.model,
         }
         log.debug(f'direct connection to model: {request.state.model["id"]}')
@@ -188,10 +190,11 @@ async def generate_chat_completion(
         models = request.app.state.MODELS
 
     model_id = form_data['model']
-    if model_id not in models:
+    # Single lookup — membership check plus getitem would be two Redis
+    # round trips on a Redis-backed model pool.
+    model = models.get(model_id)
+    if model is None:
         raise Exception('Model not found')
-
-    model = models[model_id]
 
     if getattr(request.state, 'direct', False) and model_id == getattr(request.state, 'model', {}).get('id'):
         return await generate_direct_chat_completion(request, form_data, user=user, models=models)
