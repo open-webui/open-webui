@@ -673,6 +673,7 @@ def _contributor_prompt(
                 ),
             ]
         )
+        payload['rules'].extend(_gis_infrastructure_rules(next_batch))
     if task.kind == 'kb':
         payload['knowledge_search_plan'] = dict(knowledge_search_plan)
         payload['rules'].extend(
@@ -689,6 +690,61 @@ def _contributor_prompt(
             ]
         )
     return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+def _gis_infrastructure_rules(
+    next_batch: Mapping[str, Any],
+) -> list[str]:
+    """Require deterministic spatial calls for the infrastructure owner batch."""
+    if str(next_batch.get('batch_id') or '') != 'GIS-DC':
+        return []
+    return [
+        (
+            'This is the infrastructure batch. Do not infer that distance '
+            'data are absent until you have called list_layers and '
+            'describe_layer for the linked project.'
+        ),
+        (
+            'Resolve the single licence polygon as the source feature, then '
+            'use nearest_features or features_within_distance with a '
+            'projected metre CRS and full feature geometries. Never estimate '
+            'distance from layer extents, map scale or centroids.'
+        ),
+        (
+            'For geotizer_object.v1.r078.a01 calculate the minimum distance '
+            'to the nearest settlement feature. For '
+            'geotizer_object.v1.r081.a01, when only a power-line layer is '
+            'available, return distance to the nearest power line as an '
+            'explicit proxy for the energy node, not as a direct energy-node '
+            'fact.'
+        ),
+        (
+            'For rows r084 and r085 inspect settlements, railway stations, '
+            'railway lines, roads and power lines. Build deterministic '
+            'distance-ranked proposals inside 50 km and 100 km respectively, '
+            'deduplicated by infrastructure type and stable feature ID, and '
+            'fill no more than the bounded object slots.'
+        ),
+        (
+            'For row r088 compare the nearest road and railway evidence and '
+            'propose the supported access character, mode and minimum '
+            'distance. A line intersecting the licence polygon has distance '
+            'zero, not an unknown distance.'
+        ),
+        (
+            'Every spatially computed value must use '
+            'value_origin=calculated. Its source_locator must include the '
+            'operation, project_id, source and target layer IDs, stable '
+            'feature IDs, calculation CRS, raw distance in metres and radius '
+            'threshold where applicable.'
+        ),
+        (
+            'Do not fill federal centre, GOK/ZIF, port, state border or '
+            'subsoil-user fields from a semantically different layer. Return '
+            'a negative_search_note only after checking the relevant layer '
+            'inventory and attributes.'
+        ),
+    ]
 
 
 def _object_profile_prompt(
