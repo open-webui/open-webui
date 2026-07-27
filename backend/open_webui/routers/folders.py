@@ -186,8 +186,10 @@ async def create_folder(
                     detail=ERROR_MESSAGES.DEFAULT('Error creating folder'),
                 )
 
-    if form_data.data and 'files' in form_data.data and not await can_read_all_folder_files(
-        form_data.data['files'], user, db=db
+    if (
+        form_data.data
+        and 'files' in form_data.data
+        and not await can_read_all_folder_files(form_data.data['files'], user, db=db)
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

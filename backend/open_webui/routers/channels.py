@@ -990,7 +990,9 @@ async def model_response_handler(request, channel, message, user, db=None):
                 response_parent_id = (
                     message.parent_id
                     if message.parent_id
-                    else (message.id if await Config.get('channels.model_response_mode', 'thread') == 'thread' else None)
+                    else (
+                        message.id if await Config.get('channels.model_response_mode', 'thread') == 'thread' else None
+                    )
                 )
 
                 response_message, channel = await new_message_handler(

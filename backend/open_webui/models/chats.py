@@ -870,9 +870,7 @@ class ChatTable:
                 **message,
                 'id': message.get('id') or message_id,
                 'parentId': message_parent_id if message_parent_id is not None else parent_id,
-                'childrenIds': (
-                    message.get('childrenIds') if isinstance(message.get('childrenIds'), list) else []
-                ),
+                'childrenIds': (message.get('childrenIds') if isinstance(message.get('childrenIds'), list) else []),
                 'role': role,
                 'timestamp': message.get('timestamp') or int(time.time()),
             }

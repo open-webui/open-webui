@@ -764,7 +764,8 @@ async def signin(
                     user_id=trusted_header_user_id(email),
                 )
             except IntegrityError:
-                pass
+                if not await Users.get_user_by_email(email.lower(), db=db):
+                    raise
 
         user = await Auths.authenticate_user_by_email(email, db=db)
         if user:

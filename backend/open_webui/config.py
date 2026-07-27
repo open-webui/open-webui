@@ -855,11 +855,7 @@ CONTENT_EXTRACTION_ENGINE = os.getenv('CONTENT_EXTRACTION_ENGINE', '').lower()
 
 content_extraction_supported_media_mime_types = os.getenv('CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES')
 CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES = (
-    [
-        mime_type.strip()
-        for mime_type in content_extraction_supported_media_mime_types.split(',')
-        if mime_type.strip()
-    ]
+    [mime_type.strip() for mime_type in content_extraction_supported_media_mime_types.split(',') if mime_type.strip()]
     if content_extraction_supported_media_mime_types is not None
     else None
 )

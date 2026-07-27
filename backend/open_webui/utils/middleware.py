@@ -2871,10 +2871,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 for item in get_attached_knowledge(model, metadata):
                     if not item.get('id') or not item.get('type'):
                         continue
-                    attrs = (
-                        f'type="{escape(str(item["type"]), quote=True)}" '
-                        f'id="{escape(str(item["id"]), quote=True)}"'
-                    )
+                    attrs = f'type="{escape(str(item["type"]), quote=True)}" id="{escape(str(item["id"]), quote=True)}"'
                     if item.get('name'):
                         attrs += f' name="{escape(str(item["name"]), quote=True)}"'
                     if item.get('source'):
@@ -2946,9 +2943,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     )
     if resolved_model_system_prompt:
         system_content = (
-            f'{resolved_model_system_prompt}\n{system_content}'
-            if system_content
-            else resolved_model_system_prompt
+            f'{resolved_model_system_prompt}\n{system_content}' if system_content else resolved_model_system_prompt
         )
     metadata['system_prompt'] = system_content or None
     metadata['user_prompt'] = get_last_user_message(form_data['messages'])
@@ -3779,9 +3774,7 @@ async def streaming_chat_response_handler(response, ctx):
     }
 
     filter_functions = (
-        await get_filter_functions(request, model, metadata.get('filter_ids', []))
-        if ENABLE_PLUGINS
-        else []
+        await get_filter_functions(request, model, metadata.get('filter_ids', [])) if ENABLE_PLUGINS else []
     )
 
     # Standard streaming response handler
@@ -4500,9 +4493,9 @@ async def streaming_chat_response_handler(response, ctx):
                                                             str,
                                                         ):
                                                             current_response_tool_call['function']['arguments'] = ''
-                                                        current_response_tool_call['function'][
-                                                            'arguments'
-                                                        ] += delta_arguments
+                                                        current_response_tool_call['function']['arguments'] += (
+                                                            delta_arguments
+                                                        )
 
                                         # Emit pending tool calls in real-time
                                         if response_tool_calls:

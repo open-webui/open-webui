@@ -729,7 +729,11 @@
 		);
 	};
 
-	$: if ($terminalServers !== null && $selectedTerminalId && !isTerminalAvailable($selectedTerminalId)) {
+	$: if (
+		$terminalServers !== null &&
+		$selectedTerminalId &&
+		!isTerminalAvailable($selectedTerminalId)
+	) {
 		selectedTerminalId.set(null);
 	}
 
