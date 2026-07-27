@@ -303,6 +303,7 @@ def get_redis_connection(
     cache_key = (
         redis_url,
         tuple(redis_sentinels) if redis_sentinels else (),
+        redis_cluster,
         async_mode,
         decode_responses,
     )
