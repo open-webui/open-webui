@@ -843,16 +843,37 @@ def compact_batch_context(
         'datacube': dict(datacube or {}),
         'knowledge_search_plan': dict(knowledge_search_plan or {}),
         'contributor_evidence': [
-            {
-                **dict(item),
-                'output': bounded_text(
-                    str(item.get('output') or ''),
-                    max_chars=MAX_CONTRIBUTOR_EVIDENCE_CHARS,
-                ),
-            }
+            normalize_contributor_evidence(item)
             for item in contributor_evidence
         ],
     }
+
+
+def normalize_contributor_evidence(
+    item: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Make evidence authority explicit before an LLM owner sees it."""
+    normalized = dict(item)
+    source_domain = str(item.get('source_domain') or '').strip().lower()
+    normalized['source_domain'] = source_domain or 'unknown'
+    if source_domain == 'gis':
+        normalized['relation_to_object'] = 'direct'
+        normalized['evidence_authority'] = 'linked_gis_project'
+        normalized['negative_search_precedence'] = (
+            'A knowledge-base or web miss cannot negate a confirmed GIS fact.'
+        )
+    else:
+        normalized['relation_to_object'] = str(
+            item.get('relation_to_object') or 'source_declared'
+        )
+        normalized['evidence_authority'] = str(
+            item.get('evidence_authority') or 'contributor'
+        )
+    normalized['output'] = bounded_text(
+        str(item.get('output') or ''),
+        max_chars=MAX_CONTRIBUTOR_EVIDENCE_CHARS,
+    )
+    return normalized
 
 
 def bounded_text(value: str, *, max_chars: int) -> str:
