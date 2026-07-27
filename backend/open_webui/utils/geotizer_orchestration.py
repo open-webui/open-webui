@@ -32,6 +32,31 @@ ALLOWED_VALUE_ORIGINS = frozenset(
         'analogue',
     }
 )
+ANALOGUE_BASIS_MARKERS = (
+    'analog',
+    'analogue',
+    'regional context',
+    'regional geology',
+    'месторождени-аналог',
+    'месторождение-аналог',
+    'по аналог',
+    'региональн',
+    'данным региона',
+)
+CALCULATED_BASIS_MARKERS = (
+    'calculated',
+    'derived',
+    'inferred',
+    'model prospectivity',
+    'prospectivity',
+    'выводн',
+    'оценочн',
+    'по модели',
+    'по типу месторождения',
+    'предполагаем',
+    'расчет',
+    'расчёт',
+)
 MAX_CONTRIBUTOR_EVIDENCE_CHARS = 20_000
 
 
@@ -965,6 +990,46 @@ def _value_origin_violations(
             f'patches[{index}] {value_origin} requires retrieval_note'
         )
     return violations
+
+
+def correct_explicitly_derived_value_origins(
+    envelope: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Correct direct labels contradicted by an explicit derivation note.
+
+    The owner remains responsible for choosing whether a value is usable.
+    This pure boundary correction only prevents an accepted alternative from
+    being rendered as a direct object fact when its own retrieval note says
+    that it came from an analogue, regional context, or calculation/model.
+    """
+    result = {
+        **dict(envelope),
+        'patches': [
+            dict(patch)
+            for patch in envelope.get('patches') or []
+        ],
+    }
+    for patch in result['patches']:
+        if str(patch.get('status') or '') != 'filled':
+            continue
+        current = str(patch.get('value_origin') or 'direct')
+        if current != 'direct':
+            continue
+        inferred = _origin_from_explicit_basis(
+            str(patch.get('retrieval_note') or ''),
+        )
+        if inferred is not None:
+            patch['value_origin'] = inferred
+    return result
+
+
+def _origin_from_explicit_basis(note: str) -> str | None:
+    normalized = ' '.join(note.casefold().split())
+    if any(marker in normalized for marker in ANALOGUE_BASIS_MARKERS):
+        return 'analogue'
+    if any(marker in normalized for marker in CALCULATED_BASIS_MARKERS):
+        return 'calculated'
+    return None
 
 
 def owner_submission(
