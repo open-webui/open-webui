@@ -206,6 +206,9 @@ class DoclingLoader:
                 data={
                     'image_export_mode': 'placeholder',
                     'md_page_break_placeholder': page_break_marker,
+                    # Keep Docling params as user-provided form values. Encoding nested
+                    # values here would make Open WebUI responsible for Docling's API
+                    # quirks and could break when Docling changes its form contract.
                     **self.params,
                 },
                 headers=headers,
