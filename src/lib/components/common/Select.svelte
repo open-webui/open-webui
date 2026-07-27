@@ -34,6 +34,9 @@
 	/** Alignment of the dropdown: 'start' | 'end' */
 	export let align = 'start';
 
+	/** Side to open on: 'bottom' | 'top' */
+	export let side = 'bottom';
+
 	/** Callback when dropdown closes */
 	export let onClose: () => void = () => {};
 
@@ -62,8 +65,14 @@
 
 		contentEl.style.position = 'fixed';
 		contentEl.style.zIndex = '9999';
-		contentEl.style.top = `${rect.bottom + 4}px`;
 		contentEl.style.minWidth = `${rect.width}px`;
+		if (side === 'top') {
+			contentEl.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+			contentEl.style.top = 'auto';
+		} else {
+			contentEl.style.top = `${rect.bottom + 4}px`;
+			contentEl.style.bottom = 'auto';
+		}
 
 		if (align === 'end') {
 			contentEl.style.right = `${window.innerWidth - rect.right}px`;
