@@ -1079,6 +1079,28 @@ SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION = (
 )
 
 ####################################
+# KNOWLEDGE TOOLS
+####################################
+
+
+def _int_env(name: str, default: int) -> int:
+    try:
+        return max(int(os.getenv(name) or default), 1)
+    except (ValueError, TypeError):
+        return default
+
+
+# Total output of a single kb_exec call, whatever the command.
+KB_EXEC_MAX_OUTPUT_CHARS = _int_env('KB_EXEC_MAX_OUTPUT_CHARS', 30_000)
+# Files a single kb_exec grep may scan before it asks for a narrower scope.
+KB_EXEC_MAX_GREP_FILES = _int_env('KB_EXEC_MAX_GREP_FILES', 200)
+# Matching lines returned by kb_exec grep and grep_knowledge_files.
+KNOWLEDGE_GREP_MAX_MATCHES = _int_env('KNOWLEDGE_GREP_MAX_MATCHES', 50)
+# Characters returned by view_file / view_knowledge_file.
+VIEW_FILE_MAX_CHARS = _int_env('VIEW_FILE_MAX_CHARS', 100_000)
+VIEW_FILE_DEFAULT_MAX_CHARS = _int_env('VIEW_FILE_DEFAULT_MAX_CHARS', 10_000)
+
+####################################
 # TOOLS/FUNCTIONS PIP OPTIONS
 ####################################
 

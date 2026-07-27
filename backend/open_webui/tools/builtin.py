@@ -17,6 +17,11 @@ from typing import Literal, Optional
 from fastapi import HTTPException, Request
 
 from open_webui.config import RAG_EMBEDDING_QUERY_PREFIX
+from open_webui.env import (
+    KNOWLEDGE_GREP_MAX_MATCHES,
+    VIEW_FILE_DEFAULT_MAX_CHARS,
+    VIEW_FILE_MAX_CHARS,
+)
 from open_webui.models.channels import Channel, ChannelMember, Channels
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
@@ -2157,12 +2162,6 @@ async def search_knowledge_files(
         return json.dumps({'error': str(e)})
 
 
-# Hard cap for view_file / view_knowledge_file output
-MAX_VIEW_FILE_CHARS = 100_000
-DEFAULT_VIEW_FILE_MAX_CHARS = 10_000
-MAX_GREP_RESULTS = 50
-
-
 async def _get_accessible_chat_files(
     files: Optional[list[dict]],
     user: dict,
@@ -2229,7 +2228,7 @@ def _grep_file_models(
             if matches(line):
                 file_matches += 1
                 total_matches += 1
-                if not count_only and len(results) < MAX_GREP_RESULTS:
+                if not count_only and len(results) < KNOWLEDGE_GREP_MAX_MATCHES:
                     results.append(f'{file.id}  {file.filename}:{i}: {line}')
 
         if file_matches > 0 and count_only:
@@ -2244,8 +2243,8 @@ def _grep_file_models(
         return f'No matches for "{pattern}"'
 
     output = '\n'.join(results)
-    if total_matches > MAX_GREP_RESULTS:
-        output += f'\n[{MAX_GREP_RESULTS} of {total_matches} matches shown — use file_id to narrow]'
+    if total_matches > KNOWLEDGE_GREP_MAX_MATCHES:
+        output += f'\n[{KNOWLEDGE_GREP_MAX_MATCHES} of {total_matches} matches shown — use file_id to narrow]'
     return output
 
 
@@ -2589,7 +2588,7 @@ async def grep_knowledge_files(
 async def view_file(
     file_id: str,
     offset: int = 0,
-    max_chars: int = DEFAULT_VIEW_FILE_MAX_CHARS,
+    max_chars: int = VIEW_FILE_DEFAULT_MAX_CHARS,
     line_numbers: bool = False,
     start_line: Optional[int] = None,
     end_line: Optional[int] = None,
@@ -2602,7 +2601,7 @@ async def view_file(
 
     :param file_id: The ID of the file to retrieve
     :param offset: Character offset to start reading from (default: 0)
-    :param max_chars: Maximum characters to return (default: 10000, hard cap: 100000)
+    :param max_chars: Maximum characters to return (a server-side hard cap applies)
     :param line_numbers: If true, prefix each line with its 1-indexed line number
     :param start_line: Optional 1-indexed start line (overrides offset/max_chars when set)
     :param end_line: Optional 1-indexed end line (inclusive)
@@ -2624,10 +2623,10 @@ async def view_file(
         try:
             max_chars = int(max_chars)
         except ValueError:
-            max_chars = DEFAULT_VIEW_FILE_MAX_CHARS
+            max_chars = VIEW_FILE_DEFAULT_MAX_CHARS
 
     # Enforce hard cap
-    max_chars = min(max(max_chars, 1), MAX_VIEW_FILE_CHARS)
+    max_chars = min(max(max_chars, 1), VIEW_FILE_MAX_CHARS)
     offset = max(offset, 0)
 
     try:
@@ -2705,7 +2704,7 @@ async def view_file(
 async def view_knowledge_file(
     file_id: str,
     offset: int = 0,
-    max_chars: int = DEFAULT_VIEW_FILE_MAX_CHARS,
+    max_chars: int = VIEW_FILE_DEFAULT_MAX_CHARS,
     line_numbers: bool = False,
     start_line: Optional[int] = None,
     end_line: Optional[int] = None,
@@ -2717,7 +2716,7 @@ async def view_knowledge_file(
 
     :param file_id: The ID of the file to retrieve
     :param offset: Character offset to start reading from (default: 0)
-    :param max_chars: Maximum characters to return (default: 10000, hard cap: 100000)
+    :param max_chars: Maximum characters to return (a server-side hard cap applies)
     :param line_numbers: If true, prefix each line with its 1-indexed line number
     :param start_line: Optional 1-indexed start line (overrides offset/max_chars when set)
     :param end_line: Optional 1-indexed end line (inclusive)
@@ -2739,10 +2738,10 @@ async def view_knowledge_file(
         try:
             max_chars = int(max_chars)
         except ValueError:
-            max_chars = DEFAULT_VIEW_FILE_MAX_CHARS
+            max_chars = VIEW_FILE_DEFAULT_MAX_CHARS
 
     # Enforce hard cap
-    max_chars = min(max(max_chars, 1), MAX_VIEW_FILE_CHARS)
+    max_chars = min(max(max_chars, 1), VIEW_FILE_MAX_CHARS)
     offset = max(offset, 0)
 
     try:

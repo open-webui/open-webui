@@ -19,15 +19,16 @@ from typing import Optional
 import regex
 from fastapi import Request
 
+from open_webui.env import (
+    KB_EXEC_MAX_GREP_FILES,
+    KB_EXEC_MAX_OUTPUT_CHARS,
+    KNOWLEDGE_GREP_MAX_MATCHES,
+)
+
 log = logging.getLogger(__name__)
 
-# Limits
-MAX_CAT_CHARS = 100_000
-DEFAULT_CAT_CHARS = 10_000
-MAX_GREP_FILES = 200
 DEFAULT_HEAD_LINES = 10
 DEFAULT_TAIL_LINES = 10
-MAX_GREP_MATCHES = 50
 
 # Matching time allowed per tool call. Backtracking cost is exponential in the length of the
 # matched text, so capping the pattern or the line does not bound it.
@@ -627,20 +628,9 @@ async def _kb_cat(args: list[str], flags: set[str], user: dict, model_knowledge:
         return resolved['error']
 
     content = resolved['content']
-    show_numbers = 'n' in flags
-
-    if len(content) > MAX_CAT_CHARS:
-        content = content[:MAX_CAT_CHARS]
-        truncated = True
-    else:
-        truncated = False
-
-    if show_numbers:
+    if 'n' in flags:
         lines = content.split('\n')
         content = '\n'.join(f'{i}: {line}' for i, line in enumerate(lines, 1))
-
-    if truncated:
-        content += f'\n[truncated at {MAX_CAT_CHARS:,} chars — use head/tail/sed/grep to navigate]'
 
     return content
 
@@ -790,7 +780,7 @@ async def _kb_grep(
     if ext_filter:
         accessible = [f for f in accessible if f['filename'].endswith(f'.{ext_filter}')]
 
-    if len(accessible) > MAX_GREP_FILES:
+    if len(accessible) > KB_EXEC_MAX_GREP_FILES:
         return f'Too many files ({len(accessible)}). Scope your search: grep "{pattern}" docs/ or grep "{pattern}" *.py'
 
     from open_webui.models.files import Files
@@ -822,7 +812,7 @@ async def _kb_grep(
 
             if not count_only and not filenames_only:
                 for line_num, line_text in file_matches:
-                    if len(results) < MAX_GREP_MATCHES:
+                    if len(results) < KNOWLEDGE_GREP_MAX_MATCHES:
                         results.append(f'{file_info["id"]}  {file_info["filename"]}:{line_num}: {line_text.rstrip()}')
 
     if count_only:
@@ -841,8 +831,8 @@ async def _kb_grep(
         return f'No matches for "{pattern}" across {len(accessible)} files'
 
     output = '\n'.join(results)
-    if total_matches > MAX_GREP_MATCHES:
-        output += f'\n[showing {MAX_GREP_MATCHES} of {total_matches} matches]'
+    if total_matches > KNOWLEDGE_GREP_MAX_MATCHES:
+        output += f'\n[showing {KNOWLEDGE_GREP_MAX_MATCHES} of {total_matches} matches]'
     return output
 
 
@@ -1181,7 +1171,13 @@ async def kb_exec(
 
         # One budget for the whole command: a per-search budget would multiply by segment count.
         with match_budget():
-            return await _execute_pipeline(segments, __user__, __model_knowledge__)
+            output = await _execute_pipeline(segments, __user__, __model_knowledge__)
+        if len(output) > KB_EXEC_MAX_OUTPUT_CHARS:
+            output = output[:KB_EXEC_MAX_OUTPUT_CHARS] + (
+                f'\n[output truncated at {KB_EXEC_MAX_OUTPUT_CHARS:,} chars'
+                ' — narrow the command with a path, glob, head/tail/sed or grep]'
+            )
+        return output
     except Exception as e:
         log.exception(f'kb_exec error: {e}')
         return f'Error: {e}'
