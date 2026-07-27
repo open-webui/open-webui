@@ -25,6 +25,7 @@ from open_webui.utils.task import (
     emoji_generation_template,
     follow_up_generation_template,
     get_task_model_id,
+    get_task_model_max_tokens_payload,
     image_prompt_generation_template,
     moa_response_generation_template,
     query_generation_template,
@@ -40,6 +41,7 @@ router = APIRouter()
 TASK_CONFIG_KEYS = {
     'TASK_MODEL': 'task.model.default',
     'TASK_MODEL_EXTERNAL': 'task.model.external',
+    'TASK_MODEL_MAX_TOKENS': 'task.model.max_tokens',
     'TITLE_GENERATION_PROMPT_TEMPLATE': 'task.title.prompt_template',
     'IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE': 'task.image.prompt_template',
     'ENABLE_AUTOCOMPLETE_GENERATION': 'task.autocomplete.enable',
@@ -83,6 +85,7 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
 class TaskConfigForm(BaseModel):
     TASK_MODEL: Optional[str]
     TASK_MODEL_EXTERNAL: Optional[str]
+    TASK_MODEL_MAX_TOKENS: Optional[int] = None
     ENABLE_TITLE_GENERATION: bool
     TITLE_GENERATION_PROMPT_TEMPLATE: str
     IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: str
@@ -154,19 +157,11 @@ async def generate_title(request: Request, form_data: dict, user=Depends(get_ver
 
     content = await title_generation_template(template, form_data['messages'], user)
 
-    max_tokens = models[task_model_id].get('info', {}).get('params', {}).get('max_tokens', 1000)
-
     payload = {
         'model': task_model_id,
         'messages': [{'role': 'user', 'content': content}],
         'stream': False,
-        **(
-            {'max_tokens': max_tokens}
-            if models[task_model_id].get('owned_by') == 'ollama'
-            else {
-                'max_completion_tokens': max_tokens,
-            }
-        ),
+        **await get_task_model_max_tokens_payload(models[task_model_id]),
         'metadata': {
             **(request.state.metadata if hasattr(request.state, 'metadata') else {}),
             'task': str(TASKS.TITLE_GENERATION),
@@ -237,6 +232,7 @@ async def generate_follow_ups(request: Request, form_data: dict, user=Depends(ge
         'model': task_model_id,
         'messages': [{'role': 'user', 'content': content}],
         'stream': False,
+        **await get_task_model_max_tokens_payload(models[task_model_id]),
         'metadata': {
             **(request.state.metadata if hasattr(request.state, 'metadata') else {}),
             'task': str(TASKS.FOLLOW_UP_GENERATION),
@@ -307,6 +303,7 @@ async def generate_chat_tags(request: Request, form_data: dict, user=Depends(get
         'model': task_model_id,
         'messages': [{'role': 'user', 'content': content}],
         'stream': False,
+        **await get_task_model_max_tokens_payload(models[task_model_id]),
         'metadata': {
             **(request.state.metadata if hasattr(request.state, 'metadata') else {}),
             'task': str(TASKS.TAGS_GENERATION),
@@ -371,6 +368,7 @@ async def generate_image_prompt(request: Request, form_data: dict, user=Depends(
         'model': task_model_id,
         'messages': [{'role': 'user', 'content': content}],
         'stream': False,
+        **await get_task_model_max_tokens_payload(models[task_model_id]),
         'metadata': {
             **(request.state.metadata if hasattr(request.state, 'metadata') else {}),
             'task': str(TASKS.IMAGE_PROMPT_GENERATION),
@@ -453,6 +451,7 @@ async def generate_queries(request: Request, form_data: dict, user=Depends(get_v
         'model': task_model_id,
         'messages': [{'role': 'user', 'content': content}],
         'stream': False,
+        **await get_task_model_max_tokens_payload(models[task_model_id]),
         'metadata': {
             **(request.state.metadata if hasattr(request.state, 'metadata') else {}),
             'task': str(TASKS.QUERY_GENERATION),
@@ -534,6 +533,7 @@ async def generate_autocompletion(request: Request, form_data: dict, user=Depend
         'model': task_model_id,
         'messages': [{'role': 'user', 'content': content}],
         'stream': False,
+        **await get_task_model_max_tokens_payload(models[task_model_id]),
         'metadata': {
             **(request.state.metadata if hasattr(request.state, 'metadata') else {}),
             'task': str(TASKS.AUTOCOMPLETE_GENERATION),

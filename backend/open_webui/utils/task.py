@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Any, Optional
 
 from open_webui.config import DEFAULT_RAG_TEMPLATE
+from open_webui.models.config import Config
 from open_webui.utils.misc import get_last_user_message, get_messages_content
 
 log = logging.getLogger(__name__)
@@ -25,6 +26,16 @@ def get_task_model_id(default_model_id: str, task_model: str, task_model_externa
             task_model_id = task_model_external
 
     return task_model_id
+
+
+async def get_task_model_max_tokens_payload(model: dict) -> dict:
+    """Payload fragment limiting a task generation, empty when no limit is configured."""
+    max_tokens = await Config.get('task.model.max_tokens')
+    if not max_tokens:
+        return {}
+
+    key = 'max_tokens' if model.get('owned_by') == 'ollama' else 'max_completion_tokens'
+    return {key: max_tokens}
 
 
 def prompt_variables_template(template: str, variables: dict[str, str]) -> str:

@@ -22,6 +22,7 @@
 	let taskConfig = {
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
+		TASK_MODEL_MAX_TOKENS: null as number | null,
 		ENABLE_TITLE_GENERATION: true,
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_FOLLOW_UP_GENERATION: true,
@@ -206,6 +207,23 @@
 							</SettingsSelect>
 						</AdminSettingField>
 					</div>
+
+					<AdminSettingField
+						className="mt-2.5"
+						label={$i18n.t('Task Model Max Output Tokens')}
+						description={$i18n.t(
+							'Limits how much a task model may generate for titles, tags, follow-ups, queries, autocompletion, image prompts and compaction summaries. Leave empty for no limit.'
+						)}
+					>
+						<input
+							type="number"
+							min="1"
+							step="1"
+							class={inputClass}
+							placeholder={$i18n.t('No limit')}
+							bind:value={taskConfig.TASK_MODEL_MAX_TOKENS}
+						/>
+					</AdminSettingField>
 				</div>
 			</AdminSettingSection>
 

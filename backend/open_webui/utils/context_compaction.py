@@ -11,6 +11,7 @@ from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_message_list
 from open_webui.utils.task import (
     get_task_model_id,
+    get_task_model_max_tokens_payload,
     prompt_template,
     prompt_variables_template,
     replace_messages_variable,
@@ -394,16 +395,11 @@ async def _generate_summary(
     prompt = prompt_variables_template(prompt, {'{{PREVIOUS_SUMMARY}}': previous_summary or ''})
     prompt = await prompt_template(prompt, user)
 
-    max_tokens = models[task_model_id].get('info', {}).get('params', {}).get('max_tokens', 1000)
     payload = {
         'model': task_model_id,
         'messages': [{'role': 'user', 'content': prompt}],
         'stream': False,
-        **(
-            {'max_tokens': max_tokens}
-            if models[task_model_id].get('owned_by') == 'ollama'
-            else {'max_completion_tokens': max_tokens}
-        ),
+        **await get_task_model_max_tokens_payload(models[task_model_id]),
         'metadata': {
             **(request.state.metadata if hasattr(request.state, 'metadata') else {}),
             'task': 'context_compaction',
