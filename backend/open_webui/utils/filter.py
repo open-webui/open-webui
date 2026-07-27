@@ -13,7 +13,6 @@ class FilterContext:
         self.valves_by_id = None
         self.function_valves = {}
         self.user_valves = {}
-        self.signatures = {}
 
     async def get_function_valves(self, filter_ids, filter_id, Valves):
         if filter_id not in self.function_valves:
@@ -22,12 +21,6 @@ class FilterContext:
             valves = self.valves_by_id.get(filter_id)
             self.function_valves[filter_id] = Valves(**(valves if valves else {}))
         return self.function_valves[filter_id]
-
-    def get_signature(self, handler):
-        signature_key = getattr(handler, '__func__', handler)
-        if signature_key not in self.signatures:
-            self.signatures[signature_key] = inspect.signature(handler)
-        return self.signatures[signature_key]
 
     async def get_user_valves(self, filter_id, user_id, UserValves):
         user_valves_key = (filter_id, user_id)
@@ -182,7 +175,7 @@ async def process_filter_function(
     valves_by_id = await apply_filter_valves(function_module, filter_context, valves_by_id, filter_ids, filter_id)
 
     try:
-        sig = filter_context.get_signature(handler) if filter_context is not None else inspect.signature(handler)
+        sig = inspect.signature(handler)
         params = get_filter_params(sig, filter_id, filter_type, form_data, extra_params)
 
         if '__user__' in sig.parameters:
