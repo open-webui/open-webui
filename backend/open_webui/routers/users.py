@@ -203,6 +203,7 @@ class SharingPermissions(BaseModel):
     public_notes: bool = True
     folders: bool = False
     public_chats: bool = False
+    open_chats: bool = False
     public_calendars: bool = False
 
 
