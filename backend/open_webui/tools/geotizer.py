@@ -404,12 +404,12 @@ async def _produce_valid_owner_envelope(
             run_id=run_id,
             attempt=attempt,
         )
-        envelope = correct_explicitly_derived_value_origins(envelope)
         envelope = apply_structured_gis_field_proposals(
             next_batch,
             envelope,
             context.get('contributor_evidence') or [],
         )
+        envelope = correct_explicitly_derived_value_origins(envelope)
         envelope['run_id'] = run_id
         violations = validate_owner_envelope(next_batch, envelope)
         if not violations:
