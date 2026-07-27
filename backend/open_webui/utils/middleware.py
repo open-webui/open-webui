@@ -3526,7 +3526,7 @@ async def outlet_filter_handler(ctx):
             outlet_result = outlet_data
 
         if outlet_result and outlet_result.get('messages'):
-            if not is_temp_chat and messages_map:
+            if not is_unsaved_chat and messages_map:
                 for message in outlet_result['messages']:
                     outlet_message_id = message.get('id')
                     if outlet_message_id and outlet_message_id in messages_map:
