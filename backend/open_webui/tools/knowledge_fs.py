@@ -7,13 +7,16 @@ for AI models to interact with knowledge bases using commands they already know.
 Re-exported through builtin.py for consistent imports.
 """
 
+import contextvars
 import json
 import logging
 import re
 import shlex
 import time
+from contextlib import contextmanager
 from typing import Optional
 
+import regex
 from fastapi import Request
 
 log = logging.getLogger(__name__)
@@ -25,6 +28,36 @@ MAX_GREP_FILES = 200
 DEFAULT_HEAD_LINES = 10
 DEFAULT_TAIL_LINES = 10
 MAX_GREP_MATCHES = 50
+
+# Matching time allowed per tool call. Backtracking cost is exponential in the length of the
+# matched text, so capping the pattern or the line does not bound it.
+MATCH_BUDGET_SECONDS = 2.0
+
+
+class MatchBudgetExceeded(Exception):
+    """A tool call spent its whole matching budget, so the caller reports it."""
+
+
+class MatchBudget:
+    """Matching time remaining, counted only inside search() so awaits do not consume it."""
+
+    def __init__(self):
+        self.remaining = MATCH_BUDGET_SECONDS
+
+
+# Scoped to the running task, so one budget covers every matcher a command builds without
+# threading it through each handler.
+_active_budget: contextvars.ContextVar[MatchBudget | None] = contextvars.ContextVar('kb_match_budget', default=None)
+
+
+@contextmanager
+def match_budget():
+    """Bound the matching time of one tool call rather than of each search it runs."""
+    token = _active_budget.set(MatchBudget())
+    try:
+        yield
+    finally:
+        _active_budget.reset(token)
 
 
 # =============================================================================
@@ -59,11 +92,26 @@ def build_matcher(pattern: str, case_insensitive: bool = False, use_regex: bool 
     if use_regex:
         normalized = normalize_regex(pattern)
         try:
-            re_flags = re.IGNORECASE if case_insensitive else 0
-            compiled = re.compile(normalized, re_flags)
-        except re.error as e:
+            re_flags = regex.IGNORECASE if case_insensitive else 0
+            compiled = regex.compile(normalized, re_flags)
+        except regex.error as e:
             return None, f'Invalid regex: {e}'
-        return (lambda line: bool(compiled.search(line))), None
+
+        budget = _active_budget.get() or MatchBudget()
+
+        def matches(line: str) -> bool:
+            started = time.monotonic()
+            try:
+                # A negative timeout disables it, so an exhausted budget must not reach search().
+                if budget.remaining <= 0:
+                    raise TimeoutError
+                return bool(compiled.search(line, timeout=budget.remaining))
+            except TimeoutError:
+                raise MatchBudgetExceeded(f'Search exceeded {MATCH_BUDGET_SECONDS:g}s, narrow the pattern') from None
+            finally:
+                budget.remaining -= time.monotonic() - started
+
+        return matches, None
     else:
         sp = pattern.lower() if case_insensitive else pattern
         return (lambda line: sp in (line.lower() if case_insensitive else line)), None
@@ -1131,7 +1179,9 @@ async def kb_exec(
         if not segments:
             return 'Could not parse command. Run kb_exec("ls") to start.'
 
-        return await _execute_pipeline(segments, __user__, __model_knowledge__)
+        # One budget for the whole command: a per-search budget would multiply by segment count.
+        with match_budget():
+            return await _execute_pipeline(segments, __user__, __model_knowledge__)
     except Exception as e:
         log.exception(f'kb_exec error: {e}')
         return f'Error: {e}'
