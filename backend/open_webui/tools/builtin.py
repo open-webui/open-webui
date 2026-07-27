@@ -52,6 +52,7 @@ from open_webui.routers.retrieval import search_web as _search_web
 from open_webui.tasks import stop_item_tasks
 from open_webui.events import EVENTS, publish_event
 from open_webui.socket.main import sio
+from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
 
@@ -378,7 +379,7 @@ async def generate_image(
         image_files = [{'type': 'image', 'url': img['url']} for img in images]
 
         # Persist files to DB if chat context is available
-        if __chat_id__ and __message_id__ and images:
+        if is_saved_chat_id(__chat_id__) and __message_id__ and images:
             db_files = await Chats.add_message_files_by_id_and_message_id(
                 __chat_id__,
                 __message_id__,
@@ -446,7 +447,7 @@ async def edit_image(
         image_files = [{'type': 'image', 'url': img['url']} for img in images]
 
         # Persist files to DB if chat context is available
-        if __chat_id__ and __message_id__ and images:
+        if is_saved_chat_id(__chat_id__) and __message_id__ and images:
             db_files = await Chats.add_message_files_by_id_and_message_id(
                 __chat_id__,
                 __message_id__,
@@ -3164,8 +3165,8 @@ async def create_tasks(
     :param tasks: List of task items. Each item: content (string, required), status (pending|in_progress|completed|cancelled, default pending), id (optional, auto-generated).
     :return: JSON with the full task list and summary counts
     """
-    if __chat_id__ is None:
-        return json.dumps({'error': 'Chat context not available'})
+    if not is_saved_chat_id(__chat_id__):
+        return json.dumps({'error': 'Saved chat context not available'})
 
     try:
         all_tasks = []
@@ -3216,8 +3217,8 @@ async def update_task(
     :param status: New status: completed, in_progress, pending, or cancelled (default: completed)
     :return: JSON with the updated task list and summary counts
     """
-    if __chat_id__ is None:
-        return json.dumps({'error': 'Chat context not available'})
+    if not is_saved_chat_id(__chat_id__):
+        return json.dumps({'error': 'Saved chat context not available'})
 
     try:
         status = status.strip().lower()

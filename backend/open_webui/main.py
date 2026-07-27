@@ -220,6 +220,7 @@ from open_webui.utils.chat import (
 from open_webui.utils.chat import (
     generate_chat_completion as chat_completion_handler,
 )
+from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.chat_variables import (
     normalize_chat_variables,
 )
@@ -264,7 +265,7 @@ log = logging.getLogger(__name__)
 
 
 async def emit_chat_list_event(metadata: dict, chat_id: str):
-    if not chat_id or chat_id.startswith(('channel:', 'local:')):
+    if not is_saved_chat_id(chat_id):
         return
 
     event_emitter = await get_event_emitter(metadata, update_db=False)
@@ -1141,7 +1142,11 @@ async def chat_completion(
         chat_id = form_data.get('chat_id') or ''
         chat_variables = form_data.pop('chat_variables', None)
         if chat_variables is None:
-            existing_chat = await Chats.get_chat_by_id(chat_id) if chat_id else None
+            existing_chat = (
+                await Chats.get_chat_by_id(chat_id)
+                if is_saved_chat_id(chat_id)
+                else None
+            )
             chat_variables = existing_chat.variables if existing_chat else {}
 
         chat_variables = normalize_chat_variables(chat_variables)

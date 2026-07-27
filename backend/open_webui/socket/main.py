@@ -37,6 +37,7 @@ from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
 from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user_by_token
+from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.redis import (
     build_sentinel_url,
     get_redis_connection,
@@ -945,6 +946,7 @@ async def get_event_emitter(request_info, update_db=True):
         chat_id = request_info['chat_id']
         message_id = request_info['message_id']
         internal = request_info.get('internal') is True
+        save_to_chat = update_db and message_id and is_saved_chat_id(chat_id)
 
         if internal and event_data.get('type') == 'notification':
             return
@@ -963,7 +965,7 @@ async def get_event_emitter(request_info, update_db=True):
                 room=room,
             )
 
-        if update_db and message_id and not (request_info.get('chat_id') or '').startswith('local:'):
+        if save_to_chat:
             event_type = event_data.get('type')
 
             if event_type == 'status':
