@@ -100,6 +100,8 @@ async def send_request(
     key: str | None = None,
     user: UserModel = None,
     stream: bool = False,
+    # passthrough must stay False for /api/chat: middleware parses it per line
+    passthrough: bool = False,
     content_type: str | None = None,
     metadata: dict | None = None,
     api_config: dict | None = None,
@@ -171,7 +173,7 @@ async def send_request(
 
             streaming = True
             return StreamingResponse(
-                stream_wrapper(r),
+                stream_wrapper(r, passthrough=passthrough),
                 status_code=r.status,
                 headers=response_headers,
             )
@@ -658,6 +660,7 @@ async def pull_model(
         key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
         user=user,
         stream=True,
+        passthrough=True,
     )
 
 
@@ -697,6 +700,7 @@ async def push_model(
         key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
         user=user,
         stream=True,
+        passthrough=True,
     )
 
 
@@ -729,6 +733,7 @@ async def create_model(
         key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
         user=user,
         stream=True,
+        passthrough=True,
     )
 
 
@@ -1011,6 +1016,7 @@ async def generate_completion(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=True,
+        passthrough=True,
     )
 
 
@@ -1242,6 +1248,7 @@ async def generate_openai_completion(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
+        passthrough=True,
         metadata=metadata,
         api_config=api_config,
         request=request,
@@ -1350,6 +1357,7 @@ async def generate_openai_chat_completion(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
+        passthrough=True,
         metadata=metadata,
         api_config=api_config,
         request=request,
@@ -1401,6 +1409,7 @@ async def generate_anthropic_messages(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
+        passthrough=True,
         content_type='text/event-stream' if payload.get('stream', False) else None,
         api_config=api_config,
         request=request,
@@ -1458,6 +1467,7 @@ async def generate_responses(
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
+        passthrough=True,
         content_type='text/event-stream' if payload.get('stream', False) else None,
         api_config=api_config,
         request=request,
