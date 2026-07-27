@@ -113,8 +113,7 @@
 			const id = node.getAttribute('data-id') || '';
 			// TipTap stores the trigger char in data-mention-suggestion-char (usually "@")
 			const ch = node.getAttribute('data-mention-suggestion-char') || '@';
-			// Skills are always serialized as <$id|label>, even when selected from "/".
-			const mentionChar = id.includes('|') ? '$' : ch;
+			const mentionChar = ch === '/' ? '$' : ch;
 			return `<${mentionChar}${id}>`;
 		}
 	});
@@ -284,7 +283,8 @@
 	const getMentionText = ({ node, suggestion }) => {
 		const id = node.attrs.id ?? '';
 		const label = node.attrs.label ?? id;
-		const char = id.includes('|') ? '$' : (suggestion?.char ?? '@');
+		const ch = node.attrs.mentionSuggestionChar ?? suggestion?.char ?? '@';
+		const char = ch === '/' ? '$' : ch;
 		return `${char}${label}`;
 	};
 
@@ -965,7 +965,9 @@
 				}
 			},
 			editorProps: {
-				attributes: { id },
+				// the tiptap placeholder never becomes the field's accessible name;
+				// function form so a placeholder change is picked up after mount
+				attributes: () => ({ id, 'aria-label': _placeholder }),
 				handleDrop: (view, event) => {
 					// Intercept sidebar chat item drops to prevent ProseMirror
 					// from inserting the raw JSON as text. The actual handling

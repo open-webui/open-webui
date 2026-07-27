@@ -3,6 +3,15 @@
 	const invisibleDragImage = new Image();
 	invisibleDragImage.src =
 		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+	/**
+	 * At most one chat hover preview may be open across all ChatItem instances.
+	 * bits-ui's safe-polygon close only re-evaluates on pointermove, so a
+	 * preview can be left open when the pointer stops on a neighboring row
+	 * while still inside the previous row's grace area; opening a preview
+	 * therefore force-closes whichever one is still up.
+	 */
+	let closeActiveHoverPreview: (() => void) | null = null;
 </script>
 
 <script lang="ts">
@@ -17,6 +26,7 @@
 		getAllTags,
 		getChatById,
 		getChatListByTagName,
+		markChatUnreadById,
 		updateChatById,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
@@ -67,6 +77,7 @@
 
 	export let ownerName: string | null = null;
 	export let ownerUserId: string | null = null;
+	export let onReadStateChange: (data: Record<string, unknown>) => void = () => {};
 
 	export let onDragEnd = () => {};
 
@@ -94,6 +105,17 @@
 	let mouseOver = false;
 	let openPreview = false;
 
+	const closeHoverPreview = () => {
+		if (openPreview) {
+			openPreview = false;
+		}
+	};
+
+	$: if (openPreview && closeActiveHoverPreview !== closeHoverPreview) {
+		closeActiveHoverPreview?.();
+		closeActiveHoverPreview = closeHoverPreview;
+	}
+
 	// Local state: tracks the last updatedAt seen while the user was viewing
 	// this chat.  Survives prop refreshes from sidebar data re-fetches that
 	// would overwrite the `lastReadAt` prop with a stale server value.
@@ -117,6 +139,18 @@
 			chat = await getChatById(localStorage.token, id);
 			draggable = true;
 		}
+	};
+
+	const markUnreadHandler = async () => {
+		const res = await markChatUnreadById(localStorage.token, id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (!res) return;
+
+		viewedAt = null;
+		lastReadAt = res.last_read_at ?? 0;
+		onReadStateChange(res);
 	};
 
 	let showShareChatModal = false;
@@ -311,6 +345,10 @@
 			el.removeEventListener('dragstart', onDragStart);
 			el.removeEventListener('drag', onDrag);
 			el.removeEventListener('dragend', onDragEndHandler);
+
+			if (closeActiveHoverPreview === closeHoverPreview) {
+				closeActiveHoverPreview = null;
+			}
 		};
 	});
 
@@ -520,6 +558,7 @@
 							: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
 						: ' hover:bg-gray-50 dark:hover:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-900'}  whitespace-nowrap text-ellipsis transition"
 				href="/c/{id}"
+				aria-current={id === $chatId ? 'page' : undefined}
 				onclick={() => {
 					openPreview = false;
 					dispatch('select');
@@ -597,7 +636,6 @@
 		</LinkPreview.Root>
 	{/if}
 
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	{#if !readonly}
 		<div
 			id="sidebar-chat-item-menu"
@@ -606,12 +644,6 @@
 				: 'invisible group-hover:visible'} absolute {className === 'pr-2'
 				? 'right-[8px]'
 				: 'right-1'} inset-y-0 mr-1.5 flex items-center"
-			on:mouseenter={(e) => {
-				mouseOver = true;
-			}}
-			on:mouseleave={(e) => {
-				mouseOver = false;
-			}}
 		>
 			{#if confirmEdit}
 				<div
@@ -676,6 +708,7 @@
 						deleteHandler={() => {
 							showDeleteConfirm = true;
 						}}
+						{markUnreadHandler}
 						onClose={() => {
 							dispatch('unselect');
 						}}
@@ -698,6 +731,7 @@
 						<!-- Shortcut support using "delete-chat-button" id -->
 						<button
 							id="delete-chat-button"
+							aria-label={$i18n.t('Delete')}
 							class="hidden"
 							on:click={() => {
 								showDeleteConfirm = true;

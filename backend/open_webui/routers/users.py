@@ -1069,36 +1069,41 @@ async def get_user_preview(
     user_group_ids = {g.id for g in user_groups}
 
     all_models = await Models.get_all_models(db=db)
-    accessible_model_ids = await AccessGrants.get_accessible_resource_ids(
+    active_models = [m for m in all_models if m.is_active]
+    owned_model_ids = {m.id for m in active_models if m.user_id == user_id}
+    granted_model_ids = await AccessGrants.get_accessible_resource_ids(
         user_id=user_id,
         resource_type='model',
-        resource_ids=[m.id for m in all_models],
+        resource_ids=[m.id for m in active_models if m.user_id != user_id],
         permission='read',
         user_group_ids=user_group_ids,
         db=db,
     )
+    accessible_model_ids = owned_model_ids | granted_model_ids
 
     all_knowledge = await Knowledges.get_knowledge_bases(db=db)
-    accessible_knowledge_ids = await AccessGrants.get_accessible_resource_ids(
+    owned_knowledge_ids = {k.id for k in all_knowledge if k.user_id == user_id}
+    granted_knowledge_ids = await AccessGrants.get_accessible_resource_ids(
         user_id=user_id,
         resource_type='knowledge',
-        resource_ids=[k.id for k in all_knowledge],
+        resource_ids=[k.id for k in all_knowledge if k.user_id != user_id],
         permission='read',
         user_group_ids=user_group_ids,
         db=db,
     )
+    accessible_knowledge_ids = owned_knowledge_ids | granted_knowledge_ids
 
     all_tools = await Tools.get_tools(defer_content=True, db=db)
-    accessible_tool_ids = await AccessGrants.get_accessible_resource_ids(
+    owned_tool_ids = {t.id for t in all_tools if t.user_id == user_id}
+    granted_tool_ids = await AccessGrants.get_accessible_resource_ids(
         user_id=user_id,
         resource_type='tool',
-        resource_ids=[t.id for t in all_tools],
+        resource_ids=[t.id for t in all_tools if t.user_id != user_id],
         permission='read',
         user_group_ids=user_group_ids,
         db=db,
     )
-
-    active_models = [m for m in all_models if m.is_active]
+    accessible_tool_ids = owned_tool_ids | granted_tool_ids
 
     return {
         'user': {'id': target_user.id, 'name': target_user.name},

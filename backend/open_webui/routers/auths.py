@@ -26,6 +26,8 @@ from open_webui.env import (
     ENABLE_INITIAL_ADMIN_SIGNUP,
     ENABLE_OAUTH_TOKEN_EXCHANGE,
     OAUTH_TOKEN_EXCHANGE_ALLOWED_AUDIENCES,
+    OAUTH_TOKEN_EXCHANGE_RATE_LIMIT,
+    OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW,
     WEBUI_AUTH,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
@@ -85,6 +87,17 @@ log = logging.getLogger(__name__)
 # Forgive us our failed attempts, as we forgive those
 # who exceed their allotted rate against this gate.
 signin_rate_limiter = RateLimiter(redis_client=get_redis_client(), limit=5 * 3, window=60 * 3)
+# Best-effort throttle only: there is no caller identity before the provider answers,
+# and deployments may derive request.client from proxy headers.
+token_exchange_rate_limiter = (
+    RateLimiter(
+        redis_client=get_redis_client(),
+        limit=OAUTH_TOKEN_EXCHANGE_RATE_LIMIT,
+        window=OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW,
+    )
+    if OAUTH_TOKEN_EXCHANGE_RATE_LIMIT is not None
+    else None
+)
 
 ADMIN_CONFIG_KEYS = {
     'SHOW_ADMIN_DETAILS': 'auth.admin.show',
@@ -105,6 +118,7 @@ ADMIN_CONFIG_KEYS = {
     'AUTOMATION_MIN_INTERVAL': 'automations.min_interval',
     'ENABLE_AUTOMATIONS': 'automations.enable',
     'ENABLE_CHANNELS': 'channels.enable',
+    'CHANNEL_MODEL_RESPONSE_MODE': 'channels.model_response_mode',
     'ENABLE_CALENDAR': 'calendar.enable',
     'ENABLE_MEMORIES': 'memories.enable',
     'ENABLE_MEMORY_SYSTEM_CONTEXT': 'memories.system_context.enable',
@@ -1185,6 +1199,7 @@ class AdminConfig(BaseModel):
     AUTOMATION_MIN_INTERVAL: int | str | None = None
     ENABLE_AUTOMATIONS: bool
     ENABLE_CHANNELS: bool
+    CHANNEL_MODEL_RESPONSE_MODE: str = 'thread'
     ENABLE_CALENDAR: bool
     ENABLE_MEMORIES: bool
     ENABLE_MEMORY_SYSTEM_CONTEXT: bool
@@ -1207,6 +1222,9 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
 
     if form_data.DEFAULT_USER_ROLE not in ['pending', 'user', 'admin']:
         updates.pop('ui.default_user_role', None)
+
+    if form_data.CHANNEL_MODEL_RESPONSE_MODE not in ['thread', 'channel']:
+        updates.pop('channels.model_response_mode', None)
 
     pattern = r'^(-1|0|(-?\d+(\.\d+)?)(ms|s|m|h|d|w))$'
 
@@ -1292,6 +1310,7 @@ class OAuthConfigForm(BaseModel):
     """All OAuth/OIDC settings exposed to the admin panel."""
 
     # General OAuth
+    ENABLE_OAUTH: bool | None = None
     ENABLE_OAUTH_SIGNUP: bool | None = None
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL: bool | None = None
     OAUTH_AUTO_REDIRECT: bool | None = None
@@ -1347,6 +1366,7 @@ OAUTH_COMMA_LIST_FIELDS = {
 
 
 OAUTH_CONFIG_KEYS = {
+    'ENABLE_OAUTH': 'oauth.enable',
     'ENABLE_OAUTH_SIGNUP': 'oauth.enable_signup',
     'OAUTH_MERGE_ACCOUNTS_BY_EMAIL': 'oauth.merge_accounts_by_email',
     'OAUTH_AUTO_REDIRECT': 'oauth.auto_redirect',
@@ -1550,6 +1570,14 @@ async def token_exchange(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Token exchange is disabled',
+        )
+
+    if token_exchange_rate_limiter and token_exchange_rate_limiter.is_limited(
+        request.client.host if request.client else 'unknown'
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=ERROR_MESSAGES.RATE_LIMIT_EXCEEDED,
         )
 
     provider = provider.lower()

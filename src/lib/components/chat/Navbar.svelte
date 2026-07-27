@@ -35,6 +35,7 @@
 	import ChatPlus from '../icons/ChatPlus.svelte';
 	import ChatCheck from '../icons/ChatCheck.svelte';
 	import Knobs from '../icons/Knobs.svelte';
+	import { isTemporaryChatId } from '$lib/utils/chatId';
 
 	const i18n = getContext('i18n');
 
@@ -247,7 +248,7 @@
 		</div>
 	</div>
 
-	{#if $temporaryChatEnabled && ($chatId ?? '').startsWith('local:')}
+	{#if $temporaryChatEnabled && isTemporaryChatId($chatId)}
 		<div class=" w-full z-30 text-center">
 			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
 		</div>

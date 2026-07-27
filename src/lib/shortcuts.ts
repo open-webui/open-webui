@@ -23,12 +23,15 @@ export enum Shortcut {
 	DELETE_CHAT = 'deleteChat',
 	OPEN_MODEL_SELECTOR = 'openModelSelector',
 	TOGGLE_DICTATION = 'toggleDictation',
+	NAVIGATE_CHAT_UP = 'navigateChatUp',
+	NAVIGATE_CHAT_DOWN = 'navigateChatDown',
 
 	//Global
 	SEARCH = 'search',
 	OPEN_SETTINGS = 'openSettings',
 	SHOW_SHORTCUTS = 'showShortcuts',
 	TOGGLE_SIDEBAR = 'toggleSidebar',
+	TOGGLE_CONTROLS = 'toggleControls',
 	CLOSE_MODAL = 'closeModal',
 
 	//Input
@@ -57,10 +60,13 @@ export const CONFIGURABLE_SHORTCUTS = [
 	Shortcut.DELETE_CHAT,
 	Shortcut.OPEN_MODEL_SELECTOR,
 	Shortcut.TOGGLE_DICTATION,
+	Shortcut.NAVIGATE_CHAT_UP,
+	Shortcut.NAVIGATE_CHAT_DOWN,
 	Shortcut.SEARCH,
 	Shortcut.OPEN_SETTINGS,
 	Shortcut.SHOW_SHORTCUTS,
 	Shortcut.TOGGLE_SIDEBAR,
+	Shortcut.TOGGLE_CONTROLS,
 	Shortcut.CLOSE_MODAL,
 	Shortcut.FOCUS_INPUT,
 	Shortcut.GENERATE_MESSAGE_PAIR,
@@ -78,10 +84,13 @@ export const DEFAULT_KEYBINDINGS: KeybindingsMap = {
 	[Shortcut.DELETE_CHAT]: 'Cmd+Shift+Backspace',
 	[Shortcut.OPEN_MODEL_SELECTOR]: 'Cmd+Shift+M',
 	[Shortcut.TOGGLE_DICTATION]: 'Cmd+Shift+L',
+	[Shortcut.NAVIGATE_CHAT_UP]: '',
+	[Shortcut.NAVIGATE_CHAT_DOWN]: '',
 	[Shortcut.SEARCH]: 'Cmd+K',
 	[Shortcut.OPEN_SETTINGS]: 'Cmd+.',
 	[Shortcut.SHOW_SHORTCUTS]: 'Cmd+/',
 	[Shortcut.TOGGLE_SIDEBAR]: 'Cmd+Shift+S',
+	[Shortcut.TOGGLE_CONTROLS]: '',
 	[Shortcut.CLOSE_MODAL]: 'Escape',
 	[Shortcut.FOCUS_INPUT]: 'Shift+Escape',
 	[Shortcut.GENERATE_MESSAGE_PAIR]: 'Cmd+Shift+Enter',
@@ -225,6 +234,18 @@ export const shortcuts: ShortcutRegistry = {
 		category: 'Chat',
 		configurable: true
 	},
+	[Shortcut.NAVIGATE_CHAT_UP]: {
+		name: 'Navigate to Previous Chat',
+		keys: [],
+		category: 'Chat',
+		configurable: true
+	},
+	[Shortcut.NAVIGATE_CHAT_DOWN]: {
+		name: 'Navigate to Next Chat',
+		keys: [],
+		category: 'Chat',
+		configurable: true
+	},
 
 	//Global
 	[Shortcut.SEARCH]: {
@@ -248,6 +269,12 @@ export const shortcuts: ShortcutRegistry = {
 	[Shortcut.TOGGLE_SIDEBAR]: {
 		name: 'Toggle Sidebar',
 		keys: ['mod', 'shift', 'S'],
+		category: 'Global',
+		configurable: true
+	},
+	[Shortcut.TOGGLE_CONTROLS]: {
+		name: 'Toggle Controls',
+		keys: [],
 		category: 'Global',
 		configurable: true
 	},

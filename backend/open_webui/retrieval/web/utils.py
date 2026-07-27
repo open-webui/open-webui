@@ -3,9 +3,10 @@ import ipaddress
 import logging
 import socket
 import ssl
+import time
 import urllib.parse
 import urllib.request
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 from typing import (
     Any,
     AsyncIterator,
@@ -74,6 +75,34 @@ def resolve_hostname(hostname):
     return ipv4_addresses, ipv6_addresses
 
 
+def _is_global_addr(ip: str) -> bool:
+    addr = ipaddress.ip_address(ip)
+    if not addr.is_global:
+        return False
+    if not isinstance(addr, ipaddress.IPv6Address):
+        return True
+
+    embedded = []
+    if addr.ipv4_mapped:
+        embedded.append(addr.ipv4_mapped)
+    if addr.sixtofour:
+        embedded.append(addr.sixtofour)
+    if addr.teredo:
+        embedded.extend(addr.teredo)
+
+    b = addr.packed
+    if b[:12] == b"\x00" * 12:
+        embedded.append(ipaddress.IPv4Address(b[12:]))
+    elif b[:12] == b"\x00\x64\xff\x9b" + b"\x00" * 8:
+        embedded.append(ipaddress.IPv4Address(b[12:]))
+    elif b[:6] == b"\x00\x64\xff\x9b\x00\x01":
+        if b[8] != 0:
+            return False
+        embedded.append(ipaddress.IPv4Address(bytes((b[6], b[7], b[9], b[10]))))
+
+    return all(ip.is_global for ip in embedded)
+
+
 def validate_url(url: Union[str, Sequence[str]]):
     if isinstance(url, str):
         if isinstance(validators.url(url), validators.ValidationError):
@@ -110,8 +139,7 @@ def validate_url(url: Union[str, Sequence[str]]):
             # Check if any of the resolved addresses are private
             # DNS rebinding is mitigated at the connection layer; see _SSRFSafeResolver / _SSRFSafeAdapter
             for ip in ipv4_addresses + ipv6_addresses:
-                addr = ipaddress.ip_address(ip)
-                if not addr.is_global:
+                if not _is_global_addr(ip):
                     raise ValueError(ERROR_MESSAGES.INVALID_URL)
         return True
     elif isinstance(url, Sequence):
@@ -146,7 +174,7 @@ def _ssrf_safe_new_conn(self):
         raise OSError(f'getaddrinfo for {host!r} returned empty list')
     if not ENABLE_LOCAL_WEB_FETCH:
         for _, _, _, _, sa in infos:
-            if not ipaddress.ip_address(sa[0]).is_global:
+            if not _is_global_addr(sa[0]):
                 raise ValueError(ERROR_MESSAGES.INVALID_URL)
     err = None
     for fam, typ, proto, _, sa in infos:
@@ -207,7 +235,7 @@ class _SSRFSafeResolver(aiohttp.resolver.DefaultResolver):
         results = await super().resolve(host, port, family)
         if not ENABLE_LOCAL_WEB_FETCH:
             for entry in results:
-                if not ipaddress.ip_address(entry['host']).is_global:
+                if not _is_global_addr(entry['host']):
                     raise ValueError(ERROR_MESSAGES.INVALID_URL)
         return results
 
@@ -605,56 +633,62 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
     def _intercept_navigation_sync(self, route, request=None):
         req = request or route.request
 
-        if req.resource_type != 'document':
-            route.continue_()
-            return
-
         try:
             validate_url(req.url)
+            resp = route.fetch(max_redirects=0)
+
+            if 300 <= resp.status < 400:
+                for _ in range(20):
+                    if not AIOHTTP_CLIENT_ALLOW_REDIRECTS:
+                        route.abort()
+                        return
+
+                    location = resp.headers.get('location')
+                    if not location:
+                        break
+
+                    url = urllib.parse.urljoin(resp.url, location)
+                    validate_url(url)
+                    resp = route.fetch(url=url, max_redirects=0)
+                    if not 300 <= resp.status < 400:
+                        break
+                else:
+                    route.abort()
+                    return
         except Exception:
             route.abort()
             return
-
-        if AIOHTTP_CLIENT_ALLOW_REDIRECTS:
-            resp = route.fetch()
-        else:
-            try:
-                resp = route.fetch(max_redirects=0)
-            except TypeError:
-                route.abort()
-                return
-
-            if 300 <= resp.status < 400:
-                route.abort()
-                return
 
         route.fulfill(response=resp)
 
     async def _intercept_navigation(self, route, request=None):
         req = request or route.request
 
-        if req.resource_type != 'document':
-            await route.continue_()
-            return
-
         try:
             await run_in_threadpool(validate_url, req.url)
+            resp = await route.fetch(max_redirects=0)
+
+            if 300 <= resp.status < 400:
+                for _ in range(20):
+                    if not AIOHTTP_CLIENT_ALLOW_REDIRECTS:
+                        await route.abort()
+                        return
+
+                    location = resp.headers.get('location')
+                    if not location:
+                        break
+
+                    url = urllib.parse.urljoin(resp.url, location)
+                    await run_in_threadpool(validate_url, url)
+                    resp = await route.fetch(url=url, max_redirects=0)
+                    if not 300 <= resp.status < 400:
+                        break
+                else:
+                    await route.abort()
+                    return
         except Exception:
             await route.abort()
             return
-
-        if AIOHTTP_CLIENT_ALLOW_REDIRECTS:
-            resp = await route.fetch()
-        else:
-            try:
-                resp = await route.fetch(max_redirects=0)
-            except TypeError:
-                await route.abort()
-                return
-
-            if 300 <= resp.status < 400:
-                await route.abort()
-                return
 
         await route.fulfill(response=resp)
 
@@ -669,24 +703,25 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
             else:
                 browser = p.chromium.launch(headless=self.headless, proxy=self.proxy)
 
-            for url in self.urls:
-                try:
-                    self._safe_process_url_sync(url)
-                    page = browser.new_page()
-                    page.route('**/*', self._intercept_navigation_sync)
-                    response = page.goto(url, timeout=self.playwright_timeout)
-                    if response is None:
-                        raise ValueError(f'page.goto() returned None for url {url}')
+            with browser:
+                for url in self.urls:
+                    try:
+                        self._safe_process_url_sync(url)
+                        with browser.new_page(service_workers='block') as page:
+                            page.route('**/*', self._intercept_navigation_sync)
+                            page.route_web_socket('**/*', lambda ws_route: ws_route.close())
+                            response = page.goto(url, timeout=self.playwright_timeout)
+                            if response is None:
+                                raise ValueError(f'page.goto() returned None for url {url}')
 
-                    text = self.evaluator.evaluate(page, browser, response)
-                    metadata = {'source': url}
-                    yield Document(page_content=text, metadata=metadata)
-                except Exception as e:
-                    if self.continue_on_failure:
-                        log.exception(f'Error loading {url}: {e}')
-                        continue
-                    raise e
-            browser.close()
+                            text = self.evaluator.evaluate(page, browser, response)
+                            metadata = {'source': url}
+                            yield Document(page_content=text, metadata=metadata)
+                    except Exception as e:
+                        if self.continue_on_failure:
+                            log.exception(f'Error loading {url}: {e}')
+                            continue
+                        raise e
 
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Safely load URLs asynchronously with support for remote browser."""
@@ -699,24 +734,25 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
             else:
                 browser = await p.chromium.launch(headless=self.headless, proxy=self.proxy)
 
-            for url in self.urls:
-                try:
-                    await self._safe_process_url(url)
-                    page = await browser.new_page()
-                    await page.route('**/*', self._intercept_navigation)
-                    response = await page.goto(url, timeout=self.playwright_timeout)
-                    if response is None:
-                        raise ValueError(f'page.goto() returned None for url {url}')
+            async with browser:
+                for url in self.urls:
+                    try:
+                        await self._safe_process_url(url)
+                        async with await browser.new_page(service_workers='block') as page:
+                            await page.route('**/*', self._intercept_navigation)
+                            await page.route_web_socket('**/*', lambda ws_route: ws_route.close())
+                            response = await page.goto(url, timeout=self.playwright_timeout)
+                            if response is None:
+                                raise ValueError(f'page.goto() returned None for url {url}')
 
-                    text = await self.evaluator.evaluate_async(page, browser, response)
-                    metadata = {'source': url}
-                    yield Document(page_content=text, metadata=metadata)
-                except Exception as e:
-                    if self.continue_on_failure:
-                        log.exception(f'Error loading {url}: {e}')
-                        continue
-                    raise e
-            await browser.close()
+                            text = await self.evaluator.evaluate_async(page, browser, response)
+                            metadata = {'source': url}
+                            yield Document(page_content=text, metadata=metadata)
+                    except Exception as e:
+                        if self.continue_on_failure:
+                            log.exception(f'Error loading {url}: {e}')
+                            continue
+                        raise e
 
 
 class SafeWebBaseLoader(WebBaseLoader):
@@ -728,6 +764,8 @@ class SafeWebBaseLoader(WebBaseLoader):
             trust_env (bool, optional): set to True if using proxy to make web requests, for example
                 using http(s)_proxy environment variables. Defaults to False.
         """
+        # lxml parses scraped pages far faster than the html.parser default
+        kwargs.setdefault('default_parser', 'lxml')
         super().__init__(*args, **kwargs)
         self.trust_env = trust_env
 
@@ -797,11 +835,6 @@ class SafeWebBaseLoader(WebBaseLoader):
             final_results.append(BeautifulSoup(result, url_parser, **self.bs_kwargs))
         return final_results
 
-    async def ascrape_all(self, urls: List[str], parser: Union[str, None] = None) -> List[Any]:
-        """Async fetch all urls, then return soups for all results."""
-        results = await self.fetch_all(urls)
-        return self._unpack_fetch_results(results, urls, parser=parser)
-
     def lazy_load(self) -> Iterator[Document]:
         """Lazy load text from the url(s) in web_path with error handling."""
         for path in self.web_paths:
@@ -817,19 +850,20 @@ class SafeWebBaseLoader(WebBaseLoader):
                 # Log the error and continue with the next URL
                 log.exception(f'Error loading {path}: {e}')
 
+    def _document_from_html(self, html: str, url: str) -> Document:
+        """Build one Document."""
+        soup = self._unpack_fetch_results([html], [url])[0]
+        return Document(
+            page_content=soup.get_text(**self.bs_get_text_kwargs),
+            metadata=extract_metadata(soup, url),
+        )
+
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Async lazy load text from the url(s) in web_path."""
-        results = await self.ascrape_all(self.web_paths)
-        for path, soup in zip(self.web_paths, results):
-            text = soup.get_text(**self.bs_get_text_kwargs)
-            metadata = {'source': path}
-            if title := soup.find('title'):
-                metadata['title'] = title.get_text()
-            if description := soup.find('meta', attrs={'name': 'description'}):
-                metadata['description'] = description.get('content', 'No description found.')
-            if html := soup.find('html'):
-                metadata['language'] = html.get('lang', 'No language found.')
-            yield Document(page_content=text, metadata=metadata)
+        results = await self.fetch_all(self.web_paths)
+        for path, html in zip(self.web_paths, results):
+            # parsing a large page costs hundreds of ms, keep it off the event loop
+            yield await asyncio.to_thread(self._document_from_html, html, path)
 
     async def aload(self) -> list[Document]:
         """Load data into Document objects."""

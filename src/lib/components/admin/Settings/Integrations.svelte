@@ -297,7 +297,7 @@
 
 					<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 						{$i18n.t(
-							'Connect to Open Terminal instances. All users will have access to file browsing and terminal tools through these servers.'
+							'Connect to Open Terminal instances. Admins and users granted access can use file browsing and terminal tools through these servers.'
 						)}
 					</div>
 					<a

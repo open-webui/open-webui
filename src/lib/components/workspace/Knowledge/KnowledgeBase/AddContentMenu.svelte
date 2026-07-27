@@ -37,6 +37,7 @@
 	<Tooltip content={$i18n.t('Add Content')}>
 		<button
 			class="p-1.5 rounded-xl bg-transparent transition text-xs flex items-center space-x-1 hover:text-gray-900 dark:hover:text-gray-100"
+			aria-label={$i18n.t('Add Content')}
 			on:click={(e) => {
 				e.stopPropagation();
 				show = true;

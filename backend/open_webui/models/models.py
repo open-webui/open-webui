@@ -199,11 +199,11 @@ class ModelsTable:
                 if db is not None:
                     await db.commit()
 
-        model_data = ModelModel.model_validate(model).model_dump(exclude={'access_grants'})
-        model_data['access_grants'] = (
-            access_grants if access_grants is not None else await self._get_access_grants(model_data['id'], db=db)
+        model_model = ModelModel.model_validate(model)
+        model_model.access_grants = (
+            access_grants if access_grants is not None else await self._get_access_grants(model_model.id, db=db)
         )
-        return ModelModel.model_validate(model_data)
+        return model_model
 
     async def insert_new_model(
         self, form_data: ModelForm, user_id: str, db: AsyncSession | None = None
@@ -555,12 +555,12 @@ class ModelsTable:
         try:
             async with get_async_db_context(db) as db:
                 result = await db.execute(select(Model).filter_by(id=id))
-                model_obj = result.scalars().first()
-                if not model_obj:
+                model = result.scalars().first()
+                if not model:
                     return None
-                model_obj.updated_at = int(time.time())
+                model.updated_at = int(time.time())
                 await db.commit()
-                return await self._to_model_model(model_obj, db=db)
+                return await self._to_model_model(model, db=db)
         except Exception as e:
             log.exception(f'Failed to update the model updated_at by id {id}: {e}')
             return None

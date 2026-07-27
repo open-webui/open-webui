@@ -62,7 +62,7 @@
 	const inputClass =
 		'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
 	const selectClass =
-		'dark:bg-gray-900 bg-transparent pr-5 outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
+		'bg-transparent pr-5 outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
 
 	const stringifyJson = (value: object | null | undefined) => {
 		return JSON.stringify(value && Object.keys(value).length ? value : {}, null, 2);

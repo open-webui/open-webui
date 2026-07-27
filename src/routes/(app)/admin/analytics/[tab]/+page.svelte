@@ -5,7 +5,7 @@
 
 	onMount(() => {
 		if (!($config?.features.enable_admin_analytics ?? true)) {
-			goto('/admin');
+			goto('/admin', { replaceState: true });
 		} else {
 			goto('/?settings=admin%3Aanalytics', { replaceState: true });
 		}

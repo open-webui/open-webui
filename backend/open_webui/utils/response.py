@@ -2,6 +2,7 @@ import json
 from numbers import Number
 from uuid import uuid4
 
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import (
     openai_chat_chunk_message_template,
     openai_chat_completion_message_template,
@@ -55,8 +56,6 @@ USAGE_TOKEN_KEYS = {
     'input_tokens',
     'output_tokens',
     'total_tokens',
-    'prompt_tokens',
-    'completion_tokens',
 }
 
 USAGE_COST_KEYS = {
@@ -67,6 +66,8 @@ USAGE_COST_KEYS = {
     'prompt_cost',
     'completion_cost',
 }
+
+USAGE_SUMMABLE_KEYS = USAGE_TOKEN_KEYS | USAGE_COST_KEYS
 
 USAGE_DETAIL_KEYS = {
     'prompt_tokens_details',
@@ -105,7 +106,7 @@ def merge_usage(current: dict | None, incoming: dict | None) -> dict:
     """
     Merge usage payloads from multiple model calls into one cumulative usage dict.
 
-    Token fields are additive; non-numeric metadata keeps the latest provider value.
+    Canonical token fields are additive; provider aliases keep the latest value.
     """
     current_usage = normalize_usage(current or {}) if current else {}
     incoming_usage = normalize_usage(incoming or {}) if incoming else {}
@@ -117,7 +118,7 @@ def merge_usage(current: dict | None, incoming: dict | None) -> dict:
 
     result = {**current_usage, **incoming_usage}
 
-    for key in USAGE_TOKEN_KEYS | USAGE_COST_KEYS:
+    for key in USAGE_SUMMABLE_KEYS:
         if key in current_usage or key in incoming_usage:
             current_value = current_usage.get(key, 0)
             incoming_value = incoming_usage.get(key, 0)
@@ -132,6 +133,17 @@ def merge_usage(current: dict | None, incoming: dict | None) -> dict:
                 current_usage.get(key) if isinstance(current_usage.get(key), dict) else {},
                 incoming_usage.get(key) if isinstance(incoming_usage.get(key), dict) else {},
             )
+
+    result['prompt_tokens'] = (
+        incoming_usage.get('prompt_tokens')
+        or incoming_usage.get('input_tokens')
+        or current_usage.get('prompt_tokens', 0)
+    )
+    result['completion_tokens'] = (
+        incoming_usage.get('completion_tokens')
+        or incoming_usage.get('output_tokens')
+        or current_usage.get('completion_tokens', 0)
+    )
 
     return result
 
@@ -226,12 +238,13 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
     completion_id = f'chatcmpl-{str(uuid4())}'
     first = True
     async for data in ollama_streaming_response.body_iterator:
-        data = json.loads(data)
+        data = JSONCodec.loads(data)
 
         model = data.get('model', 'ollama')
-        message_content = data.get('message', {}).get('content', None)
-        reasoning_content = data.get('message', {}).get('thinking', None)
-        tool_calls = data.get('message', {}).get('tool_calls', None)
+        message = data.get('message') or {}
+        message_content = message.get('content', None)
+        reasoning_content = message.get('thinking', None)
+        tool_calls = message.get('tool_calls', None)
         openai_tool_calls = None
 
         if tool_calls:
@@ -244,8 +257,9 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
         if done:
             usage = convert_ollama_usage_to_openai(data)
 
-        data = openai_chat_chunk_message_template(model, message_content, reasoning_content, openai_tool_calls, usage)
-        data['id'] = completion_id
+        data = openai_chat_chunk_message_template(
+            model, message_content, reasoning_content, openai_tool_calls, usage, message_id=completion_id
+        )
 
         # First chunk must carry delta.role (OpenAI spec).
         if first:
@@ -255,7 +269,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
         if done and has_tool_calls:
             data['choices'][0]['finish_reason'] = 'tool_calls'
 
-        line = f'data: {json.dumps(data)}\n\n'
+        line = f'data: {JSONCodec.dumps(data)}\n\n'
         yield line
 
     yield 'data: [DONE]\n\n'

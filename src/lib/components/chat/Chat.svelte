@@ -48,7 +48,7 @@
 		chatRequestQueues,
 		desktopEvent
 	} from '$lib/stores';
-	import { refreshChatList } from '$lib/stores/chatList';
+	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -66,6 +66,7 @@
 		displayFileHandler
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
+	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import { getOutputText } from './Messages/structuredOutput';
 
 	import {
@@ -179,7 +180,7 @@
 		$models.filter((m) => !(m?.info?.meta?.hidden ?? false)).map((m) => m.id);
 	const getDefaultModelIds = () =>
 		$config?.default_models ? $config.default_models.split(',') : [];
-	const normalizeSelectedModels = (modelIds = []) => {
+	const normalizeSelectedModels = (modelIds: string[] = []) => {
 		const availableModels = getAvailableModelIds();
 		const defaultModels = getDefaultModelIds();
 		let normalized = (modelIds ?? []).filter(
@@ -198,6 +199,23 @@
 
 		return normalized;
 	};
+
+	$: {
+		const modelSearchParam =
+			$page.url.searchParams.get('models') || $page.url.searchParams.get('model');
+
+		if (
+			chatIdProp === '' &&
+			$models.length > 0 &&
+			!selectedModels?.some((modelId) => modelId) &&
+			!modelSearchParam
+		) {
+			const fallbackModels = normalizeSelectedModels(selectedModels);
+			if (!equal(fallbackModels, selectedModels)) {
+				selectedModels = fallbackModels;
+			}
+		}
+	}
 
 	const estimateTokens = (value) => {
 		if (value === null || value === undefined || value === '') {
@@ -451,7 +469,7 @@
 	const saveChatVariables = async (values) => {
 		chatVariables = { ...chatVariables, ...values };
 
-		if ($chatId && !$temporaryChatEnabled && !$chatId.startsWith('local:')) {
+		if ($chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
 			const res = await updateChatById(localStorage.token, $chatId, {}, chatVariables).catch(
 				(err) => {
 					console.error('[chat variables save]', err);
@@ -711,6 +729,10 @@
 		);
 	};
 
+	$: if ($terminalServers !== null && $selectedTerminalId && !isTerminalAvailable($selectedTerminalId)) {
+		selectedTerminalId.set(null);
+	}
+
 	let settingDefaults = false;
 	const setDefaults = async () => {
 		if (settingDefaults) return;
@@ -951,6 +973,9 @@
 						taskIds = null;
 						if ($chatId && !$temporaryChatEnabled && hasPendingAssistantLeaf()) {
 							await loadChat();
+						}
+						if ($chatId && !$temporaryChatEnabled) {
+							updateLastReadAt($chatId);
 						}
 					}
 				} else if (type === 'chat:completion') {
@@ -1263,11 +1288,6 @@
 					enabled: $selectedTerminalId !== null && s.url === $selectedTerminalId
 				}))
 			});
-		}
-
-		// Clear stale selectedTerminalId if the referenced terminal no longer exists
-		if ($selectedTerminalId && !isTerminalAvailable($selectedTerminalId)) {
-			selectedTerminalId.set(null);
 		}
 
 		const pageSubscribe = page.subscribe(async (p) => {
@@ -2777,9 +2797,11 @@
 				: selectedModels;
 
 		// Create response messages for each selected model
-		// Build message_ids list: [{model_id, message_id}, ...]
+		// Build message_ids list: [{model_id, message_id, modelIdx}, ...]
 		// Uses an array instead of a dict to support duplicate model IDs in side-by-side chat.
-		const messageIdsList: Array<{ model_id: string; message_id: string }> = [];
+		// modelIdx identifies each side-by-side column so the backend can persist it; without
+		// it, duplicate models collapse into one another when the chat is reloaded.
+		const messageIdsList: Array<{ model_id: string; message_id: string; modelIdx: number }> = [];
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
@@ -2811,7 +2833,11 @@
 				}
 
 				responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`] = responseMessageId;
-				messageIdsList.push({ model_id: modelId, message_id: responseMessageId });
+				messageIdsList.push({
+					model_id: modelId,
+					message_id: responseMessageId,
+					modelIdx: modelIdx ? modelIdx : _modelIdx
+				});
 			}
 		}
 		history = history;
@@ -2836,7 +2862,7 @@
 				chatFiles = mergeFiles(chatFiles, createdChat?.chat?.files ?? []);
 				await onSelectEmbeddedChat?.(_chatId);
 			} else if ($temporaryChatEnabled) {
-				_chatId = `local:${$socket?.id}`;
+				_chatId = createTemporaryChatId($socket?.id);
 				await chatId.set(_chatId);
 			}
 			await tick();
@@ -2890,7 +2916,11 @@
 					primaryResponseMessageId,
 					_chatId,
 					{
-						messageIdsList: selectedModelIds.length > 1 ? messageIdsList : undefined,
+						// Always forward the message_ids list (not just for multi-model sends) so the
+						// backend persists each response's modelIdx — including single-column
+						// regenerations in a duplicate-model chat, which would otherwise lose their
+						// column identity and collapse on reload.
+						messageIdsList: messageIdsList.length > 0 ? messageIdsList : undefined,
 						regenerationPrompt
 					}
 				);
@@ -3085,7 +3115,7 @@
 		// Only send terminal_id if the model has terminal capability enabled
 		const terminalEnabled = model.info?.meta?.capabilities?.terminal ?? true;
 		const useChatVariablesFallback =
-			!_chatId || $temporaryChatEnabled || _chatId.startsWith('local:');
+			!_chatId || $temporaryChatEnabled || isTemporaryChatId(_chatId);
 
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
@@ -3456,6 +3486,7 @@
 
 	const initChatHandler = async (history) => {
 		let _chatId = $chatId;
+		const selectedFolderId = $selectedFolder?.id;
 
 		if (!$temporaryChatEnabled) {
 			chat = await createNewChat(
@@ -3488,9 +3519,13 @@
 				await refreshChatList(localStorage.token);
 			}
 
+			if (selectedFolderId) {
+				await refreshFolderChatLists(selectedFolderId, chat);
+			}
+
 			selectedFolder.set(null);
 		} else {
-			_chatId = `local:${$socket?.id}`; // Use socket id for temporary chat
+			_chatId = createTemporaryChatId($socket?.id);
 			await chatId.set(_chatId);
 		}
 		await tick();
@@ -3566,6 +3601,7 @@
 
 			if (res) {
 				await refreshChatList(localStorage.token, { refreshPinned: true });
+				await refreshFolderChatLists();
 
 				toast.success($i18n.t('Chat moved successfully'));
 			}
@@ -3580,6 +3616,7 @@
 			initNewChat();
 			await goto('/');
 			await refreshChatList(localStorage.token, { refreshPinned: true });
+			await refreshFolderChatLists();
 			toast.success($i18n.t('Chat archived.'));
 		} catch (error) {
 			console.error('Error archiving chat:', error);

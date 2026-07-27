@@ -7,7 +7,8 @@
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import type i18nType from '$lib/i18n';
 
-	import { WEBUI_NAME } from '$lib/stores';
+	import { WEBUI_NAME, folders } from '$lib/stores';
+	import { getFolders } from '$lib/apis/folders';
 
 	import {
 		getAutomationById,
@@ -42,6 +43,19 @@
 	let runsLoading = false;
 	let hasMoreRuns = true;
 	let runsPage = 0;
+	let foldersLoaded = false;
+
+	const ensureFolders = async () => {
+		if (foldersLoaded || ($folders ?? []).length > 0) return;
+		const res = await getFolders(localStorage.token).catch(() => null);
+		if (res) folders.set(res);
+		foldersLoaded = true;
+	};
+
+	const getFolderName = (folderId: string | null): string =>
+		folderId
+			? (($folders ?? []).find((folder) => folder.id === folderId)?.name ?? $i18n.t('None'))
+			: $i18n.t('None');
 
 	const formatTime = (ts: number | null): string => {
 		if (!ts) return '-';
@@ -201,6 +215,7 @@
 	onMount(async () => {
 		is_active = automation.is_active;
 
+		await ensureFolders();
 		await loadRuns();
 	});
 
@@ -260,6 +275,15 @@
 			</span>
 			<span class="min-w-0 truncate text-xs text-gray-700 dark:text-gray-300">
 				{formatSchedule(automation.data.rrule)}
+			</span>
+		</div>
+
+		<div class="flex h-7 items-center px-3">
+			<span class="w-24 shrink-0 text-[11px] text-gray-400 dark:text-gray-500">
+				{$i18n.t('Folder')}
+			</span>
+			<span class="min-w-0 truncate text-xs text-gray-700 dark:text-gray-300">
+				{getFolderName(automation.folder_id)}
 			</span>
 		</div>
 

@@ -483,6 +483,16 @@ class EventDefinitions(BaseModel):
     FUNCTION_DISABLED: EventDefinition = EventDefinition(
         name='function.disabled', description='A function was disabled.', message='Function disabled'
     )
+    FUNCTION_ENABLE_STARTED: EventDefinition = EventDefinition(
+        name='function.enable_started',
+        description='A function is about to be enabled.',
+        message='Function enable started',
+    )
+    FUNCTION_DISABLE_STARTED: EventDefinition = EventDefinition(
+        name='function.disable_started',
+        description='A function is about to be disabled.',
+        message='Function disable started',
+    )
     FUNCTION_VALVES_UPDATED: EventDefinition = EventDefinition(
         name='function.valves_updated', description='Function valves were updated.', message='Function valves updated'
     )
@@ -1067,7 +1077,9 @@ class NotificationEventSink:
             schedule_notification_dispatch(app, event)
 
 
-async def dispatch_event_functions(app: Any, event: Event, request: Any | None = None) -> None:
+async def dispatch_event_functions(
+    app: Any, event: Event, request: Any | None = None, extra_function_ids: list[str] | None = None
+) -> None:
     if not ENABLE_PLUGINS:
         return
 
@@ -1079,6 +1091,12 @@ async def dispatch_event_functions(app: Any, event: Event, request: Any | None =
 
     try:
         event_functions = await Functions.get_functions_by_type('event', active_only=True)
+        if extra_function_ids:
+            extra_functions = await Functions.get_functions_by_ids(extra_function_ids)
+            existing_ids = {function.id for function in event_functions}
+            event_functions.extend(
+                function for function in extra_functions if function.type == 'event' and function.id not in existing_ids
+            )
     except Exception:
         log.exception('Event functions could not be loaded for %s', event.event)
         return

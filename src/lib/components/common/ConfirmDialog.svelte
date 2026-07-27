@@ -46,12 +46,16 @@
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
-			console.log('Escape');
 			cancelHandler();
 		}
 
 		if (event.key === 'Enter') {
-			console.log('Enter');
+			// let the focused control act on Enter itself
+			const target = event.target;
+			if (target instanceof Element && target.closest('a, button, textarea')) {
+				return;
+			}
+
 			event.preventDefault();
 			event.stopPropagation();
 			confirmHandler();
@@ -116,6 +120,10 @@
 		}}
 	>
 		<div
+			role="dialog"
+			aria-modal="true"
+			aria-label={title !== '' ? title : $i18n.t('Confirm your action')}
+			tabindex="-1"
 			class="m-auto max-w-full w-[32rem] mx-2 bg-white dark:bg-gray-950 rounded-3xl max-h-[100dvh] shadow-3xl border border-white dark:border-gray-900"
 			in:flyAndScale
 			on:mousedown={(e) => {
@@ -165,6 +173,7 @@
 							{:else}
 								<textarea
 									bind:value={_inputValue}
+									aria-label={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
 									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
 									class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
 									rows="3"

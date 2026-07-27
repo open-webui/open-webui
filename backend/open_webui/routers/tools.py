@@ -446,20 +446,22 @@ async def get_tools_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
                 db=db,
             )
         ):
-            return ToolAccessResponse(
-                **tools.model_dump(),
-                write_access=(
-                    (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or user.id == tools.user_id
-                    or await AccessGrants.has_access(
-                        user_id=user.id,
-                        resource_type='tool',
-                        resource_id=tools.id,
-                        permission='write',
-                        db=db,
-                    )
-                ),
+            write_access = (
+                (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+                or user.id == tools.user_id
+                or await AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type='tool',
+                    resource_id=tools.id,
+                    permission='write',
+                    db=db,
+                )
             )
+            data = tools.model_dump()
+            if not write_access:
+                # extra='allow' re-admits content from model_dump; source is writer-only
+                data.pop('content', None)
+            return ToolAccessResponse(**data, write_access=write_access)
         else:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

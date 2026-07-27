@@ -468,7 +468,7 @@
 					<tbody>
 						{#each sortedModels as model, idx (model.model_id)}
 							<tr
-								class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+								class="dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
 								on:click={() => {
 									selectedModel = { id: model.model_id, name: model.name };
 									showModelModal = true;
@@ -581,7 +581,7 @@
 					</thead>
 					<tbody>
 						{#each sortedUsers as user, idx (user.user_id)}
-							<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+							<tr class="dark:border-gray-850 text-xs">
 								<td class="px-3 py-1 text-gray-400">{idx + 1}</td>
 								<td class="px-3 py-1 font-normal text-gray-900 dark:text-white">
 									<div class="flex items-center gap-2">

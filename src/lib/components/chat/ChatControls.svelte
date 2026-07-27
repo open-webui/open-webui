@@ -110,6 +110,7 @@
 	// Clear selected direct terminal if user lost permission
 	$: if (
 		$selectedTerminalId &&
+		$terminalServers !== null &&
 		!($terminalServers ?? []).some((t) => t.id && t.id === $selectedTerminalId) &&
 		!($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
 	) {
@@ -372,7 +373,6 @@
 										const node = e.node;
 										showMessage(node.data.message, true);
 									}}
-									onClose={() => showControls.set(false)}
 								/>
 							{:else if activeTab === 'files' && $selectedTerminalId}
 								<FileNav onAttach={handleTerminalAttach} {chatId} />
@@ -522,7 +522,6 @@
 											}
 											showMessage(node.data.message, true);
 										}}
-										onClose={() => showControls.set(false)}
 									/>
 								{:else if activeTab === 'files' && $selectedTerminalId}
 									<FileNav onAttach={handleTerminalAttach} overlay={dragged} {chatId} />

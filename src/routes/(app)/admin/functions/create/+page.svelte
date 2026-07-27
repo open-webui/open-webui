@@ -62,7 +62,7 @@
 
 	onMount(() => {
 		if (!$config?.features?.enable_plugins) {
-			goto('/admin');
+			goto('/admin', { replaceState: true });
 			return;
 		}
 

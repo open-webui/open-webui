@@ -24,6 +24,12 @@
 	let loaded = false;
 	let draggedOver = false;
 
+	const setOpen = (state: boolean) => {
+		open = state;
+		dispatch('change', state);
+		localStorage.setItem(`${id}-folder-state`, `${state}`);
+	};
+
 	const onDragOver = (e: DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
@@ -118,21 +124,15 @@
 		{/if}
 
 		{#if collapsible}
-			<Collapsible
-				bind:open
-				className="w-full"
-				buttonClassName="w-full"
-				onChange={(state: boolean) => {
-					dispatch('change', state);
-					localStorage.setItem(`${id}-folder-state`, `${state}`);
-				}}
-			>
+			<Collapsible bind:open className="w-full" buttonClassName="w-full" onChange={setOpen}>
 				<div class="flex items-center justify-between h-6 w-full pl-3.5 pr-1.5 shrink-0">
 					<button
 						type="button"
 						class="group flex flex-1 h-full items-center gap-1 text-left text-xs text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 transition-colors duration-100 {buttonClassName}"
 						aria-expanded={open}
 						aria-controls="{id}-content"
+						on:pointerup|stopPropagation
+						on:click={() => setOpen(!open)}
 					>
 						<span>{name}</span>
 						<span
@@ -142,6 +142,8 @@
 							<ChevronRight className="size-[11px]" />
 						</span>
 					</button>
+
+					<slot name="action" />
 
 					{#if onAdd}
 						<button

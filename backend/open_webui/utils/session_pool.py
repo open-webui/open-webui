@@ -28,6 +28,7 @@ from typing import Optional
 
 import aiohttp
 from open_webui.env import (
+    AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_POOL_CONNECTIONS,
     AIOHTTP_POOL_CONNECTIONS_PER_HOST,
@@ -37,6 +38,16 @@ from open_webui.env import (
 log = logging.getLogger(__name__)
 
 _session: Optional[aiohttp.ClientSession] = None
+
+_CLIENT_TIMEOUT = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+_CLIENT_STREAM_TIMEOUT = aiohttp.ClientTimeout(
+    total=AIOHTTP_CLIENT_TIMEOUT,
+    sock_read=AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT,
+)
+
+
+def get_client_timeout(stream: bool = False) -> aiohttp.ClientTimeout:
+    return _CLIENT_STREAM_TIMEOUT if stream else _CLIENT_TIMEOUT
 
 
 async def get_session() -> aiohttp.ClientSession:
@@ -56,7 +67,7 @@ async def get_session() -> aiohttp.ClientSession:
         else:
             connector_kwargs['limit_per_host'] = 0  # aiohttp: 0 = unlimited
         connector = aiohttp.TCPConnector(**connector_kwargs)
-        timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        timeout = get_client_timeout()
         _session = aiohttp.ClientSession(
             connector=connector,
             timeout=timeout,
@@ -104,14 +115,23 @@ async def cleanup_response(
                 await result
 
 
-async def stream_wrapper(response, session=None, content_handler=None):
+async def stream_wrapper(response, session=None, content_handler=None, passthrough=False):
     """Wrap a stream to ensure cleanup happens even if streaming is interrupted.
 
     This is more reliable than BackgroundTask which may not run if the client
     disconnects.  When using the shared pool, ``session`` should be ``None``.
+
+    ``passthrough=True`` yields raw network chunks (iter_any) instead of
+    lines: byte-identical output without a buffer scan, slice and copy per
+    line. Only for streams no internal consumer parses line-by-line.
     """
     try:
-        stream = content_handler(response.content) if content_handler else response.content
+        if content_handler:
+            stream = content_handler(response.content)
+        elif passthrough:
+            stream = response.content.iter_any()
+        else:
+            stream = response.content
         async for chunk in stream:
             yield chunk
     finally:
