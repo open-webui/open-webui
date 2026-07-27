@@ -38,7 +38,9 @@
 		showSearch,
 		showSidebar,
 		showControls,
-		mobile
+		mobile,
+		chatId,
+		chats
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -232,6 +234,17 @@
 		await goto(`/auth?redirect=${encodeURIComponent(currentUrl)}`);
 	};
 
+	const navigateChat = async (direction: -1 | 1) => {
+		if (!$chats?.length) return;
+
+		const currentIndex = $chats.findIndex((chat) => chat.id === $chatId);
+		const nextChat = currentIndex === -1 ? $chats[0] : $chats[currentIndex + direction];
+
+		if (nextChat) {
+			await goto(`/c/${nextChat.id}`);
+		}
+	};
+
 	onMount(async () => {
 		if ($user === undefined || $user === null) {
 			await gotoAuth();
@@ -292,6 +305,18 @@
 					console.log('Shortcut triggered: TOGGLE_SIDEBAR');
 					event.preventDefault();
 					showSidebar.set(!$showSidebar);
+				} else if (shortcut === Shortcut.NAVIGATE_CHAT_UP) {
+					console.log('Shortcut triggered: NAVIGATE_CHAT_UP');
+					event.preventDefault();
+					await navigateChat(-1);
+				} else if (shortcut === Shortcut.NAVIGATE_CHAT_DOWN) {
+					console.log('Shortcut triggered: NAVIGATE_CHAT_DOWN');
+					event.preventDefault();
+					await navigateChat(1);
+				} else if (shortcut === Shortcut.TOGGLE_CONTROLS) {
+					console.log('Shortcut triggered: TOGGLE_CONTROLS');
+					event.preventDefault();
+					showControls.set(!$showControls);
 				} else if (shortcut === Shortcut.DELETE_CHAT) {
 					console.log('Shortcut triggered: DELETE_CHAT');
 					event.preventDefault();
