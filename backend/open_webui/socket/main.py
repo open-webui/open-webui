@@ -394,7 +394,8 @@ async def user_join(sid, data):
             ),
             'last_seen_at': int(time.time()),
         }
-        await sio.enter_room(sid, f'user:{user.id}')
+
+    await sio.enter_room(sid, f'user:{user.id}')
 
     # Join all the channels only if user has channels permission
     if user.role == 'admin' or await has_permission(user.id, 'features.channels'):
