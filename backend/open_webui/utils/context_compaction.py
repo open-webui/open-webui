@@ -259,9 +259,25 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
 
     for idx in range(len(messages) - 1, -1, -1):
         usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-        input_tokens = (usage or {}).get('prompt_tokens') or (usage or {}).get('input_tokens')
-        if isinstance(usage, dict) and input_tokens:
-            tokens = int(input_tokens or 0) + int(usage.get('completion_tokens') or usage.get('output_tokens') or 0)
+        if isinstance(usage, dict) and (
+            tokens := (
+                int(
+                    usage.get('prompt_tokens')
+                    or usage.get('input_tokens')
+                    or usage.get('prompt_eval_count')
+                    or usage.get('prompt_n')
+                    or 0
+                )
+                + int(
+                    usage.get('completion_tokens')
+                    or usage.get('output_tokens')
+                    or usage.get('eval_count')
+                    or usage.get('predicted_n')
+                    or 0
+                )
+                + int(usage.get('cache_n') or 0)
+            )
+        ):
             tokens += _estimate_messages_tokens(messages[idx + 1 :])
             return _build_context_usage(tokens, threshold)
 
@@ -300,11 +316,26 @@ def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: 
 
     for idx in range(len(messages) - 1, -1, -1):
         usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-        if isinstance(usage, dict) and (usage.get('prompt_tokens') or usage.get('input_tokens')):
-            total = int(usage.get('prompt_tokens') or usage.get('input_tokens') or 0) + int(
-                usage.get('completion_tokens') or usage.get('output_tokens') or 0
+        if isinstance(usage, dict) and (
+            tokens := (
+                int(
+                    usage.get('prompt_tokens')
+                    or usage.get('input_tokens')
+                    or usage.get('prompt_eval_count')
+                    or usage.get('prompt_n')
+                    or 0
+                )
+                + int(
+                    usage.get('completion_tokens')
+                    or usage.get('output_tokens')
+                    or usage.get('eval_count')
+                    or usage.get('predicted_n')
+                    or 0
+                )
+                + int(usage.get('cache_n') or 0)
             )
-            return total + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
+        ):
+            return tokens + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
 
     estimated = _estimate_tokens(system_prompt) + _estimate_tokens(summary or '') + _estimate_messages_tokens(messages)
     return estimated > threshold
