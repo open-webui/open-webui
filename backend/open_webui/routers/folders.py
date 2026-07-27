@@ -45,6 +45,24 @@ router = APIRouter()
 from open_webui.utils.access_control.folders import has_folder_access as _has_folder_access
 
 
+async def get_folder_unread_counts(user_id: str, db: AsyncSession | None = None) -> dict[str, int]:
+    folders = await Folders.get_folders_by_user_id(user_id, db=db)
+    parent_by_id = {folder.id: folder.parent_id for folder in folders}
+    unread_counts = dict.fromkeys(parent_by_id.keys(), 0)
+    direct_unread_counts = await Chats.count_unread_by_folder_ids(user_id, list(parent_by_id.keys()), db=db)
+
+    for unread_folder_id, unread_count in direct_unread_counts.items():
+        current_id = unread_folder_id
+        seen = set()
+        while current_id and current_id not in seen:
+            seen.add(current_id)
+            if current_id in unread_counts:
+                unread_counts[current_id] += unread_count
+            current_id = parent_by_id.get(current_id)
+
+    return unread_counts
+
+
 async def check_folders_permission(request: Request, user, db=None):
     """Verify the folders feature is enabled and the user has permission."""
     config = await Config.get_many('folders.enable', 'user.permissions')
@@ -97,19 +115,7 @@ async def get_folders(
 
         folder_list.append(folder)
 
-    direct_unread_counts = await Chats.count_unread_by_folder_ids(
-        user.id, [folder.id for folder in folder_list], db=db
-    )
-    parent_by_id = {folder.id: folder.parent_id for folder in folder_list}
-    unread_counts = dict.fromkeys(parent_by_id.keys(), 0)
-    for unread_folder_id, unread_count in direct_unread_counts.items():
-        current_id = unread_folder_id
-        seen = set()
-        while current_id and current_id not in seen:
-            seen.add(current_id)
-            if current_id in unread_counts:
-                unread_counts[current_id] += unread_count
-            current_id = parent_by_id.get(current_id)
+    unread_counts = await get_folder_unread_counts(user.id, db=db)
 
     return [
         FolderNameIdResponse(**folder.model_dump(), unread_count=unread_counts.get(folder.id, 0))
@@ -504,7 +510,7 @@ async def get_shared_folder_chats(
     request: Request,
     id: str,
     page: int | None = Query(None, ge=1),
-    sort_by: str = Query('updated_at'),
+    sort_by: str = Query('unread_updated_at'),
     sort_dir: str = Query('desc'),
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
@@ -537,6 +543,7 @@ async def get_shared_folder_chats(
         limit=limit if page is not None else 60,
         sort_by=sort_by,
         sort_dir=sort_dir,
+        unread_for_user_id=user.id,
         db=db,
     )
     total = await Chats.count_all_chats_by_folder_id(id, db=db) if page is not None else len(chats)
@@ -562,6 +569,44 @@ async def get_shared_folder_chats(
     if page is not None:
         response.update({'total': total, 'has_more': skip + limit < total})
     return response
+
+
+@router.post('/{id}/read')
+async def mark_folder_chats_read_by_id(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await check_folders_permission(request, user, db=db)
+    folder = await Folders.get_folder_by_id(id, db=db)
+    if not folder:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    is_owner = user.id == folder.user_id
+    is_admin = user.role == 'admin'
+    if not (is_owner or is_admin or await _has_folder_access(user.id, folder, 'read', db)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    folder_ids = (
+        await Folders.get_folder_ids_by_id_and_user_id_in_subtree(id, folder.user_id, db=db)
+        if is_owner or is_admin
+        else [id]
+    )
+    updated_count = await Chats.mark_chats_read_by_folder_ids(user.id, folder_ids, db=db)
+
+    return {
+        'folder_id': id,
+        'folder_ids': folder_ids,
+        'updated_count': updated_count,
+        'folder_unread_counts': await get_folder_unread_counts(user.id, db=db),
+    }
 
 
 ############################

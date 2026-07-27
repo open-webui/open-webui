@@ -545,20 +545,24 @@ async def chat_events(sid, data):
     event_type = event_data.get('type')
 
     if event_type == 'last_read_at':
-        last_read_at = await Chats.update_chat_last_read_at_by_id(data['chat_id'], user['id'])
-        if not last_read_at:
+        read_update = await Chats.update_chat_last_read_at_by_id(data['chat_id'], user['id'])
+        if not read_update:
             return
+        last_read_at, was_unread = read_update
+        response_data = {
+            'chat_id': data['chat_id'],
+            'last_read_at': last_read_at,
+        }
+        if was_unread:
+            response_data['folder_unread_counts'] = await get_folder_unread_counts(user['id'])
+
         await sio.emit(
             'events',
             {
                 'chat_id': data['chat_id'],
                 'data': {
                     'type': 'chat:list',
-                    'data': {
-                        'chat_id': data['chat_id'],
-                        'last_read_at': last_read_at,
-                        'folder_unread_counts': await get_folder_unread_counts(user['id']),
-                    },
+                    'data': response_data,
                 },
             },
             room=f'user:{user["id"]}',

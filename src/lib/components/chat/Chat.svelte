@@ -3470,6 +3470,7 @@
 
 	const initChatHandler = async (history) => {
 		let _chatId = $chatId;
+		const selectedFolderId = $selectedFolder?.id;
 
 		if (!$temporaryChatEnabled) {
 			chat = await createNewChat(
@@ -3500,6 +3501,10 @@
 
 			if (!embedded) {
 				await refreshChatList(localStorage.token);
+			}
+
+			if (selectedFolderId) {
+				await refreshFolderChatLists(selectedFolderId, chat);
 			}
 
 			selectedFolder.set(null);

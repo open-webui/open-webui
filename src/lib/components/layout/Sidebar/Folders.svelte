@@ -11,6 +11,7 @@
 	export let shiftKey = false;
 
 	export let onDelete = (folderId) => {};
+	export let onFolderUnreadCounts = (counts) => {};
 
 	let ownedList = [];
 	let sharedList = [];
@@ -52,6 +53,7 @@
 		{shiftKey}
 		{onDelete}
 		{onItemMove}
+		{onFolderUnreadCounts}
 		on:import={(e) => {
 			dispatch('import', e.detail);
 		}}
@@ -77,6 +79,7 @@
 			{shiftKey}
 			{onDelete}
 			{onItemMove}
+			{onFolderUnreadCounts}
 			on:import={(e) => {
 				dispatch('import', e.detail);
 			}}

@@ -275,7 +275,8 @@ async def emit_chat_list_event(metadata: dict, chat_id: str):
 
     event_emitter = await get_event_emitter(metadata, update_db=False)
     if event_emitter:
-        await event_emitter({'type': 'chat:list', 'data': {'chat_id': chat_id}})
+        folder_id = metadata.get('folder_id') or await Chats.get_chat_folder_id(chat_id, metadata.get('user_id'))
+        await event_emitter({'type': 'chat:list', 'data': {'chat_id': chat_id, 'folder_id': folder_id}})
 
 
 class SPAStaticFiles(StaticFiles):
@@ -1642,7 +1643,17 @@ async def chat_completion(
                         event_emitter = await get_event_emitter(metadata, update_db=False)
                         if event_emitter:
                             try:
-                                await asyncio.shield(event_emitter({'type': 'chat:active', 'data': {'active': False}}))
+                                folder_id = metadata.get('folder_id') or await Chats.get_chat_folder_id(
+                                    chat_id, user.id
+                                )
+                                await asyncio.shield(
+                                    event_emitter(
+                                        {
+                                            'type': 'chat:active',
+                                            'data': {'active': False, 'folder_id': folder_id},
+                                        }
+                                    )
+                                )
                             except asyncio.CancelledError:
                                 pass
             except Exception:
@@ -1748,7 +1759,8 @@ async def chat_completion(
                 update_db=False,
             )
             if event_emitter:
-                await event_emitter({'type': 'chat:active', 'data': {'active': True}})
+                folder_id = metadata.get('folder_id') or await Chats.get_chat_folder_id(chat_id, user.id)
+                await event_emitter({'type': 'chat:active', 'data': {'active': True, 'folder_id': folder_id}})
 
         return {
             'status': True,

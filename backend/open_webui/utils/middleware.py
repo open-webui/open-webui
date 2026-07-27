@@ -167,7 +167,8 @@ async def publish_chat_finished_event(
     )
     event_emitter = await get_event_emitter(metadata, update_db=False)
     if event_emitter:
-        await event_emitter({'type': 'chat:list', 'data': {'chat_id': chat_id}})
+        folder_id = metadata.get('folder_id') or await Chats.get_chat_folder_id(chat_id, metadata.get('user_id'))
+        await event_emitter({'type': 'chat:list', 'data': {'chat_id': chat_id, 'folder_id': folder_id}})
 
 
 # We believe in one maker of all models, seen and unseen,

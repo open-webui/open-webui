@@ -36,11 +36,35 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.sql import exists
+from sqlalchemy.sql import case, exists
 from sqlalchemy.sql.expression import bindparam
 
 log = logging.getLogger(__name__)
 ACTIVE_CHAT_GAP_SECONDS = 30 * 60
+
+
+def chat_list_order(sort_by: str = 'updated_at', sort_dir: str = 'desc', user_id: str | None = None):
+    if sort_by != 'unread_updated_at':
+        sort_column = Chat.title if sort_by == 'title' else Chat.updated_at
+        order_clause = sort_column.asc() if sort_dir == 'asc' else sort_column.desc()
+        return order_clause, Chat.id
+
+    unfinished_assistant = (
+        select(ChatMessage.id)
+        .where(ChatMessage.chat_id == Chat.id)
+        .where(ChatMessage.role == 'assistant')
+        .where(ChatMessage.done.is_(False))
+        .exists()
+    )
+    conditions = [Chat.updated_at > func.coalesce(Chat.last_read_at, 0), ~unfinished_assistant]
+    if user_id is not None:
+        conditions.append(Chat.user_id == user_id)
+
+    unread = case(
+        (and_(*conditions), 1),
+        else_=0,
+    )
+    return unread.desc(), Chat.updated_at.desc(), Chat.id
 
 
 class Chat(Base):  # database table mapping for chat entity
@@ -614,18 +638,61 @@ class ChatTable:
         except Exception:
             return None
 
-    async def update_chat_last_read_at_by_id(self, id: str, user_id: str, db: AsyncSession | None = None) -> int | None:
+    async def update_chat_last_read_at_by_id(
+        self, id: str, user_id: str, db: AsyncSession | None = None
+    ) -> tuple[int, bool] | None:
         try:
             async with get_async_db_context(db) as session:
                 chat = await session.get(Chat, id)
                 if chat and chat.user_id == user_id:
                     last_read_at = int(time.time())
+                    was_unread = chat.last_read_at is None or chat.updated_at > chat.last_read_at
                     chat.last_read_at = last_read_at
                     await session.commit()
-                    return last_read_at
+                    return last_read_at, was_unread
                 return None
         except Exception:
             return None
+
+    async def mark_chat_unread_by_id(
+        self, id: str, user_id: str, db: AsyncSession | None = None
+    ) -> ChatTitleIdResponse | None:
+        try:
+            async with get_async_db_context(db) as session:
+                chat = await session.get(Chat, id)
+                if chat and chat.user_id == user_id:
+                    chat.last_read_at = 0
+                    await session.commit()
+                    return ChatTitleIdResponse(
+                        id=chat.id,
+                        title=chat.title,
+                        updated_at=chat.updated_at,
+                        created_at=chat.created_at,
+                        last_read_at=chat.last_read_at,
+                    )
+                return None
+        except Exception:
+            return None
+
+    async def mark_chats_read_by_folder_ids(
+        self, user_id: str, folder_ids: list[str], db: AsyncSession | None = None
+    ) -> int:
+        if not folder_ids:
+            return 0
+
+        async with get_async_db_context(db) as session:
+            result = await session.execute(
+                update(Chat)
+                .where(
+                    Chat.user_id == user_id,
+                    Chat.folder_id.in_(folder_ids),
+                    Chat.archived == False,
+                    Chat.meta['internal'].as_boolean().is_not(True),
+                )
+                .values(last_read_at=Chat.updated_at)
+            )
+            await session.commit()
+            return result.rowcount or 0
 
     async def update_chat_title_by_id(self, id: str, title: str) -> ChatModel | None:
         try:
@@ -1212,6 +1279,8 @@ class ChatTable:
         include_archived: bool = False,
         include_folders: bool = False,
         include_pinned: bool = False,
+        sort_by: str = 'updated_at',
+        sort_dir: str = 'desc',
         skip: int | None = None,
         limit: int | None = None,
         db: AsyncSession | None = None,
@@ -1231,7 +1300,7 @@ class ChatTable:
             if not include_archived:
                 stmt = stmt.filter_by(archived=False)
 
-            stmt = stmt.order_by(Chat.updated_at.desc(), Chat.id)
+            stmt = stmt.order_by(*chat_list_order(sort_by, sort_dir))
 
             if skip:
                 stmt = stmt.offset(skip)
@@ -1802,6 +1871,8 @@ class ChatTable:
         user_id: str,
         skip: int = 0,
         limit: int = 60,
+        sort_by: str = 'updated_at',
+        sort_dir: str = 'desc',
         db: AsyncSession | None = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as session:
@@ -1811,8 +1882,8 @@ class ChatTable:
                 .filter(or_(Chat.pinned == False, Chat.pinned == None))
                 .filter_by(archived=False)
                 .where(Chat.meta['internal'].as_boolean().is_not(True))
-                .order_by(Chat.updated_at.desc(), Chat.id)
             )
+            stmt = stmt.order_by(*chat_list_order(sort_by, sort_dir))
 
             if skip:
                 stmt = stmt.offset(skip)
@@ -1841,20 +1912,19 @@ class ChatTable:
         limit: int = 60,
         sort_by: str = 'updated_at',
         sort_dir: str = 'desc',
+        unread_for_user_id: str | None = None,
         db: AsyncSession | None = None,
     ) -> list[dict]:
         """Get chats in a folder across ALL users. Returns dicts with user_id."""
         async with get_async_db_context(db) as session:
-            sort_column = Chat.title if sort_by == 'title' else Chat.updated_at
-            order_clause = sort_column.asc() if sort_dir == 'asc' else sort_column.desc()
             stmt = (
                 select(Chat.id, Chat.title, Chat.user_id, Chat.updated_at, Chat.created_at, Chat.last_read_at)
                 .filter_by(folder_id=folder_id)
                 .filter(or_(Chat.pinned == False, Chat.pinned == None))
                 .filter_by(archived=False)
                 .where(Chat.meta['internal'].as_boolean().is_not(True))
-                .order_by(order_clause, Chat.id)
             )
+            stmt = stmt.order_by(*chat_list_order(sort_by, sort_dir, unread_for_user_id))
 
             if skip:
                 stmt = stmt.offset(skip)

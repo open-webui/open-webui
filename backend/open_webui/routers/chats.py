@@ -115,6 +115,24 @@ async def add_active_state_to_chat_list(
     return chat_list
 
 
+async def get_folder_unread_counts(user_id: str, db: AsyncSession | None = None) -> dict[str, int]:
+    user_folders = await Folders.get_folders_by_user_id(user_id, db=db)
+    parent_by_id = {folder.id: folder.parent_id for folder in user_folders}
+    unread_counts = dict.fromkeys(parent_by_id.keys(), 0)
+    direct_unread_counts = await Chats.count_unread_by_folder_ids(user_id, list(parent_by_id.keys()), db=db)
+
+    for unread_folder_id, unread_count in direct_unread_counts.items():
+        current_id = unread_folder_id
+        seen = set()
+        while current_id and current_id not in seen:
+            seen.add(current_id)
+            if current_id in unread_counts:
+                unread_counts[current_id] += unread_count
+            current_id = parent_by_id.get(current_id)
+
+    return unread_counts
+
+
 class ChatConfigForm(BaseModel):
     ENABLE_CONTEXT_COMPACTION: bool
     CONTEXT_COMPACTION_TOKEN_THRESHOLD: int
@@ -203,6 +221,8 @@ async def get_session_user_chat_list(
     page: int | None = None,
     include_pinned: bool | None = False,
     include_folders: bool | None = False,
+    sort_by: str = 'updated_at',
+    sort_dir: str = 'desc',
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
@@ -214,6 +234,8 @@ async def get_session_user_chat_list(
                 user.id,
                 include_folders=include_folders,
                 include_pinned=include_pinned,
+                sort_by=sort_by,
+                sort_dir=sort_dir,
                 skip=skip,
                 limit=limit,
                 db=db,
@@ -223,6 +245,8 @@ async def get_session_user_chat_list(
                 user.id,
                 include_folders=include_folders,
                 include_pinned=include_pinned,
+                sort_by=sort_by,
+                sort_dir=sort_dir,
                 db=db,
             )
         return await add_active_state_to_chat_list(request, chats)
@@ -869,6 +893,8 @@ async def get_chat_list_by_folder_id(
     request: Request,
     folder_id: str,
     page: int | None = 1,
+    sort_by: str = 'unread_updated_at',
+    sort_dir: str = 'desc',
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -876,7 +902,15 @@ async def get_chat_list_by_folder_id(
         limit = 10
         skip = (page - 1) * limit
 
-        chats = await Chats.get_chats_by_folder_id_and_user_id(folder_id, user.id, skip=skip, limit=limit, db=db)
+        chats = await Chats.get_chats_by_folder_id_and_user_id(
+            folder_id,
+            user.id,
+            skip=skip,
+            limit=limit,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
+            db=db,
+        )
         return await add_active_state_to_chat_list(request, chats)
 
     except Exception as e:
@@ -2031,6 +2065,28 @@ async def get_shared_chat_access_by_id(
 
 class ChatFolderIdForm(BaseModel):
     folder_id: str | None = None
+
+
+@router.post('/{id}/unread')
+async def mark_chat_unread_by_id(
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    chat = await Chats.mark_chat_unread_by_id(id, user.id, db=db)
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    folder_id = await Chats.get_chat_folder_id(id, user.id, db=db)
+    return {
+        'chat_id': id,
+        'last_read_at': chat.last_read_at,
+        'folder_id': folder_id,
+        'folder_unread_counts': await get_folder_unread_counts(user.id, db=db),
+    }
 
 
 @router.post('/{id}/folder', response_model=ChatResponse | None)

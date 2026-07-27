@@ -65,7 +65,7 @@ export const refreshChatList = async (
 // through a registry of per-folder callbacks that only the sidebar can reach.
 // Handlers registered here let other components (e.g. the open chat's menu)
 // request that refresh without a reference to the sidebar.
-type FolderRefreshHandler = () => unknown;
+type FolderRefreshHandler = (folderId?: string | null, chat?: ChatListItem | null) => unknown;
 const folderRefreshHandlers = new Set<FolderRefreshHandler>();
 
 export const registerFolderRefreshHandler = (handler: FolderRefreshHandler) => {
@@ -75,8 +75,8 @@ export const registerFolderRefreshHandler = (handler: FolderRefreshHandler) => {
 	};
 };
 
-export const refreshFolderChatLists = async () => {
-	await Promise.all([...folderRefreshHandlers].map((handler) => handler()));
+export const refreshFolderChatLists = async (folderId?: string | null, chat?: ChatListItem | null) => {
+	await Promise.all([...folderRefreshHandlers].map((handler) => handler(folderId, chat)));
 };
 
 export const loadNextChatListPage = async (token: string = ''): Promise<ChatListResult> => {

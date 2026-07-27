@@ -123,7 +123,15 @@
 	let showSharedFolders = false;
 
 	let folders = {};
-	let folderRegistry: Record<string, { setFolderItems?: () => unknown }> = {};
+	let folderRegistry: Record<
+		string,
+		{
+			setFolderItems?: () => unknown;
+			upsertChat?: (chat: Record<string, unknown>) => unknown;
+			setChatActive?: (chatId: string, active: boolean) => boolean;
+			setChatReadAt?: (chatId: string, lastReadAt: number) => boolean;
+		}
+	> = {};
 
 	let newFolderId = null;
 
@@ -403,6 +411,35 @@
 		chatListLoading = false;
 	};
 
+	const applyFolderUnreadCounts = (folderUnreadCounts: Record<string, number>) => {
+		folders = Object.fromEntries(
+			Object.entries(folders).map(([id, folder]) => [
+				id,
+				id in folderUnreadCounts ? { ...folder, unread_count: folderUnreadCounts[id] } : folder
+			])
+		);
+		_folders.update((folderList) =>
+			folderList.map((folder) =>
+				folder.id in folderUnreadCounts
+					? { ...folder, unread_count: folderUnreadCounts[folder.id] }
+					: folder
+			)
+		);
+	};
+
+	const applyChatReadState = (data) => {
+		if (data?.folder_unread_counts) {
+			applyFolderUnreadCounts(data.folder_unread_counts);
+		}
+
+		if (data?.chat_id && typeof data?.last_read_at === 'number') {
+			setChatReadAt(data.chat_id, data.last_read_at);
+			for (const folder of Object.values(folderRegistry)) {
+				folder?.setChatReadAt?.(data.chat_id, data.last_read_at);
+			}
+		}
+	};
+
 	const importChatHandler = async (items, pinned = false, folderId = null) => {
 		if (!canImportChats) {
 			toast.error($i18n.t('Access prohibited'));
@@ -656,9 +693,17 @@
 		socketInstance?.on('events', chatActiveEventHandler);
 		socketInstance?.on('connect', refreshChatRows);
 
-		const unregisterFolderRefreshHandler = registerFolderRefreshHandler(() =>
-			Promise.all(Object.values(folderRegistry).map((folder) => folder?.setFolderItems?.()))
-		);
+		const unregisterFolderRefreshHandler = registerFolderRefreshHandler((folderId, chat) => {
+			if (folderId) {
+				if (chat) {
+					return folderRegistry[folderId]?.upsertChat?.(chat);
+				}
+
+				return folderRegistry[folderId]?.setFolderItems?.();
+			}
+
+			return Promise.all(Object.values(folderRegistry).map((folder) => folder?.setFolderItems?.()));
+		});
 
 		await tick();
 		initPinnedMenuSortable();
@@ -696,14 +741,23 @@
 			type: string;
 			data: {
 				active?: boolean;
+				folder_id?: string | null;
 				last_read_at?: number;
 				folder_unread_counts?: Record<string, number>;
 			};
 		};
 	}) => {
 		if (event.data?.type === 'chat:active') {
-			const active = event.data.data.active ?? false;
+			const eventData = event.data.data ?? {};
+			const active = eventData.active ?? false;
 			const found = setChatActive(event.chat_id, active);
+			let foundInFolder = false;
+			for (const folder of Object.values(folderRegistry)) {
+				foundInFolder = folder?.setChatActive?.(event.chat_id, active) || foundInFolder;
+			}
+			if (!foundInFolder && active && eventData.folder_id) {
+				await folderRegistry[eventData.folder_id]?.setFolderItems?.();
+			}
 			if (!found && active) {
 				await refreshChatRows();
 			}
@@ -711,27 +765,21 @@
 			const eventData = event.data.data ?? {};
 			const folderUnreadCounts = eventData.folder_unread_counts;
 			if (folderUnreadCounts) {
-				folders = Object.fromEntries(
-					Object.entries(folders).map(([id, folder]) => [
-						id,
-						id in folderUnreadCounts ? { ...folder, unread_count: folderUnreadCounts[id] } : folder
-					])
-				);
-				_folders.update((folderList) =>
-					folderList.map((folder) =>
-						folder.id in folderUnreadCounts
-							? { ...folder, unread_count: folderUnreadCounts[folder.id] }
-							: folder
-					)
-				);
+				applyFolderUnreadCounts(folderUnreadCounts);
 			}
 
 			if (typeof eventData.last_read_at === 'number') {
 				setChatReadAt(event.chat_id, eventData.last_read_at);
+				for (const folder of Object.values(folderRegistry)) {
+					folder?.setChatReadAt?.(event.chat_id, eventData.last_read_at);
+				}
 				return;
 			}
 
-			refreshChatRows();
+			await refreshChatRows();
+			if (eventData.folder_id) {
+				await folderRegistry[eventData.folder_id]?.setFolderItems?.();
+			}
 		}
 	};
 
@@ -1295,6 +1343,7 @@
 							bind:folderRegistry
 							{folders}
 							{shiftKey}
+							onFolderUnreadCounts={applyFolderUnreadCounts}
 							onDelete={(folderId) => {
 								selectedFolder.set(null);
 								initChatList();
@@ -1465,6 +1514,7 @@
 												on:change={async () => {
 													initChatList();
 												}}
+												onReadStateChange={applyChatReadState}
 												on:tag={(e) => {
 													const { type, name } = e.detail;
 													tagEventHandler(type, name, chat.id);
@@ -1529,6 +1579,7 @@
 										on:change={async () => {
 											initChatList();
 										}}
+										onReadStateChange={applyChatReadState}
 										on:tag={(e) => {
 											const { type, name } = e.detail;
 											tagEventHandler(type, name, chat.id);
