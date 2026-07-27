@@ -372,7 +372,6 @@
 										const node = e.node;
 										showMessage(node.data.message, true);
 									}}
-									onClose={() => showControls.set(false)}
 								/>
 							{:else if activeTab === 'files' && $selectedTerminalId}
 								<FileNav onAttach={handleTerminalAttach} {chatId} />
@@ -522,7 +521,6 @@
 											}
 											showMessage(node.data.message, true);
 										}}
-										onClose={() => showControls.set(false)}
 									/>
 								{:else if activeTab === 'files' && $selectedTerminalId}
 									<FileNav onAttach={handleTerminalAttach} overlay={dragged} {chatId} />
