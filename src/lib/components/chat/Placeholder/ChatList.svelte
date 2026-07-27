@@ -17,7 +17,7 @@
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { chatId, socket } from '$lib/stores';
+	import { chatId, socket, user } from '$lib/stores';
 
 	dayjs.extend(localizedFormat);
 
@@ -175,6 +175,7 @@
 		{#each chatList as chat, idx (chat.id)}
 			{@const unread =
 				chat.id !== $chatId &&
+				chat.user_id === $user?.id &&
 				!chat.active &&
 				(chat.last_read_at == null ||
 					(chat.updated_at != null && chat.updated_at > chat.last_read_at))}
@@ -234,7 +235,7 @@
 
 				<div class="hidden sm:flex sm:basis-2/5 items-center justify-end gap-2">
 					<div class=" text-gray-500 dark:text-gray-400 text-xs">
-						{dayjs(chat?.updated_at * 1000).calendar()}
+						{dayjs(((chat.updated_at ?? chat.created_at) ?? 0) * 1000).calendar()}
 					</div>
 
 					{#if showOwnerInfo && chat.user_id && chat.owner_name}
