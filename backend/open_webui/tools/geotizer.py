@@ -255,6 +255,12 @@ async def run_geotizer_workflow(
             {
                 'route_id': task.task_id,
                 'producer': task.producer,
+                'source_domain': task.kind,
+                'relation_to_object': (
+                    'direct'
+                    if task.kind == 'gis'
+                    else 'source_declared'
+                ),
                 'output': result,
             }
             for task, result in zip(contributors, contributor_results)
@@ -566,6 +572,20 @@ def _contributor_prompt(
             ),
         ],
     }
+    if task.kind == 'gis':
+        payload['rules'].extend(
+            [
+                (
+                    'A relevant record from the linked GIS project is direct '
+                    'object evidence, not regional or analogue evidence.'
+                ),
+                (
+                    'For every supported bounded field, state the exact '
+                    'field_key, value and GIS layer/feature/query locator; '
+                    'mark it confirmed_by_linked_gis_project.'
+                ),
+            ]
+        )
     if task.kind == 'kb':
         payload['knowledge_search_plan'] = dict(knowledge_search_plan)
         payload['rules'].extend(
@@ -691,6 +711,22 @@ def _owner_prompt(
             'filled requires a non-empty value and exact source_locator.',
             'not_found/not_applicable/conflicted require value=null.',
             'For GIS evidence, the linked GIS project is already the object scope.',
+            (
+                'Treat contributor_evidence with source_domain=gis, '
+                'relation_to_object=direct and '
+                'evidence_authority=linked_gis_project as direct object '
+                'evidence.'
+            ),
+            (
+                'A knowledge-base or web miss cannot negate a fact confirmed '
+                'by an exact linked-project GIS layer/feature/query locator.'
+            ),
+            (
+                'For every bounded field explicitly supported by direct GIS '
+                'evidence, use that GIS value unless conflicting direct '
+                'evidence exists; do not return not_found solely because the '
+                'knowledge base has no match.'
+            ),
             ('Do not call geotizer_fill; the orchestrator owns state ' 'transitions.'),
         ],
     }

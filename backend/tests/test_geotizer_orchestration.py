@@ -6,7 +6,9 @@ from itertools import permutations
 
 import pytest
 from open_webui.tools.geotizer import (
+    _contributor_prompt,
     _gis_error_user_message,
+    _owner_prompt,
     run_geotizer_workflow,
 )
 from open_webui.utils.geotizer_orchestration import (
@@ -18,6 +20,7 @@ from open_webui.utils.geotizer_orchestration import (
     extract_output_message_text,
     extract_owner_envelope,
     merge_owner_envelopes,
+    normalize_contributor_evidence,
     normalize_delegator_message,
     normalize_gis_object_profile,
     owner_failure_envelope,
@@ -110,6 +113,157 @@ def test_batch_plan_owner_is_last_for_every_route_permutation():
         assert tasks[-1].producer == value['producer']
         assert all(task.role == 'contributor' for task in tasks[:-1])
         assert all(task.producer != 'DataCube Reviewer' for task in tasks)
+
+
+def test_linked_project_gis_evidence_has_direct_authority():
+    evidence = normalize_contributor_evidence(
+        {
+            'route_id': 'GIS-EVIDENCE',
+            'producer': 'GISagent_yulong',
+            'source_domain': 'gis',
+            'relation_to_object': 'deposit_analogue',
+            'output': (
+                'geotizer_object.v1.r028.a01=1966; '
+                'layer=IzuchA; feature=record-1'
+            ),
+        }
+    )
+
+    assert evidence['relation_to_object'] == 'direct'
+    assert evidence['evidence_authority'] == 'linked_gis_project'
+    assert 'cannot negate' in evidence['negative_search_precedence']
+
+
+def test_non_gis_evidence_cannot_self_promote_to_linked_project_authority():
+    evidence = normalize_contributor_evidence(
+        {
+            'producer': 'KBagent_yulong',
+            'source_domain': 'kb',
+            'relation_to_object': 'deposit_analogue',
+            'evidence_authority': 'contributor',
+            'output': 'regional analogue',
+        }
+    )
+
+    assert evidence['relation_to_object'] == 'deposit_analogue'
+    assert evidence['evidence_authority'] == 'contributor'
+
+
+def test_prompts_make_direct_gis_precedence_explicit():
+    tasks = build_batch_tasks(
+        {
+            **batch(),
+            'evidence_routes': [
+                {
+                    'route_id': 'GIS-EVIDENCE',
+                    'producer': 'GISagent_yulong',
+                    'output': 'evidence_bundle',
+                    'satisfied_by': 'contributor_call',
+                }
+            ],
+        }
+    )
+    contributor = tasks[0]
+    contributor_request = json.loads(
+        _contributor_prompt(
+            object_name='Нияюская площадь',
+            run_id='run',
+            task=contributor,
+            next_batch=batch(),
+            knowledge_search_plan={},
+        )
+    )
+    assert any(
+        'direct object evidence' in rule
+        for rule in contributor_request['rules']
+    )
+
+    context = {
+        'batch': batch(),
+        'knowledge_search_plan': {},
+        'contributor_evidence': [
+            normalize_contributor_evidence(
+                {
+                    'source_domain': 'gis',
+                    'output': 'field_key=f1; value=1966; layer=IzuchA',
+                }
+            )
+        ],
+    }
+    owner_request = json.loads(
+        _owner_prompt(
+            context=context,
+            attempt=1,
+            feedback=None,
+            previous_output='',
+        )
+    )
+    rules = '\n'.join(owner_request['rules'])
+    assert 'knowledge-base or web miss cannot negate' in rules
+    assert 'do not return not_found solely because' in rules
+
+
+def test_workflow_marks_gis_contributor_evidence_as_direct():
+    gis_batch = {
+        **batch(),
+        'evidence_routes': [
+            {
+                'route_id': 'GIS-EVIDENCE',
+                'producer': 'GISagent_yulong',
+                'output': 'evidence_bundle',
+                'satisfied_by': 'contributor_call',
+            }
+        ],
+    }
+
+    async def gis_call(payload):
+        if payload['action'] == 'start':
+            return {
+                'workflow_status': 'collecting',
+                'run_id': 'run-gis-authority',
+                'object_name': 'Нияюская площадь',
+                'datacube': {},
+                'next_batch': gis_batch,
+            }
+        if payload['action'] == 'submit_batch':
+            return {
+                'workflow_status': 'collecting',
+                'run_id': 'run-gis-authority',
+                'next_batch': None,
+            }
+        return {
+            'workflow_status': 'finalized',
+            'run_id': 'run-gis-authority',
+            'xlsx': {
+                'download_path': (
+                    '/geotizer/files/run-gis-authority/geotizer.xlsx'
+                )
+            },
+        }
+
+    async def agent_call(task, prompt, object_name, datacube):
+        if task.role == 'contributor':
+            return 'field_key=f1; value=1966; layer=IzuchA; feature=1'
+        request = json.loads(prompt)
+        evidence = request['context']['contributor_evidence']
+        assert evidence[0]['source_domain'] == 'gis'
+        assert evidence[0]['relation_to_object'] == 'direct'
+        assert evidence[0]['evidence_authority'] == 'linked_gis_project'
+        return json.dumps(envelope())
+
+    final = asyncio.run(
+        run_geotizer_workflow(
+            object_name='Нияюская площадь',
+            project_id=None,
+            model_run_id=None,
+            run_id=None,
+            allow_draft=True,
+            gis_call=gis_call,
+            agent_call=agent_call,
+        )
+    )
+
+    assert final['workflow_status'] == 'finalized'
 
 
 def test_batch_plan_rejects_unknown_owner():
