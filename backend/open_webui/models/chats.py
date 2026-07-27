@@ -1004,59 +1004,96 @@ class ChatTable:
 
                 await session.commit()
                 updated_chat = ChatModel.model_validate(chat_item)
+                user_id = chat_item.user_id
 
-                # Dual-write to chat_message table
-                try:
-                    await ChatMessages.upsert_message(
-                        message_id=message_id,
-                        chat_id=id,
-                        user_id=chat_item.user_id,
-                        data=saved_message,
-                    )
-                except Exception as e:
-                    log.warning(f'Failed to write to chat_message table: {e}')
+            # Dual-write to chat_message table
+            try:
+                await ChatMessages.upsert_message(
+                    message_id=message_id,
+                    chat_id=id,
+                    user_id=user_id,
+                    data=saved_message,
+                )
+            except Exception as e:
+                log.warning(f'Failed to write to chat_message table: {e}')
 
-                return updated_chat
+            return updated_chat
         except Exception:
             return None
 
     async def delete_message_from_chat_by_id_and_message_id(self, id: str, message_id: str) -> ChatModel | None:
-        chat_model = await self.get_chat_by_id(id)
-        if chat_model is None:
+        try:
+            async with get_async_db_context() as session:
+                chat_item = await session.get(Chat, id)
+                if chat_item is None:
+                    return None
+
+                self._sanitize_chat_row(chat_item)
+                chat = chat_item.chat or {}
+                self._repair_chat_current_id(chat)
+
+                history = chat.get('history', {})
+                deleted_ids = self.delete_message_from_history(history, message_id)
+                if not deleted_ids:
+                    clean_chat = self._clean_null_bytes(chat)
+                    chat_item.chat = clean_chat
+                    chat_item.title = (
+                        self._clean_null_bytes(clean_chat['title']) if 'title' in clean_chat else 'New Chat'
+                    )
+                    chat_item.current_message_id = self.get_current_message_id(clean_chat)
+                    flag_modified(chat_item, 'chat')
+                    await session.commit()
+                    return ChatModel.model_validate(chat_item)
+
+                messages = history.get('messages') or {}
+                chat['history'] = history
+                clean_chat = self._clean_null_bytes(chat)
+                chat_item.chat = clean_chat
+                chat_item.title = self._clean_null_bytes(clean_chat['title']) if 'title' in clean_chat else 'New Chat'
+                chat_item.current_message_id = self.get_current_message_id(clean_chat)
+                flag_modified(chat_item, 'chat')
+                chat_item.updated_at = int(time.time())
+                await session.commit()
+                updated_chat = ChatModel.model_validate(chat_item)
+                user_id = chat_item.user_id
+
+            await self.backfill_messages_by_chat_id(id, user_id, messages)
+            await ChatMessages.delete_message_ids_by_chat_id(id, deleted_ids)
+
+            return updated_chat
+        except Exception:
             return None
-
-        chat = chat_model.chat
-        history = chat.get('history', {})
-        deleted_ids = self.delete_message_from_history(history, message_id)
-        if not deleted_ids:
-            return chat_model
-
-        messages = history.get('messages') or {}
-        chat['history'] = history
-        updated_chat = await self.update_chat_by_id(id, chat)
-
-        await self.backfill_messages_by_chat_id(id, chat_model.user_id, messages)
-        await ChatMessages.delete_message_ids_by_chat_id(id, deleted_ids)
-
-        return updated_chat
 
     async def add_message_status_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, status: dict
     ) -> ChatModel | None:
-        chat = await self.get_chat_by_id(id)
-        if chat is None:
+        try:
+            async with get_async_db_context() as session:
+                chat_item = await session.get(Chat, id)
+                if chat_item is None:
+                    return None
+
+                self._sanitize_chat_row(chat_item)
+                chat = chat_item.chat or {}
+                self._repair_chat_current_id(chat)
+                history = chat.get('history', {})
+
+                if message_id in history.get('messages', {}):
+                    status_history = history['messages'][message_id].get('statusHistory', [])
+                    status_history.append(status)
+                    history['messages'][message_id]['statusHistory'] = status_history
+
+                chat['history'] = history
+                clean_chat = self._clean_null_bytes(chat)
+                chat_item.chat = clean_chat
+                chat_item.title = self._clean_null_bytes(clean_chat['title']) if 'title' in clean_chat else 'New Chat'
+                chat_item.current_message_id = self.get_current_message_id(clean_chat)
+                flag_modified(chat_item, 'chat')
+                await session.commit()
+
+                return ChatModel.model_validate(chat_item)
+        except Exception:
             return None
-
-        chat = chat.chat
-        history = chat.get('history', {})
-
-        if message_id in history.get('messages', {}):
-            status_history = history['messages'][message_id].get('statusHistory', [])
-            status_history.append(status)
-            history['messages'][message_id]['statusHistory'] = status_history
-
-        chat['history'] = history
-        return await self.update_chat_by_id(id, chat, touch=False)
 
     async def add_message_files_by_id_and_message_id(self, id: str, message_id: str, files: list[dict]) -> list[dict]:
         async with get_async_db_context() as session:
