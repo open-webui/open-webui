@@ -16,6 +16,7 @@ from typing import Literal, Optional
 
 from fastapi import HTTPException, Request
 
+from open_webui.config import RAG_EMBEDDING_QUERY_PREFIX
 from open_webui.models.channels import Channel, ChannelMember, Channels
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
@@ -3237,7 +3238,7 @@ async def query_knowledge_bases(
 
         user_id = __user__.get('id')
         user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id)]
-        query_embedding = await __request__.app.state.EMBEDDING_FUNCTION(query)
+        query_embedding = await __request__.app.state.EMBEDDING_FUNCTION(query, prefix=RAG_EMBEDDING_QUERY_PREFIX)
 
         # Min-heap of (distance, knowledge_base_id) - only holds top `count` results
         top_results_heap = []
