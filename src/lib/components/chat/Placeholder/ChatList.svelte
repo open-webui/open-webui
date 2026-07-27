@@ -17,7 +17,7 @@
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { chatId, socket, user } from '$lib/stores';
+	import { chatId, socket } from '$lib/stores';
 
 	dayjs.extend(localizedFormat);
 
@@ -175,7 +175,6 @@
 		{#each chatList as chat, idx (chat.id)}
 			{@const unread =
 				chat.id !== $chatId &&
-				chat.user_id === $user?.id &&
 				!chat.active &&
 				(chat.last_read_at == null ||
 					(chat.updated_at != null && chat.updated_at > chat.last_read_at))}
