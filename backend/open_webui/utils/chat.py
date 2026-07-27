@@ -30,7 +30,7 @@ from open_webui.socket.main import (
     sio,
 )
 from open_webui.utils.filter import (
-    get_sorted_filter_ids,
+    get_filter_functions,
     process_filter_functions,
 )
 from open_webui.utils.models import check_model_access, get_all_models
@@ -362,8 +362,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     }
 
     try:
-        filter_ids = await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
-        filter_functions = await Functions.get_functions_by_ids(filter_ids)
+        filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
 
         result, _ = await process_filter_functions(
             request=request,
