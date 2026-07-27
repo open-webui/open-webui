@@ -4439,13 +4439,35 @@ async def streaming_chat_response_handler(response, ctx):
                                         or delta.get('thinking')
                                     )
                                     reasoning_details = delta.get('reasoning_details')
-                                    if reasoning_content or reasoning_details:
-                                        reasoning_item = (
-                                            next(
-                                                (item for item in reversed(output) if item.get('type') == 'reasoning'),
-                                                None,
+                                    reasoning_detail_items = (
+                                        [item for item in reasoning_details if isinstance(item, dict)]
+                                        if isinstance(reasoning_details, list)
+                                        else [reasoning_details]
+                                        if isinstance(reasoning_details, dict)
+                                        else []
+                                    )
+                                    existing_reasoning_item = next(
+                                        (item for item in reversed(output) if item.get('type') == 'reasoning'),
+                                        None,
+                                    )
+                                    message_index = next(
+                                        (i for i, item in enumerate(output) if item.get('type') == 'message'),
+                                        None,
+                                    )
+                                    if reasoning_content or (
+                                        reasoning_detail_items
+                                        and (
+                                            existing_reasoning_item
+                                            or any(
+                                                item.get('text') or item.get('summary') or item.get('data')
+                                                for item in reasoning_detail_items
                                             )
-                                            if reasoning_details and not reasoning_content
+                                        )
+                                    ):
+                                        reasoning_item = (
+                                            existing_reasoning_item
+                                            if (reasoning_detail_items and not reasoning_content)
+                                            or message_index is not None
                                             else None
                                         )
 
@@ -4462,7 +4484,13 @@ async def streaming_chat_response_handler(response, ctx):
                                                     'summary': None,
                                                     'started_at': time.time(),
                                                 }
-                                                output.append(reasoning_item)
+                                                if message_index is not None:
+                                                    reasoning_item['ended_at'] = time.time()
+                                                    reasoning_item['duration'] = 0
+                                                    reasoning_item['status'] = 'completed'
+                                                    output.insert(message_index, reasoning_item)
+                                                else:
+                                                    output.append(reasoning_item)
                                             else:
                                                 reasoning_item = output[-1]
 
@@ -4484,10 +4512,10 @@ async def streaming_chat_response_handler(response, ctx):
                                             }
                                             delta_type = 'content'
 
-                                        if reasoning_details:
+                                        if reasoning_detail_items:
                                             merge_streamed_reasoning_details(
                                                 reasoning_item.setdefault('reasoning_details', []),
-                                                reasoning_details,
+                                                reasoning_detail_items,
                                             )
                                             data = {
                                                 'output': full_output(),
