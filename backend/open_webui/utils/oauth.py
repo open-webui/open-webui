@@ -190,6 +190,7 @@ async def get_oauth_runtime_config() -> SimpleNamespace:
 # Conservative default when the provider omits both expires_in and expires_at.
 # Matches the value recommended by Authlib's compliance_fix documentation.
 DEFAULT_TOKEN_EXPIRY_SECONDS = 3600
+NON_EXPIRING_TOKEN_EXPIRES_AT = 253402300799  # 9999-12-31 23:59:59 UTC
 
 
 # Apereo CAS includes client_id in ID token JWS headers; Authlib 1.7/joserfc
@@ -206,8 +207,11 @@ def _normalize_token_expiry(token: dict) -> dict:
     Resolution order:
     1. If *expires_at* is already present and non-None, trust it.
     2. Else if *expires_in* is present and non-None, compute *expires_at*.
-    3. Otherwise fall back to ``DEFAULT_TOKEN_EXPIRY_SECONDS`` and log a
-       warning so operators can identify providers that omit expiration.
+    3. Else if a *refresh_token* is present, fall back to
+       ``DEFAULT_TOKEN_EXPIRY_SECONDS`` and log a warning so operators can
+       identify providers that omit expiration.
+    4. Otherwise treat the token as non-expiring; there is no refresh path to
+       recover from a fabricated short expiry.
 
     Also stamps *issued_at* for auditing.
     """
@@ -217,13 +221,17 @@ def _normalize_token_expiry(token: dict) -> dict:
         expires_at = int(token['expires_at'])
     elif token.get('expires_in') is not None:
         expires_at = int(datetime.now().timestamp() + token['expires_in'])
-    else:
-        # Neither field present — conservative fallback
+    elif token.get('refresh_token'):
         log.warning(
             "OAuth token response missing both 'expires_in' and 'expires_at'; "
             f'defaulting to {DEFAULT_TOKEN_EXPIRY_SECONDS}s from now'
         )
         expires_at = int(datetime.now().timestamp() + DEFAULT_TOKEN_EXPIRY_SECONDS)
+    else:
+        log.info(
+            "OAuth token response missing 'expires_in', 'expires_at' and 'refresh_token'; treating token as non-expiring"
+        )
+        expires_at = NON_EXPIRING_TOKEN_EXPIRES_AT
 
     id_token = token.get('id_token')
     if id_token:
