@@ -1928,9 +1928,7 @@ async def generate_messages(
     if isinstance(response, StreamingResponse):
         # Streaming response: wrap the generator to convert SSE format
         return StreamingResponse(
-            openai_stream_to_anthropic_stream(
-                response.body_iterator, model=requested_model, input_tokens=input_tokens or 0
-            ),
+            openai_stream_to_anthropic_stream(response.body_iterator, model=requested_model, input_tokens=input_tokens),
             media_type='text/event-stream',
             headers={
                 'Cache-Control': 'no-cache',

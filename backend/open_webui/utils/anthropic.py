@@ -570,7 +570,7 @@ def convert_openai_to_anthropic_response(
     }
 
 
-async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str = '', input_tokens: int = 0):
+async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str = '', input_tokens: int | None = None):
     """
     Convert an OpenAI SSE streaming response to Anthropic Messages SSE format.
 
@@ -617,7 +617,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
             'model': model,
             'stop_reason': None,
             'stop_sequence': None,
-            'usage': {'input_tokens': input_tokens, 'output_tokens': 0},
+            'usage': {'input_tokens': input_tokens or 0, 'output_tokens': 0},
         },
     }
     yield f'event: message_start\ndata: {json.dumps(message_start)}\n\n'.encode()
@@ -906,13 +906,17 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
             yield f'event: content_block_stop\ndata: {json.dumps(block_stop)}\n\n'.encode()
 
     # Emit message_delta with stop reason
+    usage = {'output_tokens': output_tokens}
+    if input_tokens is not None:
+        usage['input_tokens'] = input_tokens
+
     message_delta = {
         'type': 'message_delta',
         'delta': {
             'stop_reason': stop_reason,
             'stop_sequence': None,
         },
-        'usage': {'output_tokens': output_tokens},
+        'usage': usage,
     }
     yield f'event: message_delta\ndata: {json.dumps(message_delta)}\n\n'.encode()
 
