@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import json
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from typing import Any
 
 from fastapi import Request
@@ -261,7 +261,12 @@ async def run_geotizer_workflow(
             str(field.get('field_key') or '')
             for field in next_batch.get('fields') or []
         ]
-        evidence = []
+        evidence = await _deterministic_infrastructure_evidence(
+            next_batch=next_batch,
+            run_id=active_run_id,
+            allowed_field_keys=allowed_field_keys,
+            gis_call=gis_call,
+        )
         for task, result in zip(contributors, contributor_results):
             item = {
                 'route_id': task.task_id,
@@ -690,6 +695,61 @@ def _contributor_prompt(
             ]
         )
     return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+def _needs_deterministic_infrastructure(
+    next_batch: Mapping[str, Any],
+) -> bool:
+    if str(next_batch.get('batch_id') or '') != 'GIS-DC':
+        return False
+    prefixes = (
+        'geotizer_object.v1.r078.',
+        'geotizer_object.v1.r081.',
+        'geotizer_object.v1.r084.',
+        'geotizer_object.v1.r085.',
+        'geotizer_object.v1.r088.',
+    )
+    return any(
+        str(field.get('field_key') or '').startswith(prefixes)
+        for field in next_batch.get('fields') or []
+    )
+
+
+async def _deterministic_infrastructure_evidence(
+    *,
+    next_batch: Mapping[str, Any],
+    run_id: str,
+    allowed_field_keys: Sequence[str],
+    gis_call: GisCall,
+) -> list[dict[str, Any]]:
+    if not _needs_deterministic_infrastructure(next_batch):
+        return []
+    deterministic = await gis_call(
+        {
+            'action': 'infrastructure_proposals',
+            'run_id': run_id,
+        }
+    )
+    _raise_for_gis_error(deterministic)
+    return [
+        {
+            'route_id': 'GIS-INFRASTRUCTURE-DETERMINISTIC',
+            'producer': 'gis_service',
+            'source_domain': 'gis',
+            'relation_to_object': 'direct',
+            'output': json.dumps(
+                deterministic,
+                ensure_ascii=False,
+            ),
+            'field_proposals': [
+                proposal.as_dict()
+                for proposal in normalize_gis_field_proposals(
+                    deterministic,
+                    allowed_field_keys=allowed_field_keys,
+                )
+            ],
+        }
+    ]
 
 
 def _gis_infrastructure_rules(
