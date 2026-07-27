@@ -281,13 +281,25 @@
 
 		for (let idx = activeMessages.length - 1; idx >= 0; idx -= 1) {
 			const usage = activeMessages[idx]?.usage ?? activeMessages[idx]?.info?.usage;
-			const inputTokens = usage?.input_tokens ?? usage?.prompt_tokens;
-			if (inputTokens) {
+			const usageTokens =
+				Number(
+					usage?.prompt_tokens ||
+						usage?.input_tokens ||
+						usage?.prompt_eval_count ||
+						usage?.prompt_n ||
+						0
+				) +
+				Number(
+					usage?.completion_tokens ||
+						usage?.output_tokens ||
+						usage?.eval_count ||
+						usage?.predicted_n ||
+						0
+				) +
+				Number(usage?.cache_n || 0);
+			if (usageTokens) {
 				hasUsageCheckpoint = true;
-				estimatedTokens =
-					Number(inputTokens || 0) +
-					Number(usage.output_tokens ?? usage.completion_tokens ?? 0) +
-					estimateMessagesTokens(activeMessages.slice(idx + 1));
+				estimatedTokens = usageTokens + estimateMessagesTokens(activeMessages.slice(idx + 1));
 				break;
 			}
 		}
