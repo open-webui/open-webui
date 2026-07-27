@@ -544,19 +544,37 @@ def convert_openai_to_anthropic_response(
         )
 
     # Usage
-    openai_usage = openai_response.get('usage', {})
+    openai_usage = openai_response.get('usage') or {}
+    cache_creation = openai_usage.get('cache_creation_input_tokens')
+    cache_read = openai_usage.get('cache_read_input_tokens')
+    prompt_details = openai_usage.get('prompt_tokens_details')
+    if cache_read is None and isinstance(prompt_details, dict):
+        cache_read = prompt_details.get('cached_tokens')
+
+    usage_input = openai_usage.get('input_tokens')
+    if usage_input is None:
+        prompt_tokens = openai_usage.get('prompt_tokens')
+        if prompt_tokens is not None:
+            usage_input = max(prompt_tokens - (cache_creation or 0) - (cache_read or 0), 0)
+
+    usage_output = openai_usage.get('output_tokens')
+    if usage_output is None:
+        usage_output = openai_usage.get('completion_tokens')
+
     usage = {
-        'input_tokens': (
-            input_tokens
-            if input_tokens is not None
-            else openai_usage.get('input_tokens', openai_usage.get('prompt_tokens', 0))
-        ),
-        'output_tokens': openai_usage.get('output_tokens', openai_usage.get('completion_tokens', 0)),
+        'input_tokens': usage_input if usage_input is not None else (input_tokens if input_tokens is not None else 0),
+        'output_tokens': usage_output if usage_output is not None else 0,
     }
-    if 'cache_creation_input_tokens' in openai_usage:
-        usage['cache_creation_input_tokens'] = openai_usage['cache_creation_input_tokens']
-    if 'cache_read_input_tokens' in openai_usage:
-        usage['cache_read_input_tokens'] = openai_usage['cache_read_input_tokens']
+    if cache_creation is not None:
+        usage['cache_creation_input_tokens'] = cache_creation
+    if cache_read is not None:
+        usage['cache_read_input_tokens'] = cache_read
+    if isinstance(openai_usage.get('output_tokens_details'), dict):
+        usage['output_tokens_details'] = openai_usage['output_tokens_details']
+    if isinstance(openai_usage.get('server_tool_use'), dict):
+        usage['server_tool_use'] = openai_usage['server_tool_use']
+    if openai_usage.get('service_tier') is not None:
+        usage['service_tier'] = openai_usage['service_tier']
 
     return {
         'id': openai_response.get('id', f'msg_{_uuid.uuid4().hex[:24]}'),
@@ -592,22 +610,8 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
     cache_read_input_tokens = None
     output_tokens_details = None
     server_tool_use = None
+    service_tier = None
     stop_reason = 'end_turn'
-
-    def update_usage(usage_data: dict):
-        nonlocal input_tokens
-        nonlocal output_tokens
-        nonlocal cache_creation_input_tokens
-        nonlocal cache_read_input_tokens
-        nonlocal output_tokens_details
-        nonlocal server_tool_use
-
-        input_tokens = usage_data.get('input_tokens', usage_data.get('prompt_tokens', input_tokens))
-        output_tokens = usage_data.get('output_tokens', usage_data.get('completion_tokens', output_tokens))
-        cache_creation_input_tokens = usage_data.get('cache_creation_input_tokens', cache_creation_input_tokens)
-        cache_read_input_tokens = usage_data.get('cache_read_input_tokens', cache_read_input_tokens)
-        output_tokens_details = usage_data.get('output_tokens_details', output_tokens_details)
-        server_tool_use = usage_data.get('server_tool_use', server_tool_use)
 
     # Track content blocks with a running index.
     # Each text block or tool_use block gets its own index.
@@ -663,20 +667,46 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                 except (json.JSONDecodeError, TypeError):
                     continue
 
+                usage_data = data.get('usage')
+                if isinstance(usage_data, dict):
+                    cache_creation = usage_data.get('cache_creation_input_tokens')
+                    cache_read = usage_data.get('cache_read_input_tokens')
+                    prompt_details = usage_data.get('prompt_tokens_details')
+                    if cache_read is None and isinstance(prompt_details, dict):
+                        cache_read = prompt_details.get('cached_tokens')
+
+                    usage_input = usage_data.get('input_tokens')
+                    if usage_input is None:
+                        prompt_tokens = usage_data.get('prompt_tokens')
+                        if prompt_tokens is not None:
+                            usage_input = max(prompt_tokens - (cache_creation or 0) - (cache_read or 0), 0)
+
+                    usage_output = usage_data.get('output_tokens')
+                    if usage_output is None:
+                        usage_output = usage_data.get('completion_tokens')
+
+                    if usage_input is not None:
+                        input_tokens = usage_input
+                    if usage_output is not None:
+                        output_tokens = usage_output
+                    if cache_creation is not None:
+                        cache_creation_input_tokens = cache_creation
+                    if cache_read is not None:
+                        cache_read_input_tokens = cache_read
+                    if isinstance(usage_data.get('output_tokens_details'), dict):
+                        output_tokens_details = usage_data['output_tokens_details']
+                    if isinstance(usage_data.get('server_tool_use'), dict):
+                        server_tool_use = usage_data['server_tool_use']
+                    if usage_data.get('service_tier') is not None:
+                        service_tier = usage_data['service_tier']
+
                 choices = data.get('choices', [])
                 if not choices:
-                    # Check for usage in the final chunk
-                    if data.get('usage'):
-                        update_usage(data['usage'])
                     continue
 
                 delta = choices[0].get('delta', {})
                 finish_reason = choices[0].get('finish_reason')
                 message = choices[0].get('message') or {}
-
-                # Update usage if present
-                if data.get('usage'):
-                    update_usage(data['usage'])
 
                 reasoning_content = (
                     delta.get('reasoning_content')
@@ -928,6 +958,8 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
         usage['output_tokens_details'] = output_tokens_details
     if server_tool_use is not None:
         usage['server_tool_use'] = server_tool_use
+    if service_tier is not None:
+        usage['service_tier'] = service_tier
 
     message_delta = {
         'type': 'message_delta',
