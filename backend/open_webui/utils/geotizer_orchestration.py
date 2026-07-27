@@ -1107,6 +1107,16 @@ def normalize_contributor_evidence(
         normalized['negative_search_precedence'] = (
             'A knowledge-base or web miss cannot negate a confirmed GIS fact.'
         )
+    elif source_domain == 'vision':
+        normalized['relation_to_object'] = str(
+            item.get('relation_to_object')
+            or 'project_specific_source'
+        )
+        normalized['evidence_authority'] = 'project_visual_evidence'
+        normalized['negative_search_precedence'] = (
+            'Visual evidence is calculated or analogue evidence and never '
+            'overrides a direct object fact.'
+        )
     else:
         normalized['relation_to_object'] = str(
             item.get('relation_to_object') or 'source_declared'
