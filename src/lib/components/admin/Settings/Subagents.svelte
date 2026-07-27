@@ -2,7 +2,10 @@
 	import { getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
+	import { getModels } from '$lib/apis';
 	import { getSubagentsConfig, setSubagentsConfig } from '$lib/apis/configs';
+	import { getBaseModels } from '$lib/apis/models';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 
@@ -11,23 +14,50 @@
 	let loading = true;
 	let saving = false;
 	let enabled = false;
+	let subagentModelId = '';
 	let backgroundEnabled = false;
 	let maxConcurrent = 20;
 	let maxAsync = 20;
 	let maxIterations = 30;
 	let maxOutput = 30000;
 	let systemPrompt = '';
+	let models: any[] = [];
+
+	const normalizeModelSelection = (modelId: string | null | undefined) => {
+		if (!modelId) {
+			return '';
+		}
+
+		const model = models.find((item: any) => item.id === modelId);
+		if (!model) {
+			return modelId;
+		}
+
+		return model.id;
+	};
 
 	onMount(async () => {
 		try {
-			const config = await getSubagentsConfig(localStorage.token);
+			const [config, workspaceModels, baseModels] = await Promise.all([
+				getSubagentsConfig(localStorage.token),
+				getBaseModels(localStorage.token),
+				getModels(localStorage.token, null, false)
+			]);
 			enabled = config?.ENABLE_SUBAGENTS ?? false;
+			subagentModelId = config?.SUBAGENTS_MODEL_ID ?? '';
 			backgroundEnabled = config?.SUBAGENTS_BACKGROUND_ENABLED ?? false;
 			maxConcurrent = Number(config?.SUBAGENTS_MAX_CONCURRENT) || 20;
 			maxAsync = Number(config?.SUBAGENTS_MAX_ASYNC) || 20;
 			maxIterations = Number(config?.SUBAGENTS_MAX_ITERATIONS) || 30;
 			maxOutput = Number(config?.SUBAGENTS_MAX_OUTPUT) || 30000;
 			systemPrompt = config?.SUBAGENTS_SYSTEM_PROMPT ?? '';
+			models = baseModels.map((model: any) => {
+				const workspaceModel = workspaceModels.find((item: any) => item.id === model.id);
+
+				return workspaceModel
+					? { ...model, ...workspaceModel }
+					: { ...model, id: model.id, name: model.name, is_active: true };
+			});
 		} catch (error) {
 			toast.error(`${error}`);
 		} finally {
@@ -40,6 +70,7 @@
 		try {
 			await setSubagentsConfig(localStorage.token, {
 				ENABLE_SUBAGENTS: enabled,
+				SUBAGENTS_MODEL_ID: subagentModelId,
 				SUBAGENTS_BACKGROUND_ENABLED: backgroundEnabled,
 				SUBAGENTS_MAX_CONCURRENT: maxConcurrent,
 				SUBAGENTS_MAX_ASYNC: maxAsync,
@@ -77,6 +108,34 @@
 				</p>
 
 				{#if enabled}
+					<div>
+						<label class="text-xs text-gray-600 dark:text-gray-400" for="sa-model">
+							{$i18n.t('Sub-agent Model')}
+						</label>
+						<SettingsSelect
+							id="sa-model"
+							bind:value={subagentModelId}
+							className="mt-1 w-full"
+							placeholder={$i18n.t('Select a model')}
+							on:change={() => {
+								subagentModelId = normalizeModelSelection(subagentModelId);
+							}}
+						>
+							<option value="" selected>{$i18n.t('Current Model')}</option>
+							{#each models as model}
+								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+									{model.name}
+									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+								</option>
+							{/each}
+						</SettingsSelect>
+						<p class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+							{$i18n.t(
+								'Choose a dedicated model for sub-agents. Current Model follows the active chat model.'
+							)}
+						</p>
+					</div>
+
 					<div>
 						<label class="text-xs text-gray-600 dark:text-gray-400" for="sa-concurrent">
 							{$i18n.t('Max concurrent')}
