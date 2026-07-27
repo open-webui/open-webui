@@ -23,6 +23,7 @@ from open_webui.env import (
     REDIS_SENTINEL_PORT,
     REDIS_SOCKET_CONNECT_TIMEOUT,
     REDIS_SOCKET_KEEPALIVE,
+    REDIS_SOCKET_TIMEOUT,
     REDIS_URL,
 )
 
@@ -257,6 +258,8 @@ def _socket_options() -> dict[str, Any]:
     opts: dict[str, Any] = {}
     if REDIS_SOCKET_CONNECT_TIMEOUT is not None:
         opts['socket_connect_timeout'] = REDIS_SOCKET_CONNECT_TIMEOUT
+    if REDIS_SOCKET_TIMEOUT:
+        opts['socket_timeout'] = REDIS_SOCKET_TIMEOUT
     if REDIS_SOCKET_KEEPALIVE:
         opts['socket_keepalive'] = True
     if REDIS_HEALTH_CHECK_INTERVAL:
