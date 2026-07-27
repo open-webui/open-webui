@@ -106,6 +106,50 @@ def test_explicit_origin_is_never_downgraded(declared_origin):
     assert corrected['patches'][0]['value_origin'] == declared_origin
 
 
+def test_correction_runs_after_mislabeled_structured_gis_proposal():
+    value = envelope()
+    value['patches'][0].update(
+        {
+            'status': 'not_found',
+            'value': None,
+            'value_origin': None,
+        }
+    )
+    evidence = [
+        {
+            'source_domain': 'gis',
+            'field_proposals': [
+                {
+                    'field_key': 'f1',
+                    'value': '2-3',
+                    'unit': 'months',
+                    'value_origin': 'direct',
+                    'relation_to_object': 'regional_context',
+                    'source_id': 'gis-climate',
+                    'source_title': 'Polar Urals climate',
+                    'source_locator': {
+                        'project_id': 'Object',
+                        'layer_id': 'location',
+                        'feature_or_query': 'regional climate inference',
+                    },
+                    'retrieval_note': (
+                        'Value derived from regional analogue data'
+                    ),
+                }
+            ],
+        }
+    ]
+
+    composed = apply_structured_gis_field_proposals(
+        batch(),
+        value,
+        evidence,
+    )
+    corrected = correct_explicitly_derived_value_origins(composed)
+
+    assert corrected['patches'][0]['value_origin'] == 'analogue'
+
+
 def batch():
     return {
         'batch_id': 'GIS-DC',
