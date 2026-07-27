@@ -7,6 +7,7 @@ from itertools import permutations
 import pytest
 from open_webui.tools.geotizer import (
     _contributor_prompt,
+    _contributors_for_batch,
     _gis_error_user_message,
     _gis_infrastructure_rules,
     _needs_deterministic_infrastructure,
@@ -612,6 +613,41 @@ def test_only_real_infrastructure_fields_trigger_backend_calculation():
             ],
         }
     )
+
+
+def test_deterministic_infrastructure_replaces_only_gis_contributor():
+    infrastructure_batch = {
+        **batch(),
+        'fields': [
+            {'field_key': 'geotizer_object.v1.r078.a01'},
+        ],
+        'evidence_routes': [
+            {
+                'route_id': 'GIS',
+                'producer': 'GISagent_yulong',
+                'output': 'evidence_bundle',
+                'satisfied_by': 'contributor_call',
+            },
+            {
+                'route_id': 'KB',
+                'producer': 'KBagent_yulong',
+                'output': 'evidence_bundle',
+                'satisfied_by': 'contributor_call',
+            },
+            {
+                'route_id': 'WEB',
+                'producer': 'WEBagent_yulong',
+                'output': 'evidence_bundle',
+                'satisfied_by': 'contributor_call',
+            },
+        ],
+    }
+    tasks = build_batch_tasks(infrastructure_batch)
+
+    contributors = _contributors_for_batch(infrastructure_batch, tasks)
+
+    assert [task.kind for task in contributors] == ['kb', 'web']
+    assert any(task.role == 'owner' for task in tasks)
     assert not _needs_deterministic_infrastructure(batch())
     assert not _needs_deterministic_infrastructure(
         {
