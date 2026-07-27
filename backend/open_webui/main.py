@@ -236,6 +236,7 @@ from open_webui.utils.middleware import (
     process_chat_payload,
     process_chat_response,
 )
+from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.models import (
     check_model_access,
     get_all_base_models,
@@ -886,12 +887,6 @@ async def get_base_models(request: Request, user=Depends(get_admin_user)):
 
 class ModelUnloadForm(BaseModel):
     model: str
-
-
-def strip_provider_model_prefix(model_id: str, prefix_id: str | None) -> str:
-    if prefix_id and model_id.startswith(f'{prefix_id}.'):
-        return model_id[len(f'{prefix_id}.') :]
-    return model_id
 
 
 @app.post('/api/models/unload')
