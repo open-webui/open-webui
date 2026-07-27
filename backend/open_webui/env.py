@@ -832,6 +832,11 @@ OAUTH_TOKEN_EXCHANGE_RATE_LIMIT = (
     else None
 )
 OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW = int(os.getenv('OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW', str(60 * 3)))
+OAUTH_TOKEN_EXCHANGE_TRUSTED_CLIENT_IDS = [
+    client_id.strip()
+    for client_id in os.getenv('OAUTH_TOKEN_EXCHANGE_TRUSTED_CLIENT_IDS', '').split(',')
+    if client_id.strip()
+]
 
 # Back-Channel Logout Configuration
 # When enabled, exposes POST /oauth/backchannel-logout for IdP-initiated logout
