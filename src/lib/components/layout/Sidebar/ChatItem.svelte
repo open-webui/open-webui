@@ -558,6 +558,7 @@
 							: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
 						: ' hover:bg-gray-50 dark:hover:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-900'}  whitespace-nowrap text-ellipsis transition"
 				href="/c/{id}"
+				aria-current={id === $chatId ? 'page' : undefined}
 				onclick={() => {
 					openPreview = false;
 					dispatch('select');
