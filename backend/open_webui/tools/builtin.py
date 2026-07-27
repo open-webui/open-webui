@@ -2397,7 +2397,17 @@ async def query_chat_files(
         if not accessible:
             return json.dumps({'error': 'No accessible files found'})
 
-        file_items = [{**item} for item, _ in accessible]
+        # Raw attachments (process=false uploads) have no extracted content to query
+        file_items = [{**item} for item, _ in accessible if item.get('processed') is not False]
+        if not file_items:
+            return json.dumps(
+                {
+                    'error': (
+                        'The attached files were uploaded without content extraction '
+                        '(raw attachments); their content cannot be queried as text.'
+                    )
+                }
+            )
         rag_config = await Config.get_many(
             'rag.top_k',
             'rag.top_k_reranker',
@@ -2646,6 +2656,20 @@ async def view_file(
         if file.data:
             content = file.data.get('content', '')
 
+        if not content and 'content' not in (file.data or {}):
+            # Uploaded with process=false: raw attachment, nothing was extracted
+            return json.dumps(
+                {
+                    'id': file.id,
+                    'filename': file.filename,
+                    'processed': False,
+                    'note': (
+                        'This file was uploaded without content extraction (raw attachment); '
+                        'no text content is available.'
+                    ),
+                }
+            )
+
         total_chars = len(content)
 
         # Line-based addressing (overrides char-based offset/max_chars)
@@ -2785,6 +2809,20 @@ async def view_knowledge_file(
         content = ''
         if file.data:
             content = file.data.get('content', '')
+
+        if not content and 'content' not in (file.data or {}):
+            # Uploaded with process=false: raw attachment, nothing was extracted
+            return json.dumps(
+                {
+                    'id': file.id,
+                    'filename': file.filename,
+                    'processed': False,
+                    'note': (
+                        'This file was uploaded without content extraction (raw attachment); '
+                        'no text content is available.'
+                    ),
+                }
+            )
 
         total_chars = len(content)
 

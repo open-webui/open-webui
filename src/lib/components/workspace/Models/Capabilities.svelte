@@ -15,6 +15,12 @@
 			label: $i18n.t('File Upload'),
 			description: $i18n.t('Model accepts file inputs')
 		},
+		file_processing: {
+			label: $i18n.t('File Processing'),
+			description: $i18n.t(
+				'Extract file content on upload. When disabled, uploads skip extraction entirely and files are passed along as raw attachments for the model or pipe to handle'
+			)
+		},
 		file_context: {
 			label: $i18n.t('File Context'),
 			description: $i18n.t('Inject file content into conversation context')
@@ -67,9 +73,9 @@
 
 	export let capabilities: Partial<Record<Capability, boolean>> = {};
 
-	// Hide file_context when file_upload is disabled
+	// Hide file_processing/file_context when file_upload is disabled
 	$: visibleCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter((cap) => {
-		if (cap === 'file_context' && !capabilities.file_upload) {
+		if ((cap === 'file_processing' || cap === 'file_context') && !capabilities.file_upload) {
 			return false;
 		}
 		return true;

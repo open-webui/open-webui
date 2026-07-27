@@ -201,7 +201,10 @@
 	};
 
 	const loadContent = async () => {
-		selectedTab = '';
+		// Raw attachments have no extracted content; open on the preview when
+		// the file type has one, otherwise stay on the content note.
+		const hasPreview = isAudio || isPDF || isExcel || isCode || isMarkdown || isDocx || isPptx;
+		selectedTab = item?.processed === false && hasPreview ? 'preview' : '';
 		expandedContent = false;
 		if (item?.type === 'collection') {
 			loading = true;
@@ -346,7 +349,7 @@
 						{/if}
 					</div>
 
-					{#if edit}
+					{#if edit && item?.processed !== false}
 						<div class=" self-end">
 							<Tooltip
 								content={enableFullContent
@@ -440,7 +443,13 @@
 						</PanzoomContainer>
 					</div>
 				{:else if selectedTab === ''}
-					{#if item?.file?.data}
+					{#if item?.processed === false}
+						<div class="py-2 text-sm text-gray-500">
+							{$i18n.t(
+								'This file was uploaded without content extraction (raw attachment); no text content is available.'
+							)}
+						</div>
+					{:else if item?.file?.data}
 						{@const rawContent = (item?.file?.data?.content ?? '').trim() || 'No content'}
 						{@const isTruncated =
 							($settings?.renderMarkdownInPreviews ?? true) &&
