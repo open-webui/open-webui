@@ -252,8 +252,6 @@
 		console.log(item);
 		if (item?.context === 'full') {
 			enableFullContent = true;
-		} else if (item?.context === undefined && $settings?.defaultUploadContext === 'full') {
-			enableFullContent = true;
 		}
 	});
 </script>
