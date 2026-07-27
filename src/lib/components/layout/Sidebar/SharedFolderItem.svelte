@@ -124,6 +124,7 @@
 						title={chat.title}
 						createdAt={chat.created_at}
 						updatedAt={chat.updated_at}
+						lastReadAt={chat.last_read_at}
 						active={chat.active ?? false}
 						ownerName={chat.owner_name}
 						ownerUserId={chat.user_id}

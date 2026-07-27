@@ -550,6 +550,8 @@ async def get_shared_folder_chats(
             owner_cache[uid] = u.name if u else 'Unknown'
         chat['owner_name'] = owner_cache[uid]
         chat['active'] = False
+        if chat['user_id'] != user.id:
+            chat['last_read_at'] = chat['updated_at']
         if await has_active_tasks(request.app.state.redis, chat['id']):
             chat['active'] = await ChatMessages.has_unfinished_assistant_by_chat_id(chat['id'], db=db)
 
