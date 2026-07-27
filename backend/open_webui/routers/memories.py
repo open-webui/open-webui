@@ -5,13 +5,13 @@ import logging
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from open_webui.config import RAG_EMBEDDING_CONTENT_PREFIX, RAG_EMBEDDING_QUERY_PREFIX
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.config import Config
 from open_webui.models.memories import Memories, MemoryModel
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
-from open_webui.config import RAG_EMBEDDING_QUERY_PREFIX
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user
 from open_webui.utils.memory import (
@@ -148,7 +148,9 @@ async def add_memory(
         meta={'created_by': 'manual'},
     )
 
-    vector = await request.app.state.EMBEDDING_FUNCTION(memory_vector_text(memory.content, memory.path), user=user)
+    vector = await request.app.state.EMBEDDING_FUNCTION(
+        memory_vector_text(memory.content, memory.path), prefix=RAG_EMBEDDING_CONTENT_PREFIX, user=user
+    )
 
     await ASYNC_VECTOR_DB_CLIENT.upsert(
         collection_name=f'user-memory-{user.id}',
@@ -208,6 +210,7 @@ async def update_memories(
             if result.get('status') in {'created', 'updated'}:
                 vector = await request.app.state.EMBEDDING_FUNCTION(
                     memory_vector_text(memory.content, memory.path),
+                    prefix=RAG_EMBEDDING_CONTENT_PREFIX,
                     user=user,
                 )
                 upsert_items.append(
@@ -284,7 +287,7 @@ async def query_memory(
     if not memories:
         raise HTTPException(status_code=404, detail='No memories found for user')
 
-    vector = await request.app.state.EMBEDDING_FUNCTION(form_data.content, RAG_EMBEDDING_QUERY_PREFIX, user=user)
+    vector = await request.app.state.EMBEDDING_FUNCTION(form_data.content, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user)
 
     results = await ASYNC_VECTOR_DB_CLIENT.search(
         collection_name=f'user-memory-{user.id}',
@@ -407,7 +410,9 @@ async def reset_memory_from_vector_db(
     # Generate vectors in parallel
     vectors = await asyncio.gather(
         *[
-            request.app.state.EMBEDDING_FUNCTION(memory_vector_text(memory.content, memory.path), user=user)
+            request.app.state.EMBEDDING_FUNCTION(
+                memory_vector_text(memory.content, memory.path), prefix=RAG_EMBEDDING_CONTENT_PREFIX, user=user
+            )
             for memory in memories
         ]
     )
@@ -503,7 +508,9 @@ async def update_memory_by_id(
         raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
 
     if form_data.content is not None or form_data.path is not None:
-        vector = await request.app.state.EMBEDDING_FUNCTION(memory_vector_text(memory.content, memory.path), user=user)
+        vector = await request.app.state.EMBEDDING_FUNCTION(
+            memory_vector_text(memory.content, memory.path), prefix=RAG_EMBEDDING_CONTENT_PREFIX, user=user
+        )
 
         await ASYNC_VECTOR_DB_CLIENT.upsert(
             collection_name=f'user-memory-{user.id}',

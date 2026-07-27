@@ -20,7 +20,8 @@
 		updateFolderParentIdById,
 		getFolderById,
 		createNewFolder,
-		getSharedFolderChats
+		getSharedFolderChats,
+		markFolderChatsReadById
 	} from '$lib/apis/folders';
 	import {
 		getChatById,
@@ -58,8 +59,9 @@
 
 	export let parentDragged = false;
 
-	export let onDelete = (e) => {};
-	export let onItemMove = (e) => {};
+	export let onDelete = () => {};
+	export let onItemMove = () => {};
+	export let onFolderUnreadCounts = () => {};
 
 	let folderElement;
 
@@ -76,6 +78,85 @@
 	let clickTimer = null;
 
 	let name = '';
+
+	const formatUnreadCount = (count) =>
+		new Intl.NumberFormat(undefined, {
+			notation: 'compact',
+			compactDisplay: 'short'
+		}).format(count);
+
+	const isUnreadChat = (chat) =>
+		!(chat.active ?? false) &&
+		(chat.last_read_at == null ||
+			(typeof chat.updated_at === 'number' &&
+				typeof chat.last_read_at === 'number' &&
+				chat.updated_at > chat.last_read_at));
+
+	const sortFolderChats = (items) =>
+		[...items].sort(
+			(a, b) =>
+				Number(isUnreadChat(b)) - Number(isUnreadChat(a)) ||
+				Number(b.updated_at ?? 0) - Number(a.updated_at ?? 0)
+		);
+
+	const mergeFolderChats = (items, nextItems) => {
+		const merged = [...items];
+		const indexById = new Map(merged.map((chat, index) => [chat.id, index]));
+
+		for (const chat of nextItems) {
+			if (!chat?.id) {
+				continue;
+			}
+
+			const index = indexById.get(chat.id);
+			if (index === undefined) {
+				indexById.set(chat.id, merged.length);
+				merged.push(chat);
+			} else {
+				merged[index] = { ...merged[index], ...chat };
+			}
+		}
+
+		return sortFolderChats(merged);
+	};
+
+	const applyReadState = (data) => {
+		if (data?.folder_unread_counts) {
+			onFolderUnreadCounts(data.folder_unread_counts);
+		}
+
+		if (typeof data?.last_read_at === 'number') {
+			folderRegistry[folderId]?.setChatReadAt?.(data.chat_id, data.last_read_at);
+		}
+	};
+
+	const markAllReadHandler = async () => {
+		const res = await markFolderChatsReadById(localStorage.token, folderId).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (!res) return;
+
+		if (res.folder_unread_counts) {
+			onFolderUnreadCounts(res.folder_unread_counts);
+		}
+
+		for (const readFolderId of res.folder_ids ?? []) {
+			if (readFolderId !== folderId) {
+				folderRegistry[readFolderId]?.setFolderItems?.();
+			}
+		}
+
+		if (chats) {
+			chats = sortFolderChats(
+				chats.map((chat) =>
+					!chat.user_id || chat.user_id === $user?.id
+						? { ...chat, last_read_at: chat.updated_at }
+						: chat
+				)
+			);
+		}
+	};
 
 	const onDragOver = (e) => {
 		e.preventDefault();
@@ -269,8 +350,59 @@
 	onMount(async () => {
 		open = folders[folderId].is_expanded;
 		folderRegistry[folderId] = {
-			setFolderItems: () => {
-				setFolderItems();
+			setFolderItems,
+			upsertChat: (chat) => {
+				if (chat.folder_id && chat.folder_id !== folderId) {
+					return;
+				}
+
+				pendingUpsertChats = mergeFolderChats(pendingUpsertChats, [chat]);
+				if (open || chats) {
+					chats = mergeFolderChats(chats ?? [], [chat]);
+				}
+			},
+			setChatActive: (chatId, active) => {
+				if (chats) {
+					let found = false;
+					chats = sortFolderChats(
+						chats.map((chat) => {
+							if (chat.id !== chatId) {
+								return chat;
+							}
+							found = true;
+							return { ...chat, active };
+						})
+					);
+					return found;
+				}
+				return false;
+			},
+			setChatReadAt: (chatId, lastReadAt) => {
+				if (chats) {
+					let found = false;
+					chats = sortFolderChats(
+						chats.map((chat) => {
+							if (chat.id !== chatId) {
+								return chat;
+							}
+							found = true;
+							return { ...chat, last_read_at: lastReadAt };
+						})
+					);
+					return found;
+				}
+				return false;
+			},
+			setAllChatsRead: () => {
+				if (chats) {
+					chats = sortFolderChats(
+						chats.map((chat) =>
+							!chat.user_id || chat.user_id === $user?.id
+								? { ...chat, last_read_at: chat.updated_at }
+								: chat
+						)
+					);
+				}
 			}
 		};
 		if (folderElement) {
@@ -390,10 +522,19 @@
 	let chatsPage = 1;
 	let hasMoreChats = false;
 	let chatsLoading = false;
+	let queuedReload = false;
+	let pendingUpsertChats = [];
 
 	export const setFolderItems = async (append = false) => {
 		await tick();
-		if (open && !chatsLoading) {
+		if (open && chatsLoading) {
+			if (!append) {
+				queuedReload = true;
+			}
+			return;
+		}
+
+		if (open) {
 			// Always use getSharedFolderChats so owners also see chats
 			// created by users who have write access to this folder.
 			const nextPage = append ? chatsPage + 1 : 1;
@@ -403,7 +544,11 @@
 					page: nextPage
 				});
 				const nextChats = res?.chats ?? [];
-				chats = append ? [...(chats ?? []), ...nextChats] : nextChats;
+				const merged = append ? mergeFolderChats(chats ?? [], nextChats) : nextChats;
+				chats = mergeFolderChats(merged, pendingUpsertChats);
+				pendingUpsertChats = pendingUpsertChats.filter(
+					(pendingChat) => !nextChats.some((chat) => chat.id === pendingChat.id)
+				);
 				chatsPage = nextPage;
 				hasMoreChats = res?.has_more ?? nextChats.length === SIDEBAR_CHATS_PAGE_SIZE;
 			} catch (error) {
@@ -414,20 +559,30 @@
 						return [];
 					}
 				);
-				chats = append ? [...(chats ?? []), ...(fallback ?? [])] : (fallback ?? []);
+				const fallbackChats = fallback ?? [];
+				const merged = append ? mergeFolderChats(chats ?? [], fallbackChats) : fallbackChats;
+				chats = mergeFolderChats(merged, pendingUpsertChats);
+				pendingUpsertChats = pendingUpsertChats.filter(
+					(pendingChat) => !fallbackChats.some((chat) => chat.id === pendingChat.id)
+				);
 				chatsPage = nextPage;
 				hasMoreChats = (fallback?.length ?? 0) === SIDEBAR_CHATS_PAGE_SIZE;
 			} finally {
 				chatsLoading = false;
+				if (queuedReload) {
+					queuedReload = false;
+					setFolderItems();
+				}
 			}
 		} else if (!open) {
 			chats = null;
 			chatsPage = 1;
 			hasMoreChats = false;
+			queuedReload = false;
 		}
 	};
 
-	$: if (open) {
+	$: if (open && chats === null) {
 		setFolderItems();
 	}
 
@@ -451,6 +606,11 @@
 			showSidebar.set(!$showSidebar);
 		}
 	};
+	$: if (!open && chats !== null) {
+		chats = null;
+		chatsPage = 1;
+		hasMoreChats = false;
+	}
 
 	const renameHandler = async () => {
 		console.log('Edit');
@@ -650,7 +810,7 @@
 					{/if}
 				</button>
 
-				<div class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1">
+				<div class="translate-y-[0.5px] flex min-w-0 flex-1 items-center gap-1.5 pr-6 text-start">
 					{#if edit}
 						<input
 							id="folder-{folderId}-input"
@@ -678,7 +838,18 @@
 							class="w-full h-full bg-transparent outline-hidden"
 						/>
 					{:else}
-						{folders[folderId].name}
+						<div class="min-w-0 truncate">
+							{folders[folderId].name}
+						</div>
+
+						{#if !folders[folderId]?.shared && (folders[folderId]?.unread_count ?? 0) > 0}
+							<div
+								class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-sky-500/10 px-1 text-[10px] font-semibold leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
+								title={$i18n.t('Unread')}
+							>
+								{formatUnreadCount(folders[folderId].unread_count)}
+							</div>
+						{/if}
 					{/if}
 				</div>
 
@@ -703,6 +874,7 @@
 								createSubFolderParentId = folderId;
 								showCreateSubFolderModal = true;
 							}}
+							onMarkAllRead={markAllReadHandler}
 						>
 							<div
 								class="flex size-5 items-center justify-center self-center dark:hover:text-white transition m-0 touch-auto"
@@ -739,6 +911,7 @@
 								parentDragged={dragged}
 								{onItemMove}
 								{onDelete}
+								{onFolderUnreadCounts}
 								on:import={(e) => {
 									dispatch('import', e.detail);
 								}}
@@ -764,6 +937,7 @@
 							ownerUserId={folders[folderId]?.shared && chat.owner_name ? chat.user_id : null}
 							readonly={chat.user_id !== $user?.id}
 							{shiftKey}
+							onReadStateChange={applyReadState}
 							on:change={(e) => {
 								dispatch('change', e.detail);
 							}}

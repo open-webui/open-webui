@@ -2049,7 +2049,22 @@ export const renderVegaVisualization = async (spec: string, lang: string = '', i
 		const vegaLite = await import('vega-lite');
 		vegaSpec = vegaLite.compile(parsedSpec).spec;
 	}
-	const view = new vega.View(vega.parse(vegaSpec), { renderer: 'none' });
+	// Specs come from untrusted chat content: block external loads via data.url (loader.load)
+	// and image mark hrefs emitted into the SVG (loader.sanitize).
+	const loader = vega.loader();
+	loader.load = async () => {
+		throw new Error('External resource loading is disabled for rendered visualizations');
+	};
+	const sanitize = loader.sanitize.bind(loader);
+	loader.sanitize = async (uri: string, options: any) => {
+		// Resolve with the browser's URL parser so encoding tricks match what it would fetch
+		const resolved = new URL(uri, document.baseURI);
+		if (resolved.protocol !== 'data:' && resolved.origin !== location.origin) {
+			throw new Error('External resource loading is disabled for rendered visualizations');
+		}
+		return sanitize(uri, options);
+	};
+	const view = new vega.View(vega.parse(vegaSpec), { loader, renderer: 'none' });
 	const svg = await view.toSVG();
 	return svg;
 };

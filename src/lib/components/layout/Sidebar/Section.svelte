@@ -143,6 +143,8 @@
 						</span>
 					</button>
 
+					<slot name="action" />
+
 					{#if onAdd}
 						<button
 							type="button"

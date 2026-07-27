@@ -28,6 +28,7 @@
 	import PinSlashIcon from './icons/PinSlash.svelte';
 	import ShareIcon from './icons/Share.svelte';
 	import TrashIcon from './icons/Trash.svelte';
+	import ChatCheckIcon from '$lib/components/icons/ChatCheck.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -39,6 +40,7 @@
 	export let renameHandler: Function;
 	export let deleteHandler: Function;
 	export let onClose: Function;
+	export let markUnreadHandler: Function = () => {};
 
 	export let chatId = '';
 
@@ -367,6 +369,18 @@
 			>
 				<EditPencilIcon className="size-3.5" strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Rename')}</div>
+			</button>
+
+			<button
+				draggable="false"
+				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
+				on:click={() => {
+					show = false;
+					markUnreadHandler();
+				}}
+			>
+				<ChatCheckIcon className="size-3.5" strokeWidth="1.5" />
+				<div class="flex items-center">{$i18n.t('Mark as unread')}</div>
 			</button>
 
 			<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />

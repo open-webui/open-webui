@@ -521,22 +521,34 @@
 		fileLoading = false;
 	};
 
+	let downloading = false;
+
 	const downloadFile = async (path: string) => {
 		const terminal = selectedTerminal;
-		if (!terminal) return;
+		if (!terminal || downloading) return;
 
-		// Directories end with '/' — download as ZIP archive
-		const isDir = path.endsWith('/');
-		const result = isDir
-			? await archiveFromTerminal(terminal.url, terminal.key, [path.replace(/\/$/, '')])
-			: await downloadFileBlob(terminal.url, terminal.key, path, chatId ?? undefined);
-		if (!result) return;
-		const url = URL.createObjectURL(result.blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = result.filename;
-		a.click();
-		URL.revokeObjectURL(url);
+		downloading = true;
+		const toastId = toast.loading($i18n.t('Preparing download...'));
+		try {
+			// Directories end with '/', downloaded as a ZIP archive
+			const isDir = path.endsWith('/');
+			const result = isDir
+				? await archiveFromTerminal(terminal.url, terminal.key, [path.replace(/\/$/, '')])
+				: await downloadFileBlob(terminal.url, terminal.key, path, chatId ?? undefined);
+			if (!result) {
+				toast.error($i18n.t('Download failed'));
+				return;
+			}
+			const url = URL.createObjectURL(result.blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = result.filename;
+			a.click();
+			URL.revokeObjectURL(url);
+		} finally {
+			toast.dismiss(toastId);
+			downloading = false;
+		}
 	};
 
 	// ── Drag-and-drop upload ─────────────────────────────────────────────
@@ -785,7 +797,7 @@
 
 	const bulkDownload = async () => {
 		const terminal = selectedTerminal;
-		if (!terminal) return;
+		if (!terminal || downloading) return;
 
 		const paths = [...selectedEntries].map((p) => p.replace(/\/$/, ''));
 		if (paths.length === 0) return;
@@ -796,15 +808,25 @@
 			return;
 		}
 
-		// Archive everything into a single ZIP
-		const result = await archiveFromTerminal(terminal.url, terminal.key, paths);
-		if (!result) return;
-		const url = URL.createObjectURL(result.blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = result.filename;
-		a.click();
-		URL.revokeObjectURL(url);
+		downloading = true;
+		const toastId = toast.loading($i18n.t('Preparing download...'));
+		try {
+			// Archive everything into a single ZIP
+			const result = await archiveFromTerminal(terminal.url, terminal.key, paths);
+			if (!result) {
+				toast.error($i18n.t('Download failed'));
+				return;
+			}
+			const url = URL.createObjectURL(result.blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = result.filename;
+			a.click();
+			URL.revokeObjectURL(url);
+		} finally {
+			toast.dismiss(toastId);
+			downloading = false;
+		}
 	};
 
 	// Escape to clear selection

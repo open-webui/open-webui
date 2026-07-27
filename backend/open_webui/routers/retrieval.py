@@ -101,6 +101,7 @@ from open_webui.retrieval.web.ollama import search_ollama_cloud
 from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.perplexity_search import search_perplexity_search
 from open_webui.retrieval.web.searchapi import search_searchapi
+from open_webui.retrieval.web.openserp import search_openserp
 from open_webui.retrieval.web.searxng import search_searxng
 from open_webui.retrieval.web.serpapi import search_serpapi
 from open_webui.retrieval.web.serper import search_serper
@@ -365,6 +366,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'SEARCHAPI_ENGINE': 'web.search.searchapi_engine',
     'SEARXNG_LANGUAGE': 'web.search.searxng_language',
     'SEARXNG_QUERY_URL': 'web.search.searxng_query_url',
+    'OPENSERP_BASE_URL': 'web.search.openserp_base_url',
     'SERPAPI_API_KEY': 'web.search.serpapi_api_key',
     'SERPAPI_ENGINE': 'web.search.serpapi_engine',
     'SERPER_API_KEY': 'web.search.serper_api_key',
@@ -703,6 +705,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'OLLAMA_CLOUD_WEB_SEARCH_API_KEY': config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
             'SEARXNG_QUERY_URL': config.SEARXNG_QUERY_URL,
             'SEARXNG_LANGUAGE': config.SEARXNG_LANGUAGE,
+            'OPENSERP_BASE_URL': config.OPENSERP_BASE_URL,
             'YACY_QUERY_URL': config.YACY_QUERY_URL,
             'YACY_USERNAME': config.YACY_USERNAME,
             'YACY_PASSWORD': config.YACY_PASSWORD,
@@ -781,6 +784,7 @@ class WebConfig(BaseModel):
     OLLAMA_CLOUD_WEB_SEARCH_API_KEY: str | None = None
     SEARXNG_QUERY_URL: str | None = None
     SEARXNG_LANGUAGE: str | None = None
+    OPENSERP_BASE_URL: str | None = None
     YACY_QUERY_URL: str | None = None
     YACY_USERNAME: str | None = None
     YACY_PASSWORD: str | None = None
@@ -1249,6 +1253,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY = form_data.web.OLLAMA_CLOUD_WEB_SEARCH_API_KEY
         config.SEARXNG_QUERY_URL = form_data.web.SEARXNG_QUERY_URL
         config.SEARXNG_LANGUAGE = form_data.web.SEARXNG_LANGUAGE
+        config.OPENSERP_BASE_URL = form_data.web.OPENSERP_BASE_URL
         config.YACY_QUERY_URL = form_data.web.YACY_QUERY_URL
         config.YACY_USERNAME = form_data.web.YACY_USERNAME
         config.YACY_PASSWORD = form_data.web.YACY_PASSWORD
@@ -1400,6 +1405,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'OLLAMA_CLOUD_WEB_SEARCH_API_KEY': config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
             'SEARXNG_QUERY_URL': config.SEARXNG_QUERY_URL,
             'SEARXNG_LANGUAGE': config.SEARXNG_LANGUAGE,
+            'OPENSERP_BASE_URL': config.OPENSERP_BASE_URL,
             'YACY_QUERY_URL': config.YACY_QUERY_URL,
             'YACY_USERNAME': config.YACY_USERNAME,
             'YACY_PASSWORD': config.YACY_PASSWORD,
@@ -2212,6 +2218,16 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             )
         else:
             raise Exception('No SEARXNG_QUERY_URL found in environment variables')
+    elif engine == 'openserp':
+        if config.OPENSERP_BASE_URL:
+            return await search_openserp(
+                config.OPENSERP_BASE_URL,
+                query,
+                config.WEB_SEARCH_RESULT_COUNT,
+                config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception('No OPENSERP_BASE_URL found in environment variables')
     elif engine == 'yacy':
         if config.YACY_QUERY_URL:
             return await asyncio.to_thread(
@@ -2607,12 +2623,13 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                 if hasattr(result, 'snippet') and result.snippet is not None
             ]
         else:
+            loader_config = await get_loader_config()
             loader = get_web_loader(
                 urls,
-                verify_ssl=config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
-                requests_per_second=config.WEB_LOADER_CONCURRENT_REQUESTS,
-                trust_env=config.WEB_SEARCH_TRUST_ENV,
-                loader_config=await get_loader_config(),
+                verify_ssl=loader_config.get('web_loader_ssl_verification'),
+                requests_per_second=loader_config.get('web_loader_concurrent_requests'),
+                trust_env=loader_config.get('web_search_trust_env'),
+                loader_config=loader_config,
             )
             docs = await loader.aload()
 
@@ -2640,7 +2657,8 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
             }
         else:
             # Create a single collection for all documents
-            collection_name = f'web-search-{calculate_sha256_string("-".join(form_data.queries))}'[:63]
+            # Bind the ephemeral collection to its owner so filter_accessible_collections can scope it per-user.
+            collection_name = f'web-search-{user.id}-{calculate_sha256_string("-".join(form_data.queries))}'[:63]
 
             try:
                 await run_in_threadpool(
@@ -2653,7 +2671,12 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                     user=user,
                 )
             except Exception as e:
-                log.debug(f'error saving docs: {e}')
+                # Surface the failure instead of returning an unusable collection
+                log.exception(f'Error saving web search results to vector DB: {e}')
+                raise HTTPException(
+                    status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail='Failed to embed and store the retrieved web pages. Check the embedding configuration in Admin Settings > Documents.',
+                )
 
             return {
                 'status': True,

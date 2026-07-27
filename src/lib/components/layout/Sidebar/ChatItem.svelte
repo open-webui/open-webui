@@ -26,6 +26,7 @@
 		getAllTags,
 		getChatById,
 		getChatListByTagName,
+		markChatUnreadById,
 		updateChatById,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
@@ -76,6 +77,7 @@
 
 	export let ownerName: string | null = null;
 	export let ownerUserId: string | null = null;
+	export let onReadStateChange: (data: Record<string, unknown>) => void = () => {};
 
 	export let onDragEnd = () => {};
 
@@ -137,6 +139,18 @@
 			chat = await getChatById(localStorage.token, id);
 			draggable = true;
 		}
+	};
+
+	const markUnreadHandler = async () => {
+		const res = await markChatUnreadById(localStorage.token, id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (!res) return;
+
+		viewedAt = null;
+		lastReadAt = res.last_read_at ?? 0;
+		onReadStateChange(res);
 	};
 
 	let showShareChatModal = false;
@@ -693,6 +707,7 @@
 						deleteHandler={() => {
 							showDeleteConfirm = true;
 						}}
+						{markUnreadHandler}
 						onClose={() => {
 							dispatch('unselect');
 						}}
@@ -715,6 +730,7 @@
 						<!-- Shortcut support using "delete-chat-button" id -->
 						<button
 							id="delete-chat-button"
+							aria-label={$i18n.t('Delete')}
 							class="hidden"
 							on:click={() => {
 								showDeleteConfirm = true;

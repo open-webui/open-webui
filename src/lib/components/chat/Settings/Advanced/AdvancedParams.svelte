@@ -56,6 +56,19 @@
 	$: if (params) {
 		onChange(params);
 	}
+
+	const setTopK = (event: Event) => {
+		const input = event.currentTarget as HTMLInputElement;
+		const rawValue = input.value;
+		const value = Number(rawValue);
+
+		if (!/^\d+$/.test(rawValue) || value < 0 || value > 1000) {
+			input.value = `${params.top_k ?? ''}`;
+			return;
+		}
+
+		params.top_k = value;
+	};
 </script>
 
 {#snippet rangeParam(
@@ -606,7 +619,32 @@
 		</Tooltip>
 
 		{#if (params?.top_k ?? null) !== null}
-			{@render rangeParam('top_k', 'top_k', 0, 1000, 0.5, 'any', 100)}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						type="range"
+						aria-label="top_k"
+						min="0"
+						max="1000"
+						step="1"
+						value={params.top_k}
+						on:input={setTopK}
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+					/>
+				</div>
+				<div>
+					<input
+						value={params.top_k}
+						type="number"
+						aria-label="top_k"
+						class=" bg-transparent text-center w-14"
+						min="0"
+						max="1000"
+						step="1"
+						on:input={setTopK}
+					/>
+				</div>
+			</div>
 		{/if}
 	</div>
 

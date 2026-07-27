@@ -20,6 +20,8 @@
 	import { getMessageData } from '$lib/apis/channels';
 
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
+	import StructuredOutputRenderer from '$lib/components/chat/Messages/StructuredOutputRenderer.svelte';
+	import { buildOutputDisplayItems } from '$lib/components/chat/Messages/structuredOutput';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import Name from '$lib/components/chat/Messages/Name.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -149,6 +151,9 @@
 			await loadMessageData();
 		}
 	});
+
+	$: messageOutput = Array.isArray(message?.data?.output) ? message.data.output : [];
+	$: hasStructuredOutput = buildOutputDisplayItems(messageOutput).length > 0;
 </script>
 
 <ConfirmDialog
@@ -526,7 +531,14 @@
 						</div>
 					{:else}
 						<div class="min-w-full {pending ? 'opacity-50' : ''}">
-							{#if (message?.content ?? '').trim() === '' && message?.meta?.model_id}
+							{#if hasStructuredOutput}
+								<StructuredOutputRenderer
+									id={renderedMessageId}
+									output={messageOutput}
+									done={message?.meta?.done ?? false}
+									editCodeBlock={false}
+								/>
+							{:else if (message?.content ?? '').trim() === '' && message?.meta?.model_id}
 								<Skeleton />
 							{:else}
 								<span class="markdown-prose">

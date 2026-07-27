@@ -254,6 +254,7 @@
 					class="flex items-center justify-center gap-3 py-1.5 px-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500 shrink-0"
 				>
 					<button
+						aria-label={$i18n.t('Previous page')}
 						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
 						disabled={page === 0}
 						on:click={() => {
@@ -276,6 +277,7 @@
 					</button>
 					<span>{page + 1} / {totalPages} ({totalRows.toLocaleString()} rows)</span>
 					<button
+						aria-label={$i18n.t('Next page')}
 						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
 						disabled={page >= totalPages - 1}
 						on:click={() => {

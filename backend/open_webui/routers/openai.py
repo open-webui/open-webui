@@ -44,6 +44,7 @@ from open_webui.utils.access_control import check_model_access, has_connection_a
 from open_webui.utils.anthropic import get_anthropic_models, is_anthropic_url
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
+from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     stream_chunks_handler,
@@ -54,6 +55,7 @@ from open_webui.utils.payload import (
 )
 from open_webui.utils.session_pool import (
     cleanup_response,
+    get_client_timeout,
     get_session,
     stream_wrapper,
 )
@@ -210,7 +212,7 @@ async def get_headers_and_cookies(
         headers['Authorization'] = f'Bearer {token}'
 
     if config.get('headers') and isinstance(config.get('headers'), dict):
-        custom_headers = get_custom_headers(config.get('headers'), user, metadata, request=request)
+        custom_headers = await get_custom_headers(config.get('headers'), user, metadata, request=request)
         headers.update(custom_headers)
 
     return headers, cookies
@@ -328,8 +330,7 @@ async def get_anthropic_token_count_target(request: Request, form_data: dict, us
 
     url, key, api_config = await get_openai_connection(model['urlIdx'])
     prefix_id = api_config.get('prefix_id')
-    if prefix_id:
-        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+    payload['model'] = strip_provider_model_prefix(payload['model'], prefix_id)
 
     headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
     return requested_model, payload, url, key, headers, cookies
@@ -1268,8 +1269,7 @@ async def generate_chat_completion(
     url, key, api_config = await get_openai_connection(idx)
 
     prefix_id = api_config.get('prefix_id', None)
-    if prefix_id:
-        payload['model'] = payload['model'].replace(f'{prefix_id}.', '')
+    payload['model'] = strip_provider_model_prefix(payload['model'], prefix_id)
 
     # Add user info to the payload if the model is a pipeline
     if 'pipeline' in model and model.get('pipeline'):
@@ -1345,6 +1345,10 @@ async def generate_chat_completion(
                     part.get('text', '') for part in message['content'] if part.get('type') in ('input_text', 'text')
                 )
 
+    is_streaming_request = bool(payload.get('stream', False))
+    if not is_streaming_request:
+        payload.pop('stream_options', None)
+
     payload = json.dumps(payload)
 
     r = None
@@ -1361,7 +1365,7 @@ async def generate_chat_completion(
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            timeout=get_client_timeout(stream=is_streaming_request),
         )
 
         # Check if response is SSE
@@ -1519,7 +1523,7 @@ async def embeddings(request: Request, form_data: dict, user):
         if 'text/event-stream' in r.headers.get('Content-Type', ''):
             streaming = True
             return StreamingResponse(
-                stream_wrapper(r),
+                stream_wrapper(r, passthrough=True),
                 status_code=r.status,
                 headers=_clean_proxy_headers(r.headers),
             )
@@ -1588,6 +1592,7 @@ async def responses(
     Routes to the correct upstream backend based on the model field.
     """
     payload = form_data.model_dump(exclude_none=True)
+    is_streaming_request = bool(payload.get('stream', False))
 
     idx = 0
     model_id = form_data.model
@@ -1638,14 +1643,14 @@ async def responses(
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            timeout=get_client_timeout(stream=is_streaming_request),
         )
 
         # Check if response is SSE
         if 'text/event-stream' in r.headers.get('Content-Type', ''):
             streaming = True
             return StreamingResponse(
-                stream_wrapper(r),
+                stream_wrapper(r, passthrough=True),
                 status_code=r.status,
                 headers=_clean_proxy_headers(r.headers),
             )
@@ -1708,6 +1713,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             payload = json.loads(body)
         except (json.JSONDecodeError, ValueError):
             payload = None
+    is_streaming_request = bool(payload.get('stream', False)) if isinstance(payload, dict) else False
 
     idx = 0
     model_id = payload.get('model') if isinstance(payload, dict) else None
@@ -1759,14 +1765,14 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            timeout=get_client_timeout(stream=is_streaming_request),
         )
 
         # Check if response is SSE
         if 'text/event-stream' in r.headers.get('Content-Type', ''):
             streaming = True
             return StreamingResponse(
-                stream_wrapper(r),
+                stream_wrapper(r, passthrough=True),
                 status_code=r.status,
                 headers=_clean_proxy_headers(r.headers),
             )

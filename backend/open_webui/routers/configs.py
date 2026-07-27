@@ -205,7 +205,7 @@ async def register_oauth_client(
         log.debug(f'Failed to register OAuth client: {e}')
         raise HTTPException(
             status_code=400,
-            detail=f'Failed to register OAuth client',
+            detail=f'Failed to register OAuth client: {e}',
         )
 
 
@@ -614,7 +614,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
                     if form_data.headers and isinstance(form_data.headers, dict):
                         if headers is None:
                             headers = {}
-                        custom_headers = get_custom_headers(form_data.headers, user)
+                        custom_headers = await get_custom_headers(form_data.headers, user)
                         headers.update(custom_headers)
 
                     await client.connect(form_data.url, headers=headers)
@@ -659,7 +659,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
             if form_data.headers and isinstance(form_data.headers, dict):
                 if headers is None:
                     headers = {}
-                custom_headers = get_custom_headers(form_data.headers, user)
+                custom_headers = await get_custom_headers(form_data.headers, user)
                 headers.update(custom_headers)
 
             url = get_tool_server_url(form_data.url, form_data.path)

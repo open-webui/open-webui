@@ -17,6 +17,7 @@ from open_webui.env import (
     ENABLE_OTEL_LOGS,
     GLOBAL_LOG_LEVEL,
     LOG_FORMAT,
+    LOGURU_DIAGNOSE,
 )
 
 if TYPE_CHECKING:
@@ -178,6 +179,7 @@ def start_logger():
             _json_sink,
             level=GLOBAL_LOG_LEVEL,
             filter=audit_filter,
+            diagnose=LOGURU_DIAGNOSE,
         )
     else:
         logger.add(
@@ -185,6 +187,7 @@ def start_logger():
             level=GLOBAL_LOG_LEVEL,
             format=stdout_format,
             filter=audit_filter,
+            diagnose=LOGURU_DIAGNOSE,
         )
     if AUDIT_LOG_LEVEL != 'NONE' and ENABLE_AUDIT_LOGS_FILE:
         try:
@@ -195,6 +198,7 @@ def start_logger():
                 compression='zip',
                 format=file_format,
                 filter=lambda record: record['extra'].get('auditable') is True,
+                diagnose=LOGURU_DIAGNOSE,
             )
         except Exception as e:
             logger.error(f'Failed to initialize audit log file handler: {str(e)}')

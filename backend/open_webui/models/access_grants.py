@@ -174,9 +174,7 @@ def normalize_access_grants(access_grants: Optional[list]) -> list[dict]:
             continue
         if not isinstance(principal_id, str) or not principal_id:
             continue
-        if principal_type == PRINCIPAL_TYPE_ANYONE and (
-            principal_id != WILDCARD_PRINCIPAL_ID or permission != 'read'
-        ):
+        if principal_type == PRINCIPAL_TYPE_ANYONE and (principal_id != WILDCARD_PRINCIPAL_ID or permission != 'read'):
             continue
 
         key = (principal_type, principal_id, permission)

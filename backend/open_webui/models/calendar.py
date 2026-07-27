@@ -241,11 +241,11 @@ class CalendarTable:
         access_grants: Optional[list[AccessGrantModel]] = None,
         db: Optional[AsyncSession] = None,
     ) -> CalendarModel:
-        cal_data = CalendarModel.model_validate(cal).model_dump(exclude={'access_grants'})
-        cal_data['access_grants'] = (
-            access_grants if access_grants is not None else await self._get_access_grants(cal_data['id'], db=db)
+        calendar_model = CalendarModel.model_validate(cal)
+        calendar_model.access_grants = (
+            access_grants if access_grants is not None else await self._get_access_grants(calendar_model.id, db=db)
         )
-        return CalendarModel.model_validate(cal_data)
+        return calendar_model
 
     async def get_or_create_defaults(self, user_id: str, db: Optional[AsyncSession] = None) -> list[CalendarModel]:
         """Return user's calendars, creating 'Personal' default if none exist."""
@@ -777,9 +777,7 @@ class CalendarEventAttendeeTable:
             existing_status = {
                 row.user_id: row.status
                 for row in (
-                    await db.execute(
-                        select(CalendarEventAttendee).filter(CalendarEventAttendee.event_id == event_id)
-                    )
+                    await db.execute(select(CalendarEventAttendee).filter(CalendarEventAttendee.event_id == event_id))
                 ).scalars()
             }
 

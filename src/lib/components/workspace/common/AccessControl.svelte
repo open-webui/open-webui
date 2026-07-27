@@ -309,7 +309,10 @@
 		commitAccessGrants(next);
 	};
 
-	const togglePrincipalWrite = (principalType: 'user' | 'group' | 'anyone', principalId: string) => {
+	const togglePrincipalWrite = (
+		principalType: 'user' | 'group' | 'anyone',
+		principalId: string
+	) => {
 		let next = [...currentGrants()];
 		const hasWrite = hasPrincipalGrant(principalType, principalId, 'write');
 		if (hasWrite) {

@@ -5,7 +5,8 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { WEBUI_NAME, user, config } from '$lib/stores';
+	import { WEBUI_NAME, user, config, folders } from '$lib/stores';
+	import { getFolders } from '$lib/apis/folders';
 
 	import {
 		createAutomation,
@@ -65,6 +66,7 @@
 	let page = 1;
 	let importFiles: FileList | null = null;
 	let automationsImportInputElement: HTMLInputElement;
+	let foldersLoaded = false;
 
 	const syncHeader = () => {
 		automationsLayout?.setHeader({
@@ -140,6 +142,13 @@
 		} finally {
 			loading = false;
 		}
+	};
+
+	const ensureFolders = async () => {
+		if (foldersLoaded || ($folders ?? []).length > 0) return;
+		const res = await getFolders(localStorage.token).catch(() => null);
+		if (res) folders.set(res);
+		foldersLoaded = true;
 	};
 
 	const toggleHandler = async (automation: AutomationResponse) => {
@@ -227,6 +236,7 @@
 
 	const toAutomationForm = (automation: AutomationResponse): AutomationForm => ({
 		name: automation.name,
+		folder_id: automation.folder_id,
 		data: automation.data,
 		meta: automation.meta ?? undefined,
 		is_active: automation.is_active
@@ -257,9 +267,13 @@
 			throw new Error($i18n.t('Invalid JSON format'));
 		}
 
+		await ensureFolders();
+		const validFolderIds = new Set(($folders ?? []).map((folder) => folder.id));
+
 		for (const automation of automationItems) {
 			await createAutomation(localStorage.token, {
 				name: automation.name,
+				folder_id: validFolderIds.has(automation.folder_id) ? automation.folder_id : null,
 				data: automation.data,
 				meta: automation.meta ?? undefined,
 				is_active: automation.is_active ?? true
