@@ -43,7 +43,6 @@ from open_webui.env import (
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
-from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 from open_webui.models.notes import Notes
 from open_webui.models.oauth_sessions import OAuthSessions
@@ -90,7 +89,8 @@ from open_webui.utils.files import (
     get_image_url_from_base64,
 )
 from open_webui.utils.filter import (
-    get_sorted_filter_ids,
+    FilterContext,
+    get_filter_functions,
     process_filter_functions,
 )
 
@@ -2496,11 +2496,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     if ENABLE_PLUGINS:
         try:
-            filter_ids = await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
-            filter_functions = await Functions.get_functions_by_ids(filter_ids)
+            filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
 
             form_data, flags = await process_filter_functions(
                 request=request,
+                filter_context=None,
                 filter_functions=filter_functions,
                 filter_type='inlet',
                 form_data=form_data,
@@ -3501,11 +3501,11 @@ async def outlet_filter_handler(ctx):
         }
 
         if ENABLE_PLUGINS:
-            filter_ids = await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
-            filter_functions = await Functions.get_functions_by_ids(filter_ids)
+            filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
 
             outlet_result, _ = await process_filter_functions(
                 request=request,
+                filter_context=None,
                 filter_functions=filter_functions,
                 filter_type='outlet',
                 form_data=outlet_data,
@@ -3763,9 +3763,7 @@ async def streaming_chat_response_handler(response, ctx):
     }
 
     filter_functions = (
-        await Functions.get_functions_by_ids(
-            await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
-        )
+        await get_filter_functions(request, model, metadata.get('filter_ids', []))
         if ENABLE_PLUGINS
         else []
     )
@@ -3779,6 +3777,8 @@ async def streaming_chat_response_handler(response, ctx):
 
         # Handle as a background task
         async def response_handler(response, events):
+            filter_context = FilterContext()
+
             def tag_output_handler(content_type, tags, output):
                 """
                 Detect special tags (reasoning, solution, code_interpreter) in streaming
@@ -4186,6 +4186,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                             data, _ = await process_filter_functions(
                                 request=request,
+                                filter_context=filter_context,
                                 filter_functions=filter_functions,
                                 filter_type='stream',
                                 form_data=data,
@@ -5515,6 +5516,7 @@ async def streaming_chat_response_handler(response, ctx):
                 return f'data: {item}\n\n'
 
             assistant_message = {}
+            filter_context = FilterContext()
             has_api_outlet_filters = ENABLE_API_OUTLET_FILTERS and bool(filter_functions)
             if ENABLE_API_OUTLET_FILTERS and not has_api_outlet_filters:
                 try:
@@ -5529,6 +5531,7 @@ async def streaming_chat_response_handler(response, ctx):
             for event in events:
                 event, _ = await process_filter_functions(
                     request=request,
+                    filter_context=filter_context,
                     filter_functions=filter_functions,
                     filter_type='stream',
                     form_data=event,
@@ -5541,6 +5544,7 @@ async def streaming_chat_response_handler(response, ctx):
             async for data in original_generator:
                 data, _ = await process_filter_functions(
                     request=request,
+                    filter_context=filter_context,
                     filter_functions=filter_functions,
                     filter_type='stream',
                     form_data=data,

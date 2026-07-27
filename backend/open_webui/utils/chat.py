@@ -365,6 +365,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
 
         result, _ = await process_filter_functions(
             request=request,
+            filter_context=None,
             filter_functions=filter_functions,
             filter_type='outlet',
             form_data=data,
