@@ -342,6 +342,8 @@ def get_citation_source_from_tool_result(
 
         elif tool_name in ('view_knowledge_file', 'view_file'):
             file_data = tool_result
+            if 'content' not in file_data:
+                return []
             filename = file_data.get('filename', 'Unknown File')
             file_id = file_data.get('id', '')
             knowledge_name = file_data.get('knowledge_name', '')
@@ -1856,7 +1858,12 @@ async def chat_completion_files_handler(
     __event_emitter__ = extra_params['__event_emitter__']
     sources = []
 
-    if files := body.get('metadata', {}).get('files', None):
+    files = [
+        item
+        for item in (body.get('metadata', {}).get('files', None) or [])
+        if item.get('processed') is not False
+    ]
+    if files:
         # Check if all files are in full context mode
         all_full_context = all(item.get('context') == 'full' for item in files)
 

@@ -1483,7 +1483,7 @@ async def get_sources_from_items(
                         or ('file', item.get('id')) in folder_items
                     ):
                         query_result = {
-                            'documents': [[file_object.data.get('content', '')]],
+                            'documents': [[(file_object.data or {}).get('content', '')]],
                             'metadatas': [
                                 [
                                     {

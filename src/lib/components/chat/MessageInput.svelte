@@ -719,6 +719,7 @@
 	type ModelCapability =
 		| 'vision'
 		| 'file_upload'
+		| 'file_processing'
 		| 'web_search'
 		| 'image_generation'
 		| 'code_interpreter'
@@ -743,6 +744,13 @@
 	$: fileUploadCapableModels = getCapableModelIds(
 		selectedModelIds,
 		'file_upload',
+		modelCapabilitiesById
+	);
+
+	let fileProcessingCapableModels = [];
+	$: fileProcessingCapableModels = getCapableModelIds(
+		selectedModelIds,
+		'file_processing',
 		modelCapabilitiesById
 	);
 
@@ -871,6 +879,12 @@
 			return null;
 		}
 
+		const skipProcessing =
+			process && selectedModelIds.length > 0 && fileProcessingCapableModels.length === 0;
+		if (skipProcessing) {
+			process = false;
+		}
+
 		const tempItemId = uuidv4();
 		const fileItem = {
 			type: 'file',
@@ -886,6 +900,7 @@
 			// Stamp the user's default upload mode so the sent payload carries it;
 			// the per-file toggle in FileItemModal can still override it afterwards.
 			...($settings?.defaultUploadContext === 'full' ? { context: 'full' } : {}),
+			...(skipProcessing ? { processed: false } : {}),
 			...itemData
 		};
 
