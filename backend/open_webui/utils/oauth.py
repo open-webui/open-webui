@@ -1955,6 +1955,8 @@ class OAuthManager:
                         data={'role': determined_role, 'provider': provider},
                     )
 
+                synced_fields = []
+
                 if auth_config.OAUTH_UPDATE_NAME_ON_LOGIN:
                     username_claim = auth_config.OAUTH_USERNAME_CLAIM
                     if username_claim:
@@ -1962,6 +1964,7 @@ class OAuthManager:
                         if new_name and new_name != user.name:
                             await Users.update_user_by_id(user.id, {'name': new_name}, db=db)
                             user.name = new_name
+                            synced_fields.append('name')
                             log.debug('Updated name for user %s', user.email)
 
                 if auth_config.OAUTH_UPDATE_EMAIL_ON_LOGIN:
@@ -1977,6 +1980,7 @@ class OAuthManager:
                             else:
                                 await Auths.update_email_by_id(user.id, new_email.lower(), db=db)
                                 user.email = new_email.lower()
+                                synced_fields.append('email')
                                 log.debug('Updated email for user %s', user.id)
 
                 # Update profile picture if enabled and different from current
@@ -1992,7 +1996,18 @@ class OAuthManager:
                         )
                         if processed_picture_url != user.profile_image_url:
                             await Users.update_user_profile_image_url_by_id(user.id, processed_picture_url, db=db)
+                            synced_fields.append('profile_image_url')
                             log.debug('Updated profile picture for user %s', user.email)
+
+                if synced_fields:
+                    await publish_event(
+                        request,
+                        EVENTS.USER_UPDATED,
+                        actor=user,
+                        subject_id=user.id,
+                        source='oauth',
+                        data={'updated_fields': synced_fields, 'provider': provider},
+                    )
             else:
                 # If the user does not exist, check if signups are enabled
                 if auth_config.ENABLE_OAUTH_SIGNUP:
