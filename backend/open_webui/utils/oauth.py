@@ -1908,6 +1908,14 @@ class OAuthManager:
                     # Update the user object in memory as well,
                     # to avoid problems with the ENABLE_OAUTH_GROUP_MANAGEMENT check below
                     user.role = determined_role
+                    await publish_event(
+                        request,
+                        EVENTS.USER_ROLE_UPDATED,
+                        actor=user,
+                        subject_id=user.id,
+                        source='oauth',
+                        data={'role': determined_role, 'provider': provider},
+                    )
 
                 if auth_config.OAUTH_UPDATE_NAME_ON_LOGIN:
                     username_claim = auth_config.OAUTH_USERNAME_CLAIM
