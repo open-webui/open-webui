@@ -122,7 +122,7 @@
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
 			class="{buttonClassName} cursor-pointer"
-			on:pointerup={() => {
+			on:click={() => {
 				open = !open;
 			}}
 		>
