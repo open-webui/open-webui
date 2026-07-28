@@ -162,6 +162,11 @@ RUN set -e; \
     fi; \
     fi; \
     mkdir -p /app/backend/data; chown -R $UID:$GID /app/backend/data/; \
+    # huggingface_hub creates some cache files (e.g. trees/*.json) with 0600
+    # permissions. When the pod runs with runAsNonRoot and a sidecar copies
+    # the data volume, those files are unreadable (#27651). Make the model
+    # cache world-readable so any UID can copy it.
+    chmod -R a+rX /app/backend/data/cache/ 2>/dev/null || true; \
     rm -rf /var/lib/apt/lists/*;
 
 # Install Ollama if requested
