@@ -103,6 +103,8 @@
 	let chat = null;
 
 	let mouseOver = false;
+	let focusWithin = false;
+	let menuOpen = false;
 	let openPreview = false;
 
 	const closeHoverPreview = () => {
@@ -131,7 +133,8 @@
 		id !== $chatId &&
 		!active &&
 		(effectiveReadAt === null || (updatedAt !== null && updatedAt > effectiveReadAt));
-	$: showInlineActions = id === $chatId || confirmEdit || mouseOver || selected;
+	$: showInlineActions =
+		id === $chatId || confirmEdit || mouseOver || focusWithin || menuOpen || selected;
 
 	const loadChat = async () => {
 		if (!chat) {
@@ -499,6 +502,12 @@
 	on:mouseleave={() => {
 		mouseOver = false;
 	}}
+	on:focusin={() => {
+		focusWithin = true;
+	}}
+	on:focusout={() => {
+		focusWithin = false;
+	}}
 >
 	{#if confirmEdit}
 		<div
@@ -707,7 +716,12 @@
 							showDeleteConfirm = true;
 						}}
 						{markUnreadHandler}
+						onOpen={() => {
+							menuOpen = true;
+							dispatch('select');
+						}}
 						onClose={() => {
+							menuOpen = false;
 							dispatch('unselect');
 						}}
 						onPinChange={async () => {
@@ -717,9 +731,6 @@
 						<button
 							aria-label="Chat Menu"
 							class="flex size-5 items-center justify-center self-center dark:hover:text-white transition m-0"
-							on:click={() => {
-								dispatch('select');
-							}}
 						>
 							<MoreHorizontalIcon className="size-3.5" strokeWidth="2" />
 						</button>
