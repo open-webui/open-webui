@@ -271,6 +271,17 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         name=cn,
                         role=role,
                     )
+                    # --- Default settings for users (activate memory in personalisation section) ---
+                    if user:
+                        try:
+                            Users.update_user_by_id(
+                                user.id, 
+                                {"settings": {"ui": {"memory": True}}}
+                            )
+                            log.info(f"Memory activated for new user")
+                        except Exception as e:
+                            log.error(f"Failed to set default settings for new user: {e}")
+                    # --------------------------------
 
                     if not user:
                         raise HTTPException(
@@ -474,6 +485,18 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             role,
         )
 
+        # --- Default settings for users (activate memory in personalisation section) ---
+        if user:
+            try:
+                Users.update_user_by_id(
+                    user.id, 
+                    {"settings": {"ui": {"memory": True}}}
+                )
+                log.info(f"Memory activated for new user")
+            except Exception as e:
+                log.error(f"Failed to set default settings for new user: {e}")
+        # --------------------------------
+
         if user:
             expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
             expires_at = None
@@ -593,6 +616,18 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
             form_data.profile_image_url,
             form_data.role,
         )
+
+        # --- Default settings for users (activate memory in personalisation section) ---
+        if user:
+            try:
+                Users.update_user_by_id(
+                    user.id, 
+                    {"settings": {"ui": {"memory": True}}}
+                )
+                log.info(f"Memory activated for new user")
+            except Exception as e:
+                log.error(f"Failed to set default settings for new user: {e}")
+        # --------------------------------
 
         if user:
             token = create_token(data={"id": user.id})
