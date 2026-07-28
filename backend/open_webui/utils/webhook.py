@@ -69,6 +69,9 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict, desc
                     {
                         'activityTitle': message,
                         'activitySubtitle': f'{name} ({VERSION}) - {action}',
+                        # LICENSE covers this Open WebUI webhook logo.
+                        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+                        # https://docs.openwebui.com/license.
                         'activityImage': WEBUI_FAVICON_URL,
                         'text': description,
                         'facts': facts,

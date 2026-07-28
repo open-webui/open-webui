@@ -9,7 +9,7 @@ import urllib
 import uuid
 from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
-from aiohttp import ClientSession
+from aiohttp import BasicAuth, ClientSession
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse, Response
 from ldap3 import NONE, Connection, Server, Tls
@@ -27,6 +27,7 @@ from open_webui.env import (
     ENABLE_OAUTH_TOKEN_EXCHANGE,
     OAUTH_TOKEN_EXCHANGE_RATE_LIMIT,
     OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW,
+    OAUTH_TOKEN_EXCHANGE_TRUSTED_CLIENT_IDS,
     WEBUI_AUTH,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
@@ -77,6 +78,7 @@ from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.rate_limit import RateLimiter
 from open_webui.utils.redis import get_redis_client
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
@@ -97,6 +99,7 @@ token_exchange_rate_limiter = (
     if OAUTH_TOKEN_EXCHANGE_RATE_LIMIT is not None
     else None
 )
+
 
 ADMIN_CONFIG_KEYS = {
     'SHOW_ADMIN_DETAILS': 'auth.admin.show',
@@ -738,14 +741,18 @@ async def signin(
                 pass
 
         if not await Users.get_user_by_email(email.lower(), db=db):
-            await signup_handler(
-                request,
-                email,
-                str(uuid.uuid4()),
-                name,
-                db=db,
-                source='trusted_header',
-            )
+            try:
+                await signup_handler(
+                    request,
+                    email,
+                    str(uuid.uuid4()),
+                    name,
+                    db=db,
+                    source='trusted_header',
+                )
+            except IntegrityError:
+                if not await Users.get_user_by_email(email.lower(), db=db):
+                    raise
 
         user = await Auths.authenticate_user_by_email(email, db=db)
         if user:
@@ -1520,6 +1527,37 @@ class TokenExchangeForm(BaseModel):
     token: str  # OAuth access token from external provider
 
 
+async def get_token_client_id(client, token: str) -> str | None:
+    """Return the OAuth client_id a token was minted for, when the provider supports introspection."""
+    try:
+        metadata = await client.load_server_metadata()
+        introspection_endpoint = metadata.get('introspection_endpoint')
+        if not introspection_endpoint:
+            log.warning('Token exchange trusted-client check requires an introspection_endpoint')
+            return None
+
+        async with ClientSession(trust_env=True) as session:
+            async with session.post(
+                introspection_endpoint,
+                data={'token': token, 'token_type_hint': 'access_token'},
+                auth=BasicAuth(client.client_id, client.client_secret or ''),
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
+                if r.status != 200:
+                    log.warning(f'Token introspection returned {r.status}')
+                    return None
+                introspection = await r.json()
+
+        if not introspection.get('active'):
+            log.warning('Token introspection reports the token is inactive')
+            return None
+
+        return introspection.get('client_id')
+    except Exception as e:
+        log.warning(f'Token introspection failed: {e}')
+        return None
+
+
 @router.post('/oauth/{provider}/token/exchange', response_model=SessionUserResponse)
 async def token_exchange(
     request: Request,
@@ -1562,6 +1600,20 @@ async def token_exchange(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.OAUTH_NOT_CONFIGURED(provider),
         )
+
+    if OAUTH_TOKEN_EXCHANGE_TRUSTED_CLIENT_IDS:
+        token_client_id = await get_token_client_id(client, form_data.token)
+        if not token_client_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Unable to determine which client the token was issued to',
+            )
+        if token_client_id not in OAUTH_TOKEN_EXCHANGE_TRUSTED_CLIENT_IDS:
+            log.warning('Token exchange denied: token was issued to an untrusted client for %s', provider)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
 
     # Validate the token by calling the userinfo endpoint
     try:

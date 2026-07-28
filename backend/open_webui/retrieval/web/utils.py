@@ -91,11 +91,11 @@ def _is_global_addr(ip: str) -> bool:
         embedded.extend(addr.teredo)
 
     b = addr.packed
-    if b[:12] == b"\x00" * 12:
+    if b[:12] == b'\x00' * 12:
         embedded.append(ipaddress.IPv4Address(b[12:]))
-    elif b[:12] == b"\x00\x64\xff\x9b" + b"\x00" * 8:
+    elif b[:12] == b'\x00\x64\xff\x9b' + b'\x00' * 8:
         embedded.append(ipaddress.IPv4Address(b[12:]))
-    elif b[:6] == b"\x00\x64\xff\x9b\x00\x01":
+    elif b[:6] == b'\x00\x64\xff\x9b\x00\x01':
         if b[8] != 0:
             return False
         embedded.append(ipaddress.IPv4Address(bytes((b[6], b[7], b[9], b[10]))))

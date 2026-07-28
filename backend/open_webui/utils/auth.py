@@ -86,11 +86,17 @@ def get_license_data(app, key):
     def data_handler(data):
         for k, v in data.items():
             if k == 'resources':
+                # LICENSE covers these Open WebUI branding assets.
+                # Do not alter, remove, obscure, or replace them except as LICENSE permits:
+                # https://docs.openwebui.com/license.
                 for p, c in v.items():
                     globals().get('override_static', lambda a, b: None)(p, c)
             elif k == 'count':
                 setattr(app.state, 'USER_COUNT', v)
             elif k == 'name':
+                # LICENSE covers this Open WebUI product name.
+                # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+                # https://docs.openwebui.com/license.
                 setattr(app.state, 'WEBUI_NAME', v)
             elif k == 'metadata':
                 setattr(app.state, 'LICENSE_METADATA', v)

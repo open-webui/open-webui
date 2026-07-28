@@ -832,6 +832,11 @@ OAUTH_TOKEN_EXCHANGE_RATE_LIMIT = (
     else None
 )
 OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW = int(os.getenv('OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW', str(60 * 3)))
+OAUTH_TOKEN_EXCHANGE_TRUSTED_CLIENT_IDS = [
+    client_id.strip()
+    for client_id in os.getenv('OAUTH_TOKEN_EXCHANGE_TRUSTED_CLIENT_IDS', '').split(',')
+    if client_id.strip()
+]
 
 # Back-Channel Logout Configuration
 # When enabled, exposes POST /oauth/backchannel-logout for IdP-initiated logout
@@ -883,10 +888,18 @@ if LICENSE_PUBLIC_KEY:
 # WEBUI Identity
 ####################################
 
+# LICENSE covers this Open WebUI branding surface, including name, logo,
+# visual, textual, symbolic identifiers, metadata, and surrounding UI.
+# Do not alter, remove, obscure, or replace it except as LICENSE permits:
+# https://docs.openwebui.com/license.
 WEBUI_NAME = os.getenv('WEBUI_NAME', 'Open WebUI')
 if WEBUI_NAME != 'Open WebUI':
     WEBUI_NAME += ' (Open WebUI)'
 
+# LICENSE covers this Open WebUI branding surface, including this favicon
+# and any visual, textual, or symbolic identifiers it preserves.
+# Do not alter, remove, obscure, or replace it except as LICENSE permits:
+# https://docs.openwebui.com/license.
 WEBUI_FAVICON_URL = 'https://openwebui.com/favicon.png'
 WEBUI_BUILD_HASH = os.getenv('WEBUI_BUILD_HASH', 'dev-build')
 TRUSTED_SIGNATURE_KEY = os.getenv('TRUSTED_SIGNATURE_KEY', '')
@@ -943,6 +956,10 @@ except ValueError:
 # Progressive Web App
 ####################################
 
+# LICENSE covers this install-time Open WebUI branding surface, including
+# names, logos, manifests, metadata, and surrounding UI.
+# Do not alter, remove, obscure, or replace it except as LICENSE permits:
+# https://docs.openwebui.com/license.
 EXTERNAL_PWA_MANIFEST_URL = os.getenv('EXTERNAL_PWA_MANIFEST_URL', None)
 
 ####################################

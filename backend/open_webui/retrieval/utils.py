@@ -48,7 +48,7 @@ from open_webui.retrieval.external import retrieve_external_knowledge
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.retrieval.vector.main import GetResult, SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
-from open_webui.utils.access_control.files import has_access_to_file
+from open_webui.utils.access_control.files import get_owner_accessible_folder_files, has_access_to_file
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.misc import get_content_from_message, get_message_list
@@ -1354,7 +1354,7 @@ async def get_sources_from_items(
 
         folder = await Folders.get_folder_by_id(folder_id)
         if folder and (user.role == 'admin' or await has_folder_access(user.id, folder, 'read', db=None)):
-            files = (folder.data or {}).get('files', [])
+            files = await get_owner_accessible_folder_files(folder)
             folder_items.update((entry.get('type'), entry.get('id')) for entry in files if isinstance(entry, dict))
             items.extend(files)
 

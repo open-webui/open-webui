@@ -415,7 +415,9 @@
 
 				<AdminSettingField
 					label={$i18n.t('Supported Media MIME Types')}
-					description={$i18n.t('Media upload MIME types the content extraction engine may process.')}
+					description={$i18n.t(
+						'Media upload MIME types the content extraction engine may process.'
+					)}
 				>
 					<input
 						class={inputClass}

@@ -77,6 +77,7 @@ from open_webui.socket.main import (
 )
 from open_webui.utils.access_control import has_connection_access, has_permission
 from open_webui.models.access_grants import AccessGrants
+from open_webui.utils.access_control.files import get_owner_accessible_folder_files
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.chat_id import is_saved_chat_id
@@ -2456,7 +2457,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 else:
                     # Native FC: skip RAG injection, builtin tools
                     # will read folder knowledge from metadata.
-                    metadata['folder_knowledge'] = folder.data['files']
+                    metadata['folder_knowledge'] = await get_owner_accessible_folder_files(folder)
 
     # Model "Knowledge" handling
     user_message = get_last_user_message(form_data['messages'])
@@ -2870,10 +2871,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 for item in get_attached_knowledge(model, metadata):
                     if not item.get('id') or not item.get('type'):
                         continue
-                    attrs = (
-                        f'type="{escape(str(item["type"]), quote=True)}" '
-                        f'id="{escape(str(item["id"]), quote=True)}"'
-                    )
+                    attrs = f'type="{escape(str(item["type"]), quote=True)}" id="{escape(str(item["id"]), quote=True)}"'
                     if item.get('name'):
                         attrs += f' name="{escape(str(item["name"]), quote=True)}"'
                     if item.get('source'):
@@ -2945,9 +2943,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     )
     if resolved_model_system_prompt:
         system_content = (
-            f'{resolved_model_system_prompt}\n{system_content}'
-            if system_content
-            else resolved_model_system_prompt
+            f'{resolved_model_system_prompt}\n{system_content}' if system_content else resolved_model_system_prompt
         )
     metadata['system_prompt'] = system_content or None
     metadata['user_prompt'] = get_last_user_message(form_data['messages'])
@@ -3530,7 +3526,7 @@ async def outlet_filter_handler(ctx):
             outlet_result = outlet_data
 
         if outlet_result and outlet_result.get('messages'):
-            if not is_temp_chat and messages_map:
+            if not is_unsaved_chat and messages_map:
                 for message in outlet_result['messages']:
                     outlet_message_id = message.get('id')
                     if outlet_message_id and outlet_message_id in messages_map:
@@ -3778,9 +3774,7 @@ async def streaming_chat_response_handler(response, ctx):
     }
 
     filter_functions = (
-        await get_filter_functions(request, model, metadata.get('filter_ids', []))
-        if ENABLE_PLUGINS
-        else []
+        await get_filter_functions(request, model, metadata.get('filter_ids', [])) if ENABLE_PLUGINS else []
     )
 
     # Standard streaming response handler
@@ -4499,9 +4493,9 @@ async def streaming_chat_response_handler(response, ctx):
                                                             str,
                                                         ):
                                                             current_response_tool_call['function']['arguments'] = ''
-                                                        current_response_tool_call['function'][
-                                                            'arguments'
-                                                        ] += delta_arguments
+                                                        current_response_tool_call['function']['arguments'] += (
+                                                            delta_arguments
+                                                        )
 
                                         # Emit pending tool calls in real-time
                                         if response_tool_calls:

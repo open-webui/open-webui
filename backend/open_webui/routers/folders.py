@@ -30,7 +30,7 @@ from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control import (
     filter_allowed_access_grants,
 )
-from open_webui.utils.access_control.files import get_accessible_folder_files
+from open_webui.utils.access_control.files import can_read_all_folder_files, get_accessible_folder_files
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.tasks import has_active_tasks
 from pydantic import BaseModel
@@ -156,6 +156,18 @@ async def create_folder(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
                 )
+            if form_data.data and 'files' in form_data.data:
+                owner = await Users.get_user_by_id(parent.user_id, db=db)
+                if not owner:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=ERROR_MESSAGES.NOT_FOUND,
+                    )
+                if not await can_read_all_folder_files(form_data.data['files'], owner, db=db):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                    )
             # Create as the folder owner's subfolder (keep tree consistent)
             try:
                 folder = await Folders.insert_new_folder(parent.user_id, form_data, form_data.parent_id, db=db)
@@ -173,6 +185,16 @@ async def create_folder(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT('Error creating folder'),
                 )
+
+    if (
+        form_data.data
+        and 'files' in form_data.data
+        and not await can_read_all_folder_files(form_data.data['files'], user, db=db)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
 
     try:
         folder = await Folders.insert_new_folder(user.id, form_data, form_data.parent_id, db=db)
@@ -315,11 +337,14 @@ async def update_folder_name_by_id(
                     detail=ERROR_MESSAGES.DEFAULT('Folder already exists'),
                 )
 
-        # Validate read access to every file/collection being attached.
-        # Folder files are consumed by chat middleware as RAG context.
-        if form_data.data and isinstance(form_data.data.get('files'), list):
-            accessible_files = await get_accessible_folder_files(form_data.data['files'], user, db=db)
-            if len(accessible_files) != len(form_data.data['files']):
+        if form_data.data and 'files' in form_data.data:
+            owner = user if folder.user_id == user.id else await Users.get_user_by_id(folder.user_id, db=db)
+            if not owner:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.NOT_FOUND,
+                )
+            if not await can_read_all_folder_files(form_data.data['files'], owner, db=db):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=ERROR_MESSAGES.ACCESS_PROHIBITED,

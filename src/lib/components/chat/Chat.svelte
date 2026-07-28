@@ -729,7 +729,11 @@
 		);
 	};
 
-	$: if ($terminalServers !== null && $selectedTerminalId && !isTerminalAvailable($selectedTerminalId)) {
+	$: if (
+		$terminalServers !== null &&
+		$selectedTerminalId &&
+		!isTerminalAvailable($selectedTerminalId)
+	) {
 		selectedTerminalId.set(null);
 	}
 
@@ -3663,6 +3667,9 @@
 </script>
 
 <svelte:head>
+	<!-- LICENSE covers this Open WebUI browser-title identifier.
+	Do not alter, remove, obscure, or replace it except as LICENSE permits:
+	https://docs.openwebui.com/license. -->
 	<title>
 		{$settings.showChatTitleInTab !== false && $chatTitle
 			? `${$chatTitle.length > 30 ? `${$chatTitle.slice(0, 30)}...` : $chatTitle} / ${$WEBUI_NAME}`
@@ -3926,7 +3933,7 @@
 										{chatActionHandler}
 										{addMessages}
 										allowDelete={!(generating || taskIds?.length)}
-										forkHandler={generating || taskIds?.length ? null : handleForkChat}
+										forkHandler={handleForkChat}
 										topPadding={!embedded}
 										bottomPadding={files.length > 0}
 										{onSelect}

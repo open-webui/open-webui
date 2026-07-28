@@ -4,13 +4,16 @@ from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
 from open_webui.models.files import Files
+from open_webui.models.folders import FolderModel
 from open_webui.models.groups import Groups
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.models import Models
-from open_webui.models.users import UserModel
+from open_webui.models.users import UserModel, Users
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
+
+FOLDER_FILE_TYPES = {'file', 'collection', 'note'}
 
 
 async def has_access_to_file(
@@ -122,27 +125,26 @@ async def get_accessible_folder_files(
 ) -> list[dict]:
     """Filter folder.data['files'] entries to those the caller can read.
 
-    Entries carry a 'type' ('file', 'collection' or 'note') and 'id'. File, collection and
-    note ids are each access-checked against the caller; admins bypass all checks and
-    genuinely unknown types are kept as-is.
+    Entries carry a 'type' ('file', 'collection' or 'note') and 'id'. Entries of any other
+    shape are dropped because they cannot be access-checked.
     """
-    if not entries:
+    if not isinstance(entries, list):
         return []
+    entries = [
+        entry
+        for entry in entries
+        if isinstance(entry, dict) and entry.get('type') in FOLDER_FILE_TYPES and entry.get('id')
+    ]
     if user.role == 'admin':
-        return list(entries)
+        return entries
 
     # One group-membership fetch for the whole folder listing
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
 
     accessible: list[dict] = []
     for entry in entries:
-        if not isinstance(entry, dict):
-            continue
         entry_type = entry.get('type')
         entry_id = entry.get('id')
-        if not entry_id:
-            accessible.append(entry)
-            continue
         if entry_type == 'file':
             if await has_access_to_file(entry_id, 'read', user, db=db, user_group_ids=user_group_ids):
                 accessible.append(entry)
@@ -165,6 +167,32 @@ async def get_accessible_folder_files(
                 )
             ):
                 accessible.append(entry)
-        else:
-            accessible.append(entry)
     return accessible
+
+
+async def can_read_all_folder_files(
+    entries: list[dict] | None,
+    user: UserModel,
+    db: AsyncSession | None = None,
+) -> bool:
+    if entries is None:
+        return True
+    if not isinstance(entries, list):
+        return False
+    if not entries:
+        return True
+
+    return len(await get_accessible_folder_files(entries, user, db=db)) == len(entries)
+
+
+async def get_owner_accessible_folder_files(folder: FolderModel, db: AsyncSession | None = None) -> list[dict]:
+    """Return the folder entries its owner can still delegate."""
+    files = (folder.data or {}).get('files') or []
+    if not files:
+        return []
+
+    owner = await Users.get_user_by_id(folder.user_id, db=db)
+    if not owner:
+        return []
+
+    return await get_accessible_folder_files(files, owner, db=db)

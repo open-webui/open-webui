@@ -114,6 +114,9 @@ for file_path in (FRONTEND_BUILD_DIR / 'static').glob('**/*'):
         except Exception as e:
             logging.error(f'An error occurred: {e}')
 
+# LICENSE covers copied Open WebUI logo/favicon assets.
+# Do not alter, remove, obscure, or replace them except as LICENSE permits:
+# https://docs.openwebui.com/license.
 frontend_favicon = FRONTEND_BUILD_DIR / 'static' / 'favicon.png'
 
 if frontend_favicon.exists():
@@ -181,6 +184,9 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 # CUSTOM_NAME (Legacy)
 ####################################
 
+# LICENSE covers this legacy Open WebUI branding path.
+# Do not alter, remove, obscure, or replace it except as LICENSE permits:
+# https://docs.openwebui.com/license.
 CUSTOM_NAME = os.getenv('CUSTOM_NAME', '')
 
 if CUSTOM_NAME:
@@ -855,11 +861,7 @@ CONTENT_EXTRACTION_ENGINE = os.getenv('CONTENT_EXTRACTION_ENGINE', '').lower()
 
 content_extraction_supported_media_mime_types = os.getenv('CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES')
 CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES = (
-    [
-        mime_type.strip()
-        for mime_type in content_extraction_supported_media_mime_types.split(',')
-        if mime_type.strip()
-    ]
+    [mime_type.strip() for mime_type in content_extraction_supported_media_mime_types.split(',') if mime_type.strip()]
     if content_extraction_supported_media_mime_types is not None
     else None
 )
@@ -2051,6 +2053,9 @@ DEFAULT_ARENA_MODEL = {
     'id': 'arena-model',
     'name': 'Arena Model',
     'meta': {
+        # LICENSE covers this Open WebUI fallback logo.
+        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+        # https://docs.openwebui.com/license.
         'profile_image_url': '/favicon.png',
         'description': 'Submit your questions to anonymous AI chatbots and vote on the best response.',
         'model_ids': None,

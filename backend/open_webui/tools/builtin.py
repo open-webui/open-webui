@@ -138,6 +138,9 @@ async def notify(
         return 'Notification failed: user not found.'
 
     app_name = getattr(getattr(__request__, 'app', None), 'state', None)
+    # LICENSE covers this Open WebUI notification identifier.
+    # Do not alter, remove, obscure, or replace it except as LICENSE permits:
+    # https://docs.openwebui.com/license.
     app_name = getattr(app_name, 'WEBUI_NAME', 'Open WebUI')
     try:
         result = await notify_target(user_id, message, target=target, title=title, app_name=app_name)
@@ -2423,9 +2426,9 @@ async def query_chat_files(
             items=file_items,
             queries=[query],
             embedding_function=(
-                lambda queries, prefix: embedding_function(queries, prefix=prefix, user=user_model)
-                if embedding_function
-                else None
+                lambda queries, prefix: (
+                    embedding_function(queries, prefix=prefix, user=user_model) if embedding_function else None
+                )
             ),
             k=count,
             reranking_function=(
@@ -3155,9 +3158,7 @@ async def query_knowledge_files(
                 __request__,
                 collection_names=collection_names,
                 queries=[query],
-                embedding_function=lambda queries, prefix: embedding_function(
-                    queries, prefix=prefix, user=user_model
-                ),
+                embedding_function=lambda queries, prefix: embedding_function(queries, prefix=prefix, user=user_model),
                 k=count,
             )
 
