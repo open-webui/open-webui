@@ -201,6 +201,7 @@
 							<Tooltip content={filter?.description} placement="top-start">
 								<button
 									class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+									aria-pressed={selectedFilterIds.includes(filter.id)}
 									on:click={() => {
 										if (selectedFilterIds.includes(filter.id)) {
 											selectedFilterIds = selectedFilterIds.filter((id) => id !== filter.id);
@@ -253,14 +254,8 @@
 										</div>
 									{/if}
 
-									<div class=" shrink-0">
-										<Switch
-											state={selectedFilterIds.includes(filter.id)}
-											on:change={async (e) => {
-												const state = e.detail;
-												await tick();
-											}}
-										/>
+									<div class=" shrink-0" inert>
+										<Switch state={selectedFilterIds.includes(filter.id)} />
 									</div>
 								</button>
 							</Tooltip>
@@ -272,9 +267,6 @@
 							<button
 								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 								aria-pressed={webSearchEnabled}
-								aria-label={webSearchEnabled
-									? $i18n.t('Disable Web Search')
-									: $i18n.t('Enable Web Search')}
 								on:click={() => {
 									webSearchEnabled = !webSearchEnabled;
 									onWebSearchToggle(webSearchEnabled);
@@ -290,14 +282,8 @@
 									</div>
 								</div>
 
-								<div class=" shrink-0">
-									<Switch
-										state={webSearchEnabled}
-										on:change={async (e) => {
-											const state = e.detail;
-											await tick();
-										}}
-									/>
+								<div class=" shrink-0" inert>
+									<Switch state={webSearchEnabled} />
 								</div>
 							</button>
 						</Tooltip>
@@ -308,9 +294,6 @@
 							<button
 								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 								aria-pressed={imageGenerationEnabled}
-								aria-label={imageGenerationEnabled
-									? $i18n.t('Disable Image Generation')
-									: $i18n.t('Enable Image Generation')}
 								on:click={() => {
 									imageGenerationEnabled = !imageGenerationEnabled;
 								}}
@@ -325,14 +308,8 @@
 									</div>
 								</div>
 
-								<div class=" shrink-0">
-									<Switch
-										state={imageGenerationEnabled}
-										on:change={async (e) => {
-											const state = e.detail;
-											await tick();
-										}}
-									/>
+								<div class=" shrink-0" inert>
+									<Switch state={imageGenerationEnabled} />
 								</div>
 							</button>
 						</Tooltip>
@@ -343,9 +320,6 @@
 							<button
 								class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 								aria-pressed={codeInterpreterEnabled}
-								aria-label={codeInterpreterEnabled
-									? $i18n.t('Disable Code Interpreter')
-									: $i18n.t('Enable Code Interpreter')}
 								on:click={() => {
 									codeInterpreterEnabled = !codeInterpreterEnabled;
 								}}
@@ -360,14 +334,8 @@
 									</div>
 								</div>
 
-								<div class=" shrink-0">
-									<Switch
-										state={codeInterpreterEnabled}
-										on:change={async (e) => {
-											const state = e.detail;
-											await tick();
-										}}
-									/>
+								<div class=" shrink-0" inert>
+									<Switch state={codeInterpreterEnabled} />
 								</div>
 							</button>
 						</Tooltip>
@@ -394,6 +362,9 @@
 					{#each Object.keys(tools) as toolId}
 						<button
 							class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+							aria-pressed={(tools[toolId]?.authenticated ?? true)
+								? tools[toolId].enabled
+								: undefined}
 							on:click={async (e) => {
 								if (!(tools[toolId]?.authenticated ?? true)) {
 									e.preventDefault();
@@ -490,7 +461,7 @@
 								</div>
 							{/if}
 
-							<div class=" shrink-0">
+							<div class=" shrink-0" inert>
 								<Switch state={tools[toolId].enabled} />
 							</div>
 						</button>
@@ -517,6 +488,7 @@
 					{#each Object.keys(skills) as skillId}
 						<button
 							class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+							aria-pressed={skills[skillId].enabled}
 							on:click={async () => {
 								skills[skillId].enabled = !skills[skillId].enabled;
 
@@ -543,7 +515,7 @@
 								</div>
 							</div>
 
-							<div class=" shrink-0">
+							<div class=" shrink-0" inert>
 								<Switch state={skills[skillId].enabled} />
 							</div>
 						</button>
