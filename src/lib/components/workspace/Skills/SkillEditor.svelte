@@ -39,7 +39,6 @@
 		const fm = parseFrontmatter(content);
 		if (fm.name && !name) {
 			name = formatSkillName(fm.name);
-			id = fm.name;
 		}
 		if (fm.description && !description) {
 			description = fm.description;
@@ -52,6 +51,7 @@
 			return;
 		}
 		loading = true;
+		if (!edit) id = slugify(id);
 
 		await onSubmit({
 			id,
