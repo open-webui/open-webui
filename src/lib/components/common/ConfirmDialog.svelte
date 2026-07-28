@@ -36,6 +36,7 @@
 	}
 
 	let modalElement = null;
+	let confirmButtonElement: HTMLButtonElement | null = null;
 	let mounted = false;
 
 	let focusTrap: FocusTrap.FocusTrap | null = null;
@@ -81,7 +82,10 @@
 	$: if (mounted) {
 		if (show && modalElement) {
 			document.body.appendChild(modalElement);
-			focusTrap = FocusTrap.createFocusTrap(modalElement);
+			focusTrap = FocusTrap.createFocusTrap(modalElement, {
+				initialFocus: () =>
+					modalElement.querySelector('input, textarea, select') ?? confirmButtonElement ?? undefined
+			});
 			focusTrap.activate();
 
 			window.addEventListener('keydown', handleKeyDown);
@@ -195,6 +199,7 @@
 						{cancelLabel}
 					</button>
 					<button
+						bind:this={confirmButtonElement}
 						class="text-sm bg-gray-900 hover:bg-gray-900/90 text-gray-100 dark:bg-gray-100 dark:hover:bg-gray-100/90 dark:text-gray-800 font-normal w-full py-1.5 rounded-full transition"
 						on:click={() => {
 							confirmHandler();
