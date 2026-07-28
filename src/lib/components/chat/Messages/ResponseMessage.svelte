@@ -1384,7 +1384,7 @@
 													<button
 														type="button"
 														aria-label={$i18n.t('Regenerate')}
-														class="{isLastMessage
+														class="{isLastMessage || ($settings?.highContrastMode ?? false)
 															? 'visible'
 															: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 													>
@@ -1411,7 +1411,7 @@
 												<button
 													type="button"
 													aria-label={$i18n.t('Regenerate')}
-													class="{isLastMessage
+													class="{isLastMessage || ($settings?.highContrastMode ?? false)
 														? 'visible'
 														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 													on:click={() => {
