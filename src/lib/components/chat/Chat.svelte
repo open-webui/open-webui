@@ -3113,8 +3113,14 @@
 		// in the message so the backend can inject their full content.
 		const skillIds = [...selectedSkillIds];
 
-		// Use the user-selected terminal from the dropdown
-		const activeTerminalId = $selectedTerminalId ?? null;
+		// Use the user-selected terminal from the dropdown. Only system terminals
+		// resolve by id on the backend; direct terminals are identified by URL and
+		// already travel through tool_servers below.
+		const activeTerminalId = ($terminalServers ?? []).some(
+			(t) => t.id && t.id === $selectedTerminalId
+		)
+			? $selectedTerminalId
+			: null;
 
 		// Only send terminal_id if the model has terminal capability enabled
 		const terminalEnabled = model.info?.meta?.capabilities?.terminal ?? true;
