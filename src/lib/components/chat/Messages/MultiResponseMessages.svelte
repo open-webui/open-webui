@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, tick, getContext, setContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	import { mobile, models, settings } from '$lib/stores';
@@ -21,6 +21,9 @@
 	import equal from 'fast-deep-equal';
 	import { formatMessageTimestamp, formatMessageTimestampFull } from '$lib/utils';
 	const i18n = getContext('i18n');
+
+	// Assistant output; the merged response renders Markdown directly
+	setContext('allowTerminalFileLinks', true);
 
 	export let chatId;
 	export let history;

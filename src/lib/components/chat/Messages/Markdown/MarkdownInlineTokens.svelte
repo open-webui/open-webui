@@ -7,9 +7,12 @@
 	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
+	const allowTerminalFileLinks = getContext<boolean>('allowTerminalFileLinks');
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { copyToClipboard, unescapeHtml } from '$lib/utils';
+	import { selectedTerminalId, showControls, showFileNavPath } from '$lib/stores';
+	import { copyToClipboard, displayFileHandler, unescapeHtml } from '$lib/utils';
+	import { terminalPath } from '$lib/utils/terminal';
 
 	import Image from '$lib/components/common/Image.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
@@ -46,10 +49,19 @@
 	};
 
 	/**
-	 * Handle link clicks - intercept same-origin app URLs for in-app navigation
+	 * Handle link clicks - open terminal paths, intercept same-origin app URLs
 	 */
 	const handleLinkClick = (e: MouseEvent, href: string) => {
 		try {
+			// A filesystem path points at the terminal the chat is attached to, not an app
+			// route, so open it in the file browser instead of resolving it against the origin
+			const path = allowTerminalFileLinks && $selectedTerminalId ? terminalPath(href) : null;
+			if (path) {
+				e.preventDefault();
+				displayFileHandler(path, { showControls, showFileNavPath });
+				return;
+			}
+
 			const url = new URL(href, window.location.origin);
 			// Check if same origin and an in-app route
 			if (

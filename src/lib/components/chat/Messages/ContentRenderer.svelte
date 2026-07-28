@@ -1,5 +1,5 @@
 <script>
-	import { onDestroy, onMount, tick, getContext } from 'svelte';
+	import { onDestroy, onMount, tick, getContext, setContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import Markdown from './Markdown.svelte';
@@ -15,6 +15,9 @@
 	} from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList, replaceOutsideCode } from '$lib/utils';
+
+	// Only assistant output may point at paths on the terminal
+	setContext('allowTerminalFileLinks', true);
 
 	/**
 	 * Extracts all top-level <details>...</details> blocks from content,
