@@ -316,6 +316,17 @@ def get_scim_provider() -> str:
     return SCIM_AUTH_PROVIDER
 
 
+def is_externally_managed(user: UserModel) -> bool:
+    """True when an identity provider backs the account; OAuth links count, purely local accounts do not."""
+    return user.scim is not None or user.oauth is not None
+
+
+async def get_scim_user_by_id(user_id: str, db=None) -> Optional[UserModel]:
+    """Resolve a user for SCIM, treating local-only accounts as non-existent."""
+    user = await Users.get_user_by_id(user_id, db=db)
+    return user if user and is_externally_managed(user) else None
+
+
 async def find_user_by_external_id(external_id: str, db=None) -> Optional[UserModel]:
     """Find a user by SCIM externalId, falling back to OAuth sub match."""
     provider = get_scim_provider()
@@ -513,24 +524,23 @@ async def get_users(
     limit = count
 
     # Get users from database
-    if filter:
-        # Simple filter parsing - supports userName eq, externalId eq
-        if 'userName eq' in filter:
-            email = filter.split('"')[1]
-            user = await Users.get_user_by_email(email, db=db)
-            users_list = [user] if user else []
-            total = 1 if user else 0
-        elif 'externalId eq' in filter:
-            external_id = filter.split('"')[1]
-            user = await find_user_by_external_id(external_id, db=db)
-            users_list = [user] if user else []
-            total = 1 if user else 0
-        else:
-            response = await Users.get_users(skip=skip, limit=limit, db=db)
-            users_list = response['users']
-            total = response['total']
+    # Simple filter parsing - supports userName eq, externalId eq
+    filter = filter or ''
+    if 'userName eq' in filter:
+        email = filter.split('"')[1]
+        user = await Users.get_user_by_email(email, db=db)
+        users_list = [user] if user and is_externally_managed(user) else []
+        total = len(users_list)
+    elif 'externalId eq' in filter:
+        external_id = filter.split('"')[1]
+        user = await find_user_by_external_id(external_id, db=db)
+        users_list = [user] if user else []
+        total = len(users_list)
     else:
-        response = await Users.get_users(skip=skip, limit=limit, db=db)
+        # order_by keeps the default ordering that a non-empty filter would otherwise suppress
+        response = await Users.get_users(
+            filter={'externally_managed': True, 'order_by': 'created_at'}, skip=skip, limit=limit, db=db
+        )
         users_list = response['users']
         total = response['total']
 
@@ -553,7 +563,7 @@ async def get_user(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get SCIM User by ID"""
-    user = await Users.get_user_by_id(user_id, db=db)
+    user = await get_scim_user_by_id(user_id, db=db)
     if not user:
         return scim_error(status_code=status.HTTP_404_NOT_FOUND, detail=f'User {user_id} not found')
 
@@ -615,6 +625,8 @@ async def create_user(
         email=email,
         profile_image_url=profile_image,
         role='user' if user_data.active else 'pending',
+        # Stamped even without an externalId, else the account is invisible to SCIM
+        scim={get_scim_provider(): {'external_id': user_data.externalId}},
         db=db,
     )
 
@@ -623,12 +635,6 @@ async def create_user(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Failed to create user',
         )
-
-    # Store externalId in the scim field
-    if user_data.externalId:
-        provider = get_scim_provider()
-        await Users.update_user_scim_by_id(user_id, provider, user_data.externalId, db=db)
-        new_user = await Users.get_user_by_id(user_id, db=db)
 
     await publish_event(
         request,
@@ -654,7 +660,7 @@ async def update_user(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Update SCIM User (full update)"""
-    user = await Users.get_user_by_id(user_id, db=db)
+    user = await get_scim_user_by_id(user_id, db=db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -734,7 +740,7 @@ async def patch_user(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Update SCIM User (partial update)"""
-    user = await Users.get_user_by_id(user_id, db=db)
+    user = await get_scim_user_by_id(user_id, db=db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -808,7 +814,7 @@ async def delete_user(
     db: AsyncSession = Depends(get_async_session),
 ):
     """Delete SCIM User"""
-    user = await Users.get_user_by_id(user_id, db=db)
+    user = await get_scim_user_by_id(user_id, db=db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
