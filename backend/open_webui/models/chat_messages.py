@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from typing import Any, Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from sqlalchemy import select, delete, func, cast, Integer, distinct
+from sqlalchemy import select, delete, func, cast, Integer, distinct, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.utils.response import merge_usage, normalize_usage
@@ -134,7 +134,7 @@ class ChatMessage(Base):
     user_id = Column(Text, index=True)
 
     # Structure
-    role = Column(Text, nullable=False)  # user, assistant, system
+    role = Column(Text, nullable=False)  # user, assistant, system, task
     parent_id = Column(Text, nullable=True)
 
     # Content
@@ -199,6 +199,12 @@ class ChatMessageModel(BaseModel):
     context_summary: Optional[str] = None
     created_at: int
     updated_at: int
+
+
+# Role 'task' rows are background generations (title, tags, queries): tokens, but not messages.
+TASK_ROLE = 'task'
+TOKEN_USAGE_ROLES = ('assistant', TASK_ROLE)
+ASSISTANT_MESSAGE_COUNT = func.count(case((ChatMessage.role == 'assistant', ChatMessage.id)))
 
 
 ####################
@@ -312,7 +318,10 @@ class ChatMessageTable:
     async def get_messages_by_chat_id(self, chat_id: str, db: Optional[AsyncSession] = None) -> list[ChatMessageModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(ChatMessage).filter_by(chat_id=chat_id).order_by(ChatMessage.created_at.asc())
+                select(ChatMessage)
+                .filter_by(chat_id=chat_id)
+                .filter(ChatMessage.role != TASK_ROLE)
+                .order_by(ChatMessage.created_at.asc())
             )
             messages = result.scalars().all()
             return [ChatMessageModel.model_validate(message) for message in messages]
@@ -337,7 +346,9 @@ class ChatMessageTable:
         embedded JSON blob for legacy chats).
         """
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(ChatMessage).filter_by(chat_id=chat_id))
+            result = await db.execute(
+                select(ChatMessage).filter_by(chat_id=chat_id).filter(ChatMessage.role != TASK_ROLE)
+            )
             rows = result.scalars().all()
 
         if not rows:
@@ -402,6 +413,7 @@ class ChatMessageTable:
             result = await db.execute(
                 select(ChatMessage)
                 .filter_by(user_id=user_id)
+                .filter(ChatMessage.role != TASK_ROLE)
                 .order_by(ChatMessage.created_at.desc())
                 .offset(skip)
                 .limit(limit)
@@ -419,7 +431,7 @@ class ChatMessageTable:
         db: Optional[AsyncSession] = None,
     ) -> list[ChatMessageModel]:
         async with get_async_db_context(db) as db:
-            stmt = select(ChatMessage).filter_by(model_id=model_id)
+            stmt = select(ChatMessage).filter_by(model_id=model_id).filter(ChatMessage.role != TASK_ROLE)
             if start_date:
                 stmt = stmt.filter(ChatMessage.created_at >= start_date)
             if end_date:
@@ -444,7 +456,7 @@ class ChatMessageTable:
             stmt = select(
                 ChatMessage.chat_id,
                 func.max(ChatMessage.created_at).label('last_message_at'),
-            ).filter(ChatMessage.model_id == model_id)
+            ).filter(ChatMessage.model_id == model_id, ChatMessage.role != TASK_ROLE)
             if start_date:
                 stmt = stmt.filter(ChatMessage.created_at >= start_date)
             if end_date:
@@ -574,9 +586,9 @@ class ChatMessageTable:
                 ChatMessage.model_id,
                 func.coalesce(func.sum(input_tokens), 0).label('input_tokens'),
                 func.coalesce(func.sum(output_tokens), 0).label('output_tokens'),
-                func.count(ChatMessage.id).label('message_count'),
+                ASSISTANT_MESSAGE_COUNT.label('message_count'),
             ).filter(
-                ChatMessage.role == 'assistant',
+                ChatMessage.role.in_(TOKEN_USAGE_ROLES),
                 ChatMessage.model_id.isnot(None),
                 ChatMessage.usage.isnot(None),
             )
@@ -622,9 +634,9 @@ class ChatMessageTable:
                 ChatMessage.user_id,
                 func.coalesce(func.sum(input_tokens), 0).label('input_tokens'),
                 func.coalesce(func.sum(output_tokens), 0).label('output_tokens'),
-                func.count(ChatMessage.id).label('message_count'),
+                ASSISTANT_MESSAGE_COUNT.label('message_count'),
             ).filter(
-                ChatMessage.role == 'assistant',
+                ChatMessage.role.in_(TOKEN_USAGE_ROLES),
                 ChatMessage.user_id.isnot(None),
                 ChatMessage.usage.isnot(None),
             )
@@ -666,13 +678,14 @@ class ChatMessageTable:
 
             messages_stmt = select(ChatMessage.role, func.count(ChatMessage.id).label('count')).filter(
                 ChatMessage.user_id == user_id,
+                ChatMessage.role != TASK_ROLE,
             )
             token_stmt = select(
                 func.coalesce(func.sum(input_tokens), 0).label('input_tokens'),
                 func.coalesce(func.sum(output_tokens), 0).label('output_tokens'),
             ).filter(
                 ChatMessage.user_id == user_id,
-                ChatMessage.role == 'assistant',
+                ChatMessage.role.in_(TOKEN_USAGE_ROLES),
                 ChatMessage.usage.isnot(None),
             )
             models_stmt = select(func.count(distinct(ChatMessage.model_id)).label('models_used')).filter(
@@ -698,7 +711,9 @@ class ChatMessageTable:
             active_days = set()
             if include_active_days:
                 tz = _timezone(timezone)
-                day_stmt = select(ChatMessage.created_at).filter(ChatMessage.user_id == user_id)
+                day_stmt = select(ChatMessage.created_at).filter(
+                    ChatMessage.user_id == user_id, ChatMessage.role != TASK_ROLE
+                )
                 if start_date:
                     day_stmt = day_stmt.filter(ChatMessage.created_at >= start_date)
                 if end_date:
@@ -777,8 +792,9 @@ class ChatMessageTable:
                         'models': Counter(),
                     },
                 )
-                entry['messages'] += 1
-                entry['chat_ids'].add(row.chat_id)
+                if row.role != TASK_ROLE:
+                    entry['messages'] += 1
+                    entry['chat_ids'].add(row.chat_id)
                 if row.role == 'assistant' and row.model_id:
                     entry['models'][row.model_id] += 1
                 if row.usage:

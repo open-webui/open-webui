@@ -10,7 +10,7 @@ import uuid
 # local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.automations import AutomationRun
-from open_webui.models.chat_messages import ChatMessage, ChatMessages
+from open_webui.models.chat_messages import TASK_ROLE, ChatMessage, ChatMessages
 from open_webui.models.folders import Folders
 from open_webui.models.tags import Tag, TagModel, Tags
 from open_webui.utils.misc import get_output_text, sanitize_data_for_db, sanitize_text_for_db
@@ -1439,7 +1439,9 @@ class ChatTable:
 
         async with get_async_db_context(db) as session:
             chat_ids = (
-                select(ChatMessage.chat_id).filter(ChatMessage.model_id == model_id).group_by(ChatMessage.chat_id)
+                select(ChatMessage.chat_id)
+                .filter(ChatMessage.model_id == model_id, ChatMessage.role != TASK_ROLE)
+                .group_by(ChatMessage.chat_id)
             )
 
             if filter:
@@ -1629,7 +1631,7 @@ class ChatTable:
             messages_stmt = (
                 select(ChatMessage.chat_id, ChatMessage.created_at)
                 .join(Chat, Chat.id == ChatMessage.chat_id)
-                .where(*chat_filter, ChatMessage.created_at.isnot(None))
+                .where(*chat_filter, ChatMessage.created_at.isnot(None), ChatMessage.role != TASK_ROLE)
                 .order_by(ChatMessage.chat_id, ChatMessage.created_at.asc())
             )
             messages_result = await session.execute(messages_stmt)

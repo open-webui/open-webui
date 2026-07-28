@@ -11,6 +11,8 @@ from aiocache import cached
 from fastapi import HTTPException, Request, status
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
 from open_webui.functions import generate_function_chat_completion
+from open_webui.models.chat_messages import TASK_ROLE, ChatMessages
+from open_webui.models.chats import Chats
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel
 from open_webui.routers.ollama import (
@@ -148,6 +150,34 @@ async def generate_direct_chat_completion(
         return res
 
 
+async def record_task_usage(metadata: dict, model_id: str, user: Any, response: Any) -> None:
+    """Persist a task call's token usage. Task calls bypass the response middleware that persists it for chats."""
+    task = metadata.get('task')
+    chat_id = metadata.get('chat_id')
+    usage = response.get('usage') if isinstance(response, dict) else None
+    if not task or not chat_id or not usage:
+        return
+
+    # Rejects another user's chat id, and temporary or unsaved chats, which have no row for the foreign key.
+    if not await Chats.is_chat_owner(chat_id, user.id):
+        return
+
+    try:
+        await ChatMessages.upsert_message(
+            message_id=f'task-{uuid.uuid4()}',
+            chat_id=chat_id,
+            user_id=user.id,
+            data={
+                'role': TASK_ROLE,
+                'model': model_id,
+                'usage': usage,
+                'meta': {'task': task},
+            },
+        )
+    except Exception as e:
+        log.warning(f'Failed to record usage for task {task}: {e}')
+
+
 async def generate_chat_completion(
     request: Request,
     form_data: dict,
@@ -195,8 +225,11 @@ async def generate_chat_completion(
     if model is None:
         raise Exception('Model not found')
 
+    # Captured before generate_direct_chat_completion, which pops it off form_data.
+    task_metadata = form_data.get('metadata') or {}
+
     if getattr(request.state, 'direct', False) and model_id == getattr(request.state, 'model', {}).get('id'):
-        return await generate_direct_chat_completion(request, form_data, user=user, models=models)
+        response = await generate_direct_chat_completion(request, form_data, user=user, models=models)
     else:
         # Check if user has access to the model
         if not bypass_filter and user.role == 'user':
@@ -246,6 +279,7 @@ async def generate_chat_completion(
                     await check_model_access(user, selected_model)
 
         if selected_model_id:
+            # Returns early: the recursive call records the usage under the resolved model.
             if form_data.get('stream') == True:
 
                 async def stream_wrapper(stream):
@@ -281,30 +315,33 @@ async def generate_chat_completion(
 
         if model.get('pipe'):
             # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
-            return await generate_function_chat_completion(request, form_data, user=user, models=models)
-        if model.get('owned_by') == 'ollama':
+            response = await generate_function_chat_completion(request, form_data, user=user, models=models)
+        elif model.get('owned_by') == 'ollama':
             # Using /ollama/api/chat endpoint
             form_data = convert_payload_openai_to_ollama(form_data)
-            response = await generate_ollama_chat_completion(
+            ollama_response = await generate_ollama_chat_completion(
                 request=request,
                 form_data=form_data,
                 user=user,
             )
             if form_data.get('stream'):
-                response.headers['content-type'] = 'text/event-stream'
-                return StreamingResponse(
-                    convert_streaming_response_ollama_to_openai(response),
-                    headers=dict(response.headers),
-                    background=response.background,
+                ollama_response.headers['content-type'] = 'text/event-stream'
+                response = StreamingResponse(
+                    convert_streaming_response_ollama_to_openai(ollama_response),
+                    headers=dict(ollama_response.headers),
+                    background=ollama_response.background,
                 )
             else:
-                return convert_response_ollama_to_openai(response)
+                response = convert_response_ollama_to_openai(ollama_response)
         else:
-            return await generate_openai_chat_completion(
+            response = await generate_openai_chat_completion(
                 request=request,
                 form_data=form_data,
                 user=user,
             )
+
+    await record_task_usage(task_metadata, model_id, user, response)
+    return response
 
 
 chat_completion = generate_chat_completion

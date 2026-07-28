@@ -130,7 +130,13 @@
 			summary = summaryRes ?? summary;
 
 			const modelsMap = new Map($models.map((m) => [m.id, m.name || m.id]));
-			modelStats = (modelsRes?.models ?? []).map((entry) => ({
+			const messageCounts = modelsRes?.models ?? [];
+			const countedModelIds = new Set(messageCounts.map((m) => m.model_id));
+			// A task model spends tokens without owning any message of its own.
+			const tokenOnlyModels = (tokensRes?.models ?? [])
+				.filter((entry) => !countedModelIds.has(entry.model_id))
+				.map((entry) => ({ model_id: entry.model_id, count: 0 }));
+			modelStats = [...messageCounts, ...tokenOnlyModels].map((entry) => ({
 				...entry,
 				name: modelsMap.get(entry.model_id) || entry.model_id
 			}));
