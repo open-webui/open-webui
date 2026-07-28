@@ -26,7 +26,7 @@
 	});
 </script>
 
-<Drawer bind:show className="h-full">
+<Drawer bind:show className="h-full" zIndexClass="z-99999">
 	<div class="flex h-full flex-col">
 		<div
 			class=" sticky top-0 z-30 flex justify-between bg-white px-4.5 pt-3 pb-3 dark:bg-gray-900 dark:text-gray-100"
