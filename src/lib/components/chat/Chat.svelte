@@ -3180,15 +3180,7 @@
 							}
 						: {}),
 					follow_up_generation: $settings?.autoFollowUps ?? true
-				},
-
-				...(stream && (model.info?.meta?.capabilities?.usage ?? false)
-					? {
-							stream_options: {
-								include_usage: true
-							}
-						}
-					: {})
+				}
 			},
 			`${WEBUI_BASE_URL}/api`
 		).catch(async (error) => {
