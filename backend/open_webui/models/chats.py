@@ -911,6 +911,7 @@ class ChatTable:
     @staticmethod
     def upsert_message_to_history(history: dict, message_id: str, message: dict) -> dict:
         messages = history.setdefault('messages', {})
+        is_new = message_id not in messages
 
         if message_id in messages:
             messages[message_id] = {
@@ -950,7 +951,20 @@ class ChatTable:
                 'role': role,
                 'timestamp': message.get('timestamp') or int(time.time()),
             }
+
+        current_id = history.get('currentId')
+        if is_new or current_id not in messages:
             history['currentId'] = message_id
+        else:
+            node = message_id
+            seen = set()
+            while node and node not in seen:
+                if node == current_id:
+                    history['currentId'] = message_id
+                    break
+                seen.add(node)
+                node = (messages.get(node) or {}).get('parentId')
+
         return messages[message_id]
 
     async def backfill_messages_by_chat_id(self, chat_id: str, user_id: str, messages: dict[str, dict]) -> None:
