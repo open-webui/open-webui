@@ -253,6 +253,7 @@ type Settings = {
 	chatDirection?: 'LTR' | 'RTL' | 'auto';
 	ctrlEnterToSend?: boolean;
 	keyboardShortcuts?: boolean;
+	chatHoverPreview?: boolean;
 	renderMarkdownInPreviews?: boolean;
 	renderMarkdownInUserMessages?: boolean;
 	renderMarkdownInAssistantMessages?: boolean;

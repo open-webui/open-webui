@@ -543,7 +543,7 @@
 		<LinkPreview.Root
 			openDelay={300}
 			closeDelay={0}
-			disabled={$mobile || confirmEdit || dragged}
+			disabled={$mobile || confirmEdit || dragged || !($settings?.chatHoverPreview ?? true)}
 			bind:open={openPreview}
 		>
 			<LinkPreview.Trigger
