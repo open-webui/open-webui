@@ -310,6 +310,7 @@ type Config = {
 	version: string;
 	default_locale: string;
 	default_models: string;
+	default_pinned_models?: string;
 	default_prompt_suggestions: PromptSuggestion[];
 	features: {
 		auth: boolean;

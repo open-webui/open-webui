@@ -122,6 +122,15 @@
 
 	let pinnedModels = [];
 
+	$: resolvedPinnedModels = (
+		($settings?.pinnedModels ?? []).length > 0
+			? ($settings?.pinnedModels ?? [])
+			: ($config?.default_pinned_models ?? '').split(',')
+	).filter((id) => {
+		const model = ($models ?? []).find((m) => m.id === id);
+		return model && !(model?.info?.meta?.hidden ?? false);
+	});
+
 	let showPinnedModels = false;
 	let showPinnedNotes = false;
 	let showChannels = false;
@@ -1276,7 +1285,7 @@
 						</div>
 					</div>
 
-					{#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
+					{#if resolvedPinnedModels.length > 0}
 						<SidebarSection
 							id="sidebar-models"
 							bind:open={showPinnedModels}
