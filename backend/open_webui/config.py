@@ -358,6 +358,27 @@ OPENAI_API_BASE_URL = 'https://api.openai.com/v1'
 
 
 ####################################
+# APIÁRIO DEV
+####################################
+
+APIARIO_API_KEY = os.getenv('APIARIO_API_KEY', '')
+APIARIO_API_BASE_URL = os.getenv('APIARIO_API_BASE_URL', 'https://api.apiario.dev/v1')
+
+if APIARIO_API_BASE_URL.endswith('/'):
+    APIARIO_API_BASE_URL = APIARIO_API_BASE_URL[:-1]
+
+# If APIARIO_API_KEY is set, prepend the Apiário connection to the OpenAI list
+if APIARIO_API_KEY:
+    if APIARIO_API_BASE_URL not in OPENAI_API_BASE_URLS:
+        OPENAI_API_BASE_URLS.insert(0, APIARIO_API_BASE_URL)
+        OPENAI_API_KEYS.insert(0, APIARIO_API_KEY)
+        OPENAI_API_CONFIGS[str(len(OPENAI_API_BASE_URLS) - 1)] = {
+            'provider': 'apiario',
+            'connection_type': 'external',
+        }
+
+
+####################################
 # MODELS
 ####################################
 

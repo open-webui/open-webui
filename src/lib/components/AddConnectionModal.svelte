@@ -351,6 +351,7 @@
 											<option value="https://api.groq.com/openai/v1" />
 											<option value="https://openrouter.ai/api/v1" />
 											<option value="https://api.x.ai/v1" />
+											<option value="https://api.apiario.dev/v1" />
 										</datalist>
 									{/if}
 								</div>
@@ -598,6 +599,7 @@
 											<option value="azure">{$i18n.t('Azure OpenAI')}</option>
 											<option value="llama.cpp">{$i18n.t('llama.cpp')}</option>
 											<option value="litellm">{$i18n.t('LiteLLM')}</option>
+											<option value="apiario">{$i18n.t('Apiário Dev')}</option>
 										</select>
 									</div>
 								</div>
