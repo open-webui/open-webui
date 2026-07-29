@@ -776,9 +776,15 @@
 			return null;
 		}
 
-		// Every selected model opted out of file processing: upload raw, no extraction
+		// Every selected model opted out of file processing, OR every selected
+		// model opted into native file input: upload raw, no extraction.
+		const allNativeFileInput =
+			selectedModelIds.length > 0 &&
+			nativeFileInputCapableModels.length === selectedModelIds.length;
 		const skipProcessing =
-			process && selectedModelIds.length > 0 && fileProcessingCapableModels.length === 0;
+			process &&
+			selectedModelIds.length > 0 &&
+			(fileProcessingCapableModels.length === 0 || allNativeFileInput);
 		if (skipProcessing) {
 			process = false;
 		}
