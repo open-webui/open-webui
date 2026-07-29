@@ -1848,7 +1848,7 @@ async def count_message_tokens(
 
 
 async def passthrough_anthropic_messages(request: Request, form_data: dict, user) -> Response | dict:
-    requested_model, payload, url, key, headers, cookies = await openai.get_anthropic_token_count_target(
+    requested_model, payload, url, key, headers, cookies = await openai.get_anthropic_request_target(
         request, form_data, user
     )
     request_url = f'{url.rstrip("/")}/messages'
