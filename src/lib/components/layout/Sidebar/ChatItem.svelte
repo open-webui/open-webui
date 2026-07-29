@@ -677,18 +677,20 @@
 						</button>
 					</Tooltip>
 
-					<Tooltip content={$i18n.t('Delete')}>
-						<button
-							class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
-							disabled={deleting}
-							on:click={() => {
-								deleteChatHandler(id);
-							}}
-							type="button"
-						>
-							<GarbageBinIcon className="size-3.5" strokeWidth="1.7" />
-						</button>
-					</Tooltip>
+					{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
+						<Tooltip content={$i18n.t('Delete')}>
+							<button
+								class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
+								disabled={deleting}
+								on:click={() => {
+									deleteChatHandler(id);
+								}}
+								type="button"
+							>
+								<GarbageBinIcon className="size-3.5" strokeWidth="1.7" />
+							</button>
+						</Tooltip>
+					{/if}
 				</div>
 			{:else}
 				<div class="flex self-center z-10 items-end">
@@ -727,7 +729,7 @@
 						</button>
 					</ChatMenu>
 
-					{#if id === $chatId}
+					{#if id === $chatId && ($user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true))}
 						<!-- Shortcut support using "delete-chat-button" id -->
 						<button
 							id="delete-chat-button"
