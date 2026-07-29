@@ -1183,7 +1183,9 @@
 					canCompact: () => !!history?.currentId && contextCompactionEnabled,
 					compactDisabled: () => isActive,
 					canStatus: () => !!history?.currentId,
-					canFork: () => !!history?.currentId,
+					canFork: () =>
+						!!history?.currentId &&
+						($_user?.role === 'admin' || ($_user?.permissions?.chat?.import ?? true)),
 					forkDisabled: () => isActive,
 					contextUsage: () => statusContextUsage,
 					onCompact: compactHandler,
