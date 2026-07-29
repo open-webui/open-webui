@@ -1482,7 +1482,7 @@
 										</Tooltip>
 									{/each}
 
-									{#if message.done && !readOnly && forkHandler}
+									{#if message.done && !readOnly && forkHandler && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true))}
 										<Tooltip content="Fork chat" placement="bottom">
 											<button
 												aria-label="Fork chat"
