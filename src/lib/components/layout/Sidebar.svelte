@@ -1130,6 +1130,7 @@
 				<a
 					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-50 dark:hover:bg-gray-900 transition no-drag-region"
 					href="/"
+					aria-label={$i18n.t('New Chat')}
 					draggable="false"
 					on:click={newChatHandler}
 				>
@@ -1475,7 +1476,7 @@
 							<Tooltip content={$i18n.t('More')}>
 								<button
 									type="button"
-									class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 transition-colors duration-100"
+									class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors duration-100"
 									aria-label={$i18n.t('More')}
 									on:pointerup|stopPropagation
 								>

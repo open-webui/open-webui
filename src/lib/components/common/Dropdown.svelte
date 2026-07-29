@@ -330,13 +330,7 @@
 	on:resize={positionContent}
 />
 
-<span
-	use:trigger
-	style="display: contents; cursor: pointer;"
-	role="button"
-	aria-haspopup="true"
-	aria-expanded={show}
->
+<span use:trigger style="display: contents; cursor: pointer;">
 	<slot />
 </span>
 

@@ -739,6 +739,7 @@
 			>
 				<button
 					class="text-gray-600 dark:text-gray-400 transition-all p-1 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-lg"
+					on:pointerup|stopPropagation
 					on:click={(e) => {
 						e.stopPropagation();
 						e.stopImmediatePropagation();
@@ -779,6 +780,7 @@
 							id="folder-{folderId}-input"
 							type="text"
 							bind:value={name}
+							on:pointerup|stopPropagation
 							on:blur={() => {
 								console.log('Blur');
 								updateHandler({ name });
@@ -804,6 +806,7 @@
 						<button
 							type="button"
 							class="flex min-w-0 flex-1 items-center gap-1.5 text-start"
+							on:pointerup|stopPropagation
 							on:dblclick={() => {
 								if (folders[folderId]?.shared && folders[folderId]?.permission !== 'write') return;
 								if (clickTimer) clearTimeout(clickTimer);

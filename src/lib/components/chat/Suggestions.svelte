@@ -86,45 +86,45 @@
 
 <div class="h-36 w-full">
 	{#if filteredPrompts.length > 0}
-		<div role="list" class="max-h-36 overflow-auto scrollbar-none items-start {className}">
+		<ul class="m-0 max-h-36 list-none overflow-auto p-0 scrollbar-none items-start {className}">
 			{#each filteredPrompts as prompt, idx (prompt.id || `${prompt.content}-${idx}`)}
-				<!-- svelte-ignore a11y-no-interactive-element-to-noninteractive-role -->
-				<button
-					role="listitem"
-					class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
+				<li>
+					<button
+						class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
 				       px-2.5 py-1.5 rounded-lg bg-transparent transition-colors
 				       hover:text-gray-950 dark:hover:text-white group"
-					style="animation-delay: {idx * 45}ms"
-					on:click={() => onSelect({ type: 'prompt', data: prompt.content })}
-				>
-					<div class="flex flex-col text-left leading-snug">
-						{#if prompt.title && prompt.title[0] !== ''}
-							<div
-								class="text-sm font-normal group-hover:text-gray-950 dark:text-gray-300 dark:group-hover:text-white transition line-clamp-1"
-							>
-								{prompt.title[0]}
-							</div>
-							<div
-								class="text-xs text-gray-600 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-100 font-normal line-clamp-1"
-							>
-								{prompt.title[1]}
-							</div>
-						{:else}
-							<div
-								class="text-sm font-normal group-hover:text-gray-950 dark:text-gray-300 dark:group-hover:text-white transition line-clamp-1"
-							>
-								{prompt.content}
-							</div>
-							<div
-								class="text-xs text-gray-600 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-100 font-normal line-clamp-1"
-							>
-								{$i18n.t('Prompt')}
-							</div>
-						{/if}
-					</div>
-				</button>
+						style="animation-delay: {idx * 45}ms"
+						on:click={() => onSelect({ type: 'prompt', data: prompt.content })}
+					>
+						<div class="flex flex-col text-left leading-snug">
+							{#if prompt.title && prompt.title[0] !== ''}
+								<div
+									class="text-sm font-normal group-hover:text-gray-950 dark:text-gray-300 dark:group-hover:text-white transition line-clamp-1"
+								>
+									{prompt.title[0]}
+								</div>
+								<div
+									class="text-xs text-gray-600 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-100 font-normal line-clamp-1"
+								>
+									{prompt.title[1]}
+								</div>
+							{:else}
+								<div
+									class="text-sm font-normal group-hover:text-gray-950 dark:text-gray-300 dark:group-hover:text-white transition line-clamp-1"
+								>
+									{prompt.content}
+								</div>
+								<div
+									class="text-xs text-gray-600 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-100 font-normal line-clamp-1"
+								>
+									{$i18n.t('Prompt')}
+								</div>
+							{/if}
+						</div>
+					</button>
+				</li>
 			{/each}
-		</div>
+		</ul>
 	{/if}
 </div>
 

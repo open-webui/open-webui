@@ -36,6 +36,7 @@
 >
 	<Tooltip content={$i18n.t('More')}>
 		<button
+			on:pointerup|stopPropagation
 			on:click={(e) => {
 				e.stopPropagation();
 				show = !show;
