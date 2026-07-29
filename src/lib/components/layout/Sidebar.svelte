@@ -935,12 +935,7 @@
 		role="navigation"
 		aria-label={$i18n.t('Chat history')}
 	>
-		<button
-			class="flex flex-col flex-1 {isWindows ? 'cursor-pointer' : 'cursor-[e-resize]'}"
-			on:click={async () => {
-				showSidebar.set(!$showSidebar);
-			}}
-		>
+		<div class="flex flex-col flex-1">
 			<div class="pb-1">
 				<Tooltip
 					content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
@@ -951,6 +946,9 @@
 							? 'cursor-pointer'
 							: 'cursor-[e-resize]'}"
 						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+						on:click={() => {
+							showSidebar.set(!$showSidebar);
+						}}
 					>
 						<div
 							class=" self-center flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-50 dark:group-hover:bg-gray-900"
@@ -1060,7 +1058,7 @@
 					{/if}
 				{/each}
 			</div>
-		</button>
+		</div>
 
 		<div>
 			<div>

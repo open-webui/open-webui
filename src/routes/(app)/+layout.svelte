@@ -517,7 +517,7 @@
 				<Sidebar />
 
 				{#if loaded}
-					<main id="main-content" class="contents">
+					<main id="main-content" tabindex="-1" class="contents">
 						<slot />
 					</main>
 				{:else}

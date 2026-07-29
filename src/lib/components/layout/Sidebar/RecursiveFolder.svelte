@@ -586,10 +586,6 @@
 		setFolderItems();
 	}
 
-	const shouldIgnoreRowClick = (target) => {
-		return target instanceof Element && !!target.closest('button, a, input, [role="menu"]');
-	};
-
 	const openFolderHandler = async () => {
 		const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
 			toast.error(`${error}`);
@@ -733,7 +729,6 @@
 			dispatch('open', state);
 		}}
 	>
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div class="w-full group">
 			<div
 				id="folder-{folderId}-button"
@@ -741,38 +736,6 @@
 				folderId
 					? 'bg-gray-100/80 dark:bg-gray-850/50 selected'
 					: ''}"
-				on:dblclick={(e) => {
-					if (folders[folderId]?.shared && folders[folderId]?.permission !== 'write') return;
-					if (clickTimer) {
-						clearTimeout(clickTimer); // cancel the single-click action
-						clickTimer = null;
-					}
-					renameHandler();
-				}}
-				role="button"
-				tabindex="0"
-				on:click={async (e) => {
-					if (shouldIgnoreRowClick(e.target)) return;
-					if (clickTimer) {
-						clearTimeout(clickTimer);
-						clickTimer = null;
-					}
-
-					clickTimer = setTimeout(async () => {
-						await openFolderHandler();
-						clickTimer = null;
-					}, 100); // 100ms delay (typical double-click threshold)
-				}}
-				on:keydown={(e) => {
-					if (e.currentTarget !== e.target) return;
-					if (e.key === 'Enter' || e.key === ' ') {
-						e.preventDefault();
-						openFolderHandler();
-					}
-				}}
-				on:pointerup={(e) => {
-					e.stopPropagation();
-				}}
 			>
 				<button
 					class="text-gray-600 dark:text-gray-400 transition-all p-1 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-lg"
@@ -838,23 +801,39 @@
 							class="w-full h-full bg-transparent outline-hidden"
 						/>
 					{:else}
-						<div class="min-w-0 truncate">
-							{folders[folderId].name}
-						</div>
+						<button
+							type="button"
+							class="flex min-w-0 flex-1 items-center gap-1.5 text-start"
+							on:dblclick={() => {
+								if (folders[folderId]?.shared && folders[folderId]?.permission !== 'write') return;
+								if (clickTimer) clearTimeout(clickTimer);
+								clickTimer = null;
+								renameHandler();
+							}}
+							on:click={() => {
+								if (clickTimer) clearTimeout(clickTimer);
+								clickTimer = setTimeout(async () => {
+									await openFolderHandler();
+									clickTimer = null;
+								}, 100);
+							}}
+						>
+							<span class="min-w-0 truncate">{folders[folderId].name}</span>
 
-						{#if !folders[folderId]?.shared && (folders[folderId]?.unread_count ?? 0) > 0}
-							<div
-								class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-sky-500/10 px-1 text-[10px] font-semibold leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
-								title={$i18n.t('Unread')}
-							>
-								{formatUnreadCount(folders[folderId].unread_count)}
-							</div>
-						{/if}
+							{#if !folders[folderId]?.shared && (folders[folderId]?.unread_count ?? 0) > 0}
+								<span
+									class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-sky-500/10 px-1 text-[10px] font-semibold leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
+									title={$i18n.t('Unread')}
+								>
+									{formatUnreadCount(folders[folderId].unread_count)}
+								</span>
+							{/if}
+						</button>
 					{/if}
 				</div>
 
 				{#if !folders[folderId]?.shared || folders[folderId]?.permission === 'write'}
-					<button
+					<div
 						class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 					>
 						<FolderMenu
@@ -882,7 +861,7 @@
 								<MoreHorizontal className="size-3.5" strokeWidth="2" />
 							</div>
 						</FolderMenu>
-					</button>
+					</div>
 				{/if}
 			</div>
 		</div>
