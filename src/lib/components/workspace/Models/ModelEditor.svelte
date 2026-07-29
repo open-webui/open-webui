@@ -687,6 +687,18 @@
 								</div>
 							</div>
 
+							<div class="flex w-full -mt-1">
+								<button
+									class="px-2 py-1 text-gray-500 rounded-lg text-xs"
+									on:click={() => {
+										info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
+									}}
+									type="button"
+								>
+									{$i18n.t('Reset Image')}</button
+								>
+							</div>
+
 							{#if preset}
 								<div>
 									<div class="mb-1 text-xs text-gray-400 dark:text-gray-600">
