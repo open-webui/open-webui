@@ -85,7 +85,7 @@
 	<div class="mb-2 flex items-center gap-4">
 		<button
 			class="group relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100
-			ring-1 ring-gray-200 transition-all duration-200 hover:ring-2 hover:ring-gray-300 dark:bg-white/8 dark:ring-white/10 dark:hover:ring-white/20"
+			ring-1 ring-inset ring-gray-200 transition-all duration-200 hover:ring-2 hover:ring-gray-300 dark:bg-white/8 dark:ring-white/10 dark:hover:ring-white/20"
 			type="button"
 			on:click={() => {
 				profileImageInputElement.click();
