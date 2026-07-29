@@ -120,7 +120,6 @@
 									placement="top"
 								>
 									<button
-										aria-hidden={models.length <= 1}
 										aria-label={$i18n.t('Get information on {{name}} in the UI', {
 											name: models[modelIdx]?.name
 										})}

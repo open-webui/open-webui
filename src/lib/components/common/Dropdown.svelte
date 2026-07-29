@@ -64,9 +64,20 @@
 		};
 	}
 
-	/** Svelte action: captures the first child element as the trigger reference */
-	function trigger(node: HTMLElement) {
-		triggerEl = (node.firstElementChild as HTMLElement | null) || node;
+	/** Svelte action: captures and describes the slotted interactive trigger. */
+	function trigger(node: HTMLElement, expanded: boolean) {
+		const syncTrigger = () => {
+			triggerEl =
+				node.querySelector<HTMLElement>(
+					'button, a[href], input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"])'
+				) ||
+				(node.firstElementChild as HTMLElement | null) ||
+				node;
+			triggerEl.setAttribute('aria-haspopup', 'menu');
+			triggerEl.setAttribute('aria-expanded', String(expanded));
+		};
+
+		syncTrigger();
 		function handleClick(e: MouseEvent) {
 			e.preventDefault();
 			toggleOpen();
@@ -80,6 +91,10 @@
 		node.addEventListener('click', handleClick);
 		node.addEventListener('keydown', handleKeydown);
 		return {
+			update(nextExpanded: boolean) {
+				expanded = nextExpanded;
+				syncTrigger();
+			},
 			destroy() {
 				node.removeEventListener('click', handleClick);
 				node.removeEventListener('keydown', handleKeydown);
@@ -330,7 +345,7 @@
 	on:resize={positionContent}
 />
 
-<span use:trigger style="display: contents; cursor: pointer;">
+<span use:trigger={show} style="display: contents; cursor: pointer;">
 	<slot />
 </span>
 

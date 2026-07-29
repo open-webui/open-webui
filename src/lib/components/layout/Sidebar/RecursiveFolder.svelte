@@ -837,7 +837,7 @@
 
 				{#if !folders[folderId]?.shared || folders[folderId]?.permission === 'write'}
 					<div
-						class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+						class="absolute z-10 right-2 pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 self-center flex items-center dark:text-gray-300"
 					>
 						<FolderMenu
 							onEdit={() => {

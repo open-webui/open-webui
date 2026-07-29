@@ -967,7 +967,7 @@
 			editorProps: {
 				// the tiptap placeholder never becomes the field's accessible name;
 				// function form so a placeholder change is picked up after mount
-				attributes: () => ({ id, 'aria-label': _placeholder }),
+				attributes: () => ({ id, ...(editable ? { 'aria-label': _placeholder } : {}) }),
 				handleDrop: (view, event) => {
 					// Intercept sidebar chat item drops to prevent ProseMirror
 					// from inserting the raw JSON as text. The actual handling
