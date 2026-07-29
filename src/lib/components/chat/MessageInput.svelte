@@ -606,6 +606,7 @@
 		| 'vision'
 		| 'file_upload'
 		| 'file_processing'
+		| 'native_file_input'
 		| 'web_search'
 		| 'image_generation'
 		| 'code_interpreter'
@@ -620,8 +621,9 @@
 	const getCapableModelIds = (
 		modelIds: string[],
 		capability: ModelCapability,
-		capabilitiesById: ModelCapabilitiesById
-	) => modelIds.filter((id) => capabilitiesById[id]?.[capability] ?? true);
+		capabilitiesById: ModelCapabilitiesById,
+		defaultEnabled = true
+	) => modelIds.filter((id) => capabilitiesById[id]?.[capability] ?? defaultEnabled);
 
 	let visionCapableModels = [];
 	$: visionCapableModels = getCapableModelIds(selectedModelIds, 'vision', modelCapabilitiesById);
@@ -638,6 +640,15 @@
 		selectedModelIds,
 		'file_processing',
 		modelCapabilitiesById
+	);
+
+	// Default false: only models that explicitly enable native provider file inputs.
+	let nativeFileInputCapableModels = [];
+	$: nativeFileInputCapableModels = getCapableModelIds(
+		selectedModelIds,
+		'native_file_input',
+		modelCapabilitiesById,
+		false
 	);
 
 	let webSearchCapableModels = [];
@@ -843,6 +854,21 @@
 				files = files.filter((item) => item?.itemId !== tempItemId);
 			}
 		} else {
+			// Native file input needs server-stored bytes; temporary chats are
+			// client-side only and cannot forward PDFs to the provider.
+			const nativeFileInputEnabled =
+				selectedModelIds.length > 0 &&
+				nativeFileInputCapableModels.length === selectedModelIds.length;
+			if (skipProcessing && nativeFileInputEnabled) {
+				toast.error(
+					$i18n.t(
+						'Native File Input requires a saved chat. Disable Temporary Chat to attach documents for the provider.'
+					)
+				);
+				files = files.filter((item) => item?.itemId !== tempItemId);
+				return null;
+			}
+
 			// If temporary chat is enabled, we just add the file to the list without uploading it.
 
 			const content = await extractContentFromFile(file).catch((error) => {

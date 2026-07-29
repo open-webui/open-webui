@@ -21,6 +21,12 @@
 				'Extract file content on upload. When disabled, uploads skip extraction entirely and files are passed along as raw attachments for the model or pipe to handle'
 			)
 		},
+		native_file_input: {
+			label: $i18n.t('Native File Input'),
+			description: $i18n.t(
+				'Forward raw unprocessed attachments to the provider as native file inputs (OpenAI Responses API, PDF). Requires File Processing off; does not extract or RAG-index those files.'
+			)
+		},
 		file_context: {
 			label: $i18n.t('File Context'),
 			description: $i18n.t('Inject file content into conversation context')
@@ -73,9 +79,12 @@
 
 	export let capabilities: Partial<Record<Capability, boolean>> = {};
 
-	// Hide file_processing/file_context when file_upload is disabled
+	// Hide file_processing/native_file_input/file_context when file_upload is disabled
 	$: visibleCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter((cap) => {
-		if ((cap === 'file_processing' || cap === 'file_context') && !capabilities.file_upload) {
+		if (
+			(cap === 'file_processing' || cap === 'native_file_input' || cap === 'file_context') &&
+			!capabilities.file_upload
+		) {
 			return false;
 		}
 		return true;

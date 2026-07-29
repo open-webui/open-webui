@@ -45,6 +45,7 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.model_ids import strip_provider_model_prefix
+from open_webui.utils.files import append_native_file_inputs_to_messages, get_native_file_input_enabled
 from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     stream_chunks_handler,
@@ -1086,6 +1087,15 @@ def convert_to_responses_payload(payload: dict) -> dict:
                     url_data = part.get('image_url', {})
                     url = url_data.get('url', '') if isinstance(url_data, dict) else url_data
                     content_parts.append({'type': 'input_image', 'image_url': url})
+                elif part.get('type') == 'file':
+                    file_data = part.get('file') or {}
+                    content_parts.append(
+                        {
+                            'type': 'input_file',
+                            'filename': file_data.get('filename') or 'document.pdf',
+                            'file_data': file_data.get('file_data', ''),
+                        }
+                    )
         else:
             content_parts = [{'type': text_type, 'text': str(content)}]
 
@@ -1282,6 +1292,18 @@ async def generate_chat_completion(
     headers, cookies = await get_headers_and_cookies(request, url, key, api_config, metadata, user=user)
 
     is_responses = api_config.get('api_type') == 'responses'
+
+    # Forward raw PDF attachments to Responses API as native input_file parts.
+    # Capability comes from the chat-resolved model (metadata['model']), which
+    # includes global defaults — not only workspace Models DB rows.
+    native_file_input_enabled = get_native_file_input_enabled(metadata, model_info)
+    payload = await append_native_file_inputs_to_messages(
+        payload,
+        metadata,
+        native_file_input_enabled=native_file_input_enabled,
+        is_responses=is_responses,
+        user=user,
+    )
 
     if api_config.get('azure') or api_config.get('provider') == 'azure':
         # Only set api-key header if not using Azure Entra ID authentication
