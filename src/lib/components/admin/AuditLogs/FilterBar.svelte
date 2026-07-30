@@ -415,7 +415,7 @@
 
 			{#if selectedEndpoint}
 				<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-					Endpoint: <strong class="font-mono">{selectedEndpoint}</strong>
+					{$i18n.t('Endpoint')}: <strong class="font-mono">{selectedEndpoint}</strong>
 					<button on:click={() => { selectedEndpoint = ''; handleFilterChange(); }} class="hover:text-blue-900 dark:hover:text-white">
 						<XMark className="size-2.5" strokeWidth="2.5" />
 					</button>
@@ -424,7 +424,7 @@
 
 			{#if selectedUser}
 				<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-					User: <strong>{selectedUser}</strong>
+					{$i18n.t('User')}: <strong>{selectedUser}</strong>
 					<button on:click={() => { selectedUser = ''; handleFilterChange(); }} class="hover:text-blue-900 dark:hover:text-white">
 						<XMark className="size-2.5" strokeWidth="2.5" />
 					</button>
@@ -433,7 +433,7 @@
 
 			{#if selectedRequestModel}
 				<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-					Req Model: <strong>{selectedRequestModel}</strong>
+					{$i18n.t('Req Model')}: <strong>{selectedRequestModel}</strong>
 					<button on:click={() => { selectedRequestModel = ''; handleFilterChange(); }} class="hover:text-blue-900 dark:hover:text-white">
 						<XMark className="size-2.5" strokeWidth="2.5" />
 					</button>
@@ -442,7 +442,7 @@
 
 			{#if selectedResponseModel}
 				<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-					Res Model: <strong>{selectedResponseModel}</strong>
+					{$i18n.t('Res Model')}: <strong>{selectedResponseModel}</strong>
 					<button on:click={() => { selectedResponseModel = ''; handleFilterChange(); }} class="hover:text-blue-900 dark:hover:text-white">
 						<XMark className="size-2.5" strokeWidth="2.5" />
 					</button>
@@ -451,7 +451,7 @@
 
 			{#if sourceIp}
 				<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-					IP: <strong class="font-mono">{sourceIp}</strong>
+					{$i18n.t('IP')}: <strong class="font-mono">{sourceIp}</strong>
 					<button on:click={() => { sourceIp = ''; handleFilterChange(); }} class="hover:text-blue-900 dark:hover:text-white">
 						<XMark className="size-2.5" strokeWidth="2.5" />
 					</button>
@@ -460,7 +460,7 @@
 
 			{#each selectedStatus as st}
 				<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-					Status: <strong>{st}</strong>
+					{$i18n.t('Status')}: <strong>{st === 'no_response' ? $i18n.t('No response') : st}</strong>
 					<button on:click={() => toggleStatus(st)} class="hover:text-blue-900 dark:hover:text-white">
 						<XMark className="size-2.5" strokeWidth="2.5" />
 					</button>
@@ -469,7 +469,7 @@
 
 			{#each selectedBodyState as bs}
 				<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-					Body: <strong>{bs}</strong>
+					{$i18n.t('Body')}: <strong>{$i18n.t(bs)}</strong>
 					<button on:click={() => toggleBodyState(bs)} class="hover:text-blue-900 dark:hover:text-white">
 						<XMark className="size-2.5" strokeWidth="2.5" />
 					</button>
@@ -478,7 +478,7 @@
 
 			{#each selectedSkills as sk}
 				<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-					Skill: <strong>{sk}</strong>
+					{$i18n.t('Skill')}: <strong>{sk}</strong>
 					<button on:click={() => toggleSkill(sk)} class="hover:text-blue-900 dark:hover:text-white">
 						<XMark className="size-2.5" strokeWidth="2.5" />
 					</button>

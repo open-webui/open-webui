@@ -20,6 +20,7 @@
 	import ClockIcon from './icons/Clock.svelte';
 	import CodeIcon from './icons/Code.svelte';
 	import EmojiFaceIcon from './icons/EmojiFace.svelte';
+	import EyeIcon from './icons/Eye.svelte';
 	import HelpCircleIcon from './icons/HelpCircle.svelte';
 	import LogOutIcon from './icons/LogOut.svelte';
 	import MapIcon from './icons/Map.svelte';
@@ -543,6 +544,29 @@
 						<UserIcon className="size-3.5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
+				</a>
+
+				<a
+					href="/admin/audit-logs"
+					draggable="false"
+					class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
+					on:click={async (e) => {
+						if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+							return;
+						}
+						e.preventDefault();
+						show = false;
+						goto('/admin/audit-logs');
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
+					}}
+				>
+					<div class="self-center">
+						<EyeIcon className="size-3.5" strokeWidth="1.5" />
+					</div>
+					<div class=" self-center truncate">{$i18n.t('Audit Logs')}</div>
 				</a>
 			{/if}
 

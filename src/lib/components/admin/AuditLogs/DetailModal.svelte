@@ -191,19 +191,19 @@
 						<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
 							{#if logDetail.request_model}
 								<div>
-									<span class="text-gray-400">Request Model:</span>
+									<span class="text-gray-400">{$i18n.t('Request Model')}:</span>
 									<span class="font-mono font-medium ml-1">{logDetail.request_model}</span>
 								</div>
 							{/if}
 							{#if logDetail.request_skill_ids && logDetail.request_skill_ids.length > 0}
 								<div>
-									<span class="text-gray-400">Skills:</span>
+									<span class="text-gray-400">{$i18n.t('Skills')}:</span>
 									<span class="font-mono font-medium ml-1">{logDetail.request_skill_ids.join(', ')}</span>
 								</div>
 							{/if}
 							{#if logDetail.request_tool_ids && logDetail.request_tool_ids.length > 0}
 								<div>
-									<span class="text-gray-400">Tools:</span>
+									<span class="text-gray-400">{$i18n.t('Tools')}:</span>
 									<span class="font-mono font-medium ml-1">{logDetail.request_tool_ids.join(', ')}</span>
 								</div>
 							{/if}
