@@ -3,8 +3,9 @@
 ## 目标与范围
 
 为管理员提供审计日志的检索、筛选和详情查看页面，用于排查
-`/api/v1/chat/completions` 等受审计请求。数据来源是计划中的 `audit_log`
-数据库表，不读取或解析 `audit.log` 文件。
+`/api/v1/chat/completions` 等受审计请求。数据来源是已由审计中间件持续写入的 `audit_log`
+数据库表，不读取或解析 `audit.log` 文件。数据库 schema 截至 migration
+`b9c0d1e2f3a4`。
 
 本期仅提供管理员查询：不提供普通用户访问、实时追踪、日志编辑、日志删除或正文批量导出。
 
@@ -44,9 +45,10 @@
 |---|---|---|
 | Endpoint | 可搜索单选 | 默认全部；候选值来自当前日期范围的服务端 facet |
 | User | 远程搜索组合框 | 按姓名、邮箱或 ID 搜索；选择后以 chip 显示 |
-| Method | 多选菜单 | `POST`、`PUT`、`PATCH`、`DELETE`、`GET` |
+| Request model | 可搜索单选 | 筛选 `request_model`；候选值来自当前日期范围的服务端 facet |
+| Response model | 可搜索单选 | 筛选 `response_model`；候选值来自当前日期范围的服务端 facet |
+| Request skills | 可搜索多选 | 筛选 JSON `request_skill_ids`；选择多个值时匹配含任一选定 Skill ID 的记录 |
 | Status | 多选菜单 | `2xx`、`4xx`、`5xx`、`No response` |
-| Audit level | 单选菜单 | `METADATA`、`REQUEST`、`REQUEST_RESPONSE` |
 | Source IP | 文本输入 | 精确匹配或 CIDR 前缀匹配由 API 明确声明 |
 | Body state | 多选菜单 | `Request captured`、`Response captured`、`Truncated` |
 
@@ -83,9 +85,14 @@
 
 详情分为三个无嵌套卡片的区段：
 
-1. Request：时间、请求 ID、用户快照、方法、完整脱敏 URI、来源 IP、User-Agent、审计级别。
-2. Response：HTTP 状态、是否截断、响应正文是否被捕获。
-3. Captured content：请求和响应各自的可折叠等宽文本区；仅在对应正文存在时展示。
+1. Request：时间、请求 ID、用户快照、方法、完整脱敏 URI、来源 IP、User-Agent、审计级别，及
+   `request_model`、`request_extra`、`request_skill_ids`、`request_tool_ids`、
+   `request_response_format`、`request_extra_body`、`request_system_messages`、
+   `request_user_messages`。
+2. Response：HTTP 状态、是否截断、响应正文是否被捕获，及 `response_id`、`response_model`、
+   `response_finish_reasons`。
+3. Captured content：请求和响应各自的可折叠等宽文本区；仅在对应正文存在时展示。拆分 JSON 字段
+   同样以等宽纯文本展示，保留数组及多模态 content 的原始结构。
 
 正文默认折叠为 12 行，展开后最大高度为 `24rem` 并可滚动。每个可复制值旁使用 Copy 图标
 按钮和 tooltip。正文原样显示为文本，不能作为 HTML 渲染。脱敏字段显示 `********`，截断内容
@@ -102,8 +109,9 @@
 ```text
 start_at=<unix-ms>&end_at=<unix-ms>
 q=<search text>&user_id=<id>&endpoint=<path>
-methods=POST,GET&status_classes=2xx,5xx
-audit_level=REQUEST&source_ip=<value>
+request_model=<model>&response_model=<model>
+request_skill_ids=<id1>,<id2>&status_classes=2xx,5xx
+source_ip=<value>
 body_state=request,response,truncated
 order_by=created_at&direction=desc&page=1&limit=30
 ```
@@ -135,10 +143,14 @@ order_by=created_at&direction=desc&page=1&limit=30
 ### 详情与 facet
 
 `GET /api/v1/audit-logs/{id}` 返回列表字段加上脱敏后的 `request_uri`、`user_agent`、
-`request_object`、`response_object`、`user_snapshot` 及正文截断状态。
+`request_object`、`response_object`、`user_snapshot`、请求拆分字段 `request_model`、
+`request_extra`、`request_skill_ids`、`request_tool_ids`、`request_response_format`、
+`request_extra_body`、`request_system_messages`、`request_user_messages`，以及响应拆分字段
+`response_id`、`response_model`、`response_finish_reasons` 和正文截断状态。
 
-`GET /api/v1/audit-logs/facets?start_at=&end_at=` 返回有限的 endpoint、method、
-audit level 与状态分类候选值；不返回完整用户集合。用户组合框沿用管理员用户搜索接口。
+`GET /api/v1/audit-logs/facets?start_at=&end_at=` 返回有限的 endpoint、`request_model`、
+`response_model`、`request_skill_ids` 与状态分类候选值；不返回完整用户集合。用户组合框沿用
+管理员用户搜索接口。
 
 服务端必须为筛选、排序和分页参数设置白名单；不接受任意列名或原始 SQL 条件。
 
@@ -148,6 +160,8 @@ audit level 与状态分类候选值；不返回完整用户集合。用户组�
 - 正文不出现在列表、浏览器标题、URL 参数、toast 或前端日志中。
 - 页面明确标示正文可能包含 Prompt、模型输出和敏感业务数据；本期不提供导出。
 - 所有展示数据来自数据库已脱敏值；前端不承担脱敏责任。
+- 拆分字段从已脱敏、受正文捕获上限约束的数据中派生。`REQUEST` 级别没有响应拆分值；截断、
+  非 JSON 或无法完整解析的 SSE 正文可使部分拆分值为 `NULL`。历史记录不回填。
 - 用户删除后不级联删除审计记录；用户快照保证历史记录可解释。
 
 ## 实现落点

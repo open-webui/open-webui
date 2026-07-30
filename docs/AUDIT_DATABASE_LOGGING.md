@@ -34,8 +34,12 @@ One row is written after each audited HTTP request completes. Failed database wr
 | `response_status_code` | HTTP status, captured for every audit level. |
 | `source_ip`, `user_agent` | Caller metadata. |
 | `request_object`, `response_object` | Captured, redacted request and response body text. |
+| `request_model` | Model identifier extracted from a captured request body. |
+| `request_extra`, `request_skill_ids`, `request_tool_ids`, `request_response_format`, `request_extra_body` | JSON values extracted from a captured request body. |
+| `request_system_messages`, `request_user_messages` | Ordered JSON arrays of `content` values from captured messages with the respective role. |
+| `response_id`, `response_model` | The upstream response ID and model extracted from a captured response body. |
+| `response_finish_reasons` | Ordered JSON array of non-null `choices[].finish_reason` values. |
 | `request_truncated`, `response_truncated` | `true` when the respective body reached `MAX_BODY_LOG_SIZE`; `NULL` when that body type was not captured at the selected audit level. |
-| `extra` | Reserved JSON object for future audit metadata. |
 
 `METADATA` stores neither body. `REQUEST` stores only `request_object`. `REQUEST_RESPONSE` stores both bodies. A streamed response is stored as the prefix observed before completion or disconnect, up to `MAX_BODY_LOG_SIZE` bytes.
 

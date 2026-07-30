@@ -96,6 +96,75 @@ def _redact_body(body: str) -> str:
         return re.sub(pattern, r'\1********\2', body, flags=re.IGNORECASE)
 
 
+def _extract_request_fields(body: str) -> dict[str, Any]:
+    try:
+        payload = loads(body)
+    except (JSONDecodeError, TypeError):
+        return {}
+
+    if not isinstance(payload, dict):
+        return {}
+
+    payload = _redact_value(payload)
+    messages = payload.get('messages')
+    if not isinstance(messages, list):
+        messages = []
+
+    def message_contents(role: str) -> list[Any]:
+        return [
+            message.get('content')
+            for message in messages
+            if isinstance(message, dict) and message.get('role') == role and 'content' in message
+        ]
+
+    return {
+        'request_model': payload.get('model'),
+        'request_extra': payload.get('extra'),
+        'request_skill_ids': payload.get('skill_ids'),
+        'request_tool_ids': payload.get('tool_ids'),
+        'request_response_format': payload.get('response_format'),
+        'request_extra_body': payload.get('extra_body'),
+        'request_system_messages': message_contents('system'),
+        'request_user_messages': message_contents('user'),
+    }
+
+
+def _extract_response_fields(body: str) -> dict[str, Any]:
+    try:
+        payloads = [loads(body)]
+    except (JSONDecodeError, TypeError):
+        payloads = []
+        for line in body.splitlines():
+            if not line.startswith('data:'):
+                continue
+            try:
+                payloads.append(loads(line.removeprefix('data:').strip()))
+            except (JSONDecodeError, TypeError):
+                continue
+
+    response_id = None
+    response_model = None
+    finish_reasons = []
+    for payload in payloads:
+        if not isinstance(payload, dict):
+            continue
+        response_id = response_id or payload.get('id')
+        response_model = response_model or payload.get('model')
+        choices = payload.get('choices')
+        if isinstance(choices, list):
+            finish_reasons.extend(
+                choice.get('finish_reason')
+                for choice in choices
+                if isinstance(choice, dict) and choice.get('finish_reason') is not None
+            )
+
+    return {
+        'response_id': response_id,
+        'response_model': response_model,
+        'response_finish_reasons': finish_reasons or None,
+    }
+
+
 def _redact_uri(uri: str) -> str:
     parts = urlsplit(uri)
     if not parts.query:
@@ -359,6 +428,8 @@ class AuditLoggingMiddleware:
             captures_response = self.audit_level == AuditLevel.REQUEST_RESPONSE
             request_body = _redact_body(context.request_body.decode('utf-8', errors='replace')) if captures_request else None
             response_body = _redact_body(context.response_body.decode('utf-8', errors='replace')) if captures_response else None
+            request_fields = _extract_request_fields(request_body) if request_body is not None else {}
+            response_fields = _extract_response_fields(response_body) if response_body is not None else {}
             request_uri = _redact_uri(str(request.url))
 
             entry = AuditLogEntry(
@@ -391,10 +462,11 @@ class AuditLoggingMiddleware:
                         source_ip=entry.source_ip,
                         user_agent=entry.user_agent,
                         request_object=request_body,
+                        **request_fields,
                         response_object=response_body,
+                        **response_fields,
                         request_truncated=context.request_truncated if captures_request else None,
                         response_truncated=context.response_truncated if captures_response else None,
-                        extra={},
                     )
                 )
         except Exception as e:
