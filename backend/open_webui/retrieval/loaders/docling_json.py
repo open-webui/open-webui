@@ -64,11 +64,50 @@ class DoclingLoaderJson(DoclingLoader):
             return [len(self._enc.encode(w)) for w in words]
         return [len(w) for w in words]
 
+    def _render_table_markdown(self, it: dict) -> str:
+        """Render a Docling TableItem as a GitHub-flavored markdown table.
+
+        TableItem has no "text"/"orig" field at all -- cell content lives in
+        data.table_cells (row/col offsets + text), so without this the table's
+        content is silently dropped (the caller's `if not text: continue` guard
+        would skip it, since it.get("text") is always None for tables).
+
+        Merged cells (row_span/col_span > 1) are placed at their start offset only;
+        the remaining spanned cells stay empty. Row 0 is always treated as the
+        header row for markdown syntax validity, matching common table conventions.
+        """
+        data = it.get('data') or {}
+        num_rows = data.get('num_rows') or 0
+        num_cols = data.get('num_cols') or 0
+        cells = data.get('table_cells') or []
+        if not num_rows or not num_cols or not cells:
+            return ''
+
+        grid = [['' for _ in range(num_cols)] for _ in range(num_rows)]
+        for cell in cells:
+            text = (cell.get('text') or '').replace('\n', ' ').replace('|', '\\|').strip()
+            r = cell.get('start_row_offset_idx')
+            c = cell.get('start_col_offset_idx')
+            if isinstance(r, int) and isinstance(c, int) and 0 <= r < num_rows and 0 <= c < num_cols:
+                grid[r][c] = text
+
+        lines = ['| ' + ' | '.join(grid[0]) + ' |', '| ' + ' | '.join(['---'] * num_cols) + ' |']
+        for row in grid[1:]:
+            lines.append('| ' + ' | '.join(row) + ' |')
+        return '\n'.join(lines)
+
     def _extract_ordered_items(self, document_data: dict) -> list[dict]:
         """Return all content items sorted by page then spatial position (top→bottom, left→right).
 
         Each entry: {"text": str, "label": str, "page_no": int, "bbox": tuple|None}
         Items without any prov entry containing a page_no are omitted.
+
+        Headings and list items are rendered with markdown syntax (# prefix / bullet
+        or number marker) since Docling hands back their raw text unprefixed. Tables
+        are rendered as markdown tables from their cell data (see
+        _render_table_markdown). Furniture-layer items (repeated page headers/footers,
+        background, invisible/notes content) are excluded -- they aren't part of the
+        document's actual content and would otherwise repeat as noise on every page.
         """
         json_content = document_data.get("json_content") or document_data.get("json") or {}
 
@@ -80,8 +119,20 @@ class DoclingLoaderJson(DoclingLoader):
             if not isinstance(cand, list):
                 continue
             for it in cand:
-                text = it.get("text") or it.get("orig") or ""
+                if it.get('content_layer', 'body') != 'body':
+                    continue
                 label = it.get("label") or ""
+                if name == "tables":
+                    text = self._render_table_markdown(it)
+                else:
+                    text = it.get("text") or it.get("orig") or ""
+                    if text:
+                        if label == "section_header":
+                            level = it.get("level") or 1
+                            text = f"{'#' * max(1, level)} {text}"
+                        elif label == "list_item":
+                            marker = it.get("marker") or "-"
+                            text = f"{marker} {text}"
                 for prov_entry in it.get("prov") or []:
                     if not isinstance(prov_entry, dict):
                         continue
