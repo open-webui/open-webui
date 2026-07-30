@@ -30,7 +30,7 @@
 	export let directories = [];
 
 	export let onClick = (fileId) => {};
-	export let onDelete = (fileId) => {};
+	export let onDelete = (fileId, wasProcessing = false) => {};
 	export let onRename = (fileId: string, name: string) => {};
 	export let onNavigateDirectory = (directoryId: string) => {};
 	export let onRenameDirectory = (id: string, name: string) => {};
@@ -130,6 +130,11 @@
 			file?.status === 'uploading' || fileStatus === 'pending' || fileStatus === 'processing'}
 		{@const isFailed = fileStatus === 'failed'}
 		{@const statusTooltip = getStatusTooltip(file)}
+		<!-- Deleting needs a server-side file id. It exists from the moment the
+		     upload request returns, so this only greys out the brief window in
+		     which the bytes are still on the wire. Once processing has started,
+		     deleting cancels it. -->
+		{@const canDelete = Boolean(file?.id)}
 		<div
 			class=" flex cursor-pointer w-full px-2 bg-transparent dark:hover:bg-gray-850/50 hover:bg-white rounded-xl transition {selectedFileId
 				? ''
@@ -291,16 +296,27 @@
 									<Download className="size-3.5" />
 									{$i18n.t('Download')}
 								</button>
-								<button
-									type="button"
-									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-gray-900 dark:hover:text-gray-100"
-									on:click={() => {
-										onDelete(file?.id ?? file?.tempId);
-									}}
+								<Tooltip
+									content={canDelete
+										? ''
+										: $i18n.t('Available once the upload has been received.')}
+									className="w-full"
 								>
-									<GarbageBin className="size-3.5" />
-									{$i18n.t('Delete')}
-								</button>
+									<button
+										type="button"
+										disabled={!canDelete}
+										class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition {canDelete
+											? 'cursor-pointer hover:text-gray-900 dark:hover:text-gray-100'
+											: 'cursor-not-allowed opacity-50'}"
+										on:click={() => {
+											if (!canDelete) return;
+											onDelete(file.id, isInFlight);
+										}}
+									>
+										<GarbageBin className="size-3.5" />
+										{isInFlight ? $i18n.t('Stop & Delete') : $i18n.t('Delete')}
+									</button>
+								</Tooltip>
 							</DropdownMenu>
 						</div>
 					</Dropdown>

@@ -45,6 +45,11 @@ from open_webui.routers.audio import transcribe
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.file_processing import (
+    FileProcessingCancelled,
+    register_processing,
+    unregister_processing,
+)
 from open_webui.utils.misc import strict_match_mime_type
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -134,6 +139,10 @@ async def process_uploaded_file(
     user,
     db: Optional[AsyncSession] = None,
 ):
+    def _cancelled(result) -> bool:
+        """process_file() reports a user-requested abort instead of raising."""
+        return isinstance(result, dict) and result.get('reason') == 'cancelled'
+
     async def _process_handler(db_session):
         try:
             content_type = file.content_type
@@ -158,12 +167,15 @@ async def process_uploaded_file(
                     file_metadata,
                     user,
                 )
-                await process_file(
-                    request,
-                    ProcessFileForm(file_id=file_item.id, content=result.get('text', '')),
-                    user=user,
-                    db=db_session,
-                )
+                if _cancelled(
+                    await process_file(
+                        request,
+                        ProcessFileForm(file_id=file_item.id, content=result.get('text', '')),
+                        user=user,
+                        db=db_session,
+                    )
+                ):
+                    return
 
             elif (
                 content_type
@@ -191,12 +203,15 @@ async def process_uploaded_file(
                 # configured content extraction engine.
                 if not content_type:
                     log.info(f'File type {file.content_type} is not provided, but trying to process anyway')
-                await process_file(
-                    request,
-                    ProcessFileForm(file_id=file_item.id),
-                    user=user,
-                    db=db_session,
-                )
+                if _cancelled(
+                    await process_file(
+                        request,
+                        ProcessFileForm(file_id=file_item.id),
+                        user=user,
+                        db=db_session,
+                    )
+                ):
+                    return
 
             # Auto-link to Knowledge Collection when uploaded from one (#24807).
             # Mirrors POST /knowledge/{id}/file/add so linking doesn't depend
@@ -227,12 +242,16 @@ async def process_uploaded_file(
                         # Keep the generic file status stream open until the
                         # KB-specific vector write and durable link both finish.
                         await Files.update_file_data_by_id(file_item.id, {'status': 'processing'}, db=db_session)
-                        await process_file(
-                            request,
-                            ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
-                            user=user,
-                            db=db_session,
-                        )
+                        if _cancelled(
+                            await process_file(
+                                request,
+                                ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
+                                user=user,
+                                db=db_session,
+                            )
+                        ):
+                            # Never link a file the user deleted mid-flight.
+                            return
                         knowledge_file = await Knowledges.add_file_to_knowledge_by_id(
                             knowledge_id=knowledge_id,
                             file_id=file_item.id,
@@ -247,6 +266,12 @@ async def process_uploaded_file(
                     log.warning(f'Failed to link file {file_item.id} to knowledge {knowledge_id}: {e}')
                     raise
 
+        except FileProcessingCancelled:
+            # The file was deleted while we were processing it. Nothing left to
+            # report to — and nothing left to link.
+            log.info(f'Upload processing for {file_item.id} was cancelled by the user')
+            return
+
         except Exception as e:
             log.error(f'Error processing file: {file_item.id}')
             await Files.update_file_data_by_id(
@@ -258,6 +283,9 @@ async def process_uploaded_file(
                 db=db_session,
             )
 
+    # Announce the job so a delete arriving while it runs can interrupt it
+    # instead of waiting for extraction and embedding to finish.
+    register_processing(file_item.id)
     try:
         if db:
             await _process_handler(db)
@@ -265,6 +293,7 @@ async def process_uploaded_file(
             async with get_async_db_context() as db_session:
                 await _process_handler(db_session)
     finally:
+        unregister_processing(file_item.id)
         _cleanup_local_cache(file_path)
 
 
