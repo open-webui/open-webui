@@ -7,9 +7,9 @@ import mimetypes
 import os
 import re
 import shutil
+import time
 import uuid
 from datetime import datetime
-import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Callable, Iterator, Optional, Sequence, Union
@@ -1929,7 +1929,7 @@ async def process_file(
                     # UI polling loop can show meaningful status information.
                     await Files.update_file_data_by_id(
                         file.id,
-                        {"status": "processing", "started_at": int(time.time())},
+                        {'status': 'processing', 'started_at': int(time.time())},
                         db=db,
                     )
 
@@ -2041,8 +2041,8 @@ async def process_file(
                         async with get_async_db() as _guard_session:
                             if await Files.get_file_by_id(file.id, db=_guard_session) is None:
                                 log.warning(
-                                    "File %s was deleted during processing; "
-                                    "discarding embeddings to prevent orphaned vectors.",
+                                    'File %s was deleted during processing; '
+                                    'discarding embeddings to prevent orphaned vectors.',
                                     file.id,
                                 )
                                 try:
@@ -2050,21 +2050,19 @@ async def process_file(
                                         # Shared knowledge collection – remove only this file's chunks
                                         VECTOR_DB_CLIENT.delete(
                                             collection_name=collection_name,
-                                            filter={"file_id": file.id},
+                                            filter={'file_id': file.id},
                                         )
                                     else:
                                         # Private file collection – drop entirely
-                                        VECTOR_DB_CLIENT.delete_collection(
-                                            collection_name=collection_name
-                                        )
+                                        VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
                                 except Exception as _cleanup_err:
                                     log.debug(
-                                        "Vector DB cleanup after user-delete: %s",
+                                        'Vector DB cleanup after user-delete: %s',
                                         _cleanup_err,
                                     )
                                 return {
-                                    "status": False,
-                                    "reason": "file_deleted_during_processing",
+                                    'status': False,
+                                    'reason': 'file_deleted_during_processing',
                                 }
                         # Fresh session for the final update.
                         async with get_async_db() as session:

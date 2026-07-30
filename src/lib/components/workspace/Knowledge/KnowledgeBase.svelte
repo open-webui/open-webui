@@ -38,7 +38,6 @@
 		updateKnowledgeById,
 		updateKnowledgeAccessGrants,
 		searchKnowledgeFilesById,
-		getPendingFilesByKnowledgeId,
 		createKnowledgeDirectory,
 		updateKnowledgeDirectory,
 		deleteKnowledgeDirectory,
@@ -134,30 +133,6 @@
 	let fileItems = null;
 	let fileItemsTotal = null;
 
-	// Poll every 15 s while any file is still being processed, so the UI
-	// reflects status changes (pending → processing → completed / failed)
-	// without requiring a manual page refresh.
-	let pollingInterval: ReturnType<typeof setInterval> | null = null;
-
-	$: {
-		const hasPendingFiles = fileItems?.some(
-			(f) =>
-				f?.data?.status === 'pending' ||
-				f?.data?.status === 'processing' ||
-				f?.status === 'uploading'
-		);
-		if (hasPendingFiles && pollingInterval === null) {
-			pollingInterval = setInterval(() => {
-				getItemsPage(true);
-			}, 15_000);
-		} else if (fileItems !== null && !hasPendingFiles && pollingInterval !== null) {
-			// Only stop polling once we have a real result — not while fileItems is
-			// momentarily null during a refresh, which would kill the interval early.
-			clearInterval(pollingInterval);
-			pollingInterval = null;
-		}
-	}
-
 	// Directory state
 	let currentDirectoryId: string | null = null;
 	let directoryItems = [];
@@ -210,17 +185,8 @@
 		getItemsPage();
 	}
 
-	$: if (
-		query !== undefined &&
-		viewOption !== undefined &&
-		sortKey !== undefined &&
-		direction !== undefined
-	) {
-		reset();
-	}
-
-	// silent=true preserves the current list while refreshing (used by the
-	// polling interval) so files don't flash away every 15 seconds.
+	// silent=true refreshes in place instead of blanking the list first, so the
+	// poll below can pick up status changes without the rows flashing away.
 	const getItemsPage = async (silent = false) => {
 		if (knowledgeId === null) return;
 
@@ -233,51 +199,30 @@
 			direction = null;
 		}
 
-		const [res, pendingFromServer] = await Promise.all([
-			searchKnowledgeFilesById(
-				localStorage.token,
-				knowledge.id,
-				query,
-				viewOption,
-				sortKey,
-				direction,
-				currentPage,
-				currentDirectoryId,
-				includeContent
-			).catch(() => {
-				return null;
-			}),
-			getPendingFilesByKnowledgeId(
-				localStorage.token,
-				knowledge.id
-			).catch(() => [])
-		]);
+		const res = await searchKnowledgeFilesById(
+			localStorage.token,
+			knowledge.id,
+			query,
+			viewOption,
+			sortKey,
+			direction,
+			currentPage,
+			currentDirectoryId,
+			includeContent
+		).catch(() => {
+			return null;
+		});
 
 		if (res) {
-			const linkedIds = new Set(res.items.map((f) => f.id).filter(Boolean));
+			// Uploads started in this tab have no file id until the POST returns,
+			// so the server cannot report them yet. A silent refresh must not drop
+			// those rows.
+			const localInFlight =
+				silent && fileItems !== null
+					? fileItems.filter((f) => f.status === 'uploading' && !f.id)
+					: [];
 
-			// Pending files from the server that are not yet in the linked list.
-			const serverPending = (pendingFromServer ?? []).filter((f) => !linkedIds.has(f.id));
-
-			if (silent && fileItems !== null) {
-				// During a polling refresh, also preserve local-only in-flight
-				// placeholders (e.g. files uploading in this tab right now) that
-				// aren't reflected in the server responses yet.
-				const serverIds = new Set([
-					...linkedIds,
-					...serverPending.map((f) => f.id).filter(Boolean)
-				]);
-				const localInFlight = fileItems.filter(
-					(f) =>
-						(f.status === 'uploading' ||
-							f?.data?.status === 'pending' ||
-							f?.data?.status === 'processing') &&
-						!serverIds.has(f.id)
-				);
-				fileItems = [...localInFlight, ...serverPending, ...res.items];
-			} else {
-				fileItems = [...serverPending, ...res.items];
-			}
+			fileItems = [...localInFlight, ...res.items];
 			fileItemsTotal = res.total;
 			directoryItems = res.directories ?? [];
 			breadcrumbs = res.breadcrumbs ?? [];
@@ -296,21 +241,18 @@
 						}));
 					if (newPending.length > 0) {
 						fileItems = [...newPending, ...fileItems];
-
-						// Start polling for completion (if not already polling)
-						if (!pendingPollTimer) {
-							pendingPollTimer = setInterval(async () => {
-								try {
-									const still = await getPendingKnowledgeFiles(localStorage.token, knowledgeId);
-									if (!still || still.length === 0) {
-										clearInterval(pendingPollTimer);
-										pendingPollTimer = null;
-										init();
-									}
-								} catch {}
-							}, 5000);
-						}
 					}
+
+					// Keep refreshing while anything is in flight. A silent refresh
+					// also re-reads the pending list, so this loop both surfaces
+					// status changes (queued → processing → failed) and retires
+					// itself once the last file has landed.
+					if (!pendingPollTimer) {
+						pendingPollTimer = setInterval(() => getItemsPage(true), 5000);
+					}
+				} else if (pendingPollTimer) {
+					clearInterval(pendingPollTimer);
+					pendingPollTimer = null;
 				}
 			} catch (e) {
 				console.warn('Failed to fetch pending files:', e);
@@ -1233,7 +1175,6 @@
 
 	onDestroy(() => {
 		clearTimeout(searchDebounceTimer);
-		if (pollingInterval !== null) clearInterval(pollingInterval);
 		if (pendingPollTimer) {
 			clearInterval(pendingPollTimer);
 			pendingPollTimer = null;

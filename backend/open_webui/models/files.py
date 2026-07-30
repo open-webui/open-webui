@@ -251,31 +251,6 @@ class FilesTable:
             result = await db.execute(select(File).filter_by(user_id=user_id))
             return [FileModel.model_validate(file) for file in result.scalars().all()]
 
-    async def get_pending_files_by_knowledge_id(
-        self,
-        knowledge_id: str,
-        user_id: str | None = None,
-        db: AsyncSession | None = None,
-    ) -> list['FileModelResponse']:
-        """Return files that reference knowledge_id in their meta.data and are
-        still being processed (status pending or processing).  Used to surface
-        in-flight uploads after a page refresh, before the background task has
-        finished and linked the file to the knowledge base."""
-        async with get_async_db_context(db) as db:
-            stmt = select(File).filter(
-                File.data['status'].as_string().in_(['pending', 'processing']),
-                File.meta['data']['knowledge_id'].as_string() == knowledge_id,
-            )
-            if user_id:
-                stmt = stmt.filter_by(user_id=user_id)
-
-            result = await db.execute(stmt.order_by(File.created_at.desc()))
-            files = result.scalars().all()
-
-            return [
-                FileModelResponse.model_validate(f, from_attributes=True) for f in files
-            ]
-
     async def get_file_list(
         self,
         user_id: str | None = None,
@@ -398,7 +373,6 @@ class FilesTable:
         Called once at application startup to clean up orphaned background
         tasks left behind by a previous server crash or restart. Returns the
         number of files updated."""
-        import time as _time
         async with get_async_db_context(db) as db:
             try:
                 stmt = select(File).filter(
@@ -406,7 +380,7 @@ class FilesTable:
                 )
                 result = await db.execute(stmt)
                 rows = result.scalars().all()
-                now = int(_time.time())
+                now = int(time.time())
                 for f in rows:
                     f.data = {
                         **(f.data or {}),
