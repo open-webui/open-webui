@@ -481,13 +481,13 @@ class OpenAIConfigForm(BaseModel):
 
 class OllamaConfigForm(BaseModel):
     url: str
-    key: str
+    key: str | None = None
 
 
 class AzureOpenAIConfigForm(BaseModel):
-    url: str
-    key: str
-    version: str
+    url: str | None = None
+    key: str | None = None
+    version: str | None = None
 
 
 class EmbeddingModelUpdateForm(BaseModel):
@@ -540,12 +540,16 @@ async def update_embedding_config(request: Request, form_data: EmbeddingModelUpd
 
             if form_data.ollama_config is not None:
                 config.RAG_OLLAMA_BASE_URL = form_data.ollama_config.url
-                config.RAG_OLLAMA_API_KEY = form_data.ollama_config.key
+                if form_data.ollama_config.key is not None:
+                    config.RAG_OLLAMA_API_KEY = form_data.ollama_config.key
 
             if form_data.azure_openai_config is not None:
-                config.RAG_AZURE_OPENAI_BASE_URL = form_data.azure_openai_config.url
-                config.RAG_AZURE_OPENAI_API_KEY = form_data.azure_openai_config.key
-                config.RAG_AZURE_OPENAI_API_VERSION = form_data.azure_openai_config.version
+                if form_data.azure_openai_config.url is not None:
+                    config.RAG_AZURE_OPENAI_BASE_URL = form_data.azure_openai_config.url
+                if form_data.azure_openai_config.key is not None:
+                    config.RAG_AZURE_OPENAI_API_KEY = form_data.azure_openai_config.key
+                if form_data.azure_openai_config.version is not None:
+                    config.RAG_AZURE_OPENAI_API_VERSION = form_data.azure_openai_config.version
 
         request.app.state.ef = get_ef(
             config.RAG_EMBEDDING_ENGINE,
