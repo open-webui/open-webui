@@ -170,7 +170,6 @@ def _apply_workflow_nodes(workflow, nodes, model, payload):
         node_type = node.type or ''
         node_key = node.key or ''
 
-        # --- Legacy semantic type names (backward compat) --------------------
         if node_type == 'model':
             for node_id in node.node_ids:
                 workflow[node_id]['inputs'][node_key] = model
@@ -205,17 +204,13 @@ def _apply_workflow_nodes(workflow, nodes, model, payload):
             for node_id in node.node_ids:
                 workflow[node_id]['inputs'][node_key] = seed
 
-        # --- New dynamic format: 'ClassName::inputKey' -----------------------
         elif '::' in node_type:
-            # Derive semantic meaning from the key name
             for node_id in node.node_ids:
                 if node_id not in workflow:
                     continue
                 if node_key in ('ckpt_name', 'unet_name'):
-                    # Model selection
                     workflow[node_id]['inputs'][node_key] = model
                 elif node_key in ('text', 'prompt', 'positive'):
-                    # Positive prompt text
                     workflow[node_id]['inputs'][node_key] = payload.prompt
                 elif node_key in ('width',):
                     workflow[node_id]['inputs'][node_key] = payload.width
@@ -239,13 +234,10 @@ def _apply_workflow_nodes(workflow, nodes, model, payload):
                         else:
                             workflow[node_id]['inputs'][node_key] = img
                 elif node.value is not None:
-                    # Custom static override
                     workflow[node_id]['inputs'][node_key] = node.value
                 elif hasattr(payload, 'extra_params') and payload.extra_params and node_key in payload.extra_params:
-                    # API-provided dynamic override
                     workflow[node_id]['inputs'][node_key] = payload.extra_params[node_key]
 
-        # --- Generic static value passthrough --------------------------------
         else:
             for node_id in node.node_ids:
                 workflow[node_id]['inputs'][node_key] = node.value
