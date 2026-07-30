@@ -28,12 +28,19 @@ FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 ARG BUILD_HASH
 
 # Set Node.js options (heap limit Allocation failed - JavaScript heap out of memory)
-# ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 WORKDIR /app
 
 # to store git revision in build
 RUN apk add --no-cache git
+
+ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com \
+    NPM_CONFIG_REPLACE_REGISTRY_HOST=always \
+    NPM_CONFIG_FETCH_TIMEOUT=180000 \
+    NPM_CONFIG_FETCH_RETRIES=5 \
+    NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000 \
+    NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
 
 COPY package.json package-lock.json ./
 RUN npm ci --force
@@ -124,6 +131,11 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 RUN chown -R $UID:$GID /app $HOME
 
 # Install common system dependencies
+RUN sed -i \
+    -e 's|deb.debian.org/debian|mirrors.tuna.tsinghua.edu.cn/debian|g' \
+    -e 's|security.debian.org/debian-security|mirrors.tuna.tsinghua.edu.cn/debian-security|g' \
+    /etc/apt/sources.list.d/debian.sources
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     git build-essential pandoc gcc netcat-openbsd curl jq ca-certificates \
@@ -137,12 +149,15 @@ COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
 # Set UV_LINK_MODE to copy to prevent 0-byte file corruption in QEMU arm64 cross-builds
 ENV UV_LINK_MODE=copy
+ENV UV_HTTP_TIMEOUT=180
+ENV UV_HTTP_RETRIES=8
+ENV PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 
 RUN set -e; \
     pip3 install --no-cache-dir uv; \
     if [ "$USE_CUDA" = "true" ]; then \
-    # If you use CUDA the whisper and embedding model will be downloaded on first use
-    # fix: pin torch<=2.9.1 - torch 2.10.0 aarch64 wheels cause SIGILL on ARM devices (RPi 4 Cortex-A72) #21349
+    # CUDA builds require wheels from PyTorch's CUDA-specific index.
+    # Pin torch<=2.9.1 because torch 2.10.0 ARM64 wheels cause SIGILL on Raspberry Pi 4 (Cortex-A72).
     pip3 install 'torch<=2.9.1' torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir; \
     uv pip install --system -r requirements.txt --no-cache-dir; \
     python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
@@ -151,7 +166,8 @@ RUN set -e; \
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
     python -c "import nltk; nltk.download('punkt_tab')"; \
     else \
-    pip3 install 'torch<=2.9.1' torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir; \
+    # CPU builds use PIP_INDEX_URL, allowing the configured PyPI mirror to serve ARM64 wheels.
+    pip3 install 'torch<=2.9.1' torchvision torchaudio --no-cache-dir; \
     uv pip install --system -r requirements.txt --no-cache-dir; \
     if [ "$USE_SLIM" != "true" ]; then \
     python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"; \
