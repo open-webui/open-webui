@@ -2144,7 +2144,7 @@
 												{/if}
 											{/each}
 
-											{#if webSearchEnabled}
+											{#if webSearchEnabled && showWebSearchButton}
 												<Tooltip content={$i18n.t('Web Search')} placement="top">
 													<button
 														on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
@@ -2162,7 +2162,7 @@
 												</Tooltip>
 											{/if}
 
-											{#if imageGenerationEnabled}
+											{#if imageGenerationEnabled && showImageGenerationButton}
 												<Tooltip content={$i18n.t('Image')} placement="top">
 													<button
 														on:click|preventDefault={() =>
@@ -2180,7 +2180,7 @@
 												</Tooltip>
 											{/if}
 
-											{#if codeInterpreterEnabled}
+											{#if codeInterpreterEnabled && showCodeInterpreterButton}
 												<Tooltip content={$i18n.t('Code Interpreter')} placement="top">
 													<button
 														aria-label={codeInterpreterEnabled
