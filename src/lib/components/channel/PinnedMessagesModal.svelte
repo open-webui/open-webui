@@ -103,6 +103,7 @@
 								{:else}
 									{#each pinnedMessages as message, messageIdx (message.id)}
 										<Message
+											id="pinned"
 											className="rounded-xl px-2"
 											{message}
 											{channel}
