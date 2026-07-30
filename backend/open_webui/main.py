@@ -73,6 +73,7 @@ from open_webui.config import (
 from open_webui.constants import ERROR_MESSAGES, TASKS
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
+    AUDIT_EXACT_INCLUDED_PATHS,
     AUDIT_EXCLUDED_PATHS,
     AUDIT_INCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
@@ -747,6 +748,7 @@ if audit_level != AuditLevel.NONE:
         audit_level=audit_level,
         excluded_paths=AUDIT_EXCLUDED_PATHS,
         included_paths=AUDIT_INCLUDED_PATHS,
+        exact_included_paths=AUDIT_EXACT_INCLUDED_PATHS,
         audit_get_requests=ENABLE_AUDIT_GET_REQUESTS,
         max_body_size=MAX_BODY_LOG_SIZE,
     )
@@ -827,7 +829,6 @@ app.include_router(calendar.router, prefix='/api/v1/calendars', tags=['calendars
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
     app.include_router(scim.router, prefix='/api/v1/scim/v2', tags=['scim'])
-
 
 ##################################
 #

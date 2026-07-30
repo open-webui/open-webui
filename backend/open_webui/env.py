@@ -1143,6 +1143,7 @@ ENABLE_PYODIDE_FILE_PERSISTENCE = os.getenv('ENABLE_PYODIDE_FILE_PERSISTENCE', '
 
 ENABLE_AUDIT_STDOUT = os.getenv('ENABLE_AUDIT_STDOUT', 'False').lower() == 'true'
 ENABLE_AUDIT_LOGS_FILE = os.getenv('ENABLE_AUDIT_LOGS_FILE', 'True').lower() == 'true'
+ENABLE_AUDIT_LOGS_DB = os.getenv('ENABLE_AUDIT_LOGS_DB', 'False').lower() == 'true'
 
 # Where to store log file
 # Defaults to the DATA_DIR/audit.log. To set AUDIT_LOGS_FILE_PATH you need to
@@ -1176,6 +1177,12 @@ AUDIT_EXCLUDED_PATHS = [
 # When set, only these paths are audited and AUDIT_EXCLUDED_PATHS is ignored
 AUDIT_INCLUDED_PATHS = [
     path for path in (path.strip().lstrip('/') for path in os.getenv('AUDIT_INCLUDED_PATHS', '').split(',')) if path
+]
+
+# Comma separated list of exact request paths to audit. When set, this takes
+# precedence over AUDIT_INCLUDED_PATHS and AUDIT_EXCLUDED_PATHS.
+AUDIT_EXACT_INCLUDED_PATHS = [
+    path for path in (path.strip() for path in os.getenv('AUDIT_EXACT_INCLUDED_PATHS', '').split(',')) if path
 ]
 
 # When enabled, GET requests are also audited (disabled by default to avoid log noise)
