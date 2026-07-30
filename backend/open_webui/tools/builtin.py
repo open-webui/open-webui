@@ -4010,9 +4010,7 @@ async def search_calendar_events(
 
             try:
                 end_ns = (
-                    _dt_to_ns(end, tz)
-                    if end
-                    else int(time.time() * 1_000) * 1_000_000 + 365 * 86400 * 1_000_000_000_000
+                    _dt_to_ns(end, tz) if end else int(time.time() * 1_000) * 1_000_000 + 365 * 86400 * 1_000_000_000
                 )
             except (ValueError, TypeError) as e:
                 return json.dumps({'error': f'Invalid end datetime: {e}'})
