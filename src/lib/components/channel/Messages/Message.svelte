@@ -10,7 +10,7 @@
 	dayjs.extend(isYesterday);
 	dayjs.extend(localizedFormat);
 
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { formatDate } from '$lib/utils';
@@ -137,22 +137,41 @@
 		swipeLocked = false;
 	};
 
+	let loadingMessageData = false;
+	let messageDataLoadFailed = false;
+
 	const loadMessageData = async () => {
-		if (message && message?.data === true) {
+		if (!message || message?.data !== true || loadingMessageData || messageDataLoadFailed) {
+			return;
+		}
+
+		loadingMessageData = true;
+		try {
 			const res = await getMessageData(localStorage.token, channel?.id, message.id);
 			if (res) {
 				message.data = res;
+			} else {
+				messageDataLoadFailed = true;
 			}
+		} catch (error) {
+			console.error('Failed to load message data:', error);
+			messageDataLoadFailed = true;
+		} finally {
+			loadingMessageData = false;
 		}
 	};
 
-	onMount(async () => {
-		if (message && message?.data === true) {
-			await loadMessageData();
-		}
-	});
+	$: if (message?.data === true) {
+		loadMessageData();
+	}
 
-	$: messageOutput = Array.isArray(message?.data?.output) ? message.data.output : [];
+	let resolvedData = null;
+	$: if (message?.data && message.data !== true) {
+		resolvedData = message.data;
+	}
+	$: messageData = message?.data && message.data !== true ? message.data : resolvedData;
+
+	$: messageOutput = Array.isArray(messageData?.output) ? messageData.output : [];
 	$: hasStructuredOutput = buildOutputDisplayItems(messageOutput).length > 0;
 </script>
 
@@ -455,17 +474,16 @@
 						</Name>
 					{/if}
 
-					{#if message?.data === true}
-						<!-- loading indicator -->
+					{#if message?.data === true && !resolvedData}
 						<div class=" my-2">
 							<Skeleton />
 						</div>
-					{:else if (message?.data?.files ?? []).length > 0}
+					{:else if (messageData?.files ?? []).length > 0}
 						<div
 							class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
-							{#each message?.data?.files as file}
+							{#each messageData?.files as file}
 								{@const fileUrl =
 									file.url.startsWith('data') || file.url.startsWith('http')
 										? file.url
