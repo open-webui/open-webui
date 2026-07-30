@@ -163,7 +163,13 @@ class DoclingLoaderJson(DoclingLoader):
                 continue
             metadata = {
                 **doc_meta,
-                "docling_document": document_data,
+                # The full Docling document (json_content/md_content) is intentionally NOT
+                # attached here: item mode already exposes page/bbox/label/level/marker/etc.
+                # as flat fields below, so the full per-item blob would just duplicate the
+                # entire document's texts/tables/pictures/pages into every single chunk's
+                # Qdrant payload for no benefit (nothing in this codebase reads it back).
+                # Uncomment for local debugging only:
+                # "docling_document": document_data,
                 "page": it["page_no"],
                 "label": it["label"],
                 "chunk_mode": "item",
@@ -199,7 +205,9 @@ class DoclingLoaderJson(DoclingLoader):
             page_text = "\n".join(pages[pno])
             metadata = {
                 **doc_meta,
-                "docling_document": document_data,
+                # Full document (json_content/md_content) intentionally omitted — see the
+                # comment in _format_item_mode. Uncomment for local debugging only:
+                # "docling_document": document_data,
                 "page": pno,
                 "chunk_mode": "page",
             }
@@ -248,7 +256,9 @@ class DoclingLoaderJson(DoclingLoader):
             return [
                 Document(
                     page_content=document_text,
-                    metadata={**doc_meta, "docling_document": document_data},
+                    # Full document intentionally omitted — see _format_item_mode.
+                    # metadata={**doc_meta, "docling_document": document_data},
+                    metadata=doc_meta,
                 )
             ]
 
@@ -277,7 +287,9 @@ class DoclingLoaderJson(DoclingLoader):
             page_no = word_pages[start_idx]
             metadata = {
                 **doc_meta,
-                "docling_document": document_data,
+                # Full document intentionally omitted — see the comment in
+                # _format_item_mode. Uncomment for local debugging only:
+                # "docling_document": document_data,
                 "page": page_no,
                 "chunk_mode": "chunk",
                 "chunk_start_word": start_idx,
@@ -326,6 +338,10 @@ class DoclingLoaderJson(DoclingLoader):
 
         # Fallback: structured JSON not available, return raw markdown/text.
         document_text = document_data.get("md_content") or document_data.get("text") or ""
-        metadata = {"Content-Type": "application/json", "docling_document": document_data}
+        # Full document intentionally omitted here too — document_text above already IS
+        # md_content, so attaching document_data again would duplicate it plus json_content
+        # into metadata for no benefit. Uncomment for local debugging only:
+        # metadata = {"Content-Type": "application/json", "docling_document": document_data}
+        metadata = {"Content-Type": "application/json"}
         log.debug("Docling JSON result extracted (fallback): keys=%s", list(document_data.keys()))
         return [Document(page_content=document_text, metadata=metadata)]

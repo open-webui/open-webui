@@ -27,7 +27,6 @@ from open_webui.env import (
     REQUESTS_VERIFY,
 )
 from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
-from open_webui.retrieval.loaders.docling_json import DoclingLoaderJson
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
 from open_webui.retrieval.loaders.mineru import MinerULoader
 from open_webui.retrieval.loaders.mistral import MistralLoader
@@ -593,6 +592,8 @@ class Loader:
                         docling_timeout = None
 
                 if self.engine == "docling_json":
+                    from open_webui.retrieval.loaders.docling_json import DoclingLoaderJson
+
                     try:
                         _chunk_size = int(self.kwargs.get("CHUNK_SIZE", 1000))
                     except (ValueError, TypeError):
