@@ -238,12 +238,22 @@ class DoclingLoaderJson(DoclingLoader):
         doc_meta = self._extract_doc_metadata(document_data)
 
         # Build a flat list of word-tokens and a parallel list of their page numbers.
+        #
+        # Docling hands back each structural item (heading, paragraph, list item, ...)
+        # already stripped of leading/trailing whitespace -- it's structural output, not
+        # flat markdown. Concatenating items back-to-back with nothing in between glues
+        # e.g. a heading directly onto the next paragraph ("HeadingParagraph text...").
+        # Insert an explicit paragraph-break token between items to keep the
+        # reconstructed text readable.
         words: list[str] = []
         word_pages: list[int] = []
         for it in items:
             text = it["text"]
             if not text:
                 continue
+            if words:
+                words.append('\n\n')
+                word_pages.append(it["page_no"])
             text = text.replace('\r\n', '\n').replace('\r', '\n')
             # Each whitespace run and each non-whitespace run becomes one token so
             # that joining with "".join() reconstructs the original text exactly.
