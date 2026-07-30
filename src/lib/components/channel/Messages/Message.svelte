@@ -209,7 +209,7 @@
 				: 'transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);'}"
 		>
 			{#if !edit && !disabled}
-				<div class=" absolute {showButtons ? '' : 'hover-reveal'} right-1 -top-2 z-10">
+				<div class=" absolute {showButtons ? '' : 'hover-reveal'} right-1 -top-7 z-30">
 					<div
 						class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
 					>
