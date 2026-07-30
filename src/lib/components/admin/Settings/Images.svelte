@@ -39,20 +39,10 @@
 
 	let showComfyUIWorkflowEditor = false;
 
-	// Dynamic workflow node config — populated automatically by parseAndPopulateWorkflowNodes()
 	let workflowNodesConfig: { type: string; key: string; node_ids: string; class_type: string }[] =
 		[];
 	let lastKnownWorkflowString: string | null = null;
 
-	/**
-	 * Scans every node in the parsed ComfyUI API workflow object and builds a configurable
-	 * row for each primitive input (string / number / boolean). Array-valued inputs are
-	 * wires/links and are intentionally skipped.
-	 *
-	 * @param workflow       - Parsed JSON object (ComfyUI API format).
-	 * @param savedNodes     - Previously-saved node configs used for reconciliation on load.
-	 * @param showToast      - Whether to surface success/warning toasts to the user.
-	 */
 	function parseAndPopulateWorkflowNodes(
 		workflow: Record<string, any>,
 		savedNodes: { type: string; key: string; node_ids: string[] | string }[] = [],
@@ -64,9 +54,6 @@
 			return false;
 		}
 
-		// Each entry is keyed by "nodeId::class_type::inputKey" so that nodes
-		// sharing the same class and input (e.g. positive vs negative CLIPTextEncode)
-		// are always kept as separate rows rather than merged together.
 		const nodeGroups = new Map<
 			string,
 			{ type: string; key: string; node_ids: string[]; class_type: string }
@@ -83,17 +70,13 @@
 					const val = node.inputs[inputKey];
 					const valType = typeof val;
 
-					// Only expose primitive (non-link) inputs
 					if (valType !== 'string' && valType !== 'number' && valType !== 'boolean') continue;
 
 					discoveredPrimitiveCount++;
 
-					// Unique key per node+input — never merges across different node IDs
 					const entryKey = `${nodeId}::${node.class_type}::${inputKey}`;
-					// The "type" stored in COMFYUI_WORKFLOW_NODES uses class_type::inputKey
 					const semanticType = `${node.class_type}::${inputKey}`;
 
-					// Check if this entry had saved node IDs the user configured
 					const saved = savedNodes.find(
 						(s) =>
 							s.type === semanticType &&
@@ -104,10 +87,6 @@
 					);
 
 					if (!nodeGroups.has(entryKey)) {
-						// Keys that map to payload.prompt in _apply_workflow_nodes are ambiguous
-						// when multiple nodes share the same key (e.g. positive vs negative
-						// CLIPTextEncode both have key 'text'). Leave node_ids empty for
-						// these so the admin explicitly picks which nodes receive the prompt.
 						const ambiguousKeys = new Set(['text', 'prompt', 'positive']);
 						const autoAssign = !ambiguousKeys.has(inputKey);
 
@@ -127,7 +106,6 @@
 			return false;
 		}
 
-		// Convert map → array, joining node_ids to comma-separated string for the UI input fields
 		workflowNodesConfig = Array.from(nodeGroups.values()).map((n) => ({
 			...n,
 			node_ids: n.node_ids.join(',')
@@ -152,15 +130,9 @@
 		return true;
 	}
 
-	/**
-	 * Reads config.COMFYUI_WORKFLOW, validates it, and triggers node auto-detection.
-	 * @param showToast   - Surface toasts to the user.
-	 * @param isNewImport - When true, ignore previously-saved node IDs (fresh import).
-	 */
 	const parseWorkflowAndUpdateNodes = (showToast = false, isNewImport = false) => {
 		const wfString: string = config.COMFYUI_WORKFLOW ?? '';
 
-		// Skip if nothing changed (unless it's an explicit new import)
 		if (showToast && wfString === lastKnownWorkflowString && !isNewImport) return;
 
 		if (wfString.trim() === '') {
@@ -197,7 +169,6 @@
 
 	let showComfyUIEditWorkflowEditor = false;
 
-	// Dynamic edit-workflow node config
 	let editWorkflowNodesConfig: {
 		type: string;
 		key: string;
@@ -206,9 +177,6 @@
 	}[] = [];
 	let lastKnownEditWorkflowString: string | null = null;
 
-	/**
-	 * Same as parseWorkflowAndUpdateNodes but operates on the edit-workflow config.
-	 */
 	const parseEditWorkflowAndUpdateNodes = (showToast = false, isNewImport = false) => {
 		const wfString: string = config.IMAGES_EDIT_COMFYUI_WORKFLOW ?? '';
 
@@ -238,7 +206,6 @@
 			}
 
 			const reconcileWith = isNewImport ? [] : (config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES ?? []);
-			// Re-use the same parsing function, writing to editWorkflowNodesConfig
 			const savedNodes = reconcileWith;
 			if (!parsed || typeof parsed !== 'object') {
 				editWorkflowNodesConfig = [];
@@ -257,12 +224,10 @@
 					const valType = typeof val;
 					if (valType !== 'string' && valType !== 'number' && valType !== 'boolean') continue;
 
-					// Unique key per node+input — never merges across different node IDs
 					const entryKey = `${nodeId}::${node.class_type}::${inputKey}`;
 					const semanticType = `${node.class_type}::${inputKey}`;
 
 					if (!nodeGroups.has(entryKey)) {
-						// Same ambiguous-key logic as parseAndPopulateWorkflowNodes
 						const ambiguousKeys = new Set(['text', 'prompt', 'positive']);
 						const autoAssign = !ambiguousKeys.has(inputKey);
 
@@ -370,7 +335,6 @@
 	const saveHandler = async () => {
 		loading = true;
 
-		// Serialize dynamic workflow node configs before saving
 		if (config?.COMFYUI_WORKFLOW) {
 			if (!validateJSON(config?.COMFYUI_WORKFLOW)) {
 				toast.error($i18n.t('Invalid JSON format for ComfyUI Workflow.'));
@@ -424,14 +388,12 @@
 				getModels();
 			}
 
-			// Pretty-print stored workflow JSON for the code editor
 			if (config.COMFYUI_WORKFLOW) {
 				try {
 					config.COMFYUI_WORKFLOW = JSON.stringify(JSON.parse(config.COMFYUI_WORKFLOW), null, 2);
 				} catch (e) {
 					console.error(e);
 				}
-				// Auto-parse on load, reconciling with any saved node configs
 				parseWorkflowAndUpdateNodes(false, false);
 			}
 
@@ -724,7 +686,6 @@
 									const reader = new FileReader();
 									reader.onload = (ev) => {
 										config.COMFYUI_WORKFLOW = ev.target.result as string;
-										// Auto-detect nodes from fresh import
 										parseWorkflowAndUpdateNodes(true, true);
 										(e.target as HTMLInputElement).value = '';
 									};
@@ -774,7 +735,6 @@
 									lang="json"
 									onChange={(e) => {
 										config.COMFYUI_WORKFLOW = e;
-										// Re-detect nodes as the user edits JSON
 										parseWorkflowAndUpdateNodes(false, false);
 									}}
 									onSave={() => {
@@ -1048,7 +1008,6 @@
 									const reader = new FileReader();
 									reader.onload = (ev) => {
 										config.IMAGES_EDIT_COMFYUI_WORKFLOW = ev.target.result as string;
-										// Auto-detect nodes from fresh import
 										parseEditWorkflowAndUpdateNodes(true, true);
 										(e.target as HTMLInputElement).value = '';
 									};
@@ -1097,7 +1056,6 @@
 								lang="json"
 								onChange={(e) => {
 									config.IMAGES_EDIT_COMFYUI_WORKFLOW = e;
-									// Re-detect nodes as the user edits JSON
 									parseEditWorkflowAndUpdateNodes(false, false);
 								}}
 								onSave={() => {

@@ -393,8 +393,6 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
             model_node_id = None
 
             for node in image_config.COMFYUI_WORKFLOW_NODES:
-                # Support both old ('model') and new ('ClassName::key') type formats.
-                # A node is a model-loader if its key ends with '_name' (e.g. ckpt_name, unet_name).
                 node_type = node.get('type', '')
                 node_key = node.get('key', '')
                 is_model_node = node_type == 'model' or node_key.endswith('_name')
