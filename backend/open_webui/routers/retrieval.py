@@ -7,6 +7,7 @@ import mimetypes
 import os
 import re
 import shutil
+import time
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -119,6 +120,12 @@ from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.file_processing import (
+    FileProcessingCancelled,
+    is_cancelled,
+    raise_if_cancelled,
+    run_cancellable,
+)
 from open_webui.utils.misc import (
     calculate_sha256_string,
     sanitize_text_for_db,
@@ -1833,6 +1840,24 @@ class ProcessFileForm(BaseModel):
     collection_name: str | None = None
 
 
+async def _discard_vectors(collection_name: str, file_id: str, shared_collection: bool) -> None:
+    """Undo a vector write for a file that is being deleted.
+
+    A shared knowledge collection holds other files too, so only this file's
+    chunks may go; a private ``file-{id}`` collection is dropped whole.
+    """
+    try:
+        if shared_collection:
+            await ASYNC_VECTOR_DB_CLIENT.delete(
+                collection_name=collection_name,
+                filter={'file_id': file_id},
+            )
+        else:
+            await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+    except Exception as e:
+        log.debug('Vector DB cleanup after cancelled processing: %s', e)
+
+
 @router.post('/process/file')
 async def process_file(
     request: Request,
@@ -1922,7 +1947,29 @@ async def process_file(
                 # Usage: /files/
                 file_path = file.path
                 if file_path:
+                    # Nothing expensive has happened yet — if the user already
+                    # asked for this file to go away, stop right here.
+                    await raise_if_cancelled(file.id)
+
                     file_path = await asyncio.to_thread(Storage.get_file, file_path)
+
+                    # Mark as actively processing and record start time so the
+                    # UI polling loop can show meaningful status information.
+                    await Files.update_file_data_by_id(
+                        file.id,
+                        {'status': 'processing', 'started_at': int(time.time())},
+                        db=db,
+                    )
+
+                    # Callback used by DoclingLoader to persist queue position
+                    # and task_id so they appear in the UI tooltip.
+                    _file_id_for_callback = file.id
+
+                    async def _docling_status_callback(data: dict) -> None:
+                        await Files.update_file_data_by_id(
+                            _file_id_for_callback, data, db=db
+                        )
+
                     loader_config = await get_loader_config()
                     loader = build_loader_from_config(request, loader_config)
                     loader.user = user
@@ -1931,7 +1978,15 @@ async def process_file(
                         'file_name': file.filename,
                         'file_content_type': file.meta.get('content_type'),
                     }
-                    docs = await loader.aload(file.filename, file.meta.get('content_type'), file_path)
+                    loader.kwargs['DOCLING_STATUS_CALLBACK'] = _docling_status_callback
+
+                    # Content extraction is the longest leg of the pipeline
+                    # (minutes to hours for a large PDF). Wait for it in a way
+                    # that a delete request can interrupt.
+                    docs = await run_cancellable(
+                        loader.aload(file.filename, file.meta.get('content_type'), file_path),
+                        file.id,
+                    )
 
                     docs = [
                         Document(
@@ -1962,6 +2017,11 @@ async def process_file(
                 text_content = ' '.join([doc.page_content for doc in docs])
 
             log.debug('text_content: %s', text_content)
+
+            # Extraction may have run for a long time; don't persist its result
+            # for a file the user has meanwhile deleted.
+            await raise_if_cancelled(file.id)
+
             await Files.update_file_data_by_id(
                 file.id,
                 {'content': text_content},
@@ -1998,6 +2058,13 @@ async def process_file(
                     # calls asyncio.run_coroutine_threadsafe(..., main_loop).result()
                     # which blocks the calling thread.  We MUST run it in a
                     # worker thread to avoid deadlocking the event loop.
+                    await raise_if_cancelled(file.id)
+
+                    # Deliberately *not* cancellable: abandoning this wait would
+                    # not stop the worker thread, and its vector write could then
+                    # land after the cleanup and leave orphans behind. Embedding
+                    # is the short leg, and the guard below removes whatever it
+                    # wrote if the file was deleted meanwhile.
                     result = await run_in_threadpool(
                         save_docs_to_vector_db,
                         request,
@@ -2015,6 +2082,20 @@ async def process_file(
                     log.info(f'added {len(docs)} items to collection {collection_name}')
 
                     if result:
+                        # Guard: the delete may have landed between the last
+                        # checkpoint and the vector write, in which case those
+                        # vectors are already orphaned.
+                        if await is_cancelled(file.id):
+                            log.warning(
+                                'File %s was deleted during processing; '
+                                'discarding embeddings to prevent orphaned vectors.',
+                                file.id,
+                            )
+                            await _discard_vectors(collection_name, file.id, bool(form_data.collection_name))
+                            return {
+                                'status': False,
+                                'reason': 'cancelled',
+                            }
                         # Fresh session for the final update.
                         async with get_async_db() as session:
                             await Files.update_file_metadata_by_id(
@@ -2050,6 +2131,17 @@ async def process_file(
                         raise Exception('Error saving document to vector database')
                 except Exception as e:
                     raise e
+
+        except FileProcessingCancelled:
+            # The user deleted this file mid-flight. Not an error: no 'failed'
+            # status is written (the record is normally gone anyway), and any
+            # vectors written before the checkpoint are removed.
+            log.info('Processing of file %s cancelled by user; cleaning up', file.id)
+            await _discard_vectors(collection_name, file.id, bool(form_data.collection_name))
+            return {
+                'status': False,
+                'reason': 'cancelled',
+            }
 
         except Exception as e:
             log.exception(e)

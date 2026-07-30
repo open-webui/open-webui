@@ -43,6 +43,11 @@ from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.file_processing import (
+    register_processing,
+    request_cancellation,
+    unregister_processing,
+)
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -1420,28 +1425,61 @@ async def add_file_to_knowledge_by_id(
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
+    # Idempotency: if the background task already linked this file (e.g. the
+    # browser was open long enough after all), skip the expensive re-embedding
+    # and just return the current knowledge state.
+    if await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
+        log.debug(f'File {form_data.file_id} already in knowledge {id}, skipping re-embed')
+        if knowledge:
+            return KnowledgeFilesResponse(
+                **knowledge.model_dump(),
+                files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+            )
+
     # Add content to the vector database
+    register_processing(form_data.file_id)
     try:
-        await process_file(
+        result = await process_file(
             request,
             ProcessFileForm(file_id=form_data.file_id, collection_name=id),
             user=user,
             db=db,
         )
 
-        # Add file to knowledge base
-        await Knowledges.add_file_to_knowledge_by_id(
-            knowledge_id=id,
-            file_id=form_data.file_id,
-            user_id=user.id,
-            directory_id=form_data.directory_id,
-            db=db,
-        )
+        # process_file reports a delete that arrived mid-embedding instead of
+        # raising; such a file must not be linked.
+        cancelled = isinstance(result, dict) and result.get('reason') == 'cancelled'
+
+        if not cancelled:
+            # Add file to knowledge base
+            await Knowledges.add_file_to_knowledge_by_id(
+                knowledge_id=id,
+                file_id=form_data.file_id,
+                user_id=user.id,
+                directory_id=form_data.directory_id,
+                db=db,
+            )
     except Exception as e:
         log.debug(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
+        )
+    finally:
+        unregister_processing(form_data.file_id)
+
+    if cancelled:
+        # Not an error: the user deleted the file while it was being added, and
+        # the knowledge base as it now stands is the honest answer.
+        log.info(f'File {form_data.file_id} was deleted while being added to knowledge {id}')
+        if not knowledge:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.NOT_FOUND,
+            )
+        return KnowledgeFilesResponse(
+            **knowledge.model_dump(),
+            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
         )
 
     if knowledge:
@@ -1594,11 +1632,34 @@ async def remove_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # Validate the file actually belongs to this knowledge base
-    if not await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db):
+    # Validate the file actually belongs to this knowledge base. A file that is
+    # still being processed is not linked yet, but it is shown in this knowledge
+    # base (see GET /{id}/files/pending) and must be deletable from here too —
+    # otherwise a slow extraction would leave the user with an undeletable row.
+    is_linked = await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db)
+    file_status = (file.data or {}).get('status')
+    is_in_flight_here = (
+        not is_linked
+        and ((file.meta or {}).get('data') or {}).get('knowledge_id') == id
+        and file_status in ('pending', 'processing', 'failed')
+    )
+
+    if not is_linked and not is_in_flight_here:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # Stop the pipeline before tearing anything down, so a background task
+    # cannot write vectors or a 'completed' status for a file we just removed.
+    # The DB status is the cross-process half of the signal; see
+    # utils/file_processing.py.
+    if file_status in ('pending', 'processing'):
+        interrupted = request_cancellation(form_data.file_id)
+        await Files.update_file_data_by_id(form_data.file_id, {'status': 'cancelled'}, db=db)
+        log.info(
+            f'Cancelling processing of file {form_data.file_id} '
+            f'({"signalled in-process" if interrupted else "via database flag"})'
         )
 
     await Knowledges.remove_file_from_knowledge_by_id(knowledge_id=id, file_id=form_data.file_id, db=db)
@@ -1631,6 +1692,24 @@ async def remove_file_from_knowledge_by_id(
 
         # Delete file from database
         await Files.delete_file_by_id(form_data.file_id, db=db)
+
+        # ... and the stored blob, so cancelling a long extraction really does
+        # leave nothing of the file behind.
+        if file.path:
+            try:
+                await asyncio.to_thread(Storage.delete_file, file.path)
+            except Exception as e:
+                log.warning(f'Failed to delete stored file for {form_data.file_id}: {e}')
+
+    elif is_in_flight_here:
+        # The caller may remove the file from this knowledge base but not delete
+        # the record itself (not the owner, or delete_file=false). Detach it from
+        # the knowledge base so it stops showing up as an in-flight upload here.
+        await Files.update_file_metadata_by_id(
+            form_data.file_id,
+            {'data': {**(((file.meta or {}).get('data')) or {}), 'knowledge_id': None}},
+            db=db,
+        )
 
     if knowledge:
         response = KnowledgeFilesResponse(

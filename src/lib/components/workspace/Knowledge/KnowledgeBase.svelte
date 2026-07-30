@@ -133,6 +133,11 @@
 	let fileItems = null;
 	let fileItemsTotal = null;
 
+	// Files deleted in this tab. An upload in progress and the pending poll both
+	// re-add rows from sources that can lag a few seconds behind the deletion,
+	// so every merge below filters against this set.
+	let deletedFileIds = new Set<string>();
+
 	// Directory state
 	let currentDirectoryId: string | null = null;
 	let directoryItems = [];
@@ -185,11 +190,15 @@
 		getItemsPage();
 	}
 
-	const getItemsPage = async () => {
+	// silent=true refreshes in place instead of blanking the list first, so the
+	// poll below can pick up status changes without the rows flashing away.
+	const getItemsPage = async (silent = false) => {
 		if (knowledgeId === null) return;
 
-		fileItems = null;
-		fileItemsTotal = null;
+		if (!silent) {
+			fileItems = null;
+			fileItemsTotal = null;
+		}
 
 		if (sortKey === null) {
 			direction = null;
@@ -210,7 +219,17 @@
 		});
 
 		if (res) {
-			fileItems = res.items;
+			// Uploads started in this tab have no file id until the POST returns,
+			// so the server cannot report them yet. A silent refresh must not drop
+			// those rows.
+			const localInFlight =
+				silent && fileItems !== null
+					? fileItems.filter((f) => f.status === 'uploading' && !f.id)
+					: [];
+
+			fileItems = [...localInFlight, ...res.items].filter(
+				(f) => !(f?.id && deletedFileIds.has(f.id))
+			);
 			fileItemsTotal = res.total;
 			directoryItems = res.directories ?? [];
 			breadcrumbs = res.breadcrumbs ?? [];
@@ -221,7 +240,7 @@
 				if (pendingFiles && pendingFiles.length > 0) {
 					const existingIds = new Set(fileItems.map((f) => f.id));
 					const newPending = pendingFiles
-						.filter((f) => !existingIds.has(f.id))
+						.filter((f) => !existingIds.has(f.id) && !deletedFileIds.has(f.id))
 						.map((f) => ({
 							...f,
 							name: f.meta?.name ?? f.filename,
@@ -229,21 +248,18 @@
 						}));
 					if (newPending.length > 0) {
 						fileItems = [...newPending, ...fileItems];
-
-						// Start polling for completion (if not already polling)
-						if (!pendingPollTimer) {
-							pendingPollTimer = setInterval(async () => {
-								try {
-									const still = await getPendingKnowledgeFiles(localStorage.token, knowledgeId);
-									if (!still || still.length === 0) {
-										clearInterval(pendingPollTimer);
-										pendingPollTimer = null;
-										init();
-									}
-								} catch {}
-							}, 5000);
-						}
 					}
+
+					// Keep refreshing while anything is in flight. A silent refresh
+					// also re-reads the pending list, so this loop both surfaces
+					// status changes (queued → processing → failed) and retires
+					// itself once the last file has landed.
+					if (!pendingPollTimer) {
+						pendingPollTimer = setInterval(() => getItemsPage(true), 5000);
+					}
+				} else if (pendingPollTimer) {
+					clearInterval(pendingPollTimer);
+					pendingPollTimer = null;
 				}
 			} catch (e) {
 				console.warn('Failed to fetch pending files:', e);
@@ -327,6 +343,12 @@
 		fileItems = [...newFileItems, ...(fileItems ?? [])];
 
 		for (const fileItem of newFileItems) {
+			// See uploadFileHandler: once the id is known the row can be deleted
+			// while we are still awaiting its processing stream.
+			let uploadedFileId: string | null = null;
+			const wasDeletedDuringUpload = () =>
+				uploadedFileId !== null && deletedFileIds.has(uploadedFileId);
+
 			try {
 				console.log(fileItem);
 				const res = await processWeb(localStorage.token, '', fileItem.url, false).catch((e) => {
@@ -348,10 +370,29 @@
 					const uploadedFile = await uploadFile(localStorage.token, file, {
 						knowledge_id: knowledge.id,
 						directory_id: currentDirectoryId
+					}, null, (statusData) => {
+						fileItems = fileItems.map((item) =>
+							item.itemId === fileItem.itemId
+								? { ...item, data: { ...(item.data ?? {}), ...statusData } }
+								: item
+						);
+					}, (fileId) => {
+						// Set the real id immediately so polling deduplication works
+						// before the SSE stream finishes.
+						uploadedFileId = fileId;
+						fileItems = fileItems.map((item) =>
+							item.itemId === fileItem.itemId ? { ...item, id: fileId } : item
+						);
 					}).catch((e) => {
-						toast.error(`${e}`);
+						if (!wasDeletedDuringUpload()) {
+							toast.error(`${e}`);
+						}
 						return null;
 					});
+
+					if (wasDeletedDuringUpload()) {
+						continue;
+					}
 
 					if (uploadedFile) {
 						console.log(uploadedFile);
@@ -381,7 +422,9 @@
 			} catch (e) {
 				// remove the item from fileItems
 				fileItems = fileItems.filter((item) => item.itemId !== fileItem.itemId);
-				toast.error(`${e}`);
+				if (!wasDeletedDuringUpload()) {
+					toast.error(`${e}`);
+				}
 			}
 		}
 	};
@@ -423,6 +466,14 @@
 		}
 
 		fileItems = [fileItem, ...(fileItems ?? [])];
+
+		// The server-side id, known as soon as the upload request returns. From
+		// that point on the user can delete the file, which aborts the stream we
+		// are still awaiting below.
+		let uploadedFileId: string | null = null;
+		const wasDeletedDuringUpload = () =>
+			uploadedFileId !== null && deletedFileIds.has(uploadedFileId);
+
 		try {
 			let metadata = {
 				knowledge_id: knowledge.id,
@@ -436,10 +487,40 @@
 					: {})
 			};
 
-			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
-				toast.error(`${e}`);
+			const uploadedFile = await uploadFile(
+				localStorage.token,
+				file,
+				metadata,
+				null,
+				(statusData) => {
+					// Update the local placeholder item with the server-side status so
+					// the tooltip (and spinner) reflect real progress while we wait.
+					fileItems = fileItems.map((item) =>
+						item.itemId === fileItem.itemId
+							? { ...item, data: { ...(item.data ?? {}), ...statusData } }
+							: item
+					);
+				},
+				(fileId) => {
+					// Set the real id immediately so polling deduplication works
+					// before the SSE stream finishes.
+					uploadedFileId = fileId;
+					fileItems = fileItems.map((item) =>
+						item.itemId === fileItem.itemId ? { ...item, id: fileId } : item
+					);
+				}
+			).catch((e) => {
+				// A file deleted mid-upload aborts its own processing stream —
+				// that is the outcome the user asked for, not a failure.
+				if (!wasDeletedDuringUpload()) {
+					toast.error(`${e}`);
+				}
 				return null;
 			});
+
+			if (wasDeletedDuringUpload()) {
+				return;
+			}
 
 			if (uploadedFile) {
 				console.log(uploadedFile);
@@ -462,7 +543,9 @@
 				toast.error($i18n.t('Failed to upload file.'));
 			}
 		} catch (e) {
-			toast.error(`${e}`);
+			if (!wasDeletedDuringUpload()) {
+				toast.error(`${e}`);
+			}
 		}
 	};
 
@@ -863,21 +946,32 @@
 		}
 	};
 
-	const deleteFileHandler = async (fileId) => {
-		try {
-			console.log('Starting file deletion process for:', fileId);
+	const deleteFileHandler = async (fileId, wasProcessing = false) => {
+		if (!fileId) return;
 
-			// Remove from knowledge base only
+		// A file that is still being processed is deleted server-side too — the
+		// backend cancels the running extraction/embedding first. Remember the id
+		// so neither the pending poll nor this tab's own upload handler can put
+		// the row back while that unwinds.
+		deletedFileIds.add(fileId);
+		fileItems = (fileItems ?? []).filter((item) => item.id !== fileId);
+
+		try {
 			const res = await removeFileFromKnowledgeById(localStorage.token, id, fileId);
-			console.log('Knowledge base updated:', res);
 
 			if (res) {
-				toast.success($i18n.t('File removed successfully.'));
+				toast.success(
+					wasProcessing
+						? $i18n.t('Processing stopped and file deleted.')
+						: $i18n.t('File removed successfully.')
+				);
 				await init();
 			}
 		} catch (e) {
 			console.error('Error in deleteFileHandler:', e);
+			deletedFileIds.delete(fileId);
 			toast.error(`${e}`);
+			await init();
 		}
 	};
 
@@ -1582,13 +1676,13 @@
 														}
 													}
 												}}
-												onDelete={(fileId) => {
+												onDelete={(fileId, wasProcessing) => {
 													selectedFileId = null;
 													selectedFile = null;
 													selectedFileContent = '';
 													loadingFileContent = false;
 
-													deleteFileHandler(fileId);
+													deleteFileHandler(fileId, wasProcessing);
 												}}
 												onRename={(fileId, name) => renameFileHandler(fileId, name)}
 												onNavigateDirectory={(dirId) => navigateToDirectory(dirId)}
