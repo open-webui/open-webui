@@ -1,8 +1,11 @@
 import asyncio
+import inspect
 import json
 import logging
 import sys
+import time
 
+import aiohttp
 import ftfy
 import requests
 from azure.identity import DefaultAzureCredential
@@ -11,6 +14,7 @@ from langchain_community.document_loaders import (
     BSHTMLLoader,
     CSVLoader,
     Docx2txtLoader,
+    OutlookMessageLoader,
     PyPDFLoader,
     TextLoader,
     YoutubeLoader,
@@ -26,7 +30,7 @@ from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
 from open_webui.retrieval.loaders.mineru import MinerULoader
 from open_webui.retrieval.loaders.mistral import MistralLoader
-from open_webui.retrieval.loaders.paddleocr_vl import PADDLEOCR_VL_SUPPORTED_EXTENSIONS, PaddleOCRVLLoader
+from open_webui.retrieval.loaders.paddleocr_vl import PaddleOCRVLLoader
 from open_webui.utils.headers import get_user_groups_for_custom_headers
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -179,23 +183,27 @@ class TikaLoader:
 
 
 class DoclingLoader:
-    def __init__(self, url, api_key=None, file_path=None, mime_type=None, params=None):
+    def __init__(self, url, api_key=None, file_path=None, mime_type=None, params=None, timeout=None, status_callback=None):
         self.url = url.rstrip('/')
         self.api_key = api_key
         self.file_path = file_path
         self.mime_type = mime_type
-
         self.params = params or {}
+        self.timeout = timeout  # total seconds to wait; None = infinite
+        self.status_callback = status_callback  # optional callable(dict) to persist queue state
 
-    def load(self) -> list[Document]:
+    def _build_headers(self) -> dict:
+        headers = {}
+        if self.api_key:
+            headers["X-Api-Key"] = f"{self.api_key}"
+        return headers
+
+    def _submit_file(self) -> tuple[str, int | None]:
+        headers = self._build_headers()
         page_break_marker = '\f'
-        with open(self.file_path, 'rb') as f:
-            headers = {}
-            if self.api_key:
-                headers['X-Api-Key'] = f'{self.api_key}'
-
+        with open(self.file_path, "rb") as f:
             r = requests.post(
-                f'{self.url}/v1/convert/file',
+                f"{self.url}/v1/convert/file/async",
                 files={
                     'files': (
                         self.file_path,
@@ -206,35 +214,15 @@ class DoclingLoader:
                 data={
                     'image_export_mode': 'placeholder',
                     'md_page_break_placeholder': page_break_marker,
-                    # Keep Docling params as user-provided form values. Encoding nested
-                    # values here would make Open WebUI responsible for Docling's API
-                    # quirks and could break when Docling changes its form contract.
                     **self.params,
                 },
                 headers=headers,
                 verify=AIOHTTP_CLIENT_SESSION_SSL,
+                timeout=30,
             )
-        if r.ok:
-            result = r.json()
-            document_data = result.get('document', {})
-            md_content = document_data.get('md_content', '')
-            text = md_content or '<No text content found>'
 
-            metadata = {'Content-Type': self.mime_type} if self.mime_type else {}
-            if page_break_marker in md_content:
-                documents = [
-                    Document(page_content=page.strip(), metadata={**metadata, 'page': page_idx})
-                    for page_idx, page in enumerate(md_content.split(page_break_marker))
-                    if page.strip()
-                ]
-                if documents:
-                    log.debug('Docling extracted text: %s', text)
-                    return documents
-
-            log.debug('Docling extracted text: %s', text)
-            return [Document(page_content=text, metadata=metadata)]
-        else:
-            error_msg = f'Error calling Docling API: {r.reason}'
+        if not r.ok:
+            error_msg = f"Error calling Docling API: {r.reason}"
             if r.text:
                 try:
                     error_data = r.json()
@@ -244,12 +232,110 @@ class DoclingLoader:
                     error_msg += f' - {r.text}'
             raise Exception(f'Error calling Docling: {error_msg}')
 
+        submit_data = r.json()
+        task_id = submit_data.get("task_id")
+        task_position = submit_data.get("task_position")
+        if not task_id:
+            raise Exception("Docling async submit did not return a task_id")
+        log.info(
+            "Docling task submitted: %s, queue position: %s",
+            task_id,
+            task_position,
+        )
+        if self.status_callback:
+            self.status_callback({"task_id": task_id, "task_position": task_position})
+
+        return task_id, task_position
+
+    def _poll_task_until_done(self, task_id: str) -> dict:
+        headers = self._build_headers()
+        deadline = time.monotonic() + self.timeout if self.timeout is not None else None
+        poll_wait = 30  # long-poll window per request (seconds)
+
+        while True:
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise Exception(
+                        f"Docling conversion timed out after {self.timeout}s (task_id={task_id})"
+                    )
+                poll_wait = min(poll_wait, int(remaining) + 1)
+
+            poll_start = time.monotonic()
+            try:
+                status_r = requests.get(
+                    f"{self.url}/v1/status/poll/{task_id}",
+                    params={"wait": poll_wait},
+                    headers=headers,
+                    timeout=poll_wait + 10,
+                )
+            except requests.Timeout:
+                log.warning("Docling status poll timed out for task %s, retrying", task_id)
+                elapsed = time.monotonic() - poll_start
+                if elapsed < poll_wait:
+                    time.sleep(poll_wait - elapsed)
+                continue
+
+            if not status_r.ok:
+                raise Exception(f"Error polling Docling task status: {status_r.reason}")
+
+            status_data = status_r.json()
+            task_status = status_data.get("task_status", "")
+            log.debug(
+                "Docling task %s: status=%s, queue_position=%s",
+                task_id,
+                task_status,
+                status_data.get("task_position"),
+            )
+            if self.status_callback and status_data.get("task_position") is not None:
+                self.status_callback({"task_position": status_data["task_position"]})
+
+            if task_status == "success":
+                return status_data
+            elif task_status == "failure":
+                error_msg = status_data.get("error_message") or "Unknown error"
+                raise Exception(f"Docling conversion failed: {error_msg}")
+            # else "pending" or "started" – keep polling
+
+            elapsed = time.monotonic() - poll_start
+            if elapsed < poll_wait:
+                time.sleep(poll_wait - elapsed)
+
+    def _retrieve_result(self, task_id: str) -> dict:
+        headers = self._build_headers()
+        result_r = requests.get(f"{self.url}/v1/result/{task_id}", headers=headers, timeout=30)
+        if not result_r.ok:
+            raise Exception(f"Error retrieving Docling result: {result_r.reason}")
+        return result_r.json()
+
+    def format_result(self, result_json: dict) -> list[Document]:
+        document_data = result_json.get("document", {})
+        text = document_data.get("md_content", "<No text content found>")
+        metadata = {"Content-Type": self.mime_type} if self.mime_type else {}
+        log.debug("Docling extracted text: %s", text)
+        return [Document(page_content=text, metadata=metadata)]
+
+    def load(self) -> list[Document]:
+        task_id, _ = self._submit_file()
+        self._poll_task_until_done(task_id)
+        result_json = self._retrieve_result(task_id)
+        return self.format_result(result_json)
+
+    def load_from_task_id(self, task_id: str) -> list[Document]:
+        """Resume processing from an already-submitted docling task_id.
+
+        Used on server restart when docling-serve is still running the task:
+        skips re-submission and goes straight to polling → retrieve → format.
+        """
+        self._poll_task_until_done(task_id)
+        result_json = self._retrieve_result(task_id)
+        return self.format_result(result_json)
+
 
 class Loader:
     def __init__(self, engine: str = '', **kwargs):
         self.engine = engine
         self.user = kwargs.get('user', None)
-        self.user_groups = kwargs.get('user_groups', None)
         self.metadata = kwargs.get('metadata', {})
         self.kwargs = kwargs
 
@@ -268,13 +354,6 @@ class Loader:
         loop for the entire parse — minutes for large PDFs. This offloads
         the work to a worker thread so the loop stays responsive.
         """
-        # Group lookup is async-only, so it must happen before `load`
-        # is offloaded to a thread without a running event loop.
-        if self.engine == 'external' and self.user_groups is None:
-            self.user_groups = await get_user_groups_for_custom_headers(
-                self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_HEADERS'), self.user
-            )
-
         return await asyncio.to_thread(self.load, filename, file_content_type, file_path)
 
     def _is_text_file(self, file_ext: str, file_content_type: str) -> bool:
@@ -314,20 +393,13 @@ class Loader:
         try:
             raw.decode('utf-8')
             return 'utf-8'
-        except UnicodeDecodeError as e:
-            first_non_utf8 = e.start
+        except UnicodeDecodeError:
+            pass
 
         # Use chardet as a hint, not as ground truth
         import chardet
 
-        # chardet is pure Python (~1.3s/MB), so sample around the first bad byte
-        window = 256 * 1024
-        sample_start = max(0, first_non_utf8 - window // 2)
-        sample = raw[sample_start : sample_start + window]
-        detected = chardet.detect(sample)
-        # A stray byte can sit far from the real payload, leaving the sample with nothing to read
-        if len(sample.translate(None, delete=bytes(range(128)))) < 64 and len(sample) < len(raw):
-            detected = chardet.detect(raw)
+        detected = chardet.detect(raw)
         detected_enc = (detected.get('encoding') or '').lower().replace('-', '').replace('_', '')
 
         # Map chardet's detected encoding to the correct superset codec.
@@ -440,7 +512,6 @@ class Loader:
                 api_key=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY'),
                 mime_type=file_content_type,
                 user=self.user,
-                user_groups=self.user_groups,
                 headers=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_HEADERS'),
                 metadata={
                     **self.metadata,
@@ -500,7 +571,7 @@ class Loader:
                 format_lines=self.kwargs.get('DATALAB_MARKER_FORMAT_LINES', False),
                 output_format=self.kwargs.get('DATALAB_MARKER_OUTPUT_FORMAT', 'markdown'),
             )
-        elif self.engine == 'docling' and self.kwargs.get('DOCLING_SERVER_URL'):
+        elif self.engine in ("docling", "docling_json") and self.kwargs.get("DOCLING_SERVER_URL"):
             if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, encoding=self._detect_text_encoding(file_path))
             else:
@@ -513,13 +584,52 @@ class Loader:
                         log.error('Invalid DOCLING_PARAMS format, expected JSON object')
                         params = {}
 
-                loader = DoclingLoader(
-                    url=self.kwargs.get('DOCLING_SERVER_URL'),
-                    api_key=self.kwargs.get('DOCLING_API_KEY', None),
-                    file_path=file_path,
-                    mime_type=file_content_type,
-                    params=params,
-                )
+                docling_timeout = self.kwargs.get("DOCLING_SERVE_TIMEOUT")
+                if docling_timeout is not None:
+                    try:
+                        docling_timeout = int(docling_timeout)
+                    except (ValueError, TypeError):
+                        docling_timeout = None
+
+                if self.engine == "docling_json":
+                    from open_webui.retrieval.loaders.docling_json import DoclingLoaderJson
+
+                    try:
+                        _chunk_size = int(self.kwargs.get("CHUNK_SIZE", 1000))
+                    except (ValueError, TypeError):
+                        _chunk_size = 1000
+                    try:
+                        _chunk_overlap = int(self.kwargs.get("CHUNK_OVERLAP", 100))
+                    except (ValueError, TypeError):
+                        _chunk_overlap = 100
+                    _text_splitter = self.kwargs.get("TEXT_SPLITTER") or ""
+                    _chunk_content_type = "token" if _text_splitter == "token" else "character"
+                    loader = DoclingLoaderJson(
+                        url=self.kwargs.get("DOCLING_SERVER_URL"),
+                        api_key=self.kwargs.get("DOCLING_API_KEY", None),
+                        file_path=file_path,
+                        mime_type=file_content_type,
+                        params=params,
+                        timeout=docling_timeout,
+                        status_callback=self.kwargs.get("DOCLING_STATUS_CALLBACK"),
+                        chunk_mode=self.kwargs.get("DOCLING_JSON_CHUNK_MODE", "chunk"),
+                        chunk_size=_chunk_size,
+                        chunk_overlap=_chunk_overlap,
+                        chunk_content_type=_chunk_content_type,
+                        tiktoken_encoding_name=str(
+                            self.kwargs.get("TIKTOKEN_ENCODING_NAME") or "cl100k_base"
+                        ),
+                    )
+                else:
+                    loader = DoclingLoader(
+                        url=self.kwargs.get("DOCLING_SERVER_URL"),
+                        api_key=self.kwargs.get("DOCLING_API_KEY", None),
+                        file_path=file_path,
+                        mime_type=file_content_type,
+                        params=params,
+                        timeout=docling_timeout,
+                        status_callback=self.kwargs.get("DOCLING_STATUS_CALLBACK"),
+                    )
         elif (
             self.engine == 'document_intelligence'
             and self.kwargs.get('DOCUMENT_INTELLIGENCE_ENDPOINT') != ''
@@ -573,14 +683,8 @@ class Loader:
                 api_key=self.kwargs.get('MISTRAL_OCR_API_KEY'),
                 file_path=file_path,
                 use_base64=self.kwargs.get('MISTRAL_OCR_USE_BASE64', False),
-                user=self.user,
             )
-        elif (
-            self.engine == 'paddleocr_vl'
-            and self.kwargs.get('PADDLEOCR_VL_BASE_URL')
-            and self.kwargs.get('PADDLEOCR_VL_TOKEN')
-            and file_ext in PADDLEOCR_VL_SUPPORTED_EXTENSIONS
-        ):
+        elif self.engine == 'paddleocr_vl' and self.kwargs.get('PADDLEOCR_VL_TOKEN') != '':
             loader = PaddleOCRVLLoader(
                 api_url=self.kwargs.get('PADDLEOCR_VL_BASE_URL'),
                 token=self.kwargs.get('PADDLEOCR_VL_TOKEN'),
@@ -679,18 +783,7 @@ class Loader:
                     )
                     loader = PptxLoader(file_path)
             elif file_ext == 'msg':
-                try:
-                    from langchain_community.document_loaders import (
-                        UnstructuredEmailLoader,
-                    )
-
-                    # unstructured parses .msg via python-oxmsg; avoids extract_msg's beautifulsoup4<4.14 conflict
-                    loader = UnstructuredEmailLoader(file_path, process_attachments=False)
-                except ImportError:
-                    raise ValueError(
-                        "Processing .msg files requires the 'unstructured' package. "
-                        'Install it with: pip install unstructured'
-                    )
+                loader = OutlookMessageLoader(file_path)
             elif file_ext == 'odt':
                 try:
                     from langchain_community.document_loaders import UnstructuredODTLoader
