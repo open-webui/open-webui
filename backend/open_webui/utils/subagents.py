@@ -75,6 +75,11 @@ async def process_pending_internal_messages(
     user_id: str,
     run: dict,
 ) -> None:
+    """日期：2026-07-30；作者：苍朮；用途：合并待处理内部消息并继承根聊天上下文生成回复。
+
+    参数：source_request 为来源请求，parent_chat_id 为当前父聊天，user_id 为用户，run 为代理运行上下文。
+    返回：无。
+    """
     lock = _parent_locks.setdefault(parent_chat_id, asyncio.Lock())
     while await has_active_tasks(source_request.app.state.redis, parent_chat_id):
         await asyncio.sleep(0.25)
@@ -252,6 +257,7 @@ async def process_pending_internal_messages(
             'parent_id': parent_id,
             'user_message': user_message,
             'session_id': run.get('session_id') or f'{kind}-result:{parent_chat_id}',
+            'root_chat_id': run.get('root_chat_id') or parent_chat_id,
             'background_tasks': {},
             'tool_ids': run.get('tool_ids') or [],
             'skill_ids': run.get('skill_ids') or [],
@@ -278,6 +284,11 @@ async def delegate(
     parent_chat_id: str,
     parent_message_id: str | None,
 ) -> str:
+    """日期：2026-07-30；作者：苍朮；用途：创建子代理并继承根聊天缓存作用域。
+
+    参数：task 为任务，context 为补充上下文，background 控制异步执行，其余关键字参数提供请求、用户与父聊天上下文。
+    返回：前台子代理结果或后台委派状态 JSON。
+    """
     global _foreground_semaphore
 
     task = task.strip()
@@ -313,9 +324,15 @@ async def delegate(
         and await Config.get('code_interpreter.engine', 'pyodide') != 'jupyter'
     ):
         features.pop('code_interpreter')
+    root_chat_id = metadata.get('root_chat_id')
+    if not isinstance(root_chat_id, str) or not root_chat_id.strip():
+        root_chat_id = parent_chat_id
+    else:
+        root_chat_id = root_chat_id.strip()
     run = {
         'model_id': metadata.get('model_id') or (metadata.get('model') or {}).get('id'),
         'session_id': metadata.get('session_id'),
+        'root_chat_id': root_chat_id,
         'tool_ids': copy.deepcopy(metadata.get('tool_ids') or []),
         'skill_ids': copy.deepcopy(metadata.get('skill_ids') or []),
         'system_prompt': metadata.get('system_prompt'),
@@ -442,6 +459,7 @@ async def delegate(
                     'content': prompt,
                 },
                 'session_id': run.get('session_id') or f'subagent:{chat_id}',
+                'root_chat_id': run['root_chat_id'],
                 'background_tasks': {},
                 'tool_ids': run.get('tool_ids') or [],
                 'skill_ids': run.get('skill_ids') or [],

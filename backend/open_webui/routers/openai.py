@@ -49,6 +49,7 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     stream_chunks_handler,
 )
+from open_webui.utils.openai_prompt_cache import apply_responses_prompt_cache_key
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
@@ -1193,6 +1194,16 @@ async def generate_chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
+    """日期：2026-07-30；作者：苍朮；用途：将聊天请求按连接配置转发到 OpenAI-compatible 上游。
+
+    参数：
+        request：当前 FastAPI 请求上下文。
+        form_data：OpenAI Chat Completions 兼容请求负载。
+        user：已验证的当前用户。
+
+    返回：
+        上游返回的普通响应、流式响应或错误响应。
+    """
     if not await Config.get('openai.enable'):
         raise HTTPException(status_code=503, detail='OpenAI API is disabled')
 
@@ -1291,6 +1302,7 @@ async def generate_chat_completion(
     headers, cookies = await get_headers_and_cookies(request, url, key, api_config, metadata, user=user)
 
     is_responses = api_config.get('api_type') == 'responses'
+    payload = apply_responses_prompt_cache_key(payload, metadata, api_config)
 
     if api_config.get('azure') or api_config.get('provider') == 'azure':
         # Only set api-key header if not using Azure Entra ID authentication

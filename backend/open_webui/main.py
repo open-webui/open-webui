@@ -1066,6 +1066,11 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
+    """日期：2026-07-30；作者：苍朮；用途：处理聊天完成请求并保留根聊天缓存作用域。
+
+    参数：request 为 HTTP 请求，form_data 为聊天负载，user 为已验证用户。
+    返回：聊天完成响应或流式响应。
+    """
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 
@@ -1196,6 +1201,7 @@ async def chat_completion(
             'user_message_id': user_message.get('id') if user_message else None,
             'assistant_message_id': form_data.pop('assistant_message_id', None),
             'session_id': form_data.pop('session_id', None),
+            'root_chat_id': form_data.pop('root_chat_id', None),
             'folder_id': form_data.pop('folder_id', None),
             'filter_ids': form_data.pop('filter_ids', []),
             'tool_ids': form_data.get('tool_ids', None),
