@@ -148,6 +148,7 @@
 	let messagesRef: Messages | undefined;
 
 	let autoScroll = true;
+	let focusedMessageOnLoad = false;
 	let isNearTop = true;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
@@ -586,7 +587,9 @@
 			await tick();
 			loading = false;
 			noteChatDebug('embedded chat loading false');
-			window.setTimeout(() => scrollToBottom(), 0);
+			if (!focusedMessageOnLoad) {
+				window.setTimeout(() => scrollToBottom(), 0);
+			}
 
 			await tick();
 
@@ -2007,6 +2010,7 @@
 
 	const loadChat = async () => {
 		noteChatDebug('loadChat start');
+		focusedMessageOnLoad = false;
 		// chatIdProp is empty for chats started from the home page (URL set via replaceState)
 		chatId.set(chatIdProp || $chatId);
 		noteChatDebug('loadChat set active chat id');
@@ -2148,6 +2152,35 @@
 				}
 
 				await tick();
+
+				const focusMessageId = $page.url.searchParams.get('message');
+				if (focusMessageId && history.messages[focusMessageId]) {
+					const focusFileId = $page.url.searchParams.get('image');
+					await showMessage(history.messages[focusMessageId], false, false);
+					autoScroll = false;
+					await messagesRef?.showAllMessages();
+					await tick();
+
+					const scrollToFocus = () => {
+						const messageElement = document.getElementById(`message-${focusMessageId}`);
+						const target =
+							(focusFileId &&
+								messageElement?.querySelector(`img[src*="${CSS.escape(focusFileId)}"]`)) ||
+							messageElement;
+						target?.scrollIntoView({ behavior: 'auto', block: 'center' });
+						return target;
+					};
+
+					const target = scrollToFocus();
+					requestAnimationFrame(() => {
+						scrollToFocus();
+						requestAnimationFrame(() => scrollToFocus());
+					});
+					if (target instanceof HTMLImageElement && !target.complete) {
+						target.addEventListener('load', () => scrollToFocus(), { once: true });
+					}
+					focusedMessageOnLoad = true;
+				}
 
 				return true;
 			} else {

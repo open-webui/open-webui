@@ -1,4 +1,16 @@
 import { IMAGES_API_BASE_URL } from '$lib/constants';
+import { searchFiles } from '$lib/apis/files';
+
+export const getGeneratedImages = async (token: string, skip: number = 0, limit: number = 20) => {
+	try {
+		return await searchFiles(token, 'generated-image*', skip, limit);
+	} catch (error) {
+		if (typeof error === 'string' && error.includes('No files found')) {
+			return [];
+		}
+		throw error;
+	}
+};
 
 export const getConfig = async (token: string = '') => {
 	let error = null;

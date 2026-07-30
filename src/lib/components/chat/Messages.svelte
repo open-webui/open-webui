@@ -154,6 +154,13 @@
 		}
 	};
 
+	export const showAllMessages = async () => {
+		if (messagesCount === null) return;
+		messagesCount = null;
+		buildMessages();
+		await tick();
+	};
+
 	export const scrollToTop = async () => {
 		messagesCount = null;
 		buildMessages();

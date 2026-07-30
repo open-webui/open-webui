@@ -785,6 +785,19 @@ export const getChatById = async (token: string, id: string) => {
 	return res;
 };
 
+export const chatExists = async (token: string, id: string) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	}).catch(() => null);
+
+	return res?.ok ?? false;
+};
+
 export const getChatByShareId = async (token: string, share_id: string) => {
 	let error = null;
 
