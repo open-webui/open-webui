@@ -203,47 +203,54 @@ async def periodic_session_pool_cleanup():
 
 
 async def periodic_usage_pool_cleanup():
-    max_retries = 2
     retry_delay = random.uniform(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT)
-    for attempt in range(max_retries + 1):
-        if aquire_func():
-            break
-        else:
-            if attempt < max_retries:
-                log.debug('Cleanup lock already exists. Retry %s after %ss...', attempt + 1, retry_delay)
-                await asyncio.sleep(retry_delay)
-            else:
-                log.warning('Failed to acquire cleanup lock after retries. Skipping cleanup.')
-                return
+    while True:
+        # A Redis error must not kill the task: treat it as "lock not held" and retry.
+        try:
+            acquired = aquire_func()
+        except Exception:
+            log.exception('Cleanup lock acquisition error; will retry')
+            acquired = False
 
-    log.debug('Running periodic_cleanup')
-    try:
-        while True:
-            if not renew_func():
-                log.error('Unable to renew cleanup lock. Exiting usage pool cleanup.')
-                raise Exception('Unable to renew usage pool cleanup lock.')
+        if not acquired:
+            log.debug('Cleanup lock held by another node. Retrying.')
+            await asyncio.sleep(retry_delay)
+            continue
 
-            now = int(time.time())
-            for model_id, connections in list(USAGE_POOL.items()):
-                # Creating a list of sids to remove if they have timed out
-                expired_sids = [
-                    sid for sid, details in connections.items() if now - details['updated_at'] > TIMEOUT_DURATION
-                ]
+        log.debug('Running periodic_cleanup')
+        try:
+            while True:
+                try:
+                    renewed = renew_func()
+                except Exception:
+                    log.exception('Cleanup lock renewal error; will re-acquire')
+                    renewed = False
 
-                if connections and not expired_sids:
-                    continue
+                if not renewed:
+                    log.warning('Unable to renew cleanup lock. Retrying cleanup ownership.')
+                    break
 
-                for sid in expired_sids:
-                    del connections[sid]
+                now = int(time.time())
+                for model_id, connections in list(USAGE_POOL.items()):
+                    # Creating a list of sids to remove if they have timed out
+                    expired_sids = [
+                        sid for sid, details in connections.items() if now - details['updated_at'] > TIMEOUT_DURATION
+                    ]
 
-                if not connections:
-                    log.debug('Cleaning up model %s from usage pool', model_id)
-                    del USAGE_POOL[model_id]
-                else:
-                    USAGE_POOL[model_id] = connections
-            await asyncio.sleep(TIMEOUT_DURATION)
-    finally:
-        release_func()
+                    if connections and not expired_sids:
+                        continue
+
+                    for sid in expired_sids:
+                        del connections[sid]
+
+                    if not connections:
+                        log.debug('Cleaning up model %s from usage pool', model_id)
+                        del USAGE_POOL[model_id]
+                    else:
+                        USAGE_POOL[model_id] = connections
+                await asyncio.sleep(TIMEOUT_DURATION)
+        finally:
+            release_func()
 
 
 app = socketio.ASGIApp(
