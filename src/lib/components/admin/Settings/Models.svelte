@@ -258,7 +258,11 @@
 		}
 
 		workspaceModels = await getBaseModels(localStorage.token, selectedTag);
-		baseModels = await getModels(localStorage.token, null, true);
+		// Fetch ALL models (base + workspace). Passing base=true here restricted
+		// the admin list to connection/base models only, so public workspace
+		// models never appeared and could not be ordered, defaulted, or pinned
+		// (#27702, regression from v0.10.2).
+		baseModels = await getModels(localStorage.token, null, false);
 		const workspaceModelIds = new Set<string>(workspaceModels.map((wm: ModelListItem) => wm.id));
 
 		models = baseModels
