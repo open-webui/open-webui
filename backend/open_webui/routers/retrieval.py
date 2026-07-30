@@ -475,19 +475,19 @@ async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
 
 
 class OpenAIConfigForm(BaseModel):
-    url: str
-    key: str
+    url: str | None = None
+    key: str | None = None
 
 
 class OllamaConfigForm(BaseModel):
-    url: str
-    key: str
+    url: str | None = None
+    key: str | None = None
 
 
 class AzureOpenAIConfigForm(BaseModel):
-    url: str
-    key: str
-    version: str
+    url: str | None = None
+    key: str | None = None
+    version: str | None = None
 
 
 class EmbeddingModelUpdateForm(BaseModel):
