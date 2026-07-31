@@ -17,7 +17,7 @@ authlib==1.7.2
 joserfc==1.7.4
 
 requests==2.34.2
-aiohttp==3.13.5 # do not update to 3.13.3 - broken
+aiohttp==3.14.1 # do not update to 3.13.3 - broken
 async-timeout
 aiocache
 aiofiles
@@ -42,10 +42,10 @@ RestrictedPython==8.2
 loguru==0.7.3
 asgiref==3.11.1
 
-mcp==1.27.2
+mcp==1.28.1
 openai
 
-langchain==1.2.10
+langchain==1.3.9
 langchain-community==0.4.2
 langchain-classic==1.0.7
 langchain-text-splitters==1.1.2
