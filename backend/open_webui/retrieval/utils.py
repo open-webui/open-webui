@@ -6,7 +6,6 @@ import logging
 import os
 import re
 import time
-from concurrent.futures import ThreadPoolExecutor
 from typing import Awaitable, Optional, Union
 from urllib.parse import quote
 
@@ -739,13 +738,13 @@ async def query_collection(
     query_embeddings = await embedding_function(queries, prefix=RAG_EMBEDDING_QUERY_PREFIX)
     log.debug(f'query_collection: processing {len(queries)} queries across {len(collection_names)} collections')
 
-    with ThreadPoolExecutor() as executor:
-        future_results = []
-        for query_embedding in query_embeddings:
-            for collection_name in collection_names:
-                result = executor.submit(process_query_collection, collection_name, query_embedding)
-                future_results.append(result)
-        task_results = [future.result() for future in future_results]
+    task_results = await asyncio.gather(
+        *[
+            asyncio.to_thread(process_query_collection, collection_name, query_embedding)
+            for query_embedding in query_embeddings
+            for collection_name in collection_names
+        ]
+    )
 
     for result, err in task_results:
         if err is not None:
