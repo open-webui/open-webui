@@ -32,12 +32,24 @@ def expand_recurring_event(
     if not rrule_str:
         return [event_dict]
 
-    range_start_dt = datetime.fromtimestamp(range_start_ns / 1_000_000_000)
-    range_end_dt = datetime.fromtimestamp(range_end_ns / 1_000_000_000)
+    tzinfo = None
+    if tz:
+        try:
+            tzinfo = ZoneInfo(tz)
+        except Exception:
+            tzinfo = None
+
+    def _to_wall(ns: int) -> datetime:
+        if tzinfo:
+            return datetime.fromtimestamp(ns / 1_000_000_000, tz=tzinfo).replace(tzinfo=None)
+        return datetime.fromtimestamp(ns / 1_000_000_000)
+
+    range_start_dt = _to_wall(range_start_ns)
+    range_end_dt = _to_wall(range_end_ns)
     scan_start = range_start_dt - timedelta(days=1)
 
     original_start_ns = event_dict['start_at']
-    original_start_dt = datetime.fromtimestamp(original_start_ns / 1_000_000_000)
+    original_start_dt = _to_wall(original_start_ns)
 
     try:
         # Anchor to the event's real start so day-of-week / day-of-month are correct
@@ -53,12 +65,8 @@ def expand_recurring_event(
     dt = rule.after(scan_start, inc=True)
 
     while dt and dt < range_end_dt and len(instances) < max_instances:
-        if tz:
-            try:
-                dt_tz = dt.replace(tzinfo=ZoneInfo(tz))
-                instance_start_ns = int(dt_tz.timestamp() * 1_000_000_000)
-            except Exception:
-                instance_start_ns = int(dt.timestamp() * 1_000_000_000)
+        if tzinfo:
+            instance_start_ns = int(dt.replace(tzinfo=tzinfo).timestamp() * 1_000_000_000)
         else:
             instance_start_ns = int(dt.timestamp() * 1_000_000_000)
 
