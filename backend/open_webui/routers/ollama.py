@@ -1149,7 +1149,7 @@ async def generate_chat_completion(
 
     return await send_request(
         f'{url}/api/chat',
-        payload=json.dumps(payload),
+        payload=JSONCodec.dumps(payload),
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=form_data.stream,
@@ -1244,7 +1244,7 @@ async def generate_openai_completion(
 
     return await send_request(
         f'{url}/v1/completions',
-        payload=json.dumps(payload),
+        payload=JSONCodec.dumps(payload),
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
@@ -1295,7 +1295,7 @@ async def generate_openai_embeddings(
 
     return await send_request(
         f'{url}/v1/embeddings',
-        payload=json.dumps(payload),
+        payload=JSONCodec.dumps(payload),
         key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
         user=user,
         metadata=metadata,
@@ -1352,7 +1352,7 @@ async def generate_openai_chat_completion(
 
     return await send_request(
         f'{url}/v1/chat/completions',
-        payload=json.dumps(payload),
+        payload=JSONCodec.dumps(payload),
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
@@ -1404,7 +1404,7 @@ async def generate_anthropic_messages(
 
     return await send_request(
         f'{url}/v1/messages',
-        payload=json.dumps(payload),
+        payload=JSONCodec.dumps(payload),
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
@@ -1462,7 +1462,7 @@ async def generate_responses(
 
     return await send_request(
         f'{url}/v1/responses',
-        payload=json.dumps(payload),
+        payload=JSONCodec.dumps(payload),
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
