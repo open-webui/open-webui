@@ -30,6 +30,7 @@ from open_webui.retrieval.vector.main import (
     VectorItem,
 )
 from open_webui.retrieval.vector.utils import process_metadata
+from open_webui.utils.json_codec import JSONCodec
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool, QueuePool
 
@@ -72,7 +73,7 @@ def _safe_json(v: Any) -> Dict[str, Any]:
             return {}
     if isinstance(v, str):
         try:
-            j = json.loads(v)
+            j = JSONCodec.loads(v)
             return j if isinstance(j, dict) else {}
         except Exception:
             return {}
