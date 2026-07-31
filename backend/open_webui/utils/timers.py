@@ -13,7 +13,7 @@ from typing import Literal
 from uuid import uuid4
 
 from fastapi import Request
-from sqlalchemy import select
+from sqlalchemy import BigInteger, cast, select
 from starlette.datastructures import Headers
 
 from open_webui.internal.db import get_async_db
@@ -170,19 +170,21 @@ async def create_timer(
 async def claim_due_timers(now_ns: int, limit: int = 10) -> list[tuple[str, str]]:
     """Claim due timers by moving them from pending to running."""
     async with get_async_db() as db:
+        timer_at = cast(Chat.meta['timer_at'].as_string(), BigInteger)
         stmt = (
             select(Chat)
             .where(Chat.meta['internal'].as_boolean().is_(True))
             .where(Chat.meta['type'].as_string() == 'timer')
             .where(Chat.meta['status'].as_string() == 'pending')
+            .where(timer_at <= now_ns)
+            .order_by(timer_at)
+            .limit(limit)
         )
         if db.bind.dialect.name == 'postgresql':
             stmt = stmt.with_for_update(skip_locked=True)
 
         result = await db.execute(stmt)
-        rows = [row for row in result.scalars().all() if int((row.meta or {}).get('timer_at') or 0) <= now_ns]
-        rows.sort(key=lambda row: int((row.meta or {}).get('timer_at') or 0))
-        rows = rows[:limit]
+        rows = result.scalars().all()
 
         claimed = []
         for row in rows:
