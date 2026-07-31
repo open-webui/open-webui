@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -25,6 +24,7 @@ from open_webui.retrieval.vector.main import (
     VectorItem,
 )
 from open_webui.retrieval.vector.utils import merge_hybrid_search_results, process_metadata
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import sanitize_text_for_db
 from pgvector.sqlalchemy import HALFVEC, Vector
 from sqlalchemy import (
@@ -303,7 +303,7 @@ class PgvectorClient(VectorDBBase):
                     # Use raw SQL for BYTEA/pgcrypto
                     # Ensure metadata is converted to its JSON text representation
                     # Sanitize to strip null bytes / surrogates that PostgreSQL cannot store
-                    json_metadata = sanitize_text_for_db(json.dumps(item['metadata']))
+                    json_metadata = sanitize_text_for_db(JSONCodec.dumps(item['metadata']))
                     item_text = sanitize_text_for_db(item['text'])
                     self.session.execute(
                         text("""
@@ -354,7 +354,7 @@ class PgvectorClient(VectorDBBase):
                 for item in items:
                     vector = self.adjust_vector_length(item['vector'])
                     # Sanitize to strip null bytes / surrogates that PostgreSQL cannot store
-                    json_metadata = sanitize_text_for_db(json.dumps(item['metadata']))
+                    json_metadata = sanitize_text_for_db(JSONCodec.dumps(item['metadata']))
                     item_text = sanitize_text_for_db(item['text'])
                     self.session.execute(
                         text("""

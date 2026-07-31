@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import json
 import time
 from datetime import timedelta
 from uuid import uuid4
@@ -16,6 +15,7 @@ from open_webui.models.config import Config
 from open_webui.models.users import UserModel, Users
 from open_webui.tasks import create_task, has_active_tasks
 from open_webui.utils.auth import create_token
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_message_list
 from sqlalchemy import select
 from starlette.datastructures import Headers
@@ -647,7 +647,7 @@ async def delegate(
         return f'Error: {exc}'
 
     if background:
-        return json.dumps(
+        return JSONCodec.dumps(
             {
                 'status': 'dispatched',
                 'delegation_id': delegation_id,

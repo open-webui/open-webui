@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import random
 import sys
@@ -32,6 +31,7 @@ from open_webui.utils.filter import (
     get_filter_functions,
     process_filter_functions,
 )
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.models import check_model_access, get_all_models
 from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (
@@ -108,7 +108,7 @@ async def generate_direct_chat_completion(
                             if 'done' in data and data['done']:
                                 break  # Stop streaming when 'done' is received
 
-                            yield f'data: {json.dumps(data)}\n\n'
+                            yield f'data: {JSONCodec.dumps(data)}\n\n'
                         elif isinstance(data, str):
                             if 'data:' in data:
                                 yield f'{data}\n\n'
@@ -249,7 +249,7 @@ async def generate_chat_completion(
             if form_data.get('stream') == True:
 
                 async def stream_wrapper(stream):
-                    yield f'data: {json.dumps({"selected_model_id": selected_model_id})}\n\n'
+                    yield f'data: {JSONCodec.dumps({"selected_model_id": selected_model_id})}\n\n'
                     async for chunk in stream:
                         yield chunk
 

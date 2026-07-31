@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import re
 from typing import Any
 
 from fastapi import HTTPException
-
 from open_webui.models.config import Config
 from open_webui.models.memories import Memories
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import add_or_update_system_message, get_content_from_message
 
 log = logging.getLogger(__name__)
@@ -593,7 +592,7 @@ Conversation:
         return []
 
     try:
-        parsed = json.loads(content[start : end + 1])
+        parsed = JSONCodec.loads(content[start : end + 1])
     except Exception:
         return []
 

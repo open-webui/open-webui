@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import io
-import json
 import logging
 import time
 import uuid
@@ -31,8 +30,8 @@ from open_webui.models.knowledge import (
     KnowledgeUserResponse,
 )
 from open_webui.models.models import ModelForm, Models
-from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.retrieval.external import retrieve_external_knowledge, retrieve_external_knowledge_for_connection
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
     BatchProcessFilesForm,
     ProcessFileForm,
@@ -43,6 +42,7 @@ from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.json_codec import JSONCodec
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -1277,7 +1277,7 @@ async def get_pending_knowledge_files(
         for _ in range(MAX_POLL_DURATION // 3):
             pending = await Files.get_pending_files_for_knowledge(knowledge_id)
             data = [f.model_dump() for f in pending]
-            yield f'data: {json.dumps(data)}\n\n'
+            yield f'data: {JSONCodec.dumps(data)}\n\n'
             if len(pending) == 0:
                 break
             await asyncio.sleep(3)

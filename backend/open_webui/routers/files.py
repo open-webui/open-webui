@@ -1,7 +1,6 @@
 import asyncio
 import errno
 import hashlib
-import json
 import logging
 import os
 import uuid
@@ -28,8 +27,8 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_db_context, get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
-from open_webui.models.config import Config
 from open_webui.models.chats import Chats
+from open_webui.models.config import Config
 from open_webui.models.files import (
     FileForm,
     FileListResponse,
@@ -55,6 +54,7 @@ router = APIRouter()
 
 
 from open_webui.utils.access_control.files import has_access_to_file
+from open_webui.utils.json_codec import JSONCodec
 
 ############################
 # Upload File
@@ -326,8 +326,8 @@ async def upload_file_handler(
 
     if isinstance(metadata, str):
         try:
-            metadata = json.loads(metadata)
-        except json.JSONDecodeError:
+            metadata = JSONCodec.loads(metadata)
+        except JSONCodec.JSONDecodeError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Invalid metadata format'),
@@ -642,14 +642,14 @@ async def get_file_process_status(
                             if status == 'failed':
                                 event['error'] = data.get('error')
 
-                            yield f'data: {json.dumps(event)}\n\n'
+                            yield f'data: {JSONCodec.dumps(event)}\n\n'
                             if status in ('completed', 'failed'):
                                 break
                         else:
                             # Legacy
                             break
                     else:
-                        yield f'data: {json.dumps({"status": "not_found"})}\n\n'
+                        yield f'data: {JSONCodec.dumps({"status": "not_found"})}\n\n'
                         break
 
                     await asyncio.sleep(1)

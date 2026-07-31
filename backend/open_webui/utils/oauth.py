@@ -2,7 +2,6 @@ import asyncio
 import base64
 import fnmatch
 import hashlib
-import json
 import logging
 import re
 import sys
@@ -35,8 +34,8 @@ from mcp.shared.auth import (
 )
 from open_webui.config import (
     DEFAULT_USER_ROLE,
-    ENABLE_OAUTH_GROUP_CREATION,
     ENABLE_OAUTH,
+    ENABLE_OAUTH_GROUP_CREATION,
     ENABLE_OAUTH_GROUP_MANAGEMENT,
     ENABLE_OAUTH_ROLE_MANAGEMENT,
     ENABLE_OAUTH_SIGNUP,
@@ -67,7 +66,6 @@ from open_webui.config import (
     WEBHOOK_URL,
 )
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.events import EVENTS, publish_event
 from open_webui.env import (
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
     AIOHTTP_CLIENT_SESSION_SSL,
@@ -79,6 +77,7 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
 )
+from open_webui.events import EVENTS, publish_event
 from open_webui.models.auths import Auths
 from open_webui.models.config import Config
 from open_webui.models.groups import GroupForm, GroupModel, Groups, GroupUpdateForm
@@ -114,6 +113,7 @@ class OAuthClientInformationFull(OAuthClientMetadata):
 
 
 from open_webui.env import GLOBAL_LOG_LEVEL
+from open_webui.utils.json_codec import JSONCodec
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -265,7 +265,7 @@ except Exception as e:
 def encrypt_data(data) -> str:
     """Encrypt data for storage"""
     try:
-        data_json = json.dumps(data)
+        data_json = JSONCodec.dumps(data)
         encrypted = FERNET.encrypt(data_json.encode()).decode()
         return encrypted
     except Exception as e:
@@ -277,7 +277,7 @@ def decrypt_data(data: str):
     """Decrypt data from storage"""
     try:
         decrypted = FERNET.decrypt(data.encode()).decode()
-        return json.loads(decrypted)
+        return JSONCodec.loads(decrypted)
     except Exception as e:
         log.error(f'Error decrypting data: {e}')
         raise
@@ -968,7 +968,7 @@ class OAuthClientManager:
                     content_type = resp.headers.get('content-type', '')
                     if 'application/json' in content_type:
                         try:
-                            payload = json.loads(response_text)
+                            payload = JSONCodec.loads(response_text)
                             error = payload.get('error')
                             error_description = payload.get('error_description', '')
                         except Exception:
@@ -1556,7 +1556,7 @@ class OAuthManager:
         oauth_claim = auth_config.OAUTH_GROUPS_CLAIM
 
         try:
-            blocked_groups = json.loads(auth_config.OAUTH_BLOCKED_GROUPS)
+            blocked_groups = JSONCodec.loads(auth_config.OAUTH_BLOCKED_GROUPS)
         except Exception as e:
             log.exception(f'Error loading OAUTH_BLOCKED_GROUPS: {e}')
             blocked_groups = []

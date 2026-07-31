@@ -40,6 +40,8 @@ from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     RAG_SYSTEM_CONTEXT,
 )
+from open_webui.events import EVENTS, publish_event
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
@@ -47,7 +49,6 @@ from open_webui.models.models import Models
 from open_webui.models.notes import Notes
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import UserModel, Users
-from open_webui.events import EVENTS, publish_event
 from open_webui.retrieval.utils import get_sources_from_items
 from open_webui.routers.images import (
     CreateImageForm,
@@ -76,7 +77,6 @@ from open_webui.socket.main import (
     get_event_emitter,
 )
 from open_webui.utils.access_control import has_connection_access, has_permission
-from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.access_control.files import get_owner_accessible_folder_files
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.chat import generate_chat_completion
@@ -94,7 +94,6 @@ from open_webui.utils.filter import (
     get_filter_functions,
     process_filter_functions,
 )
-
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.memory import add_memory_context, review_memory_after_turn
@@ -242,7 +241,7 @@ def _split_tool_calls(
 
     def split_json_objects(raw: str) -> list[str]:
         if not isinstance(raw, str):
-            raw = '' if raw is None else json.dumps(raw)
+            raw = '' if raw is None else JSONCodec.dumps(raw)
 
         decoder = json.JSONDecoder()
         results = []
@@ -257,7 +256,7 @@ def _split_tool_calls(
                 _, end = decoder.raw_decode(raw, position)
                 results.append(raw[position:end].strip())
                 position = end
-            except json.JSONDecodeError:
+            except JSONCodec.JSONDecodeError:
                 return [raw]
 
         return results or [raw]
@@ -267,7 +266,7 @@ def _split_tool_calls(
         function = tool_call.setdefault('function', {})
         arguments = function.get('arguments')
         if not isinstance(arguments, str):
-            arguments = '' if arguments is None else json.dumps(arguments)
+            arguments = '' if arguments is None else JSONCodec.dumps(arguments)
             function['arguments'] = arguments
         split_arguments = split_json_objects(arguments)
 
@@ -302,7 +301,7 @@ def get_citation_source_from_tool_result(
     try:
         try:
             tool_result = JSONCodec.loads(tool_result)
-        except (json.JSONDecodeError, TypeError):
+        except (JSONCodec.JSONDecodeError, TypeError):
             pass  # keep tool_result as-is (e.g. fetch_url returns plain text)
         if isinstance(tool_result, dict) and 'error' in tool_result:
             return []
@@ -1003,7 +1002,7 @@ async def process_tool_result(
                         if isinstance(text, str):
                             try:
                                 text = JSONCodec.loads(text)
-                            except json.JSONDecodeError:
+                            except JSONCodec.JSONDecodeError:
                                 pass
                         tool_response.append(text)
                     elif item.get('type') in ['image', 'audio']:
@@ -1031,7 +1030,7 @@ async def process_tool_result(
                         if isinstance(text, str) and text:
                             try:
                                 text = JSONCodec.loads(text)
-                            except json.JSONDecodeError:
+                            except JSONCodec.JSONDecodeError:
                                 pass
                             tool_response.append(text)
                         elif resource.get('blob'):
@@ -1106,7 +1105,7 @@ async def terminal_event_handler(
         if isinstance(parsed, str):
             try:
                 parsed = JSONCodec.loads(parsed)
-            except (json.JSONDecodeError, TypeError):
+            except (JSONCodec.JSONDecodeError, TypeError):
                 pass
         if isinstance(parsed, dict) and parsed.get('exists') is False:
             return
@@ -1198,7 +1197,7 @@ async def chat_completion_tools_handler(
     sources = []
 
     specs = [tool['spec'] for tool in tools.values()]
-    tools_specs = json.dumps(specs, ensure_ascii=False)
+    tools_specs = JSONCodec.dumps(specs, ensure_ascii=False)
 
     tools_prompt_template = task_config.get('task.tools.prompt_template')
     if tools_prompt_template != '':
@@ -1969,7 +1968,7 @@ def apply_params_to_form_data(form_data, model):
                 try:
                     # Attempt to parse the string as JSON
                     custom_params[key] = JSONCodec.loads(value)
-                except json.JSONDecodeError:
+                except JSONCodec.JSONDecodeError:
                     # If it fails, keep the original string
                     pass
 
@@ -3029,7 +3028,7 @@ def get_response_data(response):
         if isinstance(response.body, bytes):
             try:
                 response_data = JSONCodec.loads(response.body.decode('utf-8', 'replace'))
-            except json.JSONDecodeError:
+            except JSONCodec.JSONDecodeError:
                 response_data = {'error': {'detail': 'Invalid JSON response'}}
         else:
             response_data = response
@@ -4471,7 +4470,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                         delta_tool_call['function']['arguments'] = (
                                                             ''
                                                             if delta_arguments is None
-                                                            else json.dumps(delta_arguments)
+                                                            else JSONCodec.dumps(delta_arguments)
                                                         )
                                                     response_tool_calls.append(delta_tool_call)
                                                 else:
@@ -4486,7 +4485,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                                                     if delta_arguments is not None:
                                                         if not isinstance(delta_arguments, str):
-                                                            delta_arguments = json.dumps(delta_arguments)
+                                                            delta_arguments = JSONCodec.dumps(delta_arguments)
                                                         current_response_tool_call.setdefault('function', {})
                                                         if not isinstance(
                                                             current_response_tool_call['function'].get('arguments'),
@@ -4874,7 +4873,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         'function': {
                                             'name': item.get('name', ''),
                                             'arguments': (
-                                                arguments if isinstance(arguments, str) else json.dumps(arguments)
+                                                arguments if isinstance(arguments, str) else JSONCodec.dumps(arguments)
                                             ),
                                         },
                                     }
@@ -4963,7 +4962,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 except Exception as e:
                                     log.debug(e)
                                     return None
-                        tool_call.setdefault('function', {})['arguments'] = json.dumps(params)
+                        tool_call.setdefault('function', {})['arguments'] = JSONCodec.dumps(params)
                         return params
 
                     async def execute_tool_call(tool_call):

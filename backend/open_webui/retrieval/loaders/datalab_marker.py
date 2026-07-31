@@ -7,6 +7,7 @@ from typing import List, Optional
 import requests
 from fastapi import HTTPException, status
 from langchain_core.documents import Document
+from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
 
@@ -249,11 +250,11 @@ class DatalabMarkerLoader:
         images = final_result.get('images', {})
         if images:
             metadata['image_count'] = len(images)
-            metadata['images'] = json.dumps(list(images.keys()))
+            metadata['images'] = JSONCodec.dumps(list(images.keys()))
 
         for k, v in metadata.items():
             if isinstance(v, (dict, list)):
-                metadata[k] = json.dumps(v)
+                metadata[k] = JSONCodec.dumps(v)
             elif v is None:
                 metadata[k] = ''
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import io
-import json
 import logging
 import mimetypes
 import re
@@ -17,7 +16,6 @@ import aiofiles
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
-from PIL import Image, ImageOps
 from open_webui.config import (
     CACHE_DIR,
     ENABLE_OPENAI_IMAGE_EDIT_NORMALIZATION,
@@ -43,7 +41,9 @@ from open_webui.utils.images.comfyui import (
     comfyui_edit_image,
     comfyui_upload_image,
 )
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.session_pool import get_session
+from PIL import Image, ImageOps
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -389,7 +389,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
             ) as r:
                 info = await r.json()
 
-            workflow = json.loads(image_config.COMFYUI_WORKFLOW)
+            workflow = JSONCodec.loads(image_config.COMFYUI_WORKFLOW)
             model_node_id = None
 
             for node in image_config.COMFYUI_WORKFLOW_NODES:
@@ -1008,7 +1008,7 @@ async def image_edits(
             form = aiohttp.FormData()
             for key, value in data.items():
                 if isinstance(value, dict):
-                    form.add_field(key, json.dumps(value))
+                    form.add_field(key, JSONCodec.dumps(value))
                 else:
                     form.add_field(key, str(value))
             for param_name, (filename, file_obj, content_type_val) in files:

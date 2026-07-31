@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 
 from open_webui.config import WEBUI_FAVICON_URL
@@ -9,6 +8,7 @@ from open_webui.env import (
     VERSION,
 )
 from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
+from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict, desc
             if isinstance(user_data, dict):
                 user_dict = user_data
             else:
-                user_dict = json.loads(user_data)
+                user_dict = JSONCodec.loads(user_data)
             facts = [{'name': key, 'value': value} for key, value in user_dict.items()]
             if event_data.get('event'):
                 facts.insert(0, {'name': 'event', 'value': event_data.get('event')})

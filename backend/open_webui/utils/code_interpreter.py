@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import uuid
 from typing import Optional
@@ -128,7 +127,7 @@ class JupyterCodeExecuter:
         # send message
         msg_id = uuid.uuid4().hex
         await ws.send(
-            json.dumps(
+            JSONCodec.dumps(
                 {
                     'header': {
                         'msg_id': msg_id,

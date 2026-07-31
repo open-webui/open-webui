@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 import uuid
@@ -15,6 +14,7 @@ from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import PromptHistories
 from open_webui.models.users import User, UserModel, UserResponse, Users
+from open_webui.utils.json_codec import JSONCodec
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -344,7 +344,7 @@ class PromptsTable:
                     else:
                         # Fallback: LIKE on serialised JSON text (ASCII-safe only)
                         tag_clause = func.lower(cast(Prompt.tags, String)).like(
-                            f'%{json.dumps(tag_lower, ensure_ascii=False)}%'
+                            f'%{JSONCodec.dumps(tag_lower, ensure_ascii=False)}%'
                         )
                         tag_lower = None
 

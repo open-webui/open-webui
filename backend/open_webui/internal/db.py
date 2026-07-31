@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import os
 import sys
@@ -28,6 +27,7 @@ from open_webui.env import (
     ENABLE_DB_MIGRATIONS,
     OPEN_WEBUI_DIR,
 )
+from open_webui.utils.json_codec import JSONCodec
 from sqlalchemy import Dialect, MetaData, create_engine, event, types
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -124,18 +124,18 @@ class JSONField(types.TypeDecorator):  # TEXT-backed JSON storage
     """Store arbitrary Python objects as JSON-encoded TEXT.
 
     Used instead of native JSON columns for portability across SQLite and
-    PostgreSQL.  Values are serialized with ``json.dumps`` on write and
-    deserialized with ``json.loads`` on read.
+    PostgreSQL.  Values are serialized with ``JSONCodec.dumps`` on write and
+    deserialized with ``JSONCodec.loads`` on read.
     """
 
     impl = types.UnicodeText
     cache_ok = True
 
     def process_bind_param(self, value: _T | None, dialect: Dialect) -> Any:
-        return json.dumps(value) if value is not None else None
+        return JSONCodec.dumps(value) if value is not None else None
 
     def process_result_value(self, value: _T | None, dialect: Dialect) -> Any:
-        return json.loads(value) if value is not None else None
+        return JSONCodec.loads(value) if value is not None else None
 
     def copy(self, **kwargs: Any) -> Self:
         return JSONField(length=self.impl.length)

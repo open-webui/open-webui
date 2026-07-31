@@ -1,4 +1,3 @@
-import json
 import logging
 import random
 import urllib.parse
@@ -6,6 +5,7 @@ from typing import Optional
 
 import aiohttp
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.session_pool import get_session
 from pydantic import BaseModel
 
@@ -76,7 +76,7 @@ async def _ws_get_images(ws, workflow, client_id, base_url, api_key):
 
     async for msg in ws:
         if msg.type == aiohttp.WSMsgType.TEXT:
-            message = json.loads(msg.data)
+            message = JSONCodec.loads(msg.data)
             if message['type'] == 'executing':
                 data = message['data']
                 if data['node'] is None and data['prompt_id'] == prompt_id:
@@ -188,7 +188,7 @@ def _apply_workflow_nodes(workflow, nodes, model, payload):
 
 async def comfyui_create_image(model: str, payload: ComfyUICreateImageForm, client_id, base_url, api_key):
     ws_url = base_url.replace('http://', 'ws://').replace('https://', 'wss://')
-    workflow = json.loads(payload.workflow.workflow)
+    workflow = JSONCodec.loads(payload.workflow.workflow)
     _apply_workflow_nodes(workflow, payload.workflow.nodes, model, payload)
 
     headers = {'Authorization': f'Bearer {api_key}'}
@@ -229,7 +229,7 @@ class ComfyUIEditImageForm(BaseModel):
 
 async def comfyui_edit_image(model: str, payload: ComfyUIEditImageForm, client_id, base_url, api_key):
     ws_url = base_url.replace('http://', 'ws://').replace('https://', 'wss://')
-    workflow = json.loads(payload.workflow.workflow)
+    workflow = JSONCodec.loads(payload.workflow.workflow)
     _apply_workflow_nodes(workflow, payload.workflow.nodes, model, payload)
 
     headers = {'Authorization': f'Bearer {api_key}'}

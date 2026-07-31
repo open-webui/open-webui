@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import collections.abc
 import hashlib
-import json
 import logging
 import re
 import threading
@@ -15,6 +14,7 @@ from typing import Callable, Optional, Sequence, Union
 import aiohttp
 import mimeparse
 from open_webui.env import CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
+from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
 SURROGATE_RE = re.compile('[\ud800-\udfff]')
@@ -355,7 +355,7 @@ def convert_output_to_messages(
             arguments = item.get('arguments', '{}')
             # Ensure arguments is always a JSON string
             if not isinstance(arguments, str):
-                arguments = json.dumps(arguments)
+                arguments = JSONCodec.dumps(arguments)
             pending_tool_calls.append(
                 {
                     'id': item.get('call_id', ''),
@@ -822,7 +822,7 @@ def sanitize_data_for_db(obj):
     # json.dumps is implemented in C and much faster than a Python-level
     # recursive walk over every leaf string.
     try:
-        serialized = json.dumps(obj, ensure_ascii=False)
+        serialized = JSONCodec.dumps(obj, ensure_ascii=False)
         if '\\u0000' not in serialized:
             serialized.encode('utf-8')
             return obj
@@ -854,7 +854,7 @@ def sanitize_metadata(metadata: dict) -> dict:
             return None
         # Last resort: try to see if it's serializable
         try:
-            json.dumps(obj)
+            JSONCodec.dumps(obj)
             return obj
         except (TypeError, ValueError):
             return None
@@ -864,7 +864,7 @@ def sanitize_metadata(metadata: dict) -> dict:
         if isinstance(obj, (str, int, float, bool, type(None), dict, list)):
             return True
         try:
-            json.dumps(obj)
+            JSONCodec.dumps(obj)
             return True
         except (TypeError, ValueError):
             return False
@@ -1018,7 +1018,7 @@ def convert_logit_bias_input_to_json(logit_bias_input) -> str | None:
         return None
 
     if isinstance(logit_bias_input, dict):
-        return json.dumps(logit_bias_input)
+        return JSONCodec.dumps(logit_bias_input)
 
     logit_bias_pairs = logit_bias_input.split(',')
     logit_bias_json = {}
@@ -1028,7 +1028,7 @@ def convert_logit_bias_input_to_json(logit_bias_input) -> str | None:
         bias = int(bias.strip())
         bias = 100 if bias > 100 else -100 if bias < -100 else bias
         logit_bias_json[token] = bias
-    return json.dumps(logit_bias_json)
+    return JSONCodec.dumps(logit_bias_json)
 
 
 def freeze(value):
