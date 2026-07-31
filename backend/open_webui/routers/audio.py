@@ -76,6 +76,17 @@ AZURE_MAX_FILE_SIZE: int = AZURE_MAX_FILE_SIZE_MB * 1024 * 1024
 SPEECH_CACHE_DIR = CACHE_DIR / 'audio' / 'speech'
 SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+_MINIMAX_TTS_MODELS = (
+    'speech-2.8-hd',
+    'speech-2.8-turbo',
+    'speech-2.6-hd',
+    'speech-2.6-turbo',
+    'speech-02-hd',
+    'speech-02-turbo',
+    'speech-01-hd',
+    'speech-01-turbo',
+)
+
 TTS_CONFIG_KEYS = {
     'OPENAI_API_BASE_URL': 'audio.tts.openai.api_base_url',
     'OPENAI_API_KEY': 'audio.tts.openai.api_key',
@@ -90,6 +101,8 @@ TTS_CONFIG_KEYS = {
     'AZURE_SPEECH_OUTPUT_FORMAT': 'audio.tts.azure.speech_output_format',
     'MISTRAL_API_KEY': 'audio.tts.mistral.api_key',
     'MISTRAL_API_BASE_URL': 'audio.tts.mistral.api_base_url',
+    'MINIMAX_API_KEY': 'audio.tts.minimax.api_key',
+    'MINIMAX_API_BASE_URL': 'audio.tts.minimax.api_base_url',
 }
 
 STT_CONFIG_KEYS = {
@@ -249,6 +262,8 @@ class TTSConfigForm(BaseModel):
     AZURE_SPEECH_OUTPUT_FORMAT: str
     MISTRAL_API_KEY: str
     MISTRAL_API_BASE_URL: str
+    MINIMAX_API_KEY: str = ''
+    MINIMAX_API_BASE_URL: str = ''
 
 
 class STTConfigForm(BaseModel):
@@ -543,6 +558,57 @@ async def _tts_mistral(request, payload, file_path, file_body_path, user):
         await _raise_tts_error(exc, r)
 
 
+async def _tts_minimax(request, payload, file_path, file_body_path, user):
+    """Generate speech via the MiniMax TTS API."""
+    api_key = await Config.get('audio.tts.minimax.api_key')
+    api_base_url = await Config.get('audio.tts.minimax.api_base_url') or 'https://api.minimax.io/v1'
+
+    if not api_key:
+        raise HTTPException(status_code=400, detail='MiniMax API key is required for MiniMax TTS')
+
+    api_base_url = api_base_url.rstrip('/')
+    voice_id = (payload.get('voice') or await Config.get('audio.tts.voice') or '').strip()
+    request_payload = {
+        'model': await Config.get('audio.tts.model') or _MINIMAX_TTS_MODELS[0],
+        'text': payload.get('input', ''),
+        'audio_setting': {'format': 'mp3'},
+    }
+    if voice_id:
+        request_payload['voice_setting'] = {'voice_id': voice_id}
+
+    r = None
+    try:
+        session = await get_session()
+        r = await session.post(
+            url=f'{api_base_url}/t2a_v2',
+            json=request_payload,
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {api_key}',
+            },
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        )
+        r.raise_for_status()
+
+        res = await r.json()
+        base_resp = res.get('base_resp') or {}
+        if base_resp.get('status_code', 0) not in (0, '0'):
+            detail = base_resp.get('status_msg') or 'MiniMax TTS request failed'
+            raise HTTPException(status_code=400, detail=f'External: {detail}')
+
+        audio_hex = (res.get('data') or {}).get('audio', '')
+        if not isinstance(audio_hex, str) or not audio_hex:
+            raise ValueError('No audio data in MiniMax TTS response')
+
+        await _write_tts_cache(file_path, bytes.fromhex(audio_hex), file_body_path, payload)
+        return FileResponse(file_path)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception(exc)
+        await _raise_tts_error(exc, r)
+
+
 # Dispatcher map: engine name -> handler
 _TTS_ENGINES = {
     'openai': _tts_openai,
@@ -550,6 +616,7 @@ _TTS_ENGINES = {
     'azure': _tts_azure,
     'transformers': _tts_transformers,
     'mistral': _tts_mistral,
+    'minimax': _tts_minimax,
 }
 
 
@@ -1325,6 +1392,9 @@ async def get_available_models(request: Request) -> list[dict]:
 
     elif engine == 'mistral':
         available_models = [{'id': 'voxtral-mini-tts-2603'}]
+
+    elif engine == 'minimax':
+        available_models = [{'id': model} for model in _MINIMAX_TTS_MODELS]
 
     return available_models
 

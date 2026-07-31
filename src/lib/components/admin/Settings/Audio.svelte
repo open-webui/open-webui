@@ -45,6 +45,8 @@
 	let TTS_AZURE_SPEECH_OUTPUT_FORMAT = '';
 	let TTS_MISTRAL_API_KEY = '';
 	let TTS_MISTRAL_API_BASE_URL = '';
+	let TTS_MINIMAX_API_KEY = '';
+	let TTS_MINIMAX_API_BASE_URL = 'https://api.minimax.io/v1';
 
 	let STT_OPENAI_API_BASE_URL = '';
 	let STT_OPENAI_API_KEY = '';
@@ -157,6 +159,8 @@
 				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT,
 				MISTRAL_API_KEY: TTS_MISTRAL_API_KEY,
 				MISTRAL_API_BASE_URL: TTS_MISTRAL_API_BASE_URL,
+				MINIMAX_API_KEY: TTS_MINIMAX_API_KEY,
+				MINIMAX_API_BASE_URL: TTS_MINIMAX_API_BASE_URL,
 				SPLIT_ON: TTS_SPLIT_ON
 			},
 			stt: {
@@ -212,6 +216,8 @@
 			TTS_AZURE_SPEECH_OUTPUT_FORMAT = res.tts.AZURE_SPEECH_OUTPUT_FORMAT;
 			TTS_MISTRAL_API_KEY = res.tts.MISTRAL_API_KEY;
 			TTS_MISTRAL_API_BASE_URL = res.tts.MISTRAL_API_BASE_URL;
+			TTS_MINIMAX_API_KEY = res.tts.MINIMAX_API_KEY ?? '';
+			TTS_MINIMAX_API_BASE_URL = res.tts.MINIMAX_API_BASE_URL || 'https://api.minimax.io/v1';
 
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
 			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
@@ -490,6 +496,9 @@
 						} else if (value === 'mistral') {
 							TTS_VOICE = '';
 							TTS_MODEL = 'voxtral-mini-tts-2603';
+						} else if (value === 'minimax') {
+							TTS_VOICE = '';
+							TTS_MODEL = 'speech-2.8-hd';
 						} else {
 							TTS_VOICE = '';
 							TTS_MODEL = '';
@@ -502,6 +511,7 @@
 					<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
 					<option value="azure">{$i18n.t('Azure AI Speech')}</option>
 					<option value="mistral">{$i18n.t('MistralAI')}</option>
+					<option value="minimax">MiniMax</option>
 				</SettingsSelect>
 			</AdminSettingRow>
 
@@ -576,6 +586,30 @@
 						/>
 					</AdminSettingField>
 				</div>
+			{:else if TTS_ENGINE === 'minimax'}
+				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+					<AdminSettingField label={$i18n.t('API Base URL')}>
+						<input
+							list="tts-minimax-api-base-url-list"
+							class={inputClass}
+							placeholder={$i18n.t('API Base URL')}
+							bind:value={TTS_MINIMAX_API_BASE_URL}
+							required
+						/>
+						<datalist id="tts-minimax-api-base-url-list">
+							<option value="https://api.minimax.io/v1"></option>
+							<option value="https://api.minimaxi.com/v1"></option>
+						</datalist>
+					</AdminSettingField>
+					<AdminSettingField label={$i18n.t('API Key')}>
+						<SensitiveInput
+							variant="settings"
+							placeholder={$i18n.t('API Key')}
+							bind:value={TTS_MINIMAX_API_KEY}
+							required
+						/>
+					</AdminSettingField>
+				</div>
 			{/if}
 
 			{#if TTS_ENGINE === ''}
@@ -647,7 +681,7 @@
 						placeholder={$i18n.t('Enter additional parameters in JSON format')}
 					/>
 				</AdminSettingField>
-			{:else if TTS_ENGINE === 'elevenlabs' || TTS_ENGINE === 'mistral'}
+			{:else if TTS_ENGINE === 'elevenlabs' || TTS_ENGINE === 'mistral' || TTS_ENGINE === 'minimax'}
 				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
 					<AdminSettingField label={$i18n.t('TTS Voice')}>
 						<TTSVoiceInput
