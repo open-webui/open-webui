@@ -35,6 +35,7 @@
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LinkSlash from '$lib/components/icons/LinkSlash.svelte';
+	import SearchInput from './InputMenu/SearchInput.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -65,6 +66,34 @@
 
 	let tools = null;
 	let skills = null;
+
+	let toolsQuery = '';
+	let skillsQuery = '';
+
+	const matchesQuery = (item, query: string) => {
+		const q = query.trim().toLowerCase();
+		if (!q) {
+			return true;
+		}
+		return (
+			(item?.name ?? '').toLowerCase().includes(q) ||
+			(item?.description ?? '').toLowerCase().includes(q)
+		);
+	};
+
+	$: filteredToolIds = tools
+		? Object.keys(tools).filter((id) => matchesQuery(tools[id], toolsQuery))
+		: [];
+	$: filteredSkillIds = skills
+		? Object.keys(skills).filter((id) => matchesQuery(skills[id], skillsQuery))
+		: [];
+
+	$: if (tab !== 'tools') {
+		toolsQuery = '';
+	}
+	$: if (tab !== 'skills') {
+		skillsQuery = '';
+	}
 
 	$: if (show) {
 		init();
@@ -391,7 +420,13 @@
 						</div>
 					</button>
 
-					{#each Object.keys(tools) as toolId}
+					<SearchInput bind:value={toolsQuery} placeholder={$i18n.t('Search Tools')} />
+
+					{#if filteredToolIds.length === 0}
+						<div class="text-center text-xs text-gray-500 py-3">{$i18n.t('No results found')}</div>
+					{/if}
+
+					{#each filteredToolIds as toolId}
 						<button
 							class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 							on:click={async (e) => {
@@ -514,7 +549,13 @@
 						</div>
 					</button>
 
-					{#each Object.keys(skills) as skillId}
+					<SearchInput bind:value={skillsQuery} placeholder={$i18n.t('Search Skills')} />
+
+					{#if filteredSkillIds.length === 0}
+						<div class="text-center text-xs text-gray-500 py-3">{$i18n.t('No results found')}</div>
+					{/if}
+
+					{#each filteredSkillIds as skillId}
 						<button
 							class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 							on:click={async () => {
