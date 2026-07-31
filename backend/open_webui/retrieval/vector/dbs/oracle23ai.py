@@ -56,6 +56,7 @@ from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
 )
+from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
 
@@ -390,7 +391,7 @@ class Oracle23aiClient(VectorDBBase):
         Returns:
             Dict: Metadata dictionary
         """
-        return json.loads(json_str) if json_str else {}
+        return JSONCodec.loads(json_str) if json_str else {}
 
     def insert(self, collection_name: str, items: List[VectorItem]) -> None:
         """
