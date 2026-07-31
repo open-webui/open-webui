@@ -17,6 +17,11 @@ from open_webui.env import ENABLE_ORJSON
 if ENABLE_ORJSON:
     import orjson
 
+    # stdlib escapes these, orjson emits them raw, and Python treats all three as
+    # line boundaries: one raw separator splits an SSE frame that a reader
+    # reassembles with ``splitlines()``.
+    LINE_SEPARATOR_ESCAPES = str.maketrans({'\u2028': '\\u2028', '\u2029': '\\u2029', '\x85': '\\u0085'})
+
     class ORJSONCodec:
         """stdlib-``json``-compatible codec backed by orjson.
 
@@ -30,9 +35,12 @@ if ENABLE_ORJSON:
         @staticmethod
         def dumps(obj, *args, **kwargs):
             try:
-                return orjson.dumps(obj).decode('utf-8')
+                serialized = orjson.dumps(obj).decode('utf-8')
             except (TypeError, ValueError):
                 return engineio_json.dumps(obj, *args, **kwargs)
+            if '\u2028' in serialized or '\u2029' in serialized or '\x85' in serialized:
+                return serialized.translate(LINE_SEPARATOR_ESCAPES)
+            return serialized
 
         @staticmethod
         def loads(s, *args, **kwargs):
