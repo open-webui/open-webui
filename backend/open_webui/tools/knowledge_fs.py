@@ -8,7 +8,6 @@ Re-exported through builtin.py for consistent imports.
 """
 
 import contextvars
-import json
 import logging
 import re
 import shlex
