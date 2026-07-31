@@ -353,7 +353,7 @@ async def count_anthropic_tokens(request: Request, form_data: dict, user: UserMo
         response = await session.request(
             method='POST',
             url=request_url,
-            data=json.dumps(payload),
+            data=JSONCodec.dumps(payload),
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
@@ -1338,7 +1338,7 @@ async def generate_chat_completion(
     if not is_streaming_request:
         payload.pop('stream_options', None)
 
-    payload = json.dumps(payload)
+    payload = JSONCodec.dumps(payload)
 
     r = None
     streaming = False
@@ -1458,7 +1458,7 @@ async def embeddings(request: Request, form_data: dict, user):
     """
     idx = 0
     # Prepare payload/body
-    body = json.dumps(form_data)
+    body = JSONCodec.dumps(form_data)
     # Find correct backend url/key based on model
     model_id = form_data.get('model')
     # Check if model is already in app state cache to avoid expensive get_all_models() call
@@ -1589,7 +1589,7 @@ async def responses(
     # Enforce per-model access control
     await check_model_access(user, await Models.get_model_by_id(model_id), BYPASS_MODEL_ACCESS_CONTROL)
 
-    body = json.dumps(payload)
+    body = JSONCodec.dumps(payload)
 
     if model_id:
         models = request.app.state.OPENAI_MODELS
