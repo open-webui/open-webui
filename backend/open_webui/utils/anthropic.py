@@ -9,6 +9,7 @@ from open_webui.env import (
 )
 from open_webui.models.users import UserModel
 from open_webui.utils.headers import include_user_info_headers
+from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
 
@@ -663,8 +664,8 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                     continue
 
                 try:
-                    data = json.loads(data_string)
-                except (json.JSONDecodeError, TypeError):
+                    data = JSONCodec.loads(data_string)
+                except (ValueError, TypeError):
                     continue
 
                 usage_data = data.get('usage')
