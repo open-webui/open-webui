@@ -3113,9 +3113,6 @@
 		// in the message so the backend can inject their full content.
 		const skillIds = [...selectedSkillIds];
 
-		// Use the user-selected terminal from the dropdown
-		const activeTerminalId = $selectedTerminalId ?? null;
-
 		// Only send terminal_id if the model has terminal capability enabled
 		const terminalEnabled = model.info?.meta?.capabilities?.terminal ?? true;
 		const useChatVariablesFallback =
@@ -3139,8 +3136,9 @@
 				tool_ids: toolIds.length > 0 ? toolIds : undefined,
 				skill_ids: skillIds.length > 0 ? skillIds : undefined,
 				terminal_id:
-					terminalEnabled && ($terminalServers ?? []).some((t) => t.id && t.id === activeTerminalId)
-						? activeTerminalId
+					terminalEnabled &&
+					($terminalServers ?? []).some((t) => t.id && t.id === $selectedTerminalId)
+						? $selectedTerminalId
 						: undefined,
 				tool_servers: [
 					...($toolServers ?? []).filter(
