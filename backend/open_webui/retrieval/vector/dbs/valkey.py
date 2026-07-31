@@ -2,7 +2,6 @@
 # Requires Valkey core >= 9.0.1 with the valkey-search module >= 1.2.0 loaded.
 
 import atexit
-import json
 import logging
 import re
 import struct
@@ -24,6 +23,7 @@ from open_webui.retrieval.vector.main import (
     VectorItem,
 )
 from open_webui.retrieval.vector.utils import process_metadata
+from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
 
@@ -482,7 +482,7 @@ class ValkeyClient(VectorDBBase):
                 'id': item['id'],
                 'vector': _vector_to_bytes(item['vector']),
                 'text': item['text'],
-                'metadata_json': json.dumps(metadata),
+                'metadata_json': JSONCodec.dumps(metadata),
                 # `or ''` prevents indexing literal 'None' as a TAG value, which would
                 # poison $ne / equality queries.
                 'hash': str(metadata.get('hash') or ''),
@@ -588,8 +588,8 @@ class ValkeyClient(VectorDBBase):
                     ids.append(_decode(fields.get(b'id', b'')))
                     documents.append(_decode(fields.get(b'text', b'')))
                     try:
-                        metadatas.append(json.loads(_decode(fields.get(b'metadata_json', b'{}'))))
-                    except (json.JSONDecodeError, TypeError):
+                        metadatas.append(JSONCodec.loads(_decode(fields.get(b'metadata_json', b'{}'))))
+                    except (ValueError, TypeError):
                         metadatas.append({})
                     if limit is not None and limit > 0 and len(ids) >= limit:
                         return GetResult(ids=[ids], documents=[documents], metadatas=[metadatas])
@@ -734,8 +734,8 @@ class ValkeyClient(VectorDBBase):
             ids.append(_decode(fields.get(b'id', b'')))
             documents.append(_decode(fields.get(b'text', b'')))
             try:
-                metadatas.append(json.loads(_decode(fields.get(b'metadata_json', b'{}'))))
-            except (json.JSONDecodeError, TypeError):
+                metadatas.append(JSONCodec.loads(_decode(fields.get(b'metadata_json', b'{}'))))
+            except (ValueError, TypeError):
                 metadatas.append({})
 
             if include_score:
