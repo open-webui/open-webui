@@ -13,6 +13,7 @@ from types import SimpleNamespace
 from typing import Optional
 from urllib.parse import quote, urlparse
 
+import aiofiles
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
@@ -785,7 +786,11 @@ async def image_generations(
                 images.append({'url': url})
             return images
         elif image_config.IMAGE_GENERATION_ENGINE == 'automatic1111' or image_config.IMAGE_GENERATION_ENGINE == '':
-            if form_data.model:
+            # Automatic1111 holds one checkpoint instance-wide, so set_image_model
+            # persists the global default and switches the shared backend. Only an
+            # admin may do that; a non-admin generates on the currently configured
+            # checkpoint. The model field is not a per-user selection on this backend.
+            if form_data.model and user.role == 'admin':
                 await set_image_model(request, form_data.model)
 
             data = {
@@ -936,10 +941,10 @@ async def image_edits(
                 if isinstance(file_response, FileResponse):
                     file_path = file_response.path
 
-                    with open(file_path, 'rb') as f:
-                        file_bytes = f.read()
-                        image_data = base64.b64encode(file_bytes).decode('utf-8')
-                        mime_type, _ = mimetypes.guess_type(file_path)
+                    async with aiofiles.open(file_path, 'rb') as f:
+                        file_bytes = await f.read()
+                    image_data = base64.b64encode(file_bytes).decode('utf-8')
+                    mime_type, _ = mimetypes.guess_type(file_path)
 
                     return f'data:{mime_type};base64,{image_data}'
             return data

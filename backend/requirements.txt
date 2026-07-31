@@ -1,19 +1,22 @@
 fastapi==0.136.3
-uvicorn[standard]==0.41.0
+uvicorn[standard]==0.51.0
 pydantic==2.13.4
-python-multipart==0.0.27
+python-multipart==0.0.32
 itsdangerous==2.2.0
 
 python-socketio==5.16.2
-python-jose==3.5.0
+orjson==3.11.9
 cryptography==48.0.0
 bcrypt==5.0.0
 argon2-cffi==25.1.0
 PyJWT[crypto]==2.13.0
 authlib==1.7.2
+joserfc==1.7.4
 
 requests==2.34.2
+regex==2026.5.9 # supports a per-search timeout, which `re` does not
 aiohttp==3.13.5 # do not update to 3.13.3 - broken
+aiodns==4.0.4 # makes aiohttp resolve DNS on the event loop instead of the threadpool
 async-timeout==5.0.1
 aiocache==0.12.3
 aiofiles==25.1.0
@@ -30,7 +33,8 @@ psycopg[binary]==3.3.4
 alembic==1.18.4
 
 pycrdt==0.13.1
-redis==8.0.0
+redis==8.0.1
+hiredis==3.4.0
 
 APScheduler==3.11.2
 RestrictedPython==8.2
@@ -76,6 +80,7 @@ unstructured==0.22.31
 nltk==3.9.4
 Markdown==3.10.2
 beautifulsoup4==4.14.3
+lxml==6.1.1
 pypandoc==1.17
 pandas==3.0.3
 openpyxl==3.1.5
@@ -88,7 +93,7 @@ soundfile==0.13.1
 
 pillow==12.2.0
 opencv-python-headless==4.13.0.92
-rapidocr-onnxruntime==1.4.4
+rapidocr==3.9.2
 rank-bm25==0.2.2
 
 onnxruntime==1.26.0

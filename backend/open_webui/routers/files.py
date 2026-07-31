@@ -108,6 +108,23 @@ def _cleanup_local_cache(file_path: str) -> None:
         log.warning(f'Failed to clean up local cache for {file_path}: {e}')
 
 
+def _matches_configured_mime_type(supported: list[str] | str, content_type: str) -> bool:
+    if isinstance(supported, str):
+        supported = supported.split(',')
+    supported = [item.strip() for item in (supported or []) if item.strip()]
+    if not supported:
+        return False
+    return bool(strict_match_mime_type(supported, content_type))
+
+
+def _media_supported_for_extraction(
+    content_extraction_engine: str | None, supported: list[str] | str | None, content_type: str
+) -> bool:
+    if supported is None:
+        return content_extraction_engine == 'external'
+    return bool(content_extraction_engine and _matches_configured_mime_type(supported, content_type))
+
+
 async def process_uploaded_file(
     request,
     file,
@@ -127,6 +144,10 @@ async def process_uploaded_file(
                     content_type = 'text/plain'
 
             stt_supported = await Config.get('audio.stt.supported_content_types', [])
+            content_extraction_engine = await Config.get('rag.content_extraction_engine')
+            content_extraction_supported_media_mime_types = await Config.get(
+                'rag.content_extraction.supported_media_mime_types'
+            )
 
             if content_type and strict_match_mime_type(stt_supported, content_type):
                 # Audio / STT-supported files → transcribe then index
@@ -147,9 +168,10 @@ async def process_uploaded_file(
             elif (
                 content_type
                 and content_type.startswith(('image/', 'video/'))
-                and await Config.get('rag.content_extraction_engine') != 'external'
+                and not _media_supported_for_extraction(
+                    content_extraction_engine, content_extraction_supported_media_mime_types, content_type
+                )
             ):
-                # Media files without an external extraction engine
                 if content_type.startswith('video/'):
                     # Videos are stored as-is for downstream multimodal
                     # processing (Tools, vision models). Attempting text
@@ -165,7 +187,8 @@ async def process_uploaded_file(
                     raise Exception(f'File type {content_type} is not supported for processing')
 
             else:
-                # Documents, or any file when an external engine is configured
+                # Documents, or media files explicitly enabled for the
+                # configured content extraction engine.
                 if not content_type:
                     log.info(f'File type {file.content_type} is not provided, but trying to process anyway')
                 await process_file(
@@ -201,21 +224,28 @@ async def process_uploaded_file(
                             f'{knowledge_id}: user {user.id} lacks write access'
                         )
                     else:
-                        await Knowledges.add_file_to_knowledge_by_id(
-                            knowledge_id=knowledge_id,
-                            file_id=file_item.id,
-                            user_id=user.id,
-                            directory_id=file_metadata.get('directory_id'),
-                        )
+                        # Keep the generic file status stream open until the
+                        # KB-specific vector write and durable link both finish.
+                        await Files.update_file_data_by_id(file_item.id, {'status': 'processing'}, db=db_session)
                         await process_file(
                             request,
                             ProcessFileForm(file_id=file_item.id, collection_name=knowledge_id),
                             user=user,
                             db=db_session,
                         )
+                        knowledge_file = await Knowledges.add_file_to_knowledge_by_id(
+                            knowledge_id=knowledge_id,
+                            file_id=file_item.id,
+                            user_id=user.id,
+                            directory_id=file_metadata.get('directory_id'),
+                            db=db_session,
+                        )
+                        if not knowledge_file:
+                            raise Exception(f'Failed to link file {file_item.id} to knowledge {knowledge_id}')
                         log.info(f'Linked file {file_item.id} to knowledge {knowledge_id}')
                 except Exception as e:
                     log.warning(f'Failed to link file {file_item.id} to knowledge {knowledge_id}: {e}')
+                    raise
 
         except Exception as e:
             log.error(f'Error processing file: {file_item.id}')

@@ -142,7 +142,6 @@ class FilesTable:
                 result = File(**file.model_dump())
                 db.add(result)
                 await db.commit()
-                await db.refresh(result)
                 if result:
                     return FileModel.model_validate(result)
                 else:

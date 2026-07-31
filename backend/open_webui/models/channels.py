@@ -266,11 +266,11 @@ class ChannelTable:
         access_grants: Optional[list[AccessGrantModel]] = None,
         db: Optional[AsyncSession] = None,
     ) -> ChannelModel:
-        channel_data = ChannelModel.model_validate(channel).model_dump(exclude={'access_grants'})
-        channel_data['access_grants'] = (
-            access_grants if access_grants is not None else await self._get_access_grants(channel_data['id'], db=db)
+        channel_model = ChannelModel.model_validate(channel)
+        channel_model.access_grants = (
+            access_grants if access_grants is not None else await self._get_access_grants(channel_model.id, db=db)
         )
-        return ChannelModel.model_validate(channel_data)
+        return channel_model
 
     async def _collect_unique_user_ids(
         self,
@@ -869,7 +869,6 @@ class ChannelTable:
                 result = ChannelFile(**channel_file.model_dump())
                 db.add(result)
                 await db.commit()
-                await db.refresh(result)
                 if result:
                     return ChannelFileModel.model_validate(result)
                 else:

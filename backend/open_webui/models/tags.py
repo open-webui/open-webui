@@ -63,7 +63,6 @@ class TagTable:
                 record = Tag(id=tag_id, user_id=user_id, name=name)
                 db.add(record)
                 await db.commit()
-                await db.refresh(record)
                 return TagModel.model_validate(record) if record else None
             except Exception as e:
                 log.exception('Error inserting tag %r: %s', name, e)

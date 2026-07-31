@@ -17,6 +17,7 @@ import mimeparse
 from open_webui.env import CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
 
 log = logging.getLogger(__name__)
+SURROGATE_RE = re.compile('[\ud800-\udfff]')
 
 
 def deep_update(d, u):
@@ -28,18 +29,26 @@ def deep_update(d, u):
     return d
 
 
+def _strip_filter_entry(entry):
+    # Compose list-form env syntax passes surrounding quotes through verbatim
+    return (entry or '').strip().strip('"\'').strip()
+
+
 def get_allow_block_lists(filter_list):
     allow_list = []
     block_list = []
 
-    if filter_list:
-        for d in filter_list:
-            if d.startswith('!'):
-                # Domains starting with "!" → blocked
-                block_list.append(d[1:].strip())
-            else:
-                # Domains starting without "!" → allowed
-                allow_list.append(d.strip())
+    for raw_entry in filter_list or []:
+        entry = _strip_filter_entry(raw_entry)
+        is_blocked = entry.startswith('!')
+        if is_blocked:
+            entry = _strip_filter_entry(entry[1:])
+        if not entry:
+            continue
+        if is_blocked:
+            block_list.append(entry)
+        else:
+            allow_list.append(entry)
 
     return allow_list, block_list
 
@@ -159,13 +168,38 @@ def get_last_user_message_item(messages: list[dict]) -> dict | None:
 
 
 def get_content_from_message(message: dict) -> str | None:
-    if isinstance(message.get('content'), list):
-        for item in message['content']:
-            if item['type'] == 'text':
-                return item['text']
-    else:
-        return message.get('content')
-    return None
+    content = message.get('content')
+    if isinstance(content, list):
+        for item in content:
+            if isinstance(item, dict) and item.get('type') == 'text':
+                return item.get('text')
+    elif content:
+        return content
+
+    output_text = get_output_text(message.get('output'))
+    return output_text or (content if isinstance(content, str) else None)
+
+
+def get_output_text(output: list | None) -> str:
+    if not isinstance(output, list):
+        return ''
+
+    texts = []
+    for item in output:
+        if not isinstance(item, dict) or item.get('type') != 'message':
+            continue
+
+        parts = item.get('content') or []
+        if not isinstance(parts, list):
+            continue
+
+        text = ''.join(
+            str(part.get('text')) for part in parts if isinstance(part, dict) and part.get('text') is not None
+        )
+        if text.strip():
+            texts.append(text)
+
+    return '\n'.join(texts)
 
 
 def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
@@ -212,7 +246,7 @@ def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
 
         # All tool_calls were orphans — keep the message only if it
         # carries meaningful text or reasoning content.
-        content = message.get('content', '')
+        content = get_content_from_message(message) or ''
         has_meaningful_content = content.strip() if isinstance(content, str) else content
         if has_meaningful_content or message.get('reasoning_content'):
             reconciled_messages.append({key: value for key, value in message.items() if key != 'tool_calls'})
@@ -224,6 +258,7 @@ def convert_output_to_messages(
     output: list,
     raw: bool = False,
     reasoning_format: str | None = None,
+    flatten_tool_images: bool = False,
 ) -> list[dict]:
     """
     Convert OR-aligned output items to OpenAI Chat Completion-format messages.
@@ -242,6 +277,8 @@ def convert_output_to_messages(
               (for Ollama, which expects reasoning as tagged content).
             - ``'reasoning_content'``: set as ``reasoning_content`` top-level field
               (for llama.cpp, which routes it via the chat template).
+        flatten_tool_images: Move tool output images into a following user
+            message for Chat Completions providers.
     """
     if not output or not isinstance(output, list):
         return []
@@ -251,6 +288,10 @@ def convert_output_to_messages(
     pending_content = []
     pending_reasoning = []  # Only populated when reasoning_format == 'reasoning_content'
     pending_reasoning_details = []
+    pending_tool_image_urls = []
+    function_call_ids = {
+        item.get('call_id') for item in output if item.get('type') == 'function_call' and item.get('call_id')
+    }
 
     def flush_pending():
         nonlocal pending_content, pending_tool_calls, pending_reasoning, pending_reasoning_details
@@ -275,8 +316,29 @@ def convert_output_to_messages(
         pending_reasoning = []
         pending_reasoning_details = []
 
+    def flush_tool_images():
+        nonlocal pending_tool_image_urls
+        if not pending_tool_image_urls:
+            return
+
+        messages.append(
+            {
+                'role': 'user',
+                'content': [
+                    {
+                        'type': 'text',
+                        'text': 'Here are the images from the tool results above. Please analyze them.',
+                    },
+                    *[{'type': 'image_url', 'image_url': {'url': url}} for url in pending_tool_image_urls],
+                ],
+            }
+        )
+        pending_tool_image_urls = []
+
     for item in output:
         item_type = item.get('type', '')
+        if item_type != 'function_call_output':
+            flush_tool_images()
 
         if item_type == 'message':
             # Extract text from output_text content parts
@@ -322,8 +384,17 @@ def convert_output_to_messages(
                     if url:
                         image_urls.append(url)
 
-            if image_urls:
-                # Multimodal tool content with image(s)
+            if flatten_tool_images:
+                messages.append(
+                    {
+                        'role': 'tool',
+                        'tool_call_id': item.get('call_id', ''),
+                        'content': content,
+                    }
+                )
+                if item.get('call_id') in function_call_ids:
+                    pending_tool_image_urls.extend(image_urls)
+            elif image_urls:
                 messages.append(
                     {
                         'role': 'tool',
@@ -395,6 +466,7 @@ def convert_output_to_messages(
             pass
 
     # Flush remaining content/tool_calls
+    flush_tool_images()
     flush_pending()
 
     return reconcile_tool_pairs(messages)
@@ -591,9 +663,9 @@ def strip_empty_content_blocks(messages: list[dict]) -> list[dict]:
     return messages
 
 
-def openai_chat_message_template(model: str):
+def openai_chat_message_template(model: str, message_id: str | None = None):
     return {
-        'id': f'{model}-{str(uuid.uuid4())}',
+        'id': message_id if message_id else f'{model}-{str(uuid.uuid4())}',
         'created': int(time.time()),
         'model': model,
         'choices': [{'index': 0, 'logprobs': None, 'finish_reason': None}],
@@ -606,8 +678,9 @@ def openai_chat_chunk_message_template(
     reasoning_content: str | None = None,
     tool_calls: list[dict | None] = None,
     usage: dict | None = None,
+    message_id: str | None = None,
 ) -> dict:
-    template = openai_chat_message_template(model)
+    template = openai_chat_message_template(model, message_id)
     template['object'] = 'chat.completion.chunk'
 
     template['choices'][0]['index'] = 0
@@ -715,18 +788,10 @@ def sanitize_text_for_db(text: str) -> str:
     """Remove null bytes and invalid UTF-8 surrogates from text for PostgreSQL storage."""
     if not isinstance(text, str):
         return text
-    # Fast path: skip work when there are no null bytes (the common case)
-    if '\x00' not in text:
+    # Fast path: skip work when there are no null bytes or surrogate code points.
+    if '\x00' not in text and not SURROGATE_RE.search(text):
         return text
-    # Remove null bytes
-    text = text.replace('\x00', '').replace('\u0000', '')
-    # Remove invalid UTF-8 surrogate characters that can cause encoding errors
-    # This handles cases where binary data or encoding issues introduced surrogates
-    try:
-        text = text.encode('utf-8', errors='surrogatepass').decode('utf-8', errors='ignore')
-    except (UnicodeEncodeError, UnicodeDecodeError):
-        pass
-    return text
+    return SURROGATE_RE.sub('', text.replace('\x00', ''))
 
 
 def _strip_null_bytes_deep(obj):
@@ -734,7 +799,10 @@ def _strip_null_bytes_deep(obj):
     if isinstance(obj, str):
         return sanitize_text_for_db(obj)
     elif isinstance(obj, dict):
-        return {k: _strip_null_bytes_deep(v) for k, v in obj.items()}
+        cleaned = {}
+        for k, v in obj.items():
+            cleaned[sanitize_text_for_db(k) if isinstance(k, str) else k] = _strip_null_bytes_deep(v)
+        return cleaned
     elif isinstance(obj, list):
         return [_strip_null_bytes_deep(v) for v in obj]
     return obj
@@ -744,19 +812,21 @@ def sanitize_data_for_db(obj):
     """Recursively sanitize all strings in a data structure for database storage.
 
     Performs a fast pre-check: serializes the structure once and scans for
-    null bytes.  If none are found (the overwhelmingly common case), the
+    null bytes or invalid UTF-8 surrogates. If none are found, the
     original object is returned immediately, skipping the expensive
     recursive walk.
     """
     if isinstance(obj, str):
         return sanitize_text_for_db(obj)
-    # Fast path: check for null bytes in the serialized form.
+    # Fast path: check for null bytes and surrogate code points in the serialized form.
     # json.dumps is implemented in C and much faster than a Python-level
     # recursive walk over every leaf string.
     try:
-        if '\\u0000' not in json.dumps(obj, ensure_ascii=False):
+        serialized = json.dumps(obj, ensure_ascii=False)
+        if '\\u0000' not in serialized:
+            serialized.encode('utf-8')
             return obj
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, UnicodeEncodeError):
         pass
     return _strip_null_bytes_deep(obj)
 

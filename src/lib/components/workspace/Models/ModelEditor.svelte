@@ -24,7 +24,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import AccessControl from '../common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
+	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
 	import BuiltinTools from './BuiltinTools.svelte';
@@ -32,7 +32,8 @@
 	import TerminalSelector from './TerminalSelector.svelte';
 	import TTSVoiceInput from './TTSVoiceInput.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
-	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import AccessButton from '$lib/components/common/AccessButton.svelte';
+	import { extractInputVariables } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 
@@ -113,6 +114,60 @@
 	export let suggestionTags: { name: string }[] = [];
 	let voices: { id: string; name?: string }[] = [];
 
+	const chatVariableKeyRegex = /^[a-z][a-z0-9_]*$/;
+	const getChatVariablesPreview = (prompt: string) => {
+		const variables = extractInputVariables(prompt);
+		const warnings: string[] = [];
+		const seenDefinitions: Record<string, string> = {};
+		const typedRegex = /{{\s*chat\.variables\.([a-zA-Z0-9_.-]+)\s*\|\s*([^}]*)\s*}}/g;
+		const typedUserRegex = /{{\s*user\.variables\.([a-zA-Z0-9_.-]+)\s*\|\s*([^}]*)\s*}}/g;
+
+		for (const match of prompt.matchAll(typedRegex)) {
+			const key = match[1];
+			const definition = match[2].trim();
+			if (seenDefinitions[key] && seenDefinitions[key] !== definition) {
+				warnings.push(`${key} has conflicting duplicate definitions`);
+			}
+			seenDefinitions[key] = definition;
+		}
+
+		const fields = Object.entries(variables)
+			.filter(([name]) => name.startsWith('chat.variables.'))
+			.map(([name, field]) => ({ key: name.replace('chat.variables.', ''), ...(field as any) }));
+		const userFields = Object.entries(variables)
+			.filter(([name]) => name.startsWith('user.variables.'))
+			.map(([name]) => ({ key: name.replace('user.variables.', '') }));
+
+		for (const match of prompt.matchAll(typedUserRegex)) {
+			warnings.push(`${match[1]} uses metadata, but User Variables are configured by each user`);
+		}
+
+		for (const field of fields) {
+			const key = field.key;
+			if (!chatVariableKeyRegex.test(key)) {
+				warnings.push(`${key} must be lowercase snake case`);
+				continue;
+			}
+
+			if (
+				field.type === 'select' &&
+				(!Array.isArray(field.options) || field.options.length === 0)
+			) {
+				warnings.push(`${key} select needs options=[...]`);
+			}
+		}
+
+		for (const field of userFields) {
+			if (!chatVariableKeyRegex.test(field.key)) {
+				warnings.push(`${field.key} must be lowercase snake case`);
+			}
+		}
+
+		return { fields, userFields, warnings };
+	};
+
+	$: chatVariablesPreview = getChatVariablesPreview(system ?? '');
+
 	const getBaseModelItems = (models: any[] = []) => {
 		const currentModelId = (model as any)?.id;
 
@@ -146,6 +201,27 @@
 	const loadVoices = async () => {
 		const res = await getVoices(localStorage.token).catch(() => null);
 		voices = res?.voices ?? [];
+	};
+
+	const toModelKnowledgeReference = (item: any) => {
+		if (!item || typeof item !== 'object') {
+			return item;
+		}
+
+		return Object.fromEntries(
+			[
+				'id',
+				'name',
+				'type',
+				'description',
+				'context',
+				'legacy',
+				'collection_name',
+				'collection_names'
+			]
+				.filter((key) => item[key] !== undefined && item[key] !== null && item[key] !== '')
+				.map((key) => [key, item[key]])
+		);
 	};
 
 	const submitHandler = async () => {
@@ -194,7 +270,7 @@
 		}
 
 		if (knowledge.length > 0) {
-			info.meta.knowledge = knowledge;
+			info.meta.knowledge = knowledge.map(toModelKnowledgeReference);
 		} else {
 			if (info.meta.knowledge) {
 				delete info.meta.knowledge;
@@ -296,9 +372,7 @@
 	};
 
 	onMount(async () => {
-		if (!$tools) {
-			await tools.set(await getTools(localStorage.token));
-		}
+		await tools.set((await getTools(localStorage.token).catch(() => null)) ?? []);
 		skillsList = (await getSkills(localStorage.token).catch(() => null)) ?? [];
 		if (!$functions) {
 			await functions.set(await getFunctions(localStorage.token));
@@ -424,257 +498,216 @@
 		shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
 	/>
 
-	{#if onBack}
-		<button
-			class="flex space-x-1"
-			on:click={() => {
-				onBack();
-			}}
-		>
-			<div class=" self-center">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="h-4 w-4"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-			</div>
-			<div class=" self-center text-sm font-medium">{$i18n.t('Back')}</div>
-		</button>
-	{/if}
-
-	<div class="w-full max-h-full flex justify-center">
-		<input
-			bind:this={filesInputElement}
-			bind:files={inputFiles}
-			type="file"
-			hidden
-			accept="image/*"
-			on:change={() => {
-				let reader = new FileReader();
-				reader.onload = (event) => {
-					let originalImageUrl = `${event.target?.result}`;
-
-					// For animated formats (gif, webp), skip resizing to preserve animation
-					const fileType = (inputFiles[0] as any)?.['type'];
-					if (fileType === 'image/gif' || fileType === 'image/webp') {
-						info.meta.profile_image_url = originalImageUrl;
-						inputFiles = null;
-						filesInputElement.value = '';
-						return;
-					}
-
-					const img = new Image();
-					img.src = originalImageUrl;
-
-					img.onload = function () {
-						const canvas = document.createElement('canvas');
-						const ctx = canvas.getContext('2d');
-
-						// Calculate the aspect ratio of the image
-						const aspectRatio = img.width / img.height;
-
-						// Calculate the new width and height to fit within 100x100
-						let newWidth, newHeight;
-						if (aspectRatio > 1) {
-							newWidth = 250 * aspectRatio;
-							newHeight = 250;
-						} else {
-							newWidth = 250;
-							newHeight = 250 / aspectRatio;
-						}
-
-						// Set the canvas size
-						canvas.width = 250;
-						canvas.height = 250;
-
-						// Calculate the position to center the image
-						const offsetX = (250 - newWidth) / 2;
-						const offsetY = (250 - newHeight) / 2;
-
-						// Draw the image on the canvas
-						ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
-
-						// Get the base64 representation of the compressed image
-						const compressedSrc = canvas.toDataURL('image/webp', 0.8);
-
-						// Display the compressed image
-						info.meta.profile_image_url = compressedSrc;
-
-						inputFiles = null;
-						filesInputElement.value = '';
-					};
-				};
-
-				if (
-					inputFiles &&
-					inputFiles.length > 0 &&
-					['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/svg+xml'].includes(
-						(inputFiles[0] as any)?.['type']
-					)
-				) {
-					reader.readAsDataURL(inputFiles[0]);
-				} else {
-					console.log(`Unsupported File Type '${(inputFiles[0] as any)?.['type']}'.`);
-					inputFiles = null;
-				}
-			}}
-		/>
-
-		{#if !edit || (edit && model)}
-			<form
-				class="flex flex-col md:flex-row w-full gap-3 md:gap-6"
-				on:submit|preventDefault={() => {
-					submitHandler();
+	<div class="flex h-full min-h-0 w-full flex-col">
+		{#if onBack}
+			<button
+				class="mb-1 flex h-6 w-fit items-center gap-1 rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+				type="button"
+				on:click={() => {
+					onBack();
 				}}
 			>
-				<div class="w-full px-1">
-					<div class="flex flex-row gap-4 md:gap-6 w-full">
-						<div class="self-start flex justify-center my-2 shrink-0">
-							<div class="self-center">
-								<button
-									class="rounded-2xl flex shrink-0 items-center {info.meta.profile_image_url !==
-									`${WEBUI_BASE_URL}/static/favicon.png`
-										? 'bg-transparent'
-										: 'bg-white'} shadow-xl group relative"
-									type="button"
-									aria-label={$i18n.t('Upload profile image')}
-									on:click={() => {
-										filesInputElement.click();
-									}}
-								>
-									{#if info.meta.profile_image_url}
-										<img
-											src={info.meta.profile_image_url}
-											alt="model profile"
-											class="rounded-xl size-20 md:size-48 object-cover shrink-0"
-										/>
-									{:else}
-										<img
-											src="{WEBUI_BASE_URL}/static/favicon.png"
-											alt="model profile"
-											class=" rounded-xl size-20 md:size-48 object-cover shrink-0"
-										/>
-									{/if}
+				<ChevronLeft className="size-3" strokeWidth="2" />
+				<span>{$i18n.t('Back')}</span>
+			</button>
+		{/if}
 
-									<div class="absolute bottom-0 right-0 z-10">
-										<div class="m-1.5">
-											<div
-												class="shadow-xl p-1 rounded-full border-2 border-white bg-gray-800 text-white group-hover:bg-gray-600 transition dark:border-black dark:bg-white dark:group-hover:bg-gray-200 dark:text-black"
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 16 16"
-													fill="currentColor"
-													class="size-5"
+		<div class="min-h-0 w-full flex-1 overflow-y-auto pr-1 scrollbar-hover">
+			<input
+				bind:this={filesInputElement}
+				bind:files={inputFiles}
+				type="file"
+				hidden
+				accept="image/*"
+				on:change={() => {
+					let reader = new FileReader();
+					reader.onload = (event) => {
+						let originalImageUrl = `${event.target?.result}`;
+
+						// For animated formats (gif, webp), skip resizing to preserve animation
+						const fileType = (inputFiles[0] as any)?.['type'];
+						if (fileType === 'image/gif' || fileType === 'image/webp') {
+							info.meta.profile_image_url = originalImageUrl;
+							inputFiles = null;
+							filesInputElement.value = '';
+							return;
+						}
+
+						const img = new Image();
+						img.src = originalImageUrl;
+
+						img.onload = function () {
+							const canvas = document.createElement('canvas');
+							const ctx = canvas.getContext('2d');
+
+							// Calculate the aspect ratio of the image
+							const aspectRatio = img.width / img.height;
+
+							// Calculate the new width and height to fit within 100x100
+							let newWidth, newHeight;
+							if (aspectRatio > 1) {
+								newWidth = 250 * aspectRatio;
+								newHeight = 250;
+							} else {
+								newWidth = 250;
+								newHeight = 250 / aspectRatio;
+							}
+
+							// Set the canvas size
+							canvas.width = 250;
+							canvas.height = 250;
+
+							// Calculate the position to center the image
+							const offsetX = (250 - newWidth) / 2;
+							const offsetY = (250 - newHeight) / 2;
+
+							// Draw the image on the canvas
+							ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
+
+							// Get the base64 representation of the compressed image
+							const compressedSrc = canvas.toDataURL('image/webp', 0.8);
+
+							// Display the compressed image
+							info.meta.profile_image_url = compressedSrc;
+
+							inputFiles = null;
+							filesInputElement.value = '';
+						};
+					};
+
+					if (
+						inputFiles &&
+						inputFiles.length > 0 &&
+						['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/svg+xml'].includes(
+							(inputFiles[0] as any)?.['type']
+						)
+					) {
+						reader.readAsDataURL(inputFiles[0]);
+					} else {
+						console.log(`Unsupported File Type '${(inputFiles[0] as any)?.['type']}'.`);
+						inputFiles = null;
+					}
+				}}
+			/>
+
+			{#if !edit || (edit && model)}
+				<form
+					class="flex w-full flex-col gap-2.5 md:flex-row"
+					on:submit|preventDefault={() => {
+						submitHandler();
+					}}
+				>
+					<div class="w-full px-1">
+						<div class="flex w-full flex-col gap-3">
+							<div class="flex w-full min-w-0 items-center gap-3 py-0.5">
+								<div class="flex min-w-0 flex-1 items-center gap-3">
+									<button
+										class="group relative flex size-12 shrink-0 items-center overflow-hidden rounded-xl md:size-14 {info
+											.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
+											? 'bg-transparent'
+											: 'bg-gray-50 dark:bg-gray-850'} ring-1 ring-gray-200/70 transition hover:ring-gray-300 dark:ring-white/10 dark:hover:ring-white/20"
+										type="button"
+										aria-label={$i18n.t('Upload profile image')}
+										on:click={() => {
+											filesInputElement.click();
+										}}
+									>
+										{#if info.meta.profile_image_url}
+											<img
+												src={info.meta.profile_image_url}
+												alt="model profile"
+												class="size-full object-cover"
+											/>
+										{:else}
+											<img
+												src="{WEBUI_BASE_URL}/static/favicon.png"
+												alt="model profile"
+												class="size-full object-cover"
+											/>
+										{/if}
+
+										<div
+											class="absolute bottom-0 right-0 z-10 opacity-0 transition group-hover:opacity-100"
+										>
+											<div class="m-1">
+												<div
+													class="rounded-full bg-gray-900 p-1 text-white shadow-sm transition dark:bg-white dark:text-black"
 												>
-													<path
-														fill-rule="evenodd"
-														d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
-														clip-rule="evenodd"
-													/>
-												</svg>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 16 16"
+														fill="currentColor"
+														class="size-3"
+													>
+														<path
+															fill-rule="evenodd"
+															d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+															clip-rule="evenodd"
+														/>
+													</svg>
+												</div>
 											</div>
 										</div>
-									</div>
 
-									<div
-										class="absolute top-0 bottom-0 left-0 right-0 bg-white dark:bg-black rounded-lg opacity-0 group-hover:opacity-20 transition"
-									></div>
-								</button>
+										<div
+											class="absolute inset-0 bg-white opacity-0 transition group-hover:opacity-20 dark:bg-black"
+										></div>
+									</button>
 
-								<div class="flex w-full mt-1 justify-end">
-									<button
-										class="px-2 py-1 text-gray-500 rounded-lg text-xs"
-										on:click={() => {
-											info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
-										}}
-										type="button"
-									>
-										{$i18n.t('Reset Image')}</button
-									>
-								</div>
-							</div>
-						</div>
+									<div class="min-w-0 flex-1">
+										<div class="flex min-w-0 items-center gap-2">
+											<input
+												class="min-w-0 flex-1 bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
+												placeholder={$i18n.t('Model Name')}
+												bind:value={name}
+												required
+											/>
 
-						<div class="flex flex-col w-full flex-1">
-							<div class="flex justify-between items-start my-2">
-								<div class=" flex flex-col w-full">
-									<div class="flex-1 w-full">
+											<AccessButton
+												on:click={() => {
+													showAccessControlModal = true;
+												}}
+											/>
+										</div>
+
 										<input
-											class="text-3xl w-full bg-transparent outline-hidden"
-											placeholder={$i18n.t('Model Name')}
-											bind:value={name}
+											class="block w-full bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
+											placeholder={$i18n.t('Model ID')}
+											bind:value={id}
+											disabled={edit}
 											required
 										/>
 									</div>
-
-									<div class="flex-1 w-full">
-										<div>
-											<input
-												class="text-xs w-full bg-transparent outline-hidden"
-												placeholder={$i18n.t('Model ID')}
-												bind:value={id}
-												disabled={edit}
-												required
-											/>
-										</div>
-									</div>
-								</div>
-
-								<div class="shrink-0">
-									<button
-										class="bg-gray-50 shrink-0 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-										type="button"
-										on:click={() => {
-											showAccessControlModal = true;
-										}}
-									>
-										<LockClosed strokeWidth="2.5" className="size-3.5 shrink-0" />
-
-										<div class="text-sm font-medium shrink-0">
-											{$i18n.t('Access')}
-										</div>
-									</button>
 								</div>
 							</div>
 
 							{#if preset}
-								<div class="mb-1">
-									<div class=" text-xs font-medium mb-1 text-gray-500">
+								<div>
+									<div class="mb-1 text-xs text-gray-400 dark:text-gray-600">
 										{$i18n.t('Base Model (From)')}
 									</div>
 
-									<div>
-										<ModelSelector
-											id="workspace-base-model"
-											placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
-											searchPlaceholder={$i18n.t('Search a model')}
-											items={getBaseModelItems($models)}
-											className="w-[32rem]"
-											triggerClassName="text-sm"
-											selectionOnly
-											includeHidden={$user?.role === 'admin'}
-											bind:value={info.base_model_id}
-										/>
-									</div>
+									<ModelSelector
+										id="workspace-base-model"
+										placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
+										searchPlaceholder={$i18n.t('Search a model')}
+										items={getBaseModelItems($models)}
+										triggerClassName="text-xs"
+										selectionOnly
+										includeHidden={$user?.role === 'admin'}
+										bind:value={info.base_model_id}
+									/>
 								</div>
 							{/if}
 
-							<div class="mb-1">
-								<div class="mb-1 flex w-full justify-between items-center">
-									<div class=" self-center text-xs font-medium text-gray-500">
+							<div>
+								<div class="mb-1 flex w-full items-center justify-between">
+									<div class="self-center text-xs text-gray-400 dark:text-gray-600">
 										{$i18n.t('Description')}
 									</div>
 
 									<button
-										class="p-1 text-xs flex rounded-sm transition"
+										class="text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
 										type="button"
 										aria-pressed={enableDescription ? 'true' : 'false'}
 										aria-label={enableDescription
@@ -685,106 +718,159 @@
 										}}
 									>
 										{#if !enableDescription}
-											<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+											<span>{$i18n.t('Default')}</span>
 										{:else}
-											<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+											<span>{$i18n.t('Custom')}</span>
 										{/if}
 									</button>
 								</div>
 
 								{#if enableDescription}
 									<Textarea
-										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
+										className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
 										placeholder={$i18n.t('Add a short description about what this model does')}
+										minSize={32}
 										bind:value={info.meta.description}
 									/>
 								{/if}
 							</div>
 
-							<div class="w-full mb-1 max-w-full">
-								<div class="">
-									<Tags
-										tags={info?.meta?.tags ?? []}
-										{suggestionTags}
-										on:delete={(e) => {
-											const tagName = e.detail;
-											info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
-										}}
-										on:add={(e) => {
-											const tagName = e.detail;
-											if (!(info?.meta?.tags ?? null)) {
-												info.meta.tags = [{ name: tagName }];
-											} else {
-												info.meta.tags = [...info.meta.tags, { name: tagName }];
-											}
-										}}
-									/>
-								</div>
+							<div class="w-full max-w-full">
+								<Tags
+									tags={info?.meta?.tags ?? []}
+									{suggestionTags}
+									on:delete={(e) => {
+										const tagName = e.detail;
+										info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
+									}}
+									on:add={(e) => {
+										const tagName = e.detail;
+										if (!(info?.meta?.tags ?? null)) {
+											info.meta.tags = [{ name: tagName }];
+										} else {
+											info.meta.tags = [...info.meta.tags, { name: tagName }];
+										}
+									}}
+								/>
 							</div>
 						</div>
-					</div>
 
-					<div class="my-2">
-						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium text-gray-500">
+						<section class="mt-2.5">
+							<div class="mb-2 text-xs text-gray-400 dark:text-gray-600">
 								{$i18n.t('Model Params')}
 							</div>
-						</div>
 
-						<div class="mt-2">
-							<div class="my-1">
-								<div class=" text-xs font-medium mb-2">{$i18n.t('System Prompt')}</div>
+							<div class="space-y-2.5">
 								<div>
-									<Textarea
-										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
-										placeholder={$i18n.t(
-											'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
-										)}
-										rows={4}
-										bind:value={system}
-									/>
-								</div>
-							</div>
+									<div class="mb-1 text-xs text-gray-600 dark:text-gray-400">
+										{$i18n.t('System Prompt')}
+									</div>
+									<div>
+										<Textarea
+											className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+											placeholder={$i18n.t(
+												'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
+											)}
+											rows={2}
+											minSize={48}
+											bind:value={system}
+										/>
+									</div>
+									{#if chatVariablesPreview.fields.length > 0 || chatVariablesPreview.userFields.length > 0 || chatVariablesPreview.warnings.length > 0}
+										<div class="mt-2 border-t border-gray-100/60 pt-2 dark:border-gray-850/60">
+											<div class="mb-1.5 flex items-center justify-between gap-2">
+												<div class="text-xs text-gray-500 dark:text-gray-400">
+													{$i18n.t('Detected Variables')}
+												</div>
+												{#if chatVariablesPreview.fields.length + chatVariablesPreview.userFields.length > 0}
+													<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+														{chatVariablesPreview.fields.length +
+															chatVariablesPreview.userFields.length}
+													</div>
+												{/if}
+											</div>
 
-							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
-									{$i18n.t('Advanced Params')}
-								</div>
+											{#if chatVariablesPreview.fields.length > 0}
+												<div class="mb-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+													{$i18n.t('Chat Variables')}
+												</div>
+												<div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
+													{#each chatVariablesPreview.fields as field}
+														<div class="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+															<span class="font-medium">{field.key}</span>
+															<span class="text-gray-400 dark:text-gray-600">{field.type}</span>
+															{#if field.required}
+																<span class="text-amber-600 dark:text-amber-400">required</span>
+															{/if}
+														</div>
+													{/each}
+												</div>
+											{/if}
 
-								<button
-									class="p-1 px-3 text-xs flex rounded-sm transition"
-									type="button"
-									on:click={() => {
-										showAdvanced = !showAdvanced;
-									}}
-								>
-									{#if showAdvanced}
-										<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
-									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Show')}</span>
+											{#if chatVariablesPreview.userFields.length > 0}
+												<div class="mb-1 mt-2 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+													{$i18n.t('User Variables')}
+												</div>
+												<div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
+													{#each chatVariablesPreview.userFields as field}
+														<div class="flex items-center gap-1 text-gray-600 dark:text-gray-300">
+															<span class="font-medium">{field.key}</span>
+														</div>
+													{/each}
+												</div>
+											{/if}
+
+											{#if chatVariablesPreview.warnings.length > 0}
+												<div
+													class="mt-2 flex flex-col gap-1 text-xs text-amber-600 dark:text-amber-400"
+												>
+													{#each chatVariablesPreview.warnings as warning}
+														<div>{warning}</div>
+													{/each}
+												</div>
+											{/if}
+										</div>
 									{/if}
-								</button>
-							</div>
-
-							{#if showAdvanced}
-								<div class="my-2">
-									<AdvancedParams admin={true} custom={true} bind:params />
 								</div>
-							{/if}
-						</div>
-					</div>
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+								<div class="flex h-7 w-full justify-between">
+									<div class="self-center text-xs text-gray-600 dark:text-gray-400">
+										{$i18n.t('Advanced Params')}
+									</div>
 
-					<div class="my-2">
-						<div class="flex w-full justify-between items-center">
-							<div class="flex w-full justify-between items-center">
-								<div class=" self-center text-xs font-medium text-gray-500">
+									<button
+										class="text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+										type="button"
+										on:click={() => {
+											showAdvanced = !showAdvanced;
+										}}
+									>
+										{#if showAdvanced}
+											<span>{$i18n.t('Hide')}</span>
+										{:else}
+											<span>{$i18n.t('Show')}</span>
+										{/if}
+									</button>
+								</div>
+
+								{#if showAdvanced}
+									<div class="my-2">
+										<AdvancedParams admin={true} custom={true} layout="grid" bind:params />
+									</div>
+								{/if}
+							</div>
+						</section>
+
+						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2" />
+
+						<section class="my-2.5">
+							<div class="flex w-full items-center justify-between">
+								<div class="self-center text-xs text-gray-400 dark:text-gray-600">
 									{$i18n.t('Prompts')}
 								</div>
 
 								<button
-									class="p-1 text-xs flex rounded-sm transition"
+									class="text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
 									type="button"
 									on:click={() => {
 										if ((info?.meta?.suggestion_prompts ?? null) === null) {
@@ -795,174 +881,174 @@
 									}}
 								>
 									{#if (info?.meta?.suggestion_prompts ?? null) === null}
-										<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+										<span>{$i18n.t('Default')}</span>
 									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+										<span>{$i18n.t('Custom')}</span>
 									{/if}
 								</button>
 							</div>
+
+							{#if info?.meta?.suggestion_prompts}
+								<PromptSuggestions bind:promptSuggestions={info.meta.suggestion_prompts} />
+							{/if}
+						</section>
+
+						<div class="my-3">
+							<Knowledge bind:selectedItems={knowledge} />
 						</div>
 
-						{#if info?.meta?.suggestion_prompts}
-							<PromptSuggestions bind:promptSuggestions={info.meta.suggestion_prompts} />
-						{/if}
-					</div>
+						<div class="my-3">
+							<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
+						</div>
 
-					<div class="my-4">
-						<Knowledge bind:selectedItems={knowledge} />
-					</div>
+						<div class="my-3">
+							<SkillsSelector bind:selectedSkillIds={skillIds} skills={skillsList} />
+						</div>
 
-					<div class="my-4">
-						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
-					</div>
+						{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0 || ($functions ?? []).filter((func) => func.type === 'action').length > 0}
+							<hr class="my-3 border-gray-100/30 dark:border-gray-850/30" />
 
-					<div class="my-4">
-						<SkillsSelector bind:selectedSkillIds={skillIds} skills={skillsList} />
-					</div>
+							{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0}
+								<div class="my-3">
+									<FiltersSelector
+										bind:selectedFilterIds={filterIds}
+										filters={($functions ?? []).filter((func) => func.type === 'filter')}
+									/>
+								</div>
 
-					{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0 || ($functions ?? []).filter((func) => func.type === 'action').length > 0}
-						<hr class=" border-gray-100/30 dark:border-gray-850/30 my-4" />
+								{@const toggleableFilters = $functions.filter(
+									(func) =>
+										func.type === 'filter' &&
+										(filterIds.includes(func.id) || func?.is_global) &&
+										func?.meta?.toggle
+								)}
 
-						{#if ($functions ?? []).filter((func) => func.type === 'filter').length > 0}
-							<div class="my-4">
-								<FiltersSelector
-									bind:selectedFilterIds={filterIds}
-									filters={($functions ?? []).filter((func) => func.type === 'filter')}
-								/>
-							</div>
+								{#if toggleableFilters.length > 0}
+									<div class="my-3">
+										<DefaultFiltersSelector
+											bind:selectedFilterIds={defaultFilterIds}
+											filters={toggleableFilters}
+										/>
+									</div>
+								{/if}
+							{/if}
 
-							{@const toggleableFilters = $functions.filter(
-								(func) =>
-									func.type === 'filter' &&
-									(filterIds.includes(func.id) || func?.is_global) &&
-									func?.meta?.toggle
-							)}
-
-							{#if toggleableFilters.length > 0}
-								<div class="my-4">
-									<DefaultFiltersSelector
-										bind:selectedFilterIds={defaultFilterIds}
-										filters={toggleableFilters}
+							{#if ($functions ?? []).filter((func) => func.type === 'action').length > 0}
+								<div class="my-3">
+									<ActionsSelector
+										bind:selectedActionIds={actionIds}
+										actions={($functions ?? []).filter((func) => func.type === 'action')}
 									/>
 								</div>
 							{/if}
 						{/if}
 
-						{#if ($functions ?? []).filter((func) => func.type === 'action').length > 0}
-							<div class="my-4">
-								<ActionsSelector
-									bind:selectedActionIds={actionIds}
-									actions={($functions ?? []).filter((func) => func.type === 'action')}
-								/>
-							</div>
-						{/if}
-					{/if}
+						<hr class="my-3 border-gray-100/30 dark:border-gray-850/30" />
 
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-4" />
-
-					<div class="my-4">
-						<Capabilities bind:capabilities />
-					</div>
-
-					{#if Object.keys(capabilities).filter((key) => capabilities[key]).length > 0}
-						{@const availableFeatures = Object.entries(capabilities)
-							.filter(
-								([key, value]) =>
-									value && ['web_search', 'code_interpreter', 'image_generation'].includes(key)
-							)
-							.map(([key, value]) => key)}
-
-						{#if availableFeatures.length > 0}
-							<div class="my-4">
-								<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
-							</div>
-						{/if}
-					{/if}
-
-					{#if capabilities.builtin_tools}
-						<div class="my-4">
-							<BuiltinTools bind:builtinTools />
+						<div class="my-3">
+							<Capabilities bind:capabilities />
 						</div>
-					{/if}
 
-					{#if capabilities.terminal}
-						<div class="my-4">
-							<TerminalSelector bind:terminalId />
-						</div>
-					{/if}
+						{#if Object.keys(capabilities).filter((key) => capabilities[key]).length > 0}
+							{@const availableFeatures = Object.entries(capabilities)
+								.filter(
+									([key, value]) =>
+										value && ['web_search', 'code_interpreter', 'image_generation'].includes(key)
+								)
+								.map(([key, value]) => key)}
 
-					<div class="my-4">
-						<div class="flex w-full justify-between mb-1">
-							<div class="self-center text-xs font-medium text-gray-500">
-								{$i18n.t('TTS Voice')}
-							</div>
-						</div>
-						<TTSVoiceInput
-							bind:value={tts.voice}
-							{voices}
-							placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
-						/>
-					</div>
-
-					<hr class=" border-gray-100/30 dark:border-gray-850/30 my-4" />
-
-					<div class="my-2 flex justify-end">
-						<button
-							class=" text-sm px-3 py-2 transition rounded-lg {loading
-								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
-								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
-							type="submit"
-							disabled={loading}
-						>
-							<div class=" self-center font-medium">
-								{#if edit}
-									{$i18n.t('Save & Update')}
-								{:else}
-									{$i18n.t('Save & Create')}
-								{/if}
-							</div>
-
-							{#if loading}
-								<div class="ml-1.5 self-center">
-									<Spinner />
+							{#if availableFeatures.length > 0}
+								<div class="my-3">
+									<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
 								</div>
 							{/if}
-						</button>
-					</div>
+						{/if}
 
-					<div class="my-2 text-gray-300 dark:text-gray-700 pb-20">
-						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm font-medium">{$i18n.t('JSON Preview')}</div>
+						{#if capabilities.builtin_tools}
+							<div class="my-3">
+								<BuiltinTools bind:builtinTools />
+							</div>
+						{/if}
 
+						{#if capabilities.terminal}
+							<div class="my-3">
+								<TerminalSelector bind:terminalId />
+							</div>
+						{/if}
+
+						<div class="my-3">
+							<div class="flex w-full justify-between mb-1">
+								<div class="self-center text-xs font-normal text-gray-500">
+									{$i18n.t('TTS Voice')}
+								</div>
+							</div>
+							<TTSVoiceInput
+								bind:value={tts.voice}
+								{voices}
+								placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
+							/>
+						</div>
+
+						<hr class="my-3 border-gray-100/30 dark:border-gray-850/30" />
+
+						<div class="my-2 flex justify-end">
 							<button
-								class="p-1 px-3 text-xs flex rounded-sm transition"
-								type="button"
-								on:click={() => {
-									showPreview = !showPreview;
-								}}
+								class=" text-sm px-3 py-2 transition rounded-lg {loading
+									? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
+									: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
+								type="submit"
+								disabled={loading}
 							>
-								{#if showPreview}
-									<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
-								{:else}
-									<span class="ml-2 self-center">{$i18n.t('Show')}</span>
+								<div class=" self-center font-normal">
+									{#if edit}
+										{$i18n.t('Save & Update')}
+									{:else}
+										{$i18n.t('Save & Create')}
+									{/if}
+								</div>
+
+								{#if loading}
+									<div class="ml-1.5 self-center">
+										<Spinner />
+									</div>
 								{/if}
 							</button>
 						</div>
 
-						{#if showPreview}
-							<div>
-								<textarea
-									class="text-sm w-full bg-transparent outline-hidden resize-none"
-									rows="10"
-									value={JSON.stringify(info, null, 2)}
-									disabled
-									readonly
-								/>
+						<div class="my-2 text-gray-300 dark:text-gray-700 pb-20">
+							<div class="flex w-full justify-between mb-2">
+								<div class=" self-center text-sm font-normal">{$i18n.t('JSON Preview')}</div>
+
+								<button
+									class="p-1 px-3 text-xs flex rounded-sm transition"
+									type="button"
+									on:click={() => {
+										showPreview = !showPreview;
+									}}
+								>
+									{#if showPreview}
+										<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
+									{:else}
+										<span class="ml-2 self-center">{$i18n.t('Show')}</span>
+									{/if}
+								</button>
 							</div>
-						{/if}
+
+							{#if showPreview}
+								<div>
+									<textarea
+										class="text-sm w-full bg-transparent outline-hidden resize-none"
+										rows="10"
+										value={JSON.stringify(info, null, 2)}
+										disabled
+										readonly
+									/>
+								</div>
+							{/if}
+						</div>
 					</div>
-				</div>
-			</form>
-		{/if}
+				</form>
+			{/if}
+		</div>
 	</div>
 {/if}

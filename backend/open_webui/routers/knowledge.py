@@ -12,7 +12,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, RAG_EMBEDDING_CONTENT_PREFIX
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
@@ -21,6 +21,7 @@ from open_webui.models.config import Config
 from open_webui.models.files import FileMetadataResponse, FileModel, FileModelResponse, Files
 from open_webui.models.groups import Groups
 from open_webui.models.knowledge import (
+    KNOWLEDGE_SORTABLE_FIELDS,
     KnowledgeDirectoryForm,
     KnowledgeDirectoryModel,
     KnowledgeFileListResponse,
@@ -73,7 +74,7 @@ async def embed_knowledge_base_metadata(
     """Generate and store embedding for knowledge base."""
     try:
         content = f'{name}\n\n{description}' if description else name
-        embedding = await request.app.state.EMBEDDING_FUNCTION(content)
+        embedding = await request.app.state.EMBEDDING_FUNCTION(content, prefix=RAG_EMBEDDING_CONTENT_PREFIX)
         await ASYNC_VECTOR_DB_CLIENT.upsert(
             collection_name=KNOWLEDGE_BASES_COLLECTION,
             items=[
@@ -181,6 +182,8 @@ async def search_knowledge_bases(
     view_option: str | None = None,
     source: str | None = None,
     page: int | None = 1,
+    order_by: str | None = None,
+    direction: str | None = None,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -195,6 +198,10 @@ async def search_knowledge_bases(
         filter['view_option'] = view_option
     if source in {'local', 'external'}:
         filter['source'] = source
+    if order_by in KNOWLEDGE_SORTABLE_FIELDS:
+        filter['order_by'] = order_by
+    if direction in {'asc', 'desc'}:
+        filter['direction'] = direction
 
     groups = await Groups.get_groups_by_member_id(user.id, db=db)
     user_group_ids = {group.id for group in groups}
@@ -1936,6 +1943,10 @@ async def sync_knowledge_cleanup(
         if not file:
             continue
 
+        # Only clean up files that belong to this knowledge base.
+        if not await Knowledges.has_file(id, file_id, db=db):
+            continue
+
         await Knowledges.remove_file_from_knowledge_by_id(id, file_id, db=db)
 
         try:
@@ -1960,6 +1971,10 @@ async def sync_knowledge_cleanup(
 
     # ── Remove orphaned directories (children before parents) ──
     for dir_id in reversed(form_data.dir_ids):
+        # Only delete directories that belong to this knowledge base.
+        directory = await Knowledges.get_directory_by_id(dir_id, db=db)
+        if not directory or directory.knowledge_id != id:
+            continue
         await Knowledges.delete_directory(dir_id, move_files_to_parent=False, db=db)
 
     return {'status': True}

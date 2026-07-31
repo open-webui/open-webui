@@ -165,7 +165,6 @@ class FeedbackTable:
                 result = Feedback(**feedback.model_dump())
                 db.add(result)
                 await db.commit()
-                await db.refresh(result)
                 if result:
                     return FeedbackModel.model_validate(result)
                 else:

@@ -150,9 +150,9 @@ export const Image = Node.create<ImageOptions>({
 			img.setAttribute('title', node.attrs.title || '');
 
 			img.addEventListener('data', (e) => {
-				const files = e?.files || [];
+				const files = e?.files || editor.storage?.files || [];
 				if (files && node.attrs.src.startsWith('data://')) {
-					const file = editorFiles.find((f) => f.id === fileId);
+					const file = files.find((f) => f.id === fileId);
 					if (file) {
 						img.setAttribute('src', safeImageUrl(file.url || ''));
 					} else {

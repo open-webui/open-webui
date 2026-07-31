@@ -31,14 +31,14 @@
 <Modal size="sm" bind:show>
 	<div>
 		<!-- Header -->
-		<div class="flex justify-between items-center dark:text-gray-100 px-5 pt-4 pb-2">
-			<h3 class="text-base font-medium">{$i18n.t('New Directory')}</h3>
+		<div class="flex justify-between items-center dark:text-gray-100 px-4 pt-3 pb-1">
+			<h3 class="text-base font-normal">{$i18n.t('New Directory')}</h3>
 			<button
 				class="self-center shrink-0 ml-2"
 				aria-label={$i18n.t('Close')}
 				on:click={() => (show = false)}
 			>
-				<XMark className="size-5" />
+				<XMark className="size-4" />
 			</button>
 		</div>
 
@@ -47,7 +47,7 @@
 			<div>
 				<div class="mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
 				<input
-					class="w-full text-sm bg-transparent outline-hidden font-primary placeholder:text-gray-300 dark:placeholder:text-gray-700"
+					class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
 					type="text"
 					bind:value={name}
 					placeholder={$i18n.t('Directory name')}

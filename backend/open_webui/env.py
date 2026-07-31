@@ -102,6 +102,7 @@ class JSONFormatter(logging.Formatter):
 
 
 LOG_FORMAT = os.getenv('LOG_FORMAT', '').lower()
+LOGURU_DIAGNOSE = os.getenv('LOGURU_DIAGNOSE', 'False').lower() == 'true'
 
 GLOBAL_LOG_LEVEL = os.getenv('GLOBAL_LOG_LEVEL', '').upper()
 if GLOBAL_LOG_LEVEL in logging.getLevelNamesMapping():
@@ -148,6 +149,11 @@ DEPLOYMENT_ID = os.getenv('DEPLOYMENT_ID', '')
 INSTANCE_ID = os.getenv('INSTANCE_ID', str(uuid4()))
 
 ENABLE_DB_MIGRATIONS = os.getenv('ENABLE_DB_MIGRATIONS', 'True').lower() == 'true'
+
+# Swap the JSON encoder/decoder used across the app (HTTP request bodies, JSONResponse
+# bodies, upstream provider responses, socket.io payloads) from the stdlib `json` module
+# to orjson. Faster, but stricter: see open_webui/utils/json_codec.py for the differences.
+ENABLE_ORJSON = os.getenv('ENABLE_ORJSON', 'False').lower() == 'true'
 
 
 # Function to parse each section
@@ -389,6 +395,12 @@ try:
 except ValueError:
     REDIS_SOCKET_CONNECT_TIMEOUT = None
 
+REDIS_SOCKET_TIMEOUT = os.getenv('REDIS_SOCKET_TIMEOUT', '')
+try:
+    REDIS_SOCKET_TIMEOUT = float(REDIS_SOCKET_TIMEOUT)
+except ValueError:
+    REDIS_SOCKET_TIMEOUT = None
+
 # Whether to enable TCP SO_KEEPALIVE on Redis client sockets. Opt-in:
 # defaults to off so behavior is unchanged for existing deployments. When
 # enabled, the kernel sends TCP keepalive probes on idle connections so
@@ -565,11 +577,27 @@ try:
 except (ValueError, TypeError):
     AIOHTTP_CLIENT_TIMEOUT = 300
 
+# Optional between-chunks idle cap for streaming aiohttp requests.
+AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT = os.getenv('AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT', '')
+if AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT == '':
+    AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT = None
+else:
+    try:
+        AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT = int(AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT)
+    except (ValueError, TypeError):
+        AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT = None
+
+if AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT is not None and AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT <= 0:
+    AIOHTTP_CLIENT_STREAM_IDLE_TIMEOUT = None
+
 
 # SSL verification for general outbound requests (OpenAI, OAuth, etc.).
 # Accepts "True", "False", or a path to a CA bundle file.
 # When "True", falls back to AIOHTTP_CLIENT_SSL_CERT_FILE if set.
 AIOHTTP_CLIENT_SESSION_SSL = _parse_ssl_env(os.getenv('AIOHTTP_CLIENT_SESSION_SSL', 'True'))
+
+SEARXNG_CLIENT_CERT_FILE = os.getenv('SEARXNG_CLIENT_CERT_FILE', '').strip()
+SEARXNG_CLIENT_KEY_FILE = os.getenv('SEARXNG_CLIENT_KEY_FILE', '').strip()
 
 # When False (default), outbound HTTP requests do not follow 3xx redirects.
 AIOHTTP_CLIENT_ALLOW_REDIRECTS = os.getenv('AIOHTTP_CLIENT_ALLOW_REDIRECTS', 'False').lower() == 'true'
@@ -593,6 +621,15 @@ try:
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = int(_tool_data_timeout_raw) if _tool_data_timeout_raw else None
 except (ValueError, TypeError):
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = 10
+
+AIOHTTP_FILE_STREAM_CHUNK_SIZE = os.getenv('AIOHTTP_FILE_STREAM_CHUNK_SIZE', str(1024 * 1024))
+try:
+    AIOHTTP_FILE_STREAM_CHUNK_SIZE = int(AIOHTTP_FILE_STREAM_CHUNK_SIZE)
+except Exception:
+    AIOHTTP_FILE_STREAM_CHUNK_SIZE = 1024 * 1024
+
+if AIOHTTP_FILE_STREAM_CHUNK_SIZE <= 0:
+    AIOHTTP_FILE_STREAM_CHUNK_SIZE = 1024 * 1024
 
 
 # SSL verification for tool server connections specifically.
@@ -788,6 +825,18 @@ OAUTH_MAX_SESSIONS_PER_USER = int(os.getenv('OAUTH_MAX_SESSIONS_PER_USER', '10')
 # Token Exchange Configuration
 # Allows external apps to exchange OAuth tokens for OpenWebUI tokens
 ENABLE_OAUTH_TOKEN_EXCHANGE = os.getenv('ENABLE_OAUTH_TOKEN_EXCHANGE', 'False').lower() == 'true'
+_oauth_token_exchange_rate_limit = (os.getenv('OAUTH_TOKEN_EXCHANGE_RATE_LIMIT') or '').strip()
+OAUTH_TOKEN_EXCHANGE_RATE_LIMIT = (
+    int(_oauth_token_exchange_rate_limit)
+    if _oauth_token_exchange_rate_limit and _oauth_token_exchange_rate_limit.lower() != 'none'
+    else None
+)
+OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW = int(os.getenv('OAUTH_TOKEN_EXCHANGE_RATE_LIMIT_WINDOW', str(60 * 3)))
+OAUTH_TOKEN_EXCHANGE_TRUSTED_CLIENT_IDS = [
+    client_id.strip()
+    for client_id in os.getenv('OAUTH_TOKEN_EXCHANGE_TRUSTED_CLIENT_IDS', '').split(',')
+    if client_id.strip()
+]
 
 # Back-Channel Logout Configuration
 # When enabled, exposes POST /oauth/backchannel-logout for IdP-initiated logout
@@ -1035,8 +1084,32 @@ SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION = (
 )
 
 ####################################
+# KNOWLEDGE TOOLS
+####################################
+
+
+def _int_env(name: str, default: int) -> int:
+    try:
+        return max(int(os.getenv(name) or default), 1)
+    except (ValueError, TypeError):
+        return default
+
+
+# Total output of a single kb_exec call, whatever the command.
+KB_EXEC_MAX_OUTPUT_CHARS = _int_env('KB_EXEC_MAX_OUTPUT_CHARS', 30_000)
+# Files a single kb_exec grep may scan before it asks for a narrower scope.
+KB_EXEC_MAX_GREP_FILES = _int_env('KB_EXEC_MAX_GREP_FILES', 200)
+# Matching lines returned by kb_exec grep and grep_knowledge_files.
+KNOWLEDGE_GREP_MAX_MATCHES = _int_env('KNOWLEDGE_GREP_MAX_MATCHES', 50)
+# Characters returned by view_file / view_knowledge_file.
+VIEW_FILE_MAX_CHARS = _int_env('VIEW_FILE_MAX_CHARS', 100_000)
+VIEW_FILE_DEFAULT_MAX_CHARS = _int_env('VIEW_FILE_DEFAULT_MAX_CHARS', 10_000)
+
+####################################
 # TOOLS/FUNCTIONS PIP OPTIONS
 ####################################
+
+ENABLE_PLUGINS = os.getenv('ENABLE_PLUGINS', 'True').lower() == 'true'
 
 ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS = (
     os.getenv('ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS', 'True').lower() == 'true'
@@ -1091,15 +1164,19 @@ except ValueError:
     MAX_BODY_LOG_SIZE = 2048
 
 # Comma separated list for urls to exclude from audit
-AUDIT_EXCLUDED_PATHS = os.getenv('AUDIT_EXCLUDED_PATHS', '/chats,/chat,/folders').split(',')
-AUDIT_EXCLUDED_PATHS = [path.strip() for path in AUDIT_EXCLUDED_PATHS]
-AUDIT_EXCLUDED_PATHS = [path.lstrip('/') for path in AUDIT_EXCLUDED_PATHS]
+AUDIT_EXCLUDED_PATHS = [
+    path
+    for path in (
+        path.strip().lstrip('/') for path in os.getenv('AUDIT_EXCLUDED_PATHS', '/chats,/chat,/folders').split(',')
+    )
+    if path
+]
 
 # Comma separated list of urls to include in audit (whitelist mode)
 # When set, only these paths are audited and AUDIT_EXCLUDED_PATHS is ignored
-AUDIT_INCLUDED_PATHS = os.getenv('AUDIT_INCLUDED_PATHS', '').split(',')
-AUDIT_INCLUDED_PATHS = [path.strip() for path in AUDIT_INCLUDED_PATHS]
-AUDIT_INCLUDED_PATHS = [path.lstrip('/') for path in AUDIT_INCLUDED_PATHS if path]
+AUDIT_INCLUDED_PATHS = [
+    path for path in (path.strip().lstrip('/') for path in os.getenv('AUDIT_INCLUDED_PATHS', '').split(',')) if path
+]
 
 # When enabled, GET requests are also audited (disabled by default to avoid log noise)
 ENABLE_AUDIT_GET_REQUESTS = os.getenv('ENABLE_AUDIT_GET_REQUESTS', 'False').lower() == 'true'
