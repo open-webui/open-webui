@@ -28,18 +28,23 @@ if ENABLE_ORJSON:
         JSONDecodeError = engineio_json.JSONDecodeError
 
         @staticmethod
-        def dumps(obj, *args, **kwargs):
+        def dumps(obj, **kwargs):
+            # orjson can't honour stdlib json kwargs; its output already matches separators=(',', ':').
+            if kwargs and kwargs != {'separators': (',', ':')}:
+                return engineio_json.dumps(obj, **kwargs)
             try:
                 return orjson.dumps(obj).decode('utf-8')
             except (TypeError, ValueError):
-                return engineio_json.dumps(obj, *args, **kwargs)
+                return engineio_json.dumps(obj, **kwargs)
 
         @staticmethod
-        def loads(s, *args, **kwargs):
+        def loads(s, **kwargs):
+            if kwargs:
+                return engineio_json.loads(s, **kwargs)
             try:
                 return orjson.loads(s)
             except (TypeError, ValueError):
-                return engineio_json.loads(s, *args, **kwargs)
+                return engineio_json.loads(s)
 
     # Drop-in for stdlib ``json``: ``JSONCodec.dumps`` / ``JSONCodec.loads``.
     JSONCodec = ORJSONCodec
