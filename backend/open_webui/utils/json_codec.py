@@ -11,7 +11,6 @@ from __future__ import annotations
 import json as stdlib_json
 
 from engineio import json as engineio_json
-
 from open_webui.env import ENABLE_ORJSON
 
 if ENABLE_ORJSON:
@@ -34,6 +33,9 @@ if ENABLE_ORJSON:
 
         @staticmethod
         def dumps(obj, *args, **kwargs):
+            # orjson can't honor stdlib json options; compact separators are its default.
+            if args or (kwargs and kwargs != {'separators': (',', ':')}):
+                return engineio_json.dumps(obj, *args, **kwargs)
             try:
                 serialized = orjson.dumps(obj).decode('utf-8')
             except (TypeError, ValueError):
@@ -44,6 +46,8 @@ if ENABLE_ORJSON:
 
         @staticmethod
         def loads(s, *args, **kwargs):
+            if args or kwargs:
+                return engineio_json.loads(s, *args, **kwargs)
             try:
                 return orjson.loads(s)
             except (TypeError, ValueError):
