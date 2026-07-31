@@ -48,3 +48,16 @@ if ENABLE_ORJSON:
 else:
     JSONCodec = stdlib_json
     SOCKETIO_JSON = engineio_json
+
+
+def dumps_utf8(obj) -> bytes:
+    """Serialize to UTF-8 bytes, raising on lone surrogates.
+
+    ``JSONCodec.dumps`` cannot stand in: its stdlib fallback escapes them via ``ensure_ascii``.
+    """
+    if ENABLE_ORJSON:
+        try:
+            return orjson.dumps(obj)
+        except (TypeError, ValueError):
+            pass
+    return stdlib_json.dumps(obj, ensure_ascii=False).encode('utf-8')

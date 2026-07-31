@@ -15,6 +15,7 @@ from typing import Callable, Optional, Sequence, Union
 import aiohttp
 import mimeparse
 from open_webui.env import CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
+from open_webui.utils.json_codec import dumps_utf8
 
 log = logging.getLogger(__name__)
 SURROGATE_RE = re.compile('[\ud800-\udfff]')
@@ -811,7 +812,7 @@ def _strip_null_bytes_deep(obj):
 def sanitize_data_for_db(obj):
     """Recursively sanitize all strings in a data structure for database storage.
 
-    Performs a fast pre-check: serializes the structure once and scans for
+    Performs a fast pre-check: serializes the structure and scans for
     null bytes or invalid UTF-8 surrogates. If none are found, the
     original object is returned immediately, skipping the expensive
     recursive walk.
@@ -819,12 +820,8 @@ def sanitize_data_for_db(obj):
     if isinstance(obj, str):
         return sanitize_text_for_db(obj)
     # Fast path: check for null bytes and surrogate code points in the serialized form.
-    # json.dumps is implemented in C and much faster than a Python-level
-    # recursive walk over every leaf string.
     try:
-        serialized = json.dumps(obj, ensure_ascii=False)
-        if '\\u0000' not in serialized:
-            serialized.encode('utf-8')
+        if b'\\u0000' not in dumps_utf8(obj):
             return obj
     except (TypeError, ValueError, UnicodeEncodeError):
         pass
