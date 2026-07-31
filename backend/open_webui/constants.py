@@ -118,6 +118,9 @@ class ERROR_MESSAGES(str, Enum):
     AUTOMATION_TOO_FREQUENT = lambda interval='': f'Schedule too frequent. Minimum interval is {interval} seconds.'
     AUTOMATION_INVALID_RRULE = lambda err='': f'Invalid RRULE: {err}'
     AUTOMATION_NO_FUTURE_RUNS = 'RRULE has no future occurrences'
+    AUTOMATION_COUNT_REQUIRES_DTSTART = (
+        'RRULE with COUNT requires an explicit DTSTART line to anchor the occurrence window'
+    )
 
     FEATURE_DISABLED = lambda name='': f'{name} is disabled'
     INPUT_TOO_LONG = lambda size='': f'Input prompt exceeds maximum length of {size}'

@@ -124,6 +124,9 @@ def validate_rrule(s: str, tz: str = None) -> None:
     clock so that near-future schedules are not incorrectly rejected
     on servers whose system clock is ahead (e.g. UTC vs US timezones).
     """
+    upper = s.upper()
+    if 'COUNT=' in upper and 'DTSTART' not in upper:
+        raise ValueError(ERROR_MESSAGES.AUTOMATION_COUNT_REQUIRES_DTSTART)
     zi = _resolve_tz(tz)
     now = datetime.now(zi).replace(tzinfo=None) if zi else datetime.now()
     try:
