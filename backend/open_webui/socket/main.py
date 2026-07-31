@@ -176,6 +176,7 @@ YDOC_MANAGER = YdocManager(
 async def periodic_session_pool_cleanup():
     """Reap orphaned SESSION_POOL entries that missed heartbeats (e.g. crashed instance)."""
     retry_delay = random.uniform(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT)
+    renew_interval = min(SESSION_POOL_TIMEOUT, max(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, 1))
     while True:
         if not session_aquire_func():
             log.debug('Session cleanup lock held by another node. Retrying.')
@@ -183,21 +184,24 @@ async def periodic_session_pool_cleanup():
             continue
 
         try:
+            last_cleanup = 0
             while True:
                 if not session_renew_func():
                     log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
                     break
 
                 now = int(time.time())
-                for sid in list(SESSION_POOL.keys()):
-                    entry = SESSION_POOL.get(sid)
-                    if entry and now - entry.get('last_seen_at', 0) > SESSION_POOL_TIMEOUT:
-                        log.warning(f'Reaping orphaned session {sid} (user {entry.get("id")})')
-                        try:
-                            del SESSION_POOL[sid]
-                        except KeyError:
-                            pass
-                await asyncio.sleep(SESSION_POOL_TIMEOUT)
+                if now - last_cleanup >= SESSION_POOL_TIMEOUT:
+                    last_cleanup = now
+                    for sid in list(SESSION_POOL.keys()):
+                        entry = SESSION_POOL.get(sid)
+                        if entry and now - entry.get('last_seen_at', 0) > SESSION_POOL_TIMEOUT:
+                            log.warning(f'Reaping orphaned session {sid} (user {entry.get("id")})')
+                            try:
+                                del SESSION_POOL[sid]
+                            except KeyError:
+                                pass
+                await asyncio.sleep(renew_interval)
         finally:
             session_release_func()
 
