@@ -1210,9 +1210,9 @@ async def chat_completion_tools_handler(
 
     try:
         response = await generate_chat_completion(request, form_data=payload, user=user)
-        log.debug(f'{response=}')
+        log.debug('response=%r', response)
         content = await get_content_from_response(response)
-        log.debug(f'{content=}')
+        log.debug('content=%r', content)
 
         if not content:
             return body, {}
@@ -1227,7 +1227,7 @@ async def chat_completion_tools_handler(
             async def tool_call_handler(tool_call):
                 nonlocal skip_files
 
-                log.debug(f'{tool_call=}')
+                log.debug('tool_call=%r', tool_call)
 
                 tool_function_name = tool_call.get('name', None)
                 if tool_function_name not in tools:
@@ -1341,13 +1341,13 @@ async def chat_completion_tools_handler(
                 await tool_call_handler(result)
 
         except Exception as e:
-            log.debug(f'Error: {e}')
+            log.debug('Error: %s', e)
             content = None
     except Exception as e:
-        log.debug(f'Error: {e}')
+        log.debug('Error: %s', e)
         content = None
 
-    log.debug(f'tool_contexts: {sources}')
+    log.debug('tool_contexts: %s', sources)
 
     if skip_files and 'files' in body.get('metadata', {}):
         del body['metadata']['files']
@@ -1912,7 +1912,7 @@ async def chat_completion_files_handler(
         except Exception as e:
             log.exception(e)
 
-        log.debug(f'rag_contexts:sources: {sources}')
+        log.debug('rag_contexts:sources: %s', sources)
 
         unique_ids = set()
         for source in sources or []:
@@ -2028,7 +2028,7 @@ async def convert_url_images_to_base64(form_data, user=None):
                 else:
                     new_content.append(item)
             except Exception as e:
-                log.debug(f'Error converting image URL to base64: {e}')
+                log.debug('Error converting image URL to base64: %s', e)
                 new_content.append(item)
 
         message['content'] = new_content
@@ -2286,7 +2286,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     model_system_prompt = (form_data.get('params') or {}).get('system')
 
     form_data = apply_params_to_form_data(form_data, model)
-    log.debug(f'form_data: {form_data}')
+    log.debug('form_data: %s', form_data)
 
     # Guided regeneration: extract before it reaches the LLM provider
     regeneration_prompt = form_data.pop('regeneration_prompt', None)
@@ -2725,8 +2725,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # Client side tools
         direct_tool_servers = metadata.get('tool_servers', None)
 
-        log.debug(f'{tool_ids=}')
-        log.debug(f'{direct_tool_servers=}')
+        log.debug('tool_ids=%r', tool_ids)
+        log.debug('direct_tool_servers=%r', direct_tool_servers)
 
         tools_dict = {}
 
@@ -3498,7 +3498,7 @@ async def outlet_filter_handler(ctx):
         try:
             outlet_data = await process_pipeline_outlet_filter(request, outlet_data, user, models)
         except Exception as e:
-            log.debug(f'Pipeline outlet filter error: {e}')
+            log.debug('Pipeline outlet filter error: %s', e)
 
         # Function outlet filters
         extra_params = {
@@ -3559,7 +3559,7 @@ async def outlet_filter_handler(ctx):
                     }
                 )
     except Exception as e:
-        log.debug(f'Error running outlet filters: {e}')
+        log.debug('Error running outlet filters: %s', e)
 
 
 async def non_streaming_chat_response_handler(response, ctx):
@@ -3704,7 +3704,7 @@ async def non_streaming_chat_response_handler(response, ctx):
 
             response = build_response_object(response, merge_events_into_response(response_data, events))
         except Exception as e:
-            log.debug(f'Error occurred while processing request: {e}')
+            log.debug('Error occurred while processing request: %s', e)
             chat_id = metadata.get('chat_id')
             if getattr(request.state, 'internal', False) is not True and chat_id and is_saved_chat_id(chat_id):
                 webui_url = await Config.get('webui.url')
@@ -4815,7 +4815,7 @@ async def streaming_chat_response_handler(response, ctx):
                             if done:
                                 pass
                             else:
-                                log.debug(f'Error: {e}')
+                                log.debug('Error: %s', e)
                                 continue
                     await flush_pending_delta_data()
 
@@ -5336,7 +5336,7 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         retries += 1
-                        log.debug(f'Attempt count: {retries}')
+                        log.debug('Attempt count: %s', retries)
 
                         ci_item = output[-1]
                         ci_output = ''
@@ -5398,7 +5398,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 else:
                                     ci_output = {'stdout': 'Code interpreter engine not configured.'}
 
-                                log.debug(f'Code interpreter output: {ci_output}')
+                                log.debug('Code interpreter output: %s', ci_output)
 
                                 # Handle error responses from event_caller
                                 # (e.g. session disconnected, timeout)

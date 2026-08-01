@@ -103,7 +103,7 @@ async def remove_knowledge_base_metadata_embedding(knowledge_base_id: str) -> bo
         )
         return True
     except Exception as e:
-        log.debug(f'Failed to remove embedding for {knowledge_base_id}: {e}')
+        log.debug('Failed to remove embedding for %s: %s', knowledge_base_id, e)
         return False
 
 

@@ -390,7 +390,7 @@ class ValkeyClient(VectorDBBase):
             )
         except g['RequestError'] as e:
             if 'already exists' in str(e).lower():
-                log.debug(f'Index {index_name} already exists, skipping creation.')
+                log.debug('Index %s already exists, skipping creation.', index_name)
             else:
                 raise
 
@@ -458,7 +458,7 @@ class ValkeyClient(VectorDBBase):
             self._g['glide_ft'].dropindex(self.client, index_name)
             log.info(f'Dropped index {index_name}')
         except self._g['RequestError'] as e:
-            log.debug(f'Could not drop index {index_name}: {e}')
+            log.debug('Could not drop index %s: %s', index_name, e)
 
         self._delete_keys_by_prefix(self._key_prefix(collection_name))
 
@@ -492,7 +492,7 @@ class ValkeyClient(VectorDBBase):
             }
             self.batch_client.hset(self._item_key(collection_name, item['id']), mapping)
 
-        log.debug(f'Inserted {len(items)} items into collection {collection_name}')
+        log.debug('Inserted %s items into collection %s', len(items), collection_name)
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
         self.insert(collection_name, items)

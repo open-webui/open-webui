@@ -268,7 +268,7 @@ def get_scim_auth(request: Request, authorization: Optional[str] = Header(None))
 
         # Verify the SCIM token
         scim_token = getattr(request.app.state, 'SCIM_TOKEN', None)
-        log.debug(f'SCIM token configured: {bool(scim_token)}')
+        log.debug('SCIM token configured: %s', bool(scim_token))
         if not scim_token or not hmac.compare_digest(token, scim_token):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

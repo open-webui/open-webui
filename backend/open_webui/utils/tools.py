@@ -1187,7 +1187,7 @@ async def get_terminal_cwd(
                     data = await resp.json()
                     return data.get('cwd')
     except Exception as e:
-        log.debug(f'Failed to fetch terminal CWD: {e}')
+        log.debug('Failed to fetch terminal CWD: %s', e)
     return None
 
 
@@ -1226,7 +1226,7 @@ async def get_terminal_system_prompt(
                     data = await resp.json()
                     return data.get('prompt')
     except Exception as e:
-        log.debug(f'Failed to fetch terminal system prompt: {e}')
+        log.debug('Failed to fetch terminal system prompt: %s', e)
     return None
 
 
@@ -1447,7 +1447,7 @@ async def get_tool_server_data(url: str, headers: dict | None) -> dict[str, Any]
             error = str(err)
         raise Exception(error)
 
-    log.debug(f'Fetched data: {res}')
+    log.debug('Fetched data: %s', res)
     return res
 
 

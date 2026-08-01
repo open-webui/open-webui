@@ -667,7 +667,7 @@ async def _check_calendar_alerts(app) -> None:
                 CalendarEventUpdateForm(meta={'alerted_at': now_ns}),
             )
         except Exception:
-            log.debug(f'Failed to mark event {event.id} as alerted', exc_info=True)
+            log.debug('Failed to mark event %s as alerted', event.id, exc_info=True)
 
         # Send target notification if user has one configured
         try:
@@ -687,7 +687,7 @@ async def _check_calendar_alerts(app) -> None:
                 message=event.title,
             )
         except Exception:
-            log.debug(f'Failed to send notification for calendar alert {event.id}', exc_info=True)
+            log.debug('Failed to send notification for calendar alert %s', event.id, exc_info=True)
 
 
 async def _record_run(

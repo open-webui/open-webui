@@ -338,7 +338,7 @@ class MistralLoader:
         headers = {**self.headers, 'Accept': 'application/json'}
 
         async def url_request():
-            self._debug_log(f'Getting signed URL for file ID: {file_id}')
+            self._debug_log('Getting signed URL for file ID: %s', file_id)
             async with session.get(
                 url,
                 headers=headers,
@@ -450,7 +450,7 @@ class MistralLoader:
         try:
 
             async def delete_request():
-                self._debug_log(f'Deleting file ID: {file_id}')
+                self._debug_log('Deleting file ID: %s', file_id)
                 async with session.delete(
                     url=f'{self.base_url}/files/{file_id}',
                     headers=self.headers,
@@ -460,7 +460,7 @@ class MistralLoader:
                     return await self._handle_response_async(response)
 
             await self._retry_request_async(delete_request)
-            self._debug_log(f'File {file_id} deleted successfully')
+            self._debug_log('File %s deleted successfully', file_id)
 
         except Exception as e:
             # Don't fail the entire process if cleanup fails
@@ -519,7 +519,7 @@ class MistralLoader:
             if page_content is None or page_index is None:
                 skipped_pages += 1
                 self._debug_log(
-                    f"Skipping page due to missing 'markdown' or 'index'. Data keys: {list(page_data.keys())}"
+                    "Skipping page due to missing 'markdown' or 'index'. Data keys: %s", list(page_data.keys())
                 )
                 continue
 
@@ -531,7 +531,7 @@ class MistralLoader:
 
             if not cleaned_content:
                 skipped_pages += 1
-                self._debug_log(f'Skipping empty page {page_index}')
+                self._debug_log('Skipping empty page %s', page_index)
                 continue
 
             # Create document with optimized metadata

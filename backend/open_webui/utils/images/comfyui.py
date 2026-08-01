@@ -17,7 +17,7 @@ default_headers = {'User-Agent': 'Mozilla/5.0'}
 async def queue_prompt(prompt, client_id, base_url, api_key):
     log.info('queue_prompt')
     p = {'prompt': prompt, 'client_id': client_id}
-    log.debug(f'queue_prompt data: {p}')
+    log.debug('queue_prompt data: %s', p)
     try:
         session = await get_session()
         async with session.post(
@@ -202,7 +202,7 @@ async def comfyui_create_image(model: str, payload: ComfyUICreateImageForm, clie
         ) as ws:
             log.info('WebSocket connection established.')
             log.info('Sending workflow to WebSocket server.')
-            log.debug(f'Workflow: {workflow}')
+            log.debug('Workflow: %s', workflow)
             images = await _ws_get_images(ws, workflow, client_id, base_url, api_key)
     except aiohttp.WSServerHandshakeError as e:
         log.exception(f'Failed to connect to WebSocket server: {e}')
@@ -243,7 +243,7 @@ async def comfyui_edit_image(model: str, payload: ComfyUIEditImageForm, client_i
         ) as ws:
             log.info('WebSocket connection established.')
             log.info('Sending workflow to WebSocket server.')
-            log.debug(f'Workflow: {workflow}')
+            log.debug('Workflow: %s', workflow)
             images = await _ws_get_images(ws, workflow, client_id, base_url, api_key)
     except aiohttp.WSServerHandshakeError as e:
         log.exception(f'Failed to connect to WebSocket server: {e}')

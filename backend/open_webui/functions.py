@@ -100,7 +100,7 @@ async def get_function_models(request):
                     log.exception(e)
                     sub_pipes = []
 
-                log.debug(f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}")
+                log.debug("get_function_models: function '%s' is a manifold of %s", pipe.id, sub_pipes)
 
                 for p in sub_pipes:
                     sub_pipe_id = f'{pipe.id}.{p["id"]}'
@@ -126,7 +126,10 @@ async def get_function_models(request):
                 pipe_flag = {'type': 'pipe'}
 
                 log.debug(
-                    f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}"
+                    "get_function_models: function '%s' is a single pipe { 'id': %s, 'name': %s }",
+                    pipe.id,
+                    pipe.id,
+                    pipe.name,
                 )
 
                 pipe_models.append(

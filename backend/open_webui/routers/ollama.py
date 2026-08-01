@@ -443,7 +443,7 @@ async def get_all_models(request: Request, user: UserModel | None = None):
                 dt = datetime.fromisoformat(expires_map[m['model']])
                 m['expires_at'] = int(dt.timestamp())
     except Exception as exc:
-        log.debug(f'Failed to get loaded models: {exc}')
+        log.debug('Failed to get loaded models: %s', exc)
 
     request.app.state.OLLAMA_MODELS = {m['model']: m for m in models_dict['models']}
     return models_dict
@@ -691,7 +691,7 @@ async def push_model(
         url_idx = models[form_data.model]['urls'][0]
 
     url = (await Config.get('ollama.base_urls', []))[url_idx]
-    log.debug(f'url: {url}')
+    log.debug('url: %s', url)
 
     return await send_request(
         f'{url}/api/push',
@@ -723,7 +723,7 @@ async def create_model(
     if not await Config.get('ollama.enable'):
         raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
-    log.debug(f'form_data: {form_data}')
+    log.debug('form_data: %s', form_data)
     url = (await Config.get('ollama.base_urls', []))[url_idx]
 
     return await send_request(

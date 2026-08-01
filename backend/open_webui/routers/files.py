@@ -103,7 +103,7 @@ def _cleanup_local_cache(file_path: str) -> None:
         local_path = os.path.join(UPLOAD_DIR, local_filename)
         if os.path.isfile(local_path):
             os.remove(local_path)
-            log.debug(f'Cleaned up local cache: {local_path}')
+            log.debug('Cleaned up local cache: %s', local_path)
     except OSError as e:
         log.warning(f'Failed to clean up local cache for {file_path}: {e}')
 
@@ -1021,7 +1021,7 @@ async def delete_file_by_id(
                 if file.hash:
                     await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=knowledge.id, filter={'hash': file.hash})
             except Exception as e:
-                log.debug(f'KB embedding cleanup for {knowledge.id}: {e}')
+                log.debug('KB embedding cleanup for %s: %s', knowledge.id, e)
 
         result = await Files.delete_file_by_id(id, db=db)
         if result:

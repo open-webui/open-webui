@@ -98,7 +98,7 @@ class MinerULoader:
                 files = {'files': (filename, f, 'application/octet-stream')}
 
                 log.info(f'Sending file to MinerU Local API: {filename}')
-                log.debug(f'Local API parameters: {form_data}')
+                log.debug('Local API parameters: %s', form_data)
 
                 response = requests.post(
                     f'{self.api_url}/file_parse',
@@ -233,7 +233,7 @@ class MinerULoader:
             request_body['files'][0]['page_ranges'] = self.page_ranges
 
         log.info(f'Requesting upload URL for: {filename}')
-        log.debug(f'Cloud API request body: {request_body}')
+        log.debug('Cloud API request body: %s', request_body)
 
         try:
             response = requests.post(

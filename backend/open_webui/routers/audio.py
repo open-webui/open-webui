@@ -486,7 +486,7 @@ async def _tts_transformers(request, payload, file_path, file_body_path, user):
     try:
         idx = embeddings['filename'].index(model_name)
     except (ValueError, KeyError):
-        log.debug(f'Speaker embedding not found for {model_name}, using default index {idx}')
+        log.debug('Speaker embedding not found for %s, using default index %s', model_name, idx)
 
     def _run_pipeline():
         speaker_embedding = torch.tensor(embeddings[idx]['xvector']).unsqueeze(0)
@@ -1303,7 +1303,7 @@ async def get_available_models(request: Request) -> list[dict]:
                     data = await resp.json()
                     available_models = data.get('models', [])
             except Exception as e:
-                log.debug(f'/audio/models not available, trying /models fallback: {e}')
+                log.debug('/audio/models not available, trying /models fallback: %s', e)
                 try:
                     async with session.get(
                         f'{base_url}/models',

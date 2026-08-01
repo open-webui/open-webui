@@ -115,7 +115,7 @@ async def generate_direct_chat_completion(
                             else:
                                 yield f'data: {data}\n\n'
                 except Exception as e:
-                    log.debug(f'Error in event generator: {e}')
+                    log.debug('Error in event generator: %s', e)
                     pass
 
             # Define a background task to run the event generator
@@ -155,7 +155,7 @@ async def generate_chat_completion(
     bypass_filter: bool = False,
     bypass_system_prompt: bool = False,
 ):
-    log.debug(f'generate_chat_completion: {form_data}')
+    log.debug('generate_chat_completion: %s', form_data)
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
@@ -184,7 +184,7 @@ async def generate_chat_completion(
             **dict(request.app.state.MODELS.items()),
             request.state.model['id']: request.state.model,
         }
-        log.debug(f'direct connection to model: {request.state.model["id"]}')
+        log.debug('direct connection to model: %s', request.state.model['id'])
     else:
         models = request.app.state.MODELS
 

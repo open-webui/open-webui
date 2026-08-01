@@ -29,7 +29,7 @@ def _event_text(message: str, description: str | None = None, event_data: dict |
 
 async def post_webhook(name: str, url: str, message: str, event_data: dict, description: str | None = None) -> bool:
     try:
-        log.debug(f'post_webhook: {url}, {message}, {event_data}')
+        log.debug('post_webhook: %s, %s, %s', url, message, event_data)
         # Block private-IP / loopback / cloud-metadata targets — the URL is
         # caller-controlled (user notification settings under
         # ENABLE_USER_WEBHOOKS, automation notification triggers).
@@ -83,7 +83,7 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict, desc
         else:
             payload = event_data
 
-        log.debug(f'payload: {payload}')
+        log.debug('payload: %s', payload)
         async with get_ssrf_safe_session() as session:
             async with session.post(
                 url,
@@ -93,7 +93,7 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict, desc
             ) as r:
                 r_text = await r.text()
                 r.raise_for_status()
-                log.debug(f'r.text: {r_text}')
+                log.debug('r.text: %s', r_text)
 
         return True
     except Exception as e:
