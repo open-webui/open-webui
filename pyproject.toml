@@ -52,7 +52,7 @@ dependencies = [
     "asgiref==3.11.1",
 
     "tiktoken==0.13.0",
-    "regex==2026.5.9",
+    "regex==2026.7.19",
     "mcp==1.27.2",
 
     "openai==2.29.0",
