@@ -425,13 +425,13 @@ async def lifespan(app: FastAPI):
         log.info('Initializing tool servers...')
         try:
             await set_tool_servers(mock_request)
-            log.info(f'Initialized {len(app.state.TOOL_SERVERS)} tool server(s)')
+            log.info('Initialized %s tool server(s)', len(app.state.TOOL_SERVERS))
         except Exception as e:
             log.warning(f'Failed to initialize tool servers at startup: {e}')
 
         try:
             await set_terminal_servers(mock_request)
-            log.info(f'Initialized {len(app.state.TERMINAL_SERVERS)} terminal server(s)')
+            log.info('Initialized %s terminal server(s)', len(app.state.TERMINAL_SERVERS))
         except Exception as e:
             log.warning(f'Failed to initialize terminal servers at startup: {e}')
 
@@ -2594,7 +2594,7 @@ async def register_client(request, client_id: str) -> bool:
         **apply_connection_oauth_options(connection, oauth_client_info.model_dump(mode='json'))
     )
     oauth_client_manager.add_client(client_id, oauth_client_info)
-    log.info(f'Re-registered OAuth client {client_id} for tool server')
+    log.info('Re-registered OAuth client %s for tool server', client_id)
     return True
 
 

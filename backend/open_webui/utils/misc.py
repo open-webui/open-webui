@@ -1193,7 +1193,7 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
                     if len(line) > max_buffer_size:
                         skip_mode = True
                         yield b'data: {}\n'
-                        log.info(f'Skip mode triggered, line size: {len(line)}')
+                        log.info('Skip mode triggered, line size: %s', len(line))
                     else:
                         yield line + b'\n'
 
@@ -1203,7 +1203,7 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
             # Check if buffer exceeds limit
             if not skip_mode and len(buffer) > max_buffer_size:
                 skip_mode = True
-                log.info(f'Skip mode triggered, buffer size: {len(buffer)}')
+                log.info('Skip mode triggered, buffer size: %s', len(buffer))
                 # Clear oversized buffer to prevent unlimited growth
                 buffer = b''
 

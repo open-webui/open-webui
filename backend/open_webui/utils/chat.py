@@ -68,7 +68,7 @@ async def generate_direct_chat_completion(
         )
 
     channel = f'{user_id}:{session_id}:{request_id}'
-    logging.info(f'WebSocket channel: {channel}')
+    logging.info('WebSocket channel: %s', channel)
 
     if form_data.get('stream'):
         q = asyncio.Queue()
@@ -95,7 +95,7 @@ async def generate_direct_chat_completion(
             }
         )
 
-        log.info(f'res: {res}')
+        log.info('res: %s', res)
 
         if res.get('status', False):
             # Define a generator to stream responses

@@ -519,7 +519,7 @@ async def unload_embedding_model(request: Request):
 @router.post('/embedding/update')
 async def update_embedding_config(request: Request, form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)):
     config = await get_retrieval_config()
-    log.info(f'Updating embedding model: {config.RAG_EMBEDDING_MODEL} to {form_data.RAG_EMBEDDING_MODEL}')
+    log.info('Updating embedding model: %s to %s', config.RAG_EMBEDDING_MODEL, form_data.RAG_EMBEDDING_MODEL)
     await unload_embedding_model(request)
     try:
         config.RAG_EMBEDDING_ENGINE = form_data.RAG_EMBEDDING_ENGINE
@@ -1159,7 +1159,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         else config.RAG_RERANKING_BATCH_SIZE
     )
 
-    log.info(f'Updating reranking model: {config.RAG_RERANKING_MODEL} to {form_data.RAG_RERANKING_MODEL}')
+    log.info('Updating reranking model: %s to %s', config.RAG_RERANKING_MODEL, form_data.RAG_RERANKING_MODEL)
     try:
         config.RAG_RERANKING_MODEL = (
             form_data.RAG_RERANKING_MODEL if form_data.RAG_RERANKING_MODEL is not None else config.RAG_RERANKING_MODEL
@@ -1663,7 +1663,7 @@ def save_docs_to_vector_db(
                     existing_file_id = result.metadatas[0][0].get('file_id')
 
                 if existing_file_id != metadata.get('file_id'):
-                    log.info(f'Document with hash {metadata["hash"]} already exists')
+                    log.info('Document with hash %s already exists', metadata['hash'])
                     raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
@@ -1706,7 +1706,7 @@ def save_docs_to_vector_db(
             )
             docs = text_splitter.split_documents(docs)
         elif config.TEXT_SPLITTER == 'token':
-            log.info(f'Using token text splitter: {config.TIKTOKEN_ENCODING_NAME}')
+            log.info('Using token text splitter: %s', config.TIKTOKEN_ENCODING_NAME)
 
             tiktoken.get_encoding(str(config.TIKTOKEN_ENCODING_NAME))
             text_splitter = TokenTextSplitter(
@@ -1748,16 +1748,16 @@ def save_docs_to_vector_db(
 
     try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
-            log.info(f'collection {collection_name} already exists')
+            log.info('collection %s already exists', collection_name)
 
             if overwrite:
                 VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
-                log.info(f'deleting existing collection {collection_name}')
+                log.info('deleting existing collection %s', collection_name)
             elif add is False:
-                log.info(f'collection {collection_name} already exists, overwrite is False and add is False')
+                log.info('collection %s already exists, overwrite is False and add is False', collection_name)
                 return True
 
-        log.info(f'generating embeddings for {collection_name}')
+        log.info('generating embeddings for %s', collection_name)
         embedding_function = get_embedding_function(
             config.RAG_EMBEDDING_ENGINE,
             config.RAG_EMBEDDING_MODEL,
@@ -1801,7 +1801,7 @@ def save_docs_to_vector_db(
             request.app.state.main_loop,
         )
         embeddings = future.result(timeout=embedding_timeout)
-        log.info(f'embeddings generated {len(embeddings)} for {len(texts)} items')
+        log.info('embeddings generated %s for %s items', len(embeddings), len(texts))
 
         items = [
             {
@@ -1813,13 +1813,13 @@ def save_docs_to_vector_db(
             for idx, text in enumerate(texts)
         ]
 
-        log.info(f'adding to collection {collection_name}')
+        log.info('adding to collection %s', collection_name)
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
             items=items,
         )
 
-        log.info(f'added {len(items)} items to collection {collection_name}')
+        log.info('added %s items to collection %s', len(items), collection_name)
         return True
     except Exception as e:
         log.exception(e)
@@ -2011,7 +2011,7 @@ async def process_file(
                         add=(True if form_data.collection_name else False),
                         user=user,
                     )
-                    log.info(f'added {len(docs)} items to collection {collection_name}')
+                    log.info('added %s items to collection %s', len(docs), collection_name)
 
                     if result:
                         # Fresh session for the final update.

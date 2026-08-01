@@ -119,7 +119,7 @@ class QdrantClient(VectorDBBase):
                 on_disk=self.QDRANT_ON_DISK,
             ),
         )
-        log.info(f'collection {collection_name_with_prefix} successfully created!')
+        log.info('collection %s successfully created!', collection_name_with_prefix)
 
     def _create_collection_if_not_exists(self, collection_name, dimension):
         if not self.has_collection(collection_name=collection_name):

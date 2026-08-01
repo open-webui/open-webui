@@ -575,7 +575,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
                                         'oauth_server_metadata': oauth_server_metadata.model_dump(mode='json'),
                                     }
                                 except Exception as e:
-                                    log.info(f'Failed to parse OAuth 2.1 discovery document: {e}')
+                                    log.info('Failed to parse OAuth 2.1 discovery document: %s', e)
                                     raise HTTPException(
                                         status_code=400,
                                         detail=f'Failed to parse OAuth 2.1 discovery document from {discovery_url}',

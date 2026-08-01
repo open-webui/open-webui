@@ -181,7 +181,7 @@ class OpenGaussClient(VectorDBBase):
                 new_items.append(new_chunk)
             self.session.bulk_save_objects(new_items)
             self.session.commit()
-            log.info(f"Inserting {len(new_items)} items into collection '{collection_name}'.")
+            log.info("Inserting %s items into collection '%s'.", len(new_items), collection_name)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Failed to insert data: {e}')
@@ -207,7 +207,7 @@ class OpenGaussClient(VectorDBBase):
                     )
                     self.session.add(new_chunk)
             self.session.commit()
-            log.info(f"Inserting/updating {len(items)} items in collection '{collection_name}'.")
+            log.info("Inserting/updating %s items in collection '%s'.", len(items), collection_name)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Failed to insert or update data.: {e}')
@@ -352,7 +352,7 @@ class OpenGaussClient(VectorDBBase):
                     query = query.filter(DocumentChunk.vmetadata[key].astext == str(value))
             deleted = query.delete(synchronize_session=False)
             self.session.commit()
-            log.info(f"Deleted {deleted} items from collection '{collection_name}'")
+            log.info("Deleted %s items from collection '%s'", deleted, collection_name)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Failed to delete data: {e}')
@@ -362,7 +362,7 @@ class OpenGaussClient(VectorDBBase):
         try:
             deleted = self.session.query(DocumentChunk).delete()
             self.session.commit()
-            log.info(f'Reset completed. Deleted {deleted} items')
+            log.info('Reset completed. Deleted %s items', deleted)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Reset failed: {e}')
@@ -386,4 +386,4 @@ class OpenGaussClient(VectorDBBase):
 
     def delete_collection(self, collection_name: str) -> None:
         self.delete(collection_name)
-        log.info(f"Collection '{collection_name}' has been deleted")
+        log.info("Collection '%s' has been deleted", collection_name)
