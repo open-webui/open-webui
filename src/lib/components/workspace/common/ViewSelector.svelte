@@ -34,7 +34,7 @@
 		>
 			{selectedLabel}
 		</span>
-		<ChevronDown className=" size-3.5" strokeWidth="2.5" />
+		<ChevronDown className=" size-3.5 shrink-0" strokeWidth="2.5" />
 	</svelte:fragment>
 
 	<svelte:fragment slot="item" let:item let:selected>
