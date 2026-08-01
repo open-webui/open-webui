@@ -1834,6 +1834,10 @@ class OAuthManager:
             if not sub:
                 log.warning(f'OAuth callback failed, sub is missing: {user_data}')
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+            # Normalize to str: some providers (e.g. GitHub) return a numeric id.
+            # Without this, PostgreSQL fails with "operator does not exist: text = integer"
+            # and SQLite containment checks silently miss (int vs str mismatch).
+            sub = str(sub)
 
             oauth_data = {}
             oauth_data[provider] = {
