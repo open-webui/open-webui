@@ -156,7 +156,7 @@ all = [
     "psycopg2-binary==2.9.12",
     "pgvector==0.4.2",
     "moto[s3]>=5.0.26",
-    "docker~=7.1.0",
+    "docker>=7.1,<7.3",
     "pytest~=8.4.1",
     "pytest-docker~=3.2.5",
     "playwright==1.60.0", # Caution: version must match docker-compose.playwright.yaml - Update the docker-compose.yaml if necessary

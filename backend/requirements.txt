@@ -142,7 +142,7 @@ colbert-ai==0.2.22
 
 
 ## Tests
-docker~=7.1.0
+docker>=7.1,<7.3
 pytest~=8.4.1
 pytest-docker~=3.2.5
 
