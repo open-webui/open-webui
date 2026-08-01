@@ -91,7 +91,7 @@ psutil==7.2.2
 sentencepiece==0.2.1
 soundfile==0.13.1
 
-pillow==12.2.0
+pillow==12.3.0
 opencv-python-headless==4.13.0.92
 rapidocr==3.9.2
 rank-bm25==0.2.2
