@@ -15,7 +15,7 @@ joserfc==1.7.4
 
 requests==2.34.2
 regex==2026.5.9 # supports a per-search timeout, which `re` does not
-aiohttp==3.13.5 # do not update to 3.13.3 - broken
+aiohttp==3.14.3 # do not update to 3.13.3 - broken
 aiodns==4.0.4 # makes aiohttp resolve DNS on the event loop instead of the threadpool
 async-timeout==5.0.1
 aiocache==0.12.3
