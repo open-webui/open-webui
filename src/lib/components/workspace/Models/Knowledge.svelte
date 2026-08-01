@@ -31,7 +31,7 @@
 	let showItemModal = false;
 	let selectedItemIdx = null;
 
-	$: if (selectedItems === null) {
+	$: if (!selectedItems) {
 		selectedItems = [];
 	}
 
