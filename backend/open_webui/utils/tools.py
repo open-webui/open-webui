@@ -82,6 +82,7 @@ from open_webui.tools.builtin import (
     search_channel_messages,
     search_channels,
     search_chats,
+    search_folders,
     search_knowledge_bases,
     search_knowledge_files,
     search_memories,
@@ -639,7 +640,7 @@ async def get_builtin_tools(
 
     # Chats tools - search and fetch user's chat history
     if is_builtin_tool_enabled('chats'):
-        builtin_functions.extend([search_chats, view_chat])
+        builtin_functions.extend([search_chats, view_chat, search_folders])
 
     if (
         is_builtin_tool_enabled('subagents')

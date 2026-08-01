@@ -24,6 +24,7 @@ from open_webui.env import (
 )
 from open_webui.models.channels import Channel, ChannelMember, Channels
 from open_webui.models.chats import Chats
+from open_webui.models.folders import Folders
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.memories import Memories
@@ -1514,6 +1515,119 @@ async def view_chat(
         log.exception(f'view_chat error: {e}')
         return json.dumps({'error': str(e)})
 
+
+# =============================================================================
+# FOLDERS TOOLS
+# =============================================================================
+
+
+async def search_folders(
+    query: str,
+    count: int = 10,
+    start_timestamp: Optional[int] = None,
+    end_timestamp: Optional[int] = None,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    Search the user's folders (owned and shared) by name to find a folder
+    and its id. Useful when the user refers to a folder by name and you need
+    its id to list or scope further work.
+
+    :param query: Folder name or partial name to search for
+    :param count: Maximum number of folders to return (default: 10)
+    :return: JSON list of folders with id, name, parent_id, owner_id (for shared),
+        permission (for shared), chat_count and updated_at timestamps.
+    """
+    if __request__ is None:
+        return json.dumps({'error': 'Request context not available'})
+
+    if not __user__:
+        return json.dumps({'error': 'User context not available'})
+    
+    try:
+        user_id = __user__.get('id')
+        user_groups = await Groups.get_groups_by_member_id(user_id)
+        group_ids = {g.id for g in user_groups}
+        
+        normalized_name = Folders.normalize_folder_name(query)
+        
+        user_folders_by_name = await Folders.search_folders_by_name_contains(
+            user_id=user_id, 
+            query=normalized_name
+        )
+        
+        shared_folder_results = []
+        shared_with_user = await Folders.get_shared_folder_ids_for_user(user_id, group_ids)
+        for folder_id, highest_perm in shared_with_user:
+            shared_folder = await Folders.get_folder_by_id_and_user_id(folder_id, user_id)
+            
+            if (start_timestamp and shared_folder.updated_at < start_timestamp) or \
+               (end_timestamp and shared_folder.updated_at > end_timestamp):
+                continue
+            
+            norm_shared_name = Folders.normalize_folder_name(shared_folder.name) if shared_folder else ''
+            if (norm_shared_name and (normalized_name in norm_shared_name) and shared_folder.user_id != user_id):
+                chat_count = await Chats.count_chats_by_folder_id_and_user_id(shared_folder.id, shared_folder.user_id)
+                shared_folder_results.append(
+                    {
+                        'id': shared_folder.id,
+                        'name': shared_folder.name,
+                        'parent_id': shared_folder.parent_id,
+                        'owner_id': shared_folder.user_id,
+                        'permission': highest_perm,
+                        'chat_count': chat_count,
+                        'updated_at': shared_folder.updated_at
+                    }
+                )
+                    
+                
+        user_owned_results = []
+        for folder in user_folders_by_name:
+            if (start_timestamp and folder.updated_at < start_timestamp) or \
+                (end_timestamp and folder.updated_at > end_timestamp):
+                    continue
+            
+            chat_count = await Chats.count_chats_by_folder_id_and_user_id(folder.id, folder.user_id)
+            
+            user_owned_results.append(
+                {
+                    'id': folder.id,
+                    'name': folder.name,
+                    'parent_id': folder.parent_id,
+                    'chat_count': chat_count,
+                    'updated_at': folder.updated_at
+                }
+            )
+            
+        combined_results = user_owned_results + shared_folder_results
+        
+        return json.dumps(combined_results[:count], ensure_ascii=False)
+    except Exception as e:
+        log.exception(f'search_folders error: {e}')
+        return json.dumps({'error': str(e)})
+    
+    
+async def view_folder(
+    folder_id: str,
+    include_children: bool = False,
+    count: int = 10,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """
+    List the chats and (optionally) child folders contained in a folder by its id.
+    Set include_children=true to also include child folders.
+
+    :param folder_id: The id of the folder to inspect
+    :param include_children: If true (default=false), also include chats in nested
+                             child folders and return the child folder tree
+    :param count: Maximum number of chats to return (default: 10)
+    :return: JSON with folder info, child folders, and a list of chats
+             (id, title, updated_at)
+    """
+    pass
+ 
 
 # =============================================================================
 # SUB-AGENT TOOL
