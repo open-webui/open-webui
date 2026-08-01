@@ -457,7 +457,7 @@ async def review_memory_after_turn(
         try:
             done_task.result()
         except Exception as e:
-            log.debug(f'Memory review failed: {e}')
+            log.debug('Memory review failed: %s', e)
 
     task.add_done_callback(log_failure)
 

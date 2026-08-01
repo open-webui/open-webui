@@ -613,7 +613,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                 if provider:
                     model['provider'] = provider
 
-    log.debug(f'get_all_models:responses() {responses}')
+    log.debug('get_all_models:responses() %s', responses)
     return responses
 
 
@@ -669,7 +669,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
         return not any(name in model_id for name in _UNSUPPORTED_OPENAI_MODEL_KEYWORDS)
 
     def get_merged_models(model_lists):
-        log.debug(f'merge_models_lists {model_lists}')
+        log.debug('merge_models_lists %s', model_lists)
         models = {}
 
         for idx, model_list in enumerate(model_lists):
@@ -710,7 +710,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
         return models
 
     models = get_merged_models(map(extract_data, responses))
-    log.debug(f'models: {models}')
+    log.debug('models: %s', models)
 
     request.app.state.OPENAI_MODELS = models
     return {'data': list(models.values())}
@@ -923,7 +923,7 @@ def get_azure_allowed_params(api_version: str) -> set[str]:
         if api_version >= '2024-09-01-preview':
             allowed_params.add('stream_options')
     except ValueError:
-        log.debug(f'Invalid API version {api_version} for Azure OpenAI. Defaulting to allowed parameters.')
+        log.debug('Invalid API version %s for Azure OpenAI. Defaulting to allowed parameters.', api_version)
 
     return allowed_params
 
@@ -971,7 +971,7 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
         # Remove temperature if not 1 for o-series models
         if 'temperature' in payload and payload['temperature'] != 1:
             log.debug(
-                f'Removing temperature parameter for o-series model {model} as only default value (1) is supported'
+                'Removing temperature parameter for o-series model %s as only default value (1) is supported', model
             )
             del payload['temperature']
 

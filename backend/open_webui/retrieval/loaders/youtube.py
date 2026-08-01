@@ -90,7 +90,7 @@ class YoutubeLoader:
 
         if self.proxy_url:
             youtube_proxies = GenericProxyConfig(http_url=self.proxy_url, https_url=self.proxy_url)
-            log.debug(f'Using proxy URL: {self.proxy_url[:14]}...')
+            log.debug('Using proxy URL: %s...', self.proxy_url[:14])
         else:
             youtube_proxies = None
 
@@ -106,23 +106,23 @@ class YoutubeLoader:
             try:
                 transcript = transcript_list.find_transcript([lang])
                 if transcript.is_generated:
-                    log.debug(f"Found generated transcript for language '{lang}'")
+                    log.debug("Found generated transcript for language '%s'", lang)
                     try:
                         transcript = transcript_list.find_manually_created_transcript([lang])
-                        log.debug(f"Found manual transcript for language '{lang}'")
+                        log.debug("Found manual transcript for language '%s'", lang)
                     except NoTranscriptFound:
-                        log.debug(f"No manual transcript found for language '{lang}', using generated")
+                        log.debug("No manual transcript found for language '%s', using generated", lang)
                         pass
 
-                log.debug(f"Found transcript for language '{lang}'")
+                log.debug("Found transcript for language '%s'", lang)
                 try:
                     transcript_pieces: List[Dict[str, Any]] = transcript.fetch()
                 except ParseError:
-                    log.debug(f"Empty or invalid transcript for language '{lang}'")
+                    log.debug("Empty or invalid transcript for language '%s'", lang)
                     continue
 
                 if not transcript_pieces:
-                    log.debug(f"Empty transcript for language '{lang}'")
+                    log.debug("Empty transcript for language '%s'", lang)
                     continue
 
                 transcript_text = ' '.join(
@@ -135,7 +135,7 @@ class YoutubeLoader:
                 )
                 return [Document(page_content=transcript_text, metadata=self._metadata)]
             except NoTranscriptFound:
-                log.debug(f"No transcript found for language '{lang}'")
+                log.debug("No transcript found for language '%s'", lang)
                 continue
             except Exception as e:
                 log.info(f"Error finding transcript for language '{lang}'")

@@ -230,7 +230,7 @@ def get_rf(
                             eos = getattr(cfg, 'eos_token_id', None)
                             if eos is not None:
                                 cfg.pad_token_id = eos
-                                log.debug(f'Missing pad_token_id detected; set to eos_token_id={eos}')
+                                log.debug('Missing pad_token_id detected; set to eos_token_id=%s', eos)
                             else:
                                 log.warning('Neither pad_token_id nor eos_token_id present in model config')
                 except Exception as e2:
@@ -1643,7 +1643,7 @@ def save_docs_to_vector_db(
 
         return ', '.join(docs_info)
 
-    log.debug(f'save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}')
+    log.debug('save_docs_to_vector_db: document %s %s', _get_docs_info(docs), collection_name)
 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and 'hash' in metadata:
@@ -2567,7 +2567,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
     result_items = []
 
     try:
-        logging.debug(f'trying to web search with {config.WEB_SEARCH_ENGINE, form_data.queries}')
+        logging.debug('trying to web search with %s', (config.WEB_SEARCH_ENGINE, form_data.queries))
 
         # Use semaphore to limit concurrent requests based on WEB_SEARCH_CONCURRENT_REQUESTS
         # 0 or None = unlimited (previous behavior), positive number = limited concurrency
@@ -2610,7 +2610,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
                         urls.append(item.link)
 
         urls = list(dict.fromkeys(urls))
-        log.debug(f'urls: {urls}')
+        log.debug('urls: %s', urls)
 
     except Exception as e:
         log.exception('Web search failed')

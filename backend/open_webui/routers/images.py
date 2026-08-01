@@ -149,7 +149,7 @@ def normalize_openai_edit_image_data_url(data_url: str) -> str:
             normalized_image = base64.b64encode(output.getvalue()).decode('utf-8')
             return f'data:image/jpeg;base64,{normalized_image}'
     except Exception as e:
-        log.debug(f'Image edit normalization skipped: {e}')
+        log.debug('Image edit normalization skipped: %s', e)
 
     return data_url
 
@@ -194,7 +194,7 @@ async def set_image_model(request: Request, model: str):
                 ) as r:
                     r.raise_for_status()
         except Exception as e:
-            log.debug(f'{e}')
+            log.debug('%s', e)
 
     return image_config.IMAGE_GENERATION_MODEL
 
@@ -488,7 +488,7 @@ async def get_image_data(data: str, headers=None, trusted_base_url: str | None =
             # ENABLE_LOCAL_WEB_FETCH hammer and a blanket trust flag
             # that would follow arbitrary redirects.
             if trusted_base_url and _is_same_origin(data, trusted_base_url):
-                log.debug(f'Skipping URL validation for trusted backend: {data}')
+                log.debug('Skipping URL validation for trusted backend: %s', data)
             else:
                 await asyncio.to_thread(validate_url, data)
             session = await get_session()
@@ -762,7 +762,7 @@ async def image_generations(
                 image_config.COMFYUI_BASE_URL,
                 image_config.COMFYUI_API_KEY,
             )
-            log.debug(f'res: {res}')
+            log.debug('res: %s', res)
 
             images = []
 
@@ -817,7 +817,7 @@ async def image_generations(
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 res = await r.json(content_type=None)
-            log.debug(f'res: {res}')
+            log.debug('res: %s', res)
 
             images = []
 
@@ -1119,7 +1119,7 @@ async def image_edits(
                     )
                     comfyui_images.append(res.get('name', file_item[1][0]))
             except Exception as e:
-                log.debug(f'Error uploading images to ComfyUI: {e}')
+                log.debug('Error uploading images to ComfyUI: %s', e)
                 raise Exception('Failed to upload images to ComfyUI.')
 
             data = {
@@ -1148,7 +1148,7 @@ async def image_edits(
                 image_config.IMAGES_EDIT_COMFYUI_BASE_URL,
                 image_config.IMAGES_EDIT_COMFYUI_API_KEY,
             )
-            log.debug(f'res: {res}')
+            log.debug('res: %s', res)
 
             image_urls = set()
             for image in res['data']:
@@ -1160,7 +1160,7 @@ async def image_edits(
             if output_type_urls:
                 image_urls = output_type_urls
 
-            log.debug(f'Image URLs: {image_urls}')
+            log.debug('Image URLs: %s', image_urls)
             images = []
 
             for image_url in image_urls:

@@ -307,7 +307,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         try:
             await get_function_module_from_cache(request, function_id, function=function)
         except Exception as e:
-            log.debug(f'Failed to load function module for {function_id}: {e}')
+            log.debug('Failed to load function module for %s: %s', function_id, e)
 
     # Apply global model defaults to all models
     # Per-model overrides take precedence over global defaults
@@ -413,7 +413,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 filter_items_by_id[filter_id] = items
             model['filters'].extend({**item} for item in items)
 
-    log.debug(f'get_all_models() returned {len(models)} models')
+    log.debug('get_all_models() returned %s models', len(models))
 
     models_dict = {model['id']: model for model in models}
     if isinstance(request.app.state.MODELS, RedisDict):

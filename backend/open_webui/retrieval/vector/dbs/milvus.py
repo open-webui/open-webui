@@ -242,7 +242,7 @@ class MilvusClient(VectorDBBase):
                     break
                 all_results.extend(batch)
 
-            log.debug(f'Total results from query: {len(all_results)}')
+            log.debug('Total results from query: %s', len(all_results))
             return self._result_to_get_result([all_results] if all_results else [[]])
 
         except Exception as e:

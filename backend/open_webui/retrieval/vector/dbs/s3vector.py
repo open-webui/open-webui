@@ -54,7 +54,7 @@ class S3VectorClient(VectorDBBase):
         Create a new index in the S3 vector bucket for the given collection if it does not exist.
         """
         if self.has_collection(index_name):
-            log.debug(f"Index '{index_name}' already exists, skipping creation")
+            log.debug("Index '%s' already exists, skipping creation", index_name)
             return
 
         try:
@@ -310,7 +310,7 @@ class S3VectorClient(VectorDBBase):
 
             # Process each query vector
             for i, query_vector in enumerate(vectors):
-                log.debug(f'Processing query vector {i + 1}/{len(vectors)}')
+                log.debug('Processing query vector %s/%s', i + 1, len(vectors))
 
                 # Prepare the query vector in S3 Vector format
                 query_vector_dict = {'float32': [float(x) for x in query_vector]}
@@ -521,7 +521,7 @@ class S3VectorClient(VectorDBBase):
                             )
 
                         # Log the actual content for debugging
-                        log.debug(f'Document text preview (first 200 chars): {str(document_text)[:200]}')
+                        log.debug('Document text preview (first 200 chars): %s', str(document_text)[:200])
                     else:
                         document_text = vector_id
 

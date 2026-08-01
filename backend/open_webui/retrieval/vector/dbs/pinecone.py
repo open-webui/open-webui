@@ -274,7 +274,7 @@ class PineconeClient(VectorDBBase):
                 log.error(f'Error inserting batch: {e}')
                 raise
         elapsed = time.time() - start_time
-        log.debug(f'Insert of {len(points)} vectors took {elapsed:.2f} seconds')
+        log.debug('Insert of %s vectors took %.2f seconds', len(points), elapsed)
         log.info(
             f"Successfully inserted {len(points)} vectors in parallel batches into '{collection_name_with_prefix}'"
         )
@@ -303,7 +303,7 @@ class PineconeClient(VectorDBBase):
                 log.error(f'Error upserting batch: {e}')
                 raise
         elapsed = time.time() - start_time
-        log.debug(f'Upsert of {len(points)} vectors took {elapsed:.2f} seconds')
+        log.debug('Upsert of %s vectors took %.2f seconds', len(points), elapsed)
         log.info(
             f"Successfully upserted {len(points)} vectors in parallel batches into '{collection_name_with_prefix}'"
         )
@@ -474,7 +474,9 @@ class PineconeClient(VectorDBBase):
                     # Note: When deleting by ID, we can't filter by collection_name
                     # This is a limitation of Pinecone - be careful with ID uniqueness
                     self.index.delete(ids=batch_ids)
-                    log.debug(f"Deleted batch of {len(batch_ids)} vectors by ID from '{collection_name_with_prefix}'")
+                    log.debug(
+                        "Deleted batch of %s vectors by ID from '%s'", len(batch_ids), collection_name_with_prefix
+                    )
                 log.info(f"Successfully deleted {len(ids)} vectors by ID from '{collection_name_with_prefix}'")
 
             elif filter:
