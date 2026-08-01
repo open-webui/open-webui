@@ -16,25 +16,36 @@ from open_webui.env import ENABLE_ORJSON
 if ENABLE_ORJSON:
     import orjson
 
-    # stdlib escapes these, orjson emits them raw, and Python treats all three as
-    # line boundaries: one raw separator splits an SSE frame that a reader
-    # reassembles with ``splitlines()``.
+    # orjson emits these raw and Python treats all three as line boundaries: one raw
+    # separator splits an SSE frame reassembled with ``splitlines()``. Escaped even
+    # where stdlib would not.
     LINE_SEPARATOR_ESCAPES = str.maketrans({'\u2028': '\\u2028', '\u2029': '\\u2029', '\x85': '\\u0085'})
+
+    # Module-level because CPython rebuilds these dicts on every call.
+    FAST_PATH_KWARGS = ({'separators': (',', ':')}, {'ensure_ascii': False})
 
     class ORJSONCodec:
         """stdlib-``json``-compatible codec backed by orjson.
 
-        Anything orjson rejects (non-str dict keys, ints beyond 64 bits, ``NaN``
-        literals) falls back to engineio's stdlib-based codec, which keeps its
-        oversized-integer guard for untrusted client payloads.
+        The fast path is not byte-for-byte stdlib: it is always compact, formats
+        floats orjson's way (``1e16``, not ``1e+16``), and is raw UTF-8 apart from
+        the three line separators escaped above, so a ``separators`` caller loses
+        stdlib's ASCII escaping and an ``ensure_ascii=False`` caller loses its
+        spacing. ``dumps`` also serializes ``datetime``/``UUID``/dataclasses that
+        stdlib refuses, and encodes ``NaN``/``Infinity`` as ``null``. ``loads``
+        decodes integers above ``2**64-1`` or below ``-2**63`` as ``float`` and does
+        not enforce engineio's 100-digit integer-literal limit.
+
+        What orjson does reject (non-str dict keys and oversized ints on ``dumps``,
+        the ``NaN``/``Infinity`` literals on ``loads``) falls back to engineio's
+        stdlib-based codec, and with it stdlib's formatting.
         """
 
         JSONDecodeError = engineio_json.JSONDecodeError
 
         @staticmethod
         def dumps(obj, *args, **kwargs):
-            # orjson can't honor stdlib json options; compact separators are its default.
-            if args or (kwargs and kwargs != {'separators': (',', ':')}):
+            if args or (kwargs and kwargs not in FAST_PATH_KWARGS):
                 return engineio_json.dumps(obj, *args, **kwargs)
             try:
                 serialized = orjson.dumps(obj).decode('utf-8')
