@@ -813,12 +813,33 @@ def get_source_context(sources: list, source_ids: dict = None, include_content: 
         source_ids = {}
     for source in sources:
         for doc, meta in zip(source.get('document', []), source.get('metadata', [])):
-            source_id = meta.get('source') or source.get('source', {}).get('id') or 'N/A'
-            if source_id not in source_ids:
+            source_info = source.get('source', {})
+            source_id = (
+                meta.get('url')
+                or meta.get('file_id')
+                or meta.get('note_id')
+                or meta.get('source')
+                or source_info.get('id')
+                or 'N/A'
+            )
+            if source_id in source_ids:
+                # Tool results are already present in the conversation, so their
+                # source tags are citation markers only. Rendering the same marker
+                # again on every tool iteration wastes context and can emit
+                # conflicting attributes for one numeric citation ID.
+                if not include_content:
+                    continue
+            else:
                 source_ids[source_id] = len(source_ids) + 1
-            src_name = source.get('source', {}).get('name')
-            src_type = source.get('source', {}).get('type')
-            src_rid = source.get('source', {}).get('id')
+            src_name = meta.get('name') or source_info.get('name')
+            src_type = source_info.get('type')
+            src_rid = (
+                meta.get('url')
+                or meta.get('file_id')
+                or meta.get('note_id')
+                or source_info.get('id')
+                or source_id
+            )
             body = doc if include_content else ''
             context_string += (
                 f'<source id="{source_ids[source_id]}"'
