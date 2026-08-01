@@ -44,7 +44,7 @@ dependencies = [
     "hiredis==3.4.0",
     # "valkey-glide-sync==2.3.1",  # optional: install manually if VECTOR_DB=valkey
 
-    "pytz==2026.2",
+    "pytz==2026.3.post1",
     "APScheduler==3.11.2",
     "RestrictedPython==8.2",
 
