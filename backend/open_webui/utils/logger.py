@@ -112,10 +112,14 @@ class InterceptHandler(logging.Handler):
             frame = frame.f_back
             depth += 1
 
-        logger.opt(depth=depth, exception=record.exc_info).bind(**self._get_extras()).log(level, record.getMessage())
+        message = record.getMessage()
+        logger.opt(depth=depth, exception=record.exc_info).bind(**self._get_extras()).log(level, message)
         if ENABLE_OTEL and ENABLE_OTEL_LOGS:
             from open_webui.utils.telemetry.logs import otel_handler
 
+            # reuse the message we built so %-args format once; a non-str msg is left alone, otel exports it structured
+            if isinstance(record.msg, str):
+                record.msg, record.args = message, None
             otel_handler.emit(record)
 
     def _get_extras(self):
