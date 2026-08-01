@@ -100,7 +100,7 @@ dependencies = [
     "azure-ai-documentintelligence==1.0.2",
 
     "pillow==12.2.0",
-    "opencv-python-headless==4.13.0.92",
+    "opencv-python-headless==5.0.0.93",
     "rapidocr==3.9.2",
     "rank-bm25==0.2.2",
 
