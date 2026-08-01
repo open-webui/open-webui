@@ -49,7 +49,7 @@ dependencies = [
     "RestrictedPython==8.2",
 
     "loguru==0.7.3",
-    "asgiref==3.11.1",
+    "asgiref==3.12.1",
 
     "tiktoken==0.13.0",
     "regex==2026.5.9",
