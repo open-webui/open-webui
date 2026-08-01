@@ -84,7 +84,7 @@ dependencies = [
     "docx2txt==0.9",
     "python-pptx==1.0.2",
     "msoffcrypto-tool==6.0.0",
-    "nltk==3.9.4",
+    "nltk==3.10.0",
     "Markdown==3.10.2",
     "beautifulsoup4==4.14.3",
     "lxml==6.1.1",
