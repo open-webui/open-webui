@@ -133,7 +133,7 @@
 								{#if isPublicChannel(channel)}
 									<Hashtag className="size-3.5" strokeWidth="2.5" />
 								{:else}
-									<Lock className="size-5" strokeWidth="2" />
+									<Lock className="size-3.5" strokeWidth="2" />
 								{/if}
 							</div>
 						{/if}
