@@ -122,7 +122,7 @@ google-cloud-storage==3.9.0
 ## Databases
 pymongo==4.17.0
 psycopg2-binary==2.9.12
-pgvector==0.4.2
+pgvector==0.5.0
 
 PyMySQL==1.2.0
 boto3==1.42.62
