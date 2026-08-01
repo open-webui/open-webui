@@ -1610,7 +1610,7 @@ async def search_folders(
     
 async def view_folder(
     folder_id: str,
-    include_children: bool = False,
+    include_children: bool = True,
     count: int = 10,
     __request__: Request = None,
     __user__: dict = None,
@@ -1620,13 +1620,69 @@ async def view_folder(
     Set include_children=true to also include child folders.
 
     :param folder_id: The id of the folder to inspect
-    :param include_children: If true (default=false), also include chats in nested
-                             child folders and return the child folder tree
+    :param include_children: Optional but defaulted to True, also returns
+        a list of the folder's immediate children (id, name, parent_id, updated_at).
+        Children are only returned for folders owned by the user.
     :param count: Maximum number of chats to return (default: 10)
     :return: JSON with folder info, child folders, and a list of chats
              (id, title, updated_at)
     """
-    pass
+    if __request__ is None:
+        return json.dumps({'error': 'Request context not available'})
+    if __user__ is None:
+        return json.dumps({'error': 'User context not available'})
+    
+    try:
+        user_id = __user__.get('id')
+        folder = await Folders.get_folder_by_id(folder_id)
+        if not folder:
+            return json.dumps({'error': 'Folder with id {id} not found'.format(id=folder_id)})
+        
+        user_owns = folder.user_id == user_id
+        
+        chat_data = []
+        if user_owns:
+            chats = await Chats.get_chats_by_folder_id_and_user_id(folder_id, user_id, limit=count)
+        else:
+            chats = await Chats.get_all_chats_by_folder_id(folder_id, limit=count)
+            
+        for chat in chats:
+            chat_data.append(
+                {
+                    'id': chat.id,
+                    'title': chat.title,
+                    'snippet': chat.snippet,
+                    'updated_at': chat.updated_at
+                }
+            )
+            
+        child_folder_data = []
+        if include_children:
+            if user_owns:
+                child_folders = await Folders.get_folders_by_parent_id_and_user_id(folder_id, user_id)
+                for child in child_folders:
+                    child_folder_data.append(
+                        {
+                            'id': child.id,
+                            'name': child.name,
+                            'parent_id': child.parent_id,
+                            'updated_at': child.updated_at
+                        }
+                    )
+        
+        return json.dumps(
+            {
+                'id': folder.id,
+                'name': folder.name,
+                'parent_id': folder.parent_id,
+                'chats': chat_data,
+                
+            }
+        )
+        
+    except Exception as e:
+        log.exception(f'view_folder error: {e}')
+        return json.dumps({'error': str(e)})
  
 
 # =============================================================================
