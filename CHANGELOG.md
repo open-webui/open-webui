@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1] - 2026-08-01
+
+### Added
+
+- 🪵 **Much faster message sending.** Sending a message is now much faster, with the largest gains on busy servers and in long conversations, because the server no longer builds detailed log output that was switched off and thrown away unread. [#27834](https://github.com/open-webui/open-webui/pull/27834)
+- ⚡ **Uninterrupted chat during knowledge search.** Responses now keep streaming for everyone on the server while knowledge base searches run, instead of pausing until each search finishes. [#27824](https://github.com/open-webui/open-webui/pull/27824)
+- 🚀 **Faster model list lookups.** Title generation, tag suggestions, autocomplete, and other background steps of a chat turn now fetch the model list in one go, which keeps other people's responses flowing on busy instances with many models. [#27821](https://github.com/open-webui/open-webui/pull/27821)
+- 📇 **Faster permission checks on large instances.** Working out which groups you belong to is now a direct lookup rather than a scan of every membership on the server, so chats and the admin user list stay quick as an organization grows. [#27822](https://github.com/open-webui/open-webui/pull/27822)
+- ⚙️ **Much faster JSON handling.** Saving chats, reading settings, running tools, streaming replies, signing in and signing up, working out your permissions, and reading stored chunk details during knowledge base searches on Valkey and Oracle vector storage are all handled much faster across the application when the "ENABLE_ORJSON" option is turned on. [Commit](https://github.com/open-webui/open-webui/commit/bb0f898b431d5aa45efa7805956657ed9c3dd78d), [#27807](https://github.com/open-webui/open-webui/pull/27807), [#27805](https://github.com/open-webui/open-webui/pull/27805), [#27813](https://github.com/open-webui/open-webui/pull/27813)
+- 📤 **Much faster outbound requests.** Conversations and embedding batches sent to Ollama and Anthropic models are packaged for delivery much faster, which is most noticeable in long chats when the "ENABLE_ORJSON" option is turned on. [#27811](https://github.com/open-webui/open-webui/pull/27811), [#27810](https://github.com/open-webui/open-webui/pull/27810)
+- 🐍 **Much faster code interpreter output.** Printed output and generated images from code run in chat appear much faster when the "ENABLE_ORJSON" option is turned on. [#27812](https://github.com/open-webui/open-webui/pull/27812)
+- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 **Translation updates.** Translations for Portuguese (Brazil) were enhanced and expanded.
+
+### Fixed
+
+- 👻 **Vanishing responses.** Replies from providers that report no content at the end of a stream no longer disappear the moment generation finishes, leaving an empty message in their place. [#27800](https://github.com/open-webui/open-webui/pull/27800), [#27789](https://github.com/open-webui/open-webui/discussions/27789)
+- 🖥️ **Chats with a personal terminal.** Sending a message with a terminal you added yourself under Settings selected no longer fails with a terminal unavailable error, which had blocked those chats since 0.11.0. [#27621](https://github.com/open-webui/open-webui/issues/27621), [Commit](https://github.com/open-webui/open-webui/commit/5b333d75c6adea4d8bde96439974d6e9c83d8198), [Commit](https://github.com/open-webui/open-webui/commit/3becec6ccfc7dc457270d4e9f0d8c957e8160ddc)
+- 🗓️ **Recurring event times.** Repeating calendar events now show at the time you set them for instead of being shifted by the gap between your time zone and the server's, and they keep that time across daylight saving changes. [#27774](https://github.com/open-webui/open-webui/issues/27774), [Commit](https://github.com/open-webui/open-webui/commit/d721b0d19621d01e35505105a778ce5681b2ffba)
+- 🧩 **Chats during model list refreshes.** Messages sent while the model list is being refreshed no longer fail outright or run against a mix of old and new model entries. [#27821](https://github.com/open-webui/open-webui/pull/27821)
+- 🎛️ **Chat Controls staying put.** Hovering a chat in the sidebar whose preview contains an artifact no longer closes the Chat Controls pane of the chat you currently have open. [#27773](https://github.com/open-webui/open-webui/pull/27773), [#27772](https://github.com/open-webui/open-webui/issues/27772)
+- 📨 **Reliable streaming with unusual characters.** Responses containing rare invisible line break characters no longer arrive split or broken when the "ENABLE_ORJSON" option is turned on. [#27819](https://github.com/open-webui/open-webui/pull/27819)
+- 🧮 **Special value conversion.** Data that needs custom conversion before being stored or sent, such as certain knowledge base entries, is now converted correctly instead of having those instructions ignored when the "ENABLE_ORJSON" option is turned on. [Commit](https://github.com/open-webui/open-webui/commit/78ed5a0235c4de67828ba4b0d6147035067cec2c)
+
+### Changed
+
+- ⚠️ **Database Migrations**: This release includes database schema changes; we strongly recommend backing up your database and all associated data before upgrading in production environments. If you are running a multi-worker, multi-server, or load-balanced deployment, all instances must be updated simultaneously, rolling updates are not supported and will cause application failures due to schema incompatibility.
+
 ## [0.11.0] - 2026-07-27
 
 ### Added
