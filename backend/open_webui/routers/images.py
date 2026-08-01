@@ -64,6 +64,8 @@ IMAGE_FILE_EXTENSIONS = {
     'image/webp': '.webp',
 }
 
+MINIMAX_IMAGE_API_HOSTS = {'api.minimax.io', 'api.minimaxi.com'}
+
 IMAGE_CONFIG_KEYS = {
     'ENABLE_IMAGE_GENERATION': 'image_generation.enable',
     'ENABLE_IMAGE_PROMPT_GENERATION': 'image_generation.prompt.enable',
@@ -623,29 +625,55 @@ async def image_generations(
             if ENABLE_FORWARD_USER_INFO_HEADERS:
                 headers = include_user_info_headers(headers, user)
 
-            url = f'{image_config.IMAGES_OPENAI_API_BASE_URL}/images/generations'
-            if image_config.IMAGES_OPENAI_API_VERSION:
+            api_base_url = image_config.IMAGES_OPENAI_API_BASE_URL.rstrip('/')
+            is_minimax = urlparse(api_base_url).hostname in MINIMAX_IMAGE_API_HOSTS
+            endpoint = 'image_generation' if is_minimax else 'images/generations'
+            url = (
+                api_base_url
+                if is_minimax and urlparse(api_base_url).path.endswith('/image_generation')
+                else f'{api_base_url}/{endpoint}'
+            )
+            if image_config.IMAGES_OPENAI_API_VERSION and not is_minimax:
                 url = f'{url}?api-version={image_config.IMAGES_OPENAI_API_VERSION}'
 
-            data = {
-                'model': model,
-                'prompt': form_data.prompt,
-                'n': form_data.n,
-                **(
-                    {'size': form_data.size or image_config.IMAGE_SIZE}
-                    if (form_data.size or image_config.IMAGE_SIZE)
+            api_params = image_config.IMAGES_OPENAI_API_PARAMS or {}
+            if is_minimax:
+                requested_size = form_data.size or image_config.IMAGE_SIZE
+                dimensions = (
+                    {'width': width, 'height': height}
+                    if requested_size
+                    and 'x' in requested_size
+                    and not {'aspect_ratio', 'width', 'height'}.intersection(api_params)
                     else {}
-                ),
-                **(
-                    {}
-                    if re.match(
-                        IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
-                        image_config.IMAGE_GENERATION_MODEL,
-                    )
-                    else {'response_format': 'b64_json'}
-                ),
-                **({} if not image_config.IMAGES_OPENAI_API_PARAMS else image_config.IMAGES_OPENAI_API_PARAMS),
-            }
+                )
+                data = {
+                    'model': model,
+                    'prompt': form_data.prompt,
+                    'n': form_data.n,
+                    'response_format': 'base64',
+                    **dimensions,
+                    **api_params,
+                }
+            else:
+                data = {
+                    'model': model,
+                    'prompt': form_data.prompt,
+                    'n': form_data.n,
+                    **(
+                        {'size': form_data.size or image_config.IMAGE_SIZE}
+                        if (form_data.size or image_config.IMAGE_SIZE)
+                        else {}
+                    ),
+                    **(
+                        {}
+                        if re.match(
+                            IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
+                            image_config.IMAGE_GENERATION_MODEL,
+                        )
+                        else {'response_format': 'b64_json'}
+                    ),
+                    **api_params,
+                }
 
             session = await get_session()
             async with session.post(
@@ -659,8 +687,11 @@ async def image_generations(
 
             images = []
 
-            for image in res['data']:
-                if image_url := image.get('url', None):
+            response_images = res['data']['image_urls'] if is_minimax else res['data']
+            for image in response_images:
+                if isinstance(image, str):
+                    image_data, content_type = await get_image_data(image)
+                elif image_url := image.get('url', None):
                     image_data, content_type = await get_image_data(
                         image_url,
                         {k: v for k, v in headers.items() if k != 'Content-Type'},
