@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 import os
 import re
@@ -24,7 +25,9 @@ from open_webui.models.tools import Tools
 log = logging.getLogger(__name__)
 
 
-def resolve_valves_schema_options(valves_class: type, schema: dict, user: Any = None) -> dict:
+def resolve_valves_schema_options(
+    valves_class: type, schema: dict, user: Any = None, resolve_dynamic: bool = True
+) -> dict:
     """
     Resolve dynamic options in a Valves schema.
 
@@ -64,9 +67,10 @@ def resolve_valves_schema_options(valves_class: type, schema: dict, user: Any = 
         valves_class: The Valves or UserValves Pydantic model class
         schema: The JSON schema dict from valves_class.schema()
         user: Optional user object passed to methods that accept __user__
+        resolve_dynamic: When False, no option method is called
 
     Returns:
-        Modified schema dict with resolved options
+        Modified schema dict with resolved options; unresolvable select options lose their `input` hint
     """
     if not schema or 'properties' not in schema:
         return schema
@@ -104,41 +108,41 @@ def resolve_valves_schema_options(valves_class: type, schema: dict, user: Any = 
             resolved_options = options
 
         # Case 2: options is a string - treat as method name
-        elif isinstance(options, str) and options:
+        elif isinstance(options, str) and options and resolve_dynamic:
             method = getattr(valves_class, options, None)
             if method is None or not callable(method):
                 log.warning(f"options '{options}' not found or not callable on {valves_class.__name__}")
-                continue
+            else:
+                try:
+                    sig = inspect.signature(method)
+                    params = sig.parameters
 
-            try:
-                import inspect
+                    # Prepare kwargs based on what the method accepts
+                    kwargs = {}
+                    if '__user__' in params and user is not None:
+                        kwargs['__user__'] = user.model_dump() if hasattr(user, 'model_dump') else user
+                    if 'user' in params and user is not None:
+                        kwargs['user'] = user.model_dump() if hasattr(user, 'model_dump') else user
 
-                sig = inspect.signature(method)
-                params = sig.parameters
+                    resolved_options = method(**kwargs) if kwargs else method()
 
-                # Prepare kwargs based on what the method accepts
-                kwargs = {}
-                if '__user__' in params and user is not None:
-                    kwargs['__user__'] = user.model_dump() if hasattr(user, 'model_dump') else user
-                if 'user' in params and user is not None:
-                    kwargs['user'] = user.model_dump() if hasattr(user, 'model_dump') else user
+                    # Validate return type
+                    if not isinstance(resolved_options, list):
+                        log.warning(f"Method '{options}' did not return a list for {prop_name}")
+                        resolved_options = None
 
-                resolved_options = method(**kwargs) if kwargs else method()
+                except Exception as e:
+                    log.warning(f'Failed to resolve options for {prop_name}: {e}')
 
-                # Validate return type
-                if not isinstance(resolved_options, list):
-                    log.warning(f"Method '{options}' did not return a list for {prop_name}")
-                    continue
+        schema['properties'][prop_name] = dict(prop_schema)
 
-            except Exception as e:
-                log.warning(f'Failed to resolve options for {prop_name}: {e}')
-                continue
-        else:
-            # Invalid options type - skip
+        if resolved_options is None:
+            if input_config.get('type') in ('select', 'multiselect'):
+                # Without a usable option list the client renders the field broken or blank
+                schema['properties'][prop_name].pop('input', None)
             continue
 
         # Update the schema with resolved options
-        schema['properties'][prop_name] = dict(prop_schema)
         if 'input' not in schema['properties'][prop_name]:
             schema['properties'][prop_name]['input'] = {'type': 'select'}
         else:

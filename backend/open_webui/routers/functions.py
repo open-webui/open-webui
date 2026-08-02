@@ -598,8 +598,8 @@ async def get_function_user_valves_spec_by_id(
         if hasattr(function_module, 'UserValves'):
             UserValves = function_module.UserValves
             schema = UserValves.schema()
-            # Resolve dynamic options for select dropdowns
-            schema = resolve_valves_schema_options(UserValves, schema, user)
+            # Any verified user can reach this, so never run a disabled function's option methods
+            schema = resolve_valves_schema_options(UserValves, schema, user, resolve_dynamic=function.is_active)
             return schema
         return None
     else:
