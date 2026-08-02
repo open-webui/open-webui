@@ -190,6 +190,44 @@ class FolderTable:
                 if existing != 'write':
                     folder_perms[g.resource_id] = g.permission
             return folder_perms
+        
+    async def get_shared_folder_permission_by_id_and_user_id(
+        self, id:str, user_id: str, user_group_ids: set[str], db: Optional[AsyncSession] = None
+    ) -> Optional[str]:
+        """
+        Returns the highest permission ('write' > 'read') for a folder shared with a user,
+        or None if no access.
+        Checks direct user grants, group grants, and public (user:*) grants.
+        """
+        from open_webui.models.access_grants import AccessGrant
+        
+        async with get_async_db_context(db) as db:
+            conditions = [
+                and_(AccessGrant.principal_type == 'user', AccessGrant.principal_id == '*'),
+                and_(AccessGrant.principal_type == 'user', AccessGrant.principal_id == user_id),
+            ]
+            if user_group_ids:
+                conditions.append(
+                    and_(AccessGrant.principal_type == 'group', AccessGrant.principal_id.in_(user_group_ids))
+                )
+            result = await db.execute(
+                select(AccessGrant).filter(
+                    AccessGrant.resource_type == 'folder',
+                    AccessGrant.resource_id == id,
+                    or_(*conditions),
+                )
+            )
+            grants = result.scalars().all()
+            if not grants:
+                return None
+            
+            # Return highest permission ('write' > 'read')
+            highest_permission = 'read'
+            for g in grants:
+                if g.permission == 'write':
+                    highest_permission = 'write'
+                    break
+            return highest_permission
 
     async def get_children_folders_by_id_and_user_id(
         self, id: str, user_id: str, db: Optional[AsyncSession] = None

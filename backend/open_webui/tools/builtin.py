@@ -25,6 +25,7 @@ from open_webui.env import (
 from open_webui.models.channels import Channel, ChannelMember, Channels
 from open_webui.models.chats import Chats
 from open_webui.models.folders import Folders
+from open_webui.models.users import Users
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.memories import Memories
@@ -1566,7 +1567,11 @@ async def search_folders(
                (end_timestamp and shared_folder.updated_at > end_timestamp):
                 continue
             
-            norm_shared_name = Folders.normalize_folder_name(shared_folder.name) if shared_folder else ''
+            owner = await Users.get_user_by_id(shared_folder.user_id)
+            if not owner:
+                log.warning(f'Owner with id {shared_folder.user_id} not found for shared folder {shared_folder.id}')
+            
+            norm_shared_name = Folders.normalize_folder_name(shared_folder.name) if shared_folder else None
             if (norm_shared_name and (normalized_name in norm_shared_name) and shared_folder.user_id != user_id):
                 chat_count = await Chats.count_chats_by_folder_id_and_user_id(shared_folder.id, shared_folder.user_id)
                 shared_folder_results.append(
@@ -1574,7 +1579,7 @@ async def search_folders(
                         'id': shared_folder.id,
                         'name': shared_folder.name,
                         'parent_id': shared_folder.parent_id,
-                        'owner_id': shared_folder.user_id,
+                        'owner_name': owner.name if owner else 'Unknown',
                         'permission': highest_perm,
                         'chat_count': chat_count,
                         'updated_at': shared_folder.updated_at
@@ -1670,15 +1675,31 @@ async def view_folder(
                         }
                     )
         
-        return json.dumps(
-            {
-                'id': folder.id,
-                'name': folder.name,
-                'parent_id': folder.parent_id,
-                'chats': chat_data,
-                
-            }
-        )
+        result_obj = {
+            'id': folder.id,
+            'name': folder.name,
+            'parent_id': folder.parent_id,
+            'chats': chat_data,
+            'updated_at': folder.updated_at
+        }
+        
+        if not user_owns:
+            user_groups = await Groups.get_groups_by_member_id(user_id)
+            group_ids = {g.id for g in user_groups}
+            highest_perm = await Folders.get_shared_folder_permission_by_id_and_user_id(folder.id, user_id, group_ids)
+            
+            if highest_perm is None:
+                return json.dumps({'error': 'Access denied to folder with id {id}'.format(id=folder_id)})
+            
+            result_obj['permission'] = highest_perm
+            owner = await Users.get_user_by_id(folder.user_id)
+            if owner:
+                result_obj['owner_name'] = owner.name
+            else:
+                result_obj['owner_name'] = 'Unknown'
+                log.warning(f'Owner with id {folder.user_id} not found for folder {folder.id}')
+            
+        return json.dumps(result_obj, ensure_ascii=False)
         
     except Exception as e:
         log.exception(f'view_folder error: {e}')
