@@ -605,25 +605,16 @@ class ModelsTable:
 
                 # Update or insert models
                 for model in models:
+                    model_data = {
+                        **model.model_dump(exclude={'access_grants'}),
+                        'user_id': user_id,
+                        'updated_at': int(time.time()),
+                    }
+
                     if model.id in existing_ids:
-                        await db.execute(
-                            update(Model)
-                            .filter_by(id=model.id)
-                            .values(
-                                **model.model_dump(exclude={'access_grants'}),
-                                user_id=user_id,
-                                updated_at=int(time.time()),
-                            )
-                        )
+                        await db.execute(update(Model).filter_by(id=model.id).values(**model_data))
                     else:
-                        new_model = Model(
-                            **{
-                                **model.model_dump(exclude={'access_grants'}),
-                                'user_id': user_id,
-                                'updated_at': int(time.time()),
-                            }
-                        )
-                        db.add(new_model)
+                        db.add(Model(**model_data))
                     await AccessGrants.set_access_grants('model', model.id, model.access_grants, db=db)
 
                 # Remove models that are no longer present
