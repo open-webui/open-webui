@@ -1705,4 +1705,17 @@ async def token_exchange(
             detail='User not found. Please sign in via the web interface first.',
         )
 
+    role = await oauth_manager.get_user_role(user, user_data, deny_on_missing_roles=True)
+    if user.role != role:
+        await Users.update_user_role_by_id(user.id, role, db=db)
+        user.role = role
+        await publish_event(
+            request,
+            EVENTS.USER_ROLE_UPDATED,
+            actor=user,
+            subject_id=user.id,
+            source='oauth',
+            data={'role': role, 'provider': provider},
+        )
+
     return await create_session_response(request, user, db, source='oauth')

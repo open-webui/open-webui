@@ -1498,7 +1498,7 @@ class OAuthManager:
             log.error(f'Exception during token refresh for provider {provider}: {e}')
             return None
 
-    async def get_user_role(self, user, user_data):
+    async def get_user_role(self, user, user_data, deny_on_missing_roles=False):
         auth_config = await get_oauth_runtime_config()
         user_count = await Users.get_num_users()
         if user and user_count == 1:
@@ -1550,6 +1550,14 @@ class OAuthManager:
             log.debug('User roles from oauth: %s', oauth_roles)
             log.debug('Accepted user roles: %s', oauth_allowed_roles)
             log.debug('Accepted admin roles: %s', oauth_admin_roles)
+
+            # No ID token here to backfill claims from, so falling back to DEFAULT_USER_ROLE would demote the user.
+            if not oauth_roles and deny_on_missing_roles:
+                log.warning('OAuth role management enabled but no roles resolved for the user; denying token exchange')
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN,
+                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+                )
 
             # If roles are present in the token, they must match; otherwise deny access
             if oauth_roles:
