@@ -1314,6 +1314,7 @@ class OAuthManager:
         self.app = app
 
         self._clients = {}
+        self._jwks_clients = {}
 
         for name, provider_config in OAUTH_PROVIDERS.items():
             if 'register' not in provider_config:
@@ -2195,27 +2196,20 @@ class OAuthManager:
         matched_provider = None
         matched_client_id = None
         matched_jwks_uri = None
-        matched_issuer = None
 
         for provider_name in OAUTH_PROVIDERS:
-            server_metadata_url = self.get_server_metadata_url(provider_name)
-            if not server_metadata_url:
+            client = self.get_client(provider_name)
+            if not client:
                 continue
 
             try:
-                async with aiohttp.ClientSession(trust_env=True) as session:
-                    async with session.get(server_metadata_url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as r:
-                        if r.status != 200:
-                            continue
-                        oidc_config = await r.json()
+                # authlib caches the discovery document on the client
+                oidc_config = await client.load_server_metadata()
 
-                provider_issuer = oidc_config.get('issuer')
-                if provider_issuer and provider_issuer == token_issuer:
-                    client = self.get_client(provider_name)
+                if oidc_config.get('issuer') == token_issuer:
                     matched_provider = provider_name
-                    matched_client_id = client.client_id if client else None
+                    matched_client_id = client.client_id
                     matched_jwks_uri = oidc_config.get('jwks_uri')
-                    matched_issuer = provider_issuer
                     break
             except Exception as e:
                 log.debug('Back-channel logout: error checking provider %s: %s', provider_name, e)
@@ -2233,15 +2227,25 @@ class OAuthManager:
 
         # 4. Validate the logout_token signature and claims
         try:
-            jwks_client = pyjwt.PyJWKClient(matched_jwks_uri)
-            signing_key = jwks_client.get_signing_key_from_jwt(logout_token)
+            if matched_jwks_uri not in self._jwks_clients:
+                # 5s rather than pyjwt's 30s default: this fetch is reachable unauthenticated
+                self._jwks_clients[matched_jwks_uri] = pyjwt.PyJWKClient(matched_jwks_uri, timeout=5)
+            jwks_client = self._jwks_clients[matched_jwks_uri]
+
+            # Match the kid ourselves: pyjwt refetches the JWKS on an unknown kid, which this
+            # unauthenticated endpoint must not let a caller trigger
+            token_kid = pyjwt.get_unverified_header(logout_token).get('kid')
+            signing_keys = await asyncio.to_thread(jwks_client.get_signing_keys)
+            signing_key = jwks_client.match_kid(signing_keys, token_kid)
+            if not signing_key:
+                raise pyjwt.InvalidTokenError('no signing key matches the token kid')
 
             claims = pyjwt.decode(
                 logout_token,
                 signing_key.key,
                 algorithms=['RS256', 'RS384', 'RS512', 'ES256', 'ES384', 'ES512'],
                 audience=matched_client_id,
-                issuer=matched_issuer,
+                issuer=token_issuer,
                 options={
                     'require': ['iss', 'aud', 'iat', 'events'],
                 },
