@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 from typing import Optional
@@ -258,14 +259,15 @@ class AutomationTable:
         self,
         id: str,
         next_run_at: Optional[int],
+        is_active: bool,
         db: Optional[AsyncSession] = None,
     ) -> Optional[AutomationModel]:
         async with get_async_db_context(db) as db:
             row = await db.get(Automation, id)
             if not row:
                 return None
-            row.is_active = not row.is_active
-            row.next_run_at = next_run_at if row.is_active else None
+            row.is_active = is_active
+            row.next_run_at = next_run_at
             row.updated_at = int(time.time_ns())
             await db.commit()
             return AutomationModel.model_validate(row)
@@ -316,13 +318,25 @@ class AutomationTable:
                 tz_result = await db.execute(select(User.id, User.timezone).where(User.id.in_(user_ids)))
                 timezone_by_user_id = {uid: tz for uid, tz in tz_result.all()}
 
-            for row in rows:
+            next_runs = await asyncio.gather(
+                *[next_run_ns(row.data.get('rrule', ''), tz=timezone_by_user_id.get(row.user_id)) for row in rows],
+                return_exceptions=True,
+            )
+
+            claimed = []
+            for row, next_run_at in zip(rows, next_runs):
+                if isinstance(next_run_at, BaseException):
+                    # Look again in five minutes rather than run it blind or re-walk it every poll
+                    log.warning('Skipping automation %s: %s', row.id, next_run_at)
+                    row.next_run_at = now_ns + 300 * 1_000_000_000
+                    continue
                 row.last_run_at = now_ns
-                row.next_run_at = next_run_ns(row.data.get('rrule', ''), tz=timezone_by_user_id.get(row.user_id))
+                row.next_run_at = next_run_at
+                claimed.append(row)
 
             await db.commit()
 
-            return [AutomationModel.model_validate(r) for r in rows]
+            return [AutomationModel.model_validate(r) for r in claimed]
 
 
 ####################

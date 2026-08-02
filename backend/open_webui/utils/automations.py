@@ -20,6 +20,7 @@ import logging
 import os
 import random
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from typing import Optional
 from uuid import uuid4
@@ -117,7 +118,7 @@ def _parse_rule(s: str, now: Optional[datetime] = None):
     return rrulestr(s, ignoretz=True)
 
 
-def validate_rrule(s: str, tz: str = None) -> None:
+def _validate_rrule_blocking(s: str, tz: str = None) -> None:
     """Raise ValueError if the RRULE is malformed or exhausted.
 
     When *tz* is provided the "now" reference uses the user's local
@@ -130,11 +131,14 @@ def validate_rrule(s: str, tz: str = None) -> None:
         rule = _parse_rule(s, now)
     except Exception as e:
         raise ValueError(ERROR_MESSAGES.AUTOMATION_INVALID_RRULE(e))
-    if rule.after(now) is None:
+    first = rule.after(now)
+    if first is None:
         raise ValueError(ERROR_MESSAGES.AUTOMATION_NO_FUTURE_RUNS)
+    # The scheduler needs the occurrence after that one, which costs more, so prove it is affordable too
+    rule.after(first)
 
 
-def next_run_ns(s: str, tz: str = None) -> Optional[int]:
+def _next_run_ns_blocking(s: str, tz: str = None) -> Optional[int]:
     """Next occurrence as epoch nanoseconds, respecting user timezone."""
     zi = _resolve_tz(tz)
     now = datetime.now(zi) if zi else datetime.now()
@@ -147,7 +151,7 @@ def next_run_ns(s: str, tz: str = None) -> Optional[int]:
     return int(dt.timestamp() * 1_000_000_000)
 
 
-def next_n_runs_ns(s: str, n: int = 5, tz: str = None) -> list[int]:
+def _next_n_runs_ns_blocking(s: str, n: int = 5, tz: str = None) -> list[int]:
     """Compute next N occurrences for UI preview.
 
     Uses the user's timezone for the starting "now" so that the
@@ -170,7 +174,7 @@ def next_n_runs_ns(s: str, n: int = 5, tz: str = None) -> list[int]:
     return result
 
 
-def rrule_interval_seconds(s: str) -> Optional[int]:
+def _rrule_interval_seconds_blocking(s: str) -> Optional[int]:
     """Approximate interval between recurrences in seconds.
 
     Returns None for one-shot (COUNT=1) schedules or rules
@@ -187,6 +191,46 @@ def rrule_interval_seconds(s: str) -> Optional[int]:
     if second is None:
         return None
     return int((second - first).total_seconds())
+
+
+# A walk already under way cannot be stopped, so a single thread caps what one can cost.
+_rrule_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix='rrule')
+
+
+async def _run_bounded(fn, *args):
+    """Resolve occurrences off the event loop, raising ValueError on rules that take too long."""
+    try:
+        return await asyncio.wait_for(asyncio.wrap_future(_rrule_pool.submit(fn, *args)), timeout=1)
+    except TimeoutError:
+        log.warning('Gave up resolving recurrence rule %.200r', args[0])
+        raise ValueError(ERROR_MESSAGES.AUTOMATION_RRULE_TIMEOUT) from None
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(ERROR_MESSAGES.AUTOMATION_INVALID_RRULE(e)) from None
+
+
+async def validate_rrule(s: str, tz: str = None) -> None:
+    """Raise ValueError if the RRULE is malformed, exhausted, or too slow to resolve."""
+    await _run_bounded(_validate_rrule_blocking, s, tz)
+
+
+async def next_run_ns(s: str, tz: str = None) -> Optional[int]:
+    """Next occurrence as epoch nanoseconds. Raises ValueError if the rule cannot be resolved."""
+    return await _run_bounded(_next_run_ns_blocking, s, tz)
+
+
+async def next_n_runs_ns(s: str, n: int = 5, tz: str = None) -> list[int]:
+    """Next N occurrences for UI preview, empty when they cannot be resolved."""
+    try:
+        return await _run_bounded(_next_n_runs_ns_blocking, s, n, tz)
+    except ValueError:
+        return []
+
+
+async def rrule_interval_seconds(s: str) -> Optional[int]:
+    """Approximate interval between recurrences. Raises ValueError if the rule cannot be resolved."""
+    return await _run_bounded(_rrule_interval_seconds_blocking, s)
 
 
 ############################

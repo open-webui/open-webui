@@ -85,7 +85,13 @@ async def check_automation_limits(request, user, rrule_str: str, db, is_create: 
     if min_interval:
         min_interval = int(min_interval)
         if min_interval > 0:
-            interval = rrule_interval_seconds(rrule_str)
+            try:
+                interval = await rrule_interval_seconds(rrule_str)
+            except ValueError as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(e),
+                )
             if interval is not None and interval < min_interval:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -110,7 +116,7 @@ async def enrich_automation(automation: AutomationModel, db: AsyncSession, tz: s
     return AutomationResponse(
         **automation.model_dump(),
         last_run=last_run,
-        next_runs=next_n_runs_ns(automation.data['rrule'], tz=tz),
+        next_runs=await next_n_runs_ns(automation.data['rrule'], tz=tz),
     )
 
 
@@ -174,8 +180,10 @@ async def create_new_automation(
 ):
     await check_automations_permission(request, user)
     await check_automation_folder_access(form_data.folder_id, user, db)
+    tz = user.timezone
     try:
-        validate_rrule(form_data.data.rrule, tz=user.timezone)
+        await validate_rrule(form_data.data.rrule, tz=tz)
+        next_run_at = await next_run_ns(form_data.data.rrule, tz=tz)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -184,8 +192,7 @@ async def create_new_automation(
 
     await check_automation_limits(request, user, form_data.data.rrule, db, is_create=True)
 
-    tz = user.timezone
-    automation = await Automations.insert(user.id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
+    automation = await Automations.insert(user.id, form_data, next_run_at, db=db)
     response = await enrich_automation(automation, db, tz=tz)
     await publish_event(
         request,
@@ -233,8 +240,10 @@ async def update_automation_by_id(
     check_automation_access(automation, user)
     await check_automation_folder_access(form_data.folder_id, user, db)
 
+    tz = user.timezone
     try:
-        validate_rrule(form_data.data.rrule, tz=user.timezone)
+        await validate_rrule(form_data.data.rrule, tz=tz)
+        next_run_at = await next_run_ns(form_data.data.rrule, tz=tz)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -243,8 +252,7 @@ async def update_automation_by_id(
 
     await check_automation_limits(request, user, form_data.data.rrule, db, is_create=False)
 
-    tz = user.timezone
-    updated = await Automations.update_by_id(id, form_data, next_run_ns(form_data.data.rrule, tz=tz), db=db)
+    updated = await Automations.update_by_id(id, form_data, next_run_at, db=db)
     response = await enrich_automation(updated, db, tz=tz)
     await publish_event(
         request,
@@ -271,7 +279,15 @@ async def toggle_automation_by_id(
     await check_automations_permission(request, user)
     automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
-    toggled = await Automations.toggle(id, next_run_ns(automation.data['rrule'], tz=user.timezone), db=db)
+    is_active = not automation.is_active
+    try:
+        next_run_at = await next_run_ns(automation.data['rrule'], tz=user.timezone) if is_active else None
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    toggled = await Automations.toggle(id, next_run_at, is_active, db=db)
     response = await enrich_automation(toggled, db, tz=user.timezone)
     await publish_event(
         request,
