@@ -72,7 +72,7 @@ class DatalabMarkerLoader:
             response = requests.get(url, headers=headers)
             response.raise_for_status()
             result = response.json()
-            log.info(f'Marker API status check for request {request_id}: {result}')
+            log.info('Marker API status check for request %s: %s', request_id, result)
             return result
         except requests.HTTPError as e:
             log.error(f'Error checking Marker request status: {e}')
@@ -104,7 +104,10 @@ class DatalabMarkerLoader:
             form_data['additional_config'] = self.additional_config
 
         log.info(
-            f"Datalab Marker POST request parameters: {{'filename': '{filename}', 'mime_type': '{mime_type}', **{form_data}}}"
+            "Datalab Marker POST request parameters: {'filename': '%s', 'mime_type': '%s', **%s}",
+            filename,
+            mime_type,
+            form_data,
         )
 
         try:
@@ -168,7 +171,7 @@ class DatalabMarkerLoader:
                             'total_cost',
                         )
                     }
-                    log.info(f'Marker processing completed successfully: {json.dumps(summary, indent=2)}')
+                    log.info('Marker processing completed successfully: %s', json.dumps(summary, indent=2))
                     break
 
                 if status_val == 'failed' or success_val is False:
@@ -235,7 +238,7 @@ class DatalabMarkerLoader:
         try:
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(full_text)
-            log.info(f'Saved Marker output to: {output_path}')
+            log.info('Saved Marker output to: %s', output_path)
         except Exception as e:
             log.warning(f'Failed to write marker output to disk: {e}')
 

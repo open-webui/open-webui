@@ -326,7 +326,7 @@ class PgvectorClient(VectorDBBase):
                         },
                     )
                 self.session.commit()
-                log.info(f"Encrypted & inserted {len(items)} into '{collection_name}'")
+                log.info("Encrypted & inserted %s into '%s'", len(items), collection_name)
 
             else:
                 new_items = []
@@ -342,7 +342,7 @@ class PgvectorClient(VectorDBBase):
                     new_items.append(new_chunk)
                 self.session.bulk_save_objects(new_items)
                 self.session.commit()
-                log.info(f"Inserted {len(new_items)} items into collection '{collection_name}'.")
+                log.info("Inserted %s items into collection '%s'.", len(new_items), collection_name)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Error during insert: {e}')
@@ -381,7 +381,7 @@ class PgvectorClient(VectorDBBase):
                         },
                     )
                 self.session.commit()
-                log.info(f"Encrypted & upserted {len(items)} into '{collection_name}'")
+                log.info("Encrypted & upserted %s into '%s'", len(items), collection_name)
             else:
                 for item in items:
                     vector = self.adjust_vector_length(item['vector'])
@@ -401,7 +401,7 @@ class PgvectorClient(VectorDBBase):
                         )
                         self.session.add(new_chunk)
                 self.session.commit()
-                log.info(f"Upserted {len(items)} items into collection '{collection_name}'.")
+                log.info("Upserted %s items into collection '%s'.", len(items), collection_name)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Error during upsert: {e}')
@@ -712,7 +712,7 @@ class PgvectorClient(VectorDBBase):
                         query = query.filter(DocumentChunk.vmetadata[key].astext == str(value))
                 deleted = query.delete(synchronize_session=False)
             self.session.commit()
-            log.info(f"Deleted {deleted} items from collection '{collection_name}'.")
+            log.info("Deleted %s items from collection '%s'.", deleted, collection_name)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Error during delete: {e}')
@@ -722,7 +722,7 @@ class PgvectorClient(VectorDBBase):
         try:
             deleted = self.session.query(DocumentChunk).delete()
             self.session.commit()
-            log.info(f"Reset complete. Deleted {deleted} items from 'document_chunk' table.")
+            log.info("Reset complete. Deleted %s items from 'document_chunk' table.", deleted)
         except Exception as e:
             self.session.rollback()
             log.exception(f'Error during reset: {e}')
@@ -746,4 +746,4 @@ class PgvectorClient(VectorDBBase):
 
     def delete_collection(self, collection_name: str) -> None:
         self.delete(collection_name)
-        log.info(f"Collection '{collection_name}' deleted.")
+        log.info("Collection '%s' deleted.", collection_name)

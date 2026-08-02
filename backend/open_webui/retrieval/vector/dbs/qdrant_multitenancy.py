@@ -148,7 +148,7 @@ class QdrantClient(VectorDBBase):
                 m=0,
             ),
         )
-        log.info(f'Multi-tenant collection {mt_collection_name} created with dimension {dimension}!')
+        log.info('Multi-tenant collection %s created with dimension %s!', mt_collection_name, dimension)
 
         self.client.create_payload_index(
             collection_name=mt_collection_name,

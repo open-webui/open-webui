@@ -258,7 +258,7 @@ def get_scim_auth(request: Request, authorization: Optional[str] = Header(None))
 
         # Check if SCIM is enabled
         enable_scim = getattr(request.app.state, 'ENABLE_SCIM', False)
-        log.info(f'SCIM auth check - raw ENABLE_SCIM: {enable_scim}, type: {type(enable_scim)}')
+        log.info('SCIM auth check - raw ENABLE_SCIM: %s, type: %s', enable_scim, type(enable_scim))
 
         if not enable_scim:
             raise HTTPException(

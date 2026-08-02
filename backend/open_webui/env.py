@@ -227,7 +227,7 @@ if FROM_INIT_PY:
 
     # Check if the data directory exists in the package directory
     if DATA_DIR.exists() and DATA_DIR != NEW_DATA_DIR:
-        log.info(f'Moving {DATA_DIR} to {NEW_DATA_DIR}')
+        log.info('Moving %s to %s', DATA_DIR, NEW_DATA_DIR)
         for item in DATA_DIR.iterdir():
             dest = NEW_DATA_DIR / item.name
             if item.is_dir():

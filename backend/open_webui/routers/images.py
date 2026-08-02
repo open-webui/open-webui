@@ -170,7 +170,7 @@ def get_image_file_item(base64_string, param_name='image'):
 
 
 async def set_image_model(request: Request, model: str):
-    log.info(f'Setting image model to {model}')
+    log.info('Setting image model to %s', model)
     await Config.upsert({'image_generation.model': model})
     image_config = await get_image_config()
     if image_config.IMAGE_GENERATION_ENGINE in ['', 'automatic1111']:

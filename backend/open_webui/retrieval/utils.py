@@ -318,7 +318,7 @@ def query_doc(collection_name: str, query_embedding: list[float], k: int, user: 
         )
 
         if result:
-            log.info(f'query_doc:result {result.ids} {result.metadatas}')
+            log.info('query_doc:result %s %s', result.ids, result.metadatas)
 
         return result
     except Exception as e:
@@ -332,7 +332,7 @@ def get_doc(collection_name: str, user: UserModel = None):
         result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
 
         if result:
-            log.info(f'query_doc:result {result.ids} {result.metadatas}')
+            log.info('query_doc:result %s %s', result.ids, result.metadatas)
 
         return result
     except Exception as e:
@@ -585,7 +585,7 @@ async def query_doc_with_hybrid_search(
             'metadatas': [metadatas],
         }
 
-        log.info('query_doc_with_hybrid_search:result ' + f'{result["metadatas"]} {result["distances"]}')
+        log.info('query_doc_with_hybrid_search:result %s %s', result['metadatas'], result['distances'])
         return result
     except Exception as e:
         log.exception(f'Error querying doc {collection_name} with hybrid search: {e}')
@@ -812,7 +812,7 @@ async def query_collection_with_hybrid_search(
 
     collection_results = dict(await asyncio.gather(*(_fetch_collection(name) for name in collection_names)))
 
-    log.info(f'Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections...')
+    log.info('Starting hybrid search for %s queries in %s collections...', len(queries), len(collection_names))
 
     async def process_query(collection_name, query):
         try:

@@ -1935,7 +1935,7 @@ class ChatTable:
             result = await session.execute(stmt)
             all_chats = result.scalars().all()
 
-            log.info(f'The number of chats: {len(all_chats)}')
+            log.info('The number of chats: %s', len(all_chats))
 
             # Validate and return chats
             return [ChatModel.model_validate(chat) for chat in all_chats]
@@ -2100,7 +2100,7 @@ class ChatTable:
 
             bind = await session.connection()
             dialect_name = bind.dialect.name
-            log.info(f'DB dialect name: {dialect_name}')
+            log.info('DB dialect name: %s', dialect_name)
             if dialect_name == 'sqlite':
                 stmt = stmt.filter(
                     text(f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)")
@@ -2227,7 +2227,7 @@ class ChatTable:
             result = await session.execute(stmt.where(Chat.meta['internal'].as_boolean().is_not(True)))
             count = result.scalar()
 
-            log.info(f"Count of chats for folder '{folder_id}': {count}")
+            log.info("Count of chats for folder '%s': %s", folder_id, count)
             return count
 
     async def count_chats_by_folder_ids_and_user_id(
@@ -2241,7 +2241,7 @@ class ChatTable:
             result = await session.execute(stmt.where(Chat.meta['internal'].as_boolean().is_not(True)))
             count = result.scalar()
 
-            log.info(f"Count of chats for folders '{folder_ids}': {count}")
+            log.info("Count of chats for folders '%s': %s", folder_ids, count)
             return count
 
     async def delete_tag_by_id_and_user_id_and_tag_name(

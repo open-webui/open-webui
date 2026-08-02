@@ -241,7 +241,7 @@ async def load_tool_module_by_id(tool_id, content=None):
         exec(content, module.__dict__)
         if frontmatter is None:
             frontmatter = extract_frontmatter(content)
-        log.info(f'Loaded module: {module.__name__}')
+        log.info('Loaded module: %s', module.__name__)
 
         # Create and return the object if the class 'Tools' is found in the module
         if hasattr(module, 'Tools'):
@@ -291,7 +291,7 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
         exec(content, module.__dict__)
         if frontmatter is None:
             frontmatter = extract_frontmatter(content)
-        log.info(f'Loaded module: {module.__name__}')
+        log.info('Loaded module: %s', module.__name__)
 
         # Create appropriate object based on available class type in the module
         if hasattr(module, 'Pipe'):
@@ -437,7 +437,7 @@ def install_frontmatter_requirements(requirements: str):
             if not new_reqs:
                 return
 
-            log.info(f'Installing requirements: {" ".join(new_reqs)}')
+            log.info('Installing requirements: %s', ' '.join(new_reqs))
             subprocess.check_call(
                 [sys.executable, '-m', 'pip', 'install'] + PIP_OPTIONS + new_reqs + PIP_PACKAGE_INDEX_OPTIONS
             )

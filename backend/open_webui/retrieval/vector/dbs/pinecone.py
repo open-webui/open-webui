@@ -106,16 +106,16 @@ class PineconeClient(VectorDBBase):
         try:
             # Check if index exists
             if self.index_name not in self.client.list_indexes().names():
-                log.info(f"Creating Pinecone index '{self.index_name}'...")
+                log.info("Creating Pinecone index '%s'...", self.index_name)
                 self.client.create_index(
                     name=self.index_name,
                     dimension=self.dimension,
                     metric=self.metric,
                     spec=ServerlessSpec(cloud=self.cloud, region=self.environment),
                 )
-                log.info(f"Successfully created Pinecone index '{self.index_name}'")
+                log.info("Successfully created Pinecone index '%s'", self.index_name)
             else:
-                log.info(f"Using existing Pinecone index '{self.index_name}'")
+                log.info("Using existing Pinecone index '%s'", self.index_name)
 
             # Connect to the index
             self.index = self.client.Index(
@@ -245,7 +245,7 @@ class PineconeClient(VectorDBBase):
         collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
         try:
             self.index.delete(filter={'collection_name': collection_name_with_prefix})
-            log.info(f"Collection '{collection_name_with_prefix}' deleted (all vectors removed).")
+            log.info("Collection '%s' deleted (all vectors removed).", collection_name_with_prefix)
         except Exception as e:
             log.warning(f"Failed to delete collection '{collection_name_with_prefix}': {e}")
             raise
@@ -276,7 +276,7 @@ class PineconeClient(VectorDBBase):
         elapsed = time.time() - start_time
         log.debug('Insert of %s vectors took %.2f seconds', len(points), elapsed)
         log.info(
-            f"Successfully inserted {len(points)} vectors in parallel batches into '{collection_name_with_prefix}'"
+            "Successfully inserted %s vectors in parallel batches into '%s'", len(points), collection_name_with_prefix
         )
 
     def upsert(self, collection_name: str, items: List[VectorItem]) -> None:
@@ -305,7 +305,7 @@ class PineconeClient(VectorDBBase):
         elapsed = time.time() - start_time
         log.debug('Upsert of %s vectors took %.2f seconds', len(points), elapsed)
         log.info(
-            f"Successfully upserted {len(points)} vectors in parallel batches into '{collection_name_with_prefix}'"
+            "Successfully upserted %s vectors in parallel batches into '%s'", len(points), collection_name_with_prefix
         )
 
     async def insert_async(self, collection_name: str, items: List[VectorItem]) -> None:
@@ -326,7 +326,9 @@ class PineconeClient(VectorDBBase):
             if isinstance(result, Exception):
                 log.error(f'Error in async insert batch: {result}')
                 raise result
-        log.info(f"Successfully async inserted {len(points)} vectors in batches into '{collection_name_with_prefix}'")
+        log.info(
+            "Successfully async inserted %s vectors in batches into '%s'", len(points), collection_name_with_prefix
+        )
 
     async def upsert_async(self, collection_name: str, items: List[VectorItem]) -> None:
         """Async version of upsert using asyncio and run_in_executor for improved performance."""
@@ -346,7 +348,9 @@ class PineconeClient(VectorDBBase):
             if isinstance(result, Exception):
                 log.error(f'Error in async upsert batch: {result}')
                 raise result
-        log.info(f"Successfully async upserted {len(points)} vectors in batches into '{collection_name_with_prefix}'")
+        log.info(
+            "Successfully async upserted %s vectors in batches into '%s'", len(points), collection_name_with_prefix
+        )
 
     def search(
         self,
@@ -477,7 +481,7 @@ class PineconeClient(VectorDBBase):
                     log.debug(
                         "Deleted batch of %s vectors by ID from '%s'", len(batch_ids), collection_name_with_prefix
                     )
-                log.info(f"Successfully deleted {len(ids)} vectors by ID from '{collection_name_with_prefix}'")
+                log.info("Successfully deleted %s vectors by ID from '%s'", len(ids), collection_name_with_prefix)
 
             elif filter:
                 # Combine user filter with collection_name
@@ -486,7 +490,7 @@ class PineconeClient(VectorDBBase):
                     pinecone_filter.update(filter)
                 # Delete by metadata filter
                 self.index.delete(filter=pinecone_filter)
-                log.info(f"Successfully deleted vectors by filter from '{collection_name_with_prefix}'")
+                log.info("Successfully deleted vectors by filter from '%s'", collection_name_with_prefix)
 
             else:
                 log.warning('No ids or filter provided for delete operation')

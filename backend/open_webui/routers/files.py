@@ -177,7 +177,7 @@ async def process_uploaded_file(
                     # processing (Tools, vision models). Attempting text
                     # extraction causes "Timeout reached while detecting
                     # encoding" errors.
-                    log.info(f'Video file detected ({content_type}), skipping text extraction')
+                    log.info('Video file detected (%s), skipping text extraction', content_type)
                     await Files.update_file_data_by_id(
                         file_item.id,
                         {'status': 'completed'},
@@ -190,7 +190,7 @@ async def process_uploaded_file(
                 # Documents, or media files explicitly enabled for the
                 # configured content extraction engine.
                 if not content_type:
-                    log.info(f'File type {file.content_type} is not provided, but trying to process anyway')
+                    log.info('File type %s is not provided, but trying to process anyway', file.content_type)
                 await process_file(
                     request,
                     ProcessFileForm(file_id=file_item.id),
@@ -242,7 +242,7 @@ async def process_uploaded_file(
                         )
                         if not knowledge_file:
                             raise Exception(f'Failed to link file {file_item.id} to knowledge {knowledge_id}')
-                        log.info(f'Linked file {file_item.id} to knowledge {knowledge_id}')
+                        log.info('Linked file %s to knowledge %s', file_item.id, knowledge_id)
                 except Exception as e:
                     log.warning(f'Failed to link file {file_item.id} to knowledge {knowledge_id}: {e}')
                     raise
@@ -322,7 +322,7 @@ async def upload_file_handler(
     background_tasks: Optional[BackgroundTasks] = None,
     db: Optional[AsyncSession] = None,
 ):
-    log.info(f'file.content_type: {file.content_type} {process}')
+    log.info('file.content_type: %s %s', file.content_type, process)
 
     if isinstance(metadata, str):
         try:
@@ -868,7 +868,7 @@ async def get_html_file_content_by_id(
 
             # Check if the file already exists in the cache
             if file_path.is_file():
-                log.info(f'file_path: {file_path}')
+                log.info('file_path: %s', file_path)
                 return FileResponse(file_path)
             else:
                 raise HTTPException(
