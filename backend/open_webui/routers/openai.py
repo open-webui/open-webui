@@ -978,8 +978,11 @@ def convert_to_responses_payload(payload: dict) -> dict:
                         converted_tool['description'] = func['description']
                     if 'parameters' in func:
                         converted_tool['parameters'] = func['parameters']
-                    if 'strict' in func:
-                        converted_tool['strict'] = func['strict']
+                    # Responses API function tools default to strict=true, while Chat
+                    # Completions tools default to strict=false. Loose tools (MCP- or
+                    # OpenAPI-derived) omit the field, so pin it explicitly instead of
+                    # dropping it, otherwise optional properties stop being omittable.
+                    converted_tool['strict'] = bool(func.get('strict', False))
                 converted_tools.append(converted_tool)
             else:
                 # Already in correct format or unknown format, pass through
