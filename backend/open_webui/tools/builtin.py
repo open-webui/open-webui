@@ -1687,6 +1687,7 @@ async def view_folder(
             'name': folder.name,
             'parent_id': folder.parent_id,
             'chats': chat_data,
+            'child_folders': child_folder_data,
             'updated_at': folder.updated_at
         }
         
