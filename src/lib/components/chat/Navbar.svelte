@@ -22,6 +22,7 @@
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Menu from '$lib/components/layout/Navbar/Menu.svelte';
+	import ModelSelector from './ModelSelector.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
@@ -64,6 +65,8 @@
 	};
 
 	let showShareChatModal = false;
+	let selectedModels = [''];
+	export let showModelSelector = true;
 	let showDownloadChatModal = false;
 </script>
 
