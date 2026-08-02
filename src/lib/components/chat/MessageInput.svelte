@@ -1769,7 +1769,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 															<button
 																type="button"
 																on:click={() => selectThinkingBudget(item.value)}
-																class="group/item flex w-full text-left select-none items-center rounded-xl py-2 pl-3 pr-2 text-sm text-gray-700 dark:text-gray-300 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer justify-between gap-2
+																class="group/item flex w-full text-left select-none items-center rounded-lg py-2 pl-3 pr-2 text-sm text-gray-700 dark:text-gray-300 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer justify-between gap-2
 																	{$thinkingBudget === item.value
 																		? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent font-medium'
 																		: ''}"
@@ -1791,7 +1791,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 													on:click={() => {
 														thinkingTab = 'config';
 													}}
-													class="group/item flex w-full text-left select-none items-center rounded-xl py-2 pl-3 pr-2 text-sm text-gray-500 dark:text-gray-400 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer justify-between gap-2"
+													class="group/item flex w-full text-left select-none items-center rounded-lg py-2 pl-3 pr-2 text-sm text-gray-500 dark:text-gray-400 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer justify-between gap-2"
 												>
 													<span>Settings</span>
 												</button>
@@ -1816,7 +1816,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 															<button
 																type="button"
 																on:click={() => selectThinkingBudget(item.value)}
-																class="group/item flex w-full text-left select-none items-center rounded-xl py-2 pl-3 pr-2 text-sm text-gray-700 dark:text-gray-300 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer justify-between gap-2
+																class="group/item flex w-full text-left select-none items-center rounded-lg py-2 pl-3 pr-2 text-sm text-gray-700 dark:text-gray-300 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer justify-between gap-2
 																	{$thinkingBudget === item.value
 																		? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent font-medium'
 																		: ''}"
@@ -1838,7 +1838,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 														on:click={() => {
 															thinkingTab = 'config';
 														}}
-														class="group/item flex w-full text-left select-none items-center rounded-xl py-2 pl-3 pr-2 text-sm text-gray-500 dark:text-gray-400 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer justify-between gap-2"
+														class="group/item flex w-full text-left select-none items-center rounded-lg py-2 pl-3 pr-2 text-sm text-gray-500 dark:text-gray-400 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer justify-between gap-2"
 													>
 														<span>Settings</span>
 													</button>
