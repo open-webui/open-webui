@@ -1548,10 +1548,10 @@ async def search_folders(
         permission (for shared), chat_count and updated_at timestamps.
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
 
     if not __user__:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
     
     try:
         user_id = __user__.get('id')
@@ -1614,10 +1614,10 @@ async def search_folders(
             
         combined_results = user_owned_results + shared_folder_results
         
-        return json.dumps(combined_results[:count], ensure_ascii=False)
+        return JSONCodec.dumps(combined_results[:count], ensure_ascii=False)
     except Exception as e:
         log.exception(f'search_folders error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
     
     
 async def view_folder(
@@ -1640,15 +1640,15 @@ async def view_folder(
              (id, title, updated_at)
     """
     if __request__ is None:
-        return json.dumps({'error': 'Request context not available'})
+        return JSONCodec.dumps({'error': 'Request context not available'})
     if __user__ is None:
-        return json.dumps({'error': 'User context not available'})
+        return JSONCodec.dumps({'error': 'User context not available'})
     
     try:
         user_id = __user__.get('id')
         folder = await Folders.get_folder_by_id(folder_id)
         if not folder:
-            return json.dumps({'error': 'Folder with id {id} not found'.format(id=folder_id)})
+            return JSONCodec.dumps({'error': 'Folder with id {id} not found'.format(id=folder_id)})
         
         user_owns = folder.user_id == user_id
         
@@ -1696,7 +1696,7 @@ async def view_folder(
             highest_perm = await Folders.get_shared_folder_permission_by_id_and_user_id(folder.id, user_id, group_ids)
             
             if highest_perm is None:
-                return json.dumps({'error': 'Access denied to folder with id {id}'.format(id=folder_id)})
+                return JSONCodec.dumps({'error': 'Access denied to folder with id {id}'.format(id=folder_id)})
             
             result_obj['permission'] = highest_perm
             owner = await Users.get_user_by_id(folder.user_id)
@@ -1706,11 +1706,11 @@ async def view_folder(
                 result_obj['owner_name'] = 'Unknown'
                 log.warning(f'Owner with id {folder.user_id} not found for folder {folder.id}')
             
-        return json.dumps(result_obj, ensure_ascii=False)
+        return JSONCodec.dumps(result_obj, ensure_ascii=False)
         
     except Exception as e:
         log.exception(f'view_folder error: {e}')
-        return json.dumps({'error': str(e)})
+        return JSONCodec.dumps({'error': str(e)})
  
 
 # =============================================================================
