@@ -419,6 +419,47 @@ async def get_function_module_from_cache(
 _installed_requirements = set()
 
 
+def _build_constraints_file() -> str | None:
+    """Generate a pip constraints file from currently installed packages.
+
+    This prevents plugin/tool pip installs from upgrading or downgrading
+    packages that Open WebUI already depends on (e.g. cryptography, torch).
+    Replacing native C-extension packages in a running Python process causes
+    crashes that are extremely difficult to diagnose.
+
+    Returns the path to a temporary constraints file, or None on failure.
+    The caller is responsible for cleaning up the file.
+    """
+    try:
+        result = subprocess.run(
+            [sys.executable, '-m', 'pip', 'freeze', '--local'],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0:
+            log.warning(
+                'Failed to run pip freeze for constraints; '
+                'proceeding without constraints'
+            )
+            return None
+
+        frozen = result.stdout.strip()
+        if not frozen:
+            return None
+
+        fd, path = tempfile.mkstemp(prefix='owui_constraints_', suffix='.txt')
+        with os.fdopen(fd, 'w') as f:
+            f.write(frozen)
+        return path
+    except Exception:
+        log.warning(
+            'Could not generate pip constraints file; '
+            'proceeding without constraints'
+        )
+        return None
+
+
 def install_frontmatter_requirements(requirements: str):
     global _installed_requirements
     if not ENABLE_PIP_INSTALL_FRONTMATTER_REQUIREMENTS:
@@ -437,10 +478,40 @@ def install_frontmatter_requirements(requirements: str):
             if not new_reqs:
                 return
 
-            log.info(f'Installing requirements: {" ".join(new_reqs)}')
-            subprocess.check_call(
-                [sys.executable, '-m', 'pip', 'install'] + PIP_OPTIONS + new_reqs + PIP_PACKAGE_INDEX_OPTIONS
+            # Generate a constraints file from currently installed packages
+            # to prevent plugin requirements from upgrading/downgrading core
+            # dependencies (e.g. cryptography).  Replacing native C-extension
+            # packages in a live process corrupts loaded shared objects and
+            # causes runtime crashes.
+            constraints_file = _build_constraints_file()
+            constraint_args = (
+                ['--constraint', constraints_file] if constraints_file else []
             )
+
+            log.info(f'Installing requirements: {" ".join(new_reqs)}')
+            try:
+                subprocess.check_call(
+                    [sys.executable, '-m', 'pip', 'install']
+                    + PIP_OPTIONS
+                    + constraint_args
+                    + new_reqs
+                    + PIP_PACKAGE_INDEX_OPTIONS
+                )
+            except subprocess.CalledProcessError:
+                log.error(
+                    f'Failed to install {" ".join(new_reqs)}. '
+                    f'This may be due to a conflict with pinned Open WebUI '
+                    f'dependencies. The tool/function requiring these packages '
+                    f'will not work, but the application will continue normally.'
+                )
+                return
+            finally:
+                if constraints_file:
+                    try:
+                        os.unlink(constraints_file)
+                    except OSError:
+                        pass
+
             _installed_requirements.update(new_reqs)
         except Exception as e:
             log.error(f'Error installing packages: {" ".join(new_reqs)}')
