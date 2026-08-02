@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import json
 import logging
 import re
 import time
@@ -13,15 +12,15 @@ from typing import Literal
 from uuid import uuid4
 
 from fastapi import Request
-from sqlalchemy import select
-from starlette.datastructures import Headers
-
 from open_webui.internal.db import get_async_db
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chat, ChatForm, Chats
 from open_webui.models.users import UserModel, Users
 from open_webui.tasks import has_active_tasks
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_message_list
+from sqlalchemy import select
+from starlette.datastructures import Headers
 
 log = logging.getLogger(__name__)
 
@@ -157,7 +156,7 @@ async def create_timer(
     if not chat:
         return 'Error: failed to create timer.'
 
-    return json.dumps(
+    return JSONCodec.dumps(
         {
             'status': 'set',
             'at': datetime.fromtimestamp(due_at / 1_000_000_000, timezone.utc).isoformat().replace('+00:00', 'Z'),

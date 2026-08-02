@@ -210,7 +210,7 @@ async def periodic_usage_pool_cleanup():
             break
         else:
             if attempt < max_retries:
-                log.debug(f'Cleanup lock already exists. Retry {attempt + 1} after {retry_delay}s...')
+                log.debug('Cleanup lock already exists. Retry %s after %ss...', attempt + 1, retry_delay)
                 await asyncio.sleep(retry_delay)
             else:
                 log.warning('Failed to acquire cleanup lock after retries. Skipping cleanup.')
@@ -237,7 +237,7 @@ async def periodic_usage_pool_cleanup():
                     del connections[sid]
 
                 if not connections:
-                    log.debug(f'Cleaning up model {model_id} from usage pool')
+                    log.debug('Cleaning up model %s from usage pool', model_id)
                     del USAGE_POOL[model_id]
                 else:
                     USAGE_POOL[model_id] = connections
@@ -299,7 +299,7 @@ async def emit_to_users(event: str, data: dict, user_ids: list[str]):
         for user_id in user_ids:
             await sio.emit(event, data, room=f'user:{user_id}')
     except Exception as e:
-        log.debug(f'Failed to emit event {event} to users {user_ids}: {e}')
+        log.debug('Failed to emit event %s to users %s: %s', event, user_ids, e)
 
 
 async def enter_room_for_users(room: str, user_ids: list[str]):
@@ -315,7 +315,7 @@ async def enter_room_for_users(room: str, user_ids: list[str]):
             for sid in session_ids:
                 await sio.enter_room(sid, room)
     except Exception as e:
-        log.debug(f'Failed to make users {user_ids} join room {room}: {e}')
+        log.debug('Failed to make users %s join room %s: %s', user_ids, room, e)
 
 
 async def disconnect_user_sessions(user_id: str):
@@ -411,7 +411,7 @@ async def user_join(sid, data):
     # Join all the channels only if user has channels permission
     if user.role == 'admin' or await has_permission(user.id, 'features.channels'):
         channels = await Channels.get_channels_by_user_id(user.id)
-        log.debug(f'{channels=}')
+        log.debug('channels=%r', channels)
         for channel in channels:
             await sio.enter_room(sid, f'channel:{channel.id}')
 
@@ -443,7 +443,7 @@ async def join_channel(sid, data):
     # Join all the channels only if user has channels permission
     if user.role == 'admin' or await has_permission(user.id, 'features.channels'):
         channels = await Channels.get_channels_by_user_id(user.id)
-        log.debug(f'{channels=}')
+        log.debug('channels=%r', channels)
         for channel in channels:
             await sio.enter_room(sid, f'channel:{channel.id}')
 
@@ -480,7 +480,7 @@ async def join_note(sid, data):
         log.error(f'User {user.id} does not have access to note {data["note_id"]}')
         return
 
-    log.debug(f'Joining note {note.id} for user {user.id}')
+    log.debug('Joining note %s for user %s', note.id, user.id)
     await sio.enter_room(sid, f'note:{note.id}')
 
 

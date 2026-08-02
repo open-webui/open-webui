@@ -19,6 +19,7 @@ from open_webui.env import (
     LOG_FORMAT,
     LOGURU_DIAGNOSE,
 )
+from open_webui.utils.json_codec import JSONCodec
 
 if TYPE_CHECKING:
     from loguru import Message, Record
@@ -34,7 +35,7 @@ def stdout_format(record: 'Record') -> str:
     str: A formatted log string intended for stdout.
     """
     if record['extra']:
-        record['extra']['extra_json'] = json.dumps(record['extra'])
+        record['extra']['extra_json'] = JSONCodec.dumps(record['extra'])
         extra_format = ' - {extra[extra_json]}'
     else:
         extra_format = ''

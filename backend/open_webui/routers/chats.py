@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from typing import Optional
 from uuid import uuid4
@@ -449,7 +448,7 @@ def _process_chat_for_export(chat) -> ChatStatsExport | None:
                             history_models[model] = 0
                         history_models[model] += 1
             except Exception as e:
-                log.debug(f'Error processing message {key}: {e}')
+                log.debug('Error processing message %s: %s', key, e)
                 continue
 
         # Calculate Averages
@@ -615,7 +614,7 @@ async def export_chat_stats(
             return ChatStatsExportList(items=chat_stats_export_list, total=total, page=page)
 
     except Exception as e:
-        log.debug(f'Error exporting chat stats: {e}')
+        log.debug('Error exporting chat stats: %s', e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
@@ -672,7 +671,7 @@ async def export_single_chat_stats(
     except HTTPException:
         raise
     except Exception as e:
-        log.debug(f'Error exporting single chat stats: {e}')
+        log.debug('Error exporting single chat stats: %s', e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
@@ -878,7 +877,7 @@ async def search_user_chats(
         tag_id = words[0].replace('tag:', '')
         if len(chat_list) == 0:
             if await Tags.get_tag_by_name_and_user_id(tag_id, user.id, db=db):
-                log.debug(f'deleting tag: {tag_id}')
+                log.debug('deleting tag: %s', tag_id)
                 await Tags.delete_tag_by_name_and_user_id(tag_id, user.id, db=db)
 
     return await add_active_state_to_chat_list(request, chat_list)

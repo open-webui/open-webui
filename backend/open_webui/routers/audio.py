@@ -5,7 +5,6 @@ import base64
 import hashlib
 import html
 import io
-import json
 import logging
 import mimetypes
 import os
@@ -27,13 +26,6 @@ from fastapi import (
     status,
 )
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
-
-# pydub needs stdlib audioop (gone in 3.13); keep requires-python capped < 3.13
-from pydub import AudioSegment
-from pydub.silence import split_on_silence
-from pydub.utils import mediainfo
-
 from open_webui.config import (
     CACHE_DIR,
     ELEVENLABS_API_BASE_URL,
@@ -60,8 +52,15 @@ from open_webui.models.config import Config
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import include_user_info_headers
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import strict_match_mime_type
 from open_webui.utils.session_pool import get_session
+from pydantic import BaseModel
+
+# pydub needs stdlib audioop (gone in 3.13); keep requires-python capped < 3.13
+from pydub import AudioSegment
+from pydub.silence import split_on_silence
+from pydub.utils import mediainfo
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -357,7 +356,7 @@ async def _write_tts_cache(
     async with aiofiles.open(file_path, 'wb') as f:
         await f.write(audio)
     async with aiofiles.open(body_path, 'w') as f:
-        await f.write(json.dumps(payload))
+        await f.write(JSONCodec.dumps(payload))
 
 
 async def _tts_openai(request, payload, file_path, file_body_path, user):
@@ -395,7 +394,7 @@ async def _tts_openai(request, payload, file_path, file_body_path, user):
                 await f.write(audio_data)
 
         async with aiofiles.open(file_body_path, 'w') as f:
-            await f.write(json.dumps(payload))
+            await f.write(JSONCodec.dumps(payload))
 
         return FileResponse(file_path)
     except Exception as exc:
@@ -487,7 +486,7 @@ async def _tts_transformers(request, payload, file_path, file_body_path, user):
     try:
         idx = embeddings['filename'].index(model_name)
     except (ValueError, KeyError):
-        log.debug(f'Speaker embedding not found for {model_name}, using default index {idx}')
+        log.debug('Speaker embedding not found for %s, using default index %s', model_name, idx)
 
     def _run_pipeline():
         speaker_embedding = torch.tensor(embeddings[idx]['xvector']).unsqueeze(0)
@@ -503,7 +502,7 @@ async def _tts_transformers(request, payload, file_path, file_body_path, user):
 
     # Audio file already written by sf.write; just persist the request metadata.
     async with aiofiles.open(file_body_path, 'w') as f:
-        await f.write(json.dumps(payload))
+        await f.write(JSONCodec.dumps(payload))
     return FileResponse(file_path)
 
 
@@ -591,7 +590,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         return FileResponse(file_path)
 
     try:
-        payload = json.loads(body)
+        payload = JSONCodec.loads(body)
     except Exception as exc:
         log.exception(exc)
         raise HTTPException(status_code=400, detail='Invalid JSON payload')
@@ -639,7 +638,7 @@ async def _transcribe_whisper(request, file_path, languages, file_dir, id):
     data = {'text': transcript.strip()}
 
     async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w') as f:
-        await f.write(json.dumps(data))
+        await f.write(JSONCodec.dumps(data))
 
     log.debug(data)
     return data
@@ -702,7 +701,7 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
         data = await r.json()
 
         async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w') as f:
-            await f.write(json.dumps(data))
+            await f.write(JSONCodec.dumps(data))
         return data
     except Exception as e:
         log.exception(e)
@@ -762,7 +761,7 @@ async def _transcribe_deepgram(request, file_path, languages, file_dir, id):
 
         data = {'text': transcript}
         async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w') as f:
-            await f.write(json.dumps(data))
+            await f.write(JSONCodec.dumps(data))
         return data
 
     except Exception as e:
@@ -828,7 +827,7 @@ async def _transcribe_azure(request, file_path, filename, file_dir, id):
         raise HTTPException(status_code=400, detail='Azure API key and region are required for Azure STT')
 
     # Build the transcription definition payload
-    definition = json.dumps(
+    definition = JSONCodec.dumps(
         {'locales': locale_str.split(','), 'diarization': {'maxSpeakers': max_speakers, 'enabled': True}}
         if locale_str
         else {}
@@ -868,7 +867,7 @@ async def _transcribe_azure(request, file_path, filename, file_dir, id):
         data = {'text': transcript}
 
         async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w') as f:
-            await f.write(json.dumps(data))
+            await f.write(JSONCodec.dumps(data))
 
         log.debug(data)
         return data
@@ -1046,7 +1045,7 @@ async def _transcribe_mistral(request, file_path, filename, metadata, file_dir, 
             data = {'text': transcript}
 
         async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w') as f:
-            await f.write(json.dumps(data))
+            await f.write(JSONCodec.dumps(data))
 
         log.debug(data)
         return data
@@ -1304,7 +1303,7 @@ async def get_available_models(request: Request) -> list[dict]:
                     data = await resp.json()
                     available_models = data.get('models', [])
             except Exception as e:
-                log.debug(f'/audio/models not available, trying /models fallback: {e}')
+                log.debug('/audio/models not available, trying /models fallback: %s', e)
                 try:
                     async with session.get(
                         f'{base_url}/models',

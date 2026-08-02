@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import random
@@ -16,12 +15,8 @@ import aiohttp
 from aiocache import cached
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, ConfigDict, validator
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from open_webui.config import UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.events import EVENTS, publish_event, publish_model_provider_request_failed
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
@@ -31,6 +26,7 @@ from open_webui.env import (
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     MODELS_CACHE_TTL,
 )
+from open_webui.events import EVENTS, publish_event, publish_model_provider_request_failed
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
@@ -40,15 +36,17 @@ from open_webui.models.users import UserModel
 from open_webui.utils.access_control import check_model_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
-from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import calculate_sha256
+from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
 )
 from open_webui.utils.session_pool import cleanup_response, get_client_timeout, get_session, stream_wrapper
+from pydantic import BaseModel, ConfigDict, validator
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -445,7 +443,7 @@ async def get_all_models(request: Request, user: UserModel | None = None):
                 dt = datetime.fromisoformat(expires_map[m['model']])
                 m['expires_at'] = int(dt.timestamp())
     except Exception as exc:
-        log.debug(f'Failed to get loaded models: {exc}')
+        log.debug('Failed to get loaded models: %s', exc)
 
     request.app.state.OLLAMA_MODELS = {m['model']: m for m in models_dict['models']}
     return models_dict
@@ -619,7 +617,7 @@ async def unload_model(
         try:
             res = await send_request(
                 f'{url}/api/generate',
-                payload=json.dumps(payload),
+                payload=JSONCodec.dumps(payload),
                 key=key,
                 user=user,
             )
@@ -657,7 +655,7 @@ async def pull_model(
     # Admins may pull from any registry
     return await send_request(
         f'{url}/api/pull',
-        payload=json.dumps({**form_data, 'insecure': True}),
+        payload=JSONCodec.dumps({**form_data, 'insecure': True}),
         key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
         user=user,
         stream=True,
@@ -693,7 +691,7 @@ async def push_model(
         url_idx = models[form_data.model]['urls'][0]
 
     url = (await Config.get('ollama.base_urls', []))[url_idx]
-    log.debug(f'url: {url}')
+    log.debug('url: %s', url)
 
     return await send_request(
         f'{url}/api/push',
@@ -725,7 +723,7 @@ async def create_model(
     if not await Config.get('ollama.enable'):
         raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
-    log.debug(f'form_data: {form_data}')
+    log.debug('form_data: %s', form_data)
     url = (await Config.get('ollama.base_urls', []))[url_idx]
 
     return await send_request(
@@ -812,7 +810,7 @@ async def delete_model(
     await send_request(
         f'{url}/api/delete',
         'DELETE',
-        payload=json.dumps(payload),
+        payload=JSONCodec.dumps(payload),
         key=key,
         user=user,
     )
@@ -854,7 +852,7 @@ async def show_model_info(
 
     return await send_request(
         f'{url}/api/show',
-        payload=json.dumps(payload),
+        payload=JSONCodec.dumps(payload),
         key=key,
         user=user,
     )
@@ -1149,7 +1147,7 @@ async def generate_chat_completion(
 
     return await send_request(
         f'{url}/api/chat',
-        payload=json.dumps(payload),
+        payload=JSONCodec.dumps(payload),
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=form_data.stream,
@@ -1244,7 +1242,7 @@ async def generate_openai_completion(
 
     return await send_request(
         f'{url}/v1/completions',
-        payload=json.dumps(payload),
+        payload=JSONCodec.dumps(payload),
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
@@ -1295,7 +1293,7 @@ async def generate_openai_embeddings(
 
     return await send_request(
         f'{url}/v1/embeddings',
-        payload=json.dumps(payload),
+        payload=JSONCodec.dumps(payload),
         key=get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {}))),
         user=user,
         metadata=metadata,
@@ -1352,7 +1350,7 @@ async def generate_openai_chat_completion(
 
     return await send_request(
         f'{url}/v1/chat/completions',
-        payload=json.dumps(payload),
+        payload=JSONCodec.dumps(payload),
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
@@ -1404,7 +1402,7 @@ async def generate_anthropic_messages(
 
     return await send_request(
         f'{url}/v1/messages',
-        payload=json.dumps(payload),
+        payload=JSONCodec.dumps(payload),
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
@@ -1462,7 +1460,7 @@ async def generate_responses(
 
     return await send_request(
         f'{url}/v1/responses',
-        payload=json.dumps(payload),
+        payload=JSONCodec.dumps(payload),
         key=get_api_key(url_idx, url, api_configs),
         user=user,
         stream=payload.get('stream', False),
@@ -1581,7 +1579,7 @@ async def download_file_stream(
             ) as blob_resp:
                 if blob_resp.ok:
                     await asyncio.to_thread(os.remove, file_path)
-                    yield f'data: {json.dumps({"done": done, "blob": f"sha256:{hashed}", "name": file_name})}\n\n'
+                    yield f'data: {JSONCodec.dumps({"done": done, "blob": f"sha256:{hashed}", "name": file_name})}\n\n'
                 else:
                     raise RuntimeError('Ollama: Could not create blob, Please try again.')
 
@@ -1651,7 +1649,7 @@ async def upload_model(
                 while chunk := await f.read(chunk_size):
                     bytes_read += len(chunk)
                     progress = round(bytes_read / total_size * 100, 2)
-                    event = json.dumps({'progress': progress, 'total': total_size, 'completed': bytes_read})
+                    event = JSONCodec.dumps({'progress': progress, 'total': total_size, 'completed': bytes_read})
                     yield f'data: {event}\n\n'
 
             session = await get_session()
@@ -1688,13 +1686,13 @@ async def upload_model(
             async with session.post(
                 f'{ollama_url}/api/create',
                 headers={'Content-Type': 'application/json'},
-                data=json.dumps(create_payload),
+                data=JSONCodec.dumps(create_payload),
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 timeout=get_client_timeout(),
             ) as create_resp:
                 if create_resp.ok:
                     log.info('API SUCCESS!')
-                    event = json.dumps(
+                    event = JSONCodec.dumps(
                         {'done': True, 'blob': f'sha256:{file_hash}', 'name': filename, 'model_created': model}
                     )
                     yield f'data: {event}\n\n'
@@ -1703,6 +1701,6 @@ async def upload_model(
                     raise Exception(f'Failed to create model in Ollama. {resp_text}')
 
         except Exception as exc:
-            yield f'data: {json.dumps({"error": str(exc)})}\n\n'
+            yield f'data: {JSONCodec.dumps({"error": str(exc)})}\n\n'
 
     return StreamingResponse(file_process_stream(), media_type='text/event-stream')

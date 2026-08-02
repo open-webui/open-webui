@@ -222,7 +222,7 @@ class AuditLoggingMiddleware:
             user = await get_current_user(request, None, None, get_http_authorization_cred(auth_header))
             return user
         except Exception as e:
-            logger.debug(f'Failed to get authenticated user: {str(e)}')
+            logger.debug('Failed to get authenticated user: {}', e)
 
         return None
 

@@ -1,4 +1,3 @@
-import json
 from numbers import Number
 from uuid import uuid4
 
@@ -158,7 +157,7 @@ def convert_ollama_tool_call_to_openai(tool_calls: list) -> list:
             'type': 'function',
             'function': {
                 'name': function.get('name', ''),
-                'arguments': json.dumps(function.get('arguments', {})),
+                'arguments': JSONCodec.dumps(function.get('arguments', {})),
             },
         }
         openai_tool_calls.append(openai_tool_call)

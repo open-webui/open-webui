@@ -1,12 +1,12 @@
 # tasks.py
 import asyncio
-import json
 import logging
 from uuid import uuid4
 
 from redis.asyncio import Redis
 
 from open_webui.env import REDIS_KEY_PREFIX
+from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ async def redis_task_command_listener(app):
         if message['type'] != 'message':
             continue
         try:
-            command = json.loads(message['data'])
+            command = JSONCodec.loads(message['data'])
             if command.get('action') == 'stop':
                 task_id = command.get('task_id')
                 local_task = tasks.get(task_id)
@@ -74,7 +74,7 @@ async def redis_list_item_tasks(redis: Redis, item_id: str) -> list[str]:
 
 
 async def redis_send_command(redis: Redis, command: dict):
-    command_json = json.dumps(command)
+    command_json = JSONCodec.dumps(command)
     # RedisCluster doesn't expose publish() directly, but the
     # PUBLISH command broadcasts across all cluster nodes server-side.
     if hasattr(redis, 'nodes_manager'):

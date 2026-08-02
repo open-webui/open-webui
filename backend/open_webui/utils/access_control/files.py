@@ -34,7 +34,7 @@ async def has_access_to_file(
     file.user_id == user.id separately before calling this.
     """
     file = await Files.get_file_by_id(file_id, db=db)
-    log.debug(f'Checking if user has {access_type} access to file')
+    log.debug('Checking if user has %s access to file', access_type)
     if not file:
         return False
 

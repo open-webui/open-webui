@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
 import logging
 import re
 from typing import Optional
@@ -23,7 +22,6 @@ from open_webui.config import (
     CACHE_DIR,
 )
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.events import EVENTS, publish_event, publish_model_provider_request_failed
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
@@ -33,6 +31,7 @@ from open_webui.env import (
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     MODELS_CACHE_TTL,
 )
+from open_webui.events import EVENTS, publish_event, publish_model_provider_request_failed
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
@@ -44,11 +43,11 @@ from open_webui.utils.anthropic import get_anthropic_models, is_anthropic_url
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     stream_chunks_handler,
 )
+from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
@@ -353,7 +352,7 @@ async def count_anthropic_tokens(request: Request, form_data: dict, user: UserMo
         response = await session.request(
             method='POST',
             url=request_url,
-            data=json.dumps(payload),
+            data=JSONCodec.dumps(payload),
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
@@ -502,7 +501,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     await f.write(chunk)
 
             async with aiofiles.open(file_body_path, 'w') as f:
-                await f.write(json.dumps(json.loads(body.decode('utf-8'))))
+                await f.write(JSONCodec.dumps(JSONCodec.loads(body.decode('utf-8'))))
 
             # Return the saved file
             return FileResponse(file_path)
@@ -614,7 +613,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                 if provider:
                     model['provider'] = provider
 
-    log.debug(f'get_all_models:responses() {responses}')
+    log.debug('get_all_models:responses() %s', responses)
     return responses
 
 
@@ -670,7 +669,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
         return not any(name in model_id for name in _UNSUPPORTED_OPENAI_MODEL_KEYWORDS)
 
     def get_merged_models(model_lists):
-        log.debug(f'merge_models_lists {model_lists}')
+        log.debug('merge_models_lists %s', model_lists)
         models = {}
 
         for idx, model_list in enumerate(model_lists):
@@ -711,7 +710,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
         return models
 
     models = get_merged_models(map(extract_data, responses))
-    log.debug(f'models: {models}')
+    log.debug('models: %s', models)
 
     request.app.state.OPENAI_MODELS = models
     return {'data': list(models.values())}
@@ -924,7 +923,7 @@ def get_azure_allowed_params(api_version: str) -> set[str]:
         if api_version >= '2024-09-01-preview':
             allowed_params.add('stream_options')
     except ValueError:
-        log.debug(f'Invalid API version {api_version} for Azure OpenAI. Defaulting to allowed parameters.')
+        log.debug('Invalid API version %s for Azure OpenAI. Defaulting to allowed parameters.', api_version)
 
     return allowed_params
 
@@ -972,7 +971,7 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
         # Remove temperature if not 1 for o-series models
         if 'temperature' in payload and payload['temperature'] != 1:
             log.debug(
-                f'Removing temperature parameter for o-series model {model} as only default value (1) is supported'
+                'Removing temperature parameter for o-series model %s as only default value (1) is supported', model
             )
             del payload['temperature']
 
@@ -1286,7 +1285,7 @@ async def generate_chat_completion(
         logit_bias = convert_logit_bias_input_to_json(payload['logit_bias'])
 
         if logit_bias:
-            payload['logit_bias'] = json.loads(logit_bias)
+            payload['logit_bias'] = JSONCodec.loads(logit_bias)
 
     headers, cookies = await get_headers_and_cookies(request, url, key, api_config, metadata, user=user)
 
@@ -1338,7 +1337,7 @@ async def generate_chat_completion(
     if not is_streaming_request:
         payload.pop('stream_options', None)
 
-    payload = json.dumps(payload)
+    payload = JSONCodec.dumps(payload)
 
     r = None
     streaming = False
@@ -1370,7 +1369,7 @@ async def generate_chat_completion(
                     error_body[:1000],
                 )
                 try:
-                    error_json = json.loads(error_body)
+                    error_json = JSONCodec.loads(error_body)
                     await publish_model_provider_request_failed(
                         request,
                         actor=user,
@@ -1382,7 +1381,7 @@ async def generate_chat_completion(
                         upstream_error=error_json,
                     )
                     return JSONResponse(status_code=r.status, content=error_json)
-                except json.JSONDecodeError:
+                except JSONCodec.JSONDecodeError:
                     await publish_model_provider_request_failed(
                         request,
                         actor=user,
@@ -1458,7 +1457,7 @@ async def embeddings(request: Request, form_data: dict, user):
     """
     idx = 0
     # Prepare payload/body
-    body = json.dumps(form_data)
+    body = JSONCodec.dumps(form_data)
     # Find correct backend url/key based on model
     model_id = form_data.get('model')
     # Check if model is already in app state cache to avoid expensive get_all_models() call
@@ -1589,7 +1588,7 @@ async def responses(
     # Enforce per-model access control
     await check_model_access(user, await Models.get_model_by_id(model_id), BYPASS_MODEL_ACCESS_CONTROL)
 
-    body = json.dumps(payload)
+    body = JSONCodec.dumps(payload)
 
     if model_id:
         models = request.app.state.OPENAI_MODELS
@@ -1699,8 +1698,8 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     payload = None
     if body:
         try:
-            payload = json.loads(body)
-        except (json.JSONDecodeError, ValueError):
+            payload = JSONCodec.loads(body)
+        except (JSONCodec.JSONDecodeError, ValueError):
             payload = None
     is_streaming_request = bool(payload.get('stream', False)) if isinstance(payload, dict) else False
 
@@ -1738,9 +1737,9 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                 api_version = api_config.get('api_version', '2023-03-15-preview')
                 headers['api-version'] = api_version
 
-                payload = json.loads(body)
+                payload = JSONCodec.loads(body)
                 url, payload = convert_to_azure_payload(url, payload, api_version)
-                body = json.dumps(payload).encode()
+                body = JSONCodec.dumps(payload).encode()
 
                 request_url = f'{url}/{path}?api-version={api_version}'
         else:

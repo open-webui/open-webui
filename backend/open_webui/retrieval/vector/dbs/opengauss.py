@@ -2,7 +2,6 @@
 NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
 """
 
-import json
 import logging
 import re
 from typing import Any, Dict, List, Optional

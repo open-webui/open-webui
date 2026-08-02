@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import sys
 
@@ -28,6 +27,7 @@ from open_webui.retrieval.loaders.mineru import MinerULoader
 from open_webui.retrieval.loaders.mistral import MistralLoader
 from open_webui.retrieval.loaders.paddleocr_vl import PADDLEOCR_VL_SUPPORTED_EXTENSIONS, PaddleOCRVLLoader
 from open_webui.utils.headers import get_user_groups_for_custom_headers
+from open_webui.utils.json_codec import JSONCodec
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -508,8 +508,8 @@ class Loader:
                 params = self.kwargs.get('DOCLING_PARAMS', {})
                 if not isinstance(params, dict):
                     try:
-                        params = json.loads(params)
-                    except json.JSONDecodeError:
+                        params = JSONCodec.loads(params)
+                    except JSONCodec.JSONDecodeError:
                         log.error('Invalid DOCLING_PARAMS format, expected JSON object')
                         params = {}
 

@@ -4,7 +4,6 @@ import asyncio
 import base64
 import copy
 import inspect
-import json
 import logging
 import os
 import re
@@ -46,7 +45,6 @@ from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
-from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.tools.builtin import (
     add_memory,
     calculate_timestamp,
@@ -65,8 +63,8 @@ from open_webui.tools.builtin import (
     grep_chat_files,
     grep_knowledge_files,
     kb_exec,
-    list_chat_files,
     list_automations,
+    list_chat_files,
     list_knowledge,
     list_knowledge_bases,
     list_memories,
@@ -105,7 +103,9 @@ from open_webui.tools.builtin import (
     write_note,
 )
 from open_webui.utils.access_control import has_access, has_connection_access, has_permission
+from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import is_string_allowed
 from open_webui.utils.plugin import get_tool_contents_cache, get_tools_cache, load_tool_module_by_id
 from open_webui.utils.terminals import get_terminal_server_url
@@ -1146,7 +1146,7 @@ async def set_tool_servers(request: Request):
     try:
         if request.app.state.redis is not None:
             await request.app.state.redis.set(
-                f'{REDIS_KEY_PREFIX}:tool_servers', json.dumps(request.app.state.TOOL_SERVERS)
+                f'{REDIS_KEY_PREFIX}:tool_servers', JSONCodec.dumps(request.app.state.TOOL_SERVERS)
             )
     except Exception as e:
         log.error(f'Error caching tool_servers to Redis: {e}')
@@ -1159,7 +1159,7 @@ async def get_tool_servers(request: Request):
         tool_servers = []
         if request.app.state.redis is not None:
             try:
-                tool_servers = json.loads(await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:tool_servers'))
+                tool_servers = JSONCodec.loads(await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:tool_servers'))
                 request.app.state.TOOL_SERVERS = tool_servers
             except Exception as e:
                 log.error(f'Error fetching tool_servers from Redis: {e}')
@@ -1192,7 +1192,7 @@ async def get_terminal_cwd(
                     data = await resp.json()
                     return data.get('cwd')
     except Exception as e:
-        log.debug(f'Failed to fetch terminal CWD: {e}')
+        log.debug('Failed to fetch terminal CWD: %s', e)
     return None
 
 
@@ -1231,7 +1231,7 @@ async def get_terminal_system_prompt(
                     data = await resp.json()
                     return data.get('prompt')
     except Exception as e:
-        log.debug(f'Failed to fetch terminal system prompt: {e}')
+        log.debug('Failed to fetch terminal system prompt: %s', e)
     return None
 
 
@@ -1291,7 +1291,7 @@ async def set_terminal_servers(request: Request):
 
     if request.app.state.redis is not None:
         await request.app.state.redis.set(
-            f'{REDIS_KEY_PREFIX}:terminal_servers', json.dumps(request.app.state.TERMINAL_SERVERS)
+            f'{REDIS_KEY_PREFIX}:terminal_servers', JSONCodec.dumps(request.app.state.TERMINAL_SERVERS)
         )
 
     return request.app.state.TERMINAL_SERVERS
@@ -1302,7 +1302,7 @@ async def get_terminal_servers(request: Request):
     terminal_servers = []
     if request.app.state.redis is not None:
         try:
-            terminal_servers = json.loads(await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers'))
+            terminal_servers = JSONCodec.loads(await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers'))
             request.app.state.TERMINAL_SERVERS = terminal_servers
         except Exception as e:
             log.error(f'Error fetching terminal_servers from Redis: {e}')
@@ -1439,8 +1439,8 @@ async def get_tool_server_data(url: str, headers: dict | None) -> dict[str, Any]
                     res = yaml.safe_load(text_content)
                 else:
                     try:
-                        res = json.loads(text_content)
-                    except json.JSONDecodeError:
+                        res = JSONCodec.loads(text_content)
+                    except JSONCodec.JSONDecodeError:
                         # Fall back to YAML for non-.yml URLs that aren't valid JSON
                         res = yaml.safe_load(text_content)
 
@@ -1452,7 +1452,7 @@ async def get_tool_server_data(url: str, headers: dict | None) -> dict[str, Any]
             error = str(err)
         raise Exception(error)
 
-    log.debug(f'Fetched data: {res}')
+    log.debug('Fetched data: %s', res)
     return res
 
 
@@ -1496,7 +1496,7 @@ async def get_tool_servers_data(servers: list[dict[str, Any]]) -> list[dict[str,
                 # Use provided JSON spec
                 spec_json = None
                 try:
-                    spec_json = json.loads(server.get('spec', ''))
+                    spec_json = JSONCodec.loads(server.get('spec', ''))
                 except Exception as e:
                     log.error(f'Error parsing JSON spec for tool server {id}: {e}')
 

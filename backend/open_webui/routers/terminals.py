@@ -13,12 +13,13 @@ import aiohttp
 from fastapi import APIRouter, Depends, Request, Response, WebSocket
 from fastapi.responses import JSONResponse, StreamingResponse
 from open_webui.config import TERMINAL_PROXY_HEADERS
-from open_webui.events import EVENTS, publish_event
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.utils.access_control import has_connection_access
 from open_webui.utils.auth import get_verified_user
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.terminals import get_terminal_server_url
 from open_webui.utils.tools import bearer_auth_header, normalize_bearer_token
 from starlette.background import BackgroundTask
@@ -221,14 +222,13 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     with an appropriate error code.
     """
     import asyncio
-    import json
 
     from open_webui.utils.auth import get_verified_user_by_token
 
     # First-message authentication
     try:
         raw = await asyncio.wait_for(ws.receive_text(), timeout=10.0)
-        payload = json.loads(raw)
+        payload = JSONCodec.loads(raw)
         if payload.get('type') != 'auth':
             await ws.close(code=4001, reason='Expected auth message')
             return None
@@ -236,7 +236,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
         if user is None:
             await ws.close(code=4001, reason='Invalid token')
             return None
-    except (asyncio.TimeoutError, json.JSONDecodeError):
+    except (asyncio.TimeoutError, JSONCodec.JSONDecodeError):
         await ws.close(code=4001, reason='Auth timeout or invalid payload')
         return None
     except Exception:
