@@ -1785,7 +1785,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 														{/each}
 													</div>
 													{#if SHOW_THINKING_SETTINGS}
-													<div class="border-t border-gray-100 dark:border-gray-800"></div>
+													<div class="border-t border-gray-100 dark:border-gray-800 my-0.5 mx-1"></div>
 												<button
 													type="button"
 													on:click={() => {
@@ -1832,7 +1832,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 														{/each}
 													</div>
 													{#if SHOW_THINKING_SETTINGS}
-													<div class="border-t border-gray-100 dark:border-gray-800"></div>
+													<div class="border-t border-gray-100 dark:border-gray-800 my-0.5 mx-1"></div>
 													<button
 														type="button"
 														on:click={() => {
