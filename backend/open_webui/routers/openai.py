@@ -1141,8 +1141,15 @@ def convert_to_responses_payload(payload: dict) -> dict:
                         converted_tool['description'] = func['description']
                     if 'parameters' in func:
                         converted_tool['parameters'] = func['parameters']
-                    if 'strict' in func:
-                        converted_tool['strict'] = func['strict']
+                    # Default loose (Chat Completions / MCP / OpenAPI-derived)
+                    # function tools to non-strict. Without an explicit
+                    # strict:false, the Responses API materializes every
+                    # optional property (empty string, false, 0, empty array)
+                    # and can populate mutually-exclusive filters together,
+                    # which Open WebUI then forwards to the tool unchanged.
+                    # Preserve an explicit strict:true / strict:false from the
+                    # source tool.
+                    converted_tool['strict'] = func.get('strict', False)
                 converted_tools.append(converted_tool)
             else:
                 # Already in correct format or unknown format, pass through
