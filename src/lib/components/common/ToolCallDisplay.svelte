@@ -13,9 +13,11 @@
 	import Spinner from './Spinner.svelte';
 	import WrenchSolid from '../icons/WrenchSolid.svelte';
 	import CheckCircle from '../icons/CheckCircle.svelte';
+	import ErrorCircle from '../icons/ErrorCircle.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
 	import { settings } from '$lib/stores';
+	import { isToolResultError } from './toolCallUtils';
 
 	export let id: string = '';
 	export let attributes: {
@@ -95,6 +97,7 @@
 
 	$: parsedArgs = parseArguments(args);
 	$: parsedResult = parseJSONString(result);
+	$: isError = isDone && isToolResultError(result);
 </script>
 
 <div {id} class={className}>
@@ -135,6 +138,10 @@
 				{#if isExecuting}
 					<div>
 						<Spinner className="size-4" />
+					</div>
+				{:else if isDone && isError}
+					<div class="text-red-500 dark:text-red-400">
+						<ErrorCircle className="size-4" strokeWidth="2" />
 					</div>
 				{:else if isDone}
 					<div class="text-emerald-500 dark:text-emerald-400">
