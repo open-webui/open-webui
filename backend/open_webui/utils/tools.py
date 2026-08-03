@@ -6,15 +6,11 @@ import copy
 import inspect
 import json
 import logging
-import os
 import re
+from collections.abc import Awaitable, Callable
 from functools import cache, partial, update_wrapper
 from typing import (
     Any,
-    Awaitable,
-    Callable,
-    Optional,
-    Type,
     get_args,
     get_type_hints,
 )
@@ -31,7 +27,6 @@ from open_webui.env import (
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
-    AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
     ENABLE_FORWARD_USER_INFO_HEADERS,
@@ -46,7 +41,6 @@ from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
-from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.tools.builtin import (
     add_memory,
     calculate_timestamp,
@@ -65,8 +59,8 @@ from open_webui.tools.builtin import (
     grep_chat_files,
     grep_knowledge_files,
     kb_exec,
-    list_chat_files,
     list_automations,
+    list_chat_files,
     list_knowledge,
     list_knowledge_bases,
     list_memories,
@@ -102,13 +96,13 @@ from open_webui.tools.builtin import (
     view_skill,
     write_note,
 )
-from open_webui.utils.access_control import has_access, has_connection_access, has_permission
+from open_webui.utils.access_control import has_connection_access, has_permission
+from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
 from open_webui.utils.misc import is_string_allowed
 from open_webui.utils.plugin import get_tool_contents_cache, get_tools_cache, load_tool_module_by_id
 from open_webui.utils.terminals import get_terminal_server_url
 from pydantic import BaseModel, Field, create_model
-from pydantic.fields import FieldInfo
 
 log = logging.getLogger(__name__)
 
@@ -379,6 +373,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                     type = splits[1]
                     server_id = splits[2]
 
+                function_names = None
                 server_id_splits = server_id.split('|')
                 if len(server_id_splits) == 2:
                     server_id = server_id_splits[0]
@@ -420,6 +415,8 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
 
                     for spec in specs:
                         function_name = spec['name']
+                        if function_names and function_name not in function_names:
+                            continue
                         if function_name_filter_list:
                             if not is_string_allowed(function_name, function_name_filter_list):
                                 # Skip this function
