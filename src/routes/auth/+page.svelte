@@ -1,7 +1,7 @@
 <script>
 	import { toast } from 'svelte-sonner';
 
-	import { onMount, getContext } from 'svelte';
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
@@ -16,8 +16,6 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 
-	const i18n = getContext('i18n');
-
 	let loaded = false;
 	let passwordVisible = false;
 
@@ -29,6 +27,11 @@
 
 	let ldapUsername = '';
 
+	const showAuthError = (error, message) => {
+		console.error(error);
+		toast.error(message);
+	};
+
 	const querystringValue = (key) => {
 		const querystring = window.location.search;
 		const urlParams = new URLSearchParams(querystring);
@@ -38,7 +41,7 @@
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
 			console.log(sessionUser);
-			toast.success($i18n.t(`You're now logged in.`));
+			toast.success('Connexion réussie.');
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
 			}
@@ -54,7 +57,10 @@
 
 	const signInHandler = async () => {
 		const sessionUser = await userSignIn(email, password).catch((error) => {
-			toast.error(`${error}`);
+			showAuthError(
+				error,
+				'Connexion impossible. Vérifiez votre adresse e-mail et votre mot de passe.'
+			);
 			return null;
 		});
 
@@ -64,7 +70,10 @@
 	const signUpHandler = async () => {
 		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
 			(error) => {
-				toast.error(`${error}`);
+				showAuthError(
+					error,
+					'Création du compte impossible. Vérifiez les informations saisies.'
+				);
 				return null;
 			}
 		);
@@ -74,7 +83,10 @@
 
 	const ldapSignInHandler = async () => {
 		const sessionUser = await ldapUserSignIn(ldapUsername, password).catch((error) => {
-			toast.error(`${error}`);
+			showAuthError(
+				error,
+				'Connexion LDAP impossible. Vérifiez votre identifiant et votre mot de passe.'
+			);
 			return null;
 		});
 		await setSessionUser(sessionUser);
@@ -110,7 +122,7 @@
 			return;
 		}
 		const sessionUser = await getSessionUser(token).catch((error) => {
-			toast.error(`${error}`);
+			showAuthError(error, 'Connexion impossible. Veuillez réessayer.');
 			return null;
 		});
 		if (!sessionUser) {
@@ -153,7 +165,7 @@
 	}}
 />
 
-<div class="auth-page">
+<div class="auth-page" lang="fr">
 	<div class="auth-drag-region drag-region" aria-hidden="true"></div>
 
 	{#if loaded}
@@ -175,9 +187,7 @@
 							class="auto-signin-mascot"
 						/>
 						<div class="auto-signin-status" role="status">
-							<span id="auth-title">
-								{$i18n.t('Signing in to {{WEBUI_NAME}}', { WEBUI_NAME: $WEBUI_NAME })}
-							</span>
+							<span id="auth-title">Connexion à {$WEBUI_NAME} en cours…</span>
 							<Spinner />
 						</div>
 					</div>
@@ -185,25 +195,21 @@
 					<div class="auth-heading">
 						<h1 id="auth-title">
 							{#if $config?.onboarding ?? false}
-								{$i18n.t(`Get started with {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+								Configurez votre espace
 							{:else if mode === 'ldap'}
-								{$i18n.t(`Sign in to {{WEBUI_NAME}} with LDAP`, {
-									WEBUI_NAME: $WEBUI_NAME
-								})}
+								Connectez-vous avec LDAP
 							{:else if mode === 'signin'}
-								{$i18n.t(`Sign in to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+								Connectez-vous à IA Compagnon
 							{:else}
-								{$i18n.t(`Sign up to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+								Créez un compte IA Compagnon
 							{/if}
 						</h1>
 						<p>Votre compagnon d'apprentissage propulsé par l'IA.</p>
 
 						{#if $config?.onboarding ?? false}
 							<div class="onboarding-notice">
-								ⓘ {$WEBUI_NAME}
-								{$i18n.t(
-									'does not make any external connections, and your data stays securely on your locally hosted server.'
-								)}
+								ⓘ {$WEBUI_NAME} ne se connecte à aucun service externe et vos données
+								restent en sécurité sur votre serveur local.
 							</div>
 						{/if}
 					</div>
@@ -226,14 +232,14 @@
 								{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
 									{#if mode === 'signup'}
 										<div class="auth-field">
-											<label for="auth-name">{$i18n.t('Name')}</label>
+											<label for="auth-name">Nom complet</label>
 											<input
 												id="auth-name"
 												bind:value={name}
 												type="text"
 												class="auth-input"
 												autocomplete="name"
-												placeholder={$i18n.t('Enter Your Full Name')}
+												placeholder="Saisissez votre nom complet"
 												required
 											/>
 										</div>
@@ -241,7 +247,7 @@
 
 									{#if mode === 'ldap'}
 										<div class="auth-field">
-											<label for="auth-username">{$i18n.t('Username')}</label>
+											<label for="auth-username">Identifiant</label>
 											<input
 												id="auth-username"
 												bind:value={ldapUsername}
@@ -249,13 +255,13 @@
 												class="auth-input"
 												autocomplete="username"
 												name="username"
-												placeholder={$i18n.t('Enter Your Username')}
+												placeholder="Saisissez votre identifiant"
 												required
 											/>
 										</div>
 									{:else}
 										<div class="auth-field">
-											<label for="auth-email">{$i18n.t('Email')}</label>
+											<label for="auth-email">Adresse e-mail</label>
 											<input
 												id="auth-email"
 												bind:value={email}
@@ -263,21 +269,21 @@
 												class="auth-input"
 												autocomplete="email"
 												name="email"
-												placeholder={$i18n.t('Enter Your Email')}
+												placeholder="Saisissez votre adresse e-mail"
 												required
 											/>
 										</div>
 									{/if}
 
 									<div class="auth-field">
-										<label for="auth-password">{$i18n.t('Password')}</label>
+										<label for="auth-password">Mot de passe</label>
 										<div class="password-input">
 											<input
 												id="auth-password"
 												value={password}
 												type={passwordVisible ? 'text' : 'password'}
 												class="auth-input"
-												placeholder={$i18n.t('Enter Your Password')}
+												placeholder="Saisissez votre mot de passe"
 												autocomplete={mode === 'signup' ? 'new-password' : 'current-password'}
 												name="password"
 												on:input={(event) => {
@@ -345,13 +351,13 @@
 
 									<button class="primary-button" type="submit">
 										{#if mode === 'ldap'}
-											{$i18n.t('Authenticate')}
+											Se connecter
 										{:else if mode === 'signin'}
-											{$i18n.t('Sign in')}
+											Se connecter
 										{:else if $config?.onboarding ?? false}
-											{$i18n.t('Create Admin Account')}
+											Créer le compte administrateur IA Compagnon
 										{:else}
-											{$i18n.t('Create Account')}
+											Créer mon compte IA Compagnon
 										{/if}
 									</button>
 								{/if}
@@ -361,8 +367,8 @@
 								<div class="mode-switch">
 									<span>
 										{mode === 'signin'
-											? $i18n.t("Don't have an account?")
-											: $i18n.t('Already have an account?')}
+											? "Vous n'avez pas encore de compte ?"
+											: 'Vous avez déjà un compte ?'}
 									</span>
 									<button
 										type="button"
@@ -370,7 +376,7 @@
 											mode = mode === 'signin' ? 'signup' : 'signin';
 										}}
 									>
-										{mode === 'signin' ? $i18n.t('Sign up') : $i18n.t('Sign in')}
+										{mode === 'signin' ? 'Créer un compte' : 'Se connecter'}
 									</button>
 								</div>
 							{/if}
@@ -379,7 +385,7 @@
 								<div class="oauth-separator" aria-hidden="true">
 									<span></span>
 									{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
-										<strong>{$i18n.t('or')}</strong>
+										<strong>ou</strong>
 									{/if}
 									<span></span>
 								</div>
@@ -415,7 +421,7 @@
 													d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
 												/>
 											</svg>
-											<span>{$i18n.t('Continue with {{provider}}', { provider: 'Google' })}</span>
+											<span>Continuer avec Google</span>
 										</button>
 									{/if}
 
@@ -437,11 +443,7 @@
 												<rect x="11" y="1" width="9" height="9" fill="#7fba00" />
 												<rect x="11" y="11" width="9" height="9" fill="#ffb900" />
 											</svg>
-											<span
-												>{$i18n.t('Continue with {{provider}}', {
-													provider: 'Microsoft'
-												})}</span
-											>
+											<span>Continuer avec Microsoft</span>
 										</button>
 									{/if}
 
@@ -463,7 +465,7 @@
 													d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.92 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57C20.565 21.795 24 17.31 24 12c0-6.63-5.37-12-12-12z"
 												/>
 											</svg>
-											<span>{$i18n.t('Continue with {{provider}}', { provider: 'GitHub' })}</span>
+											<span>Continuer avec GitHub</span>
 										</button>
 									{/if}
 
@@ -490,9 +492,7 @@
 												/>
 											</svg>
 											<span>
-												{$i18n.t('Continue with {{provider}}', {
-													provider: $config?.oauth?.providers?.oidc ?? 'SSO'
-												})}
+												Continuer avec {$config?.oauth?.providers?.oidc ?? 'SSO'}
 											</span>
 										</button>
 									{/if}
@@ -511,7 +511,7 @@
 										}
 									}}
 								>
-									{mode === 'ldap' ? $i18n.t('Continue with Email') : $i18n.t('Continue with LDAP')}
+									{mode === 'ldap' ? "Continuer avec l'adresse e-mail" : 'Continuer avec LDAP'}
 								</button>
 							{/if}
 						</div>
