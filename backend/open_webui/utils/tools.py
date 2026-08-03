@@ -363,6 +363,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                     type = splits[1]
                     server_id = splits[2]
 
+                function_names = None
                 server_id_splits = server_id.split('|')
                 if len(server_id_splits) == 2:
                     server_id = server_id_splits[0]
@@ -404,6 +405,8 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
 
                     for spec in specs:
                         function_name = spec['name']
+                        if function_names and function_name not in function_names:
+                            continue
                         if function_name_filter_list:
                             if not is_string_allowed(function_name, function_name_filter_list):
                                 # Skip this function
