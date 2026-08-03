@@ -3,7 +3,13 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { user, config } from '$lib/stores';
-	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
+	import {
+		updateUserProfile,
+		createAPIKey,
+		getAPIKey,
+		deleteAPIKey,
+		getSessionUser
+	} from '$lib/apis/auths';
 	import { getUserVariables, updateUserVariables } from '$lib/apis/users';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -12,10 +18,12 @@
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 	import { copyToClipboard } from '$lib/utils';
 	import Plus from '$lib/components/icons/Plus.svelte';
+	import Trash from '$lib/components/icons/Trash.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import UserProfileImage from './Account/UserProfileImage.svelte';
 	import UserSettingField from './UserSettingField.svelte';
 	import UserSettingRow from './UserSettingRow.svelte';
@@ -40,6 +48,7 @@
 
 	let APIKey = '';
 	let APIKeyCopied = false;
+	let showDeleteAPIKeyConfirm = false;
 	let variableRows: { key: string; value: string }[] = [];
 	let variableModalOpen = false;
 	let variableFormIndex: number | null = null;
@@ -171,6 +180,20 @@
 			toast.success($i18n.t('API Key created.'));
 		} else {
 			toast.error($i18n.t('Failed to create API Key.'));
+		}
+	};
+
+	const deleteAPIKeyHandler = async () => {
+		const success = await deleteAPIKey(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (success) {
+			APIKey = '';
+			toast.success($i18n.t('API Key deleted.'));
+		} else {
+			toast.error($i18n.t('Failed to delete API Key.'));
 		}
 	};
 
@@ -422,7 +445,7 @@
 						{#if ($config?.features?.enable_api_keys ?? true) && ($user?.role === 'admin' || ($user?.permissions?.features?.api_keys ?? false))}
 							<UserSettingField
 								label={$i18n.t('API Key')}
-								description={$i18n.t('Create, copy, or rotate your API key.')}
+								description={$i18n.t('Create, copy, rotate, or delete your API key.')}
 							>
 								<div class="flex">
 									{#if APIKey}
@@ -497,6 +520,18 @@
 												</svg>
 											</button>
 										</Tooltip>
+
+										<Tooltip content={$i18n.t('Delete API Key')}>
+											<button
+												class="rounded-sm px-1.5 py-1 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-850 dark:hover:text-gray-300"
+												aria-label={$i18n.t('Delete API Key')}
+												on:click={() => {
+													showDeleteAPIKeyConfirm = true;
+												}}
+											>
+												<Trash className="size-4" strokeWidth="2" />
+											</button>
+										</Tooltip>
 									{:else}
 										<button
 											class={actionButtonClass}
@@ -533,6 +568,16 @@
 		</button>
 	</div>
 </div>
+
+<ConfirmDialog
+	title={$i18n.t('Delete API Key?')}
+	message={$i18n.t('Are you sure you want to delete your API key? This action cannot be undone.')}
+	bind:show={showDeleteAPIKeyConfirm}
+	confirmLabel={$i18n.t('Delete')}
+	on:confirm={() => {
+		deleteAPIKeyHandler();
+	}}
+/>
 
 <Modal size="sm" bind:show={variableModalOpen}>
 	<form class="p-4" on:submit|preventDefault={saveVariableForm}>
