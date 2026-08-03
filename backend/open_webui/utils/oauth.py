@@ -10,6 +10,7 @@ import urllib
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from functools import partialmethod
 from types import SimpleNamespace
 from typing import Literal, Optional
 
@@ -25,7 +26,6 @@ from fastapi import (
 )
 from joserfc.errors import BadSignatureError
 from joserfc.jws import JWSRegistry
-from joserfc.registry import HeaderParameter
 from mcp.shared.auth import (
     OAuthClientMetadata as MCPOAuthClientMetadata,
 )
@@ -89,6 +89,10 @@ from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.validate import validate_profile_image_url
 from starlette.responses import RedirectResponse
+
+# Some IdPs put private params in ID token JOSE headers (CAS: client_id, CyberArk: app_id).
+# Authlib exposes no way to pass a registry, so relax it globally; crit, alg and signature checks still apply.
+JWSRegistry.__init__ = partialmethod(JWSRegistry.__init__, strict_check_header=False)
 
 
 class OAuthClientMetadata(MCPOAuthClientMetadata):
@@ -191,14 +195,6 @@ async def get_oauth_runtime_config() -> SimpleNamespace:
 # Matches the value recommended by Authlib's compliance_fix documentation.
 DEFAULT_TOKEN_EXPIRY_SECONDS = 3600
 NON_EXPIRING_TOKEN_EXPIRES_AT = 253402300799  # 9999-12-31 23:59:59 UTC
-
-
-# Apereo CAS includes client_id in ID token JWS headers; Authlib 1.7/joserfc
-# rejects unknown headers unless we register the provider extension.
-JWSRegistry.default_header_registry.setdefault(
-    'client_id',
-    HeaderParameter('OAuth client identifier', 'str'),
-)
 
 
 def _normalize_token_expiry(token: dict) -> dict:
