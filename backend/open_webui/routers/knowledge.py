@@ -1752,6 +1752,7 @@ async def reset_knowledge_by_id(
     request: Request,
     id: str,
     include_directories: bool = Query(True),
+    delete_file: bool = Query(True),
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -1780,6 +1781,8 @@ async def reset_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    files = await Knowledges.get_files_by_id(knowledge_id=id, db=db)
+
     try:
         await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:
@@ -1787,13 +1790,33 @@ async def reset_knowledge_by_id(
         pass
 
     knowledge = await Knowledges.reset_knowledge_by_id(id=id, include_directories=include_directories, db=db)
+
+    if knowledge and delete_file:
+        for file in files:
+            if file.user_id != user.id and user.role != 'admin':
+                continue
+
+            try:
+                file_collection = f'file-{file.id}'
+                if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+                    await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+            except Exception as e:
+                log.debug('This was most likely caused by bypassing embedding processing')
+                log.debug(e)
+
+            await Files.delete_file_by_id(file.id, db=db)
+            try:
+                await asyncio.to_thread(Storage.delete_file, file.path)
+            except Exception as e:
+                log.debug('Error deleting reset knowledge file storage: %s', e)
+
     if knowledge:
         await publish_event(
             request,
             EVENTS.KNOWLEDGE_RESET,
             actor=user,
             subject_id=id,
-            data={'include_directories': include_directories},
+            data={'include_directories': include_directories, 'delete_file': delete_file},
         )
     return knowledge
 
