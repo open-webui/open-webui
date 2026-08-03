@@ -39,6 +39,9 @@ from open_webui.utils.plugin import (
     resolve_valves_schema_options,
 )
 from open_webui.utils.tools import get_tool_servers, get_tool_specs
+
+# Aliased: this module's own `get_tools` is a route handler, which would shadow it.
+from open_webui.utils.tools import get_tools as load_tool_callables
 from pydantic import BaseModel, HttpUrl
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -478,6 +481,116 @@ async def get_tools_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
+
+############################
+# ExecuteToolById
+############################
+
+
+class ToolCallForm(BaseModel):
+    name: str
+    arguments: dict = {}
+
+
+@router.post('/id/{id}/execute')
+async def execute_tool_by_id(
+    request: Request,
+    id: str,
+    form_data: ToolCallForm,
+    user=Depends(get_verified_user),
+):
+    """Call one function of a tool directly, outside a chat completion.
+
+    Tool execution otherwise only happens inside the chat pipeline, which means an
+    API client can reach a tool only by handing the whole loop to a model. This runs
+    exactly the callable the pipeline would, so an external client can drive its own
+    agent loop and still use the tools configured here.
+
+    Access control is not re-implemented: `get_tools` performs the same per-user check
+    the chat pipeline relies on and silently drops tools the caller may not read, so an
+    inaccessible id is indistinguishable from a missing one (a 404 either way).
+
+    A tool bundles several functions (one per method), so `id` selects the bundle and
+    `name` the function within it — the same pair the model produces as a tool call.
+    All three kinds work: a local tool, an OpenAPI tool server, and an MCP server.
+    """
+    # Local imports: utils.middleware pulls in several routers at module scope, so
+    # importing it at the top of a router risks an import cycle.
+    from open_webui.utils.middleware import connect_mcp_server, get_system_oauth_token
+
+    async def noop_emitter(event):
+        # The chat pipeline streams tool progress to a websocket session; there is no
+        # session here, so events are dropped rather than left unset (a tool that
+        # declares __event_emitter__ would otherwise get None and crash on call).
+        return None
+
+    extra_params = {
+        '__event_emitter__': noop_emitter,
+        '__event_call__': noop_emitter,
+        '__user__': user.model_dump(),
+        '__metadata__': {},
+        '__request__': request,
+        '__oauth_token__': await get_system_oauth_token(request, user),
+        '__model__': None,
+        '__messages__': [],
+        '__files__': [],
+        '__chat_id__': None,
+        '__message_id__': None,
+    }
+
+    def not_found(detail: str = ERROR_MESSAGES.NOT_FOUND):
+        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
+
+    async def run(callable, name):
+        try:
+            return await callable()
+        except TypeError as e:
+            # Wrong/missing arguments against the spec — a client error, not a server one.
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except HTTPException:
+            raise
+        except Exception as e:
+            log.exception(f'Error executing tool {id}.{name}')
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+    # MCP servers are resolved outside get_tools (which handles local + OpenAPI only),
+    # mirroring the chat pipeline's own split. The connection is per-call here — there
+    # is no chat session to hold it open — so it is always closed again.
+    if id.startswith('server:mcp:'):
+        server_id = id[len('server:mcp:') :]
+        result = await connect_mcp_server(request, server_id, user, {}, extra_params)
+        if result is None:
+            raise not_found()
+
+        client, tool_specs = result
+        try:
+            names = {spec['name'] for spec in tool_specs}
+            name = form_data.name
+            # The pipeline registers these as `<server_id>_<name>`, so a name copied from
+            # a model's tool call arrives prefixed. Accept either form.
+            if name not in names and name.startswith(f'{server_id}_'):
+                name = name[len(server_id) + 1 :]
+            if name not in names:
+                raise not_found(
+                    f"MCP server '{server_id}' has no tool '{form_data.name}'. Available: {', '.join(sorted(names))}"
+                )
+            value = await run(lambda: client.call_tool(name, function_args=form_data.arguments), name)
+        finally:
+            await client.disconnect()
+
+        return {'tool_id': id, 'name': name, 'result': value}
+
+    tools = await load_tool_callables(request, [id], user, extra_params)
+    if not tools:
+        raise not_found()
+
+    tool = tools.get(form_data.name)
+    if tool is None:
+        raise not_found(f"Tool '{id}' has no function '{form_data.name}'. Available: {', '.join(sorted(tools))}")
+
+    value = await run(lambda: tool['callable'](**form_data.arguments), form_data.name)
+    return {'tool_id': tool['tool_id'], 'name': form_data.name, 'result': value}
 
 
 ############################
