@@ -311,6 +311,33 @@ export const putOrchestratorPolicy = async (
 	return res;
 };
 
+export const getOrchestratorPolicy = async (
+	token: string,
+	url: string,
+	key: string,
+	policyId: string,
+	authType: string = 'bearer'
+): Promise<any> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers/policy`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			url: url.replace(/\/$/, ''),
+			key,
+			auth_type: authType,
+			policy_id: policyId
+		})
+	});
+	if (!res.ok) {
+		const body = await res.json();
+		throw Object.assign(new Error(body.detail || 'Failed to read policy'), { status: res.status });
+	}
+	return res.json();
+};
+
 export const putOrchestratorLifecycle = async (
 	token: string,
 	url: string,
@@ -350,6 +377,35 @@ export const putOrchestratorLifecycle = async (
 	}
 
 	return res;
+};
+
+export const getOrchestratorLifecycle = async (
+	token: string,
+	url: string,
+	key: string,
+	policyId: string,
+	authType: string = 'bearer'
+): Promise<any> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers/lifecycle`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			url: url.replace(/\/$/, ''),
+			key,
+			auth_type: authType,
+			policy_id: policyId
+		})
+	});
+	if (!res.ok) {
+		const body = await res.json();
+		throw Object.assign(new Error(body.detail || 'Failed to read lifecycle'), {
+			status: res.status
+		});
+	}
+	return res.json();
 };
 
 export const refreshOrchestratorTerminals = async (
@@ -661,6 +717,8 @@ export const setModelsConfig = async (token: string, config: object) => {
 	return res;
 };
 
+// --- Model Failover ---
+
 export type ModelFailoverEntry = {
 	model_id: string;
 	capabilities: string[];
@@ -732,6 +790,8 @@ export const setModelFailoverMap = async (
 	return res?.MODEL_FAILOVER_MAP ?? {};
 };
 
+// --- Vision Image RAG ---
+
 /**
  * Fetch the global vision-support model id used by Vision Image RAG.
  *
@@ -792,6 +852,33 @@ export const setRagVisionConfig = async (token: string, visionSupportModel: stri
 
 	return res?.VISION_SUPPORT_MODEL ?? '';
 };
+
+// --- Subagents ---
+
+export const getSubagentsConfig = async (token: string) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/subagents`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const setSubagentsConfig = async (token: string, config: object) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/subagents`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(config)
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+}
 
 export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) => {
 	let error = null;

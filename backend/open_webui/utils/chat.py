@@ -11,7 +11,6 @@ from aiocache import cached
 from fastapi import HTTPException, Request, status
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
 from open_webui.functions import generate_function_chat_completion
-from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel
 from open_webui.routers.ollama import (
@@ -30,7 +29,7 @@ from open_webui.socket.main import (
     sio,
 )
 from open_webui.utils.filter import (
-    get_sorted_filter_ids,
+    get_filter_functions,
     process_filter_functions,
 )
 from open_webui.utils.models import check_model_access, get_all_models
@@ -179,8 +178,10 @@ async def generate_chat_completion(
         # Merge the direct connection model into server models so that
         # task functions (title, tags, etc.) can resolve a server-side
         # task model while still having the direct model available.
+        # dict(...items()) is one HGETALL on a Redis-backed pool; ``{**pool}``
+        # would issue HKEYS plus one HGET per model.
         models = {
-            **request.app.state.MODELS,
+            **dict(request.app.state.MODELS.items()),
             request.state.model['id']: request.state.model,
         }
         log.debug(f'direct connection to model: {request.state.model["id"]}')
@@ -188,10 +189,11 @@ async def generate_chat_completion(
         models = request.app.state.MODELS
 
     model_id = form_data['model']
-    if model_id not in models:
+    # Single lookup — membership check plus getitem would be two Redis
+    # round trips on a Redis-backed model pool.
+    model = models.get(model_id)
+    if model is None:
         raise Exception('Model not found')
-
-    model = models[model_id]
 
     if getattr(request.state, 'direct', False) and model_id == getattr(request.state, 'model', {}).get('id'):
         return await generate_direct_chat_completion(request, form_data, user=user, models=models)
@@ -359,11 +361,11 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     }
 
     try:
-        filter_ids = await get_sorted_filter_ids(request, model, metadata.get('filter_ids', []))
-        filter_functions = await Functions.get_functions_by_ids(filter_ids)
+        filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
 
         result, _ = await process_filter_functions(
             request=request,
+            filter_context=None,
             filter_functions=filter_functions,
             filter_type='outlet',
             form_data=data,

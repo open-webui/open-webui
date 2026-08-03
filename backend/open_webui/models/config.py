@@ -46,8 +46,10 @@ API_CONFIG_FIELDS = (
     'auth_type',
     'headers',
     'azure',
+    'api_type',
     'api_version',
     'extra_params',
+    'passthrough_params',
 )
 
 
@@ -247,6 +249,10 @@ class Config(Base):
             now = int(time.time())
             new_count = 0
             for key, value in defaults.items():
+                # Skip keys the DB is not authoritative for (e.g. oauth.* while
+                # ENABLE_OAUTH_PERSISTENT_CONFIG is off), matching the read paths.
+                if not Config.persistent_enabled_for(key):
+                    continue
                 if key not in existing_keys:
                     value = _json_value(value)
                     db.add(Config(key=key, value=value, updated_at=now))

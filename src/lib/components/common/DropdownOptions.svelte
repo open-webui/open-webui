@@ -30,18 +30,20 @@
 	{align}
 	triggerClass={className
 		? className
-		: 'flex shrink-0 items-center gap-2 bg-transparent px-0.5 text-sm placeholder-gray-400 outline-hidden focus:outline-hidden'}
-	itemClass="flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+		: 'flex h-8 shrink-0 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[13px] font-normal text-gray-700 transition placeholder-gray-400 outline-hidden hover:text-gray-900 focus:outline-hidden dark:text-gray-200 dark:hover:text-gray-100'}
+	itemClass="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px] hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100"
 	onChange={(v) => {
 		onChange(v);
 	}}
 >
 	<svelte:fragment slot="trigger" let:selectedLabel>
-		{selectedLabel}
+		<span class="min-w-0 truncate">{selectedLabel}</span>
 		<ChevronDown className=" size-3" strokeWidth="2.5" />
 	</svelte:fragment>
 
 	<svelte:fragment slot="item" let:item let:selected>
-		<span class={selected ? '' : 'text-gray-500 dark:text-gray-400'}>{item.label}</span>
+		<span class={`min-w-0 truncate ${selected ? '' : 'text-gray-500 dark:text-gray-400'}`}
+			>{item.label}</span
+		>
 	</svelte:fragment>
 </Select>

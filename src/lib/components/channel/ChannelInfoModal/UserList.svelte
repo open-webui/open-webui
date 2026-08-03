@@ -111,7 +111,7 @@
 				<div class="">
 					<button
 						type="button"
-						class=" px-3 py-1.5 gap-1 rounded-xl bg-gray-100/50 dark:text-white dark:bg-gray-850/50 text-black transition font-medium text-xs flex items-center justify-center"
+						class=" px-3 py-1.5 gap-1 rounded-xl bg-gray-100/50 dark:text-white dark:bg-gray-850/50 text-black transition font-normal text-xs flex items-center justify-center"
 						on:click={onAdd}
 					>
 						<Plus className="size-3.5 " />
@@ -212,7 +212,7 @@
 					<div class="w-full">
 						{#each users as user, userIdx (user.id)}
 							<div class=" dark:border-gray-850 text-xs flex items-center justify-between">
-								<div class="px-2 py-1.5 font-medium text-gray-900 dark:text-white flex-1">
+								<div class="px-2 py-1.5 font-normal text-gray-900 dark:text-white flex-1">
 									<div class="flex items-center gap-2">
 										<ProfilePreview {user} side="right" align="center" sideOffset={6}>
 											<img
@@ -222,7 +222,7 @@
 											/>
 										</ProfilePreview>
 										<Tooltip content={user.email} placement="top-start">
-											<div class="font-medium truncate">{user.name}</div>
+											<div class="font-normal truncate">{user.name}</div>
 										</Tooltip>
 
 										{#if user?.is_active}

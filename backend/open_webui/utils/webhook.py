@@ -34,8 +34,12 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict, desc
         # caller-controlled (user notification settings under
         # ENABLE_USER_WEBHOOKS, automation notification triggers).
         await asyncio.to_thread(validate_url, url)
-        payload = {}
+    except Exception as e:
+        log.warning('Webhook skipped, URL invalid or not publicly resolvable: %s', e)
+        return False
 
+    try:
+        payload = {}
         # Slack and Google Chat Webhooks
         if 'https://hooks.slack.com' in url or 'https://chat.googleapis.com' in url:
             payload['text'] = _event_text(message, description, event_data)

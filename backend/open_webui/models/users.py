@@ -9,7 +9,7 @@ from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.utils.misc import throttle
 from open_webui.utils.validate import validate_profile_image_url
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import (
     JSON,
     BigInteger,
@@ -69,6 +69,7 @@ class User(Base):  # identity & profile
 
     # Metadata
     info = Column(JSON, nullable=True)
+    variables = Column(JSON, nullable=True)
     settings = Column(JSON, nullable=True)
     oauth = Column(JSON, nullable=True)
     scim = Column(JSON, nullable=True)
@@ -105,6 +106,7 @@ class UserModel(BaseModel):
     status_expires_at: int | None = None
 
     info: dict | None = None
+    variables: dict = Field(default_factory=dict, exclude=True)
     settings: UserSettings | None = None
 
     oauth: dict | None = None
@@ -125,6 +127,11 @@ class UserModel(BaseModel):
         """Assign a generated avatar when no profile image is provided."""
         self.profile_image_url = self.profile_image_url or _DEFAULT_PROFILE_IMAGE_URL.format(user_id=self.id)
         return self
+
+    @field_validator('variables', mode='before')
+    @classmethod
+    def normalize_variables(cls, value):
+        return value if isinstance(value, dict) else {}
 
 
 class UserStatusModel(UserModel):
@@ -302,7 +309,6 @@ class UsersTable:
             result = User(**user.model_dump())
             session.add(result)
             await session.commit()
-            await session.refresh(result)
             return user if result else None
 
     # database read methods
@@ -566,13 +572,6 @@ class UsersTable:
             row = (await session.execute(stmt)).scalars().first()
             return UserModel.model_validate(row) if row else None
 
-    async def get_user_webhook_url_by_id(self, id: str, db: AsyncSession | None = None) -> str | None:
-        async with get_async_db_context(db) as session:
-            user = await session.get(User, id)
-            if user and user.settings:
-                return user.settings.get('ui', {}).get('notifications', {}).get('webhook_url', None)
-            return None
-
     async def get_num_users_active_today(self, db: AsyncSession | None = None) -> int | None:
         async with get_async_db_context(db) as session:
             current_timestamp = int(time.time())
@@ -589,7 +588,6 @@ class UsersTable:
                 return None
             user.role = role
             await session.commit()
-            await session.refresh(user)
             return UserModel.model_validate(user)
 
     async def update_user_status_by_id(
@@ -602,7 +600,6 @@ class UsersTable:
             for key, value in form_data.model_dump(exclude_none=True).items():
                 setattr(user, key, value)
             await session.commit()
-            await session.refresh(user)
             return UserModel.model_validate(user)
 
     async def update_user_profile_image_url_by_id(
@@ -622,7 +619,6 @@ class UsersTable:
                 return None
             user.profile_image_url = profile_image_url
             await session.commit()
-            await session.refresh(user)
             return UserModel.model_validate(user)
 
     @throttle(DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL)
@@ -643,7 +639,6 @@ class UsersTable:
             oauth[provider] = {'sub': sub}
             user.oauth = oauth
             await session.commit()
-            await session.refresh(user)
             return UserModel.model_validate(user)
 
     async def update_user_scim_by_id(
@@ -662,7 +657,6 @@ class UsersTable:
             scim[provider] = {'external_id': external_id}
             user.scim = scim
             await session.commit()
-            await session.refresh(user)
             return UserModel.model_validate(user)
 
     async def update_user_by_id(self, id: str, updated: dict, db: AsyncSession | None = None) -> UserModel | None:
@@ -673,7 +667,6 @@ class UsersTable:
             for key, value in updated.items():
                 setattr(user, key, value)
             await session.commit()
-            await session.refresh(user)
             return UserModel.model_validate(user)
 
     # settings update helper
@@ -688,7 +681,6 @@ class UsersTable:
             user_settings.update(updated)
             user.settings = user_settings
             await session.commit()
-            await session.refresh(user)
             return UserModel.model_validate(user)
 
     async def delete_user_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
@@ -735,8 +727,8 @@ class UsersTable:
 
     async def get_valid_user_ids(self, user_ids: list[str], db: AsyncSession | None = None) -> list[str]:
         async with get_async_db_context(db) as session:
-            result = await session.execute(select(User).where(User.id.in_(user_ids)))
-            return [u.id for u in result.scalars().all()]
+            result = await session.execute(select(User.id).where(User.id.in_(user_ids)))
+            return list(result.scalars().all())
 
     async def get_super_admin_user(self, db: AsyncSession | None = None) -> UserModel | None:
         async with get_async_db_context(db) as session:
@@ -762,11 +754,11 @@ class UsersTable:
 
     async def is_user_active(self, user_id: str, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as session:
-            user = await session.get(User, user_id)
-            if user and user.last_active_at:
+            last_active_at = await session.scalar(select(User.last_active_at).where(User.id == user_id))
+            if last_active_at:
                 # Consider user active if last_active_at within the last 3 minutes
                 three_minutes_ago = int(time.time()) - 180
-                return user.last_active_at >= three_minutes_ago
+                return last_active_at >= three_minutes_ago
             return False
 
 

@@ -2,10 +2,8 @@
 import asyncio
 import json
 import logging
-from typing import Dict, List, Optional
 from uuid import uuid4
 
-from fastapi import Request
 from redis.asyncio import Redis
 
 from open_webui.env import REDIS_KEY_PREFIX
@@ -13,7 +11,7 @@ from open_webui.env import REDIS_KEY_PREFIX
 log = logging.getLogger(__name__)
 
 # A dictionary to keep track of active tasks
-tasks: Dict[str, asyncio.Task] = {}
+tasks: dict[str, asyncio.Task] = {}
 item_tasks = {}
 
 
@@ -46,7 +44,7 @@ async def redis_task_command_listener(app):
 ### ------------------------------
 
 
-async def redis_save_task(redis: Redis, task_id: str, item_id: Optional[str]):
+async def redis_save_task(redis: Redis, task_id: str, item_id: str | None):
     pipe = redis.pipeline()
     pipe.hset(REDIS_TASKS_KEY, task_id, item_id or '')
     if item_id:
@@ -54,7 +52,7 @@ async def redis_save_task(redis: Redis, task_id: str, item_id: Optional[str]):
     await pipe.execute()
 
 
-async def redis_cleanup_task(redis: Redis, task_id: str, item_id: Optional[str]):
+async def redis_cleanup_task(redis: Redis, task_id: str, item_id: str | None):
     pipe = redis.pipeline()
     pipe.hdel(REDIS_TASKS_KEY, task_id)
     if item_id:
@@ -67,11 +65,11 @@ async def redis_cleanup_task(redis: Redis, task_id: str, item_id: Optional[str])
         await pipe.execute()
 
 
-async def redis_list_tasks(redis: Redis) -> List[str]:
+async def redis_list_tasks(redis: Redis) -> list[str]:
     return list(await redis.hkeys(REDIS_TASKS_KEY))
 
 
-async def redis_list_item_tasks(redis: Redis, item_id: str) -> List[str]:
+async def redis_list_item_tasks(redis: Redis, item_id: str) -> list[str]:
     return list(await redis.smembers(f'{REDIS_ITEM_TASKS_KEY}:{item_id}'))
 
 
@@ -101,11 +99,11 @@ async def cleanup_task(redis, task_id: str, id=None):
             item_tasks.pop(id, None)
 
 
-async def create_task(redis, coroutine, id=None):
+async def create_task(redis, coroutine, id=None, task_id=None):
     """
     Create a new asyncio task and add it to the global task dictionary.
     """
-    task_id = str(uuid4())  # Generate a unique ID for the task
+    task_id = task_id or str(uuid4())  # Generate a unique ID for the task
     task = asyncio.create_task(coroutine)  # Create the task
 
     # Add a done callback for cleanup
@@ -199,12 +197,3 @@ async def has_active_tasks(redis, chat_id: str) -> bool:
     """Check if a chat has any active tasks."""
     task_ids = await list_task_ids_by_item_id(redis, chat_id)
     return len(task_ids) > 0
-
-
-async def get_active_chat_ids(redis, chat_ids: List[str]) -> List[str]:
-    """Filter a list of chat_ids to only those with active tasks."""
-    active = []
-    for chat_id in chat_ids:
-        if await has_active_tasks(redis, chat_id):
-            active.append(chat_id)
-    return active

@@ -161,7 +161,7 @@
 	<button
 		type="button"
 		class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition
-			text-gray-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5"
+			text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
 	>
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
@@ -192,15 +192,15 @@
 
 	<div
 		slot="content"
-		class="rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-48 p-1"
+		class="rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-48 p-0.5"
 	>
-		<div class="px-2 text-xs text-gray-500 pt-1">
+		<div class="px-2 text-[11px] text-gray-500 pt-0.5">
 			{$i18n.t('Schedule')}
 		</div>
 
 		<div class="px-1.5 py-0.5">
 			<select
-				class="w-full bg-transparent rounded-xl text-xs py-1.5 px-1.5 outline-hidden"
+				class="w-full h-[1.6875rem] bg-transparent rounded-xl text-[13px] px-1.5 outline-hidden"
 				bind:value={frequency}
 				on:click={(e) => e.stopPropagation()}
 				on:change={onChange}
@@ -217,20 +217,20 @@
 					type="text"
 					bind:value={customRrule}
 					placeholder="RRULE:FREQ=DAILY;BYHOUR=9;BYMINUTE=0"
-					class="w-full bg-transparent outline-hidden text-xs placeholder:text-gray-400 dark:placeholder:text-gray-600"
+					class="w-full bg-transparent outline-hidden text-[13px] placeholder:text-gray-400 dark:placeholder:text-gray-600"
 					on:click={(e) => e.stopPropagation()}
 					on:input={onChange}
 				/>
 			</div>
 		{:else if frequency !== 'HOURLY'}
-			<div class="flex gap-2 flex-wrap items-center px-3 pb-2 text-xs">
+			<div class="flex gap-2 flex-wrap items-center px-3 pb-2 text-[13px]">
 				{#if frequency === 'ONCE'}
 					<div class="flex items-center gap-1.5">
 						<input
 							type="date"
 							bind:value={onceDate}
 							min={new Date().toISOString().split('T')[0]}
-							class="bg-transparent outline-hidden text-xs dark:color-scheme-dark"
+							class="bg-transparent outline-hidden text-xs dark:scheme-dark"
 							on:click={(e) => e.stopPropagation()}
 							on:input={onChange}
 						/>
@@ -239,7 +239,7 @@
 						<input
 							type="time"
 							bind:value={onceTime}
-							class="bg-transparent outline-hidden text-xs dark:color-scheme-dark"
+							class="bg-transparent outline-hidden text-xs dark:scheme-dark"
 							on:click={(e) => e.stopPropagation()}
 							on:input={onChange}
 						/>
@@ -256,7 +256,7 @@
 								minute = m;
 								onChange();
 							}}
-							class="bg-transparent text-center outline-hidden text-xs dark:color-scheme-dark"
+							class="bg-transparent text-center outline-hidden text-xs dark:scheme-dark"
 							on:click={(e) => e.stopPropagation()}
 						/>
 					</div>
@@ -284,7 +284,7 @@
 						<button
 							type="button"
 							class="flex-1 py-1 text-xs rounded-xl transition {selectedDays.includes(d.key)
-								? 'bg-gray-50 dark:bg-gray-800 text-black dark:text-gray-100'
+								? 'text-black dark:text-gray-100'
 								: 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'}"
 							on:click={() => {
 								if (selectedDays.includes(d.key)) {

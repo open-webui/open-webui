@@ -3,14 +3,17 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
+	import type { i18n as i18nType } from 'i18next';
 	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	export let onChange: (params: any) => void = () => {};
 
 	export let admin = false;
 	export let custom = false;
+	export let layout: 'stack' | 'grid' = 'stack';
 
 	const defaultParams = {
 		// Advanced
@@ -47,14 +50,67 @@
 		num_thread: null,
 		num_gpu: null
 	};
+	type RangeParamKey = keyof typeof defaultParams;
 
-	export let params = defaultParams;
+	export let params: any = defaultParams;
 	$: if (params) {
 		onChange(params);
 	}
+
+	const setTopK = (event: Event) => {
+		const input = event.currentTarget as HTMLInputElement;
+		const rawValue = input.value;
+		const value = Number(rawValue);
+
+		if (!/^\d+$/.test(rawValue) || value < 0 || value > 1000) {
+			input.value = `${params.top_k ?? ''}`;
+			return;
+		}
+
+		params.top_k = value;
+	};
 </script>
 
-<div class=" space-y-1 text-xs pb-safe-bottom">
+{#snippet rangeParam(
+	key: RangeParamKey,
+	label: string,
+	min: number,
+	max: number,
+	rangeStep: number | string,
+	numberStep: number | string = 'any',
+	numberMax: number | undefined = max
+)}
+	<div class="flex mt-0.5 space-x-2">
+		<div class=" flex-1">
+			<input
+				type="range"
+				aria-label={label}
+				{min}
+				{max}
+				step={rangeStep}
+				bind:value={params[key]}
+				class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+			/>
+		</div>
+		<div>
+			<input
+				bind:value={params[key]}
+				type="number"
+				aria-label={label}
+				class=" bg-transparent text-center w-14"
+				{min}
+				max={numberMax}
+				step={numberStep}
+			/>
+		</div>
+	</div>
+{/snippet}
+
+<div
+	class={layout === 'grid'
+		? 'grid grid-cols-1 gap-x-5 gap-y-1 pb-safe-bottom text-xs text-gray-600 dark:text-gray-400 sm:grid-cols-2 lg:grid-cols-3'
+		: 'space-y-1 pb-safe-bottom text-xs text-gray-600 dark:text-gray-400'}
+>
 	<div>
 		<Tooltip
 			content={$i18n.t(
@@ -122,35 +178,22 @@
 			</Tooltip>
 
 			{#if (params?.stream_delta_chunk_size ?? null) !== null}
-				<div class="flex mt-0.5 space-x-2">
-					<div class=" flex-1">
-						<input
-							id="steps-range"
-							type="range"
-							min="1"
-							max="128"
-							step="1"
-							bind:value={params.stream_delta_chunk_size}
-							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-						/>
-					</div>
-					<div>
-						<input
-							bind:value={params.stream_delta_chunk_size}
-							type="number"
-							class=" bg-transparent text-center w-14"
-							min="1"
-							step="any"
-						/>
-					</div>
-				</div>
+				{@render rangeParam(
+					'stream_delta_chunk_size',
+					$i18n.t('Stream Delta Chunk Size'),
+					1,
+					128,
+					1,
+					'any',
+					undefined
+				)}
 			{/if}
 		</div>
 
 		<div>
 			<Tooltip
 				content={$i18n.t(
-					'Lower the context compaction token threshold for this model. The global context compaction threshold remains the maximum.'
+					'Set a model-specific context compaction token threshold. When set, this overrides the global threshold up to the global cap.'
 				)}
 				placement="top-start"
 				className="inline-tooltip"
@@ -182,6 +225,7 @@
 						<input
 							class="text-sm w-full bg-transparent outline-hidden outline-none"
 							type="number"
+							aria-label={$i18n.t('Context Compaction Threshold')}
 							placeholder={$i18n.t('Enter token threshold')}
 							bind:value={params.compact_token_threshold}
 							autocomplete="off"
@@ -277,6 +321,7 @@
 					<input
 						class="text-sm w-full bg-transparent outline-hidden outline-none"
 						type="text"
+						aria-label={$i18n.t('Start Tag')}
 						placeholder={$i18n.t('Start Tag')}
 						bind:value={params.reasoning_tags[0]}
 						autocomplete="off"
@@ -287,6 +332,7 @@
 					<input
 						class="text-sm w-full bg-transparent outline-hidden outline-none"
 						type="text"
+						aria-label={$i18n.t('End Tag')}
 						placeholder={$i18n.t('End Tag')}
 						bind:value={params.reasoning_tags[1]}
 						autocomplete="off"
@@ -331,6 +377,7 @@
 					<input
 						class="text-sm w-full bg-transparent outline-hidden outline-none"
 						type="number"
+						aria-label={$i18n.t('Seed')}
 						placeholder={$i18n.t('Enter Seed')}
 						bind:value={params.seed}
 						autocomplete="off"
@@ -376,6 +423,7 @@
 					<input
 						class="text-sm w-full bg-transparent outline-hidden outline-none"
 						type="text"
+						aria-label={$i18n.t('Stop Sequence')}
 						placeholder={$i18n.t('Enter stop sequence')}
 						bind:value={params.stop}
 						autocomplete="off"
@@ -414,29 +462,7 @@
 		</Tooltip>
 
 		{#if (params?.temperature ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="0"
-						max="2"
-						step="0.05"
-						bind:value={params.temperature}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.temperature}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="0"
-						max="2"
-						step="any"
-					/>
-				</div>
-			</div>
+			{@render rangeParam('temperature', $i18n.t('Temperature'), 0, 2, 0.05)}
 		{/if}
 	</div>
 
@@ -474,6 +500,7 @@
 					<input
 						class="text-sm w-full bg-transparent outline-hidden outline-none"
 						type="text"
+						aria-label={$i18n.t('Reasoning Effort')}
 						placeholder={$i18n.t('Enter reasoning effort')}
 						bind:value={params.reasoning_effort}
 						autocomplete="off"
@@ -517,6 +544,7 @@
 					<input
 						class="text-sm w-full bg-transparent outline-hidden outline-none"
 						type="text"
+						aria-label="logit_bias"
 						placeholder={$i18n.t(
 							'Enter comma-separated "token:bias_value" pairs (example: 5432:100, 413:-100)'
 						)}
@@ -558,28 +586,7 @@
 		</Tooltip>
 
 		{#if (params?.max_tokens ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="-2"
-						max="131072"
-						step="1"
-						bind:value={params.max_tokens}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.max_tokens}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="-2"
-						step="1"
-					/>
-				</div>
-			</div>
+			{@render rangeParam('max_tokens', 'max_tokens', -2, 131072, 1, 1, undefined)}
 		{/if}
 	</div>
 
@@ -615,23 +622,26 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						id="steps-range"
 						type="range"
+						aria-label="top_k"
 						min="0"
 						max="1000"
-						step="0.5"
-						bind:value={params.top_k}
+						step="1"
+						value={params.top_k}
+						on:input={setTopK}
 						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
 					/>
 				</div>
 				<div>
 					<input
-						bind:value={params.top_k}
+						value={params.top_k}
 						type="number"
+						aria-label="top_k"
 						class=" bg-transparent text-center w-14"
 						min="0"
-						max="100"
-						step="any"
+						max="1000"
+						step="1"
+						on:input={setTopK}
 					/>
 				</div>
 			</div>
@@ -668,29 +678,7 @@
 		</Tooltip>
 
 		{#if (params?.top_p ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="0"
-						max="1"
-						step="0.05"
-						bind:value={params.top_p}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.top_p}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="0"
-						max="1"
-						step="any"
-					/>
-				</div>
-			</div>
+			{@render rangeParam('top_p', 'top_p', 0, 1, 0.05)}
 		{/if}
 	</div>
 
@@ -723,29 +711,7 @@
 		</Tooltip>
 
 		{#if (params?.min_p ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="0"
-						max="1"
-						step="0.05"
-						bind:value={params.min_p}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.min_p}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="0"
-						max="1"
-						step="any"
-					/>
-				</div>
-			</div>
+			{@render rangeParam('min_p', 'min_p', 0, 1, 0.05)}
 		{/if}
 	</div>
 
@@ -779,29 +745,7 @@
 		</Tooltip>
 
 		{#if (params?.frequency_penalty ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="-2"
-						max="2"
-						step="0.05"
-						bind:value={params.frequency_penalty}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.frequency_penalty}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="-2"
-						max="2"
-						step="any"
-					/>
-				</div>
-			</div>
+			{@render rangeParam('frequency_penalty', 'frequency_penalty', -2, 2, 0.05)}
 		{/if}
 	</div>
 
@@ -835,29 +779,7 @@
 		</Tooltip>
 
 		{#if (params?.presence_penalty ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="-2"
-						max="2"
-						step="0.05"
-						bind:value={params.presence_penalty}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.presence_penalty}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="-2"
-						max="2"
-						step="any"
-					/>
-				</div>
-			</div>
+			{@render rangeParam('presence_penalty', 'presence_penalty', -2, 2, 0.05)}
 		{/if}
 	</div>
 
@@ -888,29 +810,7 @@
 		</Tooltip>
 
 		{#if (params?.mirostat ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="0"
-						max="2"
-						step="1"
-						bind:value={params.mirostat}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.mirostat}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="0"
-						max="2"
-						step="1"
-					/>
-				</div>
-			</div>
+			{@render rangeParam('mirostat', 'mirostat', 0, 2, 1, 1)}
 		{/if}
 	</div>
 
@@ -943,29 +843,7 @@
 		</Tooltip>
 
 		{#if (params?.mirostat_eta ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="0"
-						max="1"
-						step="0.05"
-						bind:value={params.mirostat_eta}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.mirostat_eta}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="0"
-						max="1"
-						step="any"
-					/>
-				</div>
-			</div>
+			{@render rangeParam('mirostat_eta', 'mirostat_eta', 0, 1, 0.05)}
 		{/if}
 	</div>
 
@@ -999,29 +877,7 @@
 		</Tooltip>
 
 		{#if (params?.mirostat_tau ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="0"
-						max="10"
-						step="0.5"
-						bind:value={params.mirostat_tau}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.mirostat_tau}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="0"
-						max="10"
-						step="any"
-					/>
-				</div>
-			</div>
+			{@render rangeParam('mirostat_tau', 'mirostat_tau', 0, 10, 0.5)}
 		{/if}
 	</div>
 
@@ -1053,29 +909,7 @@
 		</Tooltip>
 
 		{#if (params?.repeat_last_n ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="-1"
-						max="128"
-						step="1"
-						bind:value={params.repeat_last_n}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.repeat_last_n}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="-1"
-						max="128"
-						step="1"
-					/>
-				</div>
-			</div>
+			{@render rangeParam('repeat_last_n', 'repeat_last_n', -1, 128, 1, 1)}
 		{/if}
 	</div>
 
@@ -1109,29 +943,7 @@
 		</Tooltip>
 
 		{#if (params?.tfs_z ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="0"
-						max="2"
-						step="0.05"
-						bind:value={params.tfs_z}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.tfs_z}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="0"
-						max="2"
-						step="any"
-					/>
-				</div>
-			</div>
+			{@render rangeParam('tfs_z', 'tfs_z', 0, 2, 0.05)}
 		{/if}
 	</div>
 
@@ -1165,29 +977,7 @@
 		</Tooltip>
 
 		{#if (params?.repeat_penalty ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="-2"
-						max="2"
-						step="0.05"
-						bind:value={params.repeat_penalty}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.repeat_penalty}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="-2"
-						max="2"
-						step="any"
-					/>
-				</div>
-			</div>
+			{@render rangeParam('repeat_penalty', 'repeat_penalty', -2, 2, 0.05)}
 		{/if}
 	</div>
 
@@ -1226,7 +1016,7 @@
 						{params.use_mmap ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 					</div>
 					<div class=" pr-2">
-						<Switch bind:state={params.use_mmap} />
+						<Switch bind:state={params.use_mmap} ariaLabel="use_mmap" />
 					</div>
 				</div>
 			{/if}
@@ -1268,7 +1058,7 @@
 					</div>
 
 					<div class=" pr-2">
-						<Switch bind:state={params.use_mlock} />
+						<Switch bind:state={params.use_mlock} ariaLabel="use_mlock" />
 					</div>
 				</div>
 			{/if}
@@ -1321,6 +1111,7 @@
 					<input
 						class="text-sm w-full bg-transparent outline-hidden outline-none"
 						type="text"
+						aria-label={`think (${$i18n.t('Ollama')})`}
 						placeholder={$i18n.t("e.g. 'low', 'medium', 'high'")}
 						bind:value={params.think}
 						autocomplete="off"
@@ -1360,6 +1151,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<Textarea
 					className="w-full  text-sm bg-transparent outline-hidden"
+					ariaLabel={`format (${$i18n.t('Ollama')})`}
 					placeholder={$i18n.t('e.g. "json" or a JSON schema')}
 					bind:value={params.format}
 				/>
@@ -1397,28 +1189,15 @@
 		</Tooltip>
 
 		{#if (params?.num_keep ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="-1"
-						max="10240000"
-						step="1"
-						bind:value={params.num_keep}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div class="">
-					<input
-						bind:value={params.num_keep}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="-1"
-						step="1"
-					/>
-				</div>
-			</div>
+			{@render rangeParam(
+				'num_keep',
+				`num_keep (${$i18n.t('Ollama')})`,
+				-1,
+				10240000,
+				1,
+				1,
+				undefined
+			)}
 		{/if}
 	</div>
 
@@ -1450,28 +1229,15 @@
 		</Tooltip>
 
 		{#if (params?.num_ctx ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="-1"
-						max="10240000"
-						step="1"
-						bind:value={params.num_ctx}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div class="">
-					<input
-						bind:value={params.num_ctx}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="-1"
-						step="1"
-					/>
-				</div>
-			</div>
+			{@render rangeParam(
+				'num_ctx',
+				`num_ctx (${$i18n.t('Ollama')})`,
+				-1,
+				10240000,
+				1,
+				1,
+				undefined
+			)}
 		{/if}
 	</div>
 
@@ -1505,28 +1271,15 @@
 		</Tooltip>
 
 		{#if (params?.num_batch ?? null) !== null}
-			<div class="flex mt-0.5 space-x-2">
-				<div class=" flex-1">
-					<input
-						id="steps-range"
-						type="range"
-						min="256"
-						max="8192"
-						step="256"
-						bind:value={params.num_batch}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-					/>
-				</div>
-				<div>
-					<input
-						bind:value={params.num_batch}
-						type="number"
-						class=" bg-transparent text-center w-14"
-						min="256"
-						step="256"
-					/>
-				</div>
-			</div>
+			{@render rangeParam(
+				'num_batch',
+				`num_batch (${$i18n.t('Ollama')})`,
+				256,
+				8192,
+				256,
+				256,
+				undefined
+			)}
 		{/if}
 	</div>
 
@@ -1561,29 +1314,7 @@
 			</Tooltip>
 
 			{#if (params?.num_thread ?? null) !== null}
-				<div class="flex mt-0.5 space-x-2">
-					<div class=" flex-1">
-						<input
-							id="steps-range"
-							type="range"
-							min="1"
-							max="256"
-							step="1"
-							bind:value={params.num_thread}
-							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-						/>
-					</div>
-					<div class="">
-						<input
-							bind:value={params.num_thread}
-							type="number"
-							class=" bg-transparent text-center w-14"
-							min="1"
-							max="256"
-							step="1"
-						/>
-					</div>
-				</div>
+				{@render rangeParam('num_thread', `num_thread (${$i18n.t('Ollama')})`, 1, 256, 1, 1)}
 			{/if}
 		</div>
 
@@ -1617,29 +1348,7 @@
 			</Tooltip>
 
 			{#if (params?.num_gpu ?? null) !== null}
-				<div class="flex mt-0.5 space-x-2">
-					<div class=" flex-1">
-						<input
-							id="steps-range"
-							type="range"
-							min="0"
-							max="256"
-							step="1"
-							bind:value={params.num_gpu}
-							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-						/>
-					</div>
-					<div class="">
-						<input
-							bind:value={params.num_gpu}
-							type="number"
-							class=" bg-transparent text-center w-14"
-							min="0"
-							max="256"
-							step="1"
-						/>
-					</div>
-				</div>
+				{@render rangeParam('num_gpu', `num_gpu (${$i18n.t('Ollama')})`, 0, 256, 1, 1)}
 			{/if}
 		</div>
 
@@ -1676,6 +1385,7 @@
 					<input
 						class="w-full text-sm bg-transparent outline-hidden"
 						type="text"
+						aria-label={`keep_alive (${$i18n.t('Ollama')})`}
 						placeholder={$i18n.t("e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.")}
 						bind:value={params.keep_alive}
 					/>
@@ -1692,10 +1402,11 @@
 								<input
 									type="text"
 									class=" text-xs w-full bg-transparent outline-none"
+									aria-label={$i18n.t('Custom Parameter Name')}
 									placeholder={$i18n.t('Custom Parameter Name')}
 									value={key}
 									on:change={(e) => {
-										const newKey = e.target.value.trim();
+										const newKey = e.currentTarget.value.trim();
 										if (newKey && newKey !== key) {
 											params.custom_params[newKey] = params.custom_params[key];
 											delete params.custom_params[key];
@@ -1727,6 +1438,7 @@
 									bind:value={params.custom_params[key]}
 									type="text"
 									class="text-sm w-full bg-transparent outline-hidden outline-none"
+									aria-label={$i18n.t('Custom Parameter Value')}
 									placeholder={$i18n.t('Custom Parameter Value')}
 								/>
 							</div>

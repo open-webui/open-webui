@@ -11,7 +11,6 @@ from langchain_community.document_loaders import (
     BSHTMLLoader,
     CSVLoader,
     Docx2txtLoader,
-    OutlookMessageLoader,
     PyPDFLoader,
     TextLoader,
     YoutubeLoader,
@@ -27,7 +26,8 @@ from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
 from open_webui.retrieval.loaders.mineru import MinerULoader
 from open_webui.retrieval.loaders.mistral import MistralLoader
-from open_webui.retrieval.loaders.paddleocr_vl import PaddleOCRVLLoader
+from open_webui.retrieval.loaders.paddleocr_vl import PADDLEOCR_VL_SUPPORTED_EXTENSIONS, PaddleOCRVLLoader
+from open_webui.utils.headers import get_user_groups_for_custom_headers
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -206,6 +206,9 @@ class DoclingLoader:
                 data={
                     'image_export_mode': 'placeholder',
                     'md_page_break_placeholder': page_break_marker,
+                    # Keep Docling params as user-provided form values. Encoding nested
+                    # values here would make Open WebUI responsible for Docling's API
+                    # quirks and could break when Docling changes its form contract.
                     **self.params,
                 },
                 headers=headers,
@@ -246,6 +249,7 @@ class Loader:
     def __init__(self, engine: str = '', **kwargs):
         self.engine = engine
         self.user = kwargs.get('user', None)
+        self.user_groups = kwargs.get('user_groups', None)
         self.metadata = kwargs.get('metadata', {})
         self.kwargs = kwargs
 
@@ -264,6 +268,13 @@ class Loader:
         loop for the entire parse — minutes for large PDFs. This offloads
         the work to a worker thread so the loop stays responsive.
         """
+        # Group lookup is async-only, so it must happen before `load`
+        # is offloaded to a thread without a running event loop.
+        if self.engine == 'external' and self.user_groups is None:
+            self.user_groups = await get_user_groups_for_custom_headers(
+                self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_HEADERS'), self.user
+            )
+
         return await asyncio.to_thread(self.load, filename, file_content_type, file_path)
 
     def _is_text_file(self, file_ext: str, file_content_type: str) -> bool:
@@ -303,13 +314,20 @@ class Loader:
         try:
             raw.decode('utf-8')
             return 'utf-8'
-        except UnicodeDecodeError:
-            pass
+        except UnicodeDecodeError as e:
+            first_non_utf8 = e.start
 
         # Use chardet as a hint, not as ground truth
         import chardet
 
-        detected = chardet.detect(raw)
+        # chardet is pure Python (~1.3s/MB), so sample around the first bad byte
+        window = 256 * 1024
+        sample_start = max(0, first_non_utf8 - window // 2)
+        sample = raw[sample_start : sample_start + window]
+        detected = chardet.detect(sample)
+        # A stray byte can sit far from the real payload, leaving the sample with nothing to read
+        if len(sample.translate(None, delete=bytes(range(128)))) < 64 and len(sample) < len(raw):
+            detected = chardet.detect(raw)
         detected_enc = (detected.get('encoding') or '').lower().replace('-', '').replace('_', '')
 
         # Map chardet's detected encoding to the correct superset codec.
@@ -422,6 +440,7 @@ class Loader:
                 api_key=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_API_KEY'),
                 mime_type=file_content_type,
                 user=self.user,
+                user_groups=self.user_groups,
                 headers=self.kwargs.get('EXTERNAL_DOCUMENT_LOADER_HEADERS'),
                 metadata={
                     **self.metadata,
@@ -554,8 +573,14 @@ class Loader:
                 api_key=self.kwargs.get('MISTRAL_OCR_API_KEY'),
                 file_path=file_path,
                 use_base64=self.kwargs.get('MISTRAL_OCR_USE_BASE64', False),
+                user=self.user,
             )
-        elif self.engine == 'paddleocr_vl' and self.kwargs.get('PADDLEOCR_VL_TOKEN') != '':
+        elif (
+            self.engine == 'paddleocr_vl'
+            and self.kwargs.get('PADDLEOCR_VL_BASE_URL')
+            and self.kwargs.get('PADDLEOCR_VL_TOKEN')
+            and file_ext in PADDLEOCR_VL_SUPPORTED_EXTENSIONS
+        ):
             loader = PaddleOCRVLLoader(
                 api_url=self.kwargs.get('PADDLEOCR_VL_BASE_URL'),
                 token=self.kwargs.get('PADDLEOCR_VL_TOKEN'),
@@ -654,7 +679,18 @@ class Loader:
                     )
                     loader = PptxLoader(file_path)
             elif file_ext == 'msg':
-                loader = OutlookMessageLoader(file_path)
+                try:
+                    from langchain_community.document_loaders import (
+                        UnstructuredEmailLoader,
+                    )
+
+                    # unstructured parses .msg via python-oxmsg; avoids extract_msg's beautifulsoup4<4.14 conflict
+                    loader = UnstructuredEmailLoader(file_path, process_attachments=False)
+                except ImportError:
+                    raise ValueError(
+                        "Processing .msg files requires the 'unstructured' package. "
+                        'Install it with: pip install unstructured'
+                    )
             elif file_ext == 'odt':
                 try:
                     from langchain_community.document_loaders import UnstructuredODTLoader

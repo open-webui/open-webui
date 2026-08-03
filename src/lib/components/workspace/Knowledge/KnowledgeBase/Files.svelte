@@ -15,6 +15,7 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
 	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
@@ -123,7 +124,7 @@
 							<input
 								bind:this={editInput}
 								bind:value={editName}
-								class="text-sm w-full bg-transparent border-none outline-hidden"
+								class="text-xs w-full bg-transparent border-none outline-hidden"
 								on:keydown={(e) => {
 									if (e.key === 'Enter') submitRename();
 									if (e.key === 'Escape') cancelRename();
@@ -137,10 +138,10 @@
 								autofocus
 							/>
 						{:else}
-							<div class="line-clamp-1 text-sm">
+							<div class="line-clamp-1 text-xs">
 								{file?.name ?? file?.meta?.name}
 								{#if file?.meta?.size}
-									<span class="text-xs text-gray-500">{formatFileSize(file?.meta?.size)}</span>
+									<span class="text-[11px] text-gray-500">{formatFileSize(file?.meta?.size)}</span>
 								{/if}
 							</div>
 						{/if}
@@ -209,12 +210,10 @@
 						</button>
 
 						<div slot="content">
-							<div
-								class="min-w-[140px] rounded-2xl p-1 z-[9999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800"
-							>
+							<DropdownMenu className="min-w-[140px] z-[9999999]">
 								<button
 									type="button"
-									class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-gray-900 dark:hover:text-gray-100"
 									on:click={() => {
 										startRename(file);
 									}}
@@ -224,7 +223,7 @@
 								</button>
 								<button
 									type="button"
-									class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-gray-900 dark:hover:text-gray-100"
 									on:click={() => {
 										let fileId = file?.id ?? file?.tempId;
 										window.open(`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`, '_blank');
@@ -235,7 +234,7 @@
 								</button>
 								<button
 									type="button"
-									class="select-none flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition items-center gap-2 text-sm"
+									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-gray-900 dark:hover:text-gray-100"
 									on:click={() => {
 										onDelete(file?.id ?? file?.tempId);
 									}}
@@ -243,7 +242,7 @@
 									<GarbageBin className="size-3.5" />
 									{$i18n.t('Delete')}
 								</button>
-							</div>
+							</DropdownMenu>
 						</div>
 					</Dropdown>
 				</div>

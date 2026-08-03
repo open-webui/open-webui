@@ -55,7 +55,7 @@
 
 <div class="px-2 py-1">
 	<button
-		class="flex items-center gap-1 w-full text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
+		class="flex items-center gap-1 w-full text-xs font-normal text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
 		on:click={() => (expanded = !expanded)}
 	>
 		<svg
