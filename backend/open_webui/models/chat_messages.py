@@ -129,8 +129,8 @@ class ChatMessage(Base):
 
     # Identity
     id = Column(Text, primary_key=True)
-    chat_id = Column(Text, ForeignKey('chat.id', ondelete='CASCADE'), nullable=False, index=True)
-    user_id = Column(Text, index=True)
+    chat_id = Column(Text, ForeignKey('chat.id', ondelete='CASCADE'), nullable=False)
+    user_id = Column(Text)
 
     # Structure
     role = Column(Text, nullable=False)  # user, assistant, system
@@ -141,7 +141,7 @@ class ChatMessage(Base):
     output = Column(JSON, nullable=True)
 
     # Model (for assistant messages)
-    model_id = Column(Text, nullable=True, index=True)
+    model_id = Column(Text, nullable=True)
 
     # Attachments
     files = Column(JSON, nullable=True)
