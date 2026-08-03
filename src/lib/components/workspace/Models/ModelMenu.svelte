@@ -15,7 +15,7 @@
 	import Pin from '$lib/components/icons/Pin.svelte';
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
 
-	import { config, user as currentUser, settings } from '$lib/stores';
+	import { config, user as currentUser, pinnedModels, settings } from '$lib/stores';
 	import Link from '$lib/components/icons/Link.svelte';
 
 	const i18n = getContext('i18n');
@@ -131,14 +131,14 @@
 				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
 				on:click={() => runAndClose(() => pinModelHandler(model?.id))}
 			>
-				{#if ($settings?.pinnedModels ?? []).includes(model?.id)}
+				{#if $pinnedModels.includes(model?.id)}
 					<PinSlash />
 				{:else}
 					<Pin />
 				{/if}
 
 				<div class="flex items-center">
-					{#if ($settings?.pinnedModels ?? []).includes(model?.id)}
+					{#if $pinnedModels.includes(model?.id)}
 						{$i18n.t('Hide from Sidebar')}
 					{:else}
 						{$i18n.t('Keep in Sidebar')}
