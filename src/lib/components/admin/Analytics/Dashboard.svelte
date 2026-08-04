@@ -160,9 +160,12 @@
 		loading = false;
 	};
 
+	$: awaitingCustomRange = selectedPeriod === 'custom' && !(customStart && customEnd);
+
 	// Reload when the period, group, or custom range changes.
-	// In custom mode, wait until both dates are set to avoid a half-specified query.
-	$: if (selectedPeriod === 'custom' ? customStart && customEnd : selectedPeriod) {
+	$: if (awaitingCustomRange) {
+		loading = false;
+	} else if (selectedPeriod) {
 		// reference customStart/customEnd so this block reruns when they change
 		customStart;
 		customEnd;
@@ -281,7 +284,7 @@
 />
 
 <!-- Summary stats -->
-{#if !loading}
+{#if !loading && !awaitingCustomRange}
 	<div class="flex gap-3 text-xs text-gray-500 dark:text-gray-400 px-0.5 pb-2">
 		<span
 			><span class="font-normal text-gray-900 dark:text-gray-300"
@@ -342,6 +345,10 @@
 {#if loading}
 	<div class="my-10 flex justify-center">
 		<Spinner className="size-5" />
+	</div>
+{:else if awaitingCustomRange}
+	<div class="my-10 text-center text-xs text-gray-500 dark:text-gray-400">
+		{$i18n.t('Select a start and end date to view analytics.')}
 	</div>
 {:else}
 	<div class="grid md:grid-cols-2 gap-4">
