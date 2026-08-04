@@ -1229,6 +1229,7 @@
 	"File moved.": "",
 	"File name": "",
 	"File not found.": "",
+	"File reindexed.": "",
 	"File removed successfully.": "",
 	"File renamed.": "",
 	"File size should not exceed {{maxSize}} MB.": "",

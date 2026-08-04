@@ -18,6 +18,7 @@
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
@@ -28,10 +29,12 @@
 	export let selectedFileId = null;
 	export let files = [];
 	export let directories = [];
+	export let reindexingFileIds = [];
 
 	export let onClick = (fileId) => {};
 	export let onDelete = (fileId) => {};
 	export let onRename = (fileId: string, name: string) => {};
+	export let onReindex = (fileId: string) => {};
 	export let onNavigateDirectory = (directoryId: string) => {};
 	export let onRenameDirectory = (id: string, name: string) => {};
 	export let onDeleteDirectory = (id: string) => {};
@@ -89,7 +92,7 @@
 			}}
 		>
 			<div class="flex items-center">
-				{#if file?.status !== 'uploading'}
+				{#if file?.status !== 'uploading' && !reindexingFileIds.includes(file?.id ?? file?.tempId)}
 					<button
 						class="p-1 rounded-full transition"
 						type="button"
@@ -206,6 +209,16 @@
 								>
 									<Download className="size-3.5" />
 									{$i18n.t('Download')}
+								</button>
+								<button
+									type="button"
+									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-gray-900 dark:hover:text-gray-100"
+									on:click={() => {
+										onReindex(file?.id ?? file?.tempId);
+									}}
+								>
+									<ArrowPath className="size-3.5" />
+									{$i18n.t('Reindex')}
 								</button>
 								<button
 									type="button"

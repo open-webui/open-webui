@@ -893,6 +893,28 @@
 		}
 	};
 
+	let reindexingFileIds = [];
+
+	const reindexFileHandler = async (fileId: string) => {
+		if (reindexingFileIds.includes(fileId)) {
+			return;
+		}
+
+		reindexingFileIds = [...reindexingFileIds, fileId];
+
+		try {
+			const res = await updateFileFromKnowledgeById(localStorage.token, id, fileId);
+			if (res) {
+				toast.success($i18n.t('File reindexed.'));
+				getItemsPage();
+			}
+		} catch (e) {
+			toast.error(`${e}`);
+		} finally {
+			reindexingFileIds = reindexingFileIds.filter((reindexedId) => reindexedId !== fileId);
+		}
+	};
+
 	let debounceTimeout = null;
 	let mediaQuery;
 
@@ -1591,6 +1613,8 @@
 													deleteFileHandler(fileId);
 												}}
 												onRename={(fileId, name) => renameFileHandler(fileId, name)}
+												onReindex={(fileId) => reindexFileHandler(fileId)}
+												{reindexingFileIds}
 												onNavigateDirectory={(dirId) => navigateToDirectory(dirId)}
 												onRenameDirectory={(id, name) => renameDirectoryHandler(id, name)}
 												onDeleteDirectory={(id) => confirmDeleteDirectory(id)}
