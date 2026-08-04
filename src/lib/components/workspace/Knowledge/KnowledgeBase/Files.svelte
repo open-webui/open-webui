@@ -90,16 +90,18 @@
 		>
 			<div class="flex items-center">
 				{#if file?.status !== 'uploading'}
-					<button
-						class="p-1 rounded-full transition"
-						type="button"
-						on:click={() => {
-							let fileId = file?.id ?? file?.tempId;
-							onClick(fileId);
-						}}
-					>
-						<DocumentPage className="size-3.5" />
-					</button>
+					<Tooltip content={$i18n.t('Open file')}>
+						<button
+							class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							type="button"
+							on:click={() => {
+								let fileId = file?.id ?? file?.tempId;
+								window.open(`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`, '_blank');
+							}}
+						>
+							<DocumentPage className="size-3.5" />
+						</button>
+					</Tooltip>
 				{:else}
 					<Spinner className="size-3.5" />
 				{/if}
