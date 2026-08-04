@@ -928,6 +928,10 @@ export const generateDocumentSuggestions = async (
 			return res.json();
 		})
 		.catch((err) => {
+			if (err?.name === 'AbortError') {
+				return null;
+			}
+
 			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
