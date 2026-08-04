@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from open_webui.config import (
     DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_DOCUMENT_SUGGESTIONS_PROMPT_TEMPLATE,
     DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
@@ -17,11 +18,14 @@ from open_webui.config import (
 )
 from open_webui.constants import ERROR_MESSAGES, TASKS
 from open_webui.models.config import Config
+from open_webui.models.files import Files
 from open_webui.routers.pipelines import process_pipeline_inlet_filter
+from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.task import (
     autocomplete_generation_template,
+    document_suggestions_generation_template,
     emoji_generation_template,
     follow_up_generation_template,
     get_task_model_id,
@@ -48,6 +52,8 @@ TASK_CONFIG_KEYS = {
     'TAGS_GENERATION_PROMPT_TEMPLATE': 'task.tags.prompt_template',
     'FOLLOW_UP_GENERATION_PROMPT_TEMPLATE': 'task.follow_up.prompt_template',
     'ENABLE_FOLLOW_UP_GENERATION': 'task.follow_up.enable',
+    'ENABLE_DOCUMENT_SUGGESTIONS': 'task.document_suggestions.enable',
+    'DOCUMENT_SUGGESTIONS_PROMPT_TEMPLATE': 'task.document_suggestions.prompt_template',
     'ENABLE_TAGS_GENERATION': 'task.tags.enable',
     'ENABLE_TITLE_GENERATION': 'task.title.enable',
     'ENABLE_SEARCH_QUERY_GENERATION': 'task.query.search.enable',
@@ -92,6 +98,8 @@ class TaskConfigForm(BaseModel):
     TAGS_GENERATION_PROMPT_TEMPLATE: str
     FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_FOLLOW_UP_GENERATION: bool
+    ENABLE_DOCUMENT_SUGGESTIONS: bool
+    DOCUMENT_SUGGESTIONS_PROMPT_TEMPLATE: str
     ENABLE_TAGS_GENERATION: bool
     ENABLE_SEARCH_QUERY_GENERATION: bool
     ENABLE_RETRIEVAL_QUERY_GENERATION: bool
@@ -254,6 +262,104 @@ async def generate_follow_ups(request: Request, form_data: dict, user=Depends(ge
     try:
         return await generate_chat_completion(request, form_data=payload, user=user)
     except Exception as e:
+        log.error('Exception occurred', exc_info=True)
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={'detail': 'An internal error has occurred.'},
+        )
+
+
+async def _readable_file_contents(file_ids: list[str], user) -> list[str]:
+    contents = []
+    for file_id in file_ids:
+        file = await Files.get_file_by_id(file_id)
+        if not file:
+            continue
+        if not (file.user_id == user.id or user.role == 'admin' or await has_access_to_file(file_id, 'read', user)):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+        if file.data and file.data.get('content'):
+            contents.append(file.data['content'])
+    return contents
+
+
+@router.post('/document/suggestions/completions')
+async def generate_document_suggestions(request: Request, form_data: dict, user=Depends(get_verified_user)):
+    if not await Config.get('task.document_suggestions.enable'):
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={'detail': 'Document suggestions generation is disabled'},
+        )
+
+    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
+        models = {
+            **dict(request.app.state.MODELS.items()),
+            request.state.model['id']: request.state.model,
+        }
+    else:
+        models = request.app.state.MODELS
+
+    model_id = form_data['model']
+    if model_id not in models:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
+        )
+
+    file_ids = form_data.get('file_ids') or []
+    if not file_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('No files were provided.'),
+        )
+
+    content_parts = await _readable_file_contents(file_ids, user)
+
+    if not content_parts:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('No extractable content found in the provided files.'),
+        )
+
+    max_length = await Config.get('task.document_suggestions.content_max_length')
+    per_file_length = max(1, max_length // len(content_parts))
+    combined_content = '\n\n---\n\n'.join(part[:per_file_length] for part in content_parts)
+
+    task_model_id = get_task_model_id(
+        model_id,
+        await Config.get('task.model.default'),
+        await Config.get('task.model.external'),
+        models,
+    )
+
+    template = (
+        await Config.get('task.document_suggestions.prompt_template')
+    ) or DEFAULT_DOCUMENT_SUGGESTIONS_PROMPT_TEMPLATE
+
+    content = await document_suggestions_generation_template(template, combined_content, user)
+
+    payload = {
+        'model': task_model_id,
+        'messages': [{'role': 'user', 'content': content}],
+        'stream': False,
+        'metadata': {
+            **(request.state.metadata if hasattr(request.state, 'metadata') else {}),
+            'task': str(TASKS.DOCUMENT_SUGGESTIONS_GENERATION),
+            'task_body': form_data,
+            'chat_id': form_data.get('chat_id', None),
+        },
+    }
+
+    try:
+        payload = await process_pipeline_inlet_filter(request, payload, user, models)
+    except Exception as e:
+        raise e
+
+    try:
+        return await generate_chat_completion(request, form_data=payload, user=user)
+    except Exception:
         log.error('Exception occurred', exc_info=True)
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -84,6 +84,7 @@
 	import { processUrl, processWebSearch } from '$lib/apis/retrieval';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 	import {
+		generateDocumentSuggestions,
 		generateQueries,
 		chatAction,
 		generateMoACompletion,
@@ -385,6 +386,63 @@
 	let prompt = '';
 	let chatFiles = [];
 	let files = [];
+	let documentSuggestionPrompts = [];
+	let documentSuggestionsTimer = null;
+	let documentSuggestionsKey = '';
+	let documentSuggestionsController = null;
+
+	const refreshDocumentSuggestions = async (fileList, modelId) => {
+		const items = fileList ?? [];
+
+		if (items.some((f) => f?.type === 'file' && !f?.id)) {
+			return;
+		}
+
+		const ids = items
+			.filter((f) => f?.type === 'file' && f?.id && !(f?.content_type ?? '').startsWith('image/'))
+			.map((f) => f.id);
+
+		const key = `${modelId ?? ''}:${ids.join(',')}`;
+		if (key === documentSuggestionsKey) return;
+		documentSuggestionsKey = key;
+
+		documentSuggestionsController?.abort();
+		documentSuggestionsController = null;
+
+		if (ids.length === 0 || !modelId) {
+			documentSuggestionPrompts = [];
+			return;
+		}
+
+		const controller = new AbortController();
+		documentSuggestionsController = controller;
+
+		const questions = await generateDocumentSuggestions(
+			localStorage.token,
+			modelId,
+			ids,
+			undefined,
+			controller.signal
+		).catch(() => []);
+
+		if (documentSuggestionsKey !== key) return;
+		documentSuggestionPrompts = (questions ?? [])
+			.map((q) => (typeof q === 'string' ? { question: q } : q))
+			.filter((q) => q?.question)
+			.map((q) => ({
+				content: q.question,
+				title: q.title ? [q.title, q.question] : [q.question, '']
+			}));
+	};
+
+	const scheduleDocumentSuggestions = (fileList, modelId) => {
+		clearTimeout(documentSuggestionsTimer);
+		documentSuggestionsTimer = setTimeout(() => refreshDocumentSuggestions(fileList, modelId), 600);
+	};
+
+	$: if ($config?.features?.enable_document_suggestions && history?.currentId === null) {
+		scheduleDocumentSuggestions(files, selectedModels?.[0]);
+	}
 	let params = {};
 	let chatVariables = {};
 	let showChatVariablesModal = false;
@@ -4074,6 +4132,7 @@
 										}}
 										bind:selectedModels
 										{atSelectedModel}
+										{documentSuggestionPrompts}
 										className={embedded ? 'h-full flex pt-4' : 'h-full flex pt-18'}
 										{sendMessage}
 										{showMessage}
@@ -4246,6 +4305,7 @@
 							<div class="flex items-center h-full">
 								<Placeholder
 									{history}
+									bind:documentSuggestionPrompts
 									bind:selectedModels
 									bind:messageInput
 									bind:files

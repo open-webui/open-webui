@@ -22,6 +22,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import Suggestions from './Suggestions.svelte';
+
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
@@ -68,6 +69,7 @@
 	export let toolServers = [];
 
 	export let dragged = false;
+	export let documentSuggestionPrompts = [];
 
 	let models = [];
 	let selectedModelIdx = 0;
@@ -268,10 +270,12 @@
 		<div class="mx-auto max-w-2xl mt-2" in:fade={{ duration: 200, delay: 200 }}>
 			<div class="mx-5">
 				<Suggestions
-					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
-						models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
-						$config?.default_prompt_suggestions ??
-						[]}
+					suggestionPrompts={documentSuggestionPrompts.length > 0
+						? documentSuggestionPrompts
+						: (atSelectedModel?.info?.meta?.suggestion_prompts ??
+							models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+							$config?.default_prompt_suggestions ??
+							[])}
 					inputValue={prompt}
 					{onSelect}
 				/>

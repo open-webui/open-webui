@@ -320,6 +320,12 @@ async def follow_up_generation_template(template: str, messages: list[dict], use
     return template
 
 
+async def document_suggestions_generation_template(template: str, content: str, user: Optional[Any] = None) -> str:
+    template = template.replace('{{CONTENT}}', content)
+    template = await prompt_template(template, user)
+    return template
+
+
 async def tags_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)

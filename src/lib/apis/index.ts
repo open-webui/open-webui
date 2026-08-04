@@ -900,6 +900,68 @@ export const generateTags = async (
 	}
 };
 
+export const generateDocumentSuggestions = async (
+	token: string = '',
+	model: string,
+	file_ids: string[],
+	chat_id?: string,
+	signal?: AbortSignal
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/document/suggestions/completions`, {
+		signal: signal,
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			file_ids: file_ids,
+			...(chat_id && { chat_id: chat_id })
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			if (err?.name === 'AbortError') {
+				return null;
+			}
+
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	try {
+		const response = res?.choices?.[0]?.message?.content ?? '';
+		const jsonStartIndex = response.indexOf('{');
+		const jsonEndIndex = response.lastIndexOf('}');
+
+		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+			const parsed = JSON.parse(response.substring(jsonStartIndex, jsonEndIndex + 1));
+			if (parsed && parsed.questions) {
+				return Array.isArray(parsed.questions) ? parsed.questions : [];
+			}
+		}
+
+		return [];
+	} catch (e) {
+		console.error('Failed to parse response: ', e);
+		return [];
+	}
+};
+
 export const generateEmoji = async (
 	token: string = '',
 	model: string,
