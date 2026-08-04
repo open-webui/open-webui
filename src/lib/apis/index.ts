@@ -904,11 +904,13 @@ export const generateDocumentSuggestions = async (
 	token: string = '',
 	model: string,
 	file_ids: string[],
-	chat_id?: string
+	chat_id?: string,
+	signal?: AbortSignal
 ) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/document/suggestions/completions`, {
+		signal: signal,
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

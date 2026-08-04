@@ -390,9 +390,16 @@
 	let documentSuggestionPrompts = [];
 	let documentSuggestionsTimer = null;
 	let documentSuggestionsKey = '';
+	let documentSuggestionsController = null;
 
 	const refreshDocumentSuggestions = async (fileList, modelId) => {
-		const ids = (fileList ?? [])
+		const items = fileList ?? [];
+
+		if (items.some((f) => f?.type === 'file' && !f?.id)) {
+			return;
+		}
+
+		const ids = items
 			.filter(
 				(f) => f?.type === 'file' && f?.id && !(f?.content_type ?? '').startsWith('image/')
 			)
@@ -402,14 +409,24 @@
 		if (key === documentSuggestionsKey) return;
 		documentSuggestionsKey = key;
 
+		documentSuggestionsController?.abort();
+		documentSuggestionsController = null;
+
 		if (ids.length === 0 || !modelId) {
 			documentSuggestionPrompts = [];
 			return;
 		}
 
-		const questions = await generateDocumentSuggestions(localStorage.token, modelId, ids).catch(
-			() => []
-		);
+		const controller = new AbortController();
+		documentSuggestionsController = controller;
+
+		const questions = await generateDocumentSuggestions(
+			localStorage.token,
+			modelId,
+			ids,
+			undefined,
+			controller.signal
+		).catch(() => []);
 
 		if (documentSuggestionsKey !== key) return;
 		documentSuggestionPrompts = (questions ?? [])
