@@ -186,7 +186,7 @@ def upgrade() -> None:
             if oauth_sub:
                 provider, sub = oauth_sub.split('@', 1) if '@' in oauth_sub else ('oidc', oauth_sub)
                 conn.execute(
-                    sa.update(_user).where(_user.c.id == uid).values(oauth=json.dumps({provider: {'sub': sub}}))
+                    sa.update(_user).where(_user.c.id == uid).values(oauth={provider: {'sub': sub}})
                 )
 
     # ── Migrate api_key column → api_key table (only if old column still exists)
@@ -226,7 +226,7 @@ def downgrade() -> None:
 
     for uid, oauth in rows:
         try:
-            data = json.loads(oauth)
+            data = oauth
             provider = list(data.keys())[0]
             sub = data[provider].get('sub')
             oauth_sub = f'{provider}@{sub}'
