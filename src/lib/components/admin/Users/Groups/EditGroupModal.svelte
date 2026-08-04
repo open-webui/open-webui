@@ -96,7 +96,13 @@
 				features: { ...DEFAULT_PERMISSIONS.features, ...loadedPermissions.features },
 				settings: { ...DEFAULT_PERMISSIONS.settings, ...loadedPermissions.settings }
 			};
-			data = group?.data ?? {};
+			// Keep edits local to the modal. General.svelte updates data.config in
+			// place, so sharing the group's object would leak unsaved changes back
+			// into the groups list.
+			data = {
+				...(group?.data ?? {}),
+				config: { ...(group?.data?.config ?? {}) }
+			};
 
 			userCount = group?.member_count ?? 0;
 		}
