@@ -394,11 +394,7 @@
 	const refreshDocumentSuggestions = async (fileList, modelId) => {
 		const ids = (fileList ?? [])
 			.filter(
-				(f) =>
-					f?.status === 'uploaded' &&
-					f?.type === 'file' &&
-					f?.id &&
-					!(f?.content_type ?? '').startsWith('image/')
+				(f) => f?.type === 'file' && f?.id && !(f?.content_type ?? '').startsWith('image/')
 			)
 			.map((f) => f.id);
 
