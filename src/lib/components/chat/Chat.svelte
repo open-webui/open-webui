@@ -3963,6 +3963,7 @@
 										}}
 										bind:selectedModels
 										{atSelectedModel}
+										{documentSuggestionPrompts}
 										className={embedded ? 'h-full flex pt-4' : 'h-full flex pt-18'}
 										{sendMessage}
 										{showMessage}
