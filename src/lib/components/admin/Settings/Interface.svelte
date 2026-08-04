@@ -62,7 +62,8 @@
 						...current,
 						features: {
 							...current.features,
-							enable_context_compaction: chatConfig.ENABLE_CONTEXT_COMPACTION
+							enable_context_compaction: chatConfig.ENABLE_CONTEXT_COMPACTION,
+							enable_document_suggestions: taskConfig.ENABLE_DOCUMENT_SUGGESTIONS
 						}
 					}
 				: current

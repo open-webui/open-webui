@@ -938,7 +938,7 @@ export const generateDocumentSuggestions = async (
 	}
 
 	try {
-		const response = res?.choices[0]?.message?.content ?? '';
+		const response = res?.choices?.[0]?.message?.content ?? '';
 		const jsonStartIndex = response.indexOf('{');
 		const jsonEndIndex = response.lastIndexOf('}');
 
