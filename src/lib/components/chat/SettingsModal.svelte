@@ -1246,11 +1246,7 @@
 			{:else if selectedTab === 'admin:code-execution'}
 				<AdminCodeExecution saveHandler={adminConfigSaveHandler} />
 			{:else if selectedTab === 'admin:interface'}
-				<AdminInterface
-					on:save={() => {
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
+				<AdminInterface on:save={adminConfigSaveHandler} />
 			{:else if selectedTab === 'admin:audio'}
 				<AdminAudio
 					saveHandler={() => {
