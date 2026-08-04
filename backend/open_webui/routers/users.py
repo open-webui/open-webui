@@ -20,6 +20,7 @@ from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
+from open_webui.models.tool_servers import settings_without_user_configs
 from open_webui.models.users import (
     UserGroupIdsListResponse,
     UserGroupIdsModel,
@@ -101,6 +102,7 @@ async def get_users(
             UserGroupIdsModel(
                 **{
                     **user.model_dump(),
+                    'settings': settings_without_user_configs(user.settings),
                     'group_ids': [group.id for group in user_groups.get(user.id, [])],
                 }
             )
@@ -440,7 +442,7 @@ async def get_user_settings_by_session_user(
     user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
     # user already fetched by get_verified_user — no need to refetch
-    return user.settings
+    return settings_without_user_configs(user.settings)
 
 
 ############################
@@ -464,6 +466,11 @@ async def update_user_settings_by_session_user(
         )
 
     updated_user_settings = form_data.model_dump()
+    # Per-user tool server credentials live under this key and are written only
+    # through the endpoints that validate them, so whatever a client sends here is
+    # dropped rather than merged in unchecked.
+    updated_user_settings.pop('tool_servers', None)
+
     ui_settings = updated_user_settings.get('ui')
     if (
         user.role != 'admin'
@@ -503,7 +510,7 @@ async def update_user_settings_by_session_user(
             actor=user,
             subject_id=user.id,
         )
-        return user.settings
+        return settings_without_user_configs(user.settings)
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -968,7 +975,12 @@ async def update_user_by_id(
                     subject_type='user',
                     source='admin',
                 )
-            return updated_user
+            return UserModel(
+                **{
+                    **updated_user.model_dump(),
+                    'settings': settings_without_user_configs(updated_user.settings),
+                }
+            )
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

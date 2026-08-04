@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { getContext, onMount, tick } from 'svelte';
 	import { fly } from 'svelte/transition';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 
 	import {
 		config,
@@ -37,6 +39,9 @@
 	import LinkSlash from '$lib/components/icons/LinkSlash.svelte';
 
 	const i18n = getContext('i18n');
+	// Typed alias for the credential-related additions below; keeps the shared,
+	// untyped `i18n` context above exactly as upstream declared it.
+	const i18nTyped = i18n as Writable<i18nType>;
 
 	export let selectedToolIds: string[] = [];
 	export let selectedSkillIds: string[] = [];
@@ -56,6 +61,7 @@
 	export let codeInterpreterEnabled = false;
 
 	export let onShowValves: Function;
+	export let onShowCredentials: Function = () => {};
 	export let onClose: Function;
 	export let onWebSearchToggle: Function = () => {};
 	export let closeOnOutsideClick = true;
@@ -66,6 +72,10 @@
 	let tools = null;
 	let skills = null;
 
+	// Typed view of the admin-defined tools, for the credential checks below; the
+	// `tools` map above is built untyped and cannot answer them.
+	let toolsTyped: Record<string, any> = {};
+
 	$: if (show) {
 		init();
 	}
@@ -74,6 +84,13 @@
 	$: fileUploadEnabled =
 		fileUploadCapableModels.length === selectedModels.length &&
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
+
+	// Admin-defined servers can ask each user for their own credentials; until the
+	// required ones are filled in the tool cannot be enabled. Credentials the
+	// connection only offers are no obstacle, so this asks about the required ones
+	// rather than about whether the user configured anything at all.
+	const needsUserConfig = (tool: any) =>
+		(tool?.requires_user_config ?? false) && !(tool?.user_config_required_set ?? false);
 
 	const init = async () => {
 		if ($_tools === null) {
@@ -106,6 +123,7 @@
 		}
 
 		selectedToolIds = selectedToolIds.filter((id) => Object.keys(tools).includes(id));
+		toolsTyped = Object.fromEntries(($_tools ?? []).map((tool: any) => [tool.id, tool]));
 
 		if ($_skills === null) {
 			await _skills.set(await getSkills(localStorage.token));
@@ -405,6 +423,13 @@
 										authType:
 											parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null
 									});
+								} else if (needsUserConfig(toolsTyped[toolId])) {
+									e.preventDefault();
+
+									onShowCredentials({
+										id: toolId,
+										name: toolsTyped[toolId]?.name ?? ''
+									});
 								} else {
 									tools[toolId].enabled = !tools[toolId].enabled;
 
@@ -419,7 +444,7 @@
 								}
 							}}
 						>
-							{#if !(tools[toolId]?.authenticated ?? true)}
+							{#if !(tools[toolId]?.authenticated ?? true) || needsUserConfig(toolsTyped[toolId])}
 								<!-- make it slighly darker and not clickable -->
 								<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10" />
 							{/if}
@@ -464,6 +489,27 @@
 											}}
 										>
 											<LinkSlash className="size-3.5" />
+										</button>
+									</Tooltip>
+								</div>
+							{/if}
+
+							{#if tools[toolId]?.requires_user_config}
+								<div class=" shrink-0">
+									<Tooltip content={$i18nTyped.t('Credentials')}>
+										<button
+											class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
+											type="button"
+											on:click={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+												onShowCredentials({
+													id: toolId,
+													name: toolsTyped[toolId]?.name ?? ''
+												});
+											}}
+										>
+											<Knobs />
 										</button>
 									</Tooltip>
 								</div>
