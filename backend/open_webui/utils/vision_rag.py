@@ -34,10 +34,26 @@ log = logging.getLogger(__name__)
 
 
 DEFAULT_DESCRIBE_PROMPT = (
-    'Describe this image in detail so it can be used for knowledge-base search. '
-    'Capture any visible text, error messages, UI elements, diagrams, objects, '
-    'and relevant context. If the user included a message, prioritise details '
-    'relevant to it, but still describe the rest of the image.'
+    'You are a vision support model describing an image for a text-only chat model. '
+    'Produce a structured response with these exact sections:\n'
+    '\n'
+    '## Visual Description\n'
+    'A concise but accurate description of the image. Cover the most important elements: '
+    'objects, people, scenes, actions, colors, layout, and notable details. Be factual; '
+    'avoid speculation. 2-4 sentences.\n'
+    '\n'
+    '## Text Content (OCR)\n'
+    'Transcribe ALL visible text verbatim. Include: titles, headings, body text, labels, '
+    'captions, UI elements, error messages, code snippets, and watermarks. Preserve line breaks '
+    'and code formatting. If text is partial or unclear, transcribe what you can and note '
+    'uncertainty in square brackets. If no text is visible, write "None."\n'
+    '\n'
+    '## Context\n'
+    'One or two sentences noting what kind of image this is (photo, screenshot, diagram, '
+    'document, chart, etc.) and any obvious purpose.\n'
+    '\n'
+    'Do not add information that is not visible. The output will be embedded in a text-only '
+    'conversation to help the chat model respond to the user.'
 )
 
 
@@ -56,6 +72,43 @@ def _message_text(message: dict) -> str:
         parts = [p.get('text', '') for p in content if isinstance(p, dict) and p.get('type') == 'text']
         return '\n'.join(p for p in parts if p)
     return content or ''
+
+
+def _resolve_effective_vision_capability(model: dict, request) -> bool:
+    """
+    Resolve whether the effective model (wrapper → base chain) supports vision.
+
+    For wrapper models (info.base_model_id set), look up the BASE model and use
+    ITS vision capability. This fixes the bug where wrappers defaulted to
+    vision=True even when wrapping non-vision bases.
+
+    For non-wrapper models (no base_model_id), check the model's own capability
+    as before (preserving existing behavior).
+
+    Falls back to True (vision-capable) when:
+    - The wrapper has no base_model_id (treat as base model)
+    - The base model is not found in request.app.state.MODELS
+    - No explicit vision capability is set on the resolved base
+    """
+    # Walk the wrapper chain (handles wrapper-of-wrapper edge cases)
+    current = model
+    seen_ids = set()
+    while current and current.get('id') not in seen_ids:
+        seen_ids.add(current.get('id'))
+        base_model_id = (current.get('info', {}) or {}).get('base_model_id')
+        if not base_model_id:
+            # This is the effective base model — check its vision capability
+            capabilities = (current.get('info', {}) or {}).get('meta', {}).get('capabilities') or {}
+            return bool(capabilities.get('vision', True))
+        # Resolve base from app state
+        models_dict = getattr(getattr(request, 'app', None), 'state', None)
+        models_dict = getattr(models_dict, 'MODELS', None) if models_dict else None
+        if not models_dict:
+            return True  # can't resolve — best-effort default
+        current = models_dict.get(base_model_id)
+        if not current:
+            return True  # base not found — best-effort default
+    return True  # cycle/empty — best-effort default
 
 
 async def process_image_rag(
@@ -92,8 +145,7 @@ async def process_image_rag(
         return False
 
     # Decide which model describes the image.
-    capabilities = model.get('info', {}).get('meta', {}).get('capabilities') or {}
-    chatting_supports_vision = capabilities.get('vision', True)
+    chatting_supports_vision = _resolve_effective_vision_capability(model, request)
     vision_support_model_id = ((await Config.get('rag.vision.support_model')) or '').strip()
 
     # Is there anything for the downstream RAG step to retrieve? Model-attached
@@ -120,36 +172,50 @@ async def process_image_rag(
         # Non-vision chatting model and no global vision model configured.
         return False
 
-    # The chatting model's system prompt frames the description. It is NOT
-    # available on `form_data['params']` (already popped by apply_params_to_form_data)
-    # nor on `model['info']['params']` (stripped before reaching request.state.MODELS),
-    # so fetch it fresh from the model DB row.
-    system_raw = None
-    try:
-        chatting_model_row = await Models.get_model_by_id(model.get('id'))
-    except Exception as e:
-        log.warning(f'Vision RAG: could not load chatting model for system prompt: {e}')
-        chatting_model_row = None
-    if chatting_model_row and chatting_model_row.params:
-        params_obj = chatting_model_row.params
-        params_dict = params_obj.model_dump() if hasattr(params_obj, 'model_dump') else dict(params_obj)
-        system_raw = params_dict.get('system')
-
-    system_prompt = await resolve_system_prompt(system_raw, metadata, user)
+    # Admin-configurable system prompt for the vision support model call.
+    # When set, it completely replaces the chatting model's system prompt,
+    # giving admins full control over the support model's behavior.
+    admin_system_prompt = ((await Config.get('rag.vision.system_prompt')) or '').strip()
 
     user_text = _message_text(last_user)
 
-    describe_instruction = DEFAULT_DESCRIBE_PROMPT
-    if user_text:
-        describe_instruction = f"{describe_instruction}\n\nUser's message: {user_text}"
+    if admin_system_prompt:
+        # Admin override: use ONLY the admin prompt as the system message.
+        # The DEFAULT_DESCRIBE_PROMPT is folded in as a user instruction so the
+        # admin has full control of the system message tone/role.
+        describe_messages = [{'role': 'system', 'content': admin_system_prompt}]
+        describe_user_content: list[dict] = [{'type': 'text', 'text': DEFAULT_DESCRIBE_PROMPT}]
+        if user_text:
+            describe_user_content.append({'type': 'text', 'text': f"User's message: {user_text}"})
+        describe_user_content.extend(image_parts)
+        describe_messages.append({'role': 'user', 'content': describe_user_content})
+    else:
+        # Default behavior: use chatting model's system prompt + DEFAULT_DESCRIBE_PROMPT
+        # (existing logic preserved verbatim).
+        system_raw = None
+        try:
+            chatting_model_row = await Models.get_model_by_id(model.get('id'))
+        except Exception as e:
+            log.warning(f'Vision RAG: could not load chatting model for system prompt: {e}')
+            chatting_model_row = None
+        if chatting_model_row and chatting_model_row.params:
+            params_obj = chatting_model_row.params
+            params_dict = params_obj.model_dump() if hasattr(params_obj, 'model_dump') else dict(params_obj)
+            system_raw = params_dict.get('system')
 
-    describe_content: list[dict] = [{'type': 'text', 'text': describe_instruction}]
-    describe_content.extend(image_parts)
+        system_prompt = await resolve_system_prompt(system_raw, metadata, user)
 
-    describe_messages: list[dict] = []
-    if system_prompt:
-        describe_messages.append({'role': 'system', 'content': system_prompt})
-    describe_messages.append({'role': 'user', 'content': describe_content})
+        describe_instruction = DEFAULT_DESCRIBE_PROMPT
+        if user_text:
+            describe_instruction = f"{describe_instruction}\n\nUser's message: {user_text}"
+
+        describe_content: list[dict] = [{'type': 'text', 'text': describe_instruction}]
+        describe_content.extend(image_parts)
+
+        describe_messages: list[dict] = []
+        if system_prompt:
+            describe_messages.append({'role': 'system', 'content': system_prompt})
+        describe_messages.append({'role': 'user', 'content': describe_content})
 
     payload = {
         'model': vision_model_id,

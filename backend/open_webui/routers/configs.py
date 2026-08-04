@@ -812,12 +812,18 @@ class RagVisionConfigForm(BaseModel):
     # Optional model id used to describe images for Vision Image RAG when the
     # chatting model is not vision-capable. Empty string = disabled.
     VISION_SUPPORT_MODEL: str = ''
+    # Admin-configurable system prompt for the vision support model. When set,
+    # completely replaces the chatting model's system prompt for the describe call.
+    VISION_SYSTEM_PROMPT: str = ''
 
 
 @router.get('/rag/vision', response_model=RagVisionConfigForm)
 async def get_rag_vision_config(request: Request, user=Depends(get_admin_user)):
-    """Return the global vision-support model used by Vision Image RAG."""
-    return {'VISION_SUPPORT_MODEL': (await Config.get('rag.vision.support_model')) or ''}
+    """Return the global vision-support model and system prompt used by Vision Image RAG."""
+    return {
+        'VISION_SUPPORT_MODEL': (await Config.get('rag.vision.support_model')) or '',
+        'VISION_SYSTEM_PROMPT': (await Config.get('rag.vision.system_prompt')) or '',
+    }
 
 
 @router.post('/rag/vision', response_model=RagVisionConfigForm)
@@ -826,11 +832,21 @@ async def set_rag_vision_config(
     form_data: RagVisionConfigForm,
     user=Depends(get_admin_user),
 ):
-    """Set the global vision-support model. Empty string disables the non-vision
-    fallback (only vision-capable chatting models then get image RAG)."""
-    value = (form_data.VISION_SUPPORT_MODEL or '').strip()
-    await Config.upsert({'rag.vision.support_model': value})
-    return {'VISION_SUPPORT_MODEL': value}
+    """Set the global vision-support model and system prompt. Empty string for
+    the model disables the non-vision fallback. Empty system prompt restores
+    the default behavior (chatting model's system prompt is used)."""
+    support_model = (form_data.VISION_SUPPORT_MODEL or '').strip()
+    system_prompt = (form_data.VISION_SYSTEM_PROMPT or '').strip()
+    await Config.upsert(
+        {
+            'rag.vision.support_model': support_model,
+            'rag.vision.system_prompt': system_prompt,
+        }
+    )
+    return {
+        'VISION_SUPPORT_MODEL': support_model,
+        'VISION_SYSTEM_PROMPT': system_prompt,
+    }
 
 
 class SubagentsConfigForm(BaseModel):

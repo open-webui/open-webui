@@ -1019,7 +1019,7 @@
 						<hr class="my-3 border-gray-100/30 dark:border-gray-850/30" />
 
 						<div class="my-3">
-							<Capabilities bind:capabilities />
+							<Capabilities bind:capabilities baseModelId={info?.base_model_id ?? null} />
 						</div>
 
 						{#if Object.keys(capabilities).filter((key) => capabilities[key]).length > 0}

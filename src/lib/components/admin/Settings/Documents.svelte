@@ -82,6 +82,7 @@
 	// Optional model id used to describe images for RAG when the chatting
 	// model does not support vision. Empty string means disabled.
 	let visionSupportModel = '';
+	let visionSystemPrompt = '';
 
 	const embeddingModelUpdateHandler = async () => {
 		if (RAG_EMBEDDING_ENGINE === '' && RAG_EMBEDDING_MODEL.split('/').length - 1 > 1) {
@@ -347,10 +348,14 @@
 
 		RAGConfig = config;
 
-		visionSupportModel = await getRagVisionConfig(localStorage.token).catch((error) => {
+		const ragVisionConfig = await getRagVisionConfig(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
-			return '';
+			return null;
 		});
+		if (ragVisionConfig) {
+			visionSupportModel = ragVisionConfig.VISION_SUPPORT_MODEL;
+			visionSystemPrompt = ragVisionConfig.VISION_SYSTEM_PROMPT;
+		}
 	});
 </script>
 
@@ -1478,7 +1483,10 @@
 						on:change={async () => {
 							const res = await setRagVisionConfig(
 								localStorage.token,
-								visionSupportModel
+								{
+									VISION_SUPPORT_MODEL: visionSupportModel,
+									VISION_SYSTEM_PROMPT: visionSystemPrompt
+								}
 							).catch((error) => {
 								toast.error(`${error}`);
 								return null;
@@ -1496,6 +1504,26 @@
 							</option>
 						{/each}
 					</select>
+				</AdminSettingField>
+
+				<AdminSettingField
+					label={$i18n.t('Vision Support System Prompt')}
+					description={$i18n.t(
+						'Optional system prompt sent to the Vision Support Model when describing images. When set, this replaces the default describe prompt and the chatting model\'s system prompt, giving you full control over how images are described and OCR\'d. Leave empty to use the built-in default.'
+					)}
+				>
+					<Textarea
+						bind:value={visionSystemPrompt}
+						on:change={async () => {
+							await setRagVisionConfig(localStorage.token, {
+								VISION_SUPPORT_MODEL: visionSupportModel,
+								VISION_SYSTEM_PROMPT: visionSystemPrompt
+							});
+						}}
+						placeholder={$i18n.t('Describe images for the non-vision chat model, including visual details and full OCR of any visible text...')}
+						rows={6}
+						class={textareaClass}
+					/>
 				</AdminSettingField>
 
 				</div>

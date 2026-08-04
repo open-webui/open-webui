@@ -78,10 +78,16 @@
 	type Capability = keyof typeof capabilityLabels;
 
 	export let capabilities: Partial<Record<Capability, boolean>> = {};
+	export let baseModelId: string | null = null;
 
-	// Hide file_context when file_upload is disabled
+	// Hide file_context when file_upload is disabled.
+	// For wrapper models (base_model_id set), hide vision and builtin_tools
+	// as these are inherited from the base model.
 	$: visibleCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter((cap) => {
 		if (cap === 'file_context' && !capabilities.file_upload) {
+			return false;
+		}
+		if (baseModelId && (cap === 'vision' || cap === 'builtin_tools')) {
 			return false;
 		}
 		return true;
@@ -90,6 +96,11 @@
 
 <div>
 	<div class="mb-1.5 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Capabilities')}</div>
+	{#if baseModelId}
+		<div class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+			{$i18n.t('Vision and Builtin Tools capabilities are inherited from the base model and cannot be overridden on a wrapper model.')}
+		</div>
+	{/if}
 	<div class="grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
 		{#each visibleCapabilities as capability}
 			<div class="flex min-h-6 items-center justify-between gap-2.5">

@@ -2240,6 +2240,8 @@ TASK_MODEL_EXTERNAL = os.getenv('TASK_MODEL_EXTERNAL', '')
 # models. Empty = disabled (only vision-capable chatting models get image RAG).
 VISION_SUPPORT_MODEL = os.getenv('VISION_SUPPORT_MODEL', '')
 
+VISION_SYSTEM_PROMPT = os.getenv('VISION_SYSTEM_PROMPT', '')
+
 CONTEXT_COMPACTION_MODEL = os.getenv('CONTEXT_COMPACTION_MODEL', '')
 
 ENABLE_CONTEXT_COMPACTION = os.getenv('ENABLE_CONTEXT_COMPACTION', 'False').lower() == 'true'
@@ -3178,6 +3180,7 @@ DEFAULT_CONFIG = {
     'task.model.default': TASK_MODEL,
     'task.model.external': TASK_MODEL_EXTERNAL,
     'rag.vision.support_model': VISION_SUPPORT_MODEL,
+    'rag.vision.system_prompt': VISION_SYSTEM_PROMPT,
     'chat.context_compaction.model': CONTEXT_COMPACTION_MODEL,
     'chat.context_compaction.enable': ENABLE_CONTEXT_COMPACTION,
     'chat.context_compaction.token_threshold': CONTEXT_COMPACTION_TOKEN_THRESHOLD,
