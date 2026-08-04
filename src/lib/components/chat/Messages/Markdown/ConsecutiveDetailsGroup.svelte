@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { decode } from 'html-entities';
 	import { getContext } from 'svelte';
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
@@ -11,6 +10,10 @@
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
+	import {
+		decodeToolCallAttribute,
+		parseToolCallAttribute
+	} from '$lib/components/common/toolCallAttributes';
 
 	import { settings } from '$lib/stores';
 
@@ -32,16 +35,9 @@
 	export let messageDone = true;
 	export let allowEmbeds = true;
 	export let compactPreview = false;
+	export let htmlEncodedAttributes = true;
 
 	let open = $settings?.expandDetails ?? false;
-
-	function parseJSONString(str: string) {
-		try {
-			return parseJSONString(JSON.parse(str));
-		} catch (e) {
-			return str;
-		}
-	}
 
 	$: toolCallCount = tokens.filter((t) => t?.attributes?.type === 'tool_calls').length;
 	$: reasoningCount = tokens.filter((t) => t?.attributes?.type === 'reasoning').length;
@@ -58,15 +54,14 @@
 		const result: Array<{ name: string; embed: string; args: string }> = [];
 		for (const t of tokens) {
 			if (t?.attributes?.type !== 'tool_calls') continue;
-			const raw = decode(t.attributes?.embeds ?? '');
 			try {
-				const parsed = parseJSONString(raw);
+				const parsed = parseToolCallAttribute(t.attributes?.embeds ?? '', htmlEncodedAttributes);
 				if (Array.isArray(parsed) && parsed.length > 0) {
 					for (const embed of parsed) {
 						result.push({
 							name: t.attributes?.name ?? '',
 							embed,
-							args: decode(t.attributes?.arguments ?? '')
+							args: decodeToolCallAttribute(t.attributes?.arguments ?? '', htmlEncodedAttributes)
 						});
 					}
 				}

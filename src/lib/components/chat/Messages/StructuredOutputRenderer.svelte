@@ -70,6 +70,7 @@
 			id={`${id}-${displayItem.id}`}
 			tokens={displayItem.tokens}
 			messageDone={done}
+			htmlEncodedAttributes={false}
 			{compactPreview}
 		>
 			<div slot="content">
@@ -80,6 +81,7 @@
 							attributes={detailToken.attributes}
 							resultContent={detailToken.text}
 							grouped={true}
+							htmlEncodedAttributes={false}
 							open={$settings?.expandDetails ?? false}
 							className="w-full"
 							buttonClassName={detailButtonClassName}
@@ -127,6 +129,7 @@
 				id={`${id}-${displayItem.id}-tool-call`}
 				attributes={detailToken.attributes}
 				resultContent={detailToken.text}
+				htmlEncodedAttributes={false}
 				open={$settings?.expandDetails ?? false}
 				className="w-full space-y-2"
 				buttonClassName={detailButtonClassName}

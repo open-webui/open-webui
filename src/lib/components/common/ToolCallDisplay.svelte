@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { decode } from 'html-entities';
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { getContext } from 'svelte';
@@ -15,6 +14,11 @@
 	import CheckCircle from '../icons/CheckCircle.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
+	import {
+		decodeToolCallAttribute,
+		parseJSONString,
+		parseToolCallAttribute
+	} from './toolCallAttributes';
 	import { settings } from '$lib/stores';
 
 	export let id: string = '';
@@ -31,6 +35,7 @@
 
 	export let open = false;
 	export let grouped = false;
+	export let htmlEncodedAttributes = true;
 	export let className = '';
 
 	const RESULT_PREVIEW_LIMIT = 10000;
@@ -41,22 +46,6 @@
 		'w-fit py-1 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
 
 	const componentId = id || uuidv4();
-
-	function parseJSONString(str: string) {
-		// Iteratively unwrap nested JSON-encoded strings. Same result as the previous
-		// recursive form, but without the stack-overflow-and-recover path it hit on
-		// scalar values (e.g. JSON.parse('5') -> 5 -> infinite self-recursion).
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		let value: any = str;
-		while (typeof value === 'string') {
-			try {
-				value = JSON.parse(value);
-			} catch {
-				break;
-			}
-		}
-		return value;
-	}
 
 	function formatJSONString(str: string) {
 		try {
@@ -85,11 +74,14 @@
 
 	export let resultContent: string = '';
 
-	$: result = resultContent || decode(attributes?.result ?? '');
-	$: files = parseJSONString(decode(attributes?.files ?? ''));
-	$: embeds = parseJSONString(decode(attributes?.embeds ?? ''));
+	$: result =
+		resultContent || decodeToolCallAttribute(attributes?.result ?? '', htmlEncodedAttributes);
+	$: files = parseToolCallAttribute(attributes?.files ?? '', htmlEncodedAttributes);
+	$: embeds = parseToolCallAttribute(attributes?.embeds ?? '', htmlEncodedAttributes);
 	$: args =
-		open || (Array.isArray(embeds) && embeds.length > 0) ? decode(attributes?.arguments ?? '') : '';
+		open || (Array.isArray(embeds) && embeds.length > 0)
+			? decodeToolCallAttribute(attributes?.arguments ?? '', htmlEncodedAttributes)
+			: '';
 	$: isDone = attributes?.done === 'true';
 	$: isExecuting = attributes?.done && attributes?.done !== 'true';
 
