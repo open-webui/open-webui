@@ -1472,7 +1472,7 @@
 		</div>
 
 		<!-- Port detection -->
-		{#if selectedTerminal && !selectedFile && previewPort === null}
+		{#if selectedTerminal && terminalEnabled && !selectedFile && previewPort === null}
 			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800">
 				<PortList
 					baseUrl={selectedTerminal.url}
