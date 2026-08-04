@@ -85,6 +85,7 @@
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 	import {
+		generateDocumentSuggestions,
 		generateQueries,
 		chatAction,
 		generateMoACompletion,
@@ -386,6 +387,44 @@
 	let prompt = '';
 	let chatFiles = [];
 	let files = [];
+	let documentSuggestionPrompts = [];
+	let documentSuggestionsTimer = null;
+	let documentSuggestionsKey = '';
+
+	const refreshDocumentSuggestions = async (fileList, modelId) => {
+		const ids = (fileList ?? [])
+			.filter(
+				(f) =>
+					f?.status === 'uploaded' &&
+					f?.type === 'file' &&
+					f?.id &&
+					!(f?.content_type ?? '').startsWith('image/')
+			)
+			.map((f) => f.id);
+
+		const key = `${modelId ?? ''}:${ids.join(',')}`;
+		if (key === documentSuggestionsKey) return;
+		documentSuggestionsKey = key;
+
+		if (ids.length === 0 || !modelId) {
+			documentSuggestionPrompts = [];
+			return;
+		}
+
+		const questions = await generateDocumentSuggestions(localStorage.token, modelId, ids).catch(
+			() => []
+		);
+
+		if (documentSuggestionsKey !== key) return;
+		documentSuggestionPrompts = (questions ?? []).map((q) => ({ content: q, title: [q, ''] }));
+	};
+
+	$: if ($config?.features?.enable_document_suggestions && history?.currentId === null) {
+		clearTimeout(documentSuggestionsTimer);
+		const _files = files;
+		const _model = selectedModels?.[0];
+		documentSuggestionsTimer = setTimeout(() => refreshDocumentSuggestions(_files, _model), 600);
+	}
 	let params = {};
 	let chatVariables = {};
 	let showChatVariablesModal = false;
@@ -4123,6 +4162,7 @@
 							<div class="flex items-center h-full">
 								<Placeholder
 									{history}
+									bind:documentSuggestionPrompts
 									bind:selectedModels
 									bind:messageInput
 									bind:files

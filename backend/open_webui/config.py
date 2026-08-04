@@ -2269,6 +2269,28 @@ JSON format: { "follow_ups": ["Question 1?", "Question 2?", "Question 3?"] }
 
 ENABLE_FOLLOW_UP_GENERATION = os.getenv('ENABLE_FOLLOW_UP_GENERATION', 'True').lower() == 'true'
 
+DOCUMENT_SUGGESTIONS_PROMPT_TEMPLATE = os.getenv('DOCUMENT_SUGGESTIONS_PROMPT_TEMPLATE', '')
+
+DEFAULT_DOCUMENT_SUGGESTIONS_PROMPT_TEMPLATE = """### Task:
+Generate 3-5 insightful questions a user would naturally want to ask about the provided document content, to help them explore and understand its key topics, concepts, and details.
+### Guidelines:
+- Questions must be specific to the document's actual content, not generic.
+- Cover different aspects: key concepts, details, implications, and relationships.
+- Make questions concise, clear, and directly answerable from the document.
+- Order questions from broad overview to more specific details.
+- Use the document's primary language; default to English if multilingual.
+- Response must be a JSON object with a "questions" key containing an array of strings, no extra text or formatting.
+### Output:
+JSON format: { "questions": ["Question 1?", "Question 2?", "Question 3?"] }
+### Document Content:
+<document>
+{{CONTENT}}
+</document>"""
+
+DOCUMENT_SUGGESTIONS_CONTENT_MAX_LENGTH = int(os.getenv('DOCUMENT_SUGGESTIONS_CONTENT_MAX_LENGTH', '8000'))
+
+ENABLE_DOCUMENT_SUGGESTIONS = os.getenv('ENABLE_DOCUMENT_SUGGESTIONS', 'False').lower() == 'true'
+
 ENABLE_TAGS_GENERATION = os.getenv('ENABLE_TAGS_GENERATION', 'True').lower() == 'true'
 
 ENABLE_TITLE_GENERATION = os.getenv('ENABLE_TITLE_GENERATION', 'True').lower() == 'true'
@@ -3105,6 +3127,9 @@ DEFAULT_CONFIG = {
     'task.image.prompt_template': IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
     'task.follow_up.prompt_template': FOLLOW_UP_GENERATION_PROMPT_TEMPLATE,
     'task.follow_up.enable': ENABLE_FOLLOW_UP_GENERATION,
+    'task.document_suggestions.prompt_template': DOCUMENT_SUGGESTIONS_PROMPT_TEMPLATE,
+    'task.document_suggestions.enable': ENABLE_DOCUMENT_SUGGESTIONS,
+    'task.document_suggestions.content_max_length': DOCUMENT_SUGGESTIONS_CONTENT_MAX_LENGTH,
     'task.tags.enable': ENABLE_TAGS_GENERATION,
     'task.title.enable': ENABLE_TITLE_GENERATION,
     'task.query.search.enable': ENABLE_SEARCH_QUERY_GENERATION,
