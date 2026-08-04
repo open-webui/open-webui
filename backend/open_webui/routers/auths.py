@@ -1440,13 +1440,23 @@ def oauth_config_updates(data: dict) -> dict:
     }
 
 
+def _require_oauth_persistent_config():
+    if not Config.OAUTH_PERSISTENT_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='OAuth admin configuration is disabled. Set ENABLE_OAUTH_PERSISTENT_CONFIG=true to enable.',
+        )
+
+
 @router.get('/admin/config/oauth', response_model=OAuthConfigForm)
 async def get_oauth_config(request: Request, user=Depends(get_admin_user)):
+    _require_oauth_persistent_config()
     return await get_oauth_config_values()
 
 
 @router.post('/admin/config/oauth', response_model=OAuthConfigForm)
 async def update_oauth_config(request: Request, form_data: OAuthConfigForm, user=Depends(get_admin_user)):
+    _require_oauth_persistent_config()
     await Config.upsert(oauth_config_updates(form_data.model_dump(exclude_none=True)))
     return await get_oauth_config_values()
 
