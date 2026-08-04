@@ -416,7 +416,13 @@
 		);
 
 		if (documentSuggestionsKey !== key) return;
-		documentSuggestionPrompts = (questions ?? []).map((q) => ({ content: q, title: [q, ''] }));
+		documentSuggestionPrompts = (questions ?? [])
+			.map((q) => (typeof q === 'string' ? { question: q } : q))
+			.filter((q) => q?.question)
+			.map((q) => ({
+				content: q.question,
+				title: q.title ? [q.title, q.question] : [q.question, '']
+			}));
 	};
 
 	$: if ($config?.features?.enable_document_suggestions && history?.currentId === null) {

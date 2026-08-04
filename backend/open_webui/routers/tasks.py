@@ -324,7 +324,8 @@ async def generate_document_suggestions(request: Request, form_data: dict, user=
         )
 
     max_length = await Config.get('task.document_suggestions.content_max_length')
-    combined_content = '\n\n---\n\n'.join(content_parts)[:max_length]
+    per_file_length = max(1, max_length // len(content_parts))
+    combined_content = '\n\n---\n\n'.join(part[:per_file_length] for part in content_parts)
 
     task_model_id = get_task_model_id(
         model_id,

@@ -2279,9 +2279,11 @@ Generate 3-5 insightful questions a user would naturally want to ask about the p
 - Make questions concise, clear, and directly answerable from the document.
 - Order questions from broad overview to more specific details.
 - Use the document's primary language; default to English if multilingual.
-- Response must be a JSON object with a "questions" key containing an array of strings, no extra text or formatting.
+- Each entry needs a "title" of 2-5 words naming the topic, and a "question" holding the full question.
+- Titles must be distinct from one another so the list scans clearly.
+- Response must be a JSON object with a "questions" key containing an array of objects, no extra text or formatting.
 ### Output:
-JSON format: { "questions": ["Question 1?", "Question 2?", "Question 3?"] }
+JSON format: { "questions": [{ "title": "Topic name", "question": "Question 1?" }] }
 ### Document Content:
 <document>
 {{CONTENT}}
