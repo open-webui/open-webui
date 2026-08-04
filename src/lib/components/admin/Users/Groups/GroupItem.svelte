@@ -22,7 +22,15 @@
 	export let setGroups = () => {};
 
 	let showEdit = false;
+	let wasEditOpen = false;
 	$: hasCustomPermissions = Object.keys(group?.permissions ?? {}).length > 0;
+
+	$: {
+		if (wasEditOpen && !showEdit) {
+			setGroups();
+		}
+		wasEditOpen = showEdit;
+	}
 
 	const updateHandler = async (_group) => {
 		const res = await updateGroupById(localStorage.token, group.id, _group).catch((error) => {
