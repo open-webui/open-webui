@@ -421,11 +421,13 @@
 			}));
 	};
 
-	$: if ($config?.features?.enable_document_suggestions && history?.currentId === null) {
+	const scheduleDocumentSuggestions = (fileList, modelId) => {
 		clearTimeout(documentSuggestionsTimer);
-		const _files = files;
-		const _model = selectedModels?.[0];
-		documentSuggestionsTimer = setTimeout(() => refreshDocumentSuggestions(_files, _model), 600);
+		documentSuggestionsTimer = setTimeout(() => refreshDocumentSuggestions(fileList, modelId), 600);
+	};
+
+	$: if ($config?.features?.enable_document_suggestions && history?.currentId === null) {
+		scheduleDocumentSuggestions(files, selectedModels?.[0]);
 	}
 	let params = {};
 	let chatVariables = {};
