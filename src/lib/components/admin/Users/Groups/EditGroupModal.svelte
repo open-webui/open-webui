@@ -96,7 +96,7 @@
 				features: { ...DEFAULT_PERMISSIONS.features, ...loadedPermissions.features },
 				settings: { ...DEFAULT_PERMISSIONS.settings, ...loadedPermissions.settings }
 			};
-			data = group?.data ?? {};
+			data = structuredClone(group?.data ?? {});
 
 			userCount = group?.member_count ?? 0;
 		}
