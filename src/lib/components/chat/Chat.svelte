@@ -67,6 +67,7 @@
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
+	import { dequeueChatRequest } from '$lib/utils/chatQueue';
 	import { getOutputText } from './Messages/structuredOutput';
 
 	import {
@@ -2157,20 +2158,13 @@
 	const processNextInQueue = async (targetChatId: string) => {
 		if (processingQueueChats.has(targetChatId)) return;
 
-		const queue = $chatRequestQueues[targetChatId];
-		if (!queue || queue.length === 0) return;
+		const { queues, request } = dequeueChatRequest($chatRequestQueues, targetChatId);
+		if (!request) return;
 
 		processingQueueChats.add(targetChatId);
 		try {
-			const combinedPrompt = queue.map((m) => m.prompt).join('\n\n');
-			const combinedFiles = queue.flatMap((m) => m.files);
-
-			chatRequestQueues.update((q) => {
-				const { [targetChatId]: _, ...rest } = q;
-				return rest;
-			});
-
-			await submitPrompt(combinedPrompt, combinedFiles);
+			chatRequestQueues.set(queues);
+			await submitPrompt(request.prompt, request.files);
 		} finally {
 			processingQueueChats.delete(targetChatId);
 		}
