@@ -1612,6 +1612,12 @@ AUDIO_TTS_MISTRAL_API_KEY = os.getenv('AUDIO_TTS_MISTRAL_API_KEY', '')
 
 AUDIO_TTS_MISTRAL_API_BASE_URL = os.getenv('AUDIO_TTS_MISTRAL_API_BASE_URL', 'https://api.mistral.ai/v1')
 
+AUDIO_MUSIC_MINIMAX_API_KEY = os.getenv('AUDIO_MUSIC_MINIMAX_API_KEY', '')
+
+AUDIO_MUSIC_MINIMAX_API_BASE_URL = os.getenv('AUDIO_MUSIC_MINIMAX_API_BASE_URL', 'https://api.minimax.io/v1')
+
+AUDIO_MUSIC_MODEL = os.getenv('AUDIO_MUSIC_MODEL', 'music-3.0')
+
 ####################################
 # WEBUI
 ####################################
@@ -3039,6 +3045,9 @@ DEFAULT_CONFIG = {
     'audio.tts.azure.speech_output_format': AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
     'audio.tts.mistral.api_key': AUDIO_TTS_MISTRAL_API_KEY,
     'audio.tts.mistral.api_base_url': AUDIO_TTS_MISTRAL_API_BASE_URL,
+    'audio.music.minimax.api_key': AUDIO_MUSIC_MINIMAX_API_KEY,
+    'audio.music.minimax.api_base_url': AUDIO_MUSIC_MINIMAX_API_BASE_URL,
+    'audio.music.model': AUDIO_MUSIC_MODEL,
     'webui.url': WEBUI_URL,
     'ui.enable_signup': ENABLE_SIGNUP,
     'ui.enable_login_form': ENABLE_LOGIN_FORM,

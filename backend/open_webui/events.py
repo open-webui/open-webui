@@ -642,6 +642,11 @@ class EventDefinitions(BaseModel):
         description='Audio transcription was requested.',
         message='Transcription requested',
     )
+    MUSIC_GENERATION_REQUESTED: EventDefinition = EventDefinition(
+        name='music.generation_requested',
+        description='Music generation was requested.',
+        message='Music generation requested',
+    )
     TERMINAL_SESSION_OPENED: EventDefinition = EventDefinition(
         name='terminal.session.opened', description='A terminal session was opened.', message='Terminal Session opened'
     )

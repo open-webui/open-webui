@@ -154,6 +154,7 @@ from open_webui.routers import (
     knowledge,
     memories,
     models,
+    music,
     notifications,
     notes,
     ollama,
@@ -791,6 +792,7 @@ app.include_router(tasks.router, prefix='/api/v1/tasks', tags=['tasks'])
 app.include_router(images.router, prefix='/api/v1/images', tags=['images'])
 
 app.include_router(audio.router, prefix='/api/v1/audio', tags=['audio'])
+app.include_router(music.router, prefix='/api/v1/music', tags=['music'])
 app.include_router(retrieval.router, prefix='/api/v1/retrieval', tags=['retrieval'])
 
 app.include_router(configs.router, prefix='/api/v1/configs', tags=['configs'])
