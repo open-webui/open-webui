@@ -46,6 +46,7 @@ from open_webui.utils.redis import (
     get_redis_connection,
     get_sentinels_from_env,
 )
+from socketio.packet import Packet
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -64,6 +65,22 @@ def get_room_sid_map(manager, namespace: str, room: str):
     return manager.rooms.get(namespace, {}).get(room)
 
 
+class JSONOnlyPacket(Packet):
+    """Packet class that keeps every payload JSON-only.
+
+    Client attachments arrive as int lists, the form the Yjs handlers already store and apply,
+    and nothing server-side builds bytes, so python-socketio's recursive per-emit scan for
+    binary is pure overhead. With it off, an emit that does carry bytes raises in encode()
+    instead of being framed as an attachment.
+    """
+
+    uses_binary_events = False
+
+    @classmethod
+    def reconstruct_binary(cls, data, attachments):
+        return super().reconstruct_binary(data, [list(attachment) for attachment in attachments])
+
+
 if WEBSOCKET_MANAGER == 'redis':
     sentinel_hosts = WEBSOCKET_SENTINEL_HOSTS or ''
     ws_redis_url = (
@@ -76,6 +93,7 @@ if WEBSOCKET_MANAGER == 'redis':
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode='asgi',
         json=SOCKETIO_JSON,
+        serializer=JSONOnlyPacket,
         transports=(['websocket'] if ENABLE_WEBSOCKET_SUPPORT else ['polling']),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
@@ -90,6 +108,7 @@ else:
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode='asgi',
         json=SOCKETIO_JSON,
+        serializer=JSONOnlyPacket,
         transports=(['websocket'] if ENABLE_WEBSOCKET_SUPPORT else ['polling']),
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
