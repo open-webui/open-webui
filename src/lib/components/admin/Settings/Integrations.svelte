@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
+	import { v4 as uuidv4 } from 'uuid';
 	import { getModels as _getModels } from '$lib/apis';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -101,7 +102,7 @@
 	const addTerminalConnection = (server: TerminalConnection) => {
 		terminalConnections = [
 			...terminalConnections,
-			{ ...server, id: server.id ?? crypto.randomUUID() }
+			{ ...server, id: server.id ?? uuidv4() }
 		];
 		saveTerminalServers();
 	};
