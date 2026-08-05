@@ -3,7 +3,7 @@
 	import { getContext, onMount, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
-	import { config, models, settings, user } from '$lib/stores';
+	import { config, models, settings, tools, user } from '$lib/stores';
 	import type { SettingsModalRequest } from '$lib/stores';
 	import { getUserSettings, updateUserSettings } from '$lib/apis/users';
 	import { getBackendConfig, getModels as _getModels } from '$lib/apis';
@@ -390,6 +390,7 @@
 			keywords: [
 				'addconnection',
 				'add connection',
+				'credentials',
 				'integrations',
 				'managetools',
 				'manage tools',
@@ -791,6 +792,15 @@
 	let search = '';
 	let searchDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
+	// Adding personal tool servers stays behind `direct_tool_servers`, but a server an
+	// admin set up can ask this user for their own credentials — that form lives in the
+	// same tab, so it has to be reachable without the permission as well.
+	$: canAccessToolSettings =
+		$user?.role === 'admin' ||
+		($user?.role === 'user' &&
+			(($user?.permissions?.features?.direct_tool_servers ?? false) ||
+				(($tools ?? []) as any[]).some((tool) => tool?.requires_user_config)));
+
 	const getAvailableSettings = () => {
 		const personalSettings = allSettings.filter((tab) => {
 			if (tab.id === 'connections') {
@@ -798,10 +808,7 @@
 			}
 
 			if (tab.id === 'tools') {
-				return (
-					$user?.role === 'admin' ||
-					($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)
-				);
+				return canAccessToolSettings;
 			}
 
 			if (tab.id === 'interface') {
@@ -909,6 +916,13 @@
 
 	$: if (modalShow && selectedTab) {
 		scrollToSelectedTab();
+	}
+
+	// The tool list is fetched asynchronously, so tab access can turn on after the
+	// tab list was first built.
+	$: if (canAccessToolSettings) {
+		availableSettings = getAvailableSettings();
+		setFilteredSettings();
 	}
 
 	onMount(() => {
@@ -1045,7 +1059,7 @@
 							</button>
 						{/if}
 					{:else if tabId === 'tools'}
-						{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
+						{#if canAccessToolSettings}
 							<button
 								role="tab"
 								aria-controls="tab-tools"

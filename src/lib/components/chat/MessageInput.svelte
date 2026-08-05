@@ -57,6 +57,7 @@
 		getUserTimezone,
 		getWeekday
 	} from '$lib/utils';
+	import { getTools } from '$lib/apis/tools';
 	import { uploadFile } from '$lib/apis/files';
 	import { getCwd, uploadToTerminal } from '$lib/apis/terminal';
 	import { generateAutoCompletion } from '$lib/apis';
@@ -106,6 +107,7 @@
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 	import Knobs from '../icons/Knobs.svelte';
 	import ValvesModal from '../workspace/common/ValvesModal.svelte';
+	import ToolServerUserConfigModal from './Settings/Integrations/ToolServerUserConfigModal.svelte';
 	import Note from '../icons/Note.svelte';
 	import AskUserCard from './AskUserCard.svelte';
 	import { goto } from '$app/navigation';
@@ -217,7 +219,11 @@
 	let selectedValvesItemId = null;
 	let integrationsMenuCloseOnOutsideClick = true;
 
-	$: if (!showValvesModal) {
+	let showCredentialsModal = false;
+	let selectedCredentialsServerId = '';
+	let selectedCredentialsServerName = '';
+
+	$: if (!showValvesModal && !showCredentialsModal) {
 		integrationsMenuCloseOnOutsideClick = true;
 	}
 
@@ -1609,6 +1615,15 @@
 	}}
 />
 
+<ToolServerUserConfigModal
+	bind:show={showCredentialsModal}
+	serverId={selectedCredentialsServerId}
+	serverName={selectedCredentialsServerName}
+	on:save={async () => {
+		tools.set(await getTools(localStorage.token));
+	}}
+/>
+
 <InputModal
 	bind:show={showInputModal}
 	bind:value={prompt}
@@ -2266,6 +2281,14 @@
 													selectedValvesType = type;
 													selectedValvesItemId = id;
 													showValvesModal = true;
+													integrationsMenuCloseOnOutsideClick = false;
+												}}
+												onShowCredentials={(e: { id: string; name: string }) => {
+													const { id, name } = e;
+													// `server:mcp:<id>` for MCP connections, `server:<id>` for OpenAPI ones.
+													selectedCredentialsServerId = `${id}`.replace(/^server:(mcp:)?/, '');
+													selectedCredentialsServerName = name;
+													showCredentialsModal = true;
 													integrationsMenuCloseOnOutsideClick = false;
 												}}
 												onClose={async () => {

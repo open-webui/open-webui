@@ -4,16 +4,19 @@
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { getToolServersData } from '$lib/apis';
+	import { getTools } from '$lib/apis/tools';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { settings, toolServers, terminalServers } from '$lib/stores';
+	import { settings, toolServers, terminalServers, tools as _tools, user } from '$lib/stores';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
+	import Knobs from '$lib/components/icons/Knobs.svelte';
 	import Connection from './Tools/Connection.svelte';
 	import Terminals from './Integrations/Terminals.svelte';
+	import ToolServerUserConfigModal from './Integrations/ToolServerUserConfigModal.svelte';
 	import UserSettingSection from './UserSettingSection.svelte';
 
 	import AddToolServerModal from '$lib/components/AddToolServerModal.svelte';
@@ -36,6 +39,30 @@
 	let terminalServerConfigs: TerminalServerConfig[] = [];
 	let showConnectionModal = false;
 	const helpTextClass = 'text-[0.6875rem] text-gray-400 dark:text-gray-600';
+
+	// Only the credentials section below is open to users without the permission to
+	// register tool servers of their own.
+	$: canAddToolServers =
+		$user?.role === 'admin' ||
+		($user?.role === 'user' && ($user?.permissions?.features?.direct_tool_servers ?? false));
+
+	// Admin-defined servers that ask this user for their own credentials.
+	let credentialServers: any[] = [];
+	let selectedCredentialServer: any = null;
+	let showUserConfigModal = false;
+
+	// `server:mcp:<id>` for MCP connections, `server:<id>` for OpenAPI ones.
+	const toolServerId = (toolId: string) => `${toolId ?? ''}`.replace(/^server:(mcp:)?/, '');
+
+	const loadCredentialServers = async () => {
+		const tools = await getTools(localStorage.token).catch(() => null);
+		if (tools) {
+			// Keep the shared store in sync, so the tools menu in the chat sees the
+			// credentials right away instead of after a reload.
+			_tools.set(tools);
+		}
+		credentialServers = (tools ?? []).filter((tool: any) => tool?.requires_user_config);
+	};
 
 	const addConnectionHandler = async (server: ToolServerConnection) => {
 		servers = [...(servers ?? []), server];
@@ -90,10 +117,19 @@
 	onMount(async () => {
 		servers = $settings?.toolServers ?? [];
 		terminalServerConfigs = ($settings as any)?.terminalServers ?? [];
+
+		await loadCredentialServers();
 	});
 </script>
 
 <AddToolServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} direct />
+
+<ToolServerUserConfigModal
+	bind:show={showUserConfigModal}
+	serverId={toolServerId(selectedCredentialServer?.id)}
+	serverName={selectedCredentialServer?.name ?? ''}
+	on:save={() => loadCredentialServers()}
+/>
 
 <form
 	id="tab-tools"
@@ -106,78 +142,130 @@
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if servers !== null}
-			<UserSettingSection title={$i18n.t('Tools')} first>
-				<div>
-					<div class="mb-2 flex items-center justify-between">
-						<div class="text-xs text-gray-600 dark:text-gray-400">
-							{$i18n.t('External Tool Servers')}
+			{#if canAddToolServers}
+				<UserSettingSection title={$i18n.t('Tools')} first>
+					<div>
+						<div class="mb-2 flex items-center justify-between">
+							<div class="text-xs text-gray-600 dark:text-gray-400">
+								{$i18n.t('External Tool Servers')}
+							</div>
+
+							<Tooltip content={$i18n.t('Add Connection')}>
+								<button
+									aria-label={$i18n.t('Add Connection')}
+									class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+									on:click={() => (showConnectionModal = true)}
+									type="button"
+								>
+									<Plus />
+								</button>
+							</Tooltip>
 						</div>
 
-						<Tooltip content={$i18n.t('Add Connection')}>
-							<button
-								aria-label={$i18n.t('Add Connection')}
-								class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
-								on:click={() => (showConnectionModal = true)}
-								type="button"
-							>
-								<Plus />
-							</button>
-						</Tooltip>
-					</div>
+						<div class="flex flex-col gap-1">
+							{#each servers as server, idx}
+								<Connection
+									bind:connection={server}
+									direct
+									onSubmit={() => updateHandler()}
+									onDelete={() => {
+										servers = (servers ?? []).filter((_, i) => i !== idx);
+										updateHandler();
+									}}
+								/>
+							{/each}
+						</div>
 
+						{#if (servers ?? []).length === 0}
+							<div class={helpTextClass}>
+								{$i18n.t('No tool server connections configured.')}
+							</div>
+						{/if}
+
+						<div class="mt-1 {helpTextClass}">
+							{$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
+						</div>
+						<div class={helpTextClass}>
+							<!-- LICENSE covers this Open WebUI wordmark.
+							Do not alter, remove, obscure, or replace it except as LICENSE permits:
+							https://docs.openwebui.com/license. -->
+							{$i18n.t(
+								'CORS must be properly configured by the provider to allow requests from Open WebUI.'
+							)}
+							<a
+								class="ml-1 text-gray-500 underline hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+								href="https://github.com/open-webui/openapi-servers"
+								target="_blank">{$i18n.t('Learn more about OpenAPI tool servers.')} ↗</a
+							>
+						</div>
+					</div>
+				</UserSettingSection>
+			{/if}
+
+			{#if credentialServers.length > 0}
+				<UserSettingSection title={$i18n.t('Credentials')} first={!canAddToolServers}>
 					<div class="flex flex-col gap-1">
-						{#each servers as server, idx}
-							<Connection
-								bind:connection={server}
-								direct
-								onSubmit={() => updateHandler()}
-								onDelete={() => {
-									servers = (servers ?? []).filter((_, i) => i !== idx);
-									updateHandler();
-								}}
-							/>
+						{#each credentialServers as server}
+							<div class="flex items-center justify-between gap-2">
+								<div class="flex items-center gap-2 min-w-0">
+									<div class="text-xs truncate">{server.name}</div>
+
+									{#if server.user_config_set}
+										<div
+											class="text-xs font-normal px-1.5 rounded-md bg-green-500/20 text-green-700 dark:text-green-200 shrink-0"
+										>
+											{$i18n.t('Configured')}
+										</div>
+									{:else}
+										<div
+											class="text-xs font-normal px-1.5 rounded-md bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 shrink-0"
+										>
+											{$i18n.t('Not configured')}
+										</div>
+									{/if}
+								</div>
+
+								<Tooltip content={$i18n.t('Configure')}>
+									<button
+										class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+										aria-label={$i18n.t('Configure')}
+										type="button"
+										on:click={() => {
+											selectedCredentialServer = server;
+											showUserConfigModal = true;
+										}}
+									>
+										<Knobs />
+									</button>
+								</Tooltip>
+							</div>
 						{/each}
 					</div>
 
-					{#if (servers ?? []).length === 0}
-						<div class={helpTextClass}>
-							{$i18n.t('No tool server connections configured.')}
-						</div>
-					{/if}
+					<div class="mt-1 {helpTextClass}">
+						{$i18n.t(
+							'These tool servers require your own credentials. They are stored for your account only.'
+						)}
+					</div>
+				</UserSettingSection>
+			{/if}
+
+			{#if canAddToolServers}
+				<UserSettingSection title={$i18n.t('Terminal')}>
+					<Terminals bind:servers={terminalServerConfigs} onChange={() => updateHandler()} />
 
 					<div class="mt-1 {helpTextClass}">
-						{$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
-					</div>
-					<div class={helpTextClass}>
-						<!-- LICENSE covers this Open WebUI wordmark.
-							Do not alter, remove, obscure, or replace it except as LICENSE permits:
-							https://docs.openwebui.com/license. -->
 						{$i18n.t(
-							'CORS must be properly configured by the provider to allow requests from Open WebUI.'
+							'Connect to Open Terminal instances to browse files and use them as always-on tools. Only one can be active at a time.'
 						)}
-						<a
-							class="ml-1 text-gray-500 underline hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
-							href="https://github.com/open-webui/openapi-servers"
-							target="_blank">{$i18n.t('Learn more about OpenAPI tool servers.')} ↗</a
-						>
 					</div>
-				</div>
-			</UserSettingSection>
-
-			<UserSettingSection title={$i18n.t('Terminal')}>
-				<Terminals bind:servers={terminalServerConfigs} onChange={() => updateHandler()} />
-
-				<div class="mt-1 {helpTextClass}">
-					{$i18n.t(
-						'Connect to Open Terminal instances to browse files and use them as always-on tools. Only one can be active at a time.'
-					)}
-				</div>
-				<a
-					class="mt-0.5 block text-[0.6875rem] text-gray-500 underline hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
-					href="https://github.com/open-webui/open-terminal"
-					target="_blank">{$i18n.t('Learn more about Open Terminal')} ↗</a
-				>
-			</UserSettingSection>
+					<a
+						class="mt-0.5 block text-[0.6875rem] text-gray-500 underline hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+						href="https://github.com/open-webui/open-terminal"
+						target="_blank">{$i18n.t('Learn more about Open Terminal')} ↗</a
+					>
+				</UserSettingSection>
+			{/if}
 		{:else}
 			<div class="flex h-full justify-center">
 				<div class="my-auto">
@@ -187,12 +275,14 @@
 		{/if}
 	</div>
 
-	<div class="shrink-0 flex justify-end pt-3 text-sm font-normal">
-		<button
-			class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-			type="submit"
-		>
-			{$i18n.t('Save')}
-		</button>
-	</div>
+	{#if canAddToolServers}
+		<div class="shrink-0 flex justify-end pt-3 text-sm font-normal">
+			<button
+				class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+				type="submit"
+			>
+				{$i18n.t('Save')}
+			</button>
+		</div>
+	{/if}
 </form>

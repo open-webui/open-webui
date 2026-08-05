@@ -38,6 +38,8 @@
 		is_active?: boolean;
 		authenticated?: boolean;
 		has_user_valves?: boolean;
+		requires_user_config?: boolean;
+		user_config_required_set?: boolean;
 		[key: string]: any;
 	};
 
@@ -64,6 +66,7 @@
 	export let codeInterpreterEnabled = false;
 
 	export let onShowValves: Function;
+	export let onShowCredentials: Function = () => {};
 	export let onClose: Function;
 	export let onWebSearchToggle: Function = () => {};
 	export let closeOnOutsideClick = true;
@@ -101,6 +104,13 @@
 	$: fileUploadEnabled =
 		fileUploadCapableModels.length === selectedModels.length &&
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
+
+	// Admin-defined servers can ask each user for their own credentials; until the
+	// required ones are filled in the tool cannot be enabled. Credentials the
+	// connection only offers are no obstacle, so this asks about the required ones
+	// rather than about whether the user configured anything at all.
+	const needsUserConfig = (tool?: IntegrationItem) =>
+		(tool?.requires_user_config ?? false) && !(tool?.user_config_required_set ?? false);
 
 	const init = async () => {
 		await Promise.all([loadTools(), loadSkills()]);
@@ -221,6 +231,16 @@
 				id: toolId,
 				serverId: parts.at(-1) ?? toolId,
 				authType: parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null
+			});
+			return;
+		}
+
+		if (needsUserConfig(tool)) {
+			e.preventDefault();
+
+			onShowCredentials({
+				id: toolId,
+				name: tool.name ?? ''
 			});
 			return;
 		}
@@ -500,14 +520,15 @@
 								{#each toolIds as toolId}
 									<button
 										class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-										aria-pressed={(tools?.[toolId]?.authenticated ?? true)
+										aria-pressed={(tools?.[toolId]?.authenticated ?? true) &&
+										!needsUserConfig(tools?.[toolId])
 											? selectedToolIds.includes(toolId)
 											: undefined}
 										on:click={async (e) => {
 											await toggleTool(toolId, e);
 										}}
 									>
-										{#if !(tools?.[toolId]?.authenticated ?? true)}
+										{#if !(tools?.[toolId]?.authenticated ?? true) || needsUserConfig(tools?.[toolId])}
 											<!-- make it slighly darker and not clickable -->
 											<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10"></div>
 										{/if}
@@ -552,6 +573,27 @@
 														}}
 													>
 														<LinkSlash className="size-3.5" />
+													</button>
+												</Tooltip>
+											</div>
+										{/if}
+
+										{#if tools?.[toolId]?.requires_user_config}
+											<div class=" shrink-0">
+												<Tooltip content={$i18n.t('Credentials')}>
+													<button
+														class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
+														type="button"
+														on:click={(e) => {
+															e.stopPropagation();
+															e.preventDefault();
+															onShowCredentials({
+																id: toolId,
+																name: tools?.[toolId]?.name ?? ''
+															});
+														}}
+													>
+														<Knobs />
 													</button>
 												</Tooltip>
 											</div>

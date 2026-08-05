@@ -6,7 +6,12 @@
 
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	const i18n = getContext('i18n');
+	// Typed alias for the credential-related additions below; keeps the shared,
+	// untyped `i18n` context above exactly as upstream declared it.
+	const i18nTyped = i18n as Writable<i18nType>;
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -54,6 +59,15 @@
 
 	let functionNameFilterList = '';
 	let accessGrants = [];
+
+	// Credential slots each user fills in for themselves; the admin declares them here.
+	let userConfigFields: {
+		name: string;
+		title: string;
+		description: string;
+		sensitive: boolean;
+		required: boolean;
+	}[] = [];
 
 	let id = '';
 	let name = '';
@@ -232,6 +246,31 @@
 		}
 	};
 
+	const buildUserConfigSchema = () => {
+		const properties: Record<string, any> = {};
+		const required: string[] = [];
+
+		for (const field of userConfigFields) {
+			const name = (field.name ?? '').trim();
+			if (!name) {
+				continue;
+			}
+
+			properties[name] = {
+				type: 'string',
+				title: (field.title ?? '').trim() || name,
+				...((field.description ?? '').trim() ? { description: field.description.trim() } : {}),
+				...(field.sensitive ? { input: { type: 'password' } } : {})
+			};
+
+			if (field.required) {
+				required.push(name);
+			}
+		}
+
+		return Object.keys(properties).length ? { type: 'object', properties, required } : undefined;
+	};
+
 	const importHandler = async (e) => {
 		const file = e.target.files[0];
 		if (!file) return;
@@ -345,6 +384,14 @@
 			return;
 		}
 
+		// Per-user credentials are stored under the connection ID, so it has to exist
+		// and stay stable.
+		if ((buildUserConfigSchema() || auth_type === 'user_key') && !id) {
+			toast.error($i18nTyped.t('An ID is required for connections that ask users for credentials'));
+			loading = false;
+			return;
+		}
+
 		// validate spec
 		if (spec_type === 'json') {
 			try {
@@ -386,7 +433,8 @@
 			config: {
 				enable: enable,
 				function_name_filter_list: functionNameFilterList,
-				access_grants: accessGrants
+				access_grants: accessGrants,
+				...(buildUserConfigSchema() ? { user_config: buildUserConfigSchema() } : {})
 			},
 			info: {
 				id: id,
@@ -439,6 +487,7 @@
 		enable = true;
 		functionNameFilterList = '';
 		accessGrants = [];
+		userConfigFields = [];
 	};
 
 	const init = () => {
@@ -468,6 +517,17 @@
 			enable = connection.config?.enable ?? true;
 			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
 			accessGrants = connection.config?.access_grants ?? [];
+
+			const userConfigSchema = (connection as any).config?.user_config ?? null;
+			userConfigFields = Object.entries(userConfigSchema?.properties ?? {}).map(
+				([name, spec]: [string, any]) => ({
+					name,
+					title: spec?.title ?? '',
+					description: spec?.description ?? '',
+					sensitive: spec?.input?.type === 'password',
+					required: (userConfigSchema?.required ?? []).includes(name)
+				})
+			);
 		}
 	};
 
@@ -753,6 +813,7 @@
 											<option value="session">{$i18n.t('Session')}</option>
 
 											{#if !direct}
+												<option value="user_key">{$i18nTyped.t('User API Key')}</option>
 												<option value="system_oauth">{$i18n.t('OAuth')}</option>
 												{#if type === 'mcp'}
 													<option value="oauth_2.1">{$i18n.t('OAuth 2.1')}</option>
@@ -772,6 +833,10 @@
 										{:else if auth_type === 'none'}
 											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
 												{$i18n.t('No authentication')}
+											</div>
+										{:else if auth_type === 'user_key'}
+											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
+												{$i18nTyped.t('Each user provides their own API key in their settings')}
 											</div>
 										{:else if auth_type === 'session'}
 											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
@@ -981,6 +1046,91 @@
 												/>
 											</Tooltip>
 										</div>
+									</div>
+								</div>
+
+								<div class="flex flex-col w-full mt-2">
+									<div class="flex justify-between items-center mb-0.5">
+										<div class={`text-xs text-gray-500`}>{$i18nTyped.t('User Credentials')}</div>
+
+										<Tooltip content={$i18nTyped.t('Add Field')}>
+											<button
+												class="p-0.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition"
+												aria-label={$i18nTyped.t('Add Field')}
+												type="button"
+												on:click={() => {
+													userConfigFields = [
+														...userConfigFields,
+														{
+															name: '',
+															title: '',
+															description: '',
+															sensitive: true,
+															required: true
+														}
+													];
+												}}
+											>
+												<Plus className="size-3" />
+											</button>
+										</Tooltip>
+									</div>
+
+									{#each userConfigFields as field, fieldIdx}
+										<div class="flex gap-2 items-center mb-1">
+											<input
+												class={`w-full flex-1 text-sm font-mono ${inputClass}`}
+												type="text"
+												bind:value={field.name}
+												placeholder={$i18nTyped.t('Field name')}
+												aria-label={$i18nTyped.t('Field name')}
+												autocomplete="off"
+											/>
+
+											<input
+												class={`w-full flex-1 text-sm ${inputClass}`}
+												type="text"
+												bind:value={field.title}
+												placeholder={$i18nTyped.t('Label')}
+												aria-label={$i18nTyped.t('Label')}
+												autocomplete="off"
+											/>
+
+											<select
+												class={`text-sm shrink-0 ${selectClass}`}
+												aria-label={$i18nTyped.t('Type')}
+												bind:value={field.sensitive}
+											>
+												<option value={true}>{$i18nTyped.t('Secret')}</option>
+												<option value={false}>{$i18nTyped.t('Text')}</option>
+											</select>
+
+											<Tooltip
+												content={field.required
+													? $i18nTyped.t('Required')
+													: $i18nTyped.t('Optional')}
+											>
+												<Switch bind:state={field.required} />
+											</Tooltip>
+
+											<button
+												class="p-0.5 shrink-0 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition"
+												aria-label={$i18nTyped.t('Delete')}
+												type="button"
+												on:click={() => {
+													userConfigFields = userConfigFields.filter((_, i) => i !== fieldIdx);
+												}}
+											>
+												<Minus className="size-3" />
+											</button>
+										</div>
+									{/each}
+
+									<div class="text-xs text-gray-500">
+										{$i18nTyped.t(
+											'Each user fills these in from their own settings. In the headers above, refer to a field as'
+										)}
+										<span class="font-mono">{'{{USER_SECRET:field_name}}'}</span>
 									</div>
 								</div>
 							{/if}
