@@ -168,6 +168,9 @@
 		customEnd;
 		selectedGroupId;
 		loadDashboard();
+	} else {
+		// A half-specified custom range must not leave the spinner running forever.
+		loading = false;
 	}
 
 	onMount(async () => {
