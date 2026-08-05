@@ -69,6 +69,14 @@ export type CalendarForm = {
 	access_grants?: { target_type: string; target_id: string; permission: string }[];
 };
 
+const getErrorDetail = (err: any) => {
+	if (Array.isArray(err?.detail)) {
+		return err.detail.map((e: { msg?: string }) => e.msg || JSON.stringify(e)).join(', ');
+	}
+
+	return err?.detail;
+};
+
 // ── Calendars ─────────────────────────────────
 
 export const getCalendars = async (token: string): Promise<CalendarModel[]> => {
@@ -87,7 +95,7 @@ export const getCalendars = async (token: string): Promise<CalendarModel[]> => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = getErrorDetail(err);
 			console.error(err);
 			return null;
 		});
@@ -116,7 +124,7 @@ export const createCalendar = async (token: string, form: CalendarForm): Promise
 			return res.json();
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = getErrorDetail(err);
 			console.error(err);
 			return null;
 		});
@@ -149,7 +157,7 @@ export const updateCalendar = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = getErrorDetail(err);
 			console.error(err);
 			return null;
 		});
@@ -177,7 +185,7 @@ export const deleteCalendar = async (token: string, calendarId: string): Promise
 			return res.json();
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = getErrorDetail(err);
 			console.error(err);
 			return null;
 		});
@@ -208,7 +216,7 @@ export const setDefaultCalendar = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = getErrorDetail(err);
 			console.error(err);
 			return null;
 		});
@@ -250,7 +258,7 @@ export const getCalendarEvents = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = getErrorDetail(err);
 			console.error(err);
 			return null;
 		});
@@ -282,7 +290,7 @@ export const createCalendarEvent = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = getErrorDetail(err);
 			console.error(err);
 			return null;
 		});
@@ -313,7 +321,7 @@ export const getCalendarEventById = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = getErrorDetail(err);
 			console.error(err);
 			return null;
 		});
@@ -346,7 +354,7 @@ export const updateCalendarEvent = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = getErrorDetail(err);
 			console.error(err);
 			return null;
 		});
@@ -374,7 +382,7 @@ export const deleteCalendarEvent = async (token: string, eventId: string): Promi
 			return res.json();
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = getErrorDetail(err);
 			console.error(err);
 			return null;
 		});
@@ -407,7 +415,7 @@ export const rsvpCalendarEvent = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = getErrorDetail(err);
 			console.error(err);
 			return null;
 		});
@@ -445,7 +453,7 @@ export const searchCalendarEvents = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = getErrorDetail(err);
 			console.error(err);
 			return null;
 		});
