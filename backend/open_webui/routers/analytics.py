@@ -570,13 +570,19 @@ async def get_api_daily_stats(
     start_date: Optional[int] = Query(None, description='Start timestamp (epoch)'),
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
+    granularity: str = Query('daily', description="Granularity: 'hourly' or 'daily'"),
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """Get daily API request counts grouped by model."""
-    counts = await ChatMessages.get_api_daily_counts_by_model(
-        start_date=start_date, end_date=end_date, group_id=group_id, db=db
-    )
+    """Get API request counts grouped by model per day or hour."""
+    if granularity == 'hourly':
+        counts = await ChatMessages.get_api_hourly_counts_by_model(
+            start_date=start_date, end_date=end_date, db=db
+        )
+    else:
+        counts = await ChatMessages.get_api_daily_counts_by_model(
+            start_date=start_date, end_date=end_date, group_id=group_id, db=db
+        )
     return ApiDailyResponse(
         data=[ApiDailyEntry(date=date, models=models) for date, models in sorted(counts.items())]
     )

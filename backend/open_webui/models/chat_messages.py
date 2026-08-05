@@ -129,9 +129,9 @@ class ChatMessage(Base):
 
     # Identity
     id = Column(Text, primary_key=True)
-    # chat_id is nullable: NULL means the row was created by a direct API call
-    # (no UI chat session). FK intentionally omitted so API-origin rows
-    # are not tied to a Chat row.
+    # chat_id is nullable: NULL for API-origin rows (no UI session).
+    # FK enforced at DB level via migration (ON DELETE CASCADE for non-NULL rows).
+    # Not declared here to avoid ORM metadata dependency on the Chat table.
     chat_id = Column(Text, nullable=True, index=True)
     user_id = Column(Text, index=True)
     # source: NULL = regular chat message; 'api' = direct API call without chat session
@@ -1257,6 +1257,45 @@ class ChatMessageTable:
                     current += timedelta(days=1)
 
             return daily_counts
+
+    async def get_api_hourly_counts_by_model(
+        self,
+        start_date: Optional[int] = None,
+        end_date: Optional[int] = None,
+        db: Optional[AsyncSession] = None,
+    ) -> dict[str, dict[str, int]]:
+        """Get API-origin message counts grouped by hour and model."""
+        async with get_async_db_context(db) as db:
+            from datetime import datetime, timedelta
+
+            stmt = select(ChatMessage.created_at, ChatMessage.model_id).filter(
+                ChatMessage.role == 'assistant',
+                ChatMessage.model_id.isnot(None),
+                ChatMessage.source == 'api',
+            )
+            if start_date:
+                stmt = stmt.filter(ChatMessage.created_at >= start_date)
+            if end_date:
+                stmt = stmt.filter(ChatMessage.created_at <= end_date)
+
+            result = await db.execute(stmt)
+            hourly_counts: dict[str, dict[str, int]] = {}
+            for timestamp, model_id in result.all():
+                hour_str = datetime.fromtimestamp(_normalize_timestamp(timestamp)).strftime('%Y-%m-%d %H:00')
+                hourly_counts.setdefault(hour_str, {})
+                hourly_counts[hour_str][model_id] = hourly_counts[hour_str].get(model_id, 0) + 1
+
+            if start_date and end_date:
+                current = datetime.fromtimestamp(_normalize_timestamp(start_date)).replace(
+                    minute=0, second=0, microsecond=0
+                )
+                end_dt = datetime.fromtimestamp(_normalize_timestamp(end_date))
+                while current <= end_dt:
+                    hour_str = current.strftime('%Y-%m-%d %H:00')
+                    hourly_counts.setdefault(hour_str, {})
+                    current += timedelta(hours=1)
+
+            return hourly_counts
 
 
 ChatMessages = ChatMessageTable()

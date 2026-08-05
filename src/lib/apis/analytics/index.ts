@@ -245,6 +245,7 @@ export const getTokenUsage = async (
 // ------------------------------------------------------------------ //
 
 const _apiFetch = async (token: string, path: string, params: URLSearchParams) => {
+	let error = null;
 	const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/${path}?${params.toString()}`, {
 		method: 'GET',
 		headers: {
@@ -258,9 +259,15 @@ const _apiFetch = async (token: string, path: string, params: URLSearchParams) =
 			return res.json();
 		})
 		.catch((err) => {
+			error = err.detail;
 			console.error(err);
 			return null;
 		});
+
+	if (error) {
+		throw error;
+	}
+
 	return res;
 };
 
@@ -304,8 +311,9 @@ export const getApiDailyStats = (
 	token: string,
 	startDate: number | null = null,
 	endDate: number | null = null,
+	granularity: string = 'daily',
 	groupId: string | null = null
-) => _apiFetch(token, 'api/daily', _apiParams(startDate, endDate, groupId));
+) => _apiFetch(token, 'api/daily', _apiParams(startDate, endDate, groupId, { granularity }));
 
 export const getApiTokenUsage = (
 	token: string,

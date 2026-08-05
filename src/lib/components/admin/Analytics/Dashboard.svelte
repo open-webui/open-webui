@@ -139,7 +139,7 @@
 					? getApiUserAnalytics(localStorage.token, start, end, 50, selectedGroupId)
 					: getUserAnalytics(localStorage.token, start, end, 50, selectedGroupId),
 				isApi
-					? getApiDailyStats(localStorage.token, start, end, selectedGroupId)
+					? getApiDailyStats(localStorage.token, start, end, granularity, selectedGroupId)
 					: getDailyStats(localStorage.token, start, end, granularity, selectedGroupId),
 				isApi
 					? getApiTokenUsage(localStorage.token, start, end, selectedGroupId)

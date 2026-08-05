@@ -3568,6 +3568,7 @@ async def non_streaming_chat_response_handler(response, ctx):
     request = ctx['request']
 
     user = ctx['user']
+    form_data = ctx['form_data']
     metadata = ctx['metadata']
     events = ctx['events']
 
@@ -5696,9 +5697,20 @@ async def streaming_chat_response_handler(response, ctx):
                 if data:
                     if has_api_outlet_filters:
                         update_assistant_message_from_stream(assistant_message, data)
-                    # Capture usage from the final chunk (stream_options.include_usage)
+                    # Capture usage from the final chunk (stream_options.include_usage).
+                    # Items may be dicts (after filter processing) or raw SSE strings/bytes.
                     if isinstance(data, dict) and data.get('usage'):
                         _stream_usage = data['usage']
+                    elif isinstance(data, (str, bytes)):
+                        raw = data.decode() if isinstance(data, bytes) else data
+                        for _line in raw.splitlines():
+                            if _line.startswith('data: ') and _line != 'data: [DONE]':
+                                try:
+                                    _chunk = json.loads(_line[6:])
+                                    if _chunk.get('usage'):
+                                        _stream_usage = _chunk['usage']
+                                except Exception:
+                                    pass
                     yield data
 
             if has_api_outlet_filters and assistant_message:
