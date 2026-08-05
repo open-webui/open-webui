@@ -1053,16 +1053,17 @@ def throttle(interval: float = 10.0):
     different types, the return type of the function should be T | None.
 
     :param interval: Duration in seconds to wait before allowing the function to be called again.
+                     Zero or negative disables throttling.
     """
 
     def decorator(func):
+        if interval <= 0:
+            return func
+
         last_calls = {}
         lock = threading.Lock()
 
         async def wrapper(*args, **kwargs):
-            if interval is None:
-                return await func(*args, **kwargs)
-
             key = (args, freeze(kwargs))
             now = time.time()
             if now - last_calls.get(key, 0) < interval:
