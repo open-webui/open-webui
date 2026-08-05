@@ -3759,6 +3759,25 @@ async def non_streaming_chat_response_handler(response, ctx):
         }
         await outlet_filter_handler(ctx)
 
+    # Direct API call (no UI chat session, no event_emitter) — record for analytics.
+    if not getattr(request.state, 'internal', False) and not save_to_chat:
+        _usage = normalize_usage(response_data.get('usage', {}) or {})
+        _model_id = form_data.get('model') or (metadata.get('model') or {}).get('id')
+        if _usage and _model_id and user:
+            import uuid as _uuid
+            await ChatMessages.upsert_message(
+                message_id=str(_uuid.uuid4()),
+                chat_id=None,
+                user_id=user.id,
+                data={
+                    'role': 'assistant',
+                    'model_id': _model_id,
+                    'usage': _usage,
+                    'source': 'api',
+                    'done': True,
+                },
+            )
+
     if isinstance(response, dict):
         response = merge_events_into_response(response_data, events)
 
@@ -5662,6 +5681,8 @@ async def streaming_chat_response_handler(response, ctx):
                 if event:
                     yield wrap_item(JSONCodec.dumps(event))
 
+            # Accumulate usage from stream chunks for API analytics tracking.
+            _stream_usage = None
             async for data in original_generator:
                 data, _ = await process_filter_functions(
                     request=request,
@@ -5675,11 +5696,33 @@ async def streaming_chat_response_handler(response, ctx):
                 if data:
                     if has_api_outlet_filters:
                         update_assistant_message_from_stream(assistant_message, data)
+                    # Capture usage from the final chunk (stream_options.include_usage)
+                    if isinstance(data, dict) and data.get('usage'):
+                        _stream_usage = data['usage']
                     yield data
 
             if has_api_outlet_filters and assistant_message:
                 ctx['assistant_message'] = assistant_message
                 await outlet_filter_handler(ctx)
+
+            # Direct API call — record usage for analytics after stream completes.
+            if not getattr(request.state, 'internal', False) and not save_to_chat:
+                _usage = normalize_usage(_stream_usage or {})
+                _model_id = form_data.get('model') or (metadata.get('model') or {}).get('id')
+                if _usage and _model_id and user:
+                    import uuid as _uuid
+                    await ChatMessages.upsert_message(
+                        message_id=str(_uuid.uuid4()),
+                        chat_id=None,
+                        user_id=user.id,
+                        data={
+                            'role': 'assistant',
+                            'model_id': _model_id,
+                            'usage': _usage,
+                            'source': 'api',
+                            'done': True,
+                        },
+                    )
 
         return StreamingResponse(
             stream_wrapper(response.body_iterator, events),

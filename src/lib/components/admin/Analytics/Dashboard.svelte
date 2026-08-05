@@ -6,7 +6,12 @@
 		getModelAnalytics,
 		getUserAnalytics,
 		getDailyStats,
-		getTokenUsage
+		getTokenUsage,
+		getApiSummary,
+		getApiModelAnalytics,
+		getApiUserAnalytics,
+		getApiDailyStats,
+		getApiTokenUsage
 	} from '$lib/apis/analytics';
 	import { getGroups } from '$lib/apis/groups';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -43,6 +48,9 @@
 	// User group filter
 	let groups: Array<{ id: string; name: string }> = [];
 	let selectedGroupId: string | null = null;
+
+	// Source filter: 'chat' = UI chat sessions, 'api' = direct API calls
+	let selectedSource: 'chat' | 'api' = 'chat';
 
 	const getDateRange = (period: string): { start: number | null; end: number | null } => {
 		const now = Math.floor(Date.now() / 1000);
@@ -119,15 +127,38 @@
 		try {
 			const { start, end } = getDateRange(selectedPeriod);
 			const granularity = selectedPeriod === '24h' ? 'hourly' : 'daily';
+			const isApi = selectedSource === 'api';
 			const [summaryRes, modelsRes, usersRes, dailyRes, tokensRes] = await Promise.all([
-				getSummary(localStorage.token, start, end, selectedGroupId),
-				getModelAnalytics(localStorage.token, start, end, selectedGroupId),
-				getUserAnalytics(localStorage.token, start, end, 50, selectedGroupId),
-				getDailyStats(localStorage.token, start, end, granularity, selectedGroupId),
-				getTokenUsage(localStorage.token, start, end, selectedGroupId)
+				isApi
+					? getApiSummary(localStorage.token, start, end, selectedGroupId)
+					: getSummary(localStorage.token, start, end, selectedGroupId),
+				isApi
+					? getApiModelAnalytics(localStorage.token, start, end, selectedGroupId)
+					: getModelAnalytics(localStorage.token, start, end, selectedGroupId),
+				isApi
+					? getApiUserAnalytics(localStorage.token, start, end, 50, selectedGroupId)
+					: getUserAnalytics(localStorage.token, start, end, 50, selectedGroupId),
+				isApi
+					? getApiDailyStats(localStorage.token, start, end, selectedGroupId)
+					: getDailyStats(localStorage.token, start, end, granularity, selectedGroupId),
+				isApi
+					? getApiTokenUsage(localStorage.token, start, end, selectedGroupId)
+					: getTokenUsage(localStorage.token, start, end, selectedGroupId)
 			]);
 
-			summary = summaryRes ?? summary;
+			if (summaryRes) {
+				if (isApi) {
+					// API summary has total_requests/total_models/total_users (no total_chats)
+					summary = {
+						total_messages: summaryRes.total_requests ?? 0,
+						total_chats: 0,
+						total_models: summaryRes.total_models ?? 0,
+						total_users: summaryRes.total_users ?? 0
+					};
+				} else {
+					summary = summaryRes;
+				}
+			}
 
 			const modelsMap = new Map($models.map((m) => [m.id, m.name || m.id]));
 			modelStats = (modelsRes?.models ?? []).map((entry) => ({
@@ -167,6 +198,7 @@
 		customStart;
 		customEnd;
 		selectedGroupId;
+		selectedSource;
 		loadDashboard();
 	}
 
@@ -246,6 +278,13 @@
 				{/each}
 			</select>
 		{/if}
+		<select
+			bind:value={selectedSource}
+			class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-none text-right"
+		>
+			<option value="chat">{$i18n.t('Chat')}</option>
+			<option value="api">{$i18n.t('API')}</option>
+		</select>
 		{#if selectedPeriod === 'custom'}
 			<input
 				type="date"
@@ -287,7 +326,7 @@
 			><span class="font-normal text-gray-900 dark:text-gray-300"
 				>{summary.total_messages.toLocaleString()}</span
 			>
-			{$i18n.t('messages')}</span
+			{selectedSource === 'api' ? $i18n.t('requests') : $i18n.t('messages')}</span
 		>
 		<Tooltip content={$i18n.t('Token counts are estimates and may not reflect actual API usage')}>
 			<span class="cursor-help"
@@ -297,12 +336,14 @@
 				{$i18n.t('tokens')}</span
 			>
 		</Tooltip>
-		<span
-			><span class="font-normal text-gray-900 dark:text-gray-300"
-				>{summary.total_chats.toLocaleString()}</span
+		{#if selectedSource !== 'api'}
+			<span
+				><span class="font-normal text-gray-900 dark:text-gray-300"
+					>{summary.total_chats.toLocaleString()}</span
+				>
+				{$i18n.t('chats')}</span
 			>
-			{$i18n.t('chats')}</span
-		>
+		{/if}
 		<span
 			><span class="font-normal text-gray-900 dark:text-gray-300">{summary.total_users}</span>
 			{$i18n.t('users')}</span
@@ -409,24 +450,26 @@
 									{/if}
 								</div>
 							</th>
-							<th
-								scope="col"
-								class="px-2.5 py-2 cursor-pointer select-none text-right"
-								on:click={() => toggleModelSort('chats')}
-							>
-								<div class="flex gap-1.5 items-center justify-end">
-									{$i18n.t('Chats')}
-									{#if modelOrderBy === 'chats'}
-										<span class="font-normal">
-											{#if modelDirection === 'asc'}<ChevronUp
-													className="size-2"
-												/>{:else}<ChevronDown className="size-2" />{/if}
-										</span>
-									{:else}
-										<span class="invisible"><ChevronUp className="size-2" /></span>
-									{/if}
-								</div>
-							</th>
+							{#if selectedSource !== 'api'}
+								<th
+									scope="col"
+									class="px-2.5 py-2 cursor-pointer select-none text-right"
+									on:click={() => toggleModelSort('chats')}
+								>
+									<div class="flex gap-1.5 items-center justify-end">
+										{$i18n.t('Chats')}
+										{#if modelOrderBy === 'chats'}
+											<span class="font-normal">
+												{#if modelDirection === 'asc'}<ChevronUp
+														className="size-2"
+													/>{:else}<ChevronDown className="size-2" />{/if}
+											</span>
+										{:else}
+											<span class="invisible"><ChevronUp className="size-2" /></span>
+										{/if}
+									</div>
+								</th>
+							{/if}
 							<th
 								scope="col"
 								class="px-2.5 py-2 cursor-pointer select-none text-right"
@@ -490,7 +533,9 @@
 								</td>
 								<td class="px-3 py-1 text-right">{model.count.toLocaleString()}</td>
 								<td class="px-3 py-1 text-right">{(model.unique_users ?? 0).toLocaleString()}</td>
-								<td class="px-3 py-1 text-right">{(model.unique_chats ?? 0).toLocaleString()}</td>
+								{#if selectedSource !== 'api'}
+									<td class="px-3 py-1 text-right">{(model.unique_chats ?? 0).toLocaleString()}</td>
+								{/if}
 								<td class="px-3 py-1 text-right"
 									>{formatNumber(tokenStats[model.model_id]?.total_tokens ?? 0)}</td
 								>
@@ -503,7 +548,7 @@
 						{/each}
 						{#if sortedModels.length === 0}
 							<tr
-								><td colspan="7" class="px-3 py-2 text-center text-gray-400"
+								><td colspan={selectedSource === 'api' ? 6 : 7} class="px-3 py-2 text-center text-gray-400"
 									>{$i18n.t('No data')}</td
 								></tr
 							>
@@ -616,6 +661,8 @@
 	</div>
 
 	<div class="text-gray-500 text-xs mt-1.5 text-right">
-		ⓘ {$i18n.t('Message counts are based on assistant responses.')}
+		ⓘ {selectedSource === 'api'
+			? $i18n.t('API requests are direct calls without a chat session.')
+			: $i18n.t('Message counts are based on assistant responses.')}
 	</div>
 {/if}

@@ -240,6 +240,80 @@ export const getTokenUsage = async (
 	return res;
 };
 
+// ------------------------------------------------------------------ //
+// API-origin analytics (source = 'api')                               //
+// ------------------------------------------------------------------ //
+
+const _apiFetch = async (token: string, path: string, params: URLSearchParams) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/analytics/${path}?${params.toString()}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			return null;
+		});
+	return res;
+};
+
+const _apiParams = (
+	startDate: number | null,
+	endDate: number | null,
+	groupId: string | null = null,
+	extra: Record<string, string> = {}
+) => {
+	const p = new URLSearchParams();
+	if (startDate) p.append('start_date', startDate.toString());
+	if (endDate) p.append('end_date', endDate.toString());
+	if (groupId) p.append('group_id', groupId);
+	for (const [k, v] of Object.entries(extra)) p.append(k, v);
+	return p;
+};
+
+export const getApiModelAnalytics = (
+	token: string,
+	startDate: number | null = null,
+	endDate: number | null = null,
+	groupId: string | null = null
+) => _apiFetch(token, 'api/models', _apiParams(startDate, endDate, groupId));
+
+export const getApiUserAnalytics = (
+	token: string,
+	startDate: number | null = null,
+	endDate: number | null = null,
+	limit: number = 50,
+	groupId: string | null = null
+) => _apiFetch(token, 'api/users', _apiParams(startDate, endDate, groupId, { limit: limit.toString() }));
+
+export const getApiSummary = (
+	token: string,
+	startDate: number | null = null,
+	endDate: number | null = null,
+	groupId: string | null = null
+) => _apiFetch(token, 'api/summary', _apiParams(startDate, endDate, groupId));
+
+export const getApiDailyStats = (
+	token: string,
+	startDate: number | null = null,
+	endDate: number | null = null,
+	groupId: string | null = null
+) => _apiFetch(token, 'api/daily', _apiParams(startDate, endDate, groupId));
+
+export const getApiTokenUsage = (
+	token: string,
+	startDate: number | null = null,
+	endDate: number | null = null,
+	groupId: string | null = null
+) => _apiFetch(token, 'api/tokens', _apiParams(startDate, endDate, groupId));
+
 export const getModelChats = async (
 	token: string = '',
 	modelId: string,
