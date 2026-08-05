@@ -104,6 +104,21 @@ class RedisDict:
     def items(self):
         return [(k, JSONCodec.loads(v)) for k, v in self.redis.hgetall(self.name).items()]
 
+    def scan_batches(self):
+        """Yield lists of (key, value) pairs via incremental HSCAN; a field may repeat across batches."""
+        cursor = 0
+        while True:
+            cursor, batch = self.redis.hscan(self.name, cursor, count=200)
+            if batch:
+                yield [(k, JSONCodec.loads(v)) for k, v in batch.items()]
+            if cursor == 0:
+                break
+
+    def discard(self, *keys):
+        """Delete fields in one HDEL; no keys is a no-op (HDEL rejects an empty field list)."""
+        if keys:
+            self.redis.hdel(self.name, *keys)
+
     def set(self, mapping: dict):
         if not mapping:
             self.redis.delete(self.name)
@@ -137,8 +152,7 @@ class RedisDict:
         # We never DELETE the whole hash — this eliminates the race window
         # where concurrent readers would see an empty models dict.
         self.redis.hset(self.name, mapping=serialized)
-        if keys_to_remove:
-            self.redis.hdel(self.name, *keys_to_remove)
+        self.discard(*keys_to_remove)
 
         self._last_signature = signature
 

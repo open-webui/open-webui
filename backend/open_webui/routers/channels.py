@@ -1224,7 +1224,7 @@ async def post_new_message(
         except Exception as e:
             log.debug(e)
 
-        active_user_ids = get_user_ids_from_room(f'channel:{channel.id}')
+        active_user_ids = await get_user_ids_from_room(f'channel:{channel.id}')
 
         # NOTE: We intentionally do NOT pass db to background_handler.
         # Background tasks should manage their own short-lived sessions to avoid
