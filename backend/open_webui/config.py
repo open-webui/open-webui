@@ -2464,6 +2464,12 @@ OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE = os.getenv('OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE
 
 OAUTH_MERGE_ACCOUNTS_BY_EMAIL = os.getenv('OAUTH_MERGE_ACCOUNTS_BY_EMAIL', 'False').lower() == 'true'
 
+# When merging OAuth accounts by email is enabled, refuse the merge if the
+# identity provider explicitly reports the email address as unverified
+# (email_verified=false claim, or GitHub's /user/emails verified flag).
+# Providers that send no verification signal are unaffected. Off by default.
+OAUTH_MERGE_REFUSE_UNVERIFIED_EMAIL = os.getenv('OAUTH_MERGE_REFUSE_UNVERIFIED_EMAIL', 'False').lower() == 'true'
+
 OAUTH_PROVIDERS = {}
 
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
@@ -3125,6 +3131,7 @@ DEFAULT_CONFIG = {
     'oauth.auto_redirect': OAUTH_AUTO_REDIRECT,
     'oauth.refresh_token.include_scope': OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE,
     'oauth.merge_accounts_by_email': OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+    'oauth.merge_refuse_unverified_email': OAUTH_MERGE_REFUSE_UNVERIFIED_EMAIL,
     'oauth.google.client_id': GOOGLE_CLIENT_ID,
     'oauth.google.client_secret': GOOGLE_CLIENT_SECRET,
     'oauth.google.scope': GOOGLE_OAUTH_SCOPE,

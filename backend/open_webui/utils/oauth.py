@@ -53,6 +53,7 @@ from open_webui.config import (
     OAUTH_GROUPS_CLAIM,
     OAUTH_GROUPS_SEPARATOR,
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+    OAUTH_MERGE_REFUSE_UNVERIFIED_EMAIL,
     OAUTH_PICTURE_CLAIM,
     OAUTH_PROVIDERS,
     OAUTH_REFRESH_TOKEN_INCLUDE_SCOPE,
@@ -131,6 +132,11 @@ OAUTH_RUNTIME_CONFIG = {
     'OAUTH_MERGE_ACCOUNTS_BY_EMAIL': (
         'oauth.merge_accounts_by_email',
         OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+    OAUTH_MERGE_REFUSE_UNVERIFIED_EMAIL,
+    ),
+    'OAUTH_MERGE_REFUSE_UNVERIFIED_EMAIL': (
+        'oauth.merge_refuse_unverified_email',
+        OAUTH_MERGE_REFUSE_UNVERIFIED_EMAIL,
     ),
     'ENABLE_OAUTH_ROLE_MANAGEMENT': (
         'oauth.enable_role_mapping',
@@ -1848,6 +1854,10 @@ class OAuthManager:
             # Email extraction
             email_claim = auth_config.OAUTH_EMAIL_CLAIM
             email = user_data.get(email_claim, '')
+            # Whether the provider vouches for the email address. None means
+            # the provider gave no verification signal; set from the GitHub
+            # /user/emails entry below or from the email_verified claim.
+            email_verified = None
             # We currently mandate that email addresses are provided
             if not email:
                 # If the provider is GitHub,and public email is not provided, we can use the access token to fetch the user's email
@@ -1864,12 +1874,16 @@ class OAuthManager:
                                 if resp.ok:
                                     emails = await resp.json()
                                     # use the primary email as the user's email
-                                    primary_email = next(
-                                        (e['email'] for e in emails if e.get('primary')),
+                                    primary_entry = next(
+                                        (e for e in emails if e.get('primary')),
                                         None,
+                                    )
+                                    primary_email = (
+                                        primary_entry.get('email') if primary_entry else None
                                     )
                                     if primary_email:
                                         email = primary_email
+                                        email_verified = bool(primary_entry.get('verified'))
                                     else:
                                         log.warning('No primary email found in GitHub response')
                                         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -1885,6 +1899,15 @@ class OAuthManager:
                     log.warning(f'OAuth callback failed, email is missing: {user_data}')
                     raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
+            # OIDC providers send an email_verified claim when they track
+            # verification; the GitHub fallback above already set it.
+            if email_verified is None:
+                verified_claim = user_data.get('email_verified')
+                if isinstance(verified_claim, bool):
+                    email_verified = verified_claim
+                elif isinstance(verified_claim, str):
+                    email_verified = verified_claim.lower() == 'true'
+
             email = email.lower()
             # If allowed domains are configured, check if the email domain is in the list
             if (
@@ -1899,6 +1922,19 @@ class OAuthManager:
             if not user:
                 # If the user does not exist, check if merging is enabled
                 if auth_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL:
+                    # Opt-in hardening: never merge on an email the provider
+                    # explicitly reports as unverified. An IdP that lets users
+                    # assert arbitrary addresses would otherwise hand over the
+                    # matching existing account (account takeover). Providers
+                    # that send no verification signal are unaffected.
+                    if (
+                        auth_config.OAUTH_MERGE_REFUSE_UNVERIFIED_EMAIL
+                        and email_verified is False
+                    ):
+                        log.warning(
+                            f'OAuth callback failed, refusing to merge account on unverified email: {email}'
+                        )
+                        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
                     # Check if the user exists by email
                     user = await Users.get_user_by_email(email, db=db)
                     if user:
