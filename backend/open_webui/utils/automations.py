@@ -547,6 +547,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
                 'content': prompt,
             },
             'session_id': f'automation:{automation.id}',
+            'automation_id': automation.id,
             'background_tasks': {},
         }
         if tool_ids:
