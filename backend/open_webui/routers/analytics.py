@@ -419,3 +419,190 @@ async def get_model_overview(
     tags = [TagEntry(tag=tag, count=count) for tag, count in sorted(tag_counts.items(), key=lambda x: -x[1])[:10]]
 
     return ModelOverviewResponse(history=history, tags=tags)
+
+
+####################
+# API Usage Analytics
+# These endpoints track direct API calls (no UI chat session).
+# Existing chat analytics endpoints above are unaffected.
+####################
+
+
+class ApiModelEntry(BaseModel):
+    model_id: str
+    count: int
+    unique_users: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
+
+
+class ApiModelResponse(BaseModel):
+    models: list[ApiModelEntry]
+
+
+class ApiUserEntry(BaseModel):
+    user_id: str
+    name: Optional[str] = None
+    email: Optional[str] = None
+    count: int
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
+
+
+class ApiUserResponse(BaseModel):
+    users: list[ApiUserEntry]
+
+
+class ApiSummaryResponse(BaseModel):
+    total_requests: int
+    total_models: int
+    total_users: int
+
+
+class ApiDailyEntry(BaseModel):
+    date: str
+    models: dict[str, int]
+
+
+class ApiDailyResponse(BaseModel):
+    data: list[ApiDailyEntry]
+
+
+class ApiTokenUsageResponse(BaseModel):
+    models: list[TokenUsageEntry]
+    total_input_tokens: int
+    total_output_tokens: int
+    total_tokens: int
+
+
+@router.get('/api/models', response_model=ApiModelResponse)
+async def get_api_model_analytics(
+    start_date: Optional[int] = Query(None, description='Start timestamp (epoch)'),
+    end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
+    group_id: Optional[str] = Query(None, description='Filter by user group ID'),
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Get request counts per model for direct API calls."""
+    counts = await ChatMessages.get_api_message_count_by_model(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
+    unique_users = await ChatMessages.get_api_unique_users_by_model(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
+    token_usage = await ChatMessages.get_api_token_usage_by_model(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
+    models = [
+        ApiModelEntry(
+            model_id=model_id,
+            count=count,
+            unique_users=unique_users.get(model_id, 0),
+            **{k: token_usage.get(model_id, {}).get(k, 0) for k in ('input_tokens', 'output_tokens', 'total_tokens')},
+        )
+        for model_id, count in sorted(counts.items(), key=lambda x: -x[1])
+    ]
+    return ApiModelResponse(models=models)
+
+
+@router.get('/api/users', response_model=ApiUserResponse)
+async def get_api_user_analytics(
+    start_date: Optional[int] = Query(None, description='Start timestamp (epoch)'),
+    end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
+    group_id: Optional[str] = Query(None, description='Filter by user group ID'),
+    limit: int = Query(50, description='Max users to return'),
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Get request counts and token usage per user for direct API calls."""
+    counts = await ChatMessages.get_api_message_count_by_user(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
+    token_usage = await ChatMessages.get_api_token_usage_by_user(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
+    top_user_ids = [uid for uid, _ in sorted(counts.items(), key=lambda x: -x[1])[:limit]]
+    user_info = {u.id: u for u in await Users.get_users_by_user_ids(top_user_ids, db=db)}
+    users = []
+    for user_id in top_user_ids:
+        u = user_info.get(user_id)
+        tokens = token_usage.get(user_id, {})
+        users.append(
+            ApiUserEntry(
+                user_id=user_id,
+                name=u.name if u else None,
+                email=u.email if u else None,
+                count=counts[user_id],
+                input_tokens=tokens.get('input_tokens', 0),
+                output_tokens=tokens.get('output_tokens', 0),
+                total_tokens=tokens.get('total_tokens', 0),
+            )
+        )
+    return ApiUserResponse(users=users)
+
+
+@router.get('/api/summary', response_model=ApiSummaryResponse)
+async def get_api_summary(
+    start_date: Optional[int] = Query(None, description='Start timestamp (epoch)'),
+    end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
+    group_id: Optional[str] = Query(None, description='Filter by user group ID'),
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Get summary statistics for direct API usage."""
+    model_counts = await ChatMessages.get_api_message_count_by_model(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
+    user_counts = await ChatMessages.get_api_message_count_by_user(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
+    return ApiSummaryResponse(
+        total_requests=sum(model_counts.values()),
+        total_models=len(model_counts),
+        total_users=len(user_counts),
+    )
+
+
+@router.get('/api/daily', response_model=ApiDailyResponse)
+async def get_api_daily_stats(
+    start_date: Optional[int] = Query(None, description='Start timestamp (epoch)'),
+    end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
+    group_id: Optional[str] = Query(None, description='Filter by user group ID'),
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Get daily API request counts grouped by model."""
+    counts = await ChatMessages.get_api_daily_counts_by_model(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
+    return ApiDailyResponse(
+        data=[ApiDailyEntry(date=date, models=models) for date, models in sorted(counts.items())]
+    )
+
+
+@router.get('/api/tokens', response_model=ApiTokenUsageResponse)
+async def get_api_token_usage(
+    start_date: Optional[int] = Query(None),
+    end_date: Optional[int] = Query(None),
+    group_id: Optional[str] = Query(None, description='Filter by user group ID'),
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Get token usage aggregated by model for direct API calls."""
+    usage = await ChatMessages.get_api_token_usage_by_model(
+        start_date=start_date, end_date=end_date, group_id=group_id, db=db
+    )
+    models = [
+        TokenUsageEntry(model_id=model_id, **data)
+        for model_id, data in sorted(usage.items(), key=lambda x: -x[1]['total_tokens'])
+    ]
+    total_input = sum(m.input_tokens for m in models)
+    total_output = sum(m.output_tokens for m in models)
+    return ApiTokenUsageResponse(
+        models=models,
+        total_input_tokens=total_input,
+        total_output_tokens=total_output,
+        total_tokens=total_input + total_output,
+    )
