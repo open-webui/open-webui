@@ -1841,6 +1841,10 @@ class OAuthManager:
             # Email extraction
             email_claim = auth_config.OAUTH_EMAIL_CLAIM
             email = user_data.get(email_claim, '')
+            # Whether the provider vouches for the email address. None means
+            # the provider gave no verification signal; set by the claim
+            # check below or by the GitHub /user/emails fallback.
+            email_verified = None
             # We currently mandate that email addresses are provided
             if not email:
                 # If the provider is GitHub,and public email is not provided, we can use the access token to fetch the user's email
@@ -1857,12 +1861,15 @@ class OAuthManager:
                                 if resp.ok:
                                     emails = await resp.json()
                                     # use the primary email as the user's email
-                                    primary_email = next(
-                                        (e['email'] for e in emails if e.get('primary')),
+                                    primary_entry = next(
+                                        (e for e in emails if e.get('primary')),
                                         None,
                                     )
-                                    if primary_email:
-                                        email = primary_email
+                                    if primary_entry:
+                                        email = primary_entry['email']
+                                        # GitHub reports per-address verification; keep it for
+                                        # the account-merge gate below
+                                        email_verified = bool(primary_entry.get('verified'))
                                     else:
                                         log.warning('No primary email found in GitHub response')
                                         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -1878,6 +1885,15 @@ class OAuthManager:
                     log.warning(f'OAuth callback failed, email is missing: {user_data}')
                     raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
+            # OIDC providers send an `email_verified` claim; the GitHub
+            # fallback above sets email_verified from the /user/emails entry.
+            if email_verified is None:
+                verified_claim = user_data.get('email_verified')
+                if isinstance(verified_claim, bool):
+                    email_verified = verified_claim
+                elif isinstance(verified_claim, str):
+                    email_verified = verified_claim.lower() == 'true'
+
             email = email.lower()
             # If allowed domains are configured, check if the email domain is in the list
             if (
@@ -1892,6 +1908,15 @@ class OAuthManager:
             if not user:
                 # If the user does not exist, check if merging is enabled
                 if auth_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL:
+                    # Never merge on an email the provider reports as
+                    # unverified: an IdP that lets users claim arbitrary
+                    # addresses would otherwise hand over the matching
+                    # existing account (account takeover)
+                    if email_verified is False:
+                        log.warning(
+                            f'OAuth callback failed, refusing to merge account on unverified email: {email}'
+                        )
+                        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
                     # Check if the user exists by email
                     user = await Users.get_user_by_email(email, db=db)
                     if user:
