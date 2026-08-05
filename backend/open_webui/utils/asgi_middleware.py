@@ -1,5 +1,5 @@
 """
-Pure-ASGI replacements for the project's previous
+Pure-ASGI replacement for the project's previous
 `@app.middleware('http')` / `BaseHTTPMiddleware` middlewares.
 
 Why this matters
@@ -26,6 +26,10 @@ designed to (via `receive()` returning `http.disconnect`) instead of
 being injected as `CancelledError` into arbitrary `await` points.
 
 Reference: https://www.starlette.io/middleware/#limitations
+
+All of the app's own per-request concerns live in a single layer: each
+extra layer costs a coroutine hop per request, and each `send` wrapper
+runs per ASGI message, which on a streamed response means per chunk.
 """
 
 from __future__ import annotations
@@ -40,6 +44,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from open_webui.env import CUSTOM_API_KEY_HEADER
 from open_webui.internal.db import ScopedSession
 from open_webui.utils.auth import get_http_authorization_cred
+from open_webui.utils.security_headers import set_security_headers
 from starlette.datastructures import MutableHeaders
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -47,19 +52,32 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 log = logging.getLogger(__name__)
 
 
-class CommitSessionMiddleware:
-    """Commit and release the thread-local sync `ScopedSession` after each
-    HTTP request.
+class WebUIMiddleware:
+    """Open WebUI's own per-request handling, in one ASGI layer:
+
+    * reject malformed `/ws/socket.io` upgrade requests
+    * stash the bearer/cookie/API-key credential on `request.state.token`
+    * stamp `X-Process-Time` and the configured security headers
+    * serve the legacy `/watch` and `?shared=` redirects
+    * commit and release the thread-local sync `ScopedSession`
+
+    Routes that depend on `get_verified_user` etc. read that credential.
+    The header used for API-key transport is controlled by the
+    ``CUSTOM_API_KEY_HEADER`` environment variable (default ``x-api-key``).
+    This is useful when Open WebUI sits behind a reverse proxy that
+    consumes the ``Authorization`` header for its own authentication —
+    set the env var to a unique header (e.g. ``X-OpenWebUI-Key``) so the
+    middleware checks that instead and avoids the 401 short-circuit.
 
     Most requests now use the async session; the sync ScopedSession is
     only touched by startup, healthchecks, and a handful of legacy
-    helpers (notably the pgvector / opengauss vector-DB clients). The
-    middleware exists so that PostgreSQL connections do not accumulate
-    as "idle in transaction" and so that any pending sync work made
-    inside the request is durably persisted.
+    helpers (notably the pgvector / opengauss vector-DB clients). It is
+    handled here so that PostgreSQL connections do not accumulate as
+    "idle in transaction" and so that any pending sync work made inside
+    the request is durably persisted.
 
-    Failure semantics
-    -----------------
+    Sync session failure semantics
+    ------------------------------
     * Downstream raised → roll back any pending sync work, release the
       connection, and re-raise so the outer exception middleware can
       turn it into an error response. We never commit work on a
@@ -81,78 +99,19 @@ class CommitSessionMiddleware:
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
+        # Headers derive only from env vars, which are static for the process
+        # lifetime — compute them once instead of per response.
+        self._security_headers = list(set_security_headers().items())
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope['type'] != 'http':
             await self.app(scope, receive, send)
             return
 
-        path = scope.get('path', '')
-        # Keep health probes independent from sync session commit/remove
-        # so DB pressure cannot delay or fail probe responses.
-        if path in {'/health', '/ready', '/health/db'}:
-            await self.app(scope, receive, send)
-            return
-
-        try:
-            await self.app(scope, receive, send)
-        except BaseException:
-            # Downstream did not complete successfully. Roll back any
-            # pending sync writes, release the connection, and let the
-            # exception propagate.
-            if ScopedSession.registry.has():
-                try:
-                    ScopedSession.rollback()
-                except Exception:
-                    log.exception('CommitSessionMiddleware: rollback failed after downstream error')
-                finally:
-                    ScopedSession.remove()
-            raise
-
-        # Nothing in this request touched the sync session: committing would
-        # only instantiate one to run an empty transaction.
-        if not ScopedSession.registry.has():
-            return
-
-        # Downstream completed. Commit pending sync work.
-        try:
-            ScopedSession.commit()
-        except Exception:
-            log.exception('CommitSessionMiddleware: post-request commit failed; response was already sent to client')
-            try:
-                ScopedSession.rollback()
-            except Exception:
-                log.exception('CommitSessionMiddleware: rollback failed after commit failure')
-            raise
-        finally:
-            # CRITICAL: remove() returns the connection to the pool.
-            # Without this, connections remain "checked out" and
-            # accumulate as "idle in transaction" in PostgreSQL.
-            ScopedSession.remove()
-
-
-class AuthTokenMiddleware:
-    """Extract the bearer/cookie/API-key credential and stash it on
-    `request.state.token`.
-
-    The header used for API-key transport is controlled by the
-    ``CUSTOM_API_KEY_HEADER`` environment variable (default ``x-api-key``).
-    This is useful when Open WebUI sits behind a reverse proxy that
-    consumes the ``Authorization`` header for its own authentication —
-    set the env var to a unique header (e.g. ``X-OpenWebUI-Key``) so
-    the middleware checks that instead and avoids the 401 short-circuit.
-
-    Routes that depend on `get_verified_user` etc. read this state.
-    Also stamps an `X-Process-Time` response header.
-    """
-
-    def __init__(self, app: ASGIApp, *, fastapi_app) -> None:
-        self.app = app
-        self._fastapi_app = fastapi_app
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope['type'] != 'http':
-            await self.app(scope, receive, send)
+        # Guarded first, so as before this 400 carries no X-Process-Time or security headers.
+        if _is_invalid_websocket_upgrade(scope):
+            response = JSONResponse(status_code=400, content={'detail': 'Invalid WebSocket upgrade request'})
+            await response(scope, receive, send)
             return
 
         start_time = time.monotonic()
@@ -170,109 +129,126 @@ class AuthTokenMiddleware:
 
         request.state.token = token
 
-        async def send_with_timing(message: Message) -> None:
+        async def send_with_headers(message: Message) -> None:
             if message['type'] == 'http.response.start':
-                process_time = time.monotonic() - start_time
                 headers = MutableHeaders(scope=message)
-                headers['X-Process-Time'] = f'{process_time:.6f}'
+                headers['X-Process-Time'] = f'{time.monotonic() - start_time:.6f}'
+                for key, value in self._security_headers:
+                    headers[key] = value
             await send(message)
 
-        await self.app(scope, receive, send_with_timing)
-
-
-class WebsocketUpgradeGuardMiddleware:
-    """Reject HTTP requests to `/ws/socket.io` that claim
-    `transport=websocket` but lack the proper `Upgrade`/`Connection`
-    headers.
-
-    Works around https://github.com/miguelgrinberg/python-engineio/issues/367
-    where engineio mishandles such requests.
-    """
-
-    def __init__(self, app: ASGIApp) -> None:
-        self.app = app
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope['type'] != 'http':
-            await self.app(scope, receive, send)
+        redirect_url = _legacy_redirect_url(scope)
+        if redirect_url:
+            response = RedirectResponse(url=redirect_url)
+            await response(scope, receive, send_with_headers)
             return
 
-        path = scope.get('path', '')
-        if '/ws/socket.io' in path:
-            query_string = scope.get('query_string', b'').decode('latin-1', errors='replace')
-            query_params = parse_qs(query_string)
-            if query_params.get('transport', [''])[0] == 'websocket':
-                headers = _scope_headers(scope)
-                upgrade = headers.get('upgrade', '').lower()
-                connection_tokens = [token.strip() for token in headers.get('connection', '').lower().split(',')]
-                if upgrade != 'websocket' or 'upgrade' not in connection_tokens:
-                    response = JSONResponse(
-                        status_code=400,
-                        content={'detail': 'Invalid WebSocket upgrade request'},
-                    )
-                    await response(scope, receive, send)
-                    return
+        # Keep health probes independent from sync session commit/remove so DB
+        # pressure cannot delay or fail probe responses.
+        if scope.get('path', '') in {'/health', '/ready', '/health/db'}:
+            await self.app(scope, receive, send_with_headers)
+            return
 
-        await self.app(scope, receive, send)
+        try:
+            await self.app(scope, receive, send_with_headers)
+        except BaseException:
+            # Downstream did not complete successfully. Roll back any
+            # pending sync writes, release the connection, and let the
+            # exception propagate.
+            if ScopedSession.registry.has():
+                try:
+                    ScopedSession.rollback()
+                except Exception:
+                    log.exception('WebUIMiddleware: rollback failed after downstream error')
+                finally:
+                    ScopedSession.remove()
+            raise
+
+        # Nothing in this request touched the sync session: committing would
+        # only instantiate one to run an empty transaction.
+        if not ScopedSession.registry.has():
+            return
+
+        # Downstream completed. Commit pending sync work.
+        try:
+            ScopedSession.commit()
+        except Exception:
+            log.exception('WebUIMiddleware: post-request commit failed; response was already sent to client')
+            try:
+                ScopedSession.rollback()
+            except Exception:
+                log.exception('WebUIMiddleware: rollback failed after commit failure')
+            raise
+        finally:
+            # CRITICAL: remove() returns the connection to the pool.
+            # Without this, connections remain "checked out" and
+            # accumulate as "idle in transaction" in PostgreSQL.
+            ScopedSession.remove()
 
 
-class RedirectMiddleware:
-    """Rewrites a couple of legacy entry-points to the SPA's own routes:
+def _is_invalid_websocket_upgrade(scope: Scope) -> bool:
+    """Whether this is an HTTP request to `/ws/socket.io` claiming
+    `transport=websocket` but lacking the proper `Upgrade`/`Connection`
+    headers, which engineio mishandles.
+
+    https://github.com/miguelgrinberg/python-engineio/issues/367
+    """
+    if '/ws/socket.io' not in scope.get('path', ''):
+        return False
+
+    query_string = scope.get('query_string', b'').decode('latin-1', errors='replace')
+    if parse_qs(query_string).get('transport', [''])[0] != 'websocket':
+        return False
+
+    headers = _scope_headers(scope)
+    upgrade = headers.get('upgrade', '').lower()
+    connection_tokens = [token.strip() for token in headers.get('connection', '').lower().split(',')]
+    return upgrade != 'websocket' or 'upgrade' not in connection_tokens
+
+
+def _legacy_redirect_url(scope: Scope) -> str | None:
+    """Target for the two legacy entry-points that map onto the SPA's own
+    routes:
 
     * ``GET /watch?v=ID`` (YouTube) → ``/?youtube=ID``
     * ``GET /?shared=…`` (PWA share-target) → ``/?youtube=…`` /
       ``/?load-url=…`` / ``/?q=…``
+
+    Returns None for anything else.
     """
+    if scope.get('method', '').upper() != 'GET':
+        return None
 
-    def __init__(self, app: ASGIApp) -> None:
-        self.app = app
+    path = scope.get('path', '')
+    raw_query = scope.get('query_string', b'')
+    # Skip the decode + parse_qs work for every other GET. (A false positive on
+    # the substring check just falls through to the full parse below.)
+    if not (path.endswith('/watch') or b'shared' in raw_query):
+        return None
 
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope['type'] != 'http' or scope.get('method', '').upper() != 'GET':
-            await self.app(scope, receive, send)
-            return
+    query_params = parse_qs(raw_query.decode('latin-1', errors='replace'))
+    redirect_params: dict[str, str] = {}
 
-        path = scope.get('path', '')
-        raw_query = scope.get('query_string', b'')
-        # This middleware only acts on /watch?v= and ?shared= URLs; skip the
-        # decode + parse_qs work for every other GET. (A false positive on the
-        # substring check just falls through to the full parse below.)
-        if not (path.endswith('/watch') or b'shared' in raw_query):
-            await self.app(scope, receive, send)
-            return
+    if path.endswith('/watch') and query_params.get('v'):
+        redirect_params['youtube'] = query_params['v'][0]
 
-        query_string = raw_query.decode('latin-1', errors='replace')
-        query_params = parse_qs(query_string)
+    shared_text = (query_params.get('shared') or [''])[0]
+    if shared_text:
+        url_match = re.match(r'https://\S+', shared_text)
+        if url_match:
+            # Local import: youtube loader pulls heavy deps and is only needed
+            # when a share-target actually contains a YouTube URL.
+            from open_webui.retrieval.loaders.youtube import _parse_video_id
 
-        redirect_params: dict[str, str] = {}
-        if path.endswith('/watch') and 'v' in query_params and query_params['v']:
-            redirect_params['youtube'] = query_params['v'][0]
+            youtube_video_id = _parse_video_id(url_match[0])
+            if youtube_video_id:
+                redirect_params['youtube'] = youtube_video_id
+            else:
+                redirect_params['load-url'] = url_match[0]
+        else:
+            redirect_params['q'] = shared_text
 
-        if 'shared' in query_params and query_params['shared']:
-            text = query_params['shared'][0]
-            if text:
-                url_match = re.match(r'https://\S+', text)
-                if url_match:
-                    # Local import: youtube loader pulls heavy deps and is
-                    # only needed when a share-target actually contains a
-                    # YouTube URL.
-                    from open_webui.retrieval.loaders.youtube import _parse_video_id
-
-                    youtube_video_id = _parse_video_id(url_match[0])
-                    if youtube_video_id:
-                        redirect_params['youtube'] = youtube_video_id
-                    else:
-                        redirect_params['load-url'] = url_match[0]
-                else:
-                    redirect_params['q'] = text
-
-        if redirect_params:
-            redirect_url = f'/?{urlencode(redirect_params)}'
-            response = RedirectResponse(url=redirect_url)
-            await response(scope, receive, send)
-            return
-
-        await self.app(scope, receive, send)
+    return f'/?{urlencode(redirect_params)}' if redirect_params else None
 
 
 def _scope_headers(scope: Scope) -> dict[str, str]:
