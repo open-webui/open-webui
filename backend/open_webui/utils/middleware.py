@@ -40,6 +40,7 @@ from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     RAG_SYSTEM_CONTEXT,
 )
+from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
@@ -3692,6 +3693,23 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 **({'usage': usage} if usage else {}),
                             },
                         )
+                    elif not getattr(request.state, 'internal', False) and usage:
+                        # Direct API call (no UI chat session) — record for analytics.
+                        model_id = form_data.get('model') or metadata.get('model_id') or (metadata.get('model') or {}).get('id')
+                        if model_id and user:
+                            import uuid as _uuid
+                            await ChatMessages.upsert_message(
+                                message_id=str(_uuid.uuid4()),
+                                chat_id=None,
+                                user_id=user.id,
+                                data={
+                                    'role': 'assistant',
+                                    'model_id': model_id,
+                                    'usage': usage,
+                                    'source': 'api',
+                                    'done': True,
+                                },
+                            )
 
                     await publish_chat_finished_event(request, user, metadata, title, content, response_output)
 
@@ -5533,6 +5551,23 @@ async def streaming_chat_response_handler(response, ctx):
                             metadata['chat_id'],
                             metadata['message_id'],
                             {'done': True},
+                        )
+                elif not getattr(request.state, 'internal', False) and usage:
+                    # Direct API call (no UI chat session) — record for analytics.
+                    model_id = form_data.get('model') or metadata.get('model_id') or (metadata.get('model') or {}).get('id')
+                    if model_id and user:
+                        import uuid as _uuid
+                        await ChatMessages.upsert_message(
+                            message_id=str(_uuid.uuid4()),
+                            chat_id=None,
+                            user_id=user.id,
+                            data={
+                                'role': 'assistant',
+                                'model_id': model_id,
+                                'usage': usage,
+                                'source': 'api',
+                                'done': True,
+                            },
                         )
 
                 await publish_chat_finished_event(request, user, metadata, title, ''.join(content_parts), output)
