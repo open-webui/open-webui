@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from copy import deepcopy
 from typing import Any
 
 from fastapi.responses import JSONResponse
@@ -8,7 +9,12 @@ from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_message_list
+from open_webui.utils.misc import (
+    add_or_update_system_message,
+    get_content_from_message,
+    get_last_user_message,
+    get_message_list,
+)
 from open_webui.utils.task import (
     get_task_model_id,
     prompt_template,
@@ -48,7 +54,7 @@ async def compact_messages_for_request(
     models: dict,
     system_prompt: str = '',
 ) -> tuple[list[dict], str | None, bool]:
-    config = await _load_config()
+    config = await load_compaction_config()
     if not config['enable']:
         return messages, None, False
 
@@ -66,6 +72,138 @@ async def compact_messages_for_request(
     if not compacted_messages or not recent_messages:
         return [*system_messages, *messages], previous_summary, False
 
+    summary = await _summarize_with_events(
+        request,
+        user,
+        metadata,
+        model_id,
+        models,
+        compacted_messages,
+        recent_messages,
+        previous_summary,
+        config['prompt_template'],
+    )
+
+    chat_id = metadata.get('chat_id')
+    checkpoint_message_id = (
+        recent_messages[0].get('id') or metadata.get('user_message_id') or metadata.get('message_id')
+    )
+    if is_saved_chat_id(chat_id) and checkpoint_message_id:
+        await Chats.upsert_message_to_chat_by_id_and_message_id(
+            chat_id,
+            checkpoint_message_id,
+            {'contextSummary': summary},
+            touch=False,
+        )
+
+    log.info(
+        'Compacted chat context for chat=%s checkpoint=%s response=%s dropped=%d kept=%d summary_chars=%d',
+        chat_id,
+        checkpoint_message_id,
+        metadata.get('message_id'),
+        len(compacted_messages),
+        len(recent_messages),
+        len(summary),
+    )
+
+    return [*system_messages, *recent_messages], summary, True
+
+
+# Plans a cut without persisting one: the tool messages it compacts have no chat rows to sit on.
+async def plan_mid_turn_compaction(
+    request,
+    user,
+    messages: list[dict],
+    metadata: dict,
+    model_id: str,
+    models: dict,
+    config: dict,
+    prompt_tokens: int | None,
+    pinned_count: int,
+    previous_summary: str | None,
+) -> tuple[str | None, int]:
+    threshold = _resolve_token_threshold(config['token_threshold'], config['token_cap'], metadata)
+    if max(prompt_tokens or 0, _estimate_messages_tokens(messages)) <= threshold:
+        return None, 0
+
+    system_messages = [messages[0]] if messages and messages[0].get('role') == 'system' else []
+    messages = messages[1:] if system_messages else messages
+    if len(messages) <= 3:
+        return None, 0
+
+    boundary = _find_compaction_boundary(messages, config['retention_percentage'])
+    # A cut at or before the pin drops nothing, since the caller re-adds it.
+    if boundary <= pinned_count:
+        return None, 0
+
+    compacted_messages = messages[:boundary]
+    recent_messages = messages[boundary:]
+    summary = await _summarize_with_events(
+        request,
+        user,
+        metadata,
+        model_id,
+        models,
+        compacted_messages,
+        recent_messages,
+        previous_summary,
+        config['prompt_template'],
+    )
+    # Dropping messages without anything standing in for them loses the context outright.
+    if not summary:
+        return None, 0
+
+    log.info(
+        'Planned mid-turn context cut for chat=%s response=%s dropped=%d kept=%d summary_chars=%d',
+        metadata.get('chat_id'),
+        metadata.get('message_id'),
+        boundary - pinned_count,
+        len(recent_messages),
+        len(summary),
+    )
+
+    return summary, boundary - pinned_count
+
+
+# The pinned count it returns shifts the indices the next plan call reports against.
+def apply_mid_turn_compaction(
+    messages: list[dict], compacted_count: int, summary: str | None, task_message: dict | None
+) -> tuple[list[dict], int]:
+    if not compacted_count:
+        return messages, 0
+
+    # Copied because add_or_update_system_message appends in place and this runs on every iteration.
+    system_messages = [deepcopy(messages[0])] if messages and messages[0].get('role') == 'system' else []
+    recent_messages = (messages[1:] if system_messages else messages)[compacted_count:]
+
+    # Without the request the run is working towards, the model abandons the task early.
+    pinned_count = 1 if task_message and not any(message is task_message for message in recent_messages) else 0
+    if pinned_count:
+        recent_messages = [task_message, *recent_messages]
+
+    compacted = [*system_messages, *recent_messages]
+    if summary:
+        compacted = add_or_update_system_message(f'[CONVERSATION SUMMARY]\n{summary}', compacted, append=True)
+    return compacted, pinned_count
+
+
+def resolve_compaction_models(request) -> dict:
+    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
+        return {**dict(request.app.state.MODELS.items()), request.state.model['id']: request.state.model}
+    return request.app.state.MODELS
+
+
+async def _summarize_with_events(
+    request,
+    user,
+    metadata: dict,
+    model_id: str,
+    models: dict,
+    compacted_messages: list[dict],
+    recent_messages: list[dict],
+    previous_summary: str | None,
+    prompt_template: str,
+) -> str:
     event_emitter = None
     if metadata.get('chat_id') and metadata.get('message_id'):
         from open_webui.socket.main import get_event_emitter
@@ -93,7 +231,7 @@ async def compact_messages_for_request(
             compacted_messages,
             recent_messages,
             previous_summary,
-            config['prompt_template'],
+            prompt_template,
         )
     except Exception:
         if event_emitter:
@@ -110,28 +248,6 @@ async def compact_messages_for_request(
             )
         raise
 
-    chat_id = metadata.get('chat_id')
-    checkpoint_message_id = (
-        recent_messages[0].get('id') or metadata.get('user_message_id') or metadata.get('message_id')
-    )
-    if is_saved_chat_id(chat_id) and checkpoint_message_id:
-        await Chats.upsert_message_to_chat_by_id_and_message_id(
-            chat_id,
-            checkpoint_message_id,
-            {'contextSummary': summary},
-            touch=False,
-        )
-
-    log.info(
-        'Compacted chat context for chat=%s checkpoint=%s response=%s dropped=%d kept=%d summary_chars=%d',
-        chat_id,
-        checkpoint_message_id,
-        metadata.get('message_id'),
-        len(compacted_messages),
-        len(recent_messages),
-        len(summary),
-    )
-
     if event_emitter:
         await event_emitter(
             {
@@ -144,11 +260,11 @@ async def compact_messages_for_request(
             }
         )
 
-    return [*system_messages, *recent_messages], summary, True
+    return summary
 
 
 async def compact_chat_branch(request, user, chat: Any, model_id: str, models: dict) -> dict:
-    config = await _load_config()
+    config = await load_compaction_config()
     if not config['enable']:
         return {'ok': True, 'compacted': False, 'reason': 'disabled'}
 
@@ -195,7 +311,7 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
     }
 
 
-async def _load_config() -> dict:
+async def load_compaction_config() -> dict:
     values = await Config.get_many(
         'chat.context_compaction.enable',
         'chat.context_compaction.token_threshold',
@@ -250,7 +366,7 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
     if not messages:
         return None
 
-    config = await _load_config()
+    config = await load_compaction_config()
     if not config['enable']:
         return None
 
@@ -348,8 +464,32 @@ def _find_compaction_boundary(messages: list[dict], retention_percentage: int = 
     retention_percentage = _clamp_retention_percentage(retention_percentage)
     keep_count = max(2, len(messages) * retention_percentage // 100)
     target = max(1, len(messages) - keep_count)
-    boundaries = [idx for idx, message in enumerate(messages) if message.get('role') == 'user'][1:]
-    return next((idx for idx in reversed(boundaries) if idx <= target), 0)
+    # A single agentic turn has no later user message to clamp to, so tool blocks are cut points too.
+    cut_points = [idx for idx, message in enumerate(messages) if message.get('role') == 'user'][1:]
+    cut_points += _find_tool_block_starts(messages)
+    return max((idx for idx in cut_points if idx <= target), default=0)
+
+
+# Indices where no tool call is still awaiting its result, matched by id because parallel calls
+# can come back in any order.
+def _find_tool_block_starts(messages: list[dict]) -> list[int]:
+    block_starts = []
+    unanswered_tool_call_ids = set()
+    inside_tool_calling = False
+
+    for idx, message in enumerate(messages):
+        # Only the start of a later block, so plain turns stay whole and are cut on the user list.
+        if inside_tool_calling and not unanswered_tool_call_ids and message.get('tool_calls'):
+            block_starts.append(idx)
+
+        if message.get('role') == 'tool' and message.get('tool_call_id'):
+            unanswered_tool_call_ids.discard(message['tool_call_id'])
+        for tool_call in message.get('tool_calls') or []:
+            if tool_call.get('id'):
+                unanswered_tool_call_ids.add(tool_call['id'])
+                inside_tool_calling = True
+
+    return block_starts
 
 
 async def _generate_summary(

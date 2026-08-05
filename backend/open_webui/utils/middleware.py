@@ -82,7 +82,13 @@ from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.code_interpreter import execute_code_jupyter
-from open_webui.utils.context_compaction import compact_messages_for_request
+from open_webui.utils.context_compaction import (
+    apply_mid_turn_compaction,
+    compact_messages_for_request,
+    load_compaction_config,
+    plan_mid_turn_compaction,
+    resolve_compaction_models,
+)
 from open_webui.utils.files import (
     convert_markdown_base64_images,
     get_file_url_from_base64,
@@ -2345,13 +2351,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
 
     if is_saved_chat_id(chat_id) and user_message_id:
-        if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-            compaction_models = {
-                **dict(request.app.state.MODELS.items()),
-                request.state.model['id']: request.state.model,
-            }
-        else:
-            compaction_models = request.app.state.MODELS
+        compaction_models = resolve_compaction_models(request)
 
         system_message = get_system_message(form_data.get('messages', []))
         system_prompt = get_content_from_message(system_message) if system_message else ''
@@ -4896,7 +4896,12 @@ async def streaming_chat_response_handler(response, ctx):
                 )
                 tool_call_sources = []  # Track citation sources from tool results
                 all_tool_call_sources = []  # Accumulated sources across all iterations
-                user_message = get_last_user_message(form_data['messages'])
+                compacted_message_count = 0
+                compaction_summary = None
+                compaction_config = await load_compaction_config() if tool_calls else {'enable': False}
+                compaction_models = resolve_compaction_models(request) if tool_calls else {}
+                task_message = get_last_user_message_item(form_data['messages'])
+                user_message = get_content_from_message(task_message) if task_message else None
 
                 # Check if citations are enabled for this model
                 citations_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get(
@@ -5227,6 +5232,7 @@ async def streaming_chat_response_handler(response, ctx):
                             'metadata': metadata,
                         }
 
+                        # Not compacted: the provider holds this conversation, not us.
                         if ENABLE_RESPONSES_API_STATEFUL and last_response_id:
                             system_message = get_system_message(form_data['messages'])
                             new_form_data['messages'] = (
@@ -5256,10 +5262,45 @@ async def streaming_chat_response_handler(response, ctx):
                                             image_urls.append(part.get('image_url', ''))
                                     message['content'] = ''.join(text_parts)
 
-                            new_form_data['messages'] = [
-                                *form_data['messages'],
-                                *tool_messages,
-                            ]
+                            base_messages = [*form_data['messages'], *tool_messages]
+                            continuation_messages, pinned_count = apply_mid_turn_compaction(
+                                base_messages, compacted_message_count, compaction_summary, task_message
+                            )
+
+                            try:
+                                if compaction_config['enable']:
+                                    summary, dropped_count = await plan_mid_turn_compaction(
+                                        request,
+                                        user,
+                                        continuation_messages,
+                                        metadata,
+                                        model_id,
+                                        compaction_models,
+                                        compaction_config,
+                                        # Providers that omit usage on a continuation stream would
+                                        # otherwise keep reporting the pre-cut size forever.
+                                        prompt_tokens=None
+                                        if compacted_message_count
+                                        else (usage or {}).get('prompt_tokens'),
+                                        pinned_count=pinned_count,
+                                        previous_summary=compaction_summary,
+                                    )
+                                    if dropped_count:
+                                        continuation_messages, _ = apply_mid_turn_compaction(
+                                            base_messages,
+                                            compacted_message_count + dropped_count,
+                                            summary,
+                                            task_message,
+                                        )
+                                        compaction_summary = summary
+                                        compacted_message_count += dropped_count
+                            except Exception:
+                                log.exception('Mid-turn context compaction failed; continuing with the current context')
+
+                            if compacted_message_count:
+                                continuation_messages = sanitize_tool_pairs(continuation_messages)
+
+                            new_form_data['messages'] = continuation_messages
 
                             if image_urls:
                                 new_form_data['messages'].append(
