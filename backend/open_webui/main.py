@@ -7,6 +7,7 @@ import mimetypes
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
@@ -337,6 +338,14 @@ async def lifespan(app: FastAPI):
     # This allows sync functions to schedule work on the main loop without blocking health checks
     app.state.main_loop = asyncio.get_running_loop()
 
+    if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
+        anyio.to_thread.current_default_thread_limiter().total_tokens = THREAD_POOL_SIZE
+
+        # asyncio offloads bypass the limiter; set their pool before the first offload creates the stock one
+        app.state.main_loop.set_default_executor(
+            ThreadPoolExecutor(max_workers=THREAD_POOL_SIZE, thread_name_prefix='owui_offload')
+        )
+
     app.state.instance_id = INSTANCE_ID
     start_logger()
 
@@ -371,10 +380,6 @@ async def lifespan(app: FastAPI):
 
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
-
-    if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
-        limiter = anyio.to_thread.current_default_thread_limiter()
-        limiter.total_tokens = THREAD_POOL_SIZE
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(periodic_session_pool_cleanup())
