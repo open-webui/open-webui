@@ -904,6 +904,29 @@
 
 			<div>
 				<div class={settingRowClass}>
+					<div id="render-markdown-in-previews-label" class={settingLabelClass}>
+						{$i18n.t('Render Markdown in Previews')}
+					</div>
+
+					<div class={settingControlClass}>
+						<Switch
+							ariaLabelledbyId="render-markdown-in-previews-label"
+							tooltip={true}
+							bind:state={renderMarkdownInPreviews}
+							inherited={isDefaultSetting('renderMarkdownInPreviews')}
+							on:change={() => {
+								saveSettings({ renderMarkdownInPreviews });
+							}}
+						/>
+					</div>
+				</div>
+				<p class={settingDescriptionClass}>
+					{$i18n.t('Format Markdown in previews and compact content surfaces.')}
+				</p>
+			</div>
+
+			<div>
+				<div class={settingRowClass}>
 					<div id="auto-generation-label" class={settingLabelClass}>
 						{$i18n.t('Title Auto-Generation')}
 					</div>
@@ -1014,6 +1037,29 @@
 				</div>
 				<p class={settingDescriptionClass}>
 					{$i18n.t('Follow assistant responses as they are generated.')}
+				</p>
+			</div>
+
+			<div>
+				<div class={settingRowClass}>
+					<div id="scroll-on-branch-change-label" class={settingLabelClass}>
+						{$i18n.t('Scroll On Branch Change')}
+					</div>
+
+					<div class={settingControlClass}>
+						<Switch
+							ariaLabelledbyId="scroll-on-branch-change-label"
+							tooltip={true}
+							bind:state={scrollOnBranchChange}
+							inherited={isDefaultSetting('scrollOnBranchChange')}
+							on:change={() => {
+								saveSettings({ scrollOnBranchChange });
+							}}
+						/>
+					</div>
+				</div>
+				<p class={settingDescriptionClass}>
+					{$i18n.t('Scroll to the active branch when switching response branches.')}
 				</p>
 			</div>
 
@@ -1157,29 +1203,6 @@
 
 			<div>
 				<div class={settingRowClass}>
-					<div id="render-markdown-in-previews-label" class={settingLabelClass}>
-						{$i18n.t('Render Markdown in Previews')}
-					</div>
-
-					<div class={settingControlClass}>
-						<Switch
-							ariaLabelledbyId="render-markdown-in-previews-label"
-							tooltip={true}
-							bind:state={renderMarkdownInPreviews}
-							inherited={isDefaultSetting('renderMarkdownInPreviews')}
-							on:change={() => {
-								saveSettings({ renderMarkdownInPreviews });
-							}}
-						/>
-					</div>
-				</div>
-				<p class={settingDescriptionClass}>
-					{$i18n.t('Format Markdown in previews and compact content surfaces.')}
-				</p>
-			</div>
-
-			<div>
-				<div class={settingRowClass}>
 					<div id="keep-followup-prompts-label" class={settingLabelClass}>
 						{$i18n.t('Display Multi-model Responses in Tabs')}
 					</div>
@@ -1198,29 +1221,6 @@
 				</div>
 				<p class={settingDescriptionClass}>
 					{$i18n.t('Group multi-model responses into tabs.')}
-				</p>
-			</div>
-
-			<div>
-				<div class={settingRowClass}>
-					<div id="scroll-on-branch-change-label" class={settingLabelClass}>
-						{$i18n.t('Scroll On Branch Change')}
-					</div>
-
-					<div class={settingControlClass}>
-						<Switch
-							ariaLabelledbyId="scroll-on-branch-change-label"
-							tooltip={true}
-							bind:state={scrollOnBranchChange}
-							inherited={isDefaultSetting('scrollOnBranchChange')}
-							on:change={() => {
-								saveSettings({ scrollOnBranchChange });
-							}}
-						/>
-					</div>
-				</div>
-				<p class={settingDescriptionClass}>
-					{$i18n.t('Scroll to the active branch when switching response branches.')}
 				</p>
 			</div>
 
