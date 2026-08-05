@@ -42,6 +42,7 @@ from open_webui.env import (
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
+from open_webui.models.tool_servers import get_user_configs_from_settings
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.tools.builtin import (
@@ -105,6 +106,8 @@ from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.headers import (
     bearer_auth_header,
     get_custom_headers,
+    get_reserved_header_names,
+    get_user_secret_slots,
     include_user_info_headers,
     normalize_bearer_token,
 )
@@ -118,10 +121,231 @@ from open_webui.utils.terminals import (
     terminal_context_config,
     terminal_context_id,
 )
+from open_webui.utils.valves import decrypt_valves
 from pydantic import BaseModel, Field, create_model
 from pydantic.fields import FieldInfo
 
 log = logging.getLogger(__name__)
+
+
+
+def get_tool_server_connection_id(connection: dict) -> str:
+    """The connection's own ID.
+
+    Per-user credentials are keyed by it, so it must never fall back to the
+    position of the connection in the list: reordering or removing a connection
+    would hand one server the credentials a user entered for another.
+    """
+    return (connection.get('info') or {}).get('id') or ''
+
+
+def find_tool_server_connection(connections: list[dict], server_id: str) -> dict | None:
+    """Resolve a connection by its configured ID."""
+    if not server_id:
+        return None
+    for connection in connections or []:
+        if get_tool_server_connection_id(connection) == server_id:
+            return connection
+    return None
+
+
+def get_tool_server_user_config_schema(connection: dict) -> dict | None:
+    """JSON Schema of the per-user credential slots declared on a connection.
+
+    Rendered by the same component that renders tool valves, so ``input.type:
+    password`` slots are masked in the UI. Returns None when the connection asks
+    nothing of the user.
+    """
+    schema = (connection.get('config') or {}).get('user_config') or {}
+    # Default the type, so a field declared with only an input type still renders
+    # as the string field it is.
+    properties = {slot: {'type': 'string', **(spec or {})} for slot, spec in (schema.get('properties') or {}).items()}
+    required = [slot for slot in (schema.get('required') or []) if slot in properties]
+
+    if connection.get('auth_type') == USER_KEY_AUTH_TYPE:
+        # Shorthand for the common case: one per-user API key sent as a bearer token.
+        properties = {USER_KEY_SLOT: USER_KEY_PROPERTY, **properties}
+        required = [USER_KEY_SLOT, *(slot for slot in required if slot != USER_KEY_SLOT)]
+
+    if not properties:
+        return None
+
+    return {'type': 'object', 'properties': properties, 'required': required}
+
+
+def mask_user_config_values(schema: dict, values: dict | None) -> dict:
+    """Describe which slots the user filled in without handing the secrets back.
+
+    Slots rendered as passwords are write-only: only whether they are set is
+    reported. Plain slots are returned as-is, so the user can review and edit them.
+    """
+    values = values or {}
+    masked = {}
+    for slot, spec in (schema or {}).get('properties', {}).items():
+        sensitive = ((spec or {}).get('input') or {}).get('type') == 'password'
+        masked[slot] = {
+            'set': bool(values.get(slot)),
+            'sensitive': sensitive,
+            **({} if sensitive else {'value': values.get(slot)}),
+        }
+    return masked
+
+
+def get_missing_user_config_slots(connection: dict, values: dict | None) -> list[str]:
+    schema = get_tool_server_user_config_schema(connection) or {}
+    values = values or {}
+    return [slot for slot in schema.get('required', []) if not values.get(slot)]
+
+
+def get_user_config_flags(connection: dict, values: dict | None) -> dict:
+    """How a connection's per-user credentials stand for one user, as reported by
+    ``GET /api/v1/tools/``. Empty when the connection asks the user for nothing.
+
+    The two flags answer two different questions, and a connection whose slots are
+    all optional separates them:
+
+    * ``user_config_set`` — has this user configured the connection? It is only
+      true once a value of theirs is actually stored, so a connection that
+      requires nothing does not report itself as configured before the user has
+      been anywhere near it. A required slot left empty keeps it false, since the
+      configuration is then unfinished no matter what else was filled in.
+    * ``user_config_required_set`` — can the tool be used as it stands? This is
+      what gates enabling it, and optional slots are by definition no obstacle.
+    """
+    schema = get_tool_server_user_config_schema(connection)
+    if not schema:
+        return {}
+
+    values = values or {}
+    required_set = not get_missing_user_config_slots(connection, values)
+    return {
+        'requires_user_config': True,
+        'user_config_set': required_set and any(values.get(slot) for slot in schema['properties']),
+        'user_config_required_set': required_set,
+    }
+
+
+def get_user_config_from_settings(connection: dict, user) -> dict:
+    """A user's values for the slots a connection declares, read from the settings
+    already loaded with the user — no extra query on the request path."""
+    if user is None or not get_tool_server_user_config_schema(connection):
+        return {}
+
+    server_id = get_tool_server_connection_id(connection)
+    if not server_id:
+        return {}
+
+    return decrypt_valves(get_user_configs_from_settings(user.settings).get(server_id))
+
+
+def drop_reserved_user_secret_headers(connection_headers: dict | None) -> dict:
+    """Drop header templates that would inject a user secret into a reserved header.
+
+    Connections also arrive from the TOOL_SERVER_CONNECTIONS environment variable,
+    which never passes through the admin API, so the same rule is enforced here at
+    resolve time rather than only on save.
+    """
+    if not connection_headers or not isinstance(connection_headers, dict):
+        return {}
+
+    reserved = get_reserved_header_names()
+    headers = {}
+    for name, value in connection_headers.items():
+        if get_user_secret_slots(value) and str(name).strip().lower() in reserved:
+            log.warning('Ignoring header %s: a user secret cannot be injected into a reserved header', name)
+            continue
+        headers[name] = value
+    return headers
+
+
+def _validate_user_config_declaration(schema) -> dict:
+    """Validate the declared slots themselves and return them."""
+    if schema is None:
+        return {}
+
+    if not isinstance(schema, dict):
+        raise ValueError('user_config must be an object')
+
+    properties = schema.get('properties') or {}
+    if not isinstance(properties, dict):
+        raise ValueError('user_config.properties must be an object')
+
+    for slot, spec in properties.items():
+        if not SLOT_NAME_PATTERN.match(str(slot)):
+            raise ValueError(f"Invalid user_config field name '{slot}'")
+        if not isinstance(spec, dict):
+            raise ValueError(f"user_config field '{slot}' must be an object")
+
+    required = schema.get('required') or []
+    if not isinstance(required, list):
+        raise ValueError('user_config.required must be a list')
+    for slot in required:
+        if slot not in properties:
+            raise ValueError(f"user_config.required references undeclared field '{slot}'")
+
+    return properties
+
+
+def _validate_user_secret_references(connection: dict, properties: dict, url_slots: set) -> None:
+    """Check that every referenced slot is declared and lands somewhere it may."""
+    reserved = get_reserved_header_names()
+    headers = connection.get('headers') if isinstance(connection.get('headers'), dict) else {}
+
+    for name, value in headers.items():
+        slots = get_user_secret_slots(value)
+        if not slots:
+            continue
+
+        if str(name).strip().lower() in reserved:
+            raise ValueError(f"Header '{name}' cannot carry a user secret")
+
+        for slot in sorted(slots):
+            if slot not in properties:
+                raise ValueError(f"Header '{name}' references undeclared user_config field '{slot}'")
+
+    for slot in sorted(url_slots):
+        if slot not in properties:
+            raise ValueError(f"URL references undeclared user_config field '{slot}'")
+
+
+def validate_tool_server_user_config(connection: dict) -> None:
+    """Validate the per-user credential declaration of a connection.
+
+    Raises ValueError so the admin gets told what is wrong instead of the
+    misconfiguration surfacing later as an empty header.
+    """
+    properties = _validate_user_config_declaration((connection.get('config') or {}).get('user_config'))
+
+    if connection.get('auth_type') == USER_KEY_AUTH_TYPE:
+        properties = {USER_KEY_SLOT: USER_KEY_PROPERTY, **properties}
+
+    url_slots = get_user_secret_slots(connection.get('url'))
+
+    if properties and not get_tool_server_connection_id(connection):
+        # Per-user values are stored under this ID; without one they could not be
+        # told apart from another connection's.
+        raise ValueError('An ID is required for connections that ask users for credentials')
+
+    if url_slots and connection.get('type', 'openapi') != 'mcp':
+        raise ValueError('User secrets in the URL are only supported for MCP connections')
+
+    _validate_user_secret_references(connection, properties, url_slots)
+
+
+def validate_user_config_value(slot: str, value) -> str:
+    """Validate one value a user submitted for a declared slot."""
+    if not isinstance(value, (str, int, float, bool)):
+        raise ValueError(f"Invalid value for field '{slot}'")
+
+    value = str(value)
+    if len(value) > MAX_USER_CONFIG_VALUE_LENGTH:
+        raise ValueError(f"Value for field '{slot}' is too long")
+    # Control characters, above all CR/LF, would either split the header or make the
+    # HTTP client raise deep inside the request instead of here.
+    if any(character < ' ' or character == '\x7f' for character in value):
+        raise ValueError(f"Value for field '{slot}' contains control characters")
+
+    return value
 
 
 async def build_tool_server_headers(
@@ -134,11 +358,14 @@ async def build_tool_server_headers(
 ) -> tuple[dict, dict]:
     """Build auth headers and cookies for a tool server connection.
 
-    Handles bearer, session, system_oauth, and oauth_2.1 auth types plus
+    Handles bearer, session, system_oauth, user_key, and oauth_2.1 auth types plus
     custom header interpolation and user-info forwarding.
     Shared by MCP and OpenAPI paths.
 
     Returns (headers, cookies).
+
+    Raises ToolServerUserConfigRequiredError when the connection declares per-user
+    credentials the user has not filled in yet.
     """
     extra_params = extra_params or {}
     metadata = metadata or {}
@@ -147,11 +374,19 @@ async def build_tool_server_headers(
     headers = {}
     cookies = {}
 
+    # Values this user stored for the slots the admin declared on the connection.
+    user_config = get_user_config_from_settings(connection, user)
+    missing_slots = get_missing_user_config_slots(connection, user_config)
+    if missing_slots:
+        raise ToolServerUserConfigRequiredError(get_tool_server_connection_id(connection) or server_id, missing_slots)
+
     if auth_type == 'bearer':
         headers['Authorization'] = f'Bearer {connection.get("key", "")}'
     elif auth_type == 'session':
         cookies = request.cookies if hasattr(request, 'cookies') else {}
         headers['Authorization'] = f'Bearer {request.state.token.credentials}'
+    elif auth_type == USER_KEY_AUTH_TYPE:
+        headers.update(bearer_auth_header(user_config.get(USER_KEY_SLOT, '')))
     elif auth_type == 'system_oauth':
         cookies = request.cookies if hasattr(request, 'cookies') else {}
         oauth_token = extra_params.get('__oauth_token__', None)
@@ -171,9 +406,9 @@ async def build_tool_server_headers(
             log.error(f'Error getting OAuth token: {e}')
 
     # Interpolate template vars in custom connection headers
-    connection_headers = connection.get('headers', None)
-    if connection_headers and isinstance(connection_headers, dict):
-        headers.update(await get_custom_headers(connection_headers, user, metadata))
+    connection_headers = drop_reserved_user_secret_headers(connection.get('headers', None))
+    if connection_headers:
+        headers.update(await get_custom_headers(connection_headers, user, metadata, user_secrets=user_config))
 
     # Add user info headers if enabled
     if ENABLE_FORWARD_USER_INFO_HEADERS and user:
@@ -420,14 +655,9 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                     if isinstance(function_name_filter_list, str):
                         function_name_filter_list = function_name_filter_list.split(',')
 
-                    for spec in specs:
-                        function_name = spec['name']
-                        if function_name_filter_list:
-                            if not is_string_allowed(function_name, function_name_filter_list):
-                                # Skip this function
-                                continue
-
-                        metadata = extra_params.get('__metadata__', {})
+                    # Identical for every spec of this server, so build it once.
+                    metadata = extra_params.get('__metadata__', {})
+                    try:
                         headers, cookies = await build_tool_server_headers(
                             tool_server_connection,
                             request,
@@ -436,7 +666,21 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                             metadata=metadata,
                             extra_params=extra_params,
                         )
-                        headers.setdefault('Content-Type', 'application/json')
+                    except ToolServerUserConfigRequiredError as e:
+                        # Say so instead of letting the tool quietly disappear.
+                        log.info(str(e))
+                        event_emitter = extra_params.get('__event_emitter__')
+                        if event_emitter:
+                            await event_emitter({'type': 'chat:message:error', 'data': {'error': {'content': str(e)}}})
+                        continue
+                    headers.setdefault('Content-Type', 'application/json')
+
+                    for spec in specs:
+                        function_name = spec['name']
+                        if function_name_filter_list:
+                            if not is_string_allowed(function_name, function_name_filter_list):
+                                # Skip this function
+                                continue
 
                         async def make_tool_function(function_name, tool_server_data, headers, cookies):
                             async def tool_function(**kwargs):

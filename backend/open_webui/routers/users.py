@@ -20,6 +20,7 @@ from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
+from open_webui.models.tool_servers import settings_without_user_configs
 from open_webui.models.users import (
     UserGroupIdsListResponse,
     UserGroupIdsModel,
@@ -133,6 +134,7 @@ async def get_users(
             UserGroupIdsModel(
                 **{
                     **user.model_dump(),
+                    'settings': settings_without_user_configs(user.settings),
                     'group_ids': [group.id for group in user_groups.get(user.id, [])],
                 }
             )
@@ -481,13 +483,13 @@ async def get_user_settings_by_session_user(
 
     default_interface_settings = await Config.get('ui.default_interface_settings')
     if not isinstance(default_interface_settings, dict) or not default_interface_settings:
-        return user.settings
+        return settings_without_user_configs(user.settings)
 
     user_settings = user.settings.model_dump() if isinstance(user.settings, UserSettings) else dict(user.settings or {})
     ui_settings = user_settings.get('ui') if isinstance(user_settings.get('ui'), dict) else {}
     user_settings['ui'] = merge_user_ui_settings(default_interface_settings, ui_settings)
 
-    return UserSettings.model_validate(user_settings)
+    return settings_without_user_configs(UserSettings.model_validate(user_settings))
 
 
 ############################
@@ -511,6 +513,10 @@ async def update_user_settings_by_session_user(
         )
 
     updated_user_settings = form_data.model_dump(exclude_unset=True)
+    # Per-user tool server credentials live under this key and are written only
+    # through the endpoints that validate them, so whatever a client sends here is
+    # dropped rather than merged in unchecked.
+    updated_user_settings.pop('tool_servers', None)
     ui_settings = updated_user_settings.get('ui')
     if (
         user.role != 'admin'
@@ -555,7 +561,7 @@ async def update_user_settings_by_session_user(
             actor=user,
             subject_id=user.id,
         )
-        return user.settings
+        return settings_without_user_configs(user.settings)
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1022,7 +1028,12 @@ async def update_user_by_id(
                     subject_type='user',
                     source='admin',
                 )
-            return updated_user
+            return UserModel(
+                **{
+                    **updated_user.model_dump(),
+                    'settings': settings_without_user_configs(updated_user.settings),
+                }
+            )
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

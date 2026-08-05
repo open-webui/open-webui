@@ -25,12 +25,15 @@ from open_webui.models.tools import (
     Tools,
     ToolUserResponse,
 )
+from open_webui.models.tool_servers import ToolServerUserConfigs, get_user_configs_from_settings
 from open_webui.utils.access_control import (
     filter_allowed_access_grants,
     has_access,
+    has_connection_access,
     has_permission,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.valves import decrypt_valves
 from open_webui.utils.plugin import (
     get_tools_cache,
     get_tool_module_from_cache,
@@ -38,7 +41,16 @@ from open_webui.utils.plugin import (
     replace_imports,
     resolve_valves_schema_options,
 )
-from open_webui.utils.tools import get_tool_servers, get_tool_specs
+from open_webui.utils.tools import (
+    find_tool_server_connection,
+    get_tool_server_connection_id,
+    get_tool_server_user_config_schema,
+    get_tool_servers,
+    get_tool_specs,
+    get_user_config_flags,
+    mask_user_config_values,
+    validate_user_config_value,
+)
 from pydantic import BaseModel, HttpUrl
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -102,6 +114,18 @@ async def get_tools(
                 )
             )
 
+    # Credential slots the user has filled in, read from the settings already loaded
+    # with them rather than one query per connection.
+    user_configs = get_user_configs_from_settings(user.settings)
+
+    def user_config_flags(connection: dict) -> dict:
+        """requires_user_config / user_config_set / user_config_required_set, or
+        nothing when the connection asks the user for nothing."""
+        if not get_tool_server_user_config_schema(connection):
+            return {}
+        values = decrypt_valves(user_configs.get(get_tool_server_connection_id(connection)))
+        return get_user_config_flags(connection, values)
+
     # OpenAPI Tool Servers
     server_access_grants = {}
     for server in await get_tool_servers(request):
@@ -130,6 +154,7 @@ async def get_tools(
                     },
                     'updated_at': int(time.time()),
                     'created_at': int(time.time()),
+                    **user_config_flags(connection),
                 }
             )
         )
@@ -173,6 +198,9 @@ async def get_tools(
                             if auth_type in ('oauth_2.1', 'oauth_2.1_static')
                             else {}
                         ),
+                        # Surface connections that still need credentials from this user,
+                        # so the UI can offer to configure them instead of failing later.
+                        **user_config_flags(server),
                     }
                 )
             )
@@ -991,3 +1019,136 @@ async def update_tools_user_valves_by_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
+
+############################
+# ToolServerUserConfig
+#
+# Admin-defined connections may declare credential slots that each user fills in
+# for themselves. The values never leave the user they belong to: password slots
+# are never read back through these endpoints, and a value is only resolved into
+# request headers while that user's own request is being served. At rest they are
+# stored the way tool valves are — encrypted when ENABLE_VALVE_ENCRYPTION is set,
+# and in the database as submitted when it is not, which is the default.
+############################
+
+
+async def get_tool_server_connection_for_user(server_id: str, user) -> dict:
+    connection = find_tool_server_connection(await Config.get('tool_server.connections', []) or [], server_id)
+
+    if not connection:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if not await has_connection_access(user, connection):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    return connection
+
+
+@router.get('/servers/{server_id}/user_config/spec', response_model=dict | None)
+async def get_tool_server_user_config_spec(server_id: str, user=Depends(get_verified_user)):
+    connection = await get_tool_server_connection_for_user(server_id, user)
+    return get_tool_server_user_config_schema(connection)
+
+
+@router.get('/servers/{server_id}/user_config', response_model=dict | None)
+async def get_tool_server_user_config_by_id(server_id: str, user=Depends(get_verified_user)):
+    """Report which slots the user has filled in, without handing the secrets back.
+
+    Slots rendered as passwords are write-only: only ``set`` is reported for them.
+    """
+    connection = await get_tool_server_connection_for_user(server_id, user)
+    schema = get_tool_server_user_config_schema(connection)
+    if not schema:
+        return None
+
+    values = await ToolServerUserConfigs.get_config(get_tool_server_connection_id(connection), user.id)
+    return mask_user_config_values(schema, values)
+
+
+@router.post('/servers/{server_id}/user_config/update', response_model=dict | None)
+async def update_tool_server_user_config_by_id(
+    request: Request, server_id: str, form_data: dict, user=Depends(get_verified_user)
+):
+    """Store the user's own values for the slots the admin declared.
+
+    An omitted or empty slot keeps the stored value, so the UI never has to send a
+    secret back to keep it; an explicit ``null`` clears that one slot. Fields the
+    connection does not declare are ignored.
+    """
+    connection = await get_tool_server_connection_for_user(server_id, user)
+    schema = get_tool_server_user_config_schema(connection)
+    if not schema:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    connection_id = get_tool_server_connection_id(connection)
+    values = await ToolServerUserConfigs.get_config(connection_id, user.id)
+
+    updated = {}
+    cleared = set()
+    for slot in schema.get('properties', {}):
+        if slot in form_data and form_data[slot] is None:
+            cleared.add(slot)
+            continue
+
+        value = form_data.get(slot)
+        if value is not None and value != '':
+            try:
+                updated[slot] = validate_user_config_value(slot, value)
+            except ValueError as e:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        elif values.get(slot):
+            updated[slot] = values[slot]  # left blank: keep what is stored
+
+    # Saving a form that leaves a required field empty would otherwise report success
+    # and still leave the connection unusable.
+    missing = [slot for slot in schema.get('required', []) if not updated.get(slot) and slot not in cleared]
+    if missing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(f'Missing required fields: {", ".join(missing)}'),
+        )
+
+    if await ToolServerUserConfigs.update_config(connection_id, user.id, updated) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('Error updating tool server user config'),
+        )
+
+    await publish_event(
+        request,
+        EVENTS.TOOL_SERVER_USER_CONFIG_UPDATED,
+        actor=user,
+        subject_id=connection_id,
+        subject_type='tool_server',
+        data={'fields': sorted(updated.keys())},
+    )
+
+    return {slot: {'set': True} for slot in updated}
+
+
+@router.delete('/servers/{server_id}/user_config', response_model=bool)
+async def delete_tool_server_user_config_by_id(request: Request, server_id: str, user=Depends(get_verified_user)):
+    connection = await get_tool_server_connection_for_user(server_id, user)
+    connection_id = get_tool_server_connection_id(connection)
+
+    result = await ToolServerUserConfigs.delete_config(connection_id, user.id)
+    if result:
+        await publish_event(
+            request,
+            EVENTS.TOOL_SERVER_USER_CONFIG_UPDATED,
+            actor=user,
+            subject_id=connection_id,
+            subject_type='tool_server',
+            data={'fields': []},
+        )
+    return result

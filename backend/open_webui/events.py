@@ -516,6 +516,11 @@ class EventDefinitions(BaseModel):
     TOOL_VALVES_UPDATED: EventDefinition = EventDefinition(
         name='tool.valves_updated', description='Tool valves were updated.', message='Tool valves updated'
     )
+    TOOL_SERVER_USER_CONFIG_UPDATED: EventDefinition = EventDefinition(
+        name='tool_server.user_config_updated',
+        description='A user updated their credentials for a tool server.',
+        message='Tool server user config updated',
+    )
     SKILL_CREATED: EventDefinition = EventDefinition(
         name='skill.created', description='A skill was created.', message='Skill created'
     )

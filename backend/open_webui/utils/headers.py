@@ -1,10 +1,13 @@
 import logging
+import re
 import time
 from typing import Any, Optional
 from urllib.parse import quote
 
 import jwt
 from open_webui.env import (
+    FORWARD_SESSION_INFO_HEADER_CHAT_ID,
+    FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
     FORWARD_USER_INFO_HEADER_JWT,
     FORWARD_USER_INFO_HEADER_JWT_EXPIRES_SECONDS,
     FORWARD_USER_INFO_HEADER_JWT_SECRET,
@@ -18,6 +21,36 @@ from open_webui.models.groups import Groups
 log = logging.getLogger(__name__)
 
 USER_GROUPS_PLACEHOLDERS = ('{{USER_GROUPS}}', '{{USER_GROUP_IDS}}')
+
+# {{USER_SECRET:<slot>}} resolves to a value the user stored for the connection,
+# never to anything the admin or another user provided.
+USER_SECRET_PLACEHOLDER_PATTERN = re.compile(r'\{\{USER_SECRET:([A-Za-z0-9_\-]{1,64})\}\}')
+
+HOP_BY_HOP_HEADERS = ('host', 'content-length', 'connection', 'transfer-encoding', 'te', 'trailer', 'upgrade')
+
+
+def get_reserved_header_names() -> frozenset[str]:
+    """Header names that a per-user secret must never be able to set.
+
+    Hop-by-hop headers plus the headers Open WebUI itself uses to tell the tool
+    server who the caller is — taken from the configured names, since those are
+    deployment specific.
+    """
+    return frozenset(
+        name.strip().lower()
+        for name in (
+            *HOP_BY_HOP_HEADERS,
+            'cookie',
+            FORWARD_USER_INFO_HEADER_USER_NAME,
+            FORWARD_USER_INFO_HEADER_USER_ID,
+            FORWARD_USER_INFO_HEADER_USER_EMAIL,
+            FORWARD_USER_INFO_HEADER_USER_ROLE,
+            FORWARD_USER_INFO_HEADER_JWT,
+            FORWARD_SESSION_INFO_HEADER_CHAT_ID,
+            FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
+        )
+        if name
+    )
 
 
 def normalize_bearer_token(token: Any) -> str:
@@ -97,13 +130,67 @@ async def get_user_groups_for_custom_headers(
         return None
 
 
-async def get_custom_headers(custom_headers: dict, user=None, metadata: dict = None, request=None) -> dict:
+def get_user_secret_slots(value: Any) -> set[str]:
+    """Collect the ``{{USER_SECRET:<slot>}}`` slot names referenced by a template."""
+    if value is None:
+        return set()
+    return {match.group(1) for match in USER_SECRET_PLACEHOLDER_PATTERN.finditer(str(value))}
+
+
+def _resolve_user_secrets(value: str, user_secrets: dict, quote_value: bool = False) -> tuple[str, bool]:
+    """Substitute ``{{USER_SECRET:<slot>}}`` in a template.
+
+    Runs in a single pass, so a secret that happens to contain a placeholder is
+    never expanded again. Returns the resolved value and whether every referenced
+    slot actually had a value.
+    """
+    resolved = True
+
+    def replace(match) -> str:
+        nonlocal resolved
+        slot_value = user_secrets.get(match.group(1))
+        if slot_value is None or slot_value == '':
+            resolved = False
+            return ''
+        slot_value = str(slot_value)
+        return quote(slot_value, safe='') if quote_value else slot_value
+
+    return USER_SECRET_PLACEHOLDER_PATTERN.sub(replace, value), resolved
+
+
+def interpolate_user_secrets_in_url(url: str, user_secrets: dict | None) -> str:
+    """Resolve user secrets used in a connection URL, percent-encoding the values."""
+    if not url or '{{USER_SECRET:' not in url:
+        return url
+    resolved_url, _ = _resolve_user_secrets(url, user_secrets or {}, quote_value=True)
+    return resolved_url
+
+
+async def get_custom_headers(
+    custom_headers: dict,
+    user=None,
+    metadata: dict = None,
+    request=None,
+    user_secrets: dict | None = None,
+) -> dict:
     user_groups = await get_user_groups_for_custom_headers(custom_headers, user)
-    return parse_custom_headers(custom_headers, user, metadata, request=request, user_groups=user_groups)
+    return parse_custom_headers(
+        custom_headers,
+        user,
+        metadata,
+        request=request,
+        user_groups=user_groups,
+        user_secrets=user_secrets,
+    )
 
 
 def parse_custom_headers(
-    custom_headers: dict, user=None, metadata: dict = None, request=None, user_groups: Optional[list] = None
+    custom_headers: dict,
+    user=None,
+    metadata: dict = None,
+    request=None,
+    user_groups: Optional[list] = None,
+    user_secrets: dict | None = None,
 ) -> dict:
     if not custom_headers or not isinstance(custom_headers, dict):
         return {}
@@ -143,12 +230,24 @@ def parse_custom_headers(
         '{{USER_AGENT}}': user_agent,
     }
 
+    user_secrets = user_secrets or {}
+
     parsed_headers = {}
     for key, value in custom_headers.items():
         if not isinstance(value, str):
             value = str(value)
         for token, val in template_vars.items():
             value = value.replace(token, val)
+
+        # Secrets are resolved last so that a secret value that happens to contain a
+        # placeholder is never expanded again.
+        value, resolved = _resolve_user_secrets(value, user_secrets)
+        if not resolved:
+            # Sending 'Authorization: Bearer ' with the value missing tells the server
+            # nothing useful and reads as a malformed credential; drop the header instead.
+            log.debug('Dropping header %s: it references a user secret that is not set', key)
+            continue
+
         parsed_headers[key] = value
 
     return parsed_headers

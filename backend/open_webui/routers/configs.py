@@ -31,6 +31,7 @@ from open_webui.utils.tools import (
     get_tool_server_url,
     set_terminal_servers,
     set_tool_servers,
+    validate_tool_server_user_config,
 )
 from pydantic import BaseModel, ConfigDict
 
@@ -241,6 +242,12 @@ async def set_tool_servers_config(
     form_data: ToolServersConfigForm,
     user=Depends(get_admin_user),
 ):
+    for connection in form_data.TOOL_SERVER_CONNECTIONS:
+        try:
+            validate_tool_server_user_config(connection.model_dump())
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
     existing_connections = await Config.get('tool_server.connections', []) or []
     for connection in existing_connections:
         server_type = connection.get('type', 'openapi')

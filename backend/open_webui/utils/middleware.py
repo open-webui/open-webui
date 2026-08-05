@@ -97,6 +97,7 @@ from open_webui.utils.filter import (
     get_filter_functions,
     process_filter_functions,
 )
+from open_webui.utils.headers import interpolate_user_secrets_in_url
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.memory import add_memory_context, review_memory_after_turn
@@ -130,12 +131,14 @@ from open_webui.utils.task import (
     tools_function_calling_generation_template,
 )
 from open_webui.utils.tools import (
+    ToolServerUserConfigRequiredError,
     build_tool_server_headers,
     get_attached_knowledge,
     get_builtin_tools,
     get_terminal_tools,
     get_tools,
     get_updated_tool_function,
+    get_user_config_from_settings,
 )
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
@@ -2338,9 +2341,17 @@ async def connect_mcp_server(
         extra_params=extra_params,
     )
 
+    # Some servers take the credential in the path rather than in a header, e.g.
+    # https://mcp.example.com/{{USER_SECRET:api_key}}. MCP connections are resolved
+    # per request, so the URL can be per user as well.
+    url = interpolate_user_secrets_in_url(
+        mcp_server_connection.get('url', ''),
+        get_user_config_from_settings(mcp_server_connection, user),
+    )
+
     client = MCPClient()
     await client.connect(
-        url=mcp_server_connection.get('url', ''),
+        url=url,
         headers=headers if headers else None,
     )
 
@@ -2889,6 +2900,17 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 'client': client,
                                 'direct': False,
                             }
+                    except ToolServerUserConfigRequiredError as e:
+                        # Not a failure: the user has simply not filled in their credentials yet.
+                        log.info(str(e))
+                        if event_emitter:
+                            await event_emitter(
+                                {
+                                    'type': 'chat:message:error',
+                                    'data': {'error': {'content': str(e)}},
+                                }
+                            )
+                        continue
                     except Exception as e:
                         log.debug(e)
                         if event_emitter:
