@@ -2586,14 +2586,44 @@
 			const message = error?.detail ?? error?.message ?? $i18n.t('Context compaction failed');
 			toast.error(message, { id: toastId });
 		} finally {
-			messageInput?.setText('');
-			prompt = '';
 			document.getElementById('chat-input')?.focus();
 		}
 	};
 
 	const handleStatusCommand = () => {
 		messageInput?.showStatus();
+		document.getElementById('chat-input')?.focus();
+	};
+
+	const handleModelCommand = (modelId = '') => {
+		if (!modelId) {
+			const currentModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
+				Boolean
+			);
+			toast.message(
+				currentModels.length
+					? `Current model: ${currentModels.join(', ')}`
+					: $i18n.t('Model not selected')
+			);
+			messageInput?.setText('');
+			prompt = '';
+			document.getElementById('chat-input')?.focus();
+			return;
+		}
+
+		const model = $models.find((model) => model.id === modelId);
+		if (!model) {
+			toast.error(`Model not found: ${modelId}`);
+			messageInput?.setText('');
+			prompt = '';
+			document.getElementById('chat-input')?.focus();
+			return;
+		}
+
+		atSelectedModel = undefined;
+		selectedModels = [model.id];
+		saveSessionSelectedModels();
+		toast.success(`Model switched to: ${model.id}`);
 		messageInput?.setText('');
 		prompt = '';
 		document.getElementById('chat-input')?.focus();
@@ -2640,10 +2670,13 @@
 		} catch (error) {
 			toast.error(`${error}`, { id: toastId });
 		} finally {
-			messageInput?.setText('');
-			prompt = '';
 			document.getElementById('chat-input')?.focus();
 		}
+	};
+
+	const clearCommandInput = () => {
+		messageInput?.setText('');
+		prompt = '';
 	};
 
 	const submitHandler = async (userPrompt, { _raw = false } = {}) => {
@@ -2658,15 +2691,25 @@
 		}
 
 		if (String(userPrompt).trim() === '/compact') {
+			clearCommandInput();
 			await handleManualCompact();
 			return;
 		}
 		if (String(userPrompt).trim() === '/status') {
+			clearCommandInput();
 			handleStatusCommand();
 			return;
 		}
 		if (String(userPrompt).trim() === '/fork') {
+			clearCommandInput();
 			await handleForkChat();
+			return;
+		}
+		const modelCommandMatch = String(userPrompt)
+			.trim()
+			.match(/^\/model(?:\s+([\s\S]+))?$/);
+		if (modelCommandMatch) {
+			handleModelCommand(modelCommandMatch[1]?.trim() ?? '');
 			return;
 		}
 

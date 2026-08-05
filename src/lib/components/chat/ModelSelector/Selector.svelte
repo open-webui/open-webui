@@ -19,6 +19,7 @@
 	import {
 		user,
 		MODEL_DOWNLOAD_POOL,
+		mobile,
 		models,
 		temporaryChatEnabled,
 		settings,
@@ -173,6 +174,17 @@
 		schedulePositionUpdate();
 	};
 
+	const focusSearchInput = () => {
+		if (!$mobile) {
+			document.getElementById('model-search-input')?.focus();
+		}
+	};
+	const focusChatInput = () => {
+		if (!$mobile) {
+			document.getElementById('chat-input')?.focus();
+		}
+	};
+
 	const toggleOpen = async () => {
 		show = !show;
 		if (show) {
@@ -182,9 +194,17 @@
 			updatePosition();
 			await tick();
 			updatePosition();
-			window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
+			for (const delay of [0, 50, 150]) {
+				window.setTimeout(focusSearchInput, delay);
+			}
 		} else {
 			document.getElementById(`model-selector-${id}-button`)?.blur();
+		}
+	};
+
+	export const open = async () => {
+		if (!show) {
+			await toggleOpen();
 		}
 	};
 
@@ -416,11 +436,13 @@
 			values = [item.value];
 			value = item.value;
 			show = false;
+			window.setTimeout(focusChatInput, 0);
 			return;
 		}
 
 		value = item.value;
 		show = false;
+		window.setTimeout(focusChatInput, 0);
 	};
 
 	const setDefaultHandler = async () => {
