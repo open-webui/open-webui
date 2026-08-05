@@ -2,7 +2,6 @@ name: Bug Report
 description: Create a detailed bug report to help us improve Open WebUI.
 title: 'issue: '
 labels: ['bug', 'triage']
-assignees: []
 body:
   - type: markdown
     attributes:
