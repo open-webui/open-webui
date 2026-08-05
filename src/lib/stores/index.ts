@@ -335,6 +335,7 @@ type Config = {
 		enable_version_update_check: boolean;
 		enable_pyodide_file_persistence?: boolean;
 		folder_max_file_count?: number;
+		websocket_heartbeat_interval?: number;
 	};
 	oauth: {
 		providers: {

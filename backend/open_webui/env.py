@@ -499,6 +499,13 @@ try:
 except ValueError:
     WEBSOCKET_SERVER_PING_INTERVAL = 25
 
+# Seconds between client heartbeats, capped so last_active_at stays inside the 3 minute active window.
+WEBSOCKET_HEARTBEAT_INTERVAL = os.getenv('WEBSOCKET_HEARTBEAT_INTERVAL', '30')
+try:
+    WEBSOCKET_HEARTBEAT_INTERVAL = min(max(int(WEBSOCKET_HEARTBEAT_INTERVAL), 5), 90)
+except ValueError:
+    WEBSOCKET_HEARTBEAT_INTERVAL = 30
+
 WEBSOCKET_EVENT_CALLER_TIMEOUT = os.getenv('WEBSOCKET_EVENT_CALLER_TIMEOUT', '')
 
 if WEBSOCKET_EVENT_CALLER_TIMEOUT == '':
