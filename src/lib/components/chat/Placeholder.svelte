@@ -56,6 +56,7 @@
 	export let webSearchEnabled = false;
 
 	export let onUpload: Function = (e) => {};
+	export let onUpdate: (data?: { file?: any }) => void = () => {};
 	export let onSelect = (e) => {};
 	export let onChange = (e) => {};
 	export let onWebSearchToggle: Function = () => {};
@@ -243,6 +244,7 @@
 						placeholder={$i18n.t('How can I help you today?')}
 						{onChange}
 						{onUpload}
+						{onUpdate}
 						{messageQueue}
 						{onQueueSendNow}
 						{onQueueEdit}

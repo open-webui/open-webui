@@ -168,6 +168,7 @@
 	export let onQueueSendNow: (id: string) => void = () => {};
 	export let onQueueEdit: (id: string) => void = () => {};
 	export let onQueueDelete: (id: string) => void = () => {};
+	export let onUpdate: (data?: { file?: any }) => void = () => {};
 
 	export let chatTasks = [];
 
@@ -890,7 +891,7 @@
 				toast.error(`${e}`);
 				files = files.filter((item) => item?.itemId !== tempItemId);
 			} finally {
-				onUpload({ type: 'file' });
+				onUpdate({ file: fileItem });
 			}
 		} else {
 			// If temporary chat is enabled, we just add the file to the list without uploading it.
@@ -907,7 +908,7 @@
 				fileItem.error = $i18n.t('Failed to extract content from the file.');
 				toast.error($i18n.t('Failed to extract content from the file.'));
 				files = files.filter((item) => item?.itemId !== tempItemId);
-				onUpload({ type: 'file' });
+				onUpdate({ file: fileItem });
 				return null;
 			} else {
 				console.log('Extracted content from file:', {
@@ -922,7 +923,7 @@
 				fileItem.id = uuidv4(); // Temporary ID for the file
 
 				files = files;
-				onUpload({ type: 'file' });
+				onUpdate({ file: fileItem });
 			}
 		}
 	};

@@ -1531,8 +1531,6 @@
 					error: e.message || 'Unknown error'
 				})
 			);
-		} finally {
-			await processNextInQueue($chatId);
 		}
 	};
 
@@ -1583,6 +1581,22 @@
 				toast.error(`${e}`);
 			}
 		}
+	};
+
+	const onUpdate = async ({ file }: { file?: any } = {}) => {
+		if (file?.itemId) {
+			chatRequestQueues.update((q) => ({
+				...q,
+				[$chatId]: (q[$chatId] ?? []).map((message) =>
+					(message.files ?? []).some((item) => item.itemId === file.itemId)
+						? {
+								...message,
+								files: message.files.map((item) => (item.itemId === file.itemId ? file : item))
+							}
+						: message
+				)
+			}));
+		}
 
 		await processNextInQueue($chatId);
 	};
@@ -1594,8 +1608,6 @@
 			await uploadGoogleDriveFile(data);
 		} else if (type === 'web') {
 			await uploadWeb(data);
-		} else if (type === 'file') {
-			await processNextInQueue($chatId);
 		}
 	};
 
@@ -3339,6 +3351,15 @@
 				// while the request was in flight (prevents overwriting $chatId
 				// and causing spurious toast notifications / state duplication).
 				if (res.chat_id && $chatId !== res.chat_id && $chatId === _chatId) {
+					chatRequestQueues.update((q) => {
+						if (!q[_chatId]?.length) return q;
+
+						const { [_chatId]: pendingQueue, ...rest } = q;
+						return {
+							...rest,
+							[res.chat_id]: [...pendingQueue, ...(rest[res.chat_id] ?? [])]
+						};
+					});
 					await chatId.set(res.chat_id);
 					if (!$temporaryChatEnabled && !embedded) {
 						window.history.replaceState(history.state, '', `/c/${res.chat_id}`);
@@ -4089,6 +4110,7 @@
 										{stopResponse}
 										{createMessagePair}
 										{onUpload}
+										{onUpdate}
 										messageQueue={$chatRequestQueues[$chatId] ?? []}
 										{chatTasks}
 										onQueueSendNow={sendQueuedMessageNow}
@@ -4176,6 +4198,7 @@
 										{stopResponse}
 										{createMessagePair}
 										{onUpload}
+										{onUpdate}
 										messageQueue={$chatRequestQueues[$chatId] ?? []}
 										{chatTasks}
 										onQueueSendNow={sendQueuedMessageNow}
@@ -4219,6 +4242,7 @@
 									{createMessagePair}
 									{onSelect}
 									{onUpload}
+									{onUpdate}
 									messageQueue={$chatRequestQueues[$chatId] ?? []}
 									onQueueSendNow={sendQueuedMessageNow}
 									onQueueEdit={editQueuedMessage}
