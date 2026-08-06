@@ -12,7 +12,11 @@
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
+	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
+	import DefaultFeatures from '$lib/components/workspace/Models/DefaultFeatures.svelte';
 	import { getFolderById } from '$lib/apis/folders';
+	import { getTools } from '$lib/apis/tools';
+	import { tools } from '$lib/stores';
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -29,8 +33,25 @@
 	};
 	let data = {
 		system_prompt: '',
-		files: []
+		files: [],
+		tool_ids: [],
+		feature_ids: []
 	};
+	$: configFeatures = ($config?.features ?? {}) as Record<string, any>;
+	$: availableDefaultFeatures = [
+		configFeatures.enable_web_search &&
+		($user?.role === 'admin' || $user?.permissions?.features?.web_search)
+			? 'web_search'
+			: null,
+		configFeatures.enable_image_generation &&
+		($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
+			? 'image_generation'
+			: null,
+		configFeatures.enable_code_interpreter &&
+		($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
+			? 'code_interpreter'
+			: null
+	].filter((feature): feature is string => Boolean(feature));
 
 	let loading = false;
 
@@ -64,6 +85,10 @@
 	};
 
 	const init = async () => {
+		if ($tools === null) {
+			await tools.set((await getTools(localStorage.token).catch(() => null)) ?? []);
+		}
+
 		if (folderId) {
 			folder = await getFolderById(localStorage.token, folderId).catch((error) => {
 				toast.error(`${error}`);
@@ -74,9 +99,12 @@
 			meta = folder.meta || {
 				background_image_url: null
 			};
-			data = folder.data || {
+			data = {
 				system_prompt: '',
-				files: []
+				files: [],
+				tool_ids: [],
+				feature_ids: [],
+				...(folder.data || {})
 			};
 		}
 
@@ -103,7 +131,9 @@
 		};
 		data = {
 			system_prompt: '',
-			files: []
+			files: [],
+			tool_ids: [],
+			feature_ids: []
 		};
 	}
 </script>
@@ -239,6 +269,19 @@
 							</div>
 						</Knowledge>
 					</div>
+
+					<div class="my-2">
+						<ToolsSelector bind:selectedToolIds={data.tool_ids} tools={$tools ?? []} />
+					</div>
+
+					{#if availableDefaultFeatures.length > 0}
+						<div class="my-2">
+							<DefaultFeatures
+								availableFeatures={availableDefaultFeatures}
+								bind:featureIds={data.feature_ids}
+							/>
+						</div>
+					{/if}
 
 					<div class="flex justify-end pt-3 text-sm font-normal gap-1.5">
 						<button

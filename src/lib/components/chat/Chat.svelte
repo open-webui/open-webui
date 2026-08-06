@@ -313,6 +313,67 @@
 	let selectedFilterIds = [];
 	let pendingOAuthTools = [];
 
+	const applyDefaultToolIds = async (toolIds = []) => {
+		const defaultIds = [
+			...new Set([...(toolIds ?? [])].filter((id) => ($tools ?? []).find((tool) => tool.id === id)))
+		];
+
+		const unauthed = [];
+		const authed = [];
+		for (const id of defaultIds) {
+			const tool = ($tools ?? []).find((tool) => tool.id === id);
+			if (tool && tool.authenticated === false) {
+				const parts = id.split(':');
+				const serverId = parts.at(-1) ?? id;
+				const authType = parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null;
+				unauthed.push({ id, name: tool.name ?? id, serverId, authType });
+			} else {
+				authed.push(id);
+			}
+		}
+
+		selectedToolIds = authed;
+		pendingOAuthTools = unauthed;
+		await continueOAuthRedirect();
+	};
+
+	const allSelectedModelsSupport = (capability: string) => {
+		const modelIds = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(Boolean);
+		return (
+			modelIds.length > 0 &&
+			modelIds.every((modelId) => {
+				const model = $models.find((model) => model.id === modelId);
+				return model?.info?.meta?.capabilities?.[capability] ?? false;
+			})
+		);
+	};
+
+	const applyDefaultFeatureIds = (featureIds = []) => {
+		if (
+			allSelectedModelsSupport('image_generation') &&
+			$config?.features?.enable_image_generation &&
+			($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
+		) {
+			imageGenerationEnabled = featureIds.includes('image_generation');
+		}
+
+		if (
+			allSelectedModelsSupport('web_search') &&
+			$config?.features?.enable_web_search &&
+			($user?.role === 'admin' || $user?.permissions?.features?.web_search)
+		) {
+			webSearchEnabled = featureIds.includes('web_search');
+		}
+
+		if (
+			allSelectedModelsSupport('code_interpreter') &&
+			$config?.features?.enable_code_interpreter &&
+			($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
+		) {
+			codeInterpreterEnabled = featureIds.includes('code_interpreter');
+		}
+	};
+
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
@@ -752,6 +813,18 @@
 			if (!$skills) {
 				skills.set(await getSkills(localStorage.token));
 			}
+
+			const folderToolIds = $selectedFolder?.data?.tool_ids ?? [];
+			const folderFeatureIds = $selectedFolder?.data?.feature_ids ?? [];
+
+			if (folderToolIds.length > 0) {
+				await applyDefaultToolIds(folderToolIds);
+			}
+
+			if (folderFeatureIds.length > 0) {
+				applyDefaultFeatureIds(folderFeatureIds);
+			}
+
 			if (selectedModels.length !== 1 && !atSelectedModel) {
 				return;
 			}
@@ -759,33 +832,8 @@
 			const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
 			if (model) {
 				// Set Default Tools
-				if (model?.info?.meta?.toolIds) {
-					const defaultIds = [
-						...new Set(
-							[...(model?.info?.meta?.toolIds ?? [])].filter((id) =>
-								$tools.find((t) => t.id === id)
-							)
-						)
-					];
-
-					// Separate unauthenticated OAuth tools
-					const unauthed = [];
-					const authed = [];
-					for (const id of defaultIds) {
-						const tool = $tools.find((t) => t.id === id);
-						if (tool && tool.authenticated === false) {
-							const parts = id.split(':');
-							const serverId = parts.at(-1) ?? id;
-							const authType =
-								parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null;
-							unauthed.push({ id, name: tool.name ?? id, serverId, authType });
-						} else {
-							authed.push(id);
-						}
-					}
-					selectedToolIds = authed;
-					pendingOAuthTools = unauthed;
-					await continueOAuthRedirect();
+				if (folderToolIds.length === 0 && model?.info?.meta?.toolIds) {
+					await applyDefaultToolIds(model.info.meta.toolIds);
 				} else if ($settings?.tools) {
 					selectedToolIds = $settings.tools;
 				} else {
@@ -813,30 +861,10 @@
 				}
 
 				// Set Default Features
-				if (model?.info?.meta?.defaultFeatureIds) {
-					if (
-						model.info?.meta?.capabilities?.['image_generation'] &&
-						$config?.features?.enable_image_generation &&
-						($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
-					) {
-						imageGenerationEnabled = model.info.meta.defaultFeatureIds.includes('image_generation');
-					}
-
-					if (
-						model.info?.meta?.capabilities?.['web_search'] &&
-						$config?.features?.enable_web_search &&
-						($user?.role === 'admin' || $user?.permissions?.features?.web_search)
-					) {
-						webSearchEnabled = model.info.meta.defaultFeatureIds.includes('web_search');
-					}
-
-					if (
-						model.info?.meta?.capabilities?.['code_interpreter'] &&
-						$config?.features?.enable_code_interpreter &&
-						($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
-					) {
-						codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
-					}
+				const defaultFeatureIds =
+					folderFeatureIds.length === 0 ? (model?.info?.meta?.defaultFeatureIds ?? []) : [];
+				if (defaultFeatureIds.length > 0) {
+					applyDefaultFeatureIds(defaultFeatureIds);
 				}
 
 				// Set Default Terminal — only if the referenced terminal actually exists
