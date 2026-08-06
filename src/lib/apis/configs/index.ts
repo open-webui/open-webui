@@ -1,7 +1,7 @@
 import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 import type { Banner } from '$lib/types';
 
-export const importConfig = async (token: string, config) => {
+export const importConfig = async (token: string, config: object) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/import`, {
@@ -275,7 +275,8 @@ export const putOrchestratorPolicy = async (
 	url: string,
 	key: string,
 	policyId: string,
-	policyData: object
+	policyData: object,
+	authType: string = 'bearer'
 ): Promise<object | null> => {
 	let error = null;
 
@@ -288,8 +289,150 @@ export const putOrchestratorPolicy = async (
 		body: JSON.stringify({
 			url: url.replace(/\/$/, ''),
 			key,
+			auth_type: authType,
 			policy_id: policyId,
 			policy_data: policyData
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getOrchestratorPolicy = async (
+	token: string,
+	url: string,
+	key: string,
+	policyId: string,
+	authType: string = 'bearer'
+): Promise<any> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers/policy`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			url: url.replace(/\/$/, ''),
+			key,
+			auth_type: authType,
+			policy_id: policyId
+		})
+	});
+	if (!res.ok) {
+		const body = await res.json();
+		throw Object.assign(new Error(body.detail || 'Failed to read policy'), { status: res.status });
+	}
+	return res.json();
+};
+
+export const putOrchestratorLifecycle = async (
+	token: string,
+	url: string,
+	key: string,
+	policyId: string,
+	lifecycleData: object,
+	authType: string = 'bearer'
+): Promise<object | null> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers/lifecycle`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			url: url.replace(/\/$/, ''),
+			key,
+			auth_type: authType,
+			policy_id: policyId,
+			lifecycle_data: lifecycleData
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getOrchestratorLifecycle = async (
+	token: string,
+	url: string,
+	key: string,
+	policyId: string,
+	authType: string = 'bearer'
+): Promise<any> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers/lifecycle`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			url: url.replace(/\/$/, ''),
+			key,
+			auth_type: authType,
+			policy_id: policyId
+		})
+	});
+	if (!res.ok) {
+		const body = await res.json();
+		throw Object.assign(new Error(body.detail || 'Failed to read lifecycle'), {
+			status: res.status
+		});
+	}
+	return res.json();
+};
+
+export const refreshOrchestratorTerminals = async (
+	token: string,
+	url: string,
+	key: string,
+	body: {
+		user_id?: string;
+		policy_id?: string;
+		only_idle?: boolean;
+		reset?: boolean;
+	},
+	authType: string = 'bearer'
+): Promise<object | null> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers/refresh`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			url: url.replace(/\/$/, ''),
+			key,
+			auth_type: authType,
+			...body
 		})
 	})
 		.then(async (res) => {
@@ -378,6 +521,8 @@ type RegisterOAuthClientForm = {
 	client_id: string;
 	client_name?: string;
 	client_secret?: string;
+	oauth_server_url?: string;
+	oauth_scope?: string;
 };
 
 export const registerOAuthClient = async (
@@ -418,6 +563,17 @@ export const registerOAuthClient = async (
 export const getOAuthClientAuthorizationUrl = (clientId: string, type: null | string = null) => {
 	const oauthClientId = type ? `${type}:${clientId}` : clientId;
 	return `${WEBUI_BASE_URL}/oauth/clients/${oauthClientId}/authorize`;
+};
+
+export const initiateOAuthRedirect = (tool: {
+	id: string;
+	serverId: string;
+	authType?: string | null;
+}) => {
+	sessionStorage.setItem('pendingOAuthToolId', tool.id);
+	sessionStorage.setItem('oauthRedirectInProgressToolId', tool.id);
+	const authUrl = getOAuthClientAuthorizationUrl(tool.serverId, tool.authType ?? 'mcp');
+	window.open(authUrl, '_self', 'noopener');
 };
 
 export const getCodeExecutionConfig = async (token: string) => {
@@ -559,6 +715,31 @@ export const setModelsConfig = async (token: string, config: object) => {
 	}
 
 	return res;
+};
+
+export const getSubagentsConfig = async (token: string) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/subagents`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const setSubagentsConfig = async (token: string, config: object) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/subagents`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(config)
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
 };
 
 export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) => {

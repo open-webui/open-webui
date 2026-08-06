@@ -1,30 +1,29 @@
-import time
 import logging
+import time
 from typing import Optional
 from uuid import uuid4
-
-from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import (
-    Column,
-    Text,
-    JSON,
-    Boolean,
-    BigInteger,
-    Index,
-    UniqueConstraint,
-    select,
-    or_,
-    exists,
-    func,
-    delete,
-    update,
-)
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    Column,
+    Index,
+    Text,
+    UniqueConstraint,
+    delete,
+    exists,
+    func,
+    or_,
+    select,
+    update,
+)
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -242,11 +241,11 @@ class CalendarTable:
         access_grants: Optional[list[AccessGrantModel]] = None,
         db: Optional[AsyncSession] = None,
     ) -> CalendarModel:
-        cal_data = CalendarModel.model_validate(cal).model_dump(exclude={'access_grants'})
-        cal_data['access_grants'] = (
-            access_grants if access_grants is not None else await self._get_access_grants(cal_data['id'], db=db)
+        calendar_model = CalendarModel.model_validate(cal)
+        calendar_model.access_grants = (
+            access_grants if access_grants is not None else await self._get_access_grants(calendar_model.id, db=db)
         )
-        return CalendarModel.model_validate(cal_data)
+        return calendar_model
 
     async def get_or_create_defaults(self, user_id: str, db: Optional[AsyncSession] = None) -> list[CalendarModel]:
         """Return user's calendars, creating 'Personal' default if none exist."""
@@ -395,14 +394,16 @@ class CalendarTable:
                 # Delete events
                 await db.execute(delete(CalendarEvent).filter(CalendarEvent.calendar_id == id))
 
-                # Delete access grants
-                await AccessGrants.revoke_all_access('calendar', id, db=db)
-
                 # Delete calendar
                 await db.execute(delete(Calendar).filter(Calendar.id == id))
                 await db.commit()
-                return True
-        except Exception:
+
+            # Revoke access grants in a separate transaction to avoid
+            # write-lock contention on SQLite when session sharing is off.
+            await AccessGrants.revoke_all_access('calendar', id)
+            return True
+        except Exception as e:
+            log.exception(f'Failed to delete calendar {id}: {e}')
             return False
 
 
@@ -499,9 +500,12 @@ class CalendarEventTable:
                 # Filter to requested calendars only
                 accessible_cal_ids = [c for c in accessible_cal_ids if c in calendar_ids]
 
-            # Also get event IDs where user is an attendee
+            # Also get event IDs where the user is an attendee, excluding invites they declined
             attendee_event_ids_result = await db.execute(
-                select(CalendarEventAttendee.event_id).filter(CalendarEventAttendee.user_id == user_id)
+                select(CalendarEventAttendee.event_id).filter(
+                    CalendarEventAttendee.user_id == user_id,
+                    CalendarEventAttendee.status != 'declined',
+                )
             )
             attendee_event_ids = [r[0] for r in attendee_event_ids_result.all()]
 
@@ -694,12 +698,19 @@ class CalendarEventTable:
         self,
         now_ns: int,
         default_lookahead_ns: int,
+        grace_ns: int = 0,
         db: Optional[AsyncSession] = None,
     ) -> list[tuple[CalendarEventModel, Optional[str]]]:
         """Events starting between now and now + lookahead, for alert processing.
 
         Per-event lookahead is read from meta.alert_minutes (falls back to
         default_lookahead_ns).  Returns (event, user_timezone) pairs.
+
+        *grace_ns* widens the SQL lower bound so that events whose start_at
+        is up to *grace_ns* nanoseconds in the past are still fetched.  This
+        ensures "At time of event" alerts (alert_minutes=0) are not missed
+        when the scheduler polls a few seconds after the event's exact start
+        time.
         """
         from open_webui.models.users import User as UserRow
 
@@ -714,7 +725,7 @@ class CalendarEventTable:
                 .outerjoin(UserRow, UserRow.id == CalendarEvent.user_id)
                 .filter(
                     CalendarEvent.is_cancelled == False,
-                    CalendarEvent.start_at >= now_ns,
+                    CalendarEvent.start_at >= now_ns - grace_ns,
                     CalendarEvent.start_at <= upper,
                 )
             )
@@ -756,22 +767,32 @@ class CalendarEventAttendeeTable:
     async def set_attendees(
         self, event_id: str, attendees: list[dict], db: Optional[AsyncSession] = None
     ) -> list[CalendarEventAttendeeModel]:
-        """Replace all attendees for an event.
+        """Replace all attendees for an event ({user_id, meta?} per dict).
 
-        Each dict in attendees: {user_id: str, status?: str, meta?: dict}
+        RSVP status is the attendee's alone to set (via update_rsvp): an existing
+        attendee keeps their status, a newly added one starts 'pending'. A
+        caller-supplied status is ignored so an organiser cannot set it for others.
         """
         async with get_async_db_context(db) as db:
+            existing_status = {
+                row.user_id: row.status
+                for row in (
+                    await db.execute(select(CalendarEventAttendee).filter(CalendarEventAttendee.event_id == event_id))
+                ).scalars()
+            }
+
             # Remove existing
             await db.execute(delete(CalendarEventAttendee).filter(CalendarEventAttendee.event_id == event_id))
 
             now = int(time.time_ns())
             models = []
             for att in attendees:
+                user_id = att['user_id']
                 row = CalendarEventAttendee(
                     id=str(uuid4()),
                     event_id=event_id,
-                    user_id=att['user_id'],
-                    status=att.get('status', 'pending'),
+                    user_id=user_id,
+                    status=existing_status.get(user_id, 'pending'),
                     meta=att.get('meta'),
                     created_at=now,
                     updated_at=now,

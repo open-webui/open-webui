@@ -135,41 +135,6 @@ export const getOllamaUrls = async (token: string = '') => {
 	return res.OLLAMA_BASE_URLS;
 };
 
-export const updateOllamaUrls = async (token: string = '', urls: string[]) => {
-	let error = null;
-
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/urls/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		},
-		body: JSON.stringify({
-			urls: urls
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.error(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res.OLLAMA_BASE_URLS;
-};
-
 export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 	let error = null;
 

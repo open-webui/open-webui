@@ -184,12 +184,20 @@
 		"title": "Slovak (Slovenčina)"
 	},
 	{
+		"code": "sl-SI",
+		"title": "Slovenian (Slovenščina)"
+	},
+	{
 		"code": "es-ES",
 		"title": "Spanish (Español)"
 	},
 	{
 		"code": "sv-SE",
 		"title": "Swedish (Svenska)"
+	},
+	{
+		"code": "fil-PH",
+		"title": "Tagalog (Filipino)"
 	},
 	{
 		"code": "ta-IN",

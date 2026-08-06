@@ -7,24 +7,6 @@
 }
 
 @font-face {
-	font-family: 'Archivo';
-	src: url('/assets/fonts/Archivo-Variable.ttf');
-	font-display: swap;
-}
-
-@font-face {
-	font-family: 'Mona Sans';
-	src: url('/assets/fonts/Mona-Sans.woff2');
-	font-display: swap;
-}
-
-@font-face {
-	font-family: 'InstrumentSerif';
-	src: url('/assets/fonts/InstrumentSerif-Regular.ttf');
-	font-display: swap;
-}
-
-@font-face {
 	font-family: 'Vazirmatn';
 	src: url('/assets/fonts/Vazirmatn-Variable.ttf');
 	font-display: swap;
@@ -70,8 +52,16 @@ code {
 	border-radius: 2px;
 }
 
-.font-secondary {
-	font-family: 'InstrumentSerif', sans-serif;
+.app-muted {
+	@apply text-gray-500 dark:text-gray-400;
+}
+
+.app-icon-muted {
+	@apply text-gray-500 dark:text-gray-400;
+}
+
+.app-interactive-active {
+	@apply bg-gray-50/40 dark:bg-gray-800/40;
 }
 
 .marked a {
@@ -94,32 +84,41 @@ textarea::placeholder {
 	direction: auto;
 }
 
+textarea {
+	color-scheme: light;
+}
+
+.dark textarea {
+	color-scheme: dark;
+}
+
+textarea::-webkit-resizer,
+textarea::-webkit-scrollbar-corner {
+	background: transparent;
+}
+
 .input-prose {
-	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
+	@apply prose dark:prose-invert !text-[0.9375rem] prose-headings:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
 }
 
 .input-prose-sm {
-	@apply prose dark:prose-invert prose-headings:font-medium prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-1 whitespace-pre-line text-sm;
+	@apply prose dark:prose-invert prose-headings:font-normal prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-1 whitespace-pre-line text-sm;
 }
 
 .markdown-prose {
-	@apply prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply prose prose-sm dark:prose-invert max-w-none break-words !text-[0.9375rem] font-normal leading-relaxed prose-p:mt-0 prose-p:mb-2 prose-p:font-normal prose-p:leading-relaxed prose-headings:mt-2 prose-headings:mb-1 prose-headings:font-normal prose-headings:leading-snug prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-strong:font-medium prose-code:before:content-none prose-code:after:content-none prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:font-normal prose-pre:my-3 prose-table:my-0 prose-blockquote:my-3 prose-blockquote:font-normal prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850/30 prose-img:my-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0 [&_p:first-child]:mt-0 [&_h1:first-child]:mt-0 [&_h2:first-child]:mt-0 [&_h3:first-child]:mt-0 [&_h4:first-child]:mt-0 [&_h5:first-child]:mt-0 [&_h6:first-child]:mt-0;
 }
 
 .markdown-prose-sm {
-	@apply text-sm prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-2  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply text-sm prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-normal prose-hr:my-2  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown-prose-xs {
-	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-semibold prose-hr:my-0.5  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-normal prose-hr:my-0.5  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown a {
 	@apply underline;
-}
-
-.font-primary {
-	font-family: 'Archivo', 'Vazirmatn', sans-serif;
 }
 
 .drag-region {
@@ -411,6 +410,11 @@ input[type='number'] {
 	@apply line-clamp-1 absolute;
 }
 
+/* #676767 is 3.17:1 on the dark canvas; the light value already passes. */
+html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
+	color: var(--color-gray-500);
+}
+
 .tiptap ul[data-type='taskList'] {
 	list-style: none;
 	margin-left: 0;
@@ -673,7 +677,7 @@ input[type='number'] {
 }
 
 .tiptap th {
-	@apply cursor-pointer text-start text-xs text-gray-700 dark:text-gray-400 font-semibold uppercase bg-gray-50 dark:bg-gray-850;
+	@apply cursor-pointer text-start text-xs text-gray-700 dark:text-gray-400 font-normal uppercase bg-gray-50 dark:bg-gray-850;
 }
 
 .tiptap td {
@@ -681,7 +685,7 @@ input[type='number'] {
 }
 
 .tiptap tr {
-	@apply bg-white dark:bg-gray-900 dark:border-gray-850 text-xs;
+	@apply dark:border-gray-850 text-xs;
 }
 
 .tippy-box[data-theme~='transparent'] {
@@ -838,4 +842,79 @@ body {
 
 #note-content-container .ProseMirror {
 	padding-bottom: 2rem; /* space for the bottom toolbar */
+}
+
+/* High Contrast Mode: placeholders bottom out at 1.58:1 (WCAG 1.4.3 wants 4.5:1). */
+@layer utilities {
+	html.high-contrast:not(.dark) :is(input, textarea)::placeholder {
+		color: var(--color-gray-600);
+	}
+
+	html.high-contrast.dark :is(input, textarea)::placeholder {
+		color: var(--color-gray-500);
+	}
+}
+
+/* High Contrast Mode: muted text fails WCAG 1.4.3 (2.07:1 light, 3.12:1 dark).
+   :where() keeps these at low specificity so hover variants still win. */
+@layer utilities {
+	html:where(.high-contrast):not(:where(.dark)) .text-gray-400 {
+		color: var(--color-gray-600);
+	}
+
+	html:where(.high-contrast).dark .dark\:text-gray-600 {
+		color: var(--color-gray-400);
+	}
+
+	/* Elements that hover to a lighter grey than the new resting colour. */
+	html:where(.high-contrast):not(:where(.dark)) .hover\:text-gray-500:hover {
+		color: var(--color-gray-800);
+	}
+}
+
+/* High Contrast Mode: gray-500 muted text is 2.77:1 in light (WCAG 1.4.3 wants 4.5:1).
+   The utility stays in the layer so hover variants still outrank it; the classes below
+   are unlayered, so their override has to be too. */
+@layer utilities {
+	html:where(.high-contrast):not(:where(.dark)) .text-gray-500 {
+		color: var(--color-gray-600);
+	}
+}
+
+html.high-contrast:not(.dark) :is(.app-muted, .app-icon-muted, .tiptap table) {
+	color: var(--color-gray-600);
+}
+
+/* High Contrast Mode: the lightest muted pair, 1.58:1 in light and 2.14:1 in dark.
+   text-gray-400/70 is an icon colour, so 1.4.11 governs it, and 2.07:1 misses that too. */
+@layer utilities {
+	html:where(.high-contrast):not(:where(.dark)) :is(.text-gray-300, .text-gray-400\/70) {
+		color: var(--color-gray-600);
+	}
+
+	html:where(.high-contrast).dark .dark\:text-gray-700 {
+		color: var(--color-gray-400);
+	}
+
+	/* Hover states that land lighter than the new resting colour. */
+	html:where(.high-contrast):not(:where(.dark)) .hover\:text-gray-500:hover {
+		color: var(--color-gray-800);
+	}
+
+	html:where(.high-contrast):not(:where(.dark)) .group:hover .group-hover\:text-gray-500 {
+		color: var(--color-gray-800);
+	}
+}
+
+/* Autocompletion ghost text is 2.65:1 in light; the dark canvas already passes. */
+html.high-contrast:not(.dark) .ai-autocompletion::after {
+	color: var(--color-gray-600);
+}
+
+/* The shimmer gradient is 2.10:1 in light, and clipping it to the text leaves no
+   solid colour to raise; render it as flat text instead. */
+html.high-contrast:not(.dark) .shimmer {
+	background: none;
+	color: var(--color-gray-700);
+	-webkit-text-fill-color: var(--color-gray-700);
 }

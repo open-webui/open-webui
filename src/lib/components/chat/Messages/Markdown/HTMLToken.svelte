@@ -10,11 +10,8 @@
 
 	let html: string | null = null;
 
-	$: if (token.type === 'html' && token?.text) {
-		html = DOMPurify.sanitize(token.text);
-	} else {
-		html = null;
-	}
+	$: text = token.type === 'html' ? token?.text : null;
+	$: html = text ? DOMPurify.sanitize(text) : null;
 </script>
 
 {#if token.type === 'html'}

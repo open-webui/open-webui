@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List
+from typing import List, Optional
 
 import requests
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results

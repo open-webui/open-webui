@@ -15,7 +15,7 @@
 </script>
 
 <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 shrink-0">
-	<span class="text-xs font-medium text-gray-600 dark:text-gray-400 flex-1 truncate">
+	<span class="text-xs font-normal text-gray-600 dark:text-gray-400 flex-1 truncate">
 		{$i18n.t('{{count}} selected', { count })}
 	</span>
 

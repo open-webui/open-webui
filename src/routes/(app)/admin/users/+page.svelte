@@ -3,6 +3,6 @@
 	import { onMount } from 'svelte';
 
 	onMount(async () => {
-		await goto('/admin/users/overview');
+		await goto('/admin/users/overview', { replaceState: true });
 	});
 </script>

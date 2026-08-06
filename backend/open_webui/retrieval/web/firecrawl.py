@@ -28,10 +28,10 @@ def build_firecrawl_url(base_url: str | None, path: str) -> str:
 
 
 def build_firecrawl_headers(api_key: str | None) -> dict[str, str]:
-    return {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {api_key or ""}',
-    }
+    headers = {'Content-Type': 'application/json'}
+    if api_key:
+        headers['Authorization'] = f'Bearer {api_key}'
+    return headers
 
 
 def get_firecrawl_timeout_seconds(timeout: Any) -> float | None:
@@ -197,8 +197,11 @@ def search_firecrawl(
             },
             timeout=count * 3 + 10,
         )
+        # Firecrawl /search has historically returned both `{"data": [...]}`
+        # (flat list, what v1 did and what frost19k reported under #23966)
+        # and `{"data": {"web": [...]}}` (current v2). Accept either.
         data = response.get('data') or {}
-        results = data.get('web') or []
+        results = data if isinstance(data, list) else (data.get('web') or [])
 
         if filter_list:
             from open_webui.retrieval.web.main import get_filtered_results

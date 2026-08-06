@@ -95,7 +95,7 @@
 			alt=""
 		/>
 		<div class="flex-1 text-left min-w-0">
-			<div class="font-medium text-gray-900 dark:text-white truncate">
+			<div class="font-normal text-gray-900 dark:text-white truncate">
 				{name}
 			</div>
 			<div class="text-gray-500 text-xs">

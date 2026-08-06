@@ -4,7 +4,7 @@
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
 	import { config, pyodideWorker as pyodideWorkerStore } from '$lib/stores';
 
-	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
 	import { executeCode } from '$lib/apis/utils';
 	import {
 		copyToClipboard,
@@ -32,7 +32,7 @@
 	export let edit = true;
 
 	export let onSave = (e) => {};
-	export let onUpdate = (e) => {};
+	export let onUpdate = (e, codeBlockId = '') => {};
 	export let onPreview = (e) => {};
 
 	export let save = false;
@@ -244,7 +244,7 @@
 		// Otherwise fall back to a throwaway worker.
 		const sharedWorker = $pyodideWorkerStore;
 		const isShared = !!sharedWorker;
-		const worker = sharedWorker ?? new PyodideWorker();
+		const worker = sharedWorker ?? createPyodideWorker();
 
 		if (!isShared) {
 			localPyodideWorker = worker;
@@ -364,7 +364,7 @@
 	};
 
 	const render = async () => {
-		onUpdate(token);
+		onUpdate(token, id);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
 			try {
 				renderHTML = await renderMermaid(code);
@@ -379,7 +379,7 @@
 			(token?.raw ?? '').slice(-4).includes('```')
 		) {
 			try {
-				renderHTML = await renderVegaVisualization(code);
+				renderHTML = await renderVegaVisualization(code, lang);
 			} catch (error) {
 				console.error('Failed to render Vega visualization:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
@@ -420,7 +420,7 @@
 
 	onMount(async () => {
 		if (token) {
-			onUpdate(token);
+			onUpdate(token, id);
 		}
 	});
 
@@ -563,8 +563,10 @@
 								result) &&
 								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
 								class="language-{lang} rounded-t-none whitespace-pre text-sm"
-								>{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
-									code}</code
+								>{#if lang && hljs.getLanguage(lang)}{@html hljs.highlight(code, {
+										language: lang,
+										ignoreIllegals: true
+									}).value}{:else}{code}{/if}</code
 							></pre>
 					{/if}
 				{:else}

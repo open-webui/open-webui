@@ -1,26 +1,25 @@
+import inspect
 import logging
 import sys
-import inspect
-
 from typing import Any
 
 from fastapi import Request
-
-from open_webui.models.users import UserModel
+from open_webui.env import ENABLE_PLUGINS, GLOBAL_LOG_LEVEL
 from open_webui.models.functions import Functions
-
+from open_webui.models.users import UserModel
 from open_webui.socket.main import get_event_call, get_event_emitter
-from open_webui.utils.plugin import get_function_module_from_cache
-from open_webui.utils.models import get_all_models
 from open_webui.utils.middleware import process_tool_result
-
-from open_webui.env import GLOBAL_LOG_LEVEL
+from open_webui.utils.models import check_model_access, get_all_models
+from open_webui.utils.plugin import get_function_module_from_cache
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
 async def chat_action(request: Request, action_id: str, form_data: dict, user: Any):
+    if not ENABLE_PLUGINS:
+        raise Exception('Plugins are disabled by ENABLE_PLUGINS=false')
+
     if '.' in action_id:
         action_id, sub_action_id = action_id.split('.')
     else:
@@ -46,6 +45,23 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
     if model_id not in models:
         raise Exception('Model not found')
     model = models[model_id]
+
+    # Availability gate — keep this route consistent with the actions a model
+    # actually surfaces to the client. Executing admin-authored Function code is
+    # intended; this only stops a disabled, unassigned, or access-restricted
+    # action from being reached by calling the route with a raw action_id.
+    if action.type != 'action' or not action.is_active:
+        raise Exception(f'Action not available: {action_id}')
+
+    # Direct connections carry a client-supplied model the caller already owns,
+    # so scope the model-bound checks to server-resolved models.
+    if not getattr(request.state, 'direct', False) and user.role != 'admin':
+        await check_model_access(user, model)
+        # model['actions'] entries are '<function_id>' or '<function_id>.<sub_id>';
+        # the function id is always the prefix.
+        surfaced_action_ids = {item.get('id', '').split('.', 1)[0] for item in model.get('actions', [])}
+        if action_id not in surfaced_action_ids:
+            raise Exception(f'Action not available: {action_id}')
 
     __event_emitter__ = await get_event_emitter(
         {
