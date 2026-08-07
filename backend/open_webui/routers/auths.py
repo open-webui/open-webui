@@ -1669,6 +1669,20 @@ async def token_exchange(
     user = await Users.get_user_by_oauth_sub(provider, sub, db=db)
 
     if not user and await Config.get('oauth.merge_accounts_by_email'):
+        # Never merge on an email the provider reports as unverified: an IdP
+        # that lets users claim arbitrary addresses would otherwise hand over
+        # the matching existing account (account takeover). Same gate as the
+        # OAuth callback path. Providers that send no verification signal
+        # keep current behavior.
+        email_verified = user_data.get('email_verified')
+        if isinstance(email_verified, str):
+            email_verified = email_verified.lower() == 'true'
+        if email_verified is False:
+            log.warning(f'Token exchange denied: refusing to merge account on unverified email')
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
         # Try to find by email if merge is enabled
         user = await Users.get_user_by_email(email, db=db)
         if user:
