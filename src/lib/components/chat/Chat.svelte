@@ -82,7 +82,7 @@
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { processUrl, processWebSearch } from '$lib/apis/retrieval';
-	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
+	import { getAndUpdateUserLocation, getUserInfoById, getUserSettings } from '$lib/apis/users';
 	import {
 		generateQueries,
 		chatAction,
@@ -371,6 +371,25 @@
 
 	// Read-only when viewing someone else's chat (e.g. via shared folder access)
 	$: readOnly = chat != null && chat.user_id !== $user?.id;
+
+	let chatOwner = null;
+
+	const resolveChatOwner = async (userId) => {
+		if (chatOwner?.id === userId) {
+			return;
+		}
+
+		chatOwner = await getUserInfoById(localStorage.token, userId).catch((error) => {
+			console.error(error);
+			return null;
+		});
+	};
+
+	$: if (readOnly && chat?.user_id) {
+		void resolveChatOwner(chat.user_id);
+	} else {
+		chatOwner = null;
+	}
 
 	let chatTasks = [];
 
@@ -4065,6 +4084,7 @@
 									<Messages
 										bind:this={messagesRef}
 										chatId={$chatId}
+										user={chatOwner ?? $user}
 										{readOnly}
 										bind:history
 										bind:autoScroll
@@ -4302,6 +4322,7 @@
 						bind:files
 						bind:pane={controlPane}
 						chatId={$chatId}
+						chatUser={chatOwner}
 						modelId={selectedModelIds?.at(0) ?? null}
 						models={selectedModelIds.reduce((a, e, i, arr) => {
 							const model = $models.find((m) => m.id === e);
