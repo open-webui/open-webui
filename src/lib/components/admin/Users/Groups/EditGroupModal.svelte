@@ -9,10 +9,12 @@
 	import Permissions from './Permissions.svelte';
 	import Users from './Users.svelte';
 	import GroupPreviewPanel from './GroupPreviewPanel.svelte';
+	import Import from './Import.svelte';
 	import { DEFAULT_PERMISSIONS } from '$lib/constants/permissions';
 	import { getUserDefaultPermissions, getUserDefaultPermissionsDefaults } from '$lib/apis/users';
 	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
+	import DocumentArrowDown from '$lib/components/icons/DocumentArrowDown.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -263,6 +265,24 @@
 									<div class=" self-center">{$i18n.t('Preview')}</div>
 								</button>
 							{/if}
+
+							{#if tabs.includes('import')}
+								<button
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									'import'
+										? ''
+										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									on:click={() => {
+										selectedTab = 'import';
+									}}
+									type="button"
+								>
+									<div class=" self-center mr-2">
+										<DocumentArrowDown />
+									</div>
+									<div class=" self-center">{$i18n.t('CSV Import')}</div>
+								</button>
+							{/if}
 						</div>
 
 						<div class="flex-1 mt-1 lg:mt-1 lg:h-[30rem] lg:max-h-[30rem] flex flex-col">
@@ -283,6 +303,12 @@
 									<Users bind:userCount groupId={group?.id} />
 								{:else if selectedTab == 'preview'}
 									<GroupPreviewPanel groupId={group?.id} />
+								{:else if selectedTab == 'import'}
+									<Import
+										groupId={group?.id}
+										bind:userCount
+										bind:loading
+									/>
 								{/if}
 							</div>
 

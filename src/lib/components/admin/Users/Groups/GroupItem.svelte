@@ -61,7 +61,7 @@
 	edit
 	{group}
 	{defaultPermissions}
-	tabs={['general', 'permissions', 'users', 'preview']}
+	tabs={['general', 'permissions', 'users', 'preview', 'import']}
 	onSubmit={updateHandler}
 	onDelete={deleteHandler}
 />
