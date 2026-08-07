@@ -1980,6 +1980,9 @@ async def convert_url_images_to_base64(form_data, user=None):
     return form_data
 
 
+PERSISTED_MESSAGE_KEYS = ('id', 'role', 'content', 'output', 'files', 'contextSummary', 'usage', 'model')
+
+
 async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]:
     """
     Load the message chain from DB up to message_id,
@@ -1993,10 +1996,7 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
     if not db_messages:
         return None
 
-    return [
-        {k: v for k, v in msg.items() if k in ('id', 'role', 'content', 'output', 'files', 'contextSummary', 'usage')}
-        for msg in db_messages
-    ]
+    return [{k: v for k, v in msg.items() if k in PERSISTED_MESSAGE_KEYS} for msg in db_messages]
 
 
 def get_reasoning_format(model: dict) -> str | None:
@@ -2016,8 +2016,32 @@ def get_reasoning_format(model: dict) -> str | None:
     return None
 
 
+def strip_bound_reasoning_details(output: list) -> list:
+    """Drop model-bound reasoning_details entries; providers reject them replayed to another model (#28240)."""
+    stripped = []
+    for item in output:
+        details = item.get('reasoning_details')
+        if item.get('type') == 'reasoning' and details:
+            if not isinstance(details, list):
+                details = [details]
+            portable = [
+                detail
+                for detail in details
+                if not (
+                    isinstance(detail, dict) and (detail.get('type') == 'reasoning.encrypted' or 'signature' in detail)
+                )
+            ]
+            if len(portable) != len(details):
+                item = {k: v for k, v in item.items() if k != 'reasoning_details'}
+                if portable:
+                    item['reasoning_details'] = portable
+        stripped.append(item)
+    return stripped
+
+
 def process_messages_with_output(
     messages: list[dict],
+    model_id: str,
     reasoning_format: str | None = None,
 ) -> list[dict]:
     """
@@ -2025,14 +2049,20 @@ def process_messages_with_output(
 
     For assistant messages with 'output' field, produces properly formatted
     OpenAI-style messages (tool_calls + tool results). Strips 'output' before LLM.
+    Model-bound reasoning_details from a different model are dropped.
     """
     processed = []
 
     for message in messages:
         if message.get('role') == 'assistant' and message.get('output'):
+            output = message['output']
+            source_model = message.get('model')
+            if source_model and source_model != model_id and isinstance(output, list):
+                output = strip_bound_reasoning_details(output)
+
             # Use output items for clean OpenAI-format messages
             output_messages = convert_output_to_messages(
-                message['output'],
+                output,
                 raw=True,
                 reasoning_format=reasoning_format,
                 flatten_tool_images=True,
@@ -2041,8 +2071,8 @@ def process_messages_with_output(
                 processed.extend(output_messages)
                 continue
 
-        # Strip 'output' field before adding (LLM shouldn't see it)
-        clean_message = {k: v for k, v in message.items() if k != 'output'}
+        # Strip 'output' and 'model' before adding (LLM shouldn't see them)
+        clean_message = {k: v for k, v in message.items() if k not in ('output', 'model')}
         processed.append(clean_message)
 
     return processed
@@ -2249,13 +2279,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if assistant_message_id:
                 assistant_message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
                 if assistant_message and (assistant_message.get('content') or assistant_message.get('output')):
-                    db_messages.append(
-                        {
-                            k: v
-                            for k, v in assistant_message.items()
-                            if k in ('id', 'role', 'content', 'output', 'files', 'contextSummary', 'usage')
-                        }
-                    )
+                    db_messages.append({k: v for k, v in assistant_message.items() if k in PERSISTED_MESSAGE_KEYS})
 
             system_message = get_system_message(form_data.get('messages', []))
             form_data['messages'] = [system_message, *db_messages] if system_message else db_messages
@@ -2323,6 +2347,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Process messages with OR-aligned output items for clean LLM messages
     form_data['messages'] = process_messages_with_output(
         form_data.get('messages', []),
+        model_id=model['id'],
         reasoning_format=get_reasoning_format(model),
     )
     form_data['messages'] = sanitize_tool_pairs(form_data['messages'])

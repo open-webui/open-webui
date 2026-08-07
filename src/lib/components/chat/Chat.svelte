@@ -3220,7 +3220,7 @@
 					);
 
 					if (message.output && message.role === 'assistant') {
-						return { role: message.role, output: message.output };
+						return { role: message.role, model: message.model, output: message.output };
 					}
 
 					if (message.role === 'user' && imageFiles.length > 0) {
