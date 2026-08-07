@@ -15,6 +15,7 @@
 		user
 	} from '$lib/stores';
 	import { getChannelById, getChannelMessages, sendMessage } from '$lib/apis/channels';
+	import { trackRightPaneWidth } from '$lib/utils/rightPane';
 
 	import Messages from './Messages.svelte';
 	import MessageInput from './MessageInput.svelte';
@@ -266,6 +267,16 @@
 	let mediaQuery;
 	let largeScreen = false;
 
+	let threadPaneEl: HTMLElement | null = null;
+	let untrackPaneWidth: (() => void) | null = null;
+
+	const trackPaneWidth = (el: HTMLElement | null) => {
+		untrackPaneWidth?.();
+		untrackPaneWidth = el ? trackRightPaneWidth(el) : null;
+	};
+
+	$: trackPaneWidth(threadPaneEl);
+
 	onMount(() => {
 		if ($chatId) {
 			chatId.set('');
@@ -292,6 +303,8 @@
 		updateLastReadAt(id);
 		_channelId.set(null);
 		$socket?.off('events:channel', channelEventHandler);
+		untrackPaneWidth?.();
+		untrackPaneWidth = null;
 	});
 </script>
 
@@ -439,7 +452,7 @@
 				/>
 			</PaneResizer>
 
-			<Pane defaultSize={50} minSize={30} class="h-full w-full">
+			<Pane bind:el={threadPaneEl} defaultSize={50} minSize={30} class="h-full w-full">
 				<div class="h-full w-full shadow-xl">
 					<Thread
 						{threadId}

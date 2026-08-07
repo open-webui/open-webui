@@ -918,3 +918,15 @@ html.high-contrast:not(.dark) .shimmer {
 	color: var(--color-gray-700);
 	-webkit-text-fill-color: var(--color-gray-700);
 }
+
+@media (min-width: 601px) {
+	[data-sonner-toaster][data-x-position='right'] {
+		right: max(
+			env(safe-area-inset-right),
+			min(
+				calc(var(--offset) + var(--right-pane-width, 0px)),
+				calc(100vw - var(--width) - var(--offset))
+			)
+		);
+	}
+}

@@ -3,6 +3,7 @@
 	import { Pane, PaneResizer } from 'paneforge';
 
 	import Drawer from '../common/Drawer.svelte';
+	import { trackRightPaneWidth } from '$lib/utils/rightPane';
 
 	export let show = false;
 	export let pane = null;
@@ -13,6 +14,16 @@
 	let largeScreen = false;
 
 	let minSize = 0;
+
+	let paneEl: HTMLElement | null = null;
+	let untrackPaneWidth: (() => void) | null = null;
+
+	const trackPaneWidth = (el: HTMLElement | null) => {
+		untrackPaneWidth?.();
+		untrackPaneWidth = el ? trackRightPaneWidth(el) : null;
+	};
+
+	$: trackPaneWidth(paneEl);
 
 	const handleMediaQuery = async (e) => {
 		if (e.matches) {
@@ -58,6 +69,8 @@
 
 	onDestroy(() => {
 		mediaQuery.removeEventListener('change', handleMediaQuery);
+		untrackPaneWidth?.();
+		untrackPaneWidth = null;
 	});
 </script>
 
@@ -86,6 +99,7 @@
 
 	<Pane
 		bind:pane
+		bind:el={paneEl}
 		defaultSize={Math.max(20, minSize)}
 		{minSize}
 		onCollapse={() => {

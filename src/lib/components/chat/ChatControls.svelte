@@ -24,6 +24,7 @@
 	} from '$lib/stores';
 
 	import { uploadFile } from '$lib/apis/files';
+	import { trackRightPaneWidth } from '$lib/utils/rightPane';
 	import { toast } from 'svelte-sonner';
 
 	import Controls from './Controls/Controls.svelte';
@@ -61,6 +62,16 @@
 	let dragged = false;
 	let minSize = 0;
 	let paneReady = false;
+
+	let paneEl: HTMLElement | null = null;
+	let untrackPaneWidth: (() => void) | null = null;
+
+	const trackPaneWidth = (el: HTMLElement | null) => {
+		untrackPaneWidth?.();
+		untrackPaneWidth = el ? trackRightPaneWidth(el) : null;
+	};
+
+	$: trackPaneWidth(paneEl);
 
 	// Tab state for Controls+Files panel
 	let activeTab = savedTab;
@@ -251,6 +262,8 @@
 			isDestroyed = true;
 			paneReady = false;
 			resizeObserver?.disconnect();
+			untrackPaneWidth?.();
+			untrackPaneWidth = null;
 			if (!largeScreen) {
 				showControls.set(false);
 			}
@@ -401,6 +414,7 @@
 
 	<Pane
 		bind:pane
+		bind:el={paneEl}
 		defaultSize={0}
 		onResize={(size) => {
 			if ($showControls && pane.isExpanded()) {
