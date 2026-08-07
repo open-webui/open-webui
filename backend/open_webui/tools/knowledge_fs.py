@@ -33,6 +33,74 @@ DEFAULT_TAIL_LINES = 10
 # matched text, so capping the pattern or the line does not bound it.
 MATCH_BUDGET_SECONDS = 2.0
 
+# Compilation materialises every atom once per repeat enclosing it, so nested counts multiply
+# while sequences only add. That expansion, not the pattern length, is what has to be bounded.
+MAX_PATTERN_EXPANSION = 2_000
+_REPEAT_RE = re.compile(r'\{(\d+)(?:,\d*)?\}')
+# Constructs the scan below cannot mirror: (?x) drops whitespace and comments so counts bind
+# elsewhere, (?V1) lets [ open a nested set inside a class, and (?#...) can hide a parenthesis
+# from the engine but not from us. Refusing them keeps the scan the engine's own reading.
+_UNSUPPORTED_RE = re.compile(r'\(\?([a-zA-Z0-9]*(?:x|V1)|#)')
+# [:alpha:] keeps its class open past its own ], which a plain search for ] would stop at.
+_POSIX_CLASS_RE = re.compile(r'\[:\^?[a-zA-Z]+:\]')
+
+
+def _class_end(pattern: str, i: int) -> int:
+    """Index past a character class, where ^ and a leading ] are members, or -1 if unreadable."""
+    i += 2 if pattern[i + 1 : i + 2] == '^' else 1
+    if pattern[i : i + 1] == ']':
+        i += 1
+    while i < len(pattern) and pattern[i] != ']':
+        posix = _POSIX_CLASS_RE.match(pattern, i)
+        if posix:
+            i = posix.end()
+        elif pattern[i : i + 2] == '[:':
+            return -1  # a name shape we cannot mirror exactly, so where the class ends is unknown
+        else:
+            i += 2 if pattern[i] == '\\' else 1
+    return i + 1
+
+
+def _pattern_expansion(pattern: str) -> int:
+    """Atoms compilation would materialise, counting each once per repeat that encloses it."""
+    enclosing = []  # sequence cost outside each open group
+    total = 0  # cost of the sequence being built
+    last = 0  # cost of the last atom, which a following count repeats
+    i = 0
+
+    while i < len(pattern) and total <= MAX_PATTERN_EXPANSION:
+        char = pattern[i]
+        repeat = _REPEAT_RE.match(pattern, i) if char == '{' else None
+
+        if repeat:
+            digits = repeat.group(1)
+            # A zero minimum still materialises the body once, and a count too long to convert is
+            # far past the ceiling anyway.
+            count = max(int(digits), 1) if len(digits) <= 5 else MAX_PATTERN_EXPANSION + 1
+            total += last * count - last
+            last *= count
+            i = repeat.end()
+        elif char == '(':
+            enclosing.append(total)
+            total, last, i = 0, 0, i + 1
+        elif char == ')' and enclosing:
+            last = total or 1  # an atom-free group is still materialised once per repeat
+            total = last + enclosing.pop()
+            i += 1
+        elif char == '[':
+            i = _class_end(pattern, i)
+            if i < 0:
+                return MAX_PATTERN_EXPANSION + 1
+            last = 1
+            total += 1
+        else:
+            last = 1
+            total += 1
+            i += 2 if char == '\\' else 1
+
+    # A group the engine never opened must not carry its outer sequence's cost away with it.
+    return total + sum(enclosing)
+
 
 class MatchBudgetExceeded(Exception):
     """A tool call spent its whole matching budget, so the caller reports it."""
@@ -91,6 +159,11 @@ def build_matcher(pattern: str, case_insensitive: bool = False, use_regex: bool 
 
     if use_regex:
         normalized = normalize_regex(pattern)
+        if _UNSUPPORTED_RE.search(normalized):
+            return None, 'Inline (?x), (?V1) and (?#...) are not supported, remove them'
+        if _pattern_expansion(normalized) > MAX_PATTERN_EXPANSION:
+            return None, 'Pattern repeats too many times, lower the repetition counts'
+
         try:
             re_flags = regex.IGNORECASE if case_insensitive else 0
             compiled = regex.compile(normalized, re_flags)
