@@ -47,6 +47,7 @@ from open_webui.retrieval.external import retrieve_external_knowledge
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.retrieval.vector.main import GetResult, SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
+from open_webui.utils.access_control.chats import has_chat_read_access
 from open_webui.utils.access_control.files import get_owner_accessible_folder_files, has_access_to_file
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.headers import include_user_info_headers
@@ -1417,7 +1418,7 @@ async def get_sources_from_items(
             # Chat Attached
             chat = await Chats.get_chat_by_id(item.get('id'))
 
-            if chat and (user.role == 'admin' or chat.user_id == user.id):
+            if chat and await has_chat_read_access(user.id, user.role, chat):
                 messages_map = chat.chat.get('history', {}).get('messages', {})
                 message_id = chat.chat.get('history', {}).get('currentId')
 
