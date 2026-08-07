@@ -158,10 +158,12 @@
 		}
 	};
 
+	const canDropInto = () => !folders[folderId]?.shared || folders[folderId]?.permission === 'write';
+
 	const onDragOver = (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		if (dragged || parentDragged || folders[folderId]?.shared) {
+		if (dragged || parentDragged || !canDropInto()) {
 			return;
 		}
 		draggedOver = true;
@@ -170,7 +172,7 @@
 	const onDrop = async (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		if (dragged || parentDragged) {
+		if (dragged || parentDragged || !canDropInto()) {
 			return;
 		}
 
