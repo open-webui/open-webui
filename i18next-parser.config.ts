@@ -1,5 +1,9 @@
 // i18next-parser.config.ts
-import { getLanguages } from './src/lib/i18n/index.ts';
+
+const getLanguages = async () => {
+	const languages = (await import('./src/lib/i18n/locales/languages.json')).default;
+	return languages;
+};
 
 const getLangCodes = async () => {
 	const languages = await getLanguages();
