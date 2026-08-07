@@ -30,7 +30,7 @@
 		{id}
 		aria-labelledby={ariaLabelledbyId || undefined}
 		aria-label={ariaLabel || undefined}
-		class="relative h-4 min-h-4 w-7 shrink-0 cursor-pointer rounded-full mx-[1px] transition-colors duration-150 {($settings?.highContrastMode ??
+		class="relative h-4 min-h-4 w-7 shrink-0 cursor-pointer rounded-full mx-[1px] transition-colors duration-150 disabled:cursor-not-allowed {($settings?.highContrastMode ??
 		false)
 			? 'focus:outline focus:outline-2 focus:outline-gray-800 focus:dark:outline-gray-200'
 			: 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 dark:focus-visible:outline-gray-500'} {state
