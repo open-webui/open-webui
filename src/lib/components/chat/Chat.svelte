@@ -1523,6 +1523,8 @@
 			toast.success($i18n.t('File uploaded successfully'));
 		} catch (e) {
 			console.error('Error uploading file:', e);
+			fileItem.status = 'error';
+			fileItem.error = e.message || `${e}`;
 			files = files.filter((f) => f.itemId !== tempItemId);
 			toast.error(
 				$i18n.t('Error uploading file: {{error}}', {
@@ -1573,10 +1575,30 @@
 
 				files = [...files];
 			} catch (e) {
+				fileItem.status = 'error';
+				fileItem.error = `${e}`;
 				files = files.filter((f) => f.name !== url);
 				toast.error(`${e}`);
 			}
 		}
+	};
+
+	const onUpdate = async ({ file }: { file?: any } = {}) => {
+		if (file?.itemId) {
+			chatRequestQueues.update((q) => ({
+				...q,
+				[$chatId]: (q[$chatId] ?? []).map((message) =>
+					(message.files ?? []).some((item) => item.itemId === file.itemId)
+						? {
+								...message,
+								files: message.files.map((item) => (item.itemId === file.itemId ? file : item))
+							}
+						: message
+				)
+			}));
+		}
+
+		await processNextInQueue($chatId);
 	};
 
 	const onUpload = async (event) => {
@@ -2159,6 +2181,15 @@
 
 		const queue = $chatRequestQueues[targetChatId];
 		if (!queue || queue.length === 0) return;
+		const lastMessage = history.currentId ? history.messages[history.currentId] : null;
+		if (
+			(lastMessage && lastMessage.role === 'assistant' && !lastMessage.done) ||
+			queue.some((m) =>
+				(m.files ?? []).some((file) => ['uploading', 'error'].includes(file.status))
+			)
+		) {
+			return;
+		}
 
 		processingQueueChats.add(targetChatId);
 		try {
@@ -2174,6 +2205,43 @@
 		} finally {
 			processingQueueChats.delete(targetChatId);
 		}
+	};
+
+	const sendQueuedMessageNow = async (id) => {
+		const queue = $chatRequestQueues[$chatId] ?? [];
+		const item = queue.find((m) => m.id === id);
+		if (!item || (item.files ?? []).some((file) => ['uploading', 'error'].includes(file.status))) {
+			return;
+		}
+
+		chatRequestQueues.update((q) => ({
+			...q,
+			[$chatId]: queue.filter((m) => m.id !== id)
+		}));
+		await stopResponse(false);
+		await tick();
+		await submitPrompt(item.prompt, item.files);
+	};
+
+	const editQueuedMessage = (id) => {
+		const queue = $chatRequestQueues[$chatId] ?? [];
+		const item = queue.find((m) => m.id === id);
+		if (!item) return;
+
+		chatRequestQueues.update((q) => ({
+			...q,
+			[$chatId]: queue.filter((m) => m.id !== id)
+		}));
+		files = item.files;
+		messageInput?.setText(item.prompt);
+	};
+
+	const deleteQueuedMessage = (id) => {
+		const queue = $chatRequestQueues[$chatId] ?? [];
+		chatRequestQueues.update((q) => ({
+			...q,
+			[$chatId]: queue.filter((m) => m.id !== id)
+		}));
 	};
 
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
@@ -2586,14 +2654,44 @@
 			const message = error?.detail ?? error?.message ?? $i18n.t('Context compaction failed');
 			toast.error(message, { id: toastId });
 		} finally {
-			messageInput?.setText('');
-			prompt = '';
 			document.getElementById('chat-input')?.focus();
 		}
 	};
 
 	const handleStatusCommand = () => {
 		messageInput?.showStatus();
+		document.getElementById('chat-input')?.focus();
+	};
+
+	const handleModelCommand = (modelId = '') => {
+		if (!modelId) {
+			const currentModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
+				Boolean
+			);
+			toast.message(
+				currentModels.length
+					? `Current model: ${currentModels.join(', ')}`
+					: $i18n.t('Model not selected')
+			);
+			messageInput?.setText('');
+			prompt = '';
+			document.getElementById('chat-input')?.focus();
+			return;
+		}
+
+		const model = $models.find((model) => model.id === modelId);
+		if (!model) {
+			toast.error(`Model not found: ${modelId}`);
+			messageInput?.setText('');
+			prompt = '';
+			document.getElementById('chat-input')?.focus();
+			return;
+		}
+
+		atSelectedModel = undefined;
+		selectedModels = [model.id];
+		saveSessionSelectedModels();
+		toast.success(`Model switched to: ${model.id}`);
 		messageInput?.setText('');
 		prompt = '';
 		document.getElementById('chat-input')?.focus();
@@ -2640,10 +2738,13 @@
 		} catch (error) {
 			toast.error(`${error}`, { id: toastId });
 		} finally {
-			messageInput?.setText('');
-			prompt = '';
 			document.getElementById('chat-input')?.focus();
 		}
+	};
+
+	const clearCommandInput = () => {
+		messageInput?.setText('');
+		prompt = '';
 	};
 
 	const submitHandler = async (userPrompt, { _raw = false } = {}) => {
@@ -2658,15 +2759,25 @@
 		}
 
 		if (String(userPrompt).trim() === '/compact') {
+			clearCommandInput();
 			await handleManualCompact();
 			return;
 		}
 		if (String(userPrompt).trim() === '/status') {
+			clearCommandInput();
 			handleStatusCommand();
 			return;
 		}
 		if (String(userPrompt).trim() === '/fork') {
+			clearCommandInput();
 			await handleForkChat();
+			return;
+		}
+		const modelCommandMatch = String(userPrompt)
+			.trim()
+			.match(/^\/model(?:\s+([\s\S]+))?$/);
+		if (modelCommandMatch) {
+			handleModelCommand(modelCommandMatch[1]?.trim() ?? '');
 			return;
 		}
 
@@ -2694,16 +2805,6 @@
 		}
 
 		if (
-			files.length > 0 &&
-			files.filter((file) => file.type !== 'image' && file.status === 'uploading').length > 0
-		) {
-			toast.error(
-				$i18n.t(`Oops! There are files still uploading. Please wait for the upload to complete.`)
-			);
-			return;
-		}
-
-		if (
 			($config?.file?.max_count ?? null) !== null &&
 			files.length + chatFiles.length > $config?.file?.max_count
 		) {
@@ -2722,6 +2823,22 @@
 		) {
 			pendingWebSearchPrompt = userPrompt ?? '';
 			openWebSearchConfirm();
+			return;
+		}
+
+		if (
+			($chatRequestQueues[$chatId] ?? []).some((m) =>
+				(m.files ?? []).some((file) => ['uploading', 'error'].includes(file.status))
+			) ||
+			(files.length > 0 && files.some((file) => ['uploading', 'error'].includes(file.status)))
+		) {
+			chatRequestQueues.update((q) => ({
+				...q,
+				[$chatId]: [...(q[$chatId] ?? []), { id: uuidv4(), prompt: userPrompt, files }]
+			}));
+			messageInput?.setText('');
+			prompt = '';
+			files = [];
 			return;
 		}
 
@@ -3234,6 +3351,15 @@
 				// while the request was in flight (prevents overwriting $chatId
 				// and causing spurious toast notifications / state duplication).
 				if (res.chat_id && $chatId !== res.chat_id && $chatId === _chatId) {
+					chatRequestQueues.update((q) => {
+						if (!q[_chatId]?.length) return q;
+
+						const { [_chatId]: pendingQueue, ...rest } = q;
+						return {
+							...rest,
+							[res.chat_id]: [...pendingQueue, ...(rest[res.chat_id] ?? [])]
+						};
+					});
 					await chatId.set(res.chat_id);
 					if (!$temporaryChatEnabled && !embedded) {
 						window.history.replaceState(history.state, '', `/c/${res.chat_id}`);
@@ -3984,43 +4110,12 @@
 										{stopResponse}
 										{createMessagePair}
 										{onUpload}
+										{onUpdate}
 										messageQueue={$chatRequestQueues[$chatId] ?? []}
 										{chatTasks}
-										onQueueSendNow={async (id) => {
-											const queue = $chatRequestQueues[$chatId] ?? [];
-											const item = queue.find((m) => m.id === id);
-											if (item) {
-												// Remove from queue
-												chatRequestQueues.update((q) => ({
-													...q,
-													[$chatId]: queue.filter((m) => m.id !== id)
-												}));
-												await stopResponse(false);
-												await tick();
-												await submitPrompt(item.prompt, item.files);
-											}
-										}}
-										onQueueEdit={(id) => {
-											const queue = $chatRequestQueues[$chatId] ?? [];
-											const item = queue.find((m) => m.id === id);
-											if (item) {
-												// Remove from queue
-												chatRequestQueues.update((q) => ({
-													...q,
-													[$chatId]: queue.filter((m) => m.id !== id)
-												}));
-												// Set files and restore prompt to input
-												files = item.files;
-												messageInput?.setText(item.prompt);
-											}
-										}}
-										onQueueDelete={(id) => {
-											const queue = $chatRequestQueues[$chatId] ?? [];
-											chatRequestQueues.update((q) => ({
-												...q,
-												[$chatId]: queue.filter((m) => m.id !== id)
-											}));
-										}}
+										onQueueSendNow={sendQueuedMessageNow}
+										onQueueEdit={editQueuedMessage}
+										onQueueDelete={deleteQueuedMessage}
 										onChange={(data) => {
 											if (!$temporaryChatEnabled) {
 												saveDraft(data, $chatId);
@@ -4103,8 +4198,12 @@
 										{stopResponse}
 										{createMessagePair}
 										{onUpload}
+										{onUpdate}
 										messageQueue={$chatRequestQueues[$chatId] ?? []}
 										{chatTasks}
+										onQueueSendNow={sendQueuedMessageNow}
+										onQueueEdit={editQueuedMessage}
+										onQueueDelete={deleteQueuedMessage}
 										onWebSearchToggle={handleWebSearchToggle}
 										on:chatVariables={() => {
 											showChatVariablesModal = true;
@@ -4143,6 +4242,11 @@
 									{createMessagePair}
 									{onSelect}
 									{onUpload}
+									{onUpdate}
+									messageQueue={$chatRequestQueues[$chatId] ?? []}
+									onQueueSendNow={sendQueuedMessageNow}
+									onQueueEdit={editQueuedMessage}
+									onQueueDelete={deleteQueuedMessage}
 									onWebSearchToggle={handleWebSearchToggle}
 									on:chatVariables={() => {
 										showChatVariablesModal = true;

@@ -665,10 +665,9 @@ async def get_user_usage_by_session_user(
     period_end = end_date or now
     if start_date is not None:
         period_start = start_date
-    elif days is not None:
-        period_start = period_end - ((days - 1) * 86400)
     else:
-        period_start = max(user.created_at or (period_end - (364 * 86400)), period_end - (729 * 86400))
+        days = days or 730
+        period_start = period_end - ((days - 1) * 86400)
 
     if period_start > period_end:
         raise HTTPException(

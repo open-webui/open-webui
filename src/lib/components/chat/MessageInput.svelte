@@ -3,6 +3,8 @@
 	import { toast } from 'svelte-sonner';
 
 	import { marked } from 'marked';
+	import { DOMParser } from 'prosemirror-model';
+	import { Selection, TextSelection } from 'prosemirror-state';
 	import { v4 as uuidv4 } from 'uuid';
 	import dayjs from '$lib/dayjs';
 	import duration from 'dayjs/plugin/duration';
@@ -166,6 +168,7 @@
 	export let onQueueSendNow: (id: string) => void = () => {};
 	export let onQueueEdit: (id: string) => void = () => {};
 	export let onQueueDelete: (id: string) => void = () => {};
+	export let onUpdate: (data?: { file?: any }) => void = () => {};
 
 	export let chatTasks = [];
 
@@ -547,6 +550,63 @@
 		}
 	};
 
+	const replaceSlashRangeWithPrompt = async (editor, range, text: string) => {
+		text = await textVariableHandler(text);
+
+		const { state, view } = editor;
+		let tr = state.tr;
+
+		if ($settings?.insertPromptAsRichText ?? false) {
+			const htmlContent = DOMPurify.sanitize(
+				marked
+					.parse(text, {
+						breaks: true,
+						gfm: true
+					})
+					.trim()
+			);
+			const tempDiv = document.createElement('div');
+			tempDiv.innerHTML = htmlContent;
+			const fragment = DOMParser.fromSchema(state.schema).parse(tempDiv);
+			const nodesToInsert = [];
+
+			fragment.content.forEach((node) => {
+				if (node.type.name === 'paragraph') {
+					nodesToInsert.push(...node.content.content);
+				} else {
+					nodesToInsert.push(node);
+				}
+			});
+
+			tr = tr.replaceWith(range.from, range.to, nodesToInsert);
+			const newPos = range.from + nodesToInsert.reduce((sum, node) => sum + node.nodeSize, 0);
+			tr = tr.setSelection(Selection.near(tr.doc.resolve(newPos)));
+		} else if (text.includes('\n')) {
+			const nodes = text
+				.split('\n')
+				.map((line, index) =>
+					index === 0
+						? state.schema.text(line ? line : [])
+						: state.schema.nodes.paragraph.create({}, line ? state.schema.text(line) : undefined)
+				);
+			tr = tr.replaceWith(range.from, range.to, nodes);
+			const newPos = nodes.reduce((pos, node) => pos + node.nodeSize, range.from);
+			tr = tr.setSelection(TextSelection.near(tr.doc.resolve(newPos)));
+		} else {
+			tr = tr.replaceWith(range.from, range.to, text !== '' ? state.schema.text(text) : []);
+			tr = tr.setSelection(
+				state.selection.constructor.near(tr.doc.resolve(range.from + text.length + 1))
+			);
+		}
+
+		view.dispatch(tr);
+
+		await tick();
+		await inputVariableHandler(text);
+		await tick();
+		document.getElementById('chat-input')?.focus();
+	};
+
 	let command = '';
 	export let showCommands = false;
 	$: showCommands =
@@ -587,6 +647,7 @@
 
 	let chatInputContainerElement;
 	let chatInputElement;
+	let modelSelector;
 
 	let filesInputElement;
 	let commandsElement;
@@ -820,11 +881,17 @@
 
 					files = files;
 				} else {
+					fileItem.status = 'error';
+					fileItem.error = $i18n.t('Failed to upload file.');
 					files = files.filter((item) => item?.itemId !== tempItemId);
 				}
 			} catch (e) {
+				fileItem.status = 'error';
+				fileItem.error = `${e}`;
 				toast.error(`${e}`);
 				files = files.filter((item) => item?.itemId !== tempItemId);
+			} finally {
+				onUpdate({ file: fileItem });
 			}
 		} else {
 			// If temporary chat is enabled, we just add the file to the list without uploading it.
@@ -837,8 +904,11 @@
 			});
 
 			if (content === null) {
+				fileItem.status = 'error';
+				fileItem.error = $i18n.t('Failed to extract content from the file.');
 				toast.error($i18n.t('Failed to extract content from the file.'));
 				files = files.filter((item) => item?.itemId !== tempItemId);
+				onUpdate({ file: fileItem });
 				return null;
 			} else {
 				console.log('Extracted content from file:', {
@@ -853,6 +923,7 @@
 				fileItem.id = uuidv4(); // Temporary ID for the file
 
 				files = files;
+				onUpdate({ file: fileItem });
 			}
 		}
 	};
@@ -1178,6 +1249,29 @@
 			},
 			{
 				char: '/',
+				command: ({ editor, range, props }) => {
+					if (props?.type === 'prompt') {
+						void replaceSlashRangeWithPrompt(editor, range, props.content ?? '');
+						return;
+					}
+
+					if (['compact', 'fork', 'status', 'model'].includes(props?.id)) {
+						editor.chain().focus().deleteRange(range).run();
+						return;
+					}
+
+					editor
+						.chain()
+						.focus()
+						.insertContentAt(range, [
+							{
+								type: 'mention',
+								attrs: props
+							},
+							{ type: 'text', text: ' ' }
+						])
+						.run();
+				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
 					canCompact: () => !!history?.currentId && contextCompactionEnabled,
@@ -1189,6 +1283,7 @@
 					onCompact: compactHandler,
 					onStatus: statusHandler,
 					onFork: forkHandler,
+					onModel: () => modelSelector?.open(),
 					onSelect: (e) => {
 						const { type, data } = e;
 
@@ -2238,6 +2333,7 @@
 								<div class="self-end flex space-x-1 mr-1 shrink-0 gap-[0.5px]">
 									<div class="flex min-w-0 max-w-[10rem] items-center sm:max-w-[13rem]">
 										<ModelSelector
+											bind:this={modelSelector}
 											bind:selectedModels
 											showSetDefault={!history?.currentId}
 											placement="auto"

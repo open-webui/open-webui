@@ -650,7 +650,7 @@ async def pull_model(
     form_data['model'] = form_data.get('model', form_data.get('name'))
 
     url = (await Config.get('ollama.base_urls', []))[url_idx]
-    log.info(f'url: {url}')
+    log.info('url: %s', url)
 
     # Admins may pull from any registry
     return await send_request(
@@ -881,7 +881,7 @@ async def embed(
     if not await Config.get('ollama.enable'):
         raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
-    log.info(f'generate_ollama_batch_embeddings {form_data}')
+    log.info('generate_ollama_batch_embeddings %s', form_data)
     await check_model_access(user, await Models.get_model_by_id(form_data.model), BYPASS_MODEL_ACCESS_CONTROL)
     await validate_ollama_backend_idx(request, form_data.model, url_idx, user)
 
@@ -932,7 +932,7 @@ async def embeddings(
     if not await Config.get('ollama.enable'):
         raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
-    log.info(f'generate_ollama_embeddings {form_data}')
+    log.info('generate_ollama_embeddings %s', form_data)
     await check_model_access(user, await Models.get_model_by_id(form_data.model), BYPASS_MODEL_ACCESS_CONTROL)
     await validate_ollama_backend_idx(request, form_data.model, url_idx, user)
 
@@ -1637,11 +1637,11 @@ async def upload_model(
     async def file_process_stream():
         nonlocal ollama_url
         total_size = os.path.getsize(file_path)
-        log.info(f'Total Model Size: {total_size}')
+        log.info('Total Model Size: %s', total_size)
 
         # Stage 2: hash the file and emit SSE progress
         file_hash = await asyncio.to_thread(calculate_sha256, file_path, chunk_size)
-        log.info(f'Model Hash: {file_hash}')
+        log.info('Model Hash: %s', file_hash)
 
         try:
             bytes_read = 0
@@ -1675,13 +1675,13 @@ async def upload_model(
 
             # Stage 4: create the model
             model, _ext = os.path.splitext(filename)
-            log.info(f'Created Model: {model}')
+            log.info('Created Model: %s', model)
 
             create_payload = {
                 'model': model,
                 'files': {filename: f'sha256:{file_hash}'},
             }
-            log.info(f'Model Payload: {create_payload}')
+            log.info('Model Payload: %s', create_payload)
 
             async with session.post(
                 f'{ollama_url}/api/create',

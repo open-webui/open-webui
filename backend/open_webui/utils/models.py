@@ -377,13 +377,13 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             if items is None:
                 action_function = functions_by_id.get(action_id)
                 if action_function is None:
-                    log.info(f'Action not found: {action_id}')
+                    log.info('Action not found: %s', action_id)
                     action_items_by_id[action_id] = []
                     continue
 
                 function_module = functions_cache.get(action_id)
                 if function_module is None:
-                    log.info(f'Failed to load action module: {action_id}')
+                    log.info('Failed to load action module: %s', action_id)
                     action_items_by_id[action_id] = []
                     continue
                 items = get_action_items_from_module(action_function, function_module)
@@ -397,13 +397,13 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
             if items is None:
                 filter_function = functions_by_id.get(filter_id)
                 if filter_function is None:
-                    log.info(f'Filter not found: {filter_id}')
+                    log.info('Filter not found: %s', filter_id)
                     filter_items_by_id[filter_id] = []
                     continue
 
                 function_module = functions_cache.get(filter_id)
                 if function_module is None:
-                    log.info(f'Failed to load filter module: {filter_id}')
+                    log.info('Failed to load filter module: %s', filter_id)
                     filter_items_by_id[filter_id] = []
                     continue
                 if getattr(function_module, 'toggle', None):

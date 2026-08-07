@@ -21,7 +21,7 @@ from open_webui.env import (
 )
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.channels import Channel, ChannelMember, Channels
-from open_webui.models.chats import Chats
+from open_webui.models.chats import Chats, chat_search_content_query, chat_search_terms
 from open_webui.models.folders import Folders
 from open_webui.models.users import Users
 from open_webui.models.config import Config
@@ -1386,10 +1386,13 @@ async def search_chats(
     __chat_id__: str = None,
 ) -> str:
     """
-    Search the user's previous chat conversations by title and message content.
-    Helpful for finding details from earlier conversations.
+    Search the user's previous chat conversations by title and message content,
+    excluding the current chat. Helpful for finding details from earlier
+    conversations when they are not already visible in the current context.
+    Exact phrase matches are preferred, and descriptive keyword queries are
+    supported.
 
-    :param query: The search query to find matching chats
+    :param query: Exact phrase or descriptive keyword query to find matching previous chats
     :param count: Maximum number of results to return (default: 5)
     :param start_timestamp: Only include chats updated after this Unix timestamp (seconds)
     :param end_timestamp: Only include chats updated before this Unix timestamp (seconds)
@@ -1427,19 +1430,33 @@ async def search_chats(
             # Find a matching message snippet
             snippet = ''
             messages = (getattr(chat, 'chat', None) or {}).get('history', {}).get('messages', {})
-            lower_query = query.lower()
+            if not messages:
+                messages = (getattr(chat, 'chat', None) or {}).get('messages', {}) or {}
+            if isinstance(messages, list):
+                messages = {str(idx): message for idx, message in enumerate(messages)}
 
-            for msg_id, msg in messages.items():
-                content = msg.get('content', '')
-                if isinstance(content, str) and lower_query in content.lower():
-                    idx = content.lower().find(lower_query)
-                    start = max(0, idx - 50)
-                    end = min(len(content), idx + len(query) + 100)
-                    snippet = ('...' if start > 0 else '') + content[start:end] + ('...' if end < len(content) else '')
+            lower_query = chat_search_content_query(query)
+            needles = list(dict.fromkeys([lower_query, *chat_search_terms(lower_query)])) if lower_query else []
+
+            for needle in needles:
+                for msg_id, msg in messages.items():
+                    content = msg.get('content', '') if isinstance(msg, dict) else ''
+                    if isinstance(content, str) and needle in content.lower():
+                        idx = content.lower().find(needle)
+                        start = max(0, idx - 50)
+                        end = min(len(content), idx + len(needle) + 100)
+                        snippet = (
+                            ('...' if start > 0 else '')
+                            + content[start:end]
+                            + ('...' if end < len(content) else '')
+                        )
+                        break
+                if snippet:
                     break
 
-            if not snippet and lower_query in chat.title.lower():
-                snippet = f'Title match: {chat.title}'
+            title = chat.title or ''
+            if not snippet and any(needle in title.lower() for needle in needles):
+                snippet = f'Title match: {title}'
 
             results.append(
                 {

@@ -56,9 +56,14 @@
 	export let webSearchEnabled = false;
 
 	export let onUpload: Function = (e) => {};
+	export let onUpdate: (data?: { file?: any }) => void = () => {};
 	export let onSelect = (e) => {};
 	export let onChange = (e) => {};
 	export let onWebSearchToggle: Function = () => {};
+	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
+	export let onQueueSendNow: (id: string) => void = () => {};
+	export let onQueueEdit: (id: string) => void = () => {};
+	export let onQueueDelete: (id: string) => void = () => {};
 
 	export let toolServers = [];
 
@@ -239,6 +244,11 @@
 						placeholder={$i18n.t('How can I help you today?')}
 						{onChange}
 						{onUpload}
+						{onUpdate}
+						{messageQueue}
+						{onQueueSendNow}
+						{onQueueEdit}
+						{onQueueDelete}
 						{onWebSearchToggle}
 						on:chatVariables
 						on:submit={(e) => {

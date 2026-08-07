@@ -276,9 +276,9 @@ def _resolve_ollama_base_url(url: str) -> str:
 
     if not default.result() and fallback.result():
         url = url.replace(':11434', ':12434')
-        log.info(f'Ollama port 11434 unreachable on {host}, falling back to 12434')
+        log.info('Ollama port 11434 unreachable on %s, falling back to 12434', host)
     elif not default.result():
-        log.info(f'Ollama ports 11434 and 12434 both unreachable on {host}')
+        log.info('Ollama ports 11434 and 12434 both unreachable on %s', host)
 
     return url
 
@@ -811,7 +811,7 @@ if VECTOR_DB == 'oracle23ai':
             'Oracle23ai requires setting ORACLE_WALLET_DIR and ORACLE_WALLET_PASSWORD when using wallet authentication.'
         )
 
-log.info(f'VECTOR_DB: {VECTOR_DB}')
+log.info('VECTOR_DB: %s', VECTOR_DB)
 
 # S3 Vector
 S3_VECTOR_BUCKET_NAME = os.getenv('S3_VECTOR_BUCKET_NAME', None)
@@ -994,7 +994,7 @@ PDF_EXTRACT_IMAGES = os.getenv('PDF_EXTRACT_IMAGES', 'False').lower() == 'true'
 PDF_LOADER_MODE = os.getenv('PDF_LOADER_MODE', 'page')
 
 RAG_EMBEDDING_MODEL = os.getenv('RAG_EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2')
-log.info(f'Embedding model set: {RAG_EMBEDDING_MODEL}')
+log.info('Embedding model set: %s', RAG_EMBEDDING_MODEL)
 
 RAG_TOKENIZER_MODEL = os.getenv('RAG_TOKENIZER_MODEL', '')
 
@@ -1022,7 +1022,7 @@ RAG_RERANKING_ENGINE = os.getenv('RAG_RERANKING_ENGINE', '')
 
 RAG_RERANKING_MODEL = os.getenv('RAG_RERANKING_MODEL', '')
 if RAG_RERANKING_MODEL != '':
-    log.info(f'Reranking model set: {RAG_RERANKING_MODEL}')
+    log.info('Reranking model set: %s', RAG_RERANKING_MODEL)
 
 
 RAG_RERANKING_MODEL_AUTO_UPDATE = (

@@ -608,7 +608,9 @@ async def get_oauth_client_info_with_dynamic_client_registration(
                         }
                     )
                     log.info(
-                        f'Dynamic client registration successful at {registration_url}, client_id: {oauth_client_info.client_id}'
+                        'Dynamic client registration successful at %s, client_id: %s',
+                        registration_url,
+                        oauth_client_info.client_id,
                     )
                     return oauth_client_info
                 except Exception as e:
@@ -701,7 +703,7 @@ async def get_oauth_client_info_with_static_credentials(
         )
 
         log.info(
-            f'Static OAuth client info built for {oauth_client_id} using metadata from {oauth_server_metadata_url}'
+            'Static OAuth client info built for %s using metadata from %s', oauth_client_id, oauth_server_metadata_url
         )
         return oauth_client_info
     except Exception as e:
@@ -807,7 +809,7 @@ async def recover_static_oauth_client_metadata(connection: dict, oauth_client_in
     recovered = {**oauth_client_info}
     if not recovered.get('scope') and resource_metadata.scopes_supported:
         recovered['scope'] = ' '.join(resource_metadata.scopes_supported)
-        log.info(f'Recovered static OAuth scopes for {server_url} from protected resource metadata')
+        log.info('Recovered static OAuth scopes for %s from protected resource metadata', server_url)
 
     if not recovered.get('resource') and resource_metadata.resource:
         recovered['resource'] = resource_metadata.resource
@@ -916,7 +918,7 @@ class OAuthClientManager:
     def remove_client(self, client_id):
         if client_id in self.clients:
             del self.clients[client_id]
-            log.info(f'Removed OAuth client {client_id}')
+            log.info('Removed OAuth client %s', client_id)
 
         if hasattr(self.oauth, '_clients'):
             if client_id in self.oauth._clients:
@@ -1074,7 +1076,7 @@ class OAuthClientManager:
             if refreshed_token:
                 # Update the session with new token data
                 session = await OAuthSessions.update_session_by_id(session.id, refreshed_token)
-                log.info(f'Successfully refreshed token for session {session.id}')
+                log.info('Successfully refreshed token for session %s', session.id)
                 return session.token
             else:
                 log.error(f'Failed to refresh token for session {session.id}')
@@ -1242,7 +1244,7 @@ class OAuthClientManager:
                         provider=client_id,
                         token=token,
                     )
-                    log.info(f'Stored OAuth session server-side for user {user_id}, client_id {client_id}')
+                    log.info('Stored OAuth session server-side for user %s, client_id %s', user_id, client_id)
                 except Exception as e:
                     error_message = 'Failed to store OAuth session server-side'
                     log.error(f'Failed to store OAuth session server-side: {e}')
@@ -1369,7 +1371,7 @@ class OAuthManager:
             if refreshed_token:
                 # Update the session with new token data
                 session = await OAuthSessions.update_session_by_id(session.id, refreshed_token)
-                log.info(f'Successfully refreshed token for session {session.id}')
+                log.info('Successfully refreshed token for session %s', session.id)
                 return session.token
             else:
                 log.error(f'Failed to refresh token for session {session.id}')
@@ -1594,7 +1596,7 @@ class OAuthManager:
 
             for group_name in user_oauth_groups:
                 if group_name not in all_group_names:
-                    log.info(f"Group '{group_name}' not found via OAuth claim. Creating group...")
+                    log.info("Group '%s' not found via OAuth claim. Creating group...", group_name)
                     try:
                         new_group_form = GroupForm(
                             name=group_name,
@@ -1606,7 +1608,10 @@ class OAuthManager:
                         created_group = await Groups.insert_new_group(creator_id, new_group_form, db=db)
                         if created_group:
                             log.info(
-                                f"Successfully created group '{group_name}' with ID {created_group.id} using creator ID {creator_id}"
+                                "Successfully created group '%s' with ID %s using creator ID %s",
+                                group_name,
+                                created_group.id,
+                                creator_id,
                             )
                             groups_created = True
                             # Add to local set to prevent duplicate creation attempts in this run
@@ -2096,7 +2101,7 @@ class OAuthManager:
                     **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
                 )
 
-                log.info(f'Stored OAuth session server-side for user {user.id}, provider {provider}')
+                log.info('Stored OAuth session server-side for user %s, provider %s', user.id, provider)
             else:
                 log.warning(f'Failed to create OAuth session for user {user.id}, provider {provider}')
         except Exception as e:
@@ -2280,11 +2285,14 @@ class OAuthManager:
                 revoked_count += 1
 
             log.info(
-                f'Back-channel logout: revoked sessions for user {user.id} '
-                f'(email={user.email}, provider={matched_provider}, sessions_deleted={len(sessions)})'
+                'Back-channel logout: revoked sessions for user %s (email=%s, provider=%s, sessions_deleted=%s)',
+                user.id,
+                user.email,
+                matched_provider,
+                len(sessions),
             )
 
         log.info(
-            f'Back-channel logout: completed for {len(users_to_logout)} user(s), {revoked_count} revocation(s) set'
+            'Back-channel logout: completed for %s user(s), %s revocation(s) set', len(users_to_logout), revoked_count
         )
         return JSONResponse(status_code=200, content={})

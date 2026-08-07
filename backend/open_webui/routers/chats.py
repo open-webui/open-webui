@@ -13,7 +13,6 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
-from open_webui.models.config import Config
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import (
     AggregateChatStats,
@@ -27,9 +26,12 @@ from open_webui.models.chats import (
     ChatStatsExport,
     ChatTitleIdResponse,
     ChatUsageStatsListResponse,
-    is_internal_chat,
     MessageStats,
+    chat_search_content_query,
+    chat_search_terms,
+    is_internal_chat,
 )
+from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.shared_chats import SharedChatResponse, SharedChats
 from open_webui.models.tags import TagModel, Tags
@@ -48,8 +50,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 log = logging.getLogger(__name__)
 
 router = APIRouter()
-
-SEARCH_FILTER_PREFIXES = ('tag:', 'folder:', 'pinned:', 'archived:', 'shared:')
 
 CHAT_CONFIG_KEYS = {
     'CONTEXT_COMPACTION_MODEL': 'chat.context_compaction.model',
@@ -147,38 +147,42 @@ class CompactChatForm(BaseModel):
 
 
 def chat_search_content_text(text: str) -> str:
-    words = text.lower().strip().split(' ')
-    return ' '.join(word for word in words if not word.startswith(SEARCH_FILTER_PREFIXES)).strip()
+    return chat_search_content_query(text)
 
 
 def chat_search_snippet(chat: dict, search_text: str, max_length: int = 200) -> str | None:
     if not search_text:
         return None
 
-    messages = chat.get('messages', [])
+    history = chat.get('history', {})
+    messages = history.get('messages') if isinstance(history, dict) else None
+    if not messages:
+        messages = chat.get('messages', []) or []
     if isinstance(messages, dict):
         messages = messages.values()
 
-    for message in messages:
-        if not isinstance(message, dict):
-            continue
+    needles = list(dict.fromkeys([search_text, *chat_search_terms(search_text)]))
+    for needle in needles:
+        for message in messages:
+            if not isinstance(message, dict):
+                continue
 
-        content = message.get('content')
-        if not isinstance(content, str):
-            continue
+            content = message.get('content')
+            if not isinstance(content, str):
+                continue
 
-        index = content.lower().find(search_text)
-        if index == -1:
-            continue
+            index = content.lower().find(needle)
+            if index == -1:
+                continue
 
-        start = max(index - max_length // 2, 0)
-        end = min(start + max_length, len(content))
-        if index + len(search_text) > end:
-            end = min(index + len(search_text), len(content))
-            start = max(end - max_length, 0)
+            start = max(index - max_length // 2, 0)
+            end = min(start + max_length, len(content))
+            if index + len(needle) > end:
+                end = min(index + len(needle), len(content))
+                start = max(end - max_length, 0)
 
-        snippet = ' '.join(content[start:end].split())
-        return f'{"..." if start else ""}{snippet}{"..." if end < len(content) else ""}'
+            snippet = ' '.join(content[start:end].split())
+            return f'{"..." if start else ""}{snippet}{"..." if end < len(content) else ""}'
 
     return None
 

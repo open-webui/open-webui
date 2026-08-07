@@ -211,8 +211,9 @@ async def scheduler_worker_loop(app) -> None:
     SCHEDULER_POLL_INTERVAL env var (default: 10 seconds).
     """
     log.info(
-        f'Scheduler worker started (timer poll interval: {TIMER_POLL_INTERVAL}s, '
-        f'scheduler poll interval: {SCHEDULER_POLL_INTERVAL}s)'
+        'Scheduler worker started (timer poll interval: %ss, scheduler poll interval: %ss)',
+        TIMER_POLL_INTERVAL,
+        SCHEDULER_POLL_INTERVAL,
     )
     next_scheduler_poll = 0.0
 
@@ -240,7 +241,7 @@ async def scheduler_worker_loop(app) -> None:
                     async with get_async_db() as db:
                         batch = await Automations.claim_due(int(time.time_ns()), limit=10, db=db)
                     if batch:
-                        log.info(f'Claimed {len(batch)} due automation(s)')
+                        log.info('Claimed %s due automation(s)', len(batch))
                     for automation in batch:
                         asyncio.create_task(execute_automation(app, automation))
                 except Exception:
@@ -546,6 +547,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
                 'content': prompt,
             },
             'session_id': f'automation:{automation.id}',
+            'automation_id': automation.id,
             'background_tasks': {},
         }
         if tool_ids:

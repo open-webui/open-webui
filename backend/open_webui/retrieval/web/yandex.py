@@ -112,7 +112,7 @@ def search_yandex(
             for result in results[:count]
         ]
 
-        log.info(f'Yandex search results: {results}')
+        log.info('Yandex search results: %s', results)
 
         return results
     except Exception as e:

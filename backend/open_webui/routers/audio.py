@@ -157,7 +157,7 @@ def convert_audio_to_mp3(file_path):
         output_path = os.path.splitext(file_path)[0] + '.mp3'
         audio = AudioSegment.from_file(file_path)
         audio.export(output_path, format='mp3')
-        log.info(f'Converted {file_path} to {output_path}')
+        log.info('Converted %s to %s', file_path, output_path)
         return output_path
     except Exception as e:
         log.error(f'Error converting audio file: {e}')
@@ -208,7 +208,7 @@ def transcode_audio_to_mp3(audio_data: bytes, content_type_header: str, output_p
         audio_segment = AudioSegment.from_file(io.BytesIO(audio_data))
 
     audio_segment.export(str(output_path), format='mp3')
-    log.info(f'Transcoded {mime_type} audio to MP3: {output_path}')
+    log.info('Transcoded %s audio to MP3: %s', mime_type, output_path)
     return True
 
 
@@ -631,7 +631,7 @@ async def _transcribe_whisper(request, file_path, languages, file_dir, id):
             language=languages[0],
             multilingual=WHISPER_MULTILINGUAL,
         )
-        log.info("Detected language '%s' with probability %f" % (info.language, info.language_probability))
+        log.info("Detected language '%s' with probability %f", info.language, info.language_probability)
         return ''.join([segment.text for segment in list(segments)])
 
     transcript = await asyncio.to_thread(_run)
@@ -952,7 +952,9 @@ async def _transcribe_mistral(request, file_path, filename, metadata, file_dir, 
     try:
         model = await Config.get('audio.stt.model') or 'voxtral-mini-latest'
         log.info(
-            f'Mistral STT - model: {model}, method: {"chat_completions" if use_chat_completions else "transcriptions"}'
+            'Mistral STT - model: %s, method: %s',
+            model,
+            'chat_completions' if use_chat_completions else 'transcriptions',
         )
 
         session = await get_session()
@@ -1075,7 +1077,7 @@ async def _transcribe_mistral(request, file_path, filename, metadata, file_dir, 
 
 
 async def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None, user=None):
-    log.info(f'transcribe: {file_path} {metadata}')
+    log.info('transcribe: %s %s', file_path, metadata)
 
     if BYPASS_PYDUB_PREPROCESSING:
         log.info('Bypassing pydub preprocessing (BYPASS_PYDUB_PREPROCESSING=true)')
@@ -1202,7 +1204,7 @@ async def transcription(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
-    log.info(f'file.content_type: {file.content_type}')
+    log.info('file.content_type: %s', file.content_type)
     stt_supported_content_types = await Config.get('audio.stt.supported_content_types', [])
 
     if not strict_match_mime_type(stt_supported_content_types, file.content_type):

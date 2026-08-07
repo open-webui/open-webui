@@ -8,13 +8,19 @@
 
 	export let char = '';
 	export let query = '';
-	export let command: (payload: { id: string; label: string }) => void;
+	export let command: (payload: {
+		id: string;
+		label: string;
+		content?: string;
+		type?: string;
+	}) => void;
 
 	export let onSelect: (e: any) => void = () => {};
 	export let onUpload: (e: any) => void = () => {};
 	export let onCompact: () => void = () => {};
 	export let onStatus: () => void = () => {};
 	export let onFork: () => void = () => {};
+	export let onModel: () => void = () => {};
 	export let insertTextHandler: (text: string) => void = () => {};
 	export let canCompact: boolean | (() => boolean) = false;
 	export let compactDisabled: boolean | (() => boolean) = false;
@@ -93,16 +99,24 @@
 						const { type, data } = e;
 
 						if (type === 'prompt') {
-							insertTextHandler(data.content);
+							command({
+								id: data.command,
+								label: data.command,
+								content: data.content,
+								type: 'prompt'
+							});
 						} else if (type === 'command' && data.id === 'compact') {
-							insertTextHandler('');
+							command({ id: data.id, label: data.id });
 							onCompact();
 						} else if (type === 'command' && data.id === 'status') {
-							insertTextHandler('');
+							command({ id: data.id, label: data.id });
 							onStatus();
 						} else if (type === 'command' && data.id === 'fork') {
-							insertTextHandler('');
+							command({ id: data.id, label: data.id });
 							onFork();
+						} else if (type === 'command' && data.id === 'model') {
+							command({ id: data.id, label: data.id });
+							onModel();
 						} else if (type === 'skill') {
 							command({
 								id: `${data.id}|${data.name}`,
