@@ -915,6 +915,7 @@ async def get_pinned_channel_messages(
 async def send_notification(request, channel, message, active_user_ids, db=None):
     webui_url = await Config.get('webui.url')
     enable_user_webhooks = await Config.get('ui.enable_user_webhooks')
+    enable_web_push = await Config.get('webpush.enable')
 
     users = await get_channel_users_with_access(channel, 'read', db=db)
 
@@ -924,7 +925,7 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
 
     for u in users:
         if (u.id not in active_user_ids) and u.id in member_ids:
-            if enable_user_webhooks and u.settings:
+            if (enable_user_webhooks or enable_web_push) and u.settings:
                 await publish_event(
                     request,
                     EVENTS.CHANNEL_MESSAGE,

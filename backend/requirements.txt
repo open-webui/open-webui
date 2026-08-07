@@ -5,6 +5,9 @@ python-multipart==0.0.32
 itsdangerous==2.2.0
 
 python-socketio==5.16.2
+pywebpush==2.4.0
+py-vapid==1.9.4
+http-ece==1.2.1
 orjson==3.11.9
 cryptography==48.0.0
 bcrypt==5.0.0

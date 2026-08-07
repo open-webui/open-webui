@@ -6,6 +6,7 @@
 
 	import { getUsage } from '$lib/apis';
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
+	import { disableWebPushOnDevice } from '$lib/apis/notifications';
 
 	import { showSettings, mobile, showSidebar, user, config, settings } from '$lib/stores';
 
@@ -570,6 +571,11 @@
 				class="flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[13px] w-full hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition cursor-pointer select-none"
 				type="button"
 				on:click={async () => {
+					// Best-effort with a cap so a slow server cannot hang sign-out
+					await Promise.race([
+						disableWebPushOnDevice(localStorage.token),
+						new Promise((resolve) => setTimeout(resolve, 2000))
+					]);
 					const res = await userSignOut();
 					user.set(null);
 					localStorage.removeItem('token');

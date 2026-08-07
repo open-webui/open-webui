@@ -334,6 +334,15 @@
 					<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 				<AdminSettingRow
+					label={$i18n.t('Web Push Notifications')}
+					description={$i18n.t(
+						'Allow users to receive push notifications on their devices while the app is closed.'
+					)}
+					let:labelId
+				>
+					<Switch bind:state={adminConfig.ENABLE_WEB_PUSH} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+				<AdminSettingRow
 					label={$i18n.t('User Status')}
 					description={$i18n.t('Show user status information in the app.')}
 					let:labelId

@@ -126,6 +126,7 @@ ADMIN_CONFIG_KEYS = {
     'ENABLE_MEMORY_SYSTEM_CONTEXT': 'memories.system_context.enable',
     'ENABLE_NOTES': 'notes.enable',
     'ENABLE_USER_WEBHOOKS': 'ui.enable_user_webhooks',
+    'ENABLE_WEB_PUSH': 'webpush.enable',
     'ENABLE_USER_STATUS': 'users.enable_status',
     'PENDING_USER_OVERLAY_TITLE': 'ui.pending_user_overlay_title',
     'PENDING_USER_OVERLAY_CONTENT': 'ui.pending_user_overlay_content',
@@ -1211,6 +1212,7 @@ class AdminConfig(BaseModel):
     ENABLE_MEMORY_SYSTEM_CONTEXT: bool
     ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
+    ENABLE_WEB_PUSH: bool
     ENABLE_USER_STATUS: bool
     PENDING_USER_OVERLAY_TITLE: str | None = None
     PENDING_USER_OVERLAY_CONTENT: str | None = None

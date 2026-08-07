@@ -2086,6 +2086,8 @@ ENABLE_MESSAGE_RATING = os.getenv('ENABLE_MESSAGE_RATING', 'True').lower() == 't
 
 ENABLE_USER_WEBHOOKS = os.getenv('ENABLE_USER_WEBHOOKS', 'False').lower() == 'true'
 
+ENABLE_WEB_PUSH = os.getenv('ENABLE_WEB_PUSH', 'False').lower() == 'true'
+
 # FastAPI / AnyIO settings
 THREAD_POOL_SIZE = os.getenv('THREAD_POOL_SIZE', None)
 
@@ -3089,6 +3091,9 @@ DEFAULT_CONFIG = {
     'ui.enable_community_sharing': ENABLE_COMMUNITY_SHARING,
     'ui.enable_message_rating': ENABLE_MESSAGE_RATING,
     'ui.enable_user_webhooks': ENABLE_USER_WEBHOOKS,
+    # webpush.vapid_public_key / webpush.vapid_private_key are deliberately not
+    # seeded here; get_vapid_keys relies on the rows being absent until generated
+    'webpush.enable': ENABLE_WEB_PUSH,
     'ui.banners': WEBUI_BANNERS,
     'auth.admin.show': SHOW_ADMIN_DETAILS,
     'auth.admin.email': ADMIN_EMAIL,

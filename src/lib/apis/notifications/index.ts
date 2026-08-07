@@ -2,7 +2,7 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export type NotificationTarget = {
 	id: string;
-	type: 'webhook';
+	type: 'webhook' | 'webpush';
 	is_default?: boolean;
 	enabled: boolean;
 	events: string[];
@@ -79,3 +79,58 @@ export const setDefaultNotificationTarget = async (token: string, targetId: stri
 
 export const testNotificationTarget = async (token: string, targetId: string) =>
 	jsonRequest(`${WEBUI_API_BASE_URL}/notifications/targets/${targetId}/test`, token, 'POST');
+
+export const getWebPushPublicKey = async (token: string): Promise<string> => {
+	const data = await jsonRequest(`${WEBUI_API_BASE_URL}/notifications/webpush/public-key`, token);
+	return data?.public_key ?? '';
+};
+
+export const createWebPushSubscription = async (
+	token: string,
+	subscription: { endpoint: string; keys: { p256dh: string; auth: string } }
+) =>
+	jsonRequest(
+		`${WEBUI_API_BASE_URL}/notifications/webpush/subscriptions`,
+		token,
+		'POST',
+		subscription
+	);
+
+export const getWebPushSubscriptions = async (token: string): Promise<string[]> => {
+	const data = await jsonRequest(
+		`${WEBUI_API_BASE_URL}/notifications/webpush/subscriptions`,
+		token
+	);
+	return data?.endpoints ?? [];
+};
+
+export const deleteWebPushSubscription = async (token: string, endpoint: string) =>
+	jsonRequest(
+		`${WEBUI_API_BASE_URL}/notifications/webpush/subscriptions/unsubscribe`,
+		token,
+		'POST',
+		{
+			endpoint
+		}
+	);
+
+export const getPushSubscription = async (): Promise<PushSubscription | null> => {
+	if (!('serviceWorker' in navigator)) {
+		return null;
+	}
+	const registration = await navigator.serviceWorker.getRegistration('/');
+	return (await registration?.pushManager?.getSubscription()) ?? null;
+};
+
+// Best-effort removal of this device's push subscription, e.g. on sign-out
+export const disableWebPushOnDevice = async (token: string) => {
+	try {
+		const subscription = await getPushSubscription();
+		if (subscription) {
+			await deleteWebPushSubscription(token, subscription.endpoint).catch(() => {});
+			await subscription.unsubscribe();
+		}
+	} catch {
+		// ignore; the server prunes dead subscriptions on delivery
+	}
+};

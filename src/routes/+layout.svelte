@@ -85,7 +85,15 @@
 		if ('serviceWorker' in navigator) {
 			try {
 				const registrations = await navigator.serviceWorker.getRegistrations();
-				await Promise.all(registrations.map((r) => r.unregister()));
+				// Keep /sw.js registered; it delivers web push while the app is closed
+				await Promise.all(
+					registrations
+						.filter(
+							(r) =>
+								![r.active, r.waiting, r.installing].some((w) => w?.scriptURL?.endsWith('/sw.js'))
+						)
+						.map((r) => r.unregister())
+				);
 				return true;
 			} catch (error) {
 				console.error('Error unregistering service workers:', error);

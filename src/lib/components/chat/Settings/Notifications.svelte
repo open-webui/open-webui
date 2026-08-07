@@ -9,9 +9,14 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import {
 		createNotificationTarget,
+		createWebPushSubscription,
 		deleteNotificationTarget,
+		deleteWebPushSubscription,
 		getNotificationEvents,
 		getNotificationTargets,
+		getPushSubscription,
+		getWebPushPublicKey,
+		getWebPushSubscriptions,
 		setDefaultNotificationTarget,
 		testNotificationTarget,
 		updateNotificationTarget,
@@ -36,6 +41,7 @@
 	let loadingTargets = false;
 	let savingTarget = false;
 	let editingId: string | null = null;
+	let editingType: 'webhook' | 'webpush' = 'webhook';
 	let formOpen = false;
 	let form = {
 		id: '',
@@ -50,9 +56,143 @@
 		($config?.features as any)?.enable_user_webhooks &&
 		($user?.role === 'admin' || ($user?.permissions?.features?.webhooks ?? false));
 
+	$: canUseWebPush =
+		(($config?.features as any)?.enable_web_push ?? false) &&
+		'serviceWorker' in navigator &&
+		'PushManager' in window &&
+		'Notification' in window;
+
 	$: if (canUseWebhooks && !loadedTargets) {
 		void loadTargets();
 	}
+
+	let webPushEnabled = false;
+	let webPushBusy = false;
+	let webPushChecked = false;
+
+	// The toggle is on only if this browser's subscription is registered for this user
+	const reconcileWebPush = async () => {
+		if (webPushBusy) {
+			return;
+		}
+		webPushChecked = true;
+		try {
+			const [subscription, endpoints] = await Promise.all([
+				getPushSubscription(),
+				getWebPushSubscriptions(localStorage.token)
+			]);
+			webPushEnabled = subscription !== null && endpoints.includes(subscription.endpoint);
+		} catch {
+			webPushEnabled = false;
+		}
+	};
+
+	$: if (canUseWebPush && !webPushChecked) {
+		void reconcileWebPush();
+	}
+
+	const urlBase64ToUint8Array = (base64String: string) => {
+		const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+		const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+		const rawData = atob(base64);
+		return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+	};
+
+	const setWebPush = async (enable: boolean) => {
+		if (webPushBusy) {
+			webPushEnabled = !enable;
+			return;
+		}
+		webPushBusy = true;
+		try {
+			if (enable) {
+				const publicKey = await getWebPushPublicKey(localStorage.token);
+				if (!publicKey) {
+					webPushEnabled = false;
+					toast.error($i18n.t('Push notifications are not configured on this server.'));
+					return;
+				}
+
+				const permission = await Notification.requestPermission();
+				if (permission !== 'granted') {
+					webPushEnabled = false;
+					toast.error(
+						$i18n.t(
+							'Response notifications cannot be activated as the website permissions have been denied. Please visit your browser settings to grant the necessary access.'
+						)
+					);
+					return;
+				}
+
+				const registration = await navigator.serviceWorker.register('/sw.js');
+				await new Promise((resolve, reject) => {
+					const worker = registration.active ?? registration.waiting ?? registration.installing;
+					if (!worker) {
+						reject(new Error('Service worker failed to install'));
+						return;
+					}
+					if (worker.state === 'activated') {
+						resolve(undefined);
+						return;
+					}
+					const timer = setTimeout(
+						() => reject(new Error('Service worker activation timed out')),
+						10000
+					);
+					worker.addEventListener('statechange', () => {
+						if (worker.state === 'activated') {
+							clearTimeout(timer);
+							resolve(undefined);
+						} else if (worker.state === 'redundant') {
+							clearTimeout(timer);
+							reject(new Error('Service worker failed to install'));
+						}
+					});
+				});
+
+				const applicationServerKey = urlBase64ToUint8Array(publicKey);
+				const existing = await registration.pushManager.getSubscription();
+				if (existing) {
+					// A subscription under an old VAPID key makes subscribe() throw; replace it
+					const existingKey = new Uint8Array(existing.options?.applicationServerKey ?? []);
+					const sameKey =
+						existingKey.length === applicationServerKey.length &&
+						existingKey.every((byte, i) => byte === applicationServerKey[i]);
+					if (!sameKey) {
+						await existing.unsubscribe();
+					}
+				}
+
+				const subscription = await registration.pushManager.subscribe({
+					userVisibleOnly: true,
+					applicationServerKey
+				});
+
+				const { endpoint, keys } = subscription.toJSON() as {
+					endpoint: string;
+					keys: { p256dh: string; auth: string };
+				};
+				await createWebPushSubscription(localStorage.token, { endpoint, keys });
+				webPushEnabled = true;
+				toast.success($i18n.t('Push notifications enabled on this device.'));
+			} else {
+				const subscription = await getPushSubscription();
+				if (subscription) {
+					await deleteWebPushSubscription(localStorage.token, subscription.endpoint);
+					await subscription.unsubscribe().catch(() => {});
+				}
+				webPushEnabled = false;
+			}
+			if (canUseWebhooks) {
+				await loadTargets();
+			}
+		} catch (error) {
+			webPushEnabled = !enable;
+			toast.error(`${error}`);
+		} finally {
+			webPushBusy = false;
+		}
+	};
 
 	const toggleNotifications = async () => {
 		if (!notificationEnabled) {
@@ -92,6 +232,9 @@
 			}
 			if (targetResult.status === 'fulfilled') {
 				targets = targetResult.value.targets ?? [];
+				if (canUseWebPush) {
+					void reconcileWebPush();
+				}
 			} else {
 				toast.error(`${targetResult.reason}`);
 			}
@@ -104,6 +247,7 @@
 
 	const openNewTarget = () => {
 		editingId = null;
+		editingType = 'webhook';
 		formOpen = true;
 		form = {
 			id: '',
@@ -116,6 +260,7 @@
 
 	const openEditTarget = (target: NotificationTarget) => {
 		editingId = target.id;
+		editingType = target.type === 'webpush' ? 'webpush' : 'webhook';
 		formOpen = true;
 		form = {
 			id: target.id,
@@ -138,11 +283,13 @@
 			const id = form.id.trim();
 			const payload: Partial<NotificationTarget> = {
 				...(id ? { id } : {}),
-				type: 'webhook',
+				type: editingType,
 				enabled: form.enabled,
 				events: form.events,
 				delivery: form.delivery,
-				...(form.url.trim() ? { config: { url: form.url.trim() } } : {})
+				...(editingType === 'webhook' && form.url.trim()
+					? { config: { url: form.url.trim() } }
+					: {})
 			};
 
 			if (editingId) {
@@ -206,6 +353,22 @@
 				{$i18n.t('Allow browser notifications for completed responses.')}
 			</p>
 
+			{#if canUseWebPush}
+				<label class="flex cursor-pointer items-center justify-between">
+					<span class="text-xs text-gray-600 dark:text-gray-400">
+						{$i18n.t('Push Notifications')}
+					</span>
+					<Switch
+						bind:state={webPushEnabled}
+						ariaLabel={$i18n.t('Push Notifications')}
+						on:change={(event) => setWebPush(event.detail)}
+					/>
+				</label>
+				<p class="-mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+					{$i18n.t('Deliver notifications to this device even when the app is closed.')}
+				</p>
+			{/if}
+
 			<label class="flex cursor-pointer items-center justify-between">
 				<span class="text-xs text-gray-600 dark:text-gray-400">
 					{$i18n.t('Notification Sound')}
@@ -255,7 +418,7 @@
 											{target.id}
 										</span>
 										<span class="shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600">
-											{$i18n.t('Webhook')}
+											{target.type === 'webpush' ? $i18n.t('Push') : $i18n.t('Webhook')}
 										</span>
 										{#if target.is_default}
 											<span class="shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600">
@@ -355,19 +518,21 @@
 			class="block w-full bg-transparent py-0.5 font-mono text-[0.8125rem] text-gray-700 outline-none placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
 		/>
 
-		<div class="mt-2 text-[0.625rem] text-gray-400 dark:text-gray-600">
-			{$i18n.t('Webhook')}
-		</div>
-		<input
-			type="url"
-			bind:value={form.url}
-			placeholder={editingId
-				? $i18n.t('Keep current webhook URL')
-				: 'https://hooks.slack.com/services/...'}
-			autocomplete="off"
-			spellcheck="false"
-			class="block w-full bg-transparent py-0.5 font-mono text-[0.8125rem] text-gray-700 outline-none placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
-		/>
+		{#if editingType === 'webhook'}
+			<div class="mt-2 text-[0.625rem] text-gray-400 dark:text-gray-600">
+				{$i18n.t('Webhook')}
+			</div>
+			<input
+				type="url"
+				bind:value={form.url}
+				placeholder={editingId
+					? $i18n.t('Keep current webhook URL')
+					: 'https://hooks.slack.com/services/...'}
+				autocomplete="off"
+				spellcheck="false"
+				class="block w-full bg-transparent py-0.5 font-mono text-[0.8125rem] text-gray-700 outline-none placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+			/>
+		{/if}
 
 		<div class="mt-3 mb-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
 			{$i18n.t('Automatic Events')}
