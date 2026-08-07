@@ -3,8 +3,9 @@
 
 	const i18n = getContext('i18n');
 
+	import { user as sessionUser } from '$lib/stores';
 	import { getGroups, getGroupById, getGroupInfoById } from '$lib/apis/groups';
-	import { getUserInfoById } from '$lib/apis/users';
+	import { getUserInfoById, searchUsers } from '$lib/apis/users';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
@@ -40,6 +41,7 @@
 	export let defaultPermission: 'read' | 'write' = 'read';
 
 	let groups: any[] = [];
+	let userTotal: number | null = null;
 	const resolvingGroupIds = new Set<string>();
 	let userById: Record<string, any> = {};
 	const resolvingUserIds = new Set<string>();
@@ -428,6 +430,20 @@
 		.filter((group) => readGroupIds.includes(group.id) || writeGroupIds.includes(group.id))
 		.sort((a, b) => a.name.localeCompare(b.name));
 
+	$: selectableGroupCount = allowGroups
+		? groups.filter(
+				(group) => !readGroupIds.includes(group.id) && !writeGroupIds.includes(group.id)
+			).length
+		: 0;
+
+	$: selectableUserCount =
+		shareUsers && userTotal !== null
+			? Math.max(0, userTotal - 1 - selectedUserIds.filter((id) => id !== $sessionUser?.id).length)
+			: 0;
+
+	$: canAddAccess =
+		selectableGroupCount > 0 || (shareUsers && userTotal === null) || selectableUserCount > 0;
+
 	$: if (selectedUserIds.length > 0) {
 		void ensureUsersByIds(selectedUserIds);
 	}
@@ -464,6 +480,14 @@
 		groups = [...groups, ...res].filter(
 			(g, index, self) => index === self.findIndex((t) => t.id === g.id)
 		);
+
+		if (shareUsers) {
+			const userRes = await searchUsers(localStorage.token, '', 'name', 'asc', 1).catch((error) => {
+				console.error(error);
+				return null;
+			});
+			userTotal = userRes?.total ?? null;
+		}
 	});
 </script>
 
@@ -571,16 +595,18 @@
 				{$i18n.t('Access List')}
 			</div>
 			<div class="flex gap-1">
-				<button
-					class="px-2 py-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition text-xs font-normal flex items-center gap-1"
-					type="button"
-					on:click={() => {
-						showAddAccessModal = true;
-					}}
-				>
-					<Plus className="size-3" />
-					{$i18n.t('Add Access')}
-				</button>
+				{#if canAddAccess}
+					<button
+						class="px-2 py-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition text-xs font-normal flex items-center gap-1"
+						type="button"
+						on:click={() => {
+							showAddAccessModal = true;
+						}}
+					>
+						<Plus className="size-3" />
+						{$i18n.t('Add Access')}
+					</button>
+				{/if}
 			</div>
 		</div>
 

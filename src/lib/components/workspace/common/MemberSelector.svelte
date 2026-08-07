@@ -31,8 +31,22 @@
 	let filteredGroups = [];
 
 	$: filteredGroups = groups
-		? groups.filter((group) => group.name.toLowerCase().includes(query.toLowerCase()))
+		? groups.filter(
+				(group) =>
+					group.name.toLowerCase().includes(query.toLowerCase()) &&
+					!accessGrants.some(
+						(grant) => grant.principal_type === 'group' && grant.principal_id === group.id
+					)
+			)
 		: [];
+
+	$: filteredUsers = (users ?? []).filter(
+		(user: any) =>
+			!accessGrants.some(
+				(grant) => grant.principal_type === 'user' && grant.principal_id === user.id
+			) &&
+			(includeSessionUser || user?.id !== $_user?.id)
+	);
 
 	let selectedGroup = {};
 	let selectedUsers = {};
@@ -195,7 +209,7 @@
 			</div>
 		</div>
 
-		{#if users.length > 0 || filteredGroups.length > 0}
+		{#if filteredUsers.length > 0 || filteredGroups.length > 0}
 			<div class="scrollbar-hidden relative whitespace-nowrap w-full max-w-full">
 				<div class=" text-sm text-left text-gray-500 dark:text-gray-400 w-full max-w-full">
 					<div class="w-full max-h-96 overflow-y-auto rounded-lg">
@@ -241,64 +255,61 @@
 							</div>
 						{/if}
 
-						{#if includeUsers}
+						{#if includeUsers && filteredUsers.length > 0}
 							<div class="text-xs text-gray-500 mb-1 mx-1">
 								{$i18n.t('Users')}
 							</div>
 
 							<div>
-								{#each users as user, userIdx (user.id)}
-									{#if !accessGrants.some((grant) => grant.principal_type === 'user' && grant.principal_id === user.id) && (includeSessionUser || user?.id !== $_user?.id)}
-										<button
-											class=" dark:border-gray-850 text-xs flex items-center justify-between w-full"
-											type="button"
-											on:click={() => {
-												if ((userIds ?? []).includes(user.id)) {
-													userIds = userIds.filter((id) => id !== user.id);
-													delete selectedUsers[user.id];
-												} else {
-													userIds = [...userIds, user.id];
-													selectedUsers[user.id] = user;
-												}
-											}}
-										>
-											<div class="px-3 py-1.5 font-normal text-gray-900 dark:text-white flex-1">
-												<div class="flex items-center gap-2">
-													<ProfilePreview {user} side="right" align="center" sideOffset={6}>
-														<img
-															class="rounded-2xl w-6 h-6 object-cover flex-shrink-0"
-															src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
-															alt="user"
-														/>
-													</ProfilePreview>
-													<Tooltip content={user.email} placement="top-start">
-														<div class="font-normal truncate">{user.name}</div>
-													</Tooltip>
-
-													{#if user?.is_active}
-														<div>
-															<span class="relative flex size-1.5">
-																<span
-																	class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
-																></span>
-																<span
-																	class="relative inline-flex size-1.5 rounded-full bg-green-500"
-																></span>
-															</span>
-														</div>
-													{/if}
-												</div>
-											</div>
-
-											<div class="px-3 py-1">
-												<div class=" translate-y-0.5">
-													<Checkbox
-														state={(userIds ?? []).includes(user.id) ? 'checked' : 'unchecked'}
+								{#each filteredUsers as user (user.id)}
+									<button
+										class=" dark:border-gray-850 text-xs flex items-center justify-between w-full"
+										type="button"
+										on:click={() => {
+											if ((userIds ?? []).includes(user.id)) {
+												userIds = userIds.filter((id) => id !== user.id);
+												delete selectedUsers[user.id];
+											} else {
+												userIds = [...userIds, user.id];
+												selectedUsers[user.id] = user;
+											}
+										}}
+									>
+										<div class="px-3 py-1.5 font-normal text-gray-900 dark:text-white flex-1">
+											<div class="flex items-center gap-2">
+												<ProfilePreview {user} side="right" align="center" sideOffset={6}>
+													<img
+														class="rounded-2xl w-6 h-6 object-cover flex-shrink-0"
+														src={`${WEBUI_API_BASE_URL}/users/${user.id}/profile/image`}
+														alt="user"
 													/>
-												</div>
+												</ProfilePreview>
+												<Tooltip content={user.email} placement="top-start">
+													<div class="font-normal truncate">{user.name}</div>
+												</Tooltip>
+
+												{#if user?.is_active}
+													<div>
+														<span class="relative flex size-1.5">
+															<span
+																class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+															></span>
+															<span class="relative inline-flex size-1.5 rounded-full bg-green-500"
+															></span>
+														</span>
+													</div>
+												{/if}
 											</div>
-										</button>
-									{/if}
+										</div>
+
+										<div class="px-3 py-1">
+											<div class=" translate-y-0.5">
+												<Checkbox
+													state={(userIds ?? []).includes(user.id) ? 'checked' : 'unchecked'}
+												/>
+											</div>
+										</div>
+									</button>
 								{/each}
 							</div>
 						{/if}
