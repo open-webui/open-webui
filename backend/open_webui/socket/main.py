@@ -327,13 +327,22 @@ async def disconnect_user_sessions(user_id: str):
     fresh data from the database.
     """
     try:
-        session_ids = get_session_ids_from_room(f'user:{user_id}')
-        for sid in session_ids:
+        # SESSION_POOL reaches other processes; the room map also holds sockets whose pool entry
+        # was dropped without disconnecting them.
+        session_ids = {sid for sid, entry in SESSION_POOL.items() if entry.get('id') == user_id}
+        session_ids.update(get_session_ids_from_room(f'user:{user_id}'))
+    except Exception:
+        # Non-fatal: whatever changed the user is already committed.
+        log.exception('Failed to look up sessions for user %s', user_id)
+        return
+
+    for sid in session_ids:
+        try:
             await sio.disconnect(sid)
-        if session_ids:
-            log.info('Disconnected %s session(s) for user %s', len(session_ids), user_id)
-    except Exception as e:
-        log.warning(f'Failed to disconnect sessions for user {user_id}: {e}')
+        except Exception as e:
+            log.warning('Failed to disconnect session %s for user %s: %s', sid, user_id, e)
+    if session_ids:
+        log.info('Requested disconnect of %s session(s) for user %s', len(session_ids), user_id)
 
 
 @sio.on('usage')

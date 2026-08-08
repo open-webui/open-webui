@@ -582,13 +582,7 @@ class UsersTable:
             return result.scalar()
 
     async def update_user_role_by_id(self, id: str, role: str, db: AsyncSession | None = None) -> UserModel | None:
-        async with get_async_db_context(db) as session:
-            user = await session.get(User, id)
-            if not user:
-                return None
-            user.role = role
-            await session.commit()
-            return UserModel.model_validate(user)
+        return await self.update_user_by_id(id, {'role': role}, db=db)
 
     async def update_user_status_by_id(
         self, id: str, form_data: UserStatus, db: AsyncSession | None = None
@@ -664,10 +658,18 @@ class UsersTable:
             user = await session.get(User, id)
             if not user:
                 return None
+            role_changed = 'role' in updated and updated['role'] != user.role
             for key, value in updated.items():
                 setattr(user, key, value)
             await session.commit()
-            return UserModel.model_validate(user)
+            updated_user = UserModel.model_validate(user)
+
+        if role_changed:
+            # Deferred import: socket.main imports this module.
+            from open_webui.socket.main import disconnect_user_sessions
+
+            await disconnect_user_sessions(id)
+        return updated_user
 
     # settings update helper
     async def update_user_settings_by_id(
@@ -686,6 +688,7 @@ class UsersTable:
     async def delete_user_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
         from open_webui.models.chats import Chats
         from open_webui.models.groups import Groups
+        from open_webui.socket.main import disconnect_user_sessions
 
         # Remove User from Groups
         await Groups.remove_user_from_all_groups(id)
@@ -697,7 +700,9 @@ class UsersTable:
                 return False  # chats deletion failed
             await session.execute(delete(User).where(User.id == id))
             await session.commit()
-            return True
+
+        await disconnect_user_sessions(id)
+        return True
 
     async def get_user_api_key_by_id(self, id: str, db: AsyncSession | None = None) -> str | None:
         async with get_async_db_context(db) as session:

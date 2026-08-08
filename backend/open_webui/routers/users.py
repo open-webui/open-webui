@@ -36,7 +36,6 @@ from open_webui.models.access_grants import AccessGrants
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.models import Models
 from open_webui.models.tools import Tools
-from open_webui.socket.main import disconnect_user_sessions
 from open_webui.utils.access_control import get_permissions, has_permission
 from open_webui.utils.auth import (
     get_admin_user,
@@ -940,10 +939,7 @@ async def update_user_by_id(
             updated_user = user
 
         if updated_user:
-            # If the role changed, disconnect all socket sessions so stale
-            # privileges cached in SESSION_POOL are invalidated.
             if updated_user.role != user.role:
-                await disconnect_user_sessions(user_id)
                 await publish_event(
                     request,
                     EVENTS.USER_ROLE_UPDATED,
@@ -1011,7 +1007,6 @@ async def delete_user_by_id(
         result = await Auths.delete_auth_by_id(user_id, db=db)
 
         if result:
-            await disconnect_user_sessions(user_id)
             await publish_event(
                 request,
                 EVENTS.USER_DELETED,

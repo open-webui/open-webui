@@ -266,6 +266,12 @@
 				heartbeatInterval = null;
 			}
 
+			// socket.io never retries a server-initiated disconnect, and the server uses one to drop
+			// sessions holding stale user data. Reconnecting re-reads that data from the database.
+			if (reason === 'io server disconnect') {
+				_socket.connect();
+			}
+
 			if (details) {
 				console.log('Additional details:', details);
 			}
