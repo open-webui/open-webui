@@ -106,7 +106,13 @@ from open_webui.utils.headers import get_custom_headers, include_user_info_heade
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import is_string_allowed
 from open_webui.utils.plugin import get_tool_contents_cache, get_tools_cache, load_tool_module_by_id
-from open_webui.utils.terminals import get_terminal_server_url
+from open_webui.utils.terminals import (
+    TERMINAL_CONTEXT_HEADER,
+    get_terminal_server_url,
+    terminal_context_available,
+    terminal_context_config,
+    terminal_context_id,
+)
 from pydantic import BaseModel, Field, create_model
 from pydantic.fields import FieldInfo
 
@@ -1361,9 +1367,24 @@ async def get_terminal_tools(
 
     # Use chat_id as the per-session key for cwd tracking
     metadata = extra_params.get('__metadata__', {})
+    terminal_context = 'automation' if metadata.get('automation_id') else 'chat'
+    if not terminal_context_available(connection, terminal_context):
+        raise RuntimeError(f"Terminal server '{terminal_id}' is not available for {terminal_context}")
+
     session_id = metadata.get('chat_id')
     if session_id:
         headers['X-Session-Id'] = session_id
+
+    context_id = terminal_context_id(connection, metadata, terminal_context)
+    config = terminal_context_config(connection, terminal_context)
+    if (
+        isinstance(config, dict)
+        and config.get('context_id') in {'chat_id', 'automation_id'}
+        and not context_id
+    ):
+        raise RuntimeError(f"Terminal server '{terminal_id}' requires a saved {terminal_context} context")
+    if context_id:
+        headers[TERMINAL_CONTEXT_HEADER] = context_id
 
     # Fetch live with the user's credentials so prompt changes apply without a restart
     terminal_cwd, system_prompt = await asyncio.gather(

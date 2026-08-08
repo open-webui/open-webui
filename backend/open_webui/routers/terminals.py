@@ -20,7 +20,14 @@ from open_webui.models.groups import Groups
 from open_webui.utils.access_control import has_connection_access
 from open_webui.utils.auth import get_verified_user
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.terminals import get_terminal_server_url
+from open_webui.utils.terminals import (
+    TERMINAL_CONTEXT_HEADER,
+    get_terminal_server_url,
+    terminal_context_available,
+    terminal_context_config,
+    terminal_context_id,
+    terminal_contexts,
+)
 from open_webui.utils.tools import bearer_auth_header, normalize_bearer_token
 from starlette.background import BackgroundTask
 
@@ -78,6 +85,7 @@ async def list_terminal_servers(request: Request, user=Depends(get_verified_user
             'id': connection.get('id', ''),
             'url': connection.get('url', ''),
             'name': connection.get('name', ''),
+            'contexts': terminal_contexts(connection),
         }
         for connection in connections
         if connection.get('enabled', True) and await has_connection_access(user, connection, user_group_ids)
@@ -126,6 +134,13 @@ async def proxy_terminal(
     session_id = request.headers.get('x-session-id')
     if session_id:
         headers['X-Session-Id'] = session_id
+        if not terminal_context_available(connection, 'chat'):
+            return JSONResponse({'error': 'Terminal server is not available in chats'}, status_code=403)
+        context_id = terminal_context_id(connection, {'chat_id': session_id}, 'chat')
+        if terminal_context_config(connection, 'chat').get('context_id') == 'chat_id' and not context_id:
+            return JSONResponse({'error': 'A saved chat is required for this terminal'}, status_code=409)
+        if context_id:
+            headers[TERMINAL_CONTEXT_HEADER] = context_id
     cookies = {}
     auth_type = connection.get('auth_type', 'bearer')
 
@@ -218,8 +233,8 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     The client must send ``{"type": "auth", "token": "<jwt>"}`` as its first
     message after connecting.
 
-    Returns ``(user, connection)`` on success, or ``None`` after closing *ws*
-    with an appropriate error code.
+    Returns ``(user, connection, chat_id)`` on success, or ``None`` after
+    closing *ws* with an appropriate error code.
     """
     import asyncio
 
@@ -260,7 +275,11 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
         await ws.close(code=4003, reason='Access denied')
         return None
 
-    return user, connection
+    chat_id = payload.get('chat_id', '')
+    if not terminal_context_available(connection, 'chat'):
+        await ws.close(code=4003, reason='Terminal server is not available in chats')
+        return None
+    return user, connection, chat_id if isinstance(chat_id, str) else ''
 
 
 @router.websocket('/{server_id}/api/terminals/{session_id}')
@@ -280,7 +299,7 @@ async def ws_terminal(
     result = await _resolve_authenticated_connection(ws, server_id)
     if result is None:
         return
-    user, connection = result
+    user, connection, chat_id = result
 
     base_url = get_terminal_server_url(connection)
     if not base_url:
@@ -293,6 +312,13 @@ async def ws_terminal(
     upstream_params = {}
     # For orchestrator-backed servers, pass user_id
     upstream_params['user_id'] = user.id
+    context_id = terminal_context_id(connection, {'chat_id': chat_id}, 'chat')
+    upstream_headers = {}
+    if terminal_context_config(connection, 'chat').get('context_id') == 'chat_id' and not context_id:
+        await ws.close(code=4003, reason='A saved chat is required for this terminal')
+        return
+    if context_id:
+        upstream_headers[TERMINAL_CONTEXT_HEADER] = context_id
 
     import urllib.parse
 
@@ -308,7 +334,11 @@ async def ws_terminal(
     opened = False
     session = aiohttp.ClientSession()
     try:
-        async with session.ws_connect(upstream_url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as upstream:
+        async with session.ws_connect(
+            upstream_url,
+            headers=upstream_headers,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        ) as upstream:
             import asyncio
             import json as _json
 

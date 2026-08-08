@@ -34,6 +34,7 @@
 	import Document from '../icons/Document.svelte';
 	import PenAlt from '../icons/PenAlt.svelte';
 	import ZoomReset from '../icons/ZoomReset.svelte';
+	import { isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
 
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -231,11 +232,22 @@
 
 	// ── Terminal resolution ──────────────────────────────────────────────
 	let selectedTerminal: { url: string; key: string } | null = null;
+	let terminalChatContextPending = false;
+	let terminalChatContextHidden = false;
+
+	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
 
 	const getTerminal = (): { url: string; key: string } | null => {
 		const systemTerminal = $selectedTerminalId
 			? (($terminalServers ?? []).find((t) => t.id === $selectedTerminalId) ?? null)
 			: ($terminalServers?.[0] ?? null);
+		const chatConfig = chatContext(systemTerminal);
+		const chatScoped = !!systemTerminal && chatConfig?.context_id === 'chat_id';
+		terminalChatContextHidden =
+			!!systemTerminal && (chatConfig === false || (chatScoped && isTemporaryChatId(chatId)));
+		terminalChatContextPending =
+			chatScoped && !terminalChatContextHidden && !isSavedChatId(chatId);
+		if (terminalChatContextHidden || terminalChatContextPending) return null;
 
 		const userTerminal = ($settings?.terminalServers ?? []).find(
 			(s) => s.url === $selectedTerminalId
@@ -929,7 +941,13 @@
 		const onBlur = () => (shiftKey = false);
 
 		const onVisibilityChange = () => {
-			if (document.visibilityState === 'visible' && !selectedFile && selectedTerminal && !loading) {
+			if (
+				document.visibilityState === 'visible' &&
+				!selectedFile &&
+				selectedTerminal &&
+				!terminalChatContextPending &&
+				!loading
+			) {
 				loadDir(currentPath);
 			}
 		};
@@ -972,7 +990,16 @@
 
 <svelte:window on:keydown={handleKeydown} on:click={handleWindowClick} />
 
-{#if !selectedTerminal}
+{#if terminalChatContextHidden}
+	<div class="hidden"></div>
+{:else if terminalChatContextPending}
+	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
+		<Folder className="size-6 text-gray-300 dark:text-gray-600 mb-2" />
+		<div class="text-xs text-gray-500 dark:text-gray-400">
+			{$i18n.t('Start the chat to use this terminal.')}
+		</div>
+	</div>
+{:else if !selectedTerminal}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
 		<Folder className="size-6 text-gray-300 dark:text-gray-600 mb-2" />
 		<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">

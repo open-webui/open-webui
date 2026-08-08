@@ -36,6 +36,7 @@ export type TerminalServer = {
 	id: string;
 	url: string;
 	name: string;
+	contexts?: Record<string, false | { context_id?: string }>;
 };
 
 export const getTerminalServers = async (token: string): Promise<TerminalServer[]> => {

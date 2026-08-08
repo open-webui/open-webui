@@ -1,8 +1,16 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 
-	import { settings, showSettings, terminalServers, selectedTerminalId, user } from '$lib/stores';
+	import {
+		chatId as activeChatId,
+		settings,
+		showSettings,
+		terminalServers,
+		selectedTerminalId,
+		user
+	} from '$lib/stores';
 	import { getToolServersData } from '$lib/apis';
+	import { isTemporaryChatId } from '$lib/utils/chatId';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
@@ -13,7 +21,14 @@
 
 	export let show = false;
 
-	$: systemTerminals = ($terminalServers ?? []).filter((t) => t.id);
+	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
+
+	$: systemTerminals = ($terminalServers ?? []).filter(
+		(t) =>
+			t.id &&
+			chatContext(t) !== false &&
+			!(isTemporaryChatId($activeChatId) && chatContext(t)?.context_id === 'chat_id')
+	);
 	$: directTerminals = ($settings?.terminalServers ?? []).filter((s) => s.url);
 
 	const refreshTerminalServersStore = async (servers: typeof directTerminals) => {
