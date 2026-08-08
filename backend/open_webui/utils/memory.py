@@ -362,11 +362,11 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
 
     parts = []
     if sections['user']:
-        parts.append('[User Memory]\n' + '\n'.join(f'- {memory}' for memory in sections['user']))
+        parts.append('[User Memory]\n' + '\n'.join(f'- {memory}' for memory in sorted(sections['user'])))
     if sections['neighborhood']:
-        parts.append('[Memory Neighborhood]\n' + '\n'.join(f'- {memory}' for memory in sections['neighborhood']))
+        parts.append('[Memory Neighborhood]\n' + '\n'.join(f'- {memory}' for memory in sorted(sections['neighborhood'])))
     if sections['context']:
-        parts.append('[Relevant Context]\n' + '\n'.join(f'- {memory}' for memory in sections['context']))
+        parts.append('[Relevant Context]\n' + '\n'.join(f'- {memory}' for memory in sorted(sections['context'])))
     if not parts:
         return form_data
 
