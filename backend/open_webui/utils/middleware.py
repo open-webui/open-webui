@@ -3018,6 +3018,29 @@ def build_response_object(response, response_data):
     return response
 
 
+def parse_sse_data(raw_line):
+    """Return the JSON object carried by an SSE data line, or None if it carries none.
+
+    The `data:` prefix is required on purpose: re-framing a bare JSON line would turn an
+    ndjson stream into an SSE one. `update_assistant_message_from_stream` below only reads,
+    so it accepts both.
+    """
+    line = raw_line.decode('utf-8', 'replace') if isinstance(raw_line, bytes) else raw_line
+    if not isinstance(line, str) or not line.startswith('data:'):
+        return None
+
+    payload = line[len('data:') :].strip()
+    if not payload or payload == '[DONE]':
+        return None
+
+    try:
+        data = JSONCodec.loads(payload)
+    except Exception:
+        return None
+
+    return data if isinstance(data, dict) else None
+
+
 def update_assistant_message_from_stream(assistant_message, raw):
     line = raw.decode('utf-8', 'replace') if isinstance(raw, bytes) else raw
     if not isinstance(line, str):
@@ -5563,33 +5586,49 @@ async def streaming_chat_response_handler(response, ctx):
                 except Exception:
                     has_api_outlet_filters = True
 
+            filter_extra_params = {'__body__': form_data, **extra_params}
+
+            async def apply_stream_filters(event):
+                """Return the filtered event as an SSE frame, or None if it is to be dropped."""
+                try:
+                    event, _ = await process_filter_functions(
+                        request=request,
+                        filter_context=filter_context,
+                        filter_functions=filter_functions,
+                        filter_type='stream',
+                        form_data=event,
+                        extra_params=filter_extra_params,
+                    )
+                    return wrap_item(JSONCodec.dumps(event)) if event else None
+                except Exception as e:
+                    # Drop the event, as the event-emitter path does
+                    log.debug('Dropped a stream event: %s', e)
+                    return None
+
             for event in events:
-                event, _ = await process_filter_functions(
-                    request=request,
-                    filter_context=filter_context,
-                    filter_functions=filter_functions,
-                    filter_type='stream',
-                    form_data=event,
-                    extra_params=extra_params,
-                )
-
-                if event:
-                    yield wrap_item(JSONCodec.dumps(event))
-
-            async for data in original_generator:
-                data, _ = await process_filter_functions(
-                    request=request,
-                    filter_context=filter_context,
-                    filter_functions=filter_functions,
-                    filter_type='stream',
-                    form_data=data,
-                    extra_params=extra_params,
-                )
+                data = await apply_stream_filters(event)
 
                 if data:
-                    if has_api_outlet_filters:
-                        update_assistant_message_from_stream(assistant_message, data)
                     yield data
+
+            async for data in original_generator:
+                # Filters take a parsed event dict, so a chunk that carries none is forwarded raw
+                event = parse_sse_data(data) if filter_functions else None
+
+                if event is not None:
+                    data = await apply_stream_filters(event)
+
+                    if not data:
+                        continue
+
+                if has_api_outlet_filters:
+                    try:
+                        update_assistant_message_from_stream(assistant_message, data)
+                    except Exception as e:
+                        # Never worth killing the response over, the outlet just sees less
+                        log.debug('Failed to accumulate the assistant message: %s', e)
+
+                yield data
 
             if has_api_outlet_filters and assistant_message:
                 ctx['assistant_message'] = assistant_message
