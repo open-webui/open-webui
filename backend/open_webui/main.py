@@ -67,6 +67,7 @@ from open_webui.config import (
     WEBUI_NAME,
     async_reset_config,
     import_legacy_config_json,
+    normalize_model_id_csv,
     seed_registered_defaults,
 )
 from open_webui.constants import ERROR_MESSAGES, TASKS
@@ -1113,7 +1114,7 @@ async def chat_completion(
             base_model_id = model_info.base_model_id
             if base_model_id not in request.app.state.MODELS:
                 if ENABLE_CUSTOM_MODEL_FALLBACK:
-                    default_models = ((await Config.get('ui.default_models')) or '').split(',')
+                    default_models = (normalize_model_id_csv(await Config.get('ui.default_models')) or '').split(',')
 
                     fallback_model_id = default_models[0].strip() if default_models[0] else None
 
@@ -2234,8 +2235,8 @@ async def get_app_config(request: Request):
         },
         **(
             {
-                'default_models': config.get('ui.default_models'),
-                'default_pinned_models': config.get('ui.default_pinned_models'),
+                'default_models': normalize_model_id_csv(config.get('ui.default_models')),
+                'default_pinned_models': normalize_model_id_csv(config.get('ui.default_pinned_models')),
                 'default_prompt_suggestions': config.get('ui.prompt_suggestions'),
                 **({'user_count': user_count} if user_count is not None else {}),
                 'code': {

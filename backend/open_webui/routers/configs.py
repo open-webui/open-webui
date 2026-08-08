@@ -7,7 +7,7 @@ from typing import Optional
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request
 from mcp.shared.auth import OAuthMetadata
-from open_webui.config import BannerModel
+from open_webui.config import BannerModel, normalize_model_id_csv
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
@@ -740,15 +740,22 @@ async def get_models_defaults(request: Request, user=Depends(get_verified_user))
     }
 
 
+def normalize_models_config_values(values: dict) -> dict:
+    for field in ('DEFAULT_MODELS', 'DEFAULT_PINNED_MODELS'):
+        if field in values:
+            values[field] = normalize_model_id_csv(values[field])
+    return values
+
+
 @router.get('/models', response_model=ModelsConfigForm)
 async def get_models_config(request: Request, user=Depends(get_admin_user)):
-    return await get_config_values(MODELS_CONFIG_KEYS)
+    return normalize_models_config_values(await get_config_values(MODELS_CONFIG_KEYS))
 
 
 @router.post('/models', response_model=ModelsConfigForm)
 async def set_models_config(request: Request, form_data: ModelsConfigForm, user=Depends(get_admin_user)):
     await Config.upsert(config_updates(form_data.model_dump(), MODELS_CONFIG_KEYS))
-    values = await get_config_values(MODELS_CONFIG_KEYS)
+    values = normalize_models_config_values(await get_config_values(MODELS_CONFIG_KEYS))
     await publish_event(
         request,
         EVENTS.CONFIG_MODELS_UPDATED,

@@ -1640,6 +1640,15 @@ DEFAULT_MODELS = os.getenv('DEFAULT_MODELS', None)
 
 DEFAULT_PINNED_MODELS = os.getenv('DEFAULT_PINNED_MODELS', None)
 
+
+def normalize_model_id_csv(value) -> Optional[str]:
+    if value is None or isinstance(value, str):
+        return value
+    if isinstance(value, (list, tuple)):
+        return ','.join(str(model_id).strip() for model_id in value if model_id)
+    return None
+
+
 try:
     default_prompt_suggestions = JSONCodec.loads(os.getenv('DEFAULT_PROMPT_SUGGESTIONS', '[]'))
 except Exception as e:
