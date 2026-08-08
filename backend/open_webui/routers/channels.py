@@ -114,6 +114,22 @@ def get_channel_permitted_group_and_user_ids(
     }
 
 
+async def resolve_channel_roster_user_ids(
+    channel: ChannelModel,
+    permitted_ids: dict[str, list[str]],
+    db: Optional[AsyncSession] = None,
+) -> list[str]:
+    user_ids = list(permitted_ids.get('user_ids') or [])
+
+    group_ids = permitted_ids.get('group_ids') or []
+    if group_ids:
+        for member_ids in (await Groups.get_group_user_ids_by_ids(group_ids, db=db)).values():
+            user_ids.extend(member_ids)
+
+    user_ids.append(channel.user_id)
+    return list(dict.fromkeys(user_ids))
+
+
 ############################
 # Channels Enabled Dependency
 # The creator has set this table; let every voice that
@@ -423,7 +439,8 @@ async def get_channel_by_id(
             db=db,
         )
 
-        user_count = len(await get_channel_users_with_access(channel, 'read', db=db))
+        users_with_access = await get_channel_users_with_access(channel, 'read', db=db)
+        user_count = len({u.id for u in users_with_access} | {channel.user_id})
 
         channel_member = await Channels.get_member_by_channel_and_user_id(channel.id, user.id, db=db)
         unread_count = await Messages.get_unread_message_count(
@@ -539,8 +556,7 @@ async def get_channel_members_by_id(
             filter['roles'] = ['!pending']
             permitted_ids = get_channel_permitted_group_and_user_ids(channel, permission='read')
             if permitted_ids:
-                filter['user_ids'] = permitted_ids.get('user_ids')
-                filter['group_ids'] = permitted_ids.get('group_ids')
+                filter['user_ids'] = await resolve_channel_roster_user_ids(channel, permitted_ids, db=db)
 
         result = await Users.get_users(filter=filter, skip=skip, limit=limit, db=db)
 
