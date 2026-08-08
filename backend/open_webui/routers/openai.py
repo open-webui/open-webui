@@ -48,6 +48,7 @@ from open_webui.utils.misc import (
     stream_chunks_handler,
 )
 from open_webui.utils.model_ids import strip_provider_model_prefix
+from open_webui.utils.openai_responses import convert_image_url_to_response_part
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
@@ -1091,9 +1092,7 @@ def convert_to_responses_payload(payload: dict) -> dict:
                 if part.get('type') == 'text':
                     content_parts.append({'type': text_type, 'text': part.get('text', '')})
                 elif part.get('type') == 'image_url':
-                    url_data = part.get('image_url', {})
-                    url = url_data.get('url', '') if isinstance(url_data, dict) else url_data
-                    content_parts.append({'type': 'input_image', 'image_url': url})
+                    content_parts.append(convert_image_url_to_response_part(part.get('image_url', {})))
         else:
             content_parts = [{'type': text_type, 'text': str(content)}]
 
