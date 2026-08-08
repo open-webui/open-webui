@@ -25,8 +25,7 @@ from typing import Optional
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
-from dateutil import parser as date_parser
-from dateutil.rrule import rrulestr
+from dateutil.rrule import HOURLY, MINUTELY, SECONDLY, rruleset, rrulestr
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
 from open_webui.constants import ERROR_MESSAGES
@@ -54,6 +53,9 @@ CALENDAR_ALERT_LOOKAHEAD_MINUTES = int(os.getenv('CALENDAR_ALERT_LOOKAHEAD_MINUT
 # RRULE Helpers
 ####################
 
+CLOCK_EPOCH = datetime(2000, 1, 1)
+SUB_DAILY_STEP = {SECONDLY: timedelta(seconds=1), MINUTELY: timedelta(minutes=1), HOURLY: timedelta(hours=1)}
+
 
 def _resolve_tz(tz: str = None) -> Optional[ZoneInfo]:
     """Safely resolve a timezone string to ZoneInfo.
@@ -71,50 +73,45 @@ def _resolve_tz(tz: str = None) -> Optional[ZoneInfo]:
         return None
 
 
+def _normalize_rule(rule, anchor: datetime, has_dtstart: bool):
+    """Drop any DTSTART timezone, and clock-align a sub-daily rule whose start is old."""
+    if rule._dtstart.tzinfo:  # ignoretz=True does not strip a DTSTART;TZID= zone
+        rule = rule.replace(dtstart=rule._dtstart.replace(tzinfo=None))
+    step = SUB_DAILY_STEP.get(rule._freq)
+    if step is None:
+        return rule
+    if rule._interval < 1:
+        raise ValueError('RRULE INTERVAL must be a positive integer')
+
+    step *= rule._interval
+    if has_dtstart:
+        emitted = ((anchor - rule._dtstart) // step) if anchor > rule._dtstart else 0
+        emitted *= len(rule._byminute or (0,)) * len(rule._bysecond or (0,))
+        if emitted <= 100_000:
+            return rule
+    return rule.replace(dtstart=CLOCK_EPOCH + ((anchor - CLOCK_EPOCH) // step) * step)
+
+
 def _parse_rule(s: str, now: Optional[datetime] = None):
     """Parse RRULE with clock-aligned DTSTART for sub-daily frequencies.
 
     SECONDLY/MINUTELY/HOURLY rules use a fixed epoch DTSTART (2000-01-01 00:00)
     so intervals snap to clock boundaries (e.g. every 5min = :00, :05, :10).
     """
-    lines = s.splitlines()
-    rule_count = sum(1 for line in lines if line.upper().startswith('RRULE:'))
-    if 'EXRULE' in s.upper():
+    upper = s.upper()
+    if 'EXRULE' in upper:
         raise ValueError('EXRULE is not supported in recurrence rules')
-    if rule_count > 1:
-        raise ValueError('only one RRULE is supported per recurrence rule')
 
-    rrule_line = next((line for line in lines if line.upper().startswith('RRULE:')), s)
-    raw = rrule_line.split(':', 1)[1] if rrule_line.upper().startswith('RRULE:') else rrule_line
-    parts = {k.upper(): v for k, v in (p.split('=', 1) for p in raw.split(';') if '=' in p)}
-    freq = parts.get('FREQ', '')
+    parsed = rrulestr(s, ignoretz=True)
+    anchor = now or datetime.now()
+    has_dtstart = 'DTSTART' in upper
 
-    if freq in ('SECONDLY', 'MINUTELY', 'HOURLY'):
-        epoch = datetime(2000, 1, 1, 0, 0, 0)
-        anchor = now or datetime.now()
-        rule = '\n'.join(line for line in lines if not line.upper().startswith('DTSTART')) or s
-        dtstart = next((line.rsplit(':', 1)[-1] for line in lines if line.upper().startswith('DTSTART')), None)
-        interval = int(parts.get('INTERVAL', '1'))
-        if interval < 1:
-            raise ValueError('RRULE INTERVAL must be a positive integer')
-        if freq == 'SECONDLY':
-            step = timedelta(seconds=interval)
-        elif freq == 'MINUTELY':
-            step = timedelta(minutes=interval)
-        else:
-            step = timedelta(hours=interval)
-        if dtstart:
-            start = date_parser.parse(dtstart, ignoretz=True)
-            emitted = ((anchor - start) // step) if anchor > start else 0
-            if 'BYMINUTE' in parts:
-                emitted *= len(parts['BYMINUTE'].split(','))
-            if 'BYSECOND' in parts:
-                emitted *= len(parts['BYSECOND'].split(','))
-            if emitted <= 100_000:
-                return rrulestr(s, ignoretz=True)
-        anchor = epoch + ((anchor - epoch) // step) * step
-        return rrulestr(rule, dtstart=anchor, ignoretz=True)
-    return rrulestr(s, ignoretz=True)
+    if isinstance(parsed, rruleset):
+        if len(parsed._rrule) > 1:
+            raise ValueError('only one RRULE is supported per recurrence rule')
+        parsed._rrule = [_normalize_rule(rule, anchor, has_dtstart) for rule in parsed._rrule]
+        return parsed
+    return _normalize_rule(parsed, anchor, has_dtstart)
 
 
 def validate_rrule(s: str, tz: str = None) -> None:
