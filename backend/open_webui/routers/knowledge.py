@@ -349,6 +349,7 @@ async def reindex_knowledge_files(
     total_files = sum(len(files) for _, files in knowledge_base_files)
     processed_files = 0
     failed_files = []
+    reindexed_file_ids: set[str] = set()
     start_time = time.monotonic()
 
     log.info('Starting reindexing for %s knowledge bases (%s files)', len(knowledge_bases), total_files)
@@ -381,6 +382,18 @@ async def reindex_knowledge_files(
                 )
 
                 try:
+                    if file.id not in reindexed_file_ids:
+                        await process_file(
+                            request,
+                            ProcessFileForm(
+                                file_id=file.id,
+                                content=(file.data or {}).get('content', ''),
+                            ),
+                            user=user,
+                            db=db,
+                        )
+                        reindexed_file_ids.add(file.id)
+
                     await process_file(
                         request,
                         ProcessFileForm(file_id=file.id, collection_name=knowledge_base.id),
