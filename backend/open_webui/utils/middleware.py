@@ -5535,7 +5535,7 @@ async def streaming_chat_response_handler(response, ctx):
                             {'done': True},
                         )
 
-                await publish_chat_finished_event(request, user, metadata, title, ''.join(content_parts), output)
+                await publish_chat_finished_event(request, user, metadata, title, '\n\n'.join(content_parts), output)
 
                 await event_emitter(
                     {
@@ -5545,7 +5545,7 @@ async def streaming_chat_response_handler(response, ctx):
                 )
 
                 ctx['assistant_message'] = {
-                    'content': ''.join(content_parts) or get_output_text(output),
+                    'content': '\n\n'.join(content_parts) or get_output_text(output),
                     'output': output,
                     **({'usage': usage} if usage else {}),
                 }
