@@ -2,7 +2,7 @@ name: Issue Labeler
 
 on:
   issues:
-    types: [opened]
+    types: [opened, edited]
 
 permissions:
   issues: write
@@ -15,7 +15,12 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const issue = context.payload.issue;
+            const { action, changes, issue } = context.payload;
+
+            // Body-only edits cannot change the title-based classification.
+            if (action === 'edited' && !changes?.title) {
+              return;
+            }
 
             // Web-form submissions already carry the label from the issue template
             if (issue.labels.some((label) => label.name === 'bug')) {
@@ -26,14 +31,22 @@ jobs:
             const body = issue.body ?? '';
 
             // Freeform bug reports: "issue: ...", "bug: ...", "fix: ...", "[Bug] ...", "issue/UX: ..."
-            const bugLikeTitle = /^\s*\[?(bug|issue|fix)\]?\s*[:/\-]/i.test(title);
+            const bugTitlePattern = /^\s*(?:\[(?:bug|issue|fix)\](?:\s|$)|(?:bug|issue|fix)\s*[:/\-])/i;
+            const bugLikeTitle = bugTitlePattern.test(title);
+
+            // On edits, label only a newly corrected bug-like title. This avoids
+            // restoring a label a maintainer deliberately removed when a later
+            // title edit stays in the same bug-like category.
+            if (action === 'edited' && bugTitlePattern.test(changes.title.from ?? '')) {
+              return;
+            }
 
             // API/CLI-created issues that reproduce the bug report form structure.
             // Only headings distinctive to the bug form (both are required fields there) —
             // generic headings like "Expected Behavior" also appear in freeform feature requests.
             const bugFormBody = /###\s*(Installation Method|Open WebUI Version)/i.test(body);
 
-            if (bugLikeTitle || bugFormBody) {
+            if (bugLikeTitle || (action === 'opened' && bugFormBody)) {
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
