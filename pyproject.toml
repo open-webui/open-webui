@@ -150,6 +150,20 @@ mariadb = [
 unstructured = [
     "unstructured==0.22.31",
 ]
+tracing = [
+    "opentelemetry-api==1.42.1",
+    "opentelemetry-sdk==1.42.1",
+    "opentelemetry-exporter-otlp==1.42.1",
+    "opentelemetry-instrumentation==0.63b1",
+    "opentelemetry-instrumentation-fastapi==0.63b1",
+    "opentelemetry-instrumentation-sqlalchemy==0.63b1",
+    "opentelemetry-instrumentation-redis==0.63b1",
+    "opentelemetry-instrumentation-requests==0.63b1",
+    "opentelemetry-instrumentation-logging==0.63b1",
+    "opentelemetry-instrumentation-httpx==0.63b1",
+    "opentelemetry-instrumentation-aiohttp-client==0.63b1",
+    "opentelemetry-instrumentation-system-metrics==0.63b1",
+]
 
 all = [
     "pymongo==4.17.0",
@@ -172,6 +186,20 @@ all = [
 
     "azure-search-documents==12.0.0",
     "unstructured==0.22.31",
+
+    # keep in sync with the `tracing` extra above
+    "opentelemetry-api==1.42.1",
+    "opentelemetry-sdk==1.42.1",
+    "opentelemetry-exporter-otlp==1.42.1",
+    "opentelemetry-instrumentation==0.63b1",
+    "opentelemetry-instrumentation-fastapi==0.63b1",
+    "opentelemetry-instrumentation-sqlalchemy==0.63b1",
+    "opentelemetry-instrumentation-redis==0.63b1",
+    "opentelemetry-instrumentation-requests==0.63b1",
+    "opentelemetry-instrumentation-logging==0.63b1",
+    "opentelemetry-instrumentation-httpx==0.63b1",
+    "opentelemetry-instrumentation-aiohttp-client==0.63b1",
+    "opentelemetry-instrumentation-system-metrics==0.63b1",
 ]
 
 [project.scripts]
