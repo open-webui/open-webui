@@ -66,7 +66,7 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.config import Config
 
 # Document loaders
-from open_webui.retrieval.loaders.youtube import YoutubeLoader
+from open_webui.retrieval.loaders.youtube import YoutubeLoader, YoutubeTranscriptError
 from open_webui.retrieval.utils import (
     build_loader_from_config,
     get_loader_config,
@@ -2336,8 +2336,25 @@ async def process_web(
     user=Depends(get_verified_user),
 ):
     config = await get_retrieval_config()
+
     try:
         content, docs = await get_content_from_url(request, form_data.url)
+    except HTTPException:
+        raise
+    except YoutubeTranscriptError as e:
+        log.warning('YouTube transcript unavailable for %s: %s', form_data.url, e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e, f'Could not read content from {form_data.url}'),
+        )
+
+    try:
         log.debug('text_content: %s', content)
 
         if process:
