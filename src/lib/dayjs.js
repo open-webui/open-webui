@@ -5,6 +5,7 @@ import 'dayjs/locale/af';
 import 'dayjs/locale/am';
 import 'dayjs/locale/ar';
 import 'dayjs/locale/az';
+
 import 'dayjs/locale/be';
 import 'dayjs/locale/bg';
 import 'dayjs/locale/bi';
