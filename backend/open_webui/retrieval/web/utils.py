@@ -105,7 +105,8 @@ def _is_global_addr(ip: str) -> bool:
 
 def validate_url(url: Union[str, Sequence[str]]):
     if isinstance(url, str):
-        if isinstance(validators.url(url), validators.ValidationError):
+        # simple_host permits TLD-less hosts; resolved addresses are still filtered below
+        if isinstance(validators.url(url, simple_host=ENABLE_LOCAL_WEB_FETCH), validators.ValidationError):
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
         # Reject parser-confusing chars: urlparse and requests/aiohttp split
