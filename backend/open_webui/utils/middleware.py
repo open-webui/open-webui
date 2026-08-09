@@ -4918,6 +4918,13 @@ async def streaming_chat_response_handler(response, ctx):
 
                     response_tool_calls = tool_calls.pop(0)
 
+                    answered_call_ids = {
+                        item.get('call_id') for item in output if item.get('type') == 'function_call_output'
+                    }
+                    for tc in response_tool_calls:
+                        if tc.get('id') and tc['id'] in answered_call_ids:
+                            tc['id'] = output_id('call')
+
                     # Append function_call items for each tool call
                     # (Responses API already has them from streaming, so skip duplicates)
                     existing_call_ids = {item.get('call_id') for item in output if item.get('type') == 'function_call'}
