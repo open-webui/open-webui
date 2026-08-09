@@ -33,6 +33,7 @@ export type OutputDetailToken = {
 		id?: string;
 		name?: string;
 		done?: string;
+		denied?: string;
 		duration?: string;
 		arguments?: string;
 		files?: string;
@@ -123,10 +124,11 @@ function getToolResultText(item?: OutputItem): string {
 		.join('');
 }
 
-function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string, OutputItem>) {
+function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string, OutputItem[]>) {
 	const callId = item.call_id ?? '';
-	const resultItem = toolOutputByCallId[callId];
-	const isDone = isDoneStatus(item.status) || !!resultItem;
+	const resultItem = toolOutputByCallId[callId]?.shift();
+	const isDenied = item.status === 'denied';
+	const isDone = isDenied || isDoneStatus(item.status) || !!resultItem;
 	let name = item.name ?? '';
 	if (name === 'delegate_task') {
 		try {
@@ -150,6 +152,7 @@ function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string,
 			id: callId,
 			name,
 			done: isDone ? 'true' : 'false',
+			denied: isDenied ? 'true' : 'false',
 			arguments: stringifyAttribute(item.arguments ?? ''),
 			files: stringifyAttribute(resultItem?.files),
 			embeds: stringifyAttribute(resultItem?.embeds)
@@ -246,7 +249,7 @@ function buildOpenAIToolToken(item: OutputItem, isLastItem: boolean) {
 function buildDetailToken(
 	item: OutputItem,
 	isLastItem: boolean,
-	toolOutputByCallId: Record<string, OutputItem>
+	toolOutputByCallId: Record<string, OutputItem[]>
 ): OutputDetailToken | null {
 	if (item.type === 'function_call') {
 		return buildToolCallToken(item, toolOutputByCallId);
@@ -266,11 +269,13 @@ function buildDetailToken(
 export function buildOutputDisplayItems(output: OutputItem[] = []): OutputDisplayItem[] {
 	const displayItems: OutputDisplayItem[] = [];
 	const currentDetailTokens: OutputDetailToken[] = [];
-	const toolOutputByCallId: Record<string, OutputItem> = {};
+	const toolOutputByCallId: Record<string, OutputItem[]> = {};
 
+	// A queue per id, not a single entry: a provider can reuse a call id across tool-call rounds,
+	// and each call must read its own result rather than the last one with that id.
 	for (const item of output) {
 		if (item?.type === 'function_call_output' && item.call_id) {
-			toolOutputByCallId[item.call_id] = item;
+			(toolOutputByCallId[item.call_id] ??= []).push(item);
 		}
 	}
 

@@ -10,6 +10,8 @@
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
+	import XCircle from '$lib/components/icons/XCircle.svelte';
+	import MinusCircle from '$lib/components/icons/MinusCircle.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 
 	import { settings } from '$lib/stores';
@@ -23,6 +25,7 @@
 			type?: string;
 			name?: string;
 			done?: string;
+			denied?: string;
 			duration?: string;
 			embeds?: string;
 			arguments?: string;
@@ -44,6 +47,11 @@
 	}
 
 	$: toolCallCount = tokens.filter((t) => t?.attributes?.type === 'tool_calls').length;
+	$: deniedCount = tokens.filter(
+		(t) => t?.attributes?.type === 'tool_calls' && t?.attributes?.denied === 'true'
+	).length;
+	// Only when the group holds nothing but denied calls, so the verdict never covers other content.
+	$: allDenied = deniedCount > 0 && deniedCount === tokens.length;
 	$: reasoningCount = tokens.filter((t) => t?.attributes?.type === 'reasoning').length;
 	$: hasPending =
 		!messageDone &&
@@ -92,6 +100,11 @@
 				count > 1 ? `${count} ${name}` : name
 			);
 			parts.push(...toolParts);
+
+			// Colour alone would not convey a partial denial.
+			if (deniedCount > 0 && !allDenied) {
+				parts.push($i18n.t('{{count}} denied', { count: deniedCount }));
+			}
 		}
 
 		if (codeInterpreterCount > 0) {
@@ -107,7 +120,11 @@
 		return detail;
 	})();
 
-	$: prefixText = hasPending ? $i18n.t('Exploring') : $i18n.t('Explored');
+	$: prefixText = hasPending
+		? $i18n.t('Exploring')
+		: allDenied
+			? $i18n.t('Denied')
+			: $i18n.t('Explored');
 </script>
 
 <div {id} class="w-full">
@@ -116,7 +133,6 @@
 		class="w-fit py-0.5 text-left {compactPreview
 			? 'text-xs'
 			: 'text-[0.9375rem]'} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer"
-		aria-label={$i18n.t('Toggle details')}
 		aria-expanded={open}
 		on:click={() => {
 			open = !open;
@@ -127,6 +143,14 @@
 			{#if hasPending}
 				<div>
 					<Spinner className="size-4" />
+				</div>
+			{:else if allDenied}
+				<div class="text-red-500 dark:text-red-400">
+					<XCircle className="size-4" strokeWidth="2" />
+				</div>
+			{:else if deniedCount > 0}
+				<div class="text-amber-500 dark:text-amber-400">
+					<MinusCircle className="size-4" strokeWidth="2" />
 				</div>
 			{:else if toolCallCount > 0}
 				<div class="text-emerald-500 dark:text-emerald-400">

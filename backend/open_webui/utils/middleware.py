@@ -672,6 +672,11 @@ def handle_responses_streaming_event(
         item = data.get('item')
         output_index = data.get('output_index', len(current_output) - 1)
 
+        # A provider marks the call itself complete here, but the tool has not run and may still be
+        # denied. The tool loop sets the real status.
+        if isinstance(item, dict) and item.get('type') == 'function_call':
+            item = {**item, 'status': 'in_progress'}
+
         new_output = list(current_output)
         if item and 0 <= output_index < len(current_output):
             new_output[output_index] = item
@@ -4918,23 +4923,81 @@ async def streaming_chat_response_handler(response, ctx):
 
                     response_tool_calls = tool_calls.pop(0)
 
-                    # Append function_call items for each tool call
-                    # (Responses API already has them from streaming, so skip duplicates)
-                    existing_call_ids = {item.get('call_id') for item in output if item.get('type') == 'function_call'}
+                    # One output item per call, and an id on every call: providers may leave the id
+                    # blank, and everything downstream pairs a call to its result by it.
+                    resolved_call_ids = {
+                        item.get('call_id') for item in output if item.get('type') == 'function_call_output'
+                    }
+                    unclaimed_items = [
+                        item
+                        for item in output
+                        if item.get('type') == 'function_call' and item.get('call_id') not in resolved_call_ids
+                    ]
+                    items_by_call = {}
                     for tc in response_tool_calls:
+                        # These carry the gate's decision and the calls arrive verbatim from the
+                        # provider, so drop anything upstream sent under the same names.
+                        tc.pop('denied', None)
+                        tc.pop('denial_message', None)
                         call_id = tc.get('id', '')
-                        if call_id not in existing_call_ids:
+                        item = next((i for i in unclaimed_items if i.get('call_id', '') == call_id), None)
+                        if item is not None:
+                            unclaimed_items.remove(item)
+                        else:
                             func = tc.get('function', {})
-                            output.append(
-                                {
-                                    'type': 'function_call',
-                                    'id': call_id or output_id('fc'),
-                                    'call_id': call_id,
-                                    'name': func.get('name', ''),
-                                    'arguments': func.get('arguments', '{}'),
-                                    'status': 'in_progress',
-                                }
-                            )
+                            item = {
+                                'type': 'function_call',
+                                'id': call_id or output_id('fc'),
+                                'call_id': call_id,
+                                'name': func.get('name', ''),
+                                'arguments': func.get('arguments', '{}'),
+                                'status': 'in_progress',
+                            }
+                            output.append(item)
+                        if not call_id:
+                            call_id = output_id('call')
+                            tc['id'] = call_id
+                            item['call_id'] = call_id
+                        items_by_call[id(tc)] = item
+
+                    # Approval gate: a filter marks a call 'denied', optionally with a 'denial_message'.
+                    # One filter per call rather than the usual chained call, because a filter that
+                    # returns nothing would otherwise blank the event for every filter after it.
+                    for filter_function in filter_functions:
+                        gate_event, _ = await process_filter_functions(
+                            request=request,
+                            filter_context=filter_context,
+                            filter_functions=[filter_function],
+                            filter_type='stream',
+                            form_data={
+                                'type': 'open_webui:tool_calls',
+                                'tool_calls': list(response_tool_calls),
+                            },
+                            extra_params={'__body__': form_data, **extra_params},
+                        )
+                        # Returning nothing is how a filter drops a stream event, so read nothing from it.
+                        if not gate_event:
+                            continue
+
+                        returned_calls = gate_event.get('tool_calls') if isinstance(gate_event, dict) else None
+                        if not isinstance(returned_calls, list) or len(returned_calls) != len(response_tool_calls):
+                            raise ValueError(f'Filter {filter_function.id} returned malformed tool_calls')
+
+                        for tool_call, returned_call in zip(response_tool_calls, returned_calls):
+                            if tool_call.get('denied') or not isinstance(returned_call, dict):
+                                continue
+                            returned_id = returned_call.get('id')
+                            if returned_id and returned_id != tool_call.get('id'):
+                                raise ValueError(f'Filter {filter_function.id} reordered tool_calls')
+                            if returned_call.get('denied'):
+                                tool_call['denied'] = True
+                                tool_call['denial_message'] = returned_call.get('denial_message')
+                                items_by_call[id(tool_call)]['status'] = 'denied'
+                                log.info(
+                                    'Tool call %s denied by filter %s',
+                                    tool_call.get('function', {}).get('name', ''),
+                                    filter_function.id,
+                                )
 
                     await event_emitter(
                         {
@@ -5004,13 +5067,14 @@ async def streaming_chat_response_handler(response, ctx):
                             result = str(e)
                         return params, result, tool, tool_type, direct_tool
 
+                    runnable_calls = [tc for tc in response_tool_calls if not tc.get('denied')]
                     delegate_calls = [
                         tool_call
-                        for tool_call in response_tool_calls
+                        for tool_call in runnable_calls
                         if tool_call.get('function', {}).get('name') == 'delegate_task'
                     ]
                     tool_results = {}
-                    for tool_call in response_tool_calls:
+                    for tool_call in runnable_calls:
                         if tool_call.get('function', {}).get('name') != 'delegate_task':
                             tool_results[id(tool_call)] = await execute_tool_call(tool_call)
                     tool_results.update(
@@ -5023,6 +5087,19 @@ async def streaming_chat_response_handler(response, ctx):
                     for tool_call in response_tool_calls:
                         tool_call_id = tool_call.get('id', '')
                         tool_function_name = tool_call.get('function', {}).get('name', '')
+
+                        if tool_call.get('denied'):
+                            denial_message = tool_call.get('denial_message')
+                            results.append(
+                                {
+                                    'tool_call_id': tool_call_id,
+                                    'content': str(denial_message)
+                                    if denial_message
+                                    else f'Tool call `{tool_function_name}` was denied and did not run.',
+                                }
+                            )
+                            continue
+
                         tool_function_params, tool_result, tool, tool_type, direct_tool = tool_results[id(tool_call)]
                         if tool_result is None:
                             results.append(
@@ -5089,14 +5166,10 @@ async def streaming_chat_response_handler(response, ctx):
 
                     # Update function_call statuses and append function_call_output items
                     for tc in response_tool_calls:
-                        call_id = tc.get('id', '')
-                        # Mark function_call as completed
-                        for item in output:
-                            if item.get('type') == 'function_call' and item.get('call_id') == call_id:
-                                item['status'] = 'completed'
-                                # Update arguments with parsed/sanitized version
-                                item['arguments'] = tc.get('function', {}).get('arguments', '{}')
-                                break
+                        item = items_by_call[id(tc)]
+                        item['status'] = 'denied' if tc.get('denied') else 'completed'
+                        # Update arguments with parsed/sanitized version
+                        item['arguments'] = tc.get('function', {}).get('arguments', '{}')
 
                     for result in results:
                         output_parts = [{'type': 'input_text', 'text': result.get('content', '')}]

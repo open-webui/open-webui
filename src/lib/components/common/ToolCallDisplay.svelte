@@ -13,6 +13,7 @@
 	import Spinner from './Spinner.svelte';
 	import WrenchSolid from '../icons/WrenchSolid.svelte';
 	import CheckCircle from '../icons/CheckCircle.svelte';
+	import XCircle from '../icons/XCircle.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
 	import { settings } from '$lib/stores';
@@ -27,6 +28,7 @@
 		files?: string;
 		embeds?: string;
 		done?: string;
+		denied?: string;
 	} = {};
 
 	export let open = false;
@@ -91,6 +93,7 @@
 	$: args =
 		open || (Array.isArray(embeds) && embeds.length > 0) ? decode(attributes?.arguments ?? '') : '';
 	$: isDone = attributes?.done === 'true';
+	$: isDenied = attributes?.denied === 'true';
 	$: isExecuting = attributes?.done && attributes?.done !== 'true';
 
 	$: parsedArgs = parseArguments(args);
@@ -136,6 +139,10 @@
 					<div>
 						<Spinner className="size-4" />
 					</div>
+				{:else if isDenied}
+					<div class="text-red-500 dark:text-red-400">
+						<XCircle className="size-4" strokeWidth="2" />
+					</div>
 				{:else if isDone}
 					<div class="text-emerald-500 dark:text-emerald-400">
 						<CheckCircle className="size-4" strokeWidth="2" />
@@ -149,10 +156,17 @@
 				<!-- Label -->
 				<div class="flex-1 line-clamp-1">
 					<!-- Short label (below md) -->
-					<span class="@md:hidden text-black dark:text-white">{attributes.name}</span>
+					<span class="@md:hidden text-black dark:text-white">
+						{attributes.name}
+						{#if isDenied}
+							<span class="text-red-500 dark:text-red-400">{$i18n.t('Denied')}</span>
+						{/if}
+					</span>
 					<!-- Full label (md and above) -->
 					<span class="hidden @md:inline font-normal">
-						{#if isDone}
+						{#if isDenied}
+							{$i18n.t('{{NAME}} was denied', { NAME: attributes.name })}
+						{:else if isDone}
 							{$i18n.t('View Result from {{NAME}}', { NAME: attributes.name })}
 						{:else}
 							{$i18n.t('Executing {{NAME}}...', { NAME: attributes.name })}
