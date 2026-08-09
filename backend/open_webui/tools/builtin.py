@@ -1444,9 +1444,7 @@ async def search_chats(
                         start = max(0, idx - 50)
                         end = min(len(content), idx + len(needle) + 100)
                         snippet = (
-                            ('...' if start > 0 else '')
-                            + content[start:end]
-                            + ('...' if end < len(content) else '')
+                            ('...' if start > 0 else '') + content[start:end] + ('...' if end < len(content) else '')
                         )
                         break
                 if snippet:

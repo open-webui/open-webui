@@ -364,7 +364,9 @@ class MilvusClient(VectorDBBase):
                 ids=ids,
             )
         elif filter:
-            filter_string = ' && '.join([f'metadata["{key}"] == {JSONCodec.dumps(value)}' for key, value in filter.items()])
+            filter_string = ' && '.join(
+                [f'metadata["{key}"] == {JSONCodec.dumps(value)}' for key, value in filter.items()]
+            )
             log.info(
                 'Deleting items by filter from %s_%s. Filter: %s',
                 self.collection_prefix,

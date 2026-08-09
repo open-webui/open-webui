@@ -1303,7 +1303,9 @@ async def get_terminal_servers(request: Request):
     terminal_servers = []
     if request.app.state.redis is not None:
         try:
-            terminal_servers = JSONCodec.loads(await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers'))
+            terminal_servers = JSONCodec.loads(
+                await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers')
+            )
             request.app.state.TERMINAL_SERVERS = terminal_servers
         except Exception as e:
             log.error(f'Error fetching terminal_servers from Redis: {e}')
@@ -1377,11 +1379,7 @@ async def get_terminal_tools(
 
     context_id = terminal_context_id(connection, metadata, terminal_context)
     config = terminal_context_config(connection, terminal_context)
-    if (
-        isinstance(config, dict)
-        and config.get('context_id') in {'chat_id', 'automation_id'}
-        and not context_id
-    ):
+    if isinstance(config, dict) and config.get('context_id') in {'chat_id', 'automation_id'} and not context_id:
         raise RuntimeError(f"Terminal server '{terminal_id}' requires a saved {terminal_context} context")
     if context_id:
         headers[TERMINAL_CONTEXT_HEADER] = context_id
