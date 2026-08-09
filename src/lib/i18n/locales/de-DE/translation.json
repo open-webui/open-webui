@@ -2210,6 +2210,7 @@
 	"Reset all permissions to their initial configuration values": "Alle Berechtigungen auf ihre ursprünglichen Konfigurationswerte zurücksetzen",
 	"Reset Defaults": "Auf Standard zurücksetzen",
 	"Reset group permissions to match the current default user permissions": "Gruppenberechtigungen auf die aktuellen Standard-Benutzerberechtigungen zurücksetzen",
+	"Reset Image": "",
 	"Reset knowledge base?": "Wissensspeicher zurücksetzen?",
 	"Reset persisted files": "Persistierte Dateien zurücksetzen",
 	"Reset to Defaults": "Auf Standardwerte zurücksetzen",

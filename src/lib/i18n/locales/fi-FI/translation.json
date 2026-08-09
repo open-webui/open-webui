@@ -2210,6 +2210,7 @@
 	"Reset all permissions to their initial configuration values": "Palauta kaikki oikeudet niiden alkuperäisiin määritysarvoihin.",
 	"Reset Defaults": "Palauta oletukset",
 	"Reset group permissions to match the current default user permissions": "Palauta ryhmän oikeudet vastaamaan nykyisiä oletuskäyttäjäoikeuksia",
+	"Reset Image": "",
 	"Reset knowledge base?": "Nollataanko tietokanta?",
 	"Reset persisted files": "Nollaa pysyvät tiedostot",
 	"Reset to Defaults": "Palauta oletuksiin",

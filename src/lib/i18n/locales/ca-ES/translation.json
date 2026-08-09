@@ -2222,6 +2222,7 @@
 	"Reset all permissions to their initial configuration values": "Restableix tots els permisos als seus valors de configuració inicials",
 	"Reset Defaults": "",
 	"Reset group permissions to match the current default user permissions": "Restableix els permisos del grup perquè coincideixin amb els permisos d'usuari predeterminats actuals",
+	"Reset Image": "",
 	"Reset knowledge base?": "Reiniciar la base de coneixement?",
 	"Reset persisted files": "Restableix els fitxers persistents",
 	"Reset to Defaults": "Restableix els valors per defecte",

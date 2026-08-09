@@ -25,6 +25,7 @@
 	import AccessControl from '../common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
 	import DefaultFeatures from './DefaultFeatures.svelte';
 	import BuiltinTools from './BuiltinTools.svelte';
@@ -93,6 +94,15 @@
 			system: ''
 		}
 	};
+
+	// The default logo reaches the editor in three shapes: the absolute URL set
+	// above, the relative path the backend stores, and an absent key, because
+	// loading a model shallow-merges its meta over the default.
+	$: hasCustomProfileImage = Boolean(
+		info?.meta?.profile_image_url &&
+		info.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png` &&
+		info.meta.profile_image_url !== '/static/favicon.png'
+	);
 
 	let params = {
 		system: ''
@@ -607,58 +617,74 @@
 									<!-- LICENSE covers this Open WebUI fallback logo.
 									Do not alter, remove, obscure, or replace it except as LICENSE permits:
 									https://docs.openwebui.com/license. -->
-									<button
-										class="group relative flex size-12 shrink-0 items-center overflow-hidden rounded-xl md:size-14 {info
-											.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
-											? 'bg-transparent'
-											: 'bg-gray-50 dark:bg-gray-850'} ring-1 ring-gray-200/70 transition hover:ring-gray-300 dark:ring-white/10 dark:hover:ring-white/20"
-										type="button"
-										aria-label={$i18n.t('Upload profile image')}
-										on:click={() => {
-											filesInputElement.click();
-										}}
-									>
-										{#if info.meta.profile_image_url}
-											<img
-												src={info.meta.profile_image_url}
-												alt="model profile"
-												class="size-full object-cover"
-											/>
-										{:else}
-											<img
-												src="{WEBUI_BASE_URL}/static/favicon.png"
-												alt="model profile"
-												class="size-full object-cover"
-											/>
-										{/if}
-
-										<div
-											class="absolute bottom-0 right-0 z-10 opacity-0 transition group-hover:opacity-100"
+									<div class="relative shrink-0">
+										<button
+											class="group relative flex size-12 shrink-0 items-center overflow-hidden rounded-xl md:size-14 {info
+												.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
+												? 'bg-transparent'
+												: 'bg-gray-50 dark:bg-gray-850'} ring-1 ring-gray-200/70 transition hover:ring-gray-300 dark:ring-white/10 dark:hover:ring-white/20"
+											type="button"
+											aria-label={$i18n.t('Upload profile image')}
+											on:click={() => {
+												filesInputElement.click();
+											}}
 										>
-											<div class="m-1">
-												<div
-													class="rounded-full bg-gray-900 p-1 text-white shadow-sm transition dark:bg-white dark:text-black"
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 16 16"
-														fill="currentColor"
-														class="size-3"
+											{#if info.meta.profile_image_url}
+												<img
+													src={info.meta.profile_image_url}
+													alt="model profile"
+													class="size-full object-cover"
+												/>
+											{:else}
+												<img
+													src="{WEBUI_BASE_URL}/static/favicon.png"
+													alt="model profile"
+													class="size-full object-cover"
+												/>
+											{/if}
+
+											<div
+												class="absolute bottom-0 right-0 z-10 opacity-0 transition group-hover:opacity-100"
+											>
+												<div class="m-1">
+													<div
+														class="rounded-full bg-gray-900 p-1 text-white shadow-sm transition dark:bg-white dark:text-black"
 													>
-														<path
-															fill-rule="evenodd"
-															d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
-															clip-rule="evenodd"
-														/>
-													</svg>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 16 16"
+															fill="currentColor"
+															class="size-3"
+														>
+															<path
+																fill-rule="evenodd"
+																d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+																clip-rule="evenodd"
+															/>
+														</svg>
+													</div>
 												</div>
 											</div>
-										</div>
 
-										<div
-											class="absolute inset-0 bg-white opacity-0 transition group-hover:opacity-20 dark:bg-black"
-										></div>
-									</button>
+											<div
+												class="absolute inset-0 bg-white opacity-0 transition group-hover:opacity-20 dark:bg-black"
+											></div>
+										</button>
+
+										{#if hasCustomProfileImage}
+											<button
+												class="absolute -right-1 -top-1 z-10 rounded-full bg-gray-900 p-0.5 text-white shadow-sm transition hover:bg-gray-700 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+												type="button"
+												title={$i18n.t('Reset Image')}
+												aria-label={$i18n.t('Reset Image')}
+												on:click={() => {
+													info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
+												}}
+											>
+												<XMark className="size-3" strokeWidth="2.5" />
+											</button>
+										{/if}
+									</div>
 
 									<div class="min-w-0 flex-1">
 										<div class="flex min-w-0 items-center gap-2">
