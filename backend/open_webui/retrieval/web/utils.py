@@ -105,7 +105,12 @@ def _is_global_addr(ip: str) -> bool:
 
 def validate_url(url: Union[str, Sequence[str]]):
     if isinstance(url, str):
-        if isinstance(validators.url(url), validators.ValidationError):
+        # A single label host — a Docker service name such as `apprise`, or
+        # `localhost` — fails validators' default host check, which insists on a
+        # TLD. That check is not what keeps internal hosts out: the resolved
+        # addresses are filtered below. So it is relaxed exactly when local
+        # fetching has been deliberately enabled, and left strict otherwise.
+        if isinstance(validators.url(url, simple_host=ENABLE_LOCAL_WEB_FETCH), validators.ValidationError):
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
         # Reject parser-confusing chars: urlparse and requests/aiohttp split
