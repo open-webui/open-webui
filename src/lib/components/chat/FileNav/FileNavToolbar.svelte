@@ -14,6 +14,7 @@
 	export let breadcrumbs: { label: string; path: string }[] = [];
 	export let selectedFile: string | null = null;
 	export let loading = false;
+	export let writable = true;
 
 	export let onNavigate: (path: string) => void = () => {};
 	export let onRefresh: () => void = () => {};
@@ -114,6 +115,7 @@
 					: ''}"
 				on:click={() => onNavigate(crumb.path)}
 				on:dragover={(e) => {
+					if (!writable) return;
 					if (!e.dataTransfer?.types.includes('application/x-terminal-file-move')) return;
 					e.preventDefault();
 					e.stopPropagation();
@@ -123,6 +125,7 @@
 					if (dragOverCrumb === i) dragOverCrumb = null;
 				}}
 				on:drop={(e) => {
+					if (!writable) return;
 					const raw = e.dataTransfer?.getData('application/x-terminal-file-move');
 					if (!raw) return;
 					e.preventDefault();
@@ -145,6 +148,11 @@
 			</span>
 		{/if}
 	</div>
+	{#if !writable}
+		<span class="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">
+			Read-only
+		</span>
+	{/if}
 
 	<Tooltip content={$i18n.t('Refresh')}>
 		<button
@@ -240,8 +248,9 @@
 		</Dropdown>
 		<Tooltip content={$i18n.t('New Folder')}>
 			<button
-				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
 				on:click={onNewFolder}
+				disabled={!writable}
 				aria-label={$i18n.t('New Folder')}
 			>
 				<NewFolderAlt className="size-3.5" />
@@ -249,8 +258,9 @@
 		</Tooltip>
 		<Tooltip content={$i18n.t('New File')}>
 			<button
-				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
 				on:click={onNewFile}
+				disabled={!writable}
 				aria-label={$i18n.t('New File')}
 			>
 				<FilePlusAlt className="size-3.5" />
@@ -279,8 +289,9 @@
 		</Tooltip>
 		<Tooltip content={$i18n.t('Upload')}>
 			<button
-				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
 				on:click={() => uploadInput?.click()}
+				disabled={!writable}
 				aria-label={$i18n.t('Upload')}
 			>
 				<svg
@@ -305,7 +316,7 @@
 			multiple
 			hidden
 			on:change={async () => {
-				if (!uploadInput?.files?.length) return;
+				if (!writable || !uploadInput?.files?.length) return;
 				onUploadFiles(Array.from(uploadInput.files));
 				uploadInput.value = '';
 			}}

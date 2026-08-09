@@ -23,6 +23,7 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.terminals import (
     TERMINAL_CONTEXT_HEADER,
     get_terminal_server_url,
+    is_terminal_orchestrator,
     terminal_context_available,
     terminal_context_config,
     terminal_context_id,
@@ -233,7 +234,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     The client must send ``{"type": "auth", "token": "<jwt>"}`` as its first
     message after connecting.
 
-    Returns ``(user, connection, chat_id)`` on success, or ``None`` after
+    Returns ``(user, connection, chat_id, token)`` on success, or ``None`` after
     closing *ws* with an appropriate error code.
     """
     import asyncio
@@ -247,7 +248,8 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
         if payload.get('type') != 'auth':
             await ws.close(code=4001, reason='Expected auth message')
             return None
-        user = await get_verified_user_by_token(payload.get('token', ''), getattr(ws.app.state, 'redis', None))
+        token = payload.get('token', '')
+        user = await get_verified_user_by_token(token, getattr(ws.app.state, 'redis', None))
         if user is None:
             await ws.close(code=4001, reason='Invalid token')
             return None
@@ -279,7 +281,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     if not terminal_context_available(connection, 'chat'):
         await ws.close(code=4003, reason='Terminal server is not available in chats')
         return None
-    return user, connection, chat_id if isinstance(chat_id, str) else ''
+    return user, connection, chat_id if isinstance(chat_id, str) else '', token
 
 
 @router.websocket('/{server_id}/api/terminals/{session_id}')
@@ -292,14 +294,14 @@ async def ws_terminal(
 
     Uses first-message auth: the client sends ``{"type": "auth", "token": "<jwt>"}``
     as its first message. The proxy validates the JWT, then connects to the
-    upstream terminal server and authenticates with the server's API key.
+    upstream terminal server using the configured terminal auth mode.
     """
     await ws.accept()
 
     result = await _resolve_authenticated_connection(ws, server_id)
     if result is None:
         return
-    user, connection, chat_id = result
+    user, connection, chat_id, token = result
 
     base_url = get_terminal_server_url(connection)
     if not base_url:
@@ -347,6 +349,8 @@ async def ws_terminal(
             if auth_type == 'bearer':
                 key = normalize_bearer_token(connection.get('key', ''))
                 await upstream.send_str(_json.dumps({'type': 'auth', 'token': key}))
+            elif auth_type == 'session' and is_terminal_orchestrator(connection):
+                await upstream.send_str(_json.dumps({'type': 'auth', 'token': token}))
 
             await publish_event(
                 app,

@@ -32,6 +32,10 @@
 	export let onSelect: (entry: FileEntry, event: MouseEvent) => void = () => {};
 	export let onLongPress: () => void = () => {};
 	export let showDate: boolean = false;
+	export let parentWritable = true;
+
+	$: writable = entry.writable !== false;
+	$: canMutate = parentWritable && writable;
 
 	const formatRelativeTime = (epoch: number): string => {
 		const diff = Math.floor(Date.now() / 1000) - epoch;
@@ -143,6 +147,7 @@
 		role={entry.type === 'directory' ? 'button' : undefined}
 		on:dragover={(e) => {
 			if (entry.type !== 'directory') return;
+			if (!writable) return;
 			if (!e.dataTransfer?.types.includes('application/x-terminal-file-move')) return;
 			e.preventDefault();
 			e.stopPropagation();
@@ -155,6 +160,7 @@
 		}}
 		on:drop={(e) => {
 			if (entry.type !== 'directory') return;
+			if (!writable) return;
 			const raw = e.dataTransfer?.getData('application/x-terminal-file-move');
 			if (!raw) return;
 			e.preventDefault();
@@ -173,8 +179,12 @@
 	>
 		<button
 			class="flex-1 flex items-center gap-2 px-3 py-1.5 text-left min-w-0"
-			draggable={true}
+			draggable={canMutate}
 			on:dragstart={(e) => {
+				if (!canMutate) {
+					e.preventDefault();
+					return;
+				}
 				const filePath = `${currentPath}${entry.name}`;
 				// If dragging a selected item, drag all selected
 				if (selected && selectedPaths.size > 1) {
@@ -282,6 +292,9 @@
 					{entry.name}
 				</span>
 			{/if}
+			{#if !writable && !renaming}
+				<span class="text-[10px] text-gray-400 shrink-0">Read-only</span>
+			{/if}
 			{#if entry.type === 'file' && entry.size !== undefined && !renaming}
 				{#if showDate && entry.modified}
 					<span class="text-[10px] text-gray-400 shrink-0"
@@ -354,9 +367,11 @@
 
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						disabled={!canMutate}
 						on:click={(e) => {
 							e.stopPropagation();
+							if (!canMutate) return;
 							startRename();
 						}}
 					>
@@ -366,9 +381,11 @@
 
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						disabled={!canMutate}
 						on:click={(e) => {
 							e.stopPropagation();
+							if (!canMutate) return;
 							onDelete(`${currentPath}${entry.name}`, entry.name);
 						}}
 					>

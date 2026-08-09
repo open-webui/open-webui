@@ -3,6 +3,12 @@ export type FileEntry = {
 	type: 'file' | 'directory';
 	size?: number;
 	modified?: number;
+	writable?: boolean;
+};
+
+export type TerminalFileList = {
+	entries: FileEntry[];
+	writable?: boolean;
 };
 
 export type ListeningPort = {
@@ -85,7 +91,7 @@ export const listFiles = async (
 	apiKey: string,
 	path: string = '/',
 	sessionId?: string
-): Promise<FileEntry[] | null> => {
+): Promise<TerminalFileList | null> => {
 	// The endpoint uses `directory` as the query param name
 	const url = `${baseUrl.replace(/\/$/, '')}/files/list?directory=${encodeURIComponent(path)}`;
 	const headers: Record<string, string> = bearerHeaders(apiKey);
@@ -99,7 +105,7 @@ export const listFiles = async (
 			console.error('open-terminal listFiles error:', err);
 			return null;
 		});
-	return res?.entries ?? null;
+	return res?.entries ? { entries: res.entries, writable: res.writable } : null;
 };
 
 export const readFile = async (

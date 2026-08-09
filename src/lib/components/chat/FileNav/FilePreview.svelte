@@ -41,6 +41,7 @@
 	export let onSheetChange: ((sheet: string) => void) | null = null;
 
 	export let overlay = false;
+	export let readOnly = false;
 
 	export let onSave: ((content: string) => Promise<void>) | null = null;
 
@@ -59,6 +60,7 @@
 	};
 
 	export const startEdit = async () => {
+		if (readOnly) return;
 		editContent = fileContent ?? '';
 		editing = true;
 		showRaw = true;
@@ -67,7 +69,7 @@
 	};
 
 	export const saveEdit = async () => {
-		if (!onSave) return;
+		if (!onSave || readOnly) return;
 		saving = true;
 		await onSave(editContent);
 		saving = false;
@@ -81,7 +83,7 @@
 
 	/** Save code file directly from CodeMirror */
 	export const saveCodeFile = async () => {
-		if (!onSave) return;
+		if (!onSave || readOnly) return;
 		saving = true;
 		const content = fileCodeEditorRef?.getValue() ?? '';
 		await onSave(content);
@@ -426,7 +428,7 @@
 					bind:this={fileCodeEditorRef}
 					value={fileContent ?? ''}
 					filePath={selectedFile}
-					{onSave}
+					onSave={readOnly ? null : onSave}
 				/>
 			</div>
 		{:else if isMarkdown && !showRaw}
@@ -439,7 +441,7 @@
 					bind:this={fileCodeEditorRef}
 					value={fileContent ?? ''}
 					filePath={selectedFile}
-					{onSave}
+					onSave={readOnly ? null : onSave}
 				/>
 			</div>
 		{:else if isCsv && !showRaw && csvRows.length > 0}
@@ -496,7 +498,7 @@
 					bind:this={fileCodeEditorRef}
 					value={fileContent ?? ''}
 					filePath={selectedFile}
-					{onSave}
+					onSave={readOnly ? null : onSave}
 				/>
 			</div>
 		{:else if isSvg && highlightedHtml && !showRaw}
