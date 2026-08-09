@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - ⚠️ **Database Migrations**: This release includes database schema changes; we strongly recommend backing up your database and all associated data before upgrading in production environments. If you are running a multi-worker, multi-server, or load-balanced deployment, all instances must be updated simultaneously, rolling updates are not supported and will cause application failures due to schema incompatibility.
 - 📊 **Default usage statistics range.** Usage statistics now cover the past two years by default for everyone, instead of starting from the date the account was created. [Commit](https://github.com/open-webui/open-webui/commit/8dbbc206c5a0706789722c42827479e5db10bb2b)
+
 ## [0.11.0] - 2026-07-27
 
 ### Added
