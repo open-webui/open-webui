@@ -4918,6 +4918,22 @@ async def streaming_chat_response_handler(response, ctx):
 
                     response_tool_calls = tool_calls.pop(0)
 
+                    # Providers that number tool calls per round rather than per turn
+                    # hand back an id an earlier round already used and answered. The
+                    # dedup below would then drop this round's function_call while its
+                    # result is still appended, leaving a function_call_output with no
+                    # matching call and breaking every later request in the chat.
+                    # Rename the collision. Only ids that already have a result can
+                    # collide this way, so calls still awaiting one — the Responses API
+                    # items the dedup exists for — are left untouched.
+                    answered_call_ids = {
+                        item.get('call_id') for item in output if item.get('type') == 'function_call_output'
+                    }
+                    for tc in response_tool_calls:
+                        call_id = tc.get('id', '')
+                        if call_id and call_id in answered_call_ids:
+                            tc['id'] = output_id('call')
+
                     # Append function_call items for each tool call
                     # (Responses API already has them from streaming, so skip duplicates)
                     existing_call_ids = {item.get('call_id') for item in output if item.get('type') == 'function_call'}
