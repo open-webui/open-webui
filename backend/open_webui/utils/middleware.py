@@ -2096,6 +2096,11 @@ def process_messages_with_output(
                 processed.extend(output_messages)
                 continue
 
+        if message.get('role') == 'assistant' and not message.get('tool_calls'):
+            content = message.get('content')
+            if not (content.strip() if isinstance(content, str) else content):
+                continue
+
         # Strip 'output' field before adding (LLM shouldn't see it)
         clean_message = {k: v for k, v in message.items() if k != 'output'}
         processed.append(clean_message)
