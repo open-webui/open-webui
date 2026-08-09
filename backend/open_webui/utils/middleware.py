@@ -3635,7 +3635,10 @@ async def non_streaming_chat_response_handler(response, ctx):
                     if not response_output:
                         choice_message = choices[0].get('message', {})
                         reasoning_content = choice_message.get('reasoning_content') or choice_message.get('reasoning')
-                        reasoning_details = choice_message.get('reasoning_details')
+                        provider_fields = choice_message.get('provider_specific_fields') or {}
+                        reasoning_details = provider_fields.get('reasoning_details') or choice_message.get(
+                            'reasoning_details'
+                        )
                         response_output = []
                         if reasoning_content or reasoning_details:
                             reasoning_item = {
