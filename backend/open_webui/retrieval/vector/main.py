@@ -37,6 +37,14 @@ class VectorDBBase(ABC):
         """Check if the collection exists in the vector DB."""
         pass
 
+    def get_collection_dimension(self, collection_name: str) -> Optional[int]:
+        """Return a collection's vector dimension when the backend can determine it.
+
+        Backends that do not expose collection dimensions may return ``None``.
+        Callers should still handle a dimension error raised during an insert.
+        """
+        return None
+
     @abstractmethod
     def delete_collection(self, collection_name: str) -> None:
         """Delete a collection from the vector DB."""

@@ -124,6 +124,91 @@ def _memory_metadata(memory: MemoryModel) -> dict:
     }
 
 
+def _is_embedding_dimension_error(error: Exception) -> bool:
+    message = str(error).lower()
+    return 'dimension' in message and any(marker in message for marker in ('expect', 'got', 'mismatch', 'match'))
+
+
+async def _memory_vector_items(request: Request, memories: list[MemoryModel], user) -> list[dict]:
+    vectors = await asyncio.gather(
+        *[
+            request.app.state.EMBEDDING_FUNCTION(
+                memory_vector_text(memory.content, memory.path),
+                prefix=RAG_EMBEDDING_CONTENT_PREFIX,
+                user=user,
+            )
+            for memory in memories
+        ]
+    )
+
+    return [
+        {
+            'id': memory.id,
+            'text': memory_vector_text(memory.content, memory.path),
+            'vector': vectors[idx],
+            'metadata': _memory_metadata(memory),
+        }
+        for idx, memory in enumerate(memories)
+    ]
+
+
+async def _rebuild_memory_collection(request: Request, user) -> None:
+    """Recreate a user's memory collection using the current embedding model.
+
+    The SQL memory table is the source of truth, so rebuilding the vector
+    collection preserves memories when the embedding model's dimension changes.
+    """
+    collection_name = f'user-memory-{user.id}'
+    try:
+        await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name)
+    except Exception as e:
+        # A missing collection is safe; the following upsert will create it.
+        log.debug(f'Could not delete memory collection {collection_name} before rebuild: {e}')
+
+    memories = await Memories.get_memories_by_user_id(user.id)
+    if not memories:
+        return
+
+    items = await _memory_vector_items(request, memories, user)
+    await ASYNC_VECTOR_DB_CLIENT.upsert(collection_name=collection_name, items=items)
+    log.info('Rebuilt memory collection %s with %d memories', collection_name, len(items))
+
+
+async def _ensure_memory_collection_dimension(request: Request, user, dimension: int) -> bool:
+    """Rebuild the memory collection if its stored vectors use another dimension."""
+    collection_name = f'user-memory-{user.id}'
+    stored_dimension = await ASYNC_VECTOR_DB_CLIENT.get_collection_dimension(collection_name)
+    if stored_dimension is not None and stored_dimension != dimension:
+        log.warning(
+            'Memory collection %s uses dimension %d but the current embedding model uses %d; rebuilding it',
+            collection_name,
+            stored_dimension,
+            dimension,
+        )
+        await _rebuild_memory_collection(request, user)
+        return True
+    return False
+
+
+async def _upsert_memory_vectors(request: Request, user, items: list[dict]) -> None:
+    if not items:
+        return
+
+    if await _ensure_memory_collection_dimension(request, user, len(items[0]['vector'])):
+        return
+
+    collection_name = f'user-memory-{user.id}'
+    try:
+        await ASYNC_VECTOR_DB_CLIENT.upsert(collection_name=collection_name, items=items)
+    except Exception as e:
+        # Some vector backends cannot report a collection's dimension until an
+        # insert is attempted. Retry by rebuilding from the SQL source of truth.
+        if not _is_embedding_dimension_error(e):
+            raise
+        log.warning('Embedding dimension changed for %s; rebuilding its memory collection', collection_name)
+        await _rebuild_memory_collection(request, user)
+
+
 @router.post('/add', response_model=MemoryModel | None)
 async def add_memory(
     request: Request,
@@ -152,9 +237,10 @@ async def add_memory(
         memory_vector_text(memory.content, memory.path), prefix=RAG_EMBEDDING_CONTENT_PREFIX, user=user
     )
 
-    await ASYNC_VECTOR_DB_CLIENT.upsert(
-        collection_name=f'user-memory-{user.id}',
-        items=[
+    await _upsert_memory_vectors(
+        request,
+        user,
+        [
             {
                 'id': memory.id,
                 'text': memory_vector_text(memory.content, memory.path),
@@ -226,7 +312,7 @@ async def update_memories(
         response.append(result)
 
     if upsert_items:
-        await ASYNC_VECTOR_DB_CLIENT.upsert(collection_name=f'user-memory-{user.id}', items=upsert_items)
+        await _upsert_memory_vectors(request, user, upsert_items)
 
     if delete_ids:
         await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{user.id}', ids=delete_ids)
@@ -288,6 +374,7 @@ async def query_memory(
         raise HTTPException(status_code=404, detail='No memories found for user')
 
     vector = await request.app.state.EMBEDDING_FUNCTION(form_data.content, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user)
+    await _ensure_memory_collection_dimension(request, user, len(vector))
 
     results = await ASYNC_VECTOR_DB_CLIENT.search(
         collection_name=f'user-memory-{user.id}',
@@ -403,32 +490,8 @@ async def reset_memory_from_vector_db(
     """
     await check_memories_permission(user)
 
-    await ASYNC_VECTOR_DB_CLIENT.delete_collection(f'user-memory-{user.id}')
-
     memories = await Memories.get_memories_by_user_id(user.id)
-
-    # Generate vectors in parallel
-    vectors = await asyncio.gather(
-        *[
-            request.app.state.EMBEDDING_FUNCTION(
-                memory_vector_text(memory.content, memory.path), prefix=RAG_EMBEDDING_CONTENT_PREFIX, user=user
-            )
-            for memory in memories
-        ]
-    )
-
-    await ASYNC_VECTOR_DB_CLIENT.upsert(
-        collection_name=f'user-memory-{user.id}',
-        items=[
-            {
-                'id': memory.id,
-                'text': memory_vector_text(memory.content, memory.path),
-                'vector': vectors[idx],
-                'metadata': _memory_metadata(memory),
-            }
-            for idx, memory in enumerate(memories)
-        ],
-    )
+    await _rebuild_memory_collection(request, user)
 
     await publish_event(
         request,
@@ -512,9 +575,10 @@ async def update_memory_by_id(
             memory_vector_text(memory.content, memory.path), prefix=RAG_EMBEDDING_CONTENT_PREFIX, user=user
         )
 
-        await ASYNC_VECTOR_DB_CLIENT.upsert(
-            collection_name=f'user-memory-{user.id}',
-            items=[
+        await _upsert_memory_vectors(
+            request,
+            user,
+            [
                 {
                     'id': memory.id,
                     'text': memory_vector_text(memory.content, memory.path),
