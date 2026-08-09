@@ -571,11 +571,14 @@
 				type="button"
 				on:click={async () => {
 					const res = await userSignOut();
-					user.set(null);
 					localStorage.removeItem('token');
 
-					location.href = res?.redirect_url ?? '/auth';
 					show = false;
+					// A full document navigation follows and discards all client state, so
+					// the `user` store is deliberately left alone: clearing it here trips the
+					// reactive auth guard in (app)/+layout.svelte, whose client side goto
+					// cancels this navigation before the browser can leave for the IdP.
+					location.href = res?.redirect_url ?? '/auth';
 				}}
 			>
 				<div class="self-center">
