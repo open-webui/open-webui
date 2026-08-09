@@ -1118,13 +1118,8 @@ async def get_event_call(request_info):
                 to=session_id,
                 timeout=WEBSOCKET_EVENT_CALLER_TIMEOUT,
             )
-        except TimeoutError:
+        except (TimeoutError, socketio.exceptions.TimeoutError):
             log.warning(f'Event caller timed out for session {session_id}')
-            if SESSION_POOL.get(session_id) == session:
-                try:
-                    del SESSION_POOL[session_id]
-                except KeyError:
-                    pass
             return {'error': 'Event call timed out. The browser tab may be inactive or closed.'}
 
     if 'session_id' in request_info and 'chat_id' in request_info and 'message_id' in request_info:
