@@ -63,6 +63,20 @@ class ChromaClient(VectorDBBase):
         except NotFoundError:
             return False
 
+    def get_collection_dimension(self, collection_name: str) -> Optional[int]:
+        """Return the dimension of the first embedding in a Chroma collection."""
+        try:
+            collection = self.client.get_collection(name=collection_name)
+            result = collection.get(limit=1, include=['embeddings'])
+            embeddings = result.get('embeddings')
+            if embeddings is not None and len(embeddings) > 0 and embeddings[0] is not None:
+                return len(embeddings[0])
+        except NotFoundError:
+            return None
+        except Exception as e:
+            log.debug(f'Could not determine dimension for Chroma collection {collection_name}: {e}')
+        return None
+
     def delete_collection(self, collection_name: str):
         # Delete the collection based on the collection name.
         return self.client.delete_collection(name=collection_name)

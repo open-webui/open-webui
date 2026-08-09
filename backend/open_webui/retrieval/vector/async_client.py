@@ -89,6 +89,9 @@ class AsyncVectorDBClient:
     async def has_collection(self, collection_name: str) -> bool:
         return await asyncio.to_thread(self._sync.has_collection, collection_name)
 
+    async def get_collection_dimension(self, collection_name: str) -> Optional[int]:
+        return await asyncio.to_thread(self._sync.get_collection_dimension, collection_name)
+
     async def delete_collection(self, collection_name: str) -> None:
         return await asyncio.to_thread(self._sync.delete_collection, collection_name)
 
