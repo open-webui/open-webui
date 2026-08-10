@@ -398,18 +398,25 @@
 			return;
 		}
 
+		if (items.some((f) => f?.type === 'text' && f?.status !== 'uploaded')) {
+			return;
+		}
+
 		const ids = items
 			.filter((f) => f?.type === 'file' && f?.id && !(f?.content_type ?? '').startsWith('image/'))
 			.map((f) => f.id);
 
-		const key = `${modelId ?? ''}:${ids.join(',')}`;
+		const webItems = items.filter((f) => f?.type === 'text' && f?.file?.data?.content);
+		const contents = webItems.map((f) => f.file.data.content);
+
+		const key = `${modelId ?? ''}:${ids.join(',')}:${webItems.map((f) => f?.url ?? f?.name).join(',')}`;
 		if (key === documentSuggestionsKey) return;
 		documentSuggestionsKey = key;
 
 		documentSuggestionsController?.abort();
 		documentSuggestionsController = null;
 
-		if (ids.length === 0 || !modelId) {
+		if ((ids.length === 0 && contents.length === 0) || !modelId) {
 			documentSuggestionPrompts = [];
 			return;
 		}
@@ -421,6 +428,7 @@
 			localStorage.token,
 			modelId,
 			ids,
+			contents,
 			undefined,
 			controller.signal
 		).catch(() => []);

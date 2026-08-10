@@ -309,18 +309,21 @@ async def generate_document_suggestions(request: Request, form_data: dict, user=
         )
 
     file_ids = form_data.get('file_ids') or []
-    if not file_ids:
+    contents = form_data.get('contents') or []
+
+    if not file_ids and not contents:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT('No files were provided.'),
+            detail=ERROR_MESSAGES.DEFAULT('No documents were provided.'),
         )
 
     content_parts = await _readable_file_contents(file_ids, user)
+    content_parts += [content for content in contents if isinstance(content, str) and content.strip()]
 
     if not content_parts:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT('No extractable content found in the provided files.'),
+            detail=ERROR_MESSAGES.DEFAULT('No extractable content found in the provided documents.'),
         )
 
     max_length = await Config.get('task.document_suggestions.content_max_length')

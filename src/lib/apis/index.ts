@@ -904,6 +904,7 @@ export const generateDocumentSuggestions = async (
 	token: string = '',
 	model: string,
 	file_ids: string[],
+	contents: string[] = [],
 	chat_id?: string,
 	signal?: AbortSignal
 ) => {
@@ -920,6 +921,7 @@ export const generateDocumentSuggestions = async (
 		body: JSON.stringify({
 			model: model,
 			file_ids: file_ids,
+			contents: contents,
 			...(chat_id && { chat_id: chat_id })
 		})
 	})
