@@ -2,6 +2,7 @@ import asyncio
 import base64
 import fnmatch
 import hashlib
+import json
 import logging
 import re
 import sys
@@ -103,6 +104,8 @@ class OAuthClientInformationFull(OAuthClientMetadata):
     issuer: Optional[str] = None  # URL of the OAuth server that issued this client
     resource: Optional[str] = None  # RFC 8707 resource indicator for JWT audience
     oauth_resource_parameter: OAuthResourceParameterMode = 'auto'
+    # None means unset (provider defaults apply); {} is a deliberate opt-out.
+    oauth_authorize_params: Optional[dict[str, str]] = None
 
     client_id: str
     client_secret: str | None = None
@@ -119,6 +122,10 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 OAUTH_RESOURCE_PARAMETER_MODES = {'auto', 'include', 'omit'}
+
+# Google-issued OAuth client ids always carry this suffix; used to apply the
+# provider's required authorization parameters when none are configured.
+GOOGLE_CLIENT_ID_SUFFIX = '.apps.googleusercontent.com'
 
 OAUTH_RUNTIME_CONFIG = {
     'DEFAULT_USER_ROLE': ('ui.default_user_role', DEFAULT_USER_ROLE),
@@ -743,6 +750,41 @@ def get_connection_oauth_resource_parameter(connection: dict) -> OAuthResourcePa
     )
 
 
+def get_connection_oauth_authorize_params(connection: dict) -> dict[str, str] | None:
+    """Extra provider-specific parameters for the authorization request.
+
+    Some providers require non-standard authorization parameters that are not
+    advertised by OIDC discovery, so authlib cannot infer them. Google needs
+    access_type=offline to issue a refresh token at all, plus prompt=consent to
+    re-issue one for users who already granted.
+
+    Returns None when the connection does not configure the option, so the
+    caller can tell "unset" from an explicitly empty object, which is a
+    deliberate opt-out of the provider defaults.
+    """
+    info = connection.get('info') or {}
+    config = connection.get('config') or {}
+
+    if 'oauth_authorize_params' in info:
+        value = info['oauth_authorize_params']
+    elif 'oauth_authorize_params' in config:
+        value = config['oauth_authorize_params']
+    else:
+        return None
+
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            log.warning('oauth_authorize_params is not valid JSON, ignoring')
+            return None
+
+    if not isinstance(value, dict):
+        return None
+
+    return {str(k): str(v) for k, v in value.items() if v is not None}
+
+
 def apply_connection_oauth_options(connection: dict, oauth_client_info: dict) -> dict:
     info = connection.get('info') or {}
     config = connection.get('config') or {}
@@ -752,6 +794,7 @@ def apply_connection_oauth_options(connection: dict, oauth_client_info: dict) ->
     options = {
         **oauth_client_info,
         'oauth_resource_parameter': get_connection_oauth_resource_parameter(connection),
+        'oauth_authorize_params': get_connection_oauth_authorize_params(connection),
     }
     if oauth_scope:
         options['scope'] = oauth_scope
@@ -777,6 +820,21 @@ def should_send_oauth_resource(client_info: OAuthClientInformationFull | None) -
     return not scope_has_resource_indicator(client_info.scope)
 
 
+def default_oauth_authorize_params(client_info: OAuthClientInformationFull) -> dict[str, str]:
+    """Authorization parameters implied by the provider, before per-connection overrides.
+
+    Google issues a refresh token only when the authorization request carries
+    access_type=offline, and only re-issues one when prompt=consent forces the
+    consent screen. Neither is advertised by OIDC discovery. Without them every
+    Google MCP session dies at the one-hour access-token expiry, because
+    get_oauth_token() deletes a session whose refresh cannot proceed.
+    """
+    if f'{client_info.client_id or ""}'.endswith(GOOGLE_CLIENT_ID_SUFFIX):
+        return {'access_type': 'offline', 'prompt': 'consent'}
+
+    return {}
+
+
 def build_oauth_request_params(client_info: OAuthClientInformationFull | None) -> dict:
     if not client_info:
         return {}
@@ -786,6 +844,15 @@ def build_oauth_request_params(client_info: OAuthClientInformationFull | None) -
         params['scope'] = client_info.scope
     if should_send_oauth_resource(client_info):
         params['resource'] = client_info.resource
+
+    overrides = client_info.oauth_authorize_params
+    if overrides is None:
+        params.update(default_oauth_authorize_params(client_info))
+    elif overrides:
+        # Per-key override, so a connection can adjust one provider parameter
+        # without silently dropping the others it still needs.
+        params.update({**default_oauth_authorize_params(client_info), **overrides})
+    # An explicitly empty object sends no extra parameters at all.
     return params
 
 
