@@ -172,6 +172,7 @@
 	} else {
 		selectedModelIds = selectedModels;
 	}
+	$: primaryChatModel = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
 	let serverContextUsage = null;
 	let contextUsage = null;
 
@@ -3934,7 +3935,12 @@
 >
 	{#if !loading}
 		<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
-			{#if !embedded && $selectedFolder && $selectedFolder?.meta?.background_image_url}
+			{#if !embedded && primaryChatModel?.info?.meta?.chat_background_color}
+				<div
+					class="absolute top-0 left-0 w-full h-full z-0 opacity-15"
+					style="background-color: {primaryChatModel.info.meta.chat_background_color}"
+				/>
+			{:else if !embedded && $selectedFolder && $selectedFolder?.meta?.background_image_url}
 				<div
 					class="absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
 					style="background-image: url({$selectedFolder?.meta?.background_image_url})  "

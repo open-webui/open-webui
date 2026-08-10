@@ -114,6 +114,7 @@
 	let accessGrants = [];
 	let terminalId = '';
 	let tts = { voice: '' };
+	let chatBgColor = '';
 	export let suggestionTags: { name: string }[] = [];
 	let voices: { id: string; name?: string }[] = [];
 
@@ -356,6 +357,12 @@
 			}
 		}
 
+		if (chatBgColor) {
+			info.meta.chat_background_color = chatBgColor;
+		} else {
+			delete info.meta.chat_background_color;
+		}
+
 		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop
 			? (typeof params.stop === 'string' ? params.stop.split(',') : params.stop).filter((s) =>
@@ -467,6 +474,7 @@
 			builtinTools = model?.meta?.builtinTools ?? builtinTools;
 			terminalId = model?.meta?.terminalId ?? '';
 			tts = { voice: model?.meta?.tts?.voice ?? '' };
+			chatBgColor = model?.meta?.chat_background_color ?? '';
 
 			accessGrants = model?.access_grants ?? [];
 
@@ -993,6 +1001,39 @@
 								{voices}
 								placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
 							/>
+						</div>
+
+						<div class="my-3">
+							<div class="flex w-full justify-between mb-2">
+								<div class="self-center text-sm font-medium">
+									{$i18n.t('Chat Background Color')}
+								</div>
+							</div>
+
+							<div class="flex items-center gap-2">
+								<input
+									type="color"
+									bind:value={chatBgColor}
+									class="w-8 h-8 rounded cursor-pointer border border-gray-200 dark:border-gray-700 bg-transparent"
+									title={$i18n.t('Pick a color')}
+								/>
+								<input
+									type="text"
+									bind:value={chatBgColor}
+									placeholder="#ffffff"
+									maxlength="7"
+									class="w-28 text-sm px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 font-mono"
+								/>
+								{#if chatBgColor}
+									<button
+										type="button"
+										class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
+										on:click={() => { chatBgColor = ''; }}
+									>
+										{$i18n.t('Reset')}
+									</button>
+								{/if}
+							</div>
 						</div>
 
 						<hr class="my-3 border-gray-100/30 dark:border-gray-850/30" />
