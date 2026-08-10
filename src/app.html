@@ -41,6 +41,29 @@
 		</script>
 
 		<script>
+			// Set document direction + lang early from the persisted locale to avoid FOUC/RTL flash
+			(() => {
+				const _rtlLocales = new Set([
+					'ar',
+					'ar-BH',
+					'he',
+					'he-IL',
+					'fa',
+					'fa-IR',
+					'ur',
+					'ur-PK',
+					'ug',
+					'ug-CN'
+				]);
+				const _locale = (localStorage?.locale || '').split('-')[0];
+				document.documentElement.setAttribute('dir', _rtlLocales.has(_locale) ? 'rtl' : 'ltr');
+				if (localStorage?.locale) {
+					document.documentElement.setAttribute('lang', localStorage.locale);
+				}
+			})();
+		</script>
+
+		<script>
 			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
 			(() => {
 				const metaThemeColorTag = document.querySelector('meta[name="theme-color"]');

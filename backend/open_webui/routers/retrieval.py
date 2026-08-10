@@ -118,6 +118,7 @@ from open_webui.retrieval.web.linkup import search_linkup
 from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.files import has_access_to_file
+from open_webui.utils.arabic_text import normalize_arabic_text
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.misc import (
     calculate_sha256_string,
@@ -1734,7 +1735,7 @@ def save_docs_to_vector_db(
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
-    texts = [sanitize_text_for_db(doc.page_content) for doc in docs]
+    texts = [normalize_arabic_text(sanitize_text_for_db(doc.page_content)) for doc in docs]
     metadatas = [
         {
             **doc.metadata,
@@ -2570,6 +2571,9 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
     try:
         logging.debug(f'trying to web search with {config.WEB_SEARCH_ENGINE, form_data.queries}')
 
+        # Normalize Arabic query forms so search engines receive canonical text
+        form_data.queries = [normalize_arabic_text(q) for q in form_data.queries]
+
         # Use semaphore to limit concurrent requests based on WEB_SEARCH_CONCURRENT_REQUESTS
         # 0 or None = unlimited (previous behavior), positive number = limited concurrency
         # Set to 1 for sequential execution (rate-limited APIs like Brave free tier)
@@ -2750,6 +2754,9 @@ async def query_doc_handler(
     await _validate_collection_access([form_data.collection_name], user)
 
     try:
+        # Normalize Arabic query forms (hamza/yaa/diacritics) to match normalized stored text
+        form_data.query = normalize_arabic_text(form_data.query)
+
         if config.ENABLE_RAG_HYBRID_SEARCH and (form_data.hybrid is None or form_data.hybrid):
             return await query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
@@ -2816,6 +2823,9 @@ async def query_collection_handler(
     await _validate_collection_access(form_data.collection_names, user)
 
     try:
+        # Normalize Arabic query forms (hamza/yaa/diacritics) to match normalized stored text
+        form_data.query = normalize_arabic_text(form_data.query)
+
         if config.ENABLE_RAG_HYBRID_SEARCH and (form_data.hybrid is None or form_data.hybrid):
             return await query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,

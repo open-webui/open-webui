@@ -48,6 +48,7 @@
 
 	import '../tailwind.css';
 	import '../app.css';
+	import '../lib/rtl.css';
 	import 'tippy.js/dist/tippy.css';
 
 	import { executeToolServer, getBackendConfig, getModels, getVersion } from '$lib/apis';

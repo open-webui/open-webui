@@ -1,0 +1,109 @@
+/* RTL support
+   Applied automatically when <html dir="rtl"> (Arabic, Hebrew, Persian, Urdu, Uyghur).
+   Flex layouts and logical properties (border-s/e, ps/pe, start/end, inset-inline) mirror
+   on their own under dir=rtl. This file fixes the remaining physical-property layout
+   chrome (fixed/absolute positioning, translate-based centering, physical margins). */
+
+[dir='rtl'] html,
+[dir='rtl'] body {
+	direction: rtl;
+}
+
+/* Code blocks, terminals and inline code must stay LTR regardless of UI direction */
+[dir='rtl'] pre,
+[dir='rtl'] code,
+[dir='rtl'] .hljs,
+[dir='rtl'] .code-block {
+	direction: ltr;
+	text-align: left;
+}
+
+/* Keep LaTeX/Katex and other bi-directional-isolated content intact */
+[dir='rtl'] .katex,
+[dir='rtl'] .math {
+	direction: ltr;
+	unicode-bidi: isolate;
+}
+
+/* App sidebar (native desktop app) anchors left in LTR; anchor right in RTL */
+[dir='rtl'] .app-sidebar {
+	left: auto;
+	right: 0;
+}
+
+/* Collapsed sidebar resize cursor direction */
+[dir='rtl'] #sidebar .cursor-\[e-resize\] {
+	cursor: w-resize;
+}
+
+/* Chat controls pane: on the right in LTR, on the left in RTL */
+[dir='rtl'] .chat-controls {
+	left: 0;
+	right: auto;
+	border-inline-start: none;
+	border-inline-end: 0.5px solid var(--color-gray-50);
+}
+
+/* Default text alignment of the chat input area follows document direction;
+   the input itself uses dir="auto" so Arabic types right-to-left automatically. */
+[dir='rtl'] #chat-input,
+[dir='rtl'] .chat-input-container {
+	text-align: start;
+}
+
+/* Toasts and floating actions anchored right in LTR should anchor left in RTL */
+[dir='rtl'] .absolute.bottom-8.right-8 {
+	right: auto;
+	left: 2rem;
+}
+
+/* Modal close buttons / header icons that sit at the end of a toolbar */
+[dir='rtl'] .modal-close-button {
+	margin-inline-end: auto;
+}
+
+/* The delete/undo floating toast buttons inside chat items */
+[dir='rtl'] .mr-10 {
+	margin-right: 0;
+	margin-left: 2.5rem;
+}
+
+/* Sidebar "new chat" hint text uses pr/pl pairs that need flipping in menus */
+[dir='rtl'] .pr-1 {
+	padding-right: 0;
+	padding-left: 0.25rem;
+}
+
+[dir='rtl'] .pl-1 {
+	padding-left: 0;
+	padding-right: 0.25rem;
+}
+
+[dir='rtl'] .pr-2 {
+	padding-right: 0;
+	padding-left: 0.5rem;
+}
+
+[dir='rtl'] .pl-2 {
+	padding-left: 0;
+	padding-right: 0.5rem;
+}
+
+[dir='rtl'] .rounded-l-xl {
+	border-top-left-radius: 0;
+	border-bottom-left-radius: 0;
+	border-top-right-radius: 0.75rem;
+	border-bottom-right-radius: 0.75rem;
+}
+
+[dir='rtl'] .rounded-r-xl {
+	border-top-right-radius: 0;
+	border-bottom-right-radius: 0;
+	border-top-left-radius: 0.75rem;
+	border-bottom-left-radius: 0.75rem;
+}
+
+/* Scrollbars on the left edge of a flipped pane should stay on the outer (left) edge */
+[dir='rtl'] * {
+	scrollbar-gutter: stable;
+}

@@ -58,6 +58,7 @@ from open_webui.env import (
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.arabic_text import is_arabic_text
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.utils.misc import strict_match_mime_type
@@ -357,11 +358,39 @@ async def _write_tts_cache(
         await f.write(json.dumps(payload))
 
 
+# Generic (locale-agnostic) voices used as fallback defaults by OpenAI-compatible TTS engines
+GENERIC_TTS_VOICES = {'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'}
+
+# Engine-specific Arabic voices used automatically when the text is Arabic and the user has
+# not explicitly configured a voice. Azure requires explicit locale-specific voice names.
+ARABIC_TTS_VOICES = {
+    'azure': 'ar-SA-ZariyahNeural',
+    'openai': 'alloy',  # OpenAI voices already handle Arabic; keep the default
+    'mistral': 'alloy',
+}
+
+
+async def resolve_tts_voice(engine: str, payload: dict) -> str:
+    """Pick the TTS voice for a request, defaulting to an Arabic voice for Arabic text.
+
+    An explicitly configured/selected voice is always respected. The Arabic voice is only
+    substituted when the resolved voice is a generic (non-locale) default such as ``alloy``.
+    """
+    configured = str(payload.get('voice') or (await Config.get('audio.tts.voice')) or '')
+    text = str(payload.get('input') or '')
+
+    if is_arabic_text(text):
+        if configured and configured not in GENERIC_TTS_VOICES:
+            return configured
+        return ARABIC_TTS_VOICES.get(engine, configured) or configured
+
+    return configured
+
+
 async def _tts_openai(request, payload, file_path, file_body_path, user):
     """Generate speech via an OpenAI-compatible TTS endpoint."""
     payload['model'] = await Config.get('audio.tts.model')
-    if not payload.get('voice'):
-        payload['voice'] = await Config.get('audio.tts.voice')
+    payload['voice'] = await resolve_tts_voice('openai', payload)
     payload = {**payload, **(await Config.get('audio.tts.openai.params') or {})}
     api_key = await Config.get('audio.tts.openai.api_key')
     api_base_url = await Config.get('audio.tts.openai.api_base_url')
@@ -439,7 +468,7 @@ async def _tts_azure(request, payload, file_path, file_body_path, user):
     """Generate speech via Azure Cognitive Services TTS."""
     az_region = await Config.get('audio.tts.azure.speech_region') or 'eastus'
     az_base = await Config.get('audio.tts.azure.speech_base_url')
-    language = payload.get('voice') or await Config.get('audio.tts.voice')
+    language = await resolve_tts_voice('azure', payload)
     locale = '-'.join(language.split('-')[:2])
     output_format = await Config.get('audio.tts.azure.speech_output_format')
 

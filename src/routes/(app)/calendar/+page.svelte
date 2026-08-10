@@ -20,6 +20,7 @@
 	import Select from '$lib/components/common/Select.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import { formatHijri, isHijriPreferredLocale } from '$lib/utils/hijri';
 
 	const i18n = getContext('i18n');
 
@@ -30,6 +31,8 @@
 
 	let view: 'month' | 'week' | 'day' = 'month';
 	let currentDate = new Date();
+
+	let showHijri = false;
 
 	let showEventModal = false;
 	let editEvent: CalendarEventModel | null = null;
@@ -193,14 +196,36 @@
 
 	$: defaultCalendarId = calendars.find((c) => c.is_default)?.id || calendars[0]?.id || '';
 
-	$: headerText =
-		view === 'day'
-			? `${DAY_NAMES[currentDate.getDay()]}, ${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getDate()}, ${currentDate.getFullYear()}`
-			: `${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+	$: headerText = (() => {
+		const locale = (typeof $i18n?.resolvedLanguage === 'string' && $i18n.resolvedLanguage) || 'en';
+		if (view === 'day') {
+			try {
+				return new Intl.DateTimeFormat(locale, {
+					weekday: 'long',
+					year: 'numeric',
+					month: 'long',
+					day: 'numeric'
+				}).format(currentDate);
+			} catch {
+				return currentDate.toDateString();
+			}
+		}
+		try {
+			return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long' }).format(
+				currentDate
+			);
+		} catch {
+			return `${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+		}
+	})();
+
+	$: hijriText = showHijri ? formatHijri(currentDate, $i18n.resolvedLanguage || 'ar') : '';
 
 	onMount(async () => {
 		await loadCalendars();
 		await refresh();
+		// Show Hijri dates by default for Arabic-script locales
+		showHijri = isHijriPreferredLocale($i18n.resolvedLanguage);
 		loaded = true;
 	});
 </script>
@@ -252,10 +277,18 @@
 				<div class="flex w-full items-center">
 					<div class="flex items-center gap-0.5 py-1">
 						<span class="min-w-fit px-1 text-sm select-none">{headerText}</span>
+						{#if hijriText}
+							<span
+								class="min-w-fit px-1 text-xs text-gray-400 dark:text-gray-500 select-none"
+								dir="rtl"
+							>
+								{hijriText}
+							</span>
+						{/if}
 						<button
 							class="p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							on:click={() => navigateCalendar(-1)}
-							aria-label="Previous"
+							aria-label={$i18n.t('Previous')}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -274,7 +307,7 @@
 						<button
 							class="p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							on:click={() => navigateCalendar(1)}
-							aria-label="Next"
+							aria-label={$i18n.t('Next')}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -298,6 +331,15 @@
 							on:click={goToToday}
 						>
 							{$i18n.t('Today')}
+						</button>
+
+						<button
+							class="hidden md:inline text-xs px-2 py-1 rounded-lg transition {showHijri
+								? 'bg-gray-100 text-gray-900 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:ring-gray-700'
+								: 'text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-850 dark:hover:text-white'}"
+							on:click={() => (showHijri = !showHijri)}
+						>
+							{$i18n.t('Hijri')}
 						</button>
 
 						<Select
@@ -360,6 +402,7 @@
 					{events}
 					{calendars}
 					{visibleCalendarIds}
+					{showHijri}
 					bind:view
 					bind:currentDate
 					on:createEvent={handleCreateEvent}

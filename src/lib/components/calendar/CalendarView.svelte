@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher, getContext } from 'svelte';
 	import type { CalendarEventModel, CalendarModel } from '$lib/apis/calendar';
+	import { formatHijriShort } from '$lib/utils/hijri';
 	import CalendarEventChip from './CalendarEventChip.svelte';
 
 	const i18n = getContext('i18n');
@@ -11,6 +12,10 @@
 	export let visibleCalendarIds: Set<string> = new Set();
 	export let view: 'month' | 'week' | 'day' = 'month';
 	export let currentDate: Date = new Date();
+	export let showHijri: boolean = false;
+
+	$: hijriLocale =
+		(typeof $i18n?.resolvedLanguage === 'string' ? $i18n.resolvedLanguage : '') || 'ar';
 
 	const NS = 1_000_000;
 	const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -176,6 +181,15 @@
 							>
 								{day.getDate()}
 							</span>
+							{#if showHijri}
+								<span
+									class="text-[9px] leading-6 px-0.5 text-gray-400 dark:text-gray-500 truncate"
+									dir="rtl"
+									title={formatHijriShort(day, hijriLocale)}
+								>
+									{formatHijriShort(day, hijriLocale)}
+								</span>
+							{/if}
 						</div>
 						<div class="flex flex-col gap-0 flex-1 overflow-hidden">
 							{#each dayEvents.slice(0, 3) as evt (evt.instance_id || evt.id)}
@@ -191,7 +205,7 @@
 									class="text-[10px] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
 									on:click|stopPropagation={() => goToDayView(day)}
 								>
-									+{dayEvents.length - 3} more
+									{$i18n.t('and {{COUNT}} more', { COUNT: dayEvents.length - 3 })}
 								</div>
 							{/if}
 						</div>
@@ -219,7 +233,7 @@
 										: ''}"
 								>
 									<div class="text-[11px] text-gray-400 dark:text-gray-500">
-										{DAY_NAMES[day.getDay()]}
+										{$i18n.t(DAY_NAMES[day.getDay()])}
 									</div>
 									<div
 										class="text-sm mt-0.5 w-7 h-7 flex items-center justify-center mx-auto rounded-full {isToday(
@@ -268,7 +282,7 @@
 														class="text-[10px] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
 														on:click|stopPropagation={() => goToDayView(day)}
 													>
-														+{hourEvents.length - 3} more
+														{$i18n.t('and {{COUNT}} more', { COUNT: hourEvents.length - 3 })}
 													</div>
 												{/if}
 											</div>

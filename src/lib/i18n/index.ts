@@ -4,6 +4,29 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import type { i18n as i18nType } from 'i18next';
 import { writable } from 'svelte/store';
 
+export const RTL_LOCALES = new Set([
+	'ar',
+	'ar-BH',
+	'he',
+	'he-IL',
+	'fa',
+	'fa-IR',
+	'ur',
+	'ur-PK',
+	'ug',
+	'ug-CN'
+]);
+
+export const isRTL = (lang: string): boolean => {
+	if (!lang) return false;
+	return RTL_LOCALES.has(lang) || RTL_LOCALES.has(lang.split('-')[0]);
+};
+
+const applyDirection = (lang: string) => {
+	if (typeof document === 'undefined') return;
+	document.documentElement.setAttribute('dir', isRTL(lang) ? 'rtl' : 'ltr');
+};
+
 const createI18nStore = (i18n: i18nType) => {
 	const i18nWritable = writable(i18n);
 
@@ -18,6 +41,7 @@ const createI18nStore = (i18n: i18nType) => {
 		i18nWritable.set(i18n);
 		if (typeof document !== 'undefined') {
 			document.documentElement.setAttribute('lang', lang);
+			applyDirection(lang);
 		}
 	});
 	return i18nWritable;
@@ -81,6 +105,7 @@ export const getLanguages = async () => {
 };
 export const changeLanguage = (lang: string) => {
 	document.documentElement.setAttribute('lang', lang);
+	applyDirection(lang);
 	i18next.changeLanguage(lang);
 };
 

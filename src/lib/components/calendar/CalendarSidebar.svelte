@@ -70,6 +70,17 @@
 		'December'
 	];
 
+	$: miniMonthLabel = (() => {
+		const locale = (typeof $i18n?.resolvedLanguage === 'string' && $i18n.resolvedLanguage) || 'en';
+		try {
+			return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long' }).format(
+				new Date(miniYear, miniMonth, 1)
+			);
+		} catch {
+			return `${miniMonthNames[miniMonth]} ${miniYear}`;
+		}
+	})();
+
 	function isToday(d: Date): boolean {
 		return d.toDateString() === new Date().toDateString();
 	}
@@ -106,7 +117,7 @@
 	<!-- Mini Month Calendar -->
 	<div>
 		<div class="flex items-center justify-between px-1 mb-1.5 mt-1.5">
-			<div class="text-[11px] font-normal">{miniMonthNames[miniMonth]} {miniYear}</div>
+			<div class="text-[11px] font-normal">{miniMonthLabel}</div>
 			<div class="flex items-center gap-0.5">
 				<button
 					class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"

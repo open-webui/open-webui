@@ -13,6 +13,7 @@ from open_webui.models.automations import AutomationRun
 from open_webui.models.chat_messages import ChatMessage, ChatMessages
 from open_webui.models.folders import Folders
 from open_webui.models.tags import Tag, TagModel, Tags
+from open_webui.utils.arabic_text import normalize_arabic_text
 from open_webui.utils.misc import get_output_text, sanitize_data_for_db, sanitize_text_for_db
 from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import (
@@ -1797,6 +1798,14 @@ class ChatTable:
 
         search_text = ' '.join(search_text_words)
 
+        # Arabic search: match both the raw query and its normalized form (hamza/yaa/
+        # diacritics unified). Matching ANY variant is a strict superset of the original
+        # single-pattern match, so results can only increase, never regress.
+        search_variants = [search_text]
+        normalized_search_text = normalize_arabic_text(search_text)
+        if normalized_search_text != search_text:
+            search_variants.append(normalized_search_text)
+
         async with get_async_db_context(db) as session:
             stmt = select(Chat).filter(Chat.user_id == user_id)
             stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
@@ -1829,13 +1838,24 @@ class ChatTable:
                     'EXISTS ('
                     '    SELECT 1 '
                     "    FROM json_each(Chat.chat, '$.messages') AS message "
-                    "    WHERE LOWER(message.value->>'content') LIKE '%' || :content_key || '%'"
-                    ')'
+                    '    WHERE '
+                    + ' OR '.join(
+                        f"LOWER(message.value->>'content') LIKE '%' || :content_key_{i} || '%'"
+                        for i in range(len(search_variants))
+                    )
+                    + ')'
                 )
                 sqlite_content_clause = text(sqlite_content_sql)
                 stmt = stmt.filter(
-                    or_(Chat.title.ilike(bindparam('title_key')), sqlite_content_clause).params(
-                        title_key=f'%{search_text}%', content_key=search_text
+                    or_(
+                        *[
+                            Chat.title.ilike(bindparam(f'title_key_{i}'))
+                            for i in range(len(search_variants))
+                        ],
+                        sqlite_content_clause,
+                    ).params(
+                        **{f'title_key_{i}': f'%{variant}%' for i, variant in enumerate(search_variants)},
+                        **{f'content_key_{i}': variant for i, variant in enumerate(search_variants)},
                     )
                 )
 
@@ -1872,37 +1892,46 @@ class ChatTable:
                 # Safety filter: title must not contain actual null bytes
                 stmt = stmt.filter(text("Chat.title::text NOT LIKE '%\\x00%'"))
 
-                postgres_content_sql = """
-                EXISTS (
-                    SELECT 1
-                    FROM chat_message AS message
-                    WHERE message.chat_id = Chat.id
-                    AND message.user_id = Chat.user_id
-                    AND json_typeof(message.content) = 'string'
-                    AND LOWER(message.content #>> '{}') LIKE '%' || :content_key || '%'
+                postgres_content_clause = text(
+                    ' OR '.join(
+                        f"""
+                        EXISTS (
+                            SELECT 1
+                            FROM chat_message AS message
+                            WHERE message.chat_id = Chat.id
+                            AND message.user_id = Chat.user_id
+                            AND json_typeof(message.content) = 'string'
+                            AND LOWER(message.content #>> '{{}}') LIKE '%' || :content_key_{i} || '%'
+                        )
+                        OR EXISTS (
+                            SELECT 1
+                            FROM json_each(Chat.chat#>'{{history,messages}}') AS history_message
+                            WHERE json_typeof(history_message.value->'content') = 'string'
+                            AND LOWER(history_message.value->>'content') LIKE '%' || :content_key_{i} || '%'
+                        )
+                        OR EXISTS (
+                            SELECT 1
+                            FROM json_array_elements(Chat.chat->'messages') AS legacy_message
+                            WHERE json_typeof(legacy_message->'content') = 'string'
+                            AND LOWER(legacy_message->>'content') LIKE '%' || :content_key_{i} || '%'
+                        )
+                        """
+                        for i in range(len(search_variants))
+                    )
                 )
-                OR EXISTS (
-                    SELECT 1
-                    FROM json_each(Chat.chat#>'{history,messages}') AS history_message
-                    WHERE json_typeof(history_message.value->'content') = 'string'
-                    AND LOWER(history_message.value->>'content') LIKE '%' || :content_key || '%'
-                )
-                OR EXISTS (
-                    SELECT 1
-                    FROM json_array_elements(Chat.chat->'messages') AS legacy_message
-                    WHERE json_typeof(legacy_message->'content') = 'string'
-                    AND LOWER(legacy_message->>'content') LIKE '%' || :content_key || '%'
-                )
-                """
-
-                postgres_content_clause = text(postgres_content_sql)
 
                 stmt = stmt.filter(
                     or_(
-                        Chat.title.ilike(bindparam('title_key')),
+                        *[
+                            Chat.title.ilike(bindparam(f'title_key_{i}'))
+                            for i in range(len(search_variants))
+                        ],
                         postgres_content_clause,
                     )
-                ).params(title_key=f'%{search_text}%', content_key=search_text.lower())
+                ).params(
+                    **{f'title_key_{i}': f'%{variant}%' for i, variant in enumerate(search_variants)},
+                    **{f'content_key_{i}': variant for i, variant in enumerate(search_variants)},
+                )
 
                 if 'none' in tag_ids:
                     stmt = stmt.filter(
