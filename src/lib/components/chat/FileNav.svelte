@@ -184,6 +184,7 @@
 	let fileAudioUrl: string | null = null;
 	let filePdfData: ArrayBuffer | null = null;
 	let fileSqliteData: ArrayBuffer | null = null;
+	let fileDocxData: ArrayBuffer | null = null;
 	let fileLoading = false;
 	let filePreviewRef: FilePreview;
 
@@ -247,8 +248,7 @@
 		const chatScoped = !!systemTerminal && chatConfig?.context_id === 'chat_id';
 		terminalChatContextHidden =
 			!!systemTerminal && (chatConfig === false || (chatScoped && isTemporaryChatId(chatId)));
-		terminalChatContextPending =
-			chatScoped && !terminalChatContextHidden && !isSavedChatId(chatId);
+		terminalChatContextPending = chatScoped && !terminalChatContextHidden && !isSavedChatId(chatId);
 		if (terminalChatContextHidden || terminalChatContextPending) return null;
 
 		const userTerminal = ($settings?.terminalServers ?? []).find(
@@ -395,6 +395,7 @@
 		}
 		filePdfData = null;
 		fileSqliteData = null;
+		fileDocxData = null;
 		fileOfficeHtml = null;
 		fileOfficeSlides = null;
 		currentSlide = 0;
@@ -505,10 +506,7 @@
 				const arrayBuffer = await result.blob.arrayBuffer();
 				try {
 					if (ext === 'docx') {
-						const mammoth = await import('mammoth');
-						const res = await mammoth.convertToHtml({ arrayBuffer });
-						const DOMPurify = (await import('dompurify')).default;
-						fileOfficeHtml = DOMPurify.sanitize(res.value);
+						fileDocxData = arrayBuffer;
 					} else if (ext === 'xlsx') {
 						const XLSX = await import('xlsx');
 						const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
@@ -1396,6 +1394,7 @@
 					{fileAudioUrl}
 					{filePdfData}
 					{fileSqliteData}
+					{fileDocxData}
 					{fileContent}
 					{fileOfficeHtml}
 					{fileOfficeSlides}

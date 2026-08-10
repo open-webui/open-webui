@@ -26,6 +26,7 @@
 	import Spinner from './Spinner.svelte';
 	import PDFViewer from './PDFViewer.svelte';
 	import PanzoomContainer from './PanzoomContainer.svelte';
+	import DocxPreview from './DocxPreview.svelte';
 	import Reset from '../icons/Reset.svelte';
 
 	export let item;
@@ -51,7 +52,7 @@
 	let rowCount = 0;
 
 	// DOCX state
-	let docxHtml = '';
+	let docxData: ArrayBuffer | null = null;
 	let docxError = '';
 
 	// PPTX state
@@ -172,12 +173,7 @@
 	const loadDocxContent = async () => {
 		try {
 			docxError = '';
-			const [arrayBuffer, mammoth] = await Promise.all([
-				getFileContentById(item.id),
-				import('mammoth')
-			]);
-			const result = await mammoth.convertToHtml({ arrayBuffer });
-			docxHtml = DOMPurify.sanitize(result.value);
+			docxData = await getFileContentById(item.id);
 		} catch (error) {
 			console.error('Error loading DOCX file:', error);
 			docxError = $i18n.t('Failed to load DOCX file. Please try downloading it instead.');
@@ -203,6 +199,7 @@
 	const loadContent = async () => {
 		selectedTab = '';
 		expandedContent = false;
+		docxData = null;
 		if (item?.type === 'collection') {
 			loading = true;
 
@@ -570,12 +567,8 @@
 					{:else if isDocx}
 						{#if docxError}
 							<div class="text-red-500 text-sm p-4">{docxError}</div>
-						{:else if docxHtml}
-							<div
-								class="office-preview max-h-[60vh] overflow-auto p-4 prose dark:prose-invert max-w-full text-sm"
-							>
-								{@html docxHtml}
-							</div>
+						{:else if docxData}
+							<DocxPreview data={docxData} className="max-h-[60vh]" />
 						{:else}
 							<div class="text-gray-500 text-sm p-4">No content available</div>
 						{/if}

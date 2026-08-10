@@ -9,6 +9,7 @@
 	import Spinner from '../../common/Spinner.svelte';
 	import PDFViewer from '../../common/PDFViewer.svelte';
 	import PanzoomContainer from '../../common/PanzoomContainer.svelte';
+	import DocxPreview from '../../common/DocxPreview.svelte';
 	import JsonTreeView from './JsonTreeView.svelte';
 	import NotebookView from './NotebookView.svelte';
 	import SqliteView from './SqliteView.svelte';
@@ -26,6 +27,7 @@
 	export let fileAudioUrl: string | null = null;
 	export let filePdfData: ArrayBuffer | null = null;
 	export let fileSqliteData: ArrayBuffer | null = null;
+	export let fileDocxData: ArrayBuffer | null = null;
 	export let fileContent: string | null = null;
 
 	// Terminal connection for notebook execution
@@ -271,7 +273,9 @@
 </script>
 
 <div
-	class="flex-1 {fileImageUrl !== null || (fileOfficeSlides !== null && fileOfficeSlides.length > 0)
+	class="flex-1 {fileImageUrl !== null ||
+	fileDocxData !== null ||
+	(fileOfficeSlides !== null && fileOfficeSlides.length > 0)
 		? 'overflow-hidden'
 		: 'overflow-y-auto'} min-h-0 min-w-0 relative h-full"
 >
@@ -308,6 +312,8 @@
 		<PDFViewer bind:this={pdfViewerRef} data={filePdfData} className="w-full h-full" />
 	{:else if fileSqliteData !== null}
 		<SqliteView data={fileSqliteData} />
+	{:else if fileDocxData !== null}
+		<DocxPreview data={fileDocxData} className="w-full h-full" />
 	{:else if fileOfficeHtml !== null}
 		<div class="flex flex-col h-full">
 			<div class="office-preview overflow-auto flex-1 min-h-0">
