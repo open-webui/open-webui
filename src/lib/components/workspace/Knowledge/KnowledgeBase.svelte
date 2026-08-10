@@ -46,9 +46,9 @@
 		syncKnowledgeCleanup,
 		testExternalKnowledgeRetrieval
 	} from '$lib/apis/knowledge';
-	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
+	import { processUrl } from '$lib/apis/retrieval';
 
-	import { blobToFile, isYoutubeUrl, copyToClipboard } from '$lib/utils';
+	import { blobToFile, copyToClipboard } from '$lib/utils';
 	import { computeFileHash } from '$lib/utils/hash';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -307,6 +307,11 @@
 	};
 
 	const uploadWeb = async (urls) => {
+		if (!knowledge) {
+			toast.error($i18n.t('Knowledge base not found.'));
+			return;
+		}
+
 		if (!Array.isArray(urls)) {
 			urls = [urls];
 		}
@@ -329,29 +334,47 @@
 		for (const fileItem of newFileItems) {
 			try {
 				console.log(fileItem);
-				const res = await processWeb(localStorage.token, '', fileItem.url, false).catch((e) => {
-					console.error('Error processing web URL:', e);
+				const res = await processUrl(localStorage.token, fileItem.url).catch((e) => {
+					console.error('Error processing URL:', e);
 					return null;
 				});
 
 				if (res) {
 					console.log(res);
-					const file = createFileFromText(
-						// Use URL as filename, sanitized
-						fileItem.url
-							.replace(/[^a-z0-9]/gi, '_')
-							.toLowerCase()
-							.slice(0, 50),
-						res.content
-					);
+					let uploadedFile = res.file;
 
-					const uploadedFile = await uploadFile(localStorage.token, file, {
-						knowledge_id: knowledge.id,
-						directory_id: currentDirectoryId
-					}).catch((e) => {
-						toast.error(`${e}`);
-						return null;
-					});
+					if (res.type === 'web' || res.type === 'youtube') {
+						const file = createFileFromText(
+							// Use URL as filename, sanitized
+							fileItem.url
+								.replace(/[^a-z0-9]/gi, '_')
+								.toLowerCase()
+								.slice(0, 50),
+							res.content ?? ''
+						);
+
+						uploadedFile = await uploadFile(localStorage.token, file, {
+							knowledge_id: knowledge.id,
+							directory_id: currentDirectoryId,
+							source_url: fileItem.url
+						}).catch((e) => {
+							toast.error(`${e}`);
+							return null;
+						});
+					} else if (uploadedFile?.id) {
+						const linkedKnowledge = await addFileToKnowledgeById(
+							localStorage.token,
+							knowledge.id,
+							uploadedFile.id,
+							currentDirectoryId
+						).catch((e) => {
+							toast.error(`${e}`);
+							return null;
+						});
+						if (!linkedKnowledge) {
+							uploadedFile = null;
+						}
+					}
 
 					if (uploadedFile) {
 						console.log(uploadedFile);

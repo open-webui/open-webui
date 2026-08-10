@@ -21,7 +21,7 @@ from open_webui.env import (
 )
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.channels import Channel, ChannelMember, Channels
-from open_webui.models.chats import Chats, chat_search_content_query, chat_search_terms
+from open_webui.models.chats import Chats, chat_search_content_query, chat_search_terms, chat_search_content_query, chat_search_terms
 from open_webui.models.folders import Folders
 from open_webui.models.users import Users
 from open_webui.models.config import Config
