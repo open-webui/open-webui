@@ -108,6 +108,13 @@ class AutomationForm(BaseModel):
     is_active: Optional[bool] = True
 
 
+class AutomationBulkToggleForm(BaseModel):
+    is_active: bool
+    query: Optional[str] = None
+    status: Optional[str] = None
+    folder_id: Optional[str] = None
+
+
 class AutomationResponse(AutomationModel):
     last_run: Optional[AutomationRunModel] = None
     next_runs: Optional[list[int]] = None
@@ -167,6 +174,36 @@ class AutomationTable:
             )
             return [AutomationModel.model_validate(r) for r in result.scalars().all()]
 
+    def _search_stmt(
+        self,
+        user_id: str,
+        query: Optional[str] = None,
+        status: Optional[str] = None,
+        folder_id: Optional[str] = None,
+    ):
+        """Build the filter clause shared by list and bulk operations."""
+        stmt = select(Automation).filter_by(user_id=user_id)
+
+        if folder_id:
+            stmt = stmt.filter(Automation.folder_id == folder_id)
+
+        if query:
+            search = f'%{query}%'
+            # Search in name and prompt inside JSON data
+            stmt = stmt.filter(
+                or_(
+                    Automation.name.ilike(search),
+                    cast(Automation.data, String).ilike(search),
+                )
+            )
+
+        if status == 'active':
+            stmt = stmt.filter(Automation.is_active == True)
+        elif status == 'paused':
+            stmt = stmt.filter(Automation.is_active == False)
+
+        return stmt
+
     async def search_automations(
         self,
         user_id: str,
@@ -178,27 +215,7 @@ class AutomationTable:
         db: Optional[AsyncSession] = None,
     ) -> 'AutomationListResponse':
         async with get_async_db_context(db) as db:
-            stmt = select(Automation).filter_by(user_id=user_id)
-
-            if folder_id:
-                stmt = stmt.filter(Automation.folder_id == folder_id)
-
-            if query:
-                search = f'%{query}%'
-                # Search in name and prompt inside JSON data
-                stmt = stmt.filter(
-                    or_(
-                        Automation.name.ilike(search),
-                        cast(Automation.data, String).ilike(search),
-                    )
-                )
-
-            if status == 'active':
-                stmt = stmt.filter(Automation.is_active == True)
-            elif status == 'paused':
-                stmt = stmt.filter(Automation.is_active == False)
-
-            stmt = stmt.order_by(Automation.created_at.desc())
+            stmt = self._search_stmt(user_id, query, status, folder_id).order_by(Automation.created_at.desc())
 
             # Get total count
             count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
@@ -271,6 +288,46 @@ class AutomationTable:
             row.updated_at = int(time.time_ns())
             await db.commit()
             return AutomationModel.model_validate(row)
+
+    async def set_active_by_search(
+        self,
+        user_id: str,
+        is_active: bool,
+        query: Optional[str] = None,
+        status: Optional[str] = None,
+        folder_id: Optional[str] = None,
+        tz: Optional[str] = None,
+        db: Optional[AsyncSession] = None,
+    ) -> int:
+        """Set is_active on every automation matching the search filters.
+
+        Uses the same filters as search_automations so bulk actions cover the
+        whole result set rather than a single page of it. Returns the number of
+        automations actually changed.
+        """
+        async with get_async_db_context(db) as db:
+            stmt = self._search_stmt(user_id, query, status, folder_id).filter(Automation.is_active != is_active)
+            result = await db.execute(stmt)
+            rows = result.scalars().all()
+            if not rows:
+                return 0
+
+            from open_webui.utils.automations import next_run_ns
+
+            now = int(time.time_ns())
+            for row in rows:
+                row.is_active = is_active
+                # Re-arm the schedule on enable; a paused automation has no next run.
+                try:
+                    row.next_run_at = await next_run_ns(row.data.get('rrule', ''), tz=tz) if is_active else None
+                except ValueError as e:
+                    # Look again in five minutes rather than strand it active but unscheduled
+                    log.warning('Deferring automation %s: %s', row.id, e)
+                    row.next_run_at = now + 300 * 1_000_000_000
+                row.updated_at = now
+
+            await db.commit()
+            return len(rows)
 
     async def delete(self, id: str, db: Optional[AsyncSession] = None) -> bool:
         async with get_async_db_context(db) as db:

@@ -7,6 +7,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.automations import (
+    AutomationBulkToggleForm,
     AutomationForm,
     AutomationListResponse,
     AutomationModel,
@@ -202,6 +203,47 @@ async def create_new_automation(
         data={'name': automation.name, 'is_active': automation.is_active, 'folder_id': automation.folder_id},
     )
     return response
+
+
+############################
+# ToggleAllAutomations
+############################
+
+
+@router.post('/toggle/all')
+async def toggle_all_automations(
+    request: Request,
+    form_data: AutomationBulkToggleForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Enable/disable every automation matching the given filters.
+
+    The filters mirror /list, so the action covers the entire filtered set
+    instead of only the page the client currently has loaded.
+    """
+    await check_automations_permission(request, user)
+
+    count = await Automations.set_active_by_search(
+        user_id=user.id,
+        is_active=form_data.is_active,
+        query=form_data.query,
+        status=form_data.status,
+        folder_id=form_data.folder_id,
+        tz=user.timezone,
+        db=db,
+    )
+
+    if count:
+        await publish_event(
+            request,
+            EVENTS.AUTOMATION_ENABLED if form_data.is_active else EVENTS.AUTOMATION_DISABLED,
+            actor=user,
+            subject_type='automation',
+            data={'count': count},
+        )
+
+    return {'count': count}
 
 
 ############################

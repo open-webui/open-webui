@@ -12,6 +12,7 @@
 		createAutomation,
 		getAutomationItems,
 		toggleAutomationById,
+		toggleAllAutomations,
 		runAutomationById,
 		deleteAutomationById,
 		type AutomationForm,
@@ -51,6 +52,7 @@
 	let automations: AutomationResponse[] | null = null;
 	let total: number | null = null;
 	let loading = false;
+	let bulkToggling = false;
 
 	let showCreateModal = false;
 	let cloneFrom: AutomationResponse | null = null;
@@ -162,21 +164,27 @@
 	};
 
 	const bulkToggleHandler = async (enable: boolean) => {
-		const targets = (automations ?? []).filter((a) => a.is_active !== enable);
-		if (targets.length === 0) return;
+		if (bulkToggling) return;
+		bulkToggling = true;
 
-		// Optimistic UI update via map for proper Svelte reactivity
-		automations = (automations ?? []).map((a) =>
-			targets.some((t) => t.id === a.id) ? { ...a, is_active: enable } : a
+		// Applies server-side to every automation matching the current search and
+		// status filter, not just the page that happens to be rendered.
+		const res = await toggleAllAutomations(localStorage.token, enable, query, statusFilter).catch(
+			(err) => {
+				toast.error(`${err}`);
+				return null;
+			}
 		);
 
-		try {
-			await Promise.all(targets.map((a) => toggleAutomationById(localStorage.token, a.id)));
-		} catch (err) {
-			toast.error(`${err}`);
-			// Refresh from server to restore consistent state
-			await getAutomationList();
+		bulkToggling = false;
+		if (!res) return;
+
+		// The filtered set can shrink (e.g. disabling while filtering by Active),
+		// which would leave the current page out of range.
+		if (statusFilter !== 'all') {
+			page = 1;
 		}
+		await getAutomationList();
 	};
 
 	const runNowHandler = async (automation: AutomationResponse) => {
@@ -494,16 +502,18 @@
 							<div slot="content">
 								<DropdownMenu className="w-[10.625rem] shadow-sm">
 									<button
-										class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem]"
+										class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] disabled:cursor-not-allowed disabled:opacity-50"
 										type="button"
+										disabled={bulkToggling}
 										on:click={() => bulkToggleHandler(true)}
 									>
 										<CheckCircle className="size-3.5" />
 										{$i18n.t('Enable All')}
 									</button>
 									<button
-										class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem]"
+										class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] disabled:cursor-not-allowed disabled:opacity-50"
 										type="button"
+										disabled={bulkToggling}
 										on:click={() => bulkToggleHandler(false)}
 									>
 										<Minus className="size-3.5" />
