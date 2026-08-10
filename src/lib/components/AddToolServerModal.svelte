@@ -66,6 +66,7 @@
 	let oauthServerUrl = '';
 	let oauthScope = '';
 	let oauthResourceParameter = 'auto';
+	let oauthAuthorizeParams: Record<string, string> | null = null;
 
 	let enable = true;
 	let loading = false;
@@ -217,7 +218,8 @@
 						? {
 								...(oauthServerUrl ? { oauth_server_url: oauthServerUrl } : {}),
 								...(oauthScope ? { oauth_scope: oauthScope } : {}),
-								oauth_resource_parameter: oauthResourceParameter
+								oauth_resource_parameter: oauthResourceParameter,
+								...(oauthAuthorizeParams ? { oauth_authorize_params: oauthAuthorizeParams } : {})
 							}
 						: {})
 				}
@@ -269,6 +271,7 @@
 					description = data.info.description ?? '';
 					oauthScope = data.info.oauth_scope ?? '';
 					oauthResourceParameter = data.info.oauth_resource_parameter ?? 'auto';
+					oauthAuthorizeParams = data.info.oauth_authorize_params ?? null;
 				}
 
 				if (data.config) {
@@ -306,7 +309,8 @@
 					...(type === 'mcp' && ['oauth_2.1', 'oauth_2.1_static'].includes(auth_type)
 						? {
 								...(oauthScope ? { oauth_scope: oauthScope } : {}),
-								oauth_resource_parameter: oauthResourceParameter
+								oauth_resource_parameter: oauthResourceParameter,
+								...(oauthAuthorizeParams ? { oauth_authorize_params: oauthAuthorizeParams } : {})
 							}
 						: {})
 				}
@@ -395,7 +399,8 @@
 				...(type === 'mcp' && ['oauth_2.1', 'oauth_2.1_static'].includes(auth_type)
 					? {
 							...(oauthScope ? { oauth_scope: oauthScope } : {}),
-							oauth_resource_parameter: oauthResourceParameter
+							oauth_resource_parameter: oauthResourceParameter,
+							...(oauthAuthorizeParams ? { oauth_authorize_params: oauthAuthorizeParams } : {})
 						}
 					: {}),
 				...(oauthClientInfo ? { oauth_client_info: oauthClientInfo } : {}),
@@ -435,6 +440,7 @@
 		oauthServerUrl = '';
 		oauthScope = '';
 		oauthResourceParameter = 'auto';
+		oauthAuthorizeParams = null;
 
 		enable = true;
 		functionNameFilterList = '';
@@ -464,6 +470,7 @@
 			oauthServerUrl = connection.info?.oauth_server_url ?? '';
 			oauthScope = connection.info?.oauth_scope ?? '';
 			oauthResourceParameter = connection.info?.oauth_resource_parameter ?? 'auto';
+			oauthAuthorizeParams = connection.info?.oauth_authorize_params ?? null;
 
 			enable = connection.config?.enable ?? true;
 			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
