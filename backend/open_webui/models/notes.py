@@ -7,7 +7,8 @@ from open_webui.internal.db import Base, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse, Users
-from pydantic import BaseModel, ConfigDict, Field
+from open_webui.utils.notes import ensure_md_string
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import JSON, BigInteger, Boolean, Column, ForeignKey, Text, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -61,11 +62,49 @@ class PinnedNote(Base):
 ####################
 
 
+def _coerce_note_data_md(data: Optional[dict]) -> Optional[dict]:
+    """Normalize data['content']['md'] through ensure_md_string.
+
+    Closes the REST API boundary gap: even if a client sends a dict/list
+    as md, or a non-dict value as content, it gets coerced to a safe
+    markdown string before hitting the DB.
+    """
+    if not data or not isinstance(data, dict):
+        return data
+
+    content = data.get('content')
+
+    # Handle non-dict content (e.g. list, str, int) — coerce the whole value
+    if not isinstance(content, dict):
+        coerced = ensure_md_string(content)
+        data = dict(data)
+        data['content'] = {'md': coerced}
+        return data
+
+    md = content.get('md')
+    if md is None:
+        return data
+
+    coerced = ensure_md_string(md)
+    if coerced != md:
+        # Only mutate if something actually changed
+        data = dict(data)
+        content = dict(content)
+        content['md'] = coerced
+        data['content'] = content
+    return data
+
+
 class NoteForm(BaseModel):
     title: str
     data: Optional[dict] = None
     meta: Optional[dict] = None
     access_grants: Optional[list[dict]] = None
+
+    @field_validator('data', mode='before')
+    @classmethod
+    def validate_data(cls, v: Optional[dict]) -> Optional[dict]:
+        return _coerce_note_data_md(v)
 
 
 class NoteUpdateForm(BaseModel):
@@ -73,6 +112,11 @@ class NoteUpdateForm(BaseModel):
     data: Optional[dict] = None
     meta: Optional[dict] = None
     access_grants: Optional[list[dict]] = None
+
+    @field_validator('data', mode='before')
+    @classmethod
+    def validate_data(cls, v: Optional[dict]) -> Optional[dict]:
+        return _coerce_note_data_md(v)
 
 
 class NoteUserResponse(NoteModel):

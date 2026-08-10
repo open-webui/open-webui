@@ -31,6 +31,7 @@ from open_webui.utils.access_control import (
     has_public_write_access_grant,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.notes import get_note_md
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,7 +43,7 @@ router = APIRouter()
 def _truncate_note_data(data: Optional[dict], max_length: int = 1000) -> Optional[dict]:
     if not data:
         return data
-    md = (data.get('content') or {}).get('md') or ''
+    md = get_note_md(data)
     return {'content': {'md': md[:max_length]}}
 
 

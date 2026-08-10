@@ -848,18 +848,43 @@ def parse_docstring(docstring):
         return {}
 
     # Regex to match `:param name: description` format
-    param_pattern = re.compile(r':param (\w+):\s*(.+)')
+    param_pattern = re.compile(r':param (\w+):\s*(.*)')
     param_descriptions = {}
 
-    for line in docstring.splitlines():
-        match = param_pattern.match(line.strip())
-        if not match:
-            continue
-        param_name, param_description = match.groups()
-        if param_name.startswith('__'):
-            continue
-        param_descriptions[param_name] = param_description
+    lines = docstring.splitlines()
+    current_param = None
+    current_desc: list[str] = []
 
+    def flush_param():
+        nonlocal current_param, current_desc
+        if current_param and not current_param.startswith('__'):
+            param_descriptions[current_param] = '\n'.join(current_desc).strip()
+        current_param = None
+        current_desc = []
+
+    for line in lines:
+        # Check for new :param
+        match = param_pattern.match(line.strip())
+        if match:
+            flush_param()
+            current_param = match.group(1)
+            desc_part = match.group(2).strip()
+            if desc_part:
+                current_desc.append(desc_part)
+            continue
+
+        # Check for :return (ends current param)
+        if re.match(r'\s*:return', line):
+            flush_param()
+            continue
+
+        # Continuation line for current param
+        if current_param is not None:
+            stripped = line.strip()
+            if stripped:
+                current_desc.append(stripped)
+
+    flush_param()
     return param_descriptions
 
 

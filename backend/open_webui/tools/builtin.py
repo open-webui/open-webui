@@ -66,6 +66,7 @@ from open_webui.tasks import stop_item_tasks
 from open_webui.tools.knowledge_fs import kb_exec  # noqa: F401 — re-exported
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
+from open_webui.utils.notes import get_note_md
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
 
@@ -1050,8 +1051,8 @@ async def search_notes(
 
             # Extract a snippet from the markdown content
             content_snippet = ''
-            if note.data and note.data.get('content', {}).get('md'):
-                md_content = note.data['content']['md']
+            md_content = get_note_md(note.data)
+            if md_content:
                 content_lower = md_content.lower()
 
                 # Find the first matching word to center the snippet around.
@@ -1137,9 +1138,7 @@ async def view_note(
             return JSONCodec.dumps({'error': 'Access denied'})
 
         # Extract markdown content
-        content = ''
-        if note.data and note.data.get('content', {}).get('md'):
-            content = note.data['content']['md']
+        content = get_note_md(note.data)
 
         return JSONCodec.dumps(
             {
@@ -1165,8 +1164,18 @@ async def write_note(
     """
     Create a new note with the given title and content.
 
+    IMPORTANT: The 'content' parameter must ALWAYS be a plain text string (markdown).
+    If the note contains JSON, code, or structured data, wrap it in a markdown code block.
+    Never pass raw JSON objects or dicts as content -- they will be rejected.
+
+    Examples:
+    - Plain text: "Hello world"
+    - JSON content: "```json\n{\"name\": \"test\", \"version\": \"1.0\"}\n```"
+    - Code content: "```python\nprint('hello')\n```"
+
     :param title: The title of the new note
-    :param content: The markdown content for the note
+    :param content: The markdown content for the note. MUST be a string.
+    If the content is JSON or code, wrap it in a markdown code block (e.g., ```json ... ```).
     :return: JSON with success status and new note id
     """
     if __request__ is None:
@@ -1179,6 +1188,12 @@ async def write_note(
         from open_webui.models.notes import NoteForm
 
         user_id = __user__.get('id')
+
+        if not isinstance(content, str):
+            return JSONCodec.dumps({
+                'error': f'content must be a string (markdown text), got {type(content).__name__}',
+                'code': 'invalid_content_type',
+            })
 
         form = NoteForm(
             title=title,
@@ -1216,8 +1231,18 @@ async def replace_note_content(
     """
     Update an existing note by replacing the whole markdown content or applying range operations.
 
+    IMPORTANT: The 'content' parameter must ALWAYS be a plain text string (markdown).
+    If the note contains JSON, code, or structured data, wrap it in a markdown code block.
+    Never pass raw JSON objects or dicts as content -- they will be rejected.
+
+    Examples:
+    - Plain text: "Hello world"
+    - JSON content: "```json\n{\"name\": \"test\", \"version\": \"1.0\"}\n```"
+    - Code content: "```python\nprint('hello')\n```"
+
     :param note_id: The ID of the note to update
-    :param content: The new markdown content for a whole-note update
+    :param content: The new markdown content for a whole-note update. MUST be a string.
+    If the content is JSON or code, wrap it in a markdown code block (e.g., ```json ... ```).
     :param operations: Optional note operations:
     - {"action": "replace", "content": "..."}
     - {"action": "replace_range", "start": 0, "end": 10, "content": "...", "expected": "..."}
@@ -1242,7 +1267,7 @@ async def replace_note_content(
         if __user__.get('role') != 'admin' and not await _has_write_access_to_note(note, user_id):
             return JSONCodec.dumps({'error': 'Write access denied', 'code': 'write_access_denied'})
 
-        current_content = ((note.data or {}).get('content') or {}).get('md') or ''
+        current_content = get_note_md(note.data)
         applied_operation_count = 0
         if operations is not None:
             if not isinstance(operations, list) or len(operations) == 0:
@@ -1327,16 +1352,25 @@ async def replace_note_content(
         elif content is None:
             return JSONCodec.dumps({'error': 'content or operations is required', 'code': 'content_required'})
 
+        if content is not None and not isinstance(content, str):
+            return JSONCodec.dumps({
+                'error': f'content must be a string (markdown text), got {type(content).__name__}',
+                'code': 'invalid_content_type',
+            })
+
         try:
             await stop_item_tasks(__request__.app.state.redis, f'note:{note_id}')
         except Exception:
             pass
 
+        # Safely extract existing content dict — guard against non-dict content
+        existing_content = note.data.get('content') if isinstance(note.data, dict) else None
+        content_base = existing_content if isinstance(existing_content, dict) else {}
         update_data = {
             'data': {
                 **(note.data or {}),
                 'content': {
-                    **((note.data or {}).get('content') or {}),
+                    **content_base,
                     'json': None,
                     'html': '',
                     'md': content,
@@ -3124,7 +3158,7 @@ async def query_knowledge_files(
                             permission='read',
                         )
                     ):
-                        content = note.data.get('content', {}).get('md', '')
+                        content = get_note_md(note.data)
                         note_results.append(
                             {
                                 'content': content,
