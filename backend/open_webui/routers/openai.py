@@ -86,6 +86,34 @@ def _clean_proxy_headers(raw_headers) -> dict:
     return {k: v for k, v in raw_headers.items() if k not in _STRIP_PROXY_HEADERS}
 
 
+def supports_text_generation(model: dict, api_type: str | None = None) -> bool:
+    """Whether *model* can serve the text generation endpoint this connection uses.
+
+    Gateways that front many providers return their whole catalog from
+    ``/models`` - embedding, image, video, rerank and audio models included -
+    and mark each entry with the OpenAI-style ``supported_operations`` /
+    ``supported_endpoints`` hints.  Without this check every one of those
+    non-chat models shows up in the chat model picker.  Providers that
+    advertise nothing are assumed to be chat capable, which keeps plain
+    OpenAI / Ollama / vLLM behaviour unchanged.
+    """
+    if not isinstance(model, dict):
+        return True
+
+    operation = 'RESPONSES' if api_type == 'responses' else 'CHAT_COMPLETIONS'
+
+    operations = model.get('supported_operations')
+    if isinstance(operations, list) and operations:
+        return operation in operations
+
+    endpoints = model.get('supported_endpoints')
+    if isinstance(endpoints, list) and endpoints:
+        endpoint = '/responses' if api_type == 'responses' else '/chat/completions'
+        return any(isinstance(e, str) and e.endswith(endpoint) for e in endpoints)
+
+    return True
+
+
 async def send_get_request(
     request: Request = None,
     url=None,
@@ -596,6 +624,20 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                 # Catch non-list responses
                 model_list = []
 
+            if not api_config.get('model_ids'):
+                # Manually listed model ids are taken at face value; a fetched
+                # catalog gets narrowed down to the models this connection can
+                # actually chat with.
+                api_type = api_config.get('api_type')
+                filtered = [model for model in model_list if supports_text_generation(model, api_type)]
+
+                if len(filtered) != len(model_list):
+                    model_list = filtered
+                    if isinstance(response, list):
+                        responses[idx] = model_list
+                    else:
+                        response['data'] = model_list
+
             for model in model_list:
                 # Remove name key if its value is None #16689
                 if 'name' in model and model['name'] is None:
@@ -772,6 +814,15 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
                                 model
                                 for model in response_data.get('data', [])
                                 if not any(name in model['id'] for name in _UNSUPPORTED_OPENAI_MODEL_KEYWORDS)
+                            ]
+                        elif isinstance(response_data, dict) and isinstance(response_data.get('data'), list):
+                            # Keep the model id picker in sync with what this
+                            # connection will actually serve as chat models.
+                            api_type = api_config.get('api_type')
+                            response_data['data'] = [
+                                model
+                                for model in response_data['data']
+                                if isinstance(model, dict) and supports_text_generation(model, api_type)
                             ]
 
                         models = response_data
