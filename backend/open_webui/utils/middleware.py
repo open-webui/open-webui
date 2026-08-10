@@ -1051,6 +1051,10 @@ async def process_tool_result(
                             tool_response.append(resource.get('uri'))
             tool_result = tool_response[0] if len(tool_response) == 1 else tool_response
         else:  # OpenAPI
+            # Collect into a new list instead of removing from the list being
+            # iterated: list.remove() shifts every later element down by one,
+            # so the item after each extracted one is skipped entirely.
+            remaining_tool_result = []
             for item in tool_result:
                 if isinstance(item, str) and item.startswith('data:'):
                     tool_result_files.append(
@@ -1059,7 +1063,9 @@ async def process_tool_result(
                             'content': item,
                         }
                     )
-                    tool_result.remove(item)
+                else:
+                    remaining_tool_result.append(item)
+            tool_result = remaining_tool_result
 
     if isinstance(tool_result, list):
         tool_result = {'results': tool_result}
