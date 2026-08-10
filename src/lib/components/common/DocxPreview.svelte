@@ -148,7 +148,7 @@
 </script>
 
 <div
-	class="relative min-h-full bg-transparent [&_.docx-wrapper]:flex [&_.docx-wrapper]:flex-col [&_.docx-wrapper]:items-center [&_.docx-wrapper]:bg-transparent [&_.docx-wrapper]:pt-4 [&_.docx-wrapper]:pb-14 [&_.docx-wrapper>section.docx]:!mx-auto [&_.docx-wrapper>section.docx]:!mt-0 [&_.docx-wrapper>section.docx]:!mb-1 [&_.docx-wrapper>section.docx]:!shadow-[0_1px_4px_rgba(0,0,0,0.18)] [&_.docx-wrapper>section.docx]:[zoom:var(--docx-scale)] {className}"
+	class="relative min-h-full bg-transparent [&_.docx-wrapper]:flex [&_.docx-wrapper]:flex-col [&_.docx-wrapper]:items-center [&_.docx-wrapper]:!bg-transparent [&_.docx-wrapper]:pt-4 [&_.docx-wrapper]:pb-14 [&_.docx-wrapper>section.docx]:!mx-auto [&_.docx-wrapper>section.docx]:!mt-0 [&_.docx-wrapper>section.docx]:!mb-1 [&_.docx-wrapper>section.docx]:!bg-white [&_.docx-wrapper>section.docx]:!shadow-[0_1px_4px_rgba(0,0,0,0.18)] [&_.docx-wrapper>section.docx]:[zoom:var(--docx-scale)] {className}"
 	style="--docx-scale: {docxScale};"
 >
 	<div bind:this={styleEl}></div>

@@ -8,18 +8,32 @@
 	export let data: ArrayBuffer | Uint8Array | null = null;
 	export let className = 'w-full h-[70vh]';
 
+	type PdfDocument = import('pdfjs-dist').PDFDocumentProxy;
+	type PdfTextLayer = InstanceType<typeof import('pdfjs-dist').TextLayer>;
+
 	let outerContainer: HTMLDivElement;
 	let sceneElement: HTMLDivElement;
 	let loading = true;
 	let error = '';
-	let pdfDoc: any = null;
+	let pdfDoc: PdfDocument | null = null;
 	let pzInstance: PanZoom | null = null;
 	let zoomLevel = 1;
 	let rerenderTimer: ReturnType<typeof setTimeout> | null = null;
 	let lastRenderedZoom = 1;
 
 	// Keep a reference to TextLayer instances so we can update/cancel them
-	let textLayerInstances: any[] = [];
+	let textLayerInstances: PdfTextLayer[] = [];
+
+	const cancelTextLayers = () => {
+		for (const tl of textLayerInstances) {
+			try {
+				tl.cancel();
+			} catch {
+				// Text layers can already be resolved or canceled during rerenders.
+			}
+		}
+		textLayerInstances = [];
+	};
 
 	const initPanzoom = () => {
 		if (pzInstance) {
@@ -37,7 +51,7 @@
 					}
 					return false;
 				},
-				beforeMouseDown: (e) => {
+				beforeMouseDown: () => {
 					// Only allow drag-to-pan when zoomed in (not at default scale)
 					const transform = pzInstance?.getTransform();
 					if (transform && Math.abs(transform.scale - 1) < 0.01) {
@@ -93,13 +107,7 @@
 
 		const pageWrappers = sceneElement.querySelectorAll('.pdf-page-wrapper');
 
-		// Cancel old text layers
-		for (const tl of textLayerInstances) {
-			try {
-				tl.cancel();
-			} catch (_) {}
-		}
-		textLayerInstances = [];
+		cancelTextLayers();
 
 		for (let i = 0; i < pageWrappers.length; i++) {
 			const page = await pdfDoc.getPage(i + 1);
@@ -119,7 +127,7 @@
 
 			const ctx = canvas.getContext('2d');
 			if (ctx) {
-				await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+				await page.render({ canvas, canvasContext: ctx, viewport: scaledViewport }).promise;
 			}
 
 			// Rebuild text layer
@@ -146,13 +154,7 @@
 		// Clear previous content
 		sceneElement.innerHTML = '';
 
-		// Cancel old text layers
-		for (const tl of textLayerInstances) {
-			try {
-				tl.cancel();
-			} catch (_) {}
-		}
-		textLayerInstances = [];
+		cancelTextLayers();
 
 		const pdfjs = await import('pdfjs-dist');
 		const dpr = window.devicePixelRatio || 1;
@@ -194,7 +196,10 @@
 			wrapper.appendChild(canvas);
 
 			const ctx = canvas.getContext('2d');
+			if (!ctx) continue;
+
 			await page.render({
+				canvas,
 				canvasContext: ctx,
 				viewport: scaledViewport
 			}).promise;
@@ -256,12 +261,7 @@
 	onDestroy(() => {
 		if (rerenderTimer) clearTimeout(rerenderTimer);
 		pzInstance?.dispose();
-		for (const tl of textLayerInstances) {
-			try {
-				tl.cancel();
-			} catch (_) {}
-		}
-		textLayerInstances = [];
+		cancelTextLayers();
 		if (pdfDoc) {
 			pdfDoc.destroy();
 			pdfDoc = null;
