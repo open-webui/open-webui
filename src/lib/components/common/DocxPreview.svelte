@@ -224,11 +224,7 @@
 	.owui-docx-preview {
 		position: relative;
 		min-height: 100%;
-		background: #f3f4f6;
-	}
-
-	:global(.dark) .owui-docx-preview {
-		background: #111827;
+		background: transparent;
 	}
 
 	.owui-docx-scroll {

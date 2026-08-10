@@ -10,6 +10,7 @@
 	import PDFViewer from '../../common/PDFViewer.svelte';
 	import PanzoomContainer from '../../common/PanzoomContainer.svelte';
 	import DocxPreview from '../../common/DocxPreview.svelte';
+	import PptxPreview from '../../common/PptxPreview.svelte';
 	import JsonTreeView from './JsonTreeView.svelte';
 	import NotebookView from './NotebookView.svelte';
 	import SqliteView from './SqliteView.svelte';
@@ -263,8 +264,10 @@
 	}
 
 	let panzoomRef: PanzoomContainer;
+	let pptxPreviewRef: PptxPreview;
 	export const resetImageView = () => {
 		panzoomRef?.reset();
+		pptxPreviewRef?.resetView();
 	};
 
 	export const resetPdfView = () => {
@@ -338,71 +341,12 @@
 			{/if}
 		</div>
 	{:else if fileOfficeSlides !== null && fileOfficeSlides.length > 0}
-		<div class="flex flex-col h-full">
-			<PanzoomContainer
-				bind:this={panzoomRef}
-				className="w-full flex-1 min-h-0 flex items-center justify-center overflow-hidden"
-				options={{ zoomDoubleClickSpeed: 1 }}
-			>
-				<img
-					src={fileOfficeSlides[currentSlide]}
-					alt="Slide {currentSlide + 1}"
-					class="max-w-full max-h-full object-contain p-3"
-					draggable="false"
-				/>
-			</PanzoomContainer>
-			{#if fileOfficeSlides.length > 1}
-				<div
-					class="flex items-center justify-center gap-3 py-2 px-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500"
-				>
-					<button
-						aria-label={$i18n.t('Previous slide')}
-						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
-						disabled={currentSlide === 0}
-						on:click={() => {
-							resetImageView();
-							currentSlide = Math.max(0, currentSlide - 1);
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="size-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</button>
-					<span>{currentSlide + 1} / {fileOfficeSlides.length}</span>
-					<button
-						aria-label={$i18n.t('Next slide')}
-						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
-						disabled={currentSlide === fileOfficeSlides.length - 1}
-						on:click={() => {
-							resetImageView();
-							currentSlide = Math.min(fileOfficeSlides.length - 1, currentSlide + 1);
-						}}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="size-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</button>
-				</div>
-			{/if}
-		</div>
+		<PptxPreview
+			bind:this={pptxPreviewRef}
+			slides={fileOfficeSlides}
+			bind:currentSlide
+			className="w-full h-full"
+		/>
 	{:else if fileContent !== null}
 		{#if isHtml && !showRaw && serveUrl}
 			{#if overlay}
