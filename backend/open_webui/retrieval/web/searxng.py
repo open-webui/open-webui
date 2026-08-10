@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import ssl
 from functools import lru_cache
+from urllib.parse import parse_qsl, urlsplit, urlunsplit
 
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, SEARXNG_CLIENT_CERT_FILE, SEARXNG_CLIENT_KEY_FILE
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
@@ -36,6 +37,14 @@ def _get_ssl_context() -> bool | ssl.SSLContext:
     return ssl_context
 
 
+def _normalize_query_url(query_url: str) -> tuple[str, dict[str, str]]:
+    parts = urlsplit(query_url.strip())
+    existing_params = dict(parse_qsl(parts.query, keep_blank_values=True))
+    existing_params.pop('q', None)
+
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, '', parts.fragment)), existing_params
+
+
 async def search_searxng(
     query_url: str,
     query: str,
@@ -48,11 +57,9 @@ async def search_searxng(
     Optional keyword arguments (language, safesearch, time_range, categories)
     are forwarded directly as SearXNG query parameters.
     """
-    # Normalise legacy ``<query>``-style URLs by stripping any query string.
-    if '<query>' in query_url:
-        query_url = query_url.split('?')[0]
+    query_url, query_url_params = _normalize_query_url(query_url)
 
-    params = {
+    params = query_url_params | {
         'q': query,
         'format': 'json',
         'pageno': 1,
