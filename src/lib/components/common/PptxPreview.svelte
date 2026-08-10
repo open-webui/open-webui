@@ -136,9 +136,9 @@
 		: 'grid-cols-[160px_minmax(0,1fr)]'} h-full min-h-0 bg-transparent text-gray-900 dark:text-gray-100 {className}"
 >
 	<aside
-		class="{hideThumbs
+		class={hideThumbs
 			? 'hidden'
-			: 'overflow-y-auto px-2.5 pt-3.5 pb-16 border-r border-gray-200/60 dark:border-white/10 bg-transparent'}"
+			: 'overflow-y-auto px-2.5 pt-3.5 pb-16 border-r border-gray-200/60 dark:border-white/10 bg-transparent'}
 		aria-label="Slides"
 	>
 		{#each slides as slide, index}
