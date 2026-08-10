@@ -1004,8 +1004,8 @@
 						</div>
 
 						<div class="my-3">
-							<div class="flex w-full justify-between mb-2">
-								<div class="self-center text-sm font-medium">
+							<div class="flex w-full justify-between mb-1">
+								<div class="self-center text-xs font-normal text-gray-500">
 									{$i18n.t('Chat Background Color')}
 								</div>
 							</div>
