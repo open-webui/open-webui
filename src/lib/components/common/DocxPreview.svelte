@@ -147,7 +147,10 @@
 	});
 </script>
 
-<div class="owui-docx-preview {className}" style="--docx-scale: {docxScale};">
+<div
+	class="owui-docx-preview relative min-h-full bg-transparent {className}"
+	style="--docx-scale: {docxScale};"
+>
 	<div bind:this={styleEl}></div>
 
 	{#if loading}
@@ -159,14 +162,20 @@
 	{#if error}
 		<div class="text-red-500 text-sm p-4">{error}</div>
 	{:else if fallbackHtml}
-		<div bind:this={outerContainer} class="owui-docx-scroll">
-			<div class="owui-docx-fallback">
+		<div bind:this={outerContainer} class="h-full overflow-auto overscroll-contain">
+			<div
+				class="owui-docx-fallback max-w-[816px] min-h-[1056px] my-4 mx-auto py-14 px-16 bg-white text-gray-900 shadow rounded-sm font-[Calibri,Arial,sans-serif] text-base leading-[1.45]"
+			>
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 				{@html fallbackHtml}
 			</div>
 		</div>
 	{:else}
-		<div bind:this={outerContainer} class="owui-docx-scroll" on:wheel|nonpassive={handleWheel}>
+		<div
+			bind:this={outerContainer}
+			class="h-full overflow-auto overscroll-contain"
+			on:wheel|nonpassive={handleWheel}
+		>
 			<div bind:this={containerEl}></div>
 		</div>
 	{/if}
@@ -221,18 +230,6 @@
 </div>
 
 <style>
-	.owui-docx-preview {
-		position: relative;
-		min-height: 100%;
-		background: transparent;
-	}
-
-	.owui-docx-scroll {
-		height: 100%;
-		overflow: auto;
-		overscroll-behavior: contain;
-	}
-
 	.owui-docx-preview :global(.docx-wrapper) {
 		background: transparent;
 		display: flex;
@@ -245,20 +242,6 @@
 		margin: 0 auto 4px !important;
 		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18) !important;
 		zoom: var(--docx-scale);
-	}
-
-	.owui-docx-fallback {
-		max-width: 816px;
-		min-height: 1056px;
-		margin: 16px auto;
-		padding: 56px 64px;
-		background: #fff;
-		color: #111827;
-		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16);
-		border-radius: 2px;
-		font-family: Calibri, Arial, sans-serif;
-		font-size: 1rem;
-		line-height: 1.45;
 	}
 
 	.owui-docx-fallback :global(.docx-title) {

@@ -129,36 +129,64 @@
 	});
 </script>
 
-<div bind:this={rootEl} class="pptx-preview {hideThumbs ? 'pptx-preview-compact' : ''} {className}">
-	<aside class="pptx-thumbs" aria-label="Slides">
+<div
+	bind:this={rootEl}
+	class="relative grid {hideThumbs
+		? 'grid-cols-[minmax(0,1fr)]'
+		: 'grid-cols-[160px_minmax(0,1fr)]'} h-full min-h-0 bg-transparent text-gray-900 dark:text-gray-100 {className}"
+>
+	<aside
+		class="{hideThumbs
+			? 'hidden'
+			: 'overflow-y-auto px-2.5 pt-3.5 pb-16 border-r border-gray-200/60 dark:border-white/10 bg-transparent'}"
+		aria-label="Slides"
+	>
 		{#each slides as slide, index}
 			<button
 				type="button"
-				class="pptx-thumb {safeSlide === index ? 'pptx-thumb-selected' : ''}"
+				class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-2 w-full mb-3.5 p-0 text-left text-gray-900 dark:text-gray-100"
 				on:click={() => selectSlide(index)}
 				aria-label="Slide {index + 1}"
 				aria-current={safeSlide === index ? 'true' : undefined}
 			>
-				<span class="pptx-thumb-number">{index + 1}</span>
-				<span class="pptx-thumb-frame">
-					<img src={slide} alt="Slide {index + 1} thumbnail" draggable="false" />
+				<span
+					class="pt-[7px] text-xs font-medium text-right {safeSlide === index
+						? 'text-gray-900 dark:text-gray-100'
+						: 'text-gray-500 dark:text-gray-400'}">{index + 1}</span
+				>
+				<span
+					class="block aspect-video overflow-hidden rounded-lg bg-white border-2 shadow-sm {safeSlide ===
+					index
+						? 'border-gray-400 dark:border-gray-500'
+						: 'border-transparent'}"
+				>
+					<img
+						src={slide}
+						alt="Slide {index + 1} thumbnail"
+						class="block w-full h-full object-contain"
+						draggable="false"
+					/>
 				</span>
 			</button>
 		{/each}
 	</aside>
 
-	<section bind:this={stageEl} class="pptx-stage" on:wheel|nonpassive={handleStageWheel}>
+	<section
+		bind:this={stageEl}
+		class="min-w-0 min-h-0 overflow-hidden flex items-center justify-center overscroll-contain"
+		on:wheel|nonpassive={handleStageWheel}
+	>
 		{#if selectedSlide}
 			<div
 				bind:this={sceneEl}
-				class="pptx-stage-inner"
+				class="shrink-0"
 				style="width: {slideWidth}px; height: {slideHeight}px;"
 			>
 				<img
 					bind:this={slideImgEl}
 					src={selectedSlide}
 					alt="Slide {safeSlide + 1}"
-					class="pptx-slide"
+					class="block w-full h-full object-contain rounded bg-white shadow"
 					draggable="false"
 					on:load={onSlideLoad}
 				/>
@@ -167,10 +195,14 @@
 	</section>
 
 	{#if slides.length > 0}
-		<div class="pptx-controls">
+		<div
+			class="absolute bottom-3 {hideThumbs
+				? 'left-1/2'
+				: 'left-[calc(160px+(100%-160px)/2)]'} -translate-x-1/2 z-10 flex items-center gap-0.5 rounded-lg bg-white/90 dark:bg-gray-850/90 backdrop-blur-sm shadow-lg border border-gray-200/60 dark:border-gray-700/60 px-1 py-0.5"
+		>
 			<button
 				type="button"
-				class="pptx-control"
+				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 disabled:opacity-30"
 				disabled={safeSlide === 0}
 				on:click={() => selectSlide(safeSlide - 1)}
 				aria-label="Previous slide"
@@ -188,10 +220,13 @@
 					/>
 				</svg>
 			</button>
-			<span class="pptx-count">{safeSlide + 1} / {slides.length}</span>
+			<span
+				class="shrink-0 min-w-12 text-center text-[11px] text-gray-500 dark:text-gray-400 tabular-nums"
+				>{safeSlide + 1} / {slides.length}</span
+			>
 			<button
 				type="button"
-				class="pptx-control"
+				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 disabled:opacity-30"
 				disabled={safeSlide === slides.length - 1}
 				on:click={() => selectSlide(safeSlide + 1)}
 				aria-label="Next slide"
@@ -209,7 +244,12 @@
 					/>
 				</svg>
 			</button>
-			<button type="button" class="pptx-control" on:click={zoomOut} aria-label="Zoom out">
+			<button
+				type="button"
+				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+				on:click={zoomOut}
+				aria-label="Zoom out"
+			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
@@ -223,10 +263,20 @@
 					/>
 				</svg>
 			</button>
-			<button type="button" class="pptx-zoom" on:click={resetView} aria-label="Reset zoom">
+			<button
+				type="button"
+				class="shrink-0 min-w-12 h-7 px-1.5 py-1 text-center text-[11px] font-normal text-gray-500 dark:text-gray-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition tabular-nums"
+				on:click={resetView}
+				aria-label="Reset zoom"
+			>
 				{Math.round(zoomLevel * 100)}%
 			</button>
-			<button type="button" class="pptx-control" on:click={zoomIn} aria-label="Zoom in">
+			<button
+				type="button"
+				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+				on:click={zoomIn}
+				aria-label="Zoom in"
+			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
@@ -241,197 +291,3 @@
 		</div>
 	{/if}
 </div>
-
-<style>
-	.pptx-preview {
-		position: relative;
-		display: grid;
-		grid-template-columns: 160px minmax(0, 1fr);
-		height: 100%;
-		min-height: 0;
-		background: transparent;
-		color: #111827;
-	}
-
-	:global(.dark) .pptx-preview {
-		color: #f3f4f6;
-	}
-
-	.pptx-thumbs {
-		overflow-y: auto;
-		padding: 14px 10px 64px;
-		border-right: 1px solid rgba(17, 24, 39, 0.1);
-		background: transparent;
-	}
-
-	:global(.dark) .pptx-thumbs {
-		border-right-color: rgba(255, 255, 255, 0.1);
-	}
-
-	.pptx-thumb {
-		display: grid;
-		grid-template-columns: 24px minmax(0, 1fr);
-		align-items: start;
-		gap: 8px;
-		width: 100%;
-		margin: 0 0 14px;
-		padding: 0;
-		color: #111827;
-		text-align: left;
-	}
-
-	:global(.dark) .pptx-thumb {
-		color: #f3f4f6;
-	}
-
-	.pptx-thumb-number {
-		padding-top: 7px;
-		font-size: 0.75rem;
-		font-weight: 500;
-		color: #374151;
-		text-align: right;
-	}
-
-	:global(.dark) .pptx-thumb-number {
-		color: #f3f4f6;
-	}
-
-	.pptx-thumb-frame {
-		display: block;
-		aspect-ratio: 16 / 9;
-		overflow: hidden;
-		border-radius: 7px;
-		background: #fff;
-		border: 2px solid transparent;
-		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
-	}
-
-	:global(.dark) .pptx-thumb-frame {
-		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-	}
-
-	.pptx-thumb-selected .pptx-thumb-frame {
-		border-color: #60a5fa;
-	}
-
-	.pptx-thumb-selected .pptx-thumb-number {
-		color: #93c5fd;
-	}
-
-	.pptx-thumb img {
-		width: 100%;
-		height: 100%;
-		object-fit: contain;
-		display: block;
-	}
-
-	.pptx-stage {
-		min-width: 0;
-		min-height: 0;
-		overflow: hidden;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		overscroll-behavior: contain;
-	}
-
-	.pptx-stage-inner {
-		flex: 0 0 auto;
-	}
-
-	.pptx-slide {
-		display: block;
-		width: 100%;
-		height: 100%;
-		object-fit: contain;
-		border-radius: 5px;
-		background: #fff;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-	}
-
-	.pptx-controls {
-		position: absolute;
-		left: calc(160px + (100% - 160px) / 2);
-		bottom: 12px;
-		z-index: 2;
-		display: flex;
-		align-items: center;
-		gap: 2px;
-		transform: translateX(-50%);
-		border: 1px solid rgba(255, 255, 255, 0.14);
-		border-radius: 8px;
-		background: rgba(255, 255, 255, 0.92);
-		padding: 2px;
-		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
-		backdrop-filter: blur(8px);
-	}
-
-	:global(.dark) .pptx-controls {
-		border-color: rgba(255, 255, 255, 0.14);
-		background: rgba(32, 32, 32, 0.88);
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-	}
-
-	.pptx-control,
-	.pptx-zoom {
-		min-width: 28px;
-		height: 28px;
-		border-radius: 6px;
-		color: #4b5563;
-	}
-
-	:global(.dark) .pptx-control,
-	:global(.dark) .pptx-zoom {
-		color: #d1d5db;
-	}
-
-	.pptx-control {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.pptx-zoom {
-		padding: 0 8px;
-		font-size: 0.7rem;
-		font-variant-numeric: tabular-nums;
-	}
-
-	.pptx-count {
-		min-width: 48px;
-		text-align: center;
-		font-size: 0.7rem;
-		color: #4b5563;
-		font-variant-numeric: tabular-nums;
-	}
-
-	:global(.dark) .pptx-count {
-		color: #d1d5db;
-	}
-
-	.pptx-control:hover:not(:disabled),
-	.pptx-zoom:hover {
-		background: rgba(17, 24, 39, 0.08);
-	}
-
-	:global(.dark) .pptx-control:hover:not(:disabled),
-	:global(.dark) .pptx-zoom:hover {
-		background: rgba(255, 255, 255, 0.1);
-	}
-
-	.pptx-control:disabled {
-		opacity: 0.35;
-	}
-
-	.pptx-preview-compact {
-		grid-template-columns: minmax(0, 1fr);
-	}
-
-	.pptx-preview-compact .pptx-thumbs {
-		display: none;
-	}
-
-	.pptx-preview-compact .pptx-controls {
-		left: 50%;
-	}
-</style>
