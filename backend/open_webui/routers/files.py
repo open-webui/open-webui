@@ -268,6 +268,7 @@ async def process_uploaded_file(
         _cleanup_local_cache(file_path)
 
 
+@router.post('', response_model=FileModelResponse)
 @router.post('/', response_model=FileModelResponse)
 async def upload_file(
     request: Request,
