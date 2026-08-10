@@ -41,3 +41,17 @@ export const singleFlight = <T>(task: () => Promise<T>) => {
 		return active;
 	};
 };
+
+export const createAsyncQueue = () => {
+	let tail = Promise.resolve();
+
+	return <T>(task: () => Promise<T>) => {
+		const result = tail.then(task, task);
+		tail = result.then(
+			() => undefined,
+			() => undefined
+		);
+
+		return result;
+	};
+};

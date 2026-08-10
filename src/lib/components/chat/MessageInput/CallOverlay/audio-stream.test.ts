@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { hasLiveAudioTrack, singleFlight, watchAudioTrackEnd } from './audio-stream';
+import {
+	createAsyncQueue,
+	hasLiveAudioTrack,
+	singleFlight,
+	watchAudioTrackEnd
+} from './audio-stream';
 
 class FakeAudioTrack extends EventTarget {
 	readyState: MediaStreamTrackState;
@@ -74,5 +79,42 @@ describe('call audio stream lifecycle', () => {
 		expect(recover).toHaveBeenCalledTimes(2);
 		finishRecovery?.();
 		await laterRecovery;
+	});
+
+	it('serializes recording lifecycle transitions', async () => {
+		const enqueue = createAsyncQueue();
+		let finishStart: (() => void) | undefined;
+		const events: string[] = [];
+
+		const start = enqueue(
+			() =>
+				new Promise<void>((resolve) => {
+					events.push('start');
+					finishStart = resolve;
+				})
+		);
+		const recover = enqueue(async () => {
+			events.push('recover');
+		});
+
+		await Promise.resolve();
+		expect(events).toEqual(['start']);
+
+		finishStart?.();
+		await start;
+		await recover;
+
+		expect(events).toEqual(['start', 'recover']);
+	});
+
+	it('continues serialized transitions after a failure', async () => {
+		const enqueue = createAsyncQueue();
+		const failed = enqueue(async () => {
+			throw new Error('setup failed');
+		});
+		const recovered = enqueue(async () => 'recovered');
+
+		await expect(failed).rejects.toThrow('setup failed');
+		await expect(recovered).resolves.toBe('recovered');
 	});
 });
