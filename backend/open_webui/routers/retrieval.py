@@ -449,6 +449,12 @@ class ProcessUrlForm(CollectionNameForm):
     url: str
 
 
+def _extracted_web_content(result: dict) -> Optional[str]:
+    if result.get('content') is not None:
+        return result.get('content')
+    return ((result.get('file') or {}).get('data') or {}).get('content')
+
+
 class ProcessUrlResponse(BaseModel):
     status: bool
     type: str
@@ -2269,7 +2275,7 @@ async def process_url(
                 'name': form_data.url,
                 'url': form_data.url,
                 'collection_name': result.get('collection_name'),
-                'content': result.get('content'),
+                'content': _extracted_web_content(result),
             }
 
         config = await get_retrieval_config()
@@ -2283,7 +2289,7 @@ async def process_url(
                 'name': form_data.url,
                 'url': form_data.url,
                 'collection_name': result.get('collection_name'),
-                'content': result.get('content'),
+                'content': _extracted_web_content(result),
             }
 
         from open_webui.routers.files import upload_file_handler

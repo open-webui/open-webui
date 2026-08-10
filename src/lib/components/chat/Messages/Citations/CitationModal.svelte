@@ -223,7 +223,7 @@
 									title={$i18n.t('Content')}
 								></iframe>
 							{:else}
-								{@const rawContent = document.document.trim().replace(/\n\n+/g, '\n\n')}
+								{@const rawContent = (document.document ?? '').trim().replace(/\n\n+/g, '\n\n')}
 								{@const isTruncated =
 									($settings?.renderMarkdownInPreviews ?? true) &&
 									rawContent.length > CONTENT_PREVIEW_LIMIT &&
