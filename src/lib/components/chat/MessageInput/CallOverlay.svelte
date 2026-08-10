@@ -12,6 +12,7 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import VideoInputMenu from './CallOverlay/VideoInputMenu.svelte';
+	import { hasLiveAudioTrack, singleFlight, watchAudioTrackEnd } from './CallOverlay/audio-stream';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -44,6 +45,9 @@
 	let mediaRecorder;
 	let audioStream = null;
 	let audioChunks = [];
+	let audioStatus: 'listening' | 'reconnecting' | 'unavailable' = 'reconnecting';
+	let stopWatchingAudioTrack = () => {};
+	let audioAnalysisGeneration = 0;
 
 	let videoInputDevices = [];
 	let selectedVideoInputDeviceId = null;
@@ -194,7 +198,7 @@
 			mediaRecorder = false;
 
 			if (_continue) {
-				startRecording();
+				await startRecording();
 			}
 
 			if (confirmed) {
@@ -232,21 +236,44 @@
 
 	const startRecording = async () => {
 		if ($showCallOverlay) {
-			if (!audioStream) {
-				audioStream = await navigator.mediaDevices.getUserMedia({
-					audio: {
-						echoCancellation: true,
-						noiseSuppression: true,
-						autoGainControl: true
-					}
+			if (!hasLiveAudioTrack(audioStream)) {
+				audioStatus = 'reconnecting';
+
+				try {
+					audioStream = await navigator.mediaDevices.getUserMedia({
+						audio: {
+							echoCancellation: true,
+							noiseSuppression: true,
+							autoGainControl: true
+						}
+					});
+				} catch (error) {
+					console.error('Error accessing media devices.', error);
+					audioStream = null;
+					audioStatus = 'unavailable';
+					toast.error($i18n.t('Error accessing media devices.'));
+					return false;
+				}
+
+				if (!$showCallOverlay) {
+					audioStream.getAudioTracks().forEach((track) => track.stop());
+					audioStream = null;
+					return false;
+				}
+
+				stopWatchingAudioTrack();
+				stopWatchingAudioTrack = watchAudioTrackEnd(audioStream, () => {
+					void recoverAudioStream();
 				});
 			}
 
-			if (audioStream) {
-				// hardware track muting disabled to prevent backend translation errors with malformed WebM files
+			if (!hasLiveAudioTrack(audioStream)) {
+				audioStatus = 'unavailable';
+				return false;
 			}
 
 			mediaRecorder = new MediaRecorder(audioStream);
+			audioStatus = 'listening';
 
 			mediaRecorder.onstart = () => {
 				console.log('Recording started');
@@ -264,18 +291,29 @@
 				stopRecordingCallback();
 			};
 
-			analyseAudio(audioStream);
+			analyseAudio(audioStream, ++audioAnalysisGeneration);
+			return true;
 		}
+
+		return false;
 	};
 
 	const stopAudioStream = async () => {
+		const recorder = mediaRecorder;
+		mediaRecorder = false;
+		audioAnalysisGeneration += 1;
+
 		try {
-			if (mediaRecorder) {
-				mediaRecorder.stop();
+			if (recorder && recorder.state !== 'inactive') {
+				recorder.onstop = null;
+				recorder.stop();
 			}
 		} catch (error) {
 			console.log('Error stopping audio stream:', error);
 		}
+
+		stopWatchingAudioTrack();
+		stopWatchingAudioTrack = () => {};
 
 		if (!audioStream) return;
 
@@ -284,6 +322,26 @@
 		});
 
 		audioStream = null;
+	};
+
+	const recoverAudioStream = singleFlight(async () => {
+		if (!$showCallOverlay) {
+			return false;
+		}
+
+		audioStatus = 'reconnecting';
+		hasStartedSpeaking = false;
+		confirmed = false;
+		audioChunks = [];
+
+		await stopAudioStream();
+		return await startRecording();
+	});
+
+	const handleAudioDeviceChange = () => {
+		if ($showCallOverlay && !hasLiveAudioTrack(audioStream)) {
+			void recoverAudioStream();
+		}
 	};
 
 	// Function to calculate the RMS level from time domain data
@@ -296,7 +354,7 @@
 		return Math.sqrt(sumSquares / data.length);
 	};
 
-	const analyseAudio = (stream) => {
+	const analyseAudio = (stream, generation) => {
 		const audioContext = new AudioContext();
 		const audioStreamSource = audioContext.createMediaStreamSource(stream);
 
@@ -316,7 +374,7 @@
 
 		const detectSound = () => {
 			const processFrame = () => {
-				if (!mediaRecorder || !$showCallOverlay) {
+				if (!mediaRecorder || !$showCallOverlay || generation !== audioAnalysisGeneration) {
 					return;
 				}
 
@@ -713,7 +771,8 @@
 
 		model = $models.find((m) => m.id === modelId);
 
-		startRecording();
+		await startRecording();
+		navigator.mediaDevices.addEventListener('devicechange', handleAudioDeviceChange);
 
 		eventTarget.addEventListener('chat:start', chatStartHandler);
 		eventTarget.addEventListener('chat', chatEventHandler);
@@ -731,6 +790,7 @@
 			eventTarget.removeEventListener('chat:finish', chatFinishHandler);
 
 			document.removeEventListener('keydown', handleKeydown);
+			navigator.mediaDevices.removeEventListener('devicechange', handleAudioDeviceChange);
 
 			audioAbortController.abort();
 			await tick();
@@ -753,6 +813,7 @@
 		eventTarget.removeEventListener('chat:finish', chatFinishHandler);
 
 		document.removeEventListener('keydown', handleKeydown);
+		navigator.mediaDevices.removeEventListener('devicechange', handleAudioDeviceChange);
 
 		audioAbortController.abort();
 
@@ -957,6 +1018,8 @@
 				on:click={() => {
 					if (assistantSpeaking) {
 						stopAllAudio();
+					} else if (audioStatus === 'unavailable') {
+						void recoverAudioStream();
 					}
 				}}
 			>
@@ -967,6 +1030,10 @@
 						{$i18n.t('Muted')}
 					{:else if assistantSpeaking}
 						{$i18n.t('Tap to interrupt')}
+					{:else if audioStatus === 'reconnecting'}
+						{$i18n.t('Connection lost. Reconnecting...')}
+					{:else if audioStatus === 'unavailable'}
+						{$i18n.t('Error accessing media devices.')} {$i18n.t('Retry')}
 					{:else}
 						{$i18n.t('Listening...')}
 					{/if}
