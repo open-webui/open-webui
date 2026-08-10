@@ -1,5 +1,7 @@
 import asyncio
+import csv
 import logging
+import os
 import sys
 
 import ftfy
@@ -109,6 +111,52 @@ class ExcelLoader:
                 metadata={'source': self.file_path},
             )
         ]
+
+
+def get_csv_summary(filename: str, file_path: str, encoding: str) -> str | None:
+    try:
+        with open(file_path, newline='', encoding=encoding) as f:
+            sample = f.read(4096)
+            f.seek(0)
+            try:
+                dialect = csv.Sniffer().sniff(sample)
+            except csv.Error:
+                dialect = csv.excel
+
+            total_rows = 0
+            max_columns = 0
+            headers = []
+            for row in csv.reader(f, dialect):
+                total_rows += 1
+                max_columns = max(max_columns, len(row))
+                if total_rows == 1:
+                    headers = [header.lstrip('\ufeff') for header in row]
+    except Exception:
+        return None
+
+    if total_rows == 0:
+        return None
+
+    return (
+        f'Table: {total_rows} rows incl. header; '
+        f'{max(total_rows - 1, 0)} data rows; '
+        f'{max_columns} columns: {", ".join(headers)}.'
+    )
+
+
+class CSVLoaderWithSummary:
+    def __init__(self, file_path: str, filename: str, encoding: str):
+        self.file_path = file_path
+        self.filename = filename
+        self.encoding = encoding
+
+    def load(self) -> list[Document]:
+        docs = CSVLoader(self.file_path, encoding=self.encoding).load()
+        if os.getenv('ENABLE_RAG_CSV_SUMMARY', 'False').lower() == 'true':
+            summary = get_csv_summary(self.filename, self.file_path, self.encoding)
+            if summary:
+                docs.insert(0, Document(page_content=summary, metadata={'source': self.file_path, 'row': -1}))
+        return docs
 
 
 class PptxLoader:
@@ -594,7 +642,11 @@ class Loader:
                     mode=self.kwargs.get('PDF_LOADER_MODE', 'page'),
                 )
             elif file_ext == 'csv':
-                loader = CSVLoader(file_path, encoding=self._detect_text_encoding(file_path))
+                loader = CSVLoaderWithSummary(
+                    file_path,
+                    filename,
+                    self._detect_text_encoding(file_path),
+                )
             elif file_ext == 'rst':
                 try:
                     from langchain_community.document_loaders import UnstructuredRSTLoader
