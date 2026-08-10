@@ -80,6 +80,7 @@ from open_webui.tools.builtin import (
     search_channel_messages,
     search_channels,
     search_chats,
+    search_folders,
     search_knowledge_bases,
     search_knowledge_files,
     search_memories,
@@ -95,6 +96,7 @@ from open_webui.tools.builtin import (
     view_channel_thread,
     view_chat,
     view_file,
+    view_folder,
     view_knowledge_file,
     view_note,
     view_skill,
@@ -601,6 +603,9 @@ async def get_builtin_tools(
         and await has_user_chat_permission('file_upload')
     ):
         builtin_functions.extend([list_chat_files, query_chat_files, grep_chat_files, view_file])
+        
+    if is_builtin_tool_enabled('folders'):
+        builtin_functions.extend([search_folders, view_folder])
 
     # Knowledge base tools - conditional injection based on model knowledge
     # If model has attached knowledge (any type), only provide query_knowledge_files

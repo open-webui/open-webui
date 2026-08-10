@@ -31,6 +31,10 @@
 			label: $i18n.t('Files'),
 			description: $i18n.t('List, search, and read files attached to the current chat')
 		},
+		folders: {
+			label: $i18n.t('Folders'),
+			description: $i18n.t('List and search folders owned by or shared with you')
+		},
 		channels: {
 			label: $i18n.t('Channels'),
 			description: $i18n.t('Search channels and channel messages')
