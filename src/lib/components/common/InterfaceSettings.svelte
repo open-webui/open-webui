@@ -19,6 +19,7 @@
 
 	$: currentSettings = (settingsValue ?? $settings ?? {}) as Record<string, any>;
 	$: externalSettings = settingsValue !== null;
+	$: defaultSettings = ($config?.ui?.default_settings ?? {}) as Record<string, any>;
 
 	let backgroundImageUrl: string | null = null;
 	let inputFiles: FileList | null = null;
@@ -116,6 +117,11 @@
 	const settingDescriptionClass = 'mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600';
 	const actionButtonClass =
 		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+
+	const matchesDefaultSetting = (key: string, value: unknown) =>
+		!externalSettings &&
+		Object.prototype.hasOwnProperty.call(defaultSettings, key) &&
+		JSON.stringify(defaultSettings[key]) === JSON.stringify(value);
 
 	const toggleLandingPageMode = async () => {
 		landingPageMode = landingPageMode === '' ? 'chat' : '';
@@ -309,6 +315,7 @@
 		lastSettingsValue = settingsValue;
 		init();
 	}
+	$: textScaleUsesDefault = textScale === null || matchesDefaultSetting('textScale', textScale);
 
 	onMount(async () => {
 		init();
@@ -376,13 +383,13 @@
 							on:click={() => {
 								if (textScale === null) {
 									textScale = 1;
-								} else {
+								} else if (!textScaleUsesDefault) {
 									textScale = null;
 									setTextScaleHandler(1);
 								}
 							}}
 						>
-							{#if textScale === null}
+							{#if textScaleUsesDefault}
 								<span>{$i18n.t('Default')}</span>
 							{:else}
 								<span>{textScale}x</span>

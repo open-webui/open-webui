@@ -65,8 +65,13 @@
 		defaultUserUiSettings = { ...defaultUserUiSettings, ...updated };
 	};
 
+	const getDefaultUserUiSettings = () => {
+		const value = adminConfig?.DEFAULT_UI_SETTINGS;
+		return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+	};
+
 	const updateHandler = async () => {
-		adminConfig.DEFAULT_USER_UI_SETTINGS = defaultUserUiSettings;
+		adminConfig.DEFAULT_UI_SETTINGS = defaultUserUiSettings;
 
 		const res = await updateAdminConfig(localStorage.token, adminConfig);
 
@@ -83,12 +88,7 @@
 
 	onMount(async () => {
 		adminConfig = await getAdminConfig(localStorage.token);
-		defaultUserUiSettings =
-			adminConfig?.DEFAULT_USER_UI_SETTINGS &&
-			typeof adminConfig.DEFAULT_USER_UI_SETTINGS === 'object' &&
-			!Array.isArray(adminConfig.DEFAULT_USER_UI_SETTINGS)
-				? adminConfig.DEFAULT_USER_UI_SETTINGS
-				: {};
+		defaultUserUiSettings = getDefaultUserUiSettings();
 
 		banners = [...$_banners];
 	});
@@ -396,7 +396,7 @@
 							<div>{$i18n.t('Default Interface Settings')}</div>
 							<div class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 								{$i18n.t(
-									'Set the interface values new users start with. User changes still override these defaults.'
+									'Set system-wide interface defaults for every account. Personal settings override these defaults.'
 								)}
 							</div>
 						</button>

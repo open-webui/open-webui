@@ -1704,12 +1704,12 @@ DEFAULT_MODEL_PARAMS = default_model_params
 
 
 try:
-    default_user_ui_settings = JSONCodec.loads(os.getenv('DEFAULT_USER_UI_SETTINGS', '{}'))
+    default_ui_settings = JSONCodec.loads(os.getenv('DEFAULT_UI_SETTINGS', '{}'))
 except Exception as e:
-    log.exception(f'Error loading DEFAULT_USER_UI_SETTINGS: {e}')
-    default_user_ui_settings = {}
+    log.exception(f'Error loading DEFAULT_UI_SETTINGS: {e}')
+    default_ui_settings = {}
 
-DEFAULT_USER_UI_SETTINGS = default_user_ui_settings if isinstance(default_user_ui_settings, dict) else {}
+DEFAULT_UI_SETTINGS = default_ui_settings if isinstance(default_ui_settings, dict) else {}
 
 DEFAULT_USER_ROLE = os.getenv('DEFAULT_USER_ROLE', 'pending')
 
@@ -3064,7 +3064,7 @@ DEFAULT_CONFIG = {
     'ui.default_locale': DEFAULT_LOCALE,
     'ui.default_models': DEFAULT_MODELS,
     'ui.default_pinned_models': DEFAULT_PINNED_MODELS,
-    'ui.default_user_settings': DEFAULT_USER_UI_SETTINGS,
+    'ui.default_settings': DEFAULT_UI_SETTINGS,
     'ui.prompt_suggestions': DEFAULT_PROMPT_SUGGESTIONS,
     'ui.model_order_list': MODEL_ORDER_LIST,
     'models.default_metadata': DEFAULT_MODEL_METADATA,

@@ -56,6 +56,9 @@ router = APIRouter()
 def merge_user_ui_settings(defaults: dict, settings: dict) -> dict:
     merged = dict(defaults)
     for key, value in settings.items():
+        if value is None:
+            continue
+
         default_value = merged.get(key)
         merged[key] = (
             merge_user_ui_settings(default_value, value)
@@ -63,6 +66,23 @@ def merge_user_ui_settings(defaults: dict, settings: dict) -> dict:
             else value
         )
     return merged
+
+
+def strip_default_ui_settings(defaults: dict, settings: dict) -> dict:
+    stripped = {}
+    for key, value in settings.items():
+        if value is None:
+            continue
+
+        default_value = defaults.get(key)
+        if isinstance(default_value, dict) and isinstance(value, dict):
+            nested = strip_default_ui_settings(default_value, value)
+            if nested:
+                stripped[key] = nested
+        elif value != default_value:
+            stripped[key] = value
+
+    return stripped
 
 
 ############################
@@ -452,7 +472,7 @@ async def get_user_settings_by_session_user(
     user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
     # user already fetched by get_verified_user — no need to refetch
-    default_ui_settings = await Config.get('ui.default_user_settings')
+    default_ui_settings = await Config.get('ui.default_settings')
     if not isinstance(default_ui_settings, dict) or not default_ui_settings:
         return user.settings
 
@@ -514,6 +534,11 @@ async def update_user_settings_by_session_user(
         updated_user_settings.pop('notifications', None)
         if isinstance(ui_notifications, dict):
             ui_notifications.pop('webhook_url', None)
+
+    default_ui_settings = await Config.get('ui.default_settings')
+    ui_settings = updated_user_settings.get('ui')
+    if isinstance(default_ui_settings, dict) and isinstance(ui_settings, dict):
+        updated_user_settings['ui'] = strip_default_ui_settings(default_ui_settings, ui_settings)
 
     user = await Users.update_user_settings_by_id(user.id, updated_user_settings, db=db)
     if user:
