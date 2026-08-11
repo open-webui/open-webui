@@ -9,6 +9,7 @@
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 
 	import ResponseMessage from './ResponseMessage.svelte';
+	import { getOutputText } from './structuredOutput';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Merge from '$lib/components/icons/Merge.svelte';
 
@@ -227,7 +228,8 @@
 			const { messageIds } = groupedMessageIds[modelIdx];
 			const messageId = messageIds[groupedMessageIdsIdx[modelIdx]];
 
-			return history.messages[messageId].content;
+			const message = history.messages[messageId];
+			return getOutputText(message?.output) || message?.content || '';
 		});
 		mergeResponses(messageId, responses, chatId);
 	};
