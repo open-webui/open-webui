@@ -754,6 +754,7 @@
 				role="button"
 				tabindex="0"
 				on:click={async (e) => {
+					e.stopPropagation();
 					if (shouldIgnoreRowClick(e.target)) return;
 					if (clickTimer) {
 						clearTimeout(clickTimer);
@@ -771,9 +772,6 @@
 						e.preventDefault();
 						openFolderHandler();
 					}
-				}}
-				on:pointerup={(e) => {
-					e.stopPropagation();
 				}}
 			>
 				<button
