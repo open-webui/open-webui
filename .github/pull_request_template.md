@@ -6,7 +6,7 @@
 
 # Pull Request Checklist
 
-### Note to first-time contributors: Please open a discussion post in [Discussions](https://github.com/open-webui/open-webui/discussions) to discuss your idea/fix with the community before creating a pull request, and describe your changes before submitting a pull request.
+### Please open a discussion post in [Discussions](https://github.com/open-webui/open-webui/discussions) to **discuss your idea with the community first** before creating a pull request, and describe your changes before submitting a pull request. Merely opening a discussion is not enough, it needs to be actively discussed.
 
 This is to ensure large feature PRs are discussed with the community first, before starting work on it. If the community does not want this feature or it is not relevant for Open WebUI as a project, it can be identified in the discussion before working on the feature and submitting the PR.
 
@@ -16,15 +16,15 @@ This is to ensure large feature PRs are discussed with the community first, befo
 The most impactful way to contribute to Open WebUI is through well-written bug reports, detailed feature discussions, and thoughtful ideas. These directly shape the project. If you do open a pull request, please know that Open WebUI is held to the highest standard of code quality, consistency, and architectural coherence, and every line merged becomes something the core team must own, maintain, and support indefinitely. Submitted code may be refactored, rewritten, or used as inspiration for a different implementation. This is not a reflection of your work's quality. It is how we ensure that a small team can deeply understand and evolve every part of the codebase.
 -->
 
-**Before submitting, make sure you've checked the following:**
+**Before submitting, make sure you've checked and filled out the following:**
 
-- [ ] **Linked Issue/Discussion:** This PR references an existing [Issue](https://github.com/open-webui/open-webui/issues) or [Discussion](https://github.com/open-webui/open-webui/discussions) — `Closes #___` / `Relates to #___`. If one does not exist, create one first. PRs without a linked issue or discussion may be closed without review.
+- [ ] **Linked Issue/Discussion:** This PR references an existing [Issue](https://github.com/open-webui/open-webui/issues) or [Discussion](https://github.com/open-webui/open-webui/discussions) — `Closes #___` / `Relates to #___`. PRs without a linked issue or discussion will be closed without review.
 - [ ] **Target branch:** The pull request targets the `dev` branch. **PRs targeting `main` will be immediately closed.**
 - [ ] **Description:** A concise description of the changes is provided below.
 - [ ] **Changelog:** A changelog entry following [Keep a Changelog](https://keepachangelog.com/) format is included at the bottom.
 - [ ] **Documentation:** Relevant documentation has been added or updated in the [Open WebUI Docs Repository](https://github.com/open-webui/docs).
 - [ ] **Dependencies:** Any new or updated dependencies are explained, tested, and documented.
-- [ ] **Testing:** Manual tests have been performed to verify the fix/feature works correctly and does not introduce regressions. Screenshots or recordings are included where applicable.
+- [ ] **Testing:** **Manual** end-to-end tests have been performed to verify the fix/feature works correctly and does not introduce regressions. Screenshots or recordings are included where applicable.
 - [ ] **No Unchecked AI Code:** This PR is either human-written or has undergone thorough human review AND manual testing. Unreviewed AI-generated PRs may be closed immediately.
 - [ ] **Self-Review:** A self-review of the code has been performed, ensuring adherence to project coding standards.
 - [ ] **Architecture:** Smart defaults are preferred over new settings. Local state is used for ephemeral UI logic. Major architectural or UX changes have been discussed first.
@@ -40,9 +40,6 @@ The most impactful way to contribute to Open WebUI is through well-written bug r
   - **i18n**: Internationalization or localization changes
   - **perf**: Performance improvements
   - **refactor**: Code restructuring
-  - **style**: Formatting changes (whitespace, semicolons, etc.)
-  - **test**: Test additions or corrections
-  - **WIP**: Work in progress
 
 # Changelog Entry
 
