@@ -1848,6 +1848,10 @@ class ProcessFileForm(BaseModel):
     collection_name: str | None = None
 
 
+def has_vector_results(result) -> bool:
+    return bool(result and result.ids and result.ids[0])
+
+
 @router.post('/process/file')
 async def process_file(
     request: Request,
@@ -1856,7 +1860,6 @@ async def process_file(
     db: AsyncSession = Depends(get_async_session),
 ):
     """
-    Process a file and save its content to the vector database.
     Process a file and save its content to the vector database.
     Note: granular session management is used to prevent connection pool exhaustion.
     The session is committed before external API calls, and updates use a fresh session.
@@ -1870,11 +1873,13 @@ async def process_file(
     if file:
         try:
             collection_name = form_data.collection_name
+            file_collection_name = f'file-{file.id}'
 
             if collection_name is None:
-                collection_name = f'file-{file.id}'
+                collection_name = file_collection_name
             else:
                 await _validate_collection_access([collection_name], user, access_type='write')
+            collection_names = [collection_name]
 
             if form_data.content:
                 # Update the content in the file
@@ -1882,7 +1887,7 @@ async def process_file(
 
                 try:
                     # /files/{file_id}/data/content/update
-                    await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=f'file-{file.id}')
+                    await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection_name)
                 except Exception:
                     # Audio file upload pipeline
                     pass
@@ -1905,17 +1910,17 @@ async def process_file(
                 # Check if the file has already been processed and save the content
                 # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
-                result = await ASYNC_VECTOR_DB_CLIENT.query(
-                    collection_name=f'file-{file.id}', filter={'file_id': file.id}
+                file_result = await ASYNC_VECTOR_DB_CLIENT.query(
+                    collection_name=file_collection_name, filter={'file_id': file.id}
                 )
 
-                if result is not None and len(result.ids[0]) > 0:
+                if has_vector_results(file_result):
                     docs = [
                         Document(
-                            page_content=result.documents[0][idx],
-                            metadata=result.metadatas[0][idx],
+                            page_content=file_result.documents[0][idx],
+                            metadata=file_result.metadatas[0][idx],
                         )
-                        for idx, id in enumerate(result.ids[0])
+                        for idx, id in enumerate(file_result.ids[0])
                     ]
                 else:
                     docs = [
@@ -1930,6 +1935,7 @@ async def process_file(
                             },
                         )
                     ]
+                    collection_names.append(file_collection_name)
 
                 text_content = file.data.get('content', '')
             else:
@@ -2013,20 +2019,22 @@ async def process_file(
                     # calls asyncio.run_coroutine_threadsafe(..., main_loop).result()
                     # which blocks the calling thread.  We MUST run it in a
                     # worker thread to avoid deadlocking the event loop.
-                    result = await run_in_threadpool(
-                        save_docs_to_vector_db,
-                        request,
-                        docs=docs,
-                        collection_name=collection_name,
-                        config=config,
-                        metadata={
-                            'file_id': file.id,
-                            'name': file.filename,
-                            'hash': hash,
-                        },
-                        add=(True if form_data.collection_name else False),
-                        user=user,
-                    )
+                    result = True
+                    for name in collection_names:
+                        result = await run_in_threadpool(
+                            save_docs_to_vector_db,
+                            request,
+                            docs=docs,
+                            collection_name=name,
+                            config=config,
+                            metadata={
+                                'file_id': file.id,
+                                'name': file.filename,
+                                'hash': hash,
+                            },
+                            add=(True if form_data.collection_name else False),
+                            user=user,
+                        )
                     log.info('added %s items to collection %s', len(docs), collection_name)
 
                     if result:

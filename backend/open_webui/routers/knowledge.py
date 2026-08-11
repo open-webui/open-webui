@@ -381,6 +381,10 @@ async def reindex_knowledge_files(
                 )
 
                 try:
+                    file_collection = f'file-{file.id}'
+                    if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+                        await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+
                     await process_file(
                         request,
                         ProcessFileForm(file_id=file.id, collection_name=knowledge_base.id),
