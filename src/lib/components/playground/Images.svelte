@@ -5,6 +5,7 @@
 
 	import { user } from '$lib/stores';
 	import { imageGenerations, imageEdits } from '$lib/apis/images';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
@@ -97,6 +98,8 @@
 		}
 	};
 
+	const resolveImageUrl = (url: string) => (url.startsWith('/') ? `${WEBUI_BASE_URL}${url}` : url);
+
 	const downloadImage = async (url: string, index: number) => {
 		try {
 			const response = await fetch(url);
@@ -136,10 +139,10 @@
 								{#each generatedImages as image, index}
 									<button
 										class="relative group cursor-pointer"
-										on:click={() => downloadImage(image.url, index)}
+										on:click={() => downloadImage(resolveImageUrl(image.url), index)}
 									>
 										<img
-											src={image.url}
+											src={resolveImageUrl(image.url)}
 											alt=""
 											class="w-full aspect-square object-cover rounded-lg border border-gray-100/30 dark:border-gray-850/30"
 										/>
