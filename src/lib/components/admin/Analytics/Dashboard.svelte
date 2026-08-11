@@ -162,7 +162,9 @@
 
 	// Reload when the period, group, or custom range changes.
 	// In custom mode, wait until both dates are set to avoid a half-specified query.
-	$: if (selectedPeriod === 'custom' ? customStart && customEnd : selectedPeriod) {
+	$: if (selectedPeriod === 'custom' && !(customStart && customEnd)) {
+		loading = false;
+	} else if (selectedPeriod) {
 		// reference customStart/customEnd so this block reruns when they change
 		customStart;
 		customEnd;
