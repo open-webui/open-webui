@@ -5,6 +5,7 @@
 	import { getBackendConfig, getVersionUpdates } from '$lib/apis';
 	import { getAdminConfig, updateAdminConfig } from '$lib/apis/auths';
 	import { getBanners, setBanners } from '$lib/apis/configs';
+	import InterfaceSettings from '$lib/components/common/InterfaceSettings.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -33,13 +34,14 @@
 	};
 
 	let adminConfig: any = null;
+	let defaultUserUiSettings: Record<string, any> = {};
+	let showUserUiDefaults = false;
 
 	let banners: Banner[] = [];
 	const inputClass =
 		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const textareaClass =
 		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
-
 	const checkForVersionUpdates = async () => {
 		updateAvailable = null;
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
@@ -59,7 +61,13 @@
 		_banners.set(await setBanners(localStorage.token, banners));
 	};
 
+	const saveDefaultUserUiSettings = (updated: Record<string, any>) => {
+		defaultUserUiSettings = { ...defaultUserUiSettings, ...updated };
+	};
+
 	const updateHandler = async () => {
+		adminConfig.DEFAULT_USER_UI_SETTINGS = defaultUserUiSettings;
+
 		const res = await updateAdminConfig(localStorage.token, adminConfig);
 
 		await updateBanners();
@@ -75,6 +83,12 @@
 
 	onMount(async () => {
 		adminConfig = await getAdminConfig(localStorage.token);
+		defaultUserUiSettings =
+			adminConfig?.DEFAULT_USER_UI_SETTINGS &&
+			typeof adminConfig.DEFAULT_USER_UI_SETTINGS === 'object' &&
+			!Array.isArray(adminConfig.DEFAULT_USER_UI_SETTINGS)
+				? adminConfig.DEFAULT_USER_UI_SETTINGS
+				: {};
 
 		banners = [...$_banners];
 	});
@@ -370,6 +384,64 @@
 			<Events />
 
 			<AdminSettingSection title={$i18n.t('UI')}>
+				<div class="shrink-0">
+					<div class="flex items-center justify-between gap-4 py-0.5">
+						<button
+							class="min-w-0 flex-1 text-left text-xs text-gray-600 transition hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+							type="button"
+							on:click={() => {
+								showUserUiDefaults = !showUserUiDefaults;
+							}}
+						>
+							<div>{$i18n.t('Default Interface Settings')}</div>
+							<div class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+								{$i18n.t(
+									'Set the interface values new users start with. User changes still override these defaults.'
+								)}
+							</div>
+						</button>
+
+						<button
+							class="shrink-0 text-[0.6875rem] text-gray-400 transition hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+							type="button"
+							on:click={() => {
+								showUserUiDefaults = !showUserUiDefaults;
+							}}
+						>
+							{showUserUiDefaults ? $i18n.t('Close') : $i18n.t('Configure')}
+						</button>
+					</div>
+
+					{#if showUserUiDefaults}
+						<div class="mt-0.5 space-y-2">
+							<div class="flex items-center justify-between gap-4 py-0.5">
+								<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+									{Object.keys(defaultUserUiSettings).length} {$i18n.t('settings configured')}
+								</div>
+
+								{#if Object.keys(defaultUserUiSettings).length > 0}
+									<button
+										class="shrink-0 text-[0.6875rem] text-gray-400 transition hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+										type="button"
+										on:click={() => {
+											defaultUserUiSettings = {};
+										}}
+									>
+										{$i18n.t('Clear')}
+									</button>
+								{/if}
+							</div>
+
+							<div class="max-h-[28rem] overflow-y-auto pb-2 pr-1 scrollbar-hover">
+								<InterfaceSettings
+									settingsValue={defaultUserUiSettings}
+									saveSettings={saveDefaultUserUiSettings}
+								/>
+							</div>
+						</div>
+					{/if}
+				</div>
+
 				<div>
 					<div class="mb-2 flex w-full items-start justify-between gap-4">
 						<div class="min-w-0">
