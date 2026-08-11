@@ -209,9 +209,7 @@
 				: 'transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);'}"
 		>
 			{#if !edit && !disabled}
-				<div
-					class=" absolute {showButtons ? '' : 'invisible group-hover:visible'} right-1 -top-2 z-10"
-				>
+				<div class=" absolute {showButtons ? '' : 'hover-reveal'} right-1 -top-2 z-10">
 					<div
 						class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
 					>
@@ -413,7 +411,7 @@
 
 						{#if message.created_at}
 							<div
-								class="mt-1.5 flex shrink-0 items-center text-xs self-center invisible group-hover:visible text-gray-500 font-normal first-letter:capitalize"
+								class="mt-1.5 flex shrink-0 items-center text-xs self-center hover-reveal text-gray-500 font-normal first-letter:capitalize"
 							>
 								<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
 									{dayjs(message.created_at / 1000000).format('HH:mm')}
@@ -555,7 +553,8 @@
 										allowEmbeds={!!message?.meta?.model_id}
 									/>
 								</span>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
-										class="text-gray-500 text-[0.625rem] pl-1 self-center">({$i18n.t('edited')})</span
+										class="text-gray-500 text-[0.625rem] pl-1 self-center"
+										>({$i18n.t('edited')})</span
 									>{/if}
 							{/if}
 						</div>

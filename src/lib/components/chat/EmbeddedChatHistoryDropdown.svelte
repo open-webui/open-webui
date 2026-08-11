@@ -40,7 +40,7 @@
 	>
 		<span class="min-w-0 truncate">{title}</span>
 		<ChevronRight
-			className="size-3.5 shrink-0 text-gray-400/70 opacity-0 transition-opacity group-hover:opacity-100 dark:text-gray-500/70"
+			className="size-3.5 shrink-0 text-gray-400/70 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 dark:text-gray-500/70"
 			strokeWidth="2"
 		/>
 	</button>

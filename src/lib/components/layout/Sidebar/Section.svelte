@@ -134,7 +134,7 @@
 					>
 						<span>{name}</span>
 						<span
-							class="flex opacity-0 group-hover:opacity-100 transition-all duration-100"
+							class="flex opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-100"
 							style="transform: rotate({open ? '90deg' : '0deg'})"
 						>
 							<ChevronRight className="size-[0.6875rem]" />

@@ -39,11 +39,13 @@
 	export let archiveChatHandler: Function;
 	export let renameHandler: Function;
 	export let deleteHandler: Function;
+	export let onOpen: () => void = () => {};
 	export let onClose: Function;
 	export let markUnreadHandler: Function = () => {};
 
 	export let chatId = '';
 
+	let dropdown: Dropdown;
 	let show = false;
 	let pinned = false;
 
@@ -290,9 +292,12 @@
 {/if}
 
 <Dropdown
+	bind:this={dropdown}
 	bind:show
 	onOpenChange={(state) => {
-		if (state === false) {
+		if (state) {
+			onOpen();
+		} else {
 			onClose();
 		}
 	}}
@@ -363,7 +368,7 @@
 				draggable="false"
 				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
 				on:click={() => {
-					show = false;
+					dropdown.close();
 					renameHandler();
 				}}
 			>
@@ -375,7 +380,7 @@
 				draggable="false"
 				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
 				on:click={() => {
-					show = false;
+					dropdown.close();
 					markUnreadHandler();
 				}}
 			>
@@ -389,7 +394,7 @@
 				draggable="false"
 				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
 				on:click={() => {
-					show = false;
+					dropdown.close();
 					pinHandler();
 				}}
 			>
@@ -407,7 +412,7 @@
 					draggable="false"
 					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
 					on:click={() => {
-						show = false;
+						dropdown.close();
 						cloneChatHandler();
 					}}
 				>

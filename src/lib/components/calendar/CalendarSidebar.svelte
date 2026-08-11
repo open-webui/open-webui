@@ -149,7 +149,9 @@
 			</div>
 		</div>
 
-		<div class="grid grid-cols-7 text-center text-[0.5625rem] text-gray-400 dark:text-gray-500 mb-0.5">
+		<div
+			class="grid grid-cols-7 text-center text-[0.5625rem] text-gray-400 dark:text-gray-500 mb-0.5"
+		>
 			{#each ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as d}
 				<div class="py-0.5">{d}</div>
 			{/each}
@@ -224,7 +226,7 @@
 					{#if isDeletable(cal)}
 						<!-- svelte-ignore a11y-click-events-have-key-events -->
 						<span
-							class="shrink-0 p-0.5 rounded opacity-0 group-hover:opacity-100
+							class="shrink-0 p-0.5 rounded opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
 								transition-all duration-150"
 							role="button"
 							tabindex="-1"

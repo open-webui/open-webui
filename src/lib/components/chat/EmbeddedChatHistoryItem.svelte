@@ -22,7 +22,7 @@
 </script>
 
 <div
-	class="group/item flex h-[1.6875rem] w-full cursor-pointer select-none items-center rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40 [&_button:hover]:bg-transparent! dark:[&_button:hover]:bg-transparent! {selected
+	class="group flex h-[1.6875rem] w-full cursor-pointer select-none items-center rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40 [&_button:hover]:bg-transparent! dark:[&_button:hover]:bg-transparent! {selected
 		? 'bg-gray-50/70 dark:bg-gray-800/60'
 		: ''}"
 >
@@ -41,9 +41,7 @@
 	</button>
 
 	<div
-		class="{showMenu
-			? 'visible'
-			: 'invisible group-hover/item:visible'} ml-auto flex shrink-0 items-center gap-1.5 pl-2"
+		class="{showMenu ? 'visible' : 'hover-reveal'} ml-auto flex shrink-0 items-center gap-1.5 pl-2"
 	>
 		<Dropdown
 			bind:show={showMenu}
@@ -54,7 +52,10 @@
 				onMenuOpenChange(item.id, state);
 			}}
 		>
-			<Tooltip content={$i18n.t('More')} className="group-hover/item:opacity-100 opacity-0">
+			<Tooltip
+				content={$i18n.t('More')}
+				className="group-hover:opacity-100 group-focus-within:opacity-100 opacity-0"
+			>
 				<button
 					type="button"
 					aria-label={$i18n.t('More Options')}

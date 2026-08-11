@@ -335,8 +335,8 @@
 					<!-- Delete -->
 					<div class="pt-1.5">
 						<button
+							class="hover-reveal p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-lg"
 							aria-label={$i18n.t('Delete')}
-							class="invisible group-hover:visible p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-lg"
 							on:click={() => deleteIndices(di.indices)}
 						>
 							<svg

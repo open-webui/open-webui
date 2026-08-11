@@ -64,6 +64,16 @@ code {
 	@apply bg-gray-50/40 dark:bg-gray-800/40;
 }
 
+/* visibility:hidden is not focusable, so a keyboard user could never reveal these */
+.hover-reveal {
+	@apply opacity-0 pointer-events-none;
+}
+
+.group:hover .hover-reveal,
+.group:focus-within .hover-reveal {
+	@apply opacity-100 pointer-events-auto;
+}
+
 .marked a {
 	@apply underline;
 }

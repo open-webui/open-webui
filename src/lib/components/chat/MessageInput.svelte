@@ -1765,7 +1765,7 @@
 														class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
 														false)
 															? ''
-															: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
+															: 'hover-reveal transition'}"
 														type="button"
 														aria-label={$i18n.t('Remove file')}
 														on:click={() => {

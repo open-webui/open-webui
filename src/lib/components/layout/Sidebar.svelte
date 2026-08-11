@@ -1204,7 +1204,7 @@
 									<div class=" self-center text-[0.8125rem] leading-5">{$i18n.t('New Chat')}</div>
 								</div>
 
-								<HotkeyHint name="newChat" className=" group-hover:visible invisible" />
+								<HotkeyHint name="newChat" className=" hover-reveal " />
 							</a>
 						</div>
 
@@ -1225,7 +1225,7 @@
 								<div class="flex flex-1 self-center translate-y-[0.5px]">
 									<div class=" self-center text-[0.8125rem] leading-5">{$i18n.t('Search')}</div>
 								</div>
-								<HotkeyHint name="search" className=" group-hover:visible invisible" />
+								<HotkeyHint name="search" className=" hover-reveal " />
 							</button>
 						</div>
 
