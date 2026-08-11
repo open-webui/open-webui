@@ -307,21 +307,21 @@ async def has_base_model_access(
     db=None,
 ) -> bool:
     """
-    Walk the ``base_model_id`` chain and verify the caller has read access
-    at every hop.
+    Walk the ``base_model_id`` chain and require direct read access or an
+    explicit same-owner inheritance grant at every registered hop.
 
-    A base model without a ``model`` table row is admin-only, matching how
-    unregistered models are treated for direct use (``get_filtered_models``
-    hides them from non-admins and ``check_model_access`` rejects them), so
-    a shared preset cannot be used to reach a base model the caller could
-    not use directly.  Returns ``False`` the moment any hop denies access.
+    A base model without a ``model`` table row remains admin-only, matching
+    direct-use behavior. Returns ``False`` as soon as any hop denies access.
     """
-    from open_webui.models.access_grants import AccessGrants
+    from open_webui.models.access_grants import AccessGrants, has_model_inherit_grant
     from open_webui.models.models import Models
 
-    base_model_id = getattr(model_info, 'base_model_id', None)
-    seen = {model_info.id}
-    while base_model_id and base_model_id not in seen:
+    parent_model_info = model_info
+    base_model_id = getattr(parent_model_info, 'base_model_id', None)
+    seen = {parent_model_info.id}
+    while base_model_id:
+        if base_model_id in seen:
+            return False
         seen.add(base_model_id)
         base_model_info = await Models.get_model_by_id(base_model_id, db=db)
         if base_model_info is None:
@@ -336,8 +336,13 @@ async def has_base_model_access(
                 user_group_ids=user_group_ids,
                 db=db,
             )
+            or (
+                has_model_inherit_grant(base_model_info.access_grants)
+                and parent_model_info.user_id == base_model_info.user_id
+            )
         ):
             return False
+        parent_model_info = base_model_info
         base_model_id = getattr(base_model_info, 'base_model_id', None)
     return True
 

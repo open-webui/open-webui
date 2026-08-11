@@ -110,11 +110,21 @@
 		);
 	};
 
-	const isSharedModel = (model) => (model?.access_grants ?? []).length > 0 && !isPublicModel(model);
+	const isProtectedModel = (model) => {
+		return (model?.access_grants ?? []).some(
+			(g) => g.principal_type === 'model' && g.principal_id === '*' && g.permission === 'inherit'
+		);
+	};
+
+	const isSharedModel = (model) =>
+		(model?.access_grants ?? []).length > 0 && !isPublicModel(model) && !isProtectedModel(model);
 
 	const modelAccessLabel = (model) => {
 		if (isPublicModel(model)) {
 			return $i18n.t('Public');
+		}
+		if (isProtectedModel(model)) {
+			return 'Protected';
 		}
 		if (isSharedModel(model)) {
 			return $i18n.t('Shared');
@@ -125,6 +135,9 @@
 	const modelAccessClass = (model) => {
 		if (isPublicModel(model)) {
 			return 'text-[#4f7a5a] dark:text-[#8db395]';
+		}
+		if (isProtectedModel(model)) {
+			return 'text-gray-500 dark:text-gray-400';
 		}
 		if (isSharedModel(model)) {
 			return 'text-[#4f6f93] dark:text-[#8ba6c6]';

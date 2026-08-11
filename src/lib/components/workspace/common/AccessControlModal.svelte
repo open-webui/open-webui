@@ -8,9 +8,9 @@
 
 	type AccessGrant = {
 		id?: string;
-		principal_type: 'user' | 'group' | 'anyone';
+		principal_type: 'user' | 'group' | 'anyone' | 'model';
 		principal_id: string;
-		permission: 'read' | 'write';
+		permission: 'read' | 'write' | 'inherit';
 	};
 
 	export let show = false;
@@ -21,6 +21,7 @@
 	export let share = true;
 	export let sharePublic = true;
 	export let shareOpen = false;
+	export let allowProtected = false;
 	export let shareUsers = true;
 
 	export let onChange = () => {};
@@ -51,6 +52,7 @@
 				{share}
 				{sharePublic}
 				{shareOpen}
+				{allowProtected}
 				{shareUsers}
 			/>
 		</div>

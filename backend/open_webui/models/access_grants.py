@@ -13,7 +13,9 @@ log = logging.getLogger(__name__)
 
 PRINCIPAL_TYPE_ANYONE = 'anyone'
 PRINCIPAL_TYPE_GROUP = 'group'
+PRINCIPAL_TYPE_MODEL = 'model'
 PRINCIPAL_TYPE_USER = 'user'
+PERMISSION_INHERIT = 'inherit'
 WILDCARD_PRINCIPAL_ID = '*'
 
 
@@ -147,7 +149,7 @@ def access_control_to_grants(
     return grants
 
 
-def normalize_access_grants(access_grants: Optional[list]) -> list[dict]:
+def normalize_access_grants(access_grants: Optional[list], resource_type: str | None = None) -> list[dict]:
     """
     Normalize direct access_grants payloads from API forms.
 
@@ -168,11 +170,16 @@ def normalize_access_grants(access_grants: Optional[list]) -> list[dict]:
         principal_id = grant.get('principal_id')
         permission = grant.get('permission')
 
-        if principal_type not in (PRINCIPAL_TYPE_USER, PRINCIPAL_TYPE_GROUP, PRINCIPAL_TYPE_ANYONE):
-            continue
-        if permission not in ('read', 'write'):
-            continue
         if not isinstance(principal_id, str) or not principal_id:
+            continue
+        if principal_type == PRINCIPAL_TYPE_MODEL:
+            if not (
+                resource_type == 'model' and principal_id == WILDCARD_PRINCIPAL_ID and permission == PERMISSION_INHERIT
+            ):
+                continue
+        elif principal_type not in (PRINCIPAL_TYPE_USER, PRINCIPAL_TYPE_GROUP, PRINCIPAL_TYPE_ANYONE):
+            continue
+        elif permission not in ('read', 'write'):
             continue
         if principal_type == PRINCIPAL_TYPE_ANYONE and (principal_id != WILDCARD_PRINCIPAL_ID or permission != 'read'):
             continue
@@ -186,6 +193,15 @@ def normalize_access_grants(access_grants: Optional[list]) -> list[dict]:
         }
 
     return list(deduped.values())
+
+
+def has_model_inherit_grant(access_grants: Optional[list]) -> bool:
+    return any(
+        grant['principal_type'] == PRINCIPAL_TYPE_MODEL
+        and grant['principal_id'] == WILDCARD_PRINCIPAL_ID
+        and grant['permission'] == PERMISSION_INHERIT
+        for grant in normalize_access_grants(access_grants, resource_type='model')
+    )
 
 
 def has_public_read_access_grant(access_grants: Optional[list]) -> bool:
@@ -458,7 +474,7 @@ class AccessGrantsTable:
                 )
             )
 
-            normalized_grants = normalize_access_grants(access_grants)
+            normalized_grants = normalize_access_grants(access_grants, resource_type=resource_type)
 
             results = []
             for grant_dict in normalized_grants:
