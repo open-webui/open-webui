@@ -16,9 +16,9 @@
 
 	type AccessGrant = {
 		id?: string;
-		principal_type: 'user' | 'group' | 'anyone';
+		principal_type: 'user' | 'group' | 'anyone' | 'model';
 		principal_id: string;
-		permission: 'read' | 'write';
+		permission: 'read' | 'write' | 'inherit';
 	};
 
 	type LegacyAccessControl = {
@@ -35,6 +35,7 @@
 	export let share = true;
 	export let sharePublic = true;
 	export let shareOpen = false;
+	export let allowProtected = false;
 	export let shareUsers = true;
 	export let allowGroups = true;
 	export let defaultPermission: 'read' | 'write' = 'read';
@@ -112,7 +113,7 @@
 		};
 
 		for (const grant of normalized) {
-			if (!['read', 'write'].includes(grant.permission)) {
+			if (grant.permission !== 'read' && grant.permission !== 'write') {
 				continue;
 			}
 
@@ -171,6 +172,14 @@
 				grant.permission === 'read'
 		);
 
+	const hasProtectedGrant = (grants: AccessGrant[]): boolean =>
+		grants.some(
+			(grant) =>
+				grant.principal_type === 'model' &&
+				grant.principal_id === '*' &&
+				grant.permission === 'inherit'
+		);
+
 	const hasPublicWriteGrant = (grants: AccessGrant[]): boolean =>
 		grants.some(
 			(grant) =>
@@ -214,18 +223,21 @@
 		onChange(accessGrants);
 	};
 
-	const getVisibility = (grants: AccessGrant[]): 'private' | 'public' | 'open' => {
+	const getVisibility = (grants: AccessGrant[]): 'private' | 'protected' | 'public' | 'open' => {
 		if (hasAnyoneReadGrant(grants)) return 'open';
 		if (hasPublicReadGrant(grants)) return 'public';
+		if (hasProtectedGrant(grants)) return 'protected';
 		return 'private';
 	};
 
-	const setVisibility = (visibility: 'private' | 'public' | 'open') => {
+	const setVisibility = (visibility: 'private' | 'protected' | 'public' | 'open') => {
 		const filtered = currentGrants().filter(
 			(grant) =>
 				!(
-					(grant.principal_type === 'user' || grant.principal_type === 'anyone') &&
-					grant.principal_id === '*'
+					grant.principal_id === '*' &&
+					(grant.principal_type === 'user' ||
+						grant.principal_type === 'anyone' ||
+						(grant.principal_type === 'model' && grant.permission === 'inherit'))
 				)
 		);
 		if (visibility === 'public') {
@@ -239,6 +251,12 @@
 				principal_type: 'anyone',
 				principal_id: '*',
 				permission: 'read'
+			});
+		} else if (visibility === 'protected') {
+			filtered.push({
+				principal_type: 'model',
+				principal_id: '*',
+				permission: 'inherit'
 			});
 		}
 		commitAccessGrants(filtered);
@@ -480,7 +498,7 @@
 		<div class="flex gap-2 items-center">
 			<div>
 				<div class="p-2 bg-black/5 dark:bg-white/5 rounded-full">
-					{#if getVisibility(accessGrants ?? []) === 'private'}
+					{#if ['private', 'protected'].includes(getVisibility(accessGrants ?? []))}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
@@ -525,10 +543,15 @@
 						class="outline-none bg-transparent text-sm font-normal block w-fit pr-8 max-w-full placeholder-gray-400"
 						value={getVisibility(accessGrants ?? [])}
 						on:change={(e) => {
-							setVisibility((e.target as HTMLSelectElement).value as 'private' | 'public' | 'open');
+							setVisibility(
+								(e.target as HTMLSelectElement).value as 'private' | 'protected' | 'public' | 'open'
+							);
 						}}
 					>
 						<option class=" text-gray-700" value="private">{$i18n.t('Private')}</option>
+						{#if allowProtected && (share || hasProtectedGrant(accessGrants ?? []))}
+							<option class=" text-gray-700" value="protected">Protected</option>
+						{/if}
 						{#if (share && sharePublic) || hasPublicReadGrant(accessGrants ?? [])}
 							<option class=" text-gray-700" value="public">{$i18n.t('Public')}</option>
 						{/if}
@@ -541,6 +564,8 @@
 				<div class=" text-xs text-gray-400 font-normal">
 					{#if getVisibility(accessGrants ?? []) === 'private'}
 						{$i18n.t('Only select users and groups with permission can access')}
+					{:else if getVisibility(accessGrants ?? []) === 'protected'}
+						Same as Private, but Workspace models owned by the same user can use it as a base
 					{:else if getVisibility(accessGrants ?? []) === 'public'}
 						{$i18n.t('Accessible to all users')}
 					{:else}
