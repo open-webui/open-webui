@@ -1023,6 +1023,9 @@ async def process_tool_result(
                                 'url': file_url,
                             }
                         )
+                        tool_response.append(
+                            f'{tool_function_name}: {item.get("type").capitalize()} file attached successfully.'
+                        )
                     elif item.get('type') == 'resource':
                         resource = item.get('resource', {})
                         text = resource.get('text', '')
