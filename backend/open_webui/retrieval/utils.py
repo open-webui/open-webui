@@ -1416,8 +1416,21 @@ async def get_sources_from_items(
         elif item.get('type') == 'chat':
             # Chat Attached
             chat = await Chats.get_chat_by_id(item.get('id'))
+            has_read_access = bool(chat and (user.role == 'admin' or chat.user_id == user.id))
 
-            if chat and (user.role == 'admin' or chat.user_id == user.id):
+            if chat and not has_read_access:
+                has_read_access = await AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type='shared_chat',
+                    resource_id=chat.id,
+                    permission='read',
+                )
+
+            if chat and not has_read_access and chat.folder_id:
+                folder = await Folders.get_folder_by_id(chat.folder_id)
+                has_read_access = folder and await has_folder_access(user.id, folder, 'read', db=None)
+
+            if has_read_access:
                 messages_map = chat.chat.get('history', {}).get('messages', {})
                 message_id = chat.chat.get('history', {}).get('currentId')
 
