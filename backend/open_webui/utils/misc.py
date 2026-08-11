@@ -368,6 +368,10 @@ def convert_output_to_messages(
                         'name': item.get('name', ''),
                         'arguments': arguments,
                     },
+                    # Echo back provider-specific payload captured with the call.
+                    # Gemini 3 requires its thought_signature on every functionCall
+                    # replayed in the history, otherwise the request is rejected.
+                    **({'extra_content': item['extra_content']} if item.get('extra_content') else {}),
                 }
             )
 
