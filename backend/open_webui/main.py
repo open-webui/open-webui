@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import mimetypes
 import os
@@ -199,6 +200,7 @@ from open_webui.tasks import (
 )  # Import from tasks.py
 from open_webui.utils import logger
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control.folders import has_folder_write_access
 from open_webui.utils.actions import chat_action as chat_action_handler
 from open_webui.utils.asgi_middleware import (
     AuthTokenMiddleware,
@@ -239,6 +241,7 @@ from open_webui.utils.middleware import (
     process_chat_payload,
     process_chat_response,
 )
+from open_webui.utils.misc import merge_model_params
 from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.models import (
     check_model_access,
@@ -1096,17 +1099,14 @@ async def chat_completion(
             await _set_direct_model(request, model, user)
 
         # Model params: global defaults as base, per-model overrides win
-        default_model_params = await Config.get('models.default_params', {}) or {}
-        model_info_params = {
-            **default_model_params,
-            **(model_info.params.model_dump() if model_info and model_info.params else {}),
-        }
+        default_model_params = copy.deepcopy(await Config.get('models.default_params', {}) or {})
+        model_info_params = merge_model_params(
+            default_model_params,
+            model_info.params.model_dump() if model_info and model_info.params else {},
+        )
         request_params = {key: value for key, value in (form_data.get('params') or {}).items() if value is not None}
         if model_info_params or request_params:
-            form_data['params'] = {
-                **model_info_params,
-                **request_params,
-            }
+            form_data['params'] = merge_model_params(model_info_params, request_params)
 
         # Check base model existence for custom models
         if model_info and model_info.base_model_id:
@@ -1272,6 +1272,14 @@ async def chat_completion(
 
             if is_saved_chat_id(chat_id):
                 if is_new_chat:
+                    # The chat created below is persisted with this folder_id.
+                    folder_id = metadata['folder_id']
+                    if folder_id is not None and not await has_folder_write_access(user.id, folder_id):
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail=ERROR_MESSAGES.NOT_FOUND,
+                        )
+
                     # Build the full history upfront with ALL assistant placeholders
                     user_message = metadata.get('user_message') or {}
                     user_message_id = user_message.get('id') if user_message else None
@@ -2142,6 +2150,7 @@ async def get_app_config(request: Request):
         'memories.enable',
         'ui.default_models',
         'ui.default_pinned_models',
+        'ui.default_interface_settings',
         'ui.prompt_suggestions',
         'code_execution.engine',
         'code_interpreter.engine',
@@ -2272,6 +2281,7 @@ async def get_app_config(request: Request):
                     'sharepoint_tenant_id': ONEDRIVE_SHAREPOINT_TENANT_ID,
                 },
                 'ui': {
+                    'default_interface_settings': config.get('ui.default_interface_settings'),
                     'pending_user_overlay_title': config.get('ui.pending_user_overlay_title'),
                     'pending_user_overlay_content': config.get('ui.pending_user_overlay_content'),
                     'response_watermark': config.get('ui.watermark'),

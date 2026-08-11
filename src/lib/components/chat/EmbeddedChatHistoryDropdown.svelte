@@ -35,7 +35,7 @@
 >
 	<button
 		type="button"
-		class="group flex min-w-0 items-center gap-1 text-[13px] font-normal text-gray-600 transition hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+		class="group flex min-w-0 items-center gap-1 text-[0.8125rem] font-normal text-gray-600 transition hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
 		aria-label={$i18n.t('Chat history')}
 	>
 		<span class="min-w-0 truncate">{title}</span>
@@ -92,7 +92,7 @@
 					/>
 				{/each}
 			{:else}
-				<div class="px-2 py-1.5 text-[13px] text-gray-400 dark:text-gray-500">
+				<div class="px-2 py-1.5 text-[0.8125rem] text-gray-400 dark:text-gray-500">
 					{$i18n.t('No chat history')}
 				</div>
 			{/if}

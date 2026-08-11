@@ -188,7 +188,7 @@
 								{#if isPublicChannel(item?.data)}
 									<Hashtag className="size-3" strokeWidth="2.5" />
 								{:else}
-									<Lock className="size-[15px]" strokeWidth="2" />
+									<Lock className="size-[0.9375rem]" strokeWidth="2" />
 								{/if}
 							</div>
 						{:else if item.type === 'model'}

@@ -319,7 +319,7 @@
 			{#if message?.reply_to_message?.user}
 				<div class="relative text-xs mb-1">
 					<div
-						class="absolute h-3 w-7 left-[18px] top-2 rounded-tl-lg border-t-[1.5px] border-l-[1.5px] border-gray-200 dark:border-gray-700 z-0"
+						class="absolute h-3 w-7 left-[1.125rem] top-2 rounded-tl-lg border-t-[1.5px] border-l-[1.5px] border-gray-200 dark:border-gray-700 z-0"
 					></div>
 
 					<button
@@ -555,7 +555,7 @@
 										allowEmbeds={!!message?.meta?.model_id}
 									/>
 								</span>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
-										class="text-gray-500 text-[10px] pl-1 self-center">({$i18n.t('edited')})</span
+										class="text-gray-500 text-[0.625rem] pl-1 self-center">({$i18n.t('edited')})</span
 									>{/if}
 							{/if}
 						</div>
@@ -690,7 +690,7 @@
 
 	.swipe-reply-indicator {
 		position: absolute;
-		left: 8px;
+		left: 0.5rem;
 		top: 0;
 		bottom: 0;
 		display: flex;
@@ -704,8 +704,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 32px;
-		height: 32px;
+		width: 2rem;
+		height: 2rem;
 		border-radius: 50%;
 		background-color: rgba(128, 128, 128, 0.15);
 		color: rgba(128, 128, 128, 0.8);

@@ -29,6 +29,15 @@ def deep_update(d, u):
     return d
 
 
+def merge_model_params(base: dict, override: dict) -> dict:
+    params = {**base, **override}
+    base_custom = base.get('custom_params')
+    override_custom = override.get('custom_params')
+    if isinstance(base_custom, dict) and (override_custom is None or isinstance(override_custom, dict)):
+        params['custom_params'] = {**base_custom, **(override_custom or {})}
+    return params
+
+
 def _strip_filter_entry(entry):
     # Compose list-form env syntax passes surrounding quotes through verbatim
     return (entry or '').strip().strip('"\'').strip()
@@ -1151,17 +1160,17 @@ async def stream_wrapper(response, session, content_handler=None):
 
 def stream_chunks_handler(stream: aiohttp.StreamReader):
     """
-    Handle stream response chunks, supporting large data chunks that exceed the original 16kb limit.
-    When a single line exceeds max_buffer_size, returns an empty JSON string {} and skips subsequent data
-    until encountering normally sized data.
+    Handle stream response chunks without using aiohttp's line reader.
+    When configured and a single line exceeds max_buffer_size, returns an empty
+    JSON string {} and skips subsequent data until encountering normally sized data.
 
     :param stream: The stream reader to handle.
     :return: An async generator that yields the stream data.
     """
 
     max_buffer_size = CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
-    if max_buffer_size is None or max_buffer_size <= 0:
-        return stream
+    if max_buffer_size is not None and max_buffer_size <= 0:
+        max_buffer_size = None
 
     async def yield_safe_stream_chunks():
         buffer = b''
@@ -1172,7 +1181,7 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
                 continue
 
             # In skip_mode, if buffer already exceeds the limit, clear it (it's part of an oversized line)
-            if skip_mode and len(buffer) > max_buffer_size:
+            if max_buffer_size is not None and skip_mode and len(buffer) > max_buffer_size:
                 buffer = b''
 
             lines = (buffer + data).split(b'\n')
@@ -1183,14 +1192,14 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
 
                 if skip_mode:
                     # Skip mode: check if current line is small enough to exit skip mode
-                    if len(line) <= max_buffer_size:
+                    if max_buffer_size is None or len(line) <= max_buffer_size:
                         skip_mode = False
                         yield line
                     else:
                         yield b'data: {}\n'
                 else:
                     # Normal mode: check if line exceeds limit
-                    if len(line) > max_buffer_size:
+                    if max_buffer_size is not None and len(line) > max_buffer_size:
                         skip_mode = True
                         yield b'data: {}\n'
                         log.info('Skip mode triggered, line size: %s', len(line))
@@ -1201,7 +1210,7 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
             buffer = lines[-1]
 
             # Check if buffer exceeds limit
-            if not skip_mode and len(buffer) > max_buffer_size:
+            if max_buffer_size is not None and not skip_mode and len(buffer) > max_buffer_size:
                 skip_mode = True
                 log.info('Skip mode triggered, buffer size: %s', len(buffer))
                 # Clear oversized buffer to prevent unlimited growth

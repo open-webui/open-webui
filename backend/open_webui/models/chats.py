@@ -417,6 +417,20 @@ class ChatTable:
 
         return changed
 
+    @staticmethod
+    def _last_descendant_id(messages: dict, message_id: str) -> str:
+        seen_ids = set()
+        while message_id in messages and message_id not in seen_ids:
+            seen_ids.add(message_id)
+            message = messages[message_id]
+            child_ids = message.get('childrenIds') if isinstance(message, dict) else []
+            child_ids = child_ids if isinstance(child_ids, list) else []
+            next_id = next((child_id for child_id in reversed(child_ids) if child_id in messages), None)
+            if not next_id:
+                break
+            message_id = next_id
+        return message_id
+
     def _repair_chat_current_id(self, chat: dict) -> bool:
         history = chat.get('history')
         if not isinstance(history, dict):
@@ -449,6 +463,12 @@ class ChatTable:
             and current_message.get('role')
             and not current_is_bad_leaf
         ):
+            if current_message.get('contextSummary') or current_message.get('context_summary'):
+                last_descendant_id = self._last_descendant_id(messages, current_id)
+                if last_descendant_id != current_id:
+                    history['currentId'] = last_descendant_id
+                    return True
+
             return False
 
         latest_leaf_id = None
@@ -930,8 +950,7 @@ class ChatTable:
                 'role': role,
                 'timestamp': message.get('timestamp') or int(time.time()),
             }
-
-        history['currentId'] = message_id
+            history['currentId'] = message_id
         return messages[message_id]
 
     async def backfill_messages_by_chat_id(self, chat_id: str, user_id: str, messages: dict[str, dict]) -> None:
@@ -1564,6 +1583,7 @@ class ChatTable:
 
                 repaired_history = self._repair_chat_current_id(chat_item.chat or {})
                 if repaired_history:
+                    chat_item.current_message_id = self.get_current_message_id(chat_item.chat)
                     flag_modified(chat_item, 'chat')
                 if self._sanitize_chat_row(chat_item) or repaired_history:
                     await session.commit()
@@ -1605,6 +1625,7 @@ class ChatTable:
 
                 repaired_history = self._repair_chat_current_id(chat.chat or {})
                 if repaired_history:
+                    chat.current_message_id = self.get_current_message_id(chat.chat)
                     flag_modified(chat, 'chat')
                 if self._sanitize_chat_row(chat) or repaired_history:
                     await session.commit()

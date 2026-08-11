@@ -7,6 +7,7 @@
 
 	export let count: number = 0;
 	export let hasFiles: boolean = false;
+	export let canDelete = true;
 
 	export let onDelete: () => void = () => {};
 	export let onDownload: () => void = () => {};
@@ -64,8 +65,9 @@
 
 	<Tooltip content={$i18n.t('Delete')}>
 		<button
-			class="p-1 rounded transition text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400"
+			class="p-1 rounded transition text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
 			on:click={onDelete}
+			disabled={!canDelete}
 			aria-label={$i18n.t('Delete')}
 		>
 			<GarbageBin className="size-3.5" />

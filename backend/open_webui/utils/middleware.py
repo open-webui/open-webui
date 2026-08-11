@@ -663,7 +663,21 @@ def handle_responses_streaming_event(
                             current_val = {} if isinstance(delta, dict) else ''
                         item[key] = deep_merge(current_val, delta)
 
-            return new_output, None
+                return new_output, None
+
+        return current_output, None
+
+    elif event_type == 'response.output_item.done':
+        # Delta Event: Output item complete
+        item = data.get('item')
+        output_index = data.get('output_index', len(current_output) - 1)
+
+        new_output = list(current_output)
+        if item and 0 <= output_index < len(current_output):
+            new_output[output_index] = item
+        elif item:
+            new_output.append(item)
+        return new_output, {}
 
     elif event_type.startswith('response.') and event_type.endswith('.done'):
         # Delta Events: response.content_part.done, response.text.done, etc.
@@ -709,12 +723,8 @@ def handle_responses_streaming_event(
                             return new_output, {}
                 return current_output, None
 
-            # 2. Skip Output Item done (handled specifically below)
-            if type_name == 'output_item':
-                pass
-
-            # 3. Generic Field Done (text.done, audio.done)
-            elif type_name not in ['completed', 'failed']:
+            # 2. Generic Field Done (text.done, audio.done)
+            if type_name not in ['completed', 'failed']:
                 output_index = data.get('output_index', len(current_output) - 1)
                 if current_output and 0 <= output_index < len(current_output):
                     key = (
@@ -757,18 +767,6 @@ def handle_responses_streaming_event(
                         return new_output, {}
 
         return current_output, None
-
-    elif event_type == 'response.output_item.done':
-        # Delta Event: Output item complete
-        item = data.get('item')
-        output_index = data.get('output_index', len(current_output) - 1)
-
-        new_output = list(current_output)
-        if item and 0 <= output_index < len(current_output):
-            new_output[output_index] = item
-        elif item:
-            new_output.append(item)
-        return new_output, {}
 
     elif event_type == 'response.completed':
         # State Machine Event: Completed
@@ -1978,14 +1976,14 @@ def apply_params_to_form_data(form_data, model):
 
     if model.get('owned_by') == 'ollama':
         # Ollama specific parameters
-        form_data['options'] = params
+        form_data['options'] = {**params, **(form_data.get('options') or {})}
     else:
         if isinstance(params, dict):
             for key, value in params.items():
-                if value is not None:
+                if value is not None and key not in form_data:
                     form_data[key] = value
 
-        if 'logit_bias' in params and params['logit_bias'] is not None:
+        if 'logit_bias' in params and params['logit_bias'] is not None and 'logit_bias' not in form_data:
             try:
                 logit_bias = convert_logit_bias_input_to_json(params['logit_bias'])
 

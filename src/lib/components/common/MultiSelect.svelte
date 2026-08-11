@@ -105,7 +105,7 @@
 {#if open}
 	<div use:portal bind:this={contentEl} transition:flyAndScale>
 		<div
-			class="rounded-2xl min-w-[170px] max-h-72 overflow-y-auto p-1 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+			class="rounded-2xl min-w-[10.625rem] max-h-72 overflow-y-auto p-1 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 		>
 			{#each items as item}
 				<button

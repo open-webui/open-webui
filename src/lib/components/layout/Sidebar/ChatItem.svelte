@@ -478,7 +478,7 @@
 	<DragGhost {x} {y}>
 		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
 			<div class="flex items-center gap-1">
-				<ChatIcon className=" size-[18px]" strokeWidth="1.5" />
+				<ChatIcon className=" size-[1.125rem]" strokeWidth="1.5" />
 				<div class=" text-xs text-white line-clamp-1">
 					{title}
 				</div>
@@ -503,7 +503,7 @@
 	{#if confirmEdit}
 		<div
 			id="sidebar-chat-item"
-			class=" w-full flex justify-between rounded-xl px-2 py-[6px] {id === $chatId || confirmEdit
+			class=" w-full flex justify-between rounded-xl px-2 py-1.5 {id === $chatId || confirmEdit
 				? ($settings?.highContrastMode ?? false)
 					? 'bg-black/[0.035] dark:bg-white/[0.06] selected'
 					: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
@@ -548,7 +548,7 @@
 		>
 			<LinkPreview.Trigger
 				id="sidebar-chat-item"
-				class=" w-full flex justify-between rounded-xl px-2 py-[6px] {id === $chatId || confirmEdit
+				class=" w-full flex justify-between rounded-xl px-2 py-1.5 {id === $chatId || confirmEdit
 					? ($settings?.highContrastMode ?? false)
 						? 'bg-black/[0.035] dark:bg-white/[0.06] selected'
 						: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
@@ -610,7 +610,7 @@
 					{/if}
 					<div
 						dir="auto"
-						class="text-left self-center overflow-hidden w-full h-[20px] truncate {unread
+						class="text-left self-center overflow-hidden w-full h-5 truncate {unread
 							? 'font-normal text-gray-800 dark:text-gray-200'
 							: ''} {showInlineActions && !readonly ? 'pr-12' : ''}"
 					>
@@ -620,7 +620,7 @@
 
 				<!-- Time ago indicator -->
 				{#if (updatedAt ?? createdAt) && !showInlineActions}
-					<div class="shrink-0 self-center text-[10px] text-gray-400 dark:text-gray-500 pl-2">
+					<div class="shrink-0 self-center text-[0.625rem] text-gray-400 dark:text-gray-500 pl-2">
 						{formatTimeAgo((updatedAt ?? createdAt) as number)}
 					</div>
 				{/if}
@@ -642,7 +642,7 @@
 			class="{showInlineActions
 				? 'selected'
 				: 'invisible group-hover:visible'} absolute {className === 'pr-2'
-				? 'right-[8px]'
+				? 'right-[0.5rem]'
 				: 'right-1'} inset-y-0 mr-1.5 flex items-center"
 		>
 			{#if confirmEdit}

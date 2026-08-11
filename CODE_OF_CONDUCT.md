@@ -20,7 +20,7 @@ Examples of behavior that contribute to a positive and professional community in
 
 - **Respecting others.** Be considerate, listen actively, and engage with empathy toward others' viewpoints and experiences.
 - **Constructive feedback.** Provide actionable, thoughtful, and respectful feedback that helps improve the project and encourages collaboration. Avoid unproductive negativity or hypercriticism.
-- **Recognizing volunteer contributions.** Appreciate that contributors dedicate their free time and resources selflessly. Approach them with gratitude and patience.
+- **Recognizing volunteer contributions.** Appreciate that **contributors dedicate their free time and resources selflessly**. Approach them with gratitude and patience.
 - **Focusing on shared goals.** Collaborate in ways that prioritize the health, success, and sustainability of the community over individual agendas.
 
 Examples of unacceptable behavior include:
@@ -32,6 +32,7 @@ Examples of unacceptable behavior include:
 - **Entitlement, demand, or aggression toward contributors.** Volunteers are under no obligation to provide immediate or personalized support. Rude or dismissive behavior will not be tolerated.
 - **Unproductive or destructive behavior.** This includes venting frustration as hostility ("tantrums"), hypercriticism, attention-seeking negativity, or anything that distracts from the project's goals.
 - **Spamming and promotional exploitation.** Sharing irrelevant product promotions or self-promotion in the community is not allowed unless it directly contributes value to the discussion.
+- Posting low-effort, hard to read, essay-length AI generated comments or other forms of low-quality, hard to parse content that puts the burden of understanding on the reader.
 
 ### Feedback and Community Engagement
 

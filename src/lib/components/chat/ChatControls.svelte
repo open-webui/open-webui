@@ -34,6 +34,7 @@
 	import FileNav from './FileNav.svelte';
 	import PyodideFileNav from './PyodideFileNav.svelte';
 	import Overview from './Overview.svelte';
+	import { isSavedChatId } from '$lib/utils/chatId';
 
 	const i18n = getContext('i18n');
 
@@ -72,11 +73,26 @@
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 
 	$: showControlsTab = $user?.role === 'admin' || ($user?.permissions?.chat?.controls ?? true);
-	$: showFilesTab =
+	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
+	const chatContextAvailable = (terminal: any) => chatContext(terminal) !== false;
+	const chatContextNeedsSavedChat = (terminal: any) =>
+		chatContext(terminal)?.context_id === 'chat_id';
+	$: selectedSystemTerminal = ($terminalServers ?? []).find(
+		(t) => t.id && t.id === $selectedTerminalId
+	);
+	$: selectedSystemTerminalAvailable =
+		selectedSystemTerminal &&
+		chatContextAvailable(selectedSystemTerminal) &&
+		!(chatContextNeedsSavedChat(selectedSystemTerminal) && !isSavedChatId(chatId));
+	$: terminalFilesAvailable = !!(
 		($selectedTerminalId &&
-			(($terminalServers ?? []).some((t) => t.id && t.id === $selectedTerminalId) ||
-				$user?.role === 'admin' ||
-				($user?.permissions?.features?.direct_tool_servers ?? true))) ||
+			(selectedSystemTerminalAvailable ||
+				(!selectedSystemTerminal &&
+					($user?.role === 'admin' ||
+						($user?.permissions?.features?.direct_tool_servers ?? true)))))
+	);
+	$: showFilesTab =
+		terminalFilesAvailable ||
 		(codeInterpreterEnabled && $config?.code?.interpreter_engine !== 'jupyter');
 	$: showOverviewTab = hasMessages;
 
@@ -94,13 +110,13 @@
 	}
 
 	// Auto-switch to Files tab when display_file is triggered
-	$: if ($showFileNavPath) {
+	$: if ($showFileNavPath && terminalFilesAvailable) {
 		activeTab = 'files';
 		showControls.set(true);
 	}
 
 	// Auto-open Files tab when a terminal is selected (suppress panel open when full-screen)
-	$: if ($selectedTerminalId && showFilesTab) {
+	$: if ($selectedTerminalId && terminalFilesAvailable) {
 		activeTab = 'files';
 		if (largeScreen) {
 			showControls.set($settings?.showFilesOnTerminalSelect ?? true);
@@ -374,7 +390,7 @@
 										showMessage(node.data.message, true);
 									}}
 								/>
-							{:else if activeTab === 'files' && $selectedTerminalId}
+							{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
 								<FileNav onAttach={handleTerminalAttach} {chatId} />
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav />
@@ -523,7 +539,7 @@
 											showMessage(node.data.message, true);
 										}}
 									/>
-								{:else if activeTab === 'files' && $selectedTerminalId}
+								{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
 									<FileNav onAttach={handleTerminalAttach} overlay={dragged} {chatId} />
 								{:else if activeTab === 'files' && codeInterpreterEnabled}
 									<PyodideFileNav overlay={dragged} />

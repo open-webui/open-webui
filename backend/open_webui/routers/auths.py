@@ -111,6 +111,7 @@ ADMIN_CONFIG_KEYS = {
     'API_KEYS_ALLOWED_ENDPOINTS': 'auth.api_key.allowed_endpoints',
     'DEFAULT_USER_ROLE': 'ui.default_user_role',
     'DEFAULT_GROUP_ID': 'ui.default_group_id',
+    'DEFAULT_INTERFACE_SETTINGS': 'ui.default_interface_settings',
     'JWT_EXPIRES_IN': 'auth.jwt_expiry',
     'ENABLE_COMMUNITY_SHARING': 'ui.enable_community_sharing',
     'ENABLE_MESSAGE_RATING': 'ui.enable_message_rating',
@@ -1196,6 +1197,7 @@ class AdminConfig(BaseModel):
     API_KEYS_ALLOWED_ENDPOINTS: str
     DEFAULT_USER_ROLE: str
     DEFAULT_GROUP_ID: str
+    DEFAULT_INTERFACE_SETTINGS: dict | None = None
     JWT_EXPIRES_IN: str
     ENABLE_COMMUNITY_SHARING: bool
     ENABLE_MESSAGE_RATING: bool
@@ -1220,6 +1222,7 @@ class AdminConfig(BaseModel):
 @router.post('/admin/config')
 async def update_admin_config(request: Request, form_data: AdminConfig, user=Depends(get_admin_user)):
     updates = config_updates(form_data.model_dump(), ADMIN_CONFIG_KEYS)
+    updates['ui.default_interface_settings'] = form_data.DEFAULT_INTERFACE_SETTINGS or {}
     updates['folders.max_file_count'] = int(form_data.FOLDER_MAX_FILE_COUNT) if form_data.FOLDER_MAX_FILE_COUNT else ''
     updates['automations.max_count'] = int(form_data.AUTOMATION_MAX_COUNT) if form_data.AUTOMATION_MAX_COUNT else ''
     updates['automations.min_interval'] = (

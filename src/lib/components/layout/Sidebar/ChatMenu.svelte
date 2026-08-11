@@ -302,11 +302,11 @@
 	</Tooltip>
 
 	<div slot="content">
-		<DropdownMenu className="select-none min-w-[200px] transition">
+		<DropdownMenu className="select-none min-w-[12.5rem] transition">
 			{#if $user?.role === 'admin' || ($user.permissions?.chat?.share ?? true)}
 				<button
 					draggable="false"
-					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
+					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
 					on:click={() => {
 						shareHandler();
 					}}
@@ -321,7 +321,7 @@
 					<button
 						slot="trigger"
 						draggable="false"
-						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
 					>
 						<DownloadIcon className="size-3.5" strokeWidth="1.5" />
 						<div class="flex items-center">{$i18n.t('Download')}</div>
@@ -329,7 +329,7 @@
 
 					<button
 						draggable="false"
-						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
 						on:click={() => {
 							downloadJSONExport();
 						}}
@@ -339,7 +339,7 @@
 
 					<button
 						draggable="false"
-						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
 						on:click={() => {
 							downloadTxt();
 						}}
@@ -349,7 +349,7 @@
 
 					<button
 						draggable="false"
-						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 select-none w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 select-none w-full"
 						on:click={() => {
 							downloadPdf();
 						}}
@@ -361,7 +361,7 @@
 
 			<button
 				draggable="false"
-				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
+				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
 				on:click={() => {
 					show = false;
 					renameHandler();
@@ -373,7 +373,7 @@
 
 			<button
 				draggable="false"
-				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
+				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
 				on:click={() => {
 					show = false;
 					markUnreadHandler();
@@ -387,7 +387,7 @@
 
 			<button
 				draggable="false"
-				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
+				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
 				on:click={() => {
 					show = false;
 					pinHandler();
@@ -405,7 +405,7 @@
 			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true)}
 				<button
 					draggable="false"
-					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
+					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
 					on:click={() => {
 						show = false;
 						cloneChatHandler();
@@ -421,7 +421,7 @@
 					<button
 						slot="trigger"
 						draggable="false"
-						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 select-none w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 select-none w-full"
 					>
 						<FolderIcon className="size-3.5" />
 						<div class="flex items-center">{$i18n.t('Move')}</div>
@@ -430,7 +430,7 @@
 					{#each $folders.sort((a, b) => b.updated_at - a.updated_at) as folder}
 						<button
 							draggable="false"
-							class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 overflow-hidden w-full"
+							class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 overflow-hidden w-full"
 							on:click={() => {
 								moveChatHandler(chatId, folder.id);
 							}}
@@ -447,7 +447,7 @@
 
 			<button
 				draggable="false"
-				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
+				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
 				on:click={() => {
 					archiveChatHandler();
 				}}
@@ -458,7 +458,7 @@
 
 			<button
 				draggable="false"
-				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[13px] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
+				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
 				on:click={() => {
 					deleteHandler();
 				}}

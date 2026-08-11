@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import logging
 import mimetypes
 import os
@@ -11,6 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Callable, Iterator, Optional, Sequence, Union
+from urllib.parse import unquote, urlparse
 
 import tiktoken
 from fastapi import (
@@ -46,6 +48,8 @@ from open_webui.config import (
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
+    AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+    AIOHTTP_CLIENT_SESSION_SSL,
     DEVICE_TYPE,
     DOCKER,
     RAG_EMBEDDING_TIMEOUT,
@@ -62,7 +66,7 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.config import Config
 
 # Document loaders
-from open_webui.retrieval.loaders.youtube import YoutubeLoader
+from open_webui.retrieval.loaders.youtube import YoutubeLoader, YoutubeTranscriptError
 from open_webui.retrieval.utils import (
     build_loader_from_config,
     get_loader_config,
@@ -71,6 +75,7 @@ from open_webui.retrieval.utils import (
     get_embedding_function,
     get_model_path,
     get_reranking_function,
+    is_youtube_url,
     query_collection,
     query_collection_with_hybrid_search,
     query_doc,
@@ -91,6 +96,7 @@ from open_webui.retrieval.web.firecrawl import search_firecrawl
 from open_webui.retrieval.web.google_pse import search_google_pse
 from open_webui.retrieval.web.jina_search import search_jina
 from open_webui.retrieval.web.kagi import search_kagi
+from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 
 # Web search engines
 from open_webui.retrieval.web.main import SearchResult
@@ -441,6 +447,16 @@ class CollectionNameForm(BaseModel):
 
 class ProcessUrlForm(CollectionNameForm):
     url: str
+
+
+class ProcessUrlResponse(BaseModel):
+    status: bool
+    type: str
+    name: str
+    url: str
+    collection_name: str | None = None
+    content: str | None = None
+    file: dict | None = None
 
 
 class SearchForm(BaseModel):
@@ -2127,6 +2143,189 @@ async def process_text(
         )
 
 
+async def _fetch_url(url: str, max_size_mb: int | str | None) -> dict:
+    await asyncio.to_thread(validate_url, url)
+    max_bytes = None
+    if max_size_mb:
+        try:
+            max_bytes = int(max_size_mb) * 1024 * 1024
+        except (TypeError, ValueError):
+            max_bytes = None
+
+    async with get_ssrf_safe_session() as session:
+        async with session.get(
+            url, ssl=AIOHTTP_CLIENT_SESSION_SSL, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS
+        ) as response:
+            response.raise_for_status()
+
+            content_type = response.headers.get('Content-Type', '')
+            content_disposition = response.headers.get('Content-Disposition', '')
+            content_length = response.headers.get('Content-Length')
+            base_content_type = content_type.split(';')[0].strip().lower()
+            is_attachment = content_disposition.split(';')[0].strip().lower() == 'attachment'
+
+            chunks = []
+            total = 0
+
+            iterator = response.content.iter_chunked(64 * 1024)
+            first_chunk = await anext(iterator, b'')
+
+            if not is_attachment and base_content_type in {'text/html', 'application/xhtml+xml'}:
+                return {'kind': 'web'}
+
+            if not is_attachment and base_content_type in {'', 'application/octet-stream', 'binary/octet-stream'}:
+                sample = first_chunk[:4096].lstrip().lower()
+                if sample.startswith(
+                    (b'<!doctype html', b'<html', b'<head', b'<body', b'<?xml')
+                ) or b'<html' in sample[:1024]:
+                    return {'kind': 'web'}
+
+            if max_bytes and content_length:
+                try:
+                    if int(content_length) > max_bytes:
+                        raise HTTPException(
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_size_mb} MB'),
+                        )
+                except ValueError:
+                    pass
+
+            if first_chunk:
+                chunks.append(first_chunk)
+                total += len(first_chunk)
+                if max_bytes and total > max_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_size_mb} MB'),
+                    )
+
+            async for chunk in iterator:
+                if not chunk:
+                    continue
+                chunks.append(chunk)
+                total += len(chunk)
+                if max_bytes and total > max_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_size_mb} MB'),
+                    )
+
+            data = b''.join(chunks)
+
+            image_mime = None
+            try:
+                from PIL import Image
+
+                image = Image.open(io.BytesIO(data))
+                image.verify()
+                image_mime = Image.MIME.get(image.format) if image.format else None
+            except Exception:
+                image_mime = None
+
+            if base_content_type.startswith('image/') and image_mime is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT('Invalid image content'),
+                )
+
+            filename = ''
+            filename_star = re.search(r"filename\*=UTF-8''([^;]+)", content_disposition, re.IGNORECASE)
+            filename_plain = re.search(r'filename="?([^";]+)"?', content_disposition, re.IGNORECASE)
+            if filename_star:
+                filename = unquote(filename_star.group(1))
+            elif filename_plain:
+                filename = filename_plain.group(1)
+            if not filename:
+                filename = os.path.basename(urlparse(url).path)
+            filename = os.path.basename(filename or 'download')
+
+            resolved_content_type = (
+                image_mime or base_content_type or mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+            )
+            if not os.path.splitext(filename)[1]:
+                filename = f'{filename}{mimetypes.guess_extension(resolved_content_type) or ".bin"}'
+
+            return {
+                'kind': 'file',
+                'data': data,
+                'filename': filename,
+                'content_type': resolved_content_type,
+            }
+
+
+@router.post('/process/url', response_model=ProcessUrlResponse)
+async def process_url(
+    request: Request,
+    form_data: ProcessUrlForm,
+    process: bool = Query(True, description='Whether to process and save the content'),
+    user=Depends(get_verified_user),
+):
+    try:
+        if is_youtube_url(form_data.url):
+            result = await process_web(request, form_data, process=process, user=user)
+            return {
+                'status': True,
+                'type': 'youtube',
+                'name': form_data.url,
+                'url': form_data.url,
+                'collection_name': result.get('collection_name'),
+                'content': result.get('content'),
+            }
+
+        config = await get_retrieval_config()
+        url_result = await _fetch_url(form_data.url, config.FILE_MAX_SIZE)
+
+        if url_result['kind'] == 'web':
+            result = await process_web(request, form_data, process=process, user=user)
+            return {
+                'status': True,
+                'type': 'web',
+                'name': form_data.url,
+                'url': form_data.url,
+                'collection_name': result.get('collection_name'),
+                'content': result.get('content'),
+            }
+
+        from open_webui.routers.files import upload_file_handler
+
+        is_image = url_result['content_type'].startswith('image/')
+        file = UploadFile(
+            file=io.BytesIO(url_result['data']),
+            filename=url_result['filename'],
+            headers={'content-type': url_result['content_type']},
+        )
+        uploaded_file = await upload_file_handler(
+            request,
+            file=file,
+            metadata={'source_url': form_data.url},
+            process=process and not is_image,
+            process_in_background=False,
+            user=user,
+        )
+        file_data = uploaded_file.model_dump() if hasattr(uploaded_file, 'model_dump') else uploaded_file
+        file_id = file_data.get('id') if isinstance(file_data, dict) else None
+        if file_id:
+            refreshed_file = await Files.get_file_by_id(file_id)
+            if refreshed_file:
+                file_data = refreshed_file.model_dump()
+        return {
+            'status': True,
+            'type': 'image' if is_image else 'file',
+            'name': url_result['filename'],
+            'url': form_data.url,
+            'collection_name': (file_data.get('meta') or {}).get('collection_name'),
+            'file': file_data,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e, 'Error processing URL'),
+        )
+
+
 @router.post('/process/youtube')
 @router.post('/process/web')
 async def process_web(
@@ -2137,8 +2336,25 @@ async def process_web(
     user=Depends(get_verified_user),
 ):
     config = await get_retrieval_config()
+
     try:
         content, docs = await get_content_from_url(request, form_data.url)
+    except HTTPException:
+        raise
+    except YoutubeTranscriptError as e:
+        log.warning('YouTube transcript unavailable for %s: %s', form_data.url, e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e, f'Could not read content from {form_data.url}'),
+        )
+
+    try:
         log.debug('text_content: %s', content)
 
         if process:
