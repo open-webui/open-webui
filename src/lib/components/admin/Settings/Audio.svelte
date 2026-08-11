@@ -8,7 +8,8 @@
 		getAudioConfig,
 		updateAudioConfig,
 		getModels as _getModels,
-		getVoices as _getVoices
+		getVoices as _getVoices,
+		cloneVoice as _cloneVoice
 	} from '$lib/apis/audio';
 	import { config, settings } from '$lib/stores';
 
@@ -46,6 +47,15 @@
 	let TTS_MISTRAL_API_KEY = '';
 	let TTS_MISTRAL_API_BASE_URL = '';
 
+	let VOICE_CLONE_API_KEY = '';
+	let VOICE_CLONE_API_BASE_URL = '';
+	let VOICE_CLONE_API_BASE_URLS: string[] = [];
+	let VOICE_CLONE_MODELS: { id: string }[] = [];
+	let VOICE_CLONE_MODEL = '';
+	let VOICE_CLONE_VOICE_ID = '';
+	let VOICE_CLONE_FILE: File | null = null;
+	let VOICE_CLONE_LOADING = false;
+
 	let STT_OPENAI_API_BASE_URL = '';
 	let STT_OPENAI_API_KEY = '';
 	let STT_OPENAI_API_REQUEST_FORMAT = 'multipart';
@@ -78,6 +88,9 @@
 	let voices: SpeechSynthesisVoice[] = [];
 	let providerVoices: Voice[] = [];
 	let models: Awaited<ReturnType<typeof _getModels>>['models'] = [];
+	$: VOICE_CLONE_DOCS_URL = VOICE_CLONE_API_BASE_URL.includes('minimaxi.com')
+		? 'https://platform.minimaxi.com/docs/api-reference/voice-cloning-clone'
+		: 'https://platform.minimax.io/docs/api-reference/voice-cloning-clone';
 	const inputClass =
 		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const textareaClass =
@@ -138,9 +151,9 @@
 		try {
 			openaiParams = TTS_OPENAI_PARAMS ? JSON.parse(TTS_OPENAI_PARAMS) : {};
 			TTS_OPENAI_PARAMS = JSON.stringify(openaiParams, null, 2);
-		} catch (e) {
+		} catch {
 			toast.error($i18n.t('Invalid JSON format for Parameters'));
-			return;
+			return false;
 		}
 
 		const res = await updateAudioConfig(localStorage.token, {
@@ -158,6 +171,10 @@
 				MISTRAL_API_KEY: TTS_MISTRAL_API_KEY,
 				MISTRAL_API_BASE_URL: TTS_MISTRAL_API_BASE_URL,
 				SPLIT_ON: TTS_SPLIT_ON
+			},
+			voice_clone: {
+				API_KEY: VOICE_CLONE_API_KEY,
+				API_BASE_URL: VOICE_CLONE_API_BASE_URL
 			},
 			stt: {
 				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
@@ -182,6 +199,52 @@
 		if (res) {
 			saveHandler();
 			config.set(await getBackendConfig());
+			return true;
+		}
+
+		return false;
+	};
+
+	const cloneVoiceHandler = async () => {
+		if (!VOICE_CLONE_API_KEY) {
+			toast.error($i18n.t('Enter an API key'));
+			return;
+		}
+		if (!VOICE_CLONE_API_BASE_URL) {
+			toast.error($i18n.t('Enter an API base URL'));
+			return;
+		}
+		if (!VOICE_CLONE_FILE) {
+			toast.error($i18n.t('Select an audio file'));
+			return;
+		}
+		if (!VOICE_CLONE_VOICE_ID.trim()) {
+			toast.error($i18n.t('Enter a voice ID'));
+			return;
+		}
+		if (!VOICE_CLONE_MODEL) {
+			toast.error($i18n.t('Select a model'));
+			return;
+		}
+
+		VOICE_CLONE_LOADING = true;
+		try {
+			if (!(await updateConfigHandler())) {
+				return;
+			}
+
+			const res = await _cloneVoice(
+				localStorage.token,
+				VOICE_CLONE_FILE,
+				VOICE_CLONE_VOICE_ID.trim(),
+				VOICE_CLONE_MODEL
+			);
+			VOICE_CLONE_VOICE_ID = res.voice_id;
+			toast.success($i18n.t('Voice cloned successfully'));
+		} catch (e) {
+			toast.error(`${e}`);
+		} finally {
+			VOICE_CLONE_LOADING = false;
 		}
 	};
 
@@ -212,6 +275,12 @@
 			TTS_AZURE_SPEECH_OUTPUT_FORMAT = res.tts.AZURE_SPEECH_OUTPUT_FORMAT;
 			TTS_MISTRAL_API_KEY = res.tts.MISTRAL_API_KEY;
 			TTS_MISTRAL_API_BASE_URL = res.tts.MISTRAL_API_BASE_URL;
+
+			VOICE_CLONE_API_KEY = res.voice_clone?.API_KEY ?? '';
+			VOICE_CLONE_API_BASE_URL = res.voice_clone?.API_BASE_URL ?? '';
+			VOICE_CLONE_API_BASE_URLS = res.voice_clone?.API_BASE_URLS ?? [];
+			VOICE_CLONE_MODELS = res.voice_clone?.MODELS ?? [];
+			VOICE_CLONE_MODEL = VOICE_CLONE_MODELS[0]?.id ?? '';
 
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
 			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
@@ -715,6 +784,74 @@
 					{/each}
 				</SettingsSelect>
 			</AdminSettingRow>
+		</AdminSettingSection>
+
+		<AdminSettingSection title={$i18n.t('MiniMax Voice Cloning')}>
+			<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+				<AdminSettingField label={$i18n.t('API Base URL')}>
+					<input
+						list="voice-clone-api-base-url-list"
+						class={inputClass}
+						placeholder={$i18n.t('API Base URL')}
+						bind:value={VOICE_CLONE_API_BASE_URL}
+					/>
+					<datalist id="voice-clone-api-base-url-list">
+						{#each VOICE_CLONE_API_BASE_URLS as apiBaseUrl}
+							<option value={apiBaseUrl}></option>
+						{/each}
+					</datalist>
+				</AdminSettingField>
+				<AdminSettingField label={$i18n.t('API Key')}>
+					<SensitiveInput
+						variant="settings"
+						placeholder={$i18n.t('API Key')}
+						bind:value={VOICE_CLONE_API_KEY}
+					/>
+				</AdminSettingField>
+			</div>
+
+			<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+				<AdminSettingField label={$i18n.t('Audio File')}>
+					<input
+						class={inputClass}
+						type="file"
+						accept=".mp3,.m4a,.wav,audio/mpeg,audio/mp4,audio/wav"
+						on:change={(event) => {
+							const input = event.currentTarget as HTMLInputElement;
+							VOICE_CLONE_FILE = input.files?.[0] ?? null;
+						}}
+					/>
+				</AdminSettingField>
+				<AdminSettingField label={$i18n.t('Voice ID')}>
+					<input
+						class={inputClass}
+						bind:value={VOICE_CLONE_VOICE_ID}
+						placeholder={$i18n.t('Enter a voice ID')}
+					/>
+				</AdminSettingField>
+			</div>
+
+			<AdminSettingField label={$i18n.t('Model')}>
+				<SettingsSelect bind:value={VOICE_CLONE_MODEL}>
+					{#each VOICE_CLONE_MODELS as model}
+						<option value={model.id}>{model.id}</option>
+					{/each}
+				</SettingsSelect>
+			</AdminSettingField>
+
+			<div class="flex items-center justify-between gap-3">
+				<a class={linkedHelpClass} href={VOICE_CLONE_DOCS_URL} target="_blank" rel="noreferrer">
+					{$i18n.t('API documentation')}
+				</a>
+				<button
+					class="min-w-28 px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full disabled:cursor-not-allowed disabled:opacity-50"
+					type="button"
+					disabled={VOICE_CLONE_LOADING}
+					on:click={cloneVoiceHandler}
+				>
+					{VOICE_CLONE_LOADING ? $i18n.t('Cloning...') : $i18n.t('Clone Voice')}
+				</button>
+			</div>
 		</AdminSettingSection>
 	</div>
 	<div class="flex justify-end pt-6 text-sm font-normal">

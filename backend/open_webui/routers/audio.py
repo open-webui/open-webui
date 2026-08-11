@@ -73,6 +73,18 @@ MAX_FILE_SIZE: int = MAX_FILE_SIZE_MB * 1024 * 1024
 AZURE_MAX_FILE_SIZE_MB: int = 200
 AZURE_MAX_FILE_SIZE: int = AZURE_MAX_FILE_SIZE_MB * 1024 * 1024
 
+MINIMAX_VOICE_CLONE_API_BASE_URLS = (
+    'https://api.minimax.io/v1',
+    'https://api.minimaxi.com/v1',
+)
+MINIMAX_VOICE_CLONE_MODELS = (
+    'speech-2.8-hd',
+    'speech-2.6-hd',
+    'speech-02-hd',
+    'speech-01-hd',
+)
+MINIMAX_VOICE_CLONE_AUDIO_FORMATS = {'mp3', 'm4a', 'wav'}
+
 SPEECH_CACHE_DIR = CACHE_DIR / 'audio' / 'speech'
 SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -90,6 +102,11 @@ TTS_CONFIG_KEYS = {
     'AZURE_SPEECH_OUTPUT_FORMAT': 'audio.tts.azure.speech_output_format',
     'MISTRAL_API_KEY': 'audio.tts.mistral.api_key',
     'MISTRAL_API_BASE_URL': 'audio.tts.mistral.api_base_url',
+}
+
+VOICE_CLONE_CONFIG_KEYS = {
+    'API_KEY': 'audio.voice_clone.minimax.api_key',
+    'API_BASE_URL': 'audio.voice_clone.minimax.api_base_url',
 }
 
 STT_CONFIG_KEYS = {
@@ -251,6 +268,11 @@ class TTSConfigForm(BaseModel):
     MISTRAL_API_BASE_URL: str
 
 
+class VoiceCloneConfigForm(BaseModel):
+    API_KEY: str = ''
+    API_BASE_URL: str = MINIMAX_VOICE_CLONE_API_BASE_URLS[0]
+
+
 class STTConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
@@ -274,22 +296,35 @@ class STTConfigForm(BaseModel):
 class AudioConfigUpdateForm(BaseModel):
     tts: TTSConfigForm
     stt: STTConfigForm
+    voice_clone: Optional[VoiceCloneConfigForm] = None
 
 
 @router.get('/config')
 async def get_audio_config(request: Request, user=Depends(get_admin_user)):
+    voice_clone_config = await get_config_values(VOICE_CLONE_CONFIG_KEYS)
+    voice_clone_config.update(
+        {
+            'API_BASE_URLS': list(MINIMAX_VOICE_CLONE_API_BASE_URLS),
+            'MODELS': [{'id': model} for model in MINIMAX_VOICE_CLONE_MODELS],
+        }
+    )
     return {
         'tts': await get_config_values(TTS_CONFIG_KEYS),
         'stt': await get_config_values(STT_CONFIG_KEYS),
+        'voice_clone': voice_clone_config,
     }
 
 
 @router.post('/config/update')
 async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm, user=Depends(get_admin_user)):
+    voice_clone_updates = (
+        config_updates(form_data.voice_clone.model_dump(), VOICE_CLONE_CONFIG_KEYS) if form_data.voice_clone else {}
+    )
     await Config.upsert(
         {
             **config_updates(form_data.tts.model_dump(), TTS_CONFIG_KEYS),
             **config_updates(form_data.stt.model_dump(), STT_CONFIG_KEYS),
+            **voice_clone_updates,
         }
     )
 
@@ -312,6 +347,112 @@ async def update_audio_config(request: Request, form_data: AudioConfigUpdateForm
         },
     )
     return config
+
+
+async def _read_minimax_voice_clone_response(response, operation: str) -> dict:
+    try:
+        data = await response.json(content_type=None)
+    except Exception as exc:
+        status_code = response.status if response.status >= 400 else status.HTTP_502_BAD_GATEWAY
+        raise HTTPException(status_code=status_code, detail=f'Invalid {operation} response') from exc
+
+    base_resp = data.get('base_resp') if isinstance(data, dict) else None
+    provider_status = base_resp.get('status_code') if isinstance(base_resp, dict) else None
+    if response.status >= 400 or provider_status not in (0, '0'):
+        detail = base_resp.get('status_msg') if isinstance(base_resp, dict) else None
+        raise HTTPException(
+            status_code=response.status if response.status >= 400 else status.HTTP_400_BAD_REQUEST,
+            detail=f'External: {detail or f"{operation} failed"}',
+        )
+
+    return data
+
+
+@router.post('/voice-clone')
+async def clone_voice(
+    file: UploadFile = File(...),
+    voice_id: str = Form(...),
+    model: str = Form(...),
+    user=Depends(get_admin_user),
+):
+    api_key = await Config.get('audio.voice_clone.minimax.api_key')
+    api_base_url = (
+        await Config.get('audio.voice_clone.minimax.api_base_url') or MINIMAX_VOICE_CLONE_API_BASE_URLS[0]
+    ).rstrip('/')
+
+    if not api_key:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='MiniMax API key is required')
+
+    safe_name = os.path.basename(file.filename or '')
+    extension = safe_name.rsplit('.', 1)[-1].lower() if '.' in safe_name else ''
+    if extension not in MINIMAX_VOICE_CLONE_AUDIO_FORMATS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.FILE_NOT_SUPPORTED)
+
+    voice_id = voice_id.strip()
+    if not voice_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Voice ID is required')
+
+    model = model.strip()
+    if model not in MINIMAX_VOICE_CLONE_MODELS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Unsupported voice clone model')
+
+    contents = await file.read(MAX_FILE_SIZE + 1)
+    if not contents:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Audio file is empty')
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f'Audio file exceeds the {MAX_FILE_SIZE_MB} MB limit',
+        )
+
+    headers = {'Authorization': f'Bearer {api_key}'}
+    if ENABLE_FORWARD_USER_INFO_HEADERS:
+        headers = include_user_info_headers(headers, user)
+
+    upload_form = aiohttp.FormData()
+    upload_form.add_field('purpose', 'voice_clone')
+    upload_form.add_field(
+        'file',
+        contents,
+        filename=safe_name,
+        content_type=file.content_type or mimetypes.guess_type(safe_name)[0] or 'application/octet-stream',
+    )
+
+    try:
+        session = await get_session()
+        async with session.post(
+            url=f'{api_base_url}/files/upload',
+            data=upload_form,
+            headers=headers,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        ) as upload_response:
+            upload_data = await _read_minimax_voice_clone_response(upload_response, 'voice clone audio upload')
+
+        file_data = upload_data.get('file') if isinstance(upload_data, dict) else None
+        file_id = file_data.get('file_id') if isinstance(file_data, dict) else None
+        if file_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail='Invalid voice clone audio upload response',
+            )
+
+        async with session.post(
+            url=f'{api_base_url}/voice_clone',
+            json={'file_id': file_id, 'voice_id': voice_id, 'model': model},
+            headers={**headers, 'Content-Type': 'application/json'},
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        ) as clone_response:
+            await _read_minimax_voice_clone_response(clone_response, 'voice clone')
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception('MiniMax voice cloning failed')
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail='Voice cloning request failed',
+        ) from exc
+
+    return {'voice_id': voice_id}
 
 
 def load_speech_pipeline(request):

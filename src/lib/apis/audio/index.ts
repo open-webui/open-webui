@@ -27,14 +27,7 @@ export const getAudioConfig = async (token: string) => {
 	return res;
 };
 
-type OpenAIConfigForm = {
-	url: string;
-	key: string;
-	model: string;
-	speaker: string;
-};
-
-export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm) => {
+export const updateAudioConfig = async (token: string, payload: Record<string, unknown>) => {
 	let error = null;
 
 	const res = await fetch(`${AUDIO_API_BASE_URL}/config/update`, {
@@ -54,6 +47,42 @@ export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm
 		.catch((err) => {
 			console.error(err);
 			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const cloneVoice = async (
+	token: string,
+	file: File,
+	voiceId: string,
+	model: string
+): Promise<{ voice_id: string }> => {
+	const data = new FormData();
+	data.append('file', file);
+	data.append('voice_id', voiceId);
+	data.append('model', model);
+
+	let error = null;
+	const res = await fetch(`${AUDIO_API_BASE_URL}/voice-clone`, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${token}`
+		},
+		body: data
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
 			return null;
 		});
 
