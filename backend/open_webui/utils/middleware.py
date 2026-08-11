@@ -1716,6 +1716,19 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
 
             system_message_content = f'<context>Image generation was attempted but failed. The system is currently unable to generate the image. Tell the user that the following error occurred: {error_message}</context>'
 
+    elif not await Config.get('image_generation.enable'):
+        await __event_emitter__(
+            {
+                'type': 'status',
+                'data': {
+                    'description': 'Image generation is disabled',
+                    'done': True,
+                },
+            }
+        )
+
+        system_message_content = '<context>Image generation was requested but the feature is currently disabled by the administrator, so no image was created. Let the user know that image generation is currently unavailable.</context>'
+
     else:
         # Create image(s)
         if await Config.get('image_generation.prompt.enable'):
