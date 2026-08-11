@@ -13,12 +13,16 @@ This is to ensure large feature PRs are discussed with the community first, befo
 <!--
 ### ⚠️ Important: Your PR is a contribution, not a guarantee of merge.
 
+We appreciate thoughtful contributions. Pull requests are for implementation-ready changes that have already been requested, confirmed, or actively discussed in a linked Issue or Discussion. Feature ideas, behavior changes, UI/UX changes, architecture changes, suspected fixes, and unconfirmed approaches should start as an Issue or Discussion instead.
+
+Before opening a PR, make sure the change has a clear linked problem, follows nearby patterns, has been manually tested, and accounts for related or downstream behavior. PRs that are ideas, prototypes, unresolved design questions, one-off patches, or changes where affected paths have not been checked will usually be closed.
+
 The most impactful way to contribute to Open WebUI is through well-written bug reports, detailed feature discussions, and thoughtful ideas. These directly shape the project. If you do open a pull request, please know that Open WebUI is held to the highest standard of code quality, consistency, and architectural coherence, and every line merged becomes something the core team must own, maintain, and support indefinitely. Submitted code may be refactored, rewritten, or used as inspiration for a different implementation. This is not a reflection of your work's quality. It is how we ensure that a small team can deeply understand and evolve every part of the codebase.
 -->
 
 **Before submitting, make sure you've checked and filled out the following:**
 
-- [ ] **Linked Issue/Discussion:** This PR references an existing [Issue](https://github.com/open-webui/open-webui/issues) or [Discussion](https://github.com/open-webui/open-webui/discussions) — `Closes #___` / `Relates to #___`. PRs without a linked issue or discussion will be closed without review.
+- [ ] **Linked Issue/Discussion:** This PR references an existing [Issue](https://github.com/open-webui/open-webui/issues) or active, substantive [Discussion](https://github.com/open-webui/open-webui/discussions) — `Closes #___` / `Relates to #___`. Creating a discussion only to satisfy this checkbox does not count.
 - [ ] **Target branch:** The pull request targets the `dev` branch. **PRs targeting `main` will be immediately closed.**
 - [ ] **Description:** A concise description of the changes is provided below.
 - [ ] **Changelog:** A changelog entry following [Keep a Changelog](https://keepachangelog.com/) format is included at the bottom.
