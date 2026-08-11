@@ -227,11 +227,11 @@ class SharingPermissions(BaseModel):
     prompts: bool = False
     public_prompts: bool = False
     tools: bool = False
-    public_tools: bool = True
+    public_tools: bool = False
     skills: bool = False
     public_skills: bool = False
     notes: bool = False
-    public_notes: bool = True
+    public_notes: bool = False
     folders: bool = False
     public_chats: bool = False
     public_calendars: bool = False
