@@ -23,6 +23,7 @@
 
 	export let history;
 	export let onNodeClick;
+	export let chatUser = null;
 
 	type LayoutDirection = 'vertical' | 'horizontal';
 	type PositionMapEntry = {
@@ -99,7 +100,7 @@
 				id: pos.id,
 				type: 'custom',
 				data: {
-					user: $user,
+					user: chatUser ?? $user,
 					message: history.messages[id],
 					model: $models.find((model) => model.id === history.messages[id].model)
 				},
