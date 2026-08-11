@@ -1700,6 +1700,7 @@
 	"Model filesystem path detected. Model shortname is required for update, cannot continue.": "",
 	"Model Filtering": "",
 	"Model ID": "",
+	"Model ID is already added": "",
 	"Model ID is required.": "",
 	"Model IDs": "",
 	"Model is now private": "",

@@ -140,10 +140,19 @@
 	};
 
 	const addModelHandler = () => {
-		if (modelId) {
-			modelIds = [...modelIds, modelId];
-			modelId = '';
+		const newModelId = modelId.trim();
+
+		if (!newModelId) {
+			return;
 		}
+
+		if (modelIds.includes(newModelId)) {
+			toast.error($i18n.t('Model ID is already added'));
+			return;
+		}
+
+		modelIds = [...modelIds, newModelId];
+		modelId = '';
 	};
 
 	const submitHandler = async () => {
@@ -245,7 +254,7 @@
 			passthroughParams = Array.isArray(connection.config?.passthrough_params)
 				? connection.config.passthrough_params.join(', ')
 				: (connection.config?.passthrough_params ?? '');
-			modelIds = connection.config?.model_ids ?? [];
+			modelIds = [...new Set(connection.config?.model_ids ?? [])];
 
 			if (ollama) {
 				connectionType = connection.config?.connection_type ?? 'local';
