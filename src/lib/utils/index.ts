@@ -542,13 +542,13 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 				<style>
 					pre {
 						background-color: #f6f8fa;
-						border-radius: 6px;
-						padding: 16px;
+						border-radius: 0.375rem;
+						padding: 1rem;
 						overflow: auto;
 					}
 					code {
 						font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-						font-size: 14px;
+						font-size: 0.875rem;
 					}
 					.hljs-keyword { color: #d73a49; }
 					.hljs-string { color: #032f62; }
@@ -562,7 +562,7 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 					.hljs-built_in { color: #005cc5; }
 					blockquote {
 						border-left: 4px solid #dfe2e5;
-						padding-left: 16px;
+						padding-left: 1rem;
 						color: #6a737d;
 						margin-left: 0;
 						margin-right: 0;
@@ -570,13 +570,13 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 					table {
 						border-collapse: collapse;
 						width: 100%;
-						margin-bottom: 16px;
+						margin-bottom: 1rem;
 					}
 					table, th, td {
 						border: 1px solid #dfe2e5;
 					}
 					th, td {
-						padding: 8px 12px;
+						padding: 0.5rem 0.75rem;
 					}
 					th {
 						background-color: #f6f8fa;

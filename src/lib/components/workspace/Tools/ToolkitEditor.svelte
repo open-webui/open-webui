@@ -303,7 +303,7 @@ class Tools:
 				value={content}
 				lang="python"
 				{boilerplate}
-				className="text-[11px]"
+				className="text-[0.6875rem]"
 				onChange={(e) => {
 					_content = e;
 					if (!edit) {

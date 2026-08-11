@@ -150,7 +150,7 @@
 				aria-current={safeSlide === index ? 'true' : undefined}
 			>
 				<span
-					class="pt-[7px] text-xs font-medium text-right {safeSlide === index
+					class="pt-[0.4375rem] text-xs font-medium text-right {safeSlide === index
 						? 'text-gray-900 dark:text-gray-100'
 						: 'text-gray-500 dark:text-gray-400'}">{index + 1}</span
 				>
@@ -221,7 +221,7 @@
 				</svg>
 			</button>
 			<span
-				class="shrink-0 min-w-12 text-center text-[11px] text-gray-500 dark:text-gray-400 tabular-nums"
+				class="shrink-0 min-w-12 text-center text-[0.6875rem] text-gray-500 dark:text-gray-400 tabular-nums"
 				>{safeSlide + 1} / {slides.length}</span
 			>
 			<button
@@ -265,7 +265,7 @@
 			</button>
 			<button
 				type="button"
-				class="shrink-0 min-w-12 h-7 px-1.5 py-1 text-center text-[11px] font-normal text-gray-500 dark:text-gray-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition tabular-nums"
+				class="shrink-0 min-w-12 h-7 px-1.5 py-1 text-center text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition tabular-nums"
 				on:click={resetView}
 				aria-label="Reset zoom"
 			>

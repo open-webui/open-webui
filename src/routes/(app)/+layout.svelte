@@ -554,22 +554,22 @@
 		overflow: auto;
 
 		/* make space  */
-		margin: 5px 0;
+		margin: 0.3125rem 0;
 		padding: 1.75rem 0 1.75rem 1rem;
-		border-radius: 10px;
+		border-radius: 0.625rem;
 	}
 
 	pre[class*='language-'] button {
 		position: absolute;
-		top: 5px;
-		right: 5px;
+		top: 0.3125rem;
+		right: 0.3125rem;
 
 		font-size: 0.9rem;
 		padding: 0.15rem;
 		background-color: #828282;
 
 		border: ridge 1px #7b7b7c;
-		border-radius: 5px;
+		border-radius: 0.3125rem;
 		text-shadow: #c4c4c4 0 0 2px;
 	}
 

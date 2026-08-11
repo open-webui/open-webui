@@ -788,7 +788,7 @@
 							<Emoji className="size-3.5" shortCode={folders[folderId].meta.icon} />
 						</div>
 
-						<div class="hidden group-hover:flex transition-all p-[1px]">
+						<div class="hidden group-hover:flex transition-all p-[0.0625rem]">
 							{#if open}
 								<ChevronDown className=" size-3" strokeWidth="1.5" />
 							{:else}
@@ -800,7 +800,7 @@
 							<FolderIcon className="size-3.5" strokeWidth="1.5" />
 						</div>
 
-						<div class="hidden group-hover:flex transition-all p-[1px]">
+						<div class="hidden group-hover:flex transition-all p-[0.0625rem]">
 							{#if open}
 								<ChevronDown className=" size-3" strokeWidth="1.5" />
 							{:else}
@@ -890,7 +890,7 @@
 		<div slot="content" class="w-full">
 			{#if (folders[folderId]?.childrenIds ?? []).length > 0 || (chats ?? []).length > 0 || hasMoreChats}
 				<div
-					class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
+					class="ml-3 pl-1 mt-[0.0625rem] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
 				>
 					{#if folders[folderId]?.childrenIds}
 						{@const children = folders[folderId]?.childrenIds

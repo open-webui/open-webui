@@ -478,7 +478,7 @@
 	<DragGhost {x} {y}>
 		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
 			<div class="flex items-center gap-1">
-				<ChatIcon className=" size-[18px]" strokeWidth="1.5" />
+				<ChatIcon className=" size-[1.125rem]" strokeWidth="1.5" />
 				<div class=" text-xs text-white line-clamp-1">
 					{title}
 				</div>
@@ -642,7 +642,7 @@
 			class="{showInlineActions
 				? 'selected'
 				: 'invisible group-hover:visible'} absolute {className === 'pr-2'
-				? 'right-[8px]'
+				? 'right-[0.5rem]'
 				: 'right-1'} inset-y-0 mr-1.5 flex items-center"
 		>
 			{#if confirmEdit}

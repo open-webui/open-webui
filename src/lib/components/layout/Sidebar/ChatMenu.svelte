@@ -302,7 +302,7 @@
 	</Tooltip>
 
 	<div slot="content">
-		<DropdownMenu className="select-none min-w-[200px] transition">
+		<DropdownMenu className="select-none min-w-[12.5rem] transition">
 			{#if $user?.role === 'admin' || ($user.permissions?.chat?.share ?? true)}
 				<button
 					draggable="false"

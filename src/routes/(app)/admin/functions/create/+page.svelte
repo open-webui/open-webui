@@ -99,7 +99,7 @@
 
 {#if mounted}
 	{#key func?.content}
-		<div class="px-[16px] h-full min-w-0 overflow-x-hidden">
+		<div class="px-[1rem] h-full min-w-0 overflow-x-hidden">
 			<FunctionEditor
 				id={func?.id ?? ''}
 				name={func?.name ?? ''}

@@ -80,7 +80,7 @@
 			</button>
 
 			<div slot="content">
-				<DropdownMenu className="min-w-[170px]">
+				<DropdownMenu className="min-w-[10.625rem]">
 					{#each visibleActions as action (action.id)}
 						{@const Icon = getActionIcon(action.id)}
 						{#if action.href}

@@ -293,17 +293,17 @@
 				</span>
 			{/if}
 			{#if !writable && !renaming}
-				<span class="text-[10px] text-gray-400 shrink-0">Read-only</span>
+				<span class="text-[0.625rem] text-gray-400 shrink-0">Read-only</span>
 			{/if}
 			{#if entry.type === 'file' && entry.size !== undefined && !renaming}
 				{#if showDate && entry.modified}
-					<span class="text-[10px] text-gray-400 shrink-0"
+					<span class="text-[0.625rem] text-gray-400 shrink-0"
 						>{formatRelativeTime(entry.modified)}</span
 					>
 				{/if}
 				<span class="text-xs text-gray-400 shrink-0">{formatFileSize(entry.size)}</span>
 			{:else if entry.type === 'directory' && showDate && entry.modified && !renaming}
-				<span class="text-[10px] text-gray-400 shrink-0">{formatRelativeTime(entry.modified)}</span>
+				<span class="text-[0.625rem] text-gray-400 shrink-0">{formatRelativeTime(entry.modified)}</span>
 			{/if}
 		</button>
 
@@ -318,10 +318,10 @@
 			</button>
 
 			<div slot="content">
-				<DropdownMenu className="min-w-[150px] z-[9999999]">
+				<DropdownMenu className="min-w-[9.375rem] z-[9999999]">
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
 						on:click={(e) => {
 							e.stopPropagation();
 							const path =
@@ -349,7 +349,7 @@
 
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
 						on:click={(e) => {
 							e.stopPropagation();
 							const path =
@@ -367,7 +367,7 @@
 
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition disabled:opacity-40 disabled:hover:bg-transparent"
 						disabled={!canMutate}
 						on:click={(e) => {
 							e.stopPropagation();
@@ -381,7 +381,7 @@
 
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition disabled:opacity-40 disabled:hover:bg-transparent"
 						disabled={!canMutate}
 						on:click={(e) => {
 							e.stopPropagation();

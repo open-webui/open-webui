@@ -69,11 +69,11 @@
 										{tool?.name}
 									</div>
 									{#if status}
-										<span class="text-[11px] {status.pill} shrink-0">{status.label}</span>
+										<span class="text-[0.6875rem] {status.pill} shrink-0">{status.label}</span>
 									{/if}
 									{#if toolSpecs.length > 0}
 										<span
-											class="inline-flex min-w-3 items-center justify-center text-center text-[11px] leading-none text-gray-500 dark:text-gray-400 shrink-0"
+											class="inline-flex min-w-3 items-center justify-center text-center text-[0.6875rem] leading-none text-gray-500 dark:text-gray-400 shrink-0"
 										>
 											{toolSpecs.length}
 										</span>

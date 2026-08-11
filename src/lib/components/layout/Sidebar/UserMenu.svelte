@@ -42,7 +42,7 @@
 	export let profile = false;
 	export let help = false;
 
-	export let className = 'w-[240px]';
+	export let className = 'w-[15rem]';
 	export let align = 'end';
 
 	export let showActiveUsers = true;

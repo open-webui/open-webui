@@ -1019,7 +1019,7 @@
 		<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">
 			{$i18n.t('No Terminal connection configured.')}
 		</div>
-		<div class="text-[10px] text-gray-400 dark:text-gray-500">
+		<div class="text-[0.625rem] text-gray-400 dark:text-gray-500">
 			{$i18n.t('Add your Open Terminal URL and API key in Settings → Integrations.')}
 		</div>
 	</div>
@@ -1440,7 +1440,7 @@
 						<div class="text-xs text-gray-400 dark:text-gray-500">
 							{$i18n.t('This folder is empty')}
 						</div>
-						<div class="text-[11px] text-gray-300 dark:text-gray-600">
+						<div class="text-[0.6875rem] text-gray-300 dark:text-gray-600">
 							{$i18n.t('Drop files here to upload')}
 						</div>
 					</div>

@@ -48,14 +48,14 @@
 						</div>
 					{:else}
 						<div
-							class="flex h-6 max-w-[9rem] items-center gap-1 rounded-lg border border-gray-100/60 bg-white/60 px-1.5 text-[11px] leading-none text-gray-500 dark:border-white/[0.06] dark:bg-white/[0.025] dark:text-gray-400"
+							class="flex h-6 max-w-[9rem] items-center gap-1 rounded-lg border border-gray-100/60 bg-white/60 px-1.5 text-[0.6875rem] leading-none text-gray-500 dark:border-white/[0.06] dark:bg-white/[0.025] dark:text-gray-400"
 						>
 							{#if file.status === 'uploading'}
 								<span class="shrink-0 text-gray-400 dark:text-gray-500">
 									<Spinner className="size-3" />
 								</span>
 							{/if}
-							<span class="max-w-[80px] truncate">{file.name ?? 'file'}</span>
+							<span class="max-w-[5rem] truncate">{file.name ?? 'file'}</span>
 						</div>
 					{/if}
 				{/each}
