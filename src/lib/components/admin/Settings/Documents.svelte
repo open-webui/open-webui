@@ -387,10 +387,12 @@
 			return;
 		}
 
-		const knowledgeMetadataRes = await reindexKnowledgeMetadata(localStorage.token).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
+		const knowledgeMetadataRes = await reindexKnowledgeMetadata(localStorage.token).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
 		if (!knowledgeMetadataRes) {
 			return;
 		}
@@ -1548,7 +1550,9 @@
 				</AdminSettingRow>
 				<AdminSettingRow
 					label={$i18n.t('Reindex Knowledge and Memory Vectors')}
-					description={$i18n.t('Rebuild vectors for existing knowledge files, knowledge search, and memories.')}
+					description={$i18n.t(
+						'Rebuild vectors for existing knowledge files, knowledge search, and memories.'
+					)}
 				>
 					<button
 						class={actionButtonClass}
