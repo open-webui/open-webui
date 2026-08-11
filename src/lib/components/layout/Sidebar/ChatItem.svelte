@@ -141,10 +141,12 @@
 				? ($settings?.highContrastMode ?? false)
 					? 'bg-black/[0.035] dark:bg-white/[0.055] selected'
 					: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
-				: ' hover:bg-gray-50 dark:hover:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-900'
+				: $mobile
+					? ''
+					: ' hover:bg-gray-50 dark:hover:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-900'
 	}  whitespace-nowrap text-ellipsis transition`;
 
-	const selectChatHandler = () => {
+	const selectChatHandler = (event?: MouseEvent) => {
 		openPreview = false;
 		dispatch('select');
 
@@ -152,13 +154,15 @@
 			selectedFolder.set(null);
 		}
 
-		if ($mobile) {
-			showSidebar.set(false);
-		}
-
 		// Optimistically mark as read in UI when clicked
 		unread = false;
 		lastReadAt = Date.now() / 1000;
+
+		if ($mobile) {
+			event?.preventDefault();
+			void goto(`/c/${id}`);
+			showSidebar.set(false);
+		}
 	};
 
 	const renameChatFromDoubleClick = async (e: MouseEvent) => {
@@ -525,14 +529,14 @@
 			dir="auto"
 			class="text-left self-center overflow-hidden w-full h-5 truncate {unread
 				? 'font-normal text-gray-800 dark:text-gray-200'
-				: ''} {showInlineActions && !readonly ? 'pr-12' : ''}"
+				: ''} {($mobile || showInlineActions) && !readonly ? 'pr-12' : ''}"
 		>
 			{title}
 		</div>
 	</div>
 
 	<!-- Time ago indicator -->
-	{#if (updatedAt ?? createdAt) && !showInlineActions}
+	{#if (updatedAt ?? createdAt) && !showInlineActions && !($mobile && !readonly)}
 		<div class="shrink-0 self-center text-[0.625rem] text-gray-400 dark:text-gray-500 pl-2">
 			{formatTimeAgo((updatedAt ?? createdAt) as number)}
 		</div>
@@ -661,9 +665,11 @@
 	{#if !readonly}
 		<div
 			id="sidebar-chat-item-menu"
-			class="{showInlineActions
+			class="{$mobile
 				? 'selected'
-				: 'invisible group-hover:visible'} absolute {className === 'pr-2'
+				: showInlineActions
+					? 'selected'
+					: 'invisible group-hover:visible'} absolute {className === 'pr-2'
 				? 'right-[0.5rem]'
 				: 'right-1'} inset-y-0 mr-1.5 flex items-center"
 		>
@@ -739,6 +745,7 @@
 						}}
 					>
 						<button
+							type="button"
 							aria-label="Chat Menu"
 							class="flex size-5 items-center justify-center self-center dark:hover:text-white transition m-0"
 							on:click={() => {
