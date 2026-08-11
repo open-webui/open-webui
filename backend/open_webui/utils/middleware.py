@@ -1976,14 +1976,14 @@ def apply_params_to_form_data(form_data, model):
 
     if model.get('owned_by') == 'ollama':
         # Ollama specific parameters
-        form_data['options'] = params
+        form_data['options'] = {**params, **(form_data.get('options') or {})}
     else:
         if isinstance(params, dict):
             for key, value in params.items():
-                if value is not None:
+                if value is not None and key not in form_data:
                     form_data[key] = value
 
-        if 'logit_bias' in params and params['logit_bias'] is not None:
+        if 'logit_bias' in params and params['logit_bias'] is not None and 'logit_bias' not in form_data:
             try:
                 logit_bias = convert_logit_bias_input_to_json(params['logit_bias'])
 

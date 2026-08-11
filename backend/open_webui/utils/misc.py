@@ -29,6 +29,15 @@ def deep_update(d, u):
     return d
 
 
+def merge_model_params(base: dict, override: dict) -> dict:
+    params = {**base, **override}
+    base_custom = base.get('custom_params')
+    override_custom = override.get('custom_params')
+    if isinstance(base_custom, dict) and (override_custom is None or isinstance(override_custom, dict)):
+        params['custom_params'] = {**base_custom, **(override_custom or {})}
+    return params
+
+
 def _strip_filter_entry(entry):
     # Compose list-form env syntax passes surrounding quotes through verbatim
     return (entry or '').strip().strip('"\'').strip()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import mimetypes
 import os
@@ -240,6 +241,7 @@ from open_webui.utils.middleware import (
     process_chat_payload,
     process_chat_response,
 )
+from open_webui.utils.misc import merge_model_params
 from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.models import (
     check_model_access,
@@ -1097,17 +1099,14 @@ async def chat_completion(
             await _set_direct_model(request, model, user)
 
         # Model params: global defaults as base, per-model overrides win
-        default_model_params = await Config.get('models.default_params', {}) or {}
-        model_info_params = {
-            **default_model_params,
-            **(model_info.params.model_dump() if model_info and model_info.params else {}),
-        }
+        default_model_params = copy.deepcopy(await Config.get('models.default_params', {}) or {})
+        model_info_params = merge_model_params(
+            default_model_params,
+            model_info.params.model_dump() if model_info and model_info.params else {},
+        )
         request_params = {key: value for key, value in (form_data.get('params') or {}).items() if value is not None}
         if model_info_params or request_params:
-            form_data['params'] = {
-                **model_info_params,
-                **request_params,
-            }
+            form_data['params'] = merge_model_params(model_info_params, request_params)
 
         # Check base model existence for custom models
         if model_info and model_info.base_model_id:
