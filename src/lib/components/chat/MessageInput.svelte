@@ -357,8 +357,12 @@
 
 		if (chatInput) {
 			chatInputElement.replaceVariables(variables);
-			chatInputElement.focus();
+			focus();
 		}
+	};
+
+	export const focus = (options: FocusOptions = {}) => {
+		chatInputElement?.focus(options);
 	};
 
 	export const setText = async (text?: string, cb?: (text: string) => void) => {
@@ -371,7 +375,7 @@
 
 			chatInputElement?.setText(text);
 			if (!$showCallOverlay) {
-				chatInputElement?.focus();
+				focus();
 			}
 
 			if (text !== '') {
@@ -386,7 +390,7 @@
 	export const showStatus = async () => {
 		showStatusPanel = true;
 		await tick();
-		document.getElementById('chat-input')?.focus();
+		focus({ preventScroll: true });
 	};
 
 	const formatTokenCount = (value: number) => {
@@ -536,7 +540,7 @@
 
 		await tick();
 		if (chatInput) {
-			chatInput.focus();
+			focus({ preventScroll: true });
 			chatInput.dispatchEvent(new Event('input'));
 
 			const words = extractCurlyBraceWords(prompt);
@@ -604,7 +608,7 @@
 		await tick();
 		await inputVariableHandler(text);
 		await tick();
-		document.getElementById('chat-input')?.focus();
+		focus({ preventScroll: true });
 	};
 
 	let command = '';
@@ -1220,7 +1224,7 @@
 							atSelectedModel = data;
 						}
 
-						document.getElementById('chat-input')?.focus();
+						focus({ preventScroll: true });
 					},
 
 					insertTextHandler: insertTextAtCursor,
@@ -1293,7 +1297,7 @@
 							atSelectedModel = data;
 						}
 
-						document.getElementById('chat-input')?.focus();
+						focus({ preventScroll: true });
 					},
 
 					insertTextHandler: insertTextAtCursor,
@@ -1331,7 +1335,7 @@
 							atSelectedModel = data;
 						}
 
-						document.getElementById('chat-input')?.focus();
+						focus({ preventScroll: true });
 					},
 
 					insertTextHandler: insertTextAtCursor,
@@ -1363,7 +1367,7 @@
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
 					onSelect: (e) => {
-						document.getElementById('chat-input')?.focus();
+						focus({ preventScroll: true });
 					},
 
 					insertTextHandler: insertTextAtCursor,
@@ -1382,7 +1386,7 @@
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					i18n,
 					onSelect: (e) => {
-						document.getElementById('chat-input')?.focus();
+						focus({ preventScroll: true });
 					},
 
 					insertTextHandler: insertTextAtCursor,
@@ -1468,7 +1472,7 @@
 	}}
 	onClose={async () => {
 		await tick();
-		chatInputElement?.focus();
+		focus();
 	}}
 />
 
@@ -1544,7 +1548,7 @@
 								recording = false;
 
 								await tick();
-								document.getElementById('chat-input')?.focus();
+								focus({ preventScroll: true });
 							}}
 							onConfirm={async (data) => {
 								const { text, filename } = data;
@@ -1554,7 +1558,7 @@
 								await tick();
 								await insertTextAtCursor(`${text}`);
 								await tick();
-								document.getElementById('chat-input')?.focus();
+								focus({ preventScroll: true });
 
 								if ($settings?.speechAutoSend ?? false) {
 									dispatch('submit', prompt);
@@ -1565,7 +1569,6 @@
 					<form
 						class="w-full flex flex-col gap-1.5 {recording ? 'hidden' : ''}"
 						on:submit|preventDefault={() => {
-							// check if selectedModels support image input
 							dispatch('submit', prompt);
 						}}
 					>
@@ -2424,7 +2427,7 @@
 											{/if}
 										{/if}
 
-										{#if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
+										{#if !embedded && prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip content={$i18n.t('Voice mode')}>

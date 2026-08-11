@@ -518,6 +518,7 @@
 			return true;
 		});
 	};
+
 	const withSelectedText = (text: string) =>
 		embedded && selectedText?.trim()
 			? `${text}\n\nSelected note text for replace_note_content operations:\n${selectedText.trim()}`
@@ -620,8 +621,7 @@
 				await setDefaults();
 			}
 
-			const chatInput = document.getElementById('chat-input');
-			chatInput?.focus();
+			messageInput?.focus({ preventScroll: true });
 		} else if (!embedded) {
 			await goto('/');
 		} else {
@@ -670,7 +670,7 @@
 		await setDefaults();
 		loading = false;
 		await tick();
-		document.getElementById('chat-input')?.focus();
+		messageInput?.focus({ preventScroll: true });
 	};
 
 	const onSelect = async (e) => {
@@ -1212,7 +1212,7 @@
 
 			if (inputElement) {
 				messageInput?.setText(event.data.text);
-				inputElement.focus();
+				messageInput?.focus({ preventScroll: true });
 			}
 		}
 
@@ -1389,8 +1389,7 @@
 				} catch (e) {}
 			}
 
-			const chatInput = document.getElementById('chat-input');
-			chatInput?.focus();
+			messageInput?.focus({ preventScroll: true });
 		};
 		init();
 
@@ -2002,8 +2001,8 @@
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
 
-		const chatInput = document.getElementById('chat-input');
-		setTimeout(() => chatInput?.focus(), 0);
+		await tick();
+		messageInput?.focus({ preventScroll: true });
 	};
 
 	const loadChat = async () => {
@@ -2643,8 +2642,7 @@
 
 		// focus on chat input (skip during voice call to avoid triggering mobile keyboard)
 		if (!$showCallOverlay) {
-			const chatInput = document.getElementById('chat-input');
-			chatInput?.focus();
+			messageInput?.focus({ preventScroll: true });
 		}
 
 		saveSessionSelectedModels();
@@ -2699,13 +2697,13 @@
 			const message = error?.detail ?? error?.message ?? $i18n.t('Context compaction failed');
 			toast.error(message, { id: toastId });
 		} finally {
-			document.getElementById('chat-input')?.focus();
+			messageInput?.focus({ preventScroll: true });
 		}
 	};
 
 	const handleStatusCommand = () => {
 		messageInput?.showStatus();
-		document.getElementById('chat-input')?.focus();
+		messageInput?.focus({ preventScroll: true });
 	};
 
 	const handleModelCommand = (modelId = '') => {
@@ -2720,7 +2718,7 @@
 			);
 			messageInput?.setText('');
 			prompt = '';
-			document.getElementById('chat-input')?.focus();
+			messageInput?.focus({ preventScroll: true });
 			return;
 		}
 
@@ -2729,7 +2727,7 @@
 			toast.error(`Model not found: ${modelId}`);
 			messageInput?.setText('');
 			prompt = '';
-			document.getElementById('chat-input')?.focus();
+			messageInput?.focus({ preventScroll: true });
 			return;
 		}
 
@@ -2739,7 +2737,7 @@
 		toast.success(`Model switched to: ${model.id}`);
 		messageInput?.setText('');
 		prompt = '';
-		document.getElementById('chat-input')?.focus();
+		messageInput?.focus({ preventScroll: true });
 	};
 
 	const handleForkChat = async (messageId: string | null = null) => {
@@ -2783,7 +2781,7 @@
 		} catch (error) {
 			toast.error(`${error}`, { id: toastId });
 		} finally {
-			document.getElementById('chat-input')?.focus();
+			messageInput?.focus({ preventScroll: true });
 		}
 	};
 
@@ -4205,7 +4203,10 @@
 										</div>
 									</div>
 								{/if}
-								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
+								<div
+									id={embedded ? messageInputDropzoneId : undefined}
+									class="pb-2 z-10"
+								>
 									<MessageInput
 										bind:this={messageInput}
 										{history}
