@@ -1605,6 +1605,8 @@
 				toast.error(`${e}`);
 			}
 		}
+
+		await onUpdate();
 	};
 
 	const onUpdate = async ({ file }: { file?: any } = {}) => {
