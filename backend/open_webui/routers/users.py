@@ -53,6 +53,18 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def merge_user_ui_settings(defaults: dict, settings: dict) -> dict:
+    merged = dict(defaults)
+    for key, value in settings.items():
+        default_value = merged.get(key)
+        merged[key] = (
+            merge_user_ui_settings(default_value, value)
+            if isinstance(default_value, dict) and isinstance(value, dict)
+            else value
+        )
+    return merged
+
+
 ############################
 # GetUsers
 # A house is only as strong as its care for the least of
@@ -440,7 +452,15 @@ async def get_user_settings_by_session_user(
     user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
     # user already fetched by get_verified_user — no need to refetch
-    return user.settings
+    default_ui_settings = await Config.get('ui.default_user_settings')
+    if not isinstance(default_ui_settings, dict) or not default_ui_settings:
+        return user.settings
+
+    user_settings = user.settings.model_dump() if isinstance(user.settings, UserSettings) else dict(user.settings or {})
+    ui_settings = user_settings.get('ui') if isinstance(user_settings.get('ui'), dict) else {}
+    user_settings['ui'] = merge_user_ui_settings(default_ui_settings, ui_settings)
+
+    return UserSettings.model_validate(user_settings)
 
 
 ############################
