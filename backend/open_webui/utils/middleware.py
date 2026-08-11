@@ -4479,6 +4479,15 @@ async def streaming_chat_response_handler(response, ctx):
                                                         'name': func.get('name', ''),
                                                         'arguments': func.get('arguments', '{}'),
                                                         'status': 'in_progress',
+                                                        # Provider-specific payload that must survive the
+                                                        # round trip: Gemini 3 rejects a follow-up request
+                                                        # whose functionCall lacks the thought_signature it
+                                                        # returned here (HTTP 400 INVALID_ARGUMENT).
+                                                        **(
+                                                            {'extra_content': tc['extra_content']}
+                                                            if tc.get('extra_content')
+                                                            else {}
+                                                        ),
                                                     }
                                                 )
 
@@ -4902,6 +4911,11 @@ async def streaming_chat_response_handler(response, ctx):
                                     'name': func.get('name', ''),
                                     'arguments': func.get('arguments', '{}'),
                                     'status': 'in_progress',
+                                    # Provider-specific payload that must survive the round
+                                    # trip: Gemini 3 rejects a follow-up request whose
+                                    # functionCall lacks the thought_signature it returned
+                                    # here (HTTP 400 INVALID_ARGUMENT).
+                                    **({'extra_content': tc['extra_content']} if tc.get('extra_content') else {}),
                                 }
                             )
 
