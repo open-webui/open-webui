@@ -16,6 +16,7 @@
 
 	export let saveSettings: Function;
 	export let settingsValue: Record<string, any> | null = null;
+	export let personalSettingsValue: Record<string, any> = {};
 
 	$: currentSettings = (settingsValue ?? $settings ?? {}) as Record<string, any>;
 	$: externalSettings = settingsValue !== null;
@@ -118,10 +119,29 @@
 	const actionButtonClass =
 		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 
-	const matchesDefaultSetting = (key: string, value: unknown) =>
-		!externalSettings &&
-		Object.prototype.hasOwnProperty.call(defaultSettings, key) &&
-		JSON.stringify(defaultSettings[key]) === JSON.stringify(value);
+	const hasSettingPath = (source: Record<string, any>, path: string) => {
+		let current: any = source;
+		for (const part of path.split('.')) {
+			if (!current || typeof current !== 'object' || !Object.prototype.hasOwnProperty.call(current, part)) {
+				return false;
+			}
+			current = current[part];
+		}
+		return true;
+	};
+
+	const settingPathByState: Record<string, string> = {
+		titleAutoGenerate: 'title.auto'
+	};
+
+	const isDefaultSetting = (stateKey: string) => {
+		const path = settingPathByState[stateKey] ?? stateKey;
+		return (
+			!externalSettings &&
+			hasSettingPath(defaultSettings, path) &&
+			!hasSettingPath(personalSettingsValue, path)
+		);
+	};
 
 	const toggleLandingPageMode = async () => {
 		landingPageMode = landingPageMode === '' ? 'chat' : '';
@@ -315,7 +335,7 @@
 		lastSettingsValue = settingsValue;
 		init();
 	}
-	$: textScaleUsesDefault = textScale === null || matchesDefaultSetting('textScale', textScale);
+	$: textScaleUsesDefault = textScale === null || isDefaultSetting('textScale');
 
 	onMount(async () => {
 		init();
@@ -463,6 +483,7 @@
 							ariaLabelledbyId="high-contrast-mode-label"
 							tooltip={true}
 							bind:state={highContrastMode}
+							inherited={isDefaultSetting('highContrastMode')}
 							on:change={() => {
 								saveSettings({ highContrastMode });
 							}}
@@ -485,6 +506,7 @@
 							ariaLabelledbyId="use-chat-title-as-tab-title-label"
 							tooltip={true}
 							bind:state={showChatTitleInTab}
+							inherited={isDefaultSetting('showChatTitleInTab')}
 							on:change={() => {
 								saveSettings({ showChatTitleInTab });
 							}}
@@ -505,6 +527,7 @@
 							ariaLabelledbyId="allow-user-location-label"
 							tooltip={true}
 							bind:state={userLocation}
+							inherited={isDefaultSetting('userLocation')}
 							on:change={() => {
 								toggleUserLocation();
 							}}
@@ -527,6 +550,7 @@
 							ariaLabelledbyId="haptic-feedback-label"
 							tooltip={true}
 							bind:state={hapticFeedback}
+							inherited={isDefaultSetting('hapticFeedback')}
 							on:change={() => {
 								saveSettings({ hapticFeedback });
 							}}
@@ -549,6 +573,7 @@
 							ariaLabelledbyId="copy-formatted-label"
 							tooltip={true}
 							bind:state={copyFormatted}
+							inherited={isDefaultSetting('copyFormatted')}
 							on:change={() => {
 								saveSettings({ copyFormatted });
 							}}
@@ -572,6 +597,7 @@
 								ariaLabelledbyId="toast-notifications-label"
 								tooltip={true}
 								bind:state={showUpdateToast}
+								inherited={isDefaultSetting('showUpdateToast')}
 								on:change={() => {
 									saveSettings({ showUpdateToast });
 								}}
@@ -594,6 +620,7 @@
 								ariaLabelledbyId="whats-new-label"
 								tooltip={true}
 								bind:state={showChangelog}
+								inherited={isDefaultSetting('showChangelog')}
 								on:change={() => {
 									saveSettings({ showChangelog });
 								}}
@@ -619,6 +646,7 @@
 							ariaLabelledbyId="enable-message-queue-label"
 							tooltip={true}
 							bind:state={enableMessageQueue}
+							inherited={isDefaultSetting('enableMessageQueue')}
 							on:change={() => {
 								saveSettings({ enableMessageQueue });
 							}}
@@ -720,6 +748,7 @@
 							tooltip={true}
 							ariaLabelledbyId="chat-bubble-ui-label"
 							bind:state={chatBubble}
+							inherited={isDefaultSetting('chatBubble')}
 							on:change={() => {
 								saveSettings({ chatBubble });
 							}}
@@ -743,6 +772,7 @@
 								ariaLabelledbyId="chat-bubble-username-label"
 								tooltip={true}
 								bind:state={showUsername}
+								inherited={isDefaultSetting('showUsername')}
 								on:change={() => {
 									saveSettings({ showUsername });
 								}}
@@ -766,6 +796,7 @@
 							ariaLabelledbyId="widescreen-mode-label"
 							tooltip={true}
 							bind:state={widescreenMode}
+							inherited={isDefaultSetting('widescreenMode')}
 							on:change={() => {
 								saveSettings({ widescreenMode });
 							}}
@@ -789,6 +820,7 @@
 								ariaLabelledbyId="temp-chat-default-label"
 								tooltip={true}
 								bind:state={temporaryChatByDefault}
+								inherited={isDefaultSetting('temporaryChatByDefault')}
 								on:change={() => {
 									saveSettings({ temporaryChatByDefault });
 								}}
@@ -812,6 +844,7 @@
 							ariaLabelledbyId="fade-streaming-label"
 							tooltip={true}
 							bind:state={chatFadeStreamingText}
+							inherited={isDefaultSetting('chatFadeStreamingText')}
 							on:change={() => {
 								saveSettings({ chatFadeStreamingText });
 							}}
@@ -834,6 +867,7 @@
 							ariaLabelledbyId="render-markdown-user-label"
 							tooltip={true}
 							bind:state={renderMarkdownInUserMessages}
+							inherited={isDefaultSetting('renderMarkdownInUserMessages')}
 							on:change={() => {
 								saveSettings({ renderMarkdownInUserMessages });
 							}}
@@ -856,6 +890,7 @@
 							ariaLabelledbyId="render-markdown-assistant-label"
 							tooltip={true}
 							bind:state={renderMarkdownInAssistantMessages}
+							inherited={isDefaultSetting('renderMarkdownInAssistantMessages')}
 							on:change={() => {
 								saveSettings({ renderMarkdownInAssistantMessages });
 							}}
@@ -878,6 +913,7 @@
 							ariaLabelledbyId="auto-generation-label"
 							tooltip={true}
 							bind:state={titleAutoGenerate}
+							inherited={isDefaultSetting('titleAutoGenerate')}
 							on:change={() => {
 								toggleTitleAutoGenerate();
 							}}
@@ -900,6 +936,7 @@
 							ariaLabelledbyId="follow-up-auto-generation-label"
 							tooltip={true}
 							bind:state={autoFollowUps}
+							inherited={isDefaultSetting('autoFollowUps')}
 							on:change={() => {
 								saveSettings({ autoFollowUps });
 							}}
@@ -922,6 +959,7 @@
 							ariaLabelledbyId="chat-tags-label"
 							tooltip={true}
 							bind:state={autoTags}
+							inherited={isDefaultSetting('autoTags')}
 							on:change={() => {
 								saveSettings({ autoTags });
 							}}
@@ -944,6 +982,7 @@
 							ariaLabelledbyId="auto-copy-label"
 							tooltip={true}
 							bind:state={responseAutoCopy}
+							inherited={isDefaultSetting('responseAutoCopy')}
 							on:change={() => {
 								toggleResponseAutoCopy();
 							}}
@@ -966,6 +1005,7 @@
 							ariaLabelledbyId="response-auto-scroll-label"
 							tooltip={true}
 							bind:state={scrollOnResponseGeneration}
+							inherited={isDefaultSetting('scrollOnResponseGeneration')}
 							on:change={() => {
 								saveSettings({ scrollOnResponseGeneration });
 							}}
@@ -988,6 +1028,7 @@
 							ariaLabelledbyId="insert-suggestion-prompt-label"
 							tooltip={true}
 							bind:state={insertSuggestionPrompt}
+							inherited={isDefaultSetting('insertSuggestionPrompt')}
 							on:change={() => {
 								saveSettings({ insertSuggestionPrompt });
 							}}
@@ -1010,6 +1051,7 @@
 							ariaLabelledbyId="keep-follow-up-prompts-label"
 							tooltip={true}
 							bind:state={keepFollowUpPrompts}
+							inherited={isDefaultSetting('keepFollowUpPrompts')}
 							on:change={() => {
 								saveSettings({ keepFollowUpPrompts });
 							}}
@@ -1032,6 +1074,7 @@
 							ariaLabelledbyId="insert-follow-up-prompt-label"
 							tooltip={true}
 							bind:state={insertFollowUpPrompt}
+							inherited={isDefaultSetting('insertFollowUpPrompt')}
 							on:change={() => {
 								saveSettings({ insertFollowUpPrompt });
 							}}
@@ -1054,6 +1097,7 @@
 							ariaLabelledbyId="regenerate-menu-label"
 							tooltip={true}
 							bind:state={regenerateMenu}
+							inherited={isDefaultSetting('regenerateMenu')}
 							on:change={() => {
 								saveSettings({ regenerateMenu });
 							}}
@@ -1076,6 +1120,7 @@
 							ariaLabelledbyId="always-collapse-label"
 							tooltip={true}
 							bind:state={collapseCodeBlocks}
+							inherited={isDefaultSetting('collapseCodeBlocks')}
 							on:change={() => {
 								saveSettings({ collapseCodeBlocks });
 							}}
@@ -1098,6 +1143,7 @@
 							ariaLabelledbyId="always-expand-label"
 							tooltip={true}
 							bind:state={expandDetails}
+							inherited={isDefaultSetting('expandDetails')}
 							on:change={() => {
 								saveSettings({ expandDetails });
 							}}
@@ -1120,6 +1166,7 @@
 							ariaLabelledbyId="render-markdown-in-previews-label"
 							tooltip={true}
 							bind:state={renderMarkdownInPreviews}
+							inherited={isDefaultSetting('renderMarkdownInPreviews')}
 							on:change={() => {
 								saveSettings({ renderMarkdownInPreviews });
 							}}
@@ -1142,6 +1189,7 @@
 							ariaLabelledbyId="keep-followup-prompts-label"
 							tooltip={true}
 							bind:state={displayMultiModelResponsesInTabs}
+							inherited={isDefaultSetting('displayMultiModelResponsesInTabs')}
 							on:change={() => {
 								saveSettings({ displayMultiModelResponsesInTabs });
 							}}
@@ -1164,6 +1212,7 @@
 							ariaLabelledbyId="scroll-on-branch-change-label"
 							tooltip={true}
 							bind:state={scrollOnBranchChange}
+							inherited={isDefaultSetting('scrollOnBranchChange')}
 							on:change={() => {
 								saveSettings({ scrollOnBranchChange });
 							}}
@@ -1186,6 +1235,7 @@
 							ariaLabelledbyId="show-files-on-terminal-select-label"
 							tooltip={true}
 							bind:state={showFilesOnTerminalSelect}
+							inherited={isDefaultSetting('showFilesOnTerminalSelect')}
 							on:change={() => {
 								saveSettings({ showFilesOnTerminalSelect });
 							}}
@@ -1208,6 +1258,7 @@
 							ariaLabelledbyId="stylized-pdf-export-label"
 							tooltip={true}
 							bind:state={stylizedPdfExport}
+							inherited={isDefaultSetting('stylizedPdfExport')}
 							on:change={() => {
 								saveSettings({ stylizedPdfExport });
 							}}
@@ -1243,6 +1294,7 @@
 							ariaLabelledbyId="floating-action-buttons-label"
 							tooltip={true}
 							bind:state={showFloatingActionButtons}
+							inherited={isDefaultSetting('showFloatingActionButtons')}
 							on:change={() => {
 								saveSettings({ showFloatingActionButtons });
 							}}
@@ -1317,6 +1369,7 @@
 							tooltip={true}
 							ariaLabelledbyId="rich-input-label"
 							bind:state={richTextInput}
+							inherited={isDefaultSetting('richTextInput')}
 							on:change={() => {
 								saveSettings({ richTextInput });
 							}}
@@ -1340,6 +1393,7 @@
 								ariaLabelledbyId="prompt-autocompletion-label"
 								tooltip={true}
 								bind:state={promptAutocomplete}
+								inherited={isDefaultSetting('promptAutocomplete')}
 								on:change={() => {
 									saveSettings({ promptAutocomplete });
 								}}
@@ -1364,6 +1418,7 @@
 								ariaLabelledbyId="show-formatting-toolbar-label"
 								tooltip={true}
 								bind:state={showFormattingToolbar}
+								inherited={isDefaultSetting('showFormattingToolbar')}
 								on:change={() => {
 									saveSettings({ showFormattingToolbar });
 								}}
@@ -1386,6 +1441,7 @@
 								ariaLabelledbyId="insert-prompt-as-rich-text-label"
 								tooltip={true}
 								bind:state={insertPromptAsRichText}
+								inherited={isDefaultSetting('insertPromptAsRichText')}
 								on:change={() => {
 									saveSettings({ insertPromptAsRichText });
 								}}
@@ -1409,6 +1465,7 @@
 							tooltip={true}
 							ariaLabelledbyId="paste-large-label"
 							bind:state={largeTextAsFile}
+							inherited={isDefaultSetting('largeTextAsFile')}
 							on:change={() => {
 								saveSettings({ largeTextAsFile });
 							}}
@@ -1433,6 +1490,7 @@
 							ariaLabelledbyId="detect-artifacts-label"
 							tooltip={true}
 							bind:state={detectArtifacts}
+							inherited={isDefaultSetting('detectArtifacts')}
 							on:change={() => {
 								saveSettings({ detectArtifacts });
 							}}
@@ -1455,6 +1513,7 @@
 							ariaLabelledbyId="iframe-sandbox-allow-same-origin-label"
 							tooltip={true}
 							bind:state={iframeSandboxAllowSameOrigin}
+							inherited={isDefaultSetting('iframeSandboxAllowSameOrigin')}
 							on:change={() => {
 								saveSettings({ iframeSandboxAllowSameOrigin });
 							}}
@@ -1477,6 +1536,7 @@
 							ariaLabelledbyId="iframe-sandbox-allow-forms-label"
 							tooltip={true}
 							bind:state={iframeSandboxAllowForms}
+							inherited={isDefaultSetting('iframeSandboxAllowForms')}
 							on:change={() => {
 								saveSettings({ iframeSandboxAllowForms });
 							}}
@@ -1501,6 +1561,7 @@
 							ariaLabelledbyId="allow-voice-interruption-in-call-label"
 							tooltip={true}
 							bind:state={voiceInterruption}
+							inherited={isDefaultSetting('voiceInterruption')}
 							on:change={() => {
 								saveSettings({ voiceInterruption });
 							}}
@@ -1523,6 +1584,7 @@
 							ariaLabelledbyId="display-emoji-label"
 							tooltip={true}
 							bind:state={showEmojiInCall}
+							inherited={isDefaultSetting('showEmojiInCall')}
 							on:change={() => {
 								saveSettings({ showEmojiInCall });
 							}}
@@ -1587,6 +1649,7 @@
 							ariaLabelledbyId="image-compression-label"
 							tooltip={true}
 							bind:state={imageCompression}
+							inherited={isDefaultSetting('imageCompression')}
 							on:change={() => {
 								saveSettings({ imageCompression });
 							}}
@@ -1610,6 +1673,7 @@
 								ariaLabelledbyId="image-compression-in-channels-label"
 								tooltip={true}
 								bind:state={imageCompressionInChannels}
+								inherited={isDefaultSetting('imageCompressionInChannels')}
 								on:change={() => {
 									saveSettings({ imageCompressionInChannels });
 								}}

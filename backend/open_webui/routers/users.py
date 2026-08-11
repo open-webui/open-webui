@@ -469,9 +469,14 @@ async def get_default_user_permissions_defaults(user=Depends(get_admin_user)):
 
 @router.get('/user/settings', response_model=UserSettings | None)
 async def get_user_settings_by_session_user(
-    user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    raw: bool = False,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     # user already fetched by get_verified_user — no need to refetch
+    if raw:
+        return user.settings
+
     default_interface_settings = await Config.get('ui.default_interface_settings')
     if not isinstance(default_interface_settings, dict) or not default_interface_settings:
         return user.settings
