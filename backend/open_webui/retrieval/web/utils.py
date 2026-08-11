@@ -105,7 +105,16 @@ def _is_global_addr(ip: str) -> bool:
 
 def validate_url(url: Union[str, Sequence[str]]):
     if isinstance(url, str):
-        if isinstance(validators.url(url), validators.ValidationError):
+        # simple_host=True: without it, validators.url() requires a dotted
+        # hostname (a TLD-shaped domain), so single-label hostnames like
+        # `apprise` or `ollama` -- the normal way services address each
+        # other on a Docker Compose / Kubernetes network -- are rejected
+        # here unconditionally, before ENABLE_LOCAL_WEB_FETCH is ever
+        # consulted. The actual internal-vs-external decision still happens
+        # below via the resolved-IP check, which is gated on
+        # ENABLE_LOCAL_WEB_FETCH as intended; this only fixes the URL *shape*
+        # check so it stops overriding that gate for dotless hostnames.
+        if isinstance(validators.url(url, simple_host=True), validators.ValidationError):
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
         # Reject parser-confusing chars: urlparse and requests/aiohttp split
