@@ -18,6 +18,32 @@ ALLOWED_NETLOCS = {
 }
 
 
+class YoutubeTranscriptError(Exception):
+    """A YouTube transcript could not be retrieved."""
+
+
+def _transcript_error_message(error: Exception, video_id: str) -> str:
+    name = type(error).__name__
+
+    if name in {'RequestBlocked', 'IpBlocked'}:
+        return (
+            f'YouTube blocked the transcript request for {video_id} from this server. '
+            'This usually means the server address is rate limited or belongs to a cloud '
+            'provider. A proxy for these requests can be configured under Admin Settings, '
+            'Web Search, Youtube Proxy URL.'
+        )
+    if name == 'TranscriptsDisabled':
+        return f'Transcripts are disabled for the YouTube video {video_id}.'
+    if name == 'AgeRestricted':
+        return f'The YouTube video {video_id} is age restricted, so its transcript cannot be retrieved.'
+    if name in {'VideoUnavailable', 'VideoUnplayable', 'InvalidVideoId'}:
+        return f'The YouTube video {video_id} is unavailable.'
+    if name == 'PoTokenRequired':
+        return f'YouTube requires additional verification to return the transcript for {video_id}.'
+
+    return f'Could not retrieve a transcript for the YouTube video {video_id}.'
+
+
 def _parse_video_id(url: str) -> Optional[str]:
     """Parse a YouTube URL and return the video ID if valid, otherwise None."""
     parsed_url = urlparse(url)
@@ -98,8 +124,8 @@ class YoutubeLoader:
         try:
             transcript_list = transcript_api.list(self.video_id)
         except Exception as e:
-            log.warning(f'Loading YouTube transcript failed: {e}')
-            return []
+            log.warning('Loading YouTube transcript failed: %s', e)
+            raise YoutubeTranscriptError(_transcript_error_message(e, self.video_id)) from e
 
         # Try each language in order of priority
         for lang in self.language:
@@ -139,14 +165,16 @@ class YoutubeLoader:
                 continue
             except Exception as e:
                 log.info("Error finding transcript for language '%s'", lang)
-                raise e
+                raise YoutubeTranscriptError(_transcript_error_message(e, self.video_id)) from e
 
         # If we get here, all languages failed
         languages_tried = ', '.join(self.language)
         log.warning(
             f'No transcript found for any of the specified languages: {languages_tried}. Verify if the video has transcripts, add more languages if needed.'
         )
-        raise NoTranscriptFound(self.video_id, self.language, list(transcript_list))
+        raise YoutubeTranscriptError(
+            f'No transcript found for the YouTube video {self.video_id} in these languages: {languages_tried}.'
+        )
 
     async def aload(self) -> Generator[Document, None, None]:
         """Asynchronously load YouTube transcripts into `Document` objects."""
