@@ -342,7 +342,7 @@ type Config = {
 		auto_redirect?: boolean;
 	};
 	ui?: {
-		default_settings?: Record<string, unknown>;
+		default_interface_settings?: Record<string, unknown>;
 		pending_user_overlay_title?: string;
 		pending_user_overlay_content?: string;
 		response_watermark?: string;

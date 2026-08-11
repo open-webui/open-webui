@@ -68,7 +68,7 @@ def merge_user_ui_settings(defaults: dict, settings: dict) -> dict:
     return merged
 
 
-def strip_default_ui_settings(defaults: dict, settings: dict) -> dict:
+def strip_default_interface_settings(defaults: dict, settings: dict) -> dict:
     stripped = {}
     for key, value in settings.items():
         if value is None:
@@ -76,7 +76,7 @@ def strip_default_ui_settings(defaults: dict, settings: dict) -> dict:
 
         default_value = defaults.get(key)
         if isinstance(default_value, dict) and isinstance(value, dict):
-            nested = strip_default_ui_settings(default_value, value)
+            nested = strip_default_interface_settings(default_value, value)
             if nested:
                 stripped[key] = nested
         elif value != default_value:
@@ -472,13 +472,13 @@ async def get_user_settings_by_session_user(
     user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
     # user already fetched by get_verified_user — no need to refetch
-    default_ui_settings = await Config.get('ui.default_settings')
-    if not isinstance(default_ui_settings, dict) or not default_ui_settings:
+    default_interface_settings = await Config.get('ui.default_interface_settings')
+    if not isinstance(default_interface_settings, dict) or not default_interface_settings:
         return user.settings
 
     user_settings = user.settings.model_dump() if isinstance(user.settings, UserSettings) else dict(user.settings or {})
     ui_settings = user_settings.get('ui') if isinstance(user_settings.get('ui'), dict) else {}
-    user_settings['ui'] = merge_user_ui_settings(default_ui_settings, ui_settings)
+    user_settings['ui'] = merge_user_ui_settings(default_interface_settings, ui_settings)
 
     return UserSettings.model_validate(user_settings)
 
@@ -535,10 +535,10 @@ async def update_user_settings_by_session_user(
         if isinstance(ui_notifications, dict):
             ui_notifications.pop('webhook_url', None)
 
-    default_ui_settings = await Config.get('ui.default_settings')
+    default_interface_settings = await Config.get('ui.default_interface_settings')
     ui_settings = updated_user_settings.get('ui')
-    if isinstance(default_ui_settings, dict) and isinstance(ui_settings, dict):
-        updated_user_settings['ui'] = strip_default_ui_settings(default_ui_settings, ui_settings)
+    if isinstance(default_interface_settings, dict) and isinstance(ui_settings, dict):
+        updated_user_settings['ui'] = strip_default_interface_settings(default_interface_settings, ui_settings)
 
     user = await Users.update_user_settings_by_id(user.id, updated_user_settings, db=db)
     if user:

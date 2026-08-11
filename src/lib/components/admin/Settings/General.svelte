@@ -34,7 +34,7 @@
 	};
 
 	let adminConfig: any = null;
-	let defaultUserUiSettings: Record<string, any> = {};
+	let defaultInterfaceSettings: Record<string, any> = {};
 	let showUserUiDefaults = false;
 
 	let banners: Banner[] = [];
@@ -61,17 +61,17 @@
 		_banners.set(await setBanners(localStorage.token, banners));
 	};
 
-	const saveDefaultUserUiSettings = (updated: Record<string, any>) => {
-		defaultUserUiSettings = { ...defaultUserUiSettings, ...updated };
+	const saveDefaultInterfaceSettings = (updated: Record<string, any>) => {
+		defaultInterfaceSettings = { ...defaultInterfaceSettings, ...updated };
 	};
 
-	const getDefaultUserUiSettings = () => {
-		const value = adminConfig?.DEFAULT_UI_SETTINGS;
+	const getDefaultInterfaceSettings = () => {
+		const value = adminConfig?.DEFAULT_INTERFACE_SETTINGS;
 		return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 	};
 
 	const updateHandler = async () => {
-		adminConfig.DEFAULT_UI_SETTINGS = defaultUserUiSettings;
+		adminConfig.DEFAULT_INTERFACE_SETTINGS = defaultInterfaceSettings;
 
 		const res = await updateAdminConfig(localStorage.token, adminConfig);
 
@@ -88,7 +88,7 @@
 
 	onMount(async () => {
 		adminConfig = await getAdminConfig(localStorage.token);
-		defaultUserUiSettings = getDefaultUserUiSettings();
+		defaultInterfaceSettings = getDefaultInterfaceSettings();
 
 		banners = [...$_banners];
 	});
@@ -416,15 +416,15 @@
 						<div class="mt-0.5 space-y-2">
 							<div class="flex items-center justify-between gap-4 py-0.5">
 								<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
-									{Object.keys(defaultUserUiSettings).length} {$i18n.t('settings configured')}
+									{Object.keys(defaultInterfaceSettings).length} {$i18n.t('settings configured')}
 								</div>
 
-								{#if Object.keys(defaultUserUiSettings).length > 0}
+								{#if Object.keys(defaultInterfaceSettings).length > 0}
 									<button
 										class="shrink-0 text-[0.6875rem] text-gray-400 transition hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
 										type="button"
 										on:click={() => {
-											defaultUserUiSettings = {};
+											defaultInterfaceSettings = {};
 										}}
 									>
 										{$i18n.t('Clear')}
@@ -434,8 +434,8 @@
 
 							<div class="max-h-[28rem] overflow-y-auto pb-2 pr-1 scrollbar-hover">
 								<InterfaceSettings
-									settingsValue={defaultUserUiSettings}
-									saveSettings={saveDefaultUserUiSettings}
+									settingsValue={defaultInterfaceSettings}
+									saveSettings={saveDefaultInterfaceSettings}
 								/>
 							</div>
 						</div>

@@ -19,7 +19,7 @@
 
 	$: currentSettings = (settingsValue ?? $settings ?? {}) as Record<string, any>;
 	$: externalSettings = settingsValue !== null;
-	$: defaultSettings = ($config?.ui?.default_settings ?? {}) as Record<string, any>;
+	$: defaultSettings = ($config?.ui?.default_interface_settings ?? {}) as Record<string, any>;
 
 	let backgroundImageUrl: string | null = null;
 	let inputFiles: FileList | null = null;
