@@ -2397,6 +2397,7 @@ async def process_web(
                 'status': True,
                 'collection_name': collection_name,
                 'filename': form_data.url,
+                'content': content,
                 'file': {
                     'data': {
                         'content': content,
