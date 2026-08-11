@@ -477,7 +477,6 @@ class MistralLoader:
             keepalive_timeout=60,  # Increased keepalive for connection reuse
             enable_cleanup_closed=True,
             force_close=False,  # Allow connection reuse
-            resolver=aiohttp.AsyncResolver(),  # Use async DNS resolver
         )
 
         timeout = aiohttp.ClientTimeout(

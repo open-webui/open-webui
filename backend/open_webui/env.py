@@ -602,6 +602,18 @@ SEARXNG_CLIENT_KEY_FILE = os.getenv('SEARXNG_CLIENT_KEY_FILE', '').strip()
 # When False (default), outbound HTTP requests do not follow 3xx redirects.
 AIOHTTP_CLIENT_ALLOW_REDIRECTS = os.getenv('AIOHTTP_CLIENT_ALLOW_REDIRECTS', 'False').lower() == 'true'
 
+# Opt-in c-ares DNS resolution (aiodns). Off by default: c-ares breaks name
+# resolution in some environments (#28013, #28215). Must run before any
+# TCPConnector is constructed.
+AIOHTTP_CLIENT_ASYNC_DNS_RESOLVER = os.getenv('AIOHTTP_CLIENT_ASYNC_DNS_RESOLVER', 'False').lower() == 'true'
+
+if not AIOHTTP_CLIENT_ASYNC_DNS_RESOLVER:
+    import aiohttp
+
+    aiohttp.DefaultResolver = aiohttp.resolver.ThreadedResolver  # for plugin code
+    aiohttp.resolver.DefaultResolver = aiohttp.resolver.ThreadedResolver
+    aiohttp.connector.DefaultResolver = aiohttp.resolver.ThreadedResolver
+
 # Optional User-Agent override for outbound web-loader fetches.  When set,
 # SafeWebBaseLoader sends this value instead of the default python-requests UA
 # which is aggressively blocked by Cloudflare, Wikipedia, and similar services.
