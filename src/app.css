@@ -409,9 +409,8 @@ input[type='number'] {
 	outline: none;
 }
 
-/* unlayered, so it beats the outline-none utilities used across the app */
-:focus-visible,
-.ProseMirror:focus-visible {
+/* unlayered, so it beats outline-none utilities without ringing rich text editors */
+:focus-visible:not(.ProseMirror):not([contenteditable='true']) {
 	outline: 2px solid theme(--color-blue-500);
 	outline-offset: 2px;
 }
