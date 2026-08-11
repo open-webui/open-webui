@@ -438,6 +438,10 @@ async def reindex_knowledge_base_metadata_embeddings(
     """
     knowledge_bases = await Knowledges.get_knowledge_bases()
     log.info('Reindexing embeddings for %s knowledge bases', len(knowledge_bases))
+    try:
+        await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=KNOWLEDGE_BASES_COLLECTION)
+    except Exception as e:
+        log.debug(e)
 
     success_count = 0
     for kb in knowledge_bases:
