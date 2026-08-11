@@ -1576,7 +1576,16 @@ async def chat_completion(
         try:
             form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
 
-            response = await chat_completion_handler(request, form_data, user)
+            if getattr(request.state, 'image_generation_terminal', False):
+                async def image_generation_terminal_stream():
+                    yield b'data: [DONE]\n\n'
+
+                response = StreamingResponse(
+                    image_generation_terminal_stream(),
+                    media_type='text/event-stream',
+                )
+            else:
+                response = await chat_completion_handler(request, form_data, user)
 
             # When the upstream provider returns an error (e.g. HTTP 400
             # content-filter, quota exceeded), generate_chat_completion

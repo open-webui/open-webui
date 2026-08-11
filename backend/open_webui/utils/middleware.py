@@ -1565,6 +1565,89 @@ async def get_image_urls(delta_images, request, metadata, user) -> list[str]:
     return image_urls
 
 
+def get_media_only_response_type(messages: list) -> str | None:
+    """Return the single media type explicitly requested without response text."""
+    prompt = get_last_user_message(messages)
+    if not isinstance(prompt, str):
+        return None
+
+    normalized = ' '.join(prompt.lower().split())
+    image_only = bool(
+        re.search(
+            r'\b(?:return|respond|reply|output|provide|show|give)\b[^.!?]{0,80}'
+            r'\bonly (?:the )?(?:image|picture|photo|illustration)\b',
+            normalized,
+        )
+        or re.search(r'\bimage[- ]only\b', normalized)
+    )
+    audio_only = bool(
+        re.search(
+            r'\b(?:return|respond|reply|output|provide|play|give)\b[^.!?]{0,80}'
+            r'\bonly (?:the |an? )?(?:audio|audio clip|recording|voice clip)\b',
+            normalized,
+        )
+        or re.search(r'\baudio[- ]only\b', normalized)
+        or re.search(
+            r'\bexactly one (?:audio|audio clip|recording|voice clip)\b',
+            normalized,
+        )
+    )
+
+    if image_only == audio_only:
+        return None
+    return 'image' if image_only else 'audio'
+
+
+def normalize_media_only_response_content(messages: list, content):
+    """Keep only rendered media when the user explicitly requested media-only output."""
+    media_type = get_media_only_response_type(messages)
+    if not isinstance(content, str) or media_type is None:
+        return content
+
+    if media_type == 'image':
+        media = re.findall(
+            r'!\[[^\]\n]*\]\((?:data:image/[^\s)]+|https?://[^\s)]+)\)',
+            content,
+        )
+    else:
+        media = re.findall(
+            r'<audio>\s*(?:data:audio/[^\s<]+|https?://[^\s<]+)\s*</audio>',
+            content,
+        )
+    return '\n\n'.join(media) if media else content
+
+
+def normalize_media_only_response_output(messages: list, output):
+    """Normalize text parts while preserving non-text response output items."""
+    if not isinstance(output, list) or get_media_only_response_type(messages) is None:
+        return output
+
+    normalized_output = []
+    for item in output:
+        if not isinstance(item, dict) or item.get('type') != 'message':
+            normalized_output.append(item)
+            continue
+
+        normalized_parts = []
+        for part in item.get('content', []):
+            if isinstance(part, dict) and part.get('type') == 'output_text':
+                normalized_parts.append(
+                    {
+                        **part,
+                        'text': normalize_media_only_response_content(
+                            messages,
+                            part.get('text'),
+                        ),
+                    }
+                )
+            else:
+                normalized_parts.append(part)
+
+        normalized_output.append({**item, 'content': normalized_parts})
+
+    return normalized_output
+
+
 async def add_file_context(messages: list, chat_id: str, user) -> list:
     """
     Add file URLs to messages for native function calling.
@@ -1695,7 +1778,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                 }
             )
 
-            system_message_content = '<context>The requested image has been edited and created and is now being shown to the user. Let them know that it has been generated.</context>'
+            request.state.image_generation_terminal = True
         except Exception as e:
             log.debug(e)
 
@@ -1793,7 +1876,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
                 }
             )
 
-            system_message_content = '<context>The requested image has been created by the system successfully and is now being shown to the user. Let the user know that the image they requested has been generated and is now shown in the chat.</context>'
+            request.state.image_generation_terminal = True
         except Exception as e:
             log.debug(e)
 
@@ -3569,6 +3652,7 @@ async def outlet_filter_handler(ctx):
 
 async def non_streaming_chat_response_handler(response, ctx):
     request = ctx['request']
+    form_data = ctx['form_data']
 
     user = ctx['user']
     metadata = ctx['metadata']
@@ -3624,6 +3708,18 @@ async def non_streaming_chat_response_handler(response, ctx):
             choices = response_data.get('choices', [])
             response_output = response_data.get('output')
             content = choices[0].get('message', {}).get('content') if choices else ''
+            if choices:
+                content = normalize_media_only_response_content(
+                    form_data.get('messages', []),
+                    content,
+                )
+                choices[0].setdefault('message', {})['content'] = content
+            if response_output:
+                response_output = normalize_media_only_response_output(
+                    form_data.get('messages', []),
+                    response_output,
+                )
+                response_data['output'] = response_output
 
             if choices and (content or response_output):
                 if content or response_output:
@@ -4187,6 +4283,10 @@ async def streaming_chat_response_handler(response, ctx):
                     )
                     last_delta_data = None
                     last_delta_type = None
+                    media_only_response_type = get_media_only_response_type(
+                        form_data.get('messages', [])
+                    )
+                    media_only_markup_complete = False
 
                     async def flush_pending_delta_data(threshold: int = 0):
                         nonlocal delta_count
@@ -4640,6 +4740,11 @@ async def streaming_chat_response_handler(response, ctx):
                                             }
                                             delta_type = 'content'
 
+                                    if media_only_response_type and media_only_markup_complete:
+                                        value = ''
+                                        delta = {}
+                                        data = {'output': full_output()}
+
                                     if value:
                                         if (
                                             output
@@ -4783,6 +4888,23 @@ async def streaming_chat_response_handler(response, ctx):
 
                                             if end:
                                                 break
+
+                                        media_close = ')' if media_only_response_type == 'image' else '</audio>'
+                                        if media_only_response_type and media_close in value:
+                                            current_content = ''.join(content_parts)
+                                            normalized_content = normalize_media_only_response_content(
+                                                form_data.get('messages', []),
+                                                current_content,
+                                            )
+                                            if normalized_content != current_content:
+                                                content_parts = [normalized_content]
+                                                output = normalize_media_only_response_output(
+                                                    form_data.get('messages', []),
+                                                    output,
+                                                )
+                                            media_prefix = '![' if media_only_response_type == 'image' else '<audio>'
+                                            if normalized_content.startswith(media_prefix):
+                                                media_only_markup_complete = True
 
                                         if ENABLE_REALTIME_CHAT_SAVE and save_to_chat:
                                             current_output = full_output()
@@ -4954,6 +5076,7 @@ async def streaming_chat_response_handler(response, ctx):
                     tools = metadata.get('tools', {})
 
                     results = []
+                    suppressed_followup_calls = 0
 
                     def parse_tool_params(tool_call):
                         tool_args = tool_call.get('function', {}).get('arguments', '{}')
@@ -5052,6 +5175,21 @@ async def streaming_chat_response_handler(response, ctx):
                             user,
                         )
 
+                        if (
+                            tool_type == 'builtin'
+                            and tool_function_name in {'generate_image', 'edit_image'}
+                            and isinstance(tool_result, str)
+                        ):
+                            try:
+                                image_result = JSONCodec.loads(tool_result)
+                                if isinstance(image_result, dict):
+                                    suppress_followup = image_result.pop('suppress_followup', False)
+                                    tool_result = JSONCodec.dumps(image_result, ensure_ascii=False)
+                                    if image_result.get('status') == 'success' and suppress_followup is True:
+                                        suppressed_followup_calls += 1
+                            except Exception:
+                                pass
+
                         await terminal_event_handler(
                             tool_function_name,
                             tool_function_params,
@@ -5130,16 +5268,25 @@ async def streaming_chat_response_handler(response, ctx):
                             }
                         )
 
-                    # Append a new empty message item for the next response
-                    output.append(
-                        {
-                            'type': 'message',
-                            'id': output_id('msg'),
-                            'status': 'in_progress',
-                            'role': 'assistant',
-                            'content': [{'type': 'output_text', 'text': ''}],
-                        }
+                    suppress_tool_followup = bool(response_tool_calls) and suppressed_followup_calls == len(
+                        response_tool_calls
                     )
+                    if suppress_tool_followup:
+                        for item in output:
+                            if item.get('type') == 'message':
+                                item['status'] = 'completed'
+                                item['content'] = [{'type': 'output_text', 'text': ''}]
+                    if not suppress_tool_followup:
+                        # Append a new empty message item for the next response
+                        output.append(
+                            {
+                                'type': 'message',
+                                'id': output_id('msg'),
+                                'status': 'in_progress',
+                                'role': 'assistant',
+                                'content': [{'type': 'output_text', 'text': ''}],
+                            }
+                        )
 
                     # Emit citation sources to the frontend for display
                     if citations_enabled:
@@ -5222,6 +5369,9 @@ async def streaming_chat_response_handler(response, ctx):
                             },
                         }
                     )
+
+                    if suppress_tool_followup:
+                        break
 
                     try:
                         new_form_data = {
@@ -5500,6 +5650,18 @@ async def streaming_chat_response_handler(response, ctx):
                             log.exception('Code interpreter continuation failed: %s', error_content)
                             await emit_message_error(error_content)
                             break
+
+                current_content = ''.join(content_parts)
+                normalized_content = normalize_media_only_response_content(
+                    form_data.get('messages', []),
+                    current_content,
+                )
+                if normalized_content != current_content:
+                    content_parts = [normalized_content]
+                    output = normalize_media_only_response_output(
+                        form_data.get('messages', []),
+                        output,
+                    )
 
                 # Mark all in-progress items as completed
                 for item in output:

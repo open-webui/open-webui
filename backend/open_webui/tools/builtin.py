@@ -414,12 +414,16 @@ async def generate_image(
                     },
                 }
             )
-            # Return a message indicating the image is already displayed
+            # Tell the model that the image is already displayed while preserving
+            # any response-format constraint from the user (for example,
+            # image-only output with no acknowledgement text).
+            # Do not repeat the image payload in the tool result: data URLs can be
+            # large, and the UI already received the image through the event above.
             return JSONCodec.dumps(
                 {
                     'status': 'success',
-                    'message': 'The image has been successfully generated and is already visible to the user in the chat. You do not need to display or embed the image again - just acknowledge that it has been created.',
-                    'images': images,
+                    'message': "The image has been successfully generated and is already visible to the user in the chat. Do not display or embed the image again. Follow the user's requested response format: if they requested image-only output or no explanatory text, do not add an acknowledgement; otherwise, briefly confirm that the image was created.",
+                    'suppress_followup': True,
                 },
                 ensure_ascii=False,
             )
@@ -482,12 +486,16 @@ async def edit_image(
                     },
                 }
             )
-            # Return a message indicating the image is already displayed
+            # Tell the model that the image is already displayed while preserving
+            # any response-format constraint from the user (for example,
+            # image-only output with no acknowledgement text).
+            # Do not repeat the image payload in the tool result: data URLs can be
+            # large, and the UI already received the image through the event above.
             return JSONCodec.dumps(
                 {
                     'status': 'success',
-                    'message': 'The edited image has been successfully generated and is already visible to the user in the chat. You do not need to display or embed the image again - just acknowledge that it has been created.',
-                    'images': images,
+                    'message': "The edited image has been successfully generated and is already visible to the user in the chat. Do not display or embed the image again. Follow the user's requested response format: if they requested image-only output or no explanatory text, do not add an acknowledgement; otherwise, briefly confirm that the edited image was created.",
+                    'suppress_followup': True,
                 },
                 ensure_ascii=False,
             )
