@@ -31,7 +31,7 @@ def search_exa(
         count (int): Number of results to return
         filter_list (Optional[list[str]]): List of domains to filter results by
     """
-    log.info(f'Searching with Exa for query: {query}')
+    log.info('Searching with Exa for query: %s', query)
 
     headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
 
@@ -58,7 +58,7 @@ def search_exa(
                 )
             )
 
-        log.info(f'Found {len(results)} results')
+        log.info('Found %s results', len(results))
         return [
             SearchResult(
                 link=result.url,

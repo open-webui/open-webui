@@ -186,7 +186,7 @@ async def process_filter_function(
 
         form_data = await run_filter_handler(handler, params)
     except Exception as e:
-        log.debug(f'Error in {filter_type} handler {filter_id}: {e}')
+        log.debug('Error in %s handler %s: %s', filter_type, filter_id, e)
         raise e
 
     return form_data, valves_by_id, skip_files

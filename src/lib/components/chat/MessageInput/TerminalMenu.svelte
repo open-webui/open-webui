@@ -1,8 +1,16 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 
-	import { settings, showSettings, terminalServers, selectedTerminalId, user } from '$lib/stores';
+	import {
+		chatId as activeChatId,
+		settings,
+		showSettings,
+		terminalServers,
+		selectedTerminalId,
+		user
+	} from '$lib/stores';
 	import { getToolServersData } from '$lib/apis';
+	import { isTemporaryChatId } from '$lib/utils/chatId';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
@@ -13,7 +21,14 @@
 
 	export let show = false;
 
-	$: systemTerminals = ($terminalServers ?? []).filter((t) => t.id);
+	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
+
+	$: systemTerminals = ($terminalServers ?? []).filter(
+		(t) =>
+			t.id &&
+			chatContext(t) !== false &&
+			!(isTemporaryChatId($activeChatId) && chatContext(t)?.context_id === 'chat_id')
+	);
 	$: directTerminals = ($settings?.terminalServers ?? []).filter((s) => s.url);
 
 	const refreshTerminalServersStore = async (servers: typeof directTerminals) => {
@@ -94,7 +109,7 @@
 		<Tooltip content={$i18n.t('Terminal')} placement="top">
 			<button
 				type="button"
-				class="flex items-center gap-1.5 translate-y-[1px] text-[13px] text-gray-600 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-800/40 dark:hover:text-gray-200 transition rounded-lg cursor-pointer {$selectedTerminalId &&
+				class="flex items-center gap-1.5 translate-y-[1px] text-[0.8125rem] text-gray-600 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-800/40 dark:hover:text-gray-200 transition rounded-lg cursor-pointer {$selectedTerminalId &&
 				selectedLabel
 					? ' p-1 '
 					: ' p-1 opacity-50'}"
@@ -102,7 +117,7 @@
 				<Cloud className="size-3.5" strokeWidth="2" />
 
 				{#if $selectedTerminalId && selectedLabel}
-					<span class="truncate text-[13px] max-w-[100px] sm:max-w-[150px]">{selectedLabel}</span>
+					<span class="truncate text-[0.8125rem] max-w-[6.25rem] sm:max-w-[9.375rem]">{selectedLabel}</span>
 				{/if}
 			</button>
 		</Tooltip>
@@ -115,7 +130,7 @@
 				{#if directTerminals.length > 0 && ($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))}
 					<div class="flex items-center justify-between px-3 py-1">
 						<span
-							class="text-[10px] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
+							class="text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
 						>
 							{$i18n.t('Direct')}
 						</span>
@@ -146,7 +161,7 @@
 					{#each directTerminals as terminal}
 						<button
 							type="button"
-							class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl {$selectedTerminalId ===
+							class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl {$selectedTerminalId ===
 							terminal.url
 								? 'bg-gray-50/40 dark:bg-gray-800/40'
 								: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"
@@ -182,7 +197,7 @@
 				{#if systemTerminals.length > 0}
 					<div class="flex items-center justify-between px-3 py-1">
 						<span
-							class="text-[10px] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
+							class="text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
 						>
 							{$i18n.t('System')}
 						</span>
@@ -215,7 +230,7 @@
 					{#each systemTerminals as terminal}
 						<button
 							type="button"
-							class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal cursor-pointer rounded-xl {$selectedTerminalId ===
+							class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl {$selectedTerminalId ===
 							terminal.id
 								? 'bg-gray-50/40 dark:bg-gray-800/40'
 								: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"

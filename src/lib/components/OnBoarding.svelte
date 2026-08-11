@@ -74,7 +74,7 @@
 					<!-- LICENSE covers this Open WebUI welcome identifier.
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
-					<div class="mb-4 text-[11px] font-medium tracking-[0.18em] uppercase opacity-35">
+					<div class="mb-4 text-[0.6875rem] font-medium tracking-[0.18em] uppercase opacity-35">
 						Open WebUI
 					</div>
 

@@ -60,7 +60,7 @@
 	};
 </script>
 
-<div class=" max-h-full flex flex-col w-full gap-[0.5px]">
+<div class=" max-h-full flex flex-col w-full gap-[0.03125rem]">
 	<!-- Directories first -->
 	{#each directories as dir (dir.id)}
 		<DirectoryRow
@@ -140,7 +140,7 @@
 							<div class="line-clamp-1 text-xs">
 								{file?.name ?? file?.meta?.name}
 								{#if file?.meta?.size}
-									<span class="text-[11px] text-gray-500">{formatFileSize(file?.meta?.size)}</span>
+									<span class="text-[0.6875rem] text-gray-500">{formatFileSize(file?.meta?.size)}</span>
 								{/if}
 							</div>
 						{/if}
@@ -185,7 +185,7 @@
 						</button>
 
 						<div slot="content">
-							<DropdownMenu className="min-w-[140px] z-[9999999]">
+							<DropdownMenu className="min-w-[8.75rem] z-[9999999]">
 								<button
 									type="button"
 									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-gray-900 dark:hover:text-gray-100"

@@ -461,7 +461,7 @@
 							onChange={() => {
 								page = 1;
 							}}
-							triggerClass="relative h-8 w-full flex items-center gap-0.5 px-1.5 py-1.5 bg-transparent rounded-xl text-[13px] font-normal text-gray-700 transition dark:text-gray-200"
+							triggerClass="relative h-8 w-full flex items-center gap-0.5 px-1.5 py-1.5 bg-transparent rounded-xl text-[0.8125rem] font-normal text-gray-700 transition dark:text-gray-200"
 						>
 							<svelte:fragment slot="trigger" let:selectedLabel>
 								<span
@@ -483,7 +483,7 @@
 						<Dropdown align="end">
 							<Tooltip content={$i18n.t('Actions')}>
 								<button
-									class="flex h-8 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[13px] font-normal text-gray-700 transition dark:text-gray-200"
+									class="flex h-8 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[0.8125rem] font-normal text-gray-700 transition dark:text-gray-200"
 									type="button"
 								>
 									<span>{$i18n.t('Actions')}</span>
@@ -492,9 +492,9 @@
 							</Tooltip>
 
 							<div slot="content">
-								<DropdownMenu className="w-[170px] shadow-sm">
+								<DropdownMenu className="w-[10.625rem] shadow-sm">
 									<button
-										class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px]"
+										class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem]"
 										type="button"
 										on:click={() => bulkToggleHandler(true)}
 									>
@@ -502,7 +502,7 @@
 										{$i18n.t('Enable All')}
 									</button>
 									<button
-										class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[13px]"
+										class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem]"
 										type="button"
 										on:click={() => bulkToggleHandler(false)}
 									>
@@ -557,7 +557,7 @@
 										<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
 											<Tooltip content={automation.name} className="min-w-0" placement="top-start">
 												<div
-													class="truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+													class="truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
 												>
 													{automation.name}
 												</div>
@@ -569,7 +569,7 @@
 													: $i18n.t('Never')}
 											>
 												<div
-													class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+													class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
 												>
 													{formatLastRun(automation)}
 												</div>
@@ -580,7 +580,7 @@
 							</div>
 
 							<div
-								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
+								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
 							>
 								<Tooltip content={formatRRule(automation.data.rrule)} className="min-w-0">
 									<div class="truncate">

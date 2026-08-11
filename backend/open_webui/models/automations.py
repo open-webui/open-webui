@@ -179,8 +179,8 @@ class AutomationTable:
         async with get_async_db_context(db) as db:
             stmt = select(Automation).filter_by(user_id=user_id)
 
-            if folder_id is not None:
-                stmt = stmt.filter(Automation.folder_id == (folder_id or None))
+            if folder_id:
+                stmt = stmt.filter(Automation.folder_id == folder_id)
 
             if query:
                 search = f'%{query}%'

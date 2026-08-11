@@ -106,7 +106,7 @@
 	<!-- Mini Month Calendar -->
 	<div>
 		<div class="flex items-center justify-between px-1 mb-1.5 mt-1.5">
-			<div class="text-[11px] font-normal">{miniMonthNames[miniMonth]} {miniYear}</div>
+			<div class="text-[0.6875rem] font-normal">{miniMonthNames[miniMonth]} {miniYear}</div>
 			<div class="flex items-center gap-0.5">
 				<button
 					class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"
@@ -149,13 +149,13 @@
 			</div>
 		</div>
 
-		<div class="grid grid-cols-7 text-center text-[9px] text-gray-400 dark:text-gray-500 mb-0.5">
+		<div class="grid grid-cols-7 text-center text-[0.5625rem] text-gray-400 dark:text-gray-500 mb-0.5">
 			{#each ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as d}
 				<div class="py-0.5">{d}</div>
 			{/each}
 		</div>
 
-		<div class="grid grid-cols-7 text-center text-[10px]">
+		<div class="grid grid-cols-7 text-center text-[0.625rem]">
 			{#each miniDays as day}
 				<button
 					class="w-6 h-6 flex items-center justify-center rounded-full transition
@@ -178,7 +178,7 @@
 	<!-- Calendar List -->
 	<div>
 		<div class="flex items-center justify-between mb-1 px-1">
-			<div class="text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+			<div class="text-[0.6875rem] text-gray-400 dark:text-gray-500 uppercase tracking-wider">
 				{$i18n.t('Calendars')}
 			</div>
 			<button

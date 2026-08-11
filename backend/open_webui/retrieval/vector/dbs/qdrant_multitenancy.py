@@ -148,7 +148,7 @@ class QdrantClient(VectorDBBase):
                 m=0,
             ),
         )
-        log.info(f'Multi-tenant collection {mt_collection_name} created with dimension {dimension}!')
+        log.info('Multi-tenant collection %s created with dimension %s!', mt_collection_name, dimension)
 
         self.client.create_payload_index(
             collection_name=mt_collection_name,
@@ -224,7 +224,7 @@ class QdrantClient(VectorDBBase):
 
         mt_collection, tenant_id = self._get_collection_and_tenant_id(collection_name)
         if not self.client.collection_exists(collection_name=mt_collection):
-            log.debug(f"Collection {mt_collection} doesn't exist, nothing to delete")
+            log.debug("Collection %s doesn't exist, nothing to delete", mt_collection)
             return None
 
         must_conditions = [_tenant_filter(tenant_id)]
@@ -255,7 +255,7 @@ class QdrantClient(VectorDBBase):
             return None
         mt_collection, tenant_id = self._get_collection_and_tenant_id(collection_name)
         if not self.client.collection_exists(collection_name=mt_collection):
-            log.debug(f"Collection {mt_collection} doesn't exist, search returns None")
+            log.debug("Collection %s doesn't exist, search returns None", mt_collection)
             return None
 
         tenant_filter = _tenant_filter(tenant_id)
@@ -281,7 +281,7 @@ class QdrantClient(VectorDBBase):
             return None
         mt_collection, tenant_id = self._get_collection_and_tenant_id(collection_name)
         if not self.client.collection_exists(collection_name=mt_collection):
-            log.debug(f"Collection {mt_collection} doesn't exist, query returns None")
+            log.debug("Collection %s doesn't exist, query returns None", mt_collection)
             return None
         if limit is None:
             limit = NO_LIMIT
@@ -303,7 +303,7 @@ class QdrantClient(VectorDBBase):
             return None
         mt_collection, tenant_id = self._get_collection_and_tenant_id(collection_name)
         if not self.client.collection_exists(collection_name=mt_collection):
-            log.debug(f"Collection {mt_collection} doesn't exist, get returns None")
+            log.debug("Collection %s doesn't exist, get returns None", mt_collection)
             return None
         tenant_filter = _tenant_filter(tenant_id)
         points = self.client.scroll(
@@ -350,7 +350,7 @@ class QdrantClient(VectorDBBase):
             return None
         mt_collection, tenant_id = self._get_collection_and_tenant_id(collection_name)
         if not self.client.collection_exists(collection_name=mt_collection):
-            log.debug(f"Collection {mt_collection} doesn't exist, nothing to delete")
+            log.debug("Collection %s doesn't exist, nothing to delete", mt_collection)
             return None
         self.client.delete(
             collection_name=mt_collection,

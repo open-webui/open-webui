@@ -162,7 +162,9 @@
 
 	// Reload when the period, group, or custom range changes.
 	// In custom mode, wait until both dates are set to avoid a half-specified query.
-	$: if (selectedPeriod === 'custom' ? customStart && customEnd : selectedPeriod) {
+	$: if (selectedPeriod === 'custom' && !(customStart && customEnd)) {
+		loading = false;
+	} else if (selectedPeriod) {
 		// reference customStart/customEnd so this block reruns when they change
 		customStart;
 		customEnd;
@@ -488,7 +490,7 @@
 												e.target.src = '/favicon.png';
 											}}
 										/>
-										<span class="truncate max-w-[150px]">{model.name}</span>
+										<span class="truncate max-w-[9.375rem]">{model.name}</span>
 									</div>
 								</td>
 								<td class="px-3 py-1 text-right">{model.count.toLocaleString()}</td>
@@ -596,7 +598,7 @@
 												e.target.src = '/user.png';
 											}}
 										/>
-										<span class="truncate max-w-[150px]"
+										<span class="truncate max-w-[9.375rem]"
 											>{user.name || user.email || user.user_id.substring(0, 8)}</span
 										>
 									</div>

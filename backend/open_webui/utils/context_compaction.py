@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
 
@@ -8,6 +7,7 @@ from fastapi.responses import JSONResponse
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.utils.chat_id import is_saved_chat_id
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_message_list
 from open_webui.utils.task import (
     get_task_model_id,
@@ -429,7 +429,7 @@ def _response_text(response: Any) -> str:
 
     if isinstance(response, JSONResponse):
         try:
-            response = json.loads(response.body.decode('utf-8', 'replace'))
+            response = JSONCodec.loads(response.body.decode('utf-8', 'replace'))
         except Exception:
             return ''
 
@@ -477,7 +477,7 @@ def _estimate_tokens(value: Any) -> int:
 
     if not isinstance(value, str):
         try:
-            value = json.dumps(value, ensure_ascii=False)
+            value = JSONCodec.dumps(value, ensure_ascii=False)
         except Exception:
             value = str(value)
 

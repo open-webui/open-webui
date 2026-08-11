@@ -441,7 +441,7 @@
 													placement="top-start"
 												>
 													<div
-														class="truncate text-[13px] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+														class="truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
 													>
 														{item.name}
 													</div>
@@ -461,7 +461,7 @@
 
 												<Tooltip content={dayjs(item.updated_at * 1000).format('LLLL')}>
 													<div
-														class="shrink-0 truncate text-[11px] leading-5 text-gray-400 dark:text-gray-600"
+														class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
 													>
 														{dayjs(item.updated_at * 1000).fromNow()}
 													</div>
@@ -482,7 +482,7 @@
 								</div>
 
 								<div
-									class="hidden max-w-44 shrink-0 self-center truncate text-right text-[11px] leading-5 text-gray-500 dark:text-gray-500 md:block"
+									class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
 								>
 									<Tooltip
 										content={item?.user?.email ?? $i18n.t('Deleted User')}

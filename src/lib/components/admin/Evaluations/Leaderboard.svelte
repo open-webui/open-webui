@@ -154,7 +154,7 @@
 	</div>
 
 	<div
-		class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm min-h-[100px]"
+		class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm min-h-[6.25rem]"
 	>
 		{#if loading}
 			<div

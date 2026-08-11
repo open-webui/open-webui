@@ -180,7 +180,7 @@
 					{#if args}
 						<div>
 							<div
-								class="text-[10px] uppercase tracking-wider font-normal text-gray-400 dark:text-gray-500 mb-1.5 px-1"
+								class="text-[0.625rem] uppercase tracking-wider font-normal text-gray-400 dark:text-gray-500 mb-1.5 px-1"
 							>
 								{$i18n.t('Input')}
 							</div>
@@ -213,7 +213,7 @@
 					{#if isDone && result}
 						<div>
 							<div
-								class="text-[10px] uppercase tracking-wider font-normal text-gray-400 dark:text-gray-500 mb-1.5 px-1"
+								class="text-[0.625rem] uppercase tracking-wider font-normal text-gray-400 dark:text-gray-500 mb-1.5 px-1"
 							>
 								{$i18n.t('Output')}
 							</div>

@@ -603,7 +603,7 @@
 	.nb-output-html :global(td),
 	.nb-output-html :global(th) {
 		border: 1px solid rgba(128, 128, 128, 0.2);
-		padding: 3px 8px;
+		padding: 0.1875rem 0.5rem;
 		text-align: left;
 	}
 	.nb-output-html :global(th) {

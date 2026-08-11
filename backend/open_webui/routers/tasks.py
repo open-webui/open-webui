@@ -117,7 +117,7 @@ async def generate_title(request: Request, form_data: dict, user=Depends(get_ver
 
     if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
         models = {
-            **request.app.state.MODELS,
+            **dict(request.app.state.MODELS.items()),
             request.state.model['id']: request.state.model,
         }
     else:
@@ -144,7 +144,7 @@ async def generate_title(request: Request, form_data: dict, user=Depends(get_ver
         models,
     )
 
-    log.debug(f'generating chat title using model {task_model_id} for user {user.email} ')
+    log.debug('generating chat title using model %s for user %s ', task_model_id, user.email)
 
     title_template = await Config.get('task.title.prompt_template')
     if title_template != '':
@@ -201,7 +201,7 @@ async def generate_follow_ups(request: Request, form_data: dict, user=Depends(ge
 
     if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
         models = {
-            **request.app.state.MODELS,
+            **dict(request.app.state.MODELS.items()),
             request.state.model['id']: request.state.model,
         }
     else:
@@ -223,7 +223,7 @@ async def generate_follow_ups(request: Request, form_data: dict, user=Depends(ge
         models,
     )
 
-    log.debug(f'generating chat title using model {task_model_id} for user {user.email} ')
+    log.debug('generating chat title using model %s for user %s ', task_model_id, user.email)
 
     follow_up_template = await Config.get('task.follow_up.prompt_template')
     if follow_up_template != '':
@@ -271,7 +271,7 @@ async def generate_chat_tags(request: Request, form_data: dict, user=Depends(get
 
     if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
         models = {
-            **request.app.state.MODELS,
+            **dict(request.app.state.MODELS.items()),
             request.state.model['id']: request.state.model,
         }
     else:
@@ -293,7 +293,7 @@ async def generate_chat_tags(request: Request, form_data: dict, user=Depends(get
         models,
     )
 
-    log.debug(f'generating chat tags using model {task_model_id} for user {user.email} ')
+    log.debug('generating chat tags using model %s for user %s ', task_model_id, user.email)
 
     tags_template = await Config.get('task.tags.prompt_template')
     if tags_template != '':
@@ -335,7 +335,7 @@ async def generate_chat_tags(request: Request, form_data: dict, user=Depends(get
 async def generate_image_prompt(request: Request, form_data: dict, user=Depends(get_verified_user)):
     if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
         models = {
-            **request.app.state.MODELS,
+            **dict(request.app.state.MODELS.items()),
             request.state.model['id']: request.state.model,
         }
     else:
@@ -357,7 +357,7 @@ async def generate_image_prompt(request: Request, form_data: dict, user=Depends(
         models,
     )
 
-    log.debug(f'generating image prompt using model {task_model_id} for user {user.email} ')
+    log.debug('generating image prompt using model %s for user %s ', task_model_id, user.email)
 
     image_prompt_template = await Config.get('task.image.prompt_template')
     if image_prompt_template != '':
@@ -412,12 +412,12 @@ async def generate_queries(request: Request, form_data: dict, user=Depends(get_v
             )
 
     if getattr(request.state, 'cached_queries', None):
-        log.info(f'Reusing cached queries: {request.state.cached_queries}')
+        log.info('Reusing cached queries: %s', request.state.cached_queries)
         return request.state.cached_queries
 
     if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
         models = {
-            **request.app.state.MODELS,
+            **dict(request.app.state.MODELS.items()),
             request.state.model['id']: request.state.model,
         }
     else:
@@ -439,7 +439,7 @@ async def generate_queries(request: Request, form_data: dict, user=Depends(get_v
         models,
     )
 
-    log.debug(f'generating {type} queries using model {task_model_id} for user {user.email}')
+    log.debug('generating %s queries using model %s for user %s', type, task_model_id, user.email)
 
     query_template = await Config.get('task.query.prompt_template')
     if query_template.strip() != '':
@@ -498,7 +498,7 @@ async def generate_autocompletion(request: Request, form_data: dict, user=Depend
 
     if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
         models = {
-            **request.app.state.MODELS,
+            **dict(request.app.state.MODELS.items()),
             request.state.model['id']: request.state.model,
         }
     else:
@@ -520,7 +520,7 @@ async def generate_autocompletion(request: Request, form_data: dict, user=Depend
         models,
     )
 
-    log.debug(f'generating autocompletion using model {task_model_id} for user {user.email}')
+    log.debug('generating autocompletion using model %s for user %s', task_model_id, user.email)
 
     autocomplete_template = await Config.get('task.autocomplete.prompt_template')
     if autocomplete_template.strip() != '':
@@ -562,7 +562,7 @@ async def generate_autocompletion(request: Request, form_data: dict, user=Depend
 async def generate_emoji(request: Request, form_data: dict, user=Depends(get_verified_user)):
     if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
         models = {
-            **request.app.state.MODELS,
+            **dict(request.app.state.MODELS.items()),
             request.state.model['id']: request.state.model,
         }
     else:
@@ -584,7 +584,7 @@ async def generate_emoji(request: Request, form_data: dict, user=Depends(get_ver
         models,
     )
 
-    log.debug(f'generating emoji using model {task_model_id} for user {user.email} ')
+    log.debug('generating emoji using model %s for user %s ', task_model_id, user.email)
 
     template = DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE
 
@@ -628,7 +628,7 @@ async def generate_emoji(request: Request, form_data: dict, user=Depends(get_ver
 async def generate_moa_response(request: Request, form_data: dict, user=Depends(get_verified_user)):
     if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
         models = {
-            **request.app.state.MODELS,
+            **dict(request.app.state.MODELS.items()),
             request.state.model['id']: request.state.model,
         }
     else:

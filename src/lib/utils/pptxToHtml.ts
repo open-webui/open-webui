@@ -13,6 +13,298 @@ const emuToPx = (emu: number) => Math.round(emu / EMU_PER_PX);
 
 const parseEmu = (val: string | null | undefined): number => (val ? parseInt(val, 10) || 0 : 0);
 
+type ZipLike = {
+	file: (path: string) => { async: (type: 'text' | 'base64') => Promise<string> } | null;
+	files: Record<string, unknown>;
+};
+
+type Relationship = {
+	type: string;
+	target: string;
+};
+
+type Rect = {
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+};
+
+type Placeholder = {
+	type: string;
+	idx: string;
+	rect: Rect;
+};
+
+type TextToken = {
+	text: string;
+	fontPt: number;
+	bold: boolean;
+	italic: boolean;
+	color: string;
+	width: number;
+};
+
+const getTag = (el: Element) => el.tagName.split(':').pop();
+
+const normalizePath = (path: string) => {
+	const parts: string[] = [];
+	for (const part of path.split('/')) {
+		if (!part || part === '.') continue;
+		if (part === '..') parts.pop();
+		else parts.push(part);
+	}
+	return parts.join('/');
+};
+
+const dirname = (path: string) => path.slice(0, path.lastIndexOf('/'));
+const basename = (path: string) => path.slice(path.lastIndexOf('/') + 1);
+
+const resolveTarget = (sourcePath: string, target: string) => {
+	const cleanTarget = target.split('#')[0];
+	if (cleanTarget.startsWith('/')) return normalizePath(cleanTarget.slice(1));
+	return normalizePath(`${dirname(sourcePath)}/${cleanTarget}`);
+};
+
+const readXml = async (zip: ZipLike, path: string): Promise<Document | null> => {
+	const file = zip.file(path);
+	if (!file) return null;
+	const text = await file.async('text');
+	return new DOMParser().parseFromString(text, 'application/xml');
+};
+
+const readRels = async (
+	zip: ZipLike,
+	sourcePath: string
+): Promise<Record<string, Relationship>> => {
+	const relsPath = `${dirname(sourcePath)}/_rels/${basename(sourcePath)}.rels`;
+	const relsDoc = await readXml(zip, relsPath);
+	const rels: Record<string, Relationship> = {};
+	if (!relsDoc) return rels;
+
+	for (const rel of Array.from(relsDoc.getElementsByTagName('Relationship'))) {
+		const id = rel.getAttribute('Id') ?? '';
+		const target = rel.getAttribute('Target') ?? '';
+		if (!id || !target || rel.getAttribute('TargetMode') === 'External') continue;
+
+		rels[id] = {
+			type: rel.getAttribute('Type') ?? '',
+			target: resolveTarget(sourcePath, target)
+		};
+	}
+
+	return rels;
+};
+
+const getRelationshipTarget = (
+	rels: Record<string, Relationship>,
+	typeSuffix: string
+): string | null => {
+	const rel = Object.values(rels).find((entry) => entry.type.endsWith(typeSuffix));
+	return rel?.target ?? null;
+};
+
+const parseXfrm = (shape: Element): Rect | null => {
+	const xfrm = shape.getElementsByTagName('a:xfrm')[0] ?? shape.getElementsByTagName('p:xfrm')[0];
+	if (!xfrm) return null;
+
+	const off = xfrm.getElementsByTagName('a:off')[0];
+	const ext = xfrm.getElementsByTagName('a:ext')[0];
+	if (!off || !ext) return null;
+
+	const rect = {
+		x: emuToPx(parseEmu(off.getAttribute('x'))),
+		y: emuToPx(parseEmu(off.getAttribute('y'))),
+		w: emuToPx(parseEmu(ext.getAttribute('cx'))),
+		h: emuToPx(parseEmu(ext.getAttribute('cy')))
+	};
+
+	return rect.w === 0 && rect.h === 0 ? null : rect;
+};
+
+const getPlaceholder = (shape: Element): { type: string; idx: string } | null => {
+	const ph = shape.getElementsByTagName('p:ph')[0];
+	if (!ph) return null;
+	return {
+		type: ph.getAttribute('type') ?? 'body',
+		idx: ph.getAttribute('idx') ?? ''
+	};
+};
+
+const normalizePlaceholderType = (type: string) => (type === 'ctrTitle' ? 'title' : type);
+
+const placeholderKeys = ({ type, idx }: { type: string; idx: string }) => {
+	const normalizedType = normalizePlaceholderType(type);
+	return [
+		idx ? `${type}:${idx}` : '',
+		idx ? `${normalizedType}:${idx}` : '',
+		type,
+		normalizedType,
+		idx ? `idx:${idx}` : ''
+	].filter(Boolean);
+};
+
+const collectPlaceholders = (doc: Document | null): Record<string, Placeholder> => {
+	const placeholders: Record<string, Placeholder> = {};
+	if (!doc) return placeholders;
+
+	for (const shape of Array.from(doc.getElementsByTagName('p:sp'))) {
+		const ph = getPlaceholder(shape);
+		const rect = parseXfrm(shape);
+		if (!ph || !rect) continue;
+
+		for (const key of placeholderKeys(ph)) {
+			placeholders[key] ??= { ...ph, rect };
+		}
+	}
+
+	return placeholders;
+};
+
+const findPlaceholder = (
+	ph: { type: string; idx: string } | null,
+	placeholderSources: Record<string, Placeholder>[]
+): Placeholder | null => {
+	if (!ph) return null;
+	for (const key of placeholderKeys(ph)) {
+		for (const placeholders of placeholderSources) {
+			if (placeholders[key]) return placeholders[key];
+		}
+	}
+	return null;
+};
+
+const fallbackPlaceholderRect = (
+	ph: { type: string; idx: string } | null,
+	slideW: number,
+	slideH: number
+): Rect | null => {
+	if (!ph) return null;
+	const type = normalizePlaceholderType(ph.type);
+	if (type === 'title') {
+		return { x: slideW * 0.06, y: slideH * 0.08, w: slideW * 0.88, h: slideH * 0.18 };
+	}
+	if (type === 'subTitle') {
+		return { x: slideW * 0.15, y: slideH * 0.58, w: slideW * 0.7, h: slideH * 0.2 };
+	}
+	if (['body', 'obj', 'content'].includes(type)) {
+		return { x: slideW * 0.07, y: slideH * 0.26, w: slideW * 0.86, h: slideH * 0.6 };
+	}
+	return null;
+};
+
+const placeholderFontSize = (ph: { type: string; idx: string } | null) => {
+	const type = normalizePlaceholderType(ph?.type ?? '');
+	if (type === 'title') return 34;
+	if (type === 'subTitle') return 22;
+	return 16;
+};
+
+const paragraphAlign = (
+	para: Element,
+	ph: { type: string; idx: string } | null
+): CanvasTextAlign => {
+	const align = para.getElementsByTagName('a:pPr')[0]?.getAttribute('algn');
+	if (align === 'ctr') return 'center';
+	if (align === 'r') return 'right';
+
+	const type = normalizePlaceholderType(ph?.type ?? '');
+	if (type === 'title' || type === 'subTitle') return 'center';
+	return 'left';
+};
+
+const schemeColor = (val: string | null) => {
+	switch (val) {
+		case 'bg1':
+		case 'lt1':
+			return '#ffffff';
+		case 'tx1':
+		case 'dk1':
+			return '#000000';
+		case 'accent1':
+			return '#4472c4';
+		case 'accent2':
+			return '#ed7d31';
+		case 'accent3':
+			return '#a5a5a5';
+		case 'accent4':
+			return '#ffc000';
+		case 'accent5':
+			return '#5b9bd5';
+		case 'accent6':
+			return '#70ad47';
+		default:
+			return null;
+	}
+};
+
+const solidFillColor = (el: Element | Document | null): string | null => {
+	if (!el) return null;
+	const fill = el.getElementsByTagName('a:solidFill')[0];
+	if (!fill) return null;
+
+	const srgb = fill.getElementsByTagName('a:srgbClr')[0];
+	const srgbVal = srgb?.getAttribute('val');
+	if (srgbVal) return `#${srgbVal}`;
+
+	const scheme = fill.getElementsByTagName('a:schemeClr')[0];
+	return schemeColor(scheme?.getAttribute('val') ?? null);
+};
+
+const renderBackground = (
+	ctx: CanvasRenderingContext2D,
+	doc: Document,
+	slideW: number,
+	slideH: number
+) => {
+	const bgColor = solidFillColor(doc.getElementsByTagName('p:bg')[0]);
+	if (!bgColor) return;
+	ctx.fillStyle = bgColor;
+	ctx.fillRect(0, 0, slideW, slideH);
+};
+
+const fontString = ({ italic, bold, fontPt }: Pick<TextToken, 'italic' | 'bold' | 'fontPt'>) =>
+	`${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${fontPt}pt Calibri, Arial, sans-serif`;
+
+const readRunStyle = (run: Element, defaultFontSize: number) => {
+	const rPr = run.getElementsByTagName('a:rPr')[0];
+	let fontPt = defaultFontSize;
+	let bold = false;
+	let italic = false;
+	let color = '#000000';
+
+	if (rPr) {
+		if (rPr.getAttribute('b') === '1') bold = true;
+		if (rPr.getAttribute('i') === '1') italic = true;
+		const sz = rPr.getAttribute('sz');
+		if (sz) fontPt = parseInt(sz, 10) / 100;
+		color = solidFillColor(rPr) ?? color;
+	}
+
+	return { fontPt, bold, italic, color };
+};
+
+const drawTextLine = (
+	ctx: CanvasRenderingContext2D,
+	line: TextToken[],
+	align: CanvasTextAlign,
+	x: number,
+	y: number,
+	w: number
+) => {
+	const lineWidth = line.reduce((sum, token) => sum + token.width, 0);
+	let cursorX = x + 4;
+	if (align === 'center') cursorX = x + Math.max(0, (w - lineWidth) / 2);
+	if (align === 'right') cursorX = x + w - lineWidth - 4;
+
+	for (const token of line) {
+		ctx.font = fontString(token);
+		ctx.fillStyle = token.color;
+		ctx.fillText(token.text, cursorX, y);
+		cursorX += token.width;
+	}
+};
+
 /** Load a data URI into an Image element and wait for it. */
 const loadImage = (src: string): Promise<HTMLImageElement> =>
 	new Promise((resolve, reject) => {
@@ -29,7 +321,7 @@ export async function pptxToImages(
 	buffer: ArrayBuffer
 ): Promise<{ images: string[]; width: number; height: number }> {
 	const JSZip = (await import('jszip')).default;
-	const zip = await JSZip.loadAsync(buffer);
+	const zip = (await JSZip.loadAsync(buffer)) as ZipLike;
 
 	// ── Read slide dimensions from presentation.xml ──────────────────
 	let slideW = 960;
@@ -83,26 +375,13 @@ export async function pptxToImages(
 		const slideText = await zip.file(slidePath)!.async('text');
 		const slideDoc = new DOMParser().parseFromString(slideText, 'application/xml');
 
-		// Load relationship file for this slide to resolve image references
-		const slideNum = slidePath.match(/slide(\d+)/)?.[1];
-		const relsPath = `ppt/slides/_rels/slide${slideNum}.xml.rels`;
-		const rels: Record<string, string> = {};
-		const relsFile = zip.file(relsPath);
-		if (relsFile) {
-			const relsText = await relsFile.async('text');
-			const relsDoc = new DOMParser().parseFromString(relsText, 'application/xml');
-			const relEls = relsDoc.getElementsByTagName('Relationship');
-			for (let i = 0; i < relEls.length; i++) {
-				const rel = relEls[i];
-				const id = rel.getAttribute('Id') ?? '';
-				const target = rel.getAttribute('Target') ?? '';
-				if (target.startsWith('../')) {
-					rels[id] = 'ppt/' + target.replace('../', '');
-				} else {
-					rels[id] = target;
-				}
-			}
-		}
+		const rels = await readRels(zip, slidePath);
+		const layoutPath = getRelationshipTarget(rels, '/slideLayout');
+		const layoutDoc = layoutPath ? await readXml(zip, layoutPath) : null;
+		const layoutRels = layoutPath ? await readRels(zip, layoutPath) : {};
+		const masterPath = getRelationshipTarget(layoutRels, '/slideMaster');
+		const masterDoc = masterPath ? await readXml(zip, masterPath) : null;
+		const placeholderSources = [collectPlaceholders(layoutDoc), collectPlaceholders(masterDoc)];
 
 		// ── Create canvas and render slide ───────────────────────────
 		const canvas = document.createElement('canvas');
@@ -110,9 +389,11 @@ export async function pptxToImages(
 		canvas.height = slideH;
 		const ctx = canvas.getContext('2d')!;
 
-		// White background
 		ctx.fillStyle = '#ffffff';
 		ctx.fillRect(0, 0, slideW, slideH);
+		if (masterDoc) renderBackground(ctx, masterDoc, slideW, slideH);
+		if (layoutDoc) renderBackground(ctx, layoutDoc, slideW, slideH);
+		renderBackground(ctx, slideDoc, slideW, slideH);
 
 		const spTree = slideDoc.getElementsByTagName('p:spTree')[0];
 		if (!spTree) {
@@ -120,26 +401,27 @@ export async function pptxToImages(
 			continue;
 		}
 
-		const shapes = [
-			...Array.from(spTree.getElementsByTagName('p:sp')),
-			...Array.from(spTree.getElementsByTagName('p:pic'))
-		];
+		const shapes = Array.from(spTree.children).filter((el) =>
+			['sp', 'pic'].includes(getTag(el) ?? '')
+		);
 
 		for (const shape of shapes) {
-			const xfrm =
-				shape.getElementsByTagName('a:xfrm')[0] ?? shape.getElementsByTagName('p:xfrm')[0];
-			if (!xfrm) continue;
+			const ph = getPlaceholder(shape);
+			const placeholder = findPlaceholder(ph, placeholderSources);
+			const rect =
+				parseXfrm(shape) ?? placeholder?.rect ?? fallbackPlaceholderRect(ph, slideW, slideH);
+			if (!rect) continue;
 
-			const off = xfrm.getElementsByTagName('a:off')[0];
-			const ext = xfrm.getElementsByTagName('a:ext')[0];
-			if (!off || !ext) continue;
-
-			const x = emuToPx(parseEmu(off.getAttribute('x')));
-			const y = emuToPx(parseEmu(off.getAttribute('y')));
-			const w = emuToPx(parseEmu(ext.getAttribute('cx')));
-			const h = emuToPx(parseEmu(ext.getAttribute('cy')));
-
+			const { x, y, w, h } = rect;
 			if (w === 0 && h === 0) continue;
+
+			if (getTag(shape) === 'sp') {
+				const shapeFill = solidFillColor(shape.getElementsByTagName('p:spPr')[0]);
+				if (shapeFill) {
+					ctx.fillStyle = shapeFill;
+					ctx.fillRect(x, y, w, h);
+				}
+			}
 
 			// ── Picture ──────────────────────────────────────────────
 			const blipFill = shape.getElementsByTagName('p:blipFill')[0];
@@ -147,7 +429,7 @@ export async function pptxToImages(
 				const blip = blipFill.getElementsByTagName('a:blip')[0];
 				if (blip) {
 					const rEmbed = blip.getAttribute('r:embed') ?? '';
-					const mediaPath = rels[rEmbed];
+					const mediaPath = rels[rEmbed]?.target;
 					const dataUri = mediaPath ? media[mediaPath] : '';
 					if (dataUri && !dataUri.includes('image/x-emf')) {
 						try {
@@ -171,11 +453,12 @@ export async function pptxToImages(
 
 			const paragraphs = txBody.getElementsByTagName('a:p');
 			let cursorY = y;
-			const defaultFontSize = 12;
+			const defaultFontSize = placeholderFontSize(ph ?? placeholder ?? null);
 
 			for (let pi = 0; pi < paragraphs.length; pi++) {
 				const para = paragraphs[pi];
 				const runs = para.getElementsByTagName('a:r');
+				const align = paragraphAlign(para, ph ?? placeholder ?? null);
 
 				if (runs.length === 0) {
 					cursorY += defaultFontSize * 1.5;
@@ -198,53 +481,52 @@ export async function pptxToImages(
 				const lineHeight = maxFontPt * 1.4;
 				cursorY += maxFontPt; // baseline offset
 
-				let cursorX = x + 4; // small left padding
+				let line: TextToken[] = [];
+				let lineWidth = 0;
+				const flushLine = () => {
+					if (line.length === 0) return;
+					if (cursorY <= y + h) {
+						drawTextLine(ctx, line, align, x, cursorY, w);
+					}
+					line = [];
+					lineWidth = 0;
+					cursorY += lineHeight;
+				};
 
 				for (let ri = 0; ri < runs.length; ri++) {
 					const run = runs[ri];
-					const rPr = run.getElementsByTagName('a:rPr')[0];
 					const text = run.getElementsByTagName('a:t')[0]?.textContent ?? '';
 					if (!text) continue;
 
-					let fontPt = defaultFontSize;
-					let bold = false;
-					let italic = false;
-					let color = '#000000';
+					const style = readRunStyle(run, defaultFontSize);
+					ctx.font = fontString(style);
 
-					if (rPr) {
-						if (rPr.getAttribute('b') === '1') bold = true;
-						if (rPr.getAttribute('i') === '1') italic = true;
-						const sz = rPr.getAttribute('sz');
-						if (sz) fontPt = parseInt(sz, 10) / 100;
-						const solidFill = rPr.getElementsByTagName('a:solidFill')[0];
-						if (solidFill) {
-							const srgb = solidFill.getElementsByTagName('a:srgbClr')[0];
-							if (srgb) {
-								const val = srgb.getAttribute('val');
-								if (val) color = `#${val}`;
-							}
-						}
-					}
-
-					ctx.font = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${fontPt}pt Calibri, Arial, sans-serif`;
-					ctx.fillStyle = color;
 					ctx.textBaseline = 'alphabetic';
 
 					// Simple word-wrap within the shape bounds
-					const words = text.split(/(\s+)/);
+					const words = text.split(/(\n|[^\S\n]+)/);
 					for (const word of words) {
-						const metrics = ctx.measureText(word);
-						if (cursorX + metrics.width > x + w && cursorX > x + 4) {
-							cursorX = x + 4;
-							cursorY += lineHeight;
+						if (word === '') continue;
+						if (word === '\n') {
+							flushLine();
+							continue;
 						}
 						if (cursorY > y + h) break;
-						ctx.fillText(word, cursorX, cursorY);
-						cursorX += metrics.width;
+
+						const width = ctx.measureText(word).width;
+						if (lineWidth + width > w - 8 && line.length > 0) {
+							flushLine();
+							if (word.trim() === '') continue;
+						}
+						if (line.length === 0 && word.trim() === '') continue;
+
+						line.push({ ...style, text: word, width });
+						lineWidth += width;
 					}
 				}
 
-				cursorY += lineHeight * 0.4; // paragraph spacing
+				flushLine();
+				cursorY -= lineHeight * 0.6; // paragraph spacing
 			}
 
 			ctx.restore();

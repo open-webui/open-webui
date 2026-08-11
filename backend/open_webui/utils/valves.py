@@ -1,11 +1,11 @@
 import base64
 import hashlib
-import json
 import logging
 from functools import lru_cache
 
 from cryptography.fernet import Fernet, InvalidToken
 from open_webui.env import ENABLE_VALVE_ENCRYPTION, WEBUI_SECRET_KEY
+from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ def _fernet() -> Fernet:
 def encrypt_valves(valves: dict) -> dict | str:
     if not ENABLE_VALVE_ENCRYPTION:
         return valves
-    return _fernet().encrypt(json.dumps(valves).encode()).decode()
+    return _fernet().encrypt(JSONCodec.dumps(valves).encode()).decode()
 
 
 def decrypt_valves(valves) -> dict:
@@ -33,8 +33,8 @@ def decrypt_valves(valves) -> dict:
         return {}
 
     try:
-        decrypted = json.loads(_fernet().decrypt(valves.encode()).decode())
-    except (InvalidToken, json.JSONDecodeError) as e:
+        decrypted = JSONCodec.loads(_fernet().decrypt(valves.encode()).decode())
+    except (InvalidToken, JSONCodec.JSONDecodeError) as e:
         log.warning('Failed to decrypt valves: %s', type(e).__name__)
         return {}
 

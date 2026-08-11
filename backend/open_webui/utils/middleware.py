@@ -40,6 +40,8 @@ from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     RAG_SYSTEM_CONTEXT,
 )
+from open_webui.events import EVENTS, publish_event
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
@@ -47,7 +49,6 @@ from open_webui.models.models import Models
 from open_webui.models.notes import Notes
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import UserModel, Users
-from open_webui.events import EVENTS, publish_event
 from open_webui.retrieval.utils import get_sources_from_items
 from open_webui.routers.images import (
     CreateImageForm,
@@ -76,7 +77,6 @@ from open_webui.socket.main import (
     get_event_emitter,
 )
 from open_webui.utils.access_control import has_connection_access, has_permission
-from open_webui.models.access_grants import AccessGrants
 from open_webui.utils.access_control.files import get_owner_accessible_folder_files
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.chat import generate_chat_completion
@@ -94,7 +94,6 @@ from open_webui.utils.filter import (
     get_filter_functions,
     process_filter_functions,
 )
-
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.memory import add_memory_context, review_memory_after_turn
@@ -242,7 +241,7 @@ def _split_tool_calls(
 
     def split_json_objects(raw: str) -> list[str]:
         if not isinstance(raw, str):
-            raw = '' if raw is None else json.dumps(raw)
+            raw = '' if raw is None else JSONCodec.dumps(raw)
 
         decoder = json.JSONDecoder()
         results = []
@@ -257,7 +256,7 @@ def _split_tool_calls(
                 _, end = decoder.raw_decode(raw, position)
                 results.append(raw[position:end].strip())
                 position = end
-            except json.JSONDecodeError:
+            except JSONCodec.JSONDecodeError:
                 return [raw]
 
         return results or [raw]
@@ -267,7 +266,7 @@ def _split_tool_calls(
         function = tool_call.setdefault('function', {})
         arguments = function.get('arguments')
         if not isinstance(arguments, str):
-            arguments = '' if arguments is None else json.dumps(arguments)
+            arguments = '' if arguments is None else JSONCodec.dumps(arguments)
             function['arguments'] = arguments
         split_arguments = split_json_objects(arguments)
 
@@ -302,7 +301,7 @@ def get_citation_source_from_tool_result(
     try:
         try:
             tool_result = JSONCodec.loads(tool_result)
-        except (json.JSONDecodeError, TypeError):
+        except (JSONCodec.JSONDecodeError, TypeError):
             pass  # keep tool_result as-is (e.g. fetch_url returns plain text)
         if isinstance(tool_result, dict) and 'error' in tool_result:
             return []
@@ -664,7 +663,21 @@ def handle_responses_streaming_event(
                             current_val = {} if isinstance(delta, dict) else ''
                         item[key] = deep_merge(current_val, delta)
 
-            return new_output, None
+                return new_output, None
+
+        return current_output, None
+
+    elif event_type == 'response.output_item.done':
+        # Delta Event: Output item complete
+        item = data.get('item')
+        output_index = data.get('output_index', len(current_output) - 1)
+
+        new_output = list(current_output)
+        if item and 0 <= output_index < len(current_output):
+            new_output[output_index] = item
+        elif item:
+            new_output.append(item)
+        return new_output, {}
 
     elif event_type.startswith('response.') and event_type.endswith('.done'):
         # Delta Events: response.content_part.done, response.text.done, etc.
@@ -710,12 +723,8 @@ def handle_responses_streaming_event(
                             return new_output, {}
                 return current_output, None
 
-            # 2. Skip Output Item done (handled specifically below)
-            if type_name == 'output_item':
-                pass
-
-            # 3. Generic Field Done (text.done, audio.done)
-            elif type_name not in ['completed', 'failed']:
+            # 2. Generic Field Done (text.done, audio.done)
+            if type_name not in ['completed', 'failed']:
                 output_index = data.get('output_index', len(current_output) - 1)
                 if current_output and 0 <= output_index < len(current_output):
                     key = (
@@ -759,24 +768,13 @@ def handle_responses_streaming_event(
 
         return current_output, None
 
-    elif event_type == 'response.output_item.done':
-        # Delta Event: Output item complete
-        item = data.get('item')
-        output_index = data.get('output_index', len(current_output) - 1)
-
-        new_output = list(current_output)
-        if item and 0 <= output_index < len(current_output):
-            new_output[output_index] = item
-        elif item:
-            new_output.append(item)
-        return new_output, {}
-
     elif event_type == 'response.completed':
         # State Machine Event: Completed
         response_data = data.get('response', {})
         final_output = response_data.get('output')
 
-        new_output = final_output if final_output is not None else current_output
+        # Some providers send an empty output on response.completed despite having streamed items
+        new_output = final_output if final_output else current_output
 
         # Ensure reasoning items are marked as completed in the final output
         if new_output:
@@ -1003,7 +1001,7 @@ async def process_tool_result(
                         if isinstance(text, str):
                             try:
                                 text = JSONCodec.loads(text)
-                            except json.JSONDecodeError:
+                            except JSONCodec.JSONDecodeError:
                                 pass
                         tool_response.append(text)
                     elif item.get('type') in ['image', 'audio']:
@@ -1031,7 +1029,7 @@ async def process_tool_result(
                         if isinstance(text, str) and text:
                             try:
                                 text = JSONCodec.loads(text)
-                            except json.JSONDecodeError:
+                            except JSONCodec.JSONDecodeError:
                                 pass
                             tool_response.append(text)
                         elif resource.get('blob'):
@@ -1106,7 +1104,7 @@ async def terminal_event_handler(
         if isinstance(parsed, str):
             try:
                 parsed = JSONCodec.loads(parsed)
-            except (json.JSONDecodeError, TypeError):
+            except (JSONCodec.JSONDecodeError, TypeError):
                 pass
         if isinstance(parsed, dict) and parsed.get('exists') is False:
             return
@@ -1198,7 +1196,7 @@ async def chat_completion_tools_handler(
     sources = []
 
     specs = [tool['spec'] for tool in tools.values()]
-    tools_specs = json.dumps(specs, ensure_ascii=False)
+    tools_specs = JSONCodec.dumps(specs, ensure_ascii=False)
 
     tools_prompt_template = task_config.get('task.tools.prompt_template')
     if tools_prompt_template != '':
@@ -1211,9 +1209,9 @@ async def chat_completion_tools_handler(
 
     try:
         response = await generate_chat_completion(request, form_data=payload, user=user)
-        log.debug(f'{response=}')
+        log.debug('response=%r', response)
         content = await get_content_from_response(response)
-        log.debug(f'{content=}')
+        log.debug('content=%r', content)
 
         if not content:
             return body, {}
@@ -1228,7 +1226,7 @@ async def chat_completion_tools_handler(
             async def tool_call_handler(tool_call):
                 nonlocal skip_files
 
-                log.debug(f'{tool_call=}')
+                log.debug('tool_call=%r', tool_call)
 
                 tool_function_name = tool_call.get('name', None)
                 if tool_function_name not in tools:
@@ -1342,13 +1340,13 @@ async def chat_completion_tools_handler(
                 await tool_call_handler(result)
 
         except Exception as e:
-            log.debug(f'Error: {e}')
+            log.debug('Error: %s', e)
             content = None
     except Exception as e:
-        log.debug(f'Error: {e}')
+        log.debug('Error: %s', e)
         content = None
 
-    log.debug(f'tool_contexts: {sources}')
+    log.debug('tool_contexts: %s', sources)
 
     if skip_files and 'files' in body.get('metadata', {}):
         del body['metadata']['files']
@@ -1913,7 +1911,7 @@ async def chat_completion_files_handler(
         except Exception as e:
             log.exception(e)
 
-        log.debug(f'rag_contexts:sources: {sources}')
+        log.debug('rag_contexts:sources: %s', sources)
 
         unique_ids = set()
         for source in sources or []:
@@ -1969,7 +1967,7 @@ def apply_params_to_form_data(form_data, model):
                 try:
                     # Attempt to parse the string as JSON
                     custom_params[key] = JSONCodec.loads(value)
-                except json.JSONDecodeError:
+                except JSONCodec.JSONDecodeError:
                     # If it fails, keep the original string
                     pass
 
@@ -1978,14 +1976,14 @@ def apply_params_to_form_data(form_data, model):
 
     if model.get('owned_by') == 'ollama':
         # Ollama specific parameters
-        form_data['options'] = params
+        form_data['options'] = {**params, **(form_data.get('options') or {})}
     else:
         if isinstance(params, dict):
             for key, value in params.items():
-                if value is not None:
+                if value is not None and key not in form_data:
                     form_data[key] = value
 
-        if 'logit_bias' in params and params['logit_bias'] is not None:
+        if 'logit_bias' in params and params['logit_bias'] is not None and 'logit_bias' not in form_data:
             try:
                 logit_bias = convert_logit_bias_input_to_json(params['logit_bias'])
 
@@ -2029,7 +2027,7 @@ async def convert_url_images_to_base64(form_data, user=None):
                 else:
                     new_content.append(item)
             except Exception as e:
-                log.debug(f'Error converting image URL to base64: {e}')
+                log.debug('Error converting image URL to base64: %s', e)
                 new_content.append(item)
 
         message['content'] = new_content
@@ -2287,7 +2285,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     model_system_prompt = (form_data.get('params') or {}).get('system')
 
     form_data = apply_params_to_form_data(form_data, model)
-    log.debug(f'form_data: {form_data}')
+    log.debug('form_data: %s', form_data)
 
     # Guided regeneration: extract before it reaches the LLM provider
     regeneration_prompt = form_data.pop('regeneration_prompt', None)
@@ -2347,7 +2345,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if is_saved_chat_id(chat_id) and user_message_id:
         if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
             compaction_models = {
-                **request.app.state.MODELS,
+                **dict(request.app.state.MODELS.items()),
                 request.state.model['id']: request.state.model,
             }
         else:
@@ -2726,8 +2724,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # Client side tools
         direct_tool_servers = metadata.get('tool_servers', None)
 
-        log.debug(f'{tool_ids=}')
-        log.debug(f'{direct_tool_servers=}')
+        log.debug('tool_ids=%r', tool_ids)
+        log.debug('direct_tool_servers=%r', direct_tool_servers)
 
         tools_dict = {}
 
@@ -3029,7 +3027,7 @@ def get_response_data(response):
         if isinstance(response.body, bytes):
             try:
                 response_data = JSONCodec.loads(response.body.decode('utf-8', 'replace'))
-            except json.JSONDecodeError:
+            except JSONCodec.JSONDecodeError:
                 response_data = {'error': {'detail': 'Invalid JSON response'}}
         else:
             response_data = response
@@ -3499,7 +3497,7 @@ async def outlet_filter_handler(ctx):
         try:
             outlet_data = await process_pipeline_outlet_filter(request, outlet_data, user, models)
         except Exception as e:
-            log.debug(f'Pipeline outlet filter error: {e}')
+            log.debug('Pipeline outlet filter error: %s', e)
 
         # Function outlet filters
         extra_params = {
@@ -3560,7 +3558,7 @@ async def outlet_filter_handler(ctx):
                     }
                 )
     except Exception as e:
-        log.debug(f'Error running outlet filters: {e}')
+        log.debug('Error running outlet filters: %s', e)
 
 
 async def non_streaming_chat_response_handler(response, ctx):
@@ -3705,7 +3703,7 @@ async def non_streaming_chat_response_handler(response, ctx):
 
             response = build_response_object(response, merge_events_into_response(response_data, events))
         except Exception as e:
-            log.debug(f'Error occurred while processing request: {e}')
+            log.debug('Error occurred while processing request: %s', e)
             chat_id = metadata.get('chat_id')
             if getattr(request.state, 'internal', False) is not True and chat_id and is_saved_chat_id(chat_id):
                 webui_url = await Config.get('webui.url')
@@ -4471,7 +4469,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                         delta_tool_call['function']['arguments'] = (
                                                             ''
                                                             if delta_arguments is None
-                                                            else json.dumps(delta_arguments)
+                                                            else JSONCodec.dumps(delta_arguments)
                                                         )
                                                     response_tool_calls.append(delta_tool_call)
                                                 else:
@@ -4486,7 +4484,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                                                     if delta_arguments is not None:
                                                         if not isinstance(delta_arguments, str):
-                                                            delta_arguments = json.dumps(delta_arguments)
+                                                            delta_arguments = JSONCodec.dumps(delta_arguments)
                                                         current_response_tool_call.setdefault('function', {})
                                                         if not isinstance(
                                                             current_response_tool_call['function'].get('arguments'),
@@ -4816,7 +4814,7 @@ async def streaming_chat_response_handler(response, ctx):
                             if done:
                                 pass
                             else:
-                                log.debug(f'Error: {e}')
+                                log.debug('Error: %s', e)
                                 continue
                     await flush_pending_delta_data()
 
@@ -4874,7 +4872,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         'function': {
                                             'name': item.get('name', ''),
                                             'arguments': (
-                                                arguments if isinstance(arguments, str) else json.dumps(arguments)
+                                                arguments if isinstance(arguments, str) else JSONCodec.dumps(arguments)
                                             ),
                                         },
                                     }
@@ -4963,7 +4961,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 except Exception as e:
                                     log.debug(e)
                                     return None
-                        tool_call.setdefault('function', {})['arguments'] = json.dumps(params)
+                        tool_call.setdefault('function', {})['arguments'] = JSONCodec.dumps(params)
                         return params
 
                     async def execute_tool_call(tool_call):
@@ -5337,7 +5335,7 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         retries += 1
-                        log.debug(f'Attempt count: {retries}')
+                        log.debug('Attempt count: %s', retries)
 
                         ci_item = output[-1]
                         ci_output = ''
@@ -5399,7 +5397,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 else:
                                     ci_output = {'stdout': 'Code interpreter engine not configured.'}
 
-                                log.debug(f'Code interpreter output: {ci_output}')
+                                log.debug('Code interpreter output: %s', ci_output)
 
                                 # Handle error responses from event_caller
                                 # (e.g. session disconnected, timeout)

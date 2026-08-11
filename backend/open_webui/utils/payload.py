@@ -1,12 +1,12 @@
-import json
 from typing import Callable, Optional
 
+from open_webui.utils.chat_variables import render_chat_variables, render_user_variables
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import (
     add_or_update_system_message,
     deep_update,
     replace_system_message_content,
 )
-from open_webui.utils.chat_variables import render_chat_variables, render_user_variables
 from open_webui.utils.task import prompt_template, prompt_variables_template
 
 
@@ -67,7 +67,7 @@ def apply_model_params_to_body(params: dict, form_data: dict, mappings: dict[str
         return form_data
 
     for key, value in params.items():
-        if value is not None:
+        if value is not None and key not in form_data:
             if key in mappings:
                 cast_func = mappings[key]
                 if isinstance(cast_func, Callable):
@@ -115,8 +115,8 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
             if isinstance(value, str):
                 try:
                     # Attempt to parse the string as JSON
-                    custom_params[key] = json.loads(value)
-                except json.JSONDecodeError:
+                    custom_params[key] = JSONCodec.loads(value)
+                except JSONCodec.JSONDecodeError:
                     # If it fails, keep the original string
                     pass
 
@@ -149,8 +149,8 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
             if isinstance(value, str):
                 try:
                     # Attempt to parse the string as JSON
-                    custom_params[key] = json.loads(value)
-                except json.JSONDecodeError:
+                    custom_params[key] = JSONCodec.loads(value)
+                except JSONCodec.JSONDecodeError:
                     # If it fails, keep the original string
                     pass
 
@@ -198,7 +198,7 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         Parses a JSON string into a dictionary, handling potential JSONDecodeError.
         """
         try:
-            return json.loads(value)
+            return JSONCodec.loads(value)
         except Exception as e:
             return value
 
@@ -253,7 +253,7 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
                     'id': tool_call.get('id', None),
                     'function': {
                         'name': tool_call.get('function', {}).get('name', ''),
-                        'arguments': json.loads(tool_call.get('function', {}).get('arguments', {})),
+                        'arguments': JSONCodec.loads(tool_call.get('function', {}).get('arguments', {})),
                     },
                 }
                 ollama_tool_calls.append(ollama_tool_call)
@@ -336,7 +336,7 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
             Parses a JSON string into a dictionary, handling potential JSONDecodeError.
             """
             try:
-                return json.loads(value)
+                return JSONCodec.loads(value)
             except Exception as e:
                 return value
 

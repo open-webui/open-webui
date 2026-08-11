@@ -41,11 +41,9 @@
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
-	import Skeleton from './Skeleton.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import RateComment from './RateComment.svelte';
-	import Spinner from '$lib/components/common/Spinner.svelte';
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 
@@ -692,7 +690,7 @@
 								{#each message.files.filter((f) => ['image', 'file'].includes(f.type)) as file}
 									<div>
 										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
-											<Image src={file.url} alt={message.content} />
+											<Image src={file.url} alt={file.name || $i18n.t('Generated Image')} />
 										{:else}
 											<FileItem
 												item={file}
@@ -812,9 +810,7 @@
 							class="w-full flex flex-col relative {edit ? 'hidden' : ''}"
 							id="response-content-container"
 						>
-							{#if !hasResponseContent && !message.done && !message.error && !hasVisibleStatus}
-								<Skeleton />
-							{:else if hasResponseContent && message.error !== true}
+							{#if hasResponseContent && message.error !== true}
 								<!-- always show message contents even if there's an error -->
 								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 								<ContentRenderer
@@ -873,6 +869,14 @@
 										updateChat();
 									}}
 								/>
+							{/if}
+
+							{#if !message.done && !message.error && (hasResponseContent || !hasVisibleStatus)}
+								<div class="text-[0.9375rem] leading-relaxed">
+									<span
+										class="inline-block w-[0.125rem] h-3.5 bg-gray-400 dark:bg-gray-500 ml-0.5 animate-pulse align-text-bottom"
+									></span>
+								</div>
 							{/if}
 
 							{#if message?.error}
