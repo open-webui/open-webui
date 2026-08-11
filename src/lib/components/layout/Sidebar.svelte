@@ -1102,7 +1102,7 @@
 			aria-hidden={!$showSidebar}
 			inert={!$showSidebar}
 			class="h-screen max-h-[100dvh] min-h-screen select-none {visible
-				? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-50/70 dark:bg-gray-950/70'} z-50`
+				? 'bg-gray-50 dark:bg-gray-950 z-50'
 				: ' bg-transparent z-0 pointer-events-none '} {$isApp
 				? `ml-[4.5rem] md:ml-0 `
 				: $mobile
