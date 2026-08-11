@@ -1101,11 +1101,9 @@
 			aria-label={$i18n.t('Chat history')}
 			aria-hidden={!$showSidebar}
 			inert={!$showSidebar}
-			class="h-screen max-h-[100dvh] min-h-screen select-none {$mobile
-				? visible
-					? 'bg-gray-50 dark:bg-gray-950 z-50'
-					: 'bg-transparent z-0 pointer-events-none'
-				: `bg-gray-50 dark:bg-gray-950 z-50 ${$showSidebar ? '' : 'pointer-events-none'}`} {$isApp
+			class="h-screen max-h-[100dvh] min-h-screen select-none {visible
+				? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-50/70 dark:bg-gray-950/70'} z-50`
+				: ' bg-transparent z-0 pointer-events-none '} {$isApp
 				? `ml-[4.5rem] md:ml-0 `
 				: $mobile
 					? ''
@@ -1113,7 +1111,7 @@
         "
 			style={$mobile
 				? panelStyle
-				: `transform: translate3d(${$showSidebar ? '0' : '-100%'}, 0, 0); transition: transform 210ms cubic-bezier(0.22, 1, 0.36, 1); will-change: transform;`}
+				: `width: ${$showSidebar ? 'var(--sidebar-width)' : '0'}; transition: width 250ms cubic-bezier(0.22, 1, 0.36, 1);`}
 			data-state={$showSidebar}
 		>
 			<div
