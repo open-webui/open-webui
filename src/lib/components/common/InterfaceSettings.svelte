@@ -111,6 +111,7 @@
 	let showManageImageCompressionModal = false;
 
 	let textScale: number | null = null;
+	let showTextScaleSlider = false;
 	const settingRowClass = 'flex items-center justify-between gap-2.5';
 	const settingLabelClass = 'min-w-0 text-xs text-gray-600 dark:text-gray-400';
 	const settingControlClass = 'flex shrink-0 items-center justify-end gap-1.5';
@@ -243,9 +244,6 @@
 			setTextScale(textScale);
 		}
 
-		if (textScale === 1) {
-			textScale = null;
-		}
 		saveSettings({ textScale });
 	};
 
@@ -328,6 +326,7 @@
 		webSearch = currentSettings?.webSearch ?? null;
 
 		textScale = currentSettings?.textScale ?? null;
+		showTextScaleSlider = false;
 
 		defaultUploadContext = currentSettings?.defaultUploadContext ?? 'focused';
 	};
@@ -401,14 +400,20 @@
 							aria-live="polite"
 							type="button"
 							on:click={() => {
-								if (textScale === null) {
-									textScale = 1;
-								} else if (!isDefaultSetting('textScale')) {
-									setTextScaleHandler(defaultSettings.textScale ?? 1);
+								if (textScale === null || (isDefaultSetting('textScale') && !showTextScaleSlider)) {
+									textScale = textScale ?? defaultSettings.textScale ?? 1;
+									showTextScaleSlider = true;
+								} else {
+									showTextScaleSlider = false;
+									if (!externalSettings) {
+										setTextScale(defaultSettings.textScale ?? 1);
+									}
+									textScale = null;
+									saveSettings({ textScale });
 								}
 							}}
 						>
-							{#if textScale === null || isDefaultSetting('textScale')}
+							{#if textScale === null || (isDefaultSetting('textScale') && !showTextScaleSlider)}
 								<span>{$i18n.t('Default')}</span>
 							{:else}
 								<span>{textScale}x</span>
@@ -417,7 +422,7 @@
 					</div>
 				</div>
 
-				{#if textScale !== null && !isDefaultSetting('textScale')}
+				{#if textScale !== null && (showTextScaleSlider || !isDefaultSetting('textScale'))}
 					<div class=" flex items-center gap-2 px-1 pb-1">
 						<button
 							type="button"
