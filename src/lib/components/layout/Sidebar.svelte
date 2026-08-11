@@ -86,7 +86,6 @@
 	import SearchIcon from './Sidebar/icons/Search.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 	import WorkspaceIcon from './Sidebar/icons/Workspace.svelte';
-	import { slide } from 'svelte/transition';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
 	import DropdownMenu from '../common/DropdownMenu.svelte';
@@ -96,8 +95,6 @@
 
 	const BREAKPOINT = 768;
 	const DEFAULT_PINNED_ITEMS = ['notes', 'workspace'];
-	const sidebarMountTransition = (node: Element, params: Record<string, unknown>) =>
-		$mobile ? { duration: 0, css: () => '' } : slide(node, params);
 
 	let scrollTop = 0;
 
@@ -1096,30 +1093,31 @@
 	<!-- {$i18n.t('New Folder')} -->
 	<!-- {$i18n.t('Pinned')} -->
 
-	{#if visible}
+	{#if visible || !$mobile}
 		<div
 			bind:this={navElement}
-			id="sidebar"
+			id={visible ? 'sidebar' : undefined}
 			role="navigation"
 			aria-label={$i18n.t('Chat history')}
-			aria-hidden={$mobile && !$showSidebar}
-			inert={$mobile && !$showSidebar}
-			class="h-screen max-h-[100dvh] min-h-screen select-none {visible
-				? `${$mobile ? 'bg-gray-50 dark:bg-gray-950' : 'bg-gray-50/70 dark:bg-gray-950/70'} z-50`
-				: ' bg-transparent z-0 '} {$isApp
+			aria-hidden={!$showSidebar}
+			inert={!$showSidebar}
+			class="h-screen max-h-[100dvh] min-h-screen select-none {$mobile
+				? visible
+					? 'bg-gray-50 dark:bg-gray-950 z-50'
+					: 'bg-transparent z-0 pointer-events-none'
+				: `bg-gray-50 dark:bg-gray-950 z-50 ${$showSidebar ? '' : 'pointer-events-none'}`} {$isApp
 				? `ml-[4.5rem] md:ml-0 `
 				: $mobile
 					? ''
-					: ' transition-all duration-300 '} shrink-0 text-gray-700 dark:text-gray-300 text-[0.8125rem] leading-5 fixed top-0 left-0 overflow-x-hidden
+					: ''} shrink-0 text-gray-700 dark:text-gray-300 text-[0.8125rem] leading-5 fixed top-0 left-0 overflow-x-hidden
         "
-			style={panelStyle}
-			transition:sidebarMountTransition={{ duration: 250, axis: 'x' }}
+			style={$mobile
+				? panelStyle
+				: `transform: translate3d(${$showSidebar ? '0' : '-100%'}, 0, 0); transition: transform 210ms cubic-bezier(0.22, 1, 0.36, 1); will-change: transform;`}
 			data-state={$showSidebar}
 		>
 			<div
-				class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[var(--sidebar-width)] overflow-x-hidden scrollbar-hidden z-50 border-e border-gray-50 dark:border-gray-850/30 {visible
-					? ''
-					: 'invisible'}"
+				class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[var(--sidebar-width)] overflow-x-hidden scrollbar-hidden z-50 border-e border-gray-50 dark:border-gray-850/30"
 			>
 				<div
 					class="sidebar px-1 pt-1.5 pb-1 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-2"
@@ -1728,7 +1726,7 @@
 			</div>
 		</div>
 
-		{#if !$mobile}
+		{#if !$mobile && visible}
 			<div
 				class="relative flex items-center justify-center group border-l border-gray-50 dark:border-gray-850/30 hover:border-gray-200 dark:hover:border-gray-800 transition z-20"
 				id="sidebar-resizer"
