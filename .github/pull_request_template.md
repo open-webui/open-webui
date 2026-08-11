@@ -25,6 +25,7 @@ The most impactful way to contribute to Open WebUI is through well-written bug r
 - [ ] **Documentation:** Relevant documentation has been added or updated in the [Open WebUI Docs Repository](https://github.com/open-webui/docs).
 - [ ] **Dependencies:** Any new or updated dependencies are explained, tested, and documented.
 - [ ] **Testing:** **Manual** end-to-end tests have been performed to verify the fix/feature works correctly and does not introduce regressions. Screenshots or recordings are included where applicable.
+- [ ] **User-facing changes:** I have confirmed whether this PR changes the UI. If it does, screenshots are required, and a video recording is recommended.
 - [ ] **No Unchecked AI Code:** This PR is either human-written or has undergone thorough human review AND manual testing. Unreviewed AI-generated PRs may be closed immediately.
 - [ ] **Self-Review:** A self-review of the code has been performed, ensuring adherence to project coding standards.
 - [ ] **Architecture:** Smart defaults are preferred over new settings. Local state is used for ephemeral UI logic. Major architectural or UX changes have been discussed first.
@@ -83,7 +84,7 @@ The most impactful way to contribute to Open WebUI is through well-written bug r
 
 ### Screenshots or Videos
 
-- [Attach relevant screenshots or videos demonstrating the changes]
+- [Attach screenshots or videos for user-facing changes. For UI changes, screenshots are required, and a video recording is recommended.]
 
 ### Contributor License Agreement
 
