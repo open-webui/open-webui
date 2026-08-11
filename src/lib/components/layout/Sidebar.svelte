@@ -403,6 +403,18 @@
 		]);
 	};
 
+	const initSidebarData = async () => {
+		// Only fetch channels if the feature is enabled and user has permission
+		if (
+			$config?.features?.enable_channels &&
+			($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))
+		) {
+			await initChannels();
+		}
+
+		await initChatList();
+	};
+
 	const refreshChatRows = async () => {
 		const result = await refreshChatList(localStorage.token, { refreshPinned: true });
 		if (result.accepted) {
@@ -414,6 +426,10 @@
 	};
 
 	const loadMoreChats = async () => {
+		if (chatListLoading || allChatsLoaded || !$showSidebar) {
+			return;
+		}
+
 		chatListLoading = true;
 
 		const result = await loadNextChatListPage(localStorage.token);
@@ -661,17 +677,6 @@
 						navElement.style['-webkit-app-region'] = 'drag';
 					}
 				}
-
-				if (value) {
-					// Only fetch channels if the feature is enabled and user has permission
-					if (
-						$config?.features?.enable_channels &&
-						($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))
-					) {
-						await initChannels();
-					}
-					await initChatList();
-				}
 			}),
 			settings.subscribe((value) => {
 				if (pinnedModels != value?.pinnedModels ?? []) {
@@ -711,6 +716,7 @@
 		});
 
 		await tick();
+		await initSidebarData();
 		initPinnedMenuSortable();
 
 		return () => {
