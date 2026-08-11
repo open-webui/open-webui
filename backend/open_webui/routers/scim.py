@@ -700,15 +700,27 @@ async def update_user(
         await Users.update_user_scim_by_id(user_id, provider, user_data.externalId, db=db)
         updated_user = await Users.get_user_by_id(user_id, db=db)
 
-    await publish_event(
-        request,
-        EVENTS.USER_UPDATED,
-        subject_id=user_id,
-        source='scim',
-        data={
-            'updated_fields': list(update_data.keys()) + (['externalId'] if user_data.externalId else []),
-        },
-    )
+    updated_fields = list(update_data.keys()) + (['externalId'] if user_data.externalId else [])
+    role_changed = updated_user.role != user.role
+    user_updated_fields = [field for field in updated_fields if field != 'role']
+
+    if user_updated_fields:
+        await publish_event(
+            request,
+            EVENTS.USER_UPDATED,
+            subject_id=user_id,
+            source='scim',
+            data={'updated_fields': user_updated_fields},
+        )
+
+    if role_changed:
+        await publish_event(
+            request,
+            EVENTS.USER_ROLE_UPDATED,
+            subject_id=user_id,
+            source='scim',
+            data={'role': updated_user.role},
+        )
 
     return await user_to_scim(updated_user, request, db=db)
 
@@ -764,13 +776,26 @@ async def patch_user(
     else:
         updated_user = user
 
-    await publish_event(
-        request,
-        EVENTS.USER_UPDATED,
-        subject_id=user_id,
-        source='scim',
-        data={'updated_fields': list(update_data.keys())},
-    )
+    role_changed = updated_user.role != user.role
+    user_updated_fields = [field for field in update_data.keys() if field != 'role']
+
+    if user_updated_fields:
+        await publish_event(
+            request,
+            EVENTS.USER_UPDATED,
+            subject_id=user_id,
+            source='scim',
+            data={'updated_fields': user_updated_fields},
+        )
+
+    if role_changed:
+        await publish_event(
+            request,
+            EVENTS.USER_ROLE_UPDATED,
+            subject_id=user_id,
+            source='scim',
+            data={'role': updated_user.role},
+        )
 
     return await user_to_scim(updated_user, request, db=db)
 

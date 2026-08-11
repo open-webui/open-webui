@@ -1942,10 +1942,18 @@ class OAuthManager:
             if user:
                 determined_role = await self.get_user_role(user, user_data)
                 if user.role != determined_role:
-                    await Users.update_user_role_by_id(user.id, determined_role, db=db)
+                    updated_user = await Users.update_user_role_by_id(user.id, determined_role, db=db)
                     # Update the user object in memory as well,
                     # to avoid problems with the ENABLE_OAUTH_GROUP_MANAGEMENT check below
                     user.role = determined_role
+                    await publish_event(
+                        request,
+                        EVENTS.USER_ROLE_UPDATED,
+                        actor=updated_user or user,
+                        subject_id=user.id,
+                        source='oauth',
+                        data={'role': determined_role, 'provider': provider},
+                    )
 
                 if auth_config.OAUTH_UPDATE_NAME_ON_LOGIN:
                     username_claim = auth_config.OAUTH_USERNAME_CLAIM
