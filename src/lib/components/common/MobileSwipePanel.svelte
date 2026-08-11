@@ -102,7 +102,6 @@
 
 		const finish = () => {
 			settling = false;
-			mounted = nextOpen;
 			settleTimer = null;
 		};
 
