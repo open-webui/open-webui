@@ -195,7 +195,7 @@
 					// Custom drag ghost showing count
 					const ghost = document.createElement('div');
 					ghost.style.cssText =
-						'position:fixed;top:-1000px;left:-1000px;display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;background:#374151;color:#fff;font-size:12px;white-space:nowrap;pointer-events:none;';
+						'position:fixed;top:-1000px;left:-1000px;display:flex;align-items:center;gap:0.375rem;padding:0.25rem 0.625rem;border-radius:0.5rem;background:#374151;color:#fff;font-size:0.75rem;white-space:nowrap;pointer-events:none;';
 					ghost.textContent = `${selectedPaths.size} items`;
 					document.body.appendChild(ghost);
 					e.dataTransfer?.setDragImage(ghost, 0, 0);

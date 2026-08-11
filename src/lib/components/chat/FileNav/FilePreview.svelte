@@ -480,7 +480,7 @@
 	}
 	.csv-table th,
 	.csv-table td {
-		padding: 4px 8px;
+		padding: 0.25rem 0.5rem;
 		text-align: left;
 		white-space: nowrap;
 		border: 1px solid rgba(128, 128, 128, 0.15);
@@ -520,7 +520,7 @@
 		text-align: right !important;
 		user-select: none;
 		width: 1px;
-		padding-right: 6px !important;
+		padding-right: 0.375rem !important;
 	}
 	:global(.dark) .csv-row-num {
 		color: #6b7280;
@@ -531,7 +531,7 @@
 		line-height: 1.6;
 		color: #1f2937;
 		background: #fff;
-		border-radius: 4px;
+		border-radius: 0.25rem;
 	}
 	:global(.dark .office-preview) {
 		color: #e5e7eb;
@@ -546,12 +546,12 @@
 	:global(.office-preview table td),
 	:global(.office-preview table th) {
 		border: 1px solid rgba(200, 200, 200, 0.5);
-		padding: 4px 10px;
+		padding: 0.25rem 0.625rem;
 		text-align: left;
 		white-space: nowrap;
 		user-select: text;
 		cursor: cell;
-		max-width: 300px;
+		max-width: 18.75rem;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
@@ -569,7 +569,7 @@
 		font-weight: 500;
 		font-size: 0.65rem;
 		text-align: center;
-		padding: 3px 10px;
+		padding: 0.1875rem 0.625rem;
 		border-bottom: 2px solid rgba(180, 180, 180, 0.6);
 	}
 	:global(.dark .office-preview table th.excel-col-hdr) {
@@ -586,7 +586,7 @@
 		color: #999;
 		font-size: 0.6rem;
 		text-align: right !important;
-		padding: 4px 8px 4px 4px !important;
+		padding: 0.25rem 0.5rem 0.25rem 0.25rem !important;
 		user-select: none;
 		width: 1px;
 		white-space: nowrap;
