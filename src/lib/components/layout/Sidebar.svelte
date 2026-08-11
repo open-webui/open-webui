@@ -96,7 +96,6 @@
 
 	const BREAKPOINT = 768;
 	const DEFAULT_PINNED_ITEMS = ['notes', 'workspace'];
-	const MOBILE_SIDEBAR_SETTLE_MS = 210;
 	const sidebarMountTransition = (node: Element, params: Record<string, unknown>) =>
 		$mobile ? { duration: 0, css: () => '' } : slide(node, params);
 
@@ -577,18 +576,9 @@
 		selectedChatId = null;
 	};
 
-	const focusChatInputSoon = () => {
-		setTimeout(() => {
-			document.getElementById('chat-input')?.focus({ preventScroll: true });
-		}, MOBILE_SIDEBAR_SETTLE_MS);
-	};
-
-	const closeMobileSidebar = (focusChatInput = false) => {
+	const closeMobileSidebar = () => {
 		if ($mobile) {
 			showSidebar.set(false);
-			if (focusChatInput) {
-				focusChatInputSoon();
-			}
 		}
 	};
 
@@ -798,7 +788,7 @@
 	const newChatHandler = async () => {
 		selectedChatId = null;
 		selectedFolder.set(null);
-		closeMobileSidebar(true);
+		closeMobileSidebar();
 
 		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 			await temporaryChatEnabled.set(true);
