@@ -16,6 +16,7 @@
 
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { onMount, getContext, createEventDispatcher, tick } from 'svelte';
 	import { LinkPreview } from 'bits-ui';
@@ -508,9 +509,14 @@
 	{#if ownerUserId}
 		<Tooltip content={ownerName || 'Unknown'}>
 			<img
-				src="/api/v1/users/{ownerUserId}/profile/image"
+				src="{WEBUI_API_BASE_URL}/users/{ownerUserId}/profile/image"
 				alt=""
 				class="size-3.5 rounded-full shrink-0 object-cover mr-1.5"
+				on:error={(e) => {
+					if (!e.currentTarget.src.endsWith('/static/favicon.png')) {
+						e.currentTarget.src = `${WEBUI_BASE_URL}/static/favicon.png`;
+					}
+				}}
 			/>
 		</Tooltip>
 	{/if}
