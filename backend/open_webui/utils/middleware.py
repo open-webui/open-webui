@@ -4403,6 +4403,24 @@ async def streaming_chat_response_handler(response, ctx):
                                         for delta_tool_call in delta_tool_calls:
                                             tool_call_index = delta_tool_call.get('index')
 
+                                            if tool_call_index is None:
+                                                # Some OpenAI-compatible providers omit 'index' on
+                                                # streamed tool calls (e.g. Google's
+                                                # generativelanguage.googleapis.com/v1beta/openai,
+                                                # which sends each call complete in a single chunk).
+                                                # Without a fallback the call is dropped silently:
+                                                # no tool runs and the turn ends with empty content.
+                                                delta_function = delta_tool_call.get('function') or {}
+                                                if delta_function.get('name'):
+                                                    # Named call: a new entry.
+                                                    tool_call_index = len(response_tool_calls)
+                                                elif response_tool_calls:
+                                                    # Unnamed fragment: continuation of the last call.
+                                                    tool_call_index = response_tool_calls[-1].get('index')
+
+                                                if tool_call_index is not None:
+                                                    delta_tool_call['index'] = tool_call_index
+
                                             if tool_call_index is not None:
                                                 # Check if the tool call already exists
                                                 current_response_tool_call = None
