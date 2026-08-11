@@ -637,7 +637,7 @@
 		<LinkPreview.Root
 			openDelay={300}
 			closeDelay={0}
-			disabled={confirmEdit || dragged}
+			disabled={confirmEdit || dragged || !($settings?.chatHoverPreview ?? true)}
 			bind:open={openPreview}
 		>
 			<LinkPreview.Trigger
