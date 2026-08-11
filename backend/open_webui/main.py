@@ -199,6 +199,7 @@ from open_webui.tasks import (
 )  # Import from tasks.py
 from open_webui.utils import logger
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control.folders import has_folder_write_access
 from open_webui.utils.actions import chat_action as chat_action_handler
 from open_webui.utils.asgi_middleware import (
     AuthTokenMiddleware,
@@ -1272,6 +1273,14 @@ async def chat_completion(
 
             if is_saved_chat_id(chat_id):
                 if is_new_chat:
+                    # The chat created below is persisted with this folder_id.
+                    folder_id = metadata['folder_id']
+                    if folder_id is not None and not await has_folder_write_access(user.id, folder_id):
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail=ERROR_MESSAGES.NOT_FOUND,
+                        )
+
                     # Build the full history upfront with ALL assistant placeholders
                     user_message = metadata.get('user_message') or {}
                     user_message_id = user_message.get('id') if user_message else None
