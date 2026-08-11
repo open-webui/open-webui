@@ -1098,6 +1098,9 @@ async def chat_completion(
             model = model_item
             await _set_direct_model(request, model, user)
 
+        # Read before the fallback below can rebind model to a different one.
+        model_capabilities = ((model.get('info') or {}).get('meta') or {}).get('capabilities') or {}
+
         # Model params: global defaults as base, per-model overrides win
         default_model_params = copy.deepcopy(await Config.get('models.default_params', {}) or {})
         model_info_params = merge_model_params(
@@ -1134,6 +1137,10 @@ async def chat_completion(
         # Model Params
         if model_info_params.get('stream_response') is not None:
             form_data['stream'] = model_info_params.get('stream_response')
+
+        # Providers only report token counts when asked, so ask on every caller's behalf.
+        if form_data.get('stream') and model_capabilities.get('usage'):
+            form_data['stream_options'] = {**(form_data.get('stream_options') or {}), 'include_usage': True}
 
         if model_info_params.get('stream_delta_chunk_size'):
             stream_delta_chunk_size = model_info_params.get('stream_delta_chunk_size')
@@ -1946,13 +1953,6 @@ async def generate_messages(
 
     # Convert Anthropic payload to OpenAI format
     openai_payload = convert_anthropic_to_openai_payload(form_data, passthrough_params)
-    model_meta = model_info.meta.model_dump() if model_info and model_info.meta else {}
-    if (model_meta.get('capabilities') or {}).get('usage') is True:
-        if openai_payload.get('stream'):
-            stream_options = openai_payload.get('stream_options')
-            if not isinstance(stream_options, dict):
-                stream_options = {}
-            openai_payload['stream_options'] = {**stream_options, 'include_usage': True}
 
     # Route through the existing chat_completion handler
     response = await chat_completion(request, openai_payload, user)
