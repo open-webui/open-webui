@@ -158,19 +158,21 @@
 		}
 	};
 
+	$: isWritable = !folders[folderId]?.shared || folders[folderId]?.permission === 'write';
+
 	const onDragOver = (e) => {
-		e.preventDefault();
 		e.stopPropagation();
-		if (dragged || parentDragged || folders[folderId]?.shared) {
+		if (dragged || parentDragged || !isWritable) {
 			return;
 		}
+		e.preventDefault();
 		draggedOver = true;
 	};
 
 	const onDrop = async (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		if (dragged || parentDragged) {
+		if (dragged || parentDragged || !isWritable) {
 			return;
 		}
 
@@ -301,7 +303,7 @@
 
 	const onDragLeave = (e) => {
 		e.preventDefault();
-		if (dragged || parentDragged) {
+		if (dragged || parentDragged || !isWritable) {
 			return;
 		}
 
@@ -427,7 +429,7 @@
 
 	onDestroy(() => {
 		if (folderElement) {
-			folderElement.addEventListener('dragover', onDragOver);
+			folderElement.removeEventListener('dragover', onDragOver);
 			folderElement.removeEventListener('drop', onDrop);
 			folderElement.removeEventListener('dragleave', onDragLeave);
 
@@ -742,7 +744,7 @@
 					? 'bg-gray-100/80 dark:bg-gray-850/50 selected'
 					: ''}"
 				on:dblclick={(e) => {
-					if (folders[folderId]?.shared && folders[folderId]?.permission !== 'write') return;
+					if (!isWritable) return;
 					if (clickTimer) {
 						clearTimeout(clickTimer); // cancel the single-click action
 						clickTimer = null;
@@ -853,7 +855,7 @@
 					{/if}
 				</div>
 
-				{#if !folders[folderId]?.shared || folders[folderId]?.permission === 'write'}
+				{#if isWritable}
 					<button
 						class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 					>
