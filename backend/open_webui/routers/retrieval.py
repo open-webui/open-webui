@@ -1907,14 +1907,18 @@ async def process_file(
 
                 text_content = form_data.content
             elif form_data.collection_name:
-                # Check if the file has already been processed and save the content
+                # Add this file to a knowledge collection.
                 # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
+                # Reuse file-{id} chunks when they exist; otherwise restore file-{id}
+                # from stored file content while adding the file to the knowledge collection.
 
                 file_result = await ASYNC_VECTOR_DB_CLIENT.query(
                     collection_name=file_collection_name, filter={'file_id': file.id}
                 )
+                stored_content = (file.data or {}).get('content')
 
                 if has_vector_results(file_result):
+                    # Normal path: reuse the already-processed per-file chunks.
                     docs = [
                         Document(
                             page_content=file_result.documents[0][idx],
@@ -1922,10 +1926,11 @@ async def process_file(
                         )
                         for idx, id in enumerate(file_result.ids[0])
                     ]
-                else:
+                elif stored_content is not None:
+                    # Repair path: vector chunks are missing, but SQL still has the file text.
                     docs = [
                         Document(
-                            page_content=file.data.get('content', ''),
+                            page_content=stored_content,
                             metadata={
                                 **file.meta,
                                 'name': file.filename,
@@ -1936,8 +1941,10 @@ async def process_file(
                         )
                     ]
                     collection_names.append(file_collection_name)
+                else:
+                    raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
-                text_content = file.data.get('content', '')
+                text_content = stored_content or ''
             else:
                 # Process the file and save the content
                 # Usage: /files/

@@ -381,6 +381,8 @@ async def reindex_knowledge_files(
                 )
 
                 try:
+                    # Force the KB add path to use stored SQL content instead of stale file-{id} chunks.
+                    # process_file recreates file-{id} only when that stored content exists.
                     file_collection = f'file-{file.id}'
                     if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
                         await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
