@@ -124,6 +124,7 @@
 	export let chatId = '';
 	export let contextUsage = null;
 	export let contextCompactionEnabled = false;
+	export let embedded = false;
 
 	export let autoScroll = false;
 	export let generating = false;

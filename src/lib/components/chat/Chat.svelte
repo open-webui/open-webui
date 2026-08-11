@@ -4138,6 +4138,7 @@
 										chatId={$chatId}
 										{contextUsage}
 										{contextCompactionEnabled}
+										{embedded}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
 										forkHandler={handleForkChat}
@@ -4229,6 +4230,7 @@
 										chatId={$chatId}
 										{contextUsage}
 										{contextCompactionEnabled}
+										{embedded}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
 										forkHandler={handleForkChat}
