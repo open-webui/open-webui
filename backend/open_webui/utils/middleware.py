@@ -100,9 +100,7 @@ from open_webui.utils.memory import add_memory_context, review_memory_after_turn
 from open_webui.utils.misc import (
     add_or_update_system_message,
     add_or_update_user_message,
-    convert_logit_bias_input_to_json,
     convert_output_to_messages,
-    deep_update,
     extract_urls,
     get_content_from_message,
     get_last_assistant_message,
@@ -118,7 +116,7 @@ from open_webui.utils.misc import (
     set_last_user_message_content,
     strip_empty_content_blocks,
 )
-from open_webui.utils.payload import apply_system_prompt_to_body, resolve_system_prompt
+from open_webui.utils.payload import apply_params_to_form_data, apply_system_prompt_to_body, resolve_system_prompt
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import merge_usage, normalize_usage
 from open_webui.utils.sanitize import sanitize_code
@@ -1940,59 +1938,6 @@ async def chat_completion_files_handler(
         )
 
     return body, {'sources': sources}
-
-
-def apply_params_to_form_data(form_data, model):
-    params = form_data.pop('params', {})
-    custom_params = params.pop('custom_params', {})
-
-    open_webui_params = {
-        'stream_response': bool,
-        'stream_delta_chunk_size': int,
-        'function_calling': str,
-        'reasoning_tags': list,
-        'compact_token_threshold': int,
-        'system': str,
-        'note_id': str,
-    }
-
-    for key in list(params.keys()):
-        if key in open_webui_params:
-            del params[key]
-
-    if custom_params:
-        # Attempt to parse custom_params if they are strings
-        for key, value in custom_params.items():
-            if isinstance(value, str):
-                try:
-                    # Attempt to parse the string as JSON
-                    custom_params[key] = JSONCodec.loads(value)
-                except JSONCodec.JSONDecodeError:
-                    # If it fails, keep the original string
-                    pass
-
-        # If custom_params are provided, merge them into params
-        params = deep_update(params, custom_params)
-
-    if model.get('owned_by') == 'ollama':
-        # Ollama specific parameters
-        form_data['options'] = {**params, **(form_data.get('options') or {})}
-    else:
-        if isinstance(params, dict):
-            for key, value in params.items():
-                if value is not None and key not in form_data:
-                    form_data[key] = value
-
-        if 'logit_bias' in params and params['logit_bias'] is not None and 'logit_bias' not in form_data:
-            try:
-                logit_bias = convert_logit_bias_input_to_json(params['logit_bias'])
-
-                if logit_bias:
-                    form_data['logit_bias'] = JSONCodec.loads(logit_bias)
-            except Exception as e:
-                log.exception(f'Error parsing logit_bias: {e}')
-
-    return form_data
 
 
 async def convert_url_images_to_base64(form_data, user=None):

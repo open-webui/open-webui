@@ -10,6 +10,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
@@ -22,6 +23,7 @@
 	let taskConfig = {
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
+		TASK_MODEL_PARAMS: {},
 		ENABLE_TITLE_GENERATION: true,
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_FOLLOW_UP_GENERATION: true,
@@ -48,10 +50,23 @@
 		CONTEXT_COMPACTION_RETENTION_PERCENTAGE: 40,
 		CONTEXT_COMPACTION_PROMPT_TEMPLATE: ''
 	};
+	let showTaskParameters = false;
+
+	const configuredParams = (params: Record<string, any> = {}) =>
+		Object.fromEntries(
+			Object.entries(params).filter(
+				([_, value]) => value !== null && value !== '' && value !== undefined
+			)
+		);
 
 	const updateInterfaceHandler = async () => {
+		const taskConfigPayload = {
+			...taskConfig,
+			TASK_MODEL_PARAMS: configuredParams(taskConfig.TASK_MODEL_PARAMS)
+		};
+
 		[taskConfig, chatConfig] = await Promise.all([
-			updateTaskConfig(localStorage.token, taskConfig),
+			updateTaskConfig(localStorage.token, taskConfigPayload),
 			updateChatConfig(localStorage.token, chatConfig)
 		]);
 		appConfig.update((current) =>
@@ -104,6 +119,7 @@
 				getTaskConfig(localStorage.token),
 				getChatConfig(localStorage.token)
 			]);
+			taskConfig.TASK_MODEL_PARAMS = taskConfig.TASK_MODEL_PARAMS ?? {};
 
 			workspaceModels = await getBaseModels(localStorage.token);
 			baseModels = await getModels(localStorage.token, null, false);
@@ -205,6 +221,33 @@
 								{/each}
 							</SettingsSelect>
 						</AdminSettingField>
+					</div>
+
+					<div class="mt-2.5">
+						<button
+							class="flex w-full items-center justify-between gap-4 py-0.5 text-left"
+							type="button"
+							on:click={() => {
+								showTaskParameters = !showTaskParameters;
+							}}
+						>
+							<span class="text-xs text-gray-600 dark:text-gray-400">
+								{$i18n.t('Task Model Parameters')}
+							</span>
+							<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+								{showTaskParameters ? $i18n.t('Close') : $i18n.t('Configure')}
+							</span>
+						</button>
+
+						{#if showTaskParameters}
+							<div class="max-h-[24rem] overflow-y-auto pb-2 pr-1 scrollbar-hover">
+								<AdvancedParams
+									admin={true}
+									custom={true}
+									bind:params={taskConfig.TASK_MODEL_PARAMS}
+								/>
+							</div>
+						{/if}
 					</div>
 				</div>
 			</AdminSettingSection>

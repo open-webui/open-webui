@@ -2175,6 +2175,14 @@ TASK_MODEL = os.getenv('TASK_MODEL', '')
 
 TASK_MODEL_EXTERNAL = os.getenv('TASK_MODEL_EXTERNAL', '')
 
+try:
+    task_model_params = JSONCodec.loads(os.getenv('TASK_MODEL_PARAMS', '{}'))
+except Exception as e:
+    log.exception(f'Error loading TASK_MODEL_PARAMS: {e}')
+    task_model_params = {}
+
+TASK_MODEL_PARAMS = task_model_params
+
 CONTEXT_COMPACTION_MODEL = os.getenv('CONTEXT_COMPACTION_MODEL', '')
 
 ENABLE_CONTEXT_COMPACTION = os.getenv('ENABLE_CONTEXT_COMPACTION', 'False').lower() == 'true'
@@ -3104,6 +3112,7 @@ DEFAULT_CONFIG = {
     'auth.admin.email': ADMIN_EMAIL,
     'task.model.default': TASK_MODEL,
     'task.model.external': TASK_MODEL_EXTERNAL,
+    'task.model.params': TASK_MODEL_PARAMS,
     'chat.context_compaction.model': CONTEXT_COMPACTION_MODEL,
     'chat.context_compaction.enable': ENABLE_CONTEXT_COMPACTION,
     'chat.context_compaction.token_threshold': CONTEXT_COMPACTION_TOKEN_THRESHOLD,

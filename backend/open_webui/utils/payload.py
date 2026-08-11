@@ -78,6 +78,17 @@ def apply_model_params_to_body(params: dict, form_data: dict, mappings: dict[str
     return form_data
 
 
+def apply_params_to_form_data(form_data: dict, model: dict, params: dict | None = None) -> dict:
+    payload_params = form_data.pop('params', {}) or {}
+    params = dict(payload_params if params is None else params)
+    if not params:
+        return form_data
+
+    if model.get('owned_by') == 'ollama':
+        return apply_model_params_to_body_ollama(params, form_data)
+    return apply_model_params_to_body_openai(params, form_data)
+
+
 def remove_open_webui_params(params: dict) -> dict:
     """
     Removes OpenWebUI specific parameters from the provided dictionary.
@@ -95,6 +106,7 @@ def remove_open_webui_params(params: dict) -> dict:
         'reasoning_tags': list,
         'compact_token_threshold': int,
         'system': str,
+        'note_id': str,
     }
 
     for key in list(params.keys()):
