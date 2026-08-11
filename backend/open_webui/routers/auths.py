@@ -966,6 +966,11 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
         )
 
     response.delete_cookie('token')
+    try:
+        request.session.clear()
+    except Exception:
+        pass
+    response.delete_cookie('owui-session')
     response.delete_cookie('oui-session')
     response.delete_cookie('oauth_id_token')
 
