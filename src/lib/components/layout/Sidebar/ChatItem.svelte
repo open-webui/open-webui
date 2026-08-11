@@ -132,6 +132,43 @@
 		!active &&
 		(effectiveReadAt === null || (updatedAt !== null && updatedAt > effectiveReadAt));
 	$: showInlineActions = id === $chatId || confirmEdit || mouseOver || selected;
+	$: chatItemClass = ` w-full flex justify-between rounded-xl px-2 py-1.5 ${
+		id === $chatId || confirmEdit
+			? ($settings?.highContrastMode ?? false)
+				? 'bg-black/[0.035] dark:bg-white/[0.06] selected'
+				: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
+			: selected
+				? ($settings?.highContrastMode ?? false)
+					? 'bg-black/[0.035] dark:bg-white/[0.055] selected'
+					: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
+				: ' hover:bg-gray-50 dark:hover:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-900'
+	}  whitespace-nowrap text-ellipsis transition`;
+
+	const selectChatHandler = () => {
+		openPreview = false;
+		dispatch('select');
+
+		if ($selectedFolder) {
+			selectedFolder.set(null);
+		}
+
+		if ($mobile) {
+			showSidebar.set(false);
+		}
+
+		// Optimistically mark as read in UI when clicked
+		unread = false;
+		lastReadAt = Date.now() / 1000;
+	};
+
+	const renameChatFromDoubleClick = async (e: MouseEvent) => {
+		if (readonly) return;
+		e.preventDefault();
+		e.stopPropagation();
+
+		doubleClicked = true;
+		renameHandler();
+	};
 
 	const loadChat = async () => {
 		if (!chat) {
@@ -460,6 +497,48 @@
 	};
 </script>
 
+{#snippet chatItemContent()}
+	{#if ownerUserId}
+		<Tooltip content={ownerName || 'Unknown'}>
+			<img
+				src="/api/v1/users/{ownerUserId}/profile/image"
+				alt=""
+				class="size-3.5 rounded-full shrink-0 object-cover mr-1.5"
+			/>
+		</Tooltip>
+	{/if}
+
+	<!-- Loading spinner for active chat (left side) -->
+	{#if active}
+		<div class="shrink-0 self-center pr-2">
+			<Spinner className="size-3" />
+		</div>
+	{/if}
+
+	<div class="flex self-center flex-1 w-full min-w-0">
+		{#if unread}
+			<div class="shrink-0 self-center pr-2.5 flex transition-opacity duration-300">
+				<div class="size-1.5 bg-sky-500 rounded-full"></div>
+			</div>
+		{/if}
+		<div
+			dir="auto"
+			class="text-left self-center overflow-hidden w-full h-5 truncate {unread
+				? 'font-normal text-gray-800 dark:text-gray-200'
+				: ''} {showInlineActions && !readonly ? 'pr-12' : ''}"
+		>
+			{title}
+		</div>
+	</div>
+
+	<!-- Time ago indicator -->
+	{#if (updatedAt ?? createdAt) && !showInlineActions}
+		<div class="shrink-0 self-center text-[0.625rem] text-gray-400 dark:text-gray-500 pl-2">
+			{formatTimeAgo((updatedAt ?? createdAt) as number)}
+		</div>
+	{/if}
+{/snippet}
+
 <ShareChatModal bind:show={showShareChatModal} chatId={id} />
 
 <DeleteConfirmDialog
@@ -539,91 +618,34 @@
 				}}
 			/>
 		</div>
+	{:else if $mobile}
+		<a
+			id="sidebar-chat-item"
+			class={chatItemClass}
+			href="/c/{id}"
+			aria-current={id === $chatId ? 'page' : undefined}
+			on:click={selectChatHandler}
+			draggable="false"
+		>
+			{@render chatItemContent()}
+		</a>
 	{:else}
 		<LinkPreview.Root
 			openDelay={300}
 			closeDelay={0}
-			disabled={$mobile || confirmEdit || dragged}
+			disabled={confirmEdit || dragged}
 			bind:open={openPreview}
 		>
 			<LinkPreview.Trigger
 				id="sidebar-chat-item"
-				class=" w-full flex justify-between rounded-xl px-2 py-1.5 {id === $chatId || confirmEdit
-					? ($settings?.highContrastMode ?? false)
-						? 'bg-black/[0.035] dark:bg-white/[0.06] selected'
-						: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
-					: selected
-						? ($settings?.highContrastMode ?? false)
-							? 'bg-black/[0.035] dark:bg-white/[0.055] selected'
-							: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
-						: ' hover:bg-gray-50 dark:hover:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-900'}  whitespace-nowrap text-ellipsis transition"
+				class={chatItemClass}
 				href="/c/{id}"
 				aria-current={id === $chatId ? 'page' : undefined}
-				onclick={() => {
-					openPreview = false;
-					dispatch('select');
-
-					if ($selectedFolder) {
-						selectedFolder.set(null);
-					}
-
-					if ($mobile) {
-						showSidebar.set(false);
-					}
-
-					// Optimistically mark as read in UI when clicked
-					unread = false;
-					lastReadAt = Date.now() / 1000;
-				}}
-				ondblclick={async (e) => {
-					if (readonly) return;
-					e.preventDefault();
-					e.stopPropagation();
-
-					doubleClicked = true;
-					renameHandler();
-				}}
+				onclick={selectChatHandler}
+				ondblclick={renameChatFromDoubleClick}
 				draggable="false"
 			>
-				{#if ownerUserId}
-					<Tooltip content={ownerName || 'Unknown'}>
-						<img
-							src="/api/v1/users/{ownerUserId}/profile/image"
-							alt=""
-							class="size-3.5 rounded-full shrink-0 object-cover mr-1.5"
-						/>
-					</Tooltip>
-				{/if}
-
-				<!-- Loading spinner for active chat (left side) -->
-				{#if active}
-					<div class="shrink-0 self-center pr-2">
-						<Spinner className="size-3" />
-					</div>
-				{/if}
-
-				<div class="flex self-center flex-1 w-full min-w-0">
-					{#if unread}
-						<div class="shrink-0 self-center pr-2.5 flex transition-opacity duration-300">
-							<div class="size-1.5 bg-sky-500 rounded-full"></div>
-						</div>
-					{/if}
-					<div
-						dir="auto"
-						class="text-left self-center overflow-hidden w-full h-5 truncate {unread
-							? 'font-normal text-gray-800 dark:text-gray-200'
-							: ''} {showInlineActions && !readonly ? 'pr-12' : ''}"
-					>
-						{title}
-					</div>
-				</div>
-
-				<!-- Time ago indicator -->
-				{#if (updatedAt ?? createdAt) && !showInlineActions}
-					<div class="shrink-0 self-center text-[0.625rem] text-gray-400 dark:text-gray-500 pl-2">
-						{formatTimeAgo((updatedAt ?? createdAt) as number)}
-					</div>
-				{/if}
+				{@render chatItemContent()}
 			</LinkPreview.Trigger>
 
 			<ChatHoverPreview
