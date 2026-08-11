@@ -1,6 +1,8 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { getUserPosition } from '$lib/utils';
 
+let loadedSettingsToken: string | null = null;
+
 export const getUserGroups = async (token: string) => {
 	let error = null;
 
@@ -273,6 +275,12 @@ export const getAllUsers = async (token: string) => {
 
 export const getUserSettings = async (token: string, raw = false) => {
 	let error = null;
+	let loaded = false;
+
+	if (loadedSettingsToken !== token) {
+		loadedSettingsToken = null;
+	}
+
 	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/settings${raw ? '?raw=true' : ''}`, {
 		method: 'GET',
 		headers: {
@@ -282,9 +290,12 @@ export const getUserSettings = async (token: string, raw = false) => {
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
-			return res.json();
+			const settings = await res.json();
+			loaded = true;
+			return settings;
 		})
 		.catch((err) => {
+			loadedSettingsToken = null;
 			console.error(err);
 			error = err.detail;
 			return null;
@@ -293,11 +304,19 @@ export const getUserSettings = async (token: string, raw = false) => {
 	if (error) {
 		throw error;
 	}
+	if (loaded) {
+		loadedSettingsToken = token;
+	}
 
 	return res;
 };
 
 export const updateUserSettings = async (token: string, settings: object) => {
+	// UI updates replace the server snapshot, so never send one from an unhydrated session.
+	if (Object.prototype.hasOwnProperty.call(settings, 'ui') && loadedSettingsToken !== token) {
+		throw new Error('Cannot update user interface settings before they have been loaded.');
+	}
+
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/settings/update`, {
