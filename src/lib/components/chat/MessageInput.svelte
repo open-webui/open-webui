@@ -1277,7 +1277,9 @@
 					canCompact: () => !!history?.currentId && contextCompactionEnabled,
 					compactDisabled: () => isActive,
 					canStatus: () => !!history?.currentId,
-					canFork: () => !!history?.currentId,
+					canFork: () =>
+						!!history?.currentId &&
+						($_user?.role === 'admin' || ($_user?.permissions?.chat?.import ?? true)),
 					forkDisabled: () => isActive,
 					contextUsage: () => statusContextUsage,
 					onCompact: compactHandler,
@@ -1806,7 +1808,20 @@
 								</div>
 							{/if}
 
-							<div class="px-2">
+							<div class="px-2 relative">
+								{#if prompt.split('\n').length > 2}
+									<button
+										type="button"
+										class="absolute top-2.5 right-3 z-20 p-1 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+										aria-label="Expand input"
+										on:click={() => {
+											showInputModal = true;
+										}}
+									>
+										<Expand />
+									</button>
+								{/if}
+
 								<div
 									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pb-0.5 px-1 resize-none h-fit max-h-96 overflow-auto {files.length ===
 									0
@@ -1816,23 +1831,6 @@
 										: ''}"
 									id="chat-input-container"
 								>
-									{#if prompt.split('\n').length > 2}
-										<div class="fixed top-0 right-0 z-20">
-											<div class="mt-2.5 mr-3">
-												<button
-													type="button"
-													class="p-1 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
-													aria-label="Expand input"
-													on:click={async () => {
-														showInputModal = true;
-													}}
-												>
-													<Expand />
-												</button>
-											</div>
-										</div>
-									{/if}
-
 									{#if suggestions}
 										{#key $settings?.richTextInput ?? true}
 											{#key $settings?.showFormattingToolbar ?? false}

@@ -148,18 +148,13 @@ def get_message_list(messages_map, message_id):
     message_list = []
     visited_message_ids = set()
 
-    while current_message:
-        message_id = current_message.get('id')
-        if message_id in visited_message_ids:
-            # Cycle detected, break to prevent infinite loop
-            break
-
-        if message_id is not None:
-            visited_message_ids.add(message_id)
-
+    # Track the map keys, not the messages' own 'id' field: a message may omit it
+    while current_message and message_id not in visited_message_ids:
+        visited_message_ids.add(message_id)
         message_list.append(current_message)
-        parent_id = current_message.get('parentId')  # Use .get() for safety
-        current_message = messages_map.get(parent_id) if parent_id else None
+
+        message_id = current_message.get('parentId')
+        current_message = messages_map.get(message_id) if message_id else None
 
     message_list.reverse()
     return message_list

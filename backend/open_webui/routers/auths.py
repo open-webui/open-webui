@@ -768,7 +768,17 @@ async def signin(
                 trusted_role = request.headers.get(WEBUI_AUTH_TRUSTED_ROLE_HEADER, '').lower().strip()
                 if trusted_role in {'admin', 'user', 'pending'}:
                     if user.role != trusted_role:
-                        await Users.update_user_role_by_id(user.id, trusted_role, db=db)
+                        updated_user = await Users.update_user_role_by_id(user.id, trusted_role, db=db)
+                        if updated_user:
+                            user = updated_user
+                            await publish_event(
+                                request,
+                                EVENTS.USER_ROLE_UPDATED,
+                                actor=updated_user,
+                                subject_id=updated_user.id,
+                                source='trusted_header',
+                                data={'role': updated_user.role},
+                            )
                 elif trusted_role:
                     log.warning(f'Ignoring invalid trusted role header value: {trusted_role}')
 
@@ -966,6 +976,11 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
         )
 
     response.delete_cookie('token')
+    try:
+        request.session.clear()
+    except Exception:
+        pass
+    response.delete_cookie('owui-session')
     response.delete_cookie('oui-session')
     response.delete_cookie('oauth_id_token')
 
@@ -1428,11 +1443,13 @@ def _parse_oauth_update_value(field: str, value):
 
 async def get_oauth_config_values() -> dict:
     values = await Config.get_many(*OAUTH_CONFIG_KEYS.values())
-    return {
+    form_values = {
         field: _format_oauth_form_value(field, values[storage_key])
         for field, storage_key in OAUTH_CONFIG_KEYS.items()
         if storage_key in values
     }
+    form_values['ENABLE_OAUTH_PERSISTENT_CONFIG'] = Config.OAUTH_PERSISTENT_ENABLED
+    return form_values
 
 
 def oauth_config_updates(data: dict) -> dict:
@@ -1443,12 +1460,16 @@ def oauth_config_updates(data: dict) -> dict:
     }
 
 
-@router.get('/admin/config/oauth', response_model=OAuthConfigForm)
+class OAuthConfigResponse(OAuthConfigForm):
+    ENABLE_OAUTH_PERSISTENT_CONFIG: bool
+
+
+@router.get('/admin/config/oauth', response_model=OAuthConfigResponse)
 async def get_oauth_config(request: Request, user=Depends(get_admin_user)):
     return await get_oauth_config_values()
 
 
-@router.post('/admin/config/oauth', response_model=OAuthConfigForm)
+@router.post('/admin/config/oauth', response_model=OAuthConfigResponse)
 async def update_oauth_config(request: Request, form_data: OAuthConfigForm, user=Depends(get_admin_user)):
     await Config.upsert(oauth_config_updates(form_data.model_dump(exclude_none=True)))
     return await get_oauth_config_values()

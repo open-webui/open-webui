@@ -19,7 +19,7 @@
 		getArchivedChatList,
 		unarchiveAllChats
 	} from '$lib/apis/chats';
-	import { chatId, showSettings } from '$lib/stores';
+	import { chatId, showSettings, user } from '$lib/stores';
 	import { refreshChatList } from '$lib/stores/chatList';
 	import { formatNumber } from '$lib/utils';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -348,19 +348,21 @@
 									<UndoAction className="size-3.5" strokeWidth="1.5" />
 								</button>
 							</Tooltip>
-							<Tooltip content={$i18n.t('Delete Chat')}>
-								<button
-									class="rounded-lg p-1 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
-									type="button"
-									aria-label={$i18n.t('Delete Chat')}
-									on:click={() => {
-										selectedChatId = chat.id;
-										showDeleteConfirmDialog = true;
-									}}
-								>
-									<Trash className="size-3.5" strokeWidth="1.5" />
-								</button>
-							</Tooltip>
+							{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
+								<Tooltip content={$i18n.t('Delete Chat')}>
+									<button
+										class="rounded-lg p-1 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+										type="button"
+										aria-label={$i18n.t('Delete Chat')}
+										on:click={() => {
+											selectedChatId = chat.id;
+											showDeleteConfirmDialog = true;
+										}}
+									>
+										<Trash className="size-3.5" strokeWidth="1.5" />
+									</button>
+								</Tooltip>
+							{/if}
 						</div>
 					</div>
 				{/each}

@@ -271,6 +271,13 @@ def get_session_ids_from_room(room):
     return list(members) if members else []
 
 
+def get_session_ids_by_user_id(user_id: str) -> list[str]:
+    """Get known session IDs for a user across the local rooms and shared session pool."""
+    session_ids = set(get_session_ids_from_room(f'user:{user_id}'))
+    session_ids.update(sid for sid, entry in SESSION_POOL.items() if entry and entry.get('id') == user_id)
+    return list(session_ids)
+
+
 def get_user_ids_from_room(room):
     active_session_ids = get_session_ids_from_room(room)
 
@@ -326,14 +333,15 @@ async def disconnect_user_sessions(user_id: str):
     The client will automatically reconnect and re-authenticate with
     fresh data from the database.
     """
-    try:
-        session_ids = get_session_ids_from_room(f'user:{user_id}')
-        for sid in session_ids:
+    session_ids = get_session_ids_by_user_id(user_id)
+    for sid in session_ids:
+        try:
             await sio.disconnect(sid)
-        if session_ids:
-            log.info('Disconnected %s session(s) for user %s', len(session_ids), user_id)
-    except Exception as e:
-        log.warning(f'Failed to disconnect sessions for user {user_id}: {e}')
+        except Exception:
+            log.exception('Failed to disconnect session %s for user %s', sid, user_id)
+
+    if session_ids:
+        log.info('Requested disconnect of %s session(s) for user %s', len(session_ids), user_id)
 
 
 @sio.on('usage')

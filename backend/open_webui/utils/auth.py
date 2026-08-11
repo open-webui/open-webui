@@ -519,6 +519,39 @@ async def get_verified_user_by_token(token: str, redis=None):
     return user
 
 
+async def get_verified_user_by_id(user_id: str | None):
+    if not user_id:
+        return None
+
+    user = await Users.get_user_by_id(user_id)
+    if user is None or user.role not in VERIFIED_USER_ROLES:
+        return None
+
+    return user
+
+
+async def get_optional_verified_user_from_request(request: Request):
+    token = None
+    auth_token = get_http_authorization_cred(request.headers.get('Authorization'))
+    if auth_token:
+        token = auth_token.credentials
+    if token is None:
+        token = request.cookies.get('token')
+    if token is None and getattr(request.state, 'token', None):
+        token = request.state.token.credentials
+    if not token:
+        return None
+
+    try:
+        if token.startswith('sk-'):
+            user = await get_current_user_by_api_key(request, token)
+            return user if user.role in VERIFIED_USER_ROLES else None
+
+        return await get_verified_user_by_token(token, getattr(request.app.state, 'redis', None))
+    except HTTPException:
+        return None
+
+
 def get_admin_user(user=Depends(get_current_user)):
     if user.role != 'admin':
         raise HTTPException(

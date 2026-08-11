@@ -2649,7 +2649,7 @@ async def oauth_client_authorize(
                 detail='OAuth client registration is still invalid after re-registration',
             )
 
-    return await oauth_client_manager.handle_authorize(request, client_id=client_id)
+    return await oauth_client_manager.handle_authorize(request, client_id=client_id, user_id=user.id)
 
 
 @app.get('/oauth/clients/{client_id}/callback')
@@ -2657,12 +2657,10 @@ async def oauth_client_callback(
     client_id: str,
     request: Request,
     response: Response,
-    user=Depends(get_verified_user),
 ):
     return await oauth_client_manager.handle_callback(
         request,
         client_id=client_id,
-        user_id=user.id if user else None,
         response=response,
     )
 

@@ -690,7 +690,7 @@
 								{#each message.files.filter((f) => ['image', 'file'].includes(f.type)) as file}
 									<div>
 										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
-											<Image src={file.url} alt={message.content} />
+											<Image src={file.url} alt={file.name || $i18n.t('Generated Image')} />
 										{:else}
 											<FileItem
 												item={file}
@@ -1388,7 +1388,7 @@
 													<button
 														type="button"
 														aria-label={$i18n.t('Regenerate')}
-														class="{isLastMessage
+														class="{isLastMessage || ($settings?.highContrastMode ?? false)
 															? 'visible'
 															: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 													>
@@ -1415,7 +1415,7 @@
 												<button
 													type="button"
 													aria-label={$i18n.t('Regenerate')}
-													class="{isLastMessage
+													class="{isLastMessage || ($settings?.highContrastMode ?? false)
 														? 'visible'
 														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 													on:click={() => {
@@ -1486,7 +1486,7 @@
 										</Tooltip>
 									{/each}
 
-									{#if message.done && !readOnly && forkHandler}
+									{#if message.done && !readOnly && forkHandler && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true))}
 										<Tooltip content="Fork chat" placement="bottom">
 											<button
 												aria-label="Fork chat"

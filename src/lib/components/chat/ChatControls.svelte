@@ -42,6 +42,7 @@
 	export let models = [];
 
 	export let chatId = null;
+	export let chatUser = null;
 
 	export let chatFiles = [];
 	export let params = {};
@@ -385,6 +386,7 @@
 							{#if activeTab === 'overview'}
 								<Overview
 									{history}
+									{chatUser}
 									onNodeClick={(e) => {
 										const node = e.node;
 										showMessage(node.data.message, true);
@@ -529,6 +531,7 @@
 								{#if activeTab === 'overview'}
 									<Overview
 										{history}
+										{chatUser}
 										onNodeClick={(e) => {
 											const node = e.node;
 											if (node?.data?.message?.favorite) {

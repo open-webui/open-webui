@@ -786,17 +786,19 @@
 												</button>
 											</Tooltip>
 
-											<Tooltip content={$i18n.t('Delete')}>
-												<button
-													class="self-center dark:hover:text-white transition"
-													on:click|stopPropagation={() => {
-														deleteChatHandler(chat.id);
-													}}
-													type="button"
-												>
-													<GarbageBin strokeWidth="2" />
-												</button>
-											</Tooltip>
+											{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
+												<Tooltip content={$i18n.t('Delete')}>
+													<button
+														class="self-center dark:hover:text-white transition"
+														on:click|stopPropagation={() => {
+															deleteChatHandler(chat.id);
+														}}
+														type="button"
+													>
+														<GarbageBin strokeWidth="2" />
+													</button>
+												</Tooltip>
+											{/if}
 										</div>
 									{:else}
 										<div class="flex items-center">

@@ -182,7 +182,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                     model['action_ids'] = action_ids
                     model['filter_ids'] = filter_ids
                 else:
-                    models.remove(model)
+                    models = [m for m in models if m is not model]
 
         elif custom_model.is_active:
             if custom_model.id in existing_ids:

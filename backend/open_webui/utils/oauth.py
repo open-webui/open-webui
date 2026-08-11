@@ -10,6 +10,7 @@ import urllib
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from functools import partialmethod
 from types import SimpleNamespace
 from typing import Literal, Optional
 
@@ -25,7 +26,6 @@ from fastapi import (
 )
 from joserfc.errors import BadSignatureError
 from joserfc.jws import JWSRegistry
-from joserfc.registry import HeaderParameter
 from mcp.shared.auth import (
     OAuthClientMetadata as MCPOAuthClientMetadata,
 )
@@ -84,11 +84,20 @@ from open_webui.models.groups import GroupForm, GroupModel, Groups, GroupUpdateF
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import Users
 from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
-from open_webui.utils.auth import create_token, get_password_hash
+from open_webui.utils.auth import (
+    create_token,
+    get_password_hash,
+    get_optional_verified_user_from_request,
+    get_verified_user_by_id,
+)
 from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.validate import validate_profile_image_url
 from starlette.responses import RedirectResponse
+
+# Some IdPs put private params in ID token JOSE headers (CAS: client_id, CyberArk: app_id).
+# Authlib exposes no way to pass a registry, so relax it globally; crit, alg and signature checks still apply.
+JWSRegistry.__init__ = partialmethod(JWSRegistry.__init__, strict_check_header=False)
 
 
 class OAuthClientMetadata(MCPOAuthClientMetadata):
@@ -191,14 +200,6 @@ async def get_oauth_runtime_config() -> SimpleNamespace:
 # Matches the value recommended by Authlib's compliance_fix documentation.
 DEFAULT_TOKEN_EXPIRY_SECONDS = 3600
 NON_EXPIRING_TOKEN_EXPIRES_AT = 253402300799  # 9999-12-31 23:59:59 UTC
-
-
-# Apereo CAS includes client_id in ID token JWS headers; Authlib 1.7/joserfc
-# rejects unknown headers unless we register the provider extension.
-JWSRegistry.default_header_registry.setdefault(
-    'client_id',
-    HeaderParameter('OAuth client identifier', 'str'),
-)
 
 
 def _normalize_token_expiry(token: dict) -> dict:
@@ -1171,7 +1172,7 @@ class OAuthClientManager:
             log.error(f'Exception during token refresh for client_id {client_id}: {e}')
             return None
 
-    async def handle_authorize(self, request, client_id: str) -> RedirectResponse:
+    async def handle_authorize(self, request, client_id: str, user_id: str) -> RedirectResponse:
         client = await self.get_client(client_id)
         if client is None:
             raise HTTPException(404)
@@ -1187,7 +1188,15 @@ class OAuthClientManager:
         # Pass explicit scope/resource parameters for providers that require them.
         kwargs = build_oauth_request_params(client_info)
         try:
-            return await client.authorize_redirect(request, redirect_uri_str, **kwargs)
+            auth_data = await client.create_authorization_url(redirect_uri_str, **kwargs)
+            if not auth_data.get('state'):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail='OAuth authorization state was not generated',
+                )
+            auth_data['user_id'] = user_id
+            await client.save_authorize_data(request, redirect_uri=redirect_uri_str, **auth_data)
+            return RedirectResponse(auth_data['url'], status_code=302)
         except RuntimeError as e:
             # authlib raises RuntimeError('Missing "authorize_url" value') when the
             # authorization endpoint could not be resolved from server metadata.
@@ -1203,14 +1212,36 @@ class OAuthClientManager:
                 ),
             )
 
-    async def handle_callback(self, request, client_id: str, user_id: str, response):
+    async def handle_callback(self, request, client_id: str, response):
         client = await self.get_client(client_id)
         if client is None:
             raise HTTPException(404)
 
         error_message = None
+        state = request.query_params.get('state')
+        user_id = None
         try:
             client_info = await self.get_client_info(client_id)
+            state_data = await client.framework.get_state_data(request.session, state) if state else None
+            user_id = state_data.get('user_id') if state_data else None
+            if not user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail='OAuth callback state is invalid or expired',
+                )
+
+            if not await get_verified_user_by_id(user_id):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail='OAuth callback user is not authorized',
+                )
+
+            request_user = await get_optional_verified_user_from_request(request)
+            if request_user and request_user.id != user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail='OAuth callback user does not match authenticated session',
+                )
 
             # Note: Do NOT pass client_id/client_secret explicitly here.
             # The Authlib client already has these configured during add_client().
@@ -1261,6 +1292,9 @@ class OAuthClientManager:
                 error_message,
                 exc_info=True,
             )
+        finally:
+            if state and client is not None:
+                await client.framework.clear_state_data(request.session, state)
 
         webui_url = await Config.get('webui.url')
         redirect_url = (str(webui_url or request.base_url)).rstrip('/')
@@ -1908,10 +1942,18 @@ class OAuthManager:
             if user:
                 determined_role = await self.get_user_role(user, user_data)
                 if user.role != determined_role:
-                    await Users.update_user_role_by_id(user.id, determined_role, db=db)
+                    updated_user = await Users.update_user_role_by_id(user.id, determined_role, db=db)
                     # Update the user object in memory as well,
                     # to avoid problems with the ENABLE_OAUTH_GROUP_MANAGEMENT check below
                     user.role = determined_role
+                    await publish_event(
+                        request,
+                        EVENTS.USER_ROLE_UPDATED,
+                        actor=updated_user or user,
+                        subject_id=user.id,
+                        source='oauth',
+                        data={'role': determined_role, 'provider': provider},
+                    )
 
                 if auth_config.OAUTH_UPDATE_NAME_ON_LOGIN:
                     username_claim = auth_config.OAUTH_USERNAME_CLAIM

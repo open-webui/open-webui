@@ -456,16 +456,18 @@
 				<div class="flex items-center">{$i18n.t('Archive')}</div>
 			</button>
 
-			<button
-				draggable="false"
-				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
-				on:click={() => {
-					deleteHandler();
-				}}
-			>
-				<TrashIcon className="size-3.5" strokeWidth="1.5" />
-				<div class="flex items-center">{$i18n.t('Delete')}</div>
-			</button>
+			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
+				<button
+					draggable="false"
+					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 w-full"
+					on:click={() => {
+						deleteHandler();
+					}}
+				>
+					<TrashIcon className="size-3.5" strokeWidth="1.5" />
+					<div class="flex items-center">{$i18n.t('Delete')}</div>
+				</button>
+			{/if}
 		</DropdownMenu>
 	</div>
 </Dropdown>

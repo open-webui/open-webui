@@ -1547,6 +1547,7 @@ async def view_chat(
 async def delegate_task(
     task: str,
     context: str = '',
+    file_ids: list[str] | None = None,
     background: bool = False,
     __request__: Request = None,
     __user__: dict = None,
@@ -1559,6 +1560,8 @@ async def delegate_task(
 
     :param task: The specific task for the sub-agent to complete
     :param context: Relevant context, decisions, or file paths for the task
+    :param file_ids: Attached file IDs the sub-agent needs. Use this for images or files;
+        do not put file IDs only in context.
     :param background: Return immediately and continue this chat when the sub-agent finishes
     :return: Foreground result text, or a JSON dispatch handle for background work
     """
@@ -1573,6 +1576,7 @@ async def delegate_task(
         task,
         context,
         background,
+        file_ids=file_ids,
         request=__request__,
         user_data=__user__ or {},
         metadata=__metadata__ or {},
