@@ -58,6 +58,8 @@
 	import { createMessagesList } from '$lib/utils';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 
+	const MOBILE_SIDEBAR_SETTLE_MS = 210;
+
 	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
@@ -109,6 +111,12 @@
 		if (openPreview) {
 			openPreview = false;
 		}
+	};
+
+	const focusChatInputSoon = () => {
+		setTimeout(() => {
+			document.getElementById('chat-input')?.focus({ preventScroll: true });
+		}, MOBILE_SIDEBAR_SETTLE_MS);
 	};
 
 	$: if (openPreview && closeActiveHoverPreview !== closeHoverPreview) {
@@ -569,6 +577,7 @@
 
 					if ($mobile) {
 						showSidebar.set(false);
+						focusChatInputSoon();
 					}
 
 					// Optimistically mark as read in UI when clicked
