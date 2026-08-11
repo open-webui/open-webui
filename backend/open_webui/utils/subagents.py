@@ -272,6 +272,7 @@ async def delegate(
     context: str,
     background: bool,
     *,
+    file_ids: list[str] | None = None,
     request: Request,
     user_data: dict,
     metadata: dict,
@@ -331,6 +332,33 @@ async def delegate(
         return 'Error: model context is required.'
     if run.get('direct'):
         return 'Error: sub-agents are unavailable for direct connections.'
+    if file_ids:
+        requested_file_ids = {str(file_id) for file_id in file_ids if file_id}
+        run['files'] = [
+            copy.deepcopy(file)
+            for file in metadata.get('files') or []
+            if str(file.get('id') or '') in requested_file_ids
+            or str(file.get('url') or '') in requested_file_ids
+            or (
+                isinstance(file.get('file'), dict)
+                and str(file.get('file', {}).get('id') or '') in requested_file_ids
+            )
+        ]
+        found_file_ids = {
+            str(value)
+            for file in run['files']
+            for value in (
+                file.get('id'),
+                file.get('url'),
+                file.get('file', {}).get('id') if isinstance(file.get('file'), dict) else None,
+            )
+            if value
+        }
+        missing_file_ids = sorted(requested_file_ids - found_file_ids)
+        if missing_file_ids:
+            return f'Error: file_ids not attached or unavailable: {", ".join(missing_file_ids)}'
+    else:
+        run['files'] = []
 
     delegation_id = f'deleg_{uuid4().hex[:8]}'
     foreground_semaphore = None
@@ -355,6 +383,17 @@ async def delegate(
         user_message_id = str(uuid4())
         assistant_message_id = str(uuid4())
         prompt = f'{task}\n\n## Context\n{context}' if context else task
+        prompt_files = copy.deepcopy(run.get('files') or [])
+        user_message = {
+            'id': user_message_id,
+            'parentId': None,
+            'childrenIds': [assistant_message_id],
+            'role': 'user',
+            'content': prompt,
+            'timestamp': int(time.time()),
+            'models': [run['model_id']],
+            **({'files': prompt_files} if prompt_files else {}),
+        }
         chat = await Chats.insert_new_chat(
             chat_id,
             user.id,
@@ -366,15 +405,7 @@ async def delegate(
                     'history': {
                         'currentId': assistant_message_id,
                         'messages': {
-                            user_message_id: {
-                                'id': user_message_id,
-                                'parentId': None,
-                                'childrenIds': [assistant_message_id],
-                                'role': 'user',
-                                'content': prompt,
-                                'timestamp': int(time.time()),
-                                'models': [run['model_id']],
-                            },
+                            user_message_id: user_message,
                             assistant_message_id: {
                                 'id': assistant_message_id,
                                 'parentId': user_message_id,
@@ -387,7 +418,14 @@ async def delegate(
                             },
                         },
                     },
-                    'messages': [{'role': 'user', 'content': prompt}],
+                    'messages': [
+                        {
+                            'role': 'user',
+                            'content': prompt,
+                            **({'files': prompt_files} if prompt_files else {}),
+                        }
+                    ],
+                    'files': prompt_files,
                 }
             ),
             internal_meta={
@@ -435,12 +473,7 @@ async def delegate(
                 'chat_id': chat_id,
                 'id': assistant_message_id,
                 'parent_id': None,
-                'user_message': {
-                    'id': user_message_id,
-                    'parentId': None,
-                    'role': 'user',
-                    'content': prompt,
-                },
+                'user_message': user_message,
                 'session_id': run.get('session_id') or f'subagent:{chat_id}',
                 'background_tasks': {},
                 'tool_ids': run.get('tool_ids') or [],
