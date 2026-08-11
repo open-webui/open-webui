@@ -38,10 +38,8 @@
 			aria-label={ariaLabel || undefined}
 			class="relative h-4 min-h-4 w-7 shrink-0 cursor-pointer rounded-full mx-[0.0625rem] transition-colors duration-150 disabled:cursor-not-allowed {($settings?.highContrastMode ??
 			false)
-				? 'focus:outline focus:outline-2 focus:outline-gray-800 focus:dark:outline-gray-200'
-				: 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 dark:focus-visible:outline-gray-500'} {state
-				? 'bg-gray-900 dark:bg-white'
-				: 'bg-gray-300 dark:bg-gray-700'}"
+				? 'focus:outline focus:outline-2 focus:outline-gray-800! focus:dark:outline-gray-200!'
+				: ''} {state ? 'bg-gray-900 dark:bg-white' : 'bg-gray-300 dark:bg-gray-700'}"
 			onCheckedChange={async () => {
 				await tick();
 				dispatch('change', state);
