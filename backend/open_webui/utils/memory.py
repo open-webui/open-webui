@@ -286,13 +286,6 @@ def model_allows_memory(model: dict | None) -> bool:
     return ((model or {}).get('info', {}).get('meta', {}).get('capabilities') or {}).get('memory', True)
 
 
-def _format_memory_context_section(title: str, memories: list[str]) -> str | None:
-    if not memories:
-        return None
-    ordered = sorted(memories, key=lambda memory: (memory.casefold(), memory))
-    return f'[{title}]\n' + '\n'.join(f'- {memory}' for memory in ordered)
-
-
 async def add_memory_context(request, form_data: dict, user, model: dict | None = None):
     if not model_allows_memory(model):
         return form_data
@@ -372,9 +365,9 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
         ('Memory Neighborhood', 'neighborhood'),
         ('Relevant Context', 'context'),
     ):
-        part = _format_memory_context_section(title, sections[key])
-        if part:
-            parts.append(part)
+        if sections[key]:
+            ordered = sorted(sections[key], key=lambda memory: (memory.casefold(), memory))
+            parts.append(f'[{title}]\n' + '\n'.join(f'- {memory}' for memory in ordered))
     if not parts:
         return form_data
 
