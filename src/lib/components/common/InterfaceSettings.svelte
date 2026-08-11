@@ -337,8 +337,6 @@
 		lastSettingsValue = settingsValue;
 		init();
 	}
-	$: textScaleUsesDefault = textScale === null || isDefaultSetting('textScale');
-
 	onMount(async () => {
 		init();
 	});
@@ -405,13 +403,12 @@
 							on:click={() => {
 								if (textScale === null) {
 									textScale = 1;
-								} else if (!textScaleUsesDefault) {
-									textScale = null;
-									setTextScaleHandler(1);
+								} else if (!isDefaultSetting('textScale')) {
+									setTextScaleHandler(defaultSettings.textScale ?? 1);
 								}
 							}}
 						>
-							{#if textScaleUsesDefault}
+							{#if textScale === null || isDefaultSetting('textScale')}
 								<span>{$i18n.t('Default')}</span>
 							{:else}
 								<span>{textScale}x</span>
@@ -420,7 +417,7 @@
 					</div>
 				</div>
 
-				{#if textScale !== null}
+				{#if textScale !== null && !isDefaultSetting('textScale')}
 					<div class=" flex items-center gap-2 px-1 pb-1">
 						<button
 							type="button"
