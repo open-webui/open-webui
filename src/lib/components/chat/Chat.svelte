@@ -2236,16 +2236,26 @@
 		}
 
 		processingQueueChats.add(targetChatId);
+		const queuedMessages = [...queue];
+		const queuedMessageIds = new Set(queuedMessages.map((m) => m.id));
 		try {
-			const combinedPrompt = queue.map((m) => m.prompt).join('\n\n');
-			const combinedFiles = queue.flatMap((m) => m.files);
+			const combinedPrompt = queuedMessages.map((m) => m.prompt).join('\n\n');
+			const combinedFiles = queuedMessages.flatMap((m) => m.files);
 
-			chatRequestQueues.update((q) => {
-				const { [targetChatId]: _, ...rest } = q;
-				return rest;
-			});
+			chatRequestQueues.update((q) => ({
+				...q,
+				[targetChatId]: (q[targetChatId] ?? []).filter(
+					(m) => !queuedMessageIds.has(m.id)
+				)
+			}));
 
 			await submitPrompt(combinedPrompt, combinedFiles);
+		} catch (error) {
+			console.error(error);
+			chatRequestQueues.update((q) => ({
+				...q,
+				[targetChatId]: [...queuedMessages, ...(q[targetChatId] ?? [])]
+			}));
 		} finally {
 			processingQueueChats.delete(targetChatId);
 		}
