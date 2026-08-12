@@ -4306,16 +4306,17 @@ async def update_calendar_event(
             if reminder_minutes is not None:
                 meta = {'alert_minutes': reminder_minutes}
 
-        form = CalendarEventUpdateForm(
-            title=title,
-            description=description,
-            start_at=start_ns,
-            end_at=end_ns,
-            all_day=all_day,
-            location=location,
-            is_cancelled=is_cancelled,
-            meta=meta,
-        )
+        update_fields = {
+            'title': title,
+            'description': description,
+            'start_at': start_ns,
+            'end_at': end_ns,
+            'all_day': all_day,
+            'location': location,
+            'is_cancelled': is_cancelled,
+            'meta': meta,
+        }
+        form = CalendarEventUpdateForm(**{k: v for k, v in update_fields.items() if v is not None})
 
         updated = await CalendarEvents.update_event_by_id(event_id, form)
         if not updated:
