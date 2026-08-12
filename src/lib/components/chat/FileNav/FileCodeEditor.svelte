@@ -6,7 +6,7 @@
 	import { indentWithTab } from '@codemirror/commands';
 	import { indentUnit, LanguageDescription } from '@codemirror/language';
 	import { languages } from '@codemirror/language-data';
-	import { oneDark } from '@codemirror/theme-one-dark';
+	import { outisMneme } from '$lib/codemirror-outis-mneme-theme';
 	import { onMount, onDestroy } from 'svelte';
 
 	export let value = '';
@@ -111,7 +111,7 @@
 					value = internalValue;
 				}
 			}),
-			editorTheme.of(isDark ? oneDark : []),
+			editorTheme.of(isDark ? outisMneme : []),
 			editorLanguage.of([]),
 			EditorView.theme({
 				'&': { fontSize: '0.75rem', height: '100%' },
@@ -135,7 +135,7 @@
 		// Watch dark mode
 		const observer = new MutationObserver(() => {
 			const dark = document.documentElement.classList.contains('dark');
-			editor?.dispatch({ effects: editorTheme.reconfigure(dark ? oneDark : []) });
+			editor?.dispatch({ effects: editorTheme.reconfigure(dark ? outisMneme : []) });
 		});
 		observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 

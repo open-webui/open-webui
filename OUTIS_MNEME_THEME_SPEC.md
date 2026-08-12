@@ -166,6 +166,38 @@ small, out-of-band Svelte component change (removed the `Tooltip` wrapper, kept 
 `line-clamp-1` truncation). Noted here for completeness even though it's unrelated to the theme's
 color/type/radius scope.
 
+### Code-block syntax highlighting (found from live use, now fixed)
+
+Every CodeMirror-backed code editor/viewer in the app (`CodeEditor.svelte`, `FileCodeEditor.svelte`,
+`CellEditor.svelte`, `OutputEditView.svelte`) imported `@codemirror/theme-one-dark` — Atom's classic
+"One Dark" theme: violet keywords, coral names, malibu-blue functions, chalky-orange types, cyan
+operators. Five saturated hues fighting for attention, at odds with the rest of the theme's "one
+accent color, everything else muted" approach — reported as visually loud/eye-straining.
+
+**This one is not CSS-overridable.** CodeMirror's `HighlightStyle` injects its own `<style>` block
+via `StyleModule`, which assigns each style a hashed, per-instance class name — there's no stable
+selector to target from outside. The only real fix is supplying a different `HighlightStyle`.
+
+Added `src/lib/codemirror-outis-mneme-theme.ts` — same structure as `oneDark`'s source
+(`node_modules/@codemirror/theme-one-dark/dist/index.js`: an `EditorView.theme()` for chrome +
+a `HighlightStyle.define([...])` mapping `@lezer/highlight` tags to colors), recolored to the
+theme's actual palette:
+
+- Keywords (`def`/`import`/`class`/`if`/`return`) → the one accent green — the single "important"
+  hue, same role it plays everywhere else in the theme
+- Names, definitions, strings → `--color-gray-50`/`-100` (near-white, not colored)
+- Types, numbers, operators, constants → `--color-gray-300` (muted, barely-there distinction)
+- Comments → `--color-gray-600` (very dim)
+- Invalid/error tokens → keeps the theme's danger red — the one place a second hue is warranted
+- Editor chrome (background, gutter, selection, cursor) → the same near-black/glass-adjacent tones
+  as the rest of the app, not oneDark's separate `#282c34`/`#21252b`/etc. palette
+
+All 4 import sites swapped `import { oneDark } from '@codemirror/theme-one-dark'` for
+`import { outisMneme } from '$lib/codemirror-outis-mneme-theme'` and renamed the local usages —
+otherwise unchanged (same conditional dark-mode wiring). Verified live at `/workspace/tools/create`
+(the built-in Python tool editor, reachable without a model connection) — keywords read as a single
+calm green against near-white identifiers, no rainbow.
+
 ## Testing plan
 
 1. `npm install` (fresh checkout, no `node_modules` yet), `npm run dev`.

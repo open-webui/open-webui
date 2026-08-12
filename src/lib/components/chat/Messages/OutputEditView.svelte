@@ -9,7 +9,7 @@
 	import { json } from '@codemirror/lang-json';
 	import { indentWithTab } from '@codemirror/commands';
 	import { indentUnit } from '@codemirror/language';
-	import { oneDark } from '@codemirror/theme-one-dark';
+	import { outisMneme } from '$lib/codemirror-outis-mneme-theme';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
@@ -37,7 +37,7 @@
 					keymap.of([indentWithTab]),
 					indentUnit.of('  '),
 					json(),
-					editorTheme.of(isDark ? oneDark : []),
+					editorTheme.of(isDark ? outisMneme : []),
 					EditorView.theme({
 						'&': { fontSize: '13px' },
 						'.cm-content': { fontFamily: 'ui-monospace, monospace' },
