@@ -1094,6 +1094,15 @@ def convert_to_responses_payload(payload: dict) -> dict:
                     url_data = part.get('image_url', {})
                     url = url_data.get('url', '') if isinstance(url_data, dict) else url_data
                     content_parts.append({'type': 'input_image', 'image_url': url})
+                elif part.get('type') == 'file':
+                    file = part.get('file', {})
+                    if isinstance(file, dict):
+                        content_parts.append(
+                            {
+                                'type': 'input_file',
+                                **{k: v for k, v in file.items() if k in ('file_data', 'file_id', 'filename')},
+                            }
+                        )
         else:
             content_parts = [{'type': text_type, 'text': str(content)}]
 
