@@ -124,6 +124,34 @@ html.outis-mneme .markdown-prose h3 {
 	font-size: 0.8125rem !important; /* 13px, was 16px */
 }
 
+/* Tailwind Typography's `prose-invert` variant hardcodes literal colors
+   (white headings/links/bold/code/kbd, slate-300 body, etc.) instead of
+   referencing --color-gray-* — the same class of hardcoded-literal issue
+   as the `.dark body` rule above. That's why overriding the gray scale
+   alone left headings/links/body text glaring white against the dark
+   background. Redeclared here, on the same selectors the `prose`/
+   `prose-invert` utilities compile onto, using the theme's own
+   mint-tinted scale instead. */
+html.outis-mneme .markdown-prose,
+html.outis-mneme .markdown-prose-sm,
+html.outis-mneme .markdown-prose-xs,
+html.outis-mneme .input-prose,
+html.outis-mneme .input-prose-sm {
+	--tw-prose-invert-headings: #e2f2ea;
+	--tw-prose-invert-links: #6ffcb0;
+	--tw-prose-invert-bold: #e2f2ea;
+	--tw-prose-invert-code: #d4ede2;
+	--tw-prose-invert-kbd: #d4ede2;
+	--tw-prose-invert-body: #b9d9cb;
+	--tw-prose-invert-lead: #9dc4b3;
+	--tw-prose-invert-counters: #7aab98;
+	--tw-prose-invert-bullets: #5c8f7d;
+	--tw-prose-invert-quotes: #b9d9cb;
+	--tw-prose-invert-captions: #7aab98;
+	--tw-prose-invert-th-borders: #3a5346;
+	--tw-prose-invert-td-borders: #2a3d34;
+}
+
 /* Icons — all ~182 of Open WebUI's icon components hardcode
    stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
    inline on their <svg>. currentColor already picks up the theme fine, but
