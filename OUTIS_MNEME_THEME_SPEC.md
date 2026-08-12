@@ -150,9 +150,10 @@ The chat response text (`.markdown-prose`, forced to `0.9375rem`/15px via a Tail
 arbitrary value in `app.css`) read noticeably larger once switched to JetBrains Mono, even though
 the nominal size didn't change. Monospace faces generally read bigger/wider than a proportional
 face like Inter at the same rem value — fixed-width glyphs and a taller x-height take up more
-visual room. Sized down to `0.8125rem`/13px specifically for `.markdown-prose` under
-`html.outis-mneme` (needs `!important` to beat the `!text-[0.9375rem]` it's overriding) to restore
-comparable reading density to the original. Scoped to the reading area only — not a change to the
+visual room. Sized down to `0.75rem`/12px specifically for `.markdown-prose` under
+`html.outis-mneme` (needs `!important` to beat the `!text-[0.9375rem]` it's overriding) — an
+intermediate `0.8125rem`/13px pass still read too big in live use, 12px matched the reading
+density most monospace-first terminal/dashboard UIs settle on. Scoped to the reading area only — not a change to the
 font-size scale generally.
 
 ### Redundant follow-up-question tooltip (found from live use, now fixed)

@@ -98,8 +98,11 @@ html.outis-mneme body {
    0.9375rem/15px via a Tailwind !important arbitrary value). JetBrains Mono
    at a given rem size reads visually larger/wider than Inter at the same
    size — its fixed-width glyphs and taller x-height take up more room — so
-   the nominal 15px felt oversized once the whole UI switched fonts. Sized
-   down to compensate; not a change to the font-size scale generally. */
+   the nominal 15px felt oversized once the whole UI switched fonts. First
+   pass (0.8125rem/13px) still read too big in practice; settled on
+   0.75rem/12px, which lines up with the base 12px reading size most
+   monospace-first terminal/dashboard UIs use. Not a change to the
+   font-size scale generally, just this reading area. */
 html.outis-mneme .markdown-prose {
-	font-size: 0.8125rem !important;
+	font-size: 0.75rem !important;
 }
