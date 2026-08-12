@@ -106,3 +106,15 @@ html.outis-mneme body {
 html.outis-mneme .markdown-prose {
 	font-size: 0.75rem !important;
 }
+
+/* Icons — all ~182 of Open WebUI's icon components hardcode
+   stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+   inline on their <svg>. currentColor already picks up the theme fine, but
+   the rounded caps/joins read soft against the flat, sharp-cornered
+   surfaces everywhere else. stroke-linecap/stroke-linejoin are real CSS
+   properties (not just SVG presentation attributes), so one global
+   selector overrides all 182 components without touching any of them. */
+html.outis-mneme svg {
+	stroke-linecap: square;
+	stroke-linejoin: miter;
+}
