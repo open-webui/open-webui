@@ -7,9 +7,11 @@
 	import Hashtag from '$lib/components/icons/Hashtag.svelte';
 	import Lock from '$lib/components/icons/Lock.svelte';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { searchUsers } from '$lib/apis/users';
+	import { getChannelMembersById } from '$lib/apis/channels';
 
 	export let query = '';
+
+	export let channel: any = null;
 
 	export let command: (payload: { id: string; label: string }) => void;
 	export let selectedIndex = 0;
@@ -25,26 +27,30 @@
 	let _users = [];
 	let _channels = [];
 
-	$: filteredItems = [..._users, ..._models, ..._channels].filter(
+	$: filteredItems = [..._models, ..._users, ..._channels].filter(
 		(u) =>
 			u.label.toLowerCase().includes(query.toLowerCase()) ||
 			u.id.toLowerCase().includes(query.toLowerCase())
 	);
 
 	const getUserList = async () => {
-		const res = await searchUsers(localStorage.token, query).catch((error) => {
-			console.error('Error searching users:', error);
+		if (!channel?.id) return;
+
+		const res = await getChannelMembersById(localStorage.token, channel.id, query).catch((error) => {
+			console.error('Error searching channel members:', error);
 			return null;
 		});
 
-		if (res) {
-			_users = [...res.users.map((u) => ({ type: 'user', id: u.id, label: u.name }))].sort((a, b) =>
-				a.label.localeCompare(b.label)
-			);
+		if (res && Array.isArray(res.users)) {
+			const users = res.users as { id: string; name: string }[];
+			_users = users
+				.filter((u) => u.id !== $user?.id)
+				.map((u) => ({ type: 'user', id: u.id, label: u.name }))
+				.sort((a, b) => a.label.localeCompare(b.label));
 		}
 	};
 
-	$: if (query !== null && userSuggestions) {
+	$: if (query !== null && userSuggestions && channel) {
 		getUserList();
 	}
 
