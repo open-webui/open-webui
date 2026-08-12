@@ -144,6 +144,27 @@ Mono stack — same "override the token, not each component" approach as everyth
 spec, and it should now cover every remaining component using either utility, not just this one
 dropdown.
 
+### Reading-area font size (found from live use, now fixed)
+
+The chat response text (`.markdown-prose`, forced to `0.9375rem`/15px via a Tailwind `!important`
+arbitrary value in `app.css`) read noticeably larger once switched to JetBrains Mono, even though
+the nominal size didn't change. Monospace faces generally read bigger/wider than a proportional
+face like Inter at the same rem value — fixed-width glyphs and a taller x-height take up more
+visual room. Sized down to `0.8125rem`/13px specifically for `.markdown-prose` under
+`html.outis-mneme` (needs `!important` to beat the `!text-[0.9375rem]` it's overriding) to restore
+comparable reading density to the original. Scoped to the reading area only — not a change to the
+font-size scale generally.
+
+### Redundant follow-up-question tooltip (found from live use, now fixed)
+
+`FollowUps.svelte` (the suggested-next-question chips shown after a response) wrapped every chip
+in a `Tooltip` showing the exact same text as the button label, unconditionally — not only when
+the label was actually truncated. Since the button already shows the text, the tooltip just
+repeated it on hover. This isn't a CSS/token issue like everything else in this spec — it's a
+small, out-of-band Svelte component change (removed the `Tooltip` wrapper, kept the button and its
+`line-clamp-1` truncation). Noted here for completeness even though it's unrelated to the theme's
+color/type/radius scope.
+
 ## Testing plan
 
 1. `npm install` (fresh checkout, no `node_modules` yet), `npm run dev`.

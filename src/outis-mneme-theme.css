@@ -93,3 +93,13 @@ html.outis-mneme body {
 	background: #090d0c;
 	color: #d4ede2;
 }
+
+/* Chat message reading area (app.css's `.markdown-prose`, forced to
+   0.9375rem/15px via a Tailwind !important arbitrary value). JetBrains Mono
+   at a given rem size reads visually larger/wider than Inter at the same
+   size — its fixed-width glyphs and taller x-height take up more room — so
+   the nominal 15px felt oversized once the whole UI switched fonts. Sized
+   down to compensate; not a change to the font-size scale generally. */
+html.outis-mneme .markdown-prose {
+	font-size: 0.8125rem !important;
+}
