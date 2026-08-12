@@ -94,6 +94,8 @@ IMAGE_CONFIG_KEYS = {
     'IMAGES_EDIT_OPENAI_API_VERSION': 'images.edit.openai.api_version',
     'IMAGES_EDIT_GEMINI_API_BASE_URL': 'images.edit.gemini.api_base_url',
     'IMAGES_EDIT_GEMINI_API_KEY': 'images.edit.gemini.api_key',
+    'IMAGES_EDIT_MINIMAX_API_BASE_URL': 'images.edit.minimax.api_base_url',
+    'IMAGES_EDIT_MINIMAX_API_KEY': 'images.edit.minimax.api_key',
     'IMAGES_EDIT_COMFYUI_BASE_URL': 'images.edit.comfyui.base_url',
     'IMAGES_EDIT_COMFYUI_API_KEY': 'images.edit.comfyui.api_key',
     'IMAGES_EDIT_COMFYUI_WORKFLOW': 'images.edit.comfyui.workflow',
@@ -262,6 +264,8 @@ class ImagesConfig(BaseModel):
     IMAGES_EDIT_OPENAI_API_VERSION: str
     IMAGES_EDIT_GEMINI_API_BASE_URL: str
     IMAGES_EDIT_GEMINI_API_KEY: str
+    IMAGES_EDIT_MINIMAX_API_BASE_URL: str
+    IMAGES_EDIT_MINIMAX_API_KEY: str
     IMAGES_EDIT_COMFYUI_BASE_URL: str
     IMAGES_EDIT_COMFYUI_API_KEY: str
     IMAGES_EDIT_COMFYUI_WORKFLOW: str
@@ -301,6 +305,7 @@ async def update_config(request: Request, form_data: ImagesConfig, user=Depends(
     updates = config_updates(form_data.model_dump(), IMAGE_CONFIG_KEYS)
     updates['image_generation.comfyui.base_url'] = form_data.COMFYUI_BASE_URL.strip('/')
     updates['images.edit.comfyui.base_url'] = form_data.IMAGES_EDIT_COMFYUI_BASE_URL.strip('/')
+    updates['images.edit.minimax.api_base_url'] = form_data.IMAGES_EDIT_MINIMAX_API_BASE_URL.rstrip('/')
     await Config.upsert(updates)
     await set_image_model(request, form_data.IMAGE_GENERATION_MODEL)
     values = await get_config_values(IMAGE_CONFIG_KEYS)
@@ -1098,6 +1103,53 @@ async def image_edits(
                         )
                         images.append({'url': url})
 
+            return images
+
+        elif image_config.IMAGE_EDIT_ENGINE == 'minimax':
+            headers = {
+                'Authorization': f'Bearer {image_config.IMAGES_EDIT_MINIMAX_API_KEY}',
+                'Content-Type': 'application/json',
+            }
+
+            if ENABLE_FORWARD_USER_INFO_HEADERS:
+                headers = include_user_info_headers(headers, user)
+
+            source_images = [form_data.image] if isinstance(form_data.image, str) else form_data.image
+            data = {
+                'model': model or 'image-01',
+                'prompt': form_data.prompt,
+                'subject_reference': [
+                    {
+                        'type': 'character',
+                        'image_file': image,
+                    }
+                    for image in source_images
+                ],
+                'response_format': 'base64',
+                **({'n': form_data.n} if form_data.n else {}),
+                **({'width': width, 'height': height} if width is not None and height is not None else {}),
+            }
+
+            session = await get_session()
+            async with session.post(
+                url=image_config.IMAGES_EDIT_MINIMAX_API_BASE_URL,
+                json=data,
+                headers=headers,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as r:
+                r.raise_for_status()
+                res = await r.json(content_type=None)
+
+            base_response = res.get('base_resp', {})
+            if base_response.get('status_code', 0) != 0:
+                raise ValueError(base_response.get('status_msg') or 'Image edit request failed')
+
+            images = []
+            request_metadata = {key: value for key, value in data.items() if key != 'subject_reference'}
+            for image in res.get('data', {}).get('image_base64', []):
+                image_data, content_type = await get_image_data(image)
+                _, url = await upload_image(request, image_data, content_type, {**request_metadata, **metadata}, user)
+                images.append({'url': url})
             return images
 
         elif image_config.IMAGE_EDIT_ENGINE == 'comfyui':

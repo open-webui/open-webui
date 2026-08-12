@@ -729,6 +729,7 @@
 							<option value="openai">{$i18n.t('Default (Open AI)')}</option>
 							<option value="comfyui">{$i18n.t('ComfyUI')}</option>
 							<option value="gemini">{$i18n.t('Gemini')}</option>
+							<option value="minimax">MiniMax</option>
 						</SettingsSelect>
 					</AdminSettingRow>
 
@@ -786,6 +787,25 @@
 								bind:value={config.IMAGES_EDIT_OPENAI_API_VERSION}
 							/>
 						</AdminSettingField>
+					{:else if config?.IMAGE_EDIT_ENGINE === 'minimax'}
+						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+							<AdminSettingField label={$i18n.t('API Base URL')}>
+								<input
+									class={inputClass}
+									placeholder={$i18n.t('API Base URL')}
+									bind:value={config.IMAGES_EDIT_MINIMAX_API_BASE_URL}
+								/>
+							</AdminSettingField>
+
+							<AdminSettingField label={$i18n.t('API Key')}>
+								<SensitiveInput
+									variant="settings"
+									placeholder={$i18n.t('API Key')}
+									bind:value={config.IMAGES_EDIT_MINIMAX_API_KEY}
+									required={true}
+								/>
+							</AdminSettingField>
+						</div>
 					{:else if config?.IMAGE_EDIT_ENGINE === 'comfyui'}
 						<AdminSettingField
 							label={$i18n.t('Base URL')}

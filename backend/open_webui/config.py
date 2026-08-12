@@ -1499,6 +1499,11 @@ IMAGES_EDIT_OPENAI_API_KEY = os.getenv('IMAGES_EDIT_OPENAI_API_KEY', OPENAI_API_
 IMAGES_EDIT_GEMINI_API_BASE_URL = os.getenv('IMAGES_EDIT_GEMINI_API_BASE_URL', GEMINI_API_BASE_URL)
 IMAGES_EDIT_GEMINI_API_KEY = os.getenv('IMAGES_EDIT_GEMINI_API_KEY', GEMINI_API_KEY)
 
+IMAGES_EDIT_MINIMAX_API_BASE_URL = os.getenv(
+    'IMAGES_EDIT_MINIMAX_API_BASE_URL', 'https://api.minimax.io/v1/image_generation'
+)
+IMAGES_EDIT_MINIMAX_API_KEY = os.getenv('IMAGES_EDIT_MINIMAX_API_KEY', '')
+
 
 IMAGES_EDIT_COMFYUI_BASE_URL = os.getenv('IMAGES_EDIT_COMFYUI_BASE_URL', '')
 IMAGES_EDIT_COMFYUI_API_KEY = os.getenv('IMAGES_EDIT_COMFYUI_API_KEY', '')
@@ -3005,6 +3010,8 @@ DEFAULT_CONFIG = {
     'images.edit.openai.api_key': IMAGES_EDIT_OPENAI_API_KEY,
     'images.edit.gemini.api_base_url': IMAGES_EDIT_GEMINI_API_BASE_URL,
     'images.edit.gemini.api_key': IMAGES_EDIT_GEMINI_API_KEY,
+    'images.edit.minimax.api_base_url': IMAGES_EDIT_MINIMAX_API_BASE_URL,
+    'images.edit.minimax.api_key': IMAGES_EDIT_MINIMAX_API_KEY,
     'images.edit.comfyui.base_url': IMAGES_EDIT_COMFYUI_BASE_URL,
     'images.edit.comfyui.api_key': IMAGES_EDIT_COMFYUI_API_KEY,
     'images.edit.comfyui.workflow': IMAGES_EDIT_COMFYUI_WORKFLOW,
