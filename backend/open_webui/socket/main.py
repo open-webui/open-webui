@@ -176,6 +176,7 @@ YDOC_MANAGER = YdocManager(
 async def periodic_session_pool_cleanup():
     """Reap orphaned SESSION_POOL entries that missed heartbeats (e.g. crashed instance)."""
     retry_delay = random.uniform(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT)
+    renew_interval = max(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, 0.5)
     while True:
         if not session_aquire_func():
             log.debug('Session cleanup lock held by another node. Retrying.')
@@ -197,7 +198,21 @@ async def periodic_session_pool_cleanup():
                             del SESSION_POOL[sid]
                         except KeyError:
                             pass
-                await asyncio.sleep(SESSION_POOL_TIMEOUT)
+
+                next_cleanup_at = time.monotonic() + SESSION_POOL_TIMEOUT
+                lock_lost = False
+                while True:
+                    sleep_for = min(renew_interval, next_cleanup_at - time.monotonic())
+                    if sleep_for <= 0:
+                        break
+                    await asyncio.sleep(sleep_for)
+                    if not session_renew_func():
+                        log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
+                        lock_lost = True
+                        break
+
+                if lock_lost:
+                    break
         finally:
             session_release_func()
 
