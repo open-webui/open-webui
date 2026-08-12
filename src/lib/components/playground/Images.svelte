@@ -5,6 +5,8 @@
 
 	import { user } from '$lib/stores';
 	import { imageGenerations, imageEdits } from '$lib/apis/images';
+	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { resolveImageUrl } from '$lib/utils/imageUrl';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
@@ -99,7 +101,8 @@
 
 	const downloadImage = async (url: string, index: number) => {
 		try {
-			const response = await fetch(url);
+			const imageUrl = resolveImageUrl(url, WEBUI_BASE_URL);
+			const response = await fetch(imageUrl);
 			const blob = await response.blob();
 			const blobUrl = URL.createObjectURL(blob);
 			const a = document.createElement('a');
@@ -139,7 +142,7 @@
 										on:click={() => downloadImage(image.url, index)}
 									>
 										<img
-											src={image.url}
+											src={resolveImageUrl(image.url, WEBUI_BASE_URL)}
 											alt=""
 											class="w-full aspect-square object-cover rounded-lg border border-gray-100/30 dark:border-gray-850/30"
 										/>
