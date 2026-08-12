@@ -532,7 +532,7 @@
 						class="h-full overflow-y-auto rounded-lg bg-gray-50/60 px-3 py-2 dark:bg-white/[0.03]"
 					>
 						<pre
-							class="whitespace-pre-wrap pr-8 font-mono text-[11px] leading-relaxed">{selectedHistoryEntry
+							class="whitespace-pre-wrap pr-8 font-mono text-[0.6875rem] leading-relaxed">{selectedHistoryEntry
 								?.snapshot?.content || content}</pre>
 					</div>
 				</div>

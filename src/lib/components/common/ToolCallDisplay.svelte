@@ -95,6 +95,19 @@
 
 	$: parsedArgs = parseArguments(args);
 	$: parsedResult = parseJSONString(result);
+
+	const toggleOpen = () => {
+		open = !open;
+	};
+
+	const toggleOpenOnKeydown = (event: KeyboardEvent) => {
+		if (event.key !== 'Enter' && event.key !== ' ') {
+			return;
+		}
+
+		event.preventDefault();
+		toggleOpen();
+	};
 </script>
 
 <div {id} class={className}>
@@ -119,12 +132,12 @@
 		</div>
 	{:else}
 		<!-- Tool call display -->
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
 			class="{buttonClassName} cursor-pointer"
-			on:pointerup={() => {
-				open = !open;
-			}}
+			role="button"
+			tabindex="0"
+			on:click={toggleOpen}
+			on:keydown={toggleOpenOnKeydown}
 		>
 			<div
 				class="w-full max-w-full font-normal flex items-center gap-1.5 {isExecuting
@@ -180,7 +193,7 @@
 					{#if args}
 						<div>
 							<div
-								class="text-[10px] uppercase tracking-wider font-normal text-gray-400 dark:text-gray-500 mb-1.5 px-1"
+								class="text-[0.625rem] uppercase tracking-wider font-normal text-gray-400 dark:text-gray-500 mb-1.5 px-1"
 							>
 								{$i18n.t('Input')}
 							</div>
@@ -213,7 +226,7 @@
 					{#if isDone && result}
 						<div>
 							<div
-								class="text-[10px] uppercase tracking-wider font-normal text-gray-400 dark:text-gray-500 mb-1.5 px-1"
+								class="text-[0.625rem] uppercase tracking-wider font-normal text-gray-400 dark:text-gray-500 mb-1.5 px-1"
 							>
 								{$i18n.t('Output')}
 							</div>

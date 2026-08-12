@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Image from '$lib/components/common/Image.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import EditPencil from '$lib/components/icons/EditPencil.svelte';
 	import ArrowForward from '$lib/components/icons/ArrowForward.svelte';
@@ -33,12 +34,28 @@
 							file.url?.startsWith('data') || file.url?.startsWith('http')
 								? file.url
 								: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
-						<Image src={fileUrl} alt="" imageClassName="size-6 rounded-md object-cover" />
+						<div
+							class="relative size-6 shrink-0 overflow-hidden rounded-lg border border-gray-100/60 bg-white/60 dark:border-white/[0.06] dark:bg-white/[0.025]"
+						>
+							<Image src={fileUrl} alt="" imageClassName="size-full object-cover" />
+							{#if file.status === 'uploading'}
+								<div
+									class="absolute inset-0 flex items-center justify-center bg-white/75 text-gray-500 backdrop-blur-[1px] dark:bg-gray-950/70 dark:text-gray-300"
+								>
+									<Spinner className="size-3" />
+								</div>
+							{/if}
+						</div>
 					{:else}
 						<div
-							class="flex items-center px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400"
+							class="flex h-6 max-w-[9rem] items-center gap-1 rounded-lg border border-gray-100/60 bg-white/60 px-1.5 text-[0.6875rem] leading-none text-gray-500 dark:border-white/[0.06] dark:bg-white/[0.025] dark:text-gray-400"
 						>
-							<span class="max-w-[80px] truncate">{file.name ?? 'file'}</span>
+							{#if file.status === 'uploading'}
+								<span class="shrink-0 text-gray-400 dark:text-gray-500">
+									<Spinner className="size-3" />
+								</span>
+							{/if}
+							<span class="max-w-[5rem] truncate">{file.name ?? 'file'}</span>
 						</div>
 					{/if}
 				{/each}
@@ -52,17 +69,38 @@
 				{$i18n.t('Empty message')}
 			</p>
 		{/if}
+
+		{#if files.some((file) => file.status === 'error')}
+			<span class="shrink-0 text-xs text-gray-400 dark:text-gray-500">
+				{$i18n.t('Upload failed')}
+			</span>
+		{/if}
 	</div>
 
 	<!-- Actions -->
 	<div class="flex items-center gap-1 shrink-0">
 		<!-- Send immediately -->
-		<Tooltip content={$i18n.t('Send now')}>
+		<Tooltip
+			content={files.some((file) => ['uploading', 'error'].includes(file.status))
+				? $i18n.t('Waiting for upload')
+				: $i18n.t('Send now')}
+		>
 			<button
 				type="button"
-				class="p-1 text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
-				on:click={() => onSendNow(id)}
-				aria-label={$i18n.t('Send now')}
+				class="p-1 text-gray-400 transition-colors {files.some((file) =>
+					['uploading', 'error'].includes(file.status)
+				)
+					? 'opacity-40 cursor-not-allowed'
+					: 'hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'}"
+				disabled={files.some((file) => ['uploading', 'error'].includes(file.status))}
+				on:click={() => {
+					if (!files.some((file) => ['uploading', 'error'].includes(file.status))) {
+						onSendNow(id);
+					}
+				}}
+				aria-label={files.some((file) => ['uploading', 'error'].includes(file.status))
+					? $i18n.t('Waiting for upload')
+					: $i18n.t('Send now')}
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"

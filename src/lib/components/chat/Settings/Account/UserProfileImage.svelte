@@ -85,7 +85,7 @@
 	<div class="mb-2 flex items-center gap-4">
 		<button
 			class="group relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100
-			ring-1 ring-gray-200 transition-all duration-200 hover:ring-2 hover:ring-gray-300 dark:bg-white/8 dark:ring-white/10 dark:hover:ring-white/20"
+			ring-1 ring-inset ring-gray-200 transition-all duration-200 hover:ring-2 hover:ring-gray-300 dark:bg-white/8 dark:ring-white/10 dark:hover:ring-white/20"
 			type="button"
 			on:click={() => {
 				profileImageInputElement.click();
@@ -101,7 +101,7 @@
 				class="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/40"
 			>
 				<svg
-					class="h-4 w-4 text-white opacity-0 drop-shadow-sm transition-opacity duration-200 group-hover:opacity-100"
+					class="h-4 w-4 text-white opacity-0 drop-shadow-sm transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100"
 					fill="none"
 					viewBox="0 0 24 24"
 					stroke="currentColor"
@@ -187,7 +187,9 @@
 					class=" rounded-full {imageClassName} object-cover"
 				/>
 
-				<div class="absolute bottom-0 right-0 opacity-0 group-hover:opacity-100 transition">
+				<div
+					class="absolute bottom-0 right-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition"
+				>
 					<div class="p-1 rounded-full bg-white text-black border-gray-100 shadow">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -205,7 +207,7 @@
 		</div>
 		<div class="flex flex-col w-full justify-center mt-2">
 			<button
-				class=" text-xs text-center text-gray-500 rounded-lg py-0.5 opacity-0 group-hover:opacity-100 transition-all"
+				class=" text-xs text-center text-gray-500 rounded-lg py-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all"
 				type="button"
 				on:click={async () => {
 					profileImageUrl = `${WEBUI_BASE_URL}/user.png`;
@@ -213,7 +215,7 @@
 			>
 
 			<button
-				class="rounded-lg py-0.5 text-center text-xs text-gray-600 opacity-0 transition-all group-hover:opacity-100 dark:text-gray-400"
+				class="rounded-lg py-0.5 text-center text-xs text-gray-600 opacity-0 transition-all group-hover:opacity-100 group-focus-within:opacity-100 dark:text-gray-400"
 				type="button"
 				on:click={async () => {
 					if (canvasPixelTest()) {
@@ -232,7 +234,7 @@
 			>
 
 			<button
-				class="rounded-lg py-0.5 text-center text-xs text-gray-600 opacity-0 transition-all group-hover:opacity-100 dark:text-gray-400"
+				class="rounded-lg py-0.5 text-center text-xs text-gray-600 opacity-0 transition-all group-hover:opacity-100 group-focus-within:opacity-100 dark:text-gray-400"
 				type="button"
 				on:click={async () => {
 					const url = await getGravatarUrl(localStorage.token, user?.email);

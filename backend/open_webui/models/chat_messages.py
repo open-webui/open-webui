@@ -1,4 +1,3 @@
-import json
 import time
 import uuid
 from collections import Counter

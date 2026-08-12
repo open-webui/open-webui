@@ -8,18 +8,32 @@
 	export let data: ArrayBuffer | Uint8Array | null = null;
 	export let className = 'w-full h-[70vh]';
 
+	type PdfDocument = import('pdfjs-dist').PDFDocumentProxy;
+	type PdfTextLayer = InstanceType<typeof import('pdfjs-dist').TextLayer>;
+
 	let outerContainer: HTMLDivElement;
 	let sceneElement: HTMLDivElement;
 	let loading = true;
 	let error = '';
-	let pdfDoc: any = null;
+	let pdfDoc: PdfDocument | null = null;
 	let pzInstance: PanZoom | null = null;
 	let zoomLevel = 1;
 	let rerenderTimer: ReturnType<typeof setTimeout> | null = null;
 	let lastRenderedZoom = 1;
 
 	// Keep a reference to TextLayer instances so we can update/cancel them
-	let textLayerInstances: any[] = [];
+	let textLayerInstances: PdfTextLayer[] = [];
+
+	const cancelTextLayers = () => {
+		for (const tl of textLayerInstances) {
+			try {
+				tl.cancel();
+			} catch {
+				// Text layers can already be resolved or canceled during rerenders.
+			}
+		}
+		textLayerInstances = [];
+	};
 
 	const initPanzoom = () => {
 		if (pzInstance) {
@@ -37,7 +51,7 @@
 					}
 					return false;
 				},
-				beforeMouseDown: (e) => {
+				beforeMouseDown: () => {
 					// Only allow drag-to-pan when zoomed in (not at default scale)
 					const transform = pzInstance?.getTransform();
 					if (transform && Math.abs(transform.scale - 1) < 0.01) {
@@ -93,13 +107,7 @@
 
 		const pageWrappers = sceneElement.querySelectorAll('.pdf-page-wrapper');
 
-		// Cancel old text layers
-		for (const tl of textLayerInstances) {
-			try {
-				tl.cancel();
-			} catch (_) {}
-		}
-		textLayerInstances = [];
+		cancelTextLayers();
 
 		for (let i = 0; i < pageWrappers.length; i++) {
 			const page = await pdfDoc.getPage(i + 1);
@@ -119,7 +127,7 @@
 
 			const ctx = canvas.getContext('2d');
 			if (ctx) {
-				await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+				await page.render({ canvas, canvasContext: ctx, viewport: scaledViewport }).promise;
 			}
 
 			// Rebuild text layer
@@ -146,13 +154,7 @@
 		// Clear previous content
 		sceneElement.innerHTML = '';
 
-		// Cancel old text layers
-		for (const tl of textLayerInstances) {
-			try {
-				tl.cancel();
-			} catch (_) {}
-		}
-		textLayerInstances = [];
+		cancelTextLayers();
 
 		const pdfjs = await import('pdfjs-dist');
 		const dpr = window.devicePixelRatio || 1;
@@ -194,7 +196,10 @@
 			wrapper.appendChild(canvas);
 
 			const ctx = canvas.getContext('2d');
+			if (!ctx) continue;
+
 			await page.render({
+				canvas,
 				canvasContext: ctx,
 				viewport: scaledViewport
 			}).promise;
@@ -256,12 +261,7 @@
 	onDestroy(() => {
 		if (rerenderTimer) clearTimeout(rerenderTimer);
 		pzInstance?.dispose();
-		for (const tl of textLayerInstances) {
-			try {
-				tl.cancel();
-			} catch (_) {}
-		}
-		textLayerInstances = [];
+		cancelTextLayers();
 		if (pdfDoc) {
 			pdfDoc.destroy();
 			pdfDoc = null;
@@ -289,7 +289,8 @@
 			class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-0.5 rounded-lg bg-white/90 dark:bg-gray-850/90 backdrop-blur-sm shadow-lg border border-gray-200/60 dark:border-gray-700/60 px-1 py-0.5"
 		>
 			<button
-				class="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+				type="button"
+				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
 				on:click={zoomOut}
 				aria-label="Zoom out"
 			>
@@ -307,14 +308,16 @@
 				</svg>
 			</button>
 			<button
-				class="px-1.5 py-1 min-w-[3rem] text-center text-[11px] font-normal text-gray-500 dark:text-gray-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition tabular-nums"
+				type="button"
+				class="shrink-0 min-w-12 h-7 px-1.5 py-1 text-center text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition tabular-nums"
 				on:click={resetView}
 				aria-label="Reset zoom"
 			>
 				{Math.round(zoomLevel * 100)}%
 			</button>
 			<button
-				class="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+				type="button"
+				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
 				on:click={zoomIn}
 				aria-label="Zoom in"
 			>

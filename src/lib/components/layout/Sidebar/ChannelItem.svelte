@@ -77,7 +77,7 @@
 	class=" w-full {className} rounded-xl flex relative group hover:bg-gray-100 dark:hover:bg-gray-900 {$page
 		.url.pathname === `/channels/${channel.id}`
 		? 'bg-gray-100 dark:bg-gray-900 selected'
-		: ''} {channel?.type === 'dm' ? 'px-1 py-[3px]' : 'p-1'}  {channel?.unread_count > 0
+		: ''} {channel?.type === 'dm' ? 'px-1 py-[0.1875rem]' : 'p-1'}  {channel?.unread_count > 0
 		? 'font-normal dark:text-white text-black'
 		: ' dark:text-gray-400 text-gray-600'} cursor-pointer select-none"
 >
@@ -109,7 +109,7 @@
 				{#if channel?.type === 'dm'}
 					{#if channel?.users}
 						{@const channelMembers = channel.users.filter((u) => u.id !== $user?.id)}
-						<div class="flex ml-[1px] mr-0.5 relative">
+						<div class="flex ml-[0.0625rem] mr-0.5 relative">
 							{#each channelMembers.slice(0, 2) as u, index}
 								<img
 									src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
@@ -191,7 +191,7 @@
 		<div class="flex items-center">
 			{#if channel?.unread_count > 0}
 				<div
-					class="text-xs py-[1px] px-2 rounded-xl bg-gray-100 text-black dark:bg-gray-800 dark:text-white font-normal whitespace-nowrap"
+					class="text-xs py-[0.0625rem] px-2 rounded-xl bg-gray-100 text-black dark:bg-gray-800 dark:text-white font-normal whitespace-nowrap"
 				>
 					{new Intl.NumberFormat($i18n.locale, {
 						notation: 'compact',
@@ -203,9 +203,7 @@
 	</a>
 
 	{#if ['dm'].includes(channel?.type)}
-		<div
-			class="ml-0.5 mr-1 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
-		>
+		<div class="ml-0.5 mr-1 hover-reveal self-center flex items-center dark:text-gray-300">
 			<button
 				type="button"
 				class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
@@ -230,9 +228,7 @@
 			</button>
 		</div>
 	{:else if $user?.role === 'admin' || channel.user_id === $user?.id}
-		<div
-			class="ml-0.5 mr-1 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
-		>
+		<div class="ml-0.5 mr-1 hover-reveal self-center flex items-center dark:text-gray-300">
 			<button
 				type="button"
 				class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"

@@ -148,6 +148,7 @@
 
 			if (
 				($settings?.detectArtifacts ?? true) &&
+				!compactPreview &&
 				isArtifact &&
 				hasClosingCodeFence(raw) &&
 				!autoOpenedArtifactIds.has(artifactId) &&

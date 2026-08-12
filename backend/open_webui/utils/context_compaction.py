@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
 
@@ -8,7 +7,9 @@ from fastapi.responses import JSONResponse
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.utils.chat_id import is_saved_chat_id
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_message_list
+from open_webui.utils.payload import apply_params_to_form_data
 from open_webui.utils.task import (
     get_task_model_id,
     prompt_template,
@@ -367,6 +368,7 @@ async def _generate_summary(
     task_config = await Config.get_many(
         'task.model.default',
         'task.model.external',
+        'task.model.params',
         'chat.context_compaction.model',
     )
     context_compaction_model = task_config.get('chat.context_compaction.model')
@@ -394,22 +396,25 @@ async def _generate_summary(
     prompt = prompt_variables_template(prompt, {'{{PREVIOUS_SUMMARY}}': previous_summary or ''})
     prompt = await prompt_template(prompt, user)
 
-    max_tokens = models[task_model_id].get('info', {}).get('params', {}).get('max_tokens', 1000)
+    task_model_params = task_config.get('task.model.params') or {}
+    if not isinstance(task_model_params, dict):
+        task_model_params = {}
+    task_model_params = {key: value for key, value in task_model_params.items() if value is not None and value != ''}
+    task_model_params = task_model_params or {
+        'max_tokens': models[task_model_id].get('info', {}).get('params', {}).get('max_tokens', 1000)
+    }
+
     payload = {
         'model': task_model_id,
         'messages': [{'role': 'user', 'content': prompt}],
         'stream': False,
-        **(
-            {'max_tokens': max_tokens}
-            if models[task_model_id].get('owned_by') == 'ollama'
-            else {'max_completion_tokens': max_tokens}
-        ),
         'metadata': {
             **(request.state.metadata if hasattr(request.state, 'metadata') else {}),
             'task': 'context_compaction',
         },
     }
 
+    payload = apply_params_to_form_data(payload, models[task_model_id], task_model_params)
     response = await generate_chat_completion(request, form_data=payload, user=user)
     summary = _response_text(response).strip()
     if summary:
@@ -429,7 +434,7 @@ def _response_text(response: Any) -> str:
 
     if isinstance(response, JSONResponse):
         try:
-            response = json.loads(response.body.decode('utf-8', 'replace'))
+            response = JSONCodec.loads(response.body.decode('utf-8', 'replace'))
         except Exception:
             return ''
 
@@ -477,7 +482,7 @@ def _estimate_tokens(value: Any) -> int:
 
     if not isinstance(value, str):
         try:
-            value = json.dumps(value, ensure_ascii=False)
+            value = JSONCodec.dumps(value, ensure_ascii=False)
         except Exception:
             value = str(value)
 

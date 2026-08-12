@@ -198,7 +198,7 @@ router = APIRouter()
 @router.get('/list')
 async def get_pipelines_list(request: Request, user=Depends(get_admin_user)):
     responses = await get_all_models_responses(request, user)
-    log.debug(f'get_pipelines_list: get_openai_models_responses returned {responses}')
+    log.debug('get_pipelines_list: get_openai_models_responses returned %s', responses)
 
     urlIdxs = [idx for idx, response in enumerate(responses) if response is not None and 'pipelines' in response]
     base_urls = await Config.get('openai.api_base_urls', [])
@@ -221,7 +221,7 @@ async def upload_pipeline(
     file: UploadFile = File(...),
     user=Depends(get_admin_user),
 ):
-    log.info(f'upload_pipeline: urlIdx={urlIdx}, filename={file.filename}')
+    log.info('upload_pipeline: urlIdx=%s, filename=%s', urlIdx, file.filename)
     filename = os.path.basename(file.filename)
 
     # Check if the uploaded file is a python file

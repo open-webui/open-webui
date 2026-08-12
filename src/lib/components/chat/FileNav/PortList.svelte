@@ -74,7 +74,7 @@
 		<span class="ml-auto flex items-center gap-1">
 			{#if ports.length > 0}
 				<span
-					class="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+					class="text-[0.625rem] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
 				>
 					{ports.length}
 				</span>
@@ -103,7 +103,7 @@
 	</button>
 
 	{#if expanded}
-		<div class="mt-1 space-y-0.5 max-h-[150px] overflow-y-auto">
+		<div class="mt-1 space-y-0.5 max-h-[9.375rem] overflow-y-auto">
 			{#if ports.length === 0}
 				<div class="text-xs text-gray-400 dark:text-gray-500 px-1 py-1">
 					{$i18n.t('No servers detected')}
@@ -125,7 +125,7 @@
 							<span
 								role="button"
 								tabindex="-1"
-								class="text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition shrink-0 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+								class="text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition shrink-0 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
 								on:click|stopPropagation={() => openPortExternal(port.port)}
 							>
 								<svg

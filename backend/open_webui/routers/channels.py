@@ -1,6 +1,5 @@
 import base64
 import io
-import json
 import logging
 from typing import Optional
 
@@ -177,7 +176,7 @@ async def get_channels(
         user_ids = None
         users = None
         if channel.type == 'dm':
-            user_ids = [member.user_id for member in await Channels.get_members_by_channel_id(channel.id, db=db)]
+            member_user_ids = [member.user_id for member in await Channels.get_members_by_channel_id(channel.id, db=db)]
             users = [
                 UserIdNameStatusResponse(
                     **{
@@ -185,8 +184,9 @@ async def get_channels(
                         'is_active': Users.is_active(u),
                     }
                 )
-                for u in await Users.get_users_by_user_ids(user_ids, db=db)
+                for u in await Users.get_users_by_user_ids(member_user_ids, db=db)
             ]
+            user_ids = [u.id for u in users]
 
         channel_list.append(
             ChannelListItemResponse(
@@ -383,7 +383,7 @@ async def get_channel_by_id(
         if not await Channels.is_user_channel_member(channel.id, user.id, db=db):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
-        user_ids = [member.user_id for member in await Channels.get_members_by_channel_id(channel.id, db=db)]
+        member_user_ids = [member.user_id for member in await Channels.get_members_by_channel_id(channel.id, db=db)]
 
         users = [
             UserIdNameStatusResponse(
@@ -392,8 +392,9 @@ async def get_channel_by_id(
                     'is_active': Users.is_active(u),
                 }
             )
-            for u in await Users.get_users_by_user_ids(user_ids, db=db)
+            for u in await Users.get_users_by_user_ids(member_user_ids, db=db)
         ]
+        user_ids = [u.id for u in users]
 
         channel_member = await Channels.get_member_by_channel_and_user_id(channel.id, user.id, db=db)
         unread_count = await Messages.get_unread_message_count(
@@ -407,7 +408,7 @@ async def get_channel_by_id(
                 'users': users,
                 'is_manager': await Channels.is_user_channel_manager(channel.id, user.id, db=db),
                 'write_access': True,
-                'user_count': len(user_ids),
+                'user_count': len(users),
                 'last_read_at': channel_member.last_read_at if channel_member else None,
                 'unread_count': unread_count,
             }

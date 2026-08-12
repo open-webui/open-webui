@@ -633,7 +633,7 @@
 										{/if}
 
 										<div
-											class="absolute bottom-0 right-0 z-10 opacity-0 transition group-hover:opacity-100"
+											class="absolute bottom-0 right-0 z-10 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"
 										>
 											<div class="m-1">
 												<div

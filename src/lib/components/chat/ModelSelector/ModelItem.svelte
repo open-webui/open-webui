@@ -52,7 +52,7 @@
 	role="option"
 	aria-selected={isSelected}
 	aria-label={$i18n.t('Select {{modelName}} model', { modelName: item.label })}
-	class="group/item flex h-8 w-full cursor-pointer select-none items-center rounded-xl px-2 text-left text-[13px] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40 {index ===
+	class="group/item flex h-8 w-full cursor-pointer select-none items-center rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40 {index ===
 		selectedModelIdx && !compareEnabled
 		? 'bg-gray-50/70 dark:bg-gray-800/60'
 		: ''} {isSelected ? 'bg-gray-50/70 dark:bg-gray-800/60' : ''}"
@@ -121,7 +121,7 @@
 								}`}
 								className="self-end"
 							>
-								<span class="line-clamp-1 text-[11px] font-normal text-gray-500 dark:text-gray-400"
+								<span class="line-clamp-1 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400"
 									>{item.model.ollama?.details?.parameter_size ?? ''}</span
 								>
 							</Tooltip>

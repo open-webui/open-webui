@@ -53,7 +53,7 @@ def search_yacy(
         # Strip all query parameters from the URL
         query_url = query_url.rstrip('/') + '/yacysearch.json'
 
-    log.debug(f'searching {query_url}')
+    log.debug('searching %s', query_url)
 
     response = requests.get(
         query_url,

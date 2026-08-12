@@ -36,7 +36,10 @@
 	let auth_type = 'bearer';
 	let path = '/openapi.json';
 	let enabled = false;
+	let chatContextMode: 'default' | 'chat_id' | 'off' = 'default';
+	let automationContextMode: 'default' | 'automation_id' | 'off' = 'default';
 	let showAdvanced = false;
+	let showOrchestratorAdvanced = false;
 	let showAccessControlModal = false;
 	let showDeleteConfirmDialog = false;
 	let accessGrants: any[] = [];
@@ -82,6 +85,19 @@
 			// Restore policy state
 			serverType = connection?.server_type ?? (connection?.policy_id ? 'orchestrator' : null);
 			policyId = connection?.policy_id ?? '';
+			const contexts = serverType === 'orchestrator' ? (connection?.config?.contexts ?? {}) : {};
+			chatContextMode =
+				contexts?.chat === false
+					? 'off'
+					: contexts?.chat?.context_id === 'chat_id'
+						? 'chat_id'
+						: 'default';
+			automationContextMode =
+				contexts?.automation === false
+					? 'off'
+					: contexts?.automation?.context_id === 'automation_id'
+						? 'automation_id'
+						: 'default';
 
 			const p: Record<string, any> = {};
 			policyImage = p.image ?? '';
@@ -110,6 +126,8 @@
 			path = '/openapi.json';
 			enabled = false;
 			accessGrants = [];
+			chatContextMode = 'default';
+			automationContextMode = 'default';
 
 			serverType = null;
 			policyId = '';
@@ -347,6 +365,15 @@
 			}
 		}
 
+		const contexts: Record<string, false | { context_id: string }> = {};
+		if (chatContextMode === 'off') contexts.chat = false;
+		else if (chatContextMode === 'chat_id') contexts.chat = { context_id: 'chat_id' };
+		if (automationContextMode === 'off') contexts.automation = false;
+		else if (automationContextMode === 'automation_id') {
+			contexts.automation = { context_id: 'automation_id' };
+		}
+		const useContexts = !direct && serverType === 'orchestrator' && Object.keys(contexts).length > 0;
+
 		const result = {
 			...(!direct && id.trim() ? { id: id.trim() } : {}),
 			url,
@@ -356,7 +383,8 @@
 			auth_type,
 			enabled: enabled,
 			config: {
-				...(!direct ? { access_grants: accessGrants } : {})
+				...(!direct ? { access_grants: accessGrants } : {}),
+				...(useContexts ? { contexts } : {})
 			},
 			// Policy fields
 			...(serverType ? { server_type: serverType } : {}),
@@ -506,6 +534,59 @@
 
 						<!-- Policy section (orchestrator only, admin only) -->
 						{#if serverType === 'orchestrator' && !direct}
+							<button
+								type="button"
+								class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition mt-2"
+								on:click={() => (showOrchestratorAdvanced = !showOrchestratorAdvanced)}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-3 h-3 transition-transform {showOrchestratorAdvanced ? 'rotate-90' : ''}"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+								{$i18n.t('Orchestrator')}
+							</button>
+
+							{#if showOrchestratorAdvanced}
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col w-full">
+									<div class="flex justify-between mb-1">
+										<div class={`text-xs text-gray-500`}>
+											{$i18n.t('Terminal Contexts')}
+										</div>
+									</div>
+									<div class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
+										<label for="terminal-chat-context">{$i18n.t('Chat')}</label>
+										<select
+											id="terminal-chat-context"
+											class={`text-xs ${selectClass}`}
+											bind:value={chatContextMode}
+										>
+											<option value="default">{$i18n.t('Shared')}</option>
+											<option value="chat_id">{$i18n.t('Per chat')}</option>
+											<option value="off">{$i18n.t('Off')}</option>
+										</select>
+										<label for="terminal-automation-context">{$i18n.t('Automation')}</label>
+										<select
+											id="terminal-automation-context"
+											class={`text-xs ${selectClass}`}
+											bind:value={automationContextMode}
+										>
+											<option value="default">{$i18n.t('Shared')}</option>
+											<option value="automation_id">{$i18n.t('Per automation')}</option>
+											<option value="off">{$i18n.t('Off')}</option>
+										</select>
+									</div>
+								</div>
+							</div>
+
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
 									<div class="flex justify-between mb-0.5">
@@ -727,6 +808,7 @@
 									{refreshing ? $i18n.t('Refreshing...') : $i18n.t('Refresh Terminals')}
 								</button>
 							</div>
+							{/if}
 						{/if}
 
 						<div class="flex items-center justify-between">

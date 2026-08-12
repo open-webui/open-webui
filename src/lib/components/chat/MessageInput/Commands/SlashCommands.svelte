@@ -4,6 +4,7 @@
 	import { getSkillItems } from '$lib/apis/skills';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
+	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -38,7 +39,8 @@
 			: []),
 		...(canStatus && 'status'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'status' } }]
-			: [])
+			: []),
+		...('model'.startsWith(query.toLowerCase()) ? [{ type: 'command', data: { id: 'model' } }] : [])
 	];
 
 	$: filteredPrompts = prompts
@@ -266,12 +268,38 @@
 					</span>
 				</button>
 			</Tooltip>
+		{:else if item.data.id === 'model'}
+			<Tooltip content="Show or switch the current model." placement="top">
+				<button
+					type="button"
+					aria-label="Model: show or switch the current model."
+					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-xs text-left transition-colors duration-75
+						{commandIdx === selectedIdx ? 'app-interactive-active' : ''}"
+					on:mousedown={(e) => e.preventDefault()}
+					on:click={() => {
+						onSelect(item);
+					}}
+					on:mouseenter={() => {
+						selectedIdx = commandIdx;
+					}}
+					on:focus={() => {}}
+					data-selected={commandIdx === selectedIdx}
+				>
+					<span class="app-icon-muted flex items-center justify-center w-4 shrink-0">
+						<Sparkles className="size-3.5" />
+					</span>
+					<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
+						<span class="truncate">Model</span>
+						<span class="app-muted text-[0.625rem] truncate shrink-0">/model</span>
+					</span>
+				</button>
+			</Tooltip>
 		{/if}
 	{/each}
 {/if}
 
 {#if filteredPrompts.length > 0}
-	<div class="px-2 py-1 text-[11px] text-gray-500 dark:text-gray-400">
+	<div class="px-2 py-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
 		{$i18n.t('Prompts')}
 	</div>
 
@@ -279,7 +307,7 @@
 		{@const itemIdx = commandItems.length + promptIdx}
 		<Tooltip content={promptItem.name} placement="top-start">
 			<button
-				class="flex h-[1.6875rem] w-full items-center gap-1.5 rounded-xl px-2 text-left text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {itemIdx ===
+				class="flex h-[1.6875rem] w-full items-center gap-1.5 rounded-xl px-2 text-left text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {itemIdx ===
 				selectedIdx
 					? 'bg-gray-50/40 dark:bg-gray-800/40 selected-command-option-button'
 					: ''}"
@@ -306,7 +334,7 @@
 {/if}
 
 {#if skills.length > 0}
-	<div class="px-2 py-1 text-[11px] text-gray-500 dark:text-gray-400">
+	<div class="px-2 py-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
 		{$i18n.t('Skills')}
 	</div>
 
@@ -318,7 +346,7 @@
 			tippyOptions={{ maxWidth: '20rem' }}
 		>
 			<button
-				class="flex h-[1.6875rem] w-full items-center rounded-xl px-2 text-left text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {itemIdx ===
+				class="flex h-[1.6875rem] w-full items-center rounded-xl px-2 text-left text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {itemIdx ===
 				selectedIdx
 					? 'bg-gray-50/40 dark:bg-gray-800/40 selected-command-option-button'
 					: ''}"

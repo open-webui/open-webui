@@ -245,7 +245,7 @@
 				</table>
 			</div>
 
-			<div class=" absolute top-1 right-1.5 z-20 invisible group-hover:visible flex gap-0.5">
+			<div class=" absolute top-1 right-1.5 z-20 hover-reveal flex gap-0.5">
 				<Tooltip content={$i18n.t('Copy')}>
 					<button
 						class="p-1 rounded-lg bg-transparent transition"

@@ -32,6 +32,8 @@ DICT_CONFIG_KEY_ALIASES = {
     'audio.tts.openai.params': ('AUDIO_TTS_OPENAI_PARAMS',),
     'models.default_metadata': ('DEFAULT_MODEL_METADATA',),
     'models.default_params': ('DEFAULT_MODEL_PARAMS',),
+    'task.model.params': ('TASK_MODEL_PARAMS',),
+    'ui.default_interface_settings': ('DEFAULT_INTERFACE_SETTINGS',),
     'user.permissions': ('USER_PERMISSIONS',),
 }
 DICT_CONFIG_KEYS = tuple(DICT_CONFIG_KEY_ALIASES)

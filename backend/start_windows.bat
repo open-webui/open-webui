@@ -35,16 +35,21 @@ IF "%WEBUI_SECRET_KEY_LENGTH%" == "" (
 IF "%WEBUI_SECRET_KEY% %WEBUI_JWT_SECRET_KEY%" == " " (
     echo Loading WEBUI_SECRET_KEY from file, not provided as an environment variable.
 
-    IF NOT EXIST "%KEY_FILE%" (
+    IF NOT EXIST "!KEY_FILE!" (
         echo Generating WEBUI_SECRET_KEY
         :: Generate a random value to use as a WEBUI_SECRET_KEY in case the user didn't provide one
-        SET /p WEBUI_SECRET_KEY=<nul
-        FOR /L %%i IN (1,1,%WEBUI_SECRET_KEY_LENGTH%) DO SET /p WEBUI_SECRET_KEY=<!random!>>%KEY_FILE%
+        SET "CHARSET=0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        SET "WEBUI_SECRET_KEY="
+        FOR /L %%i IN (1,1,!WEBUI_SECRET_KEY_LENGTH!) DO (
+            SET /A "INDEX=!RANDOM! %% 62"
+            FOR %%j IN (!INDEX!) DO SET "WEBUI_SECRET_KEY=!WEBUI_SECRET_KEY!!CHARSET:~%%j,1!"
+        )
+        <nul SET /p="!WEBUI_SECRET_KEY!">"!KEY_FILE!"
         echo WEBUI_SECRET_KEY generated
     )
 
-    echo Loading WEBUI_SECRET_KEY from %KEY_FILE%
-    SET /p WEBUI_SECRET_KEY=<%KEY_FILE%
+    echo Loading WEBUI_SECRET_KEY from !KEY_FILE!
+    SET /p WEBUI_SECRET_KEY=<"!KEY_FILE!"
 )
 
 :: Execute uvicorn

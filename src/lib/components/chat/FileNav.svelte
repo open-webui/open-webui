@@ -34,6 +34,7 @@
 	import Document from '../icons/Document.svelte';
 	import PenAlt from '../icons/PenAlt.svelte';
 	import ZoomReset from '../icons/ZoomReset.svelte';
+	import { isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
 
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -92,6 +93,7 @@
 	let currentPath = savedPath;
 	let fileRoot: TerminalFileRoot | null = null;
 	let entries: FileEntry[] = [];
+	let currentWritable = true;
 	let loading = false;
 	let error: string | null = null;
 
@@ -174,6 +176,7 @@
 
 	// ── File preview state ───────────────────────────────────────────────
 	let selectedFile: string | null = null;
+	let selectedFileWritable = true;
 	let previewPort: number | null = null;
 	let fileContent: string | null = null;
 	let fileImageUrl: string | null = null;
@@ -181,6 +184,7 @@
 	let fileAudioUrl: string | null = null;
 	let filePdfData: ArrayBuffer | null = null;
 	let fileSqliteData: ArrayBuffer | null = null;
+	let fileDocxData: ArrayBuffer | null = null;
 	let fileLoading = false;
 	let filePreviewRef: FilePreview;
 
@@ -231,11 +235,21 @@
 
 	// ── Terminal resolution ──────────────────────────────────────────────
 	let selectedTerminal: { url: string; key: string } | null = null;
+	let terminalChatContextPending = false;
+	let terminalChatContextHidden = false;
+
+	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
 
 	const getTerminal = (): { url: string; key: string } | null => {
 		const systemTerminal = $selectedTerminalId
 			? (($terminalServers ?? []).find((t) => t.id === $selectedTerminalId) ?? null)
 			: ($terminalServers?.[0] ?? null);
+		const chatConfig = chatContext(systemTerminal);
+		const chatScoped = !!systemTerminal && chatConfig?.context_id === 'chat_id';
+		terminalChatContextHidden =
+			!!systemTerminal && (chatConfig === false || (chatScoped && isTemporaryChatId(chatId)));
+		terminalChatContextPending = chatScoped && !terminalChatContextHidden && !isSavedChatId(chatId);
+		if (terminalChatContextHidden || terminalChatContextPending) return null;
 
 		const userTerminal = ($settings?.terminalServers ?? []).find(
 			(s) => s.url === $selectedTerminalId
@@ -381,6 +395,7 @@
 		}
 		filePdfData = null;
 		fileSqliteData = null;
+		fileDocxData = null;
 		fileOfficeHtml = null;
 		fileOfficeSlides = null;
 		currentSlide = 0;
@@ -398,6 +413,7 @@
 		loading = true;
 		error = null;
 		selectedFile = null;
+		selectedFileWritable = true;
 		previewPort = null;
 		clearFilePreview();
 		clearSelection();
@@ -416,7 +432,8 @@
 				'Failed to load directory. Check your Terminal connection in Settings → Integrations.';
 			entries = [];
 		} else {
-			entries = sortEntries(result);
+			currentWritable = result.writable !== false;
+			entries = sortEntries(result.entries);
 		}
 	};
 
@@ -427,6 +444,7 @@
 		}
 
 		const filePath = `${currentPath}${entry.name}`;
+		selectedFileWritable = entry.writable !== false;
 		pushNavHistory(currentPath, filePath);
 
 		const terminal = selectedTerminal;
@@ -488,10 +506,7 @@
 				const arrayBuffer = await result.blob.arrayBuffer();
 				try {
 					if (ext === 'docx') {
-						const mammoth = await import('mammoth');
-						const res = await mammoth.convertToHtml({ arrayBuffer });
-						const DOMPurify = (await import('dompurify')).default;
-						fileOfficeHtml = DOMPurify.sanitize(res.value);
+						fileDocxData = arrayBuffer;
 					} else if (ext === 'xlsx') {
 						const XLSX = await import('xlsx');
 						const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
@@ -554,6 +569,7 @@
 	// ── Drag-and-drop upload ─────────────────────────────────────────────
 	const handleDragOver = (e: DragEvent) => {
 		if (selectedFile) return;
+		if (!currentWritable) return;
 		if (!e.dataTransfer?.types.includes('Files')) return;
 		e.preventDefault();
 		e.stopPropagation();
@@ -566,7 +582,7 @@
 		isDragOver = false;
 
 		const terminal = selectedTerminal;
-		if (selectedFile || !terminal) return;
+		if (selectedFile || !terminal || !currentWritable) return;
 
 		const droppedFiles = Array.from(e.dataTransfer?.files ?? []);
 		if (!droppedFiles.length) return;
@@ -581,7 +597,7 @@
 
 	const handleUploadFiles = async (files: File[]) => {
 		const terminal = selectedTerminal;
-		if (!files.length || !terminal) return;
+		if (!files.length || !terminal || !currentWritable) return;
 
 		uploading = true;
 		for (const file of files) {
@@ -593,6 +609,7 @@
 
 	// ── Folder creation ──────────────────────────────────────────────────
 	const startNewFolder = async () => {
+		if (!currentWritable) return;
 		creatingFolder = true;
 		newFolderName = '';
 		await tick();
@@ -622,6 +639,7 @@
 
 	// ── File creation ────────────────────────────────────────────────────
 	const startNewFile = async () => {
+		if (!currentWritable) return;
 		creatingFile = true;
 		newFileName = '';
 		await tick();
@@ -646,7 +664,7 @@
 	// ── Delete ───────────────────────────────────────────────────────────
 	const handleDelete = async (path: string, name: string) => {
 		const terminal = selectedTerminal;
-		if (!terminal) return;
+		if (!terminal || !currentWritable) return;
 
 		const result = await deleteEntry(terminal.url, terminal.key, path, chatId ?? undefined);
 		toast[result ? 'success' : 'error'](
@@ -656,6 +674,7 @@
 	};
 
 	const requestDelete = (path: string, name: string) => {
+		if (!currentWritable) return;
 		deleteTarget = { path, name };
 		showDeleteConfirm = true;
 	};
@@ -663,7 +682,7 @@
 	// ── Move (drag-and-drop) ────────────────────────────────────────────
 	const handleMove = async (source: string, destFolder: string) => {
 		const terminal = selectedTerminal;
-		if (!terminal) return;
+		if (!terminal || !currentWritable) return;
 
 		const fileName = source.split('/').pop() ?? '';
 		const destination = `${destFolder}${fileName}`;
@@ -692,7 +711,7 @@
 	// ── Rename ──────────────────────────────────────────────────────────
 	const handleRename = async (oldPath: string, newName: string) => {
 		const terminal = selectedTerminal;
-		if (!terminal || !newName) return;
+		if (!terminal || !newName || !currentWritable) return;
 
 		const dir = oldPath.substring(0, oldPath.lastIndexOf('/') + 1) || currentPath;
 		const destination = `${dir}${newName}`;
@@ -721,6 +740,13 @@
 
 	$: selectedCount = selectedEntries.size;
 	$: hasSelectedFiles = [...selectedEntries].some((p) => !p.endsWith('/'));
+	$: selectedEntriesWritable =
+		currentWritable &&
+		[...selectedEntries].every((path) => {
+			const name = path.replace(/\/$/, '').split('/').pop();
+			const entry = entries.find((item) => item.name === name);
+			return entry?.writable !== false;
+		});
 
 	const clearSelection = () => {
 		selectedEntries = new Set();
@@ -780,7 +806,7 @@
 
 	const bulkDelete = async () => {
 		const terminal = selectedTerminal;
-		if (!terminal) return;
+		if (!terminal || !selectedEntriesWritable) return;
 
 		const paths = [...selectedEntries];
 		let ok = 0;
@@ -929,7 +955,13 @@
 		const onBlur = () => (shiftKey = false);
 
 		const onVisibilityChange = () => {
-			if (document.visibilityState === 'visible' && !selectedFile && selectedTerminal && !loading) {
+			if (
+				document.visibilityState === 'visible' &&
+				!selectedFile &&
+				selectedTerminal &&
+				!terminalChatContextPending &&
+				!loading
+			) {
 				loadDir(currentPath);
 			}
 		};
@@ -972,13 +1004,22 @@
 
 <svelte:window on:keydown={handleKeydown} on:click={handleWindowClick} />
 
-{#if !selectedTerminal}
+{#if terminalChatContextHidden}
+	<div class="hidden"></div>
+{:else if terminalChatContextPending}
+	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
+		<Folder className="size-6 text-gray-300 dark:text-gray-600 mb-2" />
+		<div class="text-xs text-gray-500 dark:text-gray-400">
+			{$i18n.t('Start the chat to use this terminal.')}
+		</div>
+	</div>
+{:else if !selectedTerminal}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
 		<Folder className="size-6 text-gray-300 dark:text-gray-600 mb-2" />
 		<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">
 			{$i18n.t('No Terminal connection configured.')}
 		</div>
-		<div class="text-[10px] text-gray-400 dark:text-gray-500">
+		<div class="text-[0.625rem] text-gray-400 dark:text-gray-500">
 			{$i18n.t('Add your Open Terminal URL and API key in Settings → Integrations.')}
 		</div>
 	</div>
@@ -1019,6 +1060,7 @@
 				breadcrumbs={buildBreadcrumbs(currentPath)}
 				{selectedFile}
 				{loading}
+				writable={currentWritable}
 				{canGoBack}
 				{canGoForward}
 				{sortBy}
@@ -1116,9 +1158,9 @@
 					{#if isHtml && showRaw}
 						<Tooltip content={$i18n.t('Save')}>
 							<button
-								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
 								on:click={() => filePreviewRef?.saveCodeFile()}
-								disabled={saving}
+								disabled={saving || !selectedFileWritable}
 								aria-label={$i18n.t('Save')}
 							>
 								{#if saving}
@@ -1144,9 +1186,9 @@
 					{:else if isMarkdown && showRaw}
 						<Tooltip content={$i18n.t('Save')}>
 							<button
-								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
 								on:click={() => filePreviewRef?.saveCodeFile()}
-								disabled={saving}
+								disabled={saving || !selectedFileWritable}
 								aria-label={$i18n.t('Save')}
 							>
 								{#if saving}
@@ -1172,9 +1214,9 @@
 					{:else if isCode}
 						<Tooltip content={$i18n.t('Save')}>
 							<button
-								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
 								on:click={() => filePreviewRef?.saveCodeFile()}
-								disabled={saving}
+								disabled={saving || !selectedFileWritable}
 								aria-label={$i18n.t('Save')}
 							>
 								{#if saving}
@@ -1216,9 +1258,9 @@
 						</Tooltip>
 						<Tooltip content={$i18n.t('Save')}>
 							<button
-								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
 								on:click={() => filePreviewRef?.saveEdit()}
-								disabled={saving}
+								disabled={saving || !selectedFileWritable}
 								aria-label={$i18n.t('Save')}
 							>
 								{#if saving}
@@ -1242,8 +1284,9 @@
 					{:else}
 						<Tooltip content={$i18n.t('Edit')}>
 							<button
-								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
 								on:click={() => filePreviewRef?.startEdit()}
+								disabled={!selectedFileWritable}
 								aria-label={$i18n.t('Edit')}
 							>
 								<PenAlt className="size-3.5" />
@@ -1282,7 +1325,7 @@
 				<Tooltip content={$i18n.t('Download')}>
 					<button
 						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-						on:click={() => downloadFile(selectedFile)}
+						on:click={() => selectedFile && downloadFile(selectedFile)}
 						aria-label={$i18n.t('Download')}
 					>
 						<svg
@@ -1308,6 +1351,7 @@
 				<BulkActionBar
 					count={selectedCount}
 					hasFiles={hasSelectedFiles}
+					canDelete={selectedEntriesWritable}
 					onDelete={() => {
 						deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
 						showDeleteConfirm = true;
@@ -1343,12 +1387,14 @@
 					bind:saving
 					bind:currentSlide
 					{selectedFile}
+					readOnly={!selectedFileWritable}
 					{fileLoading}
 					{fileImageUrl}
 					{fileVideoUrl}
 					{fileAudioUrl}
 					{filePdfData}
 					{fileSqliteData}
+					{fileDocxData}
 					{fileContent}
 					{fileOfficeHtml}
 					{fileOfficeSlides}
@@ -1367,7 +1413,7 @@
 					overlay={overlay || isDraggingHandle}
 					onSave={async (content) => {
 						const terminal = selectedTerminal;
-						if (!terminal || !selectedFile) return;
+						if (!terminal || !selectedFile || !selectedFileWritable) return;
 						const fileName = selectedFile.split('/').pop() ?? 'file';
 						const dir = selectedFile.substring(0, selectedFile.lastIndexOf('/') + 1) || '/';
 						const file = new File([content], fileName, { type: 'text/plain' });
@@ -1394,7 +1440,7 @@
 						<div class="text-xs text-gray-400 dark:text-gray-500">
 							{$i18n.t('This folder is empty')}
 						</div>
-						<div class="text-[11px] text-gray-300 dark:text-gray-600">
+						<div class="text-[0.6875rem] text-gray-300 dark:text-gray-600">
 							{$i18n.t('Drop files here to upload')}
 						</div>
 					</div>
@@ -1463,6 +1509,7 @@
 									onSelect={handleSelect}
 									onLongPress={enterSelectionMode}
 									showDate={sortBy === 'date'}
+									parentWritable={currentWritable}
 								/>
 							{/each}
 						</ul>

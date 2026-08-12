@@ -261,7 +261,7 @@ class MistralLoader:
             file_id = response_data.get('id')
             if not file_id:
                 raise ValueError('File ID not found in upload response.')
-            log.info(f'File uploaded successfully. File ID: {file_id}')
+            log.info('File uploaded successfully. File ID: %s', file_id)
             return file_id
         except Exception as e:
             log.error(f'Failed to upload file: {e}')
@@ -305,12 +305,12 @@ class MistralLoader:
         if not file_id:
             raise ValueError('File ID not found in upload response.')
 
-        log.info(f'File uploaded successfully. File ID: {file_id}')
+        log.info('File uploaded successfully. File ID: %s', file_id)
         return file_id
 
     def _get_signed_url(self, file_id: str) -> str:
         """Retrieves a temporary signed URL for the uploaded file (sync version)."""
-        log.info(f'Getting signed URL for file ID: {file_id}')
+        log.info('Getting signed URL for file ID: %s', file_id)
         url = f'{self.base_url}/files/{file_id}/url'
         params = {'expiry': 1}
         signed_url_headers = {**self.headers, 'Accept': 'application/json'}
@@ -338,7 +338,7 @@ class MistralLoader:
         headers = {**self.headers, 'Accept': 'application/json'}
 
         async def url_request():
-            self._debug_log(f'Getting signed URL for file ID: {file_id}')
+            self._debug_log('Getting signed URL for file ID: %s', file_id)
             async with session.get(
                 url,
                 headers=headers,
@@ -421,7 +421,7 @@ class MistralLoader:
                 ocr_response = await self._handle_response_async(response)
 
             processing_time = time.time() - start_time
-            log.info(f'OCR processing completed in {processing_time:.2f}s')
+            log.info('OCR processing completed in %.2fs', processing_time)
 
             return ocr_response
 
@@ -434,13 +434,13 @@ class MistralLoader:
 
     def _delete_file(self, file_id: str) -> None:
         """Deletes the file from Mistral storage (sync version)."""
-        log.info(f'Deleting uploaded file ID: {file_id}')
+        log.info('Deleting uploaded file ID: %s', file_id)
         url = f'{self.base_url}/files/{file_id}'
 
         try:
             response = requests.delete(url, headers=self.headers, timeout=self.cleanup_timeout)
             delete_response = self._handle_response(response)
-            log.info(f'File deleted successfully: {delete_response}')
+            log.info('File deleted successfully: %s', delete_response)
         except Exception as e:
             # Log error but don't necessarily halt execution if deletion fails
             log.error(f'Failed to delete file ID {file_id}: {e}')
@@ -450,7 +450,7 @@ class MistralLoader:
         try:
 
             async def delete_request():
-                self._debug_log(f'Deleting file ID: {file_id}')
+                self._debug_log('Deleting file ID: %s', file_id)
                 async with session.delete(
                     url=f'{self.base_url}/files/{file_id}',
                     headers=self.headers,
@@ -460,7 +460,7 @@ class MistralLoader:
                     return await self._handle_response_async(response)
 
             await self._retry_request_async(delete_request)
-            self._debug_log(f'File {file_id} deleted successfully')
+            self._debug_log('File %s deleted successfully', file_id)
 
         except Exception as e:
             # Don't fail the entire process if cleanup fails
@@ -477,7 +477,6 @@ class MistralLoader:
             keepalive_timeout=60,  # Increased keepalive for connection reuse
             enable_cleanup_closed=True,
             force_close=False,  # Allow connection reuse
-            resolver=aiohttp.AsyncResolver(),  # Use async DNS resolver
         )
 
         timeout = aiohttp.ClientTimeout(
@@ -519,7 +518,7 @@ class MistralLoader:
             if page_content is None or page_index is None:
                 skipped_pages += 1
                 self._debug_log(
-                    f"Skipping page due to missing 'markdown' or 'index'. Data keys: {list(page_data.keys())}"
+                    "Skipping page due to missing 'markdown' or 'index'. Data keys: %s", list(page_data.keys())
                 )
                 continue
 
@@ -531,7 +530,7 @@ class MistralLoader:
 
             if not cleaned_content:
                 skipped_pages += 1
-                self._debug_log(f'Skipping empty page {page_index}')
+                self._debug_log('Skipping empty page %s', page_index)
                 continue
 
             # Create document with optimized metadata
@@ -551,7 +550,7 @@ class MistralLoader:
             )
 
         if skipped_pages > 0:
-            log.info(f'Processed {len(documents)} pages, skipped {skipped_pages} empty/invalid pages')
+            log.info('Processed %s pages, skipped %s empty/invalid pages', len(documents), skipped_pages)
 
         if not documents:
             # Case where pages existed but none had valid markdown/index
@@ -584,7 +583,7 @@ class MistralLoader:
             if self.use_base64:
                 documents = self._process_results(self._process_ocr(self._get_file_data_url()))
                 total_time = time.time() - start_time
-                log.info(f'Sync OCR workflow completed in {total_time:.2f}s, produced {len(documents)} documents')
+                log.info('Sync OCR workflow completed in %.2fs, produced %s documents', total_time, len(documents))
                 return documents
 
             # 1. Upload file
@@ -600,7 +599,7 @@ class MistralLoader:
             documents = self._process_results(ocr_response)
 
             total_time = time.time() - start_time
-            log.info(f'Sync OCR workflow completed in {total_time:.2f}s, produced {len(documents)} documents')
+            log.info('Sync OCR workflow completed in %.2fs, produced %s documents', total_time, len(documents))
 
             return documents
 
@@ -642,7 +641,7 @@ class MistralLoader:
                     ocr_response = await self._process_ocr_async(session, self._get_file_data_url())
                     documents = self._process_results(ocr_response)
                     total_time = time.time() - start_time
-                    log.info(f'Async OCR workflow completed in {total_time:.2f}s, produced {len(documents)} documents')
+                    log.info('Async OCR workflow completed in %.2fs, produced %s documents', total_time, len(documents))
                     return documents
 
                 # 1. Upload file with streaming
@@ -658,7 +657,7 @@ class MistralLoader:
                 documents = self._process_results(ocr_response)
 
                 total_time = time.time() - start_time
-                log.info(f'Async OCR workflow completed in {total_time:.2f}s, produced {len(documents)} documents')
+                log.info('Async OCR workflow completed in %.2fs, produced %s documents', total_time, len(documents))
 
                 return documents
 
@@ -701,7 +700,7 @@ class MistralLoader:
         if not loaders:
             return []
 
-        log.info(f'Starting concurrent processing of {len(loaders)} files with max {max_concurrent} concurrent')
+        log.info('Starting concurrent processing of %s files with max %s concurrent', len(loaders), max_concurrent)
         start_time = time.time()
 
         # Use semaphore to control concurrency
@@ -741,9 +740,11 @@ class MistralLoader:
         failure_count = len(results) - success_count
 
         log.info(
-            f'Batch processing completed in {total_time:.2f}s: '
-            f'{success_count} files succeeded, {failure_count} files failed, '
-            f'produced {total_docs} total documents'
+            'Batch processing completed in %.2fs: %s files succeeded, %s files failed, produced %s total documents',
+            total_time,
+            success_count,
+            failure_count,
+            total_docs,
         )
 
         return processed_results

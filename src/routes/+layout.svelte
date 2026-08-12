@@ -266,6 +266,10 @@
 				heartbeatInterval = null;
 			}
 
+			if (reason === 'io server disconnect') {
+				_socket.connect();
+			}
+
 			if (details) {
 				console.log('Additional details:', details);
 			}

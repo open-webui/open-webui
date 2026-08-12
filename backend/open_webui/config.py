@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import base64
-import json
 import logging
 import os
 import shutil
@@ -35,6 +34,7 @@ from open_webui.env import (
     log,
 )
 from open_webui.models.config import Config
+from open_webui.utils.json_codec import JSONCodec
 
 
 async def seed_registered_defaults():
@@ -84,7 +84,7 @@ async def import_legacy_config_json():
     if not os.path.exists(f'{DATA_DIR}/config.json'):
         return
     with open(f'{DATA_DIR}/config.json', 'r') as _f:
-        await Config.upsert(json.load(_f))
+        await Config.upsert(JSONCodec.loads(_f.read()))
     os.rename(f'{DATA_DIR}/config.json', f'{DATA_DIR}/old_config.json')
 
 
@@ -276,9 +276,9 @@ def _resolve_ollama_base_url(url: str) -> str:
 
     if not default.result() and fallback.result():
         url = url.replace(':11434', ':12434')
-        log.info(f'Ollama port 11434 unreachable on {host}, falling back to 12434')
+        log.info('Ollama port 11434 unreachable on %s, falling back to 12434', host)
     elif not default.result():
-        log.info(f'Ollama ports 11434 and 12434 both unreachable on {host}')
+        log.info('Ollama ports 11434 and 12434 both unreachable on %s', host)
 
     return url
 
@@ -299,12 +299,12 @@ OLLAMA_API_CONFIGS = {}
 _ollama_api_configs = os.getenv('OLLAMA_API_CONFIGS', '')
 if _ollama_api_configs:
     try:
-        parsed = json.loads(_ollama_api_configs)
+        parsed = JSONCodec.loads(_ollama_api_configs)
         if isinstance(parsed, dict):
             OLLAMA_API_CONFIGS = parsed
         else:
             log.warning('OLLAMA_API_CONFIGS must be a JSON object, ignoring')
-    except (json.JSONDecodeError, TypeError):
+    except (JSONCodec.JSONDecodeError, TypeError):
         log.warning('OLLAMA_API_CONFIGS is not valid JSON, ignoring')
 
 ####################################
@@ -346,12 +346,12 @@ OPENAI_API_CONFIGS = {}
 _openai_api_configs = os.getenv('OPENAI_API_CONFIGS', '')
 if _openai_api_configs:
     try:
-        parsed = json.loads(_openai_api_configs)
+        parsed = JSONCodec.loads(_openai_api_configs)
         if isinstance(parsed, dict):
             OPENAI_API_CONFIGS = parsed
         else:
             log.warning('OPENAI_API_CONFIGS must be a JSON object, ignoring')
-    except (json.JSONDecodeError, TypeError):
+    except (JSONCodec.JSONDecodeError, TypeError):
         log.warning('OPENAI_API_CONFIGS is not valid JSON, ignoring')
 
 # Get the actual OpenAI API key based on the base URL
@@ -375,7 +375,7 @@ ENABLE_BASE_MODELS_CACHE = os.getenv('ENABLE_BASE_MODELS_CACHE', 'False').lower(
 ####################################
 
 try:
-    tool_server_connections = json.loads(os.getenv('TOOL_SERVER_CONNECTIONS', '[]'))
+    tool_server_connections = JSONCodec.loads(os.getenv('TOOL_SERVER_CONNECTIONS', '[]'))
 except Exception as e:
     log.exception(f'Error loading TOOL_SERVER_CONNECTIONS: {e}')
     tool_server_connections = []
@@ -389,12 +389,12 @@ OAUTH_CLIENT_TIMEOUT = os.getenv('OAUTH_CLIENT_TIMEOUT', '')
 # TERMINAL_SERVER
 ####################################
 
-terminal_server_connections = json.loads(os.getenv('TERMINAL_SERVER_CONNECTIONS', '[]'))
+terminal_server_connections = JSONCodec.loads(os.getenv('TERMINAL_SERVER_CONNECTIONS', '[]'))
 
 TERMINAL_SERVER_CONNECTIONS = terminal_server_connections
 
 try:
-    TERMINAL_PROXY_HEADERS = json.loads(os.getenv('TERMINAL_PROXY_HEADERS', '{}'))
+    TERMINAL_PROXY_HEADERS = JSONCodec.loads(os.getenv('TERMINAL_PROXY_HEADERS', '{}'))
 except Exception:
     TERMINAL_PROXY_HEADERS = {}
 
@@ -811,7 +811,7 @@ if VECTOR_DB == 'oracle23ai':
             'Oracle23ai requires setting ORACLE_WALLET_DIR and ORACLE_WALLET_PASSWORD when using wallet authentication.'
         )
 
-log.info(f'VECTOR_DB: {VECTOR_DB}')
+log.info('VECTOR_DB: %s', VECTOR_DB)
 
 # S3 Vector
 S3_VECTOR_BUCKET_NAME = os.getenv('S3_VECTOR_BUCKET_NAME', None)
@@ -900,8 +900,8 @@ MINERU_API_KEY = os.getenv('MINERU_API_KEY', '')
 
 mineru_params = os.getenv('MINERU_PARAMS', '')
 try:
-    mineru_params = json.loads(mineru_params)
-except json.JSONDecodeError:
+    mineru_params = JSONCodec.loads(mineru_params)
+except JSONCodec.JSONDecodeError:
     mineru_params = {}
 
 MINERU_PARAMS = mineru_params
@@ -914,8 +914,8 @@ EXTERNAL_DOCUMENT_LOADER_API_KEY = os.getenv('EXTERNAL_DOCUMENT_LOADER_API_KEY',
 
 external_document_loader_headers = os.getenv('EXTERNAL_DOCUMENT_LOADER_HEADERS', '')
 try:
-    external_document_loader_headers = json.loads(external_document_loader_headers)
-except json.JSONDecodeError:
+    external_document_loader_headers = JSONCodec.loads(external_document_loader_headers)
+except JSONCodec.JSONDecodeError:
     external_document_loader_headers = {}
 if not isinstance(external_document_loader_headers, dict):
     external_document_loader_headers = {}
@@ -930,8 +930,8 @@ DOCLING_API_KEY = os.getenv('DOCLING_API_KEY', '')
 
 docling_params = os.getenv('DOCLING_PARAMS', '')
 try:
-    docling_params = json.loads(docling_params)
-except json.JSONDecodeError:
+    docling_params = JSONCodec.loads(docling_params)
+except JSONCodec.JSONDecodeError:
     docling_params = {}
 
 DOCLING_PARAMS = docling_params
@@ -994,7 +994,7 @@ PDF_EXTRACT_IMAGES = os.getenv('PDF_EXTRACT_IMAGES', 'False').lower() == 'true'
 PDF_LOADER_MODE = os.getenv('PDF_LOADER_MODE', 'page')
 
 RAG_EMBEDDING_MODEL = os.getenv('RAG_EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2')
-log.info(f'Embedding model set: {RAG_EMBEDDING_MODEL}')
+log.info('Embedding model set: %s', RAG_EMBEDDING_MODEL)
 
 RAG_TOKENIZER_MODEL = os.getenv('RAG_TOKENIZER_MODEL', '')
 
@@ -1022,7 +1022,7 @@ RAG_RERANKING_ENGINE = os.getenv('RAG_RERANKING_ENGINE', '')
 
 RAG_RERANKING_MODEL = os.getenv('RAG_RERANKING_MODEL', '')
 if RAG_RERANKING_MODEL != '':
-    log.info(f'Reranking model set: {RAG_RERANKING_MODEL}')
+    log.info('Reranking model set: %s', RAG_RERANKING_MODEL)
 
 
 RAG_RERANKING_MODEL_AUTO_UPDATE = (
@@ -1154,7 +1154,7 @@ WEB_SEARCH_RESULT_COUNT = int(os.getenv('WEB_SEARCH_RESULT_COUNT', '3'))
 
 
 try:
-    web_search_domain_filter_list = json.loads(os.getenv('WEB_SEARCH_DOMAIN_FILTER_LIST', '[]'))
+    web_search_domain_filter_list = JSONCodec.loads(os.getenv('WEB_SEARCH_DOMAIN_FILTER_LIST', '[]'))
 except Exception as e:
     web_search_domain_filter_list = [
         # "wikipedia.com",
@@ -1303,8 +1303,8 @@ LINKUP_API_KEY = os.getenv('LINKUP_API_KEY', '')
 
 linkup_search_params = os.getenv('LINKUP_SEARCH_PARAMS', '')
 try:
-    linkup_search_params = json.loads(linkup_search_params)
-except json.JSONDecodeError:
+    linkup_search_params = JSONCodec.loads(linkup_search_params)
+except JSONCodec.JSONDecodeError:
     linkup_search_params = {}
 
 LINKUP_SEARCH_PARAMS = linkup_search_params
@@ -1336,8 +1336,8 @@ AUTOMATIC1111_API_AUTH = os.getenv('AUTOMATIC1111_API_AUTH', '')
 
 automatic1111_params = os.getenv('AUTOMATIC1111_PARAMS', '')
 try:
-    automatic1111_params = json.loads(automatic1111_params)
-except json.JSONDecodeError:
+    automatic1111_params = JSONCodec.loads(automatic1111_params)
+except JSONCodec.JSONDecodeError:
     automatic1111_params = {}
 
 AUTOMATIC1111_PARAMS = automatic1111_params
@@ -1461,8 +1461,8 @@ COMFYUI_WORKFLOW = os.getenv('COMFYUI_WORKFLOW', COMFYUI_DEFAULT_WORKFLOW)
 
 comfyui_workflow_nodes = os.getenv('COMFYUI_WORKFLOW_NODES', '')
 try:
-    comfyui_workflow_nodes = json.loads(comfyui_workflow_nodes)
-except json.JSONDecodeError:
+    comfyui_workflow_nodes = JSONCodec.loads(comfyui_workflow_nodes)
+except JSONCodec.JSONDecodeError:
     comfyui_workflow_nodes = []
 
 COMFYUI_WORKFLOW_NODES = comfyui_workflow_nodes
@@ -1474,8 +1474,8 @@ IMAGES_OPENAI_API_KEY = os.getenv('IMAGES_OPENAI_API_KEY', OPENAI_API_KEY)
 
 images_openai_params = os.getenv('IMAGES_OPENAI_PARAMS', '')
 try:
-    images_openai_params = json.loads(images_openai_params)
-except json.JSONDecodeError:
+    images_openai_params = JSONCodec.loads(images_openai_params)
+except JSONCodec.JSONDecodeError:
     images_openai_params = {}
 
 
@@ -1513,8 +1513,8 @@ IMAGES_EDIT_COMFYUI_WORKFLOW = os.getenv('IMAGES_EDIT_COMFYUI_WORKFLOW', '')
 
 images_edit_comfyui_workflow_nodes = os.getenv('IMAGES_EDIT_COMFYUI_WORKFLOW_NODES', '')
 try:
-    images_edit_comfyui_workflow_nodes = json.loads(images_edit_comfyui_workflow_nodes)
-except json.JSONDecodeError:
+    images_edit_comfyui_workflow_nodes = JSONCodec.loads(images_edit_comfyui_workflow_nodes)
+except JSONCodec.JSONDecodeError:
     images_edit_comfyui_workflow_nodes = []
 
 IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = images_edit_comfyui_workflow_nodes
@@ -1588,8 +1588,8 @@ AUDIO_TTS_OPENAI_API_KEY = os.getenv('AUDIO_TTS_OPENAI_API_KEY', OPENAI_API_KEY)
 
 audio_tts_openai_params = os.getenv('AUDIO_TTS_OPENAI_PARAMS', '')
 try:
-    audio_tts_openai_params = json.loads(audio_tts_openai_params)
-except json.JSONDecodeError:
+    audio_tts_openai_params = JSONCodec.loads(audio_tts_openai_params)
+except JSONCodec.JSONDecodeError:
     audio_tts_openai_params = {}
 
 AUDIO_TTS_OPENAI_PARAMS = audio_tts_openai_params
@@ -1641,7 +1641,7 @@ DEFAULT_MODELS = os.getenv('DEFAULT_MODELS', None)
 DEFAULT_PINNED_MODELS = os.getenv('DEFAULT_PINNED_MODELS', None)
 
 try:
-    default_prompt_suggestions = json.loads(os.getenv('DEFAULT_PROMPT_SUGGESTIONS', '[]'))
+    default_prompt_suggestions = JSONCodec.loads(os.getenv('DEFAULT_PROMPT_SUGGESTIONS', '[]'))
 except Exception as e:
     log.exception(f'Error loading DEFAULT_PROMPT_SUGGESTIONS: {e}')
     default_prompt_suggestions = []
@@ -1679,7 +1679,7 @@ if default_prompt_suggestions == []:
 DEFAULT_PROMPT_SUGGESTIONS = default_prompt_suggestions
 
 try:
-    model_order_list = json.loads(os.getenv('MODEL_ORDER_LIST', '[]'))
+    model_order_list = JSONCodec.loads(os.getenv('MODEL_ORDER_LIST', '[]'))
 except Exception as e:
     log.exception(f'Error loading MODEL_ORDER_LIST: {e}')
     model_order_list = []
@@ -1687,7 +1687,7 @@ except Exception as e:
 MODEL_ORDER_LIST = model_order_list
 
 try:
-    default_model_metadata = json.loads(os.getenv('DEFAULT_MODEL_METADATA', '{}'))
+    default_model_metadata = JSONCodec.loads(os.getenv('DEFAULT_MODEL_METADATA', '{}'))
 except Exception as e:
     log.exception(f'Error loading DEFAULT_MODEL_METADATA: {e}')
     default_model_metadata = {}
@@ -1695,12 +1695,21 @@ except Exception as e:
 DEFAULT_MODEL_METADATA = default_model_metadata
 
 try:
-    default_model_params = json.loads(os.getenv('DEFAULT_MODEL_PARAMS', '{}'))
+    default_model_params = JSONCodec.loads(os.getenv('DEFAULT_MODEL_PARAMS', '{}'))
 except Exception as e:
     log.exception(f'Error loading DEFAULT_MODEL_PARAMS: {e}')
     default_model_params = {}
 
 DEFAULT_MODEL_PARAMS = default_model_params
+
+
+try:
+    default_interface_settings = JSONCodec.loads(os.getenv('DEFAULT_INTERFACE_SETTINGS', '{}'))
+except Exception as e:
+    log.exception(f'Error loading DEFAULT_INTERFACE_SETTINGS: {e}')
+    default_interface_settings = {}
+
+DEFAULT_INTERFACE_SETTINGS = default_interface_settings if isinstance(default_interface_settings, dict) else {}
 
 DEFAULT_USER_ROLE = os.getenv('DEFAULT_USER_ROLE', 'pending')
 
@@ -2038,7 +2047,7 @@ ENABLE_USER_STATUS = os.getenv('ENABLE_USER_STATUS', 'True').lower() == 'true'
 
 ENABLE_EVALUATION_ARENA_MODELS = os.getenv('ENABLE_EVALUATION_ARENA_MODELS', 'True').lower() == 'true'
 try:
-    evaluation_arena_models = json.loads(os.getenv('EVALUATION_ARENA_MODELS', '[]'))
+    evaluation_arena_models = JSONCodec.loads(os.getenv('EVALUATION_ARENA_MODELS', '[]'))
     if not isinstance(evaluation_arena_models, list) or not all(
         isinstance(model, dict) for model in evaluation_arena_models
     ):
@@ -2143,7 +2152,7 @@ class BannerModel(BaseModel):
 
 
 try:
-    banners = json.loads(os.getenv('WEBUI_BANNERS', '[]'))
+    banners = JSONCodec.loads(os.getenv('WEBUI_BANNERS', '[]'))
     banners = [BannerModel(**banner) for banner in banners]
 except Exception as e:
     log.exception(f'Error loading WEBUI_BANNERS: {e}')
@@ -2165,6 +2174,14 @@ ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', None)
 TASK_MODEL = os.getenv('TASK_MODEL', '')
 
 TASK_MODEL_EXTERNAL = os.getenv('TASK_MODEL_EXTERNAL', '')
+
+try:
+    task_model_params = JSONCodec.loads(os.getenv('TASK_MODEL_PARAMS', '{}'))
+except Exception as e:
+    log.exception(f'Error loading TASK_MODEL_PARAMS: {e}')
+    task_model_params = {}
+
+TASK_MODEL_PARAMS = task_model_params
 
 CONTEXT_COMPACTION_MODEL = os.getenv('CONTEXT_COMPACTION_MODEL', '')
 
@@ -2479,12 +2496,12 @@ GOOGLE_OAUTH_AUTHORIZE_PARAMS = {}
 _google_oauth_authorize_params = os.getenv('GOOGLE_OAUTH_AUTHORIZE_PARAMS', '')
 if _google_oauth_authorize_params:
     try:
-        _parsed = json.loads(_google_oauth_authorize_params)
+        _parsed = JSONCodec.loads(_google_oauth_authorize_params)
         if isinstance(_parsed, dict):
             GOOGLE_OAUTH_AUTHORIZE_PARAMS = _parsed
         else:
             log.warning('GOOGLE_OAUTH_AUTHORIZE_PARAMS must be a JSON object, ignoring')
-    except (json.JSONDecodeError, TypeError):
+    except (JSONCodec.JSONDecodeError, TypeError):
         log.warning('GOOGLE_OAUTH_AUTHORIZE_PARAMS is not valid JSON, ignoring')
 
 MICROSOFT_CLIENT_ID = os.getenv('MICROSOFT_CLIENT_ID', '')
@@ -2599,12 +2616,12 @@ OAUTH_AUTHORIZE_PARAMS = {}
 _oauth_authorize_params = os.getenv('OAUTH_AUTHORIZE_PARAMS', '')
 if _oauth_authorize_params:
     try:
-        _parsed = json.loads(_oauth_authorize_params)
+        _parsed = JSONCodec.loads(_oauth_authorize_params)
         if isinstance(_parsed, dict):
             OAUTH_AUTHORIZE_PARAMS = _parsed
         else:
             log.warning('OAUTH_AUTHORIZE_PARAMS must be a JSON object, ignoring')
-    except (json.JSONDecodeError, TypeError):
+    except (JSONCodec.JSONDecodeError, TypeError):
         log.warning('OAUTH_AUTHORIZE_PARAMS is not valid JSON, ignoring')
 
 
@@ -3055,6 +3072,7 @@ DEFAULT_CONFIG = {
     'ui.default_locale': DEFAULT_LOCALE,
     'ui.default_models': DEFAULT_MODELS,
     'ui.default_pinned_models': DEFAULT_PINNED_MODELS,
+    'ui.default_interface_settings': DEFAULT_INTERFACE_SETTINGS,
     'ui.prompt_suggestions': DEFAULT_PROMPT_SUGGESTIONS,
     'ui.model_order_list': MODEL_ORDER_LIST,
     'models.default_metadata': DEFAULT_MODEL_METADATA,
@@ -3094,6 +3112,7 @@ DEFAULT_CONFIG = {
     'auth.admin.email': ADMIN_EMAIL,
     'task.model.default': TASK_MODEL,
     'task.model.external': TASK_MODEL_EXTERNAL,
+    'task.model.params': TASK_MODEL_PARAMS,
     'chat.context_compaction.model': CONTEXT_COMPACTION_MODEL,
     'chat.context_compaction.enable': ENABLE_CONTEXT_COMPACTION,
     'chat.context_compaction.token_threshold': CONTEXT_COMPACTION_TOKEN_THRESHOLD,

@@ -253,6 +253,7 @@ type Settings = {
 	chatDirection?: 'LTR' | 'RTL' | 'auto';
 	ctrlEnterToSend?: boolean;
 	keyboardShortcuts?: boolean;
+	chatHoverPreview?: boolean;
 	renderMarkdownInPreviews?: boolean;
 	renderMarkdownInUserMessages?: boolean;
 	renderMarkdownInAssistantMessages?: boolean;
@@ -342,8 +343,10 @@ type Config = {
 		auto_redirect?: boolean;
 	};
 	ui?: {
+		default_interface_settings?: Record<string, unknown>;
 		pending_user_overlay_title?: string;
 		pending_user_overlay_content?: string;
+		response_watermark?: string;
 		iframe_csp?: string;
 	};
 };

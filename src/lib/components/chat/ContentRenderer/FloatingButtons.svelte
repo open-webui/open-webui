@@ -95,7 +95,7 @@
 			{#each actions as action}
 				<button
 					aria-label={action.label}
-					class="px-1.5 py-[1px] hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl flex items-center gap-1 min-w-fit transition"
+					class="px-1.5 py-[0.0625rem] hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl flex items-center gap-1 min-w-fit transition"
 					on:click={async () => {
 						selectedText = window.getSelection().toString();
 						selectedAction = action;

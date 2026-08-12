@@ -188,7 +188,7 @@
 							{#if dayEvents.length > 3}
 								<!-- svelte-ignore a11y-click-events-have-key-events --><!-- svelte-ignore a11y-no-static-element-interactions -->
 								<div
-									class="text-[10px] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
+									class="text-[0.625rem] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
 									on:click|stopPropagation={() => goToDayView(day)}
 								>
 									+{dayEvents.length - 3} more
@@ -207,7 +207,7 @@
 				class="flex-1 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100/30 dark:border-gray-850/30 overflow-hidden relative"
 			>
 				<div class="absolute inset-0 overflow-x-auto flex flex-col">
-					<div class="min-w-[700px] flex flex-col flex-1">
+					<div class="min-w-[43.75rem] flex flex-col flex-1">
 						<div
 							class="grid grid-cols-[52px_repeat(7,1fr)] shrink-0 border-b border-gray-100/30 dark:border-gray-850/30"
 						>
@@ -218,7 +218,7 @@
 										? 'border-l border-gray-100/20 dark:border-gray-850/20'
 										: ''}"
 								>
-									<div class="text-[11px] text-gray-400 dark:text-gray-500">
+									<div class="text-[0.6875rem] text-gray-400 dark:text-gray-500">
 										{DAY_NAMES[day.getDay()]}
 									</div>
 									<div
@@ -237,12 +237,12 @@
 						<div class="flex-1 overflow-y-auto">
 							{#each hours as hour}
 								<div
-									class="grid grid-cols-[52px_repeat(7,1fr)] min-h-[52px] {hour > 0
+									class="grid grid-cols-[52px_repeat(7,1fr)] min-h-[3.25rem] {hour > 0
 										? 'border-t border-gray-100/15 dark:border-gray-850/15'
 										: ''}"
 								>
 									<div
-										class="text-[10px] text-gray-400 dark:text-gray-500 text-right pr-2 select-none -mt-1.5 z-10"
+										class="text-[0.625rem] text-gray-400 dark:text-gray-500 text-right pr-2 select-none -mt-1.5 z-10"
 									>
 										{hour > 0 ? formatHour(hour) : ''}
 									</div>
@@ -265,7 +265,7 @@
 												{#if hourEvents.length > 3}
 													<!-- svelte-ignore a11y-click-events-have-key-events --><!-- svelte-ignore a11y-no-static-element-interactions -->
 													<div
-														class="text-[10px] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
+														class="text-[0.625rem] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
 														on:click|stopPropagation={() => goToDayView(day)}
 													>
 														+{hourEvents.length - 3} more
@@ -291,12 +291,12 @@
 				{#each hours as hour}
 					{@const hourEvents = getEventsForHour(currentDate, hour, filteredEvents)}
 					<div
-						class="flex min-h-[52px] {hour > 0
+						class="flex min-h-[3.25rem] {hour > 0
 							? 'border-t border-gray-100/15 dark:border-gray-850/15'
 							: ''}"
 					>
 						<div
-							class="w-14 shrink-0 text-[10px] text-gray-400 dark:text-gray-500 text-right pr-3 mt-1 select-none"
+							class="w-14 shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-500 text-right pr-3 mt-1 select-none"
 						>
 							{formatHour(hour)}
 						</div>

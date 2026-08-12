@@ -18,6 +18,9 @@
 	export let align: 'start' | 'end' = 'start';
 
 	let compareModels = selectedModels.length > 1;
+	let selector;
+
+	export const open = () => selector?.open();
 
 	const saveDefaultModel = async () => {
 		const hasEmptyModel = selectedModels.filter((it) => it === '');
@@ -64,6 +67,7 @@
 		<div class="min-w-0 max-w-full overflow-hidden">
 			<div class="min-w-0 max-w-full">
 				<Selector
+					bind:this={selector}
 					id="model"
 					placeholder={$i18n.t('Select a model')}
 					items={$models.map((model) => ({
