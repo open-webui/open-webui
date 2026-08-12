@@ -107,6 +107,23 @@ html.outis-mneme .markdown-prose {
 	font-size: 0.75rem !important;
 }
 
+/* Headings inside the reading area (app.css's `prose-h1:text-xl
+   prose-h2:text-lg prose-h3:text-base`, i.e. fixed 20px/18px/16px) don't
+   inherit from .markdown-prose's font-size above — they're each given
+   their own explicit size by the prose plugin. Shrinking only the body
+   text widened the heading-to-body contrast (was ~1.3x, became ~1.7x),
+   which read as headings being oddly loud/heavy. Scaled the whole
+   hierarchy down together, keeping the same relative proportions. */
+html.outis-mneme .markdown-prose h1 {
+	font-size: 1rem !important; /* 16px, was 20px */
+}
+html.outis-mneme .markdown-prose h2 {
+	font-size: 0.875rem !important; /* 14px, was 18px */
+}
+html.outis-mneme .markdown-prose h3 {
+	font-size: 0.8125rem !important; /* 13px, was 16px */
+}
+
 /* Icons — all ~182 of Open WebUI's icon components hardcode
    stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
    inline on their <svg>. currentColor already picks up the theme fine, but
