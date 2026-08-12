@@ -130,6 +130,7 @@
 	let showChatsMenu = false;
 
 	let folders = {};
+	type SelectedSidebarFolder = { id: string } | null;
 	let folderRegistry: Record<
 		string,
 		{
@@ -144,6 +145,14 @@
 	let newFolderId = null;
 
 	let sharedFolders: any[] = [];
+
+	const initSelectedFolderChats = (folder: SelectedSidebarFolder) => {
+		if (!folder?.id) {
+			return;
+		}
+
+		folderRegistry[folder.id]?.setFolderItems?.();
+	};
 
 	$: pinnedItems = $settings?.pinnedMenuItems ?? DEFAULT_PINNED_ITEMS;
 
@@ -230,29 +239,33 @@
 		}
 	};
 
-	$: if ($selectedFolder) {
-		initFolders();
-	}
+	$: initSelectedFolderChats($selectedFolder as SelectedSidebarFolder);
 
 	const initFolders = async () => {
 		if ($config?.features?.enable_folders === false) {
 			return;
 		}
 
-		const folderList = await getFolders(localStorage.token).catch((error) => {
-			return [];
-		});
+		const [folderList, sharedFolderList] = await Promise.all([
+			getFolders(localStorage.token).catch((error) => {
+				return [];
+			}),
+			getSharedFolders(localStorage.token).catch((error) => {
+				return [];
+			})
+		]);
 		_folders.set(folderList.sort((a, b) => b.updated_at - a.updated_at));
 
-		folders = {};
+		sharedFolders = sharedFolderList;
+		const folderMap: Record<string, any> = {};
 
 		// First pass: Initialize all folder entries
 		for (const folder of folderList) {
 			// Ensure folder is added to folders with its data
-			folders[folder.id] = { ...(folders[folder.id] || {}), ...folder };
+			folderMap[folder.id] = { ...(folderMap[folder.id] || {}), ...folder };
 
 			if (newFolderId && folder.id === newFolderId) {
-				folders[folder.id].new = true;
+				folderMap[folder.id].new = true;
 				newFolderId = null;
 			}
 		}
@@ -261,42 +274,38 @@
 		for (const folder of folderList) {
 			if (folder.parent_id) {
 				// Ensure the parent folder is initialized if it doesn't exist
-				if (!folders[folder.parent_id]) {
-					folders[folder.parent_id] = {}; // Create a placeholder if not already present
+				if (!folderMap[folder.parent_id]) {
+					folderMap[folder.parent_id] = {}; // Create a placeholder if not already present
 				}
 
 				// Initialize childrenIds array if it doesn't exist and add the current folder id
-				folders[folder.parent_id].childrenIds = folders[folder.parent_id].childrenIds
-					? [...folders[folder.parent_id].childrenIds, folder.id]
+				folderMap[folder.parent_id].childrenIds = folderMap[folder.parent_id].childrenIds
+					? [...folderMap[folder.parent_id].childrenIds, folder.id]
 					: [folder.id];
 
 				// Sort the children by updated_at field
-				folders[folder.parent_id].childrenIds.sort((a, b) => {
-					return folders[b].updated_at - folders[a].updated_at;
+				folderMap[folder.parent_id].childrenIds.sort((a, b) => {
+					return folderMap[b].updated_at - folderMap[a].updated_at;
 				});
 			}
 		}
 
 		// Merge shared folders into the same structure
-		try {
-			sharedFolders = await getSharedFolders(localStorage.token);
-		} catch (e) {
-			sharedFolders = [];
-		}
-
 		for (const sf of sharedFolders) {
-			if (folders[sf.id]) continue; // Already owned by user
-			folders[sf.id] = { ...sf, shared: true };
+			if (folderMap[sf.id]) continue; // Already owned by user
+			folderMap[sf.id] = { ...sf, shared: true };
 		}
 
 		// Build parent-child relationships for shared folders
 		for (const sf of sharedFolders) {
-			if (folders[sf.id]?.shared && sf.parent_id && folders[sf.parent_id]) {
-				folders[sf.parent_id].childrenIds = folders[sf.parent_id].childrenIds
-					? [...new Set([...folders[sf.parent_id].childrenIds, sf.id])]
+			if (folderMap[sf.id]?.shared && sf.parent_id && folderMap[sf.parent_id]) {
+				folderMap[sf.parent_id].childrenIds = folderMap[sf.parent_id].childrenIds
+					? [...new Set([...folderMap[sf.parent_id].childrenIds, sf.id])]
 					: [sf.id];
 			}
 		}
+
+		folders = folderMap;
 	};
 
 	const initSharedFolders = async () => {
