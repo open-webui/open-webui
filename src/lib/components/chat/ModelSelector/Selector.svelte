@@ -746,7 +746,7 @@
 <div class="relative w-full">
 	<button
 		bind:this={triggerElement}
-		class="relative w-full {($settings?.highContrastMode ?? false)
+		class="focus-ring relative w-full {($settings?.highContrastMode ?? false)
 			? ''
 			: 'outline-hidden focus:outline-hidden'}"
 		aria-label={selectedModel
@@ -833,7 +833,7 @@
 										<Tooltip content={$i18n.t('Compare')}>
 											<button
 												type="button"
-												class="flex size-[1.375rem] shrink-0 items-center justify-center rounded-lg transition-colors duration-100 {compareEnabled
+												class="focus-ring flex size-[1.375rem] shrink-0 items-center justify-center rounded-lg transition-colors duration-100 {compareEnabled
 													? 'bg-gray-50 text-gray-700 hover:bg-gray-50 dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-gray-800/60'
 													: 'text-gray-500 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200'}"
 												aria-label={$i18n.t('Compare')}
@@ -880,7 +880,7 @@
 									</div>
 									<button
 										type="button"
-										class="mt-3 rounded-lg px-0 py-1 text-[0.6875rem] font-normal leading-none text-gray-600 underline-offset-2 transition-colors duration-100 hover:text-gray-800 hover:underline focus:outline-hidden focus:underline dark:text-gray-300 dark:hover:text-gray-100"
+										class="focus-ring mt-3 rounded-lg px-0 py-1 text-[0.6875rem] font-normal leading-none text-gray-600 underline-offset-2 transition-colors duration-100 hover:text-gray-800 hover:underline focus:outline-hidden focus:underline dark:text-gray-300 dark:hover:text-gray-100"
 										on:click={() => {
 											show = false;
 											showSettings.set('admin:connections');
@@ -900,7 +900,7 @@
 							<!-- svelte-ignore a11y-no-static-element-interactions -->
 							<div
 								class="min-h-0 flex-1 overflow-y-auto"
-									style="max-height: 18rem;"
+								style="max-height: 18rem;"
 								role="listbox"
 								aria-label={$i18n.t('Available models')}
 								bind:this={listContainer}
@@ -940,7 +940,7 @@
 								placement="top-start"
 							>
 								<button
-									class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center rounded-xl px-2 text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40"
+									class="focus-ring flex h-[1.6875rem] w-full cursor-pointer select-none items-center rounded-xl px-2 text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40"
 									on:click={() => {
 										pullModelHandler();
 									}}
@@ -987,7 +987,7 @@
 								<div class="mr-2 ml-1 translate-y-0.5">
 									<Tooltip content={$i18n.t('Cancel')}>
 										<button
-											class="text-gray-800 dark:text-gray-100"
+											class="focus-ring text-gray-800 dark:text-gray-100"
 											aria-label={$i18n.t('Cancel download of {{model}}', { model: model })}
 											on:click={() => {
 												cancelModelPullHandler(model);
@@ -1021,7 +1021,7 @@
 						<div class="flex shrink-0 items-center justify-end px-2 py-1 leading-none">
 							<button
 								type="button"
-								class="text-[0.65rem] font-normal leading-none text-gray-500 underline-offset-2 transition-colors duration-100 hover:text-gray-700 hover:underline dark:text-gray-500 dark:hover:text-gray-300"
+								class="focus-ring text-[0.65rem] font-normal leading-none text-gray-500 underline-offset-2 transition-colors duration-100 hover:text-gray-700 hover:underline dark:text-gray-500 dark:hover:text-gray-300"
 								on:click|stopPropagation={setDefaultHandler}
 							>
 								{$i18n.t('Set as default')}

@@ -409,8 +409,7 @@ input[type='number'] {
 	outline: none;
 }
 
-/* unlayered, so it beats outline-none utilities without ringing rich text editors */
-:focus-visible:not(.ProseMirror):not([contenteditable='true']) {
+html.high-contrast .focus-ring:focus-visible {
 	outline: 2px solid theme(--color-blue-500);
 	outline-offset: 2px;
 }
