@@ -495,7 +495,7 @@
 					</div>
 				</div>
 				<p class={settingDescriptionClass}>
-					{$i18n.t('Increase contrast for controls and input surfaces.')}
+					{$i18n.t('Enable accessibility-focused visual enhancements.')}
 				</p>
 			</div>
 

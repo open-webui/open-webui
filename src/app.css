@@ -409,9 +409,15 @@ input[type='number'] {
 	outline: none;
 }
 
-html.high-contrast .focus-ring:focus-visible {
+:focus-visible:not(.ProseMirror):not([contenteditable='true']):not(input):not(textarea),
+.focus-ring:focus-visible {
 	outline: 2px solid theme(--color-blue-500);
-	outline-offset: 2px;
+	outline-offset: -2px;
+}
+
+html.high-contrast :is(input, textarea, [contenteditable='true'], .ProseMirror):focus-visible {
+	outline: 2px solid theme(--color-blue-500);
+	outline-offset: -2px;
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {
