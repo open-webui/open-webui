@@ -48,6 +48,7 @@
 
 	import '../tailwind.css';
 	import '../app.css';
+	import '../outis-mneme-theme.css';
 	import 'tippy.js/dist/tippy.css';
 
 	import { executeToolServer, getBackendConfig, getModels, getVersion } from '$lib/apis';
@@ -984,9 +985,15 @@
 			theme.set(newTheme);
 
 			// Apply theme classes (mirrors logic from chat/Settings/General.svelte)
-			const themes = ['dark', 'light', 'oled-dark'];
+			const themes = ['dark', 'light', 'oled-dark', 'outis-mneme'];
 			let themeToApply =
-				newTheme === 'oled-dark' ? 'dark' : newTheme === 'her' ? 'light' : newTheme;
+				newTheme === 'oled-dark'
+					? 'dark'
+					: newTheme === 'her'
+						? 'light'
+						: newTheme === 'outis-mneme'
+							? 'dark outis-mneme'
+							: newTheme;
 			if (newTheme === 'system') {
 				themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 			}
@@ -996,6 +1003,13 @@
 					e.split(' ').forEach((cls) => document.documentElement.classList.remove(cls));
 				});
 			themeToApply.split(' ').forEach((cls) => document.documentElement.classList.add(cls));
+			if (newTheme === 'outis-mneme') {
+				// See the Inline-style hazard note in OUTIS_MNEME_THEME_SPEC.md.
+				document.documentElement.style.setProperty('--color-gray-800', '#1a2823');
+				document.documentElement.style.setProperty('--color-gray-850', '#141c19');
+				document.documentElement.style.setProperty('--color-gray-900', '#0f1512');
+				document.documentElement.style.setProperty('--color-gray-950', '#090d0c');
+			}
 			return;
 		}
 		if (event.type === 'models:refresh') {

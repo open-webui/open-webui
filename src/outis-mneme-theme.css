@@ -1,0 +1,95 @@
+/*
+ * Outis-Mneme theme — see ../OUTIS_MNEME_THEME_SPEC.md
+ *
+ * Everything here is a CSS custom property override scoped to `html.outis-mneme`
+ * (added by the theme switcher alongside the standard `dark` class — see
+ * app.html / General.svelte / +layout.svelte). No component files change:
+ * every `bg-gray-900`, `text-blue-500`, `rounded-lg`, etc. utility class
+ * across the app already resolves through these same variable names.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+
+html.outis-mneme {
+	/* Neutral scale — near-black, green-tinted (replaces the default grays) */
+	--color-gray-50: #d4ede2;
+	--color-gray-100: #b9d9cb;
+	--color-gray-200: #9dc4b3;
+	--color-gray-300: #7aab98;
+	--color-gray-400: #5c8f7d;
+	--color-gray-500: #4a6a5a;
+	--color-gray-600: #3a5346;
+	--color-gray-700: #2a3d34;
+	--color-gray-800: #1a2823;
+	--color-gray-850: #141c19;
+	--color-gray-900: #0f1512;
+	--color-gray-950: #090d0c;
+
+	/* Accent — blue is the interactive/focus/link color throughout the app;
+	   green is already used for "positive" states. Both map to one green
+	   scale so the whole app reads as a single accent hue. */
+	--color-blue-50: #eafff5;
+	--color-blue-100: #d0ffe8;
+	--color-blue-200: #a6ffd2;
+	--color-blue-300: #6ffcb0;
+	--color-blue-400: #4dfa9e;
+	--color-blue-500: #2dff8f;
+	--color-blue-600: #1a8f52;
+	--color-blue-700: #146b3d;
+	--color-blue-800: #0f5230;
+	--color-blue-900: #0c3823;
+	--color-blue-950: #082217;
+
+	--color-green-50: var(--color-blue-50);
+	--color-green-100: var(--color-blue-100);
+	--color-green-200: var(--color-blue-200);
+	--color-green-300: var(--color-blue-300);
+	--color-green-400: var(--color-blue-400);
+	--color-green-500: var(--color-blue-500);
+	--color-green-600: var(--color-blue-600);
+	--color-green-700: var(--color-blue-700);
+	--color-green-800: var(--color-blue-800);
+	--color-green-900: var(--color-blue-900);
+	--color-green-950: var(--color-blue-950);
+
+	/* Danger / warning keep their own hue, just tuned to the reference palette */
+	--color-red-500: #ff4e4e;
+	--color-red-600: #e63e3e;
+	--color-yellow-500: #f5c542;
+	--color-yellow-600: #d9a82a;
+
+	/* Flat corners everywhere except rounded-full (a fixed 9999px utility,
+	   untouched — those are genuine circles: avatars, dots, icon buttons). */
+	--radius-xs: 0px;
+	--radius-sm: 0px;
+	--radius-md: 0px;
+	--radius-lg: 0px;
+	--radius-xl: 0px;
+	--radius-2xl: 0px;
+	--radius-3xl: 0px;
+	--radius-4xl: 0px;
+	--radius: 0px;
+
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+	/* Tailwind's own --font-sans/--font-mono tokens — separate from the
+	   direct font-family above. Components that opt into an explicit
+	   `font-sans`/`font-mono` utility class (menus, dropdowns, etc.) don't
+	   inherit the html-level font-family; they resolve through these
+	   instead. Found via a real dropdown menu still rendering in Inter. */
+	--font-sans: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	--font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+html.outis-mneme pre {
+	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* app.css's `.dark body { background: #171717; color: #eee }` is a hardcoded
+   literal, not a `var(--color-gray-*)` reference like everything else — the
+   one exception to the token system found during testing. Override it
+   directly rather than relying on custom-property cascade. */
+html.outis-mneme body {
+	background: #090d0c;
+	color: #d4ede2;
+}
