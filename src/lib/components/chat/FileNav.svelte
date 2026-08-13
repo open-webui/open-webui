@@ -30,8 +30,6 @@
 		type TerminalCwd
 	} from '$lib/apis/terminal';
 	import { isCodeFile } from '$lib/utils/codeHighlight';
-	import Folder from '../icons/Folder.svelte';
-	import Document from '../icons/Document.svelte';
 	import PenAlt from '../icons/PenAlt.svelte';
 	import ZoomReset from '../icons/ZoomReset.svelte';
 	import { isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
@@ -43,6 +41,8 @@
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
 	import FilePreview from './FileNav/FilePreview.svelte';
 	import FileEntryRow from './FileNav/FileEntryRow.svelte';
+	import Icon from './FileNav/Icon.svelte';
+	import FileTypeIcon from './FileNav/FileTypeIcon.svelte';
 	import BulkActionBar from './FileNav/BulkActionBar.svelte';
 	import PortList from './FileNav/PortList.svelte';
 	import PortPreview from './FileNav/PortPreview.svelte';
@@ -1014,14 +1014,14 @@
 	<div class="hidden"></div>
 {:else if terminalChatContextPending}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
-		<Folder className="size-6 text-gray-300 dark:text-gray-600 mb-2" />
+		<Icon name="terminal" size={24} strokeWidth={1.4} class="text-gray-300 dark:text-gray-600 mb-2" />
 		<div class="text-xs text-gray-500 dark:text-gray-400">
 			{$i18n.t('Start the chat to use this terminal.')}
 		</div>
 	</div>
 {:else if !selectedTerminal}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
-		<Folder className="size-6 text-gray-300 dark:text-gray-600 mb-2" />
+		<Icon name="terminal" size={24} strokeWidth={1.4} class="text-gray-300 dark:text-gray-600 mb-2" />
 		<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">
 			{$i18n.t('No Terminal connection configured.')}
 		</div>
@@ -1451,7 +1451,7 @@
 				{#if !loading && !error && !uploading && !($selectedTerminalId && $terminalServers === null)}
 					{#if creatingFolder}
 						<div class="flex items-center gap-2 px-3 py-1.5">
-							<Folder className="size-4 shrink-0 text-blue-400 dark:text-blue-300" />
+							<FileTypeIcon name={newFolderName} type="directory" />
 							<input
 								bind:this={newFolderInput}
 								bind:value={newFolderName}
@@ -1470,7 +1470,7 @@
 					{/if}
 					{#if creatingFile}
 						<div class="flex items-center gap-2 px-3 py-1.5">
-							<Document className="size-4 shrink-0 text-gray-400 dark:text-gray-500" />
+							<FileTypeIcon name={newFileName} type="file" />
 							<input
 								bind:this={newFileInput}
 								bind:value={newFileName}
@@ -1554,18 +1554,7 @@
 					class="w-full flex items-center gap-2 px-3 py-1 mb-0.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
 					on:click={toggleTerminal}
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="size-3.5"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M3.25 3A2.25 2.25 0 0 0 1 5.25v9.5A2.25 2.25 0 0 0 3.25 17h13.5A2.25 2.25 0 0 0 19 14.75v-9.5A2.25 2.25 0 0 0 16.75 3H3.25Zm.943 8.752a.75.75 0 0 1 .055-1.06L6.128 9l-1.88-1.693a.75.75 0 1 1 1.004-1.114l2.5 2.25a.75.75 0 0 1 0 1.114l-2.5 2.25a.75.75 0 0 1-1.06-.055ZM9.75 10.25a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 0-1.5h-2.5Z"
-							clip-rule="evenodd"
-						/>
-					</svg>
+					<Icon name="terminal" size={14} strokeWidth={1.4} class="shrink-0" />
 					<span class="font-normal">{$i18n.t('Terminal')}</span>
 
 					{#if terminalExpanded}
