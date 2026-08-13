@@ -93,7 +93,7 @@ from starlette.responses import RedirectResponse
 
 
 class OAuthClientMetadata(MCPOAuthClientMetadata):
-    token_endpoint_auth_method: Literal['none', 'client_secret_basic', 'client_secret_post'] = 'client_secret_post'
+    token_endpoint_auth_method: Literal['none', 'client_secret_basic', 'client_secret_post'] = 'client_secret_basic'
     pass
 
 
@@ -676,7 +676,7 @@ async def get_oauth_client_info_with_static_credentials(
         )
 
         # Determine token_endpoint_auth_method
-        token_endpoint_auth_method = 'client_secret_post'
+        token_endpoint_auth_method = 'client_secret_basic'
         if (
             oauth_server_metadata
             and oauth_server_metadata.token_endpoint_auth_methods_supported
