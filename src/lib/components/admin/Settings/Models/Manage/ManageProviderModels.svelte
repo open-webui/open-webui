@@ -5,6 +5,7 @@
 	import {
 		deleteProviderModel,
 		downloadProviderModel,
+		getErrorMessage,
 		getProviderModelCatalog,
 		loadProviderModel,
 		unloadProviderModel
@@ -100,7 +101,7 @@
 	const refreshModels = async () => {
 		loading = true;
 		const res = await getProviderModelCatalog(localStorage.token, urlIdx).catch((error) => {
-			toast.error(`${error}`);
+			toast.error(getErrorMessage(error));
 			return null;
 		});
 		providerModels = normalizeModels(res);
@@ -123,7 +124,7 @@
 	) => {
 		actionModel = modelId;
 		const res = await action(localStorage.token, urlIdx, modelId).catch((error) => {
-			toast.error(`${error}`);
+			toast.error(getErrorMessage(error));
 			return null;
 		});
 
@@ -158,7 +159,7 @@
 		actionModel = modelId;
 		const res = await unloadProviderModel(localStorage.token, urlIdx, modelId, instanceId).catch(
 			(error) => {
-				toast.error(`${error}`);
+				toast.error(getErrorMessage(error));
 				return null;
 			}
 		);

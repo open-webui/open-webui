@@ -1,5 +1,18 @@
 import { OPENAI_API_BASE_URL, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
+export const getErrorMessage = (err: any, fallback = 'Server connection failed') => {
+	const detail = err?.detail;
+	if (typeof detail === 'string') return detail;
+
+	return (
+		detail?.error?.message ??
+		detail?.message ??
+		err?.error?.message ??
+		err?.message ??
+		(typeof err === 'string' ? err : fallback)
+	);
+};
+
 export const getOpenAIConfig = async (token: string = '') => {
 	let error = null;
 
@@ -17,11 +30,7 @@ export const getOpenAIConfig = async (token: string = '') => {
 		})
 		.catch((err) => {
 			console.error(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
+			error = getErrorMessage(err);
 			return null;
 		});
 
@@ -59,11 +68,7 @@ export const updateOpenAIConfig = async (token: string = '', config: OpenAIConfi
 		})
 		.catch((err) => {
 			console.error(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
+			error = getErrorMessage(err);
 			return null;
 		});
 
@@ -147,7 +152,7 @@ export const getProviderModelCatalog = async (token: string, urlIdx: number) => 
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err?.error?.message ?? 'Server connection failed';
+			error = getErrorMessage(err);
 			return null;
 		});
 
@@ -158,10 +163,16 @@ export const getProviderModelCatalog = async (token: string, urlIdx: number) => 
 	return res;
 };
 
-export const downloadProviderModel = async (token: string, urlIdx: number, model: string) => {
+export const downloadProviderModel = async (
+	token: string,
+	urlIdx: number,
+	model: string,
+	signal?: AbortSignal
+) => {
 	let error = null;
 
 	const res = await fetch(`${OPENAI_API_BASE_URL}/models/${urlIdx}/download`, {
+		signal,
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -175,7 +186,7 @@ export const downloadProviderModel = async (token: string, urlIdx: number, model
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err?.error?.message ?? 'Server connection failed';
+			error = getErrorMessage(err);
 			return null;
 		});
 
@@ -186,12 +197,18 @@ export const downloadProviderModel = async (token: string, urlIdx: number, model
 	return res;
 };
 
-export const getProviderModelDownloadStatus = async (token: string, urlIdx: number, jobId: string) => {
+export const getProviderModelDownloadStatus = async (
+	token: string,
+	urlIdx: number,
+	jobId: string,
+	signal?: AbortSignal
+) => {
 	let error = null;
 
 	const res = await fetch(
 		`${OPENAI_API_BASE_URL}/models/${urlIdx}/download/status/${encodeURIComponent(jobId)}`,
 		{
+			signal,
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -205,7 +222,7 @@ export const getProviderModelDownloadStatus = async (token: string, urlIdx: numb
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err?.error?.message ?? 'Server connection failed';
+			error = getErrorMessage(err);
 			return null;
 		});
 
@@ -233,7 +250,7 @@ export const loadProviderModel = async (token: string, urlIdx: number, model: st
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err?.error?.message ?? 'Server connection failed';
+			error = getErrorMessage(err);
 			return null;
 		});
 
@@ -266,7 +283,7 @@ export const unloadProviderModel = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err?.error?.message ?? 'Server connection failed';
+			error = getErrorMessage(err);
 			return null;
 		});
 
@@ -296,7 +313,7 @@ export const deleteProviderModel = async (token: string, urlIdx: number, model: 
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err?.error?.message ?? 'Server connection failed';
+			error = getErrorMessage(err);
 			return null;
 		});
 
@@ -422,7 +439,7 @@ export const generateOpenAIChatCompletion = async (
 			return res.json();
 		})
 		.catch((err) => {
-			error = err?.detail ?? err;
+			error = getErrorMessage(err);
 			return null;
 		});
 
