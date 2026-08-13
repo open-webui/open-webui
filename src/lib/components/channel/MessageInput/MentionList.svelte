@@ -27,7 +27,7 @@
 	let _users = [];
 	let _channels = [];
 
-	$: filteredItems = [..._models, ..._users, ..._channels].filter(
+	$: filteredItems = [..._users, ..._models, ..._channels].filter(
 		(u) =>
 			u.label.toLowerCase().includes(query.toLowerCase()) ||
 			u.id.toLowerCase().includes(query.toLowerCase())
@@ -43,10 +43,12 @@
 
 		if (res && Array.isArray(res.users)) {
 			const users = res.users as { id: string; name: string }[];
-			_users = users
-				.filter((u) => u.id !== $user?.id)
-				.map((u) => ({ type: 'user', id: u.id, label: u.name }))
-				.sort((a, b) => a.label.localeCompare(b.label));
+			const userItems = users.map((u) => ({ type: 'user', id: u.id, label: u.name }));
+			if ($user?.id && !userItems.some((u) => u.id === $user.id)) {
+				userItems.push({ type: 'user', id: $user.id, label: $user.name });
+			}
+
+			_users = userItems.sort((a, b) => a.label.localeCompare(b.label));
 		}
 	};
 
