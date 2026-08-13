@@ -3,11 +3,11 @@
 	import panzoom, { type PanZoom, type PanZoomOptions } from 'panzoom';
 
 	const defaultOpts: PanZoomOptions = {
-	bounds: true,
-	boundsPadding: 0.1,
-	zoomSpeed: 0.085,
-	pinchSpeed: 2.25
-};
+		bounds: true,
+		boundsPadding: 0.1,
+		zoomSpeed: 0.18,
+		pinchSpeed: 3.5
+	};
 
 	export let className = '';
 	export let options: Partial<PanZoomOptions> = {};

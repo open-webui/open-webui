@@ -19,7 +19,13 @@
 	let mounted = false;
 	let initializedSlide = '';
 	let hideThumbs = false;
+	let wheelDelta = 0;
+	let lastWheelNavigationAt = 0;
+	let lastScrolledSlide = -1;
+	let thumbnailButtons: Array<HTMLButtonElement | undefined> = [];
 	const slideShortcutKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+	const wheelNavigationThreshold = 80;
+	const wheelNavigationCooldown = 450;
 
 	$: safeSlide = Math.min(Math.max(0, currentSlide), Math.max(0, slides.length - 1));
 	$: selectedSlide = slides[safeSlide] ?? '';
@@ -35,7 +41,24 @@
 
 	const updateLayout = () => {
 		hideThumbs = (rootEl?.clientWidth ?? window.innerWidth) < 720;
-		void tick().then(updateFitScale);
+		void tick().then(() => {
+			updateFitScale();
+			scrollSelectedThumbnailIntoView();
+		});
+	};
+
+	const trackThumbnail = (node: HTMLButtonElement, index: number) => {
+		thumbnailButtons[index] = node;
+		return {
+			destroy: () => {
+				if (thumbnailButtons[index] === node) thumbnailButtons[index] = undefined;
+			}
+		};
+	};
+
+	const scrollSelectedThumbnailIntoView = () => {
+		if (hideThumbs) return;
+		thumbnailButtons[safeSlide]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 	};
 
 	const initPanzoom = () => {
@@ -47,10 +70,7 @@
 			boundsPadding: 0.1,
 			zoomSpeed: 0.065,
 			filterKey: (e?: KeyboardEvent) => !!e && slideShortcutKeys.includes(e.key),
-			beforeWheel: (e) => {
-				if (!e.ctrlKey && !e.metaKey) return true;
-				return false;
-			},
+			beforeWheel: () => true,
 			beforeMouseDown: () => {
 				const transform = pzInstance?.getTransform();
 				return !!transform && Math.abs(transform.scale - 1) < 0.01;
@@ -124,12 +144,23 @@
 	};
 
 	const handleStageWheel = (e: WheelEvent) => {
-		if (e.ctrlKey || e.metaKey || !pzInstance) return;
-
 		e.preventDefault();
+		if (e.ctrlKey || e.metaKey || slides.length <= 1) return;
+
 		const multiplier = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? stageEl.clientHeight : 1;
-		pzInstance.moveBy(-e.deltaX * multiplier, -e.deltaY * multiplier, false);
-		zoomLevel = pzInstance.getTransform().scale;
+		const dominantDelta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+		wheelDelta += dominantDelta * multiplier;
+
+		const now = Date.now();
+		if (Math.abs(wheelDelta) < wheelNavigationThreshold) return;
+		if (now - lastWheelNavigationAt < wheelNavigationCooldown) {
+			wheelDelta = 0;
+			return;
+		}
+
+		lastWheelNavigationAt = now;
+		selectSlide(safeSlide + (wheelDelta > 0 ? 1 : -1));
+		wheelDelta = 0;
 	};
 
 	onMount(() => {
@@ -146,6 +177,11 @@
 			initPanzoom();
 			resetView();
 		});
+	}
+
+	$: if (mounted && safeSlide !== lastScrolledSlide) {
+		lastScrolledSlide = safeSlide;
+		void tick().then(scrollSelectedThumbnailIntoView);
 	}
 
 	onDestroy(() => {
@@ -170,6 +206,7 @@
 	>
 		{#each slides as slide, index}
 			<button
+				use:trackThumbnail={index}
 				type="button"
 				class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-2 w-full mb-3.5 p-0 text-left text-gray-900 dark:text-gray-100"
 				on:click={() => selectSlide(index)}
@@ -179,13 +216,13 @@
 				<span
 					class="pt-[0.4375rem] text-xs font-medium text-right {safeSlide === index
 						? 'text-gray-900 dark:text-gray-100'
-						: 'text-gray-500 dark:text-gray-400'}">{index + 1}</span
+						: 'text-gray-400 dark:text-gray-600'}">{index + 1}</span
 				>
 				<span
-					class="block aspect-video overflow-hidden rounded-lg bg-white border-2 shadow-sm {safeSlide ===
+					class="block aspect-video overflow-hidden rounded-lg bg-white border-2 {safeSlide ===
 					index
-						? 'border-gray-400 dark:border-gray-500'
-						: 'border-transparent'}"
+						? 'border-gray-400 shadow-sm dark:border-gray-500'
+						: 'border-transparent opacity-45'}"
 				>
 					<img
 						src={slide}
