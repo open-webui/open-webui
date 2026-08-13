@@ -1186,7 +1186,7 @@
 				</div>
 
 				<div
-					class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden pt-2.5 pb-2.5"
+					class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden space-y-1.5 pt-2.5 pb-2.5"
 					on:scroll={(e) => {
 						if (e.target.scrollTop === 0) {
 							scrollTop = 0;
@@ -1289,7 +1289,6 @@
 						<SidebarSection
 							id="sidebar-models"
 							bind:open={showPinnedModels}
-							className="mt-0.5"
 							name={$i18n.t('Models')}
 							dragAndDrop={false}
 						>
@@ -1301,7 +1300,6 @@
 						<SidebarSection
 							id="sidebar-pinned-notes"
 							bind:open={showPinnedNotes}
-							className="mt-0.5"
 							name={$i18n.t('Notes')}
 							dragAndDrop={false}
 							onAdd={async () => {
@@ -1320,7 +1318,6 @@
 						<SidebarSection
 							id="sidebar-channels"
 							bind:open={showChannels}
-							className="mt-0.5"
 							name={$i18n.t('Channels')}
 							dragAndDrop={false}
 							onAdd={$user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true)
@@ -1354,7 +1351,6 @@
 						<SidebarSection
 							id="sidebar-folders"
 							bind:open={showFolders}
-							className="mt-0.5"
 							name={$i18n.t('Folders')}
 							onAdd={() => {
 								showCreateFolderModal = true;
@@ -1406,7 +1402,6 @@
 
 					<SidebarSection
 						id="sidebar-chats"
-						className="mt-0.5"
 						name={$i18n.t('Chats')}
 						on:change={async (e) => {
 							selectedFolder.set(null);

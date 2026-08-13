@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Optional
+from typing import Literal, Optional
 from uuid import uuid4
 
 from open_webui.internal.db import Base, get_async_db_context
@@ -64,11 +64,17 @@ class AutomationTerminalConfig(BaseModel):
     cwd: Optional[str] = None
 
 
+class AutomationTarget(BaseModel):
+    type: Literal['chat', 'channel'] = 'chat'
+    channel_id: Optional[str] = None
+
+
 class AutomationData(BaseModel):
     prompt: str
     model_id: str
     rrule: str
     terminal: Optional[AutomationTerminalConfig] = None
+    target: Optional[AutomationTarget] = None
 
 
 class AutomationModel(BaseModel):

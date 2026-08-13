@@ -3602,7 +3602,7 @@ async def create_automation(
         return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import AutomationData, AutomationForm, Automations
+        from open_webui.models.automations import AutomationData, AutomationForm, AutomationTarget, Automations
         from open_webui.models.users import Users
         from open_webui.routers.automations import check_automation_limits
         from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
@@ -3644,6 +3644,11 @@ async def create_automation(
                 prompt=prompt,
                 model_id=model_id,
                 rrule=rrule,
+                target=(
+                    AutomationTarget(type='channel', channel_id=metadata.get('chat_id', '').removeprefix('channel:'))
+                    if metadata.get('chat_id', '').startswith('channel:')
+                    else None
+                ),
             ),
             is_active=True,
         )
@@ -3657,6 +3662,7 @@ async def create_automation(
                 'name': automation.name,
                 'folder_id': automation.folder_id,
                 'model_id': model_id,
+                'target': automation.data.get('target'),
                 'is_active': automation.is_active,
                 'next_runs': next_n_runs_ns(rrule, tz=tz),
             },
@@ -3695,7 +3701,7 @@ async def update_automation(
         return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import AutomationData, AutomationForm, Automations
+        from open_webui.models.automations import AutomationData, AutomationForm, AutomationTarget, Automations
         from open_webui.models.users import Users
         from open_webui.routers.automations import check_automation_limits
         from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
@@ -3746,6 +3752,7 @@ async def update_automation(
                 prompt=new_prompt,
                 model_id=new_model_id,
                 rrule=new_rrule,
+                target=AutomationTarget(**automation.data['target']) if automation.data.get('target') else None,
             ),
             is_active=automation.is_active,
         )
@@ -3759,6 +3766,7 @@ async def update_automation(
                 'name': updated.name,
                 'folder_id': updated.folder_id,
                 'model_id': new_model_id,
+                'target': updated.data.get('target'),
                 'is_active': updated.is_active,
                 'next_runs': next_n_runs_ns(new_rrule, tz=tz),
             },
@@ -3824,6 +3832,7 @@ async def list_automations(
                     'folder_id': item.folder_id,
                     'prompt_snippet': snippet,
                     'model_id': item.data.get('model_id', ''),
+                    'target': item.data.get('target'),
                     'rrule': rrule,
                     'is_active': item.is_active,
                     'last_run_at': item.last_run_at,
