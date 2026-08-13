@@ -219,9 +219,9 @@
 						: 'text-gray-300/70 dark:text-gray-700'}">{index + 1}</span
 				>
 				<span
-					class="block aspect-video overflow-hidden rounded-md bg-white border {safeSlide === index
-						? 'border-gray-100 opacity-95 dark:border-gray-850/30'
-						: 'border-transparent opacity-55 hover:opacity-80'}"
+					class="block aspect-video overflow-hidden rounded-md bg-transparent {safeSlide === index
+						? 'opacity-100'
+						: 'opacity-55 hover:opacity-80'}"
 				>
 					<img
 						src={slide}
@@ -249,7 +249,7 @@
 					bind:this={slideImgEl}
 					src={selectedSlide}
 					alt="Slide {safeSlide + 1}"
-					class="block w-full h-full object-contain rounded bg-white shadow"
+					class="block w-full h-full object-contain rounded"
 					draggable="false"
 					on:load={onSlideLoad}
 				/>
