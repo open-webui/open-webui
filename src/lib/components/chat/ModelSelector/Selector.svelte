@@ -339,6 +339,14 @@
 					})
 	).filter((item) => includeHidden || !(item.model?.info?.meta?.hidden ?? false));
 
+	$: showPullModelButton = !!(
+		!selectionOnly &&
+		!(searchValue.trim() in $MODEL_DOWNLOAD_POOL) &&
+		searchValue &&
+		ollamaVersion &&
+		$user?.role === 'admin'
+	);
+
 	$: if (
 		selectedTag !== undefined ||
 		selectedConnectionType !== undefined ||
@@ -804,12 +812,19 @@
 								autocomplete="off"
 								aria-label={$i18n.t('Search In Models')}
 								on:keydown={(e) => {
-									if (e.code === 'Enter' && filteredItems.length > 0) {
-										selectItem(filteredItems[selectedModelIdx], selectedModelIdx);
+									if (e.code === 'Enter') {
+										if (showPullModelButton && selectedModelIdx === filteredItems.length) {
+											pullModelHandler();
+										} else if (filteredItems[selectedModelIdx]) {
+											selectItem(filteredItems[selectedModelIdx], selectedModelIdx);
+										}
 										return; // dont need to scroll on selection
 									} else if (e.code === 'ArrowDown') {
 										e.stopPropagation();
-										selectedModelIdx = Math.min(selectedModelIdx + 1, filteredItems.length - 1);
+										selectedModelIdx = Math.min(
+											selectedModelIdx + 1,
+											Math.max(filteredItems.length - 1 + (showPullModelButton ? 1 : 0), 0)
+										);
 									} else if (e.code === 'ArrowUp') {
 										e.stopPropagation();
 										selectedModelIdx = Math.max(selectedModelIdx - 1, 0);
@@ -932,7 +947,7 @@
 							</div>
 						{/if}
 
-						{#if !selectionOnly && !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user?.role === 'admin'}
+						{#if showPullModelButton}
 							<Tooltip
 								content={$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
 									searchValue: searchValue
@@ -940,7 +955,14 @@
 								placement="top-start"
 							>
 								<button
-									class="focus-ring flex h-[1.6875rem] w-full cursor-pointer select-none items-center rounded-xl px-2 text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40"
+									type="button"
+									role="option"
+									aria-selected={selectedModelIdx === filteredItems.length}
+									data-arrow-selected={selectedModelIdx === filteredItems.length}
+									class="focus-ring flex h-[1.6875rem] w-full cursor-pointer select-none items-center rounded-xl px-2 text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40 {selectedModelIdx ===
+									filteredItems.length
+										? 'bg-gray-50/70 dark:bg-gray-800/60'
+										: ''}"
 									on:click={() => {
 										pullModelHandler();
 									}}
