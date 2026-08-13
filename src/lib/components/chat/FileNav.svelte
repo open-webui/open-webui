@@ -116,6 +116,35 @@
 	let loadingDirs: Set<string> = new Set();
 	let directoryMenu: { x: number; y: number } | null = null;
 
+	const invalidateVisibleRows = () => {
+		entries = [...entries];
+	};
+
+	/** Normalize Windows backslashes and collapse duplicate separators. */
+	const normalizePath = (path: string) => path.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
+
+	const cleanEntryName = (name: string) =>
+		normalizePath(name)
+			.split('/')
+			.filter(Boolean)
+			.at(-1) ?? name.replace(/\/+$/, '');
+
+	const normalizeEntries = (items: FileEntry[]) =>
+		items.map((entry) => ({ ...entry, name: cleanEntryName(entry.name) }));
+
+	const asDirectoryPath = (path: string) => {
+		const normalized = normalizePath(path || '/');
+		if (normalized === '/') return '/';
+		return normalized.endsWith('/') ? normalized : `${normalized}/`;
+	};
+
+	const joinPath = (parentPath: string, name: string) => {
+		const parent = asDirectoryPath(parentPath);
+		const child = cleanEntryName(name);
+		if (!child) return parent;
+		return normalizePath(`${parent}${child}`);
+	};
+
 	const sortEntries = (items: FileEntry[]): FileEntry[] => {
 		return [...items].sort((a, b) => {
 			// Directories always first
@@ -146,15 +175,16 @@
 			sortBy = mode;
 			sortAsc = true;
 		}
-		entries = [...entries];
+		invalidateVisibleRows();
 		treeCache = new Map(treeCache);
+		void refreshBrowser();
 	};
 
 	const filterEntries = (items: FileEntry[]) =>
 		showHidden ? items : items.filter((entry) => !entry.name.startsWith('.'));
 
 	const entryPath = (parentPath: string, entry: FileEntry) =>
-		entry.type === 'directory' ? `${parentPath}${entry.name}/` : `${parentPath}${entry.name}`;
+		entry.type === 'directory' ? asDirectoryPath(joinPath(parentPath, entry.name)) : joinPath(parentPath, entry.name);
 
 	const withRowIndexes = (rows: Omit<BrowserRow, 'rowIndex'>[]): BrowserRow[] =>
 		rows.map((row, rowIndex) => ({ ...row, rowIndex }));
@@ -369,14 +399,6 @@
 	const isPdf = (path: string) => path.split('.').pop()?.toLowerCase() === 'pdf';
 	const isOffice = (path: string) => OFFICE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
 
-	/** Normalize Windows backslashes to forward slashes. */
-	const normalizePath = (p: string) => p.replace(/\\/g, '/');
-
-	const asDirectoryPath = (path: string) => {
-		const normalized = normalizePath(path || '/');
-		return normalized.endsWith('/') ? normalized : `${normalized}/`;
-	};
-
 	const resetTreeState = () => {
 		expandedDirs = new Set();
 		treeCache = new Map();
@@ -450,7 +472,8 @@
 			homePath && cwdPath && (cwdPath === homePath || cwdPath.startsWith(homePath))
 				? { path: homePath, label: 'Home' }
 				: undefined;
-		setFileRoot(cwd?.root ?? homeRoot);
+		const rootPath = cwd?.root?.path ? asDirectoryPath(cwd.root.path) : null;
+		setFileRoot(rootPath && rootPath !== '/' ? cwd?.root : (homeRoot ?? cwd?.root));
 		const path = cwdPath ?? fileRoot?.path ?? '/';
 		return clampToFileRoot(path);
 	};
@@ -463,7 +486,7 @@
 			return parts.reduce(
 				(acc, part) => {
 					const prev = acc[acc.length - 1];
-					acc.push({ label: part, path: `${prev.path}${part}/` });
+					acc.push({ label: part, path: asDirectoryPath(joinPath(prev.path, part)) });
 					return acc;
 				},
 				[{ label: fileRoot.label, path: fileRoot.path }]
@@ -474,11 +497,11 @@
 		const isDrive = /^[A-Za-z]:$/.test(parts[0] ?? '');
 		const root = isDrive ? { label: parts[0], path: `${parts[0]}/` } : { label: '/', path: '/' };
 		return (isDrive ? parts.slice(1) : parts).reduce(
-			(acc, part) => {
-				const prev = acc[acc.length - 1];
-				acc.push({ label: part, path: `${prev.path}${part}/` });
-				return acc;
-			},
+				(acc, part) => {
+					const prev = acc[acc.length - 1];
+					acc.push({ label: part, path: asDirectoryPath(joinPath(prev.path, part)) });
+					return acc;
+				},
 			[root]
 		);
 	};
@@ -543,8 +566,8 @@
 			entries = [];
 		} else {
 			currentWritable = result.writable !== false;
-			entries = result.entries;
-			treeCache = new Map(treeCache).set(directory, result.entries);
+			entries = normalizeEntries(result.entries);
+			treeCache = new Map(treeCache).set(directory, entries);
 			saveTreeState();
 		}
 	};
@@ -559,9 +582,10 @@
 		nextLoading.delete(directory);
 		loadingDirs = nextLoading;
 		if (result === null) return null;
-		treeCache = new Map(treeCache).set(directory, result.entries);
+		const normalizedEntries = normalizeEntries(result.entries);
+		treeCache = new Map(treeCache).set(directory, normalizedEntries);
 		saveTreeState();
-		return result.entries;
+		return normalizedEntries;
 	};
 
 	const refreshExpandedDirs = async () => {
@@ -582,16 +606,12 @@
 			next.delete(directory);
 			expandedDirs = next;
 			saveTreeState();
+			invalidateVisibleRows();
 			return;
 		}
 
 		expandedDirs = new Set(expandedDirs).add(directory);
 		saveTreeState();
-		if (treeCache.has(directory)) {
-			entries = [...entries];
-			treeCache = new Map(treeCache);
-			return;
-		}
 
 		const result = await fetchExpandedDir(directory);
 		if (result === null) {
@@ -601,7 +621,7 @@
 			saveTreeState();
 			toast.error($i18n.t('Failed to load folder'));
 		} else {
-			entries = [...entries];
+			invalidateVisibleRows();
 			treeCache = new Map(treeCache);
 		}
 	};
