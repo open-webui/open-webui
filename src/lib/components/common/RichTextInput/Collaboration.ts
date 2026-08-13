@@ -130,7 +130,9 @@ export class SocketIOCollaborationProvider {
 
 							const isEmptyEditor = !this.editor?.getText().trim();
 							if (isEmptyEditor && this.editor) {
-								if (this.initialContent && (data?.sessions ?? ['']).length === 1) {
+								// The lowest joined session seeds, so viewers don't each insert the content
+								const seedingSession = data.sessions?.sort()[0];
+								if (this.initialContent && seedingSession === this.socket.id) {
 									// Check if initialContent is HTML (string) or JSON (object)
 									if (typeof this.initialContent === 'string') {
 										// HTML content - let the editor parse it, then sync to Yjs

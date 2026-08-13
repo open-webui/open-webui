@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import uuid
 
 import pycrdt as Y
@@ -163,6 +164,52 @@ class RedisDict:
         if key not in self:
             self[key] = default
         return self[key]
+
+
+def _append_prosemirror_nodes(parent, nodes) -> None:
+    # Children are appended before being written to: pycrdt only accepts writes once integrated.
+    text_run = None  # a run of text nodes shares one XmlText, as y-prosemirror lays them out
+
+    for node in nodes or []:
+        if not isinstance(node, dict) or not isinstance(node.get('type'), str):
+            continue
+
+        if node['type'] == 'text':
+            if not isinstance(node.get('text'), str) or not node['text']:
+                continue
+            if text_run is None:
+                text_run = Y.XmlText()
+                parent.children.append(text_run)
+            marks = {
+                mark['type']: mark.get('attrs') or {}
+                for mark in node.get('marks') or []
+                if isinstance(mark, dict) and mark.get('type')
+            }
+            text_run.insert(len(text_run), node['text'], marks)
+            continue
+
+        text_run = None
+        element = Y.XmlElement(node['type'])
+        parent.children.append(element)
+        for key, value in (node.get('attrs') or {}).items():
+            if value is not None:
+                element.attributes[key] = value
+        _append_prosemirror_nodes(element, node.get('content'))
+
+
+def build_prosemirror_update(content_json) -> bytes | None:
+    """Encode a ProseMirror document as a Yjs update in the shape y-prosemirror reads back."""
+    if not isinstance(content_json, dict) or content_json.get('type') != 'doc' or not content_json.get('content'):
+        return None
+
+    # A content-derived client id makes a concurrent seed of the same content a no-op.
+    canonical = json.dumps(content_json, sort_keys=True, separators=(',', ':'))
+    content_digest = hashlib.sha256(canonical.encode()).digest()
+    doc = Y.Doc(client_id=int.from_bytes(content_digest[:4], 'big'))
+    fragment = Y.XmlFragment()
+    doc['prosemirror'] = fragment
+    _append_prosemirror_nodes(fragment, content_json['content'])
+    return doc.get_update()
 
 
 class YdocManager:
