@@ -44,6 +44,12 @@
 		}
 		return hasPublicReadGrant(channel?.access_grants);
 	};
+
+	const formatUnreadCount = (count: number) =>
+		new Intl.NumberFormat(undefined, {
+			notation: 'compact',
+			compactDisplay: 'short'
+		}).format(count);
 </script>
 
 <ChannelModal
@@ -82,7 +88,7 @@
 		: ' dark:text-gray-400 text-gray-600'} cursor-pointer select-none"
 >
 	<a
-		class=" w-full flex justify-between"
+		class=" w-full flex"
 		href="/channels/{channel.id}"
 		on:click={() => {
 			console.log(channel);
@@ -104,7 +110,7 @@
 		}}
 		draggable="false"
 	>
-		<div class="flex items-center gap-1">
+		<div class="flex min-w-0 flex-1 items-center gap-1">
 			<div>
 				{#if channel?.type === 'dm'}
 					{#if channel?.users}
@@ -152,15 +158,13 @@
 				{/if}
 			</div>
 
-			<div
-				class=" text-left self-center overflow-hidden w-full line-clamp-1 flex-1 pr-1 flex items-center gap-2.5"
-			>
+			<div class="text-left self-center min-w-0 flex-1 pr-1 flex items-center gap-1.5">
 				{#if channel?.name}
-					<span class="line-clamp-1">
+					<span class="min-w-0 truncate">
 						{channel.name}
 					</span>
 				{:else}
-					<span class="shrink-0 line-clamp-1">
+					<span class="min-w-0 truncate">
 						{channel?.users
 							?.filter((u) => u.id !== $user?.id)
 							.map((u) => u.name)
@@ -171,34 +175,30 @@
 						{@const dmUser = channel.users.find((u) => u.id !== $user?.id)}
 
 						{#if dmUser?.status_emoji || dmUser?.status_message}
-							<span class="flex gap-1.5 line-clamp-1">
+							<span class="min-w-0 flex gap-1.5">
 								{#if dmUser?.status_emoji}
 									<div class=" self-center shrink-0">
 										<Emoji className="size-3.5" shortCode={dmUser?.status_emoji} />
 									</div>
 								{/if}
 
-								<div class="line-clamp-1 italic">
+								<div class="min-w-0 truncate italic">
 									{dmUser?.status_message}
 								</div>
 							</span>
 						{/if}
 					{/if}
 				{/if}
-			</div>
-		</div>
 
-		<div class="flex items-center">
-			{#if channel?.unread_count > 0}
-				<div
-					class="text-xs py-[0.0625rem] px-2 rounded-xl bg-gray-100 text-black dark:bg-gray-800 dark:text-white font-normal whitespace-nowrap"
-				>
-					{new Intl.NumberFormat($i18n.locale, {
-						notation: 'compact',
-						compactDisplay: 'short'
-					}).format(channel.unread_count)}
-				</div>
-			{/if}
+				{#if channel?.unread_count > 0}
+					<div
+						class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-sky-500/10 px-1 text-[0.625rem] font-semibold leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
+						title={$i18n.t('Unread')}
+					>
+						{formatUnreadCount(channel.unread_count)}
+					</div>
+				{/if}
+			</div>
 		</div>
 	</a>
 
