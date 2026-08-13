@@ -196,33 +196,32 @@
 	bind:this={rootEl}
 	class="relative grid {hideThumbs
 		? 'grid-cols-[minmax(0,1fr)]'
-		: 'grid-cols-[160px_minmax(0,1fr)]'} h-full min-h-0 bg-transparent text-gray-900 dark:text-gray-100 {className}"
+		: 'grid-cols-[144px_minmax(0,1fr)]'} h-full min-h-0 bg-transparent text-gray-900 dark:text-gray-100 {className}"
 >
 	<aside
 		class={hideThumbs
 			? 'hidden'
-			: 'scrollbar-hidden overflow-y-auto px-2.5 pt-3.5 pb-16 border-r border-gray-200/60 dark:border-white/10 bg-transparent'}
+			: 'pptx-slide-rail overflow-y-auto px-2 pt-3 pb-16 border-r border-gray-50 dark:border-gray-850/30 bg-transparent'}
 		aria-label="Slides"
 	>
 		{#each slides as slide, index}
 			<button
 				use:trackThumbnail={index}
 				type="button"
-				class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-2 w-full mb-3.5 p-0 text-left text-gray-900 dark:text-gray-100"
+				class="grid grid-cols-[20px_minmax(0,1fr)] items-start gap-2 w-full mb-3 p-0 text-left text-gray-900 dark:text-gray-100"
 				on:click={() => selectSlide(index)}
 				aria-label="Slide {index + 1}"
 				aria-current={safeSlide === index ? 'true' : undefined}
 			>
 				<span
-					class="pt-[0.4375rem] text-xs font-medium text-right {safeSlide === index
-						? 'text-gray-900 dark:text-gray-100'
-						: 'text-gray-400 dark:text-gray-600'}">{index + 1}</span
+					class="pt-1.5 text-[0.6875rem] font-medium text-right {safeSlide === index
+						? 'text-gray-400 dark:text-gray-500'
+						: 'text-gray-300/70 dark:text-gray-700'}">{index + 1}</span
 				>
 				<span
-					class="block aspect-video overflow-hidden rounded-lg bg-white border-2 {safeSlide ===
-					index
-						? 'border-gray-400 shadow-sm dark:border-gray-500'
-						: 'border-transparent opacity-45'}"
+					class="block aspect-video overflow-hidden rounded-md bg-white border {safeSlide === index
+						? 'border-gray-100 opacity-95 dark:border-gray-850/30'
+						: 'border-transparent opacity-55 hover:opacity-80'}"
 				>
 					<img
 						src={slide}
@@ -355,3 +354,38 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	.pptx-slide-rail {
+		scrollbar-color: transparent transparent;
+	}
+
+	.pptx-slide-rail:hover,
+	.pptx-slide-rail:focus,
+	.pptx-slide-rail:focus-within,
+	.pptx-slide-rail:active {
+		scrollbar-color: rgba(215, 215, 215, 0.6) transparent;
+	}
+
+	:global(.dark) .pptx-slide-rail:hover,
+	:global(.dark) .pptx-slide-rail:focus,
+	:global(.dark) .pptx-slide-rail:focus-within,
+	:global(.dark) .pptx-slide-rail:active {
+		scrollbar-color: rgba(67, 67, 67, 0.6) transparent;
+	}
+
+	.pptx-slide-rail::-webkit-scrollbar-thumb {
+		visibility: hidden;
+	}
+
+	.pptx-slide-rail:hover::-webkit-scrollbar-thumb,
+	.pptx-slide-rail:focus::-webkit-scrollbar-thumb,
+	.pptx-slide-rail:focus-within::-webkit-scrollbar-thumb,
+	.pptx-slide-rail:active::-webkit-scrollbar-thumb {
+		visibility: visible;
+	}
+
+	.pptx-slide-rail::-webkit-scrollbar-corner {
+		display: none;
+	}
+</style>
