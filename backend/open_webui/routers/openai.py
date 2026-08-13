@@ -246,9 +246,48 @@ router = APIRouter()
 
 LLAMACPP_LOADED_STATES = {'loaded', 'sleeping'}
 LLAMACPP_UNLOADED_STATES = {'loading', 'unloaded'}
+MODEL_MANAGEMENT_ENDPOINTS = {
+    'llama.cpp': {
+        'list': '/models',
+        'download': '/models',
+        'delete': '/models',
+        'load': '/models/load',
+        'unload': '/models/unload',
+        'sse': '/models/sse',
+    },
+    'lmstudio': {
+        'list': '/api/v1/models',
+        'download': '/api/v1/models/download',
+        'download_status': '/api/v1/models/download/status/{job_id}',
+        'load': '/api/v1/models/load',
+        'unload': '/api/v1/models/unload',
+    },
+}
 
 
-def get_llamacpp_model_loaded_state(model: dict, provider: str, manual_model_ids: bool = False) -> bool | None:
+def get_model_management_root_url(url: str, provider: str) -> str:
+    root_url = url.rstrip('/')
+    if provider in ('llama.cpp', 'lmstudio'):
+        for suffix in ('/api/v1', '/api/v0', '/v1'):
+            if root_url.endswith(suffix):
+                return root_url.removesuffix(suffix)
+
+    return root_url
+
+
+def get_provider_model_loaded_state(model: dict, provider: str, manual_model_ids: bool = False) -> bool | None:
+    if provider == 'lmstudio':
+        if model.get('loaded_instances'):
+            return True
+
+        state = model.get('state')
+        if state == 'loaded':
+            return True
+        if state == 'not-loaded':
+            return False
+
+        return None
+
     if provider != 'llama.cpp':
         return None
 
@@ -305,6 +344,111 @@ async def get_openai_connection(idx: int) -> tuple[str, str, dict]:
     key = api_keys[idx]
     api_config = api_configs.get(str(idx), api_configs.get(url, {}))
     return url, key, api_config
+
+
+async def clear_openai_model_cache(request: Request):
+    await get_all_models.cache.clear()
+    request.app.state.BASE_MODELS = []
+    request.app.state.OPENAI_MODELS = {}
+    models = getattr(request.app.state, 'MODELS', None)
+    if hasattr(models, 'clear'):
+        models.clear()
+    else:
+        request.app.state.MODELS = {}
+
+
+async def get_model_management_connection(url_idx: int) -> tuple[str, str, dict, str]:
+    if not await Config.get('openai.enable'):
+        raise HTTPException(status_code=503, detail='OpenAI API is disabled')
+
+    try:
+        url, key, api_config = await get_openai_connection(url_idx)
+    except IndexError:
+        raise HTTPException(status_code=404, detail='Connection not found')
+
+    provider = api_config.get('provider', '')
+    if provider not in MODEL_MANAGEMENT_ENDPOINTS:
+        raise HTTPException(
+            status_code=400,
+            detail=f'Provider "{provider or "default"}" does not support model management',
+        )
+
+    return get_model_management_root_url(url, provider), key, api_config, provider
+
+
+def get_model_management_path(provider: str, operation: str, path_params: dict | None = None) -> str:
+    try:
+        path = MODEL_MANAGEMENT_ENDPOINTS[provider][operation]
+    except KeyError:
+        raise HTTPException(status_code=400, detail=f'Provider "{provider}" does not support {operation}')
+
+    return path.format(**(path_params or {}))
+
+
+def get_model_management_payload(provider: str, operation: str, payload: dict | None) -> dict | None:
+    if provider == 'lmstudio' and operation == 'unload' and payload:
+        return {'instance_id': payload.get('instance_id') or payload.get('model')}
+
+    return payload
+
+
+async def send_model_management_request(
+    request: Request,
+    url_idx: int,
+    operation: str,
+    method: str = 'GET',
+    payload: dict | None = None,
+    query: dict | None = None,
+    path_params: dict | None = None,
+    stream: bool = False,
+    user: UserModel | None = None,
+):
+    root_url, key, api_config, provider = await get_model_management_connection(url_idx)
+    path = get_model_management_path(provider, operation, path_params=path_params)
+    payload = get_model_management_payload(provider, operation, payload)
+    headers, cookies = await get_headers_and_cookies(request, root_url, key, api_config, user=user)
+
+    response = None
+    streaming = False
+    try:
+        session = await get_session()
+        response = await session.request(
+            method,
+            f'{root_url}{path}',
+            json=payload,
+            params=query,
+            headers=headers,
+            cookies=cookies,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            timeout=get_client_timeout(stream=stream),
+        )
+
+        if not response.ok:
+            try:
+                error = await response.json(loads=JSONCodec.loads)
+            except Exception:
+                error = await response.text()
+            raise HTTPException(status_code=response.status, detail=error)
+
+        if stream:
+            streaming = True
+            return StreamingResponse(
+                stream_wrapper(response, passthrough=True),
+                status_code=response.status,
+                headers=_clean_proxy_headers(response.headers),
+            )
+
+        try:
+            return await response.json(loads=JSONCodec.loads)
+        except Exception:
+            return {'success': True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=response.status if response else 500, detail=str(e))
+    finally:
+        if not streaming:
+            await cleanup_response(response)
 
 
 async def get_anthropic_token_count_target(request: Request, form_data: dict, user: UserModel):
@@ -697,7 +841,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                             'urlIdx': idx,
                         }
 
-                        loaded = get_llamacpp_model_loaded_state(
+                        loaded = get_provider_model_loaded_state(
                             model,
                             provider,
                             manual_model_ids=bool(api_config.get('model_ids')),
@@ -791,6 +935,121 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
         models['data'] = await get_filtered_models(models, user)
 
     return models
+
+
+class ProviderModelOperationForm(BaseModel):
+    model: str
+    model_config = ConfigDict(extra='allow')
+
+
+@router.get('/models/{url_idx}/catalog')
+async def get_provider_model_catalog(request: Request, url_idx: int, user=Depends(get_admin_user)):
+    return await send_model_management_request(request, url_idx, 'list', user=user)
+
+
+@router.post('/models/{url_idx}/download')
+async def download_provider_model(
+    request: Request,
+    url_idx: int,
+    form_data: ProviderModelOperationForm,
+    user=Depends(get_admin_user),
+):
+    root_url, _, api_config, provider = await get_model_management_connection(url_idx)
+    payload = form_data.model_dump(exclude_none=True)
+    payload['model'] = strip_provider_model_prefix(payload['model'], api_config.get('prefix_id'))
+
+    result = await send_model_management_request(request, url_idx, 'download', 'POST', payload, user=user)
+    await clear_openai_model_cache(request)
+    await publish_event(
+        request,
+        EVENTS.MODEL_PROVIDER_MODEL_CREATED,
+        actor=user,
+        subject_id=payload['model'],
+        data={'provider': provider, 'url_idx': url_idx, 'base_url': root_url},
+    )
+    return result
+
+
+@router.get('/models/{url_idx}/download/status/{job_id}')
+async def get_provider_model_download_status(
+    request: Request,
+    url_idx: int,
+    job_id: str,
+    user=Depends(get_admin_user),
+):
+    return await send_model_management_request(
+        request,
+        url_idx,
+        'download_status',
+        path_params={'job_id': job_id},
+        user=user,
+    )
+
+
+@router.post('/models/{url_idx}/load')
+async def load_provider_model(
+    request: Request,
+    url_idx: int,
+    form_data: ProviderModelOperationForm,
+    user=Depends(get_admin_user),
+):
+    _, _, api_config, _ = await get_model_management_connection(url_idx)
+    payload = form_data.model_dump(exclude_none=True)
+    payload['model'] = strip_provider_model_prefix(payload['model'], api_config.get('prefix_id'))
+
+    result = await send_model_management_request(request, url_idx, 'load', 'POST', payload, user=user)
+    await clear_openai_model_cache(request)
+    return result
+
+
+@router.post('/models/{url_idx}/unload')
+async def unload_provider_model(
+    request: Request,
+    url_idx: int,
+    form_data: ProviderModelOperationForm,
+    user=Depends(get_admin_user),
+):
+    _, _, api_config, _ = await get_model_management_connection(url_idx)
+    payload = form_data.model_dump(exclude_none=True)
+    payload['model'] = strip_provider_model_prefix(payload['model'], api_config.get('prefix_id'))
+
+    result = await send_model_management_request(request, url_idx, 'unload', 'POST', payload, user=user)
+    await clear_openai_model_cache(request)
+    return result
+
+
+@router.get('/models/{url_idx}/sse')
+async def stream_provider_model_events(request: Request, url_idx: int, user=Depends(get_admin_user)):
+    return await send_model_management_request(request, url_idx, 'sse', stream=True, user=user)
+
+
+@router.delete('/models/{url_idx}')
+async def delete_provider_model(
+    request: Request,
+    url_idx: int,
+    model: str,
+    user=Depends(get_admin_user),
+):
+    root_url, _, api_config, provider = await get_model_management_connection(url_idx)
+    actual_model = strip_provider_model_prefix(model, api_config.get('prefix_id'))
+
+    result = await send_model_management_request(
+        request,
+        url_idx,
+        'delete',
+        'DELETE',
+        query={'model': actual_model},
+        user=user,
+    )
+    await clear_openai_model_cache(request)
+    await publish_event(
+        request,
+        EVENTS.MODEL_PROVIDER_MODEL_DELETED,
+        actor=user,
+        subject_id=actual_model,
+        data={'provider': provider, 'url_idx': url_idx, 'base_url': root_url},
+    )
+    return result
 
 
 class ConnectionVerificationForm(BaseModel):
