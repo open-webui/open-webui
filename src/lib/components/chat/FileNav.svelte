@@ -1014,14 +1014,24 @@
 	<div class="hidden"></div>
 {:else if terminalChatContextPending}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
-		<Icon name="terminal" size={24} strokeWidth={1.4} class="text-gray-300 dark:text-gray-600 mb-2" />
+		<Icon
+			name="terminal"
+			size={24}
+			strokeWidth={1.4}
+			class="text-gray-300 dark:text-gray-600 mb-2"
+		/>
 		<div class="text-xs text-gray-500 dark:text-gray-400">
 			{$i18n.t('Start the chat to use this terminal.')}
 		</div>
 	</div>
 {:else if !selectedTerminal}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
-		<Icon name="terminal" size={24} strokeWidth={1.4} class="text-gray-300 dark:text-gray-600 mb-2" />
+		<Icon
+			name="terminal"
+			size={24}
+			strokeWidth={1.4}
+			class="text-gray-300 dark:text-gray-600 mb-2"
+		/>
 		<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">
 			{$i18n.t('No Terminal connection configured.')}
 		</div>

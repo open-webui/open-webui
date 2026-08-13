@@ -1,13 +1,10 @@
 <script lang="ts">
 	import { getContext, afterUpdate } from 'svelte';
-	import { tick } from 'svelte';
-	import Folder from '../../icons/Folder.svelte';
-	import NewFolderAlt from '../../icons/NewFolderAlt.svelte';
-	import FilePlusAlt from '../../icons/FilePlusAlt.svelte';
 	import Spinner from '../../common/Spinner.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	import Icon from './Icon.svelte';
 
 	const i18n: any = getContext('i18n');
 
@@ -60,18 +57,7 @@
 			disabled={!canGoBack}
 			aria-label={$i18n.t('Back')}
 		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 20 20"
-				fill="currentColor"
-				class="size-3.5"
-			>
-				<path
-					fill-rule="evenodd"
-					d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
-					clip-rule="evenodd"
-				/>
-			</svg>
+			<Icon name="chevron-left" size={14} strokeWidth={1.5} />
 		</button>
 	</Tooltip>
 
@@ -85,18 +71,7 @@
 			disabled={!canGoForward}
 			aria-label={$i18n.t('Forward')}
 		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 20 20"
-				fill="currentColor"
-				class="size-3.5"
-			>
-				<path
-					fill-rule="evenodd"
-					d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
-					clip-rule="evenodd"
-				/>
-			</svg>
+			<Icon name="chevron-right" size={14} strokeWidth={1.5} />
 		</button>
 	</Tooltip>
 
@@ -161,18 +136,7 @@
 			on:click={onRefresh}
 			aria-label={$i18n.t('Refresh')}
 		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 20 20"
-				fill="currentColor"
-				class="size-3.5 {loading ? 'animate-spin' : ''}"
-			>
-				<path
-					fill-rule="evenodd"
-					d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.451a.75.75 0 0 0 0-1.5H4.5a.75.75 0 0 0-.75.75v3.75a.75.75 0 0 0 1.5 0v-2.127l.13.13a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm-10.624-2.85a5.5 5.5 0 0 1 9.201-2.465l.312.31H11.75a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 .75-.75V3.42a.75.75 0 0 0-1.5 0v2.126l-.13-.129A7 7 0 0 0 3.239 8.555a.75.75 0 0 0 1.449.39Z"
-					clip-rule="evenodd"
-				/>
-			</svg>
+			<Icon name="refresh" size={14} strokeWidth={1.4} class={loading ? 'animate-spin' : ''} />
 		</button>
 	</Tooltip>
 
@@ -183,16 +147,7 @@
 					class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
 					aria-label={$i18n.t('Sort')}
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="size-3.5"
-					>
-						<path
-							d="M2 3.75A.75.75 0 0 1 2.75 3h11.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 3.75ZM2 7.5a.75.75 0 0 1 .75-.75h7.508a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 7.5ZM14 7a.75.75 0 0 1 .75.75v6.69l1.72-1.72a.75.75 0 1 1 1.06 1.06l-3 3a.75.75 0 0 1-1.06 0l-3-3a.75.75 0 1 1 1.06-1.06l1.72 1.72V7.75A.75.75 0 0 1 14 7ZM2 11.25a.75.75 0 0 1 .75-.75h4.562a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z"
-						/>
-					</svg>
+					<Icon name="sort" size={14} strokeWidth={1.4} />
 				</button>
 			</Tooltip>
 
@@ -205,20 +160,14 @@
 					>
 						<span class="flex-1 text-left">{$i18n.t('Name')}</span>
 						{#if sortBy === 'name'}
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="size-3 text-gray-500 dark:text-gray-400 transition-transform {sortAsc
+							<Icon
+								name="chevron-up"
+								size={12}
+								strokeWidth={1.5}
+								class="text-gray-500 dark:text-gray-400 transition-transform {sortAsc
 									? ''
 									: 'rotate-180'}"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
+							/>
 						{/if}
 					</button>
 					<button
@@ -228,20 +177,14 @@
 					>
 						<span class="flex-1 text-left">{$i18n.t('Date Modified')}</span>
 						{#if sortBy === 'date'}
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="size-3 text-gray-500 dark:text-gray-400 transition-transform {sortAsc
+							<Icon
+								name="chevron-up"
+								size={12}
+								strokeWidth={1.5}
+								class="text-gray-500 dark:text-gray-400 transition-transform {sortAsc
 									? ''
 									: 'rotate-180'}"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
+							/>
 						{/if}
 					</button>
 				</DropdownMenu>
@@ -254,7 +197,7 @@
 				disabled={!writable}
 				aria-label={$i18n.t('New Folder')}
 			>
-				<NewFolderAlt className="size-3.5" />
+				<Icon name="folder" size={14} strokeWidth={1.4} />
 			</button>
 		</Tooltip>
 		<Tooltip content={$i18n.t('New File')}>
@@ -264,7 +207,7 @@
 				disabled={!writable}
 				aria-label={$i18n.t('New File')}
 			>
-				<FilePlusAlt className="size-3.5" />
+				<Icon name="empty-page" size={14} strokeWidth={1.4} />
 			</button>
 		</Tooltip>
 		<Tooltip content={$i18n.t('Download')}>
@@ -273,19 +216,7 @@
 				on:click={onDownloadDir}
 				aria-label={$i18n.t('Download')}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="size-3.5"
-				>
-					<path
-						d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
-					/>
-					<path
-						d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
-					/>
-				</svg>
+				<Icon name="download" size={14} strokeWidth={1.4} />
 			</button>
 		</Tooltip>
 		<Tooltip content={$i18n.t('Upload')}>
@@ -295,20 +226,7 @@
 				disabled={!writable}
 				aria-label={$i18n.t('Upload')}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.5"
-					class="size-3.5"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
-					/>
-				</svg>
+				<Icon name="upload" size={14} strokeWidth={1.4} />
 			</button>
 		</Tooltip>
 		<input
