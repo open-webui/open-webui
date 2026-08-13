@@ -20,11 +20,13 @@
 	export let onUploadFiles: (files: File[]) => void = () => {};
 	export let onDownloadDir: () => void = () => {};
 	export let onMove: (source: string, destFolder: string) => void = () => {};
+	export let showHidden = false;
+	export let onToggleHidden: () => void = () => {};
 
 	// Sort controls
-	export let sortBy: 'name' | 'date' = 'name';
+	export let sortBy: 'name' | 'size' | 'date' = 'name';
 	export let sortAsc: boolean = true;
-	export let onSort: (mode: 'name' | 'date') => void = () => {};
+	export let onSort: (mode: 'name' | 'size' | 'date') => void = () => {};
 
 	// Back / forward navigation
 	export let canGoBack = false;
@@ -46,45 +48,45 @@
 	});
 </script>
 
-<div class="flex items-center px-2 pb-1.5 shrink-0 gap-1">
+<div class="m-0 flex items-center gap-1 px-1 pt-0 pb-1.5 shrink-0 border-b border-gray-50 dark:border-gray-850/30">
 	<!-- Back -->
 	<Tooltip content={$i18n.t('Back')}>
 		<button
-			class="shrink-0 p-1 rounded transition {canGoBack
-				? 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400'
+			class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 {canGoBack
+				? 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
 				: 'text-gray-200 dark:text-gray-700 cursor-default'}"
 			on:click={onGoBack}
 			disabled={!canGoBack}
 			aria-label={$i18n.t('Back')}
 		>
-			<Icon name="chevron-left" size={14} strokeWidth={1.5} />
+			<Icon name="chevron-left" size={11} strokeWidth={1.5} />
 		</button>
 	</Tooltip>
 
 	<!-- Forward -->
 	<Tooltip content={$i18n.t('Forward')}>
 		<button
-			class="shrink-0 p-1 rounded transition {canGoForward
-				? 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-400'
+			class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 {canGoForward
+				? 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
 				: 'text-gray-200 dark:text-gray-700 cursor-default'}"
 			on:click={onGoForward}
 			disabled={!canGoForward}
 			aria-label={$i18n.t('Forward')}
 		>
-			<Icon name="chevron-right" size={14} strokeWidth={1.5} />
+			<Icon name="chevron-right" size={11} strokeWidth={1.5} />
 		</button>
 	</Tooltip>
 
 	<div
 		bind:this={breadcrumbEl}
-		class="flex items-center flex-1 min-w-0 overflow-x-auto scrollbar-none"
+		class="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto scrollbar-none"
 	>
 		{#each breadcrumbs as crumb, i}
 			{#if showSeparator(i)}
-				<span class="text-gray-300 dark:text-gray-600 text-xs shrink-0 select-none mx-0.5">/</span>
+				<span class="text-gray-300 dark:text-gray-600 text-xs shrink-0 select-none">/</span>
 			{/if}
 			<button
-				class="text-xs shrink-0 px-1 py-0.5 rounded transition
+				class="text-xs shrink-0 p-0 transition
 					{!selectedFile && i === breadcrumbs.length - 1
 					? 'text-gray-700 dark:text-gray-300'
 					: 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}
@@ -120,8 +122,8 @@
 			</button>
 		{/each}
 		{#if selectedFile}
-			<span class="text-gray-300 dark:text-gray-600 text-xs shrink-0 select-none mx-0.5">/</span>
-			<span class="text-xs shrink-0 px-1.5 py-0.5 text-gray-700 dark:text-gray-300">
+			<span class="text-gray-300 dark:text-gray-600 text-xs shrink-0 select-none">/</span>
+			<span class="text-xs shrink-0 p-0 text-gray-700 dark:text-gray-300">
 				{selectedFile.split('/').pop()}
 			</span>
 		{/if}
@@ -132,11 +134,11 @@
 
 	<Tooltip content={$i18n.t('Refresh')}>
 		<button
-			class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+			class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
 			on:click={onRefresh}
 			aria-label={$i18n.t('Refresh')}
 		>
-			<Icon name="refresh" size={14} strokeWidth={1.4} class={loading ? 'animate-spin' : ''} />
+			<Icon name="refresh" size={11} strokeWidth={1.4} class={loading ? 'animate-spin' : ''} />
 		</button>
 	</Tooltip>
 
@@ -144,10 +146,10 @@
 		<Dropdown align="end" sideOffset={4}>
 			<Tooltip content={$i18n.t('Sort')}>
 				<button
-					class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
 					aria-label={$i18n.t('Sort')}
 				>
-					<Icon name="sort" size={14} strokeWidth={1.4} />
+					<Icon name="sort" size={11} strokeWidth={1.4} />
 				</button>
 			</Tooltip>
 
@@ -155,7 +157,7 @@
 				<DropdownMenu className="min-w-[9.375rem] z-[9999999]">
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
 						on:click={() => onSort('name')}
 					>
 						<span class="flex-1 text-left">{$i18n.t('Name')}</span>
@@ -172,7 +174,24 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						on:click={() => onSort('size')}
+					>
+						<span class="flex-1 text-left">{$i18n.t('Size')}</span>
+						{#if sortBy === 'size'}
+							<Icon
+								name="chevron-up"
+								size={12}
+								strokeWidth={1.5}
+								class="text-gray-500 dark:text-gray-400 transition-transform {sortAsc
+									? ''
+									: 'rotate-180'}"
+							/>
+						{/if}
+					</button>
+					<button
+						type="button"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
 						on:click={() => onSort('date')}
 					>
 						<span class="flex-1 text-left">{$i18n.t('Date Modified')}</span>
@@ -190,45 +209,64 @@
 				</DropdownMenu>
 			</div>
 		</Dropdown>
-		<Tooltip content={$i18n.t('New Folder')}>
-			<button
-				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
-				on:click={onNewFolder}
-				disabled={!writable}
-				aria-label={$i18n.t('New Folder')}
-			>
-				<Icon name="folder" size={14} strokeWidth={1.4} />
-			</button>
-		</Tooltip>
-		<Tooltip content={$i18n.t('New File')}>
-			<button
-				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
-				on:click={onNewFile}
-				disabled={!writable}
-				aria-label={$i18n.t('New File')}
-			>
-				<Icon name="empty-page" size={14} strokeWidth={1.4} />
-			</button>
-		</Tooltip>
-		<Tooltip content={$i18n.t('Download')}>
-			<button
-				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-				on:click={onDownloadDir}
-				aria-label={$i18n.t('Download')}
-			>
-				<Icon name="download" size={14} strokeWidth={1.4} />
-			</button>
-		</Tooltip>
-		<Tooltip content={$i18n.t('Upload')}>
-			<button
-				class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
-				on:click={() => uploadInput?.click()}
-				disabled={!writable}
-				aria-label={$i18n.t('Upload')}
-			>
-				<Icon name="upload" size={14} strokeWidth={1.4} />
-			</button>
-		</Tooltip>
+		<Dropdown align="end" sideOffset={4}>
+			<Tooltip content={$i18n.t('Actions')}>
+				<button
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+					aria-label={$i18n.t('Actions')}
+				>
+					<Icon name="three-dots" size={11} strokeWidth={1.4} />
+				</button>
+			</Tooltip>
+
+			<div slot="content">
+				<DropdownMenu className="min-w-[9.375rem] z-[9999999]">
+					<button
+						type="button"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						on:click={onNewFolder}
+						disabled={!writable}
+					>
+						<Icon name="folder" size={12} strokeWidth={1.4} />
+						<span>{$i18n.t('New Folder')}</span>
+					</button>
+					<button
+						type="button"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						on:click={onNewFile}
+						disabled={!writable}
+					>
+						<Icon name="empty-page" size={12} strokeWidth={1.4} />
+						<span>{$i18n.t('New File')}</span>
+					</button>
+					<button
+						type="button"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						on:click={() => uploadInput?.click()}
+						disabled={!writable}
+					>
+						<Icon name="upload" size={12} strokeWidth={1.4} />
+						<span>{$i18n.t('Upload')}</span>
+					</button>
+					<button
+						type="button"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						on:click={onDownloadDir}
+					>
+						<Icon name="download" size={12} strokeWidth={1.4} />
+						<span>{$i18n.t('Download')}</span>
+					</button>
+					<button
+						type="button"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						on:click={onToggleHidden}
+					>
+						<Icon name="eye" size={12} strokeWidth={1.4} />
+						<span>{showHidden ? $i18n.t('Hide Hidden Files') : $i18n.t('Show Hidden Files')}</span>
+					</button>
+				</DropdownMenu>
+			</div>
+		</Dropdown>
 		<input
 			bind:this={uploadInput}
 			type="file"
