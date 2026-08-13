@@ -12,7 +12,7 @@
 	import Pencil from '../../icons/Pencil.svelte';
 	import Clipboard from '../../icons/Clipboard.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	export let entry: FileEntry;
 	export let currentPath: string;
@@ -140,7 +140,7 @@
 <li class="group">
 	<div
 		class="w-full flex items-center transition
-			{selected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}
+			{selected ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50/40 dark:hover:bg-gray-850/30'}
 			{dragOverFolder
 			? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-400 dark:ring-blue-500 ring-inset'
 			: ''}"
@@ -303,7 +303,9 @@
 				{/if}
 				<span class="text-xs text-gray-400 shrink-0">{formatFileSize(entry.size)}</span>
 			{:else if entry.type === 'directory' && showDate && entry.modified && !renaming}
-				<span class="text-[0.625rem] text-gray-400 shrink-0">{formatRelativeTime(entry.modified)}</span>
+				<span class="text-[0.625rem] text-gray-400 shrink-0"
+					>{formatRelativeTime(entry.modified)}</span
+				>
 			{/if}
 		</button>
 

@@ -48,7 +48,7 @@
 	import PortPreview from './FileNav/PortPreview.svelte';
 	import XTerminal from './XTerminal.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	export let onAttach: ((blob: Blob, name: string, contentType: string) => void) | null = null;
 	export let overlay = false;
@@ -251,8 +251,9 @@
 		terminalChatContextPending = chatScoped && !terminalChatContextHidden && !isSavedChatId(chatId);
 		if (terminalChatContextHidden || terminalChatContextPending) return null;
 
-		const userTerminal = ($settings?.terminalServers ?? []).find(
-			(s) => s.url === $selectedTerminalId
+		const settingsValue: any = $settings;
+		const userTerminal = (settingsValue?.terminalServers ?? []).find(
+			(s: any) => s.url === $selectedTerminalId
 		);
 
 		const isSystem = !!systemTerminal;
@@ -324,11 +325,16 @@
 		return normalized.endsWith('/') ? normalized : `${normalized}/`;
 	};
 
+	const labelFromPath = (path: string) => {
+		const parts = normalizePath(path).split('/').filter(Boolean);
+		return parts.at(-1) ?? '/';
+	};
+
 	const setFileRoot = (root?: TerminalFileRoot) => {
 		fileRoot = root?.path
 			? {
 					path: asDirectoryPath(root.path),
-					label: root.label || 'Home'
+					label: root.label || labelFromPath(root.path)
 				}
 			: null;
 	};
@@ -1435,13 +1441,9 @@
 				{:else if error}
 					<div class="p-4 text-xs">{error}</div>
 				{:else if entries.length === 0 && !creatingFolder && !creatingFile}
-					<div class="flex flex-col items-center justify-center gap-1.5 py-12 text-center">
-						<Folder className="size-6 text-gray-200 dark:text-gray-700" />
+					<div class="flex items-center justify-center py-12">
 						<div class="text-xs text-gray-400 dark:text-gray-500">
 							{$i18n.t('This folder is empty')}
-						</div>
-						<div class="text-[0.6875rem] text-gray-300 dark:text-gray-600">
-							{$i18n.t('Drop files here to upload')}
 						</div>
 					</div>
 				{/if}
@@ -1520,7 +1522,7 @@
 
 		<!-- Port detection -->
 		{#if selectedTerminal && !selectedFile && previewPort === null}
-			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800">
+			<div class="shrink-0 border-t border-gray-50 dark:border-gray-850/30">
 				<PortList
 					baseUrl={selectedTerminal.url}
 					apiKey={selectedTerminal.key}
@@ -1535,7 +1537,7 @@
 
 		<!-- Terminal bottom panel -->
 		{#if terminalEnabled}
-			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850">
+			<div class="shrink-0 border-t border-gray-50 dark:border-gray-850/30">
 				{#if terminalExpanded}
 					<!-- Drag handle (at top of panel) -->
 					<!-- svelte-ignore a11y-no-static-element-interactions -->

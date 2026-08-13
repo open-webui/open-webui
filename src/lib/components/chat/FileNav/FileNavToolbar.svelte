@@ -9,7 +9,7 @@
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	export let breadcrumbs: { label: string; path: string }[] = [];
 	export let selectedFile: string | null = null;
@@ -39,6 +39,9 @@
 
 	let uploadInput: HTMLInputElement;
 	let breadcrumbEl: HTMLDivElement;
+
+	const showSeparator = (index: number) =>
+		index > 0 && (breadcrumbs[0]?.label !== '/' || index > 1);
 
 	// Scroll breadcrumb to the end after every DOM update
 	afterUpdate(() => {
@@ -102,11 +105,11 @@
 		class="flex items-center flex-1 min-w-0 overflow-x-auto scrollbar-none"
 	>
 		{#each breadcrumbs as crumb, i}
-			{#if i > 1}
+			{#if showSeparator(i)}
 				<span class="text-gray-300 dark:text-gray-600 text-xs shrink-0 select-none mx-0.5">/</span>
 			{/if}
 			<button
-				class="text-xs shrink-0 px-1 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition
+				class="text-xs shrink-0 px-1 py-0.5 rounded transition
 					{!selectedFile && i === breadcrumbs.length - 1
 					? 'text-gray-700 dark:text-gray-300'
 					: 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}
@@ -149,9 +152,7 @@
 		{/if}
 	</div>
 	{#if !writable}
-		<span class="text-[0.625rem] text-gray-400 dark:text-gray-500 shrink-0">
-			Read-only
-		</span>
+		<span class="text-[0.625rem] text-gray-400 dark:text-gray-500 shrink-0"> Read-only </span>
 	{/if}
 
 	<Tooltip content={$i18n.t('Refresh')}>
