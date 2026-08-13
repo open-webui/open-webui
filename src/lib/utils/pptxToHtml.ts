@@ -38,12 +38,15 @@ type Placeholder = {
 
 type TextToken = {
 	text: string;
+	fontFace: string;
 	fontPt: number;
 	bold: boolean;
 	italic: boolean;
 	color: string;
 	width: number;
 };
+
+type TextStyle = Omit<TextToken, 'text' | 'width'>;
 
 const getTag = (el: Element) => el.tagName.split(':').pop();
 
@@ -263,25 +266,70 @@ const renderBackground = (
 	ctx.fillRect(0, 0, slideW, slideH);
 };
 
-const fontString = ({ italic, bold, fontPt }: Pick<TextToken, 'italic' | 'bold' | 'fontPt'>) =>
-	`${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${fontPt}pt Calibri, Arial, sans-serif`;
+const directChild = (el: Element, tag: string) =>
+	Array.from(el.children).find((child) => getTag(child) === tag);
 
-const readRunStyle = (run: Element, defaultFontSize: number) => {
-	const rPr = run.getElementsByTagName('a:rPr')[0];
-	let fontPt = defaultFontSize;
-	let bold = false;
-	let italic = false;
-	let color = '#000000';
+const defaultTextStyle = (fontPt: number): TextStyle => ({
+	fontFace: 'Calibri',
+	fontPt,
+	bold: false,
+	italic: false,
+	color: '#000000'
+});
 
-	if (rPr) {
-		if (rPr.getAttribute('b') === '1') bold = true;
-		if (rPr.getAttribute('i') === '1') italic = true;
-		const sz = rPr.getAttribute('sz');
-		if (sz) fontPt = parseInt(sz, 10) / 100;
-		color = solidFillColor(rPr) ?? color;
-	}
+const fontString = ({ italic, bold, fontPt, fontFace }: TextStyle) => {
+	const family = fontFace.includes(' ') ? `"${fontFace}"` : fontFace;
+	return `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${fontPt}pt ${family}, Calibri, Arial, sans-serif`;
+};
 
-	return { fontPt, bold, italic, color };
+const readTextStyle = (rPr: Element | undefined, base: TextStyle): TextStyle => {
+	if (!rPr) return base;
+
+	const latin = rPr.getElementsByTagName('a:latin')[0];
+	const typeface = latin?.getAttribute('typeface');
+	const sz = rPr.getAttribute('sz');
+
+	return {
+		fontFace: typeface && !typeface.startsWith('+') ? typeface : base.fontFace,
+		fontPt: sz ? parseInt(sz, 10) / 100 : base.fontPt,
+		bold: rPr.getAttribute('b') === '1' ? true : rPr.getAttribute('b') === '0' ? false : base.bold,
+		italic:
+			rPr.getAttribute('i') === '1' ? true : rPr.getAttribute('i') === '0' ? false : base.italic,
+		color: solidFillColor(rPr) ?? base.color
+	};
+};
+
+const readParagraphStyle = (para: Element, defaultFontSize: number) => {
+	const pPr = directChild(para, 'pPr');
+	const defRPr = pPr?.getElementsByTagName('a:defRPr')[0];
+	const endParaRPr = para.getElementsByTagName('a:endParaRPr')[0];
+	return readTextStyle(defRPr ?? endParaRPr, defaultTextStyle(defaultFontSize));
+};
+
+const readRunStyle = (run: Element, base: TextStyle) => {
+	const rPr = directChild(run, 'rPr') as Element | undefined;
+	return readTextStyle(rPr, base);
+};
+
+const textBodyInsets = (txBody: Element) => {
+	const bodyPr = txBody.getElementsByTagName('a:bodyPr')[0];
+	return {
+		left: emuToPx(parseEmu(bodyPr?.getAttribute('lIns') ?? '91440')),
+		right: emuToPx(parseEmu(bodyPr?.getAttribute('rIns') ?? '91440')),
+		top: emuToPx(parseEmu(bodyPr?.getAttribute('tIns') ?? '45720')),
+		bottom: emuToPx(parseEmu(bodyPr?.getAttribute('bIns') ?? '45720'))
+	};
+};
+
+const paragraphBullet = (para: Element) => {
+	const pPr = directChild(para, 'pPr');
+	if (!pPr || pPr.getElementsByTagName('a:buNone')[0]) return '';
+
+	const buChar = pPr.getElementsByTagName('a:buChar')[0]?.getAttribute('char');
+	if (buChar) return `${buChar} `;
+
+	if (pPr.getElementsByTagName('a:buAutoNum')[0]) return '1. ';
+	return '';
 };
 
 const drawTextLine = (
@@ -293,9 +341,9 @@ const drawTextLine = (
 	w: number
 ) => {
 	const lineWidth = line.reduce((sum, token) => sum + token.width, 0);
-	let cursorX = x + 4;
+	let cursorX = x;
 	if (align === 'center') cursorX = x + Math.max(0, (w - lineWidth) / 2);
-	if (align === 'right') cursorX = x + w - lineWidth - 4;
+	if (align === 'right') cursorX = x + w - lineWidth;
 
 	for (const token of line) {
 		ctx.font = fontString(token);
@@ -452,32 +500,42 @@ export async function pptxToImages(
 			ctx.clip();
 
 			const paragraphs = txBody.getElementsByTagName('a:p');
-			let cursorY = y;
+			const insets = textBodyInsets(txBody);
+			const textX = x + insets.left;
+			const textY = y + insets.top;
+			const textW = Math.max(1, w - insets.left - insets.right);
+			const textBottom = y + h - insets.bottom;
+			let cursorY = textY;
 			const defaultFontSize = placeholderFontSize(ph ?? placeholder ?? null);
 
 			for (let pi = 0; pi < paragraphs.length; pi++) {
 				const para = paragraphs[pi];
-				const runs = para.getElementsByTagName('a:r');
 				const align = paragraphAlign(para, ph ?? placeholder ?? null);
+				const paragraphStyle = readParagraphStyle(para, defaultFontSize);
+				const textParts: Array<{ text: string; style: TextStyle } | { newline: true }> = [];
+				const bullet = paragraphBullet(para);
 
-				if (runs.length === 0) {
-					cursorY += defaultFontSize * 1.5;
-					continue;
-				}
-
-				// Calculate max font size in this paragraph for line height
-				let maxFontPt = defaultFontSize;
-				for (let ri = 0; ri < runs.length; ri++) {
-					const rPr = runs[ri].getElementsByTagName('a:rPr')[0];
-					if (rPr) {
-						const sz = rPr.getAttribute('sz');
-						if (sz) {
-							const pt = parseInt(sz, 10) / 100;
-							if (pt > maxFontPt) maxFontPt = pt;
-						}
+				for (const child of Array.from(para.children)) {
+					const tag = getTag(child);
+					if (tag === 'br') {
+						textParts.push({ newline: true });
+						continue;
 					}
+					if (tag !== 'r' && tag !== 'fld') continue;
+
+					const style = tag === 'r' ? readRunStyle(child, paragraphStyle) : paragraphStyle;
+					const text = child.getElementsByTagName('a:t')[0]?.textContent ?? '';
+					if (text) textParts.push({ text, style });
 				}
 
+				if (bullet && textParts.some((part) => 'text' in part && part.text.trim())) {
+					textParts.unshift({ text: bullet, style: paragraphStyle });
+				}
+
+				const maxFontPt = textParts.reduce(
+					(max, part) => ('text' in part ? Math.max(max, part.style.fontPt) : max),
+					paragraphStyle.fontPt
+				);
 				const lineHeight = maxFontPt * 1.4;
 				cursorY += maxFontPt; // baseline offset
 
@@ -485,22 +543,27 @@ export async function pptxToImages(
 				let lineWidth = 0;
 				const flushLine = () => {
 					if (line.length === 0) return;
-					if (cursorY <= y + h) {
-						drawTextLine(ctx, line, align, x, cursorY, w);
+					if (cursorY <= textBottom) {
+						drawTextLine(ctx, line, align, textX, cursorY, textW);
 					}
 					line = [];
 					lineWidth = 0;
 					cursorY += lineHeight;
 				};
 
-				for (let ri = 0; ri < runs.length; ri++) {
-					const run = runs[ri];
-					const text = run.getElementsByTagName('a:t')[0]?.textContent ?? '';
-					if (!text) continue;
+				if (textParts.length === 0) {
+					cursorY += lineHeight;
+					continue;
+				}
 
-					const style = readRunStyle(run, defaultFontSize);
+				for (const part of textParts) {
+					if ('newline' in part) {
+						if (line.length > 0) flushLine();
+						else cursorY += lineHeight;
+						continue;
+					}
+					const { text, style } = part;
 					ctx.font = fontString(style);
-
 					ctx.textBaseline = 'alphabetic';
 
 					// Simple word-wrap within the shape bounds
@@ -511,10 +574,10 @@ export async function pptxToImages(
 							flushLine();
 							continue;
 						}
-						if (cursorY > y + h) break;
+						if (cursorY > textBottom) break;
 
 						const width = ctx.measureText(word).width;
-						if (lineWidth + width > w - 8 && line.length > 0) {
+						if (lineWidth + width > textW && line.length > 0) {
 							flushLine();
 							if (word.trim() === '') continue;
 						}
