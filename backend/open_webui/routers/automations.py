@@ -15,7 +15,7 @@ from open_webui.models.automations import (
     AutomationRuns,
     Automations,
 )
-from open_webui.models.access_grants import AccessGrants
+from open_webui.models.access_grants import AccessGrants, has_public_write_access_grant
 from open_webui.models.channels import Channels
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
@@ -134,12 +134,8 @@ async def check_automation_channel_access(form_data: AutomationForm, user, db: A
     if channel.type in ['group', 'dm']:
         allowed = await Channels.is_user_channel_member(channel.id, user.id, db=db)
     else:
-        allowed = await AccessGrants.has_access(
-            user_id=user.id,
-            resource_type='channel',
-            resource_id=channel.id,
-            permission='write',
-            db=db,
+        allowed = has_public_write_access_grant(channel.access_grants) or await AccessGrants.has_access(
+            user_id=user.id, resource_type='channel', resource_id=channel.id, permission='write', db=db
         )
     if not allowed:
         raise HTTPException(
