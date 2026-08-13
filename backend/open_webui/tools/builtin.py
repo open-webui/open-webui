@@ -3673,7 +3673,7 @@ async def update_automation(
     prompt: Optional[str] = None,
     rrule: Optional[str] = None,
     model_id: Optional[str] = None,
-    folder_id: Optional[str] = None,
+    folder_id: Optional[str] = '',
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
@@ -3684,8 +3684,8 @@ async def update_automation(
     :param name: New name for the automation (optional)
     :param prompt: New prompt/instructions (optional)
     :param rrule: New iCalendar RRULE schedule string (optional). See create_automation for format examples.
-    :param model_id: New model ID to use (optional)
-    :param folder_id: New owner-owned folder ID (optional); pass an empty string to clear
+    :param model_id: New model ID to use (optional); blank values are ignored
+    :param folder_id: New owner-owned folder ID (optional); omit or pass blank to keep unchanged, pass null to clear
     :return: JSON with the updated automation details
     """
     if __request__ is None:
@@ -3714,13 +3714,15 @@ async def update_automation(
         # Merge provided fields with existing values
         new_name = name if name is not None else automation.name
         new_prompt = prompt if prompt is not None else automation.data.get('prompt', '')
-        new_model_id = model_id if model_id is not None else automation.data.get('model_id', '')
+        new_model_id = model_id.strip() if model_id and model_id.strip() else automation.data.get('model_id', '')
         new_rrule = rrule if rrule is not None else automation.data.get('rrule', '')
         if folder_id is None:
+            new_folder_id = None
+        elif not folder_id.strip():
             new_folder_id = automation.folder_id
         else:
             try:
-                new_folder_id = await _validate_owned_automation_folder(user_id, folder_id)
+                new_folder_id = await _validate_owned_automation_folder(user_id, folder_id.strip())
             except ValueError as e:
                 return JSONCodec.dumps({'error': str(e)})
 
