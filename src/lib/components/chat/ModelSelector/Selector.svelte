@@ -1169,7 +1169,12 @@
 
 							{#each downloadTargets as target, targetIndex (target.id)}
 								{#if target.download}
-									<Tooltip content={target.download?.digest ?? ''} placement="top-start">
+									<Tooltip
+										content={target.download?.digest && target.download.digest !== 'downloading'
+											? target.download.digest
+											: searchValue}
+										placement="top-start"
+									>
 										<div
 											role="option"
 											aria-selected={selectedModelIdx === filteredItems.length + targetIndex}
@@ -1245,7 +1250,12 @@
 							{#each selectionOnly ? [] : Object.keys($MODEL_DOWNLOAD_POOL).filter((model) => !activeDownloadKeys.has(model)) as model}
 								{@const download = $MODEL_DOWNLOAD_POOL[model]}
 								{@const downloadName = download?.model ?? model}
-								<Tooltip content={download?.digest ?? ''} placement="top-start">
+								<Tooltip
+									content={download?.digest && download.digest !== 'downloading'
+										? download.digest
+										: downloadName}
+									placement="top-start"
+								>
 									<div
 										class="flex h-8 w-full select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100"
 									>
