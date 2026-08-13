@@ -43,7 +43,8 @@
 	export let parentWritable = true;
 
 	$: entryPath =
-		fullPath ?? (entry.type === 'directory' ? `${currentPath}${entry.name}/` : `${currentPath}${entry.name}`);
+		fullPath ??
+		(entry.type === 'directory' ? `${currentPath}${entry.name}/` : `${currentPath}${entry.name}`);
 	$: directoryPath = entryPath.endsWith('/') ? entryPath : `${entryPath}/`;
 	$: writable = entry.writable !== false;
 	$: canMutate = parentWritable && writable;
@@ -164,6 +165,7 @@
 			{dragOverFolder
 			? 'bg-blue-50 dark:bg-blue-500/10 ring-1 ring-blue-400 dark:ring-blue-500 ring-inset'
 			: ''}"
+		role="presentation"
 		on:dragover={(e) => {
 			if (entry.type !== 'directory') return;
 			if (!writable) return;
@@ -207,7 +209,7 @@
 		{#if entry.type === 'directory'}
 			<button
 				type="button"
-				class="mr-1 flex w-4 shrink-0 items-center self-stretch justify-center text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400"
+				class="mr-1 flex w-3 shrink-0 items-center self-stretch justify-center text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400"
 				style="margin-left: {rowIndent};"
 				on:click|stopPropagation={() => onToggleExpand(directoryPath)}
 				aria-label={expanded ? $i18n.t('Collapse') : $i18n.t('Expand')}
@@ -250,7 +252,10 @@
 				} else {
 					e.dataTransfer?.setData(
 						'application/x-terminal-file-move',
-						JSON.stringify({ path: entry.type === 'directory' ? directoryPath : filePath, name: entry.name })
+						JSON.stringify({
+							path: entry.type === 'directory' ? directoryPath : filePath,
+							name: entry.name
+						})
 					);
 				}
 				if (entry.type === 'file') {
@@ -276,7 +281,7 @@
 			{#if selectionMode || selected}
 				<!-- Checkbox indicator -->
 				<div
-				class="size-3.5 shrink-0 rounded border transition-colors flex items-center justify-center
+					class="size-3.5 shrink-0 rounded border transition-colors flex items-center justify-center
 						{selected
 						? 'bg-blue-500 dark:bg-blue-600 border-blue-500 dark:border-blue-600 text-white'
 						: 'border-gray-300 dark:border-gray-600'}"
@@ -348,7 +353,11 @@
 							onOpen(entry);
 						}}
 					>
-						<Icon name={entry.type === 'directory' ? 'folder' : 'eye'} size={12} strokeWidth={1.4} />
+						<Icon
+							name={entry.type === 'directory' ? 'folder' : 'eye'}
+							size={12}
+							strokeWidth={1.4}
+						/>
 						<div class="flex items-center">
 							{entry.type === 'directory' ? $i18n.t('Open Folder') : $i18n.t('Open')}
 						</div>

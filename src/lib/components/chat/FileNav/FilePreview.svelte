@@ -9,12 +9,14 @@
 	import Spinner from '../../common/Spinner.svelte';
 	import PDFViewer from '../../common/PDFViewer.svelte';
 	import PanzoomContainer from '../../common/PanzoomContainer.svelte';
+	import Tooltip from '../../common/Tooltip.svelte';
 	import DocxPreview from '../../common/DocxPreview.svelte';
 	import PptxPreview from '../../common/PptxPreview.svelte';
 	import JsonTreeView from './JsonTreeView.svelte';
 	import NotebookView from './NotebookView.svelte';
 	import SqliteView from './SqliteView.svelte';
 	import FileCodeEditor from './FileCodeEditor.svelte';
+	import Icon from './Icon.svelte';
 
 	let pdfViewerRef: PDFViewer;
 	let fileCodeEditorRef: FileCodeEditor;
@@ -273,6 +275,10 @@
 	export const resetPdfView = () => {
 		pdfViewerRef?.resetView();
 	};
+
+	const resetFloatingView = () => {
+		if (fileImageUrl !== null) panzoomRef?.reset();
+	};
 </script>
 
 <div
@@ -469,6 +475,23 @@
 	{:else}
 		<div class="text-xs text-gray-400 text-center pt-8">
 			{$i18n.t('Could not read file.')}
+		</div>
+	{/if}
+
+	{#if !fileLoading && fileImageUrl !== null}
+		<div
+			class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center rounded-lg border border-gray-200/60 bg-white/90 px-1 py-0.5 shadow-lg backdrop-blur-sm dark:border-gray-700/60 dark:bg-gray-850/90"
+		>
+			<Tooltip content={$i18n.t('Reset view')}>
+				<button
+					type="button"
+					class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+					on:click={resetFloatingView}
+					aria-label={$i18n.t('Reset view')}
+				>
+					<Icon name="refresh" size={13} strokeWidth={1.4} />
+				</button>
+			</Tooltip>
 		</div>
 	{/if}
 </div>

@@ -1270,28 +1270,6 @@
 				onSort={toggleSort}
 				onToggleHidden={toggleHidden}
 			>
-				{#if fileImageUrl !== null || (fileOfficeSlides !== null && fileOfficeSlides.length > 0)}
-					<Tooltip content={$i18n.t('Reset view')}>
-						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-							on:click={() => filePreviewRef?.resetImageView()}
-							aria-label={$i18n.t('Reset view')}
-						>
-							<Icon name="refresh" size={11} strokeWidth={1.4} />
-						</button>
-					</Tooltip>
-				{/if}
-				{#if filePdfData !== null}
-					<Tooltip content={$i18n.t('Reset view')}>
-						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-							on:click={() => filePreviewRef?.resetPdfView()}
-							aria-label={$i18n.t('Reset view')}
-						>
-							<Icon name="refresh" size={11} strokeWidth={1.4} />
-						</button>
-					</Tooltip>
-				{/if}
 				{#if (isMarkdown || isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
 					<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 						<button
