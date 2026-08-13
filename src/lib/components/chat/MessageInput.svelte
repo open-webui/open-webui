@@ -1521,7 +1521,7 @@
 			<div
 				class="{($settings?.widescreenMode ?? null)
 					? 'max-w-full'
-					: 'max-w-[58rem]'} px-2.5 mx-auto inset-x-0"
+					: 'max-w-[58rem]'} px-2 mx-auto inset-x-0"
 			>
 				<div class="">
 					<input
@@ -2536,7 +2536,7 @@
 								{@html DOMPurify.sanitize(marked($config?.license_metadata?.input_footer))}
 							</div>
 						{:else}
-							<div class="mb-1" />
+							<div class="mb-0.5" />
 						{/if}
 					</form>
 				</div>
