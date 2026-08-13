@@ -5,10 +5,9 @@ import urllib.parse
 from typing import Optional
 
 import aiohttp
-from pydantic import BaseModel
-
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.utils.session_pool import get_session
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 
@@ -203,7 +202,7 @@ async def comfyui_create_image(model: str, payload: ComfyUICreateImageForm, clie
         ) as ws:
             log.info('WebSocket connection established.')
             log.info('Sending workflow to WebSocket server.')
-            log.info(f'Workflow: {workflow}')
+            log.debug(f'Workflow: {workflow}')
             images = await _ws_get_images(ws, workflow, client_id, base_url, api_key)
     except aiohttp.WSServerHandshakeError as e:
         log.exception(f'Failed to connect to WebSocket server: {e}')
@@ -244,7 +243,7 @@ async def comfyui_edit_image(model: str, payload: ComfyUIEditImageForm, client_i
         ) as ws:
             log.info('WebSocket connection established.')
             log.info('Sending workflow to WebSocket server.')
-            log.info(f'Workflow: {workflow}')
+            log.debug(f'Workflow: {workflow}')
             images = await _ws_get_images(ws, workflow, client_id, base_url, api_key)
     except aiohttp.WSServerHandshakeError as e:
         log.exception(f'Failed to connect to WebSocket server: {e}')

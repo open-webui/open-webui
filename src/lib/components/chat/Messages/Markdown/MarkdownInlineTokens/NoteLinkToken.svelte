@@ -55,7 +55,7 @@
 >
 	<div class="flex flex-col justify-center w-full min-w-0">
 		<div class="dark:text-gray-100 text-sm flex justify-between items-center gap-2">
-			<div class="font-medium line-clamp-1 flex-1 min-w-0">
+			<div class="font-normal line-clamp-1 flex-1 min-w-0">
 				{#if loading}
 					<span class="text-gray-400">...</span>
 				{:else}

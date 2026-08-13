@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import dayjs from 'dayjs';
 
 	import { createEventDispatcher, onDestroy } from 'svelte';
 	import { onMount, tick, getContext } from 'svelte';
@@ -32,7 +31,8 @@
 		getMessageContentParts,
 		sanitizeResponseContent,
 		createMessagesList,
-		formatDate,
+		formatMessageTimestamp,
+		formatMessageTimestampFull,
 		removeDetails,
 		removeAllDetails
 	} from '$lib/utils';
@@ -63,11 +63,14 @@
 	import RegenerateMenu from './ResponseMessage/RegenerateMenu.svelte';
 	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
+	import OutputEditView from './OutputEditView.svelte';
+	import { getOutputText, replaceOutputMessageText, type OutputItem } from './structuredOutput';
 
 	interface MessageType {
 		id: string;
 		model: string;
 		content: string;
+		output?: OutputItem[];
 		files?: { type: string; url: string }[];
 		timestamp: number;
 		role: string;
@@ -126,7 +129,11 @@
 		if (source) {
 			// Fast path: O(1) check on the fields that change most often (content during streaming, done at end)
 			// Avoids 2x O(n) JSON.stringify calls that are always true during streaming anyway
-			if (message.content !== source.content || message.done !== source.done) {
+			if (
+				message.content !== source.content ||
+				message.done !== source.done ||
+				message.output?.length !== source.output?.length
+			) {
 				message = structuredClone(source);
 			} else if (!equal(message, source)) {
 				// Slow path: full comparison for infrequent changes (sources, annotations, status, etc.)
@@ -152,13 +159,17 @@
 	export let submitMessage: Function;
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
+	export let forkHandler: Function | null = null;
 
 	export let addMessages: Function;
 
 	export let isLastMessage = true;
 	export let readOnly = false;
+	export let allowDelete = true;
+	export let compactPreview = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
+	export let onInsertToNote: ((content: string) => void) | null = null;
 
 	let citationsElement: HTMLDivElement;
 
@@ -174,9 +185,13 @@
 		(model?.info?.meta?.capabilities?.status_updates ?? true) &&
 		statusEntries.length > 0 &&
 		!(statusEntries.at(-1)?.hidden ?? false);
+	$: visibleResponseContent =
+		getOutputText(message.output) || removeAllDetails(message.content ?? '');
+	$: hasResponseContent = Boolean((message.content ?? '').trim() || message.output?.length);
 
 	let edit = false;
 	let editedContent = '';
+	let editedOutput: any[] | null = null;
 	let editTextAreaElement: HTMLTextAreaElement;
 
 	let messageIndexEdit = false;
@@ -224,7 +239,8 @@
 			: $config?.audio?.tts?.voice);
 
 	const speak = async () => {
-		if (!(message?.content ?? '').trim().length) {
+		const content = visibleResponseContent;
+		if (!content.trim().length) {
 			toast.info($i18n.t('No content to speak'));
 			return;
 		}
@@ -234,7 +250,6 @@
 		const { signal } = speakAbort;
 
 		speaking = true;
-		const content = removeAllDetails(message.content);
 
 		if ($config.audio.tts.engine === '') {
 			let voices = [];
@@ -371,36 +386,55 @@
 	const editMessageHandler = async () => {
 		edit = true;
 
-		editedContent = preprocessForEditing(message.content);
+		if (message.output?.length) {
+			// Structured edit: use the block editor
+			editedOutput = structuredClone(message.output);
+		} else {
+			// Legacy text edit: use the textarea
+			editedContent = preprocessForEditing(message.content);
+		}
 
 		await tick();
 
-		const messagesContainer = document.getElementById('messages-container');
-		const savedScrollTop = messagesContainer?.scrollTop;
+		if (!editedOutput && editTextAreaElement) {
+			const messagesContainer = document.getElementById('messages-container');
+			const savedScrollTop = messagesContainer?.scrollTop ?? 0;
 
-		editTextAreaElement.style.height = '';
-		editTextAreaElement.style.height = `${editTextAreaElement.scrollHeight}px`;
+			editTextAreaElement.style.height = '';
+			editTextAreaElement.style.height = `${editTextAreaElement.scrollHeight}px`;
 
-		if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
+			if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
+			editTextAreaElement?.focus({ preventScroll: true });
+		}
 	};
 
 	const editMessageConfirmHandler = async () => {
-		const messageContent = postprocessAfterEditing(editedContent ? editedContent : '');
-		editMessage(message.id, { content: messageContent }, false);
+		if (editedOutput) {
+			editMessage(message.id, { output: editedOutput }, false);
+		} else {
+			// Legacy text edit
+			const messageContent = postprocessAfterEditing(editedContent ?? '');
+			editMessage(message.id, { content: messageContent }, false);
+		}
 
 		edit = false;
 		editedContent = '';
+		editedOutput = null;
 
 		await tick();
 	};
 
 	const saveAsCopyHandler = async () => {
-		const messageContent = postprocessAfterEditing(editedContent ? editedContent : '');
-
-		editMessage(message.id, { content: messageContent });
+		if (editedOutput) {
+			editMessage(message.id, { output: editedOutput });
+		} else {
+			const messageContent = postprocessAfterEditing(editedContent ?? '');
+			editMessage(message.id, { content: messageContent });
+		}
 
 		edit = false;
 		editedContent = '';
+		editedOutput = null;
 
 		await tick();
 	};
@@ -408,6 +442,7 @@
 	const cancelEditMessage = async () => {
 		edit = false;
 		editedContent = '';
+		editedOutput = null;
 		await tick();
 	};
 
@@ -624,53 +659,37 @@
 		dir={$settings.chatDirection}
 		style="scroll-margin-top: 3rem;"
 	>
-		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex mt-1 `}>
+		<div class={`shrink-0 ltr:mr-2 rtl:ml-2 hidden @lg:flex mt-0.5 `}>
 			<ProfileImage
 				src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
-				className={'size-8 assistant-message-profile-image'}
+				className={'size-7 assistant-message-profile-image'}
 			/>
 		</div>
 
 		<div class="flex-auto w-0 pl-1 relative">
-			<Name>
-				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span id="response-message-model-name" class="line-clamp-1 text-black dark:text-white">
-						{model?.name ?? message.model}
-					</span>
-				</Tooltip>
-
-				{#if message.timestamp}
-					<div
-						class="self-center text-xs font-medium first-letter:capitalize ml-0.5 translate-y-[1px] {($settings?.highContrastMode ??
-						false)
-							? 'dark:text-gray-100 text-gray-900'
-							: 'invisible group-hover:visible transition text-gray-400'}"
-					>
-						<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
-							<span class="line-clamp-1"
-								>{$i18n.t(formatDate(message.timestamp * 1000), {
-									LOCALIZED_TIME: dayjs(message.timestamp * 1000).format('LT'),
-									LOCALIZED_DATE: dayjs(message.timestamp * 1000).format('L')
-								})}</span
-							>
-						</Tooltip>
-					</div>
-				{/if}
-			</Name>
+			{#if !compactPreview}
+				<Name>
+					<Tooltip content={model?.name ?? message.model} placement="top-start">
+						<span id="response-message-model-name" class="line-clamp-1 text-black dark:text-white">
+							{model?.name ?? message.model}
+						</span>
+					</Tooltip>
+				</Name>
+			{/if}
 
 			<div>
-				<div class="chat-{message.role} w-full min-w-full markdown-prose">
+				<div class="chat-{message.role} w-full min-w-full">
 					<div>
 						{#if model?.info?.meta?.capabilities?.status_updates ?? true}
 							<StatusHistory statusHistory={message?.statusHistory} />
 						{/if}
 
-						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
+						{#if message?.files && message.files?.filter( (f) => ['image', 'file'].includes(f.type) ).length > 0}
 							<div
 								class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap"
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
-								{#each message.files as file}
+								{#each message.files.filter((f) => ['image', 'file'].includes(f.type)) as file}
 									<div>
 										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
 											<Image src={file.url} alt={message.content} />
@@ -709,40 +728,52 @@
 						{/if}
 
 						{#if edit === true}
-							<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 my-2">
-								<textarea
-									id="message-edit-{message.id}"
-									bind:this={editTextAreaElement}
-									class=" bg-transparent outline-hidden w-full resize-none"
-									bind:value={editedContent}
-									on:input={(e) => {
-										const messagesContainer = document.getElementById('messages-container');
-										const savedScrollTop = messagesContainer?.scrollTop;
+							<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-3 py-3 my-2">
+								{#if editedOutput}
+									<!-- Structured output editor (visual + JSON toggle) -->
+									<OutputEditView
+										output={editedOutput}
+										onChange={(updated) => {
+											editedOutput = updated;
+										}}
+									/>
+								{:else}
+									<!-- Legacy textarea for messages without output -->
+									<textarea
+										id="message-edit-{message.id}"
+										bind:this={editTextAreaElement}
+										class=" bg-transparent outline-hidden w-full resize-none text-[0.9375rem]"
+										bind:value={editedContent}
+										on:input={(e) => {
+											const messagesContainer = document.getElementById('messages-container');
+											const savedScrollTop = messagesContainer?.scrollTop ?? 0;
+											const textarea = e.currentTarget;
 
-										e.target.style.height = '';
-										e.target.style.height = `${e.target.scrollHeight}px`;
+											textarea.style.height = '';
+											textarea.style.height = `${textarea.scrollHeight}px`;
 
-										if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
-									}}
-									on:keydown={(e) => {
-										if (e.key === 'Escape') {
-											document.getElementById('close-edit-message-button')?.click();
-										}
+											if (messagesContainer) messagesContainer.scrollTop = savedScrollTop;
+										}}
+										on:keydown={(e) => {
+											if (e.key === 'Escape') {
+												document.getElementById('close-edit-message-button')?.click();
+											}
 
-										const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
-										const isEnterPressed = e.key === 'Enter';
+											const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
+											const isEnterPressed = e.key === 'Enter';
 
-										if (isCmdOrCtrlPressed && isEnterPressed) {
-											document.getElementById('confirm-edit-message-button')?.click();
-										}
-									}}
-								/>
+											if (isCmdOrCtrlPressed && isEnterPressed) {
+												document.getElementById('confirm-edit-message-button')?.click();
+											}
+										}}
+									></textarea>
+								{/if}
 
-								<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
+								<div class=" mt-2 flex justify-between text-sm font-normal">
 									<div>
 										<button
 											id="save-new-message-button"
-											class="px-3.5 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+											class="px-2.5 py-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 											on:click={() => {
 												saveAsCopyHandler();
 											}}
@@ -754,7 +785,7 @@
 									<div class="flex space-x-1.5">
 										<button
 											id="close-edit-message-button"
-											class="px-3.5 py-1.5 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+											class="px-2.5 py-1 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
 											on:click={() => {
 												cancelEditMessage();
 											}}
@@ -764,7 +795,7 @@
 
 										<button
 											id="confirm-edit-message-button"
-											class="px-3.5 py-1.5 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+											class="px-2.5 py-1 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
 											on:click={() => {
 												editMessageConfirmHandler();
 											}}
@@ -781,20 +812,22 @@
 							class="w-full flex flex-col relative {edit ? 'hidden' : ''}"
 							id="response-content-container"
 						>
-							{#if message.content === '' && !message.done && !message.error && !hasVisibleStatus}
+							{#if !hasResponseContent && !message.done && !message.error && !hasVisibleStatus}
 								<Skeleton />
-							{:else if message.content && message.error !== true}
+							{:else if hasResponseContent && message.error !== true}
 								<!-- always show message contents even if there's an error -->
 								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 								<ContentRenderer
 									id={`${chatId}-${message.id}`}
 									content={message.content}
+									output={message.output}
 									sources={message.sources}
 									floatingButtons={message?.done &&
 										!readOnly &&
 										($settings?.showFloatingActionButtons ?? true)}
 									save={!readOnly}
 									preview={!readOnly}
+									{compactPreview}
 									{editCodeBlock}
 									{topPadding}
 									done={($settings?.chatFadeStreamingText ?? true)
@@ -815,9 +848,27 @@
 										setInputText(text);
 									}}
 									onSave={({ raw, oldContent, newContent }) => {
-										history.messages[message.id].content = history.messages[
-											message.id
-										].content.replace(raw, raw.replace(oldContent, newContent));
+										const sourceMessage = history.messages[message.id];
+										if (sourceMessage.output?.length) {
+											const updatedOutput = replaceOutputMessageText(
+												sourceMessage.output,
+												oldContent,
+												newContent
+											);
+											if (updatedOutput !== sourceMessage.output) {
+												sourceMessage.output = updatedOutput;
+											} else {
+												sourceMessage.content = sourceMessage.content.replace(
+													raw,
+													raw.replace(oldContent, newContent)
+												);
+											}
+										} else {
+											sourceMessage.content = sourceMessage.content.replace(
+												raw,
+												raw.replace(oldContent, newContent)
+											);
+										}
 
 										updateChat();
 									}}
@@ -845,10 +896,25 @@
 					</div>
 				</div>
 
-				{#if !edit}
+				{#if compactPreview && message.timestamp}
+					<div class="mt-0.5 flex justify-start whitespace-nowrap text-gray-600 dark:text-gray-500">
+						<Tooltip
+							className="flex self-center"
+							content={formatMessageTimestampFull(message.timestamp * 1000)}
+							placement="bottom"
+						>
+							<time
+								datetime={new Date(message.timestamp * 1000).toISOString()}
+								class="ml-1 shrink-0 whitespace-nowrap text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
+							>
+								{formatMessageTimestamp(message.timestamp * 1000)}
+							</time>
+						</Tooltip>
+					</div>
+				{:else if !edit}
 					<div
 						bind:this={buttonsContainerElement}
-						class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
+						class="flex items-center justify-start overflow-x-auto whitespace-nowrap buttons text-gray-600 dark:text-gray-500 mt-0.5 [&>*]:shrink-0"
 					>
 						{#if message.done || siblings.length > 1}
 							{#if siblings.length > 1}
@@ -879,7 +945,7 @@
 
 									{#if messageIndexEdit}
 										<div
-											class="text-sm flex justify-center font-semibold self-center dark:text-gray-100 min-w-fit"
+											class="text-sm flex justify-center font-normal self-center dark:text-gray-100 min-w-fit"
 										>
 											<input
 												id="message-index-input-{message.id}"
@@ -900,13 +966,13 @@
 														messageIndexEdit = false;
 													}
 												}}
-												class="bg-transparent font-semibold self-center dark:text-gray-100 min-w-fit outline-hidden"
+												class="bg-transparent font-normal self-center dark:text-gray-100 min-w-fit outline-hidden"
 											/>/{siblings.length}
 										</div>
 									{:else}
 										<!-- svelte-ignore a11y-no-static-element-interactions -->
 										<div
-											class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
+											class="text-sm tracking-widest font-normal self-center dark:text-gray-100 min-w-fit"
 											on:dblclick={async () => {
 												messageIndexEdit = true;
 
@@ -988,7 +1054,7 @@
 											? 'visible'
 											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
 										on:click={() => {
-											copyToClipboard(message.content);
+											copyToClipboard(visibleResponseContent);
 										}}
 									>
 										<svg
@@ -1008,6 +1074,22 @@
 										</svg>
 									</button>
 								</Tooltip>
+
+								{#if onInsertToNote && visibleResponseContent}
+									<Tooltip content={$i18n.t('Insert into note')} placement="bottom">
+										<button
+											aria-label={$i18n.t('Insert into note')}
+											class="{isLastMessage || ($settings?.highContrastMode ?? false)
+												? 'visible'
+												: 'invisible group-hover:visible'} rounded-lg px-2 py-1.5 text-xs text-gray-500 transition hover:bg-black/5 hover:text-black dark:hover:bg-white/5 dark:hover:text-white"
+											on:click={() => {
+												onInsertToNote?.(visibleResponseContent);
+											}}
+										>
+											{$i18n.t('Insert')}
+										</button>
+									</Tooltip>
+								{/if}
 
 								{#if !readOnly && ($user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true))}
 									<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
@@ -1299,7 +1381,8 @@
 												}}
 											>
 												<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
-													<div
+													<button
+														type="button"
 														aria-label={$i18n.t('Regenerate')}
 														class="{isLastMessage
 															? 'visible'
@@ -1320,7 +1403,7 @@
 																d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
 															/>
 														</svg>
-													</div>
+													</button>
 												</Tooltip>
 											</RegenerateMenu>
 										{:else}
@@ -1368,44 +1451,6 @@
 										{/if}
 									{/if}
 
-									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete_message ?? true)}
-										{#if siblings.length > 1}
-											<Tooltip content={$i18n.t('Delete')} placement="bottom">
-												<button
-													type="button"
-													aria-label={$i18n.t('Delete')}
-													id="delete-response-button"
-													class="{isLastMessage || ($settings?.highContrastMode ?? false)
-														? 'visible'
-														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-													on:click={(e) => {
-														if (e.shiftKey) {
-															deleteMessageHandler();
-														} else {
-															showDeleteConfirm = true;
-														}
-													}}
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														fill="none"
-														viewBox="0 0 24 24"
-														stroke-width="2"
-														stroke="currentColor"
-														aria-hidden="true"
-														class="w-4 h-4"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-														/>
-													</svg>
-												</button>
-											</Tooltip>
-										{/if}
-									{/if}
-
 									{#each model?.actions ?? [] as action}
 										<Tooltip content={action.name} placement="bottom">
 											<button
@@ -1436,6 +1481,94 @@
 											</button>
 										</Tooltip>
 									{/each}
+
+									{#if message.done && !readOnly && forkHandler}
+										<Tooltip content="Fork chat" placement="bottom">
+											<button
+												aria-label="Fork chat"
+												class="{isLastMessage || ($settings?.highContrastMode ?? false)
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													forkHandler?.(message.id);
+												}}
+											>
+												<svg
+													class="w-4 h-4"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="1.8"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													aria-hidden="true"
+												>
+													<path d="M4 12H9" />
+													<path d="M9 12C12.5 12 12.5 7 16 7H20" />
+													<path d="M17 4L20 7L17 10" />
+													<path d="M9 12C12.5 12 12.5 17 16 17H20" />
+													<path d="M17 14L20 17L17 20" />
+												</svg>
+											</button>
+										</Tooltip>
+									{/if}
+
+									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete_message ?? true)}
+										{#if siblings.length > 1}
+											<Tooltip content={$i18n.t('Delete')} placement="bottom">
+												<button
+													type="button"
+													aria-label={$i18n.t('Delete')}
+													id="delete-response-button"
+													class="{isLastMessage || ($settings?.highContrastMode ?? false)
+														? 'visible'
+														: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition disabled:opacity-50 disabled:hover:bg-transparent"
+													disabled={!allowDelete}
+													on:click={(e) => {
+														if (!allowDelete) {
+															return;
+														}
+														if (e.shiftKey) {
+															deleteMessageHandler();
+														} else {
+															showDeleteConfirm = true;
+														}
+													}}
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke-width="2"
+														stroke="currentColor"
+														aria-hidden="true"
+														class="w-4 h-4"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+														/>
+													</svg>
+												</button>
+											</Tooltip>
+										{/if}
+									{/if}
+
+									{#if message.timestamp}
+										<Tooltip
+											className="flex self-center"
+											content={formatMessageTimestampFull(message.timestamp * 1000)}
+											placement="bottom"
+										>
+											<time
+												datetime={new Date(message.timestamp * 1000).toISOString()}
+												class="invisible group-hover:visible ml-1 shrink-0 whitespace-nowrap text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
+											>
+												{formatMessageTimestamp(message.timestamp * 1000)}
+											</time>
+										</Tooltip>
+									{/if}
 								{/if}
 							{/if}
 						{/if}
@@ -1454,7 +1587,7 @@
 					{/if}
 
 					{#if (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
-						<div class="mt-2.5" in:fade={{ duration: 100 }}>
+						<div class="my-2.5" in:fade={{ duration: 100 }}>
 							<FollowUps
 								followUps={message?.followUps}
 								onClick={(prompt) => {

@@ -1,0 +1,74 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Release — Create GitHub release from CHANGELOG, trigger Docker builds
+# Runs on pushes to main when package.json version changes
+# ─────────────────────────────────────────────────────────────────────────────
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ── Create release and trigger downstream workflows ──────────────────────
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Abort if package.json unchanged
+        run: |
+          git diff --cached --diff-filter=d package.json || {
+            echo "package.json not modified — skipping release"
+            exit 1
+          }
+
+      - name: Read version
+        id: pkg
+        run: echo "version=$(jq -r '.version' package.json)" >> $GITHUB_OUTPUT
+
+      - name: Extract release notes from CHANGELOG
+        run: |
+          VER="${{ steps.pkg.outputs.version }}"
+          awk "/^## \[${VER}\]/{found=1; next} /^## \[/{if(found) exit} found{print}" \
+            CHANGELOG.md > /tmp/release-notes.md
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "v${{ steps.pkg.outputs.version }}" &>/dev/null; then
+            echo "Release v${{ steps.pkg.outputs.version }} already exists — skipping creation"
+          else
+            gh release create "v${{ steps.pkg.outputs.version }}" \
+              --title "v${{ steps.pkg.outputs.version }}" \
+              --notes-file /tmp/release-notes.md
+          fi
+
+      - name: Archive source
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-archive
+          path: |
+            .
+            !.git
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger Docker build
+        uses: actions/github-script@v8
+        with:
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'docker.yaml',
+              ref: 'v${{ steps.pkg.outputs.version }}',
+            })

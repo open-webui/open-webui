@@ -238,7 +238,13 @@
 			return;
 		}
 
-		const mineTypes = ['audio/webm; codecs=opus', 'audio/mp4'];
+		const mineTypes = [
+			'audio/webm; codecs=opus',
+			'audio/webm',
+			'audio/ogg; codecs=opus',
+			'audio/mp4',
+			'audio/wav'
+		];
 
 		mediaRecorder = new MediaRecorder(stream, {
 			mimeType: mineTypes.find((type) => MediaRecorder.isTypeSupported(type))
@@ -294,6 +300,9 @@
 		if (transcribe) {
 			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
 				if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+					// reset accumulated transcription from previous sessions
+					transcription = '';
+
 					// Create a SpeechRecognition object
 					speechRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
 
@@ -347,11 +356,19 @@
 						toast.error($i18n.t(`Speech recognition error: {{error}}`, { error: event.error }));
 						onCancel();
 
-						stopRecording();
+						cancelRecording();
 					};
 				}
 			}
 		}
+	};
+
+	const cancelRecording = async () => {
+		if (speechRecognition) {
+			// detach onend so cancelling does not confirm the transcription
+			speechRecognition.onend = null;
+		}
+		await stopRecording();
 	};
 
 	const stopRecording = async () => {
@@ -405,7 +422,7 @@
 	const handleKeyDown = (e) => {
 		if (e.key === 'Escape') {
 			e.preventDefault();
-			stopRecording();
+			cancelRecording();
 			onCancel();
 		}
 	};
@@ -462,7 +479,7 @@
 
              rounded-full"
 			on:click={async () => {
-				stopRecording();
+				cancelRecording();
 				onCancel();
 			}}
 		>
@@ -501,7 +518,7 @@
         
         
         {loading ? ' text-gray-500  dark:text-gray-400  ' : ' text-indigo-400 '} 
-       font-medium flex-1 mx-auto text-center"
+       font-normal flex-1 mx-auto text-center"
 			>
 				{formatSeconds(durationSeconds)}
 			</div>
@@ -603,6 +620,7 @@
 				<button
 					id="confirm-recording-button"
 					type="button"
+					aria-label={$i18n.t('Confirm recording')}
 					class="p-1.5 bg-indigo-500 text-white dark:bg-indigo-500 dark:text-blue-950 rounded-full"
 					on:click={async () => {
 						await confirmRecording();

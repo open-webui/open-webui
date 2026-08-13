@@ -117,10 +117,6 @@
 					.map((c) => ({ type: 'channel', id: c.id, label: c.name, data: c }))
 			];
 		} else {
-			if (userSuggestions) {
-				getUserList();
-			}
-
 			if (modelSuggestions) {
 				_models = [
 					...$models

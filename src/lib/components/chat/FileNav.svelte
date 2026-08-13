@@ -25,7 +25,9 @@
 		deleteEntry,
 		moveEntry,
 		setCwd,
-		type FileEntry
+		type FileEntry,
+		type TerminalFileRoot,
+		type TerminalCwd
 	} from '$lib/apis/terminal';
 	import { isCodeFile } from '$lib/utils/codeHighlight';
 	import Folder from '../icons/Folder.svelte';
@@ -88,9 +90,39 @@
 
 	// ── Directory state ──────────────────────────────────────────────────
 	let currentPath = savedPath;
+	let fileRoot: TerminalFileRoot | null = null;
 	let entries: FileEntry[] = [];
 	let loading = false;
 	let error: string | null = null;
+
+	// ── Sort state ──────────────────────────────────────────────────────
+	type SortMode = 'name' | 'date';
+	let sortBy: SortMode = 'name';
+	let sortAsc = true;
+
+	const sortEntries = (items: FileEntry[]): FileEntry[] => {
+		return [...items].sort((a, b) => {
+			// Directories always first
+			if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+			if (sortBy === 'date') {
+				const aTime = a.modified ?? 0;
+				const bTime = b.modified ?? 0;
+				return sortAsc ? aTime - bTime : bTime - aTime;
+			}
+			const cmp = a.name.localeCompare(b.name);
+			return sortAsc ? cmp : -cmp;
+		});
+	};
+
+	const toggleSort = (mode: SortMode) => {
+		if (sortBy === mode) {
+			sortAsc = !sortAsc;
+		} else {
+			sortBy = mode;
+			sortAsc = mode === 'name'; // name defaults asc, date defaults asc (oldest first)
+		}
+		entries = sortEntries(entries);
+	};
 
 	// ── Navigation history ──────────────────────────────────────────────
 	type NavEntry = { path: string; file: string | null };
@@ -251,11 +283,8 @@
 						terminalEnabled = config?.features?.terminal !== false;
 					}
 
-					const rawCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
-					const cwd = rawCwd ? normalizePath(rawCwd) : null;
-					const dir = cwd ? (cwd.endsWith('/') ? cwd : cwd + '/') : '/';
-					savedPath = dir;
-					loadDir(dir);
+					savedPath = applyCwd(await getCwd(terminal.url, terminal.key, chatId ?? undefined));
+					loadDir(savedPath);
 				})();
 			}
 		}
@@ -276,7 +305,52 @@
 	/** Normalize Windows backslashes to forward slashes. */
 	const normalizePath = (p: string) => p.replace(/\\/g, '/');
 
+	const asDirectoryPath = (path: string) => {
+		const normalized = normalizePath(path || '/');
+		return normalized.endsWith('/') ? normalized : `${normalized}/`;
+	};
+
+	const setFileRoot = (root?: TerminalFileRoot) => {
+		fileRoot = root?.path
+			? {
+					path: asDirectoryPath(root.path),
+					label: root.label || 'Home'
+				}
+			: null;
+	};
+
+	const isInsideFileRoot = (path: string) => {
+		if (!fileRoot) return true;
+		const directory = asDirectoryPath(path);
+		return directory === fileRoot.path || directory.startsWith(fileRoot.path);
+	};
+
+	const clampToFileRoot = (path: string) => {
+		if (!fileRoot) return asDirectoryPath(path);
+		return isInsideFileRoot(path) ? asDirectoryPath(path) : fileRoot.path;
+	};
+
+	const applyCwd = (cwd: TerminalCwd | null) => {
+		setFileRoot(cwd?.root);
+		const path = cwd?.cwd ? asDirectoryPath(cwd.cwd) : (fileRoot?.path ?? '/');
+		return clampToFileRoot(path);
+	};
+
 	const buildBreadcrumbs = (path: string) => {
+		if (fileRoot) {
+			const directory = clampToFileRoot(path);
+			const relative = directory === fileRoot.path ? '' : directory.slice(fileRoot.path.length);
+			const parts = relative.split('/').filter(Boolean);
+			return parts.reduce(
+				(acc, part) => {
+					const prev = acc[acc.length - 1];
+					acc.push({ label: part, path: `${prev.path}${part}/` });
+					return acc;
+				},
+				[{ label: fileRoot.label, path: fileRoot.path }]
+			);
+		}
+
 		const parts = path.split('/').filter(Boolean);
 		const isDrive = /^[A-Za-z]:$/.test(parts[0] ?? '');
 		const root = isDrive ? { label: parts[0], path: `${parts[0]}/` } : { label: '/', path: '/' };
@@ -319,6 +393,7 @@
 	const loadDir = async (path: string) => {
 		const terminal = selectedTerminal;
 		if (!terminal) return;
+		const directory = clampToFileRoot(path);
 
 		loading = true;
 		error = null;
@@ -326,25 +401,22 @@
 		previewPort = null;
 		clearFilePreview();
 		clearSelection();
-		currentPath = path;
-		savedPath = path;
-		pushNavHistory(path);
+		currentPath = directory;
+		savedPath = directory;
+		pushNavHistory(directory);
 
-		const result = await listFiles(terminal.url, terminal.key, path, chatId ?? undefined);
+		const result = await listFiles(terminal.url, terminal.key, directory, chatId ?? undefined);
 		loading = false;
 
 		// Set working directory on the terminal server (fire-and-forget)
-		setCwd(terminal.url, terminal.key, path, chatId ?? undefined);
+		setCwd(terminal.url, terminal.key, directory, chatId ?? undefined);
 
 		if (result === null) {
 			error =
 				'Failed to load directory. Check your Terminal connection in Settings → Integrations.';
 			entries = [];
 		} else {
-			entries = result.sort((a, b) => {
-				if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
-				return a.name.localeCompare(b.name);
-			});
+			entries = sortEntries(result);
 		}
 	};
 
@@ -429,7 +501,8 @@
 							selectedExcelSheet = excelSheetNames[0];
 							const { excelToTable } = await import('$lib/utils/excelToTable');
 							const result = await excelToTable(wb.Sheets[selectedExcelSheet]);
-							fileOfficeHtml = result.html;
+							const DOMPurify = (await import('dompurify')).default;
+							fileOfficeHtml = DOMPurify.sanitize(result.html);
 						}
 					} else if (ext === 'pptx') {
 						const { pptxToImages } = await import('$lib/utils/pptxToHtml');
@@ -448,22 +521,34 @@
 		fileLoading = false;
 	};
 
+	let downloading = false;
+
 	const downloadFile = async (path: string) => {
 		const terminal = selectedTerminal;
-		if (!terminal) return;
+		if (!terminal || downloading) return;
 
-		// Directories end with '/' — download as ZIP archive
-		const isDir = path.endsWith('/');
-		const result = isDir
-			? await archiveFromTerminal(terminal.url, terminal.key, [path.replace(/\/$/, '')])
-			: await downloadFileBlob(terminal.url, terminal.key, path, chatId ?? undefined);
-		if (!result) return;
-		const url = URL.createObjectURL(result.blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = result.filename;
-		a.click();
-		URL.revokeObjectURL(url);
+		downloading = true;
+		const toastId = toast.loading($i18n.t('Preparing download...'));
+		try {
+			// Directories end with '/', downloaded as a ZIP archive
+			const isDir = path.endsWith('/');
+			const result = isDir
+				? await archiveFromTerminal(terminal.url, terminal.key, [path.replace(/\/$/, '')])
+				: await downloadFileBlob(terminal.url, terminal.key, path, chatId ?? undefined);
+			if (!result) {
+				toast.error($i18n.t('Download failed'));
+				return;
+			}
+			const url = URL.createObjectURL(result.blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = result.filename;
+			a.click();
+			URL.revokeObjectURL(url);
+		} finally {
+			toast.dismiss(toastId);
+			downloading = false;
+		}
 	};
 
 	// ── Drag-and-drop upload ─────────────────────────────────────────────
@@ -712,7 +797,7 @@
 
 	const bulkDownload = async () => {
 		const terminal = selectedTerminal;
-		if (!terminal) return;
+		if (!terminal || downloading) return;
 
 		const paths = [...selectedEntries].map((p) => p.replace(/\/$/, ''));
 		if (paths.length === 0) return;
@@ -723,15 +808,25 @@
 			return;
 		}
 
-		// Archive everything into a single ZIP
-		const result = await archiveFromTerminal(terminal.url, terminal.key, paths);
-		if (!result) return;
-		const url = URL.createObjectURL(result.blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = result.filename;
-		a.click();
-		URL.revokeObjectURL(url);
+		downloading = true;
+		const toastId = toast.loading($i18n.t('Preparing download...'));
+		try {
+			// Archive everything into a single ZIP
+			const result = await archiveFromTerminal(terminal.url, terminal.key, paths);
+			if (!result) {
+				toast.error($i18n.t('Download failed'));
+				return;
+			}
+			const url = URL.createObjectURL(result.blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = result.filename;
+			a.click();
+			URL.revokeObjectURL(url);
+		} finally {
+			toast.dismiss(toastId);
+			downloading = false;
+		}
 	};
 
 	// Escape to clear selection
@@ -750,9 +845,8 @@
 	};
 
 	// ── Lifecycle ────────────────────────────────────────────────────────
-	onMount(async () => {
+	onMount(() => {
 		const terminal = getTerminal();
-		if (!terminal) return;
 
 		let handledDisplayFile = false;
 
@@ -761,6 +855,10 @@
 			handledDisplayFile = true;
 			showFileNavPath.set(null);
 			filePath = normalizePath(filePath);
+			if (!isInsideFileRoot(filePath)) {
+				await loadDir(fileRoot?.path ?? '/');
+				return;
+			}
 
 			const lastSlash = filePath.lastIndexOf('/');
 			const dir = lastSlash > 0 ? filePath.substring(0, lastSlash + 1) : '/';
@@ -783,6 +881,10 @@
 			if (!filePath || !selectedTerminal) return;
 			showFileNavDir.set(null);
 			filePath = normalizePath(filePath);
+			if (!isInsideFileRoot(filePath)) {
+				await loadDir(fileRoot?.path ?? '/');
+				return;
+			}
 
 			const lastSlash = filePath.lastIndexOf('/');
 			const dir = lastSlash > 0 ? filePath.substring(0, lastSlash + 1) : '/';
@@ -799,20 +901,21 @@
 			}
 		});
 
-		if (!handledDisplayFile) {
+		if (!handledDisplayFile && terminal) {
 			loading = true;
 
-			// Discover server features on initial mount
-			const config = await getTerminalConfig(terminal.url, terminal.key);
-			terminalEnabled = config?.features?.terminal !== false;
+			void (async () => {
+				// Discover server features on initial mount
+				const config = await getTerminalConfig(terminal.url, terminal.key);
+				terminalEnabled = config?.features?.terminal !== false;
 
-			if (chatId || savedPath === '/') {
-				// Fetch session-specific cwd from the server (or global default for new chats)
-				const rawCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
-				const cwd = rawCwd ? normalizePath(rawCwd) : null;
-				if (cwd) savedPath = cwd.endsWith('/') ? cwd : cwd + '/';
-			}
-			loadDir(savedPath);
+				if (chatId || savedPath === '/') {
+					// Fetch session-specific cwd from the server (or global default for new chats)
+					savedPath = applyCwd(await getCwd(terminal.url, terminal.key, chatId ?? undefined));
+				}
+				savedPath = clampToFileRoot(savedPath);
+				loadDir(savedPath);
+			})();
 		}
 
 		mounted = true;
@@ -918,6 +1021,8 @@
 				{loading}
 				{canGoBack}
 				{canGoForward}
+				{sortBy}
+				{sortAsc}
 				onGoBack={goBack}
 				onGoForward={goForward}
 				onNavigate={loadDir}
@@ -934,6 +1039,7 @@
 				onUploadFiles={handleUploadFiles}
 				onDownloadDir={() => downloadFile(currentPath)}
 				onMove={handleMove}
+				onSort={toggleSort}
 			>
 				{#if fileImageUrl !== null || (fileOfficeSlides !== null && fileOfficeSlides.length > 0)}
 					<Tooltip content={$i18n.t('Reset view')}>
@@ -1253,7 +1359,8 @@
 						selectedExcelSheet = sheet;
 						const { excelToTable } = await import('$lib/utils/excelToTable');
 						const result = await excelToTable(excelWorkbook.Sheets[sheet]);
-						fileOfficeHtml = result.html;
+						const DOMPurify = (await import('dompurify')).default;
+						fileOfficeHtml = DOMPurify.sanitize(result.html);
 					}}
 					baseUrl={selectedTerminal?.url ?? ''}
 					apiKey={selectedTerminal?.key ?? ''}
@@ -1277,7 +1384,7 @@
 						<Spinner className="size-4" />
 						{$i18n.t('Uploading...')}
 					</div>
-				{:else if loading}
+				{:else if loading || ($selectedTerminalId && $terminalServers === null)}
 					<div class="flex justify-center pt-8"><Spinner className="size-4" /></div>
 				{:else if error}
 					<div class="p-4 text-xs">{error}</div>
@@ -1293,7 +1400,7 @@
 					</div>
 				{/if}
 
-				{#if !loading && !error && !uploading}
+				{#if !loading && !error && !uploading && !($selectedTerminalId && $terminalServers === null)}
 					{#if creatingFolder}
 						<div class="flex items-center gap-2 px-3 py-1.5">
 							<Folder className="size-4 shrink-0 text-blue-400 dark:text-blue-300" />
@@ -1355,6 +1462,7 @@
 									onRename={handleRename}
 									onSelect={handleSelect}
 									onLongPress={enterSelectionMode}
+									showDate={sortBy === 'date'}
 								/>
 							{/each}
 						</ul>
@@ -1409,7 +1517,7 @@
 							clip-rule="evenodd"
 						/>
 					</svg>
-					<span class="font-medium">{$i18n.t('Terminal')}</span>
+					<span class="font-normal">{$i18n.t('Terminal')}</span>
 
 					{#if terminalExpanded}
 						<div

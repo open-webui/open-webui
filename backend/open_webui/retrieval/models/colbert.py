@@ -1,11 +1,10 @@
-import os
 import logging
-import torch
+import os
+
 import numpy as np
+import torch
 from colbert.infra import ColBERTConfig
 from colbert.modeling.checkpoint import Checkpoint
-
-
 from open_webui.retrieval.models.base_reranker import BaseReranker
 
 log = logging.getLogger(__name__)

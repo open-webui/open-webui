@@ -5,6 +5,7 @@
 	export let state = 'unchecked';
 	export let indeterminate = false;
 	export let disabled = false;
+	export let ariaLabel = '';
 
 	export let disabledClassName = 'opacity-50 cursor-not-allowed';
 
@@ -37,6 +38,9 @@
 		}
 	}}
 	type="button"
+	role="checkbox"
+	aria-checked={indeterminate && _state !== 'checked' ? 'mixed' : _state === 'checked'}
+	aria-label={ariaLabel || undefined}
 	{disabled}
 >
 	<div class="top-0 left-0 absolute w-full flex justify-center">

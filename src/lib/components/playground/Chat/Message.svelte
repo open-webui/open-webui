@@ -19,7 +19,7 @@
 <div class="flex gap-2 group">
 	<div class="flex items-start pt-1">
 		<div
-			class="px-2 py-1 text-sm font-semibold uppercase min-w-[6rem] text-left rounded-lg transition"
+			class="px-2 py-1 text-sm font-normal uppercase min-w-[6rem] text-left rounded-lg transition"
 		>
 			{$i18n.t(message.role)}
 		</div>
@@ -53,6 +53,7 @@
 	<div class=" pt-1">
 		<button
 			class=" group-hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-300 transition"
+			aria-label={$i18n.t('Delete')}
 			on:click={() => {
 				onDelete();
 			}}

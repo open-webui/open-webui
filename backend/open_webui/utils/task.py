@@ -1,14 +1,12 @@
 import logging
 import math
 import re
-from datetime import datetime
-from typing import Optional, Any
 import uuid
-
-
-from open_webui.utils.misc import get_last_user_message, get_messages_content
+from datetime import datetime
+from typing import Any, Optional
 
 from open_webui.config import DEFAULT_RAG_TEMPLATE
+from open_webui.utils.misc import get_last_user_message, get_messages_content
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +33,7 @@ def prompt_variables_template(template: str, variables: dict[str, str]) -> str:
     return template
 
 
-def prompt_template(template: str, user: Optional[Any] = None) -> str:
+async def prompt_template(template: str, user: Optional[Any] = None) -> str:
     USER_VARIABLES = {}
 
     if user:
@@ -58,6 +56,19 @@ def prompt_template(template: str, user: Optional[Any] = None) -> str:
                 except Exception as e:
                     pass
 
+            # Resolve user groups from DB only when the template uses {{USER_GROUPS}}
+            groups = ''
+            if '{{USER_GROUPS}}' in template:
+                user_id = user.get('id')
+                if user_id:
+                    try:
+                        from open_webui.models.groups import Groups
+
+                        user_groups = await Groups.get_groups_by_member_id(user_id)
+                        groups = ', '.join(g.name for g in user_groups)
+                    except Exception:
+                        pass
+
             USER_VARIABLES = {
                 'name': str(user.get('name')),
                 'email': str(user.get('email')),
@@ -66,6 +77,7 @@ def prompt_template(template: str, user: Optional[Any] = None) -> str:
                 'gender': str(user.get('gender')),
                 'birth_date': str(birth_date),
                 'age': str(age),
+                'groups': groups,
             }
 
     # Get the current date
@@ -88,6 +100,7 @@ def prompt_template(template: str, user: Optional[Any] = None) -> str:
     template = template.replace('{{USER_BIRTH_DATE}}', USER_VARIABLES.get('birth_date', 'Unknown'))
     template = template.replace('{{USER_AGE}}', str(USER_VARIABLES.get('age', 'Unknown')))
     template = template.replace('{{USER_LOCATION}}', USER_VARIABLES.get('location', 'Unknown'))
+    template = template.replace('{{USER_GROUPS}}', USER_VARIABLES.get('groups', ''))
 
     return template
 
@@ -128,6 +141,9 @@ def truncate_content(content: str, max_chars: int, mode: str = 'middletruncate')
         - start: keep first max_chars characters
         - end: keep last max_chars characters
     """
+    if max_chars <= 0:
+        return ''
+
     if not content or len(content) <= max_chars:
         return content
 
@@ -178,7 +194,9 @@ def apply_content_filter(messages: list[dict], filter_str: str) -> list[dict]:
     return result
 
 
-def replace_messages_variable(template: str, messages: Optional[list[dict]] = None) -> str:
+def replace_messages_variable(
+    template: str, messages: Optional[list[dict]] = None, variable_name: str = 'MESSAGES'
+) -> str:
     def replacement_function(match):
         # Groups: (1) filter for bare MESSAGES
         #         (2) START count, (3) filter for START
@@ -224,12 +242,13 @@ def replace_messages_variable(template: str, messages: Optional[list[dict]] = No
 
         return get_messages_content(selected)
 
+    variable_pattern = re.escape(variable_name)
     template = re.sub(
         r'(?:'
-        r'\{\{MESSAGES(?:\|(\w+:\d+))?\}\}'
-        r'|\{\{MESSAGES:START:(\d+)(?:\|(\w+:\d+))?\}\}'
-        r'|\{\{MESSAGES:END:(\d+)(?:\|(\w+:\d+))?\}\}'
-        r'|\{\{MESSAGES:MIDDLETRUNCATE:(\d+)(?:\|(\w+:\d+))?\}\}'
+        rf'\{{\{{{variable_pattern}(?:\|(\w+:\d+))?\}}\}}'
+        rf'|\{{\{{{variable_pattern}:START:(\d+)(?:\|(\w+:\d+))?\}}\}}'
+        rf'|\{{\{{{variable_pattern}:END:(\d+)(?:\|(\w+:\d+))?\}}\}}'
+        rf'|\{{\{{{variable_pattern}:MIDDLETRUNCATE:(\d+)(?:\|(\w+:\d+))?\}}\}}'
         r')',
         replacement_function,
         template,
@@ -243,11 +262,11 @@ def replace_messages_variable(template: str, messages: Optional[list[dict]] = No
 
 # Let the context given here not distort the question,
 # but illuminate it, so that the answer serves the one who asked.
-def rag_template(template: str, context: str, query: str):
+async def rag_template(template: str, context: str, query: str):
     if template.strip() == '':
         template = DEFAULT_RAG_TEMPLATE
 
-    template = prompt_template(template)
+    template = await prompt_template(template)
 
     if '[context]' not in template and '{{CONTEXT}}' not in template:
         log.debug("WARNING: The RAG template does not contain the '[context]' or '{{CONTEXT}}' placeholder.")
@@ -282,51 +301,51 @@ def rag_template(template: str, context: str, query: str):
     return template
 
 
-def title_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
+async def title_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(template, user)
+    template = await prompt_template(template, user)
 
     return template
 
 
-def follow_up_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
+async def follow_up_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(template, user)
+    template = await prompt_template(template, user)
     return template
 
 
-def tags_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
+async def tags_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(template, user)
+    template = await prompt_template(template, user)
     return template
 
 
-def image_prompt_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
+async def image_prompt_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(template, user)
+    template = await prompt_template(template, user)
     return template
 
 
-def emoji_generation_template(template: str, prompt: str, user: Optional[Any] = None) -> str:
+async def emoji_generation_template(template: str, prompt: str, user: Optional[Any] = None) -> str:
     template = replace_prompt_variable(template, prompt)
-    template = prompt_template(template, user)
+    template = await prompt_template(template, user)
 
     return template
 
 
-def autocomplete_generation_template(
+async def autocomplete_generation_template(
     template: str,
     prompt: str,
     messages: Optional[list[dict]] = None,
@@ -337,16 +356,16 @@ def autocomplete_generation_template(
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(template, user)
+    template = await prompt_template(template, user)
     return template
 
 
-def query_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
+async def query_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(template, user)
+    template = await prompt_template(template, user)
     return template
 
 

@@ -3,8 +3,8 @@
 	import { folders, tags } from '$lib/stores';
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import Search from '$lib/components/icons/Search.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
+	import Search from './icons/Search.svelte';
+	import XMark from './icons/XMark.svelte';
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
@@ -229,6 +229,12 @@
 				}
 			}}
 			on:keydown={(e) => {
+				// Ignore keydown fired while confirming an IME composition (e.g. Japanese/Chinese/Korean)
+				// so confirming the composition with Enter doesn't trigger search actions (#26172).
+				if (e.isComposing || e.keyCode === 229) {
+					return;
+				}
+
 				if (e.key === 'Enter') {
 					if (filteredItems.length > 0) {
 						const itemElement = document.getElementById(`search-item-${selectedIdx}`);
@@ -290,7 +296,7 @@
 					class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					on:click={clearSearchInput}
 				>
-					<XMark className="size-3" strokeWidth="2" />
+					<XMark className="size-3" strokeWidth="1.5" />
 				</button>
 			</div>
 		{/if}
@@ -313,7 +319,7 @@
 		>
 			<div class="px-3 py-2.5 text-xs group">
 				{#if filteredItems.length > 0}
-					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1 capitalize">
+					<div class="px-1 font-normal dark:text-gray-300 text-gray-700 mb-1 capitalize">
 						{selectedOption}
 					</div>
 
@@ -338,7 +344,7 @@
 									dispatch('input');
 								}}
 							>
-								<div class="dark:text-gray-300 text-gray-700 font-medium line-clamp-1 shrink-0">
+								<div class="dark:text-gray-300 text-gray-700 font-normal line-clamp-1 shrink-0">
 									{item.name}
 								</div>
 
@@ -349,7 +355,7 @@
 						{/each}
 					</div>
 				{:else if filteredOptions.length > 0}
-					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1">
+					<div class="px-1 font-normal dark:text-gray-300 text-gray-700 mb-1">
 						{$i18n.t('Search options')}
 					</div>
 
@@ -374,7 +380,7 @@
 									dispatch('input');
 								}}
 							>
-								<div class="dark:text-gray-300 text-gray-700 font-medium">{option.name}</div>
+								<div class="dark:text-gray-300 text-gray-700 font-normal">{option.name}</div>
 
 								<div class=" text-gray-500 line-clamp-1">
 									{option.description}

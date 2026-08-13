@@ -6,8 +6,8 @@ Create Date: 2024-10-23 03:00:00.000000
 
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = '4ace53fd72c8'
 down_revision = 'af906e964978'
@@ -16,6 +16,18 @@ depends_on = None
 
 
 def upgrade():
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    columns = {c['name']: c for c in inspector.get_columns('folder')}
+
+    created_at_col = columns.get('created_at')
+    if not created_at_col:
+        return
+
+    # Only convert if still DateTime — skip if already BigInteger
+    if isinstance(created_at_col['type'], sa.BigInteger):
+        return
+
     # Perform safe alterations using batch operation
     with op.batch_alter_table('folder', schema=None) as batch_op:
         # Step 1: Remove server defaults for created_at and updated_at
@@ -48,20 +60,24 @@ def upgrade():
 
 
 def downgrade():
-    # Downgrade: Convert columns back to DateTime and restore defaults
+    # Convert columns back to DateTime and restore defaults. Mirrors the
+    # upgrade's postgresql_using cast — without it, Postgres can't
+    # auto-cast BigInteger → timestamp and aborts with DatatypeMismatch.
     with op.batch_alter_table('folder', schema=None) as batch_op:
         batch_op.alter_column(
             'created_at',
             type_=sa.DateTime(),
             existing_type=sa.BigInteger(),
             existing_nullable=False,
-            server_default=sa.func.now(),  # Restoring server default on downgrade
+            server_default=sa.func.now(),
+            postgresql_using='to_timestamp(created_at)::timestamp without time zone',
         )
         batch_op.alter_column(
             'updated_at',
             type_=sa.DateTime(),
             existing_type=sa.BigInteger(),
             existing_nullable=False,
-            server_default=sa.func.now(),  # Restoring server default on downgrade
-            onupdate=sa.func.now(),  # Restoring onupdate behavior if it was there
+            server_default=sa.func.now(),
+            onupdate=sa.func.now(),
+            postgresql_using='to_timestamp(updated_at)::timestamp without time zone',
         )

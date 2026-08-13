@@ -6,16 +6,15 @@ Create Date: 2025-12-02 06:54:19.401334
 
 """
 
+import json
+import time
+import uuid
 from typing import Sequence, Union
 
-from alembic import op
-import sqlalchemy as sa
-from sqlalchemy import inspect
 import open_webui.internal.db
-
-import time
-import json
-import uuid
+import sqlalchemy as sa
+from alembic import op
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision: str = '3e0e00844bb0'
@@ -25,6 +24,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = set(inspector.get_table_names())
+
+    if 'knowledge_file' in existing_tables:
+        return  # Already created — skip everything
+
     op.create_table(
         'knowledge_file',
         sa.Column('id', sa.Text(), primary_key=True),

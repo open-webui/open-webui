@@ -1,35 +1,39 @@
-import os
+from __future__ import annotations
+
 import json
 import logging
+import os
+import sys
 from contextlib import asynccontextmanager, contextmanager
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
-from open_webui.internal.wrappers import register_connection
 from open_webui.env import (
-    OPEN_WEBUI_DIR,
-    DATABASE_URL,
-    DATABASE_SCHEMA,
+    DATABASE_ENABLE_IAM_TOKEN_AUTH,
+    DATABASE_ENABLE_SESSION_SHARING,
+    DATABASE_ENABLE_SQLITE_WAL,
     DATABASE_POOL_MAX_OVERFLOW,
     DATABASE_POOL_RECYCLE,
     DATABASE_POOL_SIZE,
     DATABASE_POOL_TIMEOUT,
-    DATABASE_ENABLE_SQLITE_WAL,
-    DATABASE_ENABLE_SESSION_SHARING,
-    DATABASE_SQLITE_PRAGMA_SYNCHRONOUS,
+    DATABASE_SCHEMA,
     DATABASE_SQLITE_PRAGMA_BUSY_TIMEOUT,
     DATABASE_SQLITE_PRAGMA_CACHE_SIZE,
-    DATABASE_SQLITE_PRAGMA_TEMP_STORE,
-    DATABASE_SQLITE_PRAGMA_MMAP_SIZE,
     DATABASE_SQLITE_PRAGMA_JOURNAL_SIZE_LIMIT,
+    DATABASE_SQLITE_PRAGMA_MMAP_SIZE,
+    DATABASE_SQLITE_PRAGMA_SYNCHRONOUS,
+    DATABASE_SQLITE_PRAGMA_TEMP_STORE,
+    DATABASE_URL,
     ENABLE_DB_MIGRATIONS,
+    OPEN_WEBUI_DIR,
 )
-from peewee_migrate import Router
-from sqlalchemy import Dialect, create_engine, MetaData, event, types
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy import Dialect, MetaData, create_engine, event, types
+from sqlalchemy.engine.url import make_url
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import scoped_session, sessionmaker, Session
-from sqlalchemy.pool import QueuePool, NullPool
+from sqlalchemy.orm import Session, scoped_session, sessionmaker
+from sqlalchemy.pool import NullPool, QueuePool
 from sqlalchemy.sql.type_api import _T
 from typing_extensions import Self
 
@@ -116,61 +120,25 @@ extract_ssl_mode_from_url = extract_ssl_params_from_url
 reattach_ssl_mode_to_url = reattach_ssl_params_to_url
 
 
-class JSONField(types.TypeDecorator):
-    impl = types.Text
+class JSONField(types.TypeDecorator):  # TEXT-backed JSON storage
+    """Store arbitrary Python objects as JSON-encoded TEXT.
+
+    Used instead of native JSON columns for portability across SQLite and
+    PostgreSQL.  Values are serialized with ``json.dumps`` on write and
+    deserialized with ``json.loads`` on read.
+    """
+
+    impl = types.UnicodeText
     cache_ok = True
 
-    def process_bind_param(self, value: Optional[_T], dialect: Dialect) -> Any:
-        return json.dumps(value)
+    def process_bind_param(self, value: _T | None, dialect: Dialect) -> Any:
+        return json.dumps(value) if value is not None else None
 
-    def process_result_value(self, value: Optional[_T], dialect: Dialect) -> Any:
-        if value is not None:
-            return json.loads(value)
+    def process_result_value(self, value: _T | None, dialect: Dialect) -> Any:
+        return json.loads(value) if value is not None else None
 
-    def copy(self, **kw: Any) -> Self:
-        return JSONField(self.impl.length)
-
-    def db_value(self, value):
-        return json.dumps(value)
-
-    def python_value(self, value):
-        if value is not None:
-            return json.loads(value)
-
-
-# Workaround to handle the peewee migration
-# This is required to ensure the peewee migration is handled before the alembic migration
-def handle_peewee_migration(DATABASE_URL):
-    db = None
-    try:
-        # Normalize SSL params so psycopg2 always sees `sslmode=` (never `ssl=`)
-        # and cert-file params are preserved in the connection string.
-        url_without_ssl, ssl_params = extract_ssl_params_from_url(DATABASE_URL)
-        normalized_url = reattach_ssl_params_to_url(url_without_ssl, ssl_params)
-
-        # Replace the postgresql:// with postgres:// to handle the peewee migration
-        db = register_connection(normalized_url.replace('postgresql://', 'postgres://'))
-        migrate_dir = OPEN_WEBUI_DIR / 'internal' / 'migrations'
-        router = Router(db, logger=log, migrate_dir=migrate_dir)
-        router.run()
-        db.close()
-
-    except Exception as e:
-        log.error(f'Failed to initialize the database connection: {e}')
-        log.warning('Hint: If your database password contains special characters, you may need to URL-encode it.')
-        raise
-    finally:
-        # Properly closing the database connection
-        if db and not db.is_closed():
-            db.close()
-
-        # Assert if db connection has been closed
-        if db is not None:
-            assert db.is_closed(), 'Database connection is still open.'
-
-
-if ENABLE_DB_MIGRATIONS:
-    handle_peewee_migration(DATABASE_URL)
+    def copy(self, **kwargs: Any) -> Self:
+        return JSONField(length=self.impl.length)
 
 
 # Normalize SSL params from the URL once; the sync engine needs them
@@ -179,6 +147,63 @@ _url_without_ssl, _ssl_dict = extract_ssl_params_from_url(DATABASE_URL)
 
 # For psycopg2 (sync engine), re-append sslmode + cert-file params.
 SQLALCHEMY_DATABASE_URL = reattach_ssl_params_to_url(_url_without_ssl, _ssl_dict) if _ssl_dict else DATABASE_URL
+
+
+class RDSIAMTokenAuth:
+    _refresh_after = timedelta(minutes=14)
+
+    def __init__(self, database_url: str) -> None:
+        url = make_url(database_url)
+        if not url.drivername.startswith(('postgresql', 'postgres')):
+            raise ValueError('DATABASE_ENABLE_IAM_TOKEN_AUTH is only supported for PostgreSQL databases')
+        if not url.host or not url.username:
+            raise ValueError('DATABASE_ENABLE_IAM_TOKEN_AUTH requires a database host and user')
+
+        self.host = url.host
+        self.port = url.port or 5432
+        self.username = url.username
+        self._client = None
+        self._token: str | None = None
+        self._expires_at = datetime.min.replace(tzinfo=timezone.utc)
+
+    @property
+    def client(self):
+        if self._client is None:
+            import boto3
+
+            self._client = boto3.client('rds')
+        return self._client
+
+    def get_password(self) -> str:
+        now = datetime.now(timezone.utc)
+        if self._token and now < self._expires_at:
+            return self._token
+
+        self._token = self.client.generate_db_auth_token(
+            DBHostname=self.host,
+            Port=self.port,
+            DBUsername=self.username,
+        )
+        self._expires_at = now + self._refresh_after
+        log.info('AWS RDS IAM database token refreshed; next refresh after %s', self._expires_at.isoformat())
+        return self._token
+
+
+_rds_iam_token_auth = RDSIAMTokenAuth(SQLALCHEMY_DATABASE_URL) if DATABASE_ENABLE_IAM_TOKEN_AUTH else None
+
+
+def _set_iam_token_password(dialect, conn_rec, cargs, cparams):
+    if _rds_iam_token_auth is not None:
+        cparams['password'] = _rds_iam_token_auth.get_password()
+
+
+def enable_iam_token_auth(connectable) -> None:
+    if _rds_iam_token_auth is None:
+        return
+
+    engine = getattr(connectable, 'sync_engine', connectable)
+    if not event.contains(engine, 'do_connect', _set_iam_token_password):
+        event.listen(engine, 'do_connect', _set_iam_token_password)
 
 
 def _make_async_url(url: str) -> str:
@@ -303,6 +328,8 @@ else:
     else:
         engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
 
+enable_iam_token_auth(engine)
+
 
 # Sync session — used ONLY for startup config loading (config.py runs at import time)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
@@ -332,8 +359,19 @@ get_db = contextmanager(get_session)
 # all work without any stripping or translation.
 ASYNC_SQLALCHEMY_DATABASE_URL = _make_async_url(SQLALCHEMY_DATABASE_URL)
 
+# psycopg v3 cannot run in async mode under Windows' default
+# ProactorEventLoop — switch to SelectorEventLoop before creating
+# the async engine.  This runs at import time, which is early enough
+# to cover every entry point (workers, reload, direct invocations).
+if sys.platform == 'win32' and _is_postgres_url(DATABASE_URL):
+    import asyncio
+
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
     # Generous default — async coroutines + no session sharing = high connection demand.
+    # No pool_pre_ping: a local SQLite file cannot drop connections, and the
+    # ping costs a worker-thread hop plus a SELECT 1 on every checkout.
     _sqlite_pool_size = DATABASE_POOL_SIZE if isinstance(DATABASE_POOL_SIZE, int) and DATABASE_POOL_SIZE > 0 else 512
     async_engine = create_async_engine(
         ASYNC_SQLALCHEMY_DATABASE_URL,
@@ -341,7 +379,6 @@ if 'sqlite' in ASYNC_SQLALCHEMY_DATABASE_URL:
         pool_size=_sqlite_pool_size,
         pool_timeout=DATABASE_POOL_TIMEOUT,
         pool_recycle=DATABASE_POOL_RECYCLE,
-        pool_pre_ping=True,
     )
 
     @event.listens_for(async_engine.sync_engine, 'connect')
@@ -369,6 +406,8 @@ else:
             ASYNC_SQLALCHEMY_DATABASE_URL,
             pool_pre_ping=True,
         )
+
+enable_iam_token_auth(async_engine)
 
 
 AsyncSessionLocal = async_sessionmaker(
@@ -400,7 +439,7 @@ async def get_async_db():
 
 
 @asynccontextmanager
-async def get_async_db_context(db: Optional[AsyncSession] = None):
+async def get_async_db_context(db: AsyncSession | None = None):
     """Async context manager that reuses an existing session if provided and session sharing is enabled."""
     if isinstance(db, AsyncSession) and DATABASE_ENABLE_SESSION_SHARING:
         yield db

@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import logging
-from typing import Optional
 
 import requests
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
@@ -7,7 +8,7 @@ from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 log = logging.getLogger(__name__)
 
 
-def search_mojeek(api_key: str, query: str, count: int, filter_list: Optional[list[str]] = None) -> list[SearchResult]:
+def search_mojeek(api_key: str, query: str, count: int, filter_list: list[str | None] = None) -> list[SearchResult]:
     """Search using Mojeek's Search API and return the results as a list of SearchResult objects.
 
     Args:

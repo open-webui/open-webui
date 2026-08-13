@@ -11,10 +11,16 @@
 
 	import { selectedFolder } from '$lib/stores';
 
-	import { deleteFolderById, getFolderById, updateFolderById } from '$lib/apis/folders';
+	import {
+		deleteFolderById,
+		getFolderById,
+		updateFolderById,
+		createNewFolder
+	} from '$lib/apis/folders';
 	import { getChatsByFolderId } from '$lib/apis/chats';
 
 	import FolderModal from '$lib/components/layout/Sidebar/Folders/FolderModal.svelte';
+	import FolderShareModal from '$lib/components/layout/Sidebar/Folders/FolderShareModal.svelte';
 
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -25,11 +31,14 @@
 	import EmojiPicker from '$lib/components/common/EmojiPicker.svelte';
 
 	export let folder = null;
+	export let readOnly: boolean = false;
 
 	export let onUpdate: Function = (folderId) => {};
 	export let onDelete: Function = (folderId) => {};
 
 	let showFolderModal = false;
+	let showCreateSubFolderModal = false;
+	let showShareModal = false;
 	let showDeleteConfirm = false;
 	let deleteFolderContents = true;
 
@@ -68,8 +77,9 @@
 				return null;
 			});
 
-			await selectedFolder.set(_folder);
-			onUpdate(_folder);
+			const updatedFolder = { ...folder, ..._folder };
+			await selectedFolder.set(updatedFolder);
+			onUpdate(updatedFolder);
 		}
 	};
 
@@ -93,8 +103,9 @@
 				return null;
 			});
 
-			await selectedFolder.set(_folder);
-			onUpdate(_folder);
+			const updatedFolder = { ...folder, ..._folder };
+			await selectedFolder.set(updatedFolder);
+			onUpdate(updatedFolder);
 		}
 	};
 
@@ -127,6 +138,30 @@
 
 		saveAs(blob, `folder-${folder.name}-export-${Date.now()}.json`);
 	};
+
+	const createSubFolderHandler = async ({ name, meta, data, parent_id }) => {
+		if (name === '') {
+			toast.error($i18n.t('Folder name cannot be empty.'));
+			return;
+		}
+
+		name = name.trim();
+
+		const res = await createNewFolder(localStorage.token, {
+			name,
+			data,
+			meta,
+			parent_id
+		}).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Folder created successfully'));
+			onUpdate();
+		}
+	};
 </script>
 
 {#if folder}
@@ -137,6 +172,14 @@
 		onSubmit={updateHandler}
 	/>
 
+	<FolderModal
+		bind:show={showCreateSubFolderModal}
+		parentId={folder.id}
+		onSubmit={createSubFolderHandler}
+	/>
+
+	<FolderShareModal bind:show={showShareModal} {folder} />
+
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}
 		title={$i18n.t('Delete folder?')}
@@ -146,11 +189,11 @@
 	>
 		<div class=" text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3 mb-2">
 			<!-- {$i18n.t('This will delete <strong>{{NAME}}</strong> and <strong>all its contents</strong>.', {
-				NAME: folders[folderId].name
+				NAME: folder.name
 			})} -->
 
 			{$i18n.t(`Are you sure you want to delete "{{NAME}}"?`, {
-				NAME: folders[folderId].name
+				NAME: folder.name
 			})}
 		</div>
 
@@ -165,52 +208,72 @@
 
 	<div class="mb-3 px-6 @md:max-w-3xl justify-between w-full flex relative group items-center">
 		<div class="text-center flex gap-3.5 items-center">
-			<EmojiPicker
-				onClose={() => {}}
-				selected={folder?.meta?.icon ?? null}
-				onSubmit={(name) => {
-					console.log(name);
-					updateIconHandler(name);
-				}}
-			>
-				<button
-					aria-label={$i18n.t('Change folder icon')}
-					class=" rounded-full bg-gray-50 dark:bg-gray-800 size-11 flex justify-center items-center"
+			{#if readOnly}
+				<div
+					class="rounded-full bg-gray-50 dark:bg-gray-800 size-11 flex justify-center items-center"
 				>
 					{#if folder?.meta?.icon}
 						<Emoji className="size-6" shortCode={folder.meta.icon} />
 					{:else}
 						<Folder className="size-4.5" strokeWidth="2" />
 					{/if}
-				</button>
-			</EmojiPicker>
+				</div>
+			{:else}
+				<EmojiPicker
+					onClose={() => {}}
+					selected={folder?.meta?.icon ?? null}
+					onSubmit={(name) => {
+						console.log(name);
+						updateIconHandler(name);
+					}}
+				>
+					<button
+						aria-label={$i18n.t('Change folder icon')}
+						class="rounded-full bg-gray-50 dark:bg-gray-800 size-11 flex justify-center items-center outline-hidden focus:outline-hidden"
+					>
+						{#if folder?.meta?.icon}
+							<Emoji className="size-6" shortCode={folder.meta.icon} />
+						{:else}
+							<Folder className="size-4.5" strokeWidth="2" />
+						{/if}
+					</button>
+				</EmojiPicker>
+			{/if}
 
 			<div class="text-3xl line-clamp-1">
 				{folder.name}
 			</div>
 		</div>
 
-		<div class="flex items-center translate-x-2.5">
-			<FolderMenu
-				align="end"
-				onEdit={() => {
-					showFolderModal = true;
-				}}
-				onDelete={() => {
-					showDeleteConfirm = true;
-				}}
-				onExport={() => {
-					exportHandler();
-				}}
-			>
-				<button
-					class="p-1.5 dark:hover:bg-gray-850 rounded-full touch-auto"
-					aria-label={$i18n.t('Folder options')}
-					on:click={(e) => {}}
+		{#if !readOnly}
+			<div class="flex items-center translate-x-2.5">
+				<FolderMenu
+					align="end"
+					onEdit={() => {
+						showFolderModal = true;
+					}}
+					onShare={() => {
+						showShareModal = true;
+					}}
+					onDelete={() => {
+						showDeleteConfirm = true;
+					}}
+					onExport={() => {
+						exportHandler();
+					}}
+					onCreateSubFolder={() => {
+						showCreateSubFolderModal = true;
+					}}
 				>
-					<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
-				</button>
-			</FolderMenu>
-		</div>
+					<button
+						class="p-1.5 dark:hover:bg-gray-850 rounded-full touch-auto"
+						aria-label={$i18n.t('Folder options')}
+						on:click={(e) => {}}
+					>
+						<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+					</button>
+				</FolderMenu>
+			</div>
+		{/if}
 	</div>
 {/if}

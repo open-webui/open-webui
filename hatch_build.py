@@ -18,4 +18,7 @@ class CustomBuildHook(BuildHookInterface):
         subprocess.run([npm, 'install', '--force'], check=True)  # noqa: S603
         stderr.write('\n### npm run build\n')
         os.environ['APP_BUILD_HASH'] = version
+        node_options = os.environ.get('NODE_OPTIONS', '')
+        if '--max-old-space-size' not in node_options:
+            os.environ['NODE_OPTIONS'] = f'{node_options} --max-old-space-size=8192'.strip()
         subprocess.run([npm, 'run', 'build'], check=True)  # noqa: S603

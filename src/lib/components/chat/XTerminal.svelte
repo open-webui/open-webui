@@ -106,7 +106,7 @@
 			ws.onopen = () => {
 				// First-message auth (no token in URL)
 				if (ws) {
-					ws.send(JSON.stringify({ type: 'auth', token: authToken }));
+					ws.send(JSON.stringify({ type: 'auth', token: authToken.trim() }));
 				}
 				connected = true;
 				connecting = false;

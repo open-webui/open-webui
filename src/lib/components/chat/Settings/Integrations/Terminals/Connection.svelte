@@ -1,22 +1,38 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
-	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import AddTerminalServerModal from '$lib/components/AddTerminalServerModal.svelte';
 	import Cloud from '$lib/components/icons/Cloud.svelte';
 
-	export let connection = { url: '', key: '', name: '', path: '/openapi.json', enabled: false };
-	export let onSubmit: (c: typeof connection) => void = () => {};
+	type TerminalServerConfig = {
+		url: string;
+		key?: string;
+		name?: string;
+		path?: string;
+		enabled: boolean;
+		[key: string]: any;
+	};
+
+	export let connection: TerminalServerConfig = {
+		url: '',
+		key: '',
+		name: '',
+		path: '/openapi.json',
+		enabled: false
+	};
+	export let onSubmit: (c: TerminalServerConfig) => void = () => {};
 	export let onDelete: () => void = () => {};
 	export let onEnable: () => void = () => {};
 	export let onDisable: () => void = () => {};
 
 	let showConfigModal = false;
-	let showDeleteConfirmDialog = false;
 </script>
 
 <AddTerminalServerModal
@@ -25,19 +41,12 @@
 	bind:show={showConfigModal}
 	{connection}
 	onDelete={() => {
-		showDeleteConfirmDialog = true;
-	}}
-	onSubmit={(c) => {
-		connection = c;
-		onSubmit(c);
-	}}
-/>
-
-<ConfirmDialog
-	bind:show={showDeleteConfirmDialog}
-	on:confirm={() => {
 		onDelete();
 		showConfigModal = false;
+	}}
+	onSubmit={(c: TerminalServerConfig) => {
+		connection = c;
+		onSubmit(c);
 	}}
 />
 
@@ -51,7 +60,7 @@
 					<Cloud className="size-4" strokeWidth="1.5" />
 				</Tooltip>
 
-				<div class="outline-hidden w-full bg-transparent text-sm">
+				<div class="outline-hidden w-full bg-transparent text-xs text-gray-700 dark:text-gray-300">
 					{connection.name || connection.url || $i18n.t('New Terminal')}
 				</div>
 			</div>
@@ -61,7 +70,7 @@
 	<div class="flex gap-1 items-center">
 		<Tooltip content={$i18n.t('Configure')}>
 			<button
-				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
+				class="self-center p-1 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition"
 				on:click={() => {
 					showConfigModal = true;
 				}}

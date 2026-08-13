@@ -3,15 +3,18 @@ import time
 import uuid
 from typing import Optional
 
-from sqlalchemy import select, delete
-from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, get_async_db_context
-
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, Text, UniqueConstraint, or_, and_
+from sqlalchemy import BigInteger, Column, Text, UniqueConstraint, and_, delete, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
+
+PRINCIPAL_TYPE_ANYONE = 'anyone'
+PRINCIPAL_TYPE_GROUP = 'group'
+PRINCIPAL_TYPE_USER = 'user'
+WILDCARD_PRINCIPAL_ID = '*'
 
 
 ####################
@@ -25,7 +28,7 @@ class AccessGrant(Base):
     id = Column(Text, primary_key=True)
     resource_type = Column(Text, nullable=False)  # "knowledge", "model", "prompt", "tool", "note", "channel", "file"
     resource_id = Column(Text, nullable=False)
-    principal_type = Column(Text, nullable=False)  # "user" or "group"
+    principal_type = Column(Text, nullable=False)  # "user", "group", or "anyone"
     principal_id = Column(Text, nullable=False)  # user_id, group_id, or "*" (wildcard for public)
     permission = Column(Text, nullable=False)  # "read" or "write"
     created_at = Column(BigInteger, nullable=False)
@@ -165,11 +168,13 @@ def normalize_access_grants(access_grants: Optional[list]) -> list[dict]:
         principal_id = grant.get('principal_id')
         permission = grant.get('permission')
 
-        if principal_type not in ('user', 'group'):
+        if principal_type not in (PRINCIPAL_TYPE_USER, PRINCIPAL_TYPE_GROUP, PRINCIPAL_TYPE_ANYONE):
             continue
         if permission not in ('read', 'write'):
             continue
         if not isinstance(principal_id, str) or not principal_id:
+            continue
+        if principal_type == PRINCIPAL_TYPE_ANYONE and (principal_id != WILDCARD_PRINCIPAL_ID or permission != 'read'):
             continue
 
         key = (principal_type, principal_id, permission)
@@ -188,7 +193,11 @@ def has_public_read_access_grant(access_grants: Optional[list]) -> bool:
     Returns True when a direct grant list includes wildcard public-read.
     """
     for grant in normalize_access_grants(access_grants):
-        if grant['principal_type'] == 'user' and grant['principal_id'] == '*' and grant['permission'] == 'read':
+        if (
+            grant['principal_type'] == PRINCIPAL_TYPE_USER
+            and grant['principal_id'] == WILDCARD_PRINCIPAL_ID
+            and grant['permission'] == 'read'
+        ):
             return True
     return False
 
@@ -198,7 +207,25 @@ def has_public_write_access_grant(access_grants: Optional[list]) -> bool:
     Returns True when a direct grant list includes wildcard public-write.
     """
     for grant in normalize_access_grants(access_grants):
-        if grant['principal_type'] == 'user' and grant['principal_id'] == '*' and grant['permission'] == 'write':
+        if (
+            grant['principal_type'] == PRINCIPAL_TYPE_USER
+            and grant['principal_id'] == WILDCARD_PRINCIPAL_ID
+            and grant['permission'] == 'write'
+        ):
+            return True
+    return False
+
+
+def has_anyone_read_access_grant(access_grants: Optional[list]) -> bool:
+    """
+    Returns True when a direct grant list includes no-auth anyone-read.
+    """
+    for grant in normalize_access_grants(access_grants):
+        if (
+            grant['principal_type'] == PRINCIPAL_TYPE_ANYONE
+            and grant['principal_id'] == WILDCARD_PRINCIPAL_ID
+            and grant['permission'] == 'read'
+        ):
             return True
     return False
 
@@ -208,7 +235,7 @@ def has_user_access_grant(access_grants: Optional[list]) -> bool:
     Returns True when a direct grant list includes any non-wildcard user grant.
     """
     for grant in normalize_access_grants(access_grants):
-        if grant['principal_type'] == 'user' and grant['principal_id'] != '*':
+        if grant['principal_type'] == PRINCIPAL_TYPE_USER and grant['principal_id'] != WILDCARD_PRINCIPAL_ID:
             return True
     return False
 
@@ -225,9 +252,24 @@ def strip_user_access_grants(access_grants: Optional[list]) -> list:
         for grant in access_grants
         if not (
             (grant.get('principal_type') if isinstance(grant, dict) else getattr(grant, 'principal_type', None))
-            == 'user'
-            and (grant.get('principal_id') if isinstance(grant, dict) else getattr(grant, 'principal_id', None)) != '*'
+            == PRINCIPAL_TYPE_USER
+            and (grant.get('principal_id') if isinstance(grant, dict) else getattr(grant, 'principal_id', None))
+            != WILDCARD_PRINCIPAL_ID
         )
+    ]
+
+
+def strip_anyone_access_grants(access_grants: Optional[list]) -> list:
+    """
+    Remove no-auth anyone grants from the list.
+    """
+    if not access_grants:
+        return []
+    return [
+        grant
+        for grant in access_grants
+        if (grant.get('principal_type') if isinstance(grant, dict) else getattr(grant, 'principal_type', None))
+        != PRINCIPAL_TYPE_ANYONE
     ]
 
 
@@ -318,7 +360,6 @@ class AccessGrantsTable:
             )
             db.add(grant)
             await db.commit()
-            await db.refresh(grant)
             return AccessGrantModel.model_validate(grant)
 
     async def revoke_access(
@@ -496,6 +537,28 @@ class AccessGrantsTable:
                 result_dict[g.resource_id].append(AccessGrantModel.model_validate(g))
             return result_dict
 
+    async def has_anyone_access(
+        self,
+        resource_type: str,
+        resource_id: str,
+        permission: str = 'read',
+        db: Optional[AsyncSession] = None,
+    ) -> bool:
+        """Check for a no-auth anyone:* grant. Callers must opt in explicitly."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(AccessGrant)
+                .filter(
+                    AccessGrant.resource_type == resource_type,
+                    AccessGrant.resource_id == resource_id,
+                    AccessGrant.principal_type == PRINCIPAL_TYPE_ANYONE,
+                    AccessGrant.principal_id == WILDCARD_PRINCIPAL_ID,
+                    AccessGrant.permission == permission,
+                )
+                .limit(1)
+            )
+            return result.scalars().first() is not None
+
     async def has_access(
         self,
         user_id: str,
@@ -623,8 +686,8 @@ class AccessGrantsTable:
         Get all users who have the specified permission on a resource.
         Returns a list of UserModel instances.
         """
-        from open_webui.models.users import Users, UserModel
         from open_webui.models.groups import Groups
+        from open_webui.models.users import UserModel, Users
 
         async with get_async_db_context(db) as db:
             result = await db.execute(

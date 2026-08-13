@@ -6,11 +6,11 @@ Create Date: 2024-10-09 21:02:35.241684
 
 """
 
-from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.sql import table, select, update
-
 import json
+
+import sqlalchemy as sa
+from alembic import op
+from sqlalchemy.sql import select, table, update
 
 revision = '242a2047eae0'
 down_revision = '6a39f3d8e55c'
@@ -47,34 +47,41 @@ def upgrade():
             # If the column is already JSON, no need to do anything
             pass
 
-    # Step 3: Migrate data from 'old_chat' to 'chat'
-    chat_table = table(
-        'chat',
-        sa.Column('id', sa.String(), primary_key=True),
-        sa.Column('old_chat', sa.Text()),
-        sa.Column('chat', sa.JSON()),
-    )
+    # Step 3: Migrate data from 'old_chat' to 'chat' (only if old_chat exists)
+    # Re-check columns after potential rename above
+    current_cols = {c['name'] for c in sa.inspect(conn).get_columns('chat')}
+    if 'old_chat' in current_cols:
+        chat_table = table(
+            'chat',
+            sa.Column('id', sa.String(), primary_key=True),
+            sa.Column('old_chat', sa.Text()),
+            sa.Column('chat', sa.JSON()),
+        )
 
-    # - Selecting all data from the table
-    connection = op.get_bind()
-    results = connection.execute(select(chat_table.c.id, chat_table.c.old_chat))
-    for row in results:
-        try:
-            # Convert text JSON to actual JSON object, assuming the text is in JSON format
-            json_data = json.loads(row.old_chat)
-        except json.JSONDecodeError:
-            json_data = None  # Handle cases where the text cannot be converted to JSON
+        # - Selecting all data from the table
+        connection = op.get_bind()
+        results = connection.execute(select(chat_table.c.id, chat_table.c.old_chat))
+        for row in results:
+            try:
+                # Convert text JSON to actual JSON object, assuming the text is in JSON format
+                json_data = json.loads(row.old_chat)
+            except json.JSONDecodeError:
+                json_data = None  # Handle cases where the text cannot be converted to JSON
 
-        connection.execute(sa.update(chat_table).where(chat_table.c.id == row.id).values(chat=json_data))
+            connection.execute(sa.update(chat_table).where(chat_table.c.id == row.id).values(chat=json_data))
 
-    # Step 4: Drop 'old_chat' column
-    print("Dropping 'old_chat' column")
-    op.drop_column('chat', 'old_chat')
+        # Step 4: Drop 'old_chat' column
+        print("Dropping 'old_chat' column")
+        op.drop_column('chat', 'old_chat')
 
 
 def downgrade():
+    conn = op.get_bind()
+    columns = {col['name'] for col in sa.inspect(conn).get_columns('chat')}
+
     # Step 1: Add 'old_chat' column back as Text
-    op.add_column('chat', sa.Column('old_chat', sa.Text(), nullable=True))
+    if 'old_chat' not in columns:
+        op.add_column('chat', sa.Column('old_chat', sa.Text(), nullable=True))
 
     # Step 2: Convert 'chat' JSON data back to text and store in 'old_chat'
     chat_table = table(
@@ -84,14 +91,14 @@ def downgrade():
         sa.Column('old_chat', sa.Text()),
     )
 
-    connection = op.get_bind()
-    results = connection.execute(select(chat_table.c.id, chat_table.c.chat))
-    for row in results:
-        text_data = json.dumps(row.chat) if row.chat is not None else None
-        connection.execute(sa.update(chat_table).where(chat_table.c.id == row.id).values(old_chat=text_data))
+    if 'chat' in columns:
+        results = conn.execute(select(chat_table.c.id, chat_table.c.chat))
+        for row in results:
+            text_data = json.dumps(row.chat) if row.chat is not None else None
+            conn.execute(sa.update(chat_table).where(chat_table.c.id == row.id).values(old_chat=text_data))
 
-    # Step 3: Remove the new 'chat' JSON column
-    op.drop_column('chat', 'chat')
+        # Step 3: Remove the new 'chat' JSON column
+        op.drop_column('chat', 'chat')
 
     # Step 4: Rename 'old_chat' back to 'chat'
     op.alter_column('chat', 'old_chat', new_column_name='chat', existing_type=sa.Text())

@@ -5,6 +5,7 @@
 
 	import { exportChatStats, exportSingleChatStats, downloadChatStats } from '$lib/apis/chats';
 	import { getVersion } from '$lib/apis';
+	import { settings } from '$lib/stores';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -314,11 +315,11 @@
 	};
 </script>
 
-<Modal bind:show size="md">
+<Modal bind:show size="md" className="bg-white dark:bg-gray-900 rounded-4xl">
 	<div class="w-full">
 		{#if completed}
 			<div class="px-5.5 py-5">
-				<div class="mb-1 text-xl font-medium">{$i18n.t('Sync Complete!')}</div>
+				<div class="mb-1 text-xl font-normal">{$i18n.t('Sync Complete!')}</div>
 				<div class="mb-3 text-xs text-gray-500">
 					{$i18n.t('Your usage stats have been successfully synced.')}
 				</div>
@@ -336,7 +337,7 @@
 			</div>
 		{:else if error}
 			<div class="px-5.5 py-5">
-				<div class="mb-1 text-xl font-medium">{$i18n.t('Sync Failed')}</div>
+				<div class="mb-1 text-xl font-normal">{$i18n.t('Sync Failed')}</div>
 				<div class="mb-3 text-xs text-gray-500">
 					{errorMessage || $i18n.t('There was an error syncing your stats. Please try again.')}
 				</div>
@@ -354,17 +355,17 @@
 				</div>
 			</div>
 		{:else}
-			<div class="flex justify-between px-5 pt-4 pb-0.5">
-				<div class="text-lg font-medium self-center">{$i18n.t('Sync Usage Stats')}</div>
+			<div class="flex justify-between px-4 pt-3 pb-1">
+				<div class="text-sm font-medium self-center">{$i18n.t('Sync Usage Stats')}</div>
 				<button
-					class="self-center"
+					class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 					aria-label={$i18n.t('Close modal')}
 					on:click={() => {
 						show = false;
 					}}
 					disabled={syncing}
 				>
-					<XMark className={'size-5'} />
+					<XMark className={'size-4'} />
 				</button>
 			</div>
 
@@ -380,7 +381,7 @@
 				</div>
 
 				<div class="mt-3 text-xs text-gray-500">
-					<div class="font-medium text-gray-900 dark:text-gray-100 mb-1">
+					<div class="mb-1 font-normal text-gray-600 dark:text-gray-400">
 						{$i18n.t('What is shared:')}
 					</div>
 					<ul class="list-disc list-inside space-y-0.5 ml-1 mb-2">
@@ -391,7 +392,7 @@
 						<li>{$i18n.t('User ratings (thumbs up/down)')}</li>
 					</ul>
 
-					<div class="font-medium text-gray-900 dark:text-gray-100 mb-1">
+					<div class="mb-1 font-normal text-gray-600 dark:text-gray-400">
 						{$i18n.t('What is NOT shared:')}
 					</div>
 					<ul class="list-disc list-inside space-y-0.5 ml-1">
@@ -452,7 +453,7 @@
 					</div>
 				{/if}
 
-				<div class="mt-5 flex justify-between items-center gap-2">
+				<div class="mt-4 flex items-center justify-between gap-2">
 					<div class="text-xs text-gray-400 text-center mr-auto">
 						<button
 							class="hover:underline px-2"
@@ -465,7 +466,7 @@
 					</div>
 
 					<button
-						class="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 transition disabled:cursor-not-allowed"
+						class="rounded-full bg-gray-100 px-4 py-2 text-sm font-normal text-gray-600 transition hover:bg-gray-200 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
 						on:click={() => {
 							if (syncing) {
 								cancelOperation();
@@ -478,7 +479,7 @@
 					</button>
 
 					<button
-						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition-colors rounded-full"
+						class="px-3.5 py-1.5 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition-colors rounded-full"
 						on:click={syncStats}
 						disabled={syncing}
 					>

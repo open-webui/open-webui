@@ -2,7 +2,7 @@
 	import { getContext, onDestroy } from 'svelte';
 	import { getSkillItems } from '$lib/apis/skills';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Keyframes from '$lib/components/icons/Keyframes.svelte';
+	import Cube from '$lib/components/icons/Cube.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -50,18 +50,40 @@
 			onSelect({ type: 'skill', data: skill });
 		}
 	};
+
+	const escapeTooltipText = (value = '') =>
+		String(value)
+			.replaceAll('&', '&amp;')
+			.replaceAll('<', '&lt;')
+			.replaceAll('>', '&gt;')
+			.replaceAll('"', '&quot;')
+			.replaceAll("'", '&#39;');
+
+	const getTooltipContent = (skill) => {
+		const name = escapeTooltipText(skill.name);
+		const description = escapeTooltipText(skill.description);
+
+		return `<div class="max-w-80 whitespace-normal text-left leading-snug">
+			<span class="break-words font-normal">${name}</span>${description ? `: <span class="break-words opacity-80">${description}</span>` : ''}
+		</div>`;
+	};
 </script>
 
-<div class="px-2 text-xs text-gray-500 py-1">
+<div class="px-2 py-1 text-[11px] text-gray-500 dark:text-gray-400">
 	{$i18n.t('Skills')}
 </div>
 
 {#if filteredItems.length > 0}
 	{#each filteredItems as skill, skillIdx}
-		<Tooltip content={skill.description || skill.name} placement="top-start">
+		<Tooltip
+			content={getTooltipContent(skill)}
+			placement="top-start"
+			tippyOptions={{ maxWidth: '20rem' }}
+		>
 			<button
-				class="px-2.5 py-1.5 rounded-xl w-full text-left {skillIdx === selectedIdx
-					? 'bg-gray-50 dark:bg-gray-800 selected-command-option-button'
+				class="flex h-[1.6875rem] w-full items-center rounded-xl px-2 text-left text-[13px] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {skillIdx ===
+				selectedIdx
+					? 'bg-gray-50/40 dark:bg-gray-800/40 selected-command-option-button'
 					: ''}"
 				type="button"
 				on:click={() => {
@@ -73,14 +95,14 @@
 				on:focus={() => {}}
 				data-selected={skillIdx === selectedIdx}
 			>
-				<div class="flex text-black dark:text-gray-100 line-clamp-1 items-center">
-					<div class="flex items-center justify-center size-5 mr-2 shrink-0">
-						<Keyframes className="size-4" />
+				<div class="flex w-full min-w-0 items-center text-black dark:text-gray-100">
+					<div class="mr-2 flex size-4.5 shrink-0 items-center justify-center">
+						<Cube className="size-3.5" />
 					</div>
-					<div class="truncate">
+					<div class="truncate min-w-0 flex-1">
 						{skill.name}
 					</div>
-					<div class="ml-2 text-xs text-gray-500 truncate">
+					<div class="ml-2 max-w-24 shrink-0 truncate text-xs text-gray-500 dark:text-gray-400">
 						{skill.id}
 					</div>
 				</div>

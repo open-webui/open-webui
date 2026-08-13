@@ -44,7 +44,7 @@
 			</div>
 
 			<div class=" flex flex-col w-full flex-1">
-				<div class="mb-0.5 font-medium line-clamp-1 pr-2">
+				<div class="mb-0.5 font-normal line-clamp-1 pr-2">
 					{user.name}
 				</div>
 
@@ -129,7 +129,7 @@
 						<ChatBubbleOval className="size-4" />
 					</div>
 
-					<div class="font-medium">
+					<div class="font-normal">
 						{$i18n.t('Message')}
 					</div>
 				</button>

@@ -2,7 +2,7 @@
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
 
-	import { getAdminDetails } from '$lib/apis/auths';
+	import { getAdminDetails, userSignOut } from '$lib/apis/auths';
 	import { onMount, tick, getContext } from 'svelte';
 	import { config } from '$lib/stores';
 
@@ -25,7 +25,7 @@
 		<div class="m-auto pb-10 flex flex-col justify-center">
 			<div class="max-w-md">
 				<div
-					class="text-center dark:text-white text-2xl font-medium z-50"
+					class="text-center dark:text-white text-2xl font-normal z-50"
 					style="white-space: pre-wrap;"
 				>
 					{#if ($config?.ui?.pending_user_overlay_title ?? '').trim() !== ''}
@@ -52,14 +52,14 @@
 				</div>
 
 				{#if adminDetails}
-					<div class="mt-4 text-sm font-medium text-center">
+					<div class="mt-4 text-sm font-normal text-center">
 						<div>{$i18n.t('Admin')}: {adminDetails.name} ({adminDetails.email})</div>
 					</div>
 				{/if}
 
 				<div class=" mt-6 mx-auto relative group w-fit">
 					<button
-						class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 text-gray-700 transition font-medium text-sm"
+						class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 text-gray-700 transition font-normal text-sm"
 						on:click={async () => {
 							location.href = '/';
 						}}
@@ -70,8 +70,12 @@
 					<button
 						class="text-xs text-center w-full mt-2 text-gray-400 underline"
 						on:click={async () => {
+							const res = await userSignOut().catch((err) => {
+								console.error(err);
+								return null;
+							});
 							localStorage.removeItem('token');
-							location.href = '/auth';
+							location.href = res?.redirect_url ?? '/auth';
 						}}>{$i18n.t('Sign Out')}</button
 					>
 				</div>

@@ -4,29 +4,33 @@ import time
 import uuid
 from typing import Optional
 
-from sqlalchemy import select, delete, update, func, case, or_, and_
-from sqlalchemy.ext.asyncio import AsyncSession
 from open_webui.internal.db import Base, JSONField, get_async_db_context
-from open_webui.models.groups import Groups
 from open_webui.models.access_grants import (
     AccessGrantModel,
     AccessGrants,
 )
-
-from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy.dialects.postgresql import JSONB
-
-
+from open_webui.models.groups import Groups
+from open_webui.utils.validate import validate_profile_image_url
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     Column,
     ForeignKey,
     String,
     Text,
-    JSON,
     UniqueConstraint,
+    and_,
+    case,
+    delete,
+    func,
+    or_,
+    select,
+    update,
 )
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.asyncio import AsyncSession
 
 ####################
 # Channel DB Schema
@@ -244,6 +248,13 @@ class ChannelWebhookForm(BaseModel):
     name: str
     profile_image_url: Optional[str] = None
 
+    @field_validator('profile_image_url', mode='before')
+    @classmethod
+    def check_profile_image_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        return validate_profile_image_url(v)
+
 
 class ChannelTable:
     async def _get_access_grants(self, channel_id: str, db: Optional[AsyncSession] = None) -> list[AccessGrantModel]:
@@ -255,11 +266,11 @@ class ChannelTable:
         access_grants: Optional[list[AccessGrantModel]] = None,
         db: Optional[AsyncSession] = None,
     ) -> ChannelModel:
-        channel_data = ChannelModel.model_validate(channel).model_dump(exclude={'access_grants'})
-        channel_data['access_grants'] = (
-            access_grants if access_grants is not None else await self._get_access_grants(channel_data['id'], db=db)
+        channel_model = ChannelModel.model_validate(channel)
+        channel_model.access_grants = (
+            access_grants if access_grants is not None else await self._get_access_grants(channel_model.id, db=db)
         )
-        return ChannelModel.model_validate(channel_data)
+        return channel_model
 
     async def _collect_unique_user_ids(
         self,
@@ -858,7 +869,6 @@ class ChannelTable:
                 result = ChannelFile(**channel_file.model_dump())
                 db.add(result)
                 await db.commit()
-                await db.refresh(result)
                 if result:
                     return ChannelFileModel.model_validate(result)
                 else:
