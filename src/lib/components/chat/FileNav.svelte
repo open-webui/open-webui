@@ -1,6 +1,7 @@
 <script context="module">
 	// Persists across mount/unmount cycles (module-level, not per-instance)
 	let savedPath = '/';
+	let savedFileRoot = null;
 	const treeExpandedCache = new Map<string, string[]>();
 	const treeContentsCache = new Map<string, [string, any[]][]>();
 </script>
@@ -92,7 +93,7 @@
 
 	// ── Directory state ──────────────────────────────────────────────────
 	let currentPath = savedPath;
-	let fileRoot: TerminalFileRoot | null = null;
+	let fileRoot: TerminalFileRoot | null = savedFileRoot;
 	let entries: FileEntry[] = [];
 	let currentWritable = true;
 	let loading = false;
@@ -463,6 +464,7 @@
 					label: root.label || labelFromPath(root.path)
 				}
 			: null;
+		savedFileRoot = fileRoot;
 		if ((fileRoot?.path ?? null) !== previousRoot) resetTreeState();
 	};
 
@@ -484,6 +486,16 @@
 		const rootPath = cwd?.root?.path ? asDirectoryPath(cwd.root.path) : null;
 
 		if (rootPath && rootPath !== '/') return cwd?.root;
+
+		const knownRoot = fileRoot ?? savedFileRoot;
+		if (
+			knownRoot?.path &&
+			hintPath &&
+			hintPath !== '/' &&
+			(hintPath === knownRoot.path || hintPath.startsWith(knownRoot.path))
+		) {
+			return knownRoot;
+		}
 
 		const pathForHome = hintPath && hintPath !== '/' ? hintPath : cwdPath;
 		if (
