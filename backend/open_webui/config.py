@@ -39,7 +39,7 @@ from open_webui.utils.json_codec import JSONCodec
 
 async def seed_registered_defaults():
     await Config.rename_prefix('rag.web', 'web')
-    await Config.repair_flattened_dict_configs()
+    await Config.repair_config_rows()
     await Config.seed_defaults(DEFAULT_CONFIG)
 
 
