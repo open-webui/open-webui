@@ -1400,8 +1400,11 @@ def convert_to_responses_payload(payload: dict) -> dict:
                         converted_tool['description'] = func['description']
                     if 'parameters' in func:
                         converted_tool['parameters'] = func['parameters']
-                    if 'strict' in func:
-                        converted_tool['strict'] = func['strict']
+                    # Responses tools default to strict mode when the field is
+                    # omitted. Preserve the loose-schema semantics of Chat,
+                    # MCP, and OpenAPI function tools unless strictness was
+                    # explicitly requested by the caller.
+                    converted_tool['strict'] = func.get('strict', False)
                 converted_tools.append(converted_tool)
             else:
                 # Already in correct format or unknown format, pass through
