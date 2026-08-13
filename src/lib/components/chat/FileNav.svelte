@@ -116,10 +116,6 @@
 	let loadingDirs: Set<string> = new Set();
 	let directoryMenu: { x: number; y: number } | null = null;
 
-	const invalidateVisibleRows = () => {
-		entries = [...entries];
-	};
-
 	/** Normalize Windows backslashes and collapse duplicate separators. */
 	const normalizePath = (path: string) => path.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
 
@@ -145,26 +141,26 @@
 		return normalizePath(`${parent}${child}`);
 	};
 
-	const sortEntries = (items: FileEntry[]): FileEntry[] => {
+	const sortEntries = (items: FileEntry[], mode: SortMode, asc: boolean): FileEntry[] => {
 		return [...items].sort((a, b) => {
 			// Directories always first
 			if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
-			if (sortBy === 'date') {
+			if (mode === 'date') {
 				if (a.modified !== undefined && b.modified !== undefined) {
-					return sortAsc ? a.modified - b.modified : b.modified - a.modified;
+					return asc ? a.modified - b.modified : b.modified - a.modified;
 				}
 				const cmp = a.name.localeCompare(b.name);
-				return sortAsc ? cmp : -cmp;
+				return asc ? cmp : -cmp;
 			}
-			if (sortBy === 'size') {
+			if (mode === 'size') {
 				if (a.size !== undefined && b.size !== undefined) {
-					return sortAsc ? a.size - b.size : b.size - a.size;
+					return asc ? a.size - b.size : b.size - a.size;
 				}
 				const cmp = a.name.localeCompare(b.name);
-				return sortAsc ? cmp : -cmp;
+				return asc ? cmp : -cmp;
 			}
 			const cmp = a.name.localeCompare(b.name);
-			return sortAsc ? cmp : -cmp;
+			return asc ? cmp : -cmp;
 		});
 	};
 
@@ -175,16 +171,16 @@
 			sortBy = mode;
 			sortAsc = true;
 		}
-		invalidateVisibleRows();
-		treeCache = new Map(treeCache);
 		void refreshBrowser();
 	};
 
-	const filterEntries = (items: FileEntry[]) =>
-		showHidden ? items : items.filter((entry) => !entry.name.startsWith('.'));
+	const filterEntries = (items: FileEntry[], hiddenVisible: boolean) =>
+		hiddenVisible ? items : items.filter((entry) => !entry.name.startsWith('.'));
 
 	const entryPath = (parentPath: string, entry: FileEntry) =>
-		entry.type === 'directory' ? asDirectoryPath(joinPath(parentPath, entry.name)) : joinPath(parentPath, entry.name);
+		entry.type === 'directory'
+			? asDirectoryPath(joinPath(parentPath, entry.name))
+			: joinPath(parentPath, entry.name);
 
 	const withRowIndexes = (rows: Omit<BrowserRow, 'rowIndex'>[]): BrowserRow[] =>
 		rows.map((row, rowIndex) => ({ ...row, rowIndex }));
@@ -192,19 +188,35 @@
 	const buildVisibleRows = (
 		items: FileEntry[],
 		parentPath: string,
+		expanded: Set<string>,
+		cache: Map<string, FileEntry[]>,
+		hiddenVisible: boolean,
+		mode: SortMode,
+		asc: boolean,
 		depth = 0
 	): Omit<BrowserRow, 'rowIndex'>[] =>
-		sortEntries(filterEntries(items)).flatMap((entry) => {
+		sortEntries(filterEntries(items, hiddenVisible), mode, asc).flatMap((entry) => {
 			const fullPath = entryPath(parentPath, entry);
 			const row = { ...entry, fullPath, parentPath, depth };
 			const children =
-				entry.type === 'directory' && expandedDirs.has(fullPath)
-					? buildVisibleRows(treeCache.get(fullPath) ?? [], fullPath, depth + 1)
+				entry.type === 'directory' && expanded.has(fullPath)
+					? buildVisibleRows(
+							cache.get(fullPath) ?? [],
+							fullPath,
+							expanded,
+							cache,
+							hiddenVisible,
+							mode,
+							asc,
+							depth + 1
+						)
 					: [];
 			return [row, ...children];
 		});
 
-	$: visibleEntries = withRowIndexes(buildVisibleRows(entries, currentPath));
+	$: visibleEntries = withRowIndexes(
+		buildVisibleRows(entries, currentPath, expandedDirs, treeCache, showHidden, sortBy, sortAsc)
+	);
 
 	// ── Navigation history ──────────────────────────────────────────────
 	type NavEntry = { path: string; file: string | null };
@@ -465,18 +477,29 @@
 		return isInsideFileRoot(path) ? asDirectoryPath(path) : fileRoot.path;
 	};
 
-	const applyCwd = (cwd: TerminalCwd | null, preferredPath?: string) => {
+	const rootFromCwd = (cwd: TerminalCwd | null, pathHint?: string) => {
 		const cwdPath = cwd?.cwd ? asDirectoryPath(cwd.cwd) : null;
 		const homePath = cwd?.home ? asDirectoryPath(cwd.home) : null;
-		const preferredDirectory = preferredPath ? asDirectoryPath(preferredPath) : null;
-		const pathForRoot =
-			preferredDirectory && preferredDirectory !== '/' ? preferredDirectory : cwdPath;
-		const homeRoot =
-			homePath && pathForRoot && (pathForRoot === homePath || pathForRoot.startsWith(homePath))
-				? { path: homePath, label: 'Home' }
-				: undefined;
+		const hintPath = pathHint ? asDirectoryPath(pathHint) : null;
 		const rootPath = cwd?.root?.path ? asDirectoryPath(cwd.root.path) : null;
-		setFileRoot(rootPath && rootPath !== '/' ? cwd?.root : (homeRoot ?? cwd?.root));
+
+		if (rootPath && rootPath !== '/') return cwd?.root;
+
+		const pathForHome = hintPath && hintPath !== '/' ? hintPath : cwdPath;
+		if (
+			homePath &&
+			pathForHome &&
+			(pathForHome === homePath || pathForHome.startsWith(homePath))
+		) {
+			return { path: homePath, label: 'Home' };
+		}
+
+		return undefined;
+	};
+
+	const applyCwd = (cwd: TerminalCwd | null, pathHint?: string) => {
+		const cwdPath = cwd?.cwd ? asDirectoryPath(cwd.cwd) : null;
+		setFileRoot(rootFromCwd(cwd, pathHint));
 		const path = cwdPath ?? fileRoot?.path ?? '/';
 		return clampToFileRoot(path);
 	};
@@ -609,7 +632,6 @@
 			next.delete(directory);
 			expandedDirs = next;
 			saveTreeState();
-			invalidateVisibleRows();
 			return;
 		}
 
@@ -624,7 +646,6 @@
 			saveTreeState();
 			toast.error($i18n.t('Failed to load folder'));
 		} else {
-			invalidateVisibleRows();
 			treeCache = new Map(treeCache);
 		}
 	};
@@ -1140,20 +1161,21 @@
 		if (!handledDisplayFile && terminal) {
 			loading = true;
 
-				void (async () => {
-					// Discover server features on initial mount
-					const config = await getTerminalConfig(terminal.url, terminal.key);
-					terminalEnabled = config?.features?.terminal !== false;
+			void (async () => {
+				// Discover server features on initial mount
+				const config = await getTerminalConfig(terminal.url, terminal.key);
+				terminalEnabled = config?.features?.terminal !== false;
 
-					const serverCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
-					const serverPath = applyCwd(serverCwd, savedPath);
-					if (chatId || savedPath === '/') {
-						// Fetch session-specific cwd from the server (or global default for new chats)
-						savedPath = serverPath;
-					}
-					savedPath = clampToFileRoot(savedPath);
-					loadDir(savedPath, { restoreTree: true });
-				})();
+				const serverCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
+				const useServerPath = !!chatId || savedPath === '/';
+				const serverPath = applyCwd(serverCwd, useServerPath ? undefined : savedPath);
+				if (useServerPath) {
+					// Fetch session-specific cwd from the server (or global default for new chats)
+					savedPath = serverPath;
+				}
+				savedPath = clampToFileRoot(savedPath);
+				loadDir(savedPath, { restoreTree: true });
+			})();
 		}
 
 		mounted = true;

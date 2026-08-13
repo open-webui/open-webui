@@ -19,6 +19,7 @@
 	let mounted = false;
 	let initializedSlide = '';
 	let hideThumbs = false;
+	const slideShortcutKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 
 	$: safeSlide = Math.min(Math.max(0, currentSlide), Math.max(0, slides.length - 1));
 	$: selectedSlide = slides[safeSlide] ?? '';
@@ -45,6 +46,7 @@
 			bounds: true,
 			boundsPadding: 0.1,
 			zoomSpeed: 0.065,
+			filterKey: (e?: KeyboardEvent) => !!e && slideShortcutKeys.includes(e.key),
 			beforeWheel: (e) => {
 				if (!e.ctrlKey && !e.metaKey) return true;
 				return false;
@@ -63,11 +65,34 @@
 	};
 
 	const selectSlide = (index: number) => {
-		currentSlide = index;
+		const nextSlide = Math.min(Math.max(0, index), Math.max(0, slides.length - 1));
+		if (nextSlide === safeSlide) return;
+
+		currentSlide = nextSlide;
 		void tick().then(() => {
 			updateFitScale();
 			resetView();
 		});
+	};
+
+	const handleKeyDown = (e: KeyboardEvent) => {
+		if (
+			e.defaultPrevented ||
+			e.altKey ||
+			e.ctrlKey ||
+			e.metaKey ||
+			slides.length === 0 ||
+			!slideShortcutKeys.includes(e.key)
+		) {
+			return;
+		}
+
+		e.preventDefault();
+		if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+			selectSlide(safeSlide - 1);
+		} else {
+			selectSlide(safeSlide + 1);
+		}
 	};
 
 	const zoomIn = () => {
@@ -129,6 +154,8 @@
 	});
 </script>
 
+<svelte:window on:keydown={handleKeyDown} />
+
 <div
 	bind:this={rootEl}
 	class="relative grid {hideThumbs
@@ -138,7 +165,7 @@
 	<aside
 		class={hideThumbs
 			? 'hidden'
-			: 'overflow-y-auto px-2.5 pt-3.5 pb-16 border-r border-gray-200/60 dark:border-white/10 bg-transparent'}
+			: 'scrollbar-hidden overflow-y-auto px-2.5 pt-3.5 pb-16 border-r border-gray-200/60 dark:border-white/10 bg-transparent'}
 		aria-label="Slides"
 	>
 		{#each slides as slide, index}

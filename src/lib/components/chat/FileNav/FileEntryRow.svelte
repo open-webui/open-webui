@@ -48,7 +48,7 @@
 	$: directoryPath = entryPath.endsWith('/') ? entryPath : `${entryPath}/`;
 	$: writable = entry.writable !== false;
 	$: canMutate = parentWritable && writable;
-	$: rowIndent = `${12 + depth * 16}px`;
+	$: rowIndent = `${8 + depth * 16}px`;
 
 	const formatRelativeTime = (epoch: number): string => {
 		const diff = Math.floor(Date.now() / 1000) - epoch;
@@ -62,6 +62,7 @@
 
 	let dragOverFolder = false;
 	let expandTimer: ReturnType<typeof setTimeout> | null = null;
+	let menuOpen = false;
 
 	const clearExpandTimer = () => {
 		if (!expandTimer) return;
@@ -209,7 +210,7 @@
 		{#if entry.type === 'directory'}
 			<button
 				type="button"
-				class="mr-1 flex w-3 shrink-0 items-center self-stretch justify-center text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400"
+				class="mr-1.5 flex w-5 shrink-0 items-center self-stretch justify-center text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400"
 				style="margin-left: {rowIndent};"
 				on:click|stopPropagation={() => onToggleExpand(directoryPath)}
 				aria-label={expanded ? $i18n.t('Collapse') : $i18n.t('Expand')}
@@ -222,7 +223,7 @@
 				/>
 			</button>
 		{:else}
-			<span class="mr-1 w-4 shrink-0 self-stretch" style="margin-left: {rowIndent};"></span>
+			<span class="mr-1.5 w-5 shrink-0 self-stretch" style="margin-left: {rowIndent};"></span>
 		{/if}
 
 		<button
@@ -291,7 +292,7 @@
 					{/if}
 				</div>
 			{/if}
-			<FileTypeIcon name={entry.name} type={entry.type} size={13} />
+			<FileTypeIcon name={entry.name} type={entry.type} size={12} />
 			{#if renaming}
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
 				<input
@@ -333,7 +334,7 @@
 			{/if}
 		</button>
 
-		<Dropdown align="end" sideOffset={4}>
+		<Dropdown bind:show={menuOpen} align="end" sideOffset={4}>
 			<button
 				class="shrink-0 flex h-5 w-5 items-center justify-center mr-1 rounded transition
 					text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400
@@ -350,6 +351,7 @@
 						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
 						on:click={(e) => {
 							e.stopPropagation();
+							menuOpen = false;
 							onOpen(entry);
 						}}
 					>
@@ -369,6 +371,7 @@
 							class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
 							on:click={(e) => {
 								e.stopPropagation();
+								menuOpen = false;
 								onToggleExpand(directoryPath);
 							}}
 						>
@@ -387,6 +390,7 @@
 							class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
 							on:click={(e) => {
 								e.stopPropagation();
+								menuOpen = false;
 								onDownload(entryPath);
 							}}
 						>
@@ -400,6 +404,7 @@
 						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
 						on:click={(e) => {
 							e.stopPropagation();
+							menuOpen = false;
 							navigator.clipboard.writeText(entryPath).then(() => {
 								toast.success($i18n.t('Path copied'));
 							});
@@ -416,6 +421,7 @@
 						on:click={(e) => {
 							e.stopPropagation();
 							if (!canMutate) return;
+							menuOpen = false;
 							startRename();
 						}}
 					>
@@ -430,6 +436,7 @@
 						on:click={(e) => {
 							e.stopPropagation();
 							if (!canMutate) return;
+							menuOpen = false;
 							onDelete(entryPath.replace(/\/$/, ''), entry.name);
 						}}
 					>
