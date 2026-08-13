@@ -22,6 +22,8 @@
 	export let deleteModelHandler: Function = () => {};
 
 	export let onClose: Function = () => {};
+
+	const providerSupportsDelete = (provider = '') => provider === 'llama.cpp';
 </script>
 
 <Dropdown
@@ -66,7 +68,7 @@
 					<div class="flex items-center">{$i18n.t('Edit')}</div>
 				</button>
 
-				{#if $user?.role === 'admin' && model?.owned_by === 'ollama'}
+				{#if $user?.role === 'admin' && (model?.owned_by === 'ollama' || providerSupportsDelete(model?.provider))}
 					<button
 						type="button"
 						class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"

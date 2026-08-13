@@ -26,7 +26,7 @@
 	export let selectedValues: string[] = [];
 	export let compareEnabled = false;
 
-	export let unloadModelHandler: (modelValue: string) => void = () => {};
+	export let unloadModelHandler: (model: any) => void = () => {};
 	export let pinModelHandler: (modelId: string) => void = () => {};
 	export let deleteModelHandler: (model: any) => void = () => {};
 	export let selectionOnly = false;
@@ -43,6 +43,8 @@
 			toast.error($i18n.t('Failed to copy link'));
 		}
 	};
+
+	const formatSize = (size?: number) => (size ? `(${(size / 1024 ** 3).toFixed(1)}GB)` : '');
 
 	let showMenu = false;
 	$: isSelected = compareEnabled ? selectedValues.includes(item.value) : value === item.value;
@@ -125,6 +127,23 @@
 									class="line-clamp-1 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400"
 									>{item.model.ollama?.details?.parameter_size ?? ''}</span
 								>
+							</Tooltip>
+						</div>
+					{/if}
+				{:else if item.model.provider === 'lmstudio' || item.model.provider === 'llama.cpp'}
+					{@const parameterSize = item.model.params_string ?? item.model.details?.parameter_size ?? ''}
+					{@const quantization =
+						item.model.quantization?.name ?? item.model.details?.quantization_level ?? ''}
+					{@const size = item.model.size_bytes ?? item.model.size}
+					{#if parameterSize || quantization || size}
+						<div class="flex items-center translate-y-[0.5px]">
+							<Tooltip
+								content={`${quantization ? `${quantization} ` : ''}${formatSize(size)}`}
+								className="self-end"
+							>
+								<span class="line-clamp-1 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400">
+									{parameterSize || quantization || formatSize(size)}
+								</span>
 							</Tooltip>
 						</div>
 					{/if}
@@ -256,7 +275,7 @@
 					on:click={(e) => {
 						e.preventDefault();
 						e.stopPropagation();
-						unloadModelHandler(item.value);
+						unloadModelHandler(item.model);
 					}}
 				>
 					<ArrowUpTray className="size-3" />
