@@ -149,13 +149,14 @@ export function fileIconName(name: string, type: string = 'file'): string {
 		case 'rar':
 			return 'archive';
 		case 'docx':
+			return 'docx-logo';
 		case 'txt':
 			return 'page-text';
 		case 'xlsx':
 		case 'xls':
-			return 'table';
+			return 'xlsx-logo';
 		case 'pptx':
-			return 'page';
+			return 'pptx-logo';
 		default:
 			return 'empty-page';
 	}

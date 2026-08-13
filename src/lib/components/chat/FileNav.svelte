@@ -465,11 +465,14 @@
 		return isInsideFileRoot(path) ? asDirectoryPath(path) : fileRoot.path;
 	};
 
-	const applyCwd = (cwd: TerminalCwd | null) => {
+	const applyCwd = (cwd: TerminalCwd | null, preferredPath?: string) => {
 		const cwdPath = cwd?.cwd ? asDirectoryPath(cwd.cwd) : null;
 		const homePath = cwd?.home ? asDirectoryPath(cwd.home) : null;
+		const preferredDirectory = preferredPath ? asDirectoryPath(preferredPath) : null;
+		const pathForRoot =
+			preferredDirectory && preferredDirectory !== '/' ? preferredDirectory : cwdPath;
 		const homeRoot =
-			homePath && cwdPath && (cwdPath === homePath || cwdPath.startsWith(homePath))
+			homePath && pathForRoot && (pathForRoot === homePath || pathForRoot.startsWith(homePath))
 				? { path: homePath, label: 'Home' }
 				: undefined;
 		const rootPath = cwd?.root?.path ? asDirectoryPath(cwd.root.path) : null;
@@ -1137,18 +1140,20 @@
 		if (!handledDisplayFile && terminal) {
 			loading = true;
 
-			void (async () => {
-				// Discover server features on initial mount
-				const config = await getTerminalConfig(terminal.url, terminal.key);
-				terminalEnabled = config?.features?.terminal !== false;
+				void (async () => {
+					// Discover server features on initial mount
+					const config = await getTerminalConfig(terminal.url, terminal.key);
+					terminalEnabled = config?.features?.terminal !== false;
 
-				if (chatId || savedPath === '/') {
-					// Fetch session-specific cwd from the server (or global default for new chats)
-					savedPath = applyCwd(await getCwd(terminal.url, terminal.key, chatId ?? undefined));
-				}
-				savedPath = clampToFileRoot(savedPath);
-				loadDir(savedPath, { restoreTree: true });
-			})();
+					const serverCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
+					const serverPath = applyCwd(serverCwd, savedPath);
+					if (chatId || savedPath === '/') {
+						// Fetch session-specific cwd from the server (or global default for new chats)
+						savedPath = serverPath;
+					}
+					savedPath = clampToFileRoot(savedPath);
+					loadDir(savedPath, { restoreTree: true });
+				})();
 		}
 
 		mounted = true;
