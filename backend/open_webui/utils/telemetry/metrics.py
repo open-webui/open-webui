@@ -91,6 +91,24 @@ def _count_users_active_today(db_engine: Engine) -> Optional[int]:
         ).scalar()
 
 
+def _count_users_active_weekly(db_engine: Engine) -> Optional[int]:
+    """Return the number of users active within the last 7 days (sync)."""
+    seven_days_ago = int(time.time()) - (7 * 86400)
+    with Session(db_engine) as session:
+        return session.execute(
+            select(func.count()).select_from(User).filter(User.last_active_at >= seven_days_ago)
+        ).scalar()
+
+
+def _count_users_active_biweekly(db_engine: Engine) -> Optional[int]:
+    """Return the number of users active within the last 14 days (sync)."""
+    fourteen_days_ago = int(time.time()) - (14 * 86400)
+    with Session(db_engine) as session:
+        return session.execute(
+            select(func.count()).select_from(User).filter(User.last_active_at >= fourteen_days_ago)
+        ).scalar()
+
+
 def _build_meter_provider(resource: Resource) -> MeterProvider:
     """Return a configured MeterProvider."""
     headers = []
@@ -137,6 +155,12 @@ def _build_meter_provider(resource: Resource) -> MeterProvider:
         ),
         View(
             instrument_name='webui.users.active.today',
+        ),
+        View(
+            instrument_name='webui.users.active.weekly',
+        ),
+        View(
+            instrument_name='webui.users.active.biweekly',
         ),
     ]
 
@@ -201,6 +225,26 @@ def setup_metrics(app: FastAPI, resource: Resource, db_engine: Engine) -> None:
         except Exception:
             logger.debug('Failed to observe users active today', exc_info=True)
 
+    def observe_users_active_weekly(
+        options: metrics.CallbackOptions,
+    ) -> Iterable[metrics.Observation]:
+        try:
+            value = _count_users_active_weekly(db_engine)
+            if value is not None:
+                yield metrics.Observation(value=value)
+        except Exception:
+            logger.debug('Failed to observe weekly active users', exc_info=True)
+
+    def observe_users_active_biweekly(
+        options: metrics.CallbackOptions,
+    ) -> Iterable[metrics.Observation]:
+        try:
+            value = _count_users_active_biweekly(db_engine)
+            if value is not None:
+                yield metrics.Observation(value=value)
+        except Exception:
+            logger.debug('Failed to observe biweekly active users', exc_info=True)
+
     meter.create_observable_gauge(
         name='webui.users.total',
         description='Total number of registered users',
@@ -220,6 +264,20 @@ def setup_metrics(app: FastAPI, resource: Resource, db_engine: Engine) -> None:
         description='Number of users active since midnight today',
         unit='users',
         callbacks=[observe_users_active_today],
+    )
+
+    meter.create_observable_gauge(
+        name='webui.users.active.weekly',
+        description='Number of users active within the last 7 days',
+        unit='users',
+        callbacks=[observe_users_active_weekly],
+    )
+
+    meter.create_observable_gauge(
+        name='webui.users.active.biweekly',
+        description='Number of users active within the last 14 days',
+        unit='users',
+        callbacks=[observe_users_active_biweekly],
     )
 
     # FastAPI middleware
