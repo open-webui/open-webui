@@ -502,10 +502,17 @@
 			return;
 		}
 
-		const res = await resolveChatMessageToolCall(localStorage.token, $chatId, messageId, callId, 'answer', {
-			answers,
-			timed_out: timedOut
-		}).catch(async (error) => {
+		const res = await resolveChatMessageToolCall(
+			localStorage.token,
+			$chatId,
+			messageId,
+			callId,
+			'answer',
+			{
+				answers,
+				timed_out: timedOut
+			}
+		).catch(async (error) => {
 			toast.error(`${error}`);
 			await loadChat();
 		});

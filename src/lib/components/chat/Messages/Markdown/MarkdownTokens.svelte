@@ -316,11 +316,11 @@
 					{preview}
 					{compactPreview}
 					{editCodeBlock}
-										{onTaskClick}
-										{sourceIds}
-										{onSourceClick}
-										{onToolCallResolved}
-									/>
+					{onTaskClick}
+					{sourceIds}
+					{onSourceClick}
+					{onToolCallResolved}
+				/>
 			</blockquote>
 		{/if}
 	{:else if token.type === 'list'}

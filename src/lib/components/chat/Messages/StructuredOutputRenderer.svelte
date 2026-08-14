@@ -193,11 +193,11 @@
 							content={detailToken.text}
 							{done}
 							{save}
-								{preview}
-								{compactPreview}
-								{editCodeBlock}
-								{onToolCallResolved}
-							/>
+							{preview}
+							{compactPreview}
+							{editCodeBlock}
+							{onToolCallResolved}
+						/>
 					</div>
 				</div>
 			</Collapsible>
