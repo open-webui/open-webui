@@ -170,115 +170,73 @@
 </script>
 
 {#if show}
-	<section
-		class="my-2 rounded-2xl border border-gray-50 bg-white px-3.5 py-3 dark:border-gray-850 dark:bg-gray-900"
-	>
-		<div class="mb-3 flex items-center justify-between gap-3">
-			<div class="text-[0.6875rem] tracking-wide text-gray-500 dark:text-gray-400">
-				{$i18n.t('Assistant needs your input')}
-			</div>
-			<div class="shrink-0 text-right text-[0.6875rem] text-gray-500 dark:text-gray-400">
-				{$i18n.t('Question')}
-				{questionIndex + 1}
-				{$i18n.t('of')}
-				{questions.length}
-			</div>
-		</div>
-
-		<div class="space-y-2.5">
+	<section class="my-1 rounded-2xl bg-gray-50/70 px-3.5 py-3 dark:bg-white/[0.035]">
+		<div class="space-y-2">
 			{#if question}
 				{#key question.id}
-					<div class="space-y-2.5">
+					<div class="space-y-2">
 						<div>
-							<div class="text-sm font-medium tracking-[-0.01em] text-gray-900 dark:text-gray-100">
-								{question.header}
+							<div class="flex items-center justify-between gap-3">
+								<div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+									{question.header}
+								</div>
+								{#if questions.length > 1}
+									<div
+										class="shrink-0 text-right text-[0.6875rem] text-gray-500 dark:text-gray-400"
+									>
+										{questionIndex + 1}/{questions.length}
+									</div>
+								{/if}
 							</div>
-							<div class="mt-1 text-xs leading-relaxed text-gray-600 dark:text-gray-300">
+							<div class="mt-0.5 text-xs leading-relaxed text-gray-600 dark:text-gray-300">
 								{question.question}
 							</div>
 						</div>
 
-						<div class="space-y-0.5">
-							{#each question.options || [] as option, optionIndex}
-								<!-- svelte-ignore a11y_click_events_have_key_events -->
-								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-								<label
-									class="flex cursor-pointer items-start gap-2.5 rounded-2xl px-2.5 py-2 transition-colors {isSelectedOption(
-										question,
-										optionIndex
-									)
-										? 'bg-gray-50 shadow-sm dark:bg-white/[0.08]'
-										: 'hover:bg-gray-50/80 dark:hover:bg-white/[0.05]'}"
-									on:click={() => isSelectedOption(question, optionIndex) && advance()}
-								>
-									<input
-										class="sr-only"
-										type="radio"
-										name={question.id}
-										value={option.label}
-										checked={isSelectedOption(question, optionIndex)}
-										on:change={() => selectOption(question, option, optionIndex)}
-									/>
-									<span
-										class="mt-1 flex size-3.5 shrink-0 items-center justify-center rounded-full border {isSelectedOption(
+						<div class="space-y-1">
+							<div class="space-y-0.5">
+								{#each question.options || [] as option, optionIndex}
+									<button
+										type="button"
+										class="group flex w-full min-w-0 items-baseline gap-2 rounded-lg py-1.5 text-left transition-colors {isSelectedOption(
 											question,
 											optionIndex
 										)
-											? 'border-gray-900 dark:border-white'
-											: 'border-gray-300 dark:border-white/25'}"
+											? 'text-gray-950 dark:text-white'
+											: 'text-gray-700 hover:text-gray-950 dark:text-gray-300 dark:hover:text-white'}"
+										on:click={() => selectOption(question, option, optionIndex)}
 									>
-										{#if isSelectedOption(question, optionIndex)}
-											<span class="size-1.5 rounded-full bg-gray-900 dark:bg-white"></span>
-										{/if}
-									</span>
-									<span class="min-w-0 text-xs">
-										<span class="text-gray-800 dark:text-gray-100">{option.label}</span>
+										<span class="min-w-0 shrink-0 text-xs">{option.label}</span>
+										<span
+											class="min-w-0 text-xs leading-relaxed text-gray-500 transition-colors group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"
+										>
+											{option.description}
+										</span>
 										{#if optionIndex === 0}
-											<span class="ml-1.5 text-[0.625rem] text-gray-400 dark:text-gray-500">
+											<span
+												class="shrink-0 rounded-full bg-gray-200/70 px-1.5 py-0.5 text-[0.625rem] text-gray-500 dark:bg-white/[0.08] dark:text-gray-400"
+											>
 												{$i18n.t('Recommended')}
 											</span>
 										{/if}
-										<span class="mt-0.5 block leading-relaxed text-gray-500 dark:text-gray-400">
-											{option.description}
-										</span>
-									</span>
-								</label>
-							{/each}
+									</button>
+								{/each}
+							</div>
 
 							{#if questionAllowsOther(question)}
-								<label
-									class="flex cursor-pointer items-center gap-2.5 rounded-2xl px-2.5 py-2 text-xs transition-colors {isSelectedOther(
-										question
-									)
-										? 'bg-gray-50 shadow-sm dark:bg-white/[0.08]'
-										: 'hover:bg-gray-50/80 dark:hover:bg-white/[0.05]'}"
-								>
-									<input
-										class="sr-only"
-										type="radio"
-										name={question.id}
-										value="__other__"
-										checked={isSelectedOther(question)}
-										on:change={() => selectOther(question)}
-									/>
-									<span
-										class="flex size-3.5 shrink-0 items-center justify-center rounded-full border {isSelectedOther(
-											question
-										)
-											? 'border-gray-900 dark:border-white'
-											: 'border-gray-300 dark:border-white/25'}"
+								<div class="flex min-w-0 items-baseline gap-2 rounded-lg py-1.5">
+									<div
+										class="shrink-0 text-xs {isSelectedOther(question)
+											? 'text-gray-950 dark:text-white'
+											: 'text-gray-700 dark:text-gray-300'}"
 									>
-										{#if selectedAnswer?.type === 'other'}
-											<span class="size-1.5 rounded-full bg-gray-900 dark:bg-white"></span>
-										{/if}
-									</span>
-									<span class="text-gray-700 dark:text-gray-200">{$i18n.t('Other')}</span>
-								</label>
-								{#if selectedAnswer?.type === 'other'}
+										{$i18n.t('Other')}
+									</div>
 									<input
-										class="w-full rounded-2xl border border-gray-100 bg-white px-3 py-2 text-xs text-gray-800 outline-hidden placeholder:text-gray-400 focus:border-gray-200 dark:border-gray-850 dark:bg-gray-950 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-gray-700"
+										class="min-w-0 flex-1 bg-transparent text-xs text-gray-800 outline-hidden placeholder:text-gray-400 dark:text-gray-100 dark:placeholder:text-gray-500"
 										placeholder={$i18n.t('Type your answer')}
 										value={otherText(question)}
+										on:focus={() => selectOther(question)}
 										on:input={(event) =>
 											updateOther(question, (event.currentTarget as HTMLInputElement).value)}
 										on:keydown={(event) => {
@@ -288,25 +246,25 @@
 											}
 										}}
 									/>
-								{/if}
+								</div>
 							{/if}
 						</div>
 					</div>
 				{/key}
 			{/if}
 
-			<div class="flex items-center justify-between gap-2 pt-0.5">
+			<div class="flex items-center justify-between gap-2">
 				<div class="flex items-center gap-1.5">
 					<button
 						type="button"
-						class="rounded-full px-3 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-100"
+						class="rounded-full py-1 pr-2.5 text-xs text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
 						on:click={cancel}
 					>
 						{$i18n.t('Cancel')}
 					</button>
 					<button
 						type="button"
-						class="rounded-full px-3 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 disabled:opacity-30 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-100"
+						class="rounded-full px-2.5 py-1 text-xs text-gray-500 transition-colors hover:text-gray-800 disabled:opacity-30 dark:text-gray-400 dark:hover:text-gray-100"
 						disabled={questionIndex === 0}
 						on:click={() => (questionIndex -= 1)}
 					>
@@ -316,7 +274,7 @@
 				{#if questionIndex < questions.length - 1}
 					<button
 						type="button"
-						class="rounded-full bg-gray-900 px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 active:scale-[0.98] dark:bg-white dark:text-black dark:hover:bg-white/90"
+						class="rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white transition hover:opacity-90 active:scale-[0.98] dark:bg-white dark:text-black"
 						on:click={() => (questionIndex += 1)}
 					>
 						{$i18n.t('Next')}
@@ -324,7 +282,7 @@
 				{:else}
 					<button
 						type="button"
-						class="rounded-full bg-gray-900 px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black dark:hover:bg-white/90"
+						class="rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white transition hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black"
 						disabled={!complete}
 						on:click={() => submit()}
 					>
