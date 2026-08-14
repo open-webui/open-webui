@@ -2982,6 +2982,261 @@ async def build_chat_response_context(request, form_data, user, model, metadata,
     }
 
 
+async def execute_tool_call_for_output(request, form_data, user, metadata, event_caller, event_emitter, tool_call):
+    tools = metadata.get('tools', {})
+    name = tool_call.get('function', {}).get('name', '')
+    tool_args = tool_call.get('function', {}).get('arguments', '{}')
+    params = {}
+    if tool_args and tool_args.strip():
+        try:
+            params = JSONCodec.loads(tool_args)
+        except Exception:
+            try:
+                params = ast.literal_eval(tool_args)
+            except Exception as e:
+                log.debug(e)
+                return {
+                    'tool_call_id': tool_call.get('id', ''),
+                    'content': (
+                        'Error: Tool call arguments could not be parsed. '
+                        'The model generated malformed or incomplete JSON.'
+                    ),
+                }
+    tool_call.setdefault('function', {})['arguments'] = JSONCodec.dumps(params)
+
+    tool = tools.get(name)
+    if not tool:
+        return {'tool_call_id': tool_call.get('id', ''), 'content': f'Error: Tool "{name}" not found.'}
+
+    spec = tool.get('spec', {})
+    tool_type = tool.get('type', '')
+    direct_tool = tool.get('direct', False)
+    allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
+    params = {key: value for key, value in params.items() if key in allowed_params}
+
+    try:
+        if direct_tool:
+            if not event_caller:
+                result = 'Error: Browser session is not connected for this direct tool.'
+            else:
+                result = await event_caller(
+                    {
+                        'type': 'execute:tool',
+                        'data': {
+                            'id': str(uuid4()),
+                            'name': name,
+                            'params': params,
+                            'server': tool.get('server', {}),
+                            'session_id': metadata.get('session_id'),
+                        },
+                    }
+                )
+        else:
+            function = await get_updated_tool_function(
+                function=tool['callable'],
+                extra_params={
+                    '__messages__': form_data.get('messages', []),
+                    '__files__': metadata.get('files', []),
+                },
+            )
+            result = await function(**params)
+    except Exception as e:
+        result = str(e)
+
+    result, files, embeds = await process_tool_result(
+        request,
+        name,
+        result,
+        tool_type,
+        direct_tool,
+        metadata,
+        user,
+    )
+
+    await terminal_event_handler(name, params, result, event_emitter)
+
+    return {
+        'tool_call_id': tool_call.get('id', ''),
+        'content': str(result) if result else '',
+        **({'files': files} if files else {}),
+        **({'embeds': embeds} if embeds else {}),
+    }
+
+
+def append_tool_result_output(output: list[dict], result: dict) -> None:
+    output_parts = [{'type': 'input_text', 'text': result.get('content', '')}]
+    display_files = []
+    for file_item in result.get('files', []):
+        if file_item.get('type') == 'image' and file_item.get('url', '').startswith('data:'):
+            output_parts.append({'type': 'input_image', 'image_url': file_item['url']})
+        else:
+            display_files.append(file_item)
+
+    output.append(
+        {
+            'type': 'function_call_output',
+            'id': output_id('fco'),
+            'call_id': result.get('tool_call_id', ''),
+            'output': output_parts,
+            'status': 'completed',
+            **({'files': display_files} if display_files else {}),
+            **({'embeds': result.get('embeds')} if result.get('embeds') else {}),
+        }
+    )
+
+
+async def drain_approved_tool_calls(request, form_data, user, model, metadata) -> bool:
+    chat_id = metadata.get('chat_id')
+    message_id = metadata.get('message_id') or metadata.get('assistant_message_id')
+    if not is_saved_chat_id(chat_id) or not message_id:
+        return False
+
+    message = await Chats.get_message_by_id_and_message_id(chat_id, message_id)
+    output = message.get('output') if message else None
+    if not isinstance(output, list):
+        return False
+
+    result_call_ids = {
+        item.get('call_id') for item in output if item.get('type') == 'function_call_output' and item.get('call_id')
+    }
+    approved_calls = [
+        item
+        for item in output
+        if item.get('type') == 'function_call'
+        and item.get('call_id')
+        and item.get('status') == 'queued'
+        and item.get('approved') is True
+        and item.get('call_id') not in result_call_ids
+    ]
+    if not approved_calls:
+        return False
+
+    event_emitter, event_caller = await get_event_emitter_and_caller(metadata)
+    changed = False
+    for item in approved_calls:
+        tool_call = {
+            'id': item.get('call_id', ''),
+            'type': 'function',
+            'function': {
+                'name': item.get('name', ''),
+                'arguments': item.get('arguments', '{}'),
+            },
+        }
+        result = await execute_tool_call_for_output(
+            request,
+            form_data,
+            user,
+            metadata,
+            event_caller,
+            event_emitter,
+            tool_call,
+        )
+        item['status'] = 'completed'
+        item['arguments'] = tool_call.get('function', {}).get('arguments', '{}')
+        append_tool_result_output(output, result)
+        changed = True
+
+    if changed:
+        result_call_ids = {
+            item.get('call_id') for item in output if item.get('type') == 'function_call_output' and item.get('call_id')
+        }
+        paused = any(
+            item.get('type') == 'function_call'
+            and item.get('call_id')
+            and item.get('status') in {'pending', 'queued', 'requires_approval'}
+            and item.get('call_id') not in result_call_ids
+            for item in output
+        )
+        if not paused:
+            output.append(
+                {
+                    'type': 'message',
+                    'id': output_id('msg'),
+                    'status': 'in_progress',
+                    'role': 'assistant',
+                    'content': [{'type': 'output_text', 'text': ''}],
+                }
+            )
+
+        await Chats.upsert_message_to_chat_by_id_and_message_id(
+            chat_id,
+            message_id,
+            {'done': False, 'output': output},
+            touch=False,
+        )
+        if event_emitter:
+            await event_emitter(
+                {
+                    'type': 'chat:completion',
+                    'data': {
+                        'done': False,
+                        'output': output,
+                    },
+                }
+            )
+
+        db_messages = await load_messages_from_db(chat_id, metadata.get('user_message_id'))
+        if db_messages:
+            assistant_message = await Chats.get_message_by_id_and_message_id(chat_id, message_id)
+            if assistant_message:
+                db_messages.append(
+                    {
+                        k: v
+                        for k, v in assistant_message.items()
+                        if k in ('id', 'role', 'content', 'output', 'files', 'contextSummary', 'usage')
+                    }
+                )
+            form_data['messages'] = process_messages_with_output(
+                db_messages,
+                reasoning_format=get_reasoning_format(model),
+            )
+            form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
+
+        return paused
+
+    return False
+
+
+async def pause_for_tool_approval(chat_id: str, message_id: str, output: list[dict], form_data: dict, metadata: dict):
+    result_call_ids = {
+        item.get('call_id') for item in output if item.get('type') == 'function_call_output' and item.get('call_id')
+    }
+    for item in output:
+        if item.get('type') == 'function_call' and not item.get('call_id') and item.get('id'):
+            item['call_id'] = item['id']
+
+        if (
+            item.get('type') == 'function_call'
+            and item.get('call_id')
+            and item.get('call_id') not in result_call_ids
+            and item.get('status') != 'rejected'
+        ):
+            item['status'] = 'pending'
+
+    await Chats.upsert_message_to_chat_by_id_and_message_id(
+        chat_id,
+        message_id,
+        {
+            'done': False,
+            'output': output,
+            'meta': {
+                **(metadata.get('tool_approval') or {}),
+                'session_id': metadata.get('session_id'),
+                'tool_ids': metadata.get('tool_ids') or [],
+                'skill_ids': metadata.get('skill_ids') or [],
+                'terminal_id': metadata.get('terminal_id'),
+                'tool_servers': metadata.get('tool_servers'),
+                'filter_ids': metadata.get('filter_ids') or [],
+                'features': metadata.get('features') or {},
+                'variables': metadata.get('variables') or {},
+                'files': metadata.get('files') or [],
+                'params': metadata.get('params') or {},
+            },
+        },
+        touch=False,
+    )
+
+
 def get_response_data(response):
     if isinstance(response, list) and len(response) == 1:
         # If the response is a single-item list, unwrap it #17213
@@ -4032,7 +4287,20 @@ async def streaming_chat_response_handler(response, ctx):
 
             # Initialize output: use existing from message if continuing, else create new
             existing_output = message.get('output') if message else None
-            if existing_output:
+            prior_output = []
+            if existing_output and metadata.get('assistant_message_id'):
+                prior_output = list(existing_output)
+                if (
+                    prior_output
+                    and prior_output[-1].get('type') == 'message'
+                    and prior_output[-1].get('status') == 'in_progress'
+                ):
+                    msg_parts = prior_output[-1].get('content', [])
+                    if not msg_parts or (len(msg_parts) == 1 and not msg_parts[0].get('text', '').strip()):
+                        prior_output.pop()
+                output = []
+                content_parts = []
+            elif existing_output:
                 output = existing_output
             else:
                 # Only create an initial message item if there is content to initialize with
@@ -4050,7 +4318,6 @@ async def streaming_chat_response_handler(response, ctx):
                     output = []
 
             usage = None
-            prior_output = []
             last_response_id = None
 
             def full_output():
@@ -4900,6 +5167,29 @@ async def streaming_chat_response_handler(response, ctx):
                                 }
                             )
 
+                    tool_approval_mode = metadata.get('params', {}).get('tool_approval_mode', 'full')
+                    if (
+                        tool_approval_mode == 'ask'
+                        and is_saved_chat_id(metadata.get('chat_id'))
+                        and metadata.get('message_id')
+                    ):
+                        await pause_for_tool_approval(
+                            metadata['chat_id'],
+                            metadata['message_id'],
+                            output,
+                            form_data,
+                            metadata,
+                        )
+                        await event_emitter(
+                            {
+                                'type': 'chat:completion',
+                                'data': {
+                                    'output': full_output(),
+                                },
+                            }
+                        )
+                        return
+
                     await event_emitter(
                         {
                             'type': 'chat:completion',
@@ -5293,7 +5583,7 @@ async def streaming_chat_response_handler(response, ctx):
                             {
                                 'type': 'chat:completion',
                                 'data': {
-                                    'output': output,
+                                    'output': full_output(),
                                 },
                             }
                         )
@@ -5420,7 +5710,7 @@ async def streaming_chat_response_handler(response, ctx):
                             {
                                 'type': 'chat:completion',
                                 'data': {
-                                    'output': output,
+                                    'output': full_output(),
                                 },
                             }
                         )
@@ -5464,10 +5754,11 @@ async def streaming_chat_response_handler(response, ctx):
                     if item.get('status') == 'in_progress':
                         item['status'] = 'completed'
 
+                current_output = full_output()
                 title = await Chats.get_chat_title_by_id(metadata['chat_id']) if save_to_chat else ''
                 data = {
                     'done': True,
-                    'output': output,
+                    'output': current_output,
                     'title': title,
                     **({'usage': usage} if usage else {}),
                 }
@@ -5480,7 +5771,7 @@ async def streaming_chat_response_handler(response, ctx):
                             metadata['message_id'],
                             {
                                 'done': True,
-                                'output': output,
+                                'output': current_output,
                                 **({'usage': usage} if usage else {}),
                             },
                         )
@@ -5497,7 +5788,7 @@ async def streaming_chat_response_handler(response, ctx):
                             {'done': True},
                         )
 
-                await publish_chat_finished_event(request, user, metadata, title, ''.join(content_parts), output)
+                await publish_chat_finished_event(request, user, metadata, title, ''.join(content_parts), current_output)
 
                 await event_emitter(
                     {
@@ -5507,8 +5798,8 @@ async def streaming_chat_response_handler(response, ctx):
                 )
 
                 ctx['assistant_message'] = {
-                    'content': ''.join(content_parts) or get_output_text(output),
-                    'output': output,
+                    'content': ''.join(content_parts) or get_output_text(current_output),
+                    'output': current_output,
                     **({'usage': usage} if usage else {}),
                 }
                 await outlet_filter_handler(ctx)
@@ -5535,7 +5826,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 metadata['message_id'],
                                 {
                                     'done': True,
-                                    'output': output,
+                                    'output': full_output(),
                                 },
                             )
                         else:

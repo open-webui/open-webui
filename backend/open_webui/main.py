@@ -238,6 +238,7 @@ from open_webui.utils.logger import start_logger
 from open_webui.utils.middleware import (
     background_tasks_handler,
     build_chat_response_context,
+    drain_approved_tool_calls,
     process_chat_payload,
     process_chat_response,
 )
@@ -265,6 +266,11 @@ from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.redis import get_redis_client
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.session_pool import cleanup_response, get_session, stream_wrapper
+from open_webui.utils.tool_approval import (
+    ResolveToolCallForm,
+    build_tool_approval_resume_payload,
+    resolve_tool_call_output,
+)
 from open_webui.utils.tools import set_terminal_servers, set_tool_servers
 
 if SAFE_MODE:
@@ -1225,6 +1231,12 @@ async def chat_completion(
                     or model_info_params.get('function_calling')
                     or 'native'
                 ),
+                'tool_approval_mode': (
+                    form_data.get('params', {}).get('tool_approval_mode')
+                    if await Config.get('chat.tool_permissions.enable', False)
+                    else 'full'
+                )
+                or 'full',
             },
         }
 
@@ -1576,6 +1588,9 @@ async def chat_completion(
         try:
             form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
 
+            if await drain_approved_tool_calls(request, form_data, user, model, metadata):
+                return {'status': True, 'chat_id': metadata.get('chat_id'), 'paused': True}
+
             response = await chat_completion_handler(request, form_data, user)
 
             # When the upstream provider returns an error (e.g. HTTP 400
@@ -1816,6 +1831,34 @@ async def chat_completion(
 # Alias for chat_completion (Legacy)
 generate_chat_completions = chat_completion
 generate_chat_completion = chat_completion
+
+@app.post('/api/v1/chats/{id}/messages/{message_id}/resolve')
+async def resolve_chat_message_tool_call(
+    request: Request,
+    id: str,
+    message_id: str,
+    form_data: ResolveToolCallForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    resolution = await resolve_tool_call_output(id, message_id, form_data, user, db=db)
+    if form_data.action != 'approve' and resolution['paused']:
+        return {
+            'status': True,
+            'chat_id': id,
+            'message_id': message_id,
+            'paused': True,
+        }
+
+    payload = await build_tool_approval_resume_payload(id, message_id, chat=resolution['chat'])
+    result = await chat_completion(request, payload, user)
+    return {
+        'status': True,
+        'chat_id': id,
+        'message_id': message_id,
+        **(result if isinstance(result, dict) else {}),
+    }
+
 
 # Expose as app.state so internal callers (e.g. automations) can
 # use the full pipeline without importing from main.py (avoids circular deps).
@@ -2134,6 +2177,7 @@ async def get_app_config(request: Request):
         'automations.enable',
         'notes.enable',
         'chat.context_compaction.enable',
+        'chat.tool_permissions.enable',
         'web.search.enable',
         'web.search.confirmation.enable',
         'web.search.confirmation.content',
@@ -2211,6 +2255,7 @@ async def get_app_config(request: Request):
                     'enable_automations': config.get('automations.enable'),
                     'enable_notes': config.get('notes.enable'),
                     'enable_context_compaction': config.get('chat.context_compaction.enable'),
+                    'enable_tool_permissions': config.get('chat.tool_permissions.enable'),
                     'enable_web_search': config.get('web.search.enable'),
                     'enable_web_search_confirmation': config.get('web.search.confirmation.enable'),
                     'web_search_confirmation_content': config.get('web.search.confirmation.content'),

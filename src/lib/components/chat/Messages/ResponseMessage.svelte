@@ -815,6 +815,8 @@
 								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 								<ContentRenderer
 									id={`${chatId}-${message.id}`}
+									{chatId}
+									messageId={message.id}
 									content={message.content}
 									output={message.output}
 									sources={message.sources}

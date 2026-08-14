@@ -36,6 +36,8 @@
 	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
 
 	export let id = '';
+	export let chatId = '';
+	export let messageId = '';
 	export let content;
 	export let done = true;
 	export let model = null;
@@ -101,6 +103,8 @@
 	<MarkdownTokens
 		{tokens}
 		{id}
+		{chatId}
+		{messageId}
 		{done}
 		{save}
 		{preview}

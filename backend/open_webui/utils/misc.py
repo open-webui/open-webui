@@ -293,9 +293,17 @@ def convert_output_to_messages(
     pending_reasoning = []  # Only populated when reasoning_format == 'reasoning_content'
     pending_reasoning_details = []
     pending_tool_image_urls = []
-    function_call_ids = {
-        item.get('call_id') for item in output if item.get('type') == 'function_call' and item.get('call_id')
+    completed_call_ids = {
+        item.get('call_id')
+        for item in output
+        if item.get('type') == 'function_call'
+        and item.get('call_id')
+        and item.get('status') in {'completed', 'rejected'}
     }
+    result_call_ids = {
+        item.get('call_id') for item in output if item.get('type') == 'function_call_output' and item.get('call_id')
+    }
+    function_call_ids = completed_call_ids & result_call_ids
 
     def flush_pending():
         nonlocal pending_content, pending_tool_calls, pending_reasoning, pending_reasoning_details
@@ -355,6 +363,9 @@ def convert_output_to_messages(
                 pending_content.append(text)
 
         elif item_type == 'function_call':
+            if item.get('call_id') not in function_call_ids:
+                continue
+
             # Collect tool calls to batch into assistant message
             arguments = item.get('arguments', '{}')
             # Ensure arguments is always a JSON string
@@ -372,6 +383,9 @@ def convert_output_to_messages(
             )
 
         elif item_type == 'function_call_output':
+            if item.get('call_id') not in function_call_ids:
+                continue
+
             # Flush any pending content/tool_calls before adding tool result
             flush_pending()
 

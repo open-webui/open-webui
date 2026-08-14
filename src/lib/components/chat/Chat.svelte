@@ -414,6 +414,15 @@
 	let loadedChatIdProp = '';
 	let currentDraftKey = '';
 
+	$: toolApprovalMode = params?.tool_approval_mode === 'ask' ? 'ask' : 'full';
+
+	const handleToolApprovalModeChange = (mode) => {
+		params = {
+			...params,
+			tool_approval_mode: mode === 'ask' ? 'ask' : 'full'
+		};
+	};
+
 	const mergeChatVariableSchemas = (modelIds = [], availableModels = []) => {
 		const byKey: Record<string, any> = {};
 		const conflicts: any[] = [];
@@ -619,6 +628,9 @@
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
+						if (input.toolApprovalMode) {
+							handleToolApprovalModeChange(input.toolApprovalMode);
+						}
 					}
 				} catch (e) {}
 			} else {
@@ -1396,6 +1408,9 @@
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
+						if (input.toolApprovalMode) {
+							handleToolApprovalModeChange(input.toolApprovalMode);
+						}
 					}
 				} catch (e) {}
 			}
@@ -4168,7 +4183,8 @@
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
 										forkHandler={handleForkChat}
-										toolServers={$toolServers}
+										{toolApprovalMode}
+										onToolApprovalModeChange={handleToolApprovalModeChange}
 										{generating}
 										{stopResponse}
 										{createMessagePair}
@@ -4271,7 +4287,8 @@
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
 										forkHandler={handleForkChat}
-										toolServers={$toolServers}
+										{toolApprovalMode}
+										onToolApprovalModeChange={handleToolApprovalModeChange}
 										{generating}
 										{stopResponse}
 										{createMessagePair}
@@ -4328,8 +4345,9 @@
 									bind:atSelectedModel
 									bind:showCommands
 									bind:dragged
+									{toolApprovalMode}
+									onToolApprovalModeChange={handleToolApprovalModeChange}
 									{pendingOAuthTools}
-									toolServers={$toolServers}
 									{stopResponse}
 									{createMessagePair}
 									{onSelect}

@@ -6,7 +6,7 @@
 	import StructuredOutputRenderer from './StructuredOutputRenderer.svelte';
 	import {
 		artifactCode,
-		chatId,
+		chatId as currentChatId,
 		mobile,
 		settings,
 		showArtifacts,
@@ -68,6 +68,7 @@
 	};
 
 	export let id;
+	export let chatId = '';
 	export let content;
 	/** @type {import('./structuredOutput').OutputItem[]} */
 	export let output = [];
@@ -153,7 +154,7 @@
 				hasClosingCodeFence(raw) &&
 				!autoOpenedArtifactIds.has(artifactId) &&
 				!$mobile &&
-				$chatId
+				$currentChatId
 			) {
 				autoOpenedArtifactIds.add(artifactId);
 				await tick();
@@ -283,6 +284,8 @@
 	{#if output?.length}
 		<StructuredOutputRenderer
 			{id}
+			{chatId}
+			{messageId}
 			{output}
 			{model}
 			{save}
@@ -304,6 +307,8 @@
 		<div class="markdown-prose">
 			<Markdown
 				{id}
+				{chatId}
+				{messageId}
 				content={formatMessageContent(content)}
 				{model}
 				{save}
@@ -326,7 +331,16 @@
 		{#if extracted.detailsContent}
 			<!-- Render structural blocks (tool calls, reasoning, etc.) through Markdown -->
 			<div class="markdown-prose">
-				<Markdown {id} content={extracted.detailsContent} {preview} {compactPreview} {done} />
+				<Markdown
+					{id}
+					{chatId}
+					{messageId}
+					content={extracted.detailsContent}
+					{save}
+					{preview}
+					{compactPreview}
+					{done}
+				/>
 			</div>
 		{/if}
 		{#if extracted.plainContent}

@@ -38,6 +38,7 @@ export type OutputDetailToken = {
 		files?: string;
 		embeds?: string;
 		output?: string;
+		status?: string;
 	};
 };
 
@@ -124,8 +125,9 @@ function getToolResultText(item?: OutputItem): string {
 }
 
 function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string, OutputItem>) {
-	const callId = item.call_id ?? '';
+	const callId = item.call_id ?? item.id ?? '';
 	const resultItem = toolOutputByCallId[callId];
+	const status = String(item.status ?? '');
 	const isDone = isDoneStatus(item.status) || !!resultItem;
 	let name = item.name ?? '';
 	if (name === 'delegate_task') {
@@ -143,13 +145,14 @@ function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string,
 	}
 
 	return {
-		summary: isDone ? 'Tool Executed' : 'Executing...',
+		summary: status === 'pending' ? 'Tool Approval Needed' : isDone ? 'Tool Executed' : 'Executing...',
 		text: getToolResultText(resultItem),
 		attributes: {
 			type: 'tool_calls',
 			id: callId,
 			name,
 			done: isDone ? 'true' : 'false',
+			status,
 			arguments: stringifyAttribute(item.arguments ?? ''),
 			files: stringifyAttribute(resultItem?.files),
 			embeds: stringifyAttribute(resultItem?.embeds)

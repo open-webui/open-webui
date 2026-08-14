@@ -1035,6 +1035,10 @@ class ChatTable:
         return history_messages
 
     async def get_message_by_id_and_message_id(self, id: str, message_id: str) -> dict | None:
+        messages_map = await ChatMessages.get_messages_map_by_chat_id(id)
+        if messages_map and message_id in messages_map:
+            return messages_map[message_id]
+
         chat = await self.get_chat_by_id(id)
         if chat is None:
             return None

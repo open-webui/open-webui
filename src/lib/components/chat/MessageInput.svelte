@@ -170,6 +170,8 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+	export let toolApprovalMode = 'full';
+	export let onToolApprovalModeChange: Function = () => {};
 
 	export let pendingOAuthTools = [];
 
@@ -225,7 +227,8 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled
+		codeInterpreterEnabled,
+		toolApprovalMode
 	});
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
@@ -2045,6 +2048,8 @@
 										bind:files
 										selectedModels={selectedModelIds}
 										{fileUploadCapableModels}
+										{toolApprovalMode}
+										{onToolApprovalModeChange}
 										{screenCaptureHandler}
 										{inputFilesHandler}
 										uploadFilesHandler={() => {

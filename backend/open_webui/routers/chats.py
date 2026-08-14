@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import logging
-from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
@@ -58,6 +56,7 @@ CHAT_CONFIG_KEYS = {
     'CONTEXT_COMPACTION_TOKEN_CAP': 'chat.context_compaction.token_cap',
     'CONTEXT_COMPACTION_RETENTION_PERCENTAGE': 'chat.context_compaction.retention_percentage',
     'CONTEXT_COMPACTION_PROMPT_TEMPLATE': 'chat.context_compaction.prompt_template',
+    'ENABLE_TOOL_PERMISSIONS': 'chat.tool_permissions.enable',
 }
 
 
@@ -140,6 +139,7 @@ class ChatConfigForm(BaseModel):
     CONTEXT_COMPACTION_TOKEN_CAP: int | None = None
     CONTEXT_COMPACTION_RETENTION_PERCENTAGE: int = 40
     CONTEXT_COMPACTION_PROMPT_TEMPLATE: str
+    ENABLE_TOOL_PERMISSIONS: bool = False
 
 
 class CompactChatForm(BaseModel):
