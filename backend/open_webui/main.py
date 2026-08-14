@@ -1851,14 +1851,6 @@ async def resolve_chat_message_tool_call(
     db: AsyncSession = Depends(get_async_session),
 ):
     resolution = await resolve_tool_call_output(id, message_id, form_data, user, db=db)
-    if form_data.action != 'approve' and resolution['paused']:
-        return {
-            'status': True,
-            'chat_id': id,
-            'message_id': message_id,
-            'paused': True,
-        }
-
     payload = await build_tool_approval_resume_payload(id, message_id, chat=resolution['chat'])
     result = await chat_completion(request, payload, user)
     return {
@@ -2119,6 +2111,7 @@ async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
 @app.post('/api/tasks/chat/{chat_id:path}/stop')
 async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
     socket_id = get_temporary_chat_session_id(chat_id)
+    chat = None
     if socket_id:
         owner_id = get_user_id_from_session_pool(socket_id)
         if owner_id != user.id and user.role != 'admin':
@@ -2128,6 +2121,47 @@ async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
         if chat is None or (chat.user_id != user.id and user.role != 'admin'):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
     result = await stop_item_tasks(request.app.state.redis, chat_id)
+
+    if not socket_id and str(result.get('message', '')).startswith('No tasks found'):
+        messages_map = await Chats.get_messages_map_by_chat_id(chat_id) or {}
+        for message_id, message in messages_map.items():
+            if message.get('role') != 'assistant' or message.get('done') is not False:
+                continue
+
+            output = message.get('output')
+            if isinstance(output, list):
+                for item in output:
+                    if item.get('type') == 'function_call' and item.get('status') in {
+                        'pending',
+                        'queued',
+                        'requires_approval',
+                    }:
+                        item['status'] = 'rejected'
+                        item.pop('approved', None)
+
+            await Chats.upsert_message_to_chat_by_id_and_message_id(
+                chat_id,
+                message_id,
+                {'done': True, **({'output': output} if isinstance(output, list) else {})},
+                touch=False,
+            )
+            result = {
+                'status': True,
+                'message': 'Finalized pending approval message.',
+            }
+
+            event_emitter = await get_event_emitter(
+                {
+                    'user_id': chat.user_id,
+                    'chat_id': chat_id,
+                    'message_id': message_id,
+                },
+                update_db=False,
+            )
+            if event_emitter:
+                await event_emitter({'type': 'chat:completion', 'data': {'done': True, 'output': output}})
+                await event_emitter({'type': 'chat:tasks:cancel'})
+
     return result
 
 

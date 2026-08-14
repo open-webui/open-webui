@@ -2063,16 +2063,6 @@ def process_messages_with_output(
     return processed
 
 
-def strip_compaction_fields(messages: list[dict]) -> list[dict]:
-    stripped = []
-    for message in messages:
-        clean = dict(message)
-        for key in ('id', 'files', 'output', 'contextSummary', 'context_summary', 'usage'):
-            clean.pop(key, None)
-        stripped.append(clean)
-    return stripped
-
-
 def sanitize_tool_pairs(messages: list[dict]) -> list[dict]:
     tool_result_ids = {
         message.get('tool_call_id')
@@ -2330,8 +2320,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
         except Exception:
             log.exception('Context compaction failed; continuing with full chat history')
-
-    form_data['messages'] = strip_compaction_fields(form_data.get('messages', []))
 
     # Process messages with OR-aligned output items for clean LLM messages
     form_data['messages'] = process_messages_with_output(
@@ -3109,6 +3097,20 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
         and item.get('call_id') not in result_call_ids
     ]
     if not approved_calls:
+        if metadata.get('params', {}).get('tool_approval_mode', 'full') == 'ask' and any(
+            item.get('type') == 'function_call'
+            and item.get('name') != 'ask_user'
+            and (item.get('call_id') or item.get('id'))
+            and item.get('status') == 'queued'
+            and item.get('approved') is not True
+            and (item.get('call_id') or item.get('id')) not in result_call_ids
+            for item in output
+        ):
+            event_emitter, _ = await get_event_emitter_and_caller(metadata)
+            await pause_for_tool_approval(chat_id, message_id, output, form_data, metadata)
+            if event_emitter:
+                await event_emitter({'type': 'chat:completion', 'data': {'done': False, 'output': output}})
+            return True
         return False
 
     event_emitter, event_caller = await get_event_emitter_and_caller(metadata)
@@ -3146,6 +3148,21 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
         result_call_ids = {
             item.get('call_id') for item in output if item.get('type') == 'function_call_output' and item.get('call_id')
         }
+        if metadata.get('params', {}).get('tool_approval_mode', 'full') == 'ask' and any(
+            item.get('type') == 'function_call'
+            and item.get('name') != 'ask_user'
+            and (item.get('call_id') or item.get('id'))
+            and item.get('status') == 'queued'
+            and item.get('approved') is not True
+            and (item.get('call_id') or item.get('id')) not in result_call_ids
+            for item in output
+        ):
+            await pause_for_tool_approval(chat_id, message_id, output, form_data, metadata)
+            result_call_ids = {
+                item.get('call_id')
+                for item in output
+                if item.get('type') == 'function_call_output' and item.get('call_id')
+            }
         paused = any(
             item.get('type') == 'function_call'
             and item.get('call_id')
@@ -3207,6 +3224,7 @@ async def pause_for_tool_approval(chat_id: str, message_id: str, output: list[di
     result_call_ids = {
         item.get('call_id') for item in output if item.get('type') == 'function_call_output' and item.get('call_id')
     }
+    has_pending_approval = False
     for item in output:
         if item.get('type') == 'function_call' and not item.get('call_id') and item.get('id'):
             item['call_id'] = item['id']
@@ -3217,7 +3235,11 @@ async def pause_for_tool_approval(chat_id: str, message_id: str, output: list[di
             and item.get('call_id') not in result_call_ids
             and item.get('status') != 'rejected'
         ):
-            item['status'] = 'pending'
+            if not has_pending_approval:
+                item['status'] = 'pending'
+                has_pending_approval = True
+            elif item.get('status') == 'in_progress':
+                item['status'] = 'queued'
 
     await Chats.upsert_message_to_chat_by_id_and_message_id(
         chat_id,
