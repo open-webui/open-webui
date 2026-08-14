@@ -72,6 +72,10 @@
 		subagents: {
 			label: $i18n.t('Sub-agents'),
 			description: $i18n.t('Delegate focused work to parallel sub-agents')
+		},
+		taskmarket: {
+			label: $i18n.t('Taskmarket'),
+			description: $i18n.t('Create and fund onchain tasks as a requester, fetch status, and list submissions')
 		}
 	};
 

@@ -1923,6 +1923,8 @@ USER_PERMISSIONS_FEATURES_AUTOMATIONS = os.getenv('USER_PERMISSIONS_FEATURES_AUT
 
 USER_PERMISSIONS_FEATURES_CALENDAR = os.getenv('USER_PERMISSIONS_FEATURES_CALENDAR', 'True').lower() == 'true'
 
+USER_PERMISSIONS_FEATURES_TASKMARKET = os.getenv('USER_PERMISSIONS_FEATURES_TASKMARKET', 'False').lower() == 'true'
+
 USER_PERMISSIONS_FEATURES_USER_WEBHOOKS = (
     os.getenv('USER_PERMISSIONS_FEATURES_USER_WEBHOOKS', 'False').lower() == 'true'
 )
@@ -2006,6 +2008,7 @@ DEFAULT_USER_PERMISSIONS = {
         'memories': USER_PERMISSIONS_FEATURES_MEMORIES,
         'automations': USER_PERMISSIONS_FEATURES_AUTOMATIONS,
         'calendar': USER_PERMISSIONS_FEATURES_CALENDAR,
+        'taskmarket': USER_PERMISSIONS_FEATURES_TASKMARKET,
         'webhooks': USER_PERMISSIONS_FEATURES_USER_WEBHOOKS,
     },
     'settings': {
@@ -2026,6 +2029,8 @@ CHANNEL_MODEL_RESPONSE_MODE = os.getenv('CHANNEL_MODEL_RESPONSE_MODE', 'thread')
 ENABLE_CALENDAR = os.getenv('ENABLE_CALENDAR', 'True').lower() == 'true'
 
 ENABLE_AUTOMATIONS = os.getenv('ENABLE_AUTOMATIONS', 'True').lower() == 'true'
+
+ENABLE_TASKMARKET = os.getenv('ENABLE_TASKMARKET', 'False').lower() == 'true'
 
 ENABLE_SUBAGENTS = os.getenv('ENABLE_SUBAGENTS', 'False').lower() == 'true'
 SUBAGENTS_BACKGROUND_ENABLED = os.getenv('SUBAGENTS_BACKGROUND_ENABLED', 'False').lower() == 'true'
@@ -3091,6 +3096,7 @@ DEFAULT_CONFIG = {
     'channels.model_response_mode': CHANNEL_MODEL_RESPONSE_MODE,
     'calendar.enable': ENABLE_CALENDAR,
     'automations.enable': ENABLE_AUTOMATIONS,
+    'taskmarket.enable': ENABLE_TASKMARKET,
     'subagents.enable': ENABLE_SUBAGENTS,
     'subagents.background_enabled': SUBAGENTS_BACKGROUND_ENABLED,
     'subagents.max_concurrent': SUBAGENTS_MAX_CONCURRENT,

@@ -64,6 +64,11 @@ from open_webui.routers.retrieval import search_web as _search_web
 from open_webui.socket.main import sio
 from open_webui.tasks import stop_item_tasks
 from open_webui.tools.knowledge_fs import kb_exec  # noqa: F401 — re-exported
+from open_webui.tools.taskmarket import (  # noqa: F401 — re-exported
+    taskmarket_create_task,
+    taskmarket_submissions,
+    taskmarket_task_status,
+)
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target

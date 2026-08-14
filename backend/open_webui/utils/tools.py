@@ -86,6 +86,9 @@ from open_webui.tools.builtin import (
     search_memories,
     search_notes,
     search_web,
+    taskmarket_create_task,
+    taskmarket_submissions,
+    taskmarket_task_status,
     timer,
     toggle_automation,
     update_automation,
@@ -557,6 +560,7 @@ async def get_builtin_tools(
         'channels.enable',
         'automations.enable',
         'calendar.enable',
+        'taskmarket.enable',
         'ui.enable_user_webhooks',
         'subagents.enable',
         'subagents.background_enabled',
@@ -765,6 +769,18 @@ async def get_builtin_tools(
         builtin_functions.extend(
             [search_calendar_events, create_calendar_event, update_calendar_event, delete_calendar_event]
         )
+
+    # Taskmarket tools - create and fund onchain tasks as a requester,
+    # fetch live status, and list submissions for human review. Requires
+    # the first-party `taskmarket` CLI on PATH and admin approval (the
+    # feature permission defaults to off); the create tool shows the exact
+    # task and requires an explicit confirmation code before any money moves.
+    if (
+        is_builtin_tool_enabled('taskmarket')
+        and config.get('taskmarket.enable')
+        and await has_user_permission('taskmarket')
+    ):
+        builtin_functions.extend([taskmarket_create_task, taskmarket_task_status, taskmarket_submissions])
 
     if (
         is_builtin_tool_enabled('notifications')
