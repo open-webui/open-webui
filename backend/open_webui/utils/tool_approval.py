@@ -51,6 +51,7 @@ async def resolve_tool_call_output(
     if not function_call:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Tool call not found.')
     function_call.setdefault('call_id', form_data.call_id)
+    tool_name = function_call.get('name')
 
     if any(
         item.get('type') == 'function_call_output' and item.get('call_id') == form_data.call_id for item in output
@@ -58,6 +59,8 @@ async def resolve_tool_call_output(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Tool call has already been resolved.')
 
     if form_data.action == 'approve':
+        if tool_name == 'ask_user':
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='ask_user requires an answer or deny.')
         function_call['status'] = 'queued'
         function_call['approved'] = True
     elif form_data.action == 'reject':
@@ -67,13 +70,21 @@ async def resolve_tool_call_output(
                 'type': 'function_call_output',
                 'id': f'fco_{form_data.call_id}',
                 'call_id': form_data.call_id,
-                'output': [{'type': 'input_text', 'text': 'Tool call was denied by the user.'}],
+                'output': [{'type': 'input_text', 'text': 'Error: tool call rejected by user.'}],
                 'status': 'rejected',
             }
         )
     else:
+        if tool_name != 'ask_user':
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Tool call does not accept answers.')
+        if form_data.answers is None and not form_data.timed_out:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Answers are required for ask_user.')
         function_call['status'] = 'completed'
-        answer_payload = {'answers': form_data.answers, 'timed_out': form_data.timed_out}
+        answer_payload = (
+            {'status': 'cancelled', 'answers': {}, 'timed_out': True}
+            if form_data.timed_out
+            else {'status': 'answered', 'answers': form_data.answers or {}}
+        )
         output.append(
             {
                 'type': 'function_call_output',

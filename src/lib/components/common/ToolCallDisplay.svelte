@@ -93,12 +93,16 @@
 	$: result = resultContent || decode(attributes?.result ?? '');
 	$: files = parseJSONString(decode(attributes?.files ?? ''));
 	$: embeds = parseJSONString(decode(attributes?.embeds ?? ''));
+	$: isAskUser = attributes?.name === 'ask_user';
+	$: needsInput = isAskUser && attributes?.status === 'pending';
+	$: needsApproval = !isAskUser && attributes?.status === 'pending' && resolvable;
 	$: args =
-		open || (Array.isArray(embeds) && embeds.length > 0) ? decode(attributes?.arguments ?? '') : '';
+		open || needsApproval || needsInput || (Array.isArray(embeds) && embeds.length > 0)
+			? decode(attributes?.arguments ?? '')
+			: '';
 	$: isDone = attributes?.done === 'true';
-	$: needsApproval = attributes?.status === 'pending' && resolvable;
 	$: isRejected = attributes?.status === 'rejected';
-	$: isExecuting = !needsApproval && attributes?.done && attributes?.done !== 'true';
+	$: isExecuting = !needsApproval && !needsInput && attributes?.done && attributes?.done !== 'true';
 
 	$: parsedArgs = parseArguments(args);
 	$: parsedResult = parseJSONString(result);
@@ -178,6 +182,8 @@
 					<span class="hidden @md:inline font-normal">
 						{#if isDone}
 							{$i18n.t('View Result from {{NAME}}', { NAME: attributes.name })}
+						{:else if needsInput}
+							{$i18n.t('Input needed')}
 						{:else if needsApproval}
 							{$i18n.t('Allow {{NAME}}?', { NAME: attributes.name })}
 						{:else if isRejected}
@@ -188,7 +194,7 @@
 					</span>
 				</div>
 
-				{#if needsApproval}
+				{#if needsApproval && !isAskUser}
 					<span class="flex gap-1 shrink-0">
 						<button
 							type="button"
@@ -225,8 +231,8 @@
 				<div
 					class="border border-gray-50 dark:border-gray-850/30 rounded-2xl my-1.5 p-2.5 space-y-2"
 				>
-					<!-- Input -->
 					{#if args}
+						<!-- Input -->
 						<div>
 							<div
 								class="text-[0.625rem] uppercase tracking-wider font-normal text-gray-400 dark:text-gray-500 mb-1.5 px-1"

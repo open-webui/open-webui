@@ -77,6 +77,7 @@
 		getAllTags,
 		getChatById,
 		getTagsById,
+		resolveChatMessageToolCall,
 		updateChatById,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
@@ -421,6 +422,131 @@
 			...params,
 			tool_approval_mode: mode === 'ask' ? 'ask' : 'full'
 		};
+	};
+
+	const parseToolArguments = (args) => {
+		if (!args) {
+			return {};
+		}
+		let value = args;
+		while (typeof value === 'string') {
+			try {
+				value = JSON.parse(value);
+			} catch {
+				break;
+			}
+		}
+		return typeof value === 'object' && value !== null && !Array.isArray(value) ? value : {};
+	};
+
+	const getPendingAskUserFromMessage = (message) => {
+		if (message?.role !== 'assistant' || !Array.isArray(message.output)) {
+			return null;
+		}
+
+		const call = message.output.find(
+			(item) =>
+				item?.type === 'function_call' &&
+				item?.name === 'ask_user' &&
+				item?.status === 'pending' &&
+				(item?.call_id || item?.id)
+		);
+
+		if (call) {
+			return { message, call, args: parseToolArguments(call.arguments) };
+		}
+
+		return null;
+	};
+
+	const findPendingAskUser = (chatHistory) => {
+		if (!chatHistory?.messages) {
+			return null;
+		}
+		const messages = chatHistory.currentId
+			? createMessagesList(chatHistory, chatHistory.currentId)
+			: Object.values(chatHistory.messages);
+		for (const message of [...messages].reverse()) {
+			const pending = getPendingAskUserFromMessage(message);
+			if (pending) return pending;
+		}
+		return null;
+	};
+
+	const messageHasPendingAskUser = (message) => {
+		return !!getPendingAskUserFromMessage(message);
+	};
+
+	const answerPendingAskUser = async (messageId, callId, answers, timedOut = false) => {
+		if (!$chatId || !messageId || !callId) {
+			return;
+		}
+
+		await resolveChatMessageToolCall(localStorage.token, $chatId, messageId, callId, 'answer', {
+			answers,
+			timed_out: timedOut
+		}).catch(async (error) => {
+			toast.error(`${error}`);
+			await loadChat();
+		});
+	};
+
+	const rejectPendingAskUser = async (messageId, callId) => {
+		if (!$chatId || !messageId || !callId) {
+			return;
+		}
+
+		await resolveChatMessageToolCall(
+			localStorage.token,
+			$chatId,
+			messageId,
+			callId,
+			'reject'
+		).catch(async (error) => {
+			toast.error(`${error}`);
+			await loadChat();
+		});
+	};
+
+	$: pendingAskUser = findPendingAskUser(history);
+	$: savedAskUserPrompt = pendingAskUser
+		? {
+				show: true,
+				questions: Array.isArray(pendingAskUser.args?.questions)
+					? pendingAskUser.args.questions
+					: [],
+				allowOther: pendingAskUser.args?.allow_other !== false,
+				timeoutMs: null,
+				onConfirm: (value) => {
+					void answerPendingAskUser(
+						pendingAskUser.message.id,
+						pendingAskUser.call.call_id || pendingAskUser.call.id,
+						value?.answers ?? {},
+						false
+					);
+				},
+				onCancel: () => {
+					void rejectPendingAskUser(
+						pendingAskUser.message.id,
+						pendingAskUser.call.call_id || pendingAskUser.call.id
+					);
+				}
+			}
+		: null;
+
+	$: socketAskUserPrompt = {
+		show: showAskUserDialog,
+		questions: askUserQuestions,
+		allowOther: askUserAllowOther,
+		timeoutMs: askUserTimeoutMs,
+		onConfirm: (value) => {
+			showAskUserDialog = false;
+			eventCallback(value);
+		},
+		onCancel: () => {
+			showAskUserDialog = false;
+			eventCallback({ status: 'cancelled', answers: {} });
+		}
 	};
 
 	const mergeChatVariableSchemas = (modelIds = [], availableModels = []) => {
@@ -2175,7 +2301,11 @@
 				} else {
 					taskIds = null;
 					// No active tasks and message incomplete → generation was interrupted
-					if (currentMessage?.role === 'assistant' && !currentMessage.done) {
+					if (
+						currentMessage?.role === 'assistant' &&
+						!currentMessage.done &&
+						!messageHasPendingAskUser(currentMessage)
+					) {
 						currentMessage.done = true;
 					}
 				}
@@ -2586,6 +2716,7 @@
 		}
 
 		history.messages[message.id] = message;
+		history = history;
 
 		if (done) {
 			message.done = true;
@@ -4192,20 +4323,7 @@
 										{onUpdate}
 										messageQueue={$chatRequestQueues[$chatId] ?? []}
 										{chatTasks}
-										askUser={{
-											show: showAskUserDialog,
-											questions: askUserQuestions,
-											allowOther: askUserAllowOther,
-											timeoutMs: askUserTimeoutMs,
-											onConfirm: (value) => {
-												showAskUserDialog = false;
-												eventCallback(value);
-											},
-											onCancel: () => {
-												showAskUserDialog = false;
-												eventCallback({ status: 'cancelled', answers: {} });
-											}
-										}}
+										askUser={savedAskUserPrompt ?? socketAskUserPrompt}
 										onQueueSendNow={sendQueuedMessageNow}
 										onQueueEdit={editQueuedMessage}
 										onQueueDelete={deleteQueuedMessage}
@@ -4296,20 +4414,7 @@
 										{onUpdate}
 										messageQueue={$chatRequestQueues[$chatId] ?? []}
 										{chatTasks}
-										askUser={{
-											show: showAskUserDialog,
-											questions: askUserQuestions,
-											allowOther: askUserAllowOther,
-											timeoutMs: askUserTimeoutMs,
-											onConfirm: (value) => {
-												showAskUserDialog = false;
-												eventCallback(value);
-											},
-											onCancel: () => {
-												showAskUserDialog = false;
-												eventCallback({ status: 'cancelled', answers: {} });
-											}
-										}}
+										askUser={savedAskUserPrompt ?? socketAskUserPrompt}
 										onQueueSendNow={sendQueuedMessageNow}
 										onQueueEdit={editQueuedMessage}
 										onQueueDelete={deleteQueuedMessage}
@@ -4354,6 +4459,7 @@
 									{onUpload}
 									{onUpdate}
 									messageQueue={$chatRequestQueues[$chatId] ?? []}
+									askUser={savedAskUserPrompt ?? socketAskUserPrompt}
 									onQueueSendNow={sendQueuedMessageNow}
 									onQueueEdit={editQueuedMessage}
 									onQueueDelete={deleteQueuedMessage}

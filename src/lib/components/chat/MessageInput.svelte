@@ -153,11 +153,20 @@
 
 	export let history;
 	export let taskIds = null;
+	export let askUser: AskUserPrompt = {
+		show: false,
+		questions: [],
+		allowOther: true,
+		timeoutMs: null,
+		onConfirm: (_value: any) => {},
+		onCancel: () => {}
+	};
 
 	$: isActive =
-		(taskIds && taskIds.length > 0) ||
-		(history.currentId && history.messages[history.currentId]?.done != true) ||
-		generating;
+		!askUser?.show &&
+		((taskIds && taskIds.length > 0) ||
+			(history.currentId && history.messages[history.currentId]?.done != true) ||
+			generating);
 	$: canCompact = !!history?.currentId;
 
 	export let prompt = '';
@@ -182,15 +191,6 @@
 	export let onQueueEdit: (id: string) => void = () => {};
 	export let onQueueDelete: (id: string) => void = () => {};
 	export let onUpdate: (data?: { file?: any }) => void = () => {};
-	export let askUser: AskUserPrompt = {
-		show: false,
-		questions: [],
-		allowOther: true,
-		timeoutMs: null,
-		onConfirm: (_value: any) => {},
-		onCancel: () => {}
-	};
-
 	export let chatTasks = [];
 
 	let inputContent = null;

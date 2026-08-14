@@ -66,7 +66,14 @@
 	export let onQueueSendNow: (id: string) => void = () => {};
 	export let onQueueEdit: (id: string) => void = () => {};
 	export let onQueueDelete: (id: string) => void = () => {};
-
+	export let askUser = {
+		show: false,
+		questions: [],
+		allowOther: true,
+		timeoutMs: null,
+		onConfirm: (_value: any) => {},
+		onCancel: () => {}
+	};
 
 	export let dragged = false;
 
@@ -251,6 +258,7 @@
 						{onQueueSendNow}
 						{onQueueEdit}
 						{onQueueDelete}
+						{askUser}
 						{onWebSearchToggle}
 						on:chatVariables
 						on:submit={(e) => {

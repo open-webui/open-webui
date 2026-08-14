@@ -145,7 +145,8 @@ function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string,
 	}
 
 	return {
-		summary: status === 'pending' ? 'Tool Approval Needed' : isDone ? 'Tool Executed' : 'Executing...',
+		summary:
+			status === 'pending' ? 'Tool Approval Needed' : isDone ? 'Tool Executed' : 'Executing...',
 		text: getToolResultText(resultItem),
 		attributes: {
 			type: 'tool_calls',
@@ -296,6 +297,14 @@ export function buildOutputDisplayItems(output: OutputItem[] = []): OutputDispla
 
 	output.forEach((item, index) => {
 		if (item?.type === 'function_call_output') {
+			return;
+		}
+
+		if (
+			item?.type === 'function_call' &&
+			item.name === 'ask_user' &&
+			(item.status === 'pending' || item.status === 'in_progress')
+		) {
 			return;
 		}
 

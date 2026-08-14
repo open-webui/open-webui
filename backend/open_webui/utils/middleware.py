@@ -79,6 +79,7 @@ from open_webui.socket.main import (
 from open_webui.utils.access_control import has_connection_access, has_permission
 from open_webui.utils.access_control.files import get_owner_accessible_folder_files
 from open_webui.utils.access_control.folders import has_folder_access
+from open_webui.utils.ask_user import stage_ask_user_tool_call
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.code_interpreter import execute_code_jupyter
@@ -3114,6 +3115,12 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
     event_emitter, event_caller = await get_event_emitter_and_caller(metadata)
     changed = False
     for item in approved_calls:
+        if item.get('name') == 'ask_user':
+            item['status'] = 'pending'
+            item.pop('approved', None)
+            changed = True
+            continue
+
         tool_call = {
             'id': item.get('call_id', ''),
             'type': 'function',
@@ -5094,11 +5101,12 @@ async def streaming_chat_response_handler(response, ctx):
                         }
                         responses_api_tool_calls = []
                         for item in output:
-                            if item.get('type') == 'function_call' and item.get('call_id') not in handled_call_ids:
+                            call_id = item.get('call_id') or item.get('id') or output_id('fc')
+                            if item.get('type') == 'function_call' and call_id not in handled_call_ids:
                                 arguments = item.get('arguments', '{}')
                                 responses_api_tool_calls.append(
                                     {
-                                        'id': item.get('call_id', ''),
+                                        'id': call_id,
                                         'index': len(responses_api_tool_calls),
                                         'function': {
                                             'name': item.get('name', ''),
@@ -5148,6 +5156,22 @@ async def streaming_chat_response_handler(response, ctx):
                     tool_call_iterations += 1
 
                     response_tool_calls = tool_calls.pop(0)
+                    ask_user_stage = stage_ask_user_tool_call(response_tool_calls, output, output_id)
+                    if ask_user_stage:
+                        if ask_user_stage['error']:
+                            await event_emitter({'type': 'chat:completion', 'data': {'output': full_output()}})
+                            continue
+
+                        if is_saved_chat_id(metadata.get('chat_id')) and metadata.get('message_id'):
+                            await pause_for_tool_approval(
+                                metadata['chat_id'],
+                                metadata['message_id'],
+                                output,
+                                form_data,
+                                metadata,
+                            )
+                        await event_emitter({'type': 'chat:completion', 'data': {'output': full_output()}})
+                        return
 
                     # Append function_call items for each tool call
                     # (Responses API already has them from streaming, so skip duplicates)
