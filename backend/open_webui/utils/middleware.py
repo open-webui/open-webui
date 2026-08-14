@@ -4490,6 +4490,14 @@ async def streaming_chat_response_handler(response, ctx):
                             delta_data.get('summary_index'),
                         )
 
+                    def get_response_data_with_full_output_index(response_data: dict):
+                        if prior_output and isinstance(response_data.get('output_index'), int):
+                            return {
+                                **response_data,
+                                'output_index': response_data['output_index'] + len(prior_output),
+                            }
+                        return response_data
+
                     async def flush_pending_delta_data(threshold: int = 0):
                         nonlocal delta_count
                         nonlocal last_delta_data
@@ -4515,6 +4523,7 @@ async def streaming_chat_response_handler(response, ctx):
                         nonlocal last_delta_type
                         nonlocal last_delta_key
 
+                        delta_data = get_response_data_with_full_output_index(delta_data)
                         delta_key = get_response_delta_key(delta_data)
                         if (
                             last_delta_data
@@ -4536,25 +4545,20 @@ async def streaming_chat_response_handler(response, ctx):
                         if delta_count >= delta_chunk_size:
                             await flush_pending_delta_data(delta_chunk_size)
 
-                    async def emit_response_completion_event(response_event: dict, stream_output: list | None = None):
-                        if prior_output and isinstance(response_event.get('output_index'), int):
-                            response_event = {
-                                **response_event,
-                                'output_index': response_event['output_index'] + len(prior_output),
-                            }
-
-                        if response_event.get('type', '').endswith('.delta'):
+                    async def emit_response_completion_event(response_data: dict, stream_output: list | None = None):
+                        if response_data.get('type', '').endswith('.delta'):
                             await queue_pending_delta_data(
-                                response_event,
-                                response_event.get('type', 'response.delta'),
+                                response_data,
+                                response_data.get('type', 'response.delta'),
                             )
                             return
 
+                        response_data = get_response_data_with_full_output_index(response_data)
                         await flush_pending_delta_data()
                         await event_emitter(
                             {
                                 'type': 'response:completion',
-                                'data': response_event,
+                                'data': response_data,
                             }
                         )
                         await save_current_response_stream(stream_output)
