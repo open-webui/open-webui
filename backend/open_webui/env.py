@@ -470,6 +470,12 @@ else:
 WEBSOCKET_REDIS_URL = os.getenv('WEBSOCKET_REDIS_URL', REDIS_URL)
 WEBSOCKET_REDIS_CLUSTER = os.getenv('WEBSOCKET_REDIS_CLUSTER', str(REDIS_CLUSTER)).lower() == 'true'
 
+# routes each emit only to instances holding members of the target room instead of
+# broadcasting to the fleet; must be identical across the fleet (toggle with a full
+# restart, not a rolling one), needs a Redis that does not evict keys
+# (maxmemory-policy noeviction) and is not supported with WEBSOCKET_REDIS_CLUSTER
+WEBSOCKET_REDIS_ROUTING = os.getenv('WEBSOCKET_REDIS_ROUTING', 'False').lower() == 'true'
+
 websocket_redis_lock_timeout = os.getenv('WEBSOCKET_REDIS_LOCK_TIMEOUT', '60')
 
 try:

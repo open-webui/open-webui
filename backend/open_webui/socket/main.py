@@ -20,6 +20,7 @@ from open_webui.env import (
     WEBSOCKET_REDIS_CLUSTER,
     WEBSOCKET_REDIS_LOCK_TIMEOUT,
     WEBSOCKET_REDIS_OPTIONS,
+    WEBSOCKET_REDIS_ROUTING,
     WEBSOCKET_REDIS_URL,
     WEBSOCKET_SENTINEL_HOSTS,
     WEBSOCKET_SENTINEL_PORT,
@@ -34,6 +35,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.folders import Folders
 from open_webui.models.notes import Notes, NoteUpdateForm
 from open_webui.models.users import UserNameResponse, Users
+from open_webui.socket.redis_router import AsyncRedisRouterManager
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
 from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.access_control import has_permission
@@ -71,7 +73,12 @@ if WEBSOCKET_MANAGER == 'redis':
         if sentinel_hosts
         else WEBSOCKET_REDIS_URL
     )
-    redis_manager = socketio.AsyncRedisManager(ws_redis_url, redis_options=WEBSOCKET_REDIS_OPTIONS, json=SOCKETIO_JSON)
+    if WEBSOCKET_REDIS_ROUTING and WEBSOCKET_REDIS_CLUSTER:
+        # the manager's redis client is not cluster aware, registry keys would MOVED-fail
+        log.warning('WEBSOCKET_REDIS_ROUTING is not supported with WEBSOCKET_REDIS_CLUSTER, using broadcast delivery.')
+    use_router = WEBSOCKET_REDIS_ROUTING and not WEBSOCKET_REDIS_CLUSTER
+    manager_class = AsyncRedisRouterManager if use_router else socketio.AsyncRedisManager
+    redis_manager = manager_class(ws_redis_url, redis_options=WEBSOCKET_REDIS_OPTIONS, json=SOCKETIO_JSON)
     sio = socketio.AsyncServer(
         cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
         async_mode='asgi',
