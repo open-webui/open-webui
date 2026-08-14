@@ -817,6 +817,18 @@ def handle_responses_streaming_event(
         return current_output, None
 
 
+def slim_response_lifecycle_event(event: dict) -> dict:
+    # Lifecycle events echo the request back (instructions, tool schemas); only these fields are read downstream.
+    response = event.get('response')
+    if not isinstance(response, dict):
+        return event
+
+    return {
+        **event,
+        'response': {key: value for key, value in response.items() if key in {'error', 'id', 'output', 'usage'}},
+    }
+
+
 def get_source_context(sources: list, source_ids: dict = None, include_content: bool = True) -> str:
     """
     Build <source> tag context string from citation sources.
@@ -4558,7 +4570,7 @@ async def streaming_chat_response_handler(response, ctx):
                         await event_emitter(
                             {
                                 'type': 'response:completion',
-                                'data': response_data,
+                                'data': slim_response_lifecycle_event(response_data),
                             }
                         )
                         await save_current_response_stream(stream_output)
