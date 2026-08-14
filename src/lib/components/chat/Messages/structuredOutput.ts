@@ -59,6 +59,24 @@ export type OutputDisplayItem =
 			tokens: OutputDetailToken[];
 	  };
 
+type ResponseStreamEvent = {
+	type?: string;
+	item_id?: string;
+	output_index?: number;
+	content_index?: number;
+	summary_index?: number;
+	item?: OutputItem;
+	part?: OutputContentPart;
+	delta?: unknown;
+	text?: unknown;
+	arguments?: unknown;
+	response?: {
+		output?: OutputItem[];
+		[key: string]: unknown;
+	};
+	[key: string]: unknown;
+};
+
 const GROUPABLE_OUTPUT_TYPES = new Set([
 	'reasoning',
 	'function_call',
@@ -350,6 +368,167 @@ export function getOutputText(output?: OutputItem[] | null): string {
 		.map(getMessageText)
 		.filter((text) => text.trim())
 		.join('\n');
+}
+
+function appendDelta(current: unknown, delta: unknown): unknown {
+	if (typeof current === 'string' || typeof delta === 'string') {
+		return `${current ?? ''}${delta ?? ''}`;
+	}
+	if (
+		current &&
+		delta &&
+		typeof current === 'object' &&
+		typeof delta === 'object' &&
+		!Array.isArray(current) &&
+		!Array.isArray(delta)
+	) {
+		return { ...(current as Record<string, unknown>), ...(delta as Record<string, unknown>) };
+	}
+	return delta ?? current ?? '';
+}
+
+function ensureItem(output: OutputItem[], outputIndex: number, fallback?: OutputItem): OutputItem {
+	while (output.length <= outputIndex) {
+		output.push(
+			fallback ?? { type: 'message', status: 'in_progress', role: 'assistant', content: [] }
+		);
+	}
+	output[outputIndex] = { ...output[outputIndex] };
+	return output[outputIndex];
+}
+
+function ensurePart(parts: OutputContentPart[], index: number, fallback?: OutputContentPart) {
+	while (parts.length <= index) {
+		parts.push(fallback ?? { type: 'output_text', text: '' });
+	}
+	parts[index] = { ...parts[index] };
+	return parts[index];
+}
+
+function findOutputItemIndex(output: OutputItem[], item: OutputItem): number {
+	return output.findIndex(
+		(existing) =>
+			(!!item.id && existing?.id === item.id) ||
+			(!!item.call_id && existing?.call_id === item.call_id)
+	);
+}
+
+export function applyResponseStreamEvent(
+	output: OutputItem[] = [],
+	event: ResponseStreamEvent
+): OutputItem[] {
+	const eventType = event?.type ?? '';
+	if (!eventType.startsWith('response.')) {
+		return output;
+	}
+
+	if (eventType === 'response.completed') {
+		return event.response?.output ? [...event.response.output] : output;
+	}
+
+	const nextOutput = [...output];
+	const eventItemIndex = event.item_id
+		? nextOutput.findIndex((item) => item?.id === event.item_id || item?.call_id === event.item_id)
+		: -1;
+	const outputIndex =
+		eventItemIndex >= 0 ? eventItemIndex : (event.output_index ?? Math.max(output.length - 1, 0));
+
+	if (eventType === 'response.output_item.added') {
+		if (!event.item) {
+			return output;
+		}
+		const item = { ...event.item };
+		const existingIndex = findOutputItemIndex(nextOutput, item);
+		if (existingIndex >= 0) {
+			nextOutput[existingIndex] = item;
+		} else if (outputIndex < nextOutput.length) {
+			nextOutput.splice(outputIndex, 0, item);
+		} else {
+			nextOutput[outputIndex] = item;
+		}
+		return nextOutput;
+	}
+
+	if (eventType === 'response.output_item.done') {
+		if (!event.item) {
+			return output;
+		}
+		const item = { ...event.item };
+		const existingIndex = findOutputItemIndex(nextOutput, item);
+		nextOutput[existingIndex >= 0 ? existingIndex : outputIndex] = item;
+		return nextOutput;
+	}
+
+	const item = ensureItem(nextOutput, outputIndex, {
+		id: event.item_id,
+		type: eventType.includes('reasoning')
+			? 'reasoning'
+			: eventType.includes('function_call')
+				? 'function_call'
+				: 'message',
+		status: 'in_progress',
+		role: 'assistant',
+		content: []
+	});
+
+	if (eventType === 'response.content_part.added') {
+		if (item.type === 'reasoning' || !event.part) {
+			return nextOutput;
+		}
+		item.content = [...(item.content ?? [])];
+		item.content[event.content_index ?? item.content.length] = { ...event.part };
+		return nextOutput;
+	}
+
+	if (eventType === 'response.reasoning_summary_part.added') {
+		if (!event.part) {
+			return nextOutput;
+		}
+		item.summary = [...(item.summary ?? [])];
+		item.summary[event.summary_index ?? item.summary.length] = { ...event.part };
+		return nextOutput;
+	}
+
+	if (eventType.endsWith('.delta')) {
+		const deltaType = eventType.split('.')[1];
+		if (deltaType === 'function_call_arguments') {
+			item.arguments = appendDelta(item.arguments ?? '', event.delta);
+			return nextOutput;
+		}
+
+		if (deltaType === 'reasoning_summary_text') {
+			const summaryIndex = event.summary_index ?? 0;
+			item.summary = [...(item.summary ?? [])];
+			const part = ensurePart(item.summary, summaryIndex, { type: 'summary_text', text: '' });
+			part.text = appendDelta(part.text ?? '', event.delta);
+			return nextOutput;
+		}
+
+		const key = deltaType === 'output_text' || deltaType === 'reasoning_text' ? 'text' : deltaType;
+		item.content = [...(item.content ?? [])];
+		const part = ensurePart(item.content, event.content_index ?? 0);
+		part[key] = appendDelta(part[key], event.delta);
+		return nextOutput;
+	}
+
+	if (eventType.endsWith('.done')) {
+		const typeName = eventType.split('.')[1];
+		if (typeName === 'content_part' && event.part) {
+			item.content = [...(item.content ?? [])];
+			item.content[event.content_index ?? Math.max(item.content.length - 1, 0)] = { ...event.part };
+		} else if (typeName === 'function_call_arguments' && event.arguments !== undefined) {
+			item.arguments = event.arguments;
+		} else if (
+			(typeName === 'output_text' || typeName === 'text' || typeName === 'reasoning_text') &&
+			event.text !== undefined
+		) {
+			item.content = [...(item.content ?? [])];
+			const part = ensurePart(item.content, event.content_index ?? 0);
+			part.text = event.text;
+		}
+	}
+
+	return nextOutput;
 }
 
 export function replaceOutputMessageText(

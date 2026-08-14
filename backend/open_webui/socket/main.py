@@ -927,7 +927,7 @@ async def _make_channel_emitter(request_info):
     channel_id = request_info['chat_id'].removeprefix('channel:')
     message_id = request_info['message_id']
 
-    state = {'last_emit_at': 0.0}
+    state = {'last_emit_at': 0.0, 'output': []}
     THROTTLE_INTERVAL = 0.15  # ~6 updates/sec
 
     async def _emit_channel_update(content: str, done: bool = False, output: list | None = None):
@@ -975,10 +975,22 @@ async def _make_channel_emitter(request_info):
             if not content and not output and not done:
                 return
 
-            now = __import__('time').time()
+            now = time.time()
             if done or (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
                 state['last_emit_at'] = now
                 await _emit_channel_update(content, done, output if isinstance(output, list) else None)
+
+        elif event_type == 'response:completion':
+            from open_webui.utils.middleware import handle_responses_streaming_event
+
+            data = event_data.get('data', {})
+            state['output'], _ = handle_responses_streaming_event(data, state['output'])
+            content = get_output_text(state['output'])
+
+            now = time.time()
+            if content and (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
+                state['last_emit_at'] = now
+                await _emit_channel_update(content, False, state['output'])
 
         elif event_type == 'chat:message:error':
             error = event_data.get('data', {}).get('error', {})

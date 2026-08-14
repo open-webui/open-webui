@@ -66,7 +66,7 @@
 	} from '$lib/utils';
 	import { AudioQueue } from '$lib/utils/audio';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
-	import { getOutputText } from './Messages/structuredOutput';
+	import { applyResponseStreamEvent, getOutputText } from './Messages/structuredOutput';
 
 	import {
 		archiveChatById,
@@ -1178,6 +1178,8 @@
 							updateLastReadAt($chatId);
 						}
 					}
+				} else if (type === 'response:completion') {
+					responseCompletionEventHandler(data, message);
 				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);
 				} else if (type === 'chat:tasks:cancel') {
@@ -2691,6 +2693,27 @@
 		} else {
 			await saveChatHandler($chatId, history);
 		}
+	};
+
+	const responseCompletionEventHandler = (data, message) => {
+		message.output = applyResponseStreamEvent(message.output ?? [], data);
+
+		if (data?.type === 'response.output_text.delta') {
+			const value = data.delta ?? '';
+			if (!(message.content == '' && value == '\n')) {
+				message.content += value;
+
+				if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+					navigator.vibrate(5);
+				}
+				dispatchCallOverlayAudio(message);
+			}
+		} else if (data?.type === 'response.completed' || data?.type?.endsWith('.done')) {
+			message.content = getOutputText(message.output) || message.content;
+		}
+
+		history.messages[message.id] = message;
+		history = history;
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
