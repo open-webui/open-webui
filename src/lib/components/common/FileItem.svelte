@@ -57,7 +57,7 @@
 		: 'rounded-2xl'} text-left"
 	type="button"
 	on:click={async () => {
-		if (item?.file?.data?.content || item?.type === 'file' || item?.content || modal) {
+		if (item?.file?.data?.content || item?.content || modal) {
 			showModal = !showModal;
 		} else {
 			if (url) {
@@ -65,7 +65,30 @@
 					if (url.startsWith('http')) {
 						window.open(`${url}/content`, '_blank').focus();
 					} else {
-						window.open(`${WEBUI_API_BASE_URL}/files/${url}/content`, '_blank').focus();
+						// The JWT lives in localStorage (sent as an Authorization header
+						// on fetch) and is not available as a cookie on plain navigation,
+						// so opening the file URL in a new tab returns 401. Fetch the
+						// bytes with the token and trigger a direct browser download.
+						try {
+							const res = await fetch(
+								`${WEBUI_API_BASE_URL}/files/${url}/content?attachment=true`,
+								{ headers: { Authorization: `Bearer ${localStorage.token}` } }
+							);
+							if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+							const blob = await res.blob();
+							const objectUrl = window.URL.createObjectURL(blob);
+							const a = document.createElement('a');
+							a.href = objectUrl;
+							a.download = name;
+							document.body.appendChild(a);
+							a.click();
+							a.remove();
+							window.URL.revokeObjectURL(objectUrl);
+						} catch (err) {
+							console.error(err);
+							window.open(`${WEBUI_API_BASE_URL}/files/${url}/content`, '_blank').focus();
+						}
 					}
 				} else {
 					window.open(`${url}`, '_blank').focus();
