@@ -836,6 +836,15 @@ if ENABLE_SCIM:
 ##################################
 
 
+@app.post('/api/v1/responses')  # Compatibility with OpenAI Responses API
+async def responses(
+    request: Request,
+    form_data: openai.ResponsesForm,
+    user=Depends(get_verified_user),
+):
+    return await openai.responses(request, form_data, user)
+
+
 @app.get('/api/models')
 @app.get('/api/v1/models')  # Experimental: Compatibility with OpenAI API
 async def get_models(request: Request, refresh: bool = False, user=Depends(get_verified_user)):
