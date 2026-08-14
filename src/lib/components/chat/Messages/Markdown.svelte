@@ -59,6 +59,7 @@
 
 	export let onSourceClick = () => {};
 	export let onTaskClick = () => {};
+	export let onToolCallResolved = () => {};
 
 	let tokens = [];
 	let pendingUpdate = null;
@@ -116,6 +117,7 @@
 		{allowEmbeds}
 		{onTaskClick}
 		{onSourceClick}
+		{onToolCallResolved}
 		{onSave}
 		{onUpdate}
 		{onPreview}
