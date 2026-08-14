@@ -5165,7 +5165,7 @@ async def streaming_chat_response_handler(response, ctx):
                             await pause_for_tool_approval(
                                 metadata['chat_id'],
                                 metadata['message_id'],
-                                output,
+                                full_output(),
                                 form_data,
                                 metadata,
                             )
@@ -5199,7 +5199,7 @@ async def streaming_chat_response_handler(response, ctx):
                         await pause_for_tool_approval(
                             metadata['chat_id'],
                             metadata['message_id'],
-                            output,
+                            full_output(),
                             form_data,
                             metadata,
                         )
@@ -5478,7 +5478,7 @@ async def streaming_chat_response_handler(response, ctx):
                     # output sent to the frontend — they're only for LLM consumption
                     # via convert_output_to_messages.
                     frontend_output = []
-                    for item in output:
+                    for item in full_output():
                         if item.get('type') == 'function_call_output':
                             parts = item.get('output', [])
                             if any(p.get('type') == 'input_image' for p in parts):
@@ -5564,7 +5564,7 @@ async def streaming_chat_response_handler(response, ctx):
                             # keeps indices aligned. The display prefix
                             # ensures the UI shows tool history during
                             # streaming.
-                            prior_output = list(output)
+                            prior_output = list(full_output())
                             # Trim the trailing empty placeholder message
                             # so it doesn't persist as a ghost item once
                             # the new stream produces real content.

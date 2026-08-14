@@ -1547,6 +1547,8 @@ async def chat_completion(
                     for entry in message_ids:
                         target_model_id = entry['model_id']
                         assistant_message_id = entry['message_id']
+                        if assistant_message_id and assistant_message_id == metadata.get('assistant_message_id'):
+                            continue
                         if assistant_message_id:
                             assistant_message = {
                                 'id': assistant_message_id,
