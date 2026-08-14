@@ -203,6 +203,31 @@ def output_id(prefix: str) -> str:
     return f'{prefix}_{uuid4().hex[:24]}'
 
 
+
+def extract_reasoning_details(payload) -> list:
+    """Read reasoning_details from the message or OpenRouter-style provider_specific_fields.
+
+    Anthropic-via-OpenRouter puts the thinking signature on
+    message.provider_specific_fields.reasoning_details, not the top-level
+    reasoning_details key. Missing that copy drops the signature on save and
+    the next turn 400s (issue #27467).
+    """
+    if not isinstance(payload, dict):
+        return []
+
+    details = payload.get('reasoning_details')
+    if not details:
+        provider = payload.get('provider_specific_fields') or {}
+        if isinstance(provider, dict):
+            details = provider.get('reasoning_details')
+
+    if isinstance(details, list):
+        return [item for item in details if isinstance(item, dict)]
+    if isinstance(details, dict):
+        return [details]
+    return []
+
+
 def merge_streamed_reasoning_details(target: list, details) -> None:
     items = details if isinstance(details, list) else [details]
     for item in items:
@@ -3898,7 +3923,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                     if not response_output:
                         choice_message = choices[0].get('message', {})
                         reasoning_content = choice_message.get('reasoning_content') or choice_message.get('reasoning')
-                        reasoning_details = choice_message.get('reasoning_details')
+                        reasoning_details = extract_reasoning_details(choice_message)
                         response_output = []
                         if reasoning_content or reasoning_details:
                             reasoning_item = {
@@ -4939,14 +4964,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         or delta.get('reasoning')
                                         or delta.get('thinking')
                                     )
-                                    reasoning_details = delta.get('reasoning_details')
-                                    reasoning_detail_items = (
-                                        [item for item in reasoning_details if isinstance(item, dict)]
-                                        if isinstance(reasoning_details, list)
-                                        else [reasoning_details]
-                                        if isinstance(reasoning_details, dict)
-                                        else []
-                                    )
+                                    reasoning_detail_items = extract_reasoning_details(delta)
                                     existing_reasoning_item = next(
                                         (item for item in reversed(output) if item.get('type') == 'reasoning'),
                                         None,
