@@ -33,6 +33,7 @@
 	export let onTaskClick: any = () => {};
 	export let onUpdate: any = () => {};
 	export let onPreview: any = () => {};
+	export let onToolCallResolved: any = () => {};
 
 	const getDetailTitle = (detailToken: OutputDetailToken): any => detailToken.summary;
 	const getDetailAttributes = (detailToken: OutputDetailToken): any => detailToken.attributes;
@@ -45,13 +46,14 @@
 
 		resolvingCallId = callId;
 		try {
-			await resolveChatMessageToolCall(
+			const res = await resolveChatMessageToolCall(
 				localStorage.token,
 				chatId,
 				messageId,
 				callId,
 				approved ? 'approve' : 'reject'
 			);
+			onToolCallResolved(res);
 		} catch (err) {
 			toast.error(String(err));
 		} finally {
@@ -85,6 +87,7 @@
 					{sourceIds}
 					{onSourceClick}
 					{onTaskClick}
+					{onToolCallResolved}
 					{onSave}
 					{onUpdate}
 					{onPreview}
@@ -139,6 +142,7 @@
 										{preview}
 										{compactPreview}
 										{editCodeBlock}
+										{onToolCallResolved}
 									/>
 								</div>
 							</div>
@@ -189,10 +193,11 @@
 							content={detailToken.text}
 							{done}
 							{save}
-							{preview}
-							{compactPreview}
-							{editCodeBlock}
-						/>
+								{preview}
+								{compactPreview}
+								{editCodeBlock}
+								{onToolCallResolved}
+							/>
 					</div>
 				</div>
 			</Collapsible>

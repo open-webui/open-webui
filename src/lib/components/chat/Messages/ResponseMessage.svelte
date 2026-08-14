@@ -160,6 +160,7 @@
 	export let forkHandler: Function | null = null;
 
 	export let addMessages: Function;
+	export let onToolCallResolved: Function = () => {};
 
 	export let isLastMessage = true;
 	export let readOnly = false;
@@ -835,6 +836,7 @@
 									onTaskClick={async (e) => {
 										console.log(e);
 									}}
+									{onToolCallResolved}
 									onSourceClick={async (id) => {
 										console.log(id);
 

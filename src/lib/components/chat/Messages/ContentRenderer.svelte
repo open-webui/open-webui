@@ -93,6 +93,7 @@
 	export let onSave = (e) => {};
 	export let onSourceClick = (e) => {};
 	export let onTaskClick = (e) => {};
+	export let onToolCallResolved = (e) => {};
 	export let onSetInputText = (text) => {};
 
 	let contentContainerElement;
@@ -299,6 +300,7 @@
 			{formatMessageContent}
 			{onSourceClick}
 			{onTaskClick}
+			{onToolCallResolved}
 			{onSave}
 			onUpdate={markdownUpdateHandler}
 			onPreview={previewHandler}
@@ -320,6 +322,7 @@
 				{sourceIds}
 				{onSourceClick}
 				{onTaskClick}
+				{onToolCallResolved}
 				{onSave}
 				onUpdate={markdownUpdateHandler}
 				onPreview={previewHandler}
@@ -340,6 +343,7 @@
 					{preview}
 					{compactPreview}
 					{done}
+					{onToolCallResolved}
 				/>
 			</div>
 		{/if}

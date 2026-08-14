@@ -40,6 +40,7 @@
 	export let showMessage: Function = () => {};
 	export let submitMessage: Function = () => {};
 	export let addMessages: Function = () => {};
+	export let onToolCallResolved: Function = () => {};
 	export let forkHandler: Function | null = null;
 
 	export let readOnly = false;
@@ -555,6 +556,7 @@
 								{continueResponse}
 								{mergeResponses}
 								{addMessages}
+								{onToolCallResolved}
 								{forkHandler}
 								{allowDelete}
 								{triggerScroll}

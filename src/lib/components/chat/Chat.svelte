@@ -502,13 +502,14 @@
 			return;
 		}
 
-		await resolveChatMessageToolCall(localStorage.token, $chatId, messageId, callId, 'answer', {
+		const res = await resolveChatMessageToolCall(localStorage.token, $chatId, messageId, callId, 'answer', {
 			answers,
 			timed_out: timedOut
 		}).catch(async (error) => {
 			toast.error(`${error}`);
 			await loadChat();
 		});
+		onToolCallResolved(res);
 	};
 
 	const rejectPendingAskUser = async (messageId, callId) => {
@@ -516,7 +517,7 @@
 			return;
 		}
 
-		await resolveChatMessageToolCall(
+		const res = await resolveChatMessageToolCall(
 			localStorage.token,
 			$chatId,
 			messageId,
@@ -526,6 +527,7 @@
 			toast.error(`${error}`);
 			await loadChat();
 		});
+		onToolCallResolved(res);
 	};
 
 	$: pendingAskUser = findPendingAskUser(history);
@@ -655,6 +657,13 @@
 				}
 			);
 			if (res) chat = res;
+		}
+	};
+
+	const onToolCallResolved = (res) => {
+		const newTaskIds = res?.task_ids ?? (res?.task_id ? [res.task_id] : []);
+		if (newTaskIds.length > 0) {
+			taskIds = [...(taskIds ?? []), ...newTaskIds];
 		}
 	};
 
@@ -3568,10 +3577,7 @@
 				await handleOpenAIError(res.error, responseMessage);
 			} else {
 				// Backend returns task_ids (multi-model) or task_id (single model)
-				const newTaskIds = res.task_ids ?? (res.task_id ? [res.task_id] : []);
-				if (newTaskIds.length > 0) {
-					taskIds = [...(taskIds ?? []), ...newTaskIds];
-				}
+				onToolCallResolved(res);
 
 				// Backend returns chat_id for new chats — set store + URL.
 				// Only update if the user hasn't navigated to a different chat
@@ -4287,6 +4293,7 @@
 										{mergeResponses}
 										{chatActionHandler}
 										{addMessages}
+										{onToolCallResolved}
 										allowDelete={!(generating || taskIds?.length)}
 										forkHandler={handleForkChat}
 										topPadding={!embedded}
