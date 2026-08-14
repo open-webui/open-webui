@@ -279,7 +279,6 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
                     or usage.get('predicted_n')
                     or 0
                 )
-                + int(usage.get('cache_n') or 0)
             )
         ):
             tokens += _estimate_messages_tokens(messages[idx + 1 :])
@@ -336,7 +335,6 @@ def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: 
                     or usage.get('predicted_n')
                     or 0
                 )
-                + int(usage.get('cache_n') or 0)
             )
         ):
             return tokens + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
