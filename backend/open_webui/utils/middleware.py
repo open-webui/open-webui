@@ -2055,8 +2055,9 @@ def process_messages_with_output(
                 processed.extend(output_messages)
                 continue
 
-        # Strip 'output' field before adding (LLM shouldn't see it)
-        clean_message = {k: v for k, v in message.items() if k != 'output'}
+        clean_message = dict(message)
+        for key in ('id', 'files', 'output', 'contextSummary', 'context_summary', 'usage'):
+            clean_message.pop(key, None)
         processed.append(clean_message)
 
     return processed
@@ -2066,10 +2067,8 @@ def strip_compaction_fields(messages: list[dict]) -> list[dict]:
     stripped = []
     for message in messages:
         clean = dict(message)
-        clean.pop('contextSummary', None)
-        clean.pop('context_summary', None)
-        clean.pop('usage', None)
-        clean.pop('id', None)
+        for key in ('id', 'files', 'output', 'contextSummary', 'context_summary', 'usage'):
+            clean.pop(key, None)
         stripped.append(clean)
     return stripped
 
