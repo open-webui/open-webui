@@ -778,6 +778,11 @@
 	};
 
 	const setProviderDownloadConnections = async () => {
+		if ($user?.role !== 'admin') {
+			providerDownloadConnections = [];
+			return;
+		}
+
 		const openaiConfig = await getOpenAIConfig(localStorage.token).catch(() => null);
 		providerDownloadConnections =
 			openaiConfig?.ENABLE_OPENAI_API
