@@ -162,7 +162,10 @@
 	let eventConfirmationInputValue = '';
 	let eventConfirmationInputType = '';
 	let eventConfirmationInputOptions: ({ label?: string; value: string } | string)[] = [];
-	let eventCallback = null;
+	let eventCallback: (value: any) => void = () => {};
+	let showAskUserDialog = false;
+	let askUserQuestions: any[] = [];
+	let askUserAllowOther = true;
 
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
@@ -1144,6 +1147,11 @@
 					eventConfirmationInputValue = data?.value ?? '';
 					eventConfirmationInputType = data?.input?.type ?? data?.type ?? '';
 					eventConfirmationInputOptions = data?.input?.options ?? data?.options ?? [];
+				} else if (type === 'request:user_input') {
+					eventCallback = cb;
+					askUserQuestions = data?.questions ?? [];
+					askUserAllowOther = data?.allow_other ?? true;
+					showAskUserDialog = true;
 				} else if (type.startsWith('terminal:')) {
 					terminalEventHandler(type, data);
 				} else {
@@ -1600,7 +1608,9 @@
 						fileItem.content_type = uploadedFile.meta?.content_type;
 						fileItem.size = uploadedFile.meta?.size;
 						fileItem.collection_name =
-							res.collection_name ?? uploadedFile.meta?.collection_name ?? uploadedFile.collection_name;
+							res.collection_name ??
+							uploadedFile.meta?.collection_name ??
+							uploadedFile.collection_name;
 					} else {
 						fileItem.type = 'text';
 						fileItem.file = {
@@ -2249,9 +2259,7 @@
 
 			chatRequestQueues.update((q) => ({
 				...q,
-				[targetChatId]: (q[targetChatId] ?? []).filter(
-					(m) => !queuedMessageIds.has(m.id)
-				)
+				[targetChatId]: (q[targetChatId] ?? []).filter((m) => !queuedMessageIds.has(m.id))
 			}));
 
 			await submitPrompt(combinedPrompt, combinedFiles);
@@ -4165,6 +4173,15 @@
 										{onUpdate}
 										messageQueue={$chatRequestQueues[$chatId] ?? []}
 										{chatTasks}
+										askUser={{
+											show: showAskUserDialog,
+											questions: askUserQuestions,
+											allowOther: askUserAllowOther,
+											onConfirm: (value) => {
+												showAskUserDialog = false;
+												eventCallback(value);
+											}
+										}}
 										onQueueSendNow={sendQueuedMessageNow}
 										onQueueEdit={editQueuedMessage}
 										onQueueDelete={deleteQueuedMessage}
@@ -4219,10 +4236,7 @@
 										</div>
 									</div>
 								{/if}
-								<div
-									id={embedded ? messageInputDropzoneId : undefined}
-									class="pb-2 z-10"
-								>
+								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
 									<MessageInput
 										bind:this={messageInput}
 										{history}
@@ -4257,6 +4271,15 @@
 										{onUpdate}
 										messageQueue={$chatRequestQueues[$chatId] ?? []}
 										{chatTasks}
+										askUser={{
+											show: showAskUserDialog,
+											questions: askUserQuestions,
+											allowOther: askUserAllowOther,
+											onConfirm: (value) => {
+												showAskUserDialog = false;
+												eventCallback(value);
+											}
+										}}
 										onQueueSendNow={sendQueuedMessageNow}
 										onQueueEdit={editQueuedMessage}
 										onQueueDelete={deleteQueuedMessage}

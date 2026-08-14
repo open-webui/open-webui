@@ -1,15 +1,21 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { marked } from 'marked';
 
-	const i18n = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	const toolLabels = {
 		time: {
 			label: $i18n.t('Time & Calculation'),
 			description: $i18n.t('Get current time and perform date/time calculations')
+		},
+		user_input: {
+			label: $i18n.t('Ask User'),
+			description: $i18n.t('Pause a response to ask the user a clarifying question')
 		},
 		memory: {
 			label: $i18n.t('Memory'),
