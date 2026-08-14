@@ -3,6 +3,7 @@
 	import { onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -207,11 +208,18 @@
 										on:click={() => selectOption(question, option, optionIndex)}
 									>
 										<span class="min-w-0 shrink-0 text-xs">{option.label}</span>
-										<span
-											class="min-w-0 text-xs leading-relaxed text-gray-500 transition-colors group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"
+										<Tooltip
+											as="span"
+											className="min-w-0 flex-1"
+											content={option.description}
+											placement="top-start"
 										>
-											{option.description}
-										</span>
+											<span
+												class="block truncate text-xs leading-relaxed text-gray-500 transition-colors group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"
+											>
+												{option.description}
+											</span>
+										</Tooltip>
 										{#if optionIndex === 0}
 											<span
 												class="shrink-0 rounded-full bg-gray-200/70 px-1.5 py-0.5 text-[0.625rem] text-gray-500 dark:bg-white/[0.08] dark:text-gray-400"
