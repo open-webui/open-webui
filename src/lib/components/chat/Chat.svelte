@@ -166,6 +166,7 @@
 	let showAskUserDialog = false;
 	let askUserQuestions: any[] = [];
 	let askUserAllowOther = true;
+	let askUserTimeoutMs: number | null = null;
 
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
@@ -1151,6 +1152,8 @@
 					eventCallback = cb;
 					askUserQuestions = data?.questions ?? [];
 					askUserAllowOther = data?.allow_other ?? true;
+					askUserTimeoutMs =
+						typeof data?.timeout_ms === 'number' && data.timeout_ms > 0 ? data.timeout_ms : null;
 					showAskUserDialog = true;
 				} else if (type.startsWith('terminal:')) {
 					terminalEventHandler(type, data);
@@ -4177,9 +4180,14 @@
 											show: showAskUserDialog,
 											questions: askUserQuestions,
 											allowOther: askUserAllowOther,
+											timeoutMs: askUserTimeoutMs,
 											onConfirm: (value) => {
 												showAskUserDialog = false;
 												eventCallback(value);
+											},
+											onCancel: () => {
+												showAskUserDialog = false;
+												eventCallback({ status: 'cancelled', answers: {} });
 											}
 										}}
 										onQueueSendNow={sendQueuedMessageNow}
@@ -4275,9 +4283,14 @@
 											show: showAskUserDialog,
 											questions: askUserQuestions,
 											allowOther: askUserAllowOther,
+											timeoutMs: askUserTimeoutMs,
 											onConfirm: (value) => {
 												showAskUserDialog = false;
 												eventCallback(value);
+											},
+											onCancel: () => {
+												showAskUserDialog = false;
+												eventCallback({ status: 'cancelled', answers: {} });
 											}
 										}}
 										onQueueSendNow={sendQueuedMessageNow}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher, getContext } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 
@@ -34,20 +35,44 @@
 	export let show = false;
 	export let questions: AskUserQuestion[] = [];
 	export let allowOther = true;
+	export let timeoutMs: number | null = null;
 
 	let answers: Record<string, DraftAnswer> = {};
 	let questionIndex = 0;
 	let wasOpen = false;
+	let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+	const clearAutoCancel = () => {
+		if (timeoutHandle) {
+			clearTimeout(timeoutHandle);
+			timeoutHandle = null;
+		}
+	};
+
+	const cancel = () => {
+		clearAutoCancel();
+		show = false;
+		dispatch('cancel');
+	};
 
 	$: if (show && !wasOpen) {
 		answers = {};
 		questionIndex = 0;
 		wasOpen = true;
+		clearAutoCancel();
+		if (typeof timeoutMs === 'number' && timeoutMs > 0) {
+			timeoutHandle = setTimeout(() => {
+				cancel();
+			}, timeoutMs);
+		}
 	}
 
 	$: if (!show && wasOpen) {
+		clearAutoCancel();
 		wasOpen = false;
 	}
+
+	onDestroy(clearAutoCancel);
 
 	const questionAllowsOther = (question: AskUserQuestion) => question.allow_other ?? allowOther;
 
@@ -145,17 +170,18 @@
 </script>
 
 {#if show}
-	<section class="my-1 rounded-2xl bg-gray-100/70 px-3.5 py-3 dark:bg-white/[0.055]">
+	<section
+		class="my-2 rounded-2xl border border-gray-50 bg-white px-3.5 py-3 dark:border-gray-850 dark:bg-gray-900"
+	>
 		<div class="mb-3 flex items-center justify-between gap-3">
-			<div class="text-[0.6875rem] font-medium tracking-wide text-gray-500 dark:text-gray-400">
-				{$i18n.t('Planning question')}
+			<div class="text-[0.6875rem] tracking-wide text-gray-500 dark:text-gray-400">
+				{$i18n.t('Assistant needs your input')}
 			</div>
-			<div class="text-[0.6875rem] text-gray-500 dark:text-gray-400">
+			<div class="shrink-0 text-right text-[0.6875rem] text-gray-500 dark:text-gray-400">
 				{$i18n.t('Question')}
 				{questionIndex + 1}
 				{$i18n.t('of')}
-				{questions.length} ·
-				{$i18n.t('Paused while visible')}
+				{questions.length}
 			</div>
 		</div>
 
@@ -177,12 +203,12 @@
 								<!-- svelte-ignore a11y_click_events_have_key_events -->
 								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 								<label
-									class="flex cursor-pointer items-start gap-2.5 rounded-xl px-2.5 py-1.5 transition-colors {isSelectedOption(
+									class="flex cursor-pointer items-start gap-2.5 rounded-2xl px-2.5 py-2 transition-colors {isSelectedOption(
 										question,
 										optionIndex
 									)
-										? 'bg-white shadow-sm dark:bg-white/[0.1]'
-										: 'hover:bg-white/70 dark:hover:bg-white/[0.06]'}"
+										? 'bg-gray-50 shadow-sm dark:bg-white/[0.08]'
+										: 'hover:bg-gray-50/80 dark:hover:bg-white/[0.05]'}"
 									on:click={() => isSelectedOption(question, optionIndex) && advance()}
 								>
 									<input
@@ -221,11 +247,11 @@
 
 							{#if questionAllowsOther(question)}
 								<label
-									class="flex cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-xs transition-colors {isSelectedOther(
+									class="flex cursor-pointer items-center gap-2.5 rounded-2xl px-2.5 py-2 text-xs transition-colors {isSelectedOther(
 										question
 									)
-										? 'bg-white shadow-sm dark:bg-white/[0.1]'
-										: 'hover:bg-white/70 dark:hover:bg-white/[0.06]'}"
+										? 'bg-gray-50 shadow-sm dark:bg-white/[0.08]'
+										: 'hover:bg-gray-50/80 dark:hover:bg-white/[0.05]'}"
 								>
 									<input
 										class="sr-only"
@@ -250,11 +276,17 @@
 								</label>
 								{#if selectedAnswer?.type === 'other'}
 									<input
-										class="w-full rounded-xl bg-transparent px-2.5 py-1.5 text-xs text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-100 dark:placeholder:text-gray-500"
+										class="w-full rounded-2xl border border-gray-100 bg-white px-3 py-2 text-xs text-gray-800 outline-hidden placeholder:text-gray-400 focus:border-gray-200 dark:border-gray-850 dark:bg-gray-950 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-gray-700"
 										placeholder={$i18n.t('Type your answer')}
 										value={otherText(question)}
 										on:input={(event) =>
 											updateOther(question, (event.currentTarget as HTMLInputElement).value)}
+										on:keydown={(event) => {
+											if (event.key === 'Enter') {
+												event.preventDefault();
+												advance();
+											}
+										}}
 									/>
 								{/if}
 							{/if}
@@ -264,18 +296,27 @@
 			{/if}
 
 			<div class="flex items-center justify-between gap-2 pt-0.5">
-				<button
-					type="button"
-					class="rounded-lg px-2.5 py-1.5 text-xs text-gray-500 transition-colors hover:bg-white/70 hover:text-gray-800 disabled:opacity-30 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-100"
-					disabled={questionIndex === 0}
-					on:click={() => (questionIndex -= 1)}
-				>
-					{$i18n.t('Previous')}
-				</button>
+				<div class="flex items-center gap-1.5">
+					<button
+						type="button"
+						class="rounded-full px-3 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-100"
+						on:click={cancel}
+					>
+						{$i18n.t('Cancel')}
+					</button>
+					<button
+						type="button"
+						class="rounded-full px-3 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 disabled:opacity-30 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-100"
+						disabled={questionIndex === 0}
+						on:click={() => (questionIndex -= 1)}
+					>
+						{$i18n.t('Previous')}
+					</button>
+				</div>
 				{#if questionIndex < questions.length - 1}
 					<button
 						type="button"
-						class="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 active:scale-[0.98] dark:bg-white dark:text-black dark:hover:bg-white/90"
+						class="rounded-full bg-gray-900 px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 active:scale-[0.98] dark:bg-white dark:text-black dark:hover:bg-white/90"
 						on:click={() => (questionIndex += 1)}
 					>
 						{$i18n.t('Next')}
@@ -283,7 +324,7 @@
 				{:else}
 					<button
 						type="button"
-						class="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black dark:hover:bg-white/90"
+						class="rounded-full bg-gray-900 px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-gray-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black dark:hover:bg-white/90"
 						disabled={!complete}
 						on:click={() => submit()}
 					>

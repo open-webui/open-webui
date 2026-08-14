@@ -113,6 +113,15 @@
 
 	const i18n = getContext('i18n');
 
+	type AskUserPrompt = {
+		show: boolean;
+		questions: any[];
+		allowOther: boolean;
+		timeoutMs: number | null;
+		onConfirm: (value: any) => void;
+		onCancel: () => void;
+	};
+
 	export let onUpload: Function = (e) => {};
 	export let onChange: Function = () => {};
 	export let onWebSearchToggle: Function = () => {};
@@ -171,11 +180,13 @@
 	export let onQueueEdit: (id: string) => void = () => {};
 	export let onQueueDelete: (id: string) => void = () => {};
 	export let onUpdate: (data?: { file?: any }) => void = () => {};
-	export let askUser = {
+	export let askUser: AskUserPrompt = {
 		show: false,
 		questions: [],
 		allowOther: true,
-		onConfirm: (_value: any) => {}
+		timeoutMs: null,
+		onConfirm: (_value: any) => {},
+		onCancel: () => {}
 	};
 
 	export let chatTasks = [];
@@ -1593,8 +1604,12 @@
 									show={askUser.show}
 									questions={askUser.questions}
 									allowOther={askUser.allowOther}
+									timeoutMs={askUser.timeoutMs}
 									on:confirm={(e) => {
 										askUser.onConfirm(e.detail);
+									}}
+									on:cancel={() => {
+										askUser.onCancel();
 									}}
 								/>
 							</div>

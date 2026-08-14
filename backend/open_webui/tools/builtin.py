@@ -506,6 +506,7 @@ async def edit_image(
 async def ask_user(
     questions: list[dict],
     allow_other: bool = True,
+    timeout_ms: int = 120_000,
     __event_call__: callable = None,
 ) -> str:
     """
@@ -514,6 +515,7 @@ async def ask_user(
 
     :param questions: 1-3 question objects, each with id, header, question, and 2-3 options. Each option needs label and description.
     :param allow_other: Whether users may enter a free-form answer instead of choosing one of the options
+    :param timeout_ms: How long the browser should keep the prompt open before cancelling it
     :return: JSON with status and answers keyed by question id
     """
     try:
@@ -568,6 +570,9 @@ async def ask_user(
                 }
             )
 
+        if isinstance(timeout_ms, bool) or not isinstance(timeout_ms, int) or not 60_000 <= timeout_ms <= 240_000:
+            timeout_ms = 120_000
+
         if __event_call__ is None:
             return JSONCodec.dumps(
                 {
@@ -583,6 +588,7 @@ async def ask_user(
                 'data': {
                     'questions': normalized_questions,
                     'allow_other': allow_other,
+                    'timeout_ms': timeout_ms,
                 },
             }
         )
