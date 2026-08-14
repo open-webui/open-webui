@@ -1179,7 +1179,7 @@
 						}
 					}
 				} else if (type === 'response:completion') {
-					responseCompletionEventHandler(data, message);
+					responseCompletionEventHandler(data, message, event.chat_id);
 				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);
 				} else if (type === 'chat:tasks:cancel') {
@@ -2695,7 +2695,7 @@
 		}
 	};
 
-	const responseCompletionEventHandler = (data, message) => {
+	const responseCompletionEventHandler = async (data, message, chatId) => {
 		message.output = applyResponseStreamEvent(message.output ?? [], data);
 
 		if (data?.type === 'response.output_text.delta') {
@@ -2710,10 +2710,39 @@
 			}
 		} else if (data?.type === 'response.completed' || data?.type?.endsWith('.done')) {
 			message.content = getOutputText(message.output) || message.content;
+			message.done = true;
+
+			const visibleContent =
+				getOutputText(message?.output) || removeAllDetails(message?.content ?? '');
+
+			if ($settings.responseAutoCopy) {
+				copyToClipboard(visibleContent);
+			}
+
+			dispatchCallOverlayAudio(message, true);
+
+			eventTarget.dispatchEvent(
+				new CustomEvent('chat:finish', {
+					detail: {
+						id: message.id,
+						content: visibleContent
+					}
+				})
+			);
+
+			chatCompletedHandler(
+				chatId,
+				message.model,
+				message.id,
+				createMessagesList(history, message.id)
+			);
+			await processNextInQueue(chatId);
 		}
 
 		history.messages[message.id] = message;
 		history = history;
+		await tick();
+		scheduleResponseScrollToBottom();
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
