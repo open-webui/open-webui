@@ -4637,16 +4637,16 @@ async def streaming_chat_response_handler(response, ctx):
                                     )
                                 # Check for Responses API events (type field starts with "response.")
                                 elif data.get('type', '').startswith('response.'):
-                                    response_event_type = data.get('type', '')
-                                    response_event_is_delta = response_event_type.endswith('.delta')
+                                    response_data_type = data.get('type', '')
+                                    response_data_is_delta = response_data_type.endswith('.delta')
                                     output, response_metadata = handle_responses_streaming_event(data, output)
 
-                                    if not response_event_is_delta:
+                                    if not response_data_is_delta:
                                         await flush_pending_delta_data()
 
                                     # Emit citation sources from finalized output items
                                     # (mirrors Chat Completions annotation handling at delta level)
-                                    if response_event_type == 'response.output_item.done':
+                                    if response_data_type == 'response.output_item.done':
                                         item = data.get('item', {})
                                         if item.get('type') == 'message':
                                             for part in item.get('content', []):
