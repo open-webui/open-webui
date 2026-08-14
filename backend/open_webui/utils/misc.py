@@ -258,6 +258,27 @@ def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
     return reconciled_messages
 
 
+
+def usable_reasoning_details(details) -> list:
+    """Drop Anthropic reasoning entries that cannot be replayed.
+
+    A stored `reasoning.text` with format anthropic-claude-v1 and no
+    `signature` is rejected by the provider on the next turn.
+    """
+    if not details:
+        return []
+    items = details if isinstance(details, list) else [details]
+    usable = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        fmt = str(item.get('format') or '')
+        if 'anthropic' in fmt and not item.get('signature'):
+            continue
+        usable.append(item)
+    return usable
+
+
 def convert_output_to_messages(
     output: list,
     raw: bool = False,
@@ -441,7 +462,7 @@ def convert_output_to_messages(
             pending_tool_outputs.append(item)
 
         elif item_type == 'reasoning':
-            reasoning_details = item.get('reasoning_details') if raw else None
+            reasoning_details = usable_reasoning_details(item.get('reasoning_details')) if raw else []
             if not reasoning_format and not reasoning_details:
                 continue
 
