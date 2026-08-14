@@ -3668,7 +3668,13 @@
 	};
 
 	const stopResponse = async (processQueue = true) => {
-		if (taskIds) {
+		const responseMessage = history.currentId ? history.messages[history.currentId] : null;
+		const hasTaskIds = (taskIds?.length ?? 0) > 0;
+		const hasPendingAssistantResponse =
+			!!$chatId &&
+			(hasTaskIds || (responseMessage?.role === 'assistant' && responseMessage?.done !== true));
+
+		if (hasTaskIds || hasPendingAssistantResponse) {
 			if ($chatId) {
 				await stopTasksByChatId(localStorage.token, $chatId).catch((error) => {
 					toast.error(`${error}`);
@@ -3685,15 +3691,16 @@
 
 			taskIds = null;
 
-			const responseMessage = history.messages[history.currentId];
 			// Set all response messages to done
-			if (responseMessage.parentId && history.messages[responseMessage.parentId]) {
+			if (responseMessage?.parentId && history.messages[responseMessage.parentId]) {
 				for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
 					history.messages[messageId].done = true;
 				}
 			}
 
-			history.messages[history.currentId] = responseMessage;
+			if (responseMessage) {
+				history.messages[history.currentId] = responseMessage;
+			}
 
 			if (shouldAutoScrollResponse()) {
 				scrollToBottom();
