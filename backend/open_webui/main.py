@@ -1180,7 +1180,7 @@ async def chat_completion(
             message_ids = [{'model_id': model_id, 'message_id': form_data.pop('id', None)}]
 
         user_message = form_data.pop('user_message', None) or form_data.pop('parent_message', None)
-        chat_id = form_data.get('chat_id') or ''
+        chat_id = form_data.pop('chat_id', None) or ''
         chat_variables = form_data.pop('chat_variables', None)
         if chat_variables is None:
             existing_chat = await Chats.get_chat_by_id(chat_id) if is_saved_chat_id(chat_id) else None
@@ -1202,16 +1202,28 @@ async def chat_completion(
         ):
             tool_servers = None
 
+        automation_id = form_data.pop('automation_id', None)
+        tool_approval_mode = (
+            'full'
+            if automation_id or chat_id.startswith('channel:')
+            else (
+                form_data.get('params', {}).get('tool_approval_mode')
+                if await Config.get('chat.tool_permissions.enable', False)
+                else 'full'
+            )
+            or 'full'
+        )
+
         metadata = {
             'user_id': user.id,
             'user_agent': request.headers.get('user-agent', '') or '',
             'internal': getattr(request.state, 'internal', False) is True,
-            'chat_id': form_data.pop('chat_id', None) or '',
+            'chat_id': chat_id,
             'user_message': user_message,
             'user_message_id': user_message.get('id') if user_message else None,
             'assistant_message_id': form_data.pop('assistant_message_id', None),
             'session_id': form_data.pop('session_id', None),
-            'automation_id': form_data.pop('automation_id', None),
+            'automation_id': automation_id,
             'folder_id': form_data.pop('folder_id', None),
             'filter_ids': form_data.pop('filter_ids', []),
             'tool_ids': form_data.get('tool_ids', None),
@@ -1231,12 +1243,7 @@ async def chat_completion(
                     or model_info_params.get('function_calling')
                     or 'native'
                 ),
-                'tool_approval_mode': (
-                    form_data.get('params', {}).get('tool_approval_mode')
-                    if await Config.get('chat.tool_permissions.enable', False)
-                    else 'full'
-                )
-                or 'full',
+                'tool_approval_mode': tool_approval_mode,
             },
         }
 
