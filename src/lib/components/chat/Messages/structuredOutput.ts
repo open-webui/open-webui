@@ -459,6 +459,16 @@ export function applyResponseStreamEvent(
 		return nextOutput;
 	}
 
+	// ensureItem below creates the item when it is missing, so only types handled below may reach it.
+	const handledBelow =
+		eventType === 'response.content_part.added' ||
+		eventType === 'response.reasoning_summary_part.added' ||
+		eventType.endsWith('.delta') ||
+		eventType.endsWith('.done');
+	if (!handledBelow) {
+		return output;
+	}
+
 	const item = ensureItem(nextOutput, outputIndex, {
 		id: event.item_id,
 		type: eventType.includes('reasoning')
