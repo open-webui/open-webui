@@ -414,7 +414,14 @@
 							}}
 						>
 							{#if textScale === null || (isDefaultSetting('textScale') && !showTextScaleSlider)}
-								<span>{$i18n.t('Default')}</span>
+								{#if isDefaultSetting('textScale') && defaultSettings.textScale != null}
+									<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600"
+										>{$i18n.t('Default')}</span
+									>
+									<span aria-hidden="true">{defaultSettings.textScale}x</span>
+								{:else}
+									<span>{$i18n.t('Default')}</span>
+								{/if}
 							{:else}
 								<span>{textScale}x</span>
 							{/if}
