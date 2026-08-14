@@ -3,6 +3,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
+	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { user } from '$lib/stores';
 	import { imageGenerations, imageEdits } from '$lib/apis/images';
 
@@ -136,10 +137,10 @@
 								{#each generatedImages as image, index}
 									<button
 										class="relative group cursor-pointer"
-										on:click={() => downloadImage(image.url, index)}
+										on:click={() => downloadImage(`${WEBUI_BASE_URL}${image.url}`, index)}
 									>
 										<img
-											src={image.url}
+											src={`${WEBUI_BASE_URL}${image.url}`}
 											alt=""
 											class="w-full aspect-square object-cover rounded-lg border border-gray-100/30 dark:border-gray-850/30"
 										/>
