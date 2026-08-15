@@ -19,7 +19,7 @@
 	export let onNewFile: () => void = () => {};
 	export let onUploadFiles: (files: File[]) => void = () => {};
 	export let onDownloadDir: () => void = () => {};
-	export let onMove: (source: string, destFolder: string) => void = () => {};
+	export let onMove: (sources: string[], destFolder: string) => void | Promise<void> = () => {};
 	export let showHidden = false;
 	export let onToggleHidden: () => void = () => {};
 
@@ -50,7 +50,9 @@
 	});
 </script>
 
-<div class="m-0 flex items-center gap-1 px-1 pt-0 pb-1.5 shrink-0 border-b border-gray-50 dark:border-gray-850/30">
+<div
+	class="m-0 flex items-center gap-1 px-1 pt-0 pb-1.5 shrink-0 border-b border-gray-50 dark:border-gray-850/30"
+>
 	<div class="flex shrink-0 items-center gap-0.5 px-1">
 		<!-- Back -->
 		<Tooltip content={$i18n.t('Back')}>
@@ -108,7 +110,7 @@
 				on:dragleave={() => {
 					if (dragOverCrumb === i) dragOverCrumb = null;
 				}}
-				on:drop={(e) => {
+				on:drop={async (e) => {
 					if (!writable) return;
 					const raw = e.dataTransfer?.getData('application/x-terminal-file-move');
 					if (!raw) return;
@@ -117,8 +119,8 @@
 					dragOverCrumb = null;
 					try {
 						const data = JSON.parse(raw);
-						const paths = data.paths || (data.path ? [data.path] : []);
-						for (const p of paths) onMove(p, crumb.path);
+						const paths = (data.paths || (data.path ? [data.path] : [])) as string[];
+						await onMove(paths, crumb.path);
 					} catch {}
 				}}
 			>

@@ -24,7 +24,7 @@
 	export let onOpen: (entry: FileEntry) => void = () => {};
 	export let onDownload: (path: string) => void = () => {};
 	export let onDelete: (path: string, name: string) => void = () => {};
-	export let onMove: (source: string, destFolder: string) => void = () => {};
+	export let onMove: (sources: string[], destFolder: string) => void | Promise<void> = () => {};
 	export let onRename: (oldPath: string, newName: string) => void = () => {};
 
 	// ── Selection ─────────────────────────────────────────────────────────
@@ -187,7 +187,7 @@
 			dragOverFolder = false;
 			clearExpandTimer();
 		}}
-		on:drop={(e) => {
+		on:drop={async (e) => {
 			if (entry.type !== 'directory') return;
 			if (!writable) return;
 			const raw = e.dataTransfer?.getData('application/x-terminal-file-move');
@@ -198,12 +198,12 @@
 			clearExpandTimer();
 			try {
 				const data = JSON.parse(raw);
-				const paths = data.paths || (data.path ? [data.path] : []);
+				const paths = (data.paths || (data.path ? [data.path] : [])) as string[];
 				const destFolder = directoryPath;
-				for (const p of paths) {
-					if (p + '/' === destFolder || p === destFolder) continue;
-					onMove(p, destFolder);
-				}
+				await onMove(
+					paths.filter((p) => p + '/' !== destFolder && p !== destFolder),
+					destFolder
+				);
 			} catch {}
 		}}
 	>

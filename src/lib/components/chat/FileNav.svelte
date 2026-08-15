@@ -121,10 +121,7 @@
 	const normalizePath = (path: string) => path.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
 
 	const cleanEntryName = (name: string) =>
-		normalizePath(name)
-			.split('/')
-			.filter(Boolean)
-			.at(-1) ?? name.replace(/\/+$/, '');
+		normalizePath(name).split('/').filter(Boolean).at(-1) ?? name.replace(/\/+$/, '');
 
 	const normalizeEntries = (items: FileEntry[]) =>
 		items.map((entry) => ({ ...entry, name: cleanEntryName(entry.name) }));
@@ -498,11 +495,7 @@
 		}
 
 		const pathForHome = hintPath && hintPath !== '/' ? hintPath : cwdPath;
-		if (
-			homePath &&
-			pathForHome &&
-			(pathForHome === homePath || pathForHome.startsWith(homePath))
-		) {
+		if (homePath && pathForHome && (pathForHome === homePath || pathForHome.startsWith(homePath))) {
 			return { path: homePath, label: 'Home' };
 		}
 
@@ -535,11 +528,11 @@
 		const isDrive = /^[A-Za-z]:$/.test(parts[0] ?? '');
 		const root = isDrive ? { label: parts[0], path: `${parts[0]}/` } : { label: '/', path: '/' };
 		return (isDrive ? parts.slice(1) : parts).reduce(
-				(acc, part) => {
-					const prev = acc[acc.length - 1];
-					acc.push({ label: part, path: asDirectoryPath(joinPath(prev.path, part)) });
-					return acc;
-				},
+			(acc, part) => {
+				const prev = acc[acc.length - 1];
+				acc.push({ label: part, path: asDirectoryPath(joinPath(prev.path, part)) });
+				return acc;
+			},
 			[root]
 		);
 	};
@@ -571,7 +564,10 @@
 	};
 
 	// ── Directory operations ─────────────────────────────────────────────
-	const loadDir = async (path: string, options: { preserveTree?: boolean; restoreTree?: boolean } = {}) => {
+	const loadDir = async (
+		path: string,
+		options: { preserveTree?: boolean; restoreTree?: boolean } = {}
+	) => {
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 		const directory = clampToFileRoot(path);
@@ -663,7 +659,8 @@
 	};
 
 	const openEntry = async (entry: FileEntry) => {
-		const fullPath = 'fullPath' in entry ? (entry as BrowserRow).fullPath : entryPath(currentPath, entry);
+		const fullPath =
+			'fullPath' in entry ? (entry as BrowserRow).fullPath : entryPath(currentPath, entry);
 		const parentPath = 'parentPath' in entry ? (entry as BrowserRow).parentPath : currentPath;
 		if (entry.type === 'directory') {
 			await loadDir(fullPath);
@@ -819,8 +816,8 @@
 		if (rawMove) {
 			try {
 				const data = JSON.parse(rawMove);
-				const paths = data.paths || (data.path ? [data.path] : []);
-				for (const path of paths) await handleMove(path, currentPath);
+				const paths = (data.paths || (data.path ? [data.path] : [])) as string[];
+				await handleMovePaths(paths, currentPath);
 			} catch {}
 			return;
 		}
@@ -834,7 +831,7 @@
 		}
 		uploading = false;
 		invalidateTreeCache(currentPath);
-			await loadDir(currentPath, { preserveTree: true });
+		await loadDir(currentPath, { preserveTree: true });
 	};
 
 	const handleUploadFiles = async (files: File[]) => {
@@ -926,19 +923,25 @@
 	};
 
 	// ── Move (drag-and-drop) ────────────────────────────────────────────
-	const handleMove = async (source: string, destFolder: string) => {
+	const sourceParentPath = (source: string) => {
+		const cleanSource = normalizePath(source).replace(/\/$/, '');
+		const index = cleanSource.lastIndexOf('/');
+		return asDirectoryPath(index >= 0 ? cleanSource.slice(0, index + 1) : currentPath);
+	};
+
+	const moveOne = async (source: string, destFolder: string) => {
 		const terminal = selectedTerminal;
-		if (!terminal || !currentWritable) return;
+		if (!terminal || !currentWritable) return false;
 
-		const cleanSource = source.replace(/\/$/, '');
+		const cleanSource = normalizePath(source).replace(/\/$/, '');
 		const fileName = cleanSource.split('/').pop() ?? '';
-		const destination = `${asDirectoryPath(destFolder)}${fileName}`;
+		const destination = joinPath(destFolder, fileName);
 
-		if (!fileName || cleanSource === destination) return;
+		if (!fileName || cleanSource === destination) return false;
 
 		// Prevent moving a folder into itself or its own subtree
 		const sourceDir = asDirectoryPath(cleanSource);
-		if (asDirectoryPath(destFolder).startsWith(sourceDir)) return;
+		if (asDirectoryPath(destFolder).startsWith(sourceDir)) return false;
 
 		const result = await moveEntry(
 			terminal.url,
@@ -949,11 +952,27 @@
 		);
 		if ('error' in result) {
 			toast.error(result.error);
+			return false;
 		} else {
 			toast.success($i18n.t('Moved {{name}}', { name: fileName }));
+			return true;
 		}
-		invalidateTreeCache(currentPath, destFolder, cleanSource.substring(0, cleanSource.lastIndexOf('/') + 1));
-		await loadDir(currentPath, { preserveTree: true });
+	};
+
+	const refreshAfterMove = async (sources: string[], destFolder: string) => {
+		invalidateTreeCache(currentPath, destFolder, ...sources, ...sources.map(sourceParentPath));
+		clearSelection();
+		await refreshBrowser();
+	};
+
+	const handleMovePaths = async (sources: string[], destFolder: string) => {
+		const movedSources: string[] = [];
+		for (const source of sources) {
+			if (await moveOne(source, destFolder)) movedSources.push(source);
+		}
+		if (movedSources.length > 0) {
+			await refreshAfterMove(movedSources, destFolder);
+		}
 	};
 
 	// ── Rename ──────────────────────────────────────────────────────────
@@ -1325,7 +1344,7 @@
 				onNewFile={startNewFile}
 				onUploadFiles={handleUploadFiles}
 				onDownloadDir={() => downloadFile(currentPath)}
-				onMove={handleMove}
+				onMove={handleMovePaths}
 				onSort={toggleSort}
 				onToggleHidden={toggleHidden}
 			>
@@ -1618,10 +1637,17 @@
 									selected={selectedEntries.has(entry.fullPath)}
 									{selectionMode}
 									selectedPaths={selectedEntries}
-									onOpen={(row) => openEntry({ ...row, fullPath: entry.fullPath, parentPath: entry.parentPath, depth: entry.depth, rowIndex: entry.rowIndex })}
+									onOpen={(row) =>
+										openEntry({
+											...row,
+											fullPath: entry.fullPath,
+											parentPath: entry.parentPath,
+											depth: entry.depth,
+											rowIndex: entry.rowIndex
+										})}
 									onDownload={downloadFile}
 									onDelete={requestDelete}
-									onMove={handleMove}
+									onMove={handleMovePaths}
 									onRename={handleRename}
 									onSelect={handleSelect}
 									onLongPress={enterSelectionMode}
