@@ -61,9 +61,12 @@ chromadb==1.5.9
 weaviate-client==4.20.3
 opensearch-py==3.2.0
 
-transformers==5.5.4
-sentence-transformers==5.5.1
-accelerate==1.13.0
+transformers==5.5.4; sys_platform != 'darwin' or platform_machine == 'arm64'
+transformers==4.57.3; sys_platform == 'darwin' and platform_machine == 'x86_64'
+sentence-transformers==5.5.1; sys_platform != 'darwin' or platform_machine == 'arm64'
+sentence-transformers==5.2.0; sys_platform == 'darwin' and platform_machine == 'x86_64'
+accelerate==1.13.0; sys_platform != 'darwin' or platform_machine == 'arm64'
+accelerate==1.14.0; sys_platform == 'darwin' and platform_machine == 'x86_64'
 pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
 einops==0.8.2 
 
@@ -96,7 +99,8 @@ opencv-python-headless==4.13.0.92
 rapidocr==3.9.2
 rank-bm25==0.2.2
 
-onnxruntime==1.26.0
+onnxruntime==1.26.0; sys_platform != 'darwin' or platform_machine == 'arm64'
+onnxruntime==1.23.2; sys_platform == 'darwin' and platform_machine == 'x86_64'
 faster-whisper==1.2.1
 
 black==26.5.1
