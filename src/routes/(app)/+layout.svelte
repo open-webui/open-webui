@@ -355,6 +355,24 @@
 					console.log('Shortcut triggered: GENERATE_MESSAGE_PAIR');
 					event.preventDefault();
 					document.getElementById('generate-message-pair-button')?.click();
+				} else if (shortcut === Shortcut.ALLOW_TOOL_CALL) {
+					const button = [...document.getElementsByClassName('tool-call-allow-button')]
+						.reverse()
+						.find((el) => !(el as HTMLButtonElement).disabled) as HTMLButtonElement | undefined;
+					if (button) {
+						console.log('Shortcut triggered: ALLOW_TOOL_CALL');
+						event.preventDefault();
+						button.click();
+					}
+				} else if (shortcut === Shortcut.DENY_TOOL_CALL) {
+					const button = [...document.getElementsByClassName('tool-call-deny-button')]
+						.reverse()
+						.find((el) => !(el as HTMLButtonElement).disabled) as HTMLButtonElement | undefined;
+					if (button) {
+						console.log('Shortcut triggered: DENY_TOOL_CALL');
+						event.preventDefault();
+						button.click();
+					}
 				} else if (
 					shortcut === Shortcut.REGENERATE_RESPONSE &&
 					document.activeElement?.id === 'chat-input'
