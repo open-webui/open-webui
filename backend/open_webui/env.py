@@ -443,6 +443,9 @@ try:
 except (ValueError, TypeError):
     UVICORN_WORKERS = 1
 
+# tiny delta-stream frames make per-frame websocket compression CPU-bound, allow opting out (true/false)
+UVICORN_WS_PER_MESSAGE_DEFLATE = os.getenv('UVICORN_WS_PER_MESSAGE_DEFLATE', 'True').lower() == 'true'
+
 ####################################
 # WEBSOCKET SUPPORT
 ####################################
