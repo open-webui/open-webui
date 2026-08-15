@@ -3,7 +3,7 @@ NOTE: This vector database integration is community-supported and maintained on 
 """
 
 import ssl
-from typing import Optional
+from typing import Any, Optional
 
 from elasticsearch import BadRequestError, Elasticsearch
 from elasticsearch.helpers import bulk, scan
@@ -24,6 +24,15 @@ from open_webui.retrieval.vector.main import (
     VectorItem,
 )
 from open_webui.retrieval.vector.utils import process_metadata
+
+
+def _metadata_filter(key: str, value: Any) -> dict:
+    # Callers pass either a plain value or a Mongo-style {'$in': [...]} set.
+    if isinstance(value, dict):
+        if set(value) != {'$in'}:
+            raise ValueError(f"Unsupported filter value for field '{key}': {value}")
+        return {'terms': {f'metadata.{key}': list(value['$in'])}}
+    return {'term': {f'metadata.{key}': value}}
 
 
 class ElasticsearchClient(VectorDBBase):
@@ -161,12 +170,16 @@ class ElasticsearchClient(VectorDBBase):
         filter: Optional[dict] = None,
         limit: int = 10,
     ) -> Optional[SearchResult]:
+        filters = [{'term': {'collection': collection_name}}]
+        if filter:
+            filters.extend(_metadata_filter(key, value) for key, value in filter.items())
+
         query = {
             'size': limit,
             '_source': ['text', 'metadata'],
             'query': {
                 'script_score': {
-                    'query': {'bool': {'filter': [{'term': {'collection': collection_name}}]}},
+                    'query': {'bool': {'filter': filters}},
                     'script': {
                         'source': "cosineSimilarity(params.vector, 'vector') + 1.0",
                         'params': {'vector': vectors[0]},  # Assuming single query vector

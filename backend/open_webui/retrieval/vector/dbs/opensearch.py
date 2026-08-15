@@ -2,7 +2,7 @@
 NOTE: This vector database integration is community-supported and maintained on a best-effort basis.
 """
 
-from typing import Optional
+from typing import Any, Optional
 
 from open_webui.config import (
     OPENSEARCH_CERT_VERIFY,
@@ -20,6 +20,16 @@ from open_webui.retrieval.vector.main import (
 from open_webui.retrieval.vector.utils import process_metadata
 from opensearchpy import OpenSearch
 from opensearchpy.helpers import bulk
+
+
+def _metadata_filter(key: str, value: Any) -> dict:
+    # Callers pass either a plain value or a Mongo-style {'$in': [...]} set.
+    field = f'metadata.{key}.keyword'
+    if isinstance(value, dict):
+        if set(value) != {'$in'}:
+            raise ValueError(f"Unsupported filter value for field '{key}': {value}")
+        return {'terms': {field: list(value['$in'])}}
+    return {'term': {field: value}}
 
 
 class OpenSearchClient(VectorDBBase):
@@ -121,6 +131,9 @@ class OpenSearchClient(VectorDBBase):
         filter: Optional[dict] = None,
         limit: int = 10,
     ) -> Optional[SearchResult]:
+        # Built outside the try so an unsupported filter shape raises instead of being swallowed as "no results".
+        filter_clauses = [_metadata_filter(key, value) for key, value in filter.items()] if filter else []
+
         try:
             if not self.has_collection(collection_name):
                 return None
@@ -130,7 +143,7 @@ class OpenSearchClient(VectorDBBase):
                 '_source': ['text', 'metadata'],
                 'query': {
                     'script_score': {
-                        'query': {'match_all': {}},
+                        'query': {'bool': {'filter': filter_clauses}} if filter_clauses else {'match_all': {}},
                         'script': {
                             'source': '(cosineSimilarity(params.query_value, doc[params.field]) + 1.0) / 2.0',
                             'params': {

@@ -86,6 +86,19 @@ class DocumentChunk(Base):
     vmetadata = Column(MutableDict.as_mutable(JSONB), nullable=True)
 
 
+def _metadata_clauses(filter: Optional[Dict[str, Any]]) -> list:
+    """Metadata filter -> SQLAlchemy where-clauses, for plain values and {"$in": [...]}."""
+    clauses = []
+    for key, value in (filter or {}).items():
+        if isinstance(value, dict):
+            if set(value) != {'$in'}:
+                raise ValueError(f"Unsupported filter operator for '{key}': {sorted(value)}")
+            clauses.append(DocumentChunk.vmetadata[key].astext.in_([str(v) for v in value['$in']]))
+        else:
+            clauses.append(DocumentChunk.vmetadata[key].astext == str(value))
+    return clauses
+
+
 class OpenGaussClient(VectorDBBase):
     def __init__(self) -> None:
         if not OPENGAUSS_DB_URL:
@@ -218,6 +231,9 @@ class OpenGaussClient(VectorDBBase):
         filter: Optional[Dict[str, Any]] = None,
         limit: int = 10,
     ) -> Optional[SearchResult]:
+        # Built outside the try so an unsupported filter shape raises instead of being swallowed as "no results".
+        metadata_clauses = _metadata_clauses(filter)
+
         try:
             if not vectors:
                 return None
@@ -243,9 +259,11 @@ class OpenGaussClient(VectorDBBase):
                 (DocumentChunk.vector.cosine_distance(query_vectors.c.q_vector)).label('distance'),
             ]
 
+            where_clauses = [DocumentChunk.collection_name == collection_name, *metadata_clauses]
+
             subq = (
                 select(*result_fields)
-                .where(DocumentChunk.collection_name == collection_name)
+                .where(*where_clauses)
                 .order_by(DocumentChunk.vector.cosine_distance(query_vectors.c.q_vector))
             )
             if limit is not None:

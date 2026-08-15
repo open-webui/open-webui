@@ -54,6 +54,34 @@ def _convert_uuids_to_strings(obj: Any) -> Any:
         return obj
 
 
+def _build_metadata_filter(filter: dict) -> Any:
+    """Build a Weaviate filter from a non-empty metadata filter dict."""
+    weaviate_filter = None
+    for key, value in filter.items():
+        if isinstance(value, dict):
+            # Callers pass either a plain value or a Mongo-style {'$in': [...]} set.
+            if set(value) != {'$in'}:
+                raise ValueError(f'Unsupported filter operators for property {key!r}: {sorted(value)}')
+
+            allowed_values = list(value['$in'])
+            if not allowed_values:
+                raise ValueError(f'Empty $in filter for property {key!r} cannot be expressed in Weaviate')
+
+            prop_filter = weaviate.classes.query.Filter.any_of(
+                [weaviate.classes.query.Filter.by_property(name=key).equal(item) for item in allowed_values]
+            )
+        else:
+            prop_filter = weaviate.classes.query.Filter.by_property(name=key).equal(value)
+
+        weaviate_filter = (
+            prop_filter
+            if weaviate_filter is None
+            else weaviate.classes.query.Filter.all_of([weaviate_filter, prop_filter])
+        )
+
+    return weaviate_filter
+
+
 class WeaviateClient(VectorDBBase):
     def __init__(self):
         self.url = WEAVIATE_HTTP_HOST
@@ -169,6 +197,9 @@ class WeaviateClient(VectorDBBase):
 
         collection = self.client.collections.get(sane_collection_name)
 
+        # Built outside the loop so an unsupported filter shape raises instead of degrading to an unfiltered search.
+        weaviate_filter = _build_metadata_filter(filter) if filter else None
+
         result_ids, result_documents, result_metadatas, result_distances = (
             [],
             [],
@@ -181,6 +212,7 @@ class WeaviateClient(VectorDBBase):
                 response = collection.query.near_vector(
                     near_vector=vector_embedding,
                     limit=limit,
+                    filters=weaviate_filter,
                     return_metadata=weaviate.classes.query.MetadataQuery(distance=True),
                 )
 

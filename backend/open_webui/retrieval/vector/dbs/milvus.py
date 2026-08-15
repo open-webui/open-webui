@@ -3,7 +3,8 @@ NOTE: This vector database integration is community-supported and maintained on 
 """
 
 import logging
-from typing import Optional
+import re
+from typing import Any, Optional
 
 from open_webui.config import (
     MILVUS_DB,
@@ -24,7 +25,6 @@ from open_webui.retrieval.vector.main import (
     VectorItem,
 )
 from open_webui.retrieval.vector.utils import process_metadata
-from open_webui.utils.json_codec import JSONCodec
 from pymilvus import DataType
 from pymilvus import MilvusClient as Client
 from pymilvus.exceptions import MilvusException
@@ -35,6 +35,43 @@ log = logging.getLogger(__name__)
 # field). Clamp long chunks before insert so one oversized chunk can't fail the
 # whole batch and leave the file with zero embeddings.
 MILVUS_TEXT_MAX_LENGTH = 65535
+
+# Milvus expressions are SQL-like strings with no parameterized-query API; values
+# get interpolated into single-quoted literals. Shared with milvus_multitenancy.
+_SAFE_METADATA_KEY_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]{0,63}$')
+
+
+def escape_milvus_string(value: str) -> str:
+    if not isinstance(value, str):
+        raise TypeError(f'Expected str for Milvus expression value, got {type(value).__name__}')
+    return value.replace('\\', '\\\\').replace("'", "\\'")
+
+
+def _milvus_literal(key: str, value: Any) -> str:
+    if isinstance(value, str):
+        return f"'{escape_milvus_string(value)}'"
+    if isinstance(value, bool):
+        return str(value).lower()
+    if isinstance(value, (int, float)):
+        return str(value)
+    raise TypeError(f'Unsupported Milvus filter value type for key {key!r}: {type(value).__name__}')
+
+
+def metadata_expressions(filter: Optional[dict]) -> list[str]:
+    """Metadata filter -> Milvus boolean expression parts, for plain values and {'$in': [...]}."""
+    expressions = []
+    for key, value in (filter or {}).items():
+        if not isinstance(key, str) or not _SAFE_METADATA_KEY_RE.fullmatch(key):
+            raise ValueError(f'Invalid Milvus metadata filter key: {key!r}')
+        if isinstance(value, dict):
+            if set(value) != {'$in'}:
+                raise ValueError(f'Unsupported Milvus filter operator for key {key!r}: {sorted(value)}')
+            # Milvus rejects `in` against a JSON subfield, so expand it to an OR chain.
+            options = [f"metadata['{key}'] == {_milvus_literal(key, item)}" for item in value['$in']]
+            expressions.append(f'({" or ".join(options)})' if options else 'false')
+        else:
+            expressions.append(f"metadata['{key}'] == {_milvus_literal(key, value)}")
+    return expressions
 
 
 class MilvusClient(VectorDBBase):
@@ -193,6 +230,7 @@ class MilvusClient(VectorDBBase):
     ) -> Optional[SearchResult]:
         # Search for the nearest neighbor items based on the vectors and return 'limit' number of results.
         collection_name = collection_name.replace('-', '_')
+        filter_string = ' and '.join(metadata_expressions(filter))
         # For some index types like IVF_FLAT, search params like nprobe can be set.
         # Example: search_params = {"nprobe": 10} if using IVF_FLAT
         # For simplicity, not adding configurable search_params here, but could be extended.
@@ -200,6 +238,7 @@ class MilvusClient(VectorDBBase):
             collection_name=f'{self.collection_prefix}_{collection_name}',
             data=vectors,
             limit=limit,
+            filter=filter_string,
             output_fields=['data', 'metadata'],
             # search_params=search_params # Potentially add later if needed
         )
@@ -211,14 +250,7 @@ class MilvusClient(VectorDBBase):
             log.warning(f'Query attempted on non-existent collection: {self.collection_prefix}_{collection_name}')
             return None
 
-        filter_expressions = []
-        for key, value in filter.items():
-            if isinstance(value, str):
-                filter_expressions.append(f'metadata["{key}"] == "{value}"')
-            else:
-                filter_expressions.append(f'metadata["{key}"] == {value}')
-
-        filter_string = ' && '.join(filter_expressions)
+        filter_string = ' and '.join(metadata_expressions(filter))
 
         self.client.load_collection(collection_name=f'{self.collection_prefix}_{collection_name}')
 
@@ -364,7 +396,7 @@ class MilvusClient(VectorDBBase):
                 ids=ids,
             )
         elif filter:
-            filter_string = ' && '.join([f'metadata["{key}"] == {JSONCodec.dumps(value)}' for key, value in filter.items()])
+            filter_string = ' and '.join(metadata_expressions(filter))
             log.info(
                 'Deleting items by filter from %s_%s. Filter: %s',
                 self.collection_prefix,

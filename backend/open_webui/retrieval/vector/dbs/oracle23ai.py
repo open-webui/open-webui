@@ -32,6 +32,7 @@ import array
 import json
 import logging
 import os
+import re
 import threading
 import time
 from decimal import Decimal
@@ -59,6 +60,37 @@ from open_webui.retrieval.vector.main import (
 from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
+
+# Filter values are bound, but the metadata key lands inside the JSON path of JSON_VALUE, which cannot be bound.
+_SAFE_METADATA_KEY_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]{0,63}$')
+
+
+def _metadata_where_clause(filter: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    """Metadata filter -> WHERE fragment plus bind parameters, for plain values and {"$in": [...]}."""
+    clause = ''
+    params: dict[str, Any] = {}
+
+    for i, (key, value) in enumerate(filter.items()):
+        if not isinstance(key, str) or not _SAFE_METADATA_KEY_RE.fullmatch(key):
+            raise ValueError(f'Invalid Oracle metadata filter key: {key!r}')
+        json_value = f"JSON_VALUE(dc.vmetadata, '$.{key}' RETURNING VARCHAR2(4096))"
+
+        if isinstance(value, dict):
+            if set(value) != {'$in'}:
+                raise ValueError(f"Unsupported filter operator for '{key}': {sorted(value)}")
+            options = list(value['$in'])
+            if not options:
+                clause += ' AND 1 = 0'  # an empty allow-list matches nothing
+                continue
+            names = [f'value_{i}_{j}' for j in range(len(options))]
+            clause += f' AND {json_value} IN ({", ".join(f":{name}" for name in names)})'
+            params.update({name: str(option) for name, option in zip(names, options)})
+        else:
+            name = f'value_{i}'
+            clause += f' AND {json_value} = :{name}'
+            params[name] = str(value)
+
+    return clause, params
 
 
 class Oracle23aiClient(VectorDBBase):
@@ -527,6 +559,7 @@ class Oracle23aiClient(VectorDBBase):
         Args:
             collection_name (str): Name of the collection to search
             vectors (List[List[Union[float, int]]]): Query vectors to find similar items for
+            filter (Optional[dict]): Metadata filters restricting which chunks may be returned
             limit (int): Maximum number of results to return per query
 
         Returns:
@@ -550,6 +583,8 @@ class Oracle23aiClient(VectorDBBase):
 
             num_queries = len(vectors)
 
+            filter_clause, filter_params = _metadata_where_clause(filter) if filter else ('', {})
+
             ids = [[] for _ in range(num_queries)]
             distances = [[] for _ in range(num_queries)]
             documents = [[] for _ in range(num_queries)]
@@ -561,12 +596,12 @@ class Oracle23aiClient(VectorDBBase):
                         vector_blob = self._vector_to_blob(vector)
 
                         cursor.execute(
-                            """
-                            SELECT dc.id, dc.text, 
+                            f"""
+                            SELECT dc.id, dc.text,
                                 JSON_SERIALIZE(dc.vmetadata RETURNING VARCHAR2(4096)) as vmetadata,
                                 VECTOR_DISTANCE(dc.vector, :query_vector, COSINE) as distance
                             FROM document_chunk dc
-                            WHERE dc.collection_name = :collection_name
+                            WHERE dc.collection_name = :collection_name{filter_clause}
                             ORDER BY VECTOR_DISTANCE(dc.vector, :query_vector, COSINE)
                             FETCH APPROX FIRST :limit ROWS ONLY
                         """,
@@ -574,6 +609,7 @@ class Oracle23aiClient(VectorDBBase):
                                 'query_vector': vector_blob,
                                 'collection_name': collection_name,
                                 'limit': limit,
+                                **filter_params,
                             },
                         )
 
@@ -630,6 +666,8 @@ class Oracle23aiClient(VectorDBBase):
             params = {'collection_name': collection_name}
 
             for i, (key, value) in enumerate(filter.items()):
+                if not isinstance(key, str) or not _SAFE_METADATA_KEY_RE.fullmatch(key):
+                    raise ValueError(f'Invalid Oracle metadata filter key: {key!r}')
                 param_name = f'value_{i}'
                 query += f" AND JSON_VALUE(vmetadata, '$.{key}' RETURNING VARCHAR2(4096)) = :{param_name}"
                 params[param_name] = str(value)
@@ -762,6 +800,8 @@ class Oracle23aiClient(VectorDBBase):
 
             if filter:
                 for i, (key, value) in enumerate(filter.items()):
+                    if not isinstance(key, str) or not _SAFE_METADATA_KEY_RE.fullmatch(key):
+                        raise ValueError(f'Invalid Oracle metadata filter key: {key!r}')
                     param_name = f'value_{i}'
                     query += f" AND JSON_VALUE(vmetadata, '$.{key}' RETURNING VARCHAR2(4096)) = :{param_name}"
                     params[param_name] = str(value)

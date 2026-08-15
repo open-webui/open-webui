@@ -373,12 +373,17 @@ class PineconeClient(VectorDBBase):
             # Search using the first vector (assuming this is the intended behavior)
             query_vector = vectors[0]
 
+            # Combine user filter with collection_name, which is set last so a
+            # caller-supplied key cannot widen the collection scope
+            pinecone_filter = dict(filter) if filter else {}
+            pinecone_filter['collection_name'] = collection_name_with_prefix
+
             # Perform the search
             query_response = self.index.query(
                 vector=query_vector,
                 top_k=limit,
                 include_metadata=True,
-                filter={'collection_name': collection_name_with_prefix},
+                filter=pinecone_filter,
             )
 
             matches = getattr(query_response, 'matches', []) or []
@@ -418,10 +423,10 @@ class PineconeClient(VectorDBBase):
             # Create a zero vector for the dimension as Pinecone requires a vector
             zero_vector = [0.0] * self.dimension
 
-            # Combine user filter with collection_name
-            pinecone_filter = {'collection_name': collection_name_with_prefix}
-            if filter:
-                pinecone_filter.update(filter)
+            # Combine user filter with collection_name, which is set last so a
+            # caller-supplied key cannot widen the collection scope
+            pinecone_filter = dict(filter) if filter else {}
+            pinecone_filter['collection_name'] = collection_name_with_prefix
 
             # Perform metadata-only query
             query_response = self.index.query(
@@ -484,10 +489,10 @@ class PineconeClient(VectorDBBase):
                 log.info("Successfully deleted %s vectors by ID from '%s'", len(ids), collection_name_with_prefix)
 
             elif filter:
-                # Combine user filter with collection_name
-                pinecone_filter = {'collection_name': collection_name_with_prefix}
-                if filter:
-                    pinecone_filter.update(filter)
+                # Combine user filter with collection_name, which is set last so a
+                # caller-supplied key cannot widen the collection scope
+                pinecone_filter = dict(filter)
+                pinecone_filter['collection_name'] = collection_name_with_prefix
                 # Delete by metadata filter
                 self.index.delete(filter=pinecone_filter)
                 log.info("Successfully deleted vectors by filter from '%s'", collection_name_with_prefix)

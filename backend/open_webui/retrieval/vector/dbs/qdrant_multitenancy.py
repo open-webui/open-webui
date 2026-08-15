@@ -40,7 +40,14 @@ def _tenant_filter(tenant_id: str) -> models.FieldCondition:
 
 
 def _metadata_filter(key: str, value: Any) -> models.FieldCondition:
-    return models.FieldCondition(key=f'metadata.{key}', match=models.MatchValue(value=value))
+    # Callers pass either a plain value or a Mongo-style {'$in': [...]} set.
+    if isinstance(value, dict):
+        if set(value) != {'$in'}:
+            raise ValueError(f"Unsupported filter operator for '{key}': {sorted(value)}")
+        match = models.MatchAny(any=list(value['$in']))
+    else:
+        match = models.MatchValue(value=value)
+    return models.FieldCondition(key=f'metadata.{key}', match=match)
 
 
 class QdrantClient(VectorDBBase):
@@ -258,12 +265,14 @@ class QdrantClient(VectorDBBase):
             log.debug("Collection %s doesn't exist, search returns None", mt_collection)
             return None
 
-        tenant_filter = _tenant_filter(tenant_id)
+        conditions = [_tenant_filter(tenant_id)]
+        if filter:
+            conditions.extend(_metadata_filter(key, value) for key, value in filter.items())
         query_response = self.client.query_points(
             collection_name=mt_collection,
             query=vectors[0],
             limit=limit,
-            query_filter=models.Filter(must=[tenant_filter]),
+            query_filter=models.Filter(must=conditions),
         )
         get_result = self._result_to_get_result(query_response.points)
         return SearchResult(

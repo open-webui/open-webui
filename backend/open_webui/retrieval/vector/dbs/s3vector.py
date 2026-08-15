@@ -324,14 +324,20 @@ class S3VectorClient(VectorDBBase):
                 query_vector_dict = {'float32': [float(x) for x in query_vector]}
 
                 # Call S3 Vector query API
-                response = self.client.query_vectors(
-                    vectorBucketName=self.bucket_name,
-                    indexName=collection_name,
-                    topK=limit,
-                    queryVector=query_vector_dict,
-                    returnMetadata=True,
-                    returnDistance=True,
-                )
+                request_params = {
+                    'vectorBucketName': self.bucket_name,
+                    'indexName': collection_name,
+                    'topK': limit,
+                    'queryVector': query_vector_dict,
+                    'returnMetadata': True,
+                    'returnDistance': True,
+                }
+
+                # Filter server-side so topK is applied to matching vectors only
+                if filter:
+                    request_params['filter'] = filter
+
+                response = self.client.query_vectors(**request_params)
 
                 # Process results for this query
                 query_ids = []
@@ -345,6 +351,10 @@ class S3VectorClient(VectorDBBase):
                     vector_id = vector.get('key')
                     vector_metadata = vector.get('metadata', {})
                     vector_distance = vector.get('distance', 0.0)
+
+                    # Re-check client-side with the same matcher query() uses
+                    if filter and not self._matches_filter(vector_metadata, filter):
+                        continue
 
                     # Extract document text from metadata
                     document_text = ''
