@@ -296,18 +296,26 @@ html.outis-mneme .hljs-strong {
 	font-weight: 600;
 }
 
-/* The code block's own chrome (language label, Collapse/Run/Save/Copy) is
-   `bg-black` — a hardcoded literal, like `.dark body` above — while the
-   code surface below it is the theme's --color-gray-900. That left a
-   visible two-tone seam across the top of every block. Repaint the
-   header and the spacer strip to match the code surface. Scoped by the
+/* Every surface CodeBlock.svelte paints is `bg-black` — a hardcoded
+   literal, like `.dark body` above — while the code itself sits on the
+   theme's --color-gray-900, leaving a two-tone seam through the block.
+   There are six of them: the header, its buttons, the spacer strip under
+   it, the collapsed "N hidden lines" body, the plot canvas, and the
+   stdout/stderr panel. They all carry the same `dark:bg-black` utility,
+   so one rule covers the set — and covers any future one. Scoped by the
    `language-*` container CodeBlock.svelte wraps the code in, so it can't
    reach any other `bg-black` in the app. */
-html.outis-mneme div:has(> div[class*='language-']) > .sticky,
-html.outis-mneme div:has(> div[class*='language-']) > .sticky button,
-html.outis-mneme div:has(> div[class*='language-']) > .sticky .run-code-button,
-html.outis-mneme div[class*='language-'] > div:first-child {
+html.outis-mneme div:has(> div[class*='language-']) .dark\:bg-black {
 	background-color: #0f1512;
+}
+
+/* The collapsed body is padded `px-4` while the header above it and the
+   stdout panel below it both use `px-3.5`, so "N hidden lines" sat two
+   pixels right of the language label it should line up under. Only
+   visible once the two stopped sharing a background colour. 14px matches
+   the rest of the block. */
+html.outis-mneme div[class*='language-'] > div.pt-1.pb-2.px-4 {
+	padding-inline: 0.875rem;
 }
 
 /* Same chrome, its text: `text-white`, which left the language label and the
