@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { decode } from 'html-entities';
 	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 
@@ -14,7 +16,7 @@
 
 	import { settings } from '$lib/stores';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	export let id = '';
 	export let tokens: Array<{
@@ -53,7 +55,14 @@
 	$: pendingToolTokens = tokens.filter(
 		(t) => t?.attributes?.type === 'tool_calls' && t?.attributes?.status === 'pending'
 	);
-	$: hasPending = pendingToolTokens.length > 0;
+	$: hasActiveToolCalls = tokens.some(
+		(t) =>
+			t?.attributes?.type === 'tool_calls' &&
+			t?.attributes?.status !== 'rejected' &&
+			t?.attributes?.status !== 'failed' &&
+			t?.attributes?.status !== 'incomplete' &&
+			t?.attributes?.done !== 'true'
+	);
 	$: hasRejected = tokens.some(
 		(t) => t?.attributes?.type === 'tool_calls' && t?.attributes?.status === 'rejected'
 	);
@@ -89,7 +98,7 @@
 
 		if (toolCallCount > 0) {
 			// Group by tool name and show counts
-			const nameCounts = {};
+			const nameCounts: Record<string, number> = {};
 			tokens
 				.filter((t) => t?.attributes?.type === 'tool_calls')
 				.forEach((t) => {
@@ -115,7 +124,7 @@
 		return detail;
 	})();
 
-	$: prefixText = hasPending ? $i18n.t('Exploring') : $i18n.t('Explored');
+	$: prefixText = hasActiveToolCalls ? $i18n.t('Exploring') : $i18n.t('Explored');
 </script>
 
 <div {id} class="w-full min-w-0">
@@ -140,7 +149,7 @@
 		>
 			<div class="flex items-center gap-1.5 min-w-0">
 				<!-- Status icon -->
-				{#if hasPending}
+				{#if hasActiveToolCalls}
 					<div>
 						<Spinner className="size-4" />
 					</div>
@@ -160,7 +169,7 @@
 
 				<!-- Summary text -->
 				<div class="flex-1 line-clamp-1">
-					<span class="text-gray-600 dark:text-gray-300 {hasPending ? 'shimmer' : ''}"
+					<span class="text-gray-600 dark:text-gray-300 {hasActiveToolCalls ? 'shimmer' : ''}"
 						>{prefixText}</span
 					>
 					{#if summaryText}

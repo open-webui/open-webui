@@ -3,7 +3,9 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
@@ -100,9 +102,14 @@
 		open || needsApproval || needsInput || (Array.isArray(embeds) && embeds.length > 0)
 			? decode(attributes?.arguments ?? '')
 			: '';
-	$: isDone = attributes?.done === 'true';
 	$: isRejected = attributes?.status === 'rejected';
-	$: isExecuting = !needsApproval && !needsInput && attributes?.done && attributes?.done !== 'true';
+	$: isDone =
+		attributes?.done === 'true' ||
+		attributes?.status === 'failed' ||
+		attributes?.status === 'incomplete';
+	$: isExecuting = !isDone && !isRejected && attributes?.status === 'completed';
+	$: isPreparing = !isDone && !isRejected && !needsApproval && !needsInput && !isExecuting;
+	$: isActive = isPreparing || isExecuting;
 
 	$: parsedArgs = parseArguments(args);
 	$: parsedResult = parseJSONString(result);
@@ -151,12 +158,12 @@
 			on:keydown={toggleOpenOnKeydown}
 		>
 			<div
-				class="w-full min-w-0 max-w-full font-normal flex items-center gap-1.5 {isExecuting
+				class="w-full min-w-0 max-w-full font-normal flex items-center gap-1.5 {isActive
 					? 'shimmer'
 					: ''}"
 			>
 				<!-- Status icon -->
-				{#if isExecuting}
+				{#if isActive}
 					<div>
 						<Spinner className="size-4" />
 					</div>
@@ -180,14 +187,16 @@
 					<span class="@md:hidden text-black dark:text-white">{attributes.name}</span>
 					<!-- Full label (md and above) -->
 					<span class="hidden @md:inline font-normal">
-						{#if isDone}
+						{#if isRejected}
+							{$i18n.t('Denied {{NAME}}', { NAME: attributes.name })}
+						{:else if isDone}
 							{$i18n.t('View Result from {{NAME}}', { NAME: attributes.name })}
 						{:else if needsInput}
 							{$i18n.t('Input needed')}
 						{:else if needsApproval}
 							{$i18n.t('Allow {{NAME}}?', { NAME: attributes.name })}
-						{:else if isRejected}
-							{$i18n.t('Denied {{NAME}}', { NAME: attributes.name })}
+						{:else if isPreparing}
+							{$i18n.t('Preparing {{NAME}}...', { NAME: attributes.name })}
 						{:else}
 							{$i18n.t('Executing {{NAME}}...', { NAME: attributes.name })}
 						{/if}

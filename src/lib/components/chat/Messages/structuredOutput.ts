@@ -146,7 +146,9 @@ function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string,
 	const callId = item.call_id ?? item.id ?? '';
 	const resultItem = toolOutputByCallId[callId];
 	const status = String(item.status ?? '');
-	const isDone = isDoneStatus(item.status) || !!resultItem;
+	const isPending = status === 'pending';
+	const isDone = !!resultItem || status === 'failed' || status === 'incomplete';
+	const isExecuting = !isDone && status === 'completed';
 	let name = item.name ?? '';
 	if (name === 'delegate_task') {
 		try {
@@ -164,7 +166,13 @@ function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string,
 
 	return {
 		summary:
-			status === 'pending' ? 'Tool Approval Needed' : isDone ? 'Tool Executed' : 'Executing...',
+			isPending
+				? 'Tool Approval Needed'
+				: isDone
+					? 'Tool Executed'
+					: isExecuting
+						? 'Executing...'
+						: 'Preparing...',
 		text: getToolResultText(resultItem),
 		attributes: {
 			type: 'tool_calls',
