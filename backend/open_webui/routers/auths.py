@@ -1671,6 +1671,8 @@ async def token_exchange(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Token missing required 'sub' claim",
         )
+    # Providers such as GitHub return a numeric id; store and match it as text.
+    sub = str(sub)
 
     email = user_data.get(email_claim, '')
     if not email:

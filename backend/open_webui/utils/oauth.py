@@ -1922,6 +1922,8 @@ class OAuthManager:
             if not sub:
                 log.warning(f'OAuth callback failed, sub is missing: {user_data}')
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+            # Providers such as GitHub return a numeric id; store and match it as text.
+            sub = str(sub)
 
             oauth_data = {}
             oauth_data[provider] = {
@@ -2362,7 +2364,8 @@ class OAuthManager:
         # 8. Identify users to log out
         users_to_logout = []
         if sub:
-            user = await Users.get_user_by_oauth_sub(matched_provider, sub, db=db)
+            # Match the text form the login paths store.
+            user = await Users.get_user_by_oauth_sub(matched_provider, str(sub), db=db)
             if user:
                 users_to_logout.append(user)
 
