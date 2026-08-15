@@ -68,7 +68,7 @@
 		pzInstance = panzoom(sceneEl, {
 			bounds: true,
 			boundsPadding: 0.1,
-			zoomSpeed: 0.065,
+			pinchSpeed: 3.5,
 			filterKey: (e?: KeyboardEvent) => !!e && slideShortcutKeys.includes(e.key),
 			beforeWheel: () => true,
 			beforeMouseDown: () => {
@@ -144,8 +144,31 @@
 	};
 
 	const handleStageWheel = (e: WheelEvent) => {
+		if (e.ctrlKey || e.metaKey) {
+			if (!pzInstance || !sceneEl) return;
+
+			e.preventDefault();
+
+			const rect = sceneEl.getBoundingClientRect();
+			pzInstance.zoomTo(e.clientX - rect.left, e.clientY - rect.top, Math.exp(-e.deltaY * 0.002));
+			zoomLevel = pzInstance.getTransform().scale;
+			return;
+		}
+
+		const transform = pzInstance?.getTransform();
+		if (
+			transform &&
+			Math.abs(transform.scale - 1) >= 0.01 &&
+			Math.abs(e.deltaX) > Math.abs(e.deltaY)
+		) {
+			e.preventDefault();
+			pzInstance?.moveBy(-e.deltaX, -e.deltaY);
+			zoomLevel = pzInstance?.getTransform().scale ?? 1;
+			return;
+		}
+
 		e.preventDefault();
-		if (e.ctrlKey || e.metaKey || slides.length <= 1) return;
+		if (slides.length <= 1) return;
 
 		const multiplier = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? stageEl.clientHeight : 1;
 		const dominantDelta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
