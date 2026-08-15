@@ -168,6 +168,13 @@
 			(history.currentId && history.messages[history.currentId]?.done != true) ||
 			generating);
 	$: canCompact = !!history?.currentId;
+	$: canToggleTemporary =
+		!embedded &&
+		!chatId &&
+		($_user?.role === 'admin' ||
+			($_user?.role === 'user' &&
+				($_user?.permissions?.chat?.temporary ?? true) &&
+				!($_user?.permissions?.chat?.temporary_enforced ?? false)));
 
 	export let prompt = '';
 	export let files = [];
@@ -537,6 +544,26 @@
 		if (!chatInput) return;
 
 		chatInputElement?.replaceCommandWithText(text);
+	};
+
+	const temporaryHandler = async () => {
+		if (!canToggleTemporary) return;
+
+		if (($settings?.temporaryChatByDefault ?? false) && $temporaryChatEnabled) {
+			await temporaryChatEnabled.set(null);
+		} else {
+			await temporaryChatEnabled.set(!$temporaryChatEnabled);
+		}
+
+		if (location.pathname !== '/') {
+			await goto('/');
+		}
+
+		if ($temporaryChatEnabled) {
+			window.history.replaceState(null, '', '?temporary-chat=true');
+		} else {
+			window.history.replaceState(null, '', location.pathname);
+		}
 	};
 
 	const insertTextAtCursor = async (text: string) => {
@@ -1281,7 +1308,7 @@
 						return;
 					}
 
-					if (['compact', 'fork', 'status', 'model'].includes(props?.id)) {
+					if (['compact', 'fork', 'status', 'model', 'settings', 'temporary'].includes(props?.id)) {
 						editor.chain().focus().deleteRange(range).run();
 						return;
 					}
@@ -1307,11 +1334,15 @@
 						!!history?.currentId &&
 						($_user?.role === 'admin' || ($_user?.permissions?.chat?.import ?? true)),
 					forkDisabled: () => isActive,
+					canTemporary: () => canToggleTemporary,
+					temporaryEnabled: () => $temporaryChatEnabled === true,
 					contextUsage: () => statusContextUsage,
 					onCompact: compactHandler,
 					onStatus: statusHandler,
 					onFork: forkHandler,
 					onModel: () => modelSelector?.open(),
+					onSettings: () => showSettings.set(true),
+					onTemporary: temporaryHandler,
 					onSelect: (e) => {
 						const { type, data } = e;
 
