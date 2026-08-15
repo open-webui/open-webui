@@ -32,24 +32,7 @@ def set_security_headers() -> Dict[str, str]:
         dict: A dictionary containing the security headers and their values.
     """
     options = {}
-    header_setters = {
-        'CACHE_CONTROL': set_cache_control,
-        'HSTS': set_hsts,
-        'PERMISSIONS_POLICY': set_permissions_policy,
-        'REFERRER_POLICY': set_referrer,
-        'XCONTENT_TYPE': set_xcontent_type,
-        'XDOWNLOAD_OPTIONS': set_xdownload_options,
-        'XFRAME_OPTIONS': set_xframe,
-        'XPERMITTED_CROSS_DOMAIN_POLICIES': set_xpermitted_cross_domain_policies,
-        'CONTENT_SECURITY_POLICY': set_content_security_policy,
-        'CONTENT_SECURITY_POLICY_REPORT_ONLY': set_content_security_policy_report_only,
-        'CROSS_ORIGIN_EMBEDDER_POLICY': set_cross_origin_embedder_policy,
-        'CROSS_ORIGIN_OPENER_POLICY': set_cross_origin_opener_policy,
-        'CROSS_ORIGIN_RESOURCE_POLICY': set_cross_origin_resource_policy,
-        'REPORTING_ENDPOINTS': set_reporting_endpoints,
-    }
-
-    for env_var, setter in header_setters.items():
+    for env_var, setter in HEADER_SETTERS.items():
         value = os.environ.get(env_var, None)
         if value:
             header = setter(value)
@@ -168,3 +151,26 @@ def set_cross_origin_resource_policy(value: str):
 # Set Reporting-Endpoints response header
 def set_reporting_endpoints(value: str):
     return {'Reporting-Endpoints': value}
+
+
+HEADER_SETTERS = {
+    'CACHE_CONTROL': set_cache_control,
+    'HSTS': set_hsts,
+    'PERMISSIONS_POLICY': set_permissions_policy,
+    'REFERRER_POLICY': set_referrer,
+    'XCONTENT_TYPE': set_xcontent_type,
+    'XDOWNLOAD_OPTIONS': set_xdownload_options,
+    'XFRAME_OPTIONS': set_xframe,
+    'XPERMITTED_CROSS_DOMAIN_POLICIES': set_xpermitted_cross_domain_policies,
+    'CONTENT_SECURITY_POLICY': set_content_security_policy,
+    'CONTENT_SECURITY_POLICY_REPORT_ONLY': set_content_security_policy_report_only,
+    'CROSS_ORIGIN_EMBEDDER_POLICY': set_cross_origin_embedder_policy,
+    'CROSS_ORIGIN_OPENER_POLICY': set_cross_origin_opener_policy,
+    'CROSS_ORIGIN_RESOURCE_POLICY': set_cross_origin_resource_policy,
+    'REPORTING_ENDPOINTS': set_reporting_endpoints,
+}
+
+# Every header name this module can emit. A proxy route strips these from upstream responses so a
+# third party cannot decide what the browser enforces on our own origin. Derived from the setters
+# above, which return their header name whatever value they are given, so the two cannot drift.
+MANAGED_HEADER_NAMES = frozenset(name.lower() for setter in HEADER_SETTERS.values() for name in setter(''))

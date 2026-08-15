@@ -1,20 +1,24 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { getPortProxyUrl } from '$lib/apis/terminal';
+	import { toast } from 'svelte-sonner';
+	import { createPortPreviewToken, getPortPreviewUrl, isSystemTerminal } from '$lib/apis/terminal';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let baseUrl: string;
+	export let apiKey: string = '';
 	export let port: number;
 	export let path: string = '';
 	export let onClose: () => void = () => {};
 	export let overlay = false;
 
-	let iframeEl: HTMLIFrameElement;
 	let urlInput: string = '';
 	let iframeKey = 0;
 	let isLoading = false;
+	let previewToken: string | null = null;
+	let tokenReady = false;
+	let tokenError = false;
 
 	// ── Navigation history ──────────────────────────────────────────────
 	let history: string[] = [path];
@@ -31,12 +35,20 @@
 		historyIndex = history.length - 1;
 	};
 
+	const reloadFrame = () => {
+		// Drop the cached key so an expired credential is re-minted rather than reloaded into a 403.
+		tokenKey = '';
+		ensurePreviewToken(baseUrl, port);
+		isLoading = true;
+		iframeKey += 1;
+	};
+
 	const goBack = () => {
 		if (!canGoBack) return;
 		historyIndex -= 1;
 		path = history[historyIndex];
 		syncUrlBar();
-		iframeKey += 1;
+		reloadFrame();
 	};
 
 	const goForward = () => {
@@ -44,19 +56,47 @@
 		historyIndex += 1;
 		path = history[historyIndex];
 		syncUrlBar();
-		iframeKey += 1;
+		reloadFrame();
 	};
 
 	// ── URLs ─────────────────────────────────────────────────────────────
-	$: proxyUrl = getPortProxyUrl(baseUrl, port, path);
+	// A system terminal's preview comes from the application's own origin, so it must be denied that
+	// origin. A user's own terminal server is a separate origin already and keeps its own.
+	$: iframeSandbox = isSystemTerminal(baseUrl)
+		? 'allow-scripts allow-forms allow-popups allow-modals allow-downloads'
+		: 'allow-scripts allow-forms allow-popups allow-modals allow-downloads allow-same-origin';
 
-	$: proxyPathPrefix = (() => {
-		try {
-			return new URL(getPortProxyUrl(baseUrl, port, ''), window.location.origin).pathname;
-		} catch {
-			return `/proxy/${port}/`;
+	// Denied that origin, the preview's own requests cannot carry the session cookie and are
+	// authorised by the token in the path instead. Wait for it before pointing the iframe anywhere,
+	// and keep it across unrelated prop reassignments so the frame is not torn down mid-load.
+	$: ensurePreviewToken(baseUrl, port);
+
+	let tokenKey = '';
+	let latestRequest = 0;
+	const ensurePreviewToken = async (terminalUrl: string, previewPort: number) => {
+		const key = `${terminalUrl}|${previewPort}`;
+		if (key === tokenKey) return;
+		tokenKey = key;
+		const request = ++latestRequest;
+		tokenReady = false;
+		tokenError = false;
+		previewToken = null;
+		isLoading = true;
+
+		if (!isSystemTerminal(terminalUrl)) {
+			tokenReady = true;
+			return;
 		}
-	})();
+		const token = await createPortPreviewToken(terminalUrl, apiKey, previewPort);
+		// A newer request took over while this one was in flight.
+		if (request !== latestRequest) return;
+		previewToken = token;
+		tokenError = token === null;
+		if (tokenError) isLoading = false;
+		tokenReady = true;
+	};
+
+	$: previewUrl = getPortPreviewUrl(baseUrl, port, previewToken, path);
 
 	const makeDisplayUrl = (p: string) => `localhost:${port}${p ? '/' + p : ''}`;
 	const syncUrlBar = () => {
@@ -64,12 +104,12 @@
 	};
 	urlInput = makeDisplayUrl(path);
 
-	const refresh = () => {
-		iframeKey += 1;
-	};
-
 	const openExternal = () => {
-		window.open(proxyUrl, '_blank', 'noopener,noreferrer');
+		if (!tokenReady || tokenError) {
+			toast.error($i18n.t('Failed to open port {{port}}', { port }));
+			return;
+		}
+		window.open(previewUrl, '_blank', 'noopener,noreferrer');
 	};
 
 	const navigateUrl = () => {
@@ -88,34 +128,13 @@
 			pushHistory(path);
 		}
 		syncUrlBar();
-		iframeKey += 1;
+		reloadFrame();
 	};
 
-	/**
-	 * Read the iframe's current location and sync the URL bar.
-	 * If the iframe escaped the proxy prefix, redirect it back.
-	 */
+	// The sandboxed frame is opaque-origin, so its location is unreadable and the URL bar only
+	// reflects paths entered here.
 	const onIframeLoad = () => {
 		isLoading = false;
-		if (!iframeEl) return;
-		try {
-			const loc = iframeEl.contentWindow?.location;
-			if (!loc) return;
-			const iframePath = loc.pathname ?? '';
-			const iframeSearch = loc.search ?? '';
-			const iframeHash = loc.hash ?? '';
-
-			if (iframePath.startsWith(proxyPathPrefix)) {
-				const relativePath = iframePath.slice(proxyPathPrefix.length) + iframeSearch + iframeHash;
-				if (relativePath !== path) {
-					path = relativePath;
-					pushHistory(path);
-					syncUrlBar();
-				}
-			}
-		} catch {
-			// Cross-origin — can't access
-		}
 	};
 </script>
 
@@ -178,7 +197,7 @@
 		<Tooltip content={$i18n.t('Refresh')}>
 			<button
 				class="p-1 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 transition"
-				on:click={refresh}
+				on:click={reloadFrame}
 				aria-label={$i18n.t('Refresh')}
 			>
 				<svg
@@ -262,16 +281,21 @@
 		{#if overlay}
 			<div class="absolute inset-0 z-10"></div>
 		{/if}
-		{#key iframeKey}
-			<iframe
-				bind:this={iframeEl}
-				src={proxyUrl}
-				title="Port {port} preview"
-				class="w-full h-full border-0 bg-white"
-				sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
-				on:load={onIframeLoad}
-			/>
-		{/key}
+		{#if tokenError}
+			<div class="flex h-full items-center justify-center px-4 text-xs text-gray-500">
+				{$i18n.t('Failed to open port {{port}}', { port })}
+			</div>
+		{:else if tokenReady}
+			{#key iframeKey}
+				<iframe
+					src={previewUrl}
+					title="Port {port} preview"
+					class="w-full h-full border-0 bg-white"
+					sandbox={iframeSandbox}
+					on:load={onIframeLoad}
+				/>
+			{/key}
+		{/if}
 	</div>
 </div>
 

@@ -470,8 +470,36 @@ export const getListeningPorts = async (
 	return json?.ports ?? [];
 };
 
-export const getPortProxyUrl = (baseUrl: string, port: number, path: string = ''): string => {
-	return `${baseUrl.replace(/\/$/, '')}/proxy/${port}/${path}`;
+// A system terminal proxies through the application's own origin, so its port previews are served
+// sandboxed and carry their credential in the path. A user's own terminal server is already a
+// separate origin and keeps the plain proxy URL.
+export const isSystemTerminal = (baseUrl: string): boolean =>
+	baseUrl.startsWith(`${WEBUI_API_BASE_URL}/terminals/`);
+
+export const createPortPreviewToken = async (
+	baseUrl: string,
+	apiKey: string,
+	port: number
+): Promise<string | null> => {
+	const base = baseUrl.replace(/\/$/, '');
+	const res = await fetch(`${base}/port-preview/${port}`, {
+		method: 'POST',
+		headers: bearerHeaders(apiKey)
+	}).catch(() => null);
+	if (!res || !res.ok) return null;
+	const json = await res.json().catch(() => null);
+	return json?.token ?? null;
+};
+
+export const getPortPreviewUrl = (
+	baseUrl: string,
+	port: number,
+	previewToken: string | null,
+	path: string = ''
+): string => {
+	const base = baseUrl.replace(/\/$/, '');
+	if (!isSystemTerminal(base)) return `${base}/proxy/${port}/${path}`;
+	return previewToken ? `${base}/port-preview/${port}/${previewToken}/${path}` : '';
 };
 
 // ---------------------------------------------------------------------------

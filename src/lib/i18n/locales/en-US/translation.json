@@ -1194,6 +1194,7 @@
 	"Failed to load PPTX file. Please try downloading it instead.": "",
 	"Failed to load usage": "",
 	"Failed to move chat": "",
+	"Failed to open port {{port}}": "",
 	"Failed to process URL: {{url}}": "",
 	"Failed to read clipboard contents": "",
 	"Failed to refresh terminals: {{error}}": "",

@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { onDestroy, getContext, createEventDispatcher } from 'svelte';
 	import type { ListeningPort } from '$lib/apis/terminal';
-	import { getListeningPorts, getPortProxyUrl } from '$lib/apis/terminal';
+	import { toast } from 'svelte-sonner';
+	import {
+		createPortPreviewToken,
+		getListeningPorts,
+		getPortPreviewUrl,
+		isSystemTerminal
+	} from '$lib/apis/terminal';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Icon from './Icon.svelte';
 
@@ -39,9 +45,29 @@
 		dispatch('previewPort', port);
 	};
 
-	const openPortExternal = (port: number) => {
-		const url = getPortProxyUrl(baseUrl, port);
-		window.open(url, '_blank', 'noopener,noreferrer');
+	const openPortExternal = async (port: number) => {
+		if (!isSystemTerminal(baseUrl)) {
+			window.open(getPortPreviewUrl(baseUrl, port, null), '_blank', 'noopener,noreferrer');
+			return;
+		}
+
+		// Opened up front because awaiting the credential first would put this outside the user
+		// gesture and get the popup blocked. `noopener` cannot be used here, it makes window.open
+		// return null; disowning the tab achieves the same thing.
+		const tab = window.open('', '_blank');
+		if (!tab) {
+			toast.error($i18n.t('Failed to open port {{port}}', { port }));
+			return;
+		}
+		tab.opener = null;
+
+		const previewToken = await createPortPreviewToken(baseUrl, apiKey, port);
+		if (!previewToken) {
+			tab.close();
+			toast.error($i18n.t('Failed to open port {{port}}', { port }));
+			return;
+		}
+		tab.location = getPortPreviewUrl(baseUrl, port, previewToken);
 	};
 
 	// Start polling when baseUrl is available

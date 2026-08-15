@@ -105,7 +105,7 @@ class AppHTTPMiddleware:
         start_time = time.monotonic()
         request = Request(scope)
         self._set_token(request)
-        send_with_headers = self._send_with_headers(send, start_time)
+        send_with_headers = self._send_with_headers(scope, send, start_time)
 
         try:
             if await self._redirect_legacy_url(scope, receive, send_with_headers):
@@ -131,12 +131,17 @@ class AppHTTPMiddleware:
             token = HTTPAuthorizationCredentials(scheme='Bearer', credentials=api_key)
         request.state.token = token
 
-    def _send_with_headers(self, send: Send, start_time: float) -> Send:
+    def _send_with_headers(self, scope: Scope, send: Send, start_time: float) -> Send:
         async def send_with_headers(message: Message) -> None:
             if message['type'] == 'http.response.start':
+                # A route serving untrusted content sets this, having chosen headers stricter than
+                # the operator's, which are written for first-party pages.
+                owned = scope.get('state', {}).get('owns_security_headers')
                 headers = MutableHeaders(scope=message)
                 headers['X-Process-Time'] = f'{time.monotonic() - start_time:.6f}'
                 for key, value in self._security_headers:
+                    if owned and key in headers:
+                        continue
                     headers[key] = value
             await send(message)
 

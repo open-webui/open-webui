@@ -1,15 +1,20 @@
 """Reverse proxy for admin-configured terminal servers.
 
 Routes:
-  GET  /                         — list terminals the user has access to
-  *    /{server_id}/{path:path}  — proxy request to terminal server
+  GET  /                                                         — list terminals the user has access to
+  POST /{server_id}/port-preview/{port}                          — mint a port preview credential
+  *    /{server_id}/port-preview/{port}/{preview_token}/{path}   — serve a port, sandboxed
+  *    /{server_id}/{path:path}                                  — proxy request to terminal server
 """
 
+import datetime as dt
+import hashlib
 import logging
 import posixpath
 from urllib.parse import unquote
 
 import aiohttp
+import jwt
 from fastapi import APIRouter, Depends, Request, Response, WebSocket
 from fastapi.responses import JSONResponse, StreamingResponse
 from open_webui.config import TERMINAL_PROXY_HEADERS
@@ -18,9 +23,17 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.utils.access_control import has_connection_access
-from open_webui.utils.auth import get_verified_user
+from open_webui.utils.auth import (
+    ALGORITHM,
+    SESSION_SECRET,
+    decode_token,
+    get_verified_user,
+    get_verified_user_by_id,
+    is_valid_token,
+)
 from open_webui.utils.headers import bearer_auth_header, normalize_bearer_token
 from open_webui.utils.json_codec import JSONCodec
+from open_webui.utils.security_headers import MANAGED_HEADER_NAMES
 from open_webui.utils.terminals import (
     TERMINAL_CONTEXT_HEADER,
     get_terminal_server_url,
@@ -39,7 +52,35 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 STREAMING_CONTENT_TYPES = ('application/octet-stream', 'image/', 'application/pdf')
-STRIPPED_RESPONSE_HEADERS = frozenset(('transfer-encoding', 'connection', 'content-encoding', 'content-length'))
+STRIPPED_RESPONSE_HEADERS = frozenset(
+    (
+        'transfer-encoding',
+        'connection',
+        'content-encoding',
+        'content-length',
+        # Responses come back on our own origin, so a terminal server writing cookies or clearing
+        # site data here would be doing it to the application.
+        'set-cookie',
+        'clear-site-data',
+    )
+)
+
+PORT_PREVIEW_TTL = dt.timedelta(hours=1)
+# The preview credential travels in a URL the previewed page can read, so it is signed with its own
+# key: presented anywhere else it fails signature verification rather than authenticating a session.
+PORT_PREVIEW_SECRET = hashlib.sha256(f'{SESSION_SECRET}:terminal-port-preview'.encode()).hexdigest()
+# A port server's response is written by whoever uses the terminal, so it must never run with the
+# application's own privileges. The sandbox denies it the application origin; the credential rides in
+# the URL instead of a cookie because a sandboxed document is no longer same-site with the application.
+PORT_PREVIEW_HEADERS = {
+    'Content-Security-Policy': 'sandbox allow-scripts allow-forms allow-popups allow-modals allow-downloads',
+    'Referrer-Policy': 'no-referrer',
+    'X-Content-Type-Options': 'nosniff',
+    'Cache-Control': 'no-store',
+    # The preview loads at an opaque origin, so its own assets are cross-origin to it and an
+    # operator's stricter default would leave the page unable to load anything it references.
+    'Cross-Origin-Resource-Policy': 'cross-origin',
+}
 
 
 def _sanitize_proxy_path(path: str) -> str | None:
@@ -99,6 +140,84 @@ async def list_terminal_servers(request: Request, user=Depends(get_verified_user
 PROXY_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 
 
+@router.post('/{server_id}/port-preview/{port}')
+async def create_port_preview_token(server_id: str, port: int, request: Request, user=Depends(get_verified_user)):
+    """Mint a credential that authorises previewing one port on one terminal server."""
+    connections = await Config.get('terminal_server.connections', []) or []
+    connection = next((c for c in connections if c.get('id') == server_id and c.get('enabled', True)), None)
+    if connection is None or not await has_connection_access(user, connection):
+        return JSONResponse({'error': 'Access denied'}, status_code=403)
+
+    # These auth types forward the caller's own credential upstream, and a sandboxed preview carries
+    # none, so refuse here rather than serving a page whose every asset then fails.
+    if connection.get('auth_type', 'bearer') in ('session', 'system_oauth'):
+        return JSONResponse({'error': 'Port preview is unavailable for this terminal server'}, status_code=403)
+
+    # Tied to a session so it can inherit that session's lifetime and revocation. An API key has
+    # neither, and nothing in the UI mints this with one.
+    session_claims = decode_token(getattr(request.state.token, 'credentials', ''))
+    if not session_claims:
+        return JSONResponse({'error': 'Port preview requires a session'}, status_code=403)
+
+    now = dt.datetime.now(dt.UTC)
+    # Never outlive the session it was minted from, however long that session has left.
+    expires_at = now + PORT_PREVIEW_TTL
+    session_expiry = session_claims.get('exp')
+    if session_expiry:
+        expires_at = min(expires_at, dt.datetime.fromtimestamp(session_expiry, dt.UTC))
+    token = jwt.encode(
+        {
+            'user_id': user.id,
+            'server_id': server_id,
+            'port': port,
+            # Carried so signing out, which revokes by jti, revokes the previews minted from it too.
+            'session_jti': session_claims.get('jti'),
+            'iat': now,
+            'exp': expires_at,
+        },
+        PORT_PREVIEW_SECRET,
+        algorithm=ALGORITHM,
+    )
+    return {'token': token}
+
+
+@router.api_route('/{server_id}/port-preview/{port}/{preview_token}/{path:path}', methods=PROXY_METHODS)
+async def preview_port(server_id: str, port: int, preview_token: str, path: str, request: Request):
+    """Serve a port server's response as sandboxed content, authorised by the credential in the path."""
+    try:
+        claims = jwt.decode(preview_token, PORT_PREVIEW_SECRET, algorithms=[ALGORITHM])
+    except jwt.PyJWTError:
+        return JSONResponse({'error': 'Invalid preview token'}, status_code=403)
+
+    if claims.get('server_id') != server_id or claims.get('port') != port:
+        return JSONResponse({'error': 'Invalid preview token'}, status_code=403)
+
+    # The dependency chain is bypassed here, so re-apply what it would have checked: an approved
+    # role, and the revocation that signing out and back-channel logout write.
+    user = await get_verified_user_by_id(claims.get('user_id'))
+    if user is None:
+        return JSONResponse({'error': 'Invalid preview token'}, status_code=403)
+
+    revocation_claims = {'id': user.id, 'iat': claims.get('iat'), 'jti': claims.get('session_jti')}
+    if not await is_valid_token(revocation_claims, getattr(request.app.state, 'redis', None)):
+        return JSONResponse({'error': 'Invalid preview token'}, status_code=403)
+
+    # An empty sub-path is the port's root, which the sanitizer would reject as a bare '.'.
+    safe_path = _sanitize_proxy_path(path) if path else ''
+    if safe_path is None:
+        return JSONResponse({'error': 'Invalid path'}, status_code=400)
+
+    response = await _proxy(server_id, f'proxy/{port}/{safe_path}', request, user, sandboxed=True)
+
+    # This response keeps its own security headers, so drop the ones the terminal server sent: they
+    # would be a third party deciding what the browser enforces on our origin.
+    for name in MANAGED_HEADER_NAMES:
+        del response.headers[name]
+    response.headers.update(PORT_PREVIEW_HEADERS)
+    request.state.owns_security_headers = True
+    return response
+
+
 @router.api_route('/{server_id}/{path:path}', methods=PROXY_METHODS)
 async def proxy_terminal(
     server_id: str,
@@ -107,6 +226,19 @@ async def proxy_terminal(
     user=Depends(get_verified_user),
 ):
     """Proxy a request to the admin terminal server identified by *server_id*."""
+    safe_path = _sanitize_proxy_path(path)
+    if safe_path is None:
+        return JSONResponse({'error': 'Invalid path'}, status_code=400)
+
+    # Port traffic is reachable only through preview_port, which sandboxes what comes back. Preview
+    # URLs are rejected too, so a malformed one cannot hand its credential to the terminal server.
+    if safe_path.lower().startswith(('proxy/', 'port-preview/')):
+        return JSONResponse({'error': 'Not found'}, status_code=404)
+
+    return await _proxy(server_id, safe_path, request, user)
+
+
+async def _proxy(server_id: str, safe_path: str, request: Request, user, sandboxed: bool = False):
     connections = await Config.get('terminal_server.connections', []) or []
     connection = next((c for c in connections if c.get('id') == server_id), None)
 
@@ -120,13 +252,14 @@ async def proxy_terminal(
     if not await has_connection_access(user, connection, user_group_ids):
         return JSONResponse({'error': 'Access denied'}, status_code=403)
 
+    # A sandboxed caller carries none of the credentials these auth types forward upstream. The mint
+    # refuses them too; this also covers a connection switched to one after a token was issued.
+    if sandboxed and connection.get('auth_type', 'bearer') in ('session', 'system_oauth'):
+        return JSONResponse({'error': 'Port preview is unavailable for this terminal server'}, status_code=403)
+
     base_url = get_terminal_server_url(connection)
     if not base_url:
         return JSONResponse({'error': 'Terminal server URL not configured'}, status_code=503)
-
-    safe_path = _sanitize_proxy_path(path)
-    if safe_path is None:
-        return JSONResponse({'error': 'Invalid path'}, status_code=400)
 
     target_url = f'{base_url}/{safe_path}'
 
