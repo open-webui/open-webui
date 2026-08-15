@@ -1172,11 +1172,13 @@ async def get_tool_servers(request: Request):
     try:
         tool_servers = []
         if request.app.state.redis is not None:
-            try:
-                tool_servers = JSONCodec.loads(await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:tool_servers'))
-                request.app.state.TOOL_SERVERS = tool_servers
-            except Exception as e:
-                log.error(f'Error fetching tool_servers from Redis: {e}')
+            cached = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:tool_servers')
+            if cached is not None:
+                try:
+                    tool_servers = JSONCodec.loads(cached)
+                    request.app.state.TOOL_SERVERS = tool_servers
+                except Exception as e:
+                    log.error(f'Error decoding cached tool_servers from Redis: {e}')
 
         if not tool_servers:
             tool_servers = await set_tool_servers(request)
@@ -1315,11 +1317,13 @@ async def get_terminal_servers(request: Request):
     """Return cached terminal server specs, loading if needed."""
     terminal_servers = []
     if request.app.state.redis is not None:
-        try:
-            terminal_servers = JSONCodec.loads(await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers'))
-            request.app.state.TERMINAL_SERVERS = terminal_servers
-        except Exception as e:
-            log.error(f'Error fetching terminal_servers from Redis: {e}')
+        cached = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers')
+        if cached is not None:
+            try:
+                terminal_servers = JSONCodec.loads(cached)
+                request.app.state.TERMINAL_SERVERS = terminal_servers
+            except Exception as e:
+                log.error(f'Error decoding cached terminal_servers from Redis: {e}')
 
     if not terminal_servers:
         terminal_servers = await set_terminal_servers(request)
