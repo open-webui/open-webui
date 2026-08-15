@@ -1351,8 +1351,20 @@ def convert_to_responses_payload(payload: dict) -> dict:
                     content_parts.append({'type': text_type, 'text': part.get('text', '')})
                 elif part.get('type') == 'image_url':
                     url_data = part.get('image_url', {})
-                    url = url_data.get('url', '') if isinstance(url_data, dict) else url_data
-                    content_parts.append({'type': 'input_image', 'image_url': url})
+                    if isinstance(url_data, dict):
+                        url = url_data.get('url', '')
+                        image_item = {
+                            'type': 'input_image',
+                            'image_url': url,
+                            'detail': url_data.get('detail') or 'auto',
+                        }
+                    else:
+                        image_item = {
+                            'type': 'input_image',
+                            'image_url': url_data,
+                            'detail': 'auto',
+                        }
+                    content_parts.append(image_item)
         else:
             content_parts = [{'type': text_type, 'text': str(content)}]
 
