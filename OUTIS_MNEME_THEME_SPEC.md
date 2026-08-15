@@ -212,6 +212,30 @@ calm green against near-white identifiers, no rainbow.
 6. Reload the page after selecting Outis-Mneme — confirm no flash of the wrong theme (the
    `app.html` boot script is what prevents this).
 
+## Default theme
+
+Outis-Mneme is the default for anyone without a stored preference — signed in or not, admin or
+not. The theme is a browser-local `localStorage.theme` value with no server-side counterpart, so
+"new user" here means "browser with no stored preference"; the same person on a second machine
+gets the default again.
+
+The authoritative default is the boot script in `src/app.html`, which seeds `localStorage.theme`
+before the app mounts (upstream seeds `'system'` there). Because it always writes a value, the
+other three defaults — the `theme` store, and two in `Settings/General.svelte` — are only reached
+if localStorage is cleared mid-session. They are kept in sync anyway so a reader doesn't find
+`'system'` half-scattered around. `app.html` is plain HTML with no import graph, so a single
+shared constant isn't available; the duplication is deliberate and commented.
+
+Anyone who has already chosen a theme keeps it: the seed is guarded by `if (!localStorage?.theme)`.
+Verified by booting each stored value and reading back the applied state:
+
+| `localStorage.theme` | html classes | meta theme-color |
+|---|---|---|
+| *(unset — new user)* | `dark outis-mneme` | `#090d0c` |
+| `light` | `light` | `#ffffff` |
+| `system` | `light` / `dark` per OS | per OS |
+| `oled-dark` | `dark` + `--color-gray-900: #000000` | `#000000` |
+
 ## Acceptance
 
 Selecting "Outis-Mneme" from Settings turns the whole app dark-near-black with a single green
@@ -232,8 +256,9 @@ docker run -d -p 3000:8080 \
   ghcr.io/ankurtrapasiya/open-webui:outis-mneme
 ```
 
-Then open http://localhost:3000 and pick **Outis-Mneme** in Settings → General → Theme. The theme
-is an added option, not the default, so a fresh install still starts on the stock dark theme.
+Then open http://localhost:3000. Outis-Mneme is this build's default theme, so it applies
+immediately — no need to select anything. Every other theme is still available and unchanged in
+Settings → General → Theme.
 
 Tags:
 

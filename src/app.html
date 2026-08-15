@@ -50,8 +50,15 @@
 				const metaThemeColorTag = document.querySelector('meta[name="theme-color"]');
 				const prefersDarkTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
+				// Outis-Mneme is this build's default theme: anyone arriving without a
+				// stored preference gets it, signed in or not. Upstream seeds 'system'
+				// here instead. This is the authoritative default — it runs before the
+				// app boots, so every other reader (the `theme` store, the Settings
+				// dropdown) sees a value already set and never falls back. Changing the
+				// default means changing it here; the fallbacks elsewhere only exist for
+				// the case where localStorage is cleared mid-session.
 				if (!localStorage?.theme) {
-					localStorage.theme = 'system';
+					localStorage.theme = 'outis-mneme';
 				}
 
 				if (localStorage.theme === 'system') {
