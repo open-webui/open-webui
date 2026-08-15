@@ -218,3 +218,33 @@ Selecting "Outis-Mneme" from Settings turns the whole app dark-near-black with a
 accent, flat (non-rounded) corners everywhere except genuine circles (avatars, dots,
 circular icon buttons), and a monospace UI font — while every other theme option continues to
 work exactly as it did before this change.
+
+## Running the prebuilt image
+
+The theme ships as a container image so it can be tried without a local build.
+`.github/workflows/docker-outis-mneme.yaml` publishes it on every push to `theme/outis-mneme`, or
+on demand via workflow dispatch.
+
+```bash
+docker run -d -p 3000:8080 \
+  -v open-webui:/app/backend/data \
+  --name open-webui \
+  ghcr.io/ankurtrapasiya/open-webui:outis-mneme
+```
+
+Then open http://localhost:3000 and pick **Outis-Mneme** in Settings → General → Theme. The theme
+is an added option, not the default, so a fresh install still starts on the stock dark theme.
+
+Tags:
+
+- `outis-mneme` — the newest build of the theme branch. Moves.
+- `outis-mneme-<short-sha>` — one specific commit. Never moves; use this to pin.
+
+Built for `linux/amd64` and `linux/arm64`. This is the standard variant only; the CUDA, Ollama and
+slim variants are unchanged by this branch, so pull those from upstream
+(`ghcr.io/open-webui/open-webui`) if you need them.
+
+Note on the license: Open WebUI's license (clause 4) forbids altering, removing or obscuring
+"Open WebUI" branding in deployments serving more than 50 users in any 30-day window. This theme
+recolors the interface and leaves the name and logo intact, so it stays inside that condition —
+worth re-reading before taking the reskin any further.
