@@ -124,32 +124,198 @@ html.outis-mneme .markdown-prose h3 {
 	font-size: 0.8125rem !important; /* 13px, was 16px */
 }
 
-/* Tailwind Typography's `prose-invert` variant hardcodes literal colors
-   (white headings/links/bold/code/kbd, slate-300 body, etc.) instead of
-   referencing --color-gray-* — the same class of hardcoded-literal issue
-   as the `.dark body` rule above. That's why overriding the gray scale
-   alone left headings/links/body text glaring white against the dark
-   background. Redeclared here, on the same selectors the `prose`/
-   `prose-invert` utilities compile onto, using the theme's own
-   mint-tinted scale instead. */
+/* ---------------------------------------------------------------------
+ * The reading area's color system
+ *
+ * Tailwind Typography's `prose-invert` variant hardcodes literal colors
+ * (white headings/links/bold/code/kbd, slate-300 body, etc.) instead of
+ * referencing --color-gray-* — the same class of hardcoded-literal issue
+ * as the `.dark body` rule above, and why the gray-scale override alone
+ * left the prose glaring white. It does expose every role as a
+ * --tw-prose-invert-* custom property though, so the whole system is a
+ * set of variable swaps rather than per-element restyling.
+ *
+ * A first pass just re-tinted those literals mint, which fixed the hue
+ * but not the reading experience: body sat at 12.9:1 and headings at
+ * 16.9:1, and `<strong>` was given the *same* value as headings — so a
+ * bold run-in mid-paragraph shouted as loudly as a section heading and
+ * the page read as one flat sheet. On a near-black ground that range
+ * also halates during sustained reading.
+ *
+ * Now: one tonal ladder (OKLCH hue 162, low chroma, the same discipline
+ * as the code-block palette), with body dropped to a comfortable 10.5:1
+ * and each role given its own rung:
+ *
+ *   headings  #ebd0a7  13.1:1   amber — see below
+ *   strong    #c1d0c8  12.2:1   above body, below headings
+ *   body      #b2c2b9  10.5:1   the reading baseline
+ *   quiet     #86978e   6.4:1   quotes, lead, captions, counters
+ *   trace     #2a3d34           rules, borders, quote bars
+ *
+ * Headings break the ladder's hue on purpose: they take the amber the
+ * code palette uses for strings. Warm-on-cool separates them from body
+ * text by *hue* rather than by brightness, so the answer's spine is
+ * scannable without another near-white tone on screen — and prose and
+ * code end up drawing from one palette. That leaves green meaning
+ * exactly one thing in the reading area: interactive.
+ * ------------------------------------------------------------------ */
 html.outis-mneme .markdown-prose,
 html.outis-mneme .markdown-prose-sm,
 html.outis-mneme .markdown-prose-xs,
 html.outis-mneme .input-prose,
 html.outis-mneme .input-prose-sm {
-	--tw-prose-invert-headings: #e2f2ea;
-	--tw-prose-invert-links: #6ffcb0;
-	--tw-prose-invert-bold: #e2f2ea;
-	--tw-prose-invert-code: #d4ede2;
-	--tw-prose-invert-kbd: #d4ede2;
-	--tw-prose-invert-body: #b9d9cb;
-	--tw-prose-invert-lead: #9dc4b3;
-	--tw-prose-invert-counters: #7aab98;
-	--tw-prose-invert-bullets: #5c8f7d;
-	--tw-prose-invert-quotes: #b9d9cb;
-	--tw-prose-invert-captions: #7aab98;
-	--tw-prose-invert-th-borders: #3a5346;
-	--tw-prose-invert-td-borders: #2a3d34;
+	--tw-prose-invert-headings: #ebd0a7;
+	--tw-prose-invert-bold: #c1d0c8;
+	--tw-prose-invert-body: #b2c2b9;
+	--tw-prose-invert-kbd: #c1d0c8;
+	--tw-prose-invert-lead: #86978e;
+	--tw-prose-invert-quotes: #86978e;
+	--tw-prose-invert-captions: #86978e;
+	--tw-prose-invert-counters: #86978e;
+	--tw-prose-invert-bullets: #6e8177;
+	--tw-prose-invert-links: #77cd97;
+	--tw-prose-invert-hr: #2a3d34;
+	--tw-prose-invert-quote-borders: #2a3d34;
+	--tw-prose-invert-th-borders: #2a3d34;
+	--tw-prose-invert-td-borders: #1a2823;
+}
+
+/* Inline code. There is no --tw-prose-invert-code to set here: the repo's
+   tailwind.config.js turns the typography plugin's `code` styles off
+   entirely (`code: false`), so an inline `snippet` inherits body color and
+   reads as ordinary prose. Given a real rule, and given the same mint the
+   code blocks use for identifiers, so a snippet in a sentence and a
+   snippet in a block are the same color. `:not(pre) > code` keeps this
+   off fenced blocks, which CodeMirror and highlight.js own. */
+html.outis-mneme .markdown-prose :not(pre) > code,
+html.outis-mneme .markdown-prose-sm :not(pre) > code,
+html.outis-mneme .markdown-prose-xs :not(pre) > code,
+html.outis-mneme .input-prose :not(pre) > code,
+html.outis-mneme .input-prose-sm :not(pre) > code {
+	color: #b9d9cb;
+	background: #141c19;
+	padding: 0.1em 0.35em;
+	font-size: 0.95em;
+}
+
+/* ---------------------------------------------------------------------
+ * Code blocks
+ *
+ * A chat code block renders through one of two paths (CodeBlock.svelte):
+ * CodeMirror when the block is interactive, and highlight.js
+ * (github-dark.min.css) otherwise — e.g. while a response is still
+ * streaming. CodeMirror is handled in codemirror-outis-mneme-theme.ts;
+ * these rules give the highlight.js path the same palette, so a block
+ * doesn't recolor itself as it finishes streaming.
+ *
+ * Same six-role split as the CodeMirror theme, same reasoning, same
+ * values: syntax is the one place the one-accent rule is dropped, because
+ * reading code depends on telling token categories apart at a glance. The
+ * four hues are one OKLCH ring (L 0.76 / C 0.078, hue varying), so no
+ * token outshines its neighbours. Keep these in sync with
+ * codemirror-outis-mneme-theme.ts, which explains the reasoning in full.
+ * ------------------------------------------------------------------ */
+
+html.outis-mneme .hljs {
+	background: #0f1512;
+	color: #b9d9cb;
+}
+
+/* Keywords */
+html.outis-mneme .hljs-keyword,
+html.outis-mneme .hljs-selector-tag,
+html.outis-mneme .hljs-subst {
+	color: #8cc099;
+}
+
+/* Names: functions, types, classes, tags, selectors */
+html.outis-mneme .hljs-title,
+html.outis-mneme .hljs-title.class_,
+html.outis-mneme .hljs-title.function_,
+html.outis-mneme .hljs-section,
+html.outis-mneme .hljs-type,
+html.outis-mneme .hljs-built_in,
+html.outis-mneme .hljs-name,
+html.outis-mneme .hljs-attr,
+html.outis-mneme .hljs-attribute,
+html.outis-mneme .hljs-meta,
+html.outis-mneme .hljs-selector-id,
+html.outis-mneme .hljs-selector-class,
+html.outis-mneme .hljs-selector-attr,
+html.outis-mneme .hljs-selector-pseudo {
+	color: #74bed0;
+}
+
+/* Literal values */
+html.outis-mneme .hljs-number,
+html.outis-mneme .hljs-literal,
+html.outis-mneme .hljs-symbol,
+html.outis-mneme .hljs-bullet,
+html.outis-mneme .hljs-formula {
+	color: #b8a6dc;
+}
+
+/* Text data — the only warm hue */
+html.outis-mneme .hljs-string,
+html.outis-mneme .hljs-regexp,
+html.outis-mneme .hljs-template-tag,
+html.outis-mneme .hljs-template-variable,
+html.outis-mneme .hljs-code {
+	color: #cdab78;
+}
+
+/* Plain identifiers */
+html.outis-mneme .hljs-variable,
+html.outis-mneme .hljs-params {
+	color: #b9d9cb;
+}
+
+/* Structure */
+html.outis-mneme .hljs-operator,
+html.outis-mneme .hljs-punctuation {
+	color: #819388;
+}
+
+html.outis-mneme .hljs-comment,
+html.outis-mneme .hljs-quote,
+html.outis-mneme .hljs-doctag {
+	color: #71867b;
+	font-style: italic;
+}
+
+html.outis-mneme .hljs-addition {
+	color: #8cc099;
+}
+html.outis-mneme .hljs-deletion {
+	color: #dd6969;
+}
+html.outis-mneme .hljs-emphasis {
+	font-style: italic;
+}
+html.outis-mneme .hljs-strong {
+	font-weight: 600;
+}
+
+/* The code block's own chrome (language label, Collapse/Run/Save/Copy) is
+   `bg-black` — a hardcoded literal, like `.dark body` above — while the
+   code surface below it is the theme's --color-gray-900. That left a
+   visible two-tone seam across the top of every block. Repaint the
+   header and the spacer strip to match the code surface. Scoped by the
+   `language-*` container CodeBlock.svelte wraps the code in, so it can't
+   reach any other `bg-black` in the app. */
+html.outis-mneme div:has(> div[class*='language-']) > .sticky,
+html.outis-mneme div:has(> div[class*='language-']) > .sticky button,
+html.outis-mneme div:has(> div[class*='language-']) > .sticky .run-code-button,
+html.outis-mneme div[class*='language-'] > div:first-child {
+	background-color: #0f1512;
+}
+
+/* Same chrome, its text: `text-white`, which left the language label and the
+   Collapse/Run/Save/Copy controls brighter than any token in the code below
+   them. They're furniture, not content — drop them to gray-300 so the code
+   is the brightest thing in its own block. */
+html.outis-mneme div:has(> div[class*='language-']) > .sticky {
+	color: #7aab98;
 }
 
 /* Icons — all ~182 of Open WebUI's icon components hardcode

@@ -4,24 +4,56 @@
 // per-instance hashed class names, not stable selectors — there's no CSS
 // override that reaches them from outside. The only real fix is swapping
 // in our own HighlightStyle, same shape as oneDark's (see
-// node_modules/@codemirror/theme-one-dark/dist/index.js), recolored to
-// the theme's actual palette: one accent green plus grays, not oneDark's
-// five-hue violet/coral/malibu/chalky/cyan spread. See
+// node_modules/@codemirror/theme-one-dark/dist/index.js). See
 // OUTIS_MNEME_THEME_SPEC.md for the rest of the design system.
+//
+// Syntax colors are the one place the theme's "one accent" rule doesn't
+// apply. A first pass painted every token in the green/gray scale, which
+// made code unreadable: strings (#b9d9cb) were a hair off plain
+// identifiers (#d4ede2), and comments (#3a5346) sat at 2.4:1 against the
+// background. Reading code depends on telling token *categories* apart at
+// a glance, so each category gets its own hue.
+//
+// The hues are one OKLCH ring: a single lightness plane (L 0.76) and a
+// single chroma budget (C 0.078), with only the hue angle changing. Hue
+// alone carries the category, so no token is brighter than its neighbours
+// and the block reads as one calm field instead of flickering. That's
+// also what the theme's subject would do — a phosphor tube is glow, not
+// ink, and one electron gun lights every phosphor to the same energy.
+//
+//   green  H152  #8cc099  keywords, control flow
+//   cyan   H215  #74bed0  functions, types, classes (the names you scan for)
+//   violet H300  #b8a6dc  numbers, booleans, None (literal values)
+//   amber  H78   #cdab78  strings, regexps, escapes (the only warm hue)
+//
+// Off the ring: identifiers sit just above it as the reading baseline,
+// and structure sits below. All four ring hues land at 8.4-8.9:1 on the
+// background; an earlier pass spanned 7.7-13.9:1, which is what made it
+// glare.
+//
+// Note the accent green does NOT appear here. Its job is to mark
+// interaction — caret, selection, focus, links — and nothing in a code
+// block is interactive. Spending it on every `if` and `return` was most
+// of the brightness problem. It still owns the editor chrome below.
 import { EditorView } from '@codemirror/view';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 
 const bg = '#0f1512'; // --color-gray-900
 const gutterBg = '#090d0c'; // --color-gray-950
-const text = '#d4ede2'; // --color-gray-50
-const textDim = '#b9d9cb'; // --color-gray-100
-const muted = '#7aab98'; // --color-gray-300
-const mutedDark = '#3a5346'; // --color-gray-600 -- comments
-const accent = '#2dff8f'; // --color-blue-500 / --color-green-500
+const text = '#b9d9cb'; // --color-gray-100 -- identifiers, same weight as prose body
+const muted = '#819388'; // operators, punctuation -- 5.7:1
+const gutterFg = '#55675d'; // line numbers -- 3.1:1
+const mutedDark = '#3a5346'; // --color-gray-600 -- borders only
+const comment = '#71867b'; // 4.8:1 -- readable, still recedes
+const accent = '#2dff8f'; // --color-blue-500 -- editor chrome only, never syntax
+const green = '#8cc099';
+const cyan = '#74bed0';
+const violet = '#b8a6dc';
+const amber = '#cdab78';
 const accentSoft = 'rgba(45, 255, 143, 0.16)'; // selection
 const accentFaint = 'rgba(45, 255, 143, 0.05)'; // active line
-const danger = '#ff4e4e';
+const danger = '#dd6969'; // softened from #ff4e4e to sit with the ring
 
 export const outisMnemeEditorTheme = /*@__PURE__*/ EditorView.theme(
 	{
@@ -40,8 +72,8 @@ export const outisMnemeEditorTheme = /*@__PURE__*/ EditorView.theme(
 		'&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket': {
 			backgroundColor: accentSoft
 		},
-		'.cm-gutters': { backgroundColor: bg, color: mutedDark, border: 'none' },
-		'.cm-activeLineGutter': { backgroundColor: accentFaint },
+		'.cm-gutters': { backgroundColor: bg, color: gutterFg, border: 'none' },
+		'.cm-activeLineGutter': { backgroundColor: accentFaint, color: text },
 		'.cm-foldPlaceholder': { backgroundColor: 'transparent', border: 'none', color: muted },
 		'.cm-tooltip': { border: `1px solid ${mutedDark}`, backgroundColor: gutterBg },
 		'.cm-tooltip .cm-tooltip-arrow:before': {
@@ -60,51 +92,103 @@ export const outisMnemeEditorTheme = /*@__PURE__*/ EditorView.theme(
 );
 
 const outisMnemeHighlightStyle = /*@__PURE__*/ HighlightStyle.define([
-	{ tag: tags.keyword, color: accent },
+	// Keywords and control flow.
+	// (control/operator/definition/module keywords are all subtypes of
+	// tags.keyword, so the one rule covers `def`, `if`, `in`, `import`.)
+	{ tag: [tags.keyword, tags.modifier], color: green },
+
+	// Names you scan for: what's being defined and what's being called.
+	// Exact tags, not just the base ones — lezer-python emits
+	// function(definition(variableName)) for a `def` name, and matching it
+	// exactly keeps it from falling through to the plain-identifier rule.
 	{
-		tag: [tags.name, tags.deleted, tags.character, tags.propertyName, tags.macroName],
-		color: text
+		tag: [
+			tags.function(tags.variableName),
+			tags.function(tags.definition(tags.variableName)),
+			tags.function(tags.propertyName),
+			tags.labelName,
+			tags.macroName
+		],
+		color: cyan
 	},
-	{ tag: [tags.function(tags.variableName), tags.labelName], color: textDim },
-	{
-		tag: [tags.color, tags.constant(tags.name), tags.standard(tags.name)],
-		color: muted
-	},
-	{ tag: [tags.definition(tags.name), tags.separator], color: text },
 	{
 		tag: [
 			tags.typeName,
 			tags.className,
-			tags.number,
-			tags.changed,
-			tags.annotation,
-			tags.modifier,
-			tags.self,
-			tags.namespace
+			tags.definition(tags.className),
+			tags.namespace,
+			tags.annotation
 		],
-		color: muted
+		color: cyan
 	},
+
+	// Literal values.
+	{
+		tag: [
+			tags.number,
+			tags.integer,
+			tags.float,
+			tags.bool,
+			tags.atom,
+			tags.null,
+			tags.unit,
+			tags.constant(tags.name),
+			tags.standard(tags.name),
+			tags.self,
+			tags.special(tags.variableName),
+			tags.color
+		],
+		color: violet
+	},
+
+	// Text data — the only warm hue in the block.
+	{
+		tag: [
+			tags.string,
+			tags.character,
+			tags.special(tags.string),
+			tags.regexp,
+			tags.escape,
+			tags.processingInstruction,
+			tags.inserted
+		],
+		color: amber
+	},
+
+	// Plain identifiers, properties, definitions.
+	{
+		tag: [
+			tags.name,
+			tags.variableName,
+			tags.definition(tags.variableName),
+			tags.propertyName,
+			tags.attributeName
+		],
+		color: text
+	},
+
+	// Structure — present but never competing with the tokens above.
 	{
 		tag: [
 			tags.operator,
-			tags.operatorKeyword,
-			tags.url,
-			tags.escape,
-			tags.regexp,
-			tags.link,
-			tags.special(tags.string)
+			tags.punctuation,
+			tags.separator,
+			tags.bracket,
+			tags.derefOperator,
+			tags.meta
 		],
 		color: muted
 	},
-	{ tag: [tags.meta, tags.comment], color: mutedDark },
+	{ tag: tags.comment, color: comment, fontStyle: 'italic' },
+
+	// Markup.
 	{ tag: tags.strong, fontWeight: 'bold' },
 	{ tag: tags.emphasis, fontStyle: 'italic' },
 	{ tag: tags.strikethrough, textDecoration: 'line-through' },
-	{ tag: tags.link, color: muted, textDecoration: 'underline' },
+	{ tag: [tags.link, tags.url], color: cyan, textDecoration: 'underline' },
 	{ tag: tags.heading, fontWeight: 'bold', color: text },
-	{ tag: [tags.atom, tags.bool, tags.special(tags.variableName)], color: muted },
-	{ tag: [tags.processingInstruction, tags.string, tags.inserted], color: textDim },
-	{ tag: tags.invalid, color: danger }
+	{ tag: [tags.deleted, tags.changed], color: danger },
+	{ tag: tags.invalid, color: danger, textDecoration: 'underline wavy' }
 ]);
 
 export const outisMneme = [outisMnemeEditorTheme, syntaxHighlighting(outisMnemeHighlightStyle)];
