@@ -1257,8 +1257,8 @@ async def chat_completion(
         if metadata.get('chat_id') and user:
             chat_id = metadata['chat_id']
 
-            # Gate channel: branch — caller needs write access on the channel
-            # and the supplied message_id must belong to that channel.
+            # Gate channel: branch — caller needs write access on the channel, and the
+            # supplied message_id must belong to that channel and be the caller's own.
             if chat_id.startswith('channel:'):
                 channel_id = chat_id.removeprefix('channel:')
                 channel = await Channels.get_channel_by_id(channel_id)
@@ -1290,7 +1290,11 @@ async def chat_completion(
                     if not target_message_id:
                         continue
                     target_message = await Messages.get_message_by_id(target_message_id)
-                    if target_message and target_message.channel_id != channel.id:
+                    if target_message and (
+                        target_message.channel_id != channel.id
+                        # Write access is not authorship — block cross-member edits.
+                        or (user.role != 'admin' and target_message.user_id != user.id)
+                    ):
                         raise HTTPException(
                             status_code=status.HTTP_403_FORBIDDEN,
                             detail=ERROR_MESSAGES.DEFAULT(),
