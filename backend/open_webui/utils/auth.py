@@ -561,6 +561,12 @@ def get_admin_user(user=Depends(get_current_user)):
     return user
 
 
+def require_admin_for_backend_idx(url_idx: int | None, user) -> None:
+    # Admin-only even under BYPASS_MODEL_ACCESS_CONTROL, which relaxes per-model access rather than backend selection.
+    if url_idx is not None and user.role != 'admin':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+
 async def create_admin_user(email: str, password: str, name: str = 'Admin'):
     """
     Create an admin user from environment variables.

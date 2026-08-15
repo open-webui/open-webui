@@ -34,7 +34,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel
 from open_webui.utils.access_control import check_model_access
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user, require_admin_for_backend_idx
 from open_webui.utils.headers import get_custom_headers, include_user_info_headers
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import calculate_sha256
@@ -478,6 +478,8 @@ async def get_ollama_tags(
     user=Depends(get_verified_user),
 ):
     """List Ollama model tags, optionally from a specific backend."""
+    require_admin_for_backend_idx(url_idx, user)
+
     if not await Config.get('ollama.enable'):
         raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
@@ -541,6 +543,8 @@ async def get_ollama_versions(
     url_idx: int | None = None,
 ):
     """Return the lowest Ollama version across all configured backends."""
+    require_admin_for_backend_idx(url_idx, user)
+
     if not await Config.get('ollama.enable'):
         return {'version': False}
 
@@ -1053,7 +1057,7 @@ class GenerateChatCompletionForm(BaseModel):
 async def validate_ollama_backend_idx(request: Request, model: str, url_idx: int | None, user) -> None:
     # A caller-supplied url_idx must point to a backend the model is actually
     # served from; the None path is already constrained to that allow-list.
-    if url_idx is None or user is None or getattr(user, 'role', None) == 'admin' or BYPASS_MODEL_ACCESS_CONTROL:
+    if url_idx is None or user is None or getattr(user, 'role', None) == 'admin':
         return
     models = request.app.state.OLLAMA_MODELS
     if not models or model not in models:
@@ -1480,6 +1484,8 @@ async def get_openai_models(
     db: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """List models in the OpenAI-compatible format."""
+    require_admin_for_backend_idx(url_idx, user)
+
     if url_idx is None:
         model_list = await get_all_models(request, user=user)
         raw_models = model_list['models']
