@@ -5760,6 +5760,19 @@ async def streaming_chat_response_handler(response, ctx):
                             output[:0] = prior_output
                             prior_output = []
                         else:
+                            if getattr(res, 'status_code', 200) >= 400:
+                                try:
+                                    error_body = JSONCodec.loads(res.body.decode('utf-8', 'replace'))
+                                    detail = (
+                                        error_body.get('error', error_body)
+                                        if isinstance(error_body, dict)
+                                        else error_body
+                                    )
+                                    if isinstance(detail, dict):
+                                        detail = detail.get('message', detail.get('detail', str(detail)))
+                                except Exception:
+                                    detail = f'Provider returned HTTP {res.status_code}'
+                                await emit_message_error(get_message_error_content(detail))
                             break
                     except Exception as e:
                         error_content = get_message_error_content(e)
