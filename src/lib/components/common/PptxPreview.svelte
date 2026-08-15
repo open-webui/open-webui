@@ -156,11 +156,7 @@
 		}
 
 		const transform = pzInstance?.getTransform();
-		if (
-			transform &&
-			Math.abs(transform.scale - 1) >= 0.01 &&
-			Math.abs(e.deltaX) > Math.abs(e.deltaY)
-		) {
+		if (transform && Math.abs(transform.scale - 1) >= 0.01) {
 			e.preventDefault();
 			pzInstance?.moveBy(-e.deltaX, -e.deltaY);
 			zoomLevel = pzInstance?.getTransform().scale ?? 1;
