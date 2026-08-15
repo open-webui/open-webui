@@ -182,7 +182,7 @@
 					<span class="flex gap-1 shrink-0">
 						<button
 							type="button"
-							class="text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
+							class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
 							disabled={!pendingCallId || resolvingCallId === pendingCallId}
 							on:click|stopPropagation={() => onResolve(pendingCallId, true)}
 						>
@@ -190,7 +190,7 @@
 						</button>
 						<button
 							type="button"
-							class="text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
+							class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
 							disabled={!pendingCallId || resolvingCallId === pendingCallId}
 							on:click|stopPropagation={() => onResolve(pendingCallId, false)}
 						>
@@ -223,7 +223,7 @@
 						<span class="flex gap-1 shrink-0">
 							<button
 								type="button"
-								class="text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
+								class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
 								disabled={!pendingCallId || resolvingCallId === pendingCallId}
 								on:click={() => onResolve(pendingCallId, true)}
 							>
@@ -231,7 +231,7 @@
 							</button>
 							<button
 								type="button"
-								class="text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
+								class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
 								disabled={!pendingCallId || resolvingCallId === pendingCallId}
 								on:click={() => onResolve(pendingCallId, false)}
 							>
