@@ -25,10 +25,12 @@
 
 	type Feature = keyof typeof featureLabels;
 
-	export let availableFeatures: Feature[] = ['web_search', 'image_generation', 'code_interpreter'];
-	export let featureIds: Feature[] = [];
+	export let availableFeatures: string[] = ['web_search', 'image_generation', 'code_interpreter'];
+	export let featureIds: string[] = [];
 
-	const setFeature = (feature: Feature, checked: boolean) => {
+	const getFeatureLabel = (feature: string) => featureLabels[feature as Feature];
+
+	const setFeature = (feature: string, checked: boolean) => {
 		if (checked) {
 			if (!featureIds.includes(feature)) {
 				featureIds = [...featureIds, feature];
@@ -45,7 +47,7 @@
 		{#each availableFeatures as feature}
 			<div class="flex min-h-6 items-center gap-2.5">
 				<Checkbox
-					ariaLabel={$i18n.t(featureLabels[feature].label)}
+					ariaLabel={$i18n.t(getFeatureLabel(feature).label)}
 					state={featureIds.includes(feature) ? 'checked' : 'unchecked'}
 					on:change={(e) => {
 						setFeature(feature, e.detail === 'checked');
@@ -59,9 +61,9 @@
 					<Tooltip
 						as="span"
 						className="block min-w-0"
-						content={marked.parse(featureLabels[feature].description)}
+						content={marked.parse(getFeatureLabel(feature).description)}
 					>
-						<span class="block truncate">{$i18n.t(featureLabels[feature].label)}</span>
+						<span class="block truncate">{$i18n.t(getFeatureLabel(feature).label)}</span>
 					</Tooltip>
 				</button>
 			</div>
