@@ -802,11 +802,6 @@ async def yjs_document_update(sid, data):
                 log.warning(f'User {user.get("id")} does not have write access to note {note_id}. Rejecting update.')
                 return
 
-        try:
-            await stop_item_tasks(REDIS, document_id)
-        except Exception:
-            pass
-
         user_id = data.get('user_id', sid)
 
         update = data['update']  # List of bytes from frontend
@@ -834,6 +829,16 @@ async def yjs_document_update(sid, data):
             await document_save_handler(document_id, data.get('data', {}), user)
 
         if data.get('data'):
+            # Only drop the pending save when a new one takes its place.
+            # Updates without a content snapshot (the resync a client sends
+            # after rejoining a document) would otherwise cancel the pending
+            # save without scheduling a replacement, so the edits made just
+            # before the resync never reach the database.
+            try:
+                await stop_item_tasks(REDIS, document_id)
+            except Exception:
+                pass
+
             await create_task(REDIS, debounced_save(), document_id)
 
     except Exception as e:
