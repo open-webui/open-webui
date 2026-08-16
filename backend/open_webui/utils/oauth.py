@@ -19,7 +19,7 @@ import jwt
 from authlib.integrations.starlette_client import OAuth
 from authlib.oauth2.rfc6749.errors import OAuth2Error
 from authlib.oidc.core import UserInfo
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from fastapi import (
     HTTPException,
     status,
@@ -279,8 +279,15 @@ def decrypt_data(data: str):
     try:
         decrypted = FERNET.decrypt(data.encode()).decode()
         return JSONCodec.loads(decrypted)
+    except InvalidToken:
+        log.error(
+            'Error decrypting data: the stored value is not a valid token for the current key. '
+            'If WEBUI_SECRET_KEY or OAUTH_CLIENT_INFO_ENCRYPTION_KEY changed, the affected '
+            'OAuth client must be registered again.'
+        )
+        raise
     except Exception as e:
-        log.error(f'Error decrypting data: {e}')
+        log.error('Error decrypting data: %s: %s', type(e).__name__, e)
         raise
 
 

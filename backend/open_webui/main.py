@@ -614,7 +614,11 @@ async def initialize_runtime_config(app: FastAPI):
                         OAuthClientInformationFull(**oauth_client_info),
                     )
                 except Exception as e:
-                    log.error(f'Error adding OAuth client for MCP tool server {server_id}: {e}')
+                    log.error(
+                        'Error adding OAuth client for MCP tool server %s: %s',
+                        server_id,
+                        f'{type(e).__name__}: {e}' if str(e) else type(e).__name__,
+                    )
 
     arena_models = await Config.get('evaluation.arena.models', []) or []
     if any('access_control' in m.get('meta', {}) for m in arena_models):
