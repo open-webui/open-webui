@@ -38,10 +38,12 @@ def search_exa(
     payload = {
         'query': query,
         'numResults': count or 5,
-        'includeDomains': filter_list,
         'contents': {'text': True, 'highlights': True},
         'type': 'auto',  # Use the auto search type (keyword or neural)
     }
+
+    if filter_list:
+        payload['includeDomains'] = filter_list
 
     try:
         response = requests.post(f'{EXA_API_BASE}/search', headers=headers, json=payload)
