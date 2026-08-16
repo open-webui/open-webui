@@ -47,6 +47,7 @@ from open_webui.utils.access_control import filter_allowed_access_grants, has_pe
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.json_codec import JSONCodec
+from open_webui.utils.knowledge_sync import diff_manifest_files
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -1869,6 +1870,9 @@ async def sync_knowledge_diff(
     await _verify_knowledge_write_access(id, user, db)
 
     # ── Index existing state ──
+    # Read pending files first so a file linked between these two queries is
+    # present in at least one index instead of briefly appearing as missing.
+    pending_files = await Files.get_pending_files_for_knowledge(id, db=db)
     knowledge_files = await Knowledges.get_files_with_directory_ids(id, db=db)
     existing_directories = await Knowledges.get_all_directories(id, db=db)
 
@@ -1898,33 +1902,31 @@ async def sync_knowledge_diff(
             'checksum': stored_checksum,
         }
 
+    # Keep exact in-flight matches out of ``added`` so a sync client cannot
+    # re-upload the same content while background processing is still running.
+    # Failed files are intentionally absent from this set and remain retryable.
+    in_flight_files: set[tuple[str, str, str]] = set()
+    for file_model in pending_files:
+        metadata = file_model.meta.model_dump() if file_model.meta else {}
+        upload_metadata = metadata.get('data')
+        if not isinstance(upload_metadata, dict):
+            continue
+
+        directory_id = upload_metadata.get('directory_id')
+        if directory_id and directory_id not in directory_path_by_id:
+            continue
+
+        stored_checksum = metadata.get('file_hash')
+        if stored_checksum:
+            file_path = directory_path_by_id.get(directory_id, '') if directory_id else ''
+            in_flight_files.add((file_path, file_model.filename, stored_checksum))
+
     # ── Diff files ──
-    added: list[dict] = []
-    modified: list[dict] = []
-    deleted: list[dict] = []
-    unmodified_count = 0
-    manifest_keys: set[tuple[str, str]] = set()
-
-    for entry in form_data.manifest:
-        key = (entry.path, entry.filename)
-        manifest_keys.add(key)
-
-        if key not in indexed_files:
-            added.append({'filename': entry.filename, 'path': entry.path})
-        elif indexed_files[key]['checksum'] != entry.checksum:
-            modified.append(
-                {
-                    'filename': entry.filename,
-                    'path': entry.path,
-                    'stale_file_id': indexed_files[key]['file_id'],
-                }
-            )
-        else:
-            unmodified_count += 1
-
-    for key, file_info in indexed_files.items():
-        if key not in manifest_keys:
-            deleted.append({'file_id': file_info['file_id'], 'filename': key[1]})
+    added, modified, deleted, unmodified_count = diff_manifest_files(
+        form_data.manifest,
+        indexed_files,
+        in_flight_files,
+    )
 
     # ── Diff directories ──
     required_directory_paths: set[str] = set()
