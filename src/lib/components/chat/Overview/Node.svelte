@@ -93,6 +93,10 @@
 			</div>
 		{/if}
 	</Tooltip>
-	<Handle type="target" position={targetPosition} class="w-2 rounded-full dark:bg-gray-900" />
-	<Handle type="source" position={sourcePosition} class="w-2 rounded-full dark:bg-gray-900" />
+	{#if data?.message?.parentId}
+		<Handle type="target" position={targetPosition} class="w-2 rounded-full dark:bg-gray-900" />
+	{/if}
+	{#if (data?.message?.childrenIds ?? []).length > 0}
+		<Handle type="source" position={sourcePosition} class="w-2 rounded-full dark:bg-gray-900" />
+	{/if}
 </div>
