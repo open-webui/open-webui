@@ -347,6 +347,19 @@
     const text = input.value.trim();
     if (!text || state.sending) return;
 
+    // Guard: if the currently selected model is not in the loaded list,
+    // switch to ChatRayovin (or the first available model) before sending.
+    if (state.models.length && !state.models.some(m => m.id === state.currentModel)) {
+      state.currentModel = state.models.some(m => m.id === 'ChatRayovin')
+        ? 'ChatRayovin'
+        : (state.models[0]?.id || state.currentModel);
+      localStorage.setItem('owui_model', state.currentModel);
+      const sel = $('#modelSelect');
+      if (sel) sel.value = state.currentModel;
+      updateHeaderModel();
+      toast(`مدل به ${state.currentModel} تغییر کرد`);
+    }
+
     if (!state.currentChat) {
       try {
         const { chat } = await API.post('api/chat.php?action=create', { model: state.currentModel });
@@ -460,7 +473,16 @@
       const sel = $('#modelSelect');
       if (!sel) return;
       sel.innerHTML = models.map(m => `<option value="${ESC(m.id)}" data-provider="${m.provider}">${ESC(m.name)}</option>`).join('');
-      if (models.some(m => m.id === state.currentModel)) sel.value = state.currentModel;
+
+      // If the stored (possibly stale) model is not available on this endpoint,
+      // fall back to ChatRayovin (or the first available model).
+      if (!models.some(m => m.id === state.currentModel)) {
+        state.currentModel = models.some(m => m.id === 'ChatRayovin')
+          ? 'ChatRayovin'
+          : (models[0]?.id || state.currentModel);
+        localStorage.setItem('owui_model', state.currentModel);
+      }
+      sel.value = state.currentModel;
       updateHeaderModel();
     } catch (err) { toast(err.message, 'error'); }
   }
