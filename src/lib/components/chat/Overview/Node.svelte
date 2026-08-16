@@ -13,6 +13,10 @@
 	type $$Props = NodeProps;
 	export let data: $$Props['data'];
 
+	$: horizontal = data?.direction === 'horizontal';
+	$: targetPosition = horizontal ? Position.Left : Position.Top;
+	$: sourcePosition = horizontal ? Position.Right : Position.Bottom;
+
 	const getMessageContent = (nodeData: any) =>
 		getOutputText(nodeData?.message?.output) || nodeData?.message?.content || '';
 
@@ -89,6 +93,6 @@
 			</div>
 		{/if}
 	</Tooltip>
-	<Handle type="target" position={Position.Top} class="w-2 rounded-full dark:bg-gray-900" />
-	<Handle type="source" position={Position.Bottom} class="w-2 rounded-full dark:bg-gray-900" />
+	<Handle type="target" position={targetPosition} class="w-2 rounded-full dark:bg-gray-900" />
+	<Handle type="source" position={sourcePosition} class="w-2 rounded-full dark:bg-gray-900" />
 </div>
