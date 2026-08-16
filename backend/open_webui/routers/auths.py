@@ -70,6 +70,7 @@ from open_webui.utils.auth import (
     get_password_hash,
     get_verified_user,
     invalidate_token,
+    revoke_user_tokens,
     validate_password,
     verify_password,
 )
@@ -413,6 +414,16 @@ async def update_password(
                     subject_id=user.id,
                     subject_type='user',
                 )
+                # A password change must not leave old sessions usable. Revoke
+                # every existing JWT for this user so all devices (including
+                # this one) are signed out and must re-authenticate with the
+                # new password.
+                if not await revoke_user_tokens(request.app.state.redis, user.id):
+                    log.warning(
+                        'Password changed for user %s but Redis is not configured; '
+                        'existing sessions cannot be revoked and stay valid until they expire.',
+                        user.id,
+                    )
             return success
         else:
             raise HTTPException(400, detail=ERROR_MESSAGES.INCORRECT_PASSWORD)

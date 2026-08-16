@@ -279,6 +279,28 @@ async def is_valid_token(decoded, redis=None) -> bool:
     return True
 
 
+async def revoke_user_tokens(redis, user_id: str) -> bool:
+    """
+    Revoke every existing JWT session for a user by recording a per-user
+    `revoked_at` timestamp. `is_valid_token()` rejects any token whose `iat`
+    is at or before this value, so all currently-issued sessions stop working
+    on their next request.
+
+    Mirrors the per-user revocation used by OIDC back-channel logout. Requires
+    Redis: without it there is nowhere to record the timestamp, so this is a
+    no-op that returns False (callers should surface that to the operator).
+    """
+    if not redis:
+        return False
+
+    await redis.set(
+        f'{REDIS_KEY_PREFIX}:auth:user:{user_id}:revoked_at',
+        str(int(datetime.now(UTC).timestamp())),
+        ex=60 * 60 * 24 * 30,
+    )
+    return True
+
+
 async def invalidate_token(request, token):
     decoded = decode_token(token)
 

@@ -41,6 +41,7 @@ from open_webui.utils.auth import (
     get_admin_user,
     get_password_hash,
     get_verified_user,
+    revoke_user_tokens,
     validate_password,
 )
 from open_webui.utils.chat_variables import ChatVariablesError, normalize_user_variables, validate_user_variables
@@ -966,6 +967,15 @@ async def update_user_by_id(
 
             hashed = await get_password_hash(form_data.password)
             await Auths.update_user_password_by_id(user_id, hashed, db=db)
+            # An admin resetting a user's password must also sign that user out
+            # of every existing session, so a compromised account cannot keep
+            # its old tokens alive.
+            if not await revoke_user_tokens(request.app.state.redis, user_id):
+                log.warning(
+                    'Admin reset password for user %s but Redis is not configured; '
+                    'existing sessions cannot be revoked and stay valid until they expire.',
+                    user_id,
+                )
 
         # Build update dict from only the provided fields
         update_data = {}
