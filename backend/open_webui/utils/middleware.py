@@ -2038,10 +2038,10 @@ def get_reasoning_format(model: dict) -> str | None:
         'reasoning_content': llama.cpp supports reasoning_content as a top-level field.
         None: skip reasoning (safe default for strict providers).
     """
-    provider = model.get('provider', '')
-    if provider == 'ollama':
+    # owned_by is the same flag that routes to the native Ollama API; provider only exists on OpenAI connections.
+    if model.get('owned_by') == 'ollama':
         return 'think_tags'
-    if provider == 'llama.cpp':
+    if model.get('provider') == 'llama.cpp':
         return 'reasoning_content'
     return None
 
