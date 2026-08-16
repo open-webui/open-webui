@@ -50,6 +50,9 @@
 			notation: 'compact',
 			compactDisplay: 'short'
 		}).format(count);
+
+	$: hasActions =
+		channel?.type === 'dm' || $user?.role === 'admin' || channel?.user_id === $user?.id;
 </script>
 
 <ChannelModal
@@ -88,7 +91,7 @@
 		: ' dark:text-gray-400 text-gray-600'} cursor-pointer select-none"
 >
 	<a
-		class=" w-full flex"
+		class=" w-full min-w-0 flex {hasActions ? 'group-hover:pr-6 group-focus-within:pr-6' : ''}"
 		href="/channels/{channel.id}"
 		on:click={() => {
 			console.log(channel);
@@ -203,7 +206,7 @@
 	</a>
 
 	{#if ['dm'].includes(channel?.type)}
-		<div class="ml-0.5 mr-1 hover-reveal self-center flex items-center dark:text-gray-300">
+		<div class="hover-reveal absolute right-2 inset-y-0 flex items-center dark:text-gray-300">
 			<button
 				type="button"
 				class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
@@ -227,8 +230,8 @@
 				<XMarkIcon className="size-3.5" />
 			</button>
 		</div>
-	{:else if $user?.role === 'admin' || channel.user_id === $user?.id}
-		<div class="ml-0.5 mr-1 hover-reveal self-center flex items-center dark:text-gray-300">
+	{:else if hasActions}
+		<div class="hover-reveal absolute right-2 inset-y-0 flex items-center dark:text-gray-300">
 			<button
 				type="button"
 				class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
