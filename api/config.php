@@ -20,7 +20,8 @@ define('BASE_URL', rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/'))
 define('DB_FILE', __DIR__ . '/../data/openwebui.db');
 
 // ─── Auth Mode ───────────────────────────────────────────────
-$aMode = getenv('AUTH_MODE') ?? 'session';
+$aMode = getenv('AUTH_MODE');
+$aMode = ($aMode === false || $aMode === null) ? 'session' : $aMode;
 define('AUTH_MODE', strtolower(trim($aMode)) === 'api_key' ? 'api_key' : 'session');
 
 // ─── Default settings ─────────────────────────────────────────
@@ -134,6 +135,12 @@ function require_auth(): array {
 
 function e(?string $s): string {
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
+}
+
+function get_body(): array {
+    $raw = file_get_contents('php://input');
+    $data = json_decode($raw, true);
+    return is_array($data) ? $data : [];
 }
 
 init_db();
