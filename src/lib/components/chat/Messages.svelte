@@ -66,11 +66,8 @@
 	});
 
 	const loadMoreMessages = async () => {
-		// scroll slightly down to disable continuous loading
 		const element = getMessagesContainer();
-		if (element) {
-			element.scrollTop = element.scrollTop + 100;
-		}
+		const previousScrollHeight = element?.scrollHeight ?? 0;
 
 		messagesLoading = true;
 		messagesCount += 8;
@@ -78,6 +75,10 @@
 		buildMessages();
 
 		await tick();
+
+		if (element) {
+			element.scrollTop += element.scrollHeight - previousScrollHeight;
+		}
 
 		messagesLoading = false;
 	};
