@@ -64,6 +64,7 @@
 	import { getSessionUser } from '$lib/apis/auths';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+	import { unlockIOSCallAudio } from '$lib/utils/ios-call-audio';
 	import { initiateOAuthRedirect } from '$lib/apis/configs';
 	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
 
@@ -2520,6 +2521,11 @@
 
 																return;
 															}
+															// iOS requires audio to be unlocked while the original
+															// Voice Mode user gesture is still active. This must
+															// happen before getUserMedia() or any awaited operation.
+															unlockIOSCallAudio();
+
 															// check if user has access to getUserMedia
 															try {
 																let stream = await navigator.mediaDevices.getUserMedia({

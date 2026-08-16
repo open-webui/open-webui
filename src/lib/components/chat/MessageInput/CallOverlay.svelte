@@ -14,6 +14,11 @@
 	import VideoInputMenu from './CallOverlay/VideoInputMenu.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import {
+		canUseIOSCallAudio,
+		playIOSCallAudio,
+		stopIOSCallAudio
+	} from '$lib/utils/ios-call-audio';
 
 	const i18n = getContext('i18n');
 
@@ -427,39 +432,61 @@
 		}
 	};
 
-	const playAudio = (audio) => {
-		if ($showCallOverlay) {
-			return new Promise((resolve) => {
-				const audioElement = document.getElementById('audioElement') as HTMLAudioElement;
-
-				if (audioElement) {
-					audioElement.src = audio.src;
-					audioElement.muted = true;
-					audioElement.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
-
-					audioElement
-						.play()
-						.then(() => {
-							audioElement.muted = false;
-						})
-						.catch((error) => {
-							console.error(error);
-						});
-
-					audioElement.onended = async (e) => {
-						await new Promise((r) => setTimeout(r, 100));
-						resolve(e);
-					};
-				}
-			});
-		} else {
-			return Promise.resolve();
+	const playAudio = async (audio) => {
+		if (!$showCallOverlay) {
+			return;
 		}
+
+		const playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
+
+		// iOS can reject delayed HTMLMediaElement playback after the
+		// original Voice Mode user activation has expired. The
+		// AudioContext was unlocked synchronously when Voice Mode was
+		// entered, so use it for delayed call TTS.
+		if (canUseIOSCallAudio()) {
+			try {
+				await playIOSCallAudio(audio.src, playbackRate);
+				await new Promise((resolve) => setTimeout(resolve, 100));
+				return;
+			} catch (error) {
+				console.error('iOS call WebAudio playback failed, falling back:', error);
+			}
+		}
+
+		return await new Promise((resolve) => {
+			const audioElement = document.getElementById('audioElement') as HTMLAudioElement;
+
+			if (!audioElement) {
+				resolve(undefined);
+				return;
+			}
+
+			audioElement.src = audio.src;
+			audioElement.muted = true;
+			audioElement.playbackRate = playbackRate;
+
+			audioElement
+				.play()
+				.then(() => {
+					audioElement.muted = false;
+				})
+				.catch((error) => {
+					console.error(error);
+					resolve(error);
+				});
+
+			audioElement.onended = async (e) => {
+				await new Promise((r) => setTimeout(r, 100));
+				resolve(e);
+			};
+		});
 	};
 
 	const stopAllAudio = async () => {
 		assistantSpeaking = false;
 		interrupted = true;
+
+		stopIOSCallAudio();
 
 		if (chatStreaming) {
 			stopResponse();
