@@ -31,7 +31,7 @@
     chats: [],
     currentChat: null,   // {id, title, model, messages}
     models: [],
-    currentModel: localStorage.getItem('owui_model') || 'gpt-4o-mini',
+    currentModel: localStorage.getItem('owui_model') || 'ChatRayovin',
     sending: false,
     abort: null,
   };

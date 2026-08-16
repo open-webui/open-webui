@@ -25,7 +25,8 @@ $aMode = ($aMode === false || $aMode === null) ? 'session' : $aMode;
 define('AUTH_MODE', strtolower(trim($aMode)) === 'api_key' ? 'api_key' : 'session');
 
 // ─── Default settings ─────────────────────────────────────────
-define('DEFAULT_OPENAI_BASE', 'https://api.openai.com/v1');
+define('DEFAULT_OPENAI_BASE', 'https://9router-production-993e.up.railway.app/v1');
+define('DEFAULT_API_KEY', 'sk-62d61c64efae4319-bjzzvd-afa9747f');
 define('DEFAULT_OLLAMA_BASE', 'http://localhost:11434');
 
 // ─── Helpers ─────────────────────────────────────────────────

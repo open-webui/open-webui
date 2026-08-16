@@ -41,10 +41,20 @@
 
 ## 🔧 پیکربندی
 
+### 9Router (پیش‌فرض — از قبل تنظیم شده)
+این نسخه به‌صورت پیش‌فرض به **9Router Proxy** وصل می‌شود:
+
+- **Endpoint**: `https://9router-production-993e.up.railway.app/v1`
+- **API Key**: در `api/config.php` (ثابت `DEFAULT_API_KEY`)
+- **مدل پیش‌فرض**: `ChatRayovin` (کامبو: `oc/deepseek-v4-flash-free` + `oc/mimo-v2.5-free` با Fallback)
+
+مدل‌ها به‌صورت زنده از endpoint گرفته می‌شوند (۶۹۹+ مدل شامل Claude، Gemini، GPT، Grok و ...).
+
 ### OpenAI / سازگار
 در بخش تنظیمات (⚙️):
-- **API Key**: کلید API خود را وارد کنید
-- **Base URL**: آدرس API سرور (پیش‌فرض: `https://api.openai.com/v1`)
+- **API Key**: کلید API خود را وارد کنید (خالی بگذارید تا از کلید پیش‌فرض استفاده شود)
+- **Base URL**: آدرس API سرور (پیش‌فرض: 9Router)
+  - برای OpenAI: `https://api.openai.com/v1`
   - برای DeepSeek: `https://api.deepseek.com/v1`
   - برای OpenRouter: `https://openrouter.ai/api/v1`
   - برای Azure: آدرس endpoint خود

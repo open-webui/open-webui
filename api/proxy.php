@@ -19,7 +19,7 @@ if ($model === '' || !is_array($messages) || count($messages) === 0) {
 // OpenAI-compatible endpoint
 if ($provider === 'openai') {
     $base = $u['openai_base'] !== '' ? $u['openai_base'] : DEFAULT_OPENAI_BASE;
-    $key  = $u['api_key'];
+    $key  = $u['api_key'] !== '' ? $u['api_key'] : DEFAULT_API_KEY;
     if ($key === '') json_out(['error' => 'API key تنظیم نشده است. از تنظیمات وارد کنید.'], 400);
 
     $ch = curl_init(rtrim($base, '/') . '/chat/completions');
