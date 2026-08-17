@@ -455,7 +455,7 @@ async def query_doc_with_native_hybrid_search(
             'metadatas': [metadatas],
         }
     except Exception as e:
-        log.debug('Native hybrid search failed for %s, falling back to legacy hybrid search: %s', collection_name, e)
+        log.warning('Native hybrid search failed for %s: %s', collection_name, e)
         return None
 
 
@@ -705,7 +705,7 @@ async def query_collection(
                 enable_enriched_texts=config.get('rag.enable_hybrid_search_enriched_texts'),
             )
         except Exception as e:
-            log.debug('Hybrid search failed, falling back to vector search: %s', e)
+            log.warning('Hybrid search failed, falling back to vector search: %s', e)
 
     results = []
     error = False
@@ -791,13 +791,35 @@ async def query_collection_with_hybrid_search(
         if native_task_results and all(result is not None for result in native_task_results):
             return merge_and_sort_query_results(native_task_results, k=k)
 
+        # The vector DB supports native hybrid search but one or more tasks
+        # returned None (embedding failure, reranker error, transient DB error,
+        # etc.).  Rather than falling through to the BM25 path that reads every
+        # collection in full — which can balloon to multiple GBs and trigger an
+        # OOM kill on large collections — raise so the caller can fall back to
+        # the bounded vector-only search path.
+        if native_task_results:
+            none_count = sum(1 for r in native_task_results if r is None)
+            log.warning(
+                'query_collection_with_hybrid_search: native hybrid search returned '
+                'None for %d/%d task(s); raising to trigger vector-only fallback '
+                'and prevent unbounded full-collection BM25 prefetch.',
+                none_count,
+                len(native_task_results),
+            )
+            raise RuntimeError(
+                f'Native hybrid search failed for {none_count}/{len(native_task_results)} task(s)'
+            )
+
     # Fetch every collection's contents once up front so the
     # per-query/per-document loop below can reuse them. Each fetch
     # offloads to a worker thread, so run them concurrently with
     # `asyncio.gather` instead of awaiting them serially — otherwise
     # latency scales linearly with `len(collection_names)`.
+    # NOTE: This path is reached only when native hybrid search is not
+    # available for this vector backend (e.g. Chroma) or when enriched
+    # texts are requested; it is intentional in those cases.
     log.debug(
-        'query_collection_with_hybrid_search: prefetching %d collections',
+        'query_collection_with_hybrid_search: prefetching %d collections (BM25 path)',
         len(collection_names),
     )
 

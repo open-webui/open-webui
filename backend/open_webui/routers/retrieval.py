@@ -3061,41 +3061,47 @@ async def query_collection_handler(
 
     try:
         if config.ENABLE_RAG_HYBRID_SEARCH and (form_data.hybrid is None or form_data.hybrid):
-            return await query_collection_with_hybrid_search(
-                collection_names=form_data.collection_names,
-                queries=[form_data.query],
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
-                    query, prefix=prefix, user=user
-                ),
-                k=form_data.k if form_data.k else config.TOP_K,
-                reranking_function=(
-                    (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents, user=user))
-                    if request.app.state.RERANKING_FUNCTION
-                    else None
-                ),
-                k_reranker=form_data.k_reranker or config.TOP_K_RERANKER,
-                r=(form_data.r if form_data.r else config.RELEVANCE_THRESHOLD),
-                hybrid_bm25_weight=(
-                    form_data.hybrid_bm25_weight
-                    if form_data.hybrid_bm25_weight is not None
-                    else config.HYBRID_BM25_WEIGHT
-                ),
-                enable_enriched_texts=(
-                    form_data.enable_enriched_texts
-                    if form_data.enable_enriched_texts is not None
-                    else config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS
-                ),
-            )
-        else:
-            return await query_collection(
-                request,
-                collection_names=form_data.collection_names,
-                queries=[form_data.query],
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
-                    query, prefix=prefix, user=user
-                ),
-                k=form_data.k if form_data.k else config.TOP_K,
-            )
+            try:
+                return await query_collection_with_hybrid_search(
+                    collection_names=form_data.collection_names,
+                    queries=[form_data.query],
+                    embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                        query, prefix=prefix, user=user
+                    ),
+                    k=form_data.k if form_data.k else config.TOP_K,
+                    reranking_function=(
+                        (lambda query, documents: request.app.state.RERANKING_FUNCTION(query, documents, user=user))
+                        if request.app.state.RERANKING_FUNCTION
+                        else None
+                    ),
+                    k_reranker=form_data.k_reranker or config.TOP_K_RERANKER,
+                    r=(form_data.r if form_data.r else config.RELEVANCE_THRESHOLD),
+                    hybrid_bm25_weight=(
+                        form_data.hybrid_bm25_weight
+                        if form_data.hybrid_bm25_weight is not None
+                        else config.HYBRID_BM25_WEIGHT
+                    ),
+                    enable_enriched_texts=(
+                        form_data.enable_enriched_texts
+                        if form_data.enable_enriched_texts is not None
+                        else config.ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS
+                    ),
+                )
+            except Exception as hybrid_exc:
+                log.warning(
+                    'Hybrid search failed for /query/collection, falling back to vector-only search: %s',
+                    hybrid_exc,
+                )
+
+        return await query_collection(
+            request,
+            collection_names=form_data.collection_names,
+            queries=[form_data.query],
+            embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                query, prefix=prefix, user=user
+            ),
+            k=form_data.k if form_data.k else config.TOP_K,
+        )
 
     except HTTPException:
         raise
