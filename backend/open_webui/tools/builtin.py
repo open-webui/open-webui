@@ -4056,6 +4056,9 @@ async def delete_automation(
 # =============================================================================
 
 
+MAX_CALENDAR_RANGE_END_NS = 2**63 - 1
+
+
 def _get_user_tz(user_dict: dict):
     """Get the user's timezone as a ZoneInfo, falling back to UTC."""
     from zoneinfo import ZoneInfo
@@ -4155,11 +4158,7 @@ async def search_calendar_events(
                 return JSONCodec.dumps({'error': f'Invalid start datetime: {e}'})
 
             try:
-                end_ns = (
-                    _dt_to_ns(end, tz)
-                    if end
-                    else int(time.time() * 1_000) * 1_000_000 + 365 * 86400 * 1_000_000_000_000
-                )
+                end_ns = _dt_to_ns(end, tz) if end else MAX_CALENDAR_RANGE_END_NS
             except (ValueError, TypeError) as e:
                 return JSONCodec.dumps({'error': f'Invalid end datetime: {e}'})
 
