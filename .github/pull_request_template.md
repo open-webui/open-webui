@@ -1,7 +1,7 @@
 <!--
 ⚠️ CRITICAL CHECKS FOR CONTRIBUTORS (READ, DON'T DELETE) ⚠️
 1. Target the `dev` branch. PRs targeting `main` will be automatically closed.
-2. First-time contributors should not open pull requests directly.
+2. First-time contributors should not open pull requests directly unless the pull request contains only i18n/localization updates.
    Please start with a clear, detailed Issue or Discussion so maintainers can review the problem, scope, and proposed approach before any implementation is submitted.
    If you already have code, share the proposed diff in the Issue or Discussion for review.
    Open a pull request only after a maintainer explicitly asks you to do so.
@@ -28,6 +28,7 @@ The most impactful way to contribute to Open WebUI is through well-written bug r
 **Before submitting, make sure you've checked and filled out the following:**
 
 - [ ] **Linked Issue/Discussion:** This PR references an existing [Issue](https://github.com/open-webui/open-webui/issues) or active, substantive [Discussion](https://github.com/open-webui/open-webui/discussions) — `Closes #___` / `Relates to #___`. Creating a discussion only to satisfy this checkbox does not count.
+- [ ] **First-time contributor policy:** This is not my first contribution to Open WebUI, this PR contains only i18n/localization updates, or a maintainer explicitly asked me to open this PR after reviewing the linked Issue or Discussion.
 - [ ] **Target branch:** The pull request targets the `dev` branch. **PRs targeting `main` will be immediately closed.**
 - [ ] **Description:** A concise description of the changes is provided below.
 - [ ] **Changelog:** A changelog entry following [Keep a Changelog](https://keepachangelog.com/) format is included at the bottom.
