@@ -833,6 +833,17 @@ def sanitize_filename(file_name):
     return final_file_name
 
 
+def json_text_variants(value: str) -> list[str]:
+    """Both spellings ``value`` can take inside a serialized JSON column, unquoted.
+
+    Encoders disagree on non-ASCII — stdlib escapes it to ``\\uXXXX``, orjson writes it
+    raw — so a LIKE against the stored text has to accept either. ASCII collapses to one.
+    """
+    raw = JSONCodec.dumps(value, ensure_ascii=False)[1:-1]
+    escaped = JSONCodec.dumps(value, ensure_ascii=True)[1:-1]
+    return [raw] if raw == escaped else [raw, escaped]
+
+
 def sanitize_text_for_db(text: str) -> str:
     """Remove null bytes and invalid UTF-8 surrogates from text for PostgreSQL storage."""
     if not isinstance(text, str):

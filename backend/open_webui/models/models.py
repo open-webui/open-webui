@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import time
 from copy import deepcopy
@@ -10,6 +9,7 @@ from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse, Users
+from open_webui.utils.misc import json_text_variants
 from open_webui.utils.validate import validate_profile_image_url
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, update
@@ -374,20 +374,14 @@ class ModelsTable:
 
                 tag = filter.get('tag')
                 if tag:
-                    # SQLite stores JSON text via json.dumps(ensure_ascii=True),
-                    # so non-ASCII chars are \uXXXX-escaped. PostgreSQL native JSONB
-                    # stores literal Unicode. Use the right pattern for each.
-                    if db.bind.dialect.name == 'sqlite':
-                        if tag.isascii():
-                            meta_text = func.lower(cast(Model.meta, String))
-                            pattern = f'%{json.dumps(tag.lower())}%'
-                        else:
-                            meta_text = cast(Model.meta, String)
-                            pattern = f'%{json.dumps(tag)}%'
+                    if db.bind.dialect.name == 'sqlite' and not tag.isascii():
+                        # SQLite's LOWER() is ASCII-only, so match non-ASCII tags exact-case.
+                        meta_text = cast(Model.meta, String)
+                        variants = json_text_variants(tag)
                     else:
                         meta_text = func.lower(cast(Model.meta, String))
-                        pattern = f'%{json.dumps(tag.lower(), ensure_ascii=False)}%'
-                    stmt = stmt.filter(meta_text.like(pattern))
+                        variants = json_text_variants(tag.lower())
+                    stmt = stmt.filter(or_(*(meta_text.like(f'%"{variant}"%') for variant in variants)))
 
                 order_by = filter.get('order_by')
                 direction = filter.get('direction')
