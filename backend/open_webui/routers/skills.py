@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -38,6 +39,7 @@ router = APIRouter()
 @router.get('/', response_model=list[SkillUserResponse])
 async def get_skills(
     request: Request,
+    query: Optional[str] = None,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -59,6 +61,10 @@ async def get_skills(
                 db=db,
             )
         ]
+
+    if query:
+        q = query.casefold()
+        skills = [skill for skill in skills if q in (skill.name or '').casefold()]
 
     return skills
 
@@ -174,6 +180,13 @@ async def create_new_skill(
         )
 
     form_data.id = form_data.id.lower().replace(' ', '-')
+
+    # The id goes into /id/{id}/... paths, so anything outside the slug charset is unreachable once stored.
+    if not re.fullmatch(r'[a-z0-9_-]+', form_data.id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('Invalid skill ID'),
+        )
 
     existing = await Skills.get_skill_by_id(form_data.id, db=db)
     if existing is not None:

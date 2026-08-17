@@ -14,6 +14,7 @@
 		archiveChatById,
 		updateChatById,
 		updateChatFolderIdById,
+		markChatUnreadById,
 		getAllTags
 	} from '$lib/apis/chats';
 	import Spinner from '../common/Spinner.svelte';
@@ -84,6 +85,17 @@
 		if (res) {
 			await refreshSidebar();
 			await searchHandler();
+		}
+	};
+
+	const markUnreadHandler = async (id) => {
+		const res = await markChatUnreadById(localStorage.token, id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			await refreshSidebar();
 		}
 	};
 
@@ -817,6 +829,9 @@
 												}}
 												renameHandler={() => {
 													renameHandler(chat.id);
+												}}
+												markUnreadHandler={() => {
+													markUnreadHandler(chat.id);
 												}}
 												deleteHandler={() => {
 													menuChatId = chat.id;

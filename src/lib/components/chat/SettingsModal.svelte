@@ -63,6 +63,23 @@
 	let tabState: Record<string, unknown> | null = null;
 	let personalUiSettings: Record<string, any> = {};
 
+	const mergeUiSettings = (defaults: Record<string, any>, userSettings: Record<string, any>) => {
+		const merged = { ...defaults };
+		for (const [key, value] of Object.entries(userSettings)) {
+			const defaultValue = merged[key];
+			merged[key] =
+				defaultValue &&
+				value &&
+				typeof defaultValue === 'object' &&
+				typeof value === 'object' &&
+				!Array.isArray(defaultValue) &&
+				!Array.isArray(value)
+					? mergeUiSettings(defaultValue, value)
+					: value;
+		}
+		return merged;
+	};
+
 	const loadPersonalUiSettings = async () => {
 		const userSettings = await getUserSettings(localStorage.token, true).catch((error) => {
 			console.error(error);
@@ -838,6 +855,9 @@
 		const saved = await updateUserSettings(localStorage.token, { ui: $settings });
 		personalUiSettings =
 			saved?.ui && typeof saved.ui === 'object' && !Array.isArray(saved.ui) ? saved.ui : {};
+		await settings.set(
+			mergeUiSettings($config?.ui?.default_interface_settings ?? {}, personalUiSettings)
+		);
 	};
 
 	const getModels = async () => {

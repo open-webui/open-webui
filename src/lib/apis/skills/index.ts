@@ -31,10 +31,13 @@ export const createNewSkill = async (token: string, skill: object) => {
 	return res;
 };
 
-export const getSkills = async (token: string = '') => {
+export const getSkills = async (token: string = '', query: string | null = null) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/skills/`, {
+	const searchParams = new URLSearchParams();
+	if (query) searchParams.append('query', query);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/skills/?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',

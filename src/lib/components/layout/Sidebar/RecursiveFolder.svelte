@@ -528,7 +528,6 @@
 	let pendingUpsertChats = [];
 
 	export const setFolderItems = async (append = false) => {
-		await tick();
 		if (open && chatsLoading) {
 			if (!append) {
 				queuedReload = true;
@@ -537,10 +536,14 @@
 		}
 
 		if (open) {
+			chatsLoading = true;
+		}
+
+		await tick();
+		if (open) {
 			// Always use getSharedFolderChats so owners also see chats
 			// created by users who have write access to this folder.
 			const nextPage = append ? chatsPage + 1 : 1;
-			chatsLoading = true;
 			try {
 				const res = await getSharedFolderChats(localStorage.token, folderId, {
 					page: nextPage
@@ -584,7 +587,7 @@
 		}
 	};
 
-	$: if (open && chats === null) {
+	$: if (open && chats === null && !chatsLoading) {
 		setFolderItems();
 	}
 
@@ -888,7 +891,7 @@
 		</div>
 
 		<div slot="content" class="w-full">
-			{#if (folders[folderId]?.childrenIds ?? []).length > 0 || (chats ?? []).length > 0 || hasMoreChats}
+			{#if (folders[folderId]?.childrenIds ?? []).length > 0 || chats !== null || hasMoreChats || chatsLoading}
 				<div
 					class="ml-3 pl-1 mt-[0.0625rem] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
 				>
@@ -923,6 +926,24 @@
 								}}
 							/>
 						{/each}
+					{/if}
+
+					{#if chats === null && chatsLoading}
+						<div class="flex gap-1 px-2 py-1.5" aria-label="Loading">
+							<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"></span>
+							<span
+								class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:150ms] dark:bg-gray-600"
+							></span>
+							<span
+								class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:300ms] dark:bg-gray-600"
+							></span>
+						</div>
+					{/if}
+
+					{#if chats !== null && chats.length === 0 && !chatsLoading}
+						<div class="px-2 py-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+							{$i18n.t('No chats')}
+						</div>
 					{/if}
 
 					{#each chats ?? [] as chat (chat.id)}
@@ -966,18 +987,6 @@
 							{/if}
 						</button>
 					{/if}
-				</div>
-			{/if}
-
-			{#if chats === null && chatsLoading}
-				<div class="flex gap-1 px-2 py-1.5" aria-label="Loading">
-					<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"></span>
-					<span
-						class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:150ms] dark:bg-gray-600"
-					></span>
-					<span
-						class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:300ms] dark:bg-gray-600"
-					></span>
 				</div>
 			{/if}
 		</div>

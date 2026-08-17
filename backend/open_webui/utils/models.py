@@ -71,6 +71,10 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         'evaluation.arena.models',
         'models.default_metadata',
     )
+    if refresh:
+        await openai.get_all_models.cache.clear()
+        await ollama.get_all_models.cache.clear()
+
     if (
         request.app.state.MODELS
         and request.app.state.BASE_MODELS

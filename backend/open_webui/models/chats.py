@@ -902,8 +902,10 @@ class ChatTable:
             if current_id is None
             else messages.get(current_id, {}).get('childrenIds', [])
         )
-        while child_ids:
+        visited_ids = set()
+        while child_ids and child_ids[-1] not in visited_ids:
             current_id = child_ids[-1]
+            visited_ids.add(current_id)
             child_ids = messages.get(current_id, {}).get('childrenIds', [])
         history['currentId'] = current_id if current_id in messages else None
         return deleted_ids
@@ -1035,6 +1037,10 @@ class ChatTable:
         return history_messages
 
     async def get_message_by_id_and_message_id(self, id: str, message_id: str) -> dict | None:
+        messages_map = await ChatMessages.get_messages_map_by_chat_id(id)
+        if messages_map and message_id in messages_map:
+            return messages_map[message_id]
+
         chat = await self.get_chat_by_id(id)
         if chat is None:
             return None

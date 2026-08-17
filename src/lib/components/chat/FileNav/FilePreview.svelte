@@ -265,6 +265,7 @@
 
 	let panzoomRef: PanzoomContainer;
 	let pptxPreviewRef: PptxPreview;
+	let imageZoomLevel = 1;
 	export const resetImageView = () => {
 		panzoomRef?.reset();
 		pptxPreviewRef?.resetView();
@@ -288,6 +289,7 @@
 	{:else if fileImageUrl !== null}
 		<PanzoomContainer
 			bind:this={panzoomRef}
+			bind:zoomLevel={imageZoomLevel}
 			className="w-full h-full flex items-center justify-center"
 			options={{ zoomDoubleClickSpeed: 1 }}
 		>
@@ -469,6 +471,57 @@
 	{:else}
 		<div class="text-xs text-gray-400 text-center pt-8">
 			{$i18n.t('Could not read file.')}
+		</div>
+	{/if}
+
+	{#if !fileLoading && fileImageUrl !== null}
+		<div
+			class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-gray-200/60 bg-white/90 px-1 py-0.5 shadow-lg backdrop-blur-sm dark:border-gray-700/60 dark:bg-gray-850/90"
+		>
+			<button
+				type="button"
+				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+				on:click={() => panzoomRef?.zoomOut()}
+				aria-label={$i18n.t('Zoom out')}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="size-3.5"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M4 10a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H4.75A.75.75 0 0 1 4 10Z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</button>
+			<button
+				type="button"
+				class="h-7 min-w-12 shrink-0 rounded-md px-1.5 py-1 text-center text-[0.6875rem] font-normal tabular-nums text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+				on:click={() => panzoomRef?.reset()}
+				aria-label={$i18n.t('Reset zoom')}
+			>
+				{Math.round(imageZoomLevel * 100)}%
+			</button>
+			<button
+				type="button"
+				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+				on:click={() => panzoomRef?.zoomIn()}
+				aria-label={$i18n.t('Zoom in')}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="size-3.5"
+				>
+					<path
+						d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+					/>
+				</svg>
+			</button>
 		</div>
 	{/if}
 </div>

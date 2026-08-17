@@ -438,6 +438,10 @@ async def reindex_knowledge_base_metadata_embeddings(
     """
     knowledge_bases = await Knowledges.get_knowledge_bases()
     log.info('Reindexing embeddings for %s knowledge bases', len(knowledge_bases))
+    try:
+        await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=KNOWLEDGE_BASES_COLLECTION)
+    except Exception as e:
+        log.debug(e)
 
     success_count = 0
     for kb in knowledge_bases:
@@ -641,10 +645,7 @@ async def _count_external_connection_mappings(connection_id: str, db: Optional[A
 
 
 @router.get('/external/connections', response_model=ExternalKnowledgeConnectionListResponse)
-async def get_external_knowledge_connections(
-    user=Depends(get_admin_user),
-    db: AsyncSession = Depends(get_async_session),
-):
+async def get_external_knowledge_connections(user=Depends(get_admin_user)):
     connections = [_sanitize_external_connection(connection) for connection in await _get_external_connections()]
     return ExternalKnowledgeConnectionListResponse(items=connections, total=len(connections))
 
@@ -674,7 +675,6 @@ async def create_external_knowledge_connection(
 async def get_external_knowledge_connection(
     id: str,
     user=Depends(get_admin_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
     connection = await _get_external_connection(id)
     if not connection:
@@ -741,7 +741,6 @@ async def delete_external_knowledge_connection(
 async def test_external_knowledge_connection(
     id: str,
     user=Depends(get_admin_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
     connection = await _get_external_connection(id)
     if not connection:
@@ -839,7 +838,6 @@ async def test_external_knowledge_retrieval(
     id: str,
     form_data: ExternalKnowledgeRetrieveTestForm,
     user=Depends(get_admin_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
     connection = await _get_external_connection(id)
     if not connection:
@@ -1244,7 +1242,6 @@ async def get_pending_knowledge_files(
     id: str,
     stream: bool = Query(False),
     user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
     """Return files that are being processed for this knowledge base but not yet linked.
 
@@ -1257,7 +1254,11 @@ async def get_pending_knowledge_files(
     When ``stream=true``, returns an SSE stream that polls every 3 seconds
     and emits the current pending file list.  Closes when no files remain.
     """
-    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
+    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
+    # Database operations manage their own short-lived sessions internally.
+    # Holding a session here would keep a connection for the entire stream
+    # (up to an hour) and exhaust the connection pool under concurrent load.
+    knowledge = await Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1272,7 +1273,6 @@ async def get_pending_knowledge_files(
             resource_type='knowledge',
             resource_id=knowledge.id,
             permission='read',
-            db=db,
         )
     ):
         raise HTTPException(
@@ -1281,7 +1281,7 @@ async def get_pending_knowledge_files(
         )
 
     if not stream:
-        return await Files.get_pending_files_for_knowledge(id, db=db)
+        return await Files.get_pending_files_for_knowledge(id)
 
     async def event_stream(knowledge_id: str):
         MAX_POLL_DURATION = 3600  # 1 hour max

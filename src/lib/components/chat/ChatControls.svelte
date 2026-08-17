@@ -78,6 +78,12 @@
 	const chatContextAvailable = (terminal: any) => chatContext(terminal) !== false;
 	const chatContextNeedsSavedChat = (terminal: any) =>
 		chatContext(terminal)?.context_id === 'chat_id';
+	function showFilesOnTerminalSelect(largeScreen: boolean) {
+		activeTab = 'files';
+		if (largeScreen) {
+			showControls.set($settings?.showFilesOnTerminalSelect ?? true);
+		}
+	}
 	$: selectedSystemTerminal = ($terminalServers ?? []).find(
 		(t) => t.id && t.id === $selectedTerminalId
 	);
@@ -118,10 +124,7 @@
 
 	// Auto-open Files tab when a terminal is selected (suppress panel open when full-screen)
 	$: if ($selectedTerminalId && terminalFilesAvailable) {
-		activeTab = 'files';
-		if (largeScreen) {
-			showControls.set($settings?.showFilesOnTerminalSelect ?? true);
-		}
+		showFilesOnTerminalSelect(largeScreen);
 	}
 
 	// Clear selected direct terminal if user lost permission
