@@ -137,6 +137,7 @@ from open_webui.models.messages import Messages
 from open_webui.models.models import Models
 from open_webui.models.users import Users
 from open_webui.routers import (
+    action_gate,
     analytics,
     audio,
     auths,
@@ -809,6 +810,7 @@ app.include_router(notifications.router, prefix='/api/v1/notifications', tags=['
 app.include_router(knowledge.router, prefix='/api/v1/knowledge', tags=['knowledge'])
 app.include_router(prompts.router, prefix='/api/v1/prompts', tags=['prompts'])
 app.include_router(tools.router, prefix='/api/v1/tools', tags=['tools'])
+app.include_router(action_gate.router, prefix='/api/v1/action-gate', tags=['action_gate'])
 app.include_router(skills.router, prefix='/api/v1/skills', tags=['skills'])
 
 app.include_router(memories.router, prefix='/api/v1/memories', tags=['memories'])
