@@ -140,12 +140,6 @@ av==14.0.1 # Caution: Set due to FATAL FIPS SELFTEST FAILURE, see discussion htt
 
 colbert-ai==0.2.22
 
-
-## Tests
-docker~=7.1.0
-pytest~=8.4.1
-pytest-docker~=3.2.5
-
 ## LDAP
 ldap3==2.9.1
 
