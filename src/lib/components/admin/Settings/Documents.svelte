@@ -122,26 +122,33 @@
 		});
 
 		updateEmbeddingModelLoading = true;
-		const res = await updateEmbeddingConfig(localStorage.token, {
+		const payload: Parameters<typeof updateEmbeddingConfig>[1] = {
 			RAG_EMBEDDING_ENGINE: RAG_EMBEDDING_ENGINE,
 			RAG_EMBEDDING_MODEL: RAG_EMBEDDING_MODEL,
 			RAG_EMBEDDING_BATCH_SIZE: RAG_EMBEDDING_BATCH_SIZE,
 			ENABLE_ASYNC_EMBEDDING: ENABLE_ASYNC_EMBEDDING,
-			RAG_EMBEDDING_CONCURRENT_REQUESTS: RAG_EMBEDDING_CONCURRENT_REQUESTS,
-			ollama_config: {
+			RAG_EMBEDDING_CONCURRENT_REQUESTS: RAG_EMBEDDING_CONCURRENT_REQUESTS
+		};
+
+		if (RAG_EMBEDDING_ENGINE === 'ollama') {
+			payload.ollama_config = {
 				key: OllamaKey,
 				url: OllamaUrl
-			},
-			openai_config: {
+			};
+		} else if (RAG_EMBEDDING_ENGINE === 'openai') {
+			payload.openai_config = {
 				key: OpenAIKey,
 				url: OpenAIUrl
-			},
-			azure_openai_config: {
+			};
+		} else if (RAG_EMBEDDING_ENGINE === 'azure_openai') {
+			payload.azure_openai_config = {
 				key: AzureOpenAIKey,
 				url: AzureOpenAIUrl,
 				version: AzureOpenAIVersion
-			}
-		}).catch(async (error) => {
+			};
+		}
+
+		const res = await updateEmbeddingConfig(localStorage.token, payload).catch(async (error) => {
 			toast.error(`${error}`);
 			await setEmbeddingConfig();
 			return null;
@@ -300,15 +307,15 @@
 			ENABLE_ASYNC_EMBEDDING = embeddingConfig.ENABLE_ASYNC_EMBEDDING ?? true;
 			RAG_EMBEDDING_CONCURRENT_REQUESTS = embeddingConfig.RAG_EMBEDDING_CONCURRENT_REQUESTS ?? 0;
 
-			OpenAIKey = embeddingConfig.openai_config.key;
-			OpenAIUrl = embeddingConfig.openai_config.url;
+			OpenAIKey = embeddingConfig.openai_config.key ?? '';
+			OpenAIUrl = embeddingConfig.openai_config.url ?? '';
 
-			OllamaKey = embeddingConfig.ollama_config.key;
-			OllamaUrl = embeddingConfig.ollama_config.url;
+			OllamaKey = embeddingConfig.ollama_config.key ?? '';
+			OllamaUrl = embeddingConfig.ollama_config.url ?? '';
 
-			AzureOpenAIKey = embeddingConfig.azure_openai_config.key;
-			AzureOpenAIUrl = embeddingConfig.azure_openai_config.url;
-			AzureOpenAIVersion = embeddingConfig.azure_openai_config.version;
+			AzureOpenAIKey = embeddingConfig.azure_openai_config.key ?? '';
+			AzureOpenAIUrl = embeddingConfig.azure_openai_config.url ?? '';
+			AzureOpenAIVersion = embeddingConfig.azure_openai_config.version ?? '';
 		}
 	};
 	onMount(async () => {

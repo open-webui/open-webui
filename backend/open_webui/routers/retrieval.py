@@ -490,19 +490,19 @@ async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
 
 
 class OpenAIConfigForm(BaseModel):
-    url: str
-    key: str
+    url: str | None = None
+    key: str | None = None
 
 
 class OllamaConfigForm(BaseModel):
-    url: str
-    key: str
+    url: str | None = None
+    key: str | None = None
 
 
 class AzureOpenAIConfigForm(BaseModel):
-    url: str
-    key: str
-    version: str
+    url: str | None = None
+    key: str | None = None
+    version: str | None = None
 
 
 class EmbeddingModelUpdateForm(BaseModel):
@@ -544,23 +544,18 @@ async def update_embedding_config(request: Request, form_data: EmbeddingModelUpd
         config.ENABLE_ASYNC_EMBEDDING = form_data.ENABLE_ASYNC_EMBEDDING
         config.RAG_EMBEDDING_CONCURRENT_REQUESTS = form_data.RAG_EMBEDDING_CONCURRENT_REQUESTS
 
-        if config.RAG_EMBEDDING_ENGINE in [
-            'ollama',
-            'openai',
-            'azure_openai',
-        ]:
-            if form_data.openai_config is not None:
-                config.RAG_OPENAI_API_BASE_URL = form_data.openai_config.url
-                config.RAG_OPENAI_API_KEY = form_data.openai_config.key
+        if config.RAG_EMBEDDING_ENGINE == 'openai' and form_data.openai_config is not None:
+            config.RAG_OPENAI_API_BASE_URL = form_data.openai_config.url or ''
+            config.RAG_OPENAI_API_KEY = form_data.openai_config.key or ''
 
-            if form_data.ollama_config is not None:
-                config.RAG_OLLAMA_BASE_URL = form_data.ollama_config.url
-                config.RAG_OLLAMA_API_KEY = form_data.ollama_config.key
+        if config.RAG_EMBEDDING_ENGINE == 'ollama' and form_data.ollama_config is not None:
+            config.RAG_OLLAMA_BASE_URL = form_data.ollama_config.url or ''
+            config.RAG_OLLAMA_API_KEY = form_data.ollama_config.key or ''
 
-            if form_data.azure_openai_config is not None:
-                config.RAG_AZURE_OPENAI_BASE_URL = form_data.azure_openai_config.url
-                config.RAG_AZURE_OPENAI_API_KEY = form_data.azure_openai_config.key
-                config.RAG_AZURE_OPENAI_API_VERSION = form_data.azure_openai_config.version
+        if config.RAG_EMBEDDING_ENGINE == 'azure_openai' and form_data.azure_openai_config is not None:
+            config.RAG_AZURE_OPENAI_BASE_URL = form_data.azure_openai_config.url or ''
+            config.RAG_AZURE_OPENAI_API_KEY = form_data.azure_openai_config.key or ''
+            config.RAG_AZURE_OPENAI_API_VERSION = form_data.azure_openai_config.version or ''
 
         request.app.state.ef = get_ef(
             config.RAG_EMBEDDING_ENGINE,
