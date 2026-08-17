@@ -277,8 +277,10 @@ def convert_output_to_messages(
              follow-ups.
         reasoning_format: How to include reasoning blocks in the output:
             - None: skip reasoning (default, safe for strict providers).
+            - ``'thinking'``: set as ``thinking`` top-level field
+              (for native Ollama).
             - ``'think_tags'``: wrap in ``<think>`` tags inside content
-              (for Ollama, which expects reasoning as tagged content).
+              (for legacy providers that expect reasoning as tagged content).
             - ``'reasoning_content'``: set as ``reasoning_content`` top-level field
               (for llama.cpp, which routes it via the chat template).
         flatten_tool_images: Move tool output images into a following user
@@ -290,7 +292,7 @@ def convert_output_to_messages(
     messages = []
     pending_tool_calls = []
     pending_content = []
-    pending_reasoning = []  # Only populated when reasoning_format == 'reasoning_content'
+    pending_reasoning = []  # Only populated for top-level structured reasoning fields.
     pending_reasoning_details = []
     pending_tool_image_urls = []
     pending_tool_outputs = []
@@ -318,7 +320,10 @@ def convert_output_to_messages(
         }
 
         if pending_reasoning:
-            message['reasoning_content'] = '\n'.join(pending_reasoning)
+            if reasoning_format == 'thinking':
+                message['thinking'] = '\n'.join(pending_reasoning)
+            else:
+                message['reasoning_content'] = '\n'.join(pending_reasoning)
 
         if pending_reasoning_details:
             message['reasoning_details'] = pending_reasoning_details
@@ -455,12 +460,12 @@ def convert_output_to_messages(
 
             if reasoning_text:
                 if reasoning_format == 'think_tags':
-                    # Ollama: embed in content with the item's original tags
+                    # Legacy tag replay: embed in content with the item's original tags.
                     start_tag = item.get('start_tag', '<think>')
                     end_tag = item.get('end_tag', '</think>')
                     pending_content.append(f'{start_tag}{reasoning_text}{end_tag}')
-                elif reasoning_format == 'reasoning_content':
-                    # llama.cpp: collect for reasoning_content field
+                elif reasoning_format in {'thinking', 'reasoning_content'}:
+                    # Native providers: collect for their top-level reasoning field.
                     pending_reasoning.append(reasoning_text)
 
             if reasoning_details:
