@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -179,6 +180,13 @@ async def create_new_skill(
         )
 
     form_data.id = form_data.id.lower().replace(' ', '-')
+
+    # The id goes into /id/{id}/... paths, so anything outside the slug charset is unreachable once stored.
+    if not re.fullmatch(r'[a-z0-9_-]+', form_data.id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT('Invalid skill ID'),
+        )
 
     existing = await Skills.get_skill_by_id(form_data.id, db=db)
     if existing is not None:
