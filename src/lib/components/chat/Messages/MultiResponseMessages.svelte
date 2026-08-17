@@ -48,6 +48,7 @@
 	export let mergeResponses: Function;
 
 	export let addMessages: Function;
+	export let onToolCallResolved: Function = () => {};
 	export let forkHandler: Function | null = null;
 
 	export let triggerScroll: Function;
@@ -328,6 +329,7 @@
 											groupedMessageIds[selectedModelIdx].messageIds.length - 1;
 									}}
 									{addMessages}
+									{onToolCallResolved}
 									{forkHandler}
 									{readOnly}
 									{compactPreview}
@@ -391,6 +393,7 @@
 												groupedMessageIds[modelIdx].messageIds.length - 1;
 										}}
 										{addMessages}
+										{onToolCallResolved}
 										{forkHandler}
 										{readOnly}
 										{compactPreview}

@@ -217,7 +217,7 @@ async def get_content_from_url(request, url: str) -> str:
 
 
 def _get_content_from_url_sync(request, url: str, loader_config):
-    from open_webui.retrieval.web.utils import validate_url, _SSRFSafeAdapter
+    from open_webui.retrieval.web.utils import validate_url, get_ssrf_safe_requests_session
 
     # Validate URL before making any request (blocks private IPs, non-HTTP, filter list)
     validate_url(url)
@@ -241,9 +241,7 @@ def _get_content_from_url_sync(request, url: str, loader_config):
     # cloud-metadata 169.254.169.254) via a public host that redirects internally.
     try:
         # Probe through the connect-time SSRF guard; bare requests.get re-resolves (DNS-rebinding gap).
-        session = requests.Session()
-        session.mount('http://', _SSRFSafeAdapter())
-        session.mount('https://', _SSRFSafeAdapter())
+        session = get_ssrf_safe_requests_session()
         response = session.get(url, stream=True, timeout=30, allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS)
         response.raise_for_status()
         content_type = response.headers.get('Content-Type', '')

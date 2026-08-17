@@ -5,8 +5,9 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { WEBUI_NAME, user, config, folders } from '$lib/stores';
+	import { WEBUI_NAME, user, config, channels, folders } from '$lib/stores';
 	import { getFolders } from '$lib/apis/folders';
+	import { getChannels } from '$lib/apis/channels';
 
 	import {
 		createAutomation,
@@ -67,6 +68,7 @@
 	let importFiles: FileList | null = null;
 	let automationsImportInputElement: HTMLInputElement;
 	let foldersLoaded = false;
+	let channelsLoaded = false;
 
 	const syncHeader = () => {
 		automationsLayout?.setHeader({
@@ -151,6 +153,13 @@
 		foldersLoaded = true;
 	};
 
+	const ensureChannels = async () => {
+		if (channelsLoaded || ($channels ?? []).length > 0) return;
+		const res = await getChannels(localStorage.token).catch(() => null);
+		if (res) channels.set(res);
+		channelsLoaded = true;
+	};
+
 	const toggleHandler = async (automation: AutomationResponse) => {
 		const res = await toggleAutomationById(localStorage.token, automation.id).catch((err) => {
 			toast.error(`${err}`);
@@ -214,6 +223,16 @@
 		return automation.last_run_at
 			? dayjs(automation.last_run_at / 1000000).fromNow()
 			: $i18n.t('Never');
+	};
+
+	const formatDestination = (automation: AutomationResponse): string => {
+		if (automation.data.target?.type === 'channel') {
+			const channel = ($channels ?? []).find(
+				(channel) => channel.id === automation.data.target?.channel_id
+			);
+			return channel?.name ? `#${channel.name}` : $i18n.t('Channel');
+		}
+		return automation.folder_id ? $i18n.t('Folder') : $i18n.t('New chat');
 	};
 
 	const getAllAutomations = async () => {
@@ -341,6 +360,7 @@
 
 		loaded = true;
 		syncHeader();
+		ensureChannels();
 
 		return () => {
 			clearTimeout(searchDebounceTimer);
@@ -580,11 +600,14 @@
 							</div>
 
 							<div
-								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
+								class="hidden max-w-56 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
 							>
-								<Tooltip content={formatRRule(automation.data.rrule)} className="min-w-0">
+								<Tooltip
+									content={`${formatRRule(automation.data.rrule)} · ${formatDestination(automation)}`}
+									className="min-w-0"
+								>
 									<div class="truncate">
-										{formatRRule(automation.data.rrule)}
+										{formatRRule(automation.data.rrule)} · {formatDestination(automation)}
 									</div>
 								</Tooltip>
 							</div>

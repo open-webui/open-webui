@@ -41,7 +41,7 @@
 
 	$: if (citation) {
 		expandedDocs = new Set();
-		mergedDocuments = citation.document?.map((c, i) => {
+		mergedDocuments = (citation.document ?? []).map((c, i) => {
 			return {
 				source: citation.source,
 				document: c,
@@ -223,7 +223,7 @@
 									title={$i18n.t('Content')}
 								></iframe>
 							{:else}
-								{@const rawContent = document.document.trim().replace(/\n\n+/g, '\n\n')}
+								{@const rawContent = (document.document ?? '').trim().replace(/\n\n+/g, '\n\n')}
 								{@const isTruncated =
 									($settings?.renderMarkdownInPreviews ?? true) &&
 									rawContent.length > CONTENT_PREVIEW_LIMIT &&

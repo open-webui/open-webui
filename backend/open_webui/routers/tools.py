@@ -66,6 +66,7 @@ async def get_tool_module(request, tool_id, load_from_db=True):
 @router.get('/', response_model=list[ToolUserResponse])
 async def get_tools(
     request: Request,
+    query: Optional[str] = None,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -165,10 +166,7 @@ async def get_tools(
                 )
             )
 
-    if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
-        # Admin can see all tools
-        return tools
-    else:
+    if not (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL):
         user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
         filtered_tools = []
         for tool in tools:
@@ -192,7 +190,13 @@ async def get_tools(
                 db=db,
             ):
                 filtered_tools.append(tool)
-        return filtered_tools
+        tools = filtered_tools
+
+    if query:
+        q = query.casefold()
+        tools = [tool for tool in tools if q in (tool.name or '').casefold()]
+
+    return tools
 
 
 ############################

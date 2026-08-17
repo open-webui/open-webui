@@ -575,7 +575,8 @@
 					i18n,
 					triggerChar: '@',
 					modelSuggestions: true,
-					userSuggestions
+					userSuggestions,
+					channelId: channel?.id
 				})
 			},
 			...(channelSuggestions

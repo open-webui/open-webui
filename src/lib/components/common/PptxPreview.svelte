@@ -19,6 +19,13 @@
 	let mounted = false;
 	let initializedSlide = '';
 	let hideThumbs = false;
+	let wheelDelta = 0;
+	let lastWheelNavigationAt = 0;
+	let lastScrolledSlide = -1;
+	let thumbnailButtons: Array<HTMLButtonElement | undefined> = [];
+	const slideShortcutKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+	const wheelNavigationThreshold = 80;
+	const wheelNavigationCooldown = 450;
 
 	$: safeSlide = Math.min(Math.max(0, currentSlide), Math.max(0, slides.length - 1));
 	$: selectedSlide = slides[safeSlide] ?? '';
@@ -34,7 +41,24 @@
 
 	const updateLayout = () => {
 		hideThumbs = (rootEl?.clientWidth ?? window.innerWidth) < 720;
-		void tick().then(updateFitScale);
+		void tick().then(() => {
+			updateFitScale();
+			scrollSelectedThumbnailIntoView();
+		});
+	};
+
+	const trackThumbnail = (node: HTMLButtonElement, index: number) => {
+		thumbnailButtons[index] = node;
+		return {
+			destroy: () => {
+				if (thumbnailButtons[index] === node) thumbnailButtons[index] = undefined;
+			}
+		};
+	};
+
+	const scrollSelectedThumbnailIntoView = () => {
+		if (hideThumbs) return;
+		thumbnailButtons[safeSlide]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 	};
 
 	const initPanzoom = () => {
@@ -44,11 +68,9 @@
 		pzInstance = panzoom(sceneEl, {
 			bounds: true,
 			boundsPadding: 0.1,
-			zoomSpeed: 0.065,
-			beforeWheel: (e) => {
-				if (!e.ctrlKey && !e.metaKey) return true;
-				return false;
-			},
+			pinchSpeed: 3.5,
+			filterKey: (e?: KeyboardEvent) => !!e && slideShortcutKeys.includes(e.key),
+			beforeWheel: () => true,
 			beforeMouseDown: () => {
 				const transform = pzInstance?.getTransform();
 				return !!transform && Math.abs(transform.scale - 1) < 0.01;
@@ -63,11 +85,34 @@
 	};
 
 	const selectSlide = (index: number) => {
-		currentSlide = index;
+		const nextSlide = Math.min(Math.max(0, index), Math.max(0, slides.length - 1));
+		if (nextSlide === safeSlide) return;
+
+		currentSlide = nextSlide;
 		void tick().then(() => {
 			updateFitScale();
 			resetView();
 		});
+	};
+
+	const handleKeyDown = (e: KeyboardEvent) => {
+		if (
+			e.defaultPrevented ||
+			e.altKey ||
+			e.ctrlKey ||
+			e.metaKey ||
+			slides.length === 0 ||
+			!slideShortcutKeys.includes(e.key)
+		) {
+			return;
+		}
+
+		e.preventDefault();
+		if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+			selectSlide(safeSlide - 1);
+		} else {
+			selectSlide(safeSlide + 1);
+		}
 	};
 
 	const zoomIn = () => {
@@ -99,12 +144,42 @@
 	};
 
 	const handleStageWheel = (e: WheelEvent) => {
-		if (e.ctrlKey || e.metaKey || !pzInstance) return;
+		if (e.ctrlKey || e.metaKey) {
+			if (!pzInstance || !sceneEl) return;
+
+			e.preventDefault();
+
+			const rect = sceneEl.getBoundingClientRect();
+			pzInstance.zoomTo(e.clientX - rect.left, e.clientY - rect.top, Math.exp(-e.deltaY * 0.002));
+			zoomLevel = pzInstance.getTransform().scale;
+			return;
+		}
+
+		const transform = pzInstance?.getTransform();
+		if (transform && Math.abs(transform.scale - 1) >= 0.01) {
+			e.preventDefault();
+			pzInstance?.moveBy(-e.deltaX, -e.deltaY);
+			zoomLevel = pzInstance?.getTransform().scale ?? 1;
+			return;
+		}
 
 		e.preventDefault();
+		if (slides.length <= 1) return;
+
 		const multiplier = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? stageEl.clientHeight : 1;
-		pzInstance.moveBy(-e.deltaX * multiplier, -e.deltaY * multiplier, false);
-		zoomLevel = pzInstance.getTransform().scale;
+		const dominantDelta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+		wheelDelta += dominantDelta * multiplier;
+
+		const now = Date.now();
+		if (Math.abs(wheelDelta) < wheelNavigationThreshold) return;
+		if (now - lastWheelNavigationAt < wheelNavigationCooldown) {
+			wheelDelta = 0;
+			return;
+		}
+
+		lastWheelNavigationAt = now;
+		selectSlide(safeSlide + (wheelDelta > 0 ? 1 : -1));
+		wheelDelta = 0;
 	};
 
 	onMount(() => {
@@ -123,42 +198,49 @@
 		});
 	}
 
+	$: if (mounted && safeSlide !== lastScrolledSlide) {
+		lastScrolledSlide = safeSlide;
+		void tick().then(scrollSelectedThumbnailIntoView);
+	}
+
 	onDestroy(() => {
 		pzInstance?.dispose();
 		resizeObserver?.disconnect();
 	});
 </script>
 
+<svelte:window on:keydown={handleKeyDown} />
+
 <div
 	bind:this={rootEl}
 	class="relative grid {hideThumbs
 		? 'grid-cols-[minmax(0,1fr)]'
-		: 'grid-cols-[160px_minmax(0,1fr)]'} h-full min-h-0 bg-transparent text-gray-900 dark:text-gray-100 {className}"
+		: 'grid-cols-[144px_minmax(0,1fr)]'} h-full min-h-0 bg-transparent text-gray-900 dark:text-gray-100 {className}"
 >
 	<aside
 		class={hideThumbs
 			? 'hidden'
-			: 'overflow-y-auto px-2.5 pt-3.5 pb-16 border-r border-gray-200/60 dark:border-white/10 bg-transparent'}
+			: 'pptx-slide-rail overflow-y-auto px-2 pt-3 pb-16 border-r border-gray-50 dark:border-gray-850/30 bg-transparent'}
 		aria-label="Slides"
 	>
 		{#each slides as slide, index}
 			<button
+				use:trackThumbnail={index}
 				type="button"
-				class="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-2 w-full mb-3.5 p-0 text-left text-gray-900 dark:text-gray-100"
+				class="grid grid-cols-[20px_minmax(0,1fr)] items-start gap-2 w-full mb-3 p-0 text-left text-gray-900 dark:text-gray-100"
 				on:click={() => selectSlide(index)}
 				aria-label="Slide {index + 1}"
 				aria-current={safeSlide === index ? 'true' : undefined}
 			>
 				<span
-					class="pt-[0.4375rem] text-xs font-medium text-right {safeSlide === index
-						? 'text-gray-900 dark:text-gray-100'
-						: 'text-gray-500 dark:text-gray-400'}">{index + 1}</span
+					class="pt-1.5 text-[0.6875rem] font-medium text-right {safeSlide === index
+						? 'text-gray-400 dark:text-gray-500'
+						: 'text-gray-300/70 dark:text-gray-700'}">{index + 1}</span
 				>
 				<span
-					class="block aspect-video overflow-hidden rounded-lg bg-white border-2 shadow-sm {safeSlide ===
-					index
-						? 'border-gray-400 dark:border-gray-500'
-						: 'border-transparent'}"
+					class="block aspect-video overflow-hidden rounded-md bg-transparent {safeSlide === index
+						? 'opacity-100'
+						: 'opacity-55 hover:opacity-80'}"
 				>
 					<img
 						src={slide}
@@ -186,7 +268,7 @@
 					bind:this={slideImgEl}
 					src={selectedSlide}
 					alt="Slide {safeSlide + 1}"
-					class="block w-full h-full object-contain rounded bg-white shadow"
+					class="block w-full h-full object-contain rounded"
 					draggable="false"
 					on:load={onSlideLoad}
 				/>
@@ -198,7 +280,7 @@
 		<div
 			class="absolute bottom-3 {hideThumbs
 				? 'left-1/2'
-				: 'left-[calc(160px+(100%-160px)/2)]'} -translate-x-1/2 z-10 flex items-center gap-0.5 rounded-lg bg-white/90 dark:bg-gray-850/90 backdrop-blur-sm shadow-lg border border-gray-200/60 dark:border-gray-700/60 px-1 py-0.5"
+				: 'left-[calc(144px+(100%-144px)/2)]'} -translate-x-1/2 z-10 flex items-center gap-0.5 rounded-lg bg-white/90 dark:bg-gray-850/90 backdrop-blur-sm shadow-lg border border-gray-200/60 dark:border-gray-700/60 px-1 py-0.5"
 		>
 			<button
 				type="button"
@@ -291,3 +373,38 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	.pptx-slide-rail {
+		scrollbar-color: transparent transparent;
+	}
+
+	.pptx-slide-rail:hover,
+	.pptx-slide-rail:focus,
+	.pptx-slide-rail:focus-within,
+	.pptx-slide-rail:active {
+		scrollbar-color: rgba(215, 215, 215, 0.6) transparent;
+	}
+
+	:global(.dark) .pptx-slide-rail:hover,
+	:global(.dark) .pptx-slide-rail:focus,
+	:global(.dark) .pptx-slide-rail:focus-within,
+	:global(.dark) .pptx-slide-rail:active {
+		scrollbar-color: rgba(67, 67, 67, 0.6) transparent;
+	}
+
+	.pptx-slide-rail::-webkit-scrollbar-thumb {
+		visibility: hidden;
+	}
+
+	.pptx-slide-rail:hover::-webkit-scrollbar-thumb,
+	.pptx-slide-rail:focus::-webkit-scrollbar-thumb,
+	.pptx-slide-rail:focus-within::-webkit-scrollbar-thumb,
+	.pptx-slide-rail:active::-webkit-scrollbar-thumb {
+		visibility: visible;
+	}
+
+	.pptx-slide-rail::-webkit-scrollbar-corner {
+		display: none;
+	}
+</style>
