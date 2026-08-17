@@ -70,6 +70,7 @@ from open_webui.utils.auth import (
     get_password_hash,
     get_verified_user,
     invalidate_token,
+    revoke_user_tokens,
     validate_password,
     verify_password,
 )
@@ -406,6 +407,7 @@ async def update_password(
             hashed = await get_password_hash(form_data.new_password)
             success = await Auths.update_user_password_by_id(user.id, hashed, db=db)
             if success:
+                await revoke_user_tokens(request, user.id)
                 await publish_event(
                     request,
                     EVENTS.AUTH_PASSWORD_CHANGED,
