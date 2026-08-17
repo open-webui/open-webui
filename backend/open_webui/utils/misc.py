@@ -258,6 +258,17 @@ def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
     return reconciled_messages
 
 
+def get_reasoning_details(payload: dict):
+    if not isinstance(payload, dict):
+        return None
+
+    provider_fields = payload.get('provider_specific_fields') or {}
+    provider_details = (
+        provider_fields.get('reasoning_details') if isinstance(provider_fields, dict) else None
+    )
+    return payload.get('reasoning_details') or provider_details
+
+
 def convert_output_to_messages(
     output: list,
     raw: bool = False,
@@ -447,6 +458,14 @@ def convert_output_to_messages(
 
         elif item_type == 'reasoning':
             reasoning_details = item.get('reasoning_details') if raw else None
+            if reasoning_details:
+                reasoning_details = reasoning_details if isinstance(reasoning_details, list) else [reasoning_details]
+                reasoning_details = [
+                    detail
+                    for detail in reasoning_details
+                    if isinstance(detail, dict)
+                    and (detail.get('format') != 'anthropic-claude-v1' or detail.get('signature'))
+                ]
             if not reasoning_format and not reasoning_details:
                 continue
 
@@ -469,9 +488,7 @@ def convert_output_to_messages(
                     pending_reasoning.append(reasoning_text)
 
             if reasoning_details:
-                pending_reasoning_details.extend(
-                    reasoning_details if isinstance(reasoning_details, list) else [reasoning_details]
-                )
+                pending_reasoning_details.extend(reasoning_details)
 
         elif item_type == 'open_webui:code_interpreter':
             # Always include code interpreter content so the LLM knows

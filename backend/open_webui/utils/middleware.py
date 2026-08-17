@@ -110,6 +110,7 @@ from open_webui.utils.misc import (
     get_last_user_message_item,
     get_message_list,
     get_output_text,
+    get_reasoning_details,
     get_system_message,
     is_string_allowed,
     merge_system_messages,
@@ -3916,7 +3917,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                     if not response_output:
                         choice_message = choices[0].get('message', {})
                         reasoning_content = choice_message.get('reasoning_content') or choice_message.get('reasoning')
-                        reasoning_details = choice_message.get('reasoning_details')
+                        reasoning_details = get_reasoning_details(choice_message)
                         response_output = []
                         if reasoning_content or reasoning_details:
                             reasoning_item = {
@@ -4957,7 +4958,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         or delta.get('reasoning')
                                         or delta.get('thinking')
                                     )
-                                    reasoning_details = delta.get('reasoning_details')
+                                    reasoning_details = get_reasoning_details(delta)
                                     reasoning_detail_items = (
                                         [item for item in reasoning_details if isinstance(item, dict)]
                                         if isinstance(reasoning_details, list)
