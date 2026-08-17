@@ -1,7 +1,12 @@
 <!--
 ⚠️ CRITICAL CHECKS FOR CONTRIBUTORS (READ, DON'T DELETE) ⚠️
 1. Target the `dev` branch. PRs targeting `main` will be automatically closed.
-2. Do NOT delete the CLA section at the bottom. It is required for the bot to accept your PR.
+2. First-time contributors should not open pull requests directly.
+   Please start with a clear, detailed Issue or Discussion so maintainers can review the problem, scope, and proposed approach before any implementation is submitted.
+   If you already have code, share the proposed diff in the Issue or Discussion for review.
+   Open a pull request only after a maintainer explicitly asks you to do so.
+   First-time pull requests opened without maintainer invitation will be redirected to the Issue or Discussion process.
+3. Do NOT delete the CLA section at the bottom. It is required for the bot to accept your PR.
 -->
 
 # Pull Request Checklist
