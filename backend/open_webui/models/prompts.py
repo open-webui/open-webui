@@ -14,7 +14,7 @@ from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import PromptHistories
 from open_webui.models.users import User, UserModel, UserResponse, Users
-from open_webui.utils.json_codec import JSONCodec
+from open_webui.utils.misc import json_text_variants
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -342,9 +342,10 @@ class PromptsTable:
                             'EXISTS (SELECT 1 FROM json_array_elements_text(prompt.tags) t WHERE LOWER(t) = :tag_val)'
                         )
                     else:
-                        # Fallback: LIKE on serialised JSON text (ASCII-safe only)
-                        tag_clause = func.lower(cast(Prompt.tags, String)).like(
-                            f'%{JSONCodec.dumps(tag_lower, ensure_ascii=False)}%'
+                        # Fallback for dialects with no JSON array function: LIKE on the text.
+                        tags_text = func.lower(cast(Prompt.tags, String))
+                        tag_clause = or_(
+                            *(tags_text.like(f'%"{variant}"%') for variant in json_text_variants(tag_lower))
                         )
                         tag_lower = None
 

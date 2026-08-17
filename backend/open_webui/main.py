@@ -7,6 +7,7 @@ import mimetypes
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
@@ -64,6 +65,7 @@ from open_webui.config import (
     ONEDRIVE_SHAREPOINT_URL,
     STATIC_DIR,
     THREAD_POOL_SIZE,
+    THREAD_POOL_THREAD_NAME_PREFIX,
     WEBUI_AUTH,
     WEBUI_NAME,
     async_reset_config,
@@ -238,6 +240,7 @@ from open_webui.utils.logger import start_logger
 from open_webui.utils.middleware import (
     background_tasks_handler,
     build_chat_response_context,
+    drain_approved_tool_calls,
     process_chat_payload,
     process_chat_response,
 )
@@ -265,6 +268,11 @@ from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.redis import get_redis_client
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.session_pool import cleanup_response, get_client_timeout, get_session, stream_wrapper
+from open_webui.utils.tool_approval import (
+    ResolveToolCallForm,
+    build_tool_approval_resume_payload,
+    resolve_tool_call_output,
+)
 from open_webui.utils.tools import set_terminal_servers, set_tool_servers
 
 if SAFE_MODE:
@@ -337,6 +345,16 @@ async def lifespan(app: FastAPI):
     # This allows sync functions to schedule work on the main loop without blocking health checks
     app.state.main_loop = asyncio.get_running_loop()
 
+    if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
+        # asyncio offloads bypass AnyIO's limiter, so configure both before the first offload.
+        anyio.to_thread.current_default_thread_limiter().total_tokens = THREAD_POOL_SIZE
+        app.state.main_loop.set_default_executor(
+            ThreadPoolExecutor(
+                max_workers=THREAD_POOL_SIZE,
+                thread_name_prefix=THREAD_POOL_THREAD_NAME_PREFIX,
+            )
+        )
+
     app.state.instance_id = INSTANCE_ID
     start_logger()
 
@@ -372,16 +390,12 @@ async def lifespan(app: FastAPI):
     if app.state.redis is not None:
         app.state.redis_task_command_listener = asyncio.create_task(redis_task_command_listener(app))
 
-    if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
-        limiter = anyio.to_thread.current_default_thread_limiter()
-        limiter.total_tokens = THREAD_POOL_SIZE
-
-    asyncio.create_task(periodic_usage_pool_cleanup())
-    asyncio.create_task(periodic_session_pool_cleanup())
+    app.state.periodic_usage_pool_cleanup = asyncio.create_task(periodic_usage_pool_cleanup())
+    app.state.periodic_session_pool_cleanup = asyncio.create_task(periodic_session_pool_cleanup())
 
     from open_webui.utils.automations import scheduler_worker_loop
 
-    asyncio.create_task(scheduler_worker_loop(app))
+    app.state.scheduler_worker_loop = asyncio.create_task(scheduler_worker_loop(app))
 
     if await Config.get('models.base_models_cache'):
         try:
@@ -461,6 +475,10 @@ async def lifespan(app: FastAPI):
 
     if hasattr(app.state, 'redis_task_command_listener'):
         app.state.redis_task_command_listener.cancel()
+
+    app.state.periodic_usage_pool_cleanup.cancel()
+    app.state.periodic_session_pool_cleanup.cancel()
+    app.state.scheduler_worker_loop.cancel()
 
     await publish_event(app, EVENTS.SYSTEM_SHUTDOWN_COMPLETED, source='system')
 
@@ -1174,7 +1192,7 @@ async def chat_completion(
             message_ids = [{'model_id': model_id, 'message_id': form_data.pop('id', None)}]
 
         user_message = form_data.pop('user_message', None) or form_data.pop('parent_message', None)
-        chat_id = form_data.get('chat_id') or ''
+        chat_id = form_data.pop('chat_id', None) or ''
         chat_variables = form_data.pop('chat_variables', None)
         if chat_variables is None:
             existing_chat = await Chats.get_chat_by_id(chat_id) if is_saved_chat_id(chat_id) else None
@@ -1196,16 +1214,28 @@ async def chat_completion(
         ):
             tool_servers = None
 
+        automation_id = form_data.pop('automation_id', None)
+        tool_approval_mode = (
+            'full'
+            if automation_id or chat_id.startswith('channel:')
+            else (
+                form_data.get('params', {}).get('tool_approval_mode')
+                if await Config.get('chat.tool_permissions.enable', False)
+                else 'full'
+            )
+            or 'full'
+        )
+
         metadata = {
             'user_id': user.id,
             'user_agent': request.headers.get('user-agent', '') or '',
             'internal': getattr(request.state, 'internal', False) is True,
-            'chat_id': form_data.pop('chat_id', None) or '',
+            'chat_id': chat_id,
             'user_message': user_message,
             'user_message_id': user_message.get('id') if user_message else None,
             'assistant_message_id': form_data.pop('assistant_message_id', None),
             'session_id': form_data.pop('session_id', None),
-            'automation_id': form_data.pop('automation_id', None),
+            'automation_id': automation_id,
             'folder_id': form_data.pop('folder_id', None),
             'filter_ids': form_data.pop('filter_ids', []),
             'tool_ids': form_data.get('tool_ids', None),
@@ -1225,6 +1255,7 @@ async def chat_completion(
                     or model_info_params.get('function_calling')
                     or 'native'
                 ),
+                'tool_approval_mode': tool_approval_mode,
             },
         }
 
@@ -1238,8 +1269,8 @@ async def chat_completion(
         if metadata.get('chat_id') and user:
             chat_id = metadata['chat_id']
 
-            # Gate channel: branch — caller needs write access on the channel
-            # and the supplied message_id must belong to that channel.
+            # Gate channel: branch — caller needs write access on the channel, and the
+            # supplied message_id must belong to that channel and be the caller's own.
             if chat_id.startswith('channel:'):
                 channel_id = chat_id.removeprefix('channel:')
                 channel = await Channels.get_channel_by_id(channel_id)
@@ -1271,7 +1302,11 @@ async def chat_completion(
                     if not target_message_id:
                         continue
                     target_message = await Messages.get_message_by_id(target_message_id)
-                    if target_message and target_message.channel_id != channel.id:
+                    if target_message and (
+                        target_message.channel_id != channel.id
+                        # Write access is not authorship — block cross-member edits.
+                        or (user.role != 'admin' and target_message.user_id != user.id)
+                    ):
                         raise HTTPException(
                             status_code=status.HTTP_403_FORBIDDEN,
                             detail=ERROR_MESSAGES.DEFAULT(),
@@ -1528,6 +1563,8 @@ async def chat_completion(
                     for entry in message_ids:
                         target_model_id = entry['model_id']
                         assistant_message_id = entry['message_id']
+                        if assistant_message_id and assistant_message_id == metadata.get('assistant_message_id'):
+                            continue
                         if assistant_message_id:
                             assistant_message = {
                                 'id': assistant_message_id,
@@ -1575,6 +1612,9 @@ async def chat_completion(
     async def process_chat(request, form_data, user, metadata, model, tasks=None):
         try:
             form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
+
+            if await drain_approved_tool_calls(request, form_data, user, model, metadata):
+                return {'status': True, 'chat_id': metadata.get('chat_id'), 'paused': True}
 
             response = await chat_completion_handler(request, form_data, user)
 
@@ -1816,6 +1856,26 @@ async def chat_completion(
 # Alias for chat_completion (Legacy)
 generate_chat_completions = chat_completion
 generate_chat_completion = chat_completion
+
+@app.post('/api/v1/chats/{id}/messages/{message_id}/resolve')
+async def resolve_chat_message_tool_call(
+    request: Request,
+    id: str,
+    message_id: str,
+    form_data: ResolveToolCallForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    resolution = await resolve_tool_call_output(id, message_id, form_data, user, db=db)
+    payload = await build_tool_approval_resume_payload(id, message_id, chat=resolution['chat'])
+    result = await chat_completion(request, payload, user)
+    return {
+        'status': True,
+        'chat_id': id,
+        'message_id': message_id,
+        **(result if isinstance(result, dict) else {}),
+    }
+
 
 # Expose as app.state so internal callers (e.g. automations) can
 # use the full pipeline without importing from main.py (avoids circular deps).
@@ -2067,6 +2127,7 @@ async def list_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
 @app.post('/api/tasks/chat/{chat_id:path}/stop')
 async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=Depends(get_verified_user)):
     socket_id = get_temporary_chat_session_id(chat_id)
+    chat = None
     if socket_id:
         owner_id = get_user_id_from_session_pool(socket_id)
         if owner_id != user.id and user.role != 'admin':
@@ -2076,6 +2137,47 @@ async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
         if chat is None or (chat.user_id != user.id and user.role != 'admin'):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
     result = await stop_item_tasks(request.app.state.redis, chat_id)
+
+    if not socket_id and str(result.get('message', '')).startswith('No tasks found'):
+        messages_map = await Chats.get_messages_map_by_chat_id(chat_id) or {}
+        for message_id, message in messages_map.items():
+            if message.get('role') != 'assistant' or message.get('done') is not False:
+                continue
+
+            output = message.get('output')
+            if isinstance(output, list):
+                for item in output:
+                    if item.get('type') == 'function_call' and item.get('status') in {
+                        'pending',
+                        'queued',
+                        'requires_approval',
+                    }:
+                        item['status'] = 'rejected'
+                        item.pop('approved', None)
+
+            await Chats.upsert_message_to_chat_by_id_and_message_id(
+                chat_id,
+                message_id,
+                {'done': True, **({'output': output} if isinstance(output, list) else {})},
+                touch=False,
+            )
+            result = {
+                'status': True,
+                'message': 'Finalized pending approval message.',
+            }
+
+            event_emitter = await get_event_emitter(
+                {
+                    'user_id': chat.user_id,
+                    'chat_id': chat_id,
+                    'message_id': message_id,
+                },
+                update_db=False,
+            )
+            if event_emitter:
+                await event_emitter({'type': 'chat:completion', 'data': {'done': True, 'output': output}})
+                await event_emitter({'type': 'chat:tasks:cancel'})
+
     return result
 
 
@@ -2134,6 +2236,7 @@ async def get_app_config(request: Request):
         'automations.enable',
         'notes.enable',
         'chat.context_compaction.enable',
+        'chat.tool_permissions.enable',
         'web.search.enable',
         'web.search.confirmation.enable',
         'web.search.confirmation.content',
@@ -2211,6 +2314,7 @@ async def get_app_config(request: Request):
                     'enable_automations': config.get('automations.enable'),
                     'enable_notes': config.get('notes.enable'),
                     'enable_context_compaction': config.get('chat.context_compaction.enable'),
+                    'enable_tool_permissions': config.get('chat.tool_permissions.enable'),
                     'enable_web_search': config.get('web.search.enable'),
                     'enable_web_search_confirmation': config.get('web.search.confirmation.enable'),
                     'web_search_confirmation_content': config.get('web.search.confirmation.content'),

@@ -24,6 +24,7 @@
 	import ModelDeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import ExperimentalBadge from '$lib/components/common/ExperimentalBadge.svelte';
 
 	let modelUploadInputElement: HTMLInputElement;
 	let showModelDeleteConfirm = false;
@@ -938,7 +939,7 @@
 
 				<div class="pt-1">
 					<div class="flex justify-between items-center text-xs">
-						<div class=" text-sm font-normal">{$i18n.t('Experimental')}</div>
+						<div class="text-sm font-normal"><ExperimentalBadge /></div>
 						<button
 							class=" text-xs font-normal text-gray-500"
 							type="button"

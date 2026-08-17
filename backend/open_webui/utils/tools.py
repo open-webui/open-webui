@@ -47,6 +47,7 @@ from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.tools.builtin import (
     add_memory,
+    ask_user,
     calculate_timestamp,
     create_automation,
     create_calendar_event,
@@ -442,7 +443,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                         )
                         headers.setdefault('Content-Type', 'application/json')
 
-                        async def make_tool_function(function_name, tool_server_data, headers):
+                        async def make_tool_function(function_name, tool_server_data, headers, cookies):
                             async def tool_function(**kwargs):
                                 return await execute_tool_server(
                                     url=tool_server_data['url'],
@@ -455,7 +456,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
 
                             return tool_function
 
-                        tool_function = await make_tool_function(function_name, tool_server_data, headers)
+                        tool_function = await make_tool_function(function_name, tool_server_data, headers, cookies)
 
                         callable = await get_async_tool_function_and_apply_extra_params(
                             tool_function,
@@ -541,9 +542,9 @@ async def get_builtin_tools(
 
     # Helper to check if a builtin tool category is enabled via meta.builtinTools
     # Defaults to True if not specified (backward compatible)
-    def is_builtin_tool_enabled(category: str) -> bool:
+    def is_builtin_tool_enabled(category: str, default: bool = True) -> bool:
         builtin_tools = model.get('info', {}).get('meta', {}).get('builtinTools', {})
-        return builtin_tools.get(category, True)
+        return builtin_tools.get(category, default)
 
     # Helper to check user-level feature permission (admins always pass)
     user = extra_params.get('__user__', {})
@@ -582,6 +583,9 @@ async def get_builtin_tools(
     # Time utilities - available for date calculations
     if is_builtin_tool_enabled('time'):
         builtin_functions.extend([get_current_timestamp, calculate_timestamp])
+
+    if is_builtin_tool_enabled('user_input', True):
+        builtin_functions.append(ask_user)
 
     metadata = extra_params.get('__metadata__') or {}
     chat_files = metadata.get('files') or extra_params.get('__files__') or []
@@ -1166,15 +1170,17 @@ async def set_tool_servers(request: Request):
 
 async def get_tool_servers(request: Request):
     try:
-        tool_servers = []
+        tool_servers = None
         if request.app.state.redis is not None:
             try:
-                tool_servers = JSONCodec.loads(await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:tool_servers'))
-                request.app.state.TOOL_SERVERS = tool_servers
+                data = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:tool_servers')
+                if data is not None:
+                    tool_servers = JSONCodec.loads(data)
+                    request.app.state.TOOL_SERVERS = tool_servers
             except Exception as e:
                 log.error(f'Error fetching tool_servers from Redis: {e}')
 
-        if not tool_servers:
+        if tool_servers is None:
             tool_servers = await set_tool_servers(request)
 
         return tool_servers
@@ -1309,15 +1315,17 @@ async def set_terminal_servers(request: Request):
 
 async def get_terminal_servers(request: Request):
     """Return cached terminal server specs, loading if needed."""
-    terminal_servers = []
+    terminal_servers = None
     if request.app.state.redis is not None:
         try:
-            terminal_servers = JSONCodec.loads(await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers'))
-            request.app.state.TERMINAL_SERVERS = terminal_servers
+            data = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers')
+            if data is not None:
+                terminal_servers = JSONCodec.loads(data)
+                request.app.state.TERMINAL_SERVERS = terminal_servers
         except Exception as e:
             log.error(f'Error fetching terminal_servers from Redis: {e}')
 
-    if not terminal_servers:
+    if terminal_servers is None:
         terminal_servers = await set_terminal_servers(request)
 
     return terminal_servers

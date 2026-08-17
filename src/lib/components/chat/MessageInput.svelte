@@ -104,6 +104,7 @@
 	import Knobs from '../icons/Knobs.svelte';
 	import ValvesModal from '../workspace/common/ValvesModal.svelte';
 	import Note from '../icons/Note.svelte';
+	import AskUserCard from './AskUserCard.svelte';
 	import { goto } from '$app/navigation';
 	import InputModal from '../common/InputModal.svelte';
 	import Expand from '../icons/Expand.svelte';
@@ -111,6 +112,15 @@
 	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
 
 	const i18n = getContext('i18n');
+
+	type AskUserPrompt = {
+		show: boolean;
+		questions: any[];
+		allowOther: boolean;
+		timeoutMs: number | null;
+		onConfirm: (value: any) => void;
+		onCancel: () => void;
+	};
 
 	export let onUpload: Function = (e) => {};
 	export let onChange: Function = () => {};
@@ -143,12 +153,28 @@
 
 	export let history;
 	export let taskIds = null;
+	export let askUser: AskUserPrompt = {
+		show: false,
+		questions: [],
+		allowOther: true,
+		timeoutMs: null,
+		onConfirm: (_value: any) => {},
+		onCancel: () => {}
+	};
 
 	$: isActive =
-		(taskIds && taskIds.length > 0) ||
-		(history.currentId && history.messages[history.currentId]?.done != true) ||
-		generating;
+		!askUser?.show &&
+		((taskIds && taskIds.length > 0) ||
+			(history.currentId && history.messages[history.currentId]?.done != true) ||
+			generating);
 	$: canCompact = !!history?.currentId;
+	$: canToggleTemporary =
+		!embedded &&
+		!chatId &&
+		($_user?.role === 'admin' ||
+			($_user?.role === 'user' &&
+				($_user?.permissions?.chat?.temporary ?? true) &&
+				!($_user?.permissions?.chat?.temporary_enforced ?? false)));
 
 	export let prompt = '';
 	export let files = [];
@@ -160,6 +186,8 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+	export let toolApprovalMode = 'full';
+	export let onToolApprovalModeChange: Function = () => {};
 
 	export let pendingOAuthTools = [];
 
@@ -170,7 +198,6 @@
 	export let onQueueEdit: (id: string) => void = () => {};
 	export let onQueueDelete: (id: string) => void = () => {};
 	export let onUpdate: (data?: { file?: any }) => void = () => {};
-
 	export let chatTasks = [];
 
 	let inputContent = null;
@@ -207,7 +234,8 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled
+		codeInterpreterEnabled,
+		toolApprovalMode
 	});
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
@@ -516,6 +544,26 @@
 		if (!chatInput) return;
 
 		chatInputElement?.replaceCommandWithText(text);
+	};
+
+	const temporaryHandler = async () => {
+		if (!canToggleTemporary) return;
+
+		if (($settings?.temporaryChatByDefault ?? false) && $temporaryChatEnabled) {
+			await temporaryChatEnabled.set(null);
+		} else {
+			await temporaryChatEnabled.set(!$temporaryChatEnabled);
+		}
+
+		if (location.pathname !== '/') {
+			await goto('/');
+		}
+
+		if ($temporaryChatEnabled) {
+			window.history.replaceState(null, '', '?temporary-chat=true');
+		} else {
+			window.history.replaceState(null, '', location.pathname);
+		}
 	};
 
 	const insertTextAtCursor = async (text: string) => {
@@ -1260,7 +1308,7 @@
 						return;
 					}
 
-					if (['compact', 'fork', 'status', 'model'].includes(props?.id)) {
+					if (['compact', 'fork', 'status', 'model', 'settings', 'temporary'].includes(props?.id)) {
 						editor.chain().focus().deleteRange(range).run();
 						return;
 					}
@@ -1286,11 +1334,15 @@
 						!!history?.currentId &&
 						($_user?.role === 'admin' || ($_user?.permissions?.chat?.import ?? true)),
 					forkDisabled: () => isActive,
+					canTemporary: () => canToggleTemporary,
+					temporaryEnabled: () => $temporaryChatEnabled === true,
 					contextUsage: () => statusContextUsage,
 					onCompact: compactHandler,
 					onStatus: statusHandler,
 					onFork: forkHandler,
 					onModel: () => modelSelector?.open(),
+					onSettings: () => showSettings.set(true),
+					onTemporary: temporaryHandler,
 					onSelect: (e) => {
 						const { type, data } = e;
 
@@ -1521,7 +1573,7 @@
 			<div
 				class="{($settings?.widescreenMode ?? null)
 					? 'max-w-full'
-					: 'max-w-[58rem]'} px-2.5 mx-auto inset-x-0"
+					: 'max-w-[58rem]'} px-2 mx-auto inset-x-0"
 			>
 				<div class="">
 					<input
@@ -1579,6 +1631,23 @@
 							class="hidden"
 							on:click={() => createMessagePair(prompt)}
 						/>
+
+						{#if askUser?.show}
+							<div class="mx-1">
+								<AskUserCard
+									show={askUser.show}
+									questions={askUser.questions}
+									allowOther={askUser.allowOther}
+									timeoutMs={askUser.timeoutMs}
+									on:confirm={(e) => {
+										askUser.onConfirm(e.detail);
+									}}
+									on:cancel={() => {
+										askUser.onCancel();
+									}}
+								/>
+							</div>
+						{/if}
 
 						<!-- Task list display -->
 						{#if isActive && chatTasks.length > 0}
@@ -2010,6 +2079,8 @@
 										bind:files
 										selectedModels={selectedModelIds}
 										{fileUploadCapableModels}
+										{toolApprovalMode}
+										{onToolApprovalModeChange}
 										{screenCaptureHandler}
 										{inputFilesHandler}
 										uploadFilesHandler={() => {
@@ -2241,7 +2312,7 @@
 												{/if}
 											{/each}
 
-											{#if webSearchEnabled}
+											{#if webSearchEnabled && showWebSearchButton}
 												<Tooltip content={$i18n.t('Web Search')} placement="top">
 													<button
 														on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
@@ -2259,7 +2330,7 @@
 												</Tooltip>
 											{/if}
 
-											{#if imageGenerationEnabled}
+											{#if imageGenerationEnabled && showImageGenerationButton}
 												<Tooltip content={$i18n.t('Image')} placement="top">
 													<button
 														on:click|preventDefault={() =>
@@ -2277,7 +2348,7 @@
 												</Tooltip>
 											{/if}
 
-											{#if codeInterpreterEnabled}
+											{#if codeInterpreterEnabled && showCodeInterpreterButton}
 												<Tooltip content={$i18n.t('Code Interpreter')} placement="top">
 													<button
 														aria-label={codeInterpreterEnabled
@@ -2536,7 +2607,7 @@
 								{@html DOMPurify.sanitize(marked($config?.license_metadata?.input_footer))}
 							</div>
 						{:else}
-							<div class="mb-1" />
+							<div class="mb-0.5" />
 						{/if}
 					</form>
 				</div>

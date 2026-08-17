@@ -7,7 +7,14 @@
 	import { onMount, onDestroy, getContext, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { config, models as _models, settings, showSettings, user } from '$lib/stores';
+	import {
+		config,
+		models as _models,
+		pinnedModels,
+		settings,
+		showSettings,
+		user
+	} from '$lib/stores';
 	import {
 		createNewModel,
 		deleteAllModels,
@@ -607,15 +614,12 @@
 	};
 
 	const pinModelHandler = async (modelId) => {
-		let pinnedModels = $settings?.pinnedModels ?? [];
-
-		if (pinnedModels.includes(modelId)) {
-			pinnedModels = pinnedModels.filter((id) => id !== modelId);
-		} else {
-			pinnedModels = [...new Set([...pinnedModels, modelId])];
-		}
-
-		settings.set({ ...$settings, pinnedModels: pinnedModels });
+		settings.set({
+			...$settings,
+			pinnedModels: $pinnedModels.includes(modelId)
+				? $pinnedModels.filter((id) => id !== modelId)
+				: [...$pinnedModels, modelId]
+		});
 		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
 
@@ -933,7 +937,7 @@
 									}}
 								>
 									<div class="self-center">
-										<div class="flex bg-white rounded-xl">
+										<div class="flex rounded-xl">
 											<div
 												class="{(model?.is_active ?? true)
 													? ''

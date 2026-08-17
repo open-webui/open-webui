@@ -1,6 +1,9 @@
 <script context="module">
 	// Persists across mount/unmount cycles (module-level, not per-instance)
 	let savedPath = '/';
+	let savedFileRoot = null;
+	const treeExpandedCache = new Map<string, string[]>();
+	const treeContentsCache = new Map<string, [string, any[]][]>();
 </script>
 
 <script lang="ts">
@@ -30,25 +33,24 @@
 		type TerminalCwd
 	} from '$lib/apis/terminal';
 	import { isCodeFile } from '$lib/utils/codeHighlight';
-	import Folder from '../icons/Folder.svelte';
-	import Document from '../icons/Document.svelte';
-	import PenAlt from '../icons/PenAlt.svelte';
-	import ZoomReset from '../icons/ZoomReset.svelte';
 	import { isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
 
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
+	import DropdownMenu from '../common/DropdownMenu.svelte';
 
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
 	import FilePreview from './FileNav/FilePreview.svelte';
 	import FileEntryRow from './FileNav/FileEntryRow.svelte';
+	import Icon from './FileNav/Icon.svelte';
+	import FileTypeIcon from './FileNav/FileTypeIcon.svelte';
 	import BulkActionBar from './FileNav/BulkActionBar.svelte';
 	import PortList from './FileNav/PortList.svelte';
 	import PortPreview from './FileNav/PortPreview.svelte';
 	import XTerminal from './XTerminal.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	export let onAttach: ((blob: Blob, name: string, contentType: string) => void) | null = null;
 	export let overlay = false;
@@ -91,28 +93,72 @@
 
 	// ── Directory state ──────────────────────────────────────────────────
 	let currentPath = savedPath;
-	let fileRoot: TerminalFileRoot | null = null;
+	let fileRoot: TerminalFileRoot | null = savedFileRoot;
 	let entries: FileEntry[] = [];
 	let currentWritable = true;
 	let loading = false;
 	let error: string | null = null;
 
-	// ── Sort state ──────────────────────────────────────────────────────
-	type SortMode = 'name' | 'date';
+	// ── Browser view state ──────────────────────────────────────────────
+	type SortMode = 'name' | 'size' | 'date';
+	type BrowserRow = FileEntry & {
+		fullPath: string;
+		parentPath: string;
+		depth: number;
+		rowIndex: number;
+	};
+
 	let sortBy: SortMode = 'name';
 	let sortAsc = true;
+	let showHidden = false;
+	let visibleEntries: BrowserRow[] = [];
+	let expandedDirs: Set<string> = new Set();
+	let treeCache: Map<string, FileEntry[]> = new Map();
+	let loadingDirs: Set<string> = new Set();
+	let directoryMenu: { x: number; y: number } | null = null;
 
-	const sortEntries = (items: FileEntry[]): FileEntry[] => {
+	/** Normalize Windows backslashes and collapse duplicate separators. */
+	const normalizePath = (path: string) => path.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
+
+	const cleanEntryName = (name: string) =>
+		normalizePath(name).split('/').filter(Boolean).at(-1) ?? name.replace(/\/+$/, '');
+
+	const normalizeEntries = (items: FileEntry[]) =>
+		items.map((entry) => ({ ...entry, name: cleanEntryName(entry.name) }));
+
+	const asDirectoryPath = (path: string) => {
+		const normalized = normalizePath(path || '/');
+		if (normalized === '/') return '/';
+		return normalized.endsWith('/') ? normalized : `${normalized}/`;
+	};
+
+	const joinPath = (parentPath: string, name: string) => {
+		const parent = asDirectoryPath(parentPath);
+		const child = cleanEntryName(name);
+		if (!child) return parent;
+		return normalizePath(`${parent}${child}`);
+	};
+
+	const sortEntries = (items: FileEntry[], mode: SortMode, asc: boolean): FileEntry[] => {
 		return [...items].sort((a, b) => {
 			// Directories always first
 			if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
-			if (sortBy === 'date') {
-				const aTime = a.modified ?? 0;
-				const bTime = b.modified ?? 0;
-				return sortAsc ? aTime - bTime : bTime - aTime;
+			if (mode === 'date') {
+				if (a.modified !== undefined && b.modified !== undefined) {
+					return asc ? a.modified - b.modified : b.modified - a.modified;
+				}
+				const cmp = a.name.localeCompare(b.name);
+				return asc ? cmp : -cmp;
+			}
+			if (mode === 'size') {
+				if (a.size !== undefined && b.size !== undefined) {
+					return asc ? a.size - b.size : b.size - a.size;
+				}
+				const cmp = a.name.localeCompare(b.name);
+				return asc ? cmp : -cmp;
 			}
 			const cmp = a.name.localeCompare(b.name);
-			return sortAsc ? cmp : -cmp;
+			return asc ? cmp : -cmp;
 		});
 	};
 
@@ -121,10 +167,54 @@
 			sortAsc = !sortAsc;
 		} else {
 			sortBy = mode;
-			sortAsc = mode === 'name'; // name defaults asc, date defaults asc (oldest first)
+			sortAsc = true;
 		}
-		entries = sortEntries(entries);
+		void refreshBrowser();
 	};
+
+	const filterEntries = (items: FileEntry[], hiddenVisible: boolean) =>
+		hiddenVisible ? items : items.filter((entry) => !entry.name.startsWith('.'));
+
+	const entryPath = (parentPath: string, entry: FileEntry) =>
+		entry.type === 'directory'
+			? asDirectoryPath(joinPath(parentPath, entry.name))
+			: joinPath(parentPath, entry.name);
+
+	const withRowIndexes = (rows: Omit<BrowserRow, 'rowIndex'>[]): BrowserRow[] =>
+		rows.map((row, rowIndex) => ({ ...row, rowIndex }));
+
+	const buildVisibleRows = (
+		items: FileEntry[],
+		parentPath: string,
+		expanded: Set<string>,
+		cache: Map<string, FileEntry[]>,
+		hiddenVisible: boolean,
+		mode: SortMode,
+		asc: boolean,
+		depth = 0
+	): Omit<BrowserRow, 'rowIndex'>[] =>
+		sortEntries(filterEntries(items, hiddenVisible), mode, asc).flatMap((entry) => {
+			const fullPath = entryPath(parentPath, entry);
+			const row = { ...entry, fullPath, parentPath, depth };
+			const children =
+				entry.type === 'directory' && expanded.has(fullPath)
+					? buildVisibleRows(
+							cache.get(fullPath) ?? [],
+							fullPath,
+							expanded,
+							cache,
+							hiddenVisible,
+							mode,
+							asc,
+							depth + 1
+						)
+					: [];
+			return [row, ...children];
+		});
+
+	$: visibleEntries = withRowIndexes(
+		buildVisibleRows(entries, currentPath, expandedDirs, treeCache, showHidden, sortBy, sortAsc)
+	);
 
 	// ── Navigation history ──────────────────────────────────────────────
 	type NavEntry = { path: string; file: string | null };
@@ -227,6 +317,7 @@
 	let creatingFile = false;
 	let newFileName = '';
 	let newFileInput: HTMLInputElement;
+	let directoryUploadInput: HTMLInputElement;
 
 	// ── Delete confirmation ──────────────────────────────────────────────
 	let deleteTarget: { path: string; name: string } | null = null;
@@ -251,8 +342,9 @@
 		terminalChatContextPending = chatScoped && !terminalChatContextHidden && !isSavedChatId(chatId);
 		if (terminalChatContextHidden || terminalChatContextPending) return null;
 
-		const userTerminal = ($settings?.terminalServers ?? []).find(
-			(s) => s.url === $selectedTerminalId
+		const settingsValue: any = $settings;
+		const userTerminal = (settingsValue?.terminalServers ?? []).find(
+			(s: any) => s.url === $selectedTerminalId
 		);
 
 		const isSystem = !!systemTerminal;
@@ -291,6 +383,7 @@
 				loading = true;
 				error = null;
 				entries = [];
+				resetTreeState();
 				(async () => {
 					if (terminalChanged) {
 						const config = await getTerminalConfig(terminal.url, terminal.key);
@@ -316,21 +409,60 @@
 	const isPdf = (path: string) => path.split('.').pop()?.toLowerCase() === 'pdf';
 	const isOffice = (path: string) => OFFICE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
 
-	/** Normalize Windows backslashes to forward slashes. */
-	const normalizePath = (p: string) => p.replace(/\\/g, '/');
+	const resetTreeState = () => {
+		expandedDirs = new Set();
+		treeCache = new Map();
+		loadingDirs = new Set();
+	};
 
-	const asDirectoryPath = (path: string) => {
-		const normalized = normalizePath(path || '/');
-		return normalized.endsWith('/') ? normalized : `${normalized}/`;
+	const saveTreeState = () => {
+		treeExpandedCache.set(currentPath, [...expandedDirs]);
+		treeContentsCache.set(currentPath, [...treeCache.entries()]);
+	};
+
+	const restoreTreeState = (path: string) => {
+		expandedDirs = new Set(treeExpandedCache.get(path) ?? []);
+		treeCache = new Map(treeContentsCache.get(path) ?? []);
+		loadingDirs = new Set();
+	};
+
+	const invalidateTreeCache = (...paths: string[]) => {
+		const directories = paths.map(asDirectoryPath);
+		const next = new Map(treeCache);
+		for (const key of next.keys()) {
+			if (directories.some((directory) => key === directory || key.startsWith(directory))) {
+				next.delete(key);
+			}
+		}
+		treeCache = next;
+	};
+
+	const toggleHidden = () => {
+		showHidden = !showHidden;
+		localStorage.setItem('fileNav:showHidden', String(showHidden));
+		clearSelection();
+		void refreshBrowser();
+	};
+
+	const closeDirectoryMenu = () => {
+		directoryMenu = null;
+	};
+
+	const labelFromPath = (path: string) => {
+		const parts = normalizePath(path).split('/').filter(Boolean);
+		return parts.at(-1) ?? '/';
 	};
 
 	const setFileRoot = (root?: TerminalFileRoot) => {
+		const previousRoot = fileRoot?.path ?? null;
 		fileRoot = root?.path
 			? {
 					path: asDirectoryPath(root.path),
-					label: root.label || 'Home'
+					label: root.label || labelFromPath(root.path)
 				}
 			: null;
+		savedFileRoot = fileRoot;
+		if ((fileRoot?.path ?? null) !== previousRoot) resetTreeState();
 	};
 
 	const isInsideFileRoot = (path: string) => {
@@ -344,9 +476,36 @@
 		return isInsideFileRoot(path) ? asDirectoryPath(path) : fileRoot.path;
 	};
 
-	const applyCwd = (cwd: TerminalCwd | null) => {
-		setFileRoot(cwd?.root);
-		const path = cwd?.cwd ? asDirectoryPath(cwd.cwd) : (fileRoot?.path ?? '/');
+	const rootFromCwd = (cwd: TerminalCwd | null, pathHint?: string) => {
+		const cwdPath = cwd?.cwd ? asDirectoryPath(cwd.cwd) : null;
+		const homePath = cwd?.home ? asDirectoryPath(cwd.home) : null;
+		const hintPath = pathHint ? asDirectoryPath(pathHint) : null;
+		const rootPath = cwd?.root?.path ? asDirectoryPath(cwd.root.path) : null;
+
+		if (rootPath && rootPath !== '/') return cwd?.root;
+
+		const knownRoot = fileRoot ?? savedFileRoot;
+		if (
+			knownRoot?.path &&
+			hintPath &&
+			hintPath !== '/' &&
+			(hintPath === knownRoot.path || hintPath.startsWith(knownRoot.path))
+		) {
+			return knownRoot;
+		}
+
+		const pathForHome = hintPath && hintPath !== '/' ? hintPath : cwdPath;
+		if (homePath && pathForHome && (pathForHome === homePath || pathForHome.startsWith(homePath))) {
+			return { path: homePath, label: 'Home' };
+		}
+
+		return undefined;
+	};
+
+	const applyCwd = (cwd: TerminalCwd | null, pathHint?: string) => {
+		const cwdPath = cwd?.cwd ? asDirectoryPath(cwd.cwd) : null;
+		setFileRoot(rootFromCwd(cwd, pathHint));
+		const path = cwdPath ?? fileRoot?.path ?? '/';
 		return clampToFileRoot(path);
 	};
 
@@ -358,7 +517,7 @@
 			return parts.reduce(
 				(acc, part) => {
 					const prev = acc[acc.length - 1];
-					acc.push({ label: part, path: `${prev.path}${part}/` });
+					acc.push({ label: part, path: asDirectoryPath(joinPath(prev.path, part)) });
 					return acc;
 				},
 				[{ label: fileRoot.label, path: fileRoot.path }]
@@ -371,7 +530,7 @@
 		return (isDrive ? parts.slice(1) : parts).reduce(
 			(acc, part) => {
 				const prev = acc[acc.length - 1];
-				acc.push({ label: part, path: `${prev.path}${part}/` });
+				acc.push({ label: part, path: asDirectoryPath(joinPath(prev.path, part)) });
 				return acc;
 			},
 			[root]
@@ -405,10 +564,18 @@
 	};
 
 	// ── Directory operations ─────────────────────────────────────────────
-	const loadDir = async (path: string) => {
+	const loadDir = async (
+		path: string,
+		options: { preserveTree?: boolean; restoreTree?: boolean } = {}
+	) => {
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 		const directory = clampToFileRoot(path);
+		if (options.restoreTree) {
+			restoreTreeState(directory);
+		} else if (!options.preserveTree && directory !== currentPath) {
+			resetTreeState();
+		}
 
 		loading = true;
 		error = null;
@@ -433,19 +600,79 @@
 			entries = [];
 		} else {
 			currentWritable = result.writable !== false;
-			entries = sortEntries(result.entries);
+			entries = normalizeEntries(result.entries);
+			treeCache = new Map(treeCache).set(directory, entries);
+			saveTreeState();
+		}
+	};
+
+	const fetchExpandedDir = async (path: string) => {
+		const terminal = selectedTerminal;
+		if (!terminal) return null;
+		const directory = asDirectoryPath(path);
+		loadingDirs = new Set(loadingDirs).add(directory);
+		const result = await listFiles(terminal.url, terminal.key, directory, chatId ?? undefined);
+		const nextLoading = new Set(loadingDirs);
+		nextLoading.delete(directory);
+		loadingDirs = nextLoading;
+		if (result === null) return null;
+		const normalizedEntries = normalizeEntries(result.entries);
+		treeCache = new Map(treeCache).set(directory, normalizedEntries);
+		saveTreeState();
+		return normalizedEntries;
+	};
+
+	const refreshExpandedDirs = async () => {
+		for (const directory of [...expandedDirs]) {
+			await fetchExpandedDir(directory);
+		}
+	};
+
+	const refreshBrowser = async () => {
+		await loadDir(currentPath, { preserveTree: true });
+		await refreshExpandedDirs();
+	};
+
+	const toggleExpand = async (path: string) => {
+		const directory = asDirectoryPath(path);
+		if (expandedDirs.has(directory)) {
+			const next = new Set(expandedDirs);
+			next.delete(directory);
+			expandedDirs = next;
+			saveTreeState();
+			return;
+		}
+
+		expandedDirs = new Set(expandedDirs).add(directory);
+		saveTreeState();
+
+		const result = await fetchExpandedDir(directory);
+		if (result === null) {
+			const next = new Set(expandedDirs);
+			next.delete(directory);
+			expandedDirs = next;
+			saveTreeState();
+			toast.error($i18n.t('Failed to load folder'));
+		} else {
+			treeCache = new Map(treeCache);
 		}
 	};
 
 	const openEntry = async (entry: FileEntry) => {
+		const fullPath =
+			'fullPath' in entry ? (entry as BrowserRow).fullPath : entryPath(currentPath, entry);
+		const parentPath = 'parentPath' in entry ? (entry as BrowserRow).parentPath : currentPath;
 		if (entry.type === 'directory') {
-			await loadDir(`${currentPath}${entry.name}/`);
+			await loadDir(fullPath);
 			return;
 		}
 
-		const filePath = `${currentPath}${entry.name}`;
+		const filePath = fullPath;
+		if (parentPath !== currentPath) {
+			await loadDir(parentPath);
+		}
 		selectedFileWritable = entry.writable !== false;
-		pushNavHistory(currentPath, filePath);
+		pushNavHistory(parentPath, filePath);
 
 		const terminal = selectedTerminal;
 		if (!terminal) return;
@@ -570,10 +797,11 @@
 	const handleDragOver = (e: DragEvent) => {
 		if (selectedFile) return;
 		if (!currentWritable) return;
-		if (!e.dataTransfer?.types.includes('Files')) return;
+		const types = e.dataTransfer?.types;
+		if (!types?.includes('Files') && !types?.includes('application/x-terminal-file-move')) return;
 		e.preventDefault();
 		e.stopPropagation();
-		isDragOver = true;
+		isDragOver = types.includes('Files');
 	};
 
 	const handleDrop = async (e: DragEvent) => {
@@ -584,6 +812,16 @@
 		const terminal = selectedTerminal;
 		if (selectedFile || !terminal || !currentWritable) return;
 
+		const rawMove = e.dataTransfer?.getData('application/x-terminal-file-move');
+		if (rawMove) {
+			try {
+				const data = JSON.parse(rawMove);
+				const paths = (data.paths || (data.path ? [data.path] : [])) as string[];
+				await handleMovePaths(paths, currentPath);
+			} catch {}
+			return;
+		}
+
 		const droppedFiles = Array.from(e.dataTransfer?.files ?? []);
 		if (!droppedFiles.length) return;
 
@@ -592,7 +830,8 @@
 			await uploadToTerminal(terminal.url, terminal.key, currentPath, file, chatId ?? undefined);
 		}
 		uploading = false;
-		await loadDir(currentPath);
+		invalidateTreeCache(currentPath);
+		await loadDir(currentPath, { preserveTree: true });
 	};
 
 	const handleUploadFiles = async (files: File[]) => {
@@ -604,7 +843,8 @@
 			await uploadToTerminal(terminal.url, terminal.key, currentPath, file, chatId ?? undefined);
 		}
 		uploading = false;
-		await loadDir(currentPath);
+		invalidateTreeCache(currentPath);
+		await loadDir(currentPath, { preserveTree: true });
 	};
 
 	// ── Folder creation ──────────────────────────────────────────────────
@@ -634,7 +874,8 @@
 		toast[result ? 'success' : 'error'](
 			$i18n.t(result ? 'Folder created' : 'Failed to create folder')
 		);
-		await loadDir(currentPath);
+		invalidateTreeCache(currentPath);
+		await loadDir(currentPath, { preserveTree: true });
 	};
 
 	// ── File creation ────────────────────────────────────────────────────
@@ -658,7 +899,8 @@
 		const emptyFile = new File([''], name, { type: 'application/octet-stream' });
 		const result = await uploadToTerminal(terminal.url, terminal.key, currentPath, emptyFile);
 		toast[result ? 'success' : 'error']($i18n.t(result ? 'File created' : 'Failed to create file'));
-		await loadDir(currentPath);
+		invalidateTreeCache(currentPath);
+		await loadDir(currentPath, { preserveTree: true });
 	};
 
 	// ── Delete ───────────────────────────────────────────────────────────
@@ -670,7 +912,8 @@
 		toast[result ? 'success' : 'error'](
 			$i18n.t(result ? '{{name}} deleted' : 'Failed to delete {{name}}', { name })
 		);
-		await loadDir(currentPath);
+		invalidateTreeCache(currentPath, path);
+		await loadDir(currentPath, { preserveTree: true });
 	};
 
 	const requestDelete = (path: string, name: string) => {
@@ -680,32 +923,56 @@
 	};
 
 	// ── Move (drag-and-drop) ────────────────────────────────────────────
-	const handleMove = async (source: string, destFolder: string) => {
+	const sourceParentPath = (source: string) => {
+		const cleanSource = normalizePath(source).replace(/\/$/, '');
+		const index = cleanSource.lastIndexOf('/');
+		return asDirectoryPath(index >= 0 ? cleanSource.slice(0, index + 1) : currentPath);
+	};
+
+	const moveOne = async (source: string, destFolder: string) => {
 		const terminal = selectedTerminal;
-		if (!terminal || !currentWritable) return;
+		if (!terminal || !currentWritable) return false;
 
-		const fileName = source.split('/').pop() ?? '';
-		const destination = `${destFolder}${fileName}`;
+		const cleanSource = normalizePath(source).replace(/\/$/, '');
+		const fileName = cleanSource.split('/').pop() ?? '';
+		const destination = joinPath(destFolder, fileName);
 
-		if (source === destination) return;
+		if (!fileName || cleanSource === destination) return false;
 
 		// Prevent moving a folder into itself or its own subtree
-		const sourceDir = source.endsWith('/') ? source : source + '/';
-		if (destFolder.startsWith(sourceDir)) return;
+		const sourceDir = asDirectoryPath(cleanSource);
+		if (asDirectoryPath(destFolder).startsWith(sourceDir)) return false;
 
 		const result = await moveEntry(
 			terminal.url,
 			terminal.key,
-			source,
+			cleanSource,
 			destination,
 			chatId ?? undefined
 		);
 		if ('error' in result) {
 			toast.error(result.error);
+			return false;
 		} else {
 			toast.success($i18n.t('Moved {{name}}', { name: fileName }));
+			return true;
 		}
-		await loadDir(currentPath);
+	};
+
+	const refreshAfterMove = async (sources: string[], destFolder: string) => {
+		invalidateTreeCache(currentPath, destFolder, ...sources, ...sources.map(sourceParentPath));
+		clearSelection();
+		await refreshBrowser();
+	};
+
+	const handleMovePaths = async (sources: string[], destFolder: string) => {
+		const movedSources: string[] = [];
+		for (const source of sources) {
+			if (await moveOne(source, destFolder)) movedSources.push(source);
+		}
+		if (movedSources.length > 0) {
+			await refreshAfterMove(movedSources, destFolder);
+		}
 	};
 
 	// ── Rename ──────────────────────────────────────────────────────────
@@ -730,7 +997,8 @@
 		} else {
 			toast.success($i18n.t('Renamed to {{name}}', { name: newName }));
 		}
-		await loadDir(currentPath);
+		invalidateTreeCache(currentPath, oldPath);
+		await loadDir(currentPath, { preserveTree: true });
 	};
 
 	// ── Multi-select ────────────────────────────────────────────────────
@@ -739,12 +1007,10 @@
 	let selectionMode = false;
 
 	$: selectedCount = selectedEntries.size;
-	$: hasSelectedFiles = [...selectedEntries].some((p) => !p.endsWith('/'));
 	$: selectedEntriesWritable =
 		currentWritable &&
 		[...selectedEntries].every((path) => {
-			const name = path.replace(/\/$/, '').split('/').pop();
-			const entry = entries.find((item) => item.name === name);
+			const entry = visibleEntries.find((item) => item.fullPath === path);
 			return entry?.writable !== false;
 		});
 
@@ -755,45 +1021,38 @@
 	};
 
 	const selectAll = () => {
-		selectedEntries = new Set(
-			entries.map((e) => {
-				const p = `${currentPath}${e.name}`;
-				return e.type === 'directory' ? p + '/' : p;
-			})
-		);
+		selectedEntries = new Set(visibleEntries.map((entry) => entry.fullPath));
 		selectedEntries = selectedEntries; // trigger reactivity
 	};
 
-	const handleSelect = (entry: FileEntry, event: MouseEvent) => {
-		const path =
-			entry.type === 'directory' ? `${currentPath}${entry.name}/` : `${currentPath}${entry.name}`;
-		const idx = entries.indexOf(entry);
-
+	const handleSelect = (entry: FileEntry, event: MouseEvent, path?: string, index?: number) => {
+		const selectedPath = path ?? entryPath(currentPath, entry);
+		const idx = index ?? visibleEntries.findIndex((row) => row.fullPath === selectedPath);
+		if (idx < 0) return;
 		if (event.shiftKey && lastClickedIndex !== null) {
 			// Range select — replaces current selection with range
 			const start = Math.min(lastClickedIndex, idx);
 			const end = Math.max(lastClickedIndex, idx);
 			const newSet = new Set<string>();
 			for (let i = start; i <= end; i++) {
-				const e = entries[i];
-				const p = e.type === 'directory' ? `${currentPath}${e.name}/` : `${currentPath}${e.name}`;
-				newSet.add(p);
+				const row = visibleEntries[i];
+				if (row) newSet.add(row.fullPath);
 			}
 			selectedEntries = newSet;
 		} else if (event.metaKey || event.ctrlKey) {
 			// Toggle one
-			if (selectedEntries.has(path)) {
-				selectedEntries.delete(path);
+			if (selectedEntries.has(selectedPath)) {
+				selectedEntries.delete(selectedPath);
 			} else {
-				selectedEntries.add(path);
+				selectedEntries.add(selectedPath);
 			}
 			selectedEntries = selectedEntries;
 		} else {
 			// In selection mode (touch), toggle
-			if (selectedEntries.has(path)) {
-				selectedEntries.delete(path);
+			if (selectedEntries.has(selectedPath)) {
+				selectedEntries.delete(selectedPath);
 			} else {
-				selectedEntries.add(path);
+				selectedEntries.add(selectedPath);
 			}
 			selectedEntries = selectedEntries;
 		}
@@ -817,8 +1076,9 @@
 		toast[ok > 0 ? 'success' : 'error'](
 			$i18n.t('Deleted {{ok}} of {{total}} items', { ok, total: paths.length })
 		);
+		invalidateTreeCache(currentPath, ...paths);
 		clearSelection();
-		await loadDir(currentPath);
+		await loadDir(currentPath, { preserveTree: true });
 	};
 
 	const bulkDownload = async () => {
@@ -865,6 +1125,7 @@
 
 	// Click outside panel to clear selection
 	const handleWindowClick = (e: MouseEvent) => {
+		if (directoryMenu) directoryMenu = null;
 		if (selectedCount > 0 && containerEl && !containerEl.contains(e.target as Node)) {
 			clearSelection();
 		}
@@ -872,6 +1133,7 @@
 
 	// ── Lifecycle ────────────────────────────────────────────────────────
 	onMount(() => {
+		showHidden = localStorage.getItem('fileNav:showHidden') === 'true';
 		const terminal = getTerminal();
 
 		let handledDisplayFile = false;
@@ -922,7 +1184,7 @@
 				}
 			} else {
 				if (currentPath.startsWith(dir) || dir.startsWith(currentPath)) {
-					await loadDir(currentPath);
+					await loadDir(currentPath, { preserveTree: true });
 				}
 			}
 		});
@@ -935,12 +1197,15 @@
 				const config = await getTerminalConfig(terminal.url, terminal.key);
 				terminalEnabled = config?.features?.terminal !== false;
 
-				if (chatId || savedPath === '/') {
+				const serverCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
+				const useServerPath = !!chatId || savedPath === '/';
+				const serverPath = applyCwd(serverCwd, useServerPath ? undefined : savedPath);
+				if (useServerPath) {
 					// Fetch session-specific cwd from the server (or global default for new chats)
-					savedPath = applyCwd(await getCwd(terminal.url, terminal.key, chatId ?? undefined));
+					savedPath = serverPath;
 				}
 				savedPath = clampToFileRoot(savedPath);
-				loadDir(savedPath);
+				loadDir(savedPath, { restoreTree: true });
 			})();
 		}
 
@@ -962,7 +1227,7 @@
 				!terminalChatContextPending &&
 				!loading
 			) {
-				loadDir(currentPath);
+				loadDir(currentPath, { preserveTree: true });
 			}
 		};
 
@@ -1008,14 +1273,24 @@
 	<div class="hidden"></div>
 {:else if terminalChatContextPending}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
-		<Folder className="size-6 text-gray-300 dark:text-gray-600 mb-2" />
+		<Icon
+			name="terminal"
+			size={24}
+			strokeWidth={1.4}
+			class="text-gray-300 dark:text-gray-600 mb-2"
+		/>
 		<div class="text-xs text-gray-500 dark:text-gray-400">
 			{$i18n.t('Start the chat to use this terminal.')}
 		</div>
 	</div>
 {:else if !selectedTerminal}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
-		<Folder className="size-6 text-gray-300 dark:text-gray-600 mb-2" />
+		<Icon
+			name="terminal"
+			size={24}
+			strokeWidth={1.4}
+			class="text-gray-300 dark:text-gray-600 mb-2"
+		/>
 		<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">
 			{$i18n.t('No Terminal connection configured.')}
 		</div>
@@ -1035,23 +1310,11 @@
 	>
 		{#if isDragOver}
 			<div
-				class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm pointer-events-none gap-1.5"
+				class="absolute inset-1 z-10 flex items-center justify-center rounded-lg border-2 border-dashed border-blue-400 bg-blue-500/10 dark:border-blue-500 pointer-events-none"
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.5"
-					class="size-5 text-gray-400 dark:text-gray-500"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
-					/>
-				</svg>
-				<span class="text-xs text-gray-400 dark:text-gray-500">{currentPath}</span>
+				<span class="text-xs font-medium text-blue-500 dark:text-blue-400">
+					{$i18n.t('Drop to upload')}
+				</span>
 			</div>
 		{/if}
 
@@ -1065,6 +1328,7 @@
 				{canGoForward}
 				{sortBy}
 				{sortAsc}
+				{showHidden}
 				onGoBack={goBack}
 				onGoForward={goForward}
 				onNavigate={loadDir}
@@ -1073,42 +1337,21 @@
 						const fileName = selectedFile.split('/').pop() ?? '';
 						openEntry({ name: fileName, type: 'file', size: 0 });
 					} else {
-						loadDir(currentPath);
+						refreshBrowser();
 					}
 				}}
 				onNewFolder={startNewFolder}
 				onNewFile={startNewFile}
 				onUploadFiles={handleUploadFiles}
 				onDownloadDir={() => downloadFile(currentPath)}
-				onMove={handleMove}
+				onMove={handleMovePaths}
 				onSort={toggleSort}
+				onToggleHidden={toggleHidden}
 			>
-				{#if fileImageUrl !== null || (fileOfficeSlides !== null && fileOfficeSlides.length > 0)}
-					<Tooltip content={$i18n.t('Reset view')}>
-						<button
-							class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-							on:click={() => filePreviewRef?.resetImageView()}
-							aria-label={$i18n.t('Reset view')}
-						>
-							<ZoomReset className="size-3.5" />
-						</button>
-					</Tooltip>
-				{/if}
-				{#if filePdfData !== null}
-					<Tooltip content={$i18n.t('Reset view')}>
-						<button
-							class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
-							on:click={() => filePreviewRef?.resetPdfView()}
-							aria-label={$i18n.t('Reset view')}
-						>
-							<ZoomReset className="size-3.5" />
-						</button>
-					</Tooltip>
-				{/if}
 				{#if (isMarkdown || isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
 					<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 						<button
-							class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
 							on:click={() => {
 								if (editing) filePreviewRef?.cancelEdit();
 								showRaw = !showRaw;
@@ -1116,40 +1359,9 @@
 							aria-label={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}
 						>
 							{#if showRaw}
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="1.5"
-									class="size-3.5"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
-									/>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-									/>
-								</svg>
+								<Icon name="eye" size={11} strokeWidth={1.4} />
 							{:else}
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="1.5"
-									class="size-3.5"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5"
-									/>
-								</svg>
+								<Icon name="code" size={11} strokeWidth={1.4} />
 							{/if}
 						</button>
 					</Tooltip>
@@ -1158,7 +1370,7 @@
 					{#if isHtml && showRaw}
 						<Tooltip content={$i18n.t('Save')}>
 							<button
-								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
 								on:click={() => filePreviewRef?.saveCodeFile()}
 								disabled={saving || !selectedFileWritable}
 								aria-label={$i18n.t('Save')}
@@ -1166,18 +1378,7 @@
 								{#if saving}
 									<Spinner className="size-3.5" />
 								{:else}
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="size-3.5"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+									<Icon name="check" size={11} strokeWidth={1.7} />
 								{/if}
 							</button>
 						</Tooltip>
@@ -1186,7 +1387,7 @@
 					{:else if isMarkdown && showRaw}
 						<Tooltip content={$i18n.t('Save')}>
 							<button
-								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
 								on:click={() => filePreviewRef?.saveCodeFile()}
 								disabled={saving || !selectedFileWritable}
 								aria-label={$i18n.t('Save')}
@@ -1194,18 +1395,7 @@
 								{#if saving}
 									<Spinner className="size-3.5" />
 								{:else}
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="size-3.5"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+									<Icon name="check" size={11} strokeWidth={1.7} />
 								{/if}
 							</button>
 						</Tooltip>
@@ -1214,7 +1404,7 @@
 					{:else if isCode}
 						<Tooltip content={$i18n.t('Save')}>
 							<button
-								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
 								on:click={() => filePreviewRef?.saveCodeFile()}
 								disabled={saving || !selectedFileWritable}
 								aria-label={$i18n.t('Save')}
@@ -1222,43 +1412,23 @@
 								{#if saving}
 									<Spinner className="size-3.5" />
 								{:else}
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="size-3.5"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+									<Icon name="check" size={11} strokeWidth={1.7} />
 								{/if}
 							</button>
 						</Tooltip>
 					{:else if editing}
 						<Tooltip content={$i18n.t('Cancel')}>
 							<button
-								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
 								on:click={() => filePreviewRef?.cancelEdit()}
 								aria-label={$i18n.t('Cancel')}
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 20 20"
-									fill="currentColor"
-									class="size-3.5"
-								>
-									<path
-										d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
-									/>
-								</svg>
+								<Icon name="xmark" size={11} strokeWidth={1.7} />
 							</button>
 						</Tooltip>
 						<Tooltip content={$i18n.t('Save')}>
 							<button
-								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
 								on:click={() => filePreviewRef?.saveEdit()}
 								disabled={saving || !selectedFileWritable}
 								aria-label={$i18n.t('Save')}
@@ -1266,30 +1436,19 @@
 								{#if saving}
 									<Spinner className="size-3.5" />
 								{:else}
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="size-3.5"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+									<Icon name="check" size={11} strokeWidth={1.7} />
 								{/if}
 							</button>
 						</Tooltip>
 					{:else}
 						<Tooltip content={$i18n.t('Edit')}>
 							<button
-								class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-30 disabled:hover:bg-transparent"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
 								on:click={() => filePreviewRef?.startEdit()}
 								disabled={!selectedFileWritable}
 								aria-label={$i18n.t('Edit')}
 							>
-								<PenAlt className="size-3.5" />
+								<Icon name="pencil" size={11} strokeWidth={1.4} />
 							</button>
 						</Tooltip>
 					{/if}
@@ -1298,50 +1457,24 @@
 				{#if fileContent !== null}
 					<Tooltip content={$i18n.t('Copy')}>
 						<button
-							class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
 							on:click={async () => {
 								await navigator.clipboard.writeText(fileContent ?? '');
 								toast.success($i18n.t('Copied to clipboard'));
 							}}
 							aria-label={$i18n.t('Copy')}
 						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.5"
-								class="size-3.5"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"
-								/>
-							</svg>
+							<Icon name="copy" size={11} strokeWidth={1.4} />
 						</button>
 					</Tooltip>
 				{/if}
 				<Tooltip content={$i18n.t('Download')}>
 					<button
-						class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
 						on:click={() => selectedFile && downloadFile(selectedFile)}
 						aria-label={$i18n.t('Download')}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.5"
-							class="size-3.5"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-							/>
-						</svg>
+						<Icon name="download" size={11} strokeWidth={1.4} />
 					</button>
 				</Tooltip>
 			</FileNavToolbar>
@@ -1350,7 +1483,6 @@
 			{#if selectedCount > 0}
 				<BulkActionBar
 					count={selectedCount}
-					hasFiles={hasSelectedFiles}
 					canDelete={selectedEntriesWritable}
 					onDelete={() => {
 						deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
@@ -1367,7 +1499,14 @@
 		<div
 			class="flex-1 overflow-y-auto min-h-0 min-w-0"
 			on:click={(e) => {
+				closeDirectoryMenu();
 				if (e.target === e.currentTarget && selectedCount > 0) clearSelection();
+			}}
+			on:contextmenu={(e) => {
+				if (selectedFile || previewPort !== null) return;
+				if ((e.target as HTMLElement)?.closest('[data-file-row]')) return;
+				e.preventDefault();
+				directoryMenu = { x: e.clientX, y: e.clientY };
 			}}
 		>
 			{#if previewPort !== null}
@@ -1434,26 +1573,22 @@
 					<div class="flex justify-center pt-8"><Spinner className="size-4" /></div>
 				{:else if error}
 					<div class="p-4 text-xs">{error}</div>
-				{:else if entries.length === 0 && !creatingFolder && !creatingFile}
-					<div class="flex flex-col items-center justify-center gap-1.5 py-12 text-center">
-						<Folder className="size-6 text-gray-200 dark:text-gray-700" />
+				{:else if visibleEntries.length === 0 && !creatingFolder && !creatingFile}
+					<div class="flex items-center justify-center py-12">
 						<div class="text-xs text-gray-400 dark:text-gray-500">
 							{$i18n.t('This folder is empty')}
-						</div>
-						<div class="text-[0.6875rem] text-gray-300 dark:text-gray-600">
-							{$i18n.t('Drop files here to upload')}
 						</div>
 					</div>
 				{/if}
 
 				{#if !loading && !error && !uploading && !($selectedTerminalId && $terminalServers === null)}
 					{#if creatingFolder}
-						<div class="flex items-center gap-2 px-3 py-1.5">
-							<Folder className="size-4 shrink-0 text-blue-400 dark:text-blue-300" />
+						<div class="flex h-7 items-center gap-2 px-2">
+							<FileTypeIcon name={newFolderName} type="directory" />
 							<input
 								bind:this={newFolderInput}
 								bind:value={newFolderName}
-								class="flex-1 text-xs bg-transparent border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5 outline-none focus:border-blue-400 dark:focus:border-blue-500"
+								class="flex-1 text-xs bg-transparent border border-gray-100 dark:border-white/[0.06] rounded px-1.5 py-0.5 outline-none focus:border-blue-400 dark:focus:border-blue-500"
 								placeholder={$i18n.t('Folder name')}
 								on:keydown={(e) => {
 									if (e.key === 'Enter') submitNewFolder();
@@ -1467,12 +1602,12 @@
 						</div>
 					{/if}
 					{#if creatingFile}
-						<div class="flex items-center gap-2 px-3 py-1.5">
-							<Document className="size-4 shrink-0 text-gray-400 dark:text-gray-500" />
+						<div class="flex h-7 items-center gap-2 px-2">
+							<FileTypeIcon name={newFileName} type="file" />
 							<input
 								bind:this={newFileInput}
 								bind:value={newFileName}
-								class="flex-1 text-xs bg-transparent border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5 outline-none focus:border-blue-400 dark:focus:border-blue-500"
+								class="flex-1 text-xs bg-transparent border border-gray-100 dark:border-white/[0.06] rounded px-1.5 py-0.5 outline-none focus:border-blue-400 dark:focus:border-blue-500"
 								placeholder={$i18n.t('File name')}
 								on:keydown={(e) => {
 									if (e.key === 'Enter') submitNewFile();
@@ -1486,28 +1621,37 @@
 						</div>
 					{/if}
 
-					{#if entries.length > 0 || creatingFolder || creatingFile}
+					{#if visibleEntries.length > 0 || creatingFolder || creatingFile}
 						<ul>
-							{#each entries as entry}
+							{#each visibleEntries as entry (entry.fullPath)}
 								<FileEntryRow
 									{entry}
-									{currentPath}
+									currentPath={entry.parentPath}
+									fullPath={entry.fullPath}
+									depth={entry.depth}
+									rowIndex={entry.rowIndex}
+									expanded={expandedDirs.has(entry.fullPath)}
+									loadingChildren={loadingDirs.has(entry.fullPath)}
 									terminalUrl={selectedTerminal.url}
 									terminalKey={selectedTerminal.key}
-									selected={selectedEntries.has(
-										entry.type === 'directory'
-											? `${currentPath}${entry.name}/`
-											: `${currentPath}${entry.name}`
-									)}
+									selected={selectedEntries.has(entry.fullPath)}
 									{selectionMode}
 									selectedPaths={selectedEntries}
-									onOpen={openEntry}
+									onOpen={(row) =>
+										openEntry({
+											...row,
+											fullPath: entry.fullPath,
+											parentPath: entry.parentPath,
+											depth: entry.depth,
+											rowIndex: entry.rowIndex
+										})}
 									onDownload={downloadFile}
 									onDelete={requestDelete}
-									onMove={handleMove}
+									onMove={handleMovePaths}
 									onRename={handleRename}
 									onSelect={handleSelect}
 									onLongPress={enterSelectionMode}
+									onToggleExpand={toggleExpand}
 									showDate={sortBy === 'date'}
 									parentWritable={currentWritable}
 								/>
@@ -1520,7 +1664,7 @@
 
 		<!-- Port detection -->
 		{#if selectedTerminal && !selectedFile && previewPort === null}
-			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800">
+			<div class="shrink-0 border-t border-gray-50 dark:border-gray-850/30">
 				<PortList
 					baseUrl={selectedTerminal.url}
 					apiKey={selectedTerminal.key}
@@ -1535,7 +1679,7 @@
 
 		<!-- Terminal bottom panel -->
 		{#if terminalEnabled}
-			<div class="shrink-0 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850">
+			<div class="shrink-0 border-t border-gray-50 dark:border-gray-850/30">
 				{#if terminalExpanded}
 					<!-- Drag handle (at top of panel) -->
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1549,21 +1693,10 @@
 
 				<!-- Toggle header (full-width button) -->
 				<button
-					class="w-full flex items-center gap-2 px-3 py-1 mb-0.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+					class="w-full flex items-center gap-2 px-2 py-1 mb-0.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-100"
 					on:click={toggleTerminal}
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="size-3.5"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M3.25 3A2.25 2.25 0 0 0 1 5.25v9.5A2.25 2.25 0 0 0 3.25 17h13.5A2.25 2.25 0 0 0 19 14.75v-9.5A2.25 2.25 0 0 0 16.75 3H3.25Zm.943 8.752a.75.75 0 0 1 .055-1.06L6.128 9l-1.88-1.693a.75.75 0 1 1 1.004-1.114l2.5 2.25a.75.75 0 0 1 0 1.114l-2.5 2.25a.75.75 0 0 1-1.06-.055ZM9.75 10.25a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 0-1.5h-2.5Z"
-							clip-rule="evenodd"
-						/>
-					</svg>
+					<Icon name="terminal" size={14} strokeWidth={1.4} class="shrink-0" />
 					<span class="font-normal">{$i18n.t('Terminal')}</span>
 
 					{#if terminalExpanded}
@@ -1576,18 +1709,12 @@
 						/>
 					{/if}
 
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="size-3 ml-auto transition-transform {terminalExpanded ? 'rotate-180' : ''}"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z"
-							clip-rule="evenodd"
-						/>
-					</svg>
+					<Icon
+						name="chevron-up"
+						size={12}
+						strokeWidth={1.4}
+						class="ml-auto transition-transform {terminalExpanded ? 'rotate-180' : ''}"
+					/>
 				</button>
 
 				{#if terminalExpanded}
@@ -1600,6 +1727,98 @@
 						/>
 					</div>
 				{/if}
+			</div>
+		{/if}
+
+		<input
+			bind:this={directoryUploadInput}
+			type="file"
+			multiple
+			hidden
+			on:change={async () => {
+				if (!currentWritable || !directoryUploadInput?.files?.length) return;
+				await handleUploadFiles(Array.from(directoryUploadInput.files));
+				directoryUploadInput.value = '';
+			}}
+		/>
+
+		{#if directoryMenu}
+			<div
+				class="fixed z-[9999999]"
+				style="left: {directoryMenu.x}px; top: {directoryMenu.y}px;"
+				on:click|stopPropagation
+			>
+				<DropdownMenu className="min-w-[9.375rem]">
+					<button
+						type="button"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						on:click={() => {
+							closeDirectoryMenu();
+							refreshBrowser();
+						}}
+					>
+						<Icon name="refresh" size={12} strokeWidth={1.4} />
+						<span>{$i18n.t('Refresh')}</span>
+					</button>
+					<button
+						type="button"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						disabled={!currentWritable}
+						on:click={() => {
+							closeDirectoryMenu();
+							startNewFile();
+						}}
+					>
+						<Icon name="empty-page" size={12} strokeWidth={1.4} />
+						<span>{$i18n.t('New File')}</span>
+					</button>
+					<button
+						type="button"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						disabled={!currentWritable}
+						on:click={() => {
+							closeDirectoryMenu();
+							startNewFolder();
+						}}
+					>
+						<Icon name="folder" size={12} strokeWidth={1.4} />
+						<span>{$i18n.t('New Folder')}</span>
+					</button>
+					<button
+						type="button"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						disabled={!currentWritable}
+						on:click={() => {
+							closeDirectoryMenu();
+							directoryUploadInput?.click();
+						}}
+					>
+						<Icon name="upload" size={12} strokeWidth={1.4} />
+						<span>{$i18n.t('Upload')}</span>
+					</button>
+					<button
+						type="button"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						on:click={() => {
+							closeDirectoryMenu();
+							downloadFile(currentPath);
+						}}
+					>
+						<Icon name="download" size={12} strokeWidth={1.4} />
+						<span>{$i18n.t('Download')}</span>
+					</button>
+					<button
+						type="button"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						on:click={() => {
+							closeDirectoryMenu();
+							toggleHidden();
+						}}
+					>
+						<Icon name="eye" size={12} strokeWidth={1.4} />
+						<span>{showHidden ? $i18n.t('Hide Hidden Files') : $i18n.t('Show Hidden Files')}</span>
+					</button>
+				</DropdownMenu>
 			</div>
 		{/if}
 	</div>
