@@ -80,6 +80,7 @@ LOADER_CONFIG_KEYS = {
     'firecrawl_api_url': 'web.loader.firecrawl_api_url',
     'firecrawl_timeout': 'web.loader.firecrawl_timeout',
     'tavily_api_key': 'web.search.tavily_api_key',
+    'tavily_api_base_url': 'web.search.tavily_api_base_url',
     'tavily_extract_depth': 'web.search.tavily_extract_depth',
     'microsoft_web_iq_api_base_url': 'web.search.microsoft_web_iq_api_base_url',
     'microsoft_web_iq_api_key': 'web.search.microsoft_web_iq_api_key',

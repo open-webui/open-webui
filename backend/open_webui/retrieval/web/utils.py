@@ -42,6 +42,7 @@ from open_webui.config import (
     MICROSOFT_WEB_IQ_LANGUAGE,
     PLAYWRIGHT_TIMEOUT,
     PLAYWRIGHT_WS_URL,
+    TAVILY_API_BASE_URL,
     TAVILY_API_KEY,
     TAVILY_EXTRACT_DEPTH,
     WEB_FETCH_FILTER_LIST,
@@ -57,7 +58,7 @@ from open_webui.env import (
 )
 from open_webui.retrieval.loaders.external_web import ExternalWebLoader
 from open_webui.retrieval.loaders.microsoft_web_iq import MicrosoftWebIQLoader
-from open_webui.retrieval.loaders.tavily import TavilyLoader
+from open_webui.retrieval.loaders.tavily import DEFAULT_TAVILY_API_BASE_URL, TavilyLoader
 from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
 from open_webui.utils.misc import is_host_allowed
 
@@ -406,6 +407,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         web_paths: Union[str, List[str]],
         api_key: str,
         extract_depth: Literal['basic', 'advanced'] = 'basic',
+        api_base_url: str = DEFAULT_TAVILY_API_BASE_URL,
         continue_on_failure: bool = True,
         requests_per_second: Optional[float] = None,
         verify_ssl: bool = True,
@@ -418,6 +420,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             web_paths: List of URLs/paths to process.
             api_key: The Tavily API key.
             extract_depth: Depth of extraction ("basic" or "advanced").
+            api_base_url: Base URL of the Tavily API, for self-hosted or proxied endpoints.
             continue_on_failure: Whether to continue if extraction of a URL fails.
             requests_per_second: Number of requests per second to limit to.
             verify_ssl: If True, verify SSL certificates.
@@ -439,6 +442,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         self.web_paths = web_paths if isinstance(web_paths, list) else [web_paths]
         self.api_key = api_key
         self.extract_depth = extract_depth
+        self.api_base_url = api_base_url
         self.continue_on_failure = continue_on_failure
         self.verify_ssl = verify_ssl
         self.trust_env = trust_env
@@ -469,6 +473,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 urls=valid_urls,
                 api_key=self.api_key,
                 extract_depth=self.extract_depth,
+                api_base_url=self.api_base_url,
                 continue_on_failure=self.continue_on_failure,
             )
             yield from loader.lazy_load()
@@ -501,6 +506,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 urls=valid_urls,
                 api_key=self.api_key,
                 extract_depth=self.extract_depth,
+                api_base_url=self.api_base_url,
                 continue_on_failure=self.continue_on_failure,
             )
             async for document in loader.alazy_load():
@@ -940,6 +946,7 @@ def get_web_loader(
         WebLoaderClass = SafeTavilyLoader
         web_loader_args['api_key'] = cfg('tavily_api_key', TAVILY_API_KEY)
         web_loader_args['extract_depth'] = cfg('tavily_extract_depth', TAVILY_EXTRACT_DEPTH)
+        web_loader_args['api_base_url'] = cfg('tavily_api_base_url', TAVILY_API_BASE_URL)
 
     if engine == 'microsoft_web_iq':
         WebLoaderClass = SafeMicrosoftWebIQLoader

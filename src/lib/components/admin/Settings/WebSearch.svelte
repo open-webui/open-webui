@@ -571,6 +571,24 @@
 									bind:value={webConfig.TAVILY_API_KEY}
 								/>
 							</div>
+
+							<div class="mt-2">
+								<div class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1">
+									{$i18n.t('Tavily API Base URL')}
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											class="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+											type="text"
+											placeholder={$i18n.t('Enter Tavily API Base URL')}
+											bind:value={webConfig.TAVILY_API_BASE_URL}
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							</div>
 						</div>
 					{:else if webConfig.WEB_SEARCH_ENGINE === 'searchapi'}
 						<div class="mb-2.5 flex w-full flex-col">
@@ -1301,6 +1319,24 @@
 									placeholder={$i18n.t('Enter Tavily API Key')}
 									bind:value={webConfig.TAVILY_API_KEY}
 								/>
+							</div>
+
+							<div class="mt-2">
+								<div class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1">
+									{$i18n.t('Tavily API Base URL')}
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											class="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+											type="text"
+											placeholder={$i18n.t('Enter Tavily API Base URL')}
+											bind:value={webConfig.TAVILY_API_BASE_URL}
+											autocomplete="off"
+										/>
+									</div>
+								</div>
 							</div>
 						{/if}
 					</div>
