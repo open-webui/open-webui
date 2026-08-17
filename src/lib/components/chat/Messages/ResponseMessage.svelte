@@ -833,9 +833,7 @@
 									{compactPreview}
 									{editCodeBlock}
 									{topPadding}
-									done={($settings?.chatFadeStreamingText ?? true)
-										? (message?.done ?? false)
-										: true}
+									done={message?.done ?? false}
 									{model}
 									onTaskClick={async (e) => {
 										console.log(e);
