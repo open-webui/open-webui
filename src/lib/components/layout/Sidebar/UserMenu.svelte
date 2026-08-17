@@ -6,6 +6,7 @@
 
 	import { getUsage } from '$lib/apis';
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
+	import { getSignOutRedirect, shouldPreserveUserForRedirect } from '$lib/utils/signout';
 
 	import { showSettings, mobile, showSidebar, user, config, settings } from '$lib/stores';
 
@@ -571,10 +572,17 @@
 				type="button"
 				on:click={async () => {
 					const res = await userSignOut();
-					user.set(null);
+					const redirectUrl = getSignOutRedirect(res);
 					localStorage.removeItem('token');
 
-					location.href = res?.redirect_url ?? '/auth';
+					if (shouldPreserveUserForRedirect(res)) {
+						location.href = redirectUrl;
+						return;
+					}
+
+					user.set(null);
+
+					location.href = redirectUrl;
 					show = false;
 				}}
 			>
