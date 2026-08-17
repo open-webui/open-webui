@@ -286,7 +286,7 @@ export const getUserSettings = async (token: string, raw = false) => {
 		})
 		.catch((err) => {
 			console.error(err);
-			error = err.detail;
+			error = err?.detail ?? err;
 			return null;
 		});
 
