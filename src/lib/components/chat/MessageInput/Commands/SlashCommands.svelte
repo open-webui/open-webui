@@ -3,7 +3,10 @@
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getSkillItems } from '$lib/apis/skills';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import ChatBubbleDotted from '$lib/components/icons/ChatBubbleDotted.svelte';
+	import ChatBubbleDottedChecked from '$lib/components/icons/ChatBubbleDottedChecked.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
+	import Knobs from '$lib/components/icons/Knobs.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 
 	const i18n = getContext('i18n');
@@ -15,6 +18,8 @@
 	export let canStatus = false;
 	export let canFork = false;
 	export let forkDisabled = false;
+	export let canTemporary = false;
+	export let temporaryEnabled = false;
 	export let contextPercent = 0;
 	export let contextHasThreshold = false;
 
@@ -31,6 +36,9 @@
 	$: contextCircleOffset = 50.27 * (1 - contextCirclePercent / 100);
 
 	$: commandItems = [
+		...(canTemporary && 'temporary'.startsWith(query.toLowerCase())
+			? [{ type: 'command', data: { id: 'temporary' } }]
+			: []),
 		...(canCompact && 'compact'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'compact' } }]
 			: []),
@@ -40,7 +48,12 @@
 		...(canStatus && 'status'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'status' } }]
 			: []),
-		...('model'.startsWith(query.toLowerCase()) ? [{ type: 'command', data: { id: 'model' } }] : [])
+		...('model'.startsWith(query.toLowerCase())
+			? [{ type: 'command', data: { id: 'model' } }]
+			: []),
+		...('settings'.startsWith(query.toLowerCase())
+			? [{ type: 'command', data: { id: 'settings' } }]
+			: [])
 	];
 
 	$: filteredPrompts = prompts
@@ -128,7 +141,39 @@
 	</div>
 
 	{#each commandItems as item, commandIdx}
-		{#if item.data.id === 'compact'}
+		{#if item.data.id === 'temporary'}
+			<Tooltip content="Toggle temporary chat for this new chat." placement="top">
+				<button
+					type="button"
+					aria-label="Temporary: toggle temporary chat for this new chat."
+					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-xs text-left transition-colors duration-75
+						{commandIdx === selectedIdx ? 'app-interactive-active' : ''}"
+					on:mousedown={(e) => e.preventDefault()}
+					on:click={() => {
+						onSelect(item);
+					}}
+					on:mouseenter={() => {
+						selectedIdx = commandIdx;
+					}}
+					on:focus={() => {}}
+					data-selected={commandIdx === selectedIdx}
+				>
+					<span class="app-icon-muted flex items-center justify-center w-4 shrink-0">
+						{#if temporaryEnabled}
+							<ChatBubbleDottedChecked className="size-3.5" strokeWidth="1.6" />
+						{:else}
+							<ChatBubbleDotted className="size-3.5" strokeWidth="1.6" />
+						{/if}
+					</span>
+					<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
+						<span class="truncate">Temporary</span>
+						<span class="app-muted text-[0.625rem] truncate shrink-0">
+							{temporaryEnabled ? 'On' : 'Off'}
+						</span>
+					</span>
+				</button>
+			</Tooltip>
+		{:else if item.data.id === 'compact'}
 			<Tooltip content="Shorten older messages so this chat can keep going." placement="top">
 				<button
 					type="button"
@@ -291,6 +336,32 @@
 					<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
 						<span class="truncate">Model</span>
 						<span class="app-muted text-[0.625rem] truncate shrink-0">/model</span>
+					</span>
+				</button>
+			</Tooltip>
+		{:else if item.data.id === 'settings'}
+			<Tooltip content="Open settings." placement="top">
+				<button
+					type="button"
+					aria-label="Settings: open settings."
+					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-xs text-left transition-colors duration-75
+						{commandIdx === selectedIdx ? 'app-interactive-active' : ''}"
+					on:mousedown={(e) => e.preventDefault()}
+					on:click={() => {
+						onSelect(item);
+					}}
+					on:mouseenter={() => {
+						selectedIdx = commandIdx;
+					}}
+					on:focus={() => {}}
+					data-selected={commandIdx === selectedIdx}
+				>
+					<span class="app-icon-muted flex items-center justify-center w-4 shrink-0">
+						<Knobs className="size-3.5" />
+					</span>
+					<span class="flex-1 min-w-0 flex items-baseline gap-1.5 overflow-hidden">
+						<span class="truncate">Settings</span>
+						<span class="app-muted text-[0.625rem] truncate shrink-0">/settings</span>
 					</span>
 				</button>
 			</Tooltip>

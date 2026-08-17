@@ -13,10 +13,12 @@ log = logging.getLogger(__name__)
 # A dictionary to keep track of active tasks
 tasks: dict[str, asyncio.Task] = {}
 item_tasks = {}
+response_streams: dict[str, dict] = {}
 
 
 REDIS_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks'
 REDIS_ITEM_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks:item'
+REDIS_RESPONSE_STREAMS_KEY = f'{REDIS_KEY_PREFIX}:tasks:response_streams'
 REDIS_PUBSUB_CHANNEL = f'{REDIS_KEY_PREFIX}:tasks:commands'
 
 
@@ -55,6 +57,7 @@ async def redis_save_task(redis: Redis, task_id: str, item_id: str | None):
 async def redis_cleanup_task(redis: Redis, task_id: str, item_id: str | None):
     pipe = redis.pipeline()
     pipe.hdel(REDIS_TASKS_KEY, task_id)
+    pipe.hdel(REDIS_RESPONSE_STREAMS_KEY, task_id)
     if item_id:
         pipe.srem(f'{REDIS_ITEM_TASKS_KEY}:{item_id}', task_id)
         await pipe.execute()
@@ -91,6 +94,7 @@ async def cleanup_task(redis, task_id: str, id=None):
         await redis_cleanup_task(redis, task_id, id)
 
     tasks.pop(task_id, None)  # Remove the task if it exists
+    response_streams.pop(task_id, None)
 
     # If an ID is provided, remove the task from the item_tasks dictionary
     if id and task_id in item_tasks.get(id, []):
@@ -138,6 +142,63 @@ async def list_task_ids_by_item_id(redis, id):
     if redis:
         return await redis_list_item_tasks(redis, id)
     return item_tasks.get(id, [])
+
+
+async def save_response_stream(
+    redis,
+    task_id: str | None,
+    chat_id: str | None,
+    message_id: str | None,
+    content: str,
+    output: list,
+):
+    if not task_id or not chat_id or not message_id:
+        return
+
+    data = {
+        'chat_id': chat_id,
+        'message_id': message_id,
+        'content': content,
+        'output': output,
+    }
+
+    if redis:
+        await redis.hset(REDIS_RESPONSE_STREAMS_KEY, task_id, JSONCodec.dumps(data))
+    else:
+        response_streams[task_id] = data
+
+
+async def get_response_streams_by_chat_id(redis, chat_id: str) -> list[dict]:
+    task_ids = await list_task_ids_by_item_id(redis, chat_id)
+    if not task_ids:
+        return []
+
+    if redis:
+        values = await redis.hmget(REDIS_RESPONSE_STREAMS_KEY, task_ids)
+        streams = []
+        for value in values:
+            if not value:
+                continue
+            try:
+                data = JSONCodec.loads(value)
+            except Exception:
+                continue
+            if data.get('chat_id') == chat_id:
+                streams.append(data)
+        return streams
+
+    return [
+        stream for task_id in task_ids if (stream := response_streams.get(task_id)) and stream.get('chat_id') == chat_id
+    ]
+
+
+async def clear_response_stream(redis, task_id: str | None):
+    if not task_id:
+        return
+    if redis:
+        await redis.hdel(REDIS_RESPONSE_STREAMS_KEY, task_id)
+    else:
+        response_streams.pop(task_id, None)
 
 
 async def stop_task(redis, task_id: str):

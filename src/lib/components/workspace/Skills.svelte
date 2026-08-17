@@ -21,7 +21,7 @@
 		deleteSkillById,
 		toggleSkillById
 	} from '$lib/apis/skills';
-	import { capitalizeFirstLetter, parseFrontmatter, formatSkillName } from '$lib/utils';
+	import { capitalizeFirstLetter, parseFrontmatter, formatSkillName, slugify } from '$lib/utils';
 	import TagInput from '$lib/components/common/Tags/TagInput.svelte';
 
 	import Tooltip from '../common/Tooltip.svelte';
@@ -306,7 +306,7 @@
 							const displayName = formatSkillName(rawName);
 							sessionStorage.skill = JSON.stringify({
 								name: displayName,
-								id: fm.name || '',
+								id: slugify(rawName),
 								description: fm.description || '',
 								content: mdContent,
 								is_active: true,

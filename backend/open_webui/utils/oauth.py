@@ -1519,8 +1519,8 @@ class OAuthManager:
             oauth_allowed_roles = auth_config.OAUTH_ALLOWED_ROLES
             oauth_admin_roles = auth_config.OAUTH_ADMIN_ROLES
             oauth_roles = []
-            # Default/fallback role if no matching roles are found
-            role = auth_config.DEFAULT_USER_ROLE
+            # Keep existing users at their current role unless the provider sent roles.
+            role = user.role if user else auth_config.DEFAULT_USER_ROLE
 
             # Next block extracts the roles from the user data, accepting nested claims of any depth
             if oauth_claim and oauth_allowed_roles and oauth_admin_roles:
@@ -1585,7 +1585,34 @@ class OAuthManager:
 
         return role
 
-    async def update_user_groups(self, user, user_data, default_permissions, db=None):
+    async def update_user_role_from_oauth(
+        self,
+        request,
+        user,
+        user_data,
+        provider,
+        *,
+        db=None,
+    ):
+        determined_role = await self.get_user_role(user, user_data)
+        if user.role == determined_role:
+            return user
+
+        updated_user = await Users.update_user_role_by_id(user.id, determined_role, db=db)
+        user = updated_user or user
+        user.role = determined_role
+        await publish_event(
+            request,
+            EVENTS.USER_ROLE_UPDATED,
+            actor=user,
+            subject_id=user.id,
+            source='oauth',
+            data={'role': determined_role, 'provider': provider},
+        )
+
+        return user
+
+    async def update_user_groups(self, request, user, user_data, default_permissions, db=None):
         auth_config = await get_oauth_runtime_config()
         log.debug('Running OAUTH Group management')
         oauth_claim = auth_config.OAUTH_GROUPS_CLAIM
@@ -1650,6 +1677,13 @@ class OAuthManager:
                             groups_created = True
                             # Add to local set to prevent duplicate creation attempts in this run
                             all_group_names.add(group_name)
+                            await publish_event(
+                                request,
+                                EVENTS.GROUP_CREATED,
+                                subject_id=created_group.id,
+                                source='oauth',
+                                data={'name': created_group.name},
+                            )
                         else:
                             log.error(f"Failed to create group '{group_name}' via OAuth.")
                     except Exception as e:
@@ -1674,7 +1708,15 @@ class OAuthManager:
             ):
                 # Remove group from user
                 log.debug('Removing user from group %s as it is no longer in their oauth groups', group_model.name)
-                await Groups.remove_users_from_group(group_model.id, [user.id], db=db)
+                if await Groups.remove_users_from_group(group_model.id, [user.id], db=db):
+                    await publish_event(
+                        request,
+                        EVENTS.GROUP_MEMBER_REMOVED,
+                        actor=user,
+                        subject_id=group_model.id,
+                        source='oauth',
+                        data={'user_ids': [user.id]},
+                    )
 
                 # In case a group is created, but perms are never assigned to the group by hitting "save"
                 group_permissions = group_model.permissions
@@ -1703,7 +1745,15 @@ class OAuthManager:
                 # Add user to group
                 log.debug('Adding user to group %s as it was found in their oauth groups', group_model.name)
 
-                await Groups.add_users_to_group(group_model.id, [user.id], db=db)
+                if await Groups.add_users_to_group(group_model.id, [user.id], db=db):
+                    await publish_event(
+                        request,
+                        EVENTS.GROUP_MEMBER_ADDED,
+                        actor=user,
+                        subject_id=group_model.id,
+                        source='oauth',
+                        data={'user_ids': [user.id]},
+                    )
 
                 # In case a group is created, but perms are never assigned to the group by hitting "save"
                 group_permissions = group_model.permissions
@@ -1940,29 +1990,26 @@ class OAuthManager:
                         await Users.update_user_oauth_by_id(user.id, provider, sub, db=db)
 
             if user:
-                determined_role = await self.get_user_role(user, user_data)
-                if user.role != determined_role:
-                    updated_user = await Users.update_user_role_by_id(user.id, determined_role, db=db)
-                    # Update the user object in memory as well,
-                    # to avoid problems with the ENABLE_OAUTH_GROUP_MANAGEMENT check below
-                    user.role = determined_role
-                    await publish_event(
-                        request,
-                        EVENTS.USER_ROLE_UPDATED,
-                        actor=updated_user or user,
-                        subject_id=user.id,
-                        source='oauth',
-                        data={'role': determined_role, 'provider': provider},
-                    )
+                user = await self.update_user_role_from_oauth(
+                    request=request,
+                    user=user,
+                    user_data=user_data,
+                    provider=provider,
+                    db=db,
+                )
+
+                updated_fields = []
 
                 if auth_config.OAUTH_UPDATE_NAME_ON_LOGIN:
                     username_claim = auth_config.OAUTH_USERNAME_CLAIM
                     if username_claim:
                         new_name = user_data.get(username_claim)
                         if new_name and new_name != user.name:
-                            await Users.update_user_by_id(user.id, {'name': new_name}, db=db)
-                            user.name = new_name
-                            log.debug('Updated name for user %s', user.email)
+                            updated_user = await Users.update_user_by_id(user.id, {'name': new_name}, db=db)
+                            if updated_user:
+                                user = updated_user
+                                updated_fields.append('name')
+                                log.debug('Updated name for user %s', user.email)
 
                 if auth_config.OAUTH_UPDATE_EMAIL_ON_LOGIN:
                     email_claim = auth_config.OAUTH_EMAIL_CLAIM
@@ -1974,9 +2021,9 @@ class OAuthManager:
                                 log.error(
                                     f'Cannot update email to {new_email} for user {user.id} because it is already taken.'
                                 )
-                            else:
-                                await Auths.update_email_by_id(user.id, new_email.lower(), db=db)
-                                user.email = new_email.lower()
+                            elif await Auths.update_email_by_id(user.id, new_email.lower(), db=db):
+                                user = await Users.get_user_by_id(user.id, db=db) or user
+                                updated_fields.append('email')
                                 log.debug('Updated email for user %s', user.id)
 
                 # Update profile picture if enabled and different from current
@@ -1991,8 +2038,23 @@ class OAuthManager:
                             new_picture_url, token.get('access_token')
                         )
                         if processed_picture_url != user.profile_image_url:
-                            await Users.update_user_profile_image_url_by_id(user.id, processed_picture_url, db=db)
-                            log.debug('Updated profile picture for user %s', user.email)
+                            updated_user = await Users.update_user_profile_image_url_by_id(
+                                user.id, processed_picture_url, db=db
+                            )
+                            if updated_user:
+                                user = updated_user
+                                updated_fields.append('profile_image_url')
+                                log.debug('Updated profile picture for user %s', user.email)
+
+                if updated_fields:
+                    await publish_event(
+                        request,
+                        EVENTS.USER_UPDATED,
+                        actor=user,
+                        subject_id=user.id,
+                        source='oauth',
+                        data={'updated_fields': updated_fields, 'provider': provider},
+                    )
             else:
                 # If the user does not exist, check if signups are enabled
                 if auth_config.ENABLE_OAUTH_SIGNUP:
@@ -2060,6 +2122,7 @@ class OAuthManager:
             )
             if auth_config.ENABLE_OAUTH_GROUP_MANAGEMENT:
                 await self.update_user_groups(
+                    request=request,
                     user=user,
                     user_data=user_data,
                     default_permissions=await Config.get('user.permissions'),
@@ -2097,6 +2160,16 @@ class OAuthManager:
             samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
             secure=WEBUI_AUTH_COOKIE_SECURE,
             **({'max_age': cookie_max_age} if cookie_max_age is not None else {}),
+        )
+
+        await publish_event(
+            request,
+            EVENTS.AUTH_LOGIN,
+            actor=user,
+            subject_id=user.id,
+            subject_type='user',
+            source='oauth',
+            data={'auth_method': 'oauth', 'provider': provider},
         )
 
         # Legacy cookies for compatibility with older frontend versions

@@ -490,19 +490,19 @@ async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
 
 
 class OpenAIConfigForm(BaseModel):
-    url: str
-    key: str
+    url: str | None = None
+    key: str | None = None
 
 
 class OllamaConfigForm(BaseModel):
-    url: str
-    key: str
+    url: str | None = None
+    key: str | None = None
 
 
 class AzureOpenAIConfigForm(BaseModel):
-    url: str
-    key: str
-    version: str
+    url: str | None = None
+    key: str | None = None
+    version: str | None = None
 
 
 class EmbeddingModelUpdateForm(BaseModel):
@@ -544,23 +544,18 @@ async def update_embedding_config(request: Request, form_data: EmbeddingModelUpd
         config.ENABLE_ASYNC_EMBEDDING = form_data.ENABLE_ASYNC_EMBEDDING
         config.RAG_EMBEDDING_CONCURRENT_REQUESTS = form_data.RAG_EMBEDDING_CONCURRENT_REQUESTS
 
-        if config.RAG_EMBEDDING_ENGINE in [
-            'ollama',
-            'openai',
-            'azure_openai',
-        ]:
-            if form_data.openai_config is not None:
-                config.RAG_OPENAI_API_BASE_URL = form_data.openai_config.url
-                config.RAG_OPENAI_API_KEY = form_data.openai_config.key
+        if config.RAG_EMBEDDING_ENGINE == 'openai' and form_data.openai_config is not None:
+            config.RAG_OPENAI_API_BASE_URL = form_data.openai_config.url or ''
+            config.RAG_OPENAI_API_KEY = form_data.openai_config.key or ''
 
-            if form_data.ollama_config is not None:
-                config.RAG_OLLAMA_BASE_URL = form_data.ollama_config.url
-                config.RAG_OLLAMA_API_KEY = form_data.ollama_config.key
+        if config.RAG_EMBEDDING_ENGINE == 'ollama' and form_data.ollama_config is not None:
+            config.RAG_OLLAMA_BASE_URL = form_data.ollama_config.url or ''
+            config.RAG_OLLAMA_API_KEY = form_data.ollama_config.key or ''
 
-            if form_data.azure_openai_config is not None:
-                config.RAG_AZURE_OPENAI_BASE_URL = form_data.azure_openai_config.url
-                config.RAG_AZURE_OPENAI_API_KEY = form_data.azure_openai_config.key
-                config.RAG_AZURE_OPENAI_API_VERSION = form_data.azure_openai_config.version
+        if config.RAG_EMBEDDING_ENGINE == 'azure_openai' and form_data.azure_openai_config is not None:
+            config.RAG_AZURE_OPENAI_BASE_URL = form_data.azure_openai_config.url or ''
+            config.RAG_AZURE_OPENAI_API_KEY = form_data.azure_openai_config.key or ''
+            config.RAG_AZURE_OPENAI_API_VERSION = form_data.azure_openai_config.version or ''
 
         request.app.state.ef = get_ef(
             config.RAG_EMBEDDING_ENGINE,
@@ -1998,7 +1993,7 @@ async def process_file(
             hash = calculate_sha256_string(text_content)
 
             if config.BYPASS_EMBEDDING_AND_RETRIEVAL:
-                await Files.update_file_data_by_id(file.id, {'status': 'completed'}, db=db)
+                await Files.update_file_data_by_id(file.id, {'status': 'completed', 'error': None}, db=db)
                 await Files.update_file_hash_by_id(file.id, hash, db=db)
                 await publish_event(
                     request,
@@ -2057,7 +2052,7 @@ async def process_file(
 
                             await Files.update_file_data_by_id(
                                 file.id,
-                                {'status': 'completed'},
+                                {'status': 'completed', 'error': None},
                                 db=session,
                             )
                             await Files.update_file_hash_by_id(file.id, hash, db=session)
@@ -2087,11 +2082,24 @@ async def process_file(
             async with get_async_db() as session:
                 await Files.update_file_data_by_id(
                     file.id,
-                    {'status': 'failed'},
+                    {'status': 'failed', 'error': str(e)},
                     db=session,
                 )
                 # Clear the hash so the file can be re-uploaded after fixing the issue
                 await Files.update_file_hash_by_id(file.id, None, db=session)
+
+            await publish_event(
+                request,
+                EVENTS.RETRIEVAL_CONTENT_PROCESS_FAILED,
+                actor=user,
+                subject_id=file.id,
+                subject_type='file',
+                data={
+                    'collection_name': collection_name,
+                    'filename': file.filename,
+                    'message': f'{file.filename}: {e}',
+                },
+            )
 
             if 'No pandoc was found' in str(e):
                 raise HTTPException(
@@ -2397,6 +2405,7 @@ async def process_web(
                 'status': True,
                 'collection_name': collection_name,
                 'filename': form_data.url,
+                'content': content,
                 'file': {
                     'data': {
                         'content': content,

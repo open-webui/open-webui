@@ -103,11 +103,12 @@ async def _emit_note_updated(request: Request, user: dict, note) -> None:
 
 async def _has_read_access_to_file(
     file,
-    user_id: str,
-    user_role: str,
+    user: dict,
     model_knowledge: Optional[list[dict]] = None,
 ) -> bool:
     """Check if a user can read a file via ownership, admin role, model attachment, or access grants."""
+    user_id = user.get('id')
+    user_role = user.get('role', 'user')
     if file.user_id == user_id or user_role == 'admin':
         return True
     if model_knowledge and any(item.get('type') == 'file' and item.get('id') == file.id for item in model_knowledge):
@@ -117,7 +118,7 @@ async def _has_read_access_to_file(
     return await has_access_to_file(
         file_id=file.id,
         access_type='read',
-        user=UserModel(**{'id': user_id, 'role': user_role}),
+        user=UserModel(**user),
     )
 
 
@@ -496,6 +497,120 @@ async def edit_image(
     except Exception as e:
         log.exception(f'edit_image error: {e}')
         return JSONCodec.dumps({'error': str(e)})
+
+
+# =============================================================================
+# USER INPUT TOOLS
+# =============================================================================
+
+
+async def ask_user(
+    questions: list[dict],
+    allow_other: bool = True,
+    timeout_ms: int = 120_000,
+    __event_call__: callable = None,
+) -> str:
+    """
+    Ask the user clarifying questions before continuing.
+    Use this when the next step depends on user intent, preference, or a tradeoff that cannot be inferred safely.
+
+    :param questions: 1-3 question objects, each with id, header, question, and 2-3 options. Each option needs label and description.
+    :param allow_other: Whether users may enter a free-form answer instead of choosing one of the options
+    :param timeout_ms: How long the browser should keep the prompt open before cancelling it
+    :return: JSON with status and answers keyed by question id
+    """
+    try:
+        if not isinstance(questions, list) or not 1 <= len(questions) <= 3:
+            raise ValueError('ask_user requires 1-3 questions.')
+
+        normalized_questions = []
+        seen_ids = set()
+        for index, question in enumerate(questions):
+            if not isinstance(question, dict):
+                raise ValueError('Each question must be an object.')
+
+            question_id = str(question.get('id') or '').strip()[:64]
+            if not question_id:
+                raise ValueError('Each question requires a non-empty id.')
+            if question_id in seen_ids:
+                raise ValueError(f'Duplicate question id: {question_id}')
+            seen_ids.add(question_id)
+
+            options = question.get('options')
+            if not isinstance(options, list) or not 2 <= len(options) <= 3:
+                raise ValueError('Each question requires 2-3 options.')
+
+            normalized_options = []
+            for option in options:
+                if not isinstance(option, dict):
+                    raise ValueError('Each option must be an object.')
+
+                label = str(option.get('label') or '').strip()[:80]
+                description = str(option.get('description') or '').strip()[:240]
+                if not label or not description:
+                    raise ValueError('Each option requires a label and description.')
+
+                normalized_options.append(
+                    {
+                        'label': label,
+                        'description': description,
+                    }
+                )
+
+            question_text = str(question.get('question') or '').strip()[:500]
+            if not question_text:
+                raise ValueError('Each question requires question text.')
+
+            normalized_questions.append(
+                {
+                    'id': question_id,
+                    'header': str(question.get('header') or '').strip()[:48] or f'Question {index + 1}',
+                    'question': question_text,
+                    'options': normalized_options,
+                    'allow_other': bool(question.get('allow_other', allow_other)),
+                }
+            )
+
+        if isinstance(timeout_ms, bool) or not isinstance(timeout_ms, int) or not 60_000 <= timeout_ms <= 240_000:
+            timeout_ms = 120_000
+
+        if __event_call__ is None:
+            return JSONCodec.dumps(
+                {
+                    'status': 'error',
+                    'error': 'User input requires an active browser session with WebSocket connection.',
+                },
+                ensure_ascii=False,
+            )
+
+        output = await __event_call__(
+            {
+                'type': 'request:user_input',
+                'data': {
+                    'questions': normalized_questions,
+                    'allow_other': allow_other,
+                    'timeout_ms': timeout_ms,
+                },
+            }
+        )
+
+        if not isinstance(output, dict):
+            return JSONCodec.dumps({'status': 'error', 'error': 'Invalid user input response.'}, ensure_ascii=False)
+        if output.get('error'):
+            return JSONCodec.dumps({'status': 'error', 'error': output.get('error')}, ensure_ascii=False)
+        if output.get('status') == 'cancelled':
+            return JSONCodec.dumps({'status': 'cancelled', 'answers': {}}, ensure_ascii=False)
+
+        return JSONCodec.dumps(
+            {
+                'status': 'answered',
+                'answers': output.get('answers', {}),
+            },
+            ensure_ascii=False,
+        )
+    except Exception as e:
+        log.exception(f'ask_user error: {e}')
+        return JSONCodec.dumps({'status': 'error', 'error': str(e)}, ensure_ascii=False)
 
 
 # =============================================================================
@@ -2200,8 +2315,6 @@ async def _get_accessible_chat_files(
 ) -> list[tuple[dict, object]]:
     from open_webui.models.files import Files
 
-    user_id = user.get('id')
-    user_role = user.get('role', 'user')
     accessible = []
     seen = set()
 
@@ -2223,7 +2336,7 @@ async def _get_accessible_chat_files(
         seen.add(fid)
 
         file = await Files.get_file_by_id(fid)
-        if file and await _has_read_access_to_file(file, user_id, user_role):
+        if file and await _has_read_access_to_file(file, user):
             accessible.append((normalized, file))
 
     return accessible
@@ -2445,10 +2558,7 @@ async def query_chat_files(
         if not embedding_function and not full_context:
             return JSONCodec.dumps({'error': 'Embedding function not configured'})
 
-        user_model = UserModel.model_construct(
-            id=__user__.get('id'),
-            role=__user__.get('role', 'user'),
-        )
+        user_model = UserModel(**__user__)
         sources = await get_sources_from_items(
             request=__request__,
             items=file_items,
@@ -2541,7 +2651,7 @@ async def grep_knowledge_files(
             # Single file mode — verify access
             file = await Files.get_file_by_id(file_id)
             if file:
-                if not await _has_read_access_to_file(file, user_id, user_role, __model_knowledge__):
+                if not await _has_read_access_to_file(file, __user__, __model_knowledge__):
                     return JSONCodec.dumps({'error': 'File not found'})
                 files_to_search.append(file)
         elif __model_knowledge__:
@@ -2663,14 +2773,11 @@ async def view_file(
     try:
         from open_webui.models.files import Files
 
-        user_id = __user__.get('id')
-        user_role = __user__.get('role', 'user')
-
         file = await Files.get_file_by_id(file_id)
         if not file:
             return JSONCodec.dumps({'error': 'File not found'})
 
-        if not await _has_read_access_to_file(file, user_id, user_role, __model_knowledge__):
+        if not await _has_read_access_to_file(file, __user__, __model_knowledge__):
             return JSONCodec.dumps({'error': 'File not found'})
 
         content = ''
@@ -3078,7 +3185,7 @@ async def query_knowledge_files(
         embedding_function = getattr(__request__.app.state, 'EMBEDDING_FUNCTION', None)
         if not embedding_function:
             return JSONCodec.dumps({'error': 'Embedding function not configured'})
-        user_model = UserModel.model_construct(id=user_id, role=user_role)
+        user_model = UserModel(**__user__)
 
         collection_names = []
         external_knowledges = []
@@ -3272,7 +3379,7 @@ async def query_knowledge_bases(
         embedding_function = getattr(__request__.app.state, 'EMBEDDING_FUNCTION', None)
         if not embedding_function:
             return JSONCodec.dumps({'error': 'Embedding function not configured'})
-        user_model = UserModel.model_construct(id=user_id, role=__user__.get('role', 'user'))
+        user_model = UserModel(**__user__)
         query_embedding = await embedding_function(query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user_model)
 
         # Min-heap of (distance, knowledge_base_id) - only holds top `count` results
@@ -3602,7 +3709,7 @@ async def create_automation(
         return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import AutomationData, AutomationForm, Automations
+        from open_webui.models.automations import AutomationData, AutomationForm, AutomationTarget, Automations
         from open_webui.models.users import Users
         from open_webui.routers.automations import check_automation_limits
         from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
@@ -3644,6 +3751,11 @@ async def create_automation(
                 prompt=prompt,
                 model_id=model_id,
                 rrule=rrule,
+                target=(
+                    AutomationTarget(type='channel', channel_id=metadata.get('chat_id', '').removeprefix('channel:'))
+                    if metadata.get('chat_id', '').startswith('channel:')
+                    else None
+                ),
             ),
             is_active=True,
         )
@@ -3657,6 +3769,7 @@ async def create_automation(
                 'name': automation.name,
                 'folder_id': automation.folder_id,
                 'model_id': model_id,
+                'target': automation.data.get('target'),
                 'is_active': automation.is_active,
                 'next_runs': await next_n_runs_ns(rrule, tz=tz),
             },
@@ -3673,7 +3786,7 @@ async def update_automation(
     prompt: Optional[str] = None,
     rrule: Optional[str] = None,
     model_id: Optional[str] = None,
-    folder_id: Optional[str] = None,
+    folder_id: Optional[str] = '',
     __request__: Request = None,
     __user__: dict = None,
 ) -> str:
@@ -3684,8 +3797,8 @@ async def update_automation(
     :param name: New name for the automation (optional)
     :param prompt: New prompt/instructions (optional)
     :param rrule: New iCalendar RRULE schedule string (optional). See create_automation for format examples.
-    :param model_id: New model ID to use (optional)
-    :param folder_id: New owner-owned folder ID (optional); pass an empty string to clear
+    :param model_id: New model ID to use (optional); blank values are ignored
+    :param folder_id: New owner-owned folder ID (optional); omit or pass blank to keep unchanged, pass null to clear
     :return: JSON with the updated automation details
     """
     if __request__ is None:
@@ -3695,7 +3808,7 @@ async def update_automation(
         return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import AutomationData, AutomationForm, Automations
+        from open_webui.models.automations import AutomationData, AutomationForm, AutomationTarget, Automations
         from open_webui.models.users import Users
         from open_webui.routers.automations import check_automation_limits
         from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
@@ -3714,13 +3827,15 @@ async def update_automation(
         # Merge provided fields with existing values
         new_name = name if name is not None else automation.name
         new_prompt = prompt if prompt is not None else automation.data.get('prompt', '')
-        new_model_id = model_id if model_id is not None else automation.data.get('model_id', '')
+        new_model_id = model_id.strip() if model_id and model_id.strip() else automation.data.get('model_id', '')
         new_rrule = rrule if rrule is not None else automation.data.get('rrule', '')
         if folder_id is None:
+            new_folder_id = None
+        elif not folder_id.strip():
             new_folder_id = automation.folder_id
         else:
             try:
-                new_folder_id = await _validate_owned_automation_folder(user_id, folder_id)
+                new_folder_id = await _validate_owned_automation_folder(user_id, folder_id.strip())
             except ValueError as e:
                 return JSONCodec.dumps({'error': str(e)})
 
@@ -3744,6 +3859,7 @@ async def update_automation(
                 prompt=new_prompt,
                 model_id=new_model_id,
                 rrule=new_rrule,
+                target=AutomationTarget(**automation.data['target']) if automation.data.get('target') else None,
             ),
             is_active=automation.is_active,
         )
@@ -3757,6 +3873,7 @@ async def update_automation(
                 'name': updated.name,
                 'folder_id': updated.folder_id,
                 'model_id': new_model_id,
+                'target': updated.data.get('target'),
                 'is_active': updated.is_active,
                 'next_runs': await next_n_runs_ns(new_rrule, tz=tz),
             },
@@ -3822,6 +3939,7 @@ async def list_automations(
                     'folder_id': item.folder_id,
                     'prompt_snippet': snippet,
                     'model_id': item.data.get('model_id', ''),
+                    'target': item.data.get('target'),
                     'rrule': rrule,
                     'is_active': item.is_active,
                     'last_run_at': item.last_run_at,
@@ -3940,6 +4058,9 @@ async def delete_automation(
 # =============================================================================
 
 
+MAX_CALENDAR_RANGE_END_NS = 2**63 - 1
+
+
 def _get_user_tz(user_dict: dict):
     """Get the user's timezone as a ZoneInfo, falling back to UTC."""
     from zoneinfo import ZoneInfo
@@ -4039,11 +4160,7 @@ async def search_calendar_events(
                 return JSONCodec.dumps({'error': f'Invalid start datetime: {e}'})
 
             try:
-                end_ns = (
-                    _dt_to_ns(end, tz)
-                    if end
-                    else int(time.time() * 1_000) * 1_000_000 + 365 * 86400 * 1_000_000_000_000
-                )
+                end_ns = _dt_to_ns(end, tz) if end else MAX_CALENDAR_RANGE_END_NS
             except (ValueError, TypeError) as e:
                 return JSONCodec.dumps({'error': f'Invalid end datetime: {e}'})
 
@@ -4308,16 +4425,17 @@ async def update_calendar_event(
             if reminder_minutes is not None:
                 meta = {'alert_minutes': reminder_minutes}
 
-        form = CalendarEventUpdateForm(
-            title=title,
-            description=description,
-            start_at=start_ns,
-            end_at=end_ns,
-            all_day=all_day,
-            location=location,
-            is_cancelled=is_cancelled,
-            meta=meta,
-        )
+        update_fields = {
+            'title': title,
+            'description': description,
+            'start_at': start_ns,
+            'end_at': end_ns,
+            'all_day': all_day,
+            'location': location,
+            'is_cancelled': is_cancelled,
+            'meta': meta,
+        }
+        form = CalendarEventUpdateForm(**{k: v for k, v in update_fields.items() if v is not None})
 
         updated = await CalendarEvents.update_event_by_id(event_id, form)
         if not updated:

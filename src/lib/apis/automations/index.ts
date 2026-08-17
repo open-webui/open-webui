@@ -5,11 +5,17 @@ export type AutomationTerminalConfig = {
 	cwd?: string;
 };
 
+export type AutomationTarget = {
+	type: 'chat' | 'channel';
+	channel_id?: string | null;
+};
+
 export type AutomationData = {
 	prompt: string;
 	model_id: string;
 	rrule: string;
 	terminal?: AutomationTerminalConfig;
+	target?: AutomationTarget | null;
 };
 
 export type AutomationForm = {

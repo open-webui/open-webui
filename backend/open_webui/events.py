@@ -411,6 +411,11 @@ class EventDefinitions(BaseModel):
         description='Retrieval content was processed.',
         message='Retrieval Content processed',
     )
+    RETRIEVAL_CONTENT_PROCESS_FAILED: EventDefinition = EventDefinition(
+        name='retrieval.content.process_failed',
+        description='Retrieval content processing failed.',
+        message='Retrieval Content process failed',
+    )
     RETRIEVAL_COLLECTION_DELETED: EventDefinition = EventDefinition(
         name='retrieval.collection.deleted',
         description='A retrieval collection was deleted.',
@@ -666,6 +671,7 @@ NOTIFICATION_EVENTS = (
     EVENTS.CHAT_FAILED.name,
     EVENTS.CHANNEL_MESSAGE.name,
     EVENTS.CALENDAR_ALERT.name,
+    EVENTS.RETRIEVAL_CONTENT_PROCESS_FAILED.name,
 )
 
 
