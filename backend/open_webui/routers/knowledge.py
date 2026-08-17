@@ -645,10 +645,7 @@ async def _count_external_connection_mappings(connection_id: str, db: Optional[A
 
 
 @router.get('/external/connections', response_model=ExternalKnowledgeConnectionListResponse)
-async def get_external_knowledge_connections(
-    user=Depends(get_admin_user),
-    db: AsyncSession = Depends(get_async_session),
-):
+async def get_external_knowledge_connections(user=Depends(get_admin_user)):
     connections = [_sanitize_external_connection(connection) for connection in await _get_external_connections()]
     return ExternalKnowledgeConnectionListResponse(items=connections, total=len(connections))
 
@@ -678,7 +675,6 @@ async def create_external_knowledge_connection(
 async def get_external_knowledge_connection(
     id: str,
     user=Depends(get_admin_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
     connection = await _get_external_connection(id)
     if not connection:
@@ -745,7 +741,6 @@ async def delete_external_knowledge_connection(
 async def test_external_knowledge_connection(
     id: str,
     user=Depends(get_admin_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
     connection = await _get_external_connection(id)
     if not connection:
@@ -843,7 +838,6 @@ async def test_external_knowledge_retrieval(
     id: str,
     form_data: ExternalKnowledgeRetrieveTestForm,
     user=Depends(get_admin_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
     connection = await _get_external_connection(id)
     if not connection:
