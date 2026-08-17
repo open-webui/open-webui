@@ -41,6 +41,7 @@ from open_webui.utils.auth import (
     get_admin_user,
     get_password_hash,
     get_verified_user,
+    revoke_user_tokens,
     validate_password,
 )
 from open_webui.utils.chat_variables import ChatVariablesError, normalize_user_variables, validate_user_variables
@@ -964,7 +965,8 @@ async def update_user_by_id(
                 raise HTTPException(400, detail=str(e))
 
             hashed = await get_password_hash(form_data.password)
-            await Auths.update_user_password_by_id(user_id, hashed, db=db)
+            if await Auths.update_user_password_by_id(user_id, hashed, db=db):
+                await revoke_user_tokens(request, user_id)
 
         # Build update dict from only the provided fields
         update_data = {}

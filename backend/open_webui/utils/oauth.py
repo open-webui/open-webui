@@ -5,7 +5,6 @@ import hashlib
 import logging
 import re
 import sys
-import time
 import urllib
 import uuid
 from dataclasses import dataclass, field
@@ -73,7 +72,6 @@ from open_webui.env import (
     ENABLE_OAUTH_ID_TOKEN_COOKIE,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
     OAUTH_MAX_SESSIONS_PER_USER,
-    REDIS_KEY_PREFIX,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
 )
@@ -89,6 +87,7 @@ from open_webui.utils.auth import (
     get_password_hash,
     get_optional_verified_user_from_request,
     get_verified_user_by_id,
+    revoke_user_tokens,
 )
 from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration
@@ -2391,12 +2390,7 @@ class OAuthManager:
                 await OAuthSessions.delete_session_by_id(oauth_session.id, db=db)
 
             if redis:
-                revocation_key = f'{REDIS_KEY_PREFIX}:auth:user:{user.id}:revoked_at'
-                await redis.set(
-                    revocation_key,
-                    str(int(time.time())),
-                    ex=60 * 60 * 24 * 30,
-                )
+                await revoke_user_tokens(request, user.id)
                 revoked_count += 1
 
             log.info(

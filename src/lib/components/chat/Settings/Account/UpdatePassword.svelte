@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { updateUserPassword } from '$lib/apis/auths';
+	import { updateUserPassword, userSignOut } from '$lib/apis/auths';
+	import { user } from '$lib/stores';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	const i18n = getContext('i18n');
@@ -23,7 +24,20 @@
 			);
 
 			if (res) {
-				toast.success($i18n.t('Successfully updated.'));
+				// This session is no longer trusted once the password it was issued under changes
+				toast.success($i18n.t('Password updated. Please sign in again.'));
+
+				localStorage.removeItem('token');
+				user.set(null);
+
+				const signOutRes = await userSignOut().catch((error) => {
+					console.error(error);
+					return null;
+				});
+
+				if (signOutRes?.redirect_url) {
+					location.href = signOutRes.redirect_url;
+				}
 			}
 
 			currentPassword = '';
