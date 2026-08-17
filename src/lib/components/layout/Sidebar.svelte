@@ -31,6 +31,7 @@
 		loadNextChatListPage,
 		refreshChatList,
 		registerFolderRefreshHandler,
+		registerFoldersRefreshHandler,
 		setAllChatsRead,
 		setChatActive,
 		setChatReadAt
@@ -720,6 +721,7 @@
 
 			return Promise.all(Object.values(folderRegistry).map((folder) => folder?.setFolderItems?.()));
 		});
+		const unregisterFoldersRefreshHandler = registerFoldersRefreshHandler(initFolders);
 
 		await tick();
 		await initSidebarData();
@@ -744,6 +746,7 @@
 			socketInstance?.off('connect', refreshChatRows);
 
 			unregisterFolderRefreshHandler();
+			unregisterFoldersRefreshHandler();
 		};
 	});
 

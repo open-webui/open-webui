@@ -82,6 +82,23 @@ export const refreshFolderChatLists = async (
 	await Promise.all([...folderRefreshHandlers].map((handler) => handler(folderId, chat)));
 };
 
+// The folder tree itself (names, icons, nesting) is likewise sidebar state, rebuilt
+// by its own fetch. Handlers registered here let the folder page request that
+// rebuild after it renames, re-icons, creates, or deletes a folder.
+type FoldersRefreshHandler = () => unknown;
+const foldersRefreshHandlers = new Set<FoldersRefreshHandler>();
+
+export const registerFoldersRefreshHandler = (handler: FoldersRefreshHandler) => {
+	foldersRefreshHandlers.add(handler);
+	return () => {
+		foldersRefreshHandlers.delete(handler);
+	};
+};
+
+export const refreshFolders = async () => {
+	await Promise.all([...foldersRefreshHandlers].map((handler) => handler()));
+};
+
 export const loadNextChatListPage = async (token: string = ''): Promise<ChatListResult> => {
 	if (!paginationReady || allLoaded || loadingNextPage) {
 		return { accepted: false, allLoaded };
