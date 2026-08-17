@@ -145,10 +145,14 @@ async def build_tool_approval_resume_payload(chat_id: str, message_id: str, chat
 
     chat_data = chat.chat or {}
     message_meta = assistant_message.get('meta') if isinstance(assistant_message.get('meta'), dict) else {}
+    chat_params = chat_data.get('params') if isinstance(chat_data.get('params'), dict) else {}
     params = {
-        **(chat_data.get('params') or {}),
+        **chat_params,
         **(message_meta.get('params') if isinstance(message_meta.get('params'), dict) else {}),
     }
+    current_approval_mode = chat_params.get('tool_approval_mode')
+    if current_approval_mode in {'ask', 'full'}:
+        params['tool_approval_mode'] = current_approval_mode
     if 'tool_approval_mode' not in params:
         params['tool_approval_mode'] = 'ask'
 

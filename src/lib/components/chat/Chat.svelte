@@ -425,7 +425,7 @@
 			? 'ask'
 			: 'full';
 
-	const handleToolApprovalModeChange = async (mode) => {
+	const handleToolApprovalModeChange = async (mode: string) => {
 		const tool_approval_mode = mode === 'ask' ? 'ask' : 'full';
 		params = {
 			...params,
@@ -442,6 +442,54 @@
 		await updateUserSettings(localStorage.token, { ui: $settings }).catch((err) => {
 			console.error('[tool permissions settings]', err);
 		});
+
+		if ($chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
+			const res = await updateChatById(localStorage.token, $chatId, { params }).catch((err) => {
+				console.error('[tool permissions chat]', err);
+				return null;
+			});
+			if (res) chat = res;
+		}
+
+		if (tool_approval_mode === 'full') {
+			const messages = [...Object.values(history?.messages ?? {})].reverse() as any[];
+			for (const message of messages) {
+				const output = (Array.isArray(message?.output) ? message.output : []) as any[];
+				const resultCallIds = new Set(
+					output
+						.filter((item: any) => item?.type === 'function_call_output' && item?.call_id)
+						.map((item: any) => item.call_id)
+				);
+				const pendingCall = output.find((item: any) => {
+					const callId = item?.call_id ?? item?.id;
+					return (
+						item?.type === 'function_call' &&
+						item?.name !== 'ask_user' &&
+						(item?.status === 'pending' || item?.status === 'requires_approval') &&
+						callId &&
+						!resultCallIds.has(callId)
+					);
+				});
+				const callId = pendingCall?.call_id ?? pendingCall?.id;
+				if (!message?.id || !callId) {
+					continue;
+				}
+
+				const res = await resolveChatMessageToolCall(
+					localStorage.token,
+					$chatId,
+					message.id,
+					callId,
+					'approve'
+				).catch(async (error) => {
+					toast.error(`${error}`);
+					await loadChat();
+					return null;
+				});
+				if (res) onToolCallResolved(res);
+				break;
+			}
+		}
 	};
 
 	const parseToolArguments = (args) => {
