@@ -20,13 +20,18 @@ log = logging.getLogger(__name__)
 USER_GROUPS_PLACEHOLDERS = ('{{USER_GROUPS}}', '{{USER_GROUP_IDS}}')
 
 
+def _user_field(user: Optional[Any], field: str) -> str:
+    """Read an identity field from a user object that may only be partially populated."""
+    return str(getattr(user, field, '') or '').strip()
+
+
 def _mint_forward_user_jwt(user: Any) -> str:
     now = int(time.time())
     payload = {
-        'sub': str(user.id),
-        'email': str(user.email),
-        'name': str(user.name),
-        'role': str(user.role),
+        'sub': _user_field(user, 'id'),
+        'email': _user_field(user, 'email'),
+        'name': _user_field(user, 'name'),
+        'role': _user_field(user, 'role'),
         'iss': 'open-webui',
         'iat': now,
         'exp': now + FORWARD_USER_INFO_HEADER_JWT_EXPIRES_SECONDS,
@@ -55,10 +60,10 @@ def include_user_info_headers(headers: dict, user: Optional[Any] = None) -> dict
 
     return {
         **headers,
-        FORWARD_USER_INFO_HEADER_USER_NAME: quote(user.name.strip(), safe=' '),
-        FORWARD_USER_INFO_HEADER_USER_ID: user.id,
-        FORWARD_USER_INFO_HEADER_USER_EMAIL: user.email.strip(),
-        FORWARD_USER_INFO_HEADER_USER_ROLE: user.role,
+        FORWARD_USER_INFO_HEADER_USER_NAME: quote(_user_field(user, 'name'), safe=' '),
+        FORWARD_USER_INFO_HEADER_USER_ID: _user_field(user, 'id'),
+        FORWARD_USER_INFO_HEADER_USER_EMAIL: _user_field(user, 'email'),
+        FORWARD_USER_INFO_HEADER_USER_ROLE: _user_field(user, 'role'),
     }
 
 
@@ -121,10 +126,10 @@ def parse_custom_headers(
         '{{FILE_NAME}}': metadata.get('file_name', '') or '',
         '{{FILE_CONTENT_TYPE}}': metadata.get('file_content_type', '') or '',
         '{{TASK}}': metadata.get('task', '') or '',
-        '{{USER_ID}}': (user.id if user else '') or '',
-        '{{USER_NAME}}': (user.name.strip() if user else '') or '',
-        '{{USER_EMAIL}}': (user.email.strip() if user else '') or '',
-        '{{USER_ROLE}}': (user.role if user else '') or '',
+        '{{USER_ID}}': _user_field(user, 'id'),
+        '{{USER_NAME}}': _user_field(user, 'name'),
+        '{{USER_EMAIL}}': _user_field(user, 'email'),
+        '{{USER_ROLE}}': _user_field(user, 'role'),
         '{{USER_GROUPS}}': ','.join(group.name.strip() for group in user_groups) if user_groups else '',
         '{{USER_GROUP_IDS}}': ','.join(group.id for group in user_groups) if user_groups else '',
         '{{USER_AGENT}}': user_agent,
