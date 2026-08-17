@@ -2744,23 +2744,23 @@
 	};
 
 	const responseCompletionEventHandler = (data, message) => {
-		const output = Array.isArray(data?.output)
-			? data.output
-			: applyResponseStreamEvent(message.output ?? [], data);
-
-		const updatedMessage = {
-			...message,
-			output
-		};
+		message.output = applyResponseStreamEvent(message.output ?? [], data);
 
 		if (data?.type === 'response.output_text.delta') {
-			if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
-				navigator.vibrate(5);
+			const value = data.delta ?? '';
+			if (!(message.content == '' && value == '\n')) {
+				message.content += value;
+
+				if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
+					navigator.vibrate(5);
+				}
+				dispatchCallOverlayAudio(message);
 			}
-			dispatchCallOverlayAudio(updatedMessage);
+		} else if (data?.type === 'response.completed' || data?.type?.endsWith('.done')) {
+			message.content = getOutputText(message.output) || message.content;
 		}
 
-		history.messages[message.id] = updatedMessage;
+		history.messages[message.id] = message;
 		history = history;
 	};
 
