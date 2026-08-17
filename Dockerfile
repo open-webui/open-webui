@@ -162,6 +162,7 @@ RUN set -e; \
     fi; \
     fi; \
     mkdir -p /app/backend/data; chown -R $UID:$GID /app/backend/data/; \
+    if [ -d /app/backend/data/cache ]; then chmod -R a+rX /app/backend/data/cache; fi; \
     rm -rf /var/lib/apt/lists/*;
 
 # Optional: PPTX parsing through unstructured may need spaCy's English model.
