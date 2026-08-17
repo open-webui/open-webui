@@ -1847,8 +1847,6 @@ async def responses(
     # Enforce per-model access control
     await check_model_access(user, await Models.get_model_by_id(model_id), BYPASS_MODEL_ACCESS_CONTROL)
 
-    body = JSONCodec.dumps(payload)
-
     if model_id:
         models = request.app.state.OPENAI_MODELS
         if not models or model_id not in models:
@@ -1858,6 +1856,9 @@ async def responses(
             idx = models[model_id]['urlIdx']
 
     url, key, api_config = await get_openai_connection(idx)
+
+    payload['model'] = strip_provider_model_prefix(payload['model'], api_config.get('prefix_id'))
+    body = JSONCodec.dumps(payload)
 
     r = None
     streaming = False
