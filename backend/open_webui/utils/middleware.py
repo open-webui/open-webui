@@ -474,6 +474,23 @@ def deep_merge(target, source):
         return source
 
 
+RESPONSE_COMPLETION_RESPONSE_FIELDS = ('error', 'id', 'output', 'usage')
+
+
+def get_response_completion_event_data(event: dict) -> dict:
+    """Build the data payload for response:completion events."""
+    response = event.get('response')
+    if not isinstance(response, dict):
+        return event
+
+    response_data = {key: response[key] for key in RESPONSE_COMPLETION_RESPONSE_FIELDS if key in response}
+
+    return {
+        **event,
+        'response': response_data,
+    }
+
+
 def handle_responses_streaming_event(
     data: dict,
     current_output: list,
@@ -4559,7 +4576,7 @@ async def streaming_chat_response_handler(response, ctx):
                         await event_emitter(
                             {
                                 'type': 'response:completion',
-                                'data': response_data,
+                                'data': get_response_completion_event_data(response_data),
                             }
                         )
                         await save_current_response_stream(stream_output)
