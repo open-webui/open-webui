@@ -38,6 +38,7 @@ router = APIRouter()
 @router.get('/', response_model=list[SkillUserResponse])
 async def get_skills(
     request: Request,
+    query: Optional[str] = None,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -59,6 +60,10 @@ async def get_skills(
                 db=db,
             )
         ]
+
+    if query:
+        q = query.casefold()
+        skills = [skill for skill in skills if q in (skill.name or '').casefold()]
 
     return skills
 
