@@ -4,12 +4,11 @@ import logging
 from urllib.parse import urlparse
 
 import requests
+from open_webui.retrieval.loaders.microsoft_web_iq import DEFAULT_MICROSOFT_WEB_IQ_API_BASE_URL
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.utils.headers import include_user_info_headers
 
 log = logging.getLogger(__name__)
-
-DEFAULT_MICROSOFT_WEB_IQ_API_BASE_URL = 'https://api.microsoft.ai/v3'
 
 
 def search_microsoft_web_iq(
