@@ -3262,15 +3262,10 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
         if db_messages:
             assistant_message = await Chats.get_message_by_id_and_message_id(chat_id, message_id)
             if assistant_message:
-                db_messages.append(
-                    {
-                        k: v
-                        for k, v in assistant_message.items()
-                        if k in ('id', 'role', 'content', 'output', 'files', 'contextSummary', 'usage')
-                    }
-                )
+                db_messages.append({k: v for k, v in assistant_message.items() if k in PERSISTED_MESSAGE_KEYS})
             form_data['messages'] = process_messages_with_output(
                 db_messages,
+                model_id=model['id'],
                 reasoning_format=get_reasoning_format(model),
             )
             form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
