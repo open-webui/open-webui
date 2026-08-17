@@ -1248,7 +1248,6 @@ async def get_pending_knowledge_files(
     id: str,
     stream: bool = Query(False),
     user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
     """Return files that are being processed for this knowledge base but not yet linked.
 
@@ -1261,7 +1260,11 @@ async def get_pending_knowledge_files(
     When ``stream=true``, returns an SSE stream that polls every 3 seconds
     and emits the current pending file list.  Closes when no files remain.
     """
-    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
+    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
+    # Database operations manage their own short-lived sessions internally.
+    # Holding a session here would keep a connection for the entire stream
+    # (up to an hour) and exhaust the connection pool under concurrent load.
+    knowledge = await Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1276,7 +1279,6 @@ async def get_pending_knowledge_files(
             resource_type='knowledge',
             resource_id=knowledge.id,
             permission='read',
-            db=db,
         )
     ):
         raise HTTPException(
@@ -1285,7 +1287,7 @@ async def get_pending_knowledge_files(
         )
 
     if not stream:
-        return await Files.get_pending_files_for_knowledge(id, db=db)
+        return await Files.get_pending_files_for_knowledge(id)
 
     async def event_stream(knowledge_id: str):
         MAX_POLL_DURATION = 3600  # 1 hour max
