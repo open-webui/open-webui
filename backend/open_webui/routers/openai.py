@@ -861,7 +861,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 
 
 @router.get('/models')
-@router.get('/models/{url_idx}')
+@router.get('/models/{url_idx}', dependencies=[Depends(get_admin_user)])
 async def get_models(request: Request, url_idx: int | None = None, user=Depends(get_verified_user)):
     if not await Config.get('openai.enable'):
         raise HTTPException(status_code=503, detail='OpenAI API is disabled')
