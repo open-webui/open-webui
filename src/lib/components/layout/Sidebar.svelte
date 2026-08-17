@@ -1141,7 +1141,6 @@
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
 						<img
-							crossorigin="anonymous"
 							src="{WEBUI_BASE_URL}/static/favicon.png"
 							class="sidebar-new-chat-icon size-5 rounded-full"
 							alt=""

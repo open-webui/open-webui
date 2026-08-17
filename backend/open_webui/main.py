@@ -2943,7 +2943,7 @@ async def check_db_health():
 
 # --- static assets & files ---
 # Serve build-time static assets (CSS, JS, images, favicon, etc.)
-app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')
+app.mount('/static', CORSStaticFiles(directory=STATIC_DIR), name='static')
 
 
 @app.get('/cache/{path:path}')

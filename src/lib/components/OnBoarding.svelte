@@ -43,13 +43,7 @@
 			<!-- LICENSE covers this Open WebUI onboarding logo.
 			Do not alter, remove, obscure, or replace it except as LICENSE permits:
 			https://docs.openwebui.com/license. -->
-			<img
-				id="logo"
-				crossorigin="anonymous"
-				src="/static/favicon.png"
-				class="size-6 rounded-full"
-				alt="logo"
-			/>
+			<img id="logo" src="/static/favicon.png" class="size-6 rounded-full" alt="logo" />
 		</div>
 
 		<video
