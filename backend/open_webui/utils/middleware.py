@@ -1666,12 +1666,6 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
         message_list = form_data.get('messages', [])
     else:
         chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
-        await __event_emitter__(
-            {
-                'type': 'status',
-                'data': {'description': 'Creating image', 'done': False},
-            }
-        )
 
         messages_map = chat.chat.get('history', {}).get('messages', {})
         message_id = chat.chat.get('history', {}).get('currentId')
@@ -1691,9 +1685,22 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
         for image in images:
             input_images.append(image)
 
+    # Called directly, bypassing the /images routes that enforce these switches.
+    editing = len(input_images) > 0 and await Config.get('images.edit.enable')
+    if not editing and not await Config.get('image_generation.enable'):
+        return form_data
+
+    if is_saved_chat_id(chat_id):
+        await __event_emitter__(
+            {
+                'type': 'status',
+                'data': {'description': 'Creating image', 'done': False},
+            }
+        )
+
     system_message_content = ''
 
-    if len(input_images) > 0 and await Config.get('images.edit.enable'):
+    if editing:
         # Edit image(s)
         try:
             images = await image_edits(
@@ -2527,7 +2534,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             ):
                 form_data = await add_memory_context(request, form_data, user, model)
 
-        if 'web_search' in features and features['web_search']:
+        if 'web_search' in features and features['web_search'] and await Config.get('web.search.enable'):
             # features is client-supplied; re-check the permission the native FC path enforces.
             if getattr(user, 'role', None) == 'admin' or await has_permission(
                 getattr(user, 'id', ''),
