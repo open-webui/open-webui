@@ -443,7 +443,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                         )
                         headers.setdefault('Content-Type', 'application/json')
 
-                        async def make_tool_function(function_name, tool_server_data, headers):
+                        async def make_tool_function(function_name, tool_server_data, headers, cookies):
                             async def tool_function(**kwargs):
                                 return await execute_tool_server(
                                     url=tool_server_data['url'],
@@ -456,7 +456,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
 
                             return tool_function
 
-                        tool_function = await make_tool_function(function_name, tool_server_data, headers)
+                        tool_function = await make_tool_function(function_name, tool_server_data, headers, cookies)
 
                         callable = await get_async_tool_function_and_apply_extra_params(
                             tool_function,
