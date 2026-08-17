@@ -902,8 +902,10 @@ class ChatTable:
             if current_id is None
             else messages.get(current_id, {}).get('childrenIds', [])
         )
-        while child_ids:
+        visited_ids = set()
+        while child_ids and child_ids[-1] not in visited_ids:
             current_id = child_ids[-1]
+            visited_ids.add(current_id)
             child_ids = messages.get(current_id, {}).get('childrenIds', [])
         history['currentId'] = current_id if current_id in messages else None
         return deleted_ids
