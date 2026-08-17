@@ -22,7 +22,7 @@
 		socket,
 		config,
 		isApp,
-		models,
+		visiblePinnedModels,
 		selectedFolder,
 		WEBUI_NAME,
 		sidebarWidth
@@ -120,9 +120,7 @@
 
 	let showCreateFolderModal = false;
 
-	let pinnedModels = [];
-
-	let showPinnedModels = false;
+	let showPinnedModels = true;
 	let showPinnedNotes = false;
 	let showChannels = false;
 	let showFolders = false;
@@ -682,12 +680,6 @@
 					} else {
 						navElement.style['-webkit-app-region'] = 'drag';
 					}
-				}
-			}),
-			settings.subscribe((value) => {
-				if (pinnedModels != value?.pinnedModels ?? []) {
-					pinnedModels = value?.pinnedModels ?? [];
-					showPinnedModels = pinnedModels.length > 0;
 				}
 			})
 		];
@@ -1285,7 +1277,7 @@
 						</div>
 					</div>
 
-					{#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
+					{#if $visiblePinnedModels.length > 0}
 						<SidebarSection
 							id="sidebar-models"
 							bind:open={showPinnedModels}
