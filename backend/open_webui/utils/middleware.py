@@ -119,6 +119,11 @@ from open_webui.utils.misc import (
     set_last_user_message_content,
     strip_empty_content_blocks,
 )
+from open_webui.utils.multimodal import (
+    build_media_content_parts,
+    get_media_content_part_url,
+    is_inline_media_data_url,
+)
 from open_webui.utils.payload import apply_params_to_form_data, apply_system_prompt_to_body, resolve_system_prompt
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import merge_usage, normalize_usage
@@ -1995,7 +2000,7 @@ async def chat_completion_files_handler(
     return body, {'sources': sources}
 
 
-async def convert_url_images_to_base64(form_data, user=None):
+async def convert_url_media_to_base64(form_data, user=None):
     messages = form_data.get('messages', [])
 
     for message in messages:
@@ -2006,28 +2011,31 @@ async def convert_url_images_to_base64(form_data, user=None):
         new_content = []
 
         for item in content:
-            if not isinstance(item, dict) or item.get('type') != 'image_url':
+            media_part = get_media_content_part_url(item)
+            if media_part is None:
                 new_content.append(item)
                 continue
 
-            image_url = item.get('image_url', {}).get('url', '')
-            if image_url.startswith('data:image/'):
+            part_type, media_url = media_part
+            if not media_url or is_inline_media_data_url(part_type, media_url):
                 new_content.append(item)
                 continue
 
             try:
-                base64_data = await get_image_base64_from_url(image_url, user=user)
+                # Resolves both remote URLs and bare file ids (access-checked) to a data URL,
+                # deriving the MIME type from the stored file, so it covers every media kind.
+                base64_data = await get_image_base64_from_url(media_url, user=user)
                 if base64_data:
                     new_content.append(
                         {
-                            'type': 'image_url',
-                            'image_url': {'url': base64_data},
+                            'type': part_type,
+                            part_type: {'url': base64_data},
                         }
                     )
                 else:
                     new_content.append(item)
             except Exception as e:
-                log.debug('Error converting image URL to base64: %s', e)
+                log.debug('Error converting media URL to base64: %s', e)
                 new_content.append(item)
 
         message['content'] = new_content
@@ -2305,26 +2313,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             system_message = get_system_message(form_data.get('messages', []))
             form_data['messages'] = [system_message, *db_messages] if system_message else db_messages
 
-            # Inject image files into content as image_url parts (mirrors frontend logic)
+            # Inject media files into content as typed parts (mirrors frontend logic)
             for message in form_data['messages']:
-                image_files = [
-                    f
-                    for f in message.get('files', [])
-                    if f.get('type') == 'image' or (f.get('content_type') or '').startswith('image/')
-                ]
-                if message.get('role') == 'user' and image_files:
+                media_parts = build_media_content_parts(message.get('files', []))
+                if message.get('role') == 'user' and media_parts:
                     text_content = message.get('content', '')
                     if isinstance(text_content, str):
                         message['content'] = [
                             {'type': 'text', 'text': text_content},
-                            *[
-                                {
-                                    'type': 'image_url',
-                                    'image_url': {'url': f['url']},
-                                }
-                                for f in image_files
-                                if f.get('url')
-                            ],
+                            *media_parts,
                         ]
                 # Strip files field — it's been incorporated into content
                 message.pop('files', None)
@@ -2379,7 +2376,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception:
             pass
 
-    form_data = await convert_url_images_to_base64(form_data, user=user)
+    form_data = await convert_url_media_to_base64(form_data, user=user)
 
     event_emitter = await get_event_emitter(metadata)
     event_caller = await get_event_call(metadata)
