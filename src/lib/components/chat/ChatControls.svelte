@@ -117,10 +117,11 @@
 	}
 
 	// Auto-open Files tab when a terminal is selected (suppress panel open when full-screen)
+	$: showFilesOnTerminalSelect = $settings?.showFilesOnTerminalSelect ?? true;
 	$: if ($selectedTerminalId && terminalFilesAvailable) {
 		activeTab = 'files';
 		if (largeScreen) {
-			showControls.set($settings?.showFilesOnTerminalSelect ?? true);
+			showControls.set(showFilesOnTerminalSelect);
 		}
 	}
 
