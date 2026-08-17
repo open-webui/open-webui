@@ -1075,16 +1075,10 @@ async def model_response_handler(request, channel, message, user, db=None):
                         ],
                     ]
 
-                # Resolve model config (same helpers automations use)
-                from open_webui.utils.automations import (
-                    _resolve_model_features,
-                    _resolve_model_filter_ids,
-                    _resolve_model_tool_ids,
-                )
+                # Resolve model config (same path automations use)
+                from open_webui.utils.automations import _resolve_model_defaults
 
-                tool_ids = _resolve_model_tool_ids(request.app, model_id)
-                features = await _resolve_model_features(request.app, model_id)
-                filter_ids = _resolve_model_filter_ids(request.app, model_id)
+                tool_ids, features, filter_ids, _ = await _resolve_model_defaults(request.app, model_id)
 
                 # Build full form_data — same shape as frontend POST.
                 # The channel: prefix routes pipeline events to the

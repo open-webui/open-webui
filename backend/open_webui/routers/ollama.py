@@ -471,7 +471,7 @@ async def get_filtered_models(models, user, db=None):
 
 
 @router.get('/api/tags')
-@router.get('/api/tags/{url_idx}')
+@router.get('/api/tags/{url_idx}', dependencies=[Depends(get_admin_user)])
 async def get_ollama_tags(
     request: Request,
     url_idx: int | None = None,
@@ -534,7 +534,7 @@ async def get_ollama_loaded_models(
 
 
 @router.get('/api/version')
-@router.get('/api/version/{url_idx}')
+@router.get('/api/version/{url_idx}', dependencies=[Depends(get_admin_user)])
 async def get_ollama_versions(
     request: Request,
     user=Depends(get_verified_user),
@@ -1053,7 +1053,7 @@ class GenerateChatCompletionForm(BaseModel):
 async def validate_ollama_backend_idx(request: Request, model: str, url_idx: int | None, user) -> None:
     # A caller-supplied url_idx must point to a backend the model is actually
     # served from; the None path is already constrained to that allow-list.
-    if url_idx is None or user is None or getattr(user, 'role', None) == 'admin' or BYPASS_MODEL_ACCESS_CONTROL:
+    if url_idx is None or user is None or getattr(user, 'role', None) == 'admin':
         return
     models = request.app.state.OLLAMA_MODELS
     if not models or model not in models:
@@ -1472,7 +1472,7 @@ async def generate_responses(
 
 
 @router.get('/v1/models')
-@router.get('/v1/models/{url_idx}')
+@router.get('/v1/models/{url_idx}', dependencies=[Depends(get_admin_user)])
 async def get_openai_models(
     request: Request,
     url_idx: int | None = None,

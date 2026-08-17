@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import logging
-from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
@@ -36,7 +34,7 @@ from open_webui.models.folders import Folders
 from open_webui.models.shared_chats import SharedChatResponse, SharedChats
 from open_webui.models.tags import TagModel, Tags
 from open_webui.socket.main import get_event_emitter
-from open_webui.tasks import has_active_tasks, stop_item_tasks
+from open_webui.tasks import get_response_streams_by_chat_id, has_active_tasks, stop_item_tasks
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.folders import has_folder_access, has_folder_write_access
 from open_webui.utils.auth import bearer_security, get_admin_user, get_current_user, get_verified_user
@@ -58,7 +56,34 @@ CHAT_CONFIG_KEYS = {
     'CONTEXT_COMPACTION_TOKEN_CAP': 'chat.context_compaction.token_cap',
     'CONTEXT_COMPACTION_RETENTION_PERCENTAGE': 'chat.context_compaction.retention_percentage',
     'CONTEXT_COMPACTION_PROMPT_TEMPLATE': 'chat.context_compaction.prompt_template',
+    'ENABLE_TOOL_PERMISSIONS': 'chat.tool_permissions.enable',
 }
+
+
+def overlay_response_streams(chat_data: dict, response_streams: list[dict]) -> dict:
+    if not response_streams:
+        return chat_data
+
+    messages = chat_data.get('chat', {}).get('history', {}).get('messages')
+    if isinstance(messages, dict):
+        for stream in response_streams:
+            message_id = stream.get('message_id')
+            message = messages.get(message_id)
+            if isinstance(message, dict):
+                message['content'] = stream.get('content', '')
+                message['output'] = stream.get('output') or []
+                message['done'] = False
+
+    legacy_messages = chat_data.get('chat', {}).get('messages')
+    if isinstance(legacy_messages, list):
+        streams_by_message_id = {stream.get('message_id'): stream for stream in response_streams}
+        for message in legacy_messages:
+            if isinstance(message, dict) and (stream := streams_by_message_id.get(message.get('id'))):
+                message['content'] = stream.get('content', '')
+                message['output'] = stream.get('output') or []
+                message['done'] = False
+
+    return chat_data
 
 
 async def get_optional_verified_user(
@@ -140,6 +165,7 @@ class ChatConfigForm(BaseModel):
     CONTEXT_COMPACTION_TOKEN_CAP: int | None = None
     CONTEXT_COMPACTION_RETENTION_PERCENTAGE: int = 40
     CONTEXT_COMPACTION_PROMPT_TEMPLATE: str
+    ENABLE_TOOL_PERMISSIONS: bool = False
 
 
 class CompactChatForm(BaseModel):
@@ -1297,7 +1323,12 @@ async def compact_chat_by_id(
 
 
 @router.get('/{id}', response_model=ChatResponse | None)
-async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_chat_by_id(
+    id: str,
+    request: Request,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
 
     if not chat and user.role == 'admin':
@@ -1328,6 +1359,10 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user), db: AsyncSess
 
     if chat:
         data = ChatResponse.model_validate(chat, from_attributes=True).model_dump()
+        data = overlay_response_streams(
+            data,
+            await get_response_streams_by_chat_id(request.app.state.redis, id),
+        )
         data['context_usage'] = await get_chat_context_usage(chat)
         return data
 

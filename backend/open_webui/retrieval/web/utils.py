@@ -1,4 +1,5 @@
 import asyncio
+import http.cookiejar
 import ipaddress
 import logging
 import socket
@@ -11,17 +12,20 @@ from typing import (
     Any,
     AsyncIterator,
     Dict,
+    Iterable,
     Iterator,
     List,
     Literal,
     Optional,
     Sequence,
+    Tuple,
     Union,
 )
 
 import aiohttp
 import aiohttp.resolver
 import certifi
+import requests
 import urllib3.connection
 import urllib3.connectionpool
 import validators
@@ -52,6 +56,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
     AIOHTTP_CLIENT_SESSION_SSL,
+    AIOHTTP_CLIENT_SSL_CERT_FILE,
     AIOHTTP_CLIENT_TIMEOUT,
     USER_AGENT,
 )
@@ -240,17 +245,59 @@ class _SSRFSafeResolver(aiohttp.resolver.DefaultResolver):
         return results
 
 
-def get_ssrf_safe_session() -> aiohttp.ClientSession:
+def get_ssrf_safe_session(trust_env: bool = True, store_cookies: bool = True) -> aiohttp.ClientSession:
     """A one-off aiohttp session that re-validates the connect-time IP via _SSRFSafeResolver,
     defeating DNS rebinding. Use for validate_url-gated fetches of user-supplied URLs that must
     not use the shared (rebinding-vulnerable) pool. Use as a context manager so it is closed:
     ``async with get_ssrf_safe_session() as session: ...``.
+
+    trust_env also enables environment proxies, and proxied traffic bypasses the connect-time
+    IP check, because the proxy resolves the hostname instead.
     """
     return aiohttp.ClientSession(
         connector=aiohttp.TCPConnector(resolver=_SSRFSafeResolver()),
         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
-        trust_env=True,
+        trust_env=trust_env,
+        cookie_jar=None if store_cookies else aiohttp.DummyCookieJar(),
     )
+
+
+def get_ssrf_safe_requests_session(trust_env: bool = True, store_cookies: bool = True) -> requests.Session:
+    """The requests counterpart of get_ssrf_safe_session, with the same proxy caveat."""
+    session = requests.Session()
+    session.trust_env = trust_env
+    if not store_cookies:
+        session.cookies.set_policy(http.cookiejar.DefaultCookiePolicy(allowed_domains=[]))
+    session.mount('http://', _SSRFSafeAdapter())
+    session.mount('https://', _SSRFSafeAdapter())
+    return session
+
+
+# accept-encoding goes because the client must advertise only codecs it can decode, the rest
+# because the client derives them from the URL and body it is actually given. content-encoding
+# stays: the browser's body is forwarded byte for byte, so its own labelling still applies.
+_DROPPED_REQUEST_HEADERS = {'accept-encoding', 'connection', 'content-length', 'host', 'transfer-encoding'}
+
+# The clients hand us a decoded body, so the sender's framing no longer describes it.
+_DROPPED_RESPONSE_HEADERS = {'connection', 'content-encoding', 'content-length', 'transfer-encoding'}
+
+
+def _forwardable_request_headers(headers: Dict[str, str]) -> Dict[str, str]:
+    return {name: value for name, value in headers.items() if name.lower() not in _DROPPED_REQUEST_HEADERS}
+
+
+def _fulfillable_response_headers(header_pairs: Iterable[Tuple[str, str]]) -> Dict[str, str]:
+    """Collapse repeated headers the way route.fulfill expects: set-cookie by newline, rest by comma.
+
+    Takes pairs rather than a mapping because reading either client's headers as a mapping loses
+    duplicate Set-Cookie values, leaving one malformed cookie or one of the two.
+    """
+    collected: Dict[str, List[str]] = {}
+    for name, value in header_pairs:
+        name = name.lower()  # grouping by the sender's case would split a repeated header
+        if name not in _DROPPED_RESPONSE_HEADERS:
+            collected.setdefault(name, []).append(value)
+    return {name: ('\n' if name == 'set-cookie' else ', ').join(values) for name, values in collected.items()}
 
 
 def extract_metadata(soup, url):
@@ -404,7 +451,6 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
     def __init__(
         self,
         web_paths: Union[str, List[str]],
-        api_base_url: str,
         api_key: str,
         extract_depth: Literal['basic', 'advanced'] = 'basic',
         continue_on_failure: bool = True,
@@ -438,7 +484,6 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
 
         # Store parameters for creating TavilyLoader instances
         self.web_paths = web_paths if isinstance(web_paths, list) else [web_paths]
-        self.api_base_url = api_base_url
         self.api_key = api_key
         self.extract_depth = extract_depth
         self.continue_on_failure = continue_on_failure
@@ -585,7 +630,9 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
         requests_per_second (Optional[float]): Number of requests per second to limit to.
         continue_on_failure (bool): If True, continue loading other URLs on failure.
         headless (bool): If True, the browser will run in headless mode.
-        proxy (dict): Proxy override settings for the Playwright session.
+        proxy (dict): Proxy override settings for the Playwright session. Page requests are
+            issued outside the browser, so they follow the environment proxy via trust_env
+            rather than this setting.
         playwright_ws_url (Optional[str]): WebSocket endpoint URI for remote browser connection.
         playwright_timeout (Optional[int]): Maximum operation time in milliseconds.
     """
@@ -630,14 +677,49 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
         self.trust_env = trust_env
         self.playwright_timeout = playwright_timeout
 
-    def _intercept_navigation_sync(self, route, request=None):
-        req = request or route.request
+    def _request_timeout(self) -> float:
+        # per-hop budget, since page.goto's timeout cannot reach into our own fetch and 0 disables
+        # it. aiohttp treats it as a total where requests only caps each read, so sync runs looser.
+        return (self.playwright_timeout or 30000) / 1000
+
+    def _requests_verify(self) -> Union[bool, str]:
+        """requests takes a CA path where aiohttp takes the parsed SSLContext.
+
+        A bundle named directly in AIOHTTP_CLIENT_SESSION_SSL reaches us already parsed and
+        cannot be expressed here, so that form falls back to the global bundle or certifi.
+        """
+        if not self.verify_ssl or AIOHTTP_CLIENT_SESSION_SSL is False:
+            return False
+        if AIOHTTP_CLIENT_SESSION_SSL is True:
+            return True  # no usable global CA bundle, so both clients land on certifi
+        return AIOHTTP_CLIENT_SSL_CERT_FILE or True
+
+    def _intercept_navigation_sync(self, route, session):
+        req = route.request
+
+        hop_cookies: List[Tuple[str, str]] = []
 
         try:
-            validate_url(req.url)
-            resp = route.fetch(max_redirects=0)
+            headers = _forwardable_request_headers(req.all_headers())
+            post_data = req.post_data_buffer
+            verify, timeout = self._requests_verify(), self._request_timeout()
 
-            if 300 <= resp.status < 400:
+            # The browser would resolve the hostname again, after the check; fetch it ourselves.
+            def fetch(url):
+                validate_url(url)
+                return session.request(
+                    req.method,
+                    url,
+                    headers=headers,
+                    data=post_data,
+                    allow_redirects=False,
+                    verify=verify,
+                    timeout=timeout,
+                )
+
+            resp = fetch(req.url)
+
+            if 300 <= resp.status_code < 400:
                 for _ in range(20):
                     if not AIOHTTP_CLIENT_ALLOW_REDIRECTS:
                         route.abort()
@@ -647,26 +729,50 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                     if not location:
                         break
 
-                    url = urllib.parse.urljoin(resp.url, location)
-                    validate_url(url)
-                    resp = route.fetch(url=url, max_redirects=0)
-                    if not 300 <= resp.status < 400:
+                    # only the last hop is fulfilled, so carry each hop's cookies to the browser
+                    hop_cookies += [('set-cookie', v) for v in resp.raw.headers.getlist('set-cookie')]
+                    resp = fetch(urllib.parse.urljoin(resp.url, location))
+                    if not 300 <= resp.status_code < 400:
                         break
                 else:
                     route.abort()
                     return
-        except Exception:
+        except Exception as e:
+            log.debug('Playwright loader could not fetch %s: %s', req.url, e)
             route.abort()
             return
 
-        route.fulfill(response=resp)
+        route.fulfill(
+            status=resp.status_code,
+            headers=_fulfillable_response_headers(hop_cookies + list(resp.raw.headers.items())),
+            body=resp.content,
+        )
 
-    async def _intercept_navigation(self, route, request=None):
-        req = request or route.request
+    async def _intercept_navigation(self, route, session):
+        req = route.request
+
+        hop_cookies: List[Tuple[str, str]] = []
 
         try:
-            await run_in_threadpool(validate_url, req.url)
-            resp = await route.fetch(max_redirects=0)
+            headers = _forwardable_request_headers(await req.all_headers())
+            post_data = req.post_data_buffer
+
+            # The browser would resolve the hostname again, after the check; fetch it ourselves.
+            async def fetch(url):
+                await run_in_threadpool(validate_url, url)
+                response = await session.request(
+                    req.method,
+                    url,
+                    headers=headers,
+                    data=post_data,
+                    allow_redirects=False,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL if self.verify_ssl else False,
+                    timeout=aiohttp.ClientTimeout(total=self._request_timeout()),
+                )
+                # aiohttp only returns the connection to the pool once the body is buffered
+                return response, await response.read()
+
+            resp, body = await fetch(req.url)
 
             if 300 <= resp.status < 400:
                 for _ in range(20):
@@ -678,19 +784,24 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                     if not location:
                         break
 
-                    url = urllib.parse.urljoin(resp.url, location)
-                    await run_in_threadpool(validate_url, url)
-                    resp = await route.fetch(url=url, max_redirects=0)
+                    # only the last hop is fulfilled, so carry each hop's cookies to the browser
+                    hop_cookies += [('set-cookie', v) for v in resp.headers.getall('Set-Cookie', [])]
+                    resp, body = await fetch(urllib.parse.urljoin(str(resp.url), location))
                     if not 300 <= resp.status < 400:
                         break
                 else:
                     await route.abort()
                     return
-        except Exception:
+        except Exception as e:
+            log.debug('Playwright loader could not fetch %s: %s', req.url, e)
             await route.abort()
             return
 
-        await route.fulfill(response=resp)
+        await route.fulfill(
+            status=resp.status,
+            headers=_fulfillable_response_headers(hop_cookies + list(resp.headers.items())),
+            body=body,
+        )
 
     def lazy_load(self) -> Iterator[Document]:
         """Safely load URLs synchronously with support for remote browser."""
@@ -707,8 +818,12 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                 for url in self.urls:
                     try:
                         self._safe_process_url_sync(url)
-                        with browser.new_page(service_workers='block') as page:
-                            page.route('**/*', self._intercept_navigation_sync)
+                        # opened before the page so it outlives any route still in flight at teardown
+                        with (
+                            get_ssrf_safe_requests_session(self.trust_env, store_cookies=False) as session,
+                            browser.new_page(service_workers='block') as page,
+                        ):
+                            page.route('**/*', lambda route: self._intercept_navigation_sync(route, session))
                             page.route_web_socket('**/*', lambda ws_route: ws_route.close())
                             response = page.goto(url, timeout=self.playwright_timeout)
                             if response is None:
@@ -738,8 +853,12 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                 for url in self.urls:
                     try:
                         await self._safe_process_url(url)
-                        async with await browser.new_page(service_workers='block') as page:
-                            await page.route('**/*', self._intercept_navigation)
+                        # opened before the page so it outlives any route still in flight at teardown
+                        async with (
+                            get_ssrf_safe_session(self.trust_env, store_cookies=False) as session,
+                            await browser.new_page(service_workers='block') as page,
+                        ):
+                            await page.route('**/*', lambda route: self._intercept_navigation(route, session))
                             await page.route_web_socket('**/*', lambda ws_route: ws_route.close())
                             response = await page.goto(url, timeout=self.playwright_timeout)
                             if response is None:

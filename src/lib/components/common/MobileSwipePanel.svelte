@@ -62,9 +62,32 @@
 		return (
 			target instanceof Element &&
 			!!target.closest(
-				'input, textarea, select, button, [role="menu"], [contenteditable="true"], [data-sidebar-no-gesture]'
+				'input, textarea, select, [role="menu"], [contenteditable="true"], [data-sidebar-no-gesture]'
 			)
 		);
+	};
+
+	const canScrollHorizontally = (target: EventTarget | null, dx: number) => {
+		if (!(target instanceof Element) || dx === 0 || typeof window === 'undefined') {
+			return false;
+		}
+
+		let element: Element | null = target;
+		while (element && element !== document.documentElement && element !== document.body) {
+			const node = element as HTMLElement;
+			const overflowX = window.getComputedStyle(node).overflowX;
+			const isScrollable =
+				/(auto|scroll|overlay)/.test(overflowX) && node.scrollWidth > node.clientWidth + 1;
+
+			if (isScrollable) {
+				const maxScrollLeft = node.scrollWidth - node.clientWidth;
+				return dx > 0 ? node.scrollLeft > 0 : node.scrollLeft < maxScrollLeft - 1;
+			}
+
+			element = element.parentElement;
+		}
+
+		return false;
 	};
 
 	const setScrollLock = (locked: boolean) => {
@@ -187,6 +210,11 @@
 			}
 
 			if (absX < SWIPE_SLOP && absY < SWIPE_SLOP) {
+				return;
+			}
+
+			if (absX > absY && canScrollHorizontally(e.target, dx)) {
+				cancelSwipe();
 				return;
 			}
 

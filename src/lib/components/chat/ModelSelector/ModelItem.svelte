@@ -26,7 +26,7 @@
 	export let selectedValues: string[] = [];
 	export let compareEnabled = false;
 
-	export let unloadModelHandler: (modelValue: string) => void = () => {};
+	export let unloadModelHandler: (model: any) => void = () => {};
 	export let pinModelHandler: (modelId: string) => void = () => {};
 	export let deleteModelHandler: (model: any) => void = () => {};
 	export let selectionOnly = false;
@@ -44,6 +44,8 @@
 		}
 	};
 
+	const formatSize = (size?: number) => (size ? `(${(size / 1024 ** 3).toFixed(1)}GB)` : '');
+
 	let showMenu = false;
 	$: isSelected = compareEnabled ? selectedValues.includes(item.value) : value === item.value;
 </script>
@@ -52,7 +54,7 @@
 	role="option"
 	aria-selected={isSelected}
 	aria-label={$i18n.t('Select {{modelName}} model', { modelName: item.label })}
-	class="group/item flex h-8 w-full cursor-pointer select-none items-center rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40 {index ===
+	class="focus-ring group/item flex h-8 w-full cursor-pointer select-none items-center rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40 {index ===
 		selectedModelIdx && !compareEnabled
 		? 'bg-gray-50/70 dark:bg-gray-800/60'
 		: ''} {isSelected ? 'bg-gray-50/70 dark:bg-gray-800/60' : ''}"
@@ -121,9 +123,27 @@
 								}`}
 								className="self-end"
 							>
-								<span class="line-clamp-1 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400"
+								<span
+									class="line-clamp-1 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400"
 									>{item.model.ollama?.details?.parameter_size ?? ''}</span
 								>
+							</Tooltip>
+						</div>
+					{/if}
+				{:else if item.model.provider === 'lmstudio' || item.model.provider === 'llama.cpp'}
+					{@const parameterSize = item.model.params_string ?? item.model.details?.parameter_size ?? ''}
+					{@const quantization =
+						item.model.quantization?.name ?? item.model.details?.quantization_level ?? ''}
+					{@const size = item.model.size_bytes ?? item.model.size}
+					{#if parameterSize || quantization || size}
+						<div class="flex items-center translate-y-[0.5px]">
+							<Tooltip
+								content={`${quantization ? `${quantization} ` : ''}${formatSize(size)}`}
+								className="self-end"
+							>
+								<span class="line-clamp-1 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400">
+									{parameterSize || quantization || formatSize(size)}
+								</span>
 							</Tooltip>
 						</div>
 					{/if}
@@ -250,12 +270,12 @@
 				className="flex-shrink-0 group-hover/item:opacity-100 opacity-0 "
 			>
 				<button
-					class="flex"
+					class="focus-ring flex"
 					aria-label={$i18n.t('Eject model')}
 					on:click={(e) => {
 						e.preventDefault();
 						e.stopPropagation();
-						unloadModelHandler(item.value);
+						unloadModelHandler(item.model);
 					}}
 				>
 					<ArrowUpTray className="size-3" />
@@ -275,7 +295,7 @@
 			>
 				<button
 					aria-label={`${$i18n.t('More Options')}`}
-					class="flex"
+					class="focus-ring flex"
 					on:click={(e) => {
 						e.preventDefault();
 						e.stopPropagation();

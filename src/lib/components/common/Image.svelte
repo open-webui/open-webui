@@ -31,6 +31,7 @@
 
 	let failed = false;
 	let attemptedSrc = '';
+	$: compactUnavailable = /(?:^|\s)(?:size-|w-|h-)/.test(imageClassName);
 	$: if (_src !== attemptedSrc) {
 		attemptedSrc = _src;
 		failed = false;
@@ -50,11 +51,15 @@
 <div class=" relative group w-fit flex items-center">
 	{#if failed}
 		<div
-			class="{imageClassName} flex items-center gap-2 px-3 py-2.5 border border-dashed border-gray-200 dark:border-gray-800 text-gray-400 dark:text-gray-600"
+			class="{imageClassName} inline-flex {compactUnavailable
+				? ''
+				: 'h-[1.6875rem] min-w-8 gap-1.5 px-2'} items-center justify-center overflow-hidden border border-gray-100/50 bg-gray-50/40 text-gray-500 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-400"
 			data-cy="image-unavailable"
 		>
-			<Photo className="size-4 shrink-0" strokeWidth="1.5" />
-			<span class="text-xs">{$i18n.t('Image unavailable')}</span>
+			<Photo className="size-3.5 shrink-0" strokeWidth="1.5" />
+			<span class:hidden={compactUnavailable} class="truncate text-xs">
+				{$i18n.t('Image unavailable')}
+			</span>
 		</div>
 	{:else}
 		<button

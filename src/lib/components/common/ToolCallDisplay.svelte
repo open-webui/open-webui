@@ -3,7 +3,9 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
@@ -13,6 +15,7 @@
 	import Spinner from './Spinner.svelte';
 	import WrenchSolid from '../icons/WrenchSolid.svelte';
 	import CheckCircle from '../icons/CheckCircle.svelte';
+	import XMark from '../icons/XMark.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
 	import { settings } from '$lib/stores';
@@ -27,18 +30,22 @@
 		files?: string;
 		embeds?: string;
 		done?: string;
+		status?: string;
 	} = {};
 
 	export let open = false;
 	export let grouped = false;
 	export let className = '';
+	export let resolvable = false;
+	export let resolving = false;
+	export let onResolve: (approved: boolean) => void = () => {};
 
 	const RESULT_PREVIEW_LIMIT = 10000;
 	let expandedResult = false;
 
 	$: if (!open) expandedResult = false;
 	export let buttonClassName =
-		'w-fit py-1 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
+		'py-1 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
 
 	const componentId = id || uuidv4();
 
@@ -88,10 +95,21 @@
 	$: result = resultContent || decode(attributes?.result ?? '');
 	$: files = parseJSONString(decode(attributes?.files ?? ''));
 	$: embeds = parseJSONString(decode(attributes?.embeds ?? ''));
+	$: isAskUser = attributes?.name === 'ask_user';
+	$: needsInput = isAskUser && attributes?.status === 'pending';
+	$: needsApproval = !isAskUser && attributes?.status === 'pending' && resolvable;
 	$: args =
-		open || (Array.isArray(embeds) && embeds.length > 0) ? decode(attributes?.arguments ?? '') : '';
-	$: isDone = attributes?.done === 'true';
-	$: isExecuting = attributes?.done && attributes?.done !== 'true';
+		open || needsApproval || needsInput || (Array.isArray(embeds) && embeds.length > 0)
+			? decode(attributes?.arguments ?? '')
+			: '';
+	$: isRejected = attributes?.status === 'rejected';
+	$: isDone =
+		attributes?.done === 'true' ||
+		attributes?.status === 'failed' ||
+		attributes?.status === 'incomplete';
+	$: isExecuting = !isDone && !isRejected && attributes?.status === 'completed';
+	$: isPreparing = !isDone && !isRejected && !needsApproval && !needsInput && !isExecuting;
+	$: isActive = isPreparing || isExecuting;
 
 	$: parsedArgs = parseArguments(args);
 	$: parsedResult = parseJSONString(result);
@@ -133,21 +151,25 @@
 	{:else}
 		<!-- Tool call display -->
 		<div
-			class="{buttonClassName} cursor-pointer"
+			class="{buttonClassName} w-full min-w-0 cursor-pointer"
 			role="button"
 			tabindex="0"
 			on:click={toggleOpen}
 			on:keydown={toggleOpenOnKeydown}
 		>
 			<div
-				class="w-full max-w-full font-normal flex items-center gap-1.5 {isExecuting
+				class="w-full min-w-0 max-w-full font-normal flex items-center gap-1.5 {isActive
 					? 'shimmer'
 					: ''}"
 			>
 				<!-- Status icon -->
-				{#if isExecuting}
+				{#if isActive}
 					<div>
 						<Spinner className="size-4" />
+					</div>
+				{:else if isRejected}
+					<div class="text-red-400 dark:text-red-500">
+						<XMark className="size-4" strokeWidth="2.5" />
 					</div>
 				{:else if isDone}
 					<div class="text-emerald-500 dark:text-emerald-400">
@@ -160,27 +182,56 @@
 				{/if}
 
 				<!-- Label -->
-				<div class="flex-1 line-clamp-1">
+				<div class="flex-1 min-w-0 line-clamp-1">
 					<!-- Short label (below md) -->
 					<span class="@md:hidden text-black dark:text-white">{attributes.name}</span>
 					<!-- Full label (md and above) -->
 					<span class="hidden @md:inline font-normal">
-						{#if isDone}
+						{#if isRejected}
+							{$i18n.t('Denied {{NAME}}', { NAME: attributes.name })}
+						{:else if isDone}
 							{$i18n.t('View Result from {{NAME}}', { NAME: attributes.name })}
+						{:else if needsInput}
+							{$i18n.t('Input needed')}
+						{:else if needsApproval}
+							{$i18n.t('Allow {{NAME}}?', { NAME: attributes.name })}
+						{:else if isPreparing}
+							{$i18n.t('Preparing {{NAME}}...', { NAME: attributes.name })}
 						{:else}
 							{$i18n.t('Executing {{NAME}}...', { NAME: attributes.name })}
 						{/if}
 					</span>
 				</div>
 
-				<!-- Chevron -->
-				<div class="flex shrink-0 self-center translate-y-[1px]">
-					{#if open}
-						<ChevronUp strokeWidth="3.5" className="size-3" />
-					{:else}
-						<ChevronDown strokeWidth="3.5" className="size-3" />
-					{/if}
-				</div>
+				{#if needsApproval && !isAskUser}
+					<span class="flex gap-1 shrink-0">
+						<button
+							type="button"
+							class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
+							disabled={resolving}
+							on:click|stopPropagation={() => onResolve(true)}
+						>
+							{$i18n.t('Allow')}
+						</button>
+						<button
+							type="button"
+							class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
+							disabled={resolving}
+							on:click|stopPropagation={() => onResolve(false)}
+						>
+							{$i18n.t('Deny')}
+						</button>
+					</span>
+				{:else}
+					<!-- Chevron -->
+					<div class="flex shrink-0 self-center translate-y-[1px]">
+						{#if open}
+							<ChevronUp strokeWidth="3.5" className="size-3" />
+						{:else}
+							<ChevronDown strokeWidth="3.5" className="size-3" />
+						{/if}
+					</div>
+				{/if}
 			</div>
 		</div>
 
@@ -189,8 +240,8 @@
 				<div
 					class="border border-gray-50 dark:border-gray-850/30 rounded-2xl my-1.5 p-2.5 space-y-2"
 				>
-					<!-- Input -->
 					{#if args}
+						<!-- Input -->
 						<div>
 							<div
 								class="text-[0.625rem] uppercase tracking-wider font-normal text-gray-400 dark:text-gray-500 mb-1.5 px-1"

@@ -188,7 +188,7 @@
 			</div>
 		</div>
 
-		<div class=" max-h-full w-full overflow-y-auto" bind:this={messagesContainerElement}>
+		<div class="flex-1 min-h-0 w-full overflow-y-auto pt-7" bind:this={messagesContainerElement}>
 			{#if messages !== null}
 				<Messages
 					id={threadId}
@@ -225,25 +225,25 @@
 					<Spinner />
 				</div>
 			{/if}
+		</div>
 
-			<div class=" pb-[1rem] px-2.5 w-full">
-				<MessageInput
-					bind:replyToMessage
-					bind:chatInputElement
-					id={threadId}
-					{channel}
-					disabled={!channel?.write_access}
-					placeholder={!channel?.write_access
-						? $i18n.t('You do not have permission to send messages in this thread.')
-						: $i18n.t('Reply to thread...')}
-					typingUsersClassName="from-gray-50 dark:from-gray-850"
-					{typingUsers}
-					userSuggestions={true}
-					channelSuggestions={true}
-					{onChange}
-					onSubmit={submitHandler}
-				/>
-			</div>
+		<div class=" pb-[1rem] px-2.5 w-full">
+			<MessageInput
+				bind:replyToMessage
+				bind:chatInputElement
+				id={threadId}
+				{channel}
+				disabled={!channel?.write_access}
+				placeholder={!channel?.write_access
+					? $i18n.t('You do not have permission to send messages in this thread.')
+					: $i18n.t('Reply to thread...')}
+				typingUsersClassName="from-gray-50 dark:from-gray-850"
+				{typingUsers}
+				userSuggestions={true}
+				channelSuggestions={true}
+				{onChange}
+				onSubmit={submitHandler}
+			/>
 		</div>
 	</div>
 {/if}

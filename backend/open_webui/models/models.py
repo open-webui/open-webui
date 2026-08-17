@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import time
 from copy import deepcopy
@@ -10,6 +9,7 @@ from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse, Users
+from open_webui.utils.misc import json_text_variants
 from open_webui.utils.validate import validate_profile_image_url
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, update
@@ -374,20 +374,14 @@ class ModelsTable:
 
                 tag = filter.get('tag')
                 if tag:
-                    # SQLite stores JSON text via json.dumps(ensure_ascii=True),
-                    # so non-ASCII chars are \uXXXX-escaped. PostgreSQL native JSONB
-                    # stores literal Unicode. Use the right pattern for each.
-                    if db.bind.dialect.name == 'sqlite':
-                        if tag.isascii():
-                            meta_text = func.lower(cast(Model.meta, String))
-                            pattern = f'%{json.dumps(tag.lower())}%'
-                        else:
-                            meta_text = cast(Model.meta, String)
-                            pattern = f'%{json.dumps(tag)}%'
+                    if db.bind.dialect.name == 'sqlite' and not tag.isascii():
+                        # SQLite's LOWER() is ASCII-only, so match non-ASCII tags exact-case.
+                        meta_text = cast(Model.meta, String)
+                        variants = json_text_variants(tag)
                     else:
                         meta_text = func.lower(cast(Model.meta, String))
-                        pattern = f'%{json.dumps(tag.lower(), ensure_ascii=False)}%'
-                    stmt = stmt.filter(meta_text.like(pattern))
+                        variants = json_text_variants(tag.lower())
+                    stmt = stmt.filter(or_(*(meta_text.like(f'%"{variant}"%') for variant in variants)))
 
                 order_by = filter.get('order_by')
                 direction = filter.get('direction')
@@ -605,25 +599,16 @@ class ModelsTable:
 
                 # Update or insert models
                 for model in models:
+                    model_data = {
+                        **model.model_dump(exclude={'access_grants'}),
+                        'user_id': user_id,
+                        'updated_at': int(time.time()),
+                    }
+
                     if model.id in existing_ids:
-                        await db.execute(
-                            update(Model)
-                            .filter_by(id=model.id)
-                            .values(
-                                **model.model_dump(exclude={'access_grants'}),
-                                user_id=user_id,
-                                updated_at=int(time.time()),
-                            )
-                        )
+                        await db.execute(update(Model).filter_by(id=model.id).values(**model_data))
                     else:
-                        new_model = Model(
-                            **{
-                                **model.model_dump(exclude={'access_grants'}),
-                                'user_id': user_id,
-                                'updated_at': int(time.time()),
-                            }
-                        )
-                        db.add(new_model)
+                        db.add(Model(**model_data))
                     await AccessGrants.set_access_grants('model', model.id, model.access_grants, db=db)
 
                 # Remove models that are no longer present

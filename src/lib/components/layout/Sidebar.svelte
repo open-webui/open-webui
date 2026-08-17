@@ -22,7 +22,7 @@
 		socket,
 		config,
 		isApp,
-		models,
+		visiblePinnedModels,
 		selectedFolder,
 		WEBUI_NAME,
 		sidebarWidth
@@ -120,9 +120,7 @@
 
 	let showCreateFolderModal = false;
 
-	let pinnedModels = [];
-
-	let showPinnedModels = false;
+	let showPinnedModels = true;
 	let showPinnedNotes = false;
 	let showChannels = false;
 	let showFolders = false;
@@ -130,6 +128,7 @@
 	let showChatsMenu = false;
 
 	let folders = {};
+	type SelectedSidebarFolder = { id: string } | null;
 	let folderRegistry: Record<
 		string,
 		{
@@ -144,6 +143,14 @@
 	let newFolderId = null;
 
 	let sharedFolders: any[] = [];
+
+	const initSelectedFolderChats = (folder: SelectedSidebarFolder) => {
+		if (!folder?.id) {
+			return;
+		}
+
+		folderRegistry[folder.id]?.setFolderItems?.();
+	};
 
 	$: pinnedItems = $settings?.pinnedMenuItems ?? DEFAULT_PINNED_ITEMS;
 
@@ -230,29 +237,33 @@
 		}
 	};
 
-	$: if ($selectedFolder) {
-		initFolders();
-	}
+	$: initSelectedFolderChats($selectedFolder as SelectedSidebarFolder);
 
 	const initFolders = async () => {
 		if ($config?.features?.enable_folders === false) {
 			return;
 		}
 
-		const folderList = await getFolders(localStorage.token).catch((error) => {
-			return [];
-		});
+		const [folderList, sharedFolderList] = await Promise.all([
+			getFolders(localStorage.token).catch((error) => {
+				return [];
+			}),
+			getSharedFolders(localStorage.token).catch((error) => {
+				return [];
+			})
+		]);
 		_folders.set(folderList.sort((a, b) => b.updated_at - a.updated_at));
 
-		folders = {};
+		sharedFolders = sharedFolderList;
+		const folderMap: Record<string, any> = {};
 
 		// First pass: Initialize all folder entries
 		for (const folder of folderList) {
 			// Ensure folder is added to folders with its data
-			folders[folder.id] = { ...(folders[folder.id] || {}), ...folder };
+			folderMap[folder.id] = { ...(folderMap[folder.id] || {}), ...folder };
 
 			if (newFolderId && folder.id === newFolderId) {
-				folders[folder.id].new = true;
+				folderMap[folder.id].new = true;
 				newFolderId = null;
 			}
 		}
@@ -261,42 +272,38 @@
 		for (const folder of folderList) {
 			if (folder.parent_id) {
 				// Ensure the parent folder is initialized if it doesn't exist
-				if (!folders[folder.parent_id]) {
-					folders[folder.parent_id] = {}; // Create a placeholder if not already present
+				if (!folderMap[folder.parent_id]) {
+					folderMap[folder.parent_id] = {}; // Create a placeholder if not already present
 				}
 
 				// Initialize childrenIds array if it doesn't exist and add the current folder id
-				folders[folder.parent_id].childrenIds = folders[folder.parent_id].childrenIds
-					? [...folders[folder.parent_id].childrenIds, folder.id]
+				folderMap[folder.parent_id].childrenIds = folderMap[folder.parent_id].childrenIds
+					? [...folderMap[folder.parent_id].childrenIds, folder.id]
 					: [folder.id];
 
 				// Sort the children by updated_at field
-				folders[folder.parent_id].childrenIds.sort((a, b) => {
-					return folders[b].updated_at - folders[a].updated_at;
+				folderMap[folder.parent_id].childrenIds.sort((a, b) => {
+					return folderMap[b].updated_at - folderMap[a].updated_at;
 				});
 			}
 		}
 
 		// Merge shared folders into the same structure
-		try {
-			sharedFolders = await getSharedFolders(localStorage.token);
-		} catch (e) {
-			sharedFolders = [];
-		}
-
 		for (const sf of sharedFolders) {
-			if (folders[sf.id]) continue; // Already owned by user
-			folders[sf.id] = { ...sf, shared: true };
+			if (folderMap[sf.id]) continue; // Already owned by user
+			folderMap[sf.id] = { ...sf, shared: true };
 		}
 
 		// Build parent-child relationships for shared folders
 		for (const sf of sharedFolders) {
-			if (folders[sf.id]?.shared && sf.parent_id && folders[sf.parent_id]) {
-				folders[sf.parent_id].childrenIds = folders[sf.parent_id].childrenIds
-					? [...new Set([...folders[sf.parent_id].childrenIds, sf.id])]
+			if (folderMap[sf.id]?.shared && sf.parent_id && folderMap[sf.parent_id]) {
+				folderMap[sf.parent_id].childrenIds = folderMap[sf.parent_id].childrenIds
+					? [...new Set([...folderMap[sf.parent_id].childrenIds, sf.id])]
 					: [sf.id];
 			}
 		}
+
+		folders = folderMap;
 	};
 
 	const initSharedFolders = async () => {
@@ -674,12 +681,6 @@
 						navElement.style['-webkit-app-region'] = 'drag';
 					}
 				}
-			}),
-			settings.subscribe((value) => {
-				if (pinnedModels != value?.pinnedModels ?? []) {
-					pinnedModels = value?.pinnedModels ?? [];
-					showPinnedModels = pinnedModels.length > 0;
-				}
 			})
 		];
 
@@ -700,7 +701,12 @@
 		socketInstance?.on('events', chatActiveEventHandler);
 		socketInstance?.on('connect', refreshChatRows);
 
-		const unregisterFolderRefreshHandler = registerFolderRefreshHandler((folderId, chat) => {
+		const unregisterFolderRefreshHandler = registerFolderRefreshHandler(async (folderId, chat) => {
+			// null refreshes the folder tree; undefined refreshes all folder chat lists.
+			if (folderId === null) {
+				return initFolders();
+			}
+
 			if (folderId) {
 				if (chat) {
 					return folderRegistry[folderId]?.upsertChat?.(chat);
@@ -1177,7 +1183,7 @@
 				</div>
 
 				<div
-					class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden pt-2.5 pb-2.5"
+					class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden space-y-1.5 pt-2.5 pb-2.5"
 					on:scroll={(e) => {
 						if (e.target.scrollTop === 0) {
 							scrollTop = 0;
@@ -1276,11 +1282,10 @@
 						</div>
 					</div>
 
-					{#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
+					{#if $visiblePinnedModels.length > 0}
 						<SidebarSection
 							id="sidebar-models"
 							bind:open={showPinnedModels}
-							className="mt-0.5"
 							name={$i18n.t('Models')}
 							dragAndDrop={false}
 						>
@@ -1292,7 +1297,6 @@
 						<SidebarSection
 							id="sidebar-pinned-notes"
 							bind:open={showPinnedNotes}
-							className="mt-0.5"
 							name={$i18n.t('Notes')}
 							dragAndDrop={false}
 							onAdd={async () => {
@@ -1311,7 +1315,6 @@
 						<SidebarSection
 							id="sidebar-channels"
 							bind:open={showChannels}
-							className="mt-0.5"
 							name={$i18n.t('Channels')}
 							dragAndDrop={false}
 							onAdd={$user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true)
@@ -1345,7 +1348,6 @@
 						<SidebarSection
 							id="sidebar-folders"
 							bind:open={showFolders}
-							className="mt-0.5"
 							name={$i18n.t('Folders')}
 							onAdd={() => {
 								showCreateFolderModal = true;
@@ -1397,7 +1399,6 @@
 
 					<SidebarSection
 						id="sidebar-chats"
-						className="mt-0.5"
 						name={$i18n.t('Chats')}
 						on:change={async (e) => {
 							selectedFolder.set(null);

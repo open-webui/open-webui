@@ -404,7 +404,11 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
         )
         request.state.token = None
         request.state.enable_api_keys = False
-        await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
+        try:
+            await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
+        except Exception as exc:
+            log.exception(f'Timer {timer_id} completion failed')
+            await _set_timer_state(timer_id, 'error', timer_error=str(exc)[:500])
 
 
 async def _set_timer_state(timer_id: str, status: str, **fields) -> None:

@@ -122,7 +122,7 @@
 
 <button
 	bind:this={triggerEl}
-	class={triggerClass}
+	class="focus-ring {triggerClass}"
 	type="button"
 	aria-expanded={open}
 	on:click={toggleOpen}
@@ -139,7 +139,7 @@
 		<DropdownMenu className={contentClass} style={`max-height: ${maxHeight}; overflow-y: auto;`}>
 			<slot {open} {selectItem}>
 				{#each items as item}
-					<button class={itemClass} type="button" on:click={() => selectItem(item)}>
+					<button class="focus-ring {itemClass}" type="button" on:click={() => selectItem(item)}>
 						<slot name="item" {item} selected={value === item.value}>
 							{item.label}
 						</slot>

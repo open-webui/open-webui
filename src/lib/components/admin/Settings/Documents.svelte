@@ -17,12 +17,13 @@
 		updateRAGConfig
 	} from '$lib/apis/retrieval';
 
-	import { reindexKnowledgeFiles } from '$lib/apis/knowledge';
+	import { reindexKnowledgeFiles, reindexKnowledgeMetadata } from '$lib/apis/knowledge';
+	import { reindexMemoryVectors } from '$lib/apis/memories';
 	import { deleteAllFiles } from '$lib/apis/files';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import ReindexKnowledgeFilesConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import ReindexEmbeddingDataConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -121,26 +122,33 @@
 		});
 
 		updateEmbeddingModelLoading = true;
-		const res = await updateEmbeddingConfig(localStorage.token, {
+		const payload: Parameters<typeof updateEmbeddingConfig>[1] = {
 			RAG_EMBEDDING_ENGINE: RAG_EMBEDDING_ENGINE,
 			RAG_EMBEDDING_MODEL: RAG_EMBEDDING_MODEL,
 			RAG_EMBEDDING_BATCH_SIZE: RAG_EMBEDDING_BATCH_SIZE,
 			ENABLE_ASYNC_EMBEDDING: ENABLE_ASYNC_EMBEDDING,
-			RAG_EMBEDDING_CONCURRENT_REQUESTS: RAG_EMBEDDING_CONCURRENT_REQUESTS,
-			ollama_config: {
+			RAG_EMBEDDING_CONCURRENT_REQUESTS: RAG_EMBEDDING_CONCURRENT_REQUESTS
+		};
+
+		if (RAG_EMBEDDING_ENGINE === 'ollama') {
+			payload.ollama_config = {
 				key: OllamaKey,
 				url: OllamaUrl
-			},
-			openai_config: {
+			};
+		} else if (RAG_EMBEDDING_ENGINE === 'openai') {
+			payload.openai_config = {
 				key: OpenAIKey,
 				url: OpenAIUrl
-			},
-			azure_openai_config: {
+			};
+		} else if (RAG_EMBEDDING_ENGINE === 'azure_openai') {
+			payload.azure_openai_config = {
 				key: AzureOpenAIKey,
 				url: AzureOpenAIUrl,
 				version: AzureOpenAIVersion
-			}
-		}).catch(async (error) => {
+			};
+		}
+
+		const res = await updateEmbeddingConfig(localStorage.token, payload).catch(async (error) => {
 			toast.error(`${error}`);
 			await setEmbeddingConfig();
 			return null;
@@ -299,15 +307,15 @@
 			ENABLE_ASYNC_EMBEDDING = embeddingConfig.ENABLE_ASYNC_EMBEDDING ?? true;
 			RAG_EMBEDDING_CONCURRENT_REQUESTS = embeddingConfig.RAG_EMBEDDING_CONCURRENT_REQUESTS ?? 0;
 
-			OpenAIKey = embeddingConfig.openai_config.key;
-			OpenAIUrl = embeddingConfig.openai_config.url;
+			OpenAIKey = embeddingConfig.openai_config.key ?? '';
+			OpenAIUrl = embeddingConfig.openai_config.url ?? '';
 
-			OllamaKey = embeddingConfig.ollama_config.key;
-			OllamaUrl = embeddingConfig.ollama_config.url;
+			OllamaKey = embeddingConfig.ollama_config.key ?? '';
+			OllamaUrl = embeddingConfig.ollama_config.url ?? '';
 
-			AzureOpenAIKey = embeddingConfig.azure_openai_config.key;
-			AzureOpenAIUrl = embeddingConfig.azure_openai_config.url;
-			AzureOpenAIVersion = embeddingConfig.azure_openai_config.version;
+			AzureOpenAIKey = embeddingConfig.azure_openai_config.key ?? '';
+			AzureOpenAIUrl = embeddingConfig.azure_openai_config.url ?? '';
+			AzureOpenAIVersion = embeddingConfig.azure_openai_config.version ?? '';
 		}
 	};
 	onMount(async () => {
@@ -371,15 +379,37 @@
 	}}
 />
 
-<ReindexKnowledgeFilesConfirmDialog
+<ReindexEmbeddingDataConfirmDialog
 	bind:show={showReindexConfirm}
+	title={$i18n.t('Reindex Embedding Data')}
+	message={$i18n.t(
+		'Rebuild knowledge file, knowledge search, and memory vectors using the current embedding model.'
+	)}
 	on:confirm={async () => {
-		const res = await reindexKnowledgeFiles(localStorage.token).catch((error) => {
+		const knowledgeRes = await reindexKnowledgeFiles(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (!knowledgeRes) {
+			return;
+		}
+
+		const knowledgeMetadataRes = await reindexKnowledgeMetadata(localStorage.token).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
+		if (!knowledgeMetadataRes) {
+			return;
+		}
+
+		const memoryRes = await reindexMemoryVectors(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
-		if (res) {
+		if (memoryRes) {
 			toast.success($i18n.t('Success'));
 		}
 	}}
@@ -1116,7 +1146,7 @@
 						</div>
 						<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 							{$i18n.t(
-								'After changing the embedding model, reindex the knowledge base for changes to take effect.'
+								'After changing the embedding model, reindex knowledge, knowledge search, and memory vectors for changes to take effect.'
 							)}
 						</div>
 					</AdminSettingField>
@@ -1526,8 +1556,10 @@
 					</button>
 				</AdminSettingRow>
 				<AdminSettingRow
-					label={$i18n.t('Reindex Knowledge Base Vectors')}
-					description={$i18n.t('Rebuild vectors for existing knowledge files.')}
+					label={$i18n.t('Reindex Knowledge and Memory Vectors')}
+					description={$i18n.t(
+						'Rebuild vectors for existing knowledge files, knowledge search, and memories.'
+					)}
 				>
 					<button
 						class={actionButtonClass}

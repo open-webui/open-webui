@@ -234,6 +234,7 @@ class SharingPermissions(BaseModel):
     public_notes: bool = False
     folders: bool = False
     public_chats: bool = False
+    open_chats: bool = False
     public_calendars: bool = False
 
 
@@ -470,7 +471,6 @@ async def get_default_user_permissions_defaults(user=Depends(get_admin_user)):
 async def get_user_settings_by_session_user(
     raw: bool = False,
     user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
     # user already fetched by get_verified_user — no need to refetch
     if raw:
@@ -507,7 +507,7 @@ async def update_user_settings_by_session_user(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    updated_user_settings = form_data.model_dump()
+    updated_user_settings = form_data.model_dump(exclude_unset=True)
     ui_settings = updated_user_settings.get('ui')
     if (
         user.role != 'admin'
@@ -569,7 +569,6 @@ async def update_user_settings_by_session_user(
 async def get_user_status_by_session_user(
     request: Request,
     user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
 ):
     if not await Config.get('users.enable_status'):
         raise HTTPException(
@@ -619,7 +618,7 @@ async def update_user_status_by_session_user(
 
 
 @router.get('/user/info', response_model=dict | None)
-async def get_user_info_by_session_user(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_user_info_by_session_user(user=Depends(get_verified_user)):
     # user already fetched by get_verified_user — no need to refetch
     return user.info
 

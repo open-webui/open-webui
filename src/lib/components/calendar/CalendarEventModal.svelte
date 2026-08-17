@@ -121,6 +121,11 @@
 			return;
 		}
 
+		if (!startDate) {
+			toast.error($i18n.t('Date is required'));
+			return;
+		}
+
 		loading = true;
 		try {
 			const startNs = dateTimeToNs(startDate, allDay ? '00:00' : startTime);

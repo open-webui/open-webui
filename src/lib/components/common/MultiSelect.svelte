@@ -88,7 +88,7 @@
 
 <button
 	bind:this={triggerEl}
-	class={className}
+	class="focus-ring {className}"
 	aria-label={placeholder}
 	type="button"
 	on:click={toggleOpen}
@@ -109,7 +109,7 @@
 		>
 			{#each items as item}
 				<button
-					class="flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+					class="focus-ring flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 					type="button"
 					on:click={() => toggleItem(item.value)}
 				>

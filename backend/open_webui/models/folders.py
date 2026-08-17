@@ -230,7 +230,9 @@ class FolderTable:
             async with get_async_db_context(db) as db:
                 # Check if folder exists
                 result = await db.execute(
-                    select(Folder).filter_by(parent_id=parent_id, user_id=user_id).filter(Folder.name.ilike(name))
+                    select(Folder)
+                    .filter_by(parent_id=parent_id, user_id=user_id)
+                    .filter(func.lower(Folder.name) == func.lower(name))
                 )
                 folder = result.scalars().first()
 

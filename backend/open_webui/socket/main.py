@@ -177,6 +177,7 @@ async def periodic_session_pool_cleanup():
     """Reap orphaned SESSION_POOL entries that missed heartbeats (e.g. crashed instance)."""
     retry_delay = random.uniform(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT)
     is_redis = WEBSOCKET_MANAGER == 'redis'
+    renew_interval = max(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, 0.5)
     while True:
         if not session_aquire_func():
             log.debug('Session cleanup lock held by another node. Retrying.')
@@ -206,8 +207,20 @@ async def periodic_session_pool_cleanup():
                                 SESSION_POOL.pop(sid, None)
                     await asyncio.sleep(0)  # don't hold the loop for the whole sweep
 
-                # Never sleep past half the lock TTL; renewals only happen between sweeps.
-                await asyncio.sleep(min(SESSION_POOL_TIMEOUT, WEBSOCKET_REDIS_LOCK_TIMEOUT / 2))
+                next_cleanup_at = time.monotonic() + SESSION_POOL_TIMEOUT
+                lock_lost = False
+                while True:
+                    sleep_for = min(renew_interval, next_cleanup_at - time.monotonic())
+                    if sleep_for <= 0:
+                        break
+                    await asyncio.sleep(sleep_for)
+                    if not session_renew_func():
+                        log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
+                        lock_lost = True
+                        break
+
+                if lock_lost:
+                    break
         finally:
             session_release_func()
 
@@ -911,7 +924,7 @@ async def _make_channel_emitter(request_info):
     channel_id = request_info['chat_id'].removeprefix('channel:')
     message_id = request_info['message_id']
 
-    state = {'last_emit_at': 0.0}
+    state = {'last_emit_at': 0.0, 'output': []}
     THROTTLE_INTERVAL = 0.15  # ~6 updates/sec
 
     async def _emit_channel_update(content: str, done: bool = False, output: list | None = None):
@@ -959,10 +972,22 @@ async def _make_channel_emitter(request_info):
             if not content and not output and not done:
                 return
 
-            now = __import__('time').time()
+            now = time.time()
             if done or (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
                 state['last_emit_at'] = now
                 await _emit_channel_update(content, done, output if isinstance(output, list) else None)
+
+        elif event_type == 'response:completion':
+            from open_webui.utils.middleware import handle_responses_streaming_event
+
+            data = event_data.get('data', {})
+            state['output'], _ = handle_responses_streaming_event(data, state['output'])
+            content = get_output_text(state['output'])
+
+            now = time.time()
+            if content and (now - state['last_emit_at']) >= THROTTLE_INTERVAL:
+                state['last_emit_at'] = now
+                await _emit_channel_update(content, False, state['output'])
 
         elif event_type == 'chat:message:error':
             error = event_data.get('data', {}).get('error', {})

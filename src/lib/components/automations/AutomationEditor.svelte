@@ -7,8 +7,9 @@
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import type i18nType from '$lib/i18n';
 
-	import { WEBUI_NAME, folders } from '$lib/stores';
+	import { WEBUI_NAME, channels, folders } from '$lib/stores';
 	import { getFolders } from '$lib/apis/folders';
+	import { getChannels } from '$lib/apis/channels';
 
 	import {
 		getAutomationById,
@@ -44,6 +45,7 @@
 	let hasMoreRuns = true;
 	let runsPage = 0;
 	let foldersLoaded = false;
+	let channelsLoaded = false;
 
 	const ensureFolders = async () => {
 		if (foldersLoaded || ($folders ?? []).length > 0) return;
@@ -52,10 +54,28 @@
 		foldersLoaded = true;
 	};
 
+	const ensureChannels = async () => {
+		if (channelsLoaded || ($channels ?? []).length > 0) return;
+		const res = await getChannels(localStorage.token).catch(() => null);
+		if (res) channels.set(res);
+		channelsLoaded = true;
+	};
+
 	const getFolderName = (folderId: string | null): string =>
 		folderId
 			? (($folders ?? []).find((folder) => folder.id === folderId)?.name ?? $i18n.t('None'))
 			: $i18n.t('None');
+
+	const getDestinationName = (): string => {
+		const target = automation.data.target;
+		if (target?.type === 'channel') {
+			const channel = ($channels ?? []).find((channel) => channel.id === target.channel_id);
+			return channel?.name ? `#${channel.name}` : $i18n.t('Channel');
+		}
+		return automation.folder_id
+			? `${$i18n.t('Folder')}: ${getFolderName(automation.folder_id)}`
+			: $i18n.t('New chat');
+	};
 
 	const formatTime = (ts: number | null): string => {
 		if (!ts) return '-';
@@ -216,6 +236,7 @@
 		is_active = automation.is_active;
 
 		await ensureFolders();
+		await ensureChannels();
 		await loadRuns();
 	});
 
@@ -283,10 +304,10 @@
 
 		<div class="flex h-7 items-center px-3">
 			<span class="w-24 shrink-0 text-[0.6875rem] text-gray-400 dark:text-gray-500">
-				{$i18n.t('Folder')}
+				{$i18n.t('Destination')}
 			</span>
 			<span class="min-w-0 truncate text-xs text-gray-700 dark:text-gray-300">
-				{getFolderName(automation.folder_id)}
+				{getDestinationName()}
 			</span>
 		</div>
 
@@ -356,11 +377,19 @@
 								<button
 									class="group flex items-center gap-1 text-[0.6875rem] text-gray-400"
 									on:click={() => {
-										goto(`/c/${run.chat_id}`);
+										if (run.chat_id?.startsWith('channel:')) {
+											goto(`/channels/${run.chat_id.replace('channel:', '')}`);
+										} else {
+											goto(`/c/${run.chat_id}`);
+										}
 									}}
 									type="button"
 								>
-									<span class="group-hover:underline">{$i18n.t('View chat')}</span>
+									<span class="group-hover:underline">
+										{run.chat_id?.startsWith('channel:')
+											? $i18n.t('View channel')
+											: $i18n.t('View chat')}
+									</span>
 									<ArrowRight className="size-2.5" strokeWidth="2" />
 								</button>
 							{/if}
