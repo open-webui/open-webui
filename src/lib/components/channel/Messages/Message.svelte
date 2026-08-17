@@ -10,7 +10,7 @@
 	dayjs.extend(isYesterday);
 	dayjs.extend(localizedFormat);
 
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { formatDate } from '$lib/utils';
@@ -146,11 +146,9 @@
 		}
 	};
 
-	onMount(async () => {
-		if (message && message?.data === true) {
-			await loadMessageData();
-		}
-	});
+	$: if (message?.data === true) {
+		loadMessageData();
+	}
 
 	$: messageOutput = Array.isArray(message?.data?.output) ? message.data.output : [];
 	$: hasStructuredOutput = buildOutputDisplayItems(messageOutput).length > 0;
@@ -454,7 +452,6 @@
 					{/if}
 
 					{#if message?.data === true}
-						<!-- loading indicator -->
 						<div class=" my-2">
 							<Skeleton />
 						</div>
