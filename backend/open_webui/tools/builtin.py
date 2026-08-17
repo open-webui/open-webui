@@ -103,11 +103,12 @@ async def _emit_note_updated(request: Request, user: dict, note) -> None:
 
 async def _has_read_access_to_file(
     file,
-    user_id: str,
-    user_role: str,
+    user: dict,
     model_knowledge: Optional[list[dict]] = None,
 ) -> bool:
     """Check if a user can read a file via ownership, admin role, model attachment, or access grants."""
+    user_id = user.get('id')
+    user_role = user.get('role', 'user')
     if file.user_id == user_id or user_role == 'admin':
         return True
     if model_knowledge and any(item.get('type') == 'file' and item.get('id') == file.id for item in model_knowledge):
@@ -117,7 +118,7 @@ async def _has_read_access_to_file(
     return await has_access_to_file(
         file_id=file.id,
         access_type='read',
-        user=UserModel(**{'id': user_id, 'role': user_role}),
+        user=UserModel(**user),
     )
 
 
@@ -2314,8 +2315,6 @@ async def _get_accessible_chat_files(
 ) -> list[tuple[dict, object]]:
     from open_webui.models.files import Files
 
-    user_id = user.get('id')
-    user_role = user.get('role', 'user')
     accessible = []
     seen = set()
 
@@ -2337,7 +2336,7 @@ async def _get_accessible_chat_files(
         seen.add(fid)
 
         file = await Files.get_file_by_id(fid)
-        if file and await _has_read_access_to_file(file, user_id, user_role):
+        if file and await _has_read_access_to_file(file, user):
             accessible.append((normalized, file))
 
     return accessible
@@ -2559,10 +2558,7 @@ async def query_chat_files(
         if not embedding_function and not full_context:
             return JSONCodec.dumps({'error': 'Embedding function not configured'})
 
-        user_model = UserModel.model_construct(
-            id=__user__.get('id'),
-            role=__user__.get('role', 'user'),
-        )
+        user_model = UserModel(**__user__)
         sources = await get_sources_from_items(
             request=__request__,
             items=file_items,
@@ -2655,7 +2651,7 @@ async def grep_knowledge_files(
             # Single file mode — verify access
             file = await Files.get_file_by_id(file_id)
             if file:
-                if not await _has_read_access_to_file(file, user_id, user_role, __model_knowledge__):
+                if not await _has_read_access_to_file(file, __user__, __model_knowledge__):
                     return JSONCodec.dumps({'error': 'File not found'})
                 files_to_search.append(file)
         elif __model_knowledge__:
@@ -2777,14 +2773,11 @@ async def view_file(
     try:
         from open_webui.models.files import Files
 
-        user_id = __user__.get('id')
-        user_role = __user__.get('role', 'user')
-
         file = await Files.get_file_by_id(file_id)
         if not file:
             return JSONCodec.dumps({'error': 'File not found'})
 
-        if not await _has_read_access_to_file(file, user_id, user_role, __model_knowledge__):
+        if not await _has_read_access_to_file(file, __user__, __model_knowledge__):
             return JSONCodec.dumps({'error': 'File not found'})
 
         content = ''
@@ -3192,7 +3185,7 @@ async def query_knowledge_files(
         embedding_function = getattr(__request__.app.state, 'EMBEDDING_FUNCTION', None)
         if not embedding_function:
             return JSONCodec.dumps({'error': 'Embedding function not configured'})
-        user_model = UserModel.model_construct(id=user_id, role=user_role)
+        user_model = UserModel(**__user__)
 
         collection_names = []
         external_knowledges = []
@@ -3386,7 +3379,7 @@ async def query_knowledge_bases(
         embedding_function = getattr(__request__.app.state, 'EMBEDDING_FUNCTION', None)
         if not embedding_function:
             return JSONCodec.dumps({'error': 'Embedding function not configured'})
-        user_model = UserModel.model_construct(id=user_id, role=__user__.get('role', 'user'))
+        user_model = UserModel(**__user__)
         query_embedding = await embedding_function(query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user_model)
 
         # Min-heap of (distance, knowledge_base_id) - only holds top `count` results
