@@ -427,30 +427,40 @@
 		}
 	};
 
+	let pendingAudioResolve: ((e: any) => void) | null = null;
+
 	const playAudio = (audio) => {
 		if ($showCallOverlay) {
 			return new Promise((resolve) => {
 				const audioElement = document.getElementById('audioElement') as HTMLAudioElement;
 
-				if (audioElement) {
-					audioElement.src = audio.src;
-					audioElement.muted = true;
-					audioElement.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
-
-					audioElement
-						.play()
-						.then(() => {
-							audioElement.muted = false;
-						})
-						.catch((error) => {
-							console.error(error);
-						});
-
-					audioElement.onended = async (e) => {
-						await new Promise((r) => setTimeout(r, 100));
-						resolve(e);
-					};
+				if (!audioElement) {
+					resolve(null);
+					return;
 				}
+
+				pendingAudioResolve = resolve;
+
+				audioElement.src = audio.src;
+				audioElement.muted = true;
+				audioElement.playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
+
+				audioElement
+					.play()
+					.then(() => {
+						audioElement.muted = false;
+					})
+					.catch((error) => {
+						console.error(error);
+						pendingAudioResolve = null;
+						resolve(error);
+					});
+
+				audioElement.onended = async (e) => {
+					await new Promise((r) => setTimeout(r, 100));
+					pendingAudioResolve = null;
+					resolve(e);
+				};
 			});
 		} else {
 			return Promise.resolve();
@@ -475,6 +485,11 @@
 			audioElement.muted = true;
 			audioElement.pause();
 			audioElement.currentTime = 0;
+		}
+
+		if (pendingAudioResolve) {
+			pendingAudioResolve(null);
+			pendingAudioResolve = null;
 		}
 	};
 
