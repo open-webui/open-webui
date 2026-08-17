@@ -1519,8 +1519,8 @@ class OAuthManager:
             oauth_allowed_roles = auth_config.OAUTH_ALLOWED_ROLES
             oauth_admin_roles = auth_config.OAUTH_ADMIN_ROLES
             oauth_roles = []
-            # Default/fallback role if no matching roles are found
-            role = auth_config.DEFAULT_USER_ROLE
+            # Keep existing users at their current role unless the provider sent roles.
+            role = user.role if user else auth_config.DEFAULT_USER_ROLE
 
             # Next block extracts the roles from the user data, accepting nested claims of any depth
             if oauth_claim and oauth_allowed_roles and oauth_admin_roles:
@@ -1584,6 +1584,90 @@ class OAuthManager:
                 role = user.role
 
         return role
+
+    async def update_user_from_oauth(
+        self,
+        request,
+        user,
+        user_data,
+        provider,
+        token: dict | None = None,
+        *,
+        db=None,
+    ):
+        auth_config = await get_oauth_runtime_config()
+
+        determined_role = await self.get_user_role(user, user_data)
+        if user.role != determined_role:
+            updated_user = await Users.update_user_role_by_id(user.id, determined_role, db=db)
+            user = updated_user or user
+            user.role = determined_role
+            await publish_event(
+                request,
+                EVENTS.USER_ROLE_UPDATED,
+                actor=user,
+                subject_id=user.id,
+                source='oauth',
+                data={'role': determined_role, 'provider': provider},
+            )
+
+        updated_fields = []
+
+        if auth_config.OAUTH_UPDATE_NAME_ON_LOGIN:
+            username_claim = auth_config.OAUTH_USERNAME_CLAIM
+            if username_claim:
+                new_name = user_data.get(username_claim)
+                if new_name and new_name != user.name:
+                    updated_user = await Users.update_user_by_id(user.id, {'name': new_name}, db=db)
+                    if updated_user:
+                        user = updated_user
+                        updated_fields.append('name')
+                        log.debug('Updated name for user %s', user.email)
+
+        if auth_config.OAUTH_UPDATE_EMAIL_ON_LOGIN:
+            email_claim = auth_config.OAUTH_EMAIL_CLAIM
+            if email_claim:
+                new_email = user_data.get(email_claim)
+                if new_email and new_email.lower() != user.email.lower():
+                    existing_user = await Users.get_user_by_email(new_email, db=db)
+                    if existing_user:
+                        log.error(
+                            f'Cannot update email to {new_email} for user {user.id} because it is already taken.'
+                        )
+                    elif await Auths.update_email_by_id(user.id, new_email.lower(), db=db):
+                        user = await Users.get_user_by_id(user.id, db=db) or user
+                        updated_fields.append('email')
+                        log.debug('Updated email for user %s', user.id)
+
+        if auth_config.OAUTH_UPDATE_PICTURE_ON_LOGIN:
+            picture_claim = auth_config.OAUTH_PICTURE_CLAIM
+            if picture_claim:
+                new_picture_url = user_data.get(
+                    picture_claim,
+                    OAUTH_PROVIDERS[provider].get('picture_url', ''),
+                )
+                access_token = token.get('access_token') if token else None
+                processed_picture_url = await self._process_picture_url(new_picture_url, access_token)
+                if processed_picture_url != user.profile_image_url:
+                    updated_user = await Users.update_user_profile_image_url_by_id(
+                        user.id, processed_picture_url, db=db
+                    )
+                    if updated_user:
+                        user = updated_user
+                        updated_fields.append('profile_image_url')
+                        log.debug('Updated profile picture for user %s', user.email)
+
+        if updated_fields:
+            await publish_event(
+                request,
+                EVENTS.USER_UPDATED,
+                actor=user,
+                subject_id=user.id,
+                source='oauth',
+                data={'updated_fields': updated_fields, 'provider': provider},
+            )
+
+        return user
 
     async def update_user_groups(self, request, user, user_data, default_permissions, db=None):
         auth_config = await get_oauth_runtime_config()
@@ -1963,78 +2047,14 @@ class OAuthManager:
                         await Users.update_user_oauth_by_id(user.id, provider, sub, db=db)
 
             if user:
-                determined_role = await self.get_user_role(user, user_data)
-                if user.role != determined_role:
-                    updated_user = await Users.update_user_role_by_id(user.id, determined_role, db=db)
-                    # Update the user object in memory as well,
-                    # to avoid problems with the ENABLE_OAUTH_GROUP_MANAGEMENT check below
-                    user.role = determined_role
-                    await publish_event(
-                        request,
-                        EVENTS.USER_ROLE_UPDATED,
-                        actor=updated_user or user,
-                        subject_id=user.id,
-                        source='oauth',
-                        data={'role': determined_role, 'provider': provider},
-                    )
-
-                updated_fields = []
-
-                if auth_config.OAUTH_UPDATE_NAME_ON_LOGIN:
-                    username_claim = auth_config.OAUTH_USERNAME_CLAIM
-                    if username_claim:
-                        new_name = user_data.get(username_claim)
-                        if new_name and new_name != user.name:
-                            updated_user = await Users.update_user_by_id(user.id, {'name': new_name}, db=db)
-                            if updated_user:
-                                user = updated_user
-                                updated_fields.append('name')
-                                log.debug('Updated name for user %s', user.email)
-
-                if auth_config.OAUTH_UPDATE_EMAIL_ON_LOGIN:
-                    email_claim = auth_config.OAUTH_EMAIL_CLAIM
-                    if email_claim:
-                        new_email = user_data.get(email_claim)
-                        if new_email and new_email.lower() != user.email.lower():
-                            existing_user = await Users.get_user_by_email(new_email, db=db)
-                            if existing_user:
-                                log.error(
-                                    f'Cannot update email to {new_email} for user {user.id} because it is already taken.'
-                                )
-                            elif await Auths.update_email_by_id(user.id, new_email.lower(), db=db):
-                                user = await Users.get_user_by_id(user.id, db=db) or user
-                                updated_fields.append('email')
-                                log.debug('Updated email for user %s', user.id)
-
-                # Update profile picture if enabled and different from current
-                if auth_config.OAUTH_UPDATE_PICTURE_ON_LOGIN:
-                    picture_claim = auth_config.OAUTH_PICTURE_CLAIM
-                    if picture_claim:
-                        new_picture_url = user_data.get(
-                            picture_claim,
-                            OAUTH_PROVIDERS[provider].get('picture_url', ''),
-                        )
-                        processed_picture_url = await self._process_picture_url(
-                            new_picture_url, token.get('access_token')
-                        )
-                        if processed_picture_url != user.profile_image_url:
-                            updated_user = await Users.update_user_profile_image_url_by_id(
-                                user.id, processed_picture_url, db=db
-                            )
-                            if updated_user:
-                                user = updated_user
-                                updated_fields.append('profile_image_url')
-                                log.debug('Updated profile picture for user %s', user.email)
-
-                if updated_fields:
-                    await publish_event(
-                        request,
-                        EVENTS.USER_UPDATED,
-                        actor=user,
-                        subject_id=user.id,
-                        source='oauth',
-                        data={'updated_fields': updated_fields, 'provider': provider},
-                    )
+                user = await self.update_user_from_oauth(
+                    request=request,
+                    user=user,
+                    user_data=user_data,
+                    provider=provider,
+                    token=token,
+                    db=db,
+                )
             else:
                 # If the user does not exist, check if signups are enabled
                 if auth_config.ENABLE_OAUTH_SIGNUP:
