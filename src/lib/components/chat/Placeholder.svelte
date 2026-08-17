@@ -113,10 +113,10 @@
 					folder={$selectedFolder}
 					readOnly={folderReadOnly}
 					onUpdate={async () => {
-						await Promise.all([refreshChatList(localStorage.token), refreshFolderChatLists()]);
+						await Promise.all([refreshChatList(localStorage.token), refreshFolderChatLists(null)]);
 					}}
 					onDelete={async () => {
-						await Promise.all([refreshChatList(localStorage.token), refreshFolderChatLists()]);
+						await Promise.all([refreshChatList(localStorage.token), refreshFolderChatLists(null)]);
 
 						selectedFolder.set(null);
 					}}

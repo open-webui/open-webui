@@ -702,6 +702,11 @@
 		socketInstance?.on('connect', refreshChatRows);
 
 		const unregisterFolderRefreshHandler = registerFolderRefreshHandler(async (folderId, chat) => {
+			// null refreshes the folder tree; undefined refreshes all folder chat lists.
+			if (folderId === null) {
+				return initFolders();
+			}
+
 			if (folderId) {
 				if (chat) {
 					return folderRegistry[folderId]?.upsertChat?.(chat);
@@ -710,7 +715,6 @@
 				return folderRegistry[folderId]?.setFolderItems?.();
 			}
 
-			await initFolders();
 			return Promise.all(Object.values(folderRegistry).map((folder) => folder?.setFolderItems?.()));
 		});
 
