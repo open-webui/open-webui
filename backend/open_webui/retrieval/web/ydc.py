@@ -23,7 +23,7 @@ def search_youcom(
         filter_list (list[str], optional): Domain filter list
         language (str): Language code for search results (default: "EN")
     """
-    url = 'https://ydc-index.io/v1/search'
+    url = 'https://api.you.com/v1/search'
     headers = {
         'Accept': 'application/json',
         'X-API-KEY': api_key,
