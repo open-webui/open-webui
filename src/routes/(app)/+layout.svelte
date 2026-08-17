@@ -90,19 +90,7 @@
 	};
 
 	const setUserSettings = async (cb?: () => Promise<void>) => {
-		let userSettings = await getUserSettings(localStorage.token).catch((error) => {
-			console.error(error);
-			return null;
-		});
-
-		if (!userSettings) {
-			try {
-				userSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
-			} catch (e: unknown) {
-				console.error('Failed to parse settings from localStorage', e);
-				userSettings = {};
-			}
-		}
+		const userSettings = await getUserSettings(localStorage.token);
 
 		if (userSettings?.ui) {
 			settings.set(userSettings.ui);
@@ -254,14 +242,20 @@
 		}
 
 		clearChatInputStorage();
-		await Promise.all([
-			checkLocalDBChats(),
-			setBanners().catch((e) => console.error('Failed to load banners:', e)),
-			setTools().catch((e) => console.error('Failed to load tools:', e)),
-			setUserSettings(async () => {
-				await setModels().catch((e) => console.error('Failed to load models:', e));
-			}).catch((e) => console.error('Failed to load user settings:', e))
-		]);
+		try {
+			await Promise.all([
+				checkLocalDBChats(),
+				setBanners().catch((e) => console.error('Failed to load banners:', e)),
+				setTools().catch((e) => console.error('Failed to load tools:', e)),
+				setUserSettings(async () => {
+					await setModels().catch((e) => console.error('Failed to load models:', e));
+				})
+			]);
+		} catch (e) {
+			console.error('Failed to load user settings:', e);
+			toast.error($i18n.t('Failed to load Interface settings'));
+			return;
+		}
 
 		selectedTerminalId.set(localStorage.selectedTerminalId ?? null);
 
