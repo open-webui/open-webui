@@ -17,7 +17,7 @@
 		temporaryChatEnabled,
 		selectedFolder
 	} from '$lib/stores';
-	import { refreshChatList } from '$lib/stores/chatList';
+	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
@@ -112,11 +112,11 @@
 				<FolderTitle
 					folder={$selectedFolder}
 					readOnly={folderReadOnly}
-					onUpdate={async (folder) => {
-						await refreshChatList(localStorage.token);
+					onUpdate={async () => {
+						await Promise.all([refreshChatList(localStorage.token), refreshFolderChatLists()]);
 					}}
 					onDelete={async () => {
-						await refreshChatList(localStorage.token);
+						await Promise.all([refreshChatList(localStorage.token), refreshFolderChatLists()]);
 
 						selectedFolder.set(null);
 					}}
