@@ -1705,12 +1705,11 @@ async def token_exchange(
             detail='User not found. Please sign in via the web interface first.',
         )
 
-    user = await oauth_manager.update_user_from_oauth(
+    user = await oauth_manager.update_user_role_from_oauth(
         request=request,
         user=user,
         user_data=user_data,
         provider=provider,
-        token=token_data,
         db=db,
     )
     if await Config.get('oauth.enable_group_mapping'):
