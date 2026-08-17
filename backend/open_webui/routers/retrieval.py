@@ -1998,7 +1998,7 @@ async def process_file(
             hash = calculate_sha256_string(text_content)
 
             if config.BYPASS_EMBEDDING_AND_RETRIEVAL:
-                await Files.update_file_data_by_id(file.id, {'status': 'completed'}, db=db)
+                await Files.update_file_data_by_id(file.id, {'status': 'completed', 'error': None}, db=db)
                 await Files.update_file_hash_by_id(file.id, hash, db=db)
                 await publish_event(
                     request,
@@ -2057,7 +2057,7 @@ async def process_file(
 
                             await Files.update_file_data_by_id(
                                 file.id,
-                                {'status': 'completed'},
+                                {'status': 'completed', 'error': None},
                                 db=session,
                             )
                             await Files.update_file_hash_by_id(file.id, hash, db=session)
@@ -2087,11 +2087,24 @@ async def process_file(
             async with get_async_db() as session:
                 await Files.update_file_data_by_id(
                     file.id,
-                    {'status': 'failed'},
+                    {'status': 'failed', 'error': str(e)},
                     db=session,
                 )
                 # Clear the hash so the file can be re-uploaded after fixing the issue
                 await Files.update_file_hash_by_id(file.id, None, db=session)
+
+            await publish_event(
+                request,
+                EVENTS.RETRIEVAL_CONTENT_PROCESS_FAILED,
+                actor=user,
+                subject_id=file.id,
+                subject_type='file',
+                data={
+                    'collection_name': collection_name,
+                    'filename': file.filename,
+                    'message': f'{file.filename}: {e}',
+                },
+            )
 
             if 'No pandoc was found' in str(e):
                 raise HTTPException(
