@@ -197,10 +197,14 @@ class FolderTable:
         try:
             async with get_async_db_context(db) as db:
                 folders = []
+                seen_ids = {id}
 
                 async def get_children(folder):
                     children = await self.get_folders_by_parent_id_and_user_id(folder.id, user_id, db=db)
                     for child in children:
+                        if child.id in seen_ids:
+                            continue
+                        seen_ids.add(child.id)
                         await get_children(child)
                         folders.append(child)
 
@@ -260,15 +264,17 @@ class FolderTable:
             if not folder:
                 return []
 
-            folder_ids = [folder.id]
+            folder_ids = {folder.id}
             folders = [FolderModel.model_validate(folder)]
             while folders:
                 current_folder = folders.pop()
                 children = await self.get_folders_by_parent_id_and_user_id(current_folder.id, user_id, db=db)
-                folder_ids.extend(child.id for child in children)
-                folders.extend(children)
+                for child in children:
+                    if child.id not in folder_ids:
+                        folder_ids.add(child.id)
+                        folders.append(child)
 
-            return folder_ids
+            return list(folder_ids)
 
     async def update_folder_parent_id_by_id_and_user_id(
         self,
@@ -378,11 +384,15 @@ class FolderTable:
                     return folder_ids
 
                 folder_ids.append(folder.id)
+                seen_ids = {folder.id}
 
                 # Delete all children folders
                 async def delete_children(folder):
                     folder_children = await self.get_folders_by_parent_id_and_user_id(folder.id, user_id, db=db)
                     for folder_child in folder_children:
+                        if folder_child.id in seen_ids:
+                            continue
+                        seen_ids.add(folder_child.id)
                         await delete_children(folder_child)
                         folder_ids.append(folder_child.id)
 
