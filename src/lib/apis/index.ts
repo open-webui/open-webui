@@ -1,5 +1,5 @@
 import { WEBUI_BASE_URL } from '$lib/constants';
-import { convertOpenApiToToolPayload } from '$lib/utils';
+import { convertOpenApiToToolPayload, normalizeTags } from '$lib/utils';
 import { getOpenAIModelsDirect } from './openai';
 
 const TOOL_SERVER_FETCH_TIMEOUT = 10000;
@@ -141,8 +141,8 @@ export const getModels = async (
 					}
 				}
 
-				const tags = apiConfig.tags;
-				if (tags) {
+				const tags = normalizeTags(apiConfig.tags);
+				if (tags.length > 0) {
 					for (const model of models) {
 						model.tags = tags;
 					}

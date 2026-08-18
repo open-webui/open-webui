@@ -244,7 +244,7 @@ from open_webui.utils.middleware import (
     process_chat_payload,
     process_chat_response,
 )
-from open_webui.utils.misc import merge_model_params
+from open_webui.utils.misc import merge_model_params, normalize_tags
 from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.models import (
     check_model_access,
@@ -888,19 +888,16 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
     models = await get_filtered_models(models, user)
 
     for model in models:
+        meta = model.get('info', {}).get('meta', {})
+
         # Remove profile image URL to reduce payload size
-        if model.get('info', {}).get('meta', {}).get('profile_image_url'):
-            model['info']['meta'].pop('profile_image_url', None)
+        meta.pop('profile_image_url', None)
 
-        try:
-            model_tags = [tag.get('name') for tag in model.get('info', {}).get('meta', {}).get('tags', [])]
-            tags = [tag.get('name') for tag in model.get('tags', [])]
+        if 'tags' in meta:
+            meta['tags'] = normalize_tags(meta['tags'])
 
-            tags = list(set(model_tags + tags))
-            model['tags'] = [{'name': tag} for tag in tags]
-        except Exception as e:
-            log.debug('Error processing model tags: %s', e)
-            model['tags'] = []
+        tags = meta.get('tags', []) + normalize_tags(model.get('tags'))
+        model['tags'] = list({tag['name']: tag for tag in tags}.values())
 
     model_order_list = await Config.get('ui.model_order_list')
     if model_order_list:

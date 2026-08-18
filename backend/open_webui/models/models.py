@@ -9,7 +9,7 @@ from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
 from open_webui.models.users import User, UserModel, UserResponse, Users
-from open_webui.utils.misc import json_text_variants
+from open_webui.utils.misc import json_text_variants, normalize_tags
 from open_webui.utils.validate import validate_profile_image_url
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, update
@@ -97,17 +97,9 @@ class ModelMeta(BaseModel):
 
     @model_validator(mode='before')
     @classmethod
-    def normalize_tags(cls, data):
+    def normalize_meta_tags(cls, data):
         if isinstance(data, dict) and 'tags' in data:
-            raw_tags = data['tags']
-            if isinstance(raw_tags, list):
-                normalized = []
-                for tag in raw_tags:
-                    if isinstance(tag, str):
-                        normalized.append({'name': tag})
-                    elif isinstance(tag, dict) and 'name' in tag:
-                        normalized.append(tag)
-                data['tags'] = normalized
+            data['tags'] = normalize_tags(data['tags'])
         return data
 
 

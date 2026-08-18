@@ -33,6 +33,13 @@ import { decode } from 'html-entities';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Unvalidated config and API payloads hold tags as plain strings or malformed dicts
+export const normalizeTags = (tags: unknown): { name: string }[] =>
+	(Array.isArray(tags) ? tags : [])
+		.map((tag) => (typeof tag === 'string' ? tag : tag?.name))
+		.filter((name): name is string => typeof name === 'string' && name.trim() !== '')
+		.map((name) => ({ name: name.trim() }));
+
 export const formatNumber = (num: number): string => {
 	return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 })
 		.format(num)
