@@ -115,6 +115,7 @@ from open_webui.retrieval.web.serply import search_serply
 from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.sougou import search_sougou
 from open_webui.retrieval.web.tavily import search_tavily
+from open_webui.retrieval.web.olostep import search_olostep
 from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.retrieval.web.yacy import search_yacy
 from open_webui.retrieval.web.yandex import search_yandex
@@ -384,6 +385,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'SOUGOU_API_SID': 'web.search.sougou_api_sid',
     'SOUGOU_API_SK': 'web.search.sougou_api_sk',
     'TAVILY_API_KEY': 'web.search.tavily_api_key',
+    'OLOSTEP_API_KEY': 'web.search.olostep_api_key',
     'TAVILY_EXTRACT_DEPTH': 'web.search.tavily_extract_depth',
     'TEXT_SPLITTER': 'rag.text_splitter',
     'TIKA_SERVER_URL': 'rag.tika_server_url',
@@ -2628,6 +2630,17 @@ async def search_web(request: Request, engine: str, query: str, user=None) -> li
             )
         else:
             raise Exception('No TAVILY_API_KEY found in environment variables')
+    elif engine == "olostep":
+        if config.OLOSTEP_API_KEY:
+            return await asyncio.to_thread(
+                search_olostep,
+                config.OLOSTEP_API_KEY,
+                query,
+                config.WEB_SEARCH_RESULT_COUNT,
+                config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception("No OLOSTEP_API_KEY found in environment variables")
     elif engine == 'exa':
         if config.EXA_API_KEY:
             return await asyncio.to_thread(

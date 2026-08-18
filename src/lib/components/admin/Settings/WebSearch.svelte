@@ -47,7 +47,8 @@
 		'yandex',
 		'youcom',
 		'linkup',
-        'openserp'
+        'openserp',
+		'olostep'
 	];
 	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'microsoft_web_iq', 'external'];
 
@@ -569,6 +570,20 @@
 									variant="settings"
 									placeholder={$i18n.t('Enter Tavily API Key')}
 									bind:value={webConfig.TAVILY_API_KEY}
+								/>
+							</div>
+						</div>
+					{:else if webConfig.WEB_SEARCH_ENGINE === 'olostep'}
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
+								<div class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1">
+									{$i18n.t('Olostep API Key')}
+								</div>
+
+								<SensitiveInput
+									variant="settings"
+									placeholder={$i18n.t('Enter Olostep API Key')}
+									bind:value={webConfig.OLOSTEP_API_KEY}
 								/>
 							</div>
 						</div>

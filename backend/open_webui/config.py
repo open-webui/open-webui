@@ -1271,6 +1271,8 @@ SOUGOU_API_SK = os.getenv('SOUGOU_API_SK', '')
 
 TAVILY_API_KEY = os.getenv('TAVILY_API_KEY', '')
 
+OLOSTEP_API_KEY = os.getenv('OLOSTEP_API_KEY', '')
+
 TAVILY_EXTRACT_DEPTH = os.getenv('TAVILY_EXTRACT_DEPTH', 'basic')
 
 PLAYWRIGHT_WS_URL = os.getenv('PLAYWRIGHT_WS_URL', '')
@@ -2989,6 +2991,7 @@ DEFAULT_CONFIG = {
     'web.search.sougou_api_sid': SOUGOU_API_SID,
     'web.search.sougou_api_sk': SOUGOU_API_SK,
     'web.search.tavily_api_key': TAVILY_API_KEY,
+    'web.search.olostep_api_key': OLOSTEP_API_KEY,
     'web.search.tavily_extract_depth': TAVILY_EXTRACT_DEPTH,
     'web.loader.playwright_ws_url': PLAYWRIGHT_WS_URL,
     'web.loader.playwright_timeout': PLAYWRIGHT_TIMEOUT,
