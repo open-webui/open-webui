@@ -71,6 +71,8 @@
 	};
 
 	let RAGConfig: any = null;
+	let mediaMimeTypesConfigured = false;
+
 	const inputClass =
 		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const actionButtonClass =
@@ -260,6 +262,10 @@
 			}
 		}
 
+		const mediaMimeTypes = RAGConfig.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES.split(',')
+			.map((mimeType: string) => mimeType.trim())
+			.filter((mimeType: string) => mimeType !== '');
+
 		const res = await updateRAGConfig(localStorage.token, {
 			...RAGConfig,
 			// Convert null (from cleared number inputs) to empty string so the backend
@@ -280,12 +286,9 @@
 				RAGConfig.EXTERNAL_DOCUMENT_LOADER_HEADERS.trim() !== ''
 					? JSON.parse(RAGConfig.EXTERNAL_DOCUMENT_LOADER_HEADERS)
 					: {},
+			// Blank clears the list, unless never set (null keeps the external-engine-only default)
 			CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES:
-				RAGConfig.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES.trim() === ''
-					? undefined
-					: RAGConfig.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES.split(',')
-							.map((mimeType: string) => mimeType.trim())
-							.filter((mimeType: string) => mimeType !== ''),
+				mediaMimeTypes.length > 0 || mediaMimeTypesConfigured ? mediaMimeTypes : undefined,
 			MINERU_PARAMS:
 				typeof RAGConfig.MINERU_PARAMS === 'string' && RAGConfig.MINERU_PARAMS.trim() !== ''
 					? JSON.parse(RAGConfig.MINERU_PARAMS)
@@ -294,6 +297,10 @@
 				.map((ext) => ext.trim())
 				.filter((ext) => ext !== '')
 		});
+
+		if (res) {
+			mediaMimeTypesConfigured = res.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES != null;
+		}
 		dispatch('save');
 	};
 
@@ -342,9 +349,9 @@
 				: config.EXTERNAL_DOCUMENT_LOADER_HEADERS;
 
 		config.MINERU_FILE_EXTENSIONS = (config?.MINERU_FILE_EXTENSIONS ?? ['pdf']).join(', ');
-		config.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES = (
-			config?.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES ?? []
-		).join(', ');
+		const storedMediaMimeTypes = config.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES;
+		mediaMimeTypesConfigured = storedMediaMimeTypes != null;
+		config.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES = (storedMediaMimeTypes ?? []).join(', ');
 		config.RAG_TOKENIZER_MODEL = config?.RAG_TOKENIZER_MODEL ?? '';
 
 		RAGConfig = config;
