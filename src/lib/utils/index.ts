@@ -1141,6 +1141,26 @@ export const extractParagraphsForAudio = (text: string) => {
 	return paragraphs.map(cleanText).filter(Boolean);
 };
 
+export const selectCallOverlayAudioParts = (
+	messageContentParts: string[],
+	alreadySent: number = 0,
+	final: boolean = false
+) => {
+	let n = alreadySent;
+	const parts: string[] = [];
+	for (; n < messageContentParts.length; n++) {
+		const part = messageContentParts[n];
+		if (!part) {
+			continue;
+		}
+		if (!final && (part.split(/\s+/).length < 4 || part.length < 50)) {
+			break;
+		}
+		parts.push(part);
+	}
+	return { parts, nextSent: n };
+};
+
 export const extractSentencesForAudio = (text: string) => {
 	return extractSentences(text).reduce((mergedTexts, currentText) => {
 		const lastIndex = mergedTexts.length - 1;

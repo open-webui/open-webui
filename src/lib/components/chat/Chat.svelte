@@ -56,6 +56,7 @@
 		convertMessagesToHistory,
 		copyToClipboard,
 		getMessageContentParts,
+	selectCallOverlayAudioParts,
 		createMessagesList,
 		sanitizeHistory,
 		getPromptVariables,
@@ -1922,23 +1923,25 @@
 			messageContentParts.pop();
 		}
 
-		const nextContentPart = messageContentParts.at(-1) ?? '';
-		if (!nextContentPart || (!final && nextContentPart === message.lastSentence)) {
-			return;
-		}
-
-		if (!final) {
-			message.lastSentence = nextContentPart;
-		}
-
-		eventTarget.dispatchEvent(
-			new CustomEvent('chat', {
-				detail: {
-					id: message.id,
-					content: nextContentPart
-				}
-			})
+		// Dispatch every newly completed part in order. The previous
+		// lastSentence/at(-1) path dropped earlier sentences when a chunk
+		// completed more than one part at once.
+		const { parts, nextSent } = selectCallOverlayAudioParts(
+			messageContentParts,
+			message.ttsSent ?? 0,
+			final
 		);
+		for (const part of parts) {
+			eventTarget.dispatchEvent(
+				new CustomEvent('chat', {
+					detail: {
+						id: message.id,
+						content: part
+					}
+				})
+			);
+		}
+		message.ttsSent = nextSent;
 	};
 
 	const getContents = () => {
