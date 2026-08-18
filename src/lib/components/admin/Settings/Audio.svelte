@@ -490,6 +490,9 @@
 						} else if (value === 'mistral') {
 							TTS_VOICE = '';
 							TTS_MODEL = 'voxtral-mini-tts-2603';
+						} else if (value === 'sarvam') {
+							TTS_VOICE = 'aditya';
+							TTS_MODEL = 'bulbul:v3';
 						} else {
 							TTS_VOICE = '';
 							TTS_MODEL = '';
@@ -502,6 +505,7 @@
 					<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
 					<option value="azure">{$i18n.t('Azure AI Speech')}</option>
 					<option value="mistral">{$i18n.t('MistralAI')}</option>
+					<option value="sarvam">{$i18n.t('Sarvam AI')}</option>
 				</SettingsSelect>
 			</AdminSettingRow>
 

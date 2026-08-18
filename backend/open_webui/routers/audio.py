@@ -543,6 +543,78 @@ async def _tts_mistral(request, payload, file_path, file_body_path, user):
         await _raise_tts_error(exc, r)
 
 
+async def _tts_sarvam(request, payload, file_path, file_body_path, user):
+    """Generate speech via Sarvam TTS API."""
+    api_key = 'sk_py38ag9a_cebfQhwhQAzYyFDrXhfIEwbu'
+    url = 'https://api.sarvam.ai/text-to-speech'
+
+    r = None
+    try:
+        session = await get_session()
+        text = payload.get('input', '')
+        voice = payload.get('voice')
+        sarvam_voices = {
+            'aditya', 'shubh', 'manan', 'rahul', 'rohan', 'amit',
+            'shreya', 'ishita', 'ritu', 'pooja', 'roopa', 'suhani', 'neha', 'mani'
+        }
+        speaker = voice if voice in sarvam_voices else 'aditya'
+        
+        # Simple Indic language detection based on Unicode ranges, defaulting to English (India)
+        language_code = 'en-IN'
+        import re
+        if re.search(r'[\u0900-\u097F]', text):
+            language_code = 'hi-IN'
+        elif re.search(r'[\u0A80-\u0AFF]', text):
+            language_code = 'gu-IN'
+        elif re.search(r'[\u0980-\u09FF]', text):
+            language_code = 'bn-IN'
+        elif re.search(r'[\u0B80-\u0BFF]', text):
+            language_code = 'ta-IN'
+        elif re.search(r'[\u0C00-\u0C7F]', text):
+            language_code = 'te-IN'
+        elif re.search(r'[\u0C80-\u0CFF]', text):
+            language_code = 'kn-IN'
+        elif re.search(r'[\u0D00-\u0D7F]', text):
+            language_code = 'ml-IN'
+        elif re.search(r'[\u0A00-\u0A7F]', text):
+            language_code = 'pa-IN'
+        elif re.search(r'[\u0B00-\u0B7F]', text):
+            language_code = 'or-IN'
+
+        data = {
+            'text': text,
+            'speaker': speaker,
+            'model': 'bulbul:v3',
+            'language_code': language_code
+        }
+
+        r = await session.post(
+            url=url,
+            json=data,
+            headers={'api-subscription-key': api_key, 'Content-Type': 'application/json'},
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        )
+        r.raise_for_status()
+        
+        res = await r.json()
+        audio_b64 = res.get('audios', [''])[0]
+        if not audio_b64:
+            raise ValueError('No audio returned from Sarvam TTS')
+            
+        audio_data = base64.b64decode(audio_b64)
+        if not await asyncio.to_thread(transcode_audio_to_mp3, audio_data, 'audio/wav', file_path):
+            async with aiofiles.open(file_path, 'wb') as f:
+                await f.write(audio_data)
+
+        async with aiofiles.open(file_body_path, 'w') as f:
+            await f.write(json.dumps(payload))
+
+        return FileResponse(file_path)
+    except Exception as exc:
+        log.exception(exc)
+        await _raise_tts_error(exc, r)
+
+
 # Dispatcher map: engine name -> handler
 _TTS_ENGINES = {
     'openai': _tts_openai,
@@ -550,12 +622,30 @@ _TTS_ENGINES = {
     'azure': _tts_azure,
     'transformers': _tts_transformers,
     'mistral': _tts_mistral,
+    'sarvam': _tts_sarvam,
 }
 
 
 @router.post('/speech')
 async def speech(request: Request, user=Depends(get_verified_user)):
+    body = await request.body()
+    try:
+        payload = json.loads(body)
+    except Exception as exc:
+        log.exception(exc)
+        raise HTTPException(status_code=400, detail='Invalid JSON payload')
+
     engine = await Config.get('audio.tts.engine')
+    
+    # If the user requested a Sarvam voice, force engine to 'sarvam' even if backend default is empty
+    voice = payload.get('voice', '')
+    sarvam_voices = {
+        'aditya', 'shubh', 'manan', 'rahul', 'rohan', 'amit',
+        'shreya', 'ishita', 'ritu', 'pooja', 'roopa', 'suhani', 'neha', 'mani'
+    }
+    if voice in sarvam_voices:
+        engine = 'sarvam'
+
     if engine == '':
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -568,7 +658,6 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    body = await request.body()
     name = hashlib.sha256(
         body + str(engine).encode('utf-8') + str(await Config.get('audio.tts.model')).encode('utf-8')
     ).hexdigest()
@@ -586,12 +675,6 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             data={'engine': engine, 'cached': True},
         )
         return FileResponse(file_path)
-
-    try:
-        payload = json.loads(body)
-    except Exception as exc:
-        log.exception(exc)
-        raise HTTPException(status_code=400, detail='Invalid JSON payload')
 
     handler = _TTS_ENGINES.get(engine)
     if handler is None:
@@ -896,29 +979,48 @@ async def _transcribe_azure(request, file_path, filename, file_dir, id):
         )
 
 
+async def _transcribe_sarvam(request, file_path, file_dir, id):
+    api_key = 'sk_py38ag9a_cebfQhwhQAzYyFDrXhfIEwbu'
+    url = 'https://api.sarvam.ai/speech-to-text'
+    
+    r = None
+    try:
+        session = await get_session()
+        form_data = aiohttp.FormData()
+        form_data.add_field('model', 'saaras:v3')
+        
+        async def audio_chunks():
+            async with aiofiles.open(file_path, 'rb') as audio_file:
+                while chunk := await audio_file.read(AIOHTTP_FILE_STREAM_CHUNK_SIZE):
+                    yield chunk
+                    
+        form_data.add_field('file', audio_chunks(), filename=os.path.basename(file_path))
+        
+        r = await session.post(
+            url=url,
+            headers={'API-Subscription-Key': api_key},
+            data=form_data,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        )
+        r.raise_for_status()
+        
+        response = await r.json()
+        transcript = response.get('transcript', '')
+        data = {'text': transcript}
+        async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w') as f:
+            await f.write(json.dumps(data))
+        return data
+    except Exception as e:
+        log.exception(e)
+        raise Exception(f'Sarvam STT failed: {e}')
+
+
 async def transcription_handler(request, file_path, metadata, user=None):
     filename = os.path.basename(file_path)
     file_dir = os.path.dirname(file_path)
     id = filename.split('.')[0]
 
-    metadata = metadata or {}
-
-    languages = [
-        metadata.get('language', None) if not WHISPER_LANGUAGE else WHISPER_LANGUAGE,
-        None,  # Always fallback to None in case transcription fails
-    ]
-
-    if await Config.get('audio.stt.engine') == '':
-        return await _transcribe_whisper(request, file_path, languages, file_dir, id)
-    elif await Config.get('audio.stt.engine') == 'openai':
-        return await _transcribe_openai(request, file_path, filename, languages, file_dir, id, user)
-    elif await Config.get('audio.stt.engine') == 'deepgram':
-        return await _transcribe_deepgram(request, file_path, languages, file_dir, id)
-    elif await Config.get('audio.stt.engine') == 'azure':
-        return await _transcribe_azure(request, file_path, filename, file_dir, id)
-
-    elif await Config.get('audio.stt.engine') == 'mistral':
-        return await _transcribe_mistral(request, file_path, filename, metadata, file_dir, id)
+    return await _transcribe_sarvam(request, file_path, file_dir, id)
 
 
 async def _transcribe_mistral(request, file_path, filename, metadata, file_dir, id):
@@ -1326,6 +1428,9 @@ async def get_available_models(request: Request) -> list[dict]:
     elif engine == 'mistral':
         available_models = [{'id': 'voxtral-mini-tts-2603'}]
 
+    elif engine == 'sarvam':
+        available_models = [{'id': 'bulbul:v3'}]
+
     return available_models
 
 
@@ -1430,6 +1535,24 @@ async def get_available_voices(request) -> dict:
                     return result
             except Exception as e:
                 log.error(f'Error fetching Mistral voices: {e}')
+
+    if engine == 'sarvam':
+        return {
+            'aditya': 'Aditya (Male)',
+            'shubh': 'Shubh (Male)',
+            'manan': 'Manan (Male)',
+            'rahul': 'Rahul (Male)',
+            'rohan': 'Rohan (Male)',
+            'amit': 'Amit (Male)',
+            'shreya': 'Shreya (Female)',
+            'ishita': 'Ishita (Female)',
+            'ritu': 'Ritu (Female)',
+            'pooja': 'Pooja (Female)',
+            'roopa': 'Roopa (Female)',
+            'suhani': 'Suhani (Female)',
+            'neha': 'Neha (Female)',
+            'mani': 'Mani (Female)',
+        }
 
     return {}
 

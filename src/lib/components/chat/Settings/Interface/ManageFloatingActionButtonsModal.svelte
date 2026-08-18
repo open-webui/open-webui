@@ -67,12 +67,6 @@
 										if (floatingActionButtons === null) {
 											floatingActionButtons = [
 												{
-													id: 'ask',
-													label: $i18n.t('Ask'),
-													input: true,
-													prompt: `{{SELECTED_CONTENT}}\n\n\n{{INPUT_CONTENT}}`
-												},
-												{
 													id: 'explain',
 													label: $i18n.t('Explain'),
 													input: false,

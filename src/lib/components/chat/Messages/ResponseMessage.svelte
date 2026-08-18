@@ -23,7 +23,7 @@
 		TTSWorker,
 		user
 	} from '$lib/stores';
-	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
+	import { synthesizeOpenAISpeech, synthesizeFallbackSpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
 		copyToClipboard as _copyToClipboard,
@@ -234,12 +234,13 @@
 	// Resolve voice: model-specific > user settings > config default
 	const getVoiceId = () =>
 		model?.info?.meta?.tts?.voice ??
-		($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
-			? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-			: $config?.audio?.tts?.voice);
+		$settings?.audio?.tts?.voice ??
+		$config?.audio?.tts?.voice;
 
 	const speak = async () => {
-		const content = visibleResponseContent;
+		let content = visibleResponseContent;
+		// Strip markdown images (including base64 encoded images)
+		content = content.replace(/!\[.*?\]\(.*?\)/g, '');
 		if (!content.trim().length) {
 			toast.info($i18n.t('No content to speak'));
 			return;
@@ -251,26 +252,116 @@
 
 		speaking = true;
 
-		if ($config.audio.tts.engine === '') {
+		const ttsEngine = $settings?.audio?.tts?.engine || '';
+		// Check localStorage directly in case i18next falls back to English for unsupported UI languages
+		const currentLang = localStorage.getItem('locale') || $i18n.language || 'en-US';
+
+		// If no backend TTS engine is configured, use fallback/Google TTS path
+		const sarvamVoices = [
+			'aditya', 'shubh', 'manan', 'rahul', 'rohan', 'amit',
+			'shreya', 'ishita', 'ritu', 'pooja', 'roopa', 'suhani', 'neha', 'mani'
+		];
+		const useBrowserTTS = $config?.audio?.tts?.engine === '' && !sarvamVoices.includes(getVoiceId());
+
+		if (useBrowserTTS) {
 			let voices = [];
-			const getVoicesLoop = setInterval(() => {
+			const getVoicesLoop = setInterval(async () => {
 				voices = speechSynthesis.getVoices();
 				if (voices.length > 0) {
 					clearInterval(getVoicesLoop);
 
-					const voice = voices.find((v) => v.voiceURI === getVoiceId());
+					let voice = voices.find((v) => v.voiceURI === getVoiceId());
+					
+					const langPrefix = currentLang.split('-')[0];
+					const forceGoogleTTS = langPrefix === 'gu' || langPrefix === 'hi' || langPrefix === 'en';
+
+					// If no specific voice is set, try to auto-select a voice matching the current language
+					if (forceGoogleTTS || !voice) {
+						if (!voice && !forceGoogleTTS) {
+							voice = voices.find((v) => v.lang.startsWith(langPrefix));
+						}
+						
+						// If still no voice is found for non-English, or if we force Google TTS (for gu/hi)
+						if (forceGoogleTTS || (!voice && langPrefix !== 'en')) {
+							console.log(`Falling back to Google TTS for ${langPrefix}`);
+							clearInterval(getVoicesLoop);
+							
+							let sentences = [];
+							const words = content.split(/\s+/);
+							let currentChunk = '';
+							for (const word of words) {
+								if (currentChunk.length + word.length > 150) {
+									if (currentChunk.trim()) sentences.push(currentChunk.trim());
+									currentChunk = word + ' ';
+								} else {
+									currentChunk += word + ' ';
+								}
+							}
+							if (currentChunk.trim()) {
+								sentences.push(currentChunk.trim());
+							}
+							
+							$audioQueue.setId(`${message.id}`);
+							$audioQueue.setPlaybackRate($settings?.audio?.tts?.playbackRate ?? 1);
+							$audioQueue.onStopped = () => {
+								speaking = false;
+								speakingIdx = undefined;
+								if ($settings?.conversationMode) {
+									document.getElementById('voice-input-button')?.click();
+								}
+							};
+							
+							speaking = true;
+							try {
+								const fetchPromises = sentences.map(async (sentence) => {
+									try {
+										const res = await synthesizeFallbackSpeech(localStorage.token, sentence, langPrefix);
+										if (!res.ok) throw new Error('Failed to fetch TTS');
+										const blob = await res.blob();
+										return URL.createObjectURL(blob);
+									} catch (e) {
+										console.error('Google TTS Error for sentence:', sentence, e);
+										return null;
+									}
+								});
+
+								const urls = (await Promise.all(fetchPromises)).filter(url => url !== null);
+								if (urls.length === 0) {
+									throw new Error('Failed to load any audio chunks');
+								}
+
+								for (const url of urls) {
+									if (speaking) {
+										$audioQueue.enqueue(url);
+									}
+								}
+							} catch (e) {
+								console.error('Google TTS Error:', e);
+								toast.error('Failed to load audio');
+								speaking = false;
+							}
+							
+							return;
+						}
+						
+						voice = voice || voices.find((v) => v.default) || voices[0];
+					}
+
 					const speech = new SpeechSynthesisUtterance(content);
-					speech.rate = $settings.audio?.tts?.playbackRate ?? 1;
+					speech.rate = $settings?.audio?.tts?.playbackRate ?? 1;
 
 					speech.onend = () => {
 						speaking = false;
-						if ($settings.conversationMode) {
+						if ($settings?.conversationMode) {
 							document.getElementById('voice-input-button')?.click();
 						}
 					};
 
 					if (voice) {
 						speech.voice = voice;
+						speech.lang = voice.lang;
+					} else {
+						speech.lang = currentLang;
 					}
 
 					speechSynthesis.speak(speech);
@@ -278,7 +369,7 @@
 			}, 100);
 		} else {
 			$audioQueue.setId(`${message.id}`);
-			$audioQueue.setPlaybackRate($settings.audio?.tts?.playbackRate ?? 1);
+			$audioQueue.setPlaybackRate($settings?.audio?.tts?.playbackRate ?? 1);
 			$audioQueue.onStopped = () => {
 				speaking = false;
 				speakingIdx = undefined;
@@ -297,15 +388,16 @@
 				return;
 			}
 
-			const voiceId = getVoiceId();
+			let voiceId = getVoiceId();
+			if (ttsEngine === 'browser-kokoro') {
+				voiceId = 'af_heart';
+			}
 			console.debug('Prepared message content for TTS', messageContentParts, 'voice:', voiceId);
 
-			if ($settings.audio?.tts?.engine === 'browser-kokoro') {
+			if (ttsEngine === 'browser-kokoro') {
 				if (!$TTSWorker) {
 					await TTSWorker.set(
-						new KokoroWorker({
-							dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
-						})
+						new KokoroWorker($settings?.audio?.tts?.engineConfig?.dtype ?? 'fp32')
 					);
 
 					await $TTSWorker.init();
@@ -331,17 +423,20 @@
 					}
 				}
 			} else {
-				for (const [, sentence] of messageContentParts.entries()) {
+				const fetchPromises = messageContentParts.map((sentence) =>
+					synthesizeOpenAISpeech(localStorage.token, voiceId, sentence).catch((error) => {
+						console.error(error);
+						toast.error(`${error}`);
+						speaking = false;
+						loadingSpeech = false;
+						return null;
+					})
+				);
+
+				for (const fetchPromise of fetchPromises) {
 					if (signal.aborted) return;
 
-					const res = await synthesizeOpenAISpeech(localStorage.token, voiceId, sentence).catch(
-						(error) => {
-							console.error(error);
-							toast.error(`${error}`);
-							speaking = false;
-							loadingSpeech = false;
-						}
-					);
+					const res = await fetchPromise;
 
 					if (signal.aborted) return;
 
@@ -444,6 +539,48 @@
 		editedContent = '';
 		editedOutput = null;
 		await tick();
+	};
+
+	const handleExplainSelection = async (selectedText: string) => {
+		const currentQuestion = history?.messages ? history.messages[message.parentId] : null;
+		const previousResponse = currentQuestion?.parentId ? history.messages[currentQuestion.parentId] : null;
+		const previousQuestion = previousResponse?.parentId ? history.messages[previousResponse.parentId] : null;
+
+		const prevQ = previousQuestion?.content?.trim() || 'None';
+		const prevA = previousResponse?.content?.trim() || 'None';
+		const currQ = currentQuestion?.content?.trim() || 'None';
+		const currA = message?.content?.trim() || selectedText;
+
+		const explainPrompt = `Please explain the following selected text/concept in detail with regards to Sewage Treatment Plant (STP) pumping station operations, pumping systems, and related parameters:
+
+> ${selectedText}
+
+### Context:
+- **Previous Question**: ${prevQ}
+- **Previous Answer**: ${prevA}
+- **Current Question**: ${currQ}
+- **Current Answer**: ${currA}
+
+### Instructions for Gemini:
+1. The current primary focus of the Sewage Treatment Plant (STP) is specifically the **pumping station / pumping part** (including raw sewage pumping, wet well levels, pump operations, flow rates, voltage/current measurements, electrical anomalies, and discharge systems). Tailor and contextualize your explanation specifically around the STP pumping station.
+2. Explain the selected topic in clear, comprehensive technical detail with regards to Sewage Treatment Plant (STP) pumping station operations, equipment, and parameters.
+3. If the query/context is not informative or lacks sufficient context to give an accurate STP pumping station explanation, reply strictly with error code: \`[STP_NEEDS_MORE_CONTEXT]\` so that the past 5 messages can be sent.
+4. Otherwise, provide a detailed, accurate, and practical explanation focused on the sewage treatment plant pumping station.`;
+
+		// Route to Gemini model regardless of current UI selection
+		const geminiModel = ($models ?? []).find(
+			(m) =>
+				m.id?.toLowerCase().includes('gemini') ||
+				(m.name && m.name.toLowerCase().includes('gemini'))
+		);
+		const targetModelId = geminiModel?.id || ($models && $models.length > 0 ? $models[0].id : message.model);
+
+		const displayLabel = `💡 Explain: "${selectedText?.length > 100 ? selectedText.slice(0, 100) + '...' : selectedText}"`;
+		console.log('Explain requested:', { selectedText, targetModelId, displayLabel });
+
+		if (submitMessage) {
+			await submitMessage(message.id, explainPrompt, [targetModelId], displayLabel);
+		}
 	};
 
 	let feedbackLoading = false;
@@ -847,6 +984,9 @@
 									onSetInputText={(text) => {
 										setInputText(text);
 									}}
+									onExplain={(selectedText) => {
+										handleExplainSelection(selectedText);
+									}}
 									onSave={({ raw, oldContent, newContent }) => {
 										const sourceMessage = history.messages[message.id];
 										if (sourceMessage.output?.length) {
@@ -989,6 +1129,7 @@
 									{/if}
 
 									<button
+										type="button"
 										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 										on:click={() => {
 											showNextMessage(message);
@@ -1016,9 +1157,10 @@
 
 							{#if message.done}
 								{#if !readOnly}
-									{#if $user?.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
+									{#if false}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
+												type="button"
 												aria-label={$i18n.t('Edit')}
 												class="{isLastMessage || ($settings?.highContrastMode ?? false)
 													? 'visible'
@@ -1049,6 +1191,7 @@
 
 								<Tooltip content={$i18n.t('Copy')} placement="bottom">
 									<button
+										type="button"
 										aria-label={$i18n.t('Copy')}
 										class="{isLastMessage || ($settings?.highContrastMode ?? false)
 											? 'visible'
@@ -1078,6 +1221,7 @@
 								{#if onInsertToNote && visibleResponseContent}
 									<Tooltip content={$i18n.t('Insert into note')} placement="bottom">
 										<button
+											type="button"
 											aria-label={$i18n.t('Insert into note')}
 											class="{isLastMessage || ($settings?.highContrastMode ?? false)
 												? 'visible'
@@ -1094,6 +1238,7 @@
 								{#if !readOnly && ($user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true))}
 									<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
 										<button
+											type="button"
 											aria-label={$i18n.t('Read Aloud')}
 											id="speak-button-{message.id}"
 											class="{isLastMessage || ($settings?.highContrastMode ?? false)
@@ -1302,42 +1447,7 @@
 										</Tooltip>
 									{/if}
 
-									{#if isLastMessage && ($user?.role === 'admin' || ($user?.permissions?.chat?.continue_response ?? true))}
-										<Tooltip content={$i18n.t('Continue Response')} placement="bottom">
-											<button
-												aria-label={$i18n.t('Continue Response')}
-												type="button"
-												id="continue-response-button"
-												class="{isLastMessage || ($settings?.highContrastMode ?? false)
-													? 'visible'
-													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-												on:click={() => {
-													continueResponse();
-												}}
-											>
-												<svg
-													aria-hidden="true"
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="2.3"
-													stroke="currentColor"
-													class="w-4 h-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-													/>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M15.91 11.672a.375.375 0 0 1 0 .656l-5.603 3.113a.375.375 0 0 1-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112Z"
-													/>
-												</svg>
-											</button>
-										</Tooltip>
-									{/if}
+
 
 									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true)}
 										{#if $settings?.regenerateMenu ?? true}

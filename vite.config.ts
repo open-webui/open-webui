@@ -2,10 +2,12 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 import { viteStaticCopy } from 'vite-plugin-static-copy';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 
 export default defineConfig({
 	plugins: [
 		sveltekit(),
+		basicSsl(),
 		viteStaticCopy({
 			targets: [
 				{
@@ -16,6 +18,20 @@ export default defineConfig({
 			]
 		})
 	],
+	server: {
+		port: 5000,
+		host: '0.0.0.0',
+		allowedHosts: true,
+		proxy: {
+			'/api': 'http://localhost:8080',
+			'/ollama': 'http://localhost:8080',
+			'/openai': 'http://localhost:8080',
+			'/ws': {
+				target: 'ws://localhost:8080',
+				ws: true
+			}
+		}
+	},
 	define: {
 		APP_VERSION: JSON.stringify(process.env.npm_package_version),
 		APP_BUILD_HASH: JSON.stringify(process.env.APP_BUILD_HASH || 'dev-build')

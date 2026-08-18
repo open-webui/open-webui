@@ -5,7 +5,6 @@
 	import { config, models, tags as _tags } from '$lib/stores';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -15,22 +14,16 @@
 	export let show = false;
 
 	let LIKE_REASONS = [
-		'accurate_information',
-		'followed_instructions_perfectly',
-		'showcased_creativity',
-		'positive_attitude',
-		'attention_to_detail',
-		'thorough_explanation',
+		'covered_all_details',
+		'covered_extra_details',
+		'showed_image_and_text_properly',
 		'other'
 	];
 	let DISLIKE_REASONS = [
-		'dont_like_the_style',
-		'too_verbose',
-		'not_helpful',
-		'not_factually_correct',
-		'didnt_fully_follow_instructions',
-		'refused_when_it_shouldnt_have',
-		'being_lazy',
+		'giving_stale_info',
+		'wrong_info',
+		'stt_not_working',
+		'tts_not_working',
 		'other'
 	];
 
@@ -42,6 +35,41 @@
 
 	let detailedRating = null;
 	let selectedModel = null;
+
+	const getReasonLabel = (reason: string) => {
+		switch (reason) {
+			case 'covered_all_details':
+				return 'Covered all details';
+			case 'covered_extra_details':
+				return 'Covered extra details';
+			case 'showed_image_and_text_properly':
+				return 'Showed image and text properly';
+			case 'giving_stale_info':
+				return 'Giving stale info';
+			case 'wrong_info':
+				return 'Wrong info';
+			case 'stt_not_working':
+				return 'STT not working';
+			case 'tts_not_working':
+				return 'TTS not working';
+			case 'other':
+				return '';
+			default:
+				return reason;
+		}
+	};
+
+	const handleReasonClick = (reason: string) => {
+		selectedReason = reason;
+		const label = getReasonLabel(reason);
+		if (label) {
+			if (!comment.trim()) {
+				comment = label;
+			} else if (!comment.includes(label)) {
+				comment = `${comment.trim()}, ${label}`;
+			}
+		}
+	};
 
 	$: if (message?.annotation?.rating === 1) {
 		reasons = LIKE_REASONS;
@@ -175,35 +203,23 @@
 							? 'bg-gray-100 dark:bg-gray-800'
 							: ''} transition rounded-xl"
 						on:click={() => {
-							selectedReason = reason;
+							handleReasonClick(reason);
 						}}
 					>
-						{#if reason === 'accurate_information'}
-							{$i18n.t('Accurate information')}
-						{:else if reason === 'followed_instructions_perfectly'}
-							{$i18n.t('Followed instructions perfectly')}
-						{:else if reason === 'showcased_creativity'}
-							{$i18n.t('Showcased creativity')}
-						{:else if reason === 'positive_attitude'}
-							{$i18n.t('Positive attitude')}
-						{:else if reason === 'attention_to_detail'}
-							{$i18n.t('Attention to detail')}
-						{:else if reason === 'thorough_explanation'}
-							{$i18n.t('Thorough explanation')}
-						{:else if reason === 'dont_like_the_style'}
-							{$i18n.t("Don't like the style")}
-						{:else if reason === 'too_verbose'}
-							{$i18n.t('Too verbose')}
-						{:else if reason === 'not_helpful'}
-							{$i18n.t('Not helpful')}
-						{:else if reason === 'not_factually_correct'}
-							{$i18n.t('Not factually correct')}
-						{:else if reason === 'didnt_fully_follow_instructions'}
-							{$i18n.t("Didn't fully follow instructions")}
-						{:else if reason === 'refused_when_it_shouldnt_have'}
-							{$i18n.t("Refused when it shouldn't have")}
-						{:else if reason === 'being_lazy'}
-							{$i18n.t('Being lazy')}
+						{#if reason === 'covered_all_details'}
+							Covered all details
+						{:else if reason === 'covered_extra_details'}
+							Covered extra details
+						{:else if reason === 'showed_image_and_text_properly'}
+							Showed image and text properly
+						{:else if reason === 'giving_stale_info'}
+							Giving stale info
+						{:else if reason === 'wrong_info'}
+							Wrong info
+						{:else if reason === 'stt_not_working'}
+							STT not working
+						{:else if reason === 'tts_not_working'}
+							TTS not working
 						{:else if reason === 'other'}
 							{$i18n.t('Other')}
 						{:else}
@@ -252,24 +268,4 @@
 			{$i18n.t('Save')}
 		</button>
 	</div>
-
-	{#if $config?.features.enable_community_sharing && message?.model}
-		<div class="mt-3 pt-3 border-t border-gray-100/30 dark:border-gray-850/30">
-			<a
-				href={`https://openwebui.com/models?q=${encodeURIComponent(message.model)}`}
-				target="_blank"
-				class="flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full px-3 py-2 rounded-xl transition"
-			>
-				<div class="self-center">
-					<div class="text-sm font-normal">
-						{$i18n.t('Leave a public review for {{modelName}}', { modelName: message.model })}
-					</div>
-					<div class="text-xs text-gray-500">
-						{$i18n.t('Help the community discover great models')}
-					</div>
-				</div>
-				<ChevronRight className="size-4" />
-			</a>
-		</div>
-	{/if}
 </div>

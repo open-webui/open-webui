@@ -727,8 +727,13 @@ body {
 }
 
 .dark body {
-	background: #171717;
+	background: transparent;
 	color: #eee;
+}
+
+/* Force layout backgrounds to be transparent for the ocean theme */
+.bg-white, .dark\:bg-gray-900, .bg-gray-50, .dark\:bg-gray-800, .dark\:bg-gray-950, .bg-gray-950, .bg-black {
+	background-color: transparent !important;
 }
 
 /* Position the handle relative to each LI */
@@ -917,4 +922,131 @@ html.high-contrast:not(.dark) .shimmer {
 	background: none;
 	color: var(--color-gray-700);
 	-webkit-text-fill-color: var(--color-gray-700);
+}
+
+/* Deep Ocean Premium Background: Bioluminescent Abyssal Flow */
+#ocean-bg {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 0;
+	background: linear-gradient(180deg, #021b33 0%, #010a15 100%);
+	overflow: hidden;
+}
+
+/* Ensure contents stay above background */
+body > div[style*="display: contents"] {
+	position: relative;
+	z-index: 10;
+}
+
+/* Make body background transparent to see the ocean */
+body { background: transparent !important; }
+html.dark body { background: transparent !important; }
+
+/* Light theme overrides for deep ocean */
+html.light #ocean-bg {
+    background: linear-gradient(180deg, #1496c7 0%, #021b33 100%);
+}
+
+/* Bioluminescent light caustics */
+.caustic-overlay {
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 50% 50%, rgba(5, 255, 162, 0.03) 0%, rgba(0, 242, 254, 0.05) 50%, transparent 100%);
+    animation: rotateCaustics 25s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+}
+
+@keyframes rotateCaustics {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Layered fluid wave paths */
+.bg-wave {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 140px;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.bg-wave-1 {
+    z-index: 2;
+}
+
+.bg-wave-2 {
+    z-index: 3;
+    height: 100px;
+}
+
+/* Premium bubbles styling */
+.bubble-premium {
+    position: absolute;
+    bottom: -100px;
+    border-radius: 50%;
+    background: rgba(0, 242, 254, 0.08);
+    border: 1px solid rgba(0, 242, 254, 0.25);
+    backdrop-filter: blur(2px);
+    box-shadow:
+        inset 0 0 10px rgba(255, 255, 255, 0.15),
+        0 0 12px rgba(0, 242, 254, 0.2);
+    animation: floatPremiumBubble linear infinite;
+    z-index: 4;
+}
+
+@keyframes floatPremiumBubble {
+    0% {
+        transform: translateY(0px) translateX(0px) scale(0.8);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    50% {
+        transform: translateY(-50vh) translateX(25px) scale(1);
+    }
+    100% {
+        transform: translateY(-120vh) translateX(-25px) scale(1.2);
+        opacity: 0;
+    }
+}
+
+/* Micro bioluminescent particles styling */
+.micro-particle {
+    position: absolute;
+    bottom: -100px;
+    border-radius: 50%;
+    background: #05ffa2;
+    box-shadow: 
+        0 0 8px #05ffa2,
+        0 0 15px rgba(0, 242, 254, 0.6);
+    animation: floatPremiumParticle linear infinite;
+    z-index: 5;
+}
+
+@keyframes floatPremiumParticle {
+    0% {
+        transform: translateY(0px) translateX(0px);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.8;
+    }
+    50% {
+        transform: translateY(-50vh) translateX(-15px);
+    }
+    100% {
+        transform: translateY(-120vh) translateX(15px);
+        opacity: 0;
+    }
 }

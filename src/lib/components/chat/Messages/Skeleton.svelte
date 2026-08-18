@@ -2,37 +2,40 @@
 	export let size = 'md';
 </script>
 
-<span
-	class="relative flex {size === 'md'
-		? 'size-3 my-2'
-		: size === 'xs'
-			? 'size-1.5 my-1'
-			: 'size-2 my-1'} mx-1"
->
+<div class="flex items-center space-x-1 p-1">
 	<span
-		class="absolute inline-flex h-full w-full animate-pulse rounded-full bg-gray-700 dark:bg-gray-200 opacity-75"
+		class="inline-block {size === 'md' ? 'size-2' : size === 'xs' ? 'size-1' : 'size-1.5'} rounded-full bg-gray-700 dark:bg-gray-300 animate-bounce1"
 	></span>
 	<span
-		class="relative inline-flex {size === 'md'
-			? 'size-3'
-			: size === 'xs'
-				? 'size-1.5'
-				: 'size-2'} rounded-full bg-black dark:bg-white animate-size"
+		class="inline-block {size === 'md' ? 'size-2' : size === 'xs' ? 'size-1' : 'size-1.5'} rounded-full bg-gray-700 dark:bg-gray-300 animate-bounce2"
 	></span>
-</span>
+	<span
+		class="inline-block {size === 'md' ? 'size-2' : size === 'xs' ? 'size-1' : 'size-1.5'} rounded-full bg-gray-700 dark:bg-gray-300 animate-bounce3"
+	></span>
+</div>
 
 <style>
-	@keyframes size {
-		0%,
-		100% {
-			transform: scale(1);
+	@keyframes bounce {
+		0%, 100% {
+			transform: translateY(0);
+			opacity: 0.5;
 		}
 		50% {
-			transform: scale(1.25);
+			transform: translateY(-4px);
+			opacity: 1;
 		}
 	}
 
-	.animate-size {
-		animation: size 1.5s ease-in-out infinite;
+	.animate-bounce1 {
+		animation: bounce 1.2s infinite ease-in-out;
+		animation-delay: 0s;
+	}
+	.animate-bounce2 {
+		animation: bounce 1.2s infinite ease-in-out;
+		animation-delay: 0.15s;
+	}
+	.animate-bounce3 {
+		animation: bounce 1.2s infinite ease-in-out;
+		animation-delay: 0.3s;
 	}
 </style>

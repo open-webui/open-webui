@@ -1,11 +1,18 @@
 <script lang="ts">
 	import { onDestroy, getContext } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import PanzoomContainer from '$lib/components/common/PanzoomContainer.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
+	import Minus from '$lib/components/icons/Minus.svelte';
+	import ZoomReset from '$lib/components/icons/ZoomReset.svelte';
+	import Clipboard from '$lib/components/icons/Clipboard.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
 
 	export let show = false;
 	export let src = '';
@@ -13,12 +20,151 @@
 
 	const i18n = getContext('i18n');
 
-	let previewElement = null;
+	let previewElement: HTMLElement | null = null;
+	let scale = 1;
+	let translateX = 0;
+	let translateY = 0;
+	let isDragging = false;
+	let startX = 0;
+	let startY = 0;
+	let copied = false;
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
-			console.log('Escape');
-			show = false;
+			closeModal();
+		} else if (event.key === '+' || event.key === '=') {
+			zoomIn();
+		} else if (event.key === '-') {
+			zoomOut();
+		} else if (event.key === '0') {
+			resetZoom();
+		}
+	};
+
+	const closeModal = () => {
+		show = false;
+		resetZoom();
+	};
+
+	const zoomIn = () => {
+		scale = Math.min(scale + 0.25, 4);
+	};
+
+	const zoomOut = () => {
+		scale = Math.max(scale - 0.25, 0.5);
+		if (scale <= 1) {
+			translateX = 0;
+			translateY = 0;
+		}
+	};
+
+	const resetZoom = () => {
+		scale = 1;
+		translateX = 0;
+		translateY = 0;
+	};
+
+	const handleWheel = (e: WheelEvent) => {
+		e.preventDefault();
+		if (e.deltaY < 0) {
+			zoomIn();
+		} else {
+			zoomOut();
+		}
+	};
+
+	const handleMouseDown = (e: MouseEvent) => {
+		if (scale > 1) {
+			isDragging = true;
+			startX = e.clientX - translateX;
+			startY = e.clientY - translateY;
+		}
+	};
+
+	const handleMouseMove = (e: MouseEvent) => {
+		if (isDragging && scale > 1) {
+			translateX = e.clientX - startX;
+			translateY = e.clientY - startY;
+		}
+	};
+
+	const handleMouseUp = () => {
+		isDragging = false;
+	};
+
+	const copyImageHandler = async () => {
+		try {
+			if (src.startsWith('data:image/')) {
+				const base64Data = src.split(',')[1];
+				const byteCharacters = atob(base64Data);
+				const byteNumbers = new Array(byteCharacters.length);
+				for (let i = 0; i < byteCharacters.length; i++) {
+					byteNumbers[i] = byteCharacters.charCodeAt(i);
+				}
+				const byteArray = new Uint8Array(byteNumbers);
+				const blob = new Blob([byteArray], { type: 'image/png' });
+				await navigator.clipboard.write([
+					new ClipboardItem({ 'image/png': blob })
+				]);
+				copied = true;
+				toast.success($i18n.t('Image copied to clipboard'));
+				setTimeout(() => {
+					copied = false;
+				}, 2000);
+			} else {
+				const response = await fetch(src);
+				const blob = await response.blob();
+				const pngBlob = blob.type === 'image/png' ? blob : new Blob([blob], { type: 'image/png' });
+				await navigator.clipboard.write([
+					new ClipboardItem({ 'image/png': pngBlob })
+				]);
+				copied = true;
+				toast.success($i18n.t('Image copied to clipboard'));
+				setTimeout(() => {
+					copied = false;
+				}, 2000);
+			}
+		} catch (err) {
+			console.error(err);
+			try {
+				await navigator.clipboard.writeText(src);
+				copied = true;
+				toast.success($i18n.t('Image URL copied to clipboard'));
+				setTimeout(() => {
+					copied = false;
+				}, 2000);
+			} catch (copyErr) {
+				toast.error($i18n.t('Failed to copy image'));
+			}
+		}
+	};
+
+	const downloadHandler = () => {
+		try {
+			if (src.startsWith('data:image/')) {
+				const base64Data = src.split(',')[1];
+				const blob = new Blob([Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0))], {
+					type: 'image/png'
+				});
+				const fileName = `${(alt || 'image').toLowerCase().replace(/[^a-z0-9]/gi, '_')}.png`;
+				saveAs(blob, fileName);
+			} else {
+				fetch(src)
+					.then((response) => response.blob())
+					.then((blob) => {
+						const mimeType = blob.type || 'image/png';
+						const ext = mimeType.split('/')[1] || 'png';
+						const fileName = `${(alt || 'image').toLowerCase().replace(/[^a-z0-9]/gi, '_')}.${ext}`;
+						saveAs(blob, fileName);
+					})
+					.catch((error) => {
+						console.error('Error downloading remote image:', error);
+						toast.error($i18n.t('Error downloading image'));
+					});
+			}
+		} catch (err) {
+			console.error(err);
+			toast.error($i18n.t('Error downloading image'));
 		}
 	};
 
@@ -26,21 +172,21 @@
 		document.body.appendChild(previewElement);
 		window.addEventListener('keydown', handleKeyDown);
 		document.body.style.overflow = 'hidden';
+		resetZoom();
 	} else if (previewElement) {
 		window.removeEventListener('keydown', handleKeyDown);
-		document.body.removeChild(previewElement);
+		if (previewElement.parentNode === document.body) {
+			document.body.removeChild(previewElement);
+		}
 		document.body.style.overflow = 'unset';
 	}
 
 	onDestroy(() => {
 		window.removeEventListener('keydown', handleKeyDown);
 		show = false;
-
 		if (previewElement && previewElement.parentNode === document.body) {
 			document.body.removeChild(previewElement);
 		}
-		// NOTE: If multiple modals can stack in the future, direct "unset" may
-		// re-enable page scroll too early. Consider a shared body-scroll lock manager.
 		document.body.style.overflow = 'unset';
 	});
 </script>
@@ -50,119 +196,133 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		bind:this={previewElement}
-		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black text-white w-full min-h-screen h-screen flex justify-center z-9999 overflow-hidden overscroll-contain"
+		class="fixed inset-0 bg-black/90 backdrop-blur-md text-white w-full h-full flex flex-col justify-between items-center z-[99999] select-none overflow-hidden"
+		on:wheel={handleWheel}
+		on:click={(e) => {
+			if (e.target === previewElement) {
+				closeModal();
+			}
+		}}
 	>
-		<div class=" absolute left-0 w-full flex justify-between select-none z-20">
-			<div>
-				<button
-					class=" p-5"
-					on:pointerdown={(e) => {
-						e.stopImmediatePropagation();
-						e.preventDefault();
-						show = false;
-					}}
-					on:click={(e) => {
-						show = false;
-					}}
-				>
-					<XMark className={'size-6'} />
-				</button>
+		<!-- Top Controls Bar -->
+		<div class="w-full flex items-center justify-between px-6 py-4 z-30 pointer-events-auto bg-gradient-to-b from-black/60 to-transparent">
+			<!-- Left: Alt or Title -->
+			<div class="text-sm font-medium text-gray-300 truncate max-w-[30%]">
+				{alt || $i18n.t('Image Preview')}
 			</div>
 
-			<div>
-				<button
-					aria-label={$i18n.t('Download')}
-					class=" p-5 z-999"
-					on:click={() => {
-						if (src.startsWith('data:image/')) {
-							const base64Data = src.split(',')[1];
-							const blob = new Blob([Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0))], {
-								type: 'image/png'
-							});
-
-							const mimeType = blob.type || 'image/png';
-							// create file name based on the MIME type, alt should be a valid file name with extension
-							const fileName = `${$i18n
-								.t('Generated Image')
-								.toLowerCase()
-								.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
-
-							// Use FileSaver to save the blob
-							saveAs(blob, fileName);
-							return;
-						} else if (src.startsWith('blob:')) {
-							// Handle blob URLs
-							fetch(src)
-								.then((response) => response.blob())
-								.then((blob) => {
-									// detect the MIME type from the blob
-									const mimeType = blob.type || 'image/png';
-
-									// Create a new Blob with the correct MIME type
-									const blobWithType = new Blob([blob], { type: mimeType });
-
-									// create file name based on the MIME type, alt should be a valid file name with extension
-									const fileName = `${$i18n
-										.t('Generated Image')
-										.toLowerCase()
-										.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
-
-									// Use FileSaver to save the blob
-									saveAs(blobWithType, fileName);
-								})
-								.catch((error) => {
-									console.error('Error downloading blob:', error);
-								});
-							return;
-						} else if (
-							src.startsWith('/') ||
-							src.startsWith('http://') ||
-							src.startsWith('https://')
-						) {
-							// Handle remote URLs
-							fetch(src)
-								.then((response) => response.blob())
-								.then((blob) => {
-									// detect the MIME type from the blob
-									const mimeType = blob.type || 'image/png';
-
-									// Create a new Blob with the correct MIME type
-									const blobWithType = new Blob([blob], { type: mimeType });
-
-									// create file name based on the MIME type, alt should be a valid file name with extension
-									const fileName = `${$i18n
-										.t('Generated Image')
-										.toLowerCase()
-										.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
-
-									// Use FileSaver to save the blob
-									saveAs(blobWithType, fileName);
-								})
-								.catch((error) => {
-									console.error('Error downloading remote image:', error);
-								});
-							return;
-						}
-					}}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="w-6 h-6"
+			<!-- Center: Floating Toolbar -->
+			<div class="flex items-center gap-1.5 bg-gray-900/80 backdrop-blur-lg px-3 py-1.5 rounded-2xl border border-white/10 shadow-2xl">
+				<!-- Zoom Out -->
+				<Tooltip content={$i18n.t('Zoom Out (-)')}>
+					<button
+						type="button"
+						class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+						disabled={scale <= 0.5}
+						on:click={zoomOut}
 					>
-						<path
-							d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"
-						/>
-						<path
-							d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"
-						/>
-					</svg>
+						<Minus className="size-4" />
+					</button>
+				</Tooltip>
+
+				<!-- Zoom Percentage Display -->
+				<button
+					type="button"
+					class="px-2 py-1 text-xs font-mono font-semibold text-gray-200 hover:text-white rounded-lg hover:bg-white/10 transition cursor-pointer"
+					on:click={resetZoom}
+					title={$i18n.t('Reset Zoom')}
+				>
+					{Math.round(scale * 100)}%
 				</button>
+
+				<!-- Zoom In -->
+				<Tooltip content={$i18n.t('Zoom In (+)')}>
+					<button
+						type="button"
+						class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+						disabled={scale >= 4}
+						on:click={zoomIn}
+					>
+						<Plus className="size-4" />
+					</button>
+				</Tooltip>
+
+				<!-- Reset Zoom -->
+				<Tooltip content={$i18n.t('Reset Zoom (0)')}>
+					<button
+						type="button"
+						class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition cursor-pointer"
+						on:click={resetZoom}
+					>
+						<ZoomReset className="size-4" />
+					</button>
+				</Tooltip>
+
+				<div class="w-[1px] h-4 bg-white/20 mx-1"></div>
+
+				<!-- Copy Image -->
+				<Tooltip content={copied ? $i18n.t('Copied!') : $i18n.t('Copy Image')}>
+					<button
+						type="button"
+						class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition cursor-pointer flex items-center gap-1 text-xs font-medium"
+						on:click={copyImageHandler}
+					>
+						{#if copied}
+							<Check className="size-4 text-emerald-400" />
+						{:else}
+							<Clipboard className="size-4" />
+						{/if}
+						<span class="hidden sm:inline">{$i18n.t('Copy')}</span>
+					</button>
+				</Tooltip>
+
+				<!-- Download -->
+				<Tooltip content={$i18n.t('Download')}>
+					<button
+						type="button"
+						class="p-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition cursor-pointer flex items-center gap-1 text-xs font-medium"
+						on:click={downloadHandler}
+					>
+						<Download className="size-4" />
+						<span class="hidden sm:inline">{$i18n.t('Download')}</span>
+					</button>
+				</Tooltip>
+			</div>
+
+			<!-- Right: Close Button -->
+			<div class="flex items-center">
+				<Tooltip content={$i18n.t('Close (Esc)')}>
+					<button
+						type="button"
+						class="p-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition cursor-pointer"
+						on:click={closeModal}
+					>
+						<XMark className="size-5" />
+					</button>
+				</Tooltip>
 			</div>
 		</div>
-		<PanzoomContainer className="flex h-full max-h-full justify-center items-center z-0">
-			<img {src} {alt} class=" mx-auto h-full object-scale-down select-none" draggable="false" />
-		</PanzoomContainer>
+
+		<!-- Main Image Viewport -->
+		<div
+			class="flex-1 w-full h-full flex items-center justify-center overflow-hidden relative cursor-default {scale > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : ''}"
+			on:mousedown={handleMouseDown}
+			on:mousemove={handleMouseMove}
+			on:mouseup={handleMouseUp}
+			on:mouseleave={handleMouseUp}
+			on:click={(e) => {
+				if (e.target === e.currentTarget) {
+					closeModal();
+				}
+			}}
+		>
+			<img
+				{src}
+				{alt}
+				class="max-w-[90vw] max-h-[82vh] object-contain select-none pointer-events-none rounded-lg shadow-2xl transition-transform duration-100 ease-out"
+				style="transform: translate({translateX}px, {translateY}px) scale({scale}); transform-origin: center center;"
+				draggable="false"
+			/>
+		</div>
 	</div>
 {/if}

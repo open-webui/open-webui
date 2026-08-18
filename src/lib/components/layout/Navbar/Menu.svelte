@@ -27,13 +27,13 @@
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
-	import Tags from '$lib/components/chat/Tags.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import Share from '$lib/components/icons/Share.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
+	import UndoAction from '$lib/components/icons/UndoAction.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
@@ -483,8 +483,13 @@
 						archiveChatHandler();
 					}}
 				>
-					<ArchiveBox className="size-3.5" strokeWidth="1.5" />
-					<div class="flex items-center">{$i18n.t('Archive')}</div>
+					{#if chat?.archived || chat?.chat?.archived || chat?.meta?.archived}
+						<UndoAction className="size-3.5" strokeWidth="1.5" />
+						<div class="flex items-center">{$i18n.t('Unarchive')}</div>
+					{:else}
+						<ArchiveBox className="size-3.5" strokeWidth="1.5" />
+						<div class="flex items-center">{$i18n.t('Archive')}</div>
+					{/if}
 				</button>
 
 				<button
@@ -497,12 +502,6 @@
 					<GarbageBin className="size-3.5" strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Delete')}</div>
 				</button>
-
-				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
-
-				<div class="flex max-h-28 overflow-y-auto px-2 py-1">
-					<Tags chatId={chat.id} />
-				</div>
 			{/if}
 		</DropdownMenu>
 	</div>

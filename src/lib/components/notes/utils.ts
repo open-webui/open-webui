@@ -107,19 +107,25 @@ export const downloadPdf = async (note) => {
 	pdf.save(`${note.title}.pdf`);
 };
 
-export const createNoteHandler = async (title: string, md?: string, html?: string) => {
-	//  $i18n.t('New Note'),
+export const createNoteHandler = async (
+	title: string,
+	md?: string,
+	html?: string,
+	noteType: 'question' | 'context' = 'context'
+) => {
 	const res = await createNewNote(localStorage.token, {
-		// YYYY-MM-DD
 		title: title,
 		data: {
 			content: {
 				json: null,
 				html: html || md || '',
-				md: md || ''
+				md: md || '',
+				type: noteType
 			}
 		},
-		meta: null,
+		meta: {
+			type: noteType
+		},
 		access_grants: []
 	}).catch((error) => {
 		toast.error(`${error}`);

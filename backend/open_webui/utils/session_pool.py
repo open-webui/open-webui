@@ -57,6 +57,7 @@ async def get_session() -> aiohttp.ClientSession:
         connector_kwargs = {
             'ttl_dns_cache': AIOHTTP_POOL_DNS_TTL,
             'enable_cleanup_closed': True,
+            'resolver': aiohttp.ThreadedResolver(),
         }
         if AIOHTTP_POOL_CONNECTIONS is not None:
             connector_kwargs['limit'] = AIOHTTP_POOL_CONNECTIONS

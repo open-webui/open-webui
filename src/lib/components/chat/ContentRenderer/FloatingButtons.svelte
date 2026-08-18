@@ -2,13 +2,13 @@
 	import { getContext, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
 	import LightBulb from '$lib/components/icons/LightBulb.svelte';
 
 	export let id = '';
 
 	export let actions = [];
 	export let onSetInputText = (text) => {};
+	export let onExplain = (text: string) => {};
 
 	let floatingInput = false;
 	let selectedAction = null;
@@ -22,13 +22,6 @@
 
 	const DEFAULT_ACTIONS = [
 		{
-			id: 'ask',
-			label: $i18n.t('Ask'),
-			icon: ChatBubble,
-			input: true,
-			prompt: `{{SELECTED_CONTENT}}\n\n\n{{INPUT_CONTENT}}`
-		},
-		{
 			id: 'explain',
 			label: $i18n.t('Explain'),
 			icon: LightBulb,
@@ -37,6 +30,12 @@
 	];
 
 	const actionHandler = (actionId) => {
+		if (actionId === 'explain' && onExplain) {
+			onExplain(selectedText);
+			closeHandler();
+			return;
+		}
+
 		let selectedContent = selectedText
 			.split('\n')
 			.map((line) => `> ${line}`)
@@ -75,6 +74,12 @@
 		closeHandler();
 	};
 
+	export const setSelectedText = (text: string) => {
+		if (text) {
+			selectedText = text;
+		}
+	};
+
 	export const closeHandler = () => {
 		selectedAction = null;
 		selectedText = '';
@@ -90,34 +95,29 @@
 >
 	{#if !floatingInput}
 		<div
-			class="flex flex-row shrink-0 p-0.5 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-xl shadow-xl border border-gray-100 dark:border-gray-800"
+			class="flex flex-row shrink-0 p-1 bg-slate-900/95 text-white dark:bg-gray-800/95 text-xs font-medium rounded-xl shadow-2xl border border-sky-400/30 backdrop-blur-md"
 		>
 			{#each actions as action}
 				<button
 					aria-label={action.label}
-					class="px-1.5 py-[1px] hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl flex items-center gap-1 min-w-fit transition"
-					on:click={async () => {
-						selectedText = window.getSelection().toString();
-						selectedAction = action;
-
-						if (action.prompt.includes('{{INPUT_CONTENT}}')) {
-							floatingInput = true;
-							floatingInputValue = '';
-
-							await tick();
-							setTimeout(() => {
-								const input = document.getElementById('floating-message-input');
-								if (input) {
-									input.focus();
-								}
-							}, 0);
-						} else {
-							actionHandler(action.id);
+					class="px-2.5 py-1 hover:bg-sky-500/20 text-sky-200 hover:text-white rounded-lg flex items-center gap-1.5 min-w-fit transition cursor-pointer font-semibold shadow-sm"
+					on:mousedown={() => {
+						const currentSelection = window.getSelection()?.toString();
+						if (currentSelection) {
+							selectedText = currentSelection;
 						}
+					}}
+					on:click={async () => {
+						const currentSelection = window.getSelection()?.toString();
+						if (currentSelection) {
+							selectedText = currentSelection;
+						}
+						selectedAction = action;
+						actionHandler(action.id);
 					}}
 				>
 					{#if action.icon}
-						<svelte:component this={action.icon} className="size-3 shrink-0" />
+						<svelte:component this={action.icon} className="size-3.5 shrink-0 text-amber-400" />
 					{/if}
 					<div class="shrink-0">{action.label}</div>
 				</button>

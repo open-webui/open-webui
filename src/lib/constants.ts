@@ -1,10 +1,10 @@
 import { browser, dev } from '$app/environment';
 // import { version } from '../../package.json';
 
-export const APP_NAME = 'Open WebUI';
+export const APP_NAME = 'STP Chatbot';
 
-export const WEBUI_HOSTNAME = browser ? (dev ? `${location.hostname}:8080` : ``) : '';
-export const WEBUI_BASE_URL = browser ? (dev ? `http://${WEBUI_HOSTNAME}` : ``) : ``;
+export const WEBUI_HOSTNAME = browser ? (dev ? (['localhost', '127.0.0.1'].includes(location.hostname) ? `${location.hostname}:8080` : location.host) : ``) : '';
+export const WEBUI_BASE_URL = browser ? (dev ? (['localhost', '127.0.0.1'].includes(location.hostname) ? `http://${WEBUI_HOSTNAME}` : `${window.location.origin}`) : ``) : ``;
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
 
 export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;

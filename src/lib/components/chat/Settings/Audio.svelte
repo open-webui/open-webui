@@ -100,11 +100,7 @@
 		TTSEngine = $settings?.audio?.tts?.engine ?? '';
 		TTSEngineConfig = $settings?.audio?.tts?.engineConfig ?? {};
 
-		if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
-			voice = $settings?.audio?.tts?.voice ?? $config.audio.tts.voice ?? '';
-		} else {
-			voice = $config.audio.tts.voice ?? '';
-		}
+		voice = $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice ?? '';
 
 		nonLocalVoices = $settings.audio?.tts?.nonLocalVoices ?? false;
 
@@ -198,28 +194,6 @@
 						<option value="">{$i18n.t('Default')}</option>
 						<option value="web">{$i18n.t('Web API')}</option>
 					</SettingsSelect>
-				</UserSettingRow>
-
-				<UserSettingRow
-					label={$i18n.t('Language')}
-					description={$i18n.t(
-						'Set a speech recognition language or leave it blank to detect automatically.'
-					)}
-				>
-					<Tooltip
-						content={$i18n.t(
-							'The language of the input audio. Supplying the input language in ISO-639-1 (e.g. en) format will improve accuracy and latency. Leave blank to automatically detect the language.'
-						)}
-						placement="top"
-					>
-						<input
-							type="text"
-							bind:value={STTLanguage}
-							aria-label={$i18n.t('Speech-to-Text Language')}
-							placeholder={$i18n.t('e.g. en')}
-							class="h-7 w-24 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-right text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500"
-						/>
-					</Tooltip>
 				</UserSettingRow>
 			{/if}
 

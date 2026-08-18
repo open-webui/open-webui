@@ -11,6 +11,7 @@
 		settings,
 		showControls,
 		showSidebar,
+		showCallOverlay,
 		temporaryChatEnabled,
 		user
 	} from '$lib/stores';
@@ -30,14 +31,25 @@
 
 	import ChatBubbleDotted from '../icons/ChatBubbleDotted.svelte';
 	import ChatBubbleDottedChecked from '../icons/ChatBubbleDottedChecked.svelte';
+	import Voice from '../icons/Voice.svelte';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import ChatPlus from '../icons/ChatPlus.svelte';
 	import ChatCheck from '../icons/ChatCheck.svelte';
 	import Knobs from '../icons/Knobs.svelte';
 	import { isTemporaryChatId } from '$lib/utils/chatId';
+	import { changeLanguage } from '$lib/i18n';
+
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 
 	const i18n = getContext('i18n');
+
+	const setLanguage = (langCode: string) => {
+		localStorage.setItem('locale', langCode);
+		changeLanguage(langCode);
+		window.location.reload();
+	};
 
 	export let initNewChat: Function;
 	export let readOnly: boolean = false;
@@ -164,6 +176,47 @@
 				<div class="mr-1 flex flex-none items-center gap-2 self-center">
 					<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
 
+					<!-- UI Language Selector -->
+					<Dropdown align="end" sideOffset={8}>
+						<button
+							class="flex h-6 cursor-pointer items-center justify-center gap-1 rounded-lg text-sm font-medium text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200 px-2"
+						>
+							{#if $i18n.language === 'hi-IN'}
+								Hindi
+							{:else if $i18n.language === 'gu-IN'}
+								Gujarati
+							{:else}
+								English
+							{/if}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4 pointer-events-none">
+								<path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+							</svg>
+						</button>
+
+						<div slot="content">
+							<DropdownMenu className="select-none min-w-[120px] transition">
+								<button
+									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-3 text-[13px] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+									on:click={() => setLanguage('en-US')}
+								>
+									<div class="flex items-center">English</div>
+								</button>
+								<button
+									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-3 text-[13px] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+									on:click={() => setLanguage('hi-IN')}
+								>
+									<div class="flex items-center">Hindi</div>
+								</button>
+								<button
+									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-3 text-[13px] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+									on:click={() => setLanguage('gu-IN')}
+								>
+									<div class="flex items-center">Gujarati</div>
+								</button>
+							</DropdownMenu>
+						</div>
+					</Dropdown>
+
 					{#if $user?.role === 'user' ? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false) : true}
 						{#if !chat?.id}
 							<Tooltip content={$i18n.t(`Temporary Chat`)}>
@@ -214,6 +267,27 @@
 						{/if}
 					{/if}
 
+					<Tooltip content={$showCallOverlay ? $i18n.t('Close Voice Call') : $i18n.t('Conversational Mode')}>
+						<button
+							class="flex size-6 cursor-pointer items-center justify-center rounded-lg transition {$showCallOverlay
+								? 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/40'
+								: 'text-gray-500 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200'}"
+							id="conversational-mode-button"
+							on:click={async () => {
+								if ($showCallOverlay) {
+									showCallOverlay.set(false);
+									showControls.set(false);
+								} else {
+									showCallOverlay.set(true);
+									showControls.set(true);
+								}
+							}}
+							aria-label={$i18n.t('Conversational Mode')}
+						>
+							<Voice className="size-4.5" strokeWidth="1.5" />
+						</button>
+					</Tooltip>
+
 					{#if $mobile && !$temporaryChatEnabled && chat && chat.id}
 						<Tooltip content={$i18n.t('New Chat')}>
 							<button
@@ -230,7 +304,7 @@
 						</Tooltip>
 					{/if}
 
-					{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
+					{#if false && ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true))}
 						<Tooltip content={$i18n.t('Controls')}>
 							<button
 								class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"

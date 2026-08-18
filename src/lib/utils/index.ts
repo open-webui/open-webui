@@ -1107,7 +1107,7 @@ export const extractSentences = (text: string) => {
 	});
 
 	// Split the modified text into sentences based on common punctuation marks or newlines, avoiding these blocks
-	let sentences = text.split(/(?<=[.!?])\s+|\n+/);
+	let sentences = text.split(/(?<=[.!?।])\s+|\n+/);
 
 	// Restore code blocks and process sentences
 	sentences = sentences.map((sentence) => {

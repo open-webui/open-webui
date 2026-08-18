@@ -93,6 +93,7 @@
 	export let onSourceClick = (e) => {};
 	export let onTaskClick = (e) => {};
 	export let onSetInputText = (text) => {};
+	export let onExplain = (text) => {};
 
 	let contentContainerElement;
 	let floatingButtonsElement;
@@ -172,9 +173,54 @@
 		}
 	);
 
+	const showButtonsForSelection = (event = null) => {
+		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
+		if (!buttonsContainerElement || !contentContainerElement) return;
+
+		let selection = window.getSelection();
+		const selectedTextContent = selection?.toString()?.trim();
+
+		if (selectedTextContent && selectedTextContent.length > 0) {
+			if (floatingButtonsElement?.setSelectedText) {
+				floatingButtonsElement.setSelectedText(selectedTextContent);
+			}
+
+			let top = 0;
+			let left = 0;
+			const parentRect = contentContainerElement.getBoundingClientRect();
+
+			if (event && event.type === 'contextmenu') {
+				top = event.clientY - parentRect.top;
+				left = event.clientX - parentRect.left;
+			} else if (selection.rangeCount > 0) {
+				const range = selection.getRangeAt(0);
+				const rect = range.getBoundingClientRect();
+				top = rect.bottom - parentRect.top;
+				left = rect.left - parentRect.left;
+			}
+
+			buttonsContainerElement.style.display = 'block';
+
+			const spaceOnRight = parentRect.width - left;
+			let halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
+
+			if (spaceOnRight < halfScreenWidth) {
+				buttonsContainerElement.style.right = '0px';
+				buttonsContainerElement.style.left = 'auto';
+			} else {
+				buttonsContainerElement.style.left = `${Math.max(0, left)}px`;
+				buttonsContainerElement.style.right = 'auto';
+			}
+			buttonsContainerElement.style.top = `${top + 5}px`;
+		} else {
+			closeFloatingButtons();
+		}
+	};
+
 	const updateButtonPosition = (event) => {
 		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
 		if (
+			event &&
 			!contentContainerElement?.contains(event.target) &&
 			!buttonsContainerElement?.contains(event.target)
 		) {
@@ -184,43 +230,17 @@
 
 		setTimeout(async () => {
 			await tick();
+			showButtonsForSelection(event);
+		}, 10);
+	};
 
-			if (!contentContainerElement?.contains(event.target)) return;
-
-			let selection = window.getSelection();
-
-			if (selection.toString().trim().length > 0) {
-				const range = selection.getRangeAt(0);
-				const rect = range.getBoundingClientRect();
-
-				const parentRect = contentContainerElement.getBoundingClientRect();
-
-				// Adjust based on parent rect
-				const top = rect.bottom - parentRect.top;
-				const left = rect.left - parentRect.left;
-
-				if (buttonsContainerElement) {
-					buttonsContainerElement.style.display = 'block';
-
-					// Calculate space available on the right
-					const spaceOnRight = parentRect.width - left;
-					let halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
-
-					if (spaceOnRight < halfScreenWidth) {
-						const right = parentRect.right - rect.right;
-						buttonsContainerElement.style.right = `${right}px`;
-						buttonsContainerElement.style.left = 'auto'; // Reset left
-					} else {
-						// Enough space, position using 'left'
-						buttonsContainerElement.style.left = `${left}px`;
-						buttonsContainerElement.style.right = 'auto'; // Reset right
-					}
-					buttonsContainerElement.style.top = `${top + 5}px`; // +5 to add some spacing
-				}
-			} else {
-				closeFloatingButtons();
-			}
-		}, 0);
+	const handleContextMenu = (event) => {
+		const selection = window.getSelection();
+		const selectedText = selection?.toString()?.trim();
+		if (selectedText && selectedText.length > 0) {
+			event.preventDefault();
+			showButtonsForSelection(event);
+		}
 	};
 
 	const closeFloatingButtons = () => {
@@ -230,10 +250,7 @@
 		}
 
 		if (floatingButtonsElement) {
-			// check if closeHandler is defined
-
 			if (typeof floatingButtonsElement?.closeHandler === 'function') {
-				// call the closeHandler function
 				floatingButtonsElement?.closeHandler();
 			}
 		}
@@ -245,13 +262,12 @@
 		}
 	};
 
-	// Reactive listener attachment: re-attaches when floatingButtons
-	// transitions from false → true (e.g. when message.done flips).
 	let listenersAttached = false;
 
 	function attachListeners() {
 		if (!listenersAttached && contentContainerElement) {
 			contentContainerElement.addEventListener('mouseup', updateButtonPosition);
+			contentContainerElement.addEventListener('contextmenu', handleContextMenu);
 			document.addEventListener('mouseup', updateButtonPosition);
 			document.addEventListener('keydown', keydownHandler);
 			listenersAttached = true;
@@ -261,6 +277,7 @@
 	function detachListeners() {
 		if (listenersAttached) {
 			contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
+			contentContainerElement?.removeEventListener('contextmenu', handleContextMenu);
 			document.removeEventListener('mouseup', updateButtonPosition);
 			document.removeEventListener('keydown', keydownHandler);
 			listenersAttached = false;
@@ -278,7 +295,7 @@
 	});
 </script>
 
-<div bind:this={contentContainerElement}>
+<div bind:this={contentContainerElement} class="relative">
 	{#if output?.length}
 		<StructuredOutputRenderer
 			{id}
@@ -338,9 +355,13 @@
 	<FloatingButtons
 		bind:this={floatingButtonsElement}
 		{id}
-		actions={$settings?.floatingActionButtons ?? []}
+		actions={$settings?.floatingActionButtons?.filter((a) => a.id !== 'ask') ?? []}
 		onSetInputText={(text) => {
 			onSetInputText(text);
+			closeFloatingButtons();
+		}}
+		onExplain={(selectedText) => {
+			onExplain(selectedText);
 			closeFloatingButtons();
 		}}
 	/>

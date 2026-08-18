@@ -194,3 +194,14 @@ export const getVoices = async (token: string = '') => {
 
 	return res;
 };
+
+export const synthesizeFallbackSpeech = async (token: string = '', text: string, lang: string = 'en') => {
+	const textUrl = encodeURIComponent(text);
+	const res = await fetch(`${AUDIO_API_BASE_URL}/fallback-tts?text=${textUrl}&lang=${lang}`, {
+		headers: {
+			Authorization: `Bearer ${token}`
+		}
+	});
+	return res;
+};
+

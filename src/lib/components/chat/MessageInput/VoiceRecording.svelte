@@ -178,15 +178,22 @@
 		const file = blobToFile(audioBlob, `Recording-${dayjs().format('L LT')}.${ext}`);
 
 		if (transcribe) {
-			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
+			const savedLocale = localStorage.getItem('locale') || $i18n.language || 'en-US';
+			const currentLangCode = savedLocale.split('-')[0];
+			
+			// If engine is 'web', ONLY allow it if language is English, because Web STT hallucinates heavily on Hindi/Gujarati
+			const isWebEngine = $config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web';
+			if (isWebEngine && currentLangCode === 'en') {
 				// with web stt, we don't need to send the file to the server
 				return;
 			}
 
+			const sttLanguage = currentLangCode;
+
 			const res = await transcribeAudio(
 				localStorage.token,
 				file,
-				$settings?.audio?.stt?.language
+				sttLanguage
 			).catch((error) => {
 				toast.error(`${error}`);
 				return null;
@@ -305,6 +312,9 @@
 
 					// Create a SpeechRecognition object
 					speechRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+					
+					// Set language to the current UI language (checking localStorage directly to avoid i18next fallback issues)
+					speechRecognition.lang = localStorage.getItem('locale') || $i18n.language || 'en-US';
 
 					// Set continuous to true for continuous recognition
 					speechRecognition.continuous = true;

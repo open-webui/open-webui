@@ -67,6 +67,21 @@
 			}
 		}
 	}
+
+	$: displayContent = getCleanDisplayContent(message?.meta?.displayText, message?.content);
+
+	const getCleanDisplayContent = (displayText?: string, content?: string) => {
+		if (displayText) return displayText;
+		if (content?.includes('Please explain the following selected text/concept in detail with regards to Sewage Treatment Plant')) {
+			const match = content.match(/> ([\s\S]*?)\n\n### Context:/);
+			if (match && match[1]) {
+				const txt = match[1].trim();
+				return `💡 **Explain**: "${txt.length > 120 ? txt.slice(0, 120) + '...' : txt}"`;
+			}
+			return `💡 **Explain selection**`;
+		}
+		return content ?? '';
+	};
 	const copyToClipboard = async (text) => {
 		const res = await _copyToClipboard(text);
 		if (res) {
@@ -380,12 +395,12 @@
 									}`
 								: ' w-full'}"
 						>
-							{#if message.content}
+							{#if displayContent}
 								{#if $settings?.renderMarkdownInUserMessages ?? true}
 									<div class="markdown-prose">
 										<Markdown
 											id={`${chatId}-${message.id}`}
-											content={message.content}
+											content={displayContent}
 											{editCodeBlock}
 											{topPadding}
 										/>
@@ -395,7 +410,7 @@
 										class="whitespace-pre-wrap text-[0.9375rem]"
 										dir={$settings?.chatDirection ?? 'auto'}
 									>
-										{message.content}
+										{displayContent}
 									</div>
 								{/if}
 							{/if}

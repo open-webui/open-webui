@@ -415,10 +415,21 @@
 					<SplitCreateButton
 						actions={[
 							{
-								id: 'notes-new',
-								label: $i18n.t('Create'),
+								id: 'notes-new-context',
+								label: $i18n.t('New Context Note'),
 								onClick: async () => {
-									const res = await createNoteHandler(dayjs().format('YYYY-MM-DD'));
+									const res = await createNoteHandler('', '', '', 'context');
+
+									if (res) {
+										goto(`/notes/${res.id}`);
+									}
+								}
+							},
+							{
+								id: 'notes-new-question',
+								label: $i18n.t('New Question Note'),
+								onClick: async () => {
+									const res = await createNoteHandler('', '', '', 'question');
 
 									if (res) {
 										goto(`/notes/${res.id}`);

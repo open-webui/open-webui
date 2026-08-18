@@ -1616,23 +1616,24 @@
 			messageContentParts.pop();
 		}
 
-		const nextContentPart = messageContentParts.at(-1) ?? '';
-		if (!nextContentPart || (!final && nextContentPart === message.lastSentence)) {
-			return;
-		}
+		// Keep track of already dispatched sentences/parts for this message
+		const startIndex = message.dispatchedSentencesCount || 0;
+		const newParts = messageContentParts.slice(startIndex);
 
-		if (!final) {
-			message.lastSentence = nextContentPart;
+		if (newParts.length > 0) {
+			message.dispatchedSentencesCount = messageContentParts.length;
+			
+			for (const part of newParts) {
+				eventTarget.dispatchEvent(
+					new CustomEvent('chat', {
+						detail: {
+							id: message.id,
+							content: part
+						}
+					})
+				);
+			}
 		}
-
-		eventTarget.dispatchEvent(
-			new CustomEvent('chat', {
-				detail: {
-					id: message.id,
-					content: nextContentPart
-				}
-			})
-		);
 	};
 
 	const getContents = () => {
@@ -2493,18 +2494,6 @@
 	const submitPrompt = async (inputContent, inputFiles) => {
 		const _files = structuredClone(inputFiles);
 
-		chatFiles.push(
-			..._files.filter(
-				(item) =>
-					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
-					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
-			)
-		);
-		chatFiles = chatFiles.filter(
-			// Remove duplicates
-			(item, index, array) => array.findIndex((i) => equal(i, item)) === index
-		);
-
 		// Create user message
 		let userMessageId = uuidv4();
 		let userMessage = {
@@ -2807,7 +2796,7 @@
 		// it, duplicate models collapse into one another when the chat is reloaded.
 		const messageIdsList: Array<{ model_id: string; message_id: string; modelIdx: number }> = [];
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
-			const model = $models.filter((m) => m.id === modelId).at(0);
+			const model = $models.find((m) => m.id === modelId) || $models[0];
 
 			if (model) {
 				let responseMessageId = uuidv4();
@@ -2903,7 +2892,7 @@
 
 		// Single request — backend fans out to all models
 		const primaryModelId = selectedModelIds[0];
-		const primaryModel = $models.filter((m) => m.id === primaryModelId).at(0);
+		const primaryModel = $models.find((m) => m.id === primaryModelId) || $models[0];
 		const primaryResponseMessageId = messageIdsList[0]?.message_id;
 
 		if (primaryModel && primaryResponseMessageId) {
@@ -2988,28 +2977,16 @@
 		} = {}
 	) => {
 		const responseMessage = _history.messages[responseMessageId];
+		if (responseMessage) {
+			responseMessage.dispatchedSentencesCount = 0;
+		}
 		const userMessage = _history.messages[responseMessage.parentId];
 
-		const chatMessageFiles = _messages
-			.filter((message) => message.files)
-			.flatMap((message) => message.files);
-
-		// Filter chatFiles to only include files that are in the chatMessageFiles
-		chatFiles = chatFiles.filter((item) => {
-			const fileExists = chatMessageFiles.some((messageFile) => messageFile.id === item.id);
-			return fileExists;
-		});
-
-		let files = structuredClone(chatFiles);
-		files.push(
-			...(userMessage?.files ?? []).filter(
-				(item) =>
-					['doc', 'text', 'note', 'chat', 'collection', 'folder'].includes(item.type) ||
-					(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
-			)
+		let files = (userMessage?.files ?? []).filter(
+			(item) =>
+				['doc', 'text', 'note', 'chat', 'collection', 'folder'].includes(item.type) ||
+				(item.type === 'file' && !(item?.content_type ?? '').startsWith('image/'))
 		);
-		// Remove duplicates
-		files = files.filter((item, index, array) => array.findIndex((i) => equal(i, item)) === index);
 
 		scrollToBottom();
 		eventTarget.dispatchEvent(
@@ -3344,7 +3321,7 @@
 		}
 	};
 
-	const submitMessage = async (parentId, prompt) => {
+	const submitMessage = async (parentId, prompt, targetModels = null, displayText = null) => {
 		let userPrompt = prompt;
 		let userMessageId = uuidv4();
 
@@ -3354,11 +3331,14 @@
 			childrenIds: [],
 			role: 'user',
 			content: userPrompt,
-			models: selectedModels,
-			timestamp: Math.floor(Date.now() / 1000) // Unix epoch
+			models: targetModels || selectedModels,
+			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
+			meta: {
+				...(displayText ? { displayText } : {})
+			}
 		};
 
-		if (parentId !== null) {
+		if (parentId !== null && history.messages[parentId]) {
 			history.messages[parentId].childrenIds = [
 				...history.messages[parentId].childrenIds,
 				userMessageId
@@ -3374,7 +3354,9 @@
 			scrollToBottom();
 		}
 
-		await sendMessage(history, userMessageId);
+		await sendMessage(history, userMessageId, {
+			modelId: targetModels && targetModels.length > 0 ? targetModels[0] : null
+		});
 	};
 
 	const regenerateResponse = async (message, suggestionPrompt = null) => {
@@ -3616,15 +3598,28 @@
 
 	const archiveChatHandler = async (id: string) => {
 		try {
+			const isArchived = chat?.archived ?? false;
 			await archiveChatById(localStorage.token, id);
-			initNewChat();
-			await goto('/');
-			await refreshChatList(localStorage.token, { refreshPinned: true });
-			await refreshFolderChatLists();
-			toast.success($i18n.t('Chat archived.'));
+			if (isArchived) {
+				if (chat) {
+					chat = { ...chat, archived: false };
+				}
+				await refreshChatList(localStorage.token, { refreshPinned: true });
+				await refreshFolderChatLists();
+				toast.success($i18n.t('Chat unarchived.'));
+			} else {
+				if (chat) {
+					chat = { ...chat, archived: true };
+				}
+				initNewChat();
+				await goto('/');
+				await refreshChatList(localStorage.token, { refreshPinned: true });
+				await refreshFolderChatLists();
+				toast.success($i18n.t('Chat archived.'));
+			}
 		} catch (error) {
 			console.error('Error archiving chat:', error);
-			toast.error($i18n.t('Failed to archive chat.'));
+			toast.error($i18n.t('Failed to update chat archive status.'));
 		}
 	};
 
@@ -3674,7 +3669,7 @@
 	</title>
 </svelte:head>
 
-<audio id="audioElement" style="display: none;"></audio>
+<audio id="audioElement" style="display: none;" referrerpolicy="no-referrer"></audio>
 
 {#if getChatVariablesForm(selectedModelIds, chatVariables, $models).conflicts.length > 0}
 	<Modal bind:show={showChatVariablesModal} size="md">
@@ -3837,6 +3832,7 @@
 							{readOnly}
 							chat={{
 								id: $chatId,
+								archived: chat?.archived ?? false,
 								chat: {
 									title: $chatTitle,
 									models: selectedModels,
@@ -4169,9 +4165,10 @@
 						bind:params
 						bind:files
 						bind:pane={controlPane}
+						bind:selectedModels={selectedModels}
 						chatId={$chatId}
-						modelId={selectedModelIds?.at(0) ?? null}
-						models={selectedModelIds.reduce((a, e, i, arr) => {
+						modelId={selectedModels?.at(0) ?? null}
+						models={selectedModels.reduce((a, e, i, arr) => {
 							const model = $models.find((m) => m.id === e);
 							if (model) {
 								return [...a, model];

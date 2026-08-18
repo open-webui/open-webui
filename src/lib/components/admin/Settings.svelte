@@ -44,7 +44,6 @@
 			'subagents',
 			'evaluations',
 			'analytics',
-			'integrations',
 			'documents',
 			'web',
 			'code-execution',
@@ -165,26 +164,7 @@
 			route: '/admin/settings/analytics',
 			keywords: ['analytics', 'usage', 'stats', 'dashboard', 'models', 'users', 'messages']
 		},
-		{
-			id: 'integrations',
-			title: 'Integrations',
-			route: '/admin/settings/integrations',
-			keywords: [
-				'tools',
-				'integrations',
-				'plugins',
-				'extensions',
-				'functions',
-				'openapi',
-				'server',
-				'knowledge',
-				'vector db',
-				'qdrant',
-				'rag',
-				'retrieval',
-				'sources'
-			]
-		},
+
 		{
 			id: 'documents',
 			title: 'Documents',
@@ -431,8 +411,7 @@
 					<Evaluations />
 				{:else if selectedTab === 'analytics'}
 					<Analytics />
-				{:else if selectedTab === 'integrations'}
-					<Integrations />
+				{:else if false && selectedTab === 'integrations'}
 				{:else if selectedTab === 'documents'}
 					<Documents
 						on:save={async () => {

@@ -59,7 +59,37 @@
 	};
 
 	$: if (suggestionPrompts) {
-		sortedPrompts = [...(suggestionPrompts ?? [])].sort(() => Math.random() - 0.5);
+		let localizedPrompts = [...(suggestionPrompts ?? [])];
+		
+		if ($i18n.language === 'hi-IN') {
+			localizedPrompts = localizedPrompts.map(p => {
+				if (p.content === 'GIVE ME STAGING ANALYSIS IN PAST 24 HOURS') {
+					return { ...p, title: ['स्टेजिंग विश्लेषण', 'मुझे स्टेजिंग विश्लेषण दें'], content: 'पिछले 24 घंटों में मुझे स्टेजिंग विश्लेषण दें' };
+				}
+				if (p.content === 'FLOW HLT AND NUMBER OF PUMPS RUNNING IN PAST 24 HOURS') {
+					return { ...p, title: ['वर्तमान स्थिति', 'फ्लो एचएलटी और पंप'], content: 'पिछले 24 घंटों में फ्लो एचएलटी और चल रहे पंपों की संख्या' };
+				}
+				if (p.content === 'ANOMALY ANALYSIS IN PAST 24 HOURS') {
+					return { ...p, title: ['अलर्ट', 'विसंगति विश्लेषण'], content: 'पिछले 24 घंटों में विसंगति विश्लेषण' };
+				}
+				return p;
+			});
+		} else if ($i18n.language === 'gu-IN') {
+			localizedPrompts = localizedPrompts.map(p => {
+				if (p.content === 'GIVE ME STAGING ANALYSIS IN PAST 24 HOURS') {
+					return { ...p, title: ['સ્ટેજિંગ વિશ્લેષણ', 'મને સ્ટેજિંગ વિશ્લેષણ આપો'], content: 'છેલ્લા ૨૪ કલાકમાં મને સ્ટેજિંગ વિશ્લેષણ આપો' };
+				}
+				if (p.content === 'FLOW HLT AND NUMBER OF PUMPS RUNNING IN PAST 24 HOURS') {
+					return { ...p, title: ['વર્તમાન સ્થિતિ', 'ફ્લો એચએલટી અને પંપ'], content: 'છેલ્લા ૨૪ કલાકમાં ફ્લો એચએલટી અને ચાલતા પંપની સંખ્યા' };
+				}
+				if (p.content === 'ANOMALY ANALYSIS IN PAST 24 HOURS') {
+					return { ...p, title: ['એલર્ટ્સ', 'અસંગતતા વિશ્લેષણ'], content: 'છેલ્લા ૨૪ કલાકમાં અસંગતતા વિશ્લેષણ' };
+				}
+				return p;
+			});
+		}
+		
+		sortedPrompts = localizedPrompts.sort(() => Math.random() - 0.5);
 		getFilteredPrompts(inputValue);
 	}
 </script>

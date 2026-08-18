@@ -13,6 +13,7 @@
 		tags,
 		folders as _folders,
 		showSidebar,
+		showSettings,
 		showSearch,
 		mobile,
 		pinnedChats,
@@ -62,7 +63,7 @@
 	import { createNoteHandler } from '$lib/components/notes/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
-	import UserMenu from './Sidebar/UserMenu.svelte';
+	import PinnedModelItem from './Sidebar/PinnedModelItem.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
@@ -92,9 +93,11 @@
 	import DropdownMenu from '../common/DropdownMenu.svelte';
 	import CheckIcon from '../icons/Check.svelte';
 	import MoreHorizontalIcon from './Sidebar/icons/MoreHorizontal.svelte';
+	import ArchiveBox from '../icons/ArchiveBox.svelte';
+	import ArchivedChatsModal from '../chat/ArchivedChatsModal.svelte';
 
 	const BREAKPOINT = 768;
-	const DEFAULT_PINNED_ITEMS = ['notes', 'workspace'];
+	const DEFAULT_PINNED_ITEMS = ['notes'];
 
 	let scrollTop = 0;
 
@@ -119,6 +122,7 @@
 	let allChatsLoaded = false;
 
 	let showCreateFolderModal = false;
+	let showArchivedChatsModal = false;
 
 	let pinnedModels = [];
 
@@ -1063,36 +1067,7 @@
 			<div>
 				<div class=" flex justify-center items-center">
 					{#if $user !== undefined && $user !== null}
-						<UserMenu role={$user?.role} profile={$config?.features?.enable_user_status ?? true}>
-							<button
-								type="button"
-								class=" cursor-pointer flex size-8.5 items-center justify-center transition group"
-								aria-label={$i18n.t('User menu')}
-							>
-								<div
-									class="self-center relative flex size-[30px] items-center justify-center rounded-lg transition group-hover:bg-gray-50 dark:group-hover:bg-gray-900"
-								>
-									<img
-										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
-										class="size-5.5 object-cover rounded-full"
-										alt={$i18n.t('Open User Profile Menu')}
-										aria-label={$i18n.t('Open User Profile Menu')}
-									/>
-
-									{#if $config?.features?.enable_user_status}
-										<div class="absolute -bottom-0.5 -right-0.5">
-											<span class="relative flex size-2.5">
-												<span
-													class="relative inline-flex size-2.5 rounded-full {true
-														? 'bg-green-500'
-														: 'bg-gray-300 dark:bg-gray-700'} border-2 border-white dark:border-gray-900"
-												></span>
-											</span>
-										</div>
-									{/if}
-								</div>
-							</button>
-						</UserMenu>
+						<!-- User profile disabled, Settings button removed -->
 					{/if}
 				</div>
 			</div>
@@ -1672,50 +1647,25 @@
 				</SidebarSection>
 			</div>
 
-			<div class="px-1 pt-1 pb-1.5 sticky bottom-0 z-10 -mt-2 sidebar">
+			<div class="px-2 pt-1 pb-2 sticky bottom-0 z-10 -mt-2 sidebar">
 				<div
 					class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 				></div>
-				<div class="flex flex-col">
-					{#if $user !== undefined && $user !== null}
-						<UserMenu
-							role={$user?.role}
-							profile={$config?.features?.enable_user_status ?? true}
-							className="w-[calc(var(--sidebar-width)-1rem)]"
-						>
-							<button
-								type="button"
-								class=" flex items-center rounded-xl py-1.5 px-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-900 transition"
-								aria-label={$i18n.t('User menu')}
-							>
-								<div class=" self-center mr-3 relative flex-shrink-0">
-									<img
-										src={`${WEBUI_API_BASE_URL}/users/${$user?.id}/profile/image`}
-										class="size-5.5 object-cover rounded-full"
-										alt={$i18n.t('Open User Profile Menu')}
-										aria-label={$i18n.t('Open User Profile Menu')}
-									/>
-
-									{#if $config?.features?.enable_user_status}
-										<div class="absolute -bottom-0.5 -right-0.5">
-											<span class="relative flex size-2.5">
-												<span
-													class="relative inline-flex size-2.5 rounded-full {true
-														? 'bg-green-500'
-														: 'bg-gray-300 dark:bg-gray-700'} border-2 border-white dark:border-gray-900"
-												></span>
-											</span>
-										</div>
-									{/if}
-								</div>
-								<div class=" self-center font-normal truncate">{$user?.name}</div>
-							</button>
-						</UserMenu>
-					{/if}
+				<div class="flex flex-col gap-0.5">
+					<button
+						type="button"
+						class="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-[13px] font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-850 hover:text-gray-900 dark:hover:text-gray-100 transition cursor-pointer"
+						on:click={() => (showArchivedChatsModal = true)}
+					>
+						<ArchiveBox className="size-4" />
+						<span>{$i18n.t('Archived Chats')}</span>
+					</button>
 				</div>
 			</div>
 		</div>
 	</div>
+
+	<ArchivedChatsModal bind:show={showArchivedChatsModal} />
 
 	{#if !$mobile}
 		<div

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/png" href="/static/favicon.png" crossorigin="use-credentials" />
@@ -121,6 +121,30 @@
 	</head>
 
 	<body data-sveltekit-preload-data="hover">
+		<div id="ocean-bg">
+			<!-- Bioluminescent light caustics -->
+			<div class="caustic-overlay"></div>
+			
+			<!-- Layered fluid wave paths -->
+			<svg class="bg-wave bg-wave-1" viewBox="0 0 1200 120" preserveAspectRatio="none">
+				<path d="M0,60 C300,100 600,20 900,80 L1200,60 L1200,120 L0,120 Z" fill="rgba(0, 242, 254, 0.04)">
+					<animate attributeName="d" 
+							 values="M0,60 C300,100 600,20 900,80 L1200,60 L1200,120 L0,120 Z;
+									 M0,60 C300,40 600,80 900,30 L1200,60 L1200,120 L0,120 Z;
+									 M0,60 C300,100 600,20 900,80 L1200,60 L1200,120 L0,120 Z" 
+							 dur="20s" repeatCount="indefinite" />
+				</path>
+			</svg>
+			<svg class="bg-wave bg-wave-2" viewBox="0 0 1200 120" preserveAspectRatio="none">
+				<path d="M0,50 C350,20 650,90 950,40 L1200,70 L1200,120 L0,120 Z" fill="rgba(5, 255, 162, 0.03)">
+					<animate attributeName="d" 
+							 values="M0,50 C350,20 650,90 950,40 L1200,70 L1200,120 L0,120 Z;
+									 M0,50 C350,80 650,30 950,70 L1200,50 L1200,120 L0,120 Z;
+									 M0,50 C350,20 650,90 950,40 L1200,70 L1200,120 L0,120 Z" 
+							 dur="15s" repeatCount="indefinite" />
+				</path>
+			</svg>
+		</div>
 		<div style="display: contents">%sveltekit.body%</div>
 
 		<div
@@ -187,6 +211,44 @@
 				Footer content
 			</span> -->
 		</div>
+
+		<!-- Premium Bioluminescent Abyssal Particle Generator -->
+		<script>
+			document.addEventListener("DOMContentLoaded", () => {
+				const container = document.getElementById("ocean-bg");
+				if (!container) return;
+				
+				// Generate larger premium light-blue bubbles
+				const totalBubbles = 40;
+				for (let i = 0; i < totalBubbles; i++) {
+					const bubble = document.createElement("div");
+					bubble.className = "bubble-premium";
+					bubble.style.left = Math.random() * 100 + "vw";
+					const size = Math.random() * 18 + 6; // 6px to 24px
+					bubble.style.width = size + "px";
+					bubble.style.height = size + "px";
+					bubble.style.animationDuration = (Math.random() * 8 + 12) + "s"; // 12s to 20s
+					bubble.style.animationDelay = (Math.random() * 12) + "s";
+					bubble.style.opacity = (Math.random() * 0.25 + 0.05);
+					container.appendChild(bubble);
+				}
+
+				// Generate smaller bioluminescent teal/green micro-particles
+				const totalMicro = 60;
+				for (let i = 0; i < totalMicro; i++) {
+					const particle = document.createElement("div");
+					particle.className = "micro-particle";
+					particle.style.left = Math.random() * 100 + "vw";
+					const size = Math.random() * 3 + 1.5; // 1.5px to 4.5px
+					particle.style.width = size + "px";
+					particle.style.height = size + "px";
+					particle.style.animationDuration = (Math.random() * 10 + 8) + "s"; // 8s to 18s
+					particle.style.animationDelay = (Math.random() * 10) + "s";
+					particle.style.opacity = (Math.random() * 0.4 + 0.1);
+					container.appendChild(particle);
+				}
+			});
+		</script>
 	</body>
 
 	<style type="text/css" nonce="">

@@ -937,9 +937,14 @@ ${content}
 
 		const dropzoneElement = document.getElementById('note-editor');
 
-		// dropzoneElement?.addEventListener('dragover', onDragOver);
-		// dropzoneElement?.addEventListener('drop', onDrop);
-		// dropzoneElement?.addEventListener('dragleave', onDragLeave);
+		if (!note?.title) {
+			setTimeout(() => {
+				const titleInput = document.getElementById('note-title-input');
+				if (titleInput) {
+					titleInput.focus();
+				}
+			}, 100);
+		}
 	});
 
 	onDestroy(() => {
@@ -1036,13 +1041,42 @@ ${content}
 								</Tooltip>
 							{/if}
 
+							<div class="flex items-center gap-1 shrink-0 mr-2">
+								<button
+									type="button"
+									class="px-2.5 py-1 text-xs rounded-lg font-semibold transition cursor-pointer flex items-center gap-1 {note?.meta?.type === 'question'
+										? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'
+										: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30 hover:bg-sky-500/25'}"
+									on:click={() => {
+										const newType = note?.meta?.type === 'question' ? 'context' : 'question';
+										note.meta = { ...(note.meta || {}), type: newType };
+										if (note.data?.content) {
+											note.data.content.type = newType;
+										}
+										changeDebounceHandler();
+									}}
+									title="Click to toggle between Question Note and Context Note"
+								>
+									{#if note?.meta?.type === 'question'}
+										<span>❓ Question Note</span>
+									{:else}
+										<span>📄 Context Note</span>
+									{/if}
+								</button>
+							</div>
+
 							<input
+								id="note-title-input"
 								class="w-full text-sm font-normal bg-transparent outline-hidden {$mobile
 									? 'ml-1'
 									: ''}"
 								type="text"
 								bind:value={note.title}
-								placeholder={titleGenerating ? $i18n.t('Generating...') : $i18n.t('Title')}
+								placeholder={titleGenerating
+									? $i18n.t('Generating...')
+									: note?.meta?.type === 'question'
+										? $i18n.t('Type Question Note name (questions inside will be asked ? separated)...')
+										: $i18n.t('Type Context Note name (content referenced as Context in chat)...')}
 								disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
 									titleGenerating}
 								required

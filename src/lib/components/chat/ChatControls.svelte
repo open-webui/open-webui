@@ -41,6 +41,7 @@
 	export let models = [];
 
 	export let chatId = null;
+	export let selectedModels = [];
 
 	export let chatFiles = [];
 	export let params = {};
@@ -71,7 +72,7 @@
 
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 
-	$: showControlsTab = $user?.role === 'admin' || ($user?.permissions?.chat?.controls ?? true);
+	$: showControlsTab = false;
 	$: showFilesTab =
 		($selectedTerminalId &&
 			(($terminalServers ?? []).some((t) => t.id && t.id === $selectedTerminalId) ||
@@ -160,8 +161,13 @@
 	};
 
 	export const openPane = () => {
+		const container = document.getElementById(containerId) as HTMLElement;
+		if ($showCallOverlay && container) {
+			const callMinSize = Math.max(minSize, Math.floor((500 / container.clientWidth) * 100));
+			pane.resize(Math.max(callMinSize, 40));
+			return;
+		}
 		if (parseInt(localStorage?.chatControlsSize)) {
-			const container = document.getElementById(containerId);
 			let size = Math.floor(
 				(parseInt(localStorage?.chatControlsSize) / container.clientWidth) * 100
 			);
@@ -170,6 +176,16 @@
 			pane.resize(minSize);
 		}
 	};
+
+	$: if ($showCallOverlay && pane && paneReady) {
+		const container = document.getElementById(containerId) as HTMLElement;
+		if (container) {
+			const callMinSize = Math.max(minSize, Math.floor((500 / container.clientWidth) * 100));
+			if (pane.getSize() < callMinSize) {
+				pane.resize(callMinSize);
+			}
+		}
+	}
 
 	const handleMediaQuery = async (e) => {
 		if (e.matches) {
@@ -289,6 +305,7 @@
 					>
 						<CallOverlay
 							bind:files
+							bind:selectedModels
 							{submitPrompt}
 							{stopResponse}
 							{modelId}
@@ -433,6 +450,7 @@
 						<div class="w-full h-full flex justify-center">
 							<CallOverlay
 								bind:files
+								bind:selectedModels
 								{submitPrompt}
 								{stopResponse}
 								{modelId}

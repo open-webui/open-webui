@@ -94,6 +94,15 @@
 		return res;
 	};
 
+	let selectedFilter: 'all' | 'question' | 'context' = 'all';
+
+	$: displayedItems = items.filter((item) => {
+		const isQuestion = item.meta?.type === 'question' || item.data?.content?.type === 'question';
+		if (selectedFilter === 'question') return isQuestion;
+		if (selectedFilter === 'context') return !isQuestion;
+		return true;
+	});
+
 	onMount(async () => {
 		await getItemsPage();
 		await tick();
@@ -111,16 +120,47 @@
 	<div class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-hidden">
 		<SearchInput bind:value={query} placeholder={$i18n.t('Search Notes')} />
 
+		<!-- Tabs to divide Question Notes vs Context Notes -->
+		<div class="flex items-center gap-1 px-2 py-1 border-b border-gray-100 dark:border-gray-800 shrink-0 text-xs">
+			<button
+				type="button"
+				class="px-2 py-0.5 rounded-lg transition font-medium cursor-pointer {selectedFilter === 'all'
+					? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white font-semibold'
+					: 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}"
+				on:click={() => (selectedFilter = 'all')}
+			>
+				{$i18n.t('All')}
+			</button>
+			<button
+				type="button"
+				class="px-2 py-0.5 rounded-lg transition font-medium cursor-pointer flex items-center gap-1 {selectedFilter === 'question'
+					? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 font-semibold border border-amber-500/30'
+					: 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}"
+				on:click={() => (selectedFilter = 'question')}
+			>
+				<span>❓ Questions</span>
+			</button>
+			<button
+				type="button"
+				class="px-2 py-0.5 rounded-lg transition font-medium cursor-pointer flex items-center gap-1 {selectedFilter === 'context'
+					? 'bg-sky-500/20 text-sky-700 dark:text-sky-300 font-semibold border border-sky-500/30'
+					: 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}"
+				on:click={() => (selectedFilter = 'context')}
+			>
+				<span>📄 Context</span>
+			</button>
+		</div>
+
 		<div class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
-			{#if items.length === 0 && itemsLoading}
+			{#if displayedItems.length === 0 && itemsLoading}
 				<div class="py-4.5">
 					<Spinner />
 				</div>
-			{:else if items.length === 0}
+			{:else if displayedItems.length === 0}
 				<div class="text-center text-xs text-gray-500 py-3">{$i18n.t('No notes found')}</div>
 			{:else}
 				<div class="flex flex-col gap-0.5">
-					{#each items as item, idx}
+					{#each displayedItems as item, idx}
 						<button
 							class=" h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[13px] font-normal {idx ===
 							selectedIdx
@@ -140,9 +180,9 @@
 							}}
 							data-selected={idx === selectedIdx}
 						>
-							<div class="text-black dark:text-gray-100 flex items-center gap-1.5">
+							<div class="text-black dark:text-gray-100 flex items-center gap-1.5 min-w-0 flex-1">
 								<Tooltip content={$i18n.t('Note')} placement="top">
-									<PageEdit className="size-3.5" />
+									<PageEdit className="size-3.5 shrink-0" />
 								</Tooltip>
 
 								<Tooltip
@@ -154,6 +194,16 @@
 									</div>
 								</Tooltip>
 							</div>
+
+							{#if item.meta?.type === 'question' || item.data?.content?.type === 'question'}
+								<span class="text-[10px] px-1.5 py-0.5 bg-amber-500/15 text-amber-700 dark:text-amber-300 rounded font-medium shrink-0 ml-1.5">
+									❓ Question
+								</span>
+							{:else}
+								<span class="text-[10px] px-1.5 py-0.5 bg-sky-500/15 text-sky-700 dark:text-sky-300 rounded font-medium shrink-0 ml-1.5">
+									📄 Context
+								</span>
+							{/if}
 						</button>
 					{/each}
 

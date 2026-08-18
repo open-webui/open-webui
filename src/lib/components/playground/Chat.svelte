@@ -507,6 +507,7 @@
 								</select>
 							</div>
 
+							{#if false}
 							<button
 								class="p-1.5 text-sm font-normal bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg {showControls
 									? 'text-black dark:text-white'
@@ -519,6 +520,7 @@
 							>
 								<AdjustmentsHorizontal className="size-3.5" />
 							</button>
+							{/if}
 
 							<div class="flex gap-2 shrink-0">
 								{#if !loading}

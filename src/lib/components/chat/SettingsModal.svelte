@@ -350,23 +350,7 @@
 				'settings'
 			]
 		},
-		{
-			id: 'tools',
-			title: 'Integrations',
-			keywords: [
-				'addconnection',
-				'add connection',
-				'integrations',
-				'managetools',
-				'manage tools',
-				'manage tool servers',
-				'managetoolservers',
-				'open terminal',
-				'openterminal',
-				'terminal',
-				'settings'
-			]
-		},
+
 
 		{
 			id: 'personalization',
@@ -717,11 +701,7 @@
 			title: 'Analytics',
 			keywords: ['analytics', 'usage', 'stats', 'dashboard', 'models', 'users', 'messages']
 		},
-		{
-			id: 'admin:integrations',
-			title: 'Integrations',
-			keywords: ['tools', 'integrations', 'plugins', 'extensions', 'functions', 'openapi', 'server']
-		},
+
 		{
 			id: 'admin:documents',
 			title: 'Documents',
@@ -1005,21 +985,7 @@
 								<span>{$i18n.t('Connections')}</span>
 							</button>
 						{/if}
-					{:else if tabId === 'tools'}
-						{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
-							<button
-								role="tab"
-								aria-controls="tab-tools"
-								aria-selected={selectedTab === 'tools'}
-								class={tabButtonClass(selectedTab === 'tools')}
-								on:click={() => {
-									selectedTab = 'tools';
-								}}
-							>
-								<WrenchAlt className="size-3.5" strokeWidth="2" />
-								<span>{$i18n.t('Integrations')}</span>
-							</button>
-						{/if}
+					{:else if false && tabId === 'tools'}
 					{:else if tabId === 'personalization'}
 						<button
 							role="tab"
@@ -1184,13 +1150,7 @@
 						toast.success($i18n.t('Settings saved successfully!'));
 					}}
 				/>
-			{:else if selectedTab === 'tools'}
-				<Integrations
-					saveSettings={async (updated: Record<string, any>) => {
-						await saveSettings(updated);
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
+			{:else if false && selectedTab === 'tools'}
 			{:else if selectedTab === 'personalization'}
 				<Personalization
 					{saveSettings}
@@ -1237,8 +1197,7 @@
 				<AdminEvaluations />
 			{:else if selectedTab === 'admin:analytics'}
 				<AdminAnalytics />
-			{:else if selectedTab === 'admin:integrations'}
-				<AdminIntegrations {saveSettings} />
+			{:else if false && selectedTab === 'admin:integrations'}
 			{:else if selectedTab === 'admin:documents'}
 				<AdminDocuments on:save={adminConfigSaveHandler} />
 			{:else if selectedTab === 'admin:web'}

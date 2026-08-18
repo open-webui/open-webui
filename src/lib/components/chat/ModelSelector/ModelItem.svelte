@@ -11,8 +11,6 @@
 	import { copyToClipboard, sanitizeResponseContent } from '$lib/utils';
 	import ArrowUpTray from '$lib/components/icons/ArrowUpTray.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
-	import ModelItemMenu from './ModelItemMenu.svelte';
-	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import { toast } from 'svelte-sonner';
 	import Tag from '$lib/components/icons/Tag.svelte';
 	import Label from '$lib/components/icons/Label.svelte';
@@ -260,29 +258,7 @@
 			</Tooltip>
 		{/if}
 
-		{#if !selectionOnly}
-			<ModelItemMenu
-				bind:show={showMenu}
-				model={item.model}
-				{pinModelHandler}
-				{deleteModelHandler}
-				copyLinkHandler={() => {
-					copyLinkHandler(item.model);
-				}}
-			>
-				<button
-					aria-label={`${$i18n.t('More Options')}`}
-					class="flex"
-					on:click={(e) => {
-						e.preventDefault();
-						e.stopPropagation();
-						showMenu = !showMenu;
-					}}
-				>
-					<EllipsisHorizontal />
-				</button>
-			</ModelItemMenu>
-		{/if}
+
 
 		{#if isSelected}
 			<div>

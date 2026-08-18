@@ -42,6 +42,10 @@ async def seed_registered_defaults():
     await Config.repair_flattened_dict_configs()
     await Config.seed_defaults(DEFAULT_CONFIG)
 
+    # Overwrite default whisper model to the new default if it is currently 'base' to ensure good Hindi/multilingual support.
+    if await Config.get('audio.stt.whisper_model') == 'base':
+        await Config.upsert({'audio.stt.whisper_model': WHISPER_MODEL})
+
 
 async def async_reset_config():
     await Config.clear()
@@ -1518,7 +1522,7 @@ IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = images_edit_comfyui_workflow_nodes
 ####################################
 
 # Transcription
-WHISPER_MODEL = os.getenv('WHISPER_MODEL', 'base')
+WHISPER_MODEL = os.getenv('WHISPER_MODEL', 'small')
 
 WHISPER_COMPUTE_TYPE = os.getenv('WHISPER_COMPUTE_TYPE', 'int8')
 WHISPER_MODEL_DIR = os.getenv('WHISPER_MODEL_DIR', f'{CACHE_DIR}/whisper/models')
@@ -1526,7 +1530,7 @@ WHISPER_MODEL_AUTO_UPDATE = not OFFLINE_MODE and os.getenv('WHISPER_MODEL_AUTO_U
 
 WHISPER_VAD_FILTER = os.getenv('WHISPER_VAD_FILTER', 'False').lower() == 'true'
 
-WHISPER_MULTILINGUAL = os.getenv('WHISPER_MULTILINGUAL', 'False').lower() == 'true'
+WHISPER_MULTILINGUAL = os.getenv('WHISPER_MULTILINGUAL', 'True').lower() == 'true'
 
 WHISPER_LANGUAGE = os.getenv('WHISPER_LANGUAGE', '').lower() or None
 
@@ -1591,12 +1595,12 @@ AUDIO_TTS_OPENAI_PARAMS = audio_tts_openai_params
 
 AUDIO_TTS_API_KEY = os.getenv('AUDIO_TTS_API_KEY', '')
 
-AUDIO_TTS_ENGINE = os.getenv('AUDIO_TTS_ENGINE', '')
+AUDIO_TTS_ENGINE = os.getenv('AUDIO_TTS_ENGINE', 'sarvam')
 
 
-AUDIO_TTS_MODEL = os.getenv('AUDIO_TTS_MODEL', 'tts-1')
+AUDIO_TTS_MODEL = os.getenv('AUDIO_TTS_MODEL', 'bulbul:v3')
 
-AUDIO_TTS_VOICE = os.getenv('AUDIO_TTS_VOICE', 'alloy')
+AUDIO_TTS_VOICE = os.getenv('AUDIO_TTS_VOICE', 'aditya')
 
 AUDIO_TTS_SPLIT_ON = os.getenv('AUDIO_TTS_SPLIT_ON', 'punctuation')
 
@@ -1642,31 +1646,16 @@ except Exception as e:
 if default_prompt_suggestions == []:
     default_prompt_suggestions = [
         {
-            'title': ['Help me study', 'vocabulary for a college entrance exam'],
-            'content': "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
+            'title': ['Staging Analysis', 'give me staging analysis'],
+            'content': 'GIVE ME STAGING ANALYSIS IN PAST 24 HOURS',
         },
         {
-            'title': ['Give me ideas', "for what to do with my kids' art"],
-            'content': "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
+            'title': ['Current Status', 'flow HLT and pumps'],
+            'content': 'FLOW HLT AND NUMBER OF PUMPS RUNNING IN PAST 24 HOURS',
         },
         {
-            'title': ['Tell me a fun fact', 'about the Roman Empire'],
-            'content': 'Tell me a random fun fact about the Roman Empire',
-        },
-        {
-            'title': ['Show me a code snippet', "of a website's sticky header"],
-            'content': "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
-        },
-        {
-            'title': [
-                'Explain options trading',
-                "if I'm familiar with buying and selling stocks",
-            ],
-            'content': "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
-        },
-        {
-            'title': ['Overcome procrastination', 'give me tips'],
-            'content': 'Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?',
+            'title': ['Alerts', 'anomaly analysis'],
+            'content': 'ANOMALY ANALYSIS IN PAST 24 HOURS',
         },
     ]
 

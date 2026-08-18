@@ -60,6 +60,26 @@
 	let version;
 	let handledSettingsUrl = '';
 
+	const BLOCKED_PREFIXES = [
+		'/admin',
+		'/workspace',
+		'/playground',
+		'/channels',
+		'/automations',
+		'/calendar'
+	];
+
+	$: if ($page?.url?.pathname) {
+		const currentPath = $page.url.pathname;
+		if (
+			BLOCKED_PREFIXES.some(
+				(prefix) => currentPath === prefix || currentPath.startsWith(`${prefix}/`)
+			)
+		) {
+			goto('/', { replaceState: true });
+		}
+	}
+
 	const clearChatInputStorage = () => {
 		const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
 		if (chatInputKeys.length > 0) {

@@ -92,7 +92,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         return []
 
     # Add arena models
-    if config.get('evaluation.arena.enable'):
+    if False:
         arena_models = []
         arena_config = config.get('evaluation.arena.models') or []
         if len(arena_config) > 0:
