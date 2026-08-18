@@ -274,7 +274,7 @@
 					: {},
 			CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES:
 				RAGConfig.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES.trim() === ''
-					? undefined
+					? []
 					: RAGConfig.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES.split(',')
 							.map((mimeType: string) => mimeType.trim())
 							.filter((mimeType: string) => mimeType !== ''),
