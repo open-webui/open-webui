@@ -1616,23 +1616,21 @@
 			messageContentParts.pop();
 		}
 
-		const nextContentPart = messageContentParts.at(-1) ?? '';
-		if (!nextContentPart || (!final && nextContentPart === message.lastSentence)) {
-			return;
+		let n = message.ttsSent ?? 0;
+		for (; n < messageContentParts.length; n++) {
+			const part = messageContentParts[n];
+			if (!part) continue;
+			if (!final && (part.split(/\s+/).length < 4 || part.length < 50)) break;
+			eventTarget.dispatchEvent(
+				new CustomEvent('chat', {
+					detail: {
+						id: message.id,
+						content: part
+					}
+				})
+			);
 		}
-
-		if (!final) {
-			message.lastSentence = nextContentPart;
-		}
-
-		eventTarget.dispatchEvent(
-			new CustomEvent('chat', {
-				detail: {
-					id: message.id,
-					content: nextContentPart
-				}
-			})
-		);
+		message.ttsSent = n;
 	};
 
 	const getContents = () => {
