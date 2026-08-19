@@ -2,18 +2,26 @@
 ⚠️ CRITICAL CHECKS FOR CONTRIBUTORS (READ, DON'T DELETE) ⚠️
 1. Target the `dev` branch. PRs targeting `main` will be automatically closed.
 2. First-time contributors should not open pull requests directly unless the pull request contains only i18n/localization updates.
-   Please start with a clear, detailed Issue or Discussion so maintainers can review the problem, scope, and proposed approach before any implementation is submitted.
-   If you already have code, share the proposed diff in the Issue or Discussion for review.
-   Open a pull request only after a maintainer explicitly asks you to do so.
-   First-time pull requests opened without maintainer invitation will be redirected to the Issue or Discussion process.
+   Do not open a PR as the first step.
+   For real, reproducible bugs, start with a well-described Issue that explains the problem, why it matters, and what outcome you are looking for.
+   For feature requests, enhancements, behavior changes, UI/UX changes, architecture changes, suspected fixes, or unconfirmed approaches, start with an active Discussion.
+   If you want to propose an implementation, include a local diff or patch in the Issue or Discussion.
+   We may close unsolicited PRs without review.
+   Contributors with a history of successful merged PRs may be given more latitude.
 3. Do NOT delete the CLA section at the bottom. It is required for the bot to accept your PR.
 -->
 
 # Pull Request Checklist
 
-### Please open a discussion post in [Discussions](https://github.com/open-webui/open-webui/discussions) to **discuss your idea with the community first** before creating a pull request, and describe your changes before submitting a pull request. Merely opening a discussion is not enough, it needs to be actively discussed.
+### Do not open a pull request as the first step.
 
-This is to ensure large feature PRs are discussed with the community first, before starting work on it. If the community does not want this feature or it is not relevant for Open WebUI as a project, it can be identified in the discussion before working on the feature and submitting the PR.
+For real, reproducible bugs, start with a well-described [Issue](https://github.com/open-webui/open-webui/issues) that explains the problem, why it matters, and what outcome you are looking for.
+
+For feature requests, enhancements, behavior changes, UI/UX changes, architecture changes, suspected fixes, or unconfirmed approaches, start with an active [Discussion](https://github.com/open-webui/open-webui/discussions). Merely opening a discussion is not enough; it needs to be actively discussed.
+
+If you want to propose an implementation, include a local diff or patch in the Issue or Discussion for context.
+
+Unsolicited PRs may be closed without review. Contributors with a history of successful merged PRs may be given more latitude.
 
 <!--
 ### ⚠️ Important: Your PR is a contribution, not a guarantee of merge.
@@ -27,7 +35,7 @@ The most impactful way to contribute to Open WebUI is through well-written bug r
 
 **Before submitting, make sure you've checked and filled out the following:**
 
-- [ ] **Linked Issue/Discussion:** This PR references an existing [Issue](https://github.com/open-webui/open-webui/issues) or active, substantive [Discussion](https://github.com/open-webui/open-webui/discussions) — `Closes #___` / `Relates to #___`. Creating a discussion only to satisfy this checkbox does not count.
+- [ ] **Linked Issue/Discussion:** This PR references an existing, well-described [Issue](https://github.com/open-webui/open-webui/issues) for a real bug or an active, substantive [Discussion](https://github.com/open-webui/open-webui/discussions) for a feature request or enhancement — `Closes #___` / `Relates to #___`.
 - [ ] **First-time contributor policy:** This is not my first contribution to Open WebUI, this PR contains only i18n/localization updates, or a maintainer explicitly asked me to open this PR after reviewing the linked Issue or Discussion.
 - [ ] **Target branch:** The pull request targets the `dev` branch. **PRs targeting `main` will be immediately closed.**
 - [ ] **Description:** A concise description of the changes is provided below.
