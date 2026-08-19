@@ -15,6 +15,7 @@ from open_webui.config import (
     QDRANT_PREFER_GRPC,
     QDRANT_TIMEOUT,
     QDRANT_URI,
+    QDRANT_EMBEDDING_MODEL
 )
 from open_webui.retrieval.vector.main import (
     GetResult,
@@ -41,6 +42,7 @@ class QdrantClient(VectorDBBase):
         self.GRPC_PORT = QDRANT_GRPC_PORT
         self.QDRANT_TIMEOUT = QDRANT_TIMEOUT
         self.QDRANT_HNSW_M = QDRANT_HNSW_M
+        self.QDRANT_EMBEDDING_MODEL=QDRANT_EMBEDDING_MODEL
 
         if not self.QDRANT_URI:
             self.client = None
@@ -59,14 +61,16 @@ class QdrantClient(VectorDBBase):
                 prefer_grpc=self.PREFER_GRPC,
                 api_key=self.QDRANT_API_KEY,
                 timeout=self.QDRANT_TIMEOUT,
+                                embedding_model_name =QDRANT_EMBEDDING_MODEL
             )
         else:
             self.client = Qclient(
                 url=self.QDRANT_URI,
                 api_key=self.QDRANT_API_KEY,
                 timeout=QDRANT_TIMEOUT,
+                embedding_model_name =QDRANT_EMBEDDING_MODEL
             )
-
+        pass
     def _result_to_get_result(self, points) -> GetResult:
         ids = []
         documents = []
@@ -119,7 +123,7 @@ class QdrantClient(VectorDBBase):
                 on_disk=self.QDRANT_ON_DISK,
             ),
         )
-        log.info(f'collection {collection_name_with_prefix} successfully created!')
+        log.info('collection %s successfully created!', collection_name_with_prefix)
 
     def _create_collection_if_not_exists(self, collection_name, dimension):
         if not self.has_collection(collection_name=collection_name):
