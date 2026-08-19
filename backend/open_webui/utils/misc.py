@@ -112,17 +112,25 @@ def is_host_allowed(host: Union[str, Sequence[str]], filter_list: list[str | Non
     if not filter_list:
         return True
 
-    allow_list, block_list = get_allow_block_lists(filter_list)
+    allow_list, _ = get_allow_block_lists(filter_list)
     hosts = [host] if isinstance(host, str) else list(host or [])
 
     if allow_list:
         if not any(_host_matches_pattern(h, allowed) for h in hosts for allowed in allow_list):
             return False
 
-    if any(_host_matches_pattern(h, blocked) for h in hosts for blocked in block_list):
-        return False
+    return not is_host_blocked(hosts, filter_list)
 
-    return True
+
+def is_host_blocked(host: Union[str, Sequence[str]], filter_list: list[str | None] = None) -> bool:
+    """Whether a host or resolved address matches a block entry, ignoring any allow entries.
+
+    For addresses, where an allow entry cannot apply: it names a host, and the address at hand
+    may belong to a forward proxy rather than to the host the request is actually for.
+    """
+    _, block_list = get_allow_block_lists(filter_list)
+    hosts = [host] if isinstance(host, str) else list(host or [])
+    return any(_host_matches_pattern(h, blocked) for h in hosts for blocked in block_list)
 
 
 def get_message_list(messages_map, message_id):
