@@ -244,9 +244,21 @@ class ModelsTable:
                     log.error('Skipping model %r during get_all_models due to error: %s', model.id, exc)
             return models
 
-    async def get_models(self, db: AsyncSession | None = None) -> list[ModelUserResponse]:
+    async def get_models(
+        self, writable_by_user_id: str | None = None, db: AsyncSession | None = None
+    ) -> list[ModelUserResponse]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(Model).filter(Model.base_model_id != None))
+            stmt = select(Model).filter(Model.base_model_id != None)
+
+            if writable_by_user_id:
+                user_group_ids = {
+                    group.id for group in await Groups.get_groups_by_member_id(writable_by_user_id, db=db)
+                }
+                stmt = self._has_permission(
+                    db, stmt, {'user_id': writable_by_user_id, 'group_ids': user_group_ids}, permission='write'
+                )
+
+            result = await db.execute(stmt)
             all_models = result.scalars().all()
 
             user_ids = list(set(model.user_id for model in all_models))
@@ -318,21 +330,6 @@ class ModelsTable:
                 await self._to_model_model(model, access_grants=grants_map.get(model.id, []), db=db)
                 for model in all_models
             ]
-
-    async def get_models_by_user_id(self, user_id: str, db: AsyncSession | None = None) -> list[ModelUserResponse]:
-        models = await self.get_models(db=db)
-        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user_id, db=db)}
-
-        # One grants query for all non-owned models instead of one per model
-        accessible_ids = await AccessGrants.get_accessible_resource_ids(
-            user_id=user_id,
-            resource_type='model',
-            resource_ids=[model.id for model in models if model.user_id != user_id],
-            permission='write',
-            user_group_ids=user_group_ids,
-            db=db,
-        )
-        return [model for model in models if model.user_id == user_id or model.id in accessible_ids]
 
     def _has_permission(self, db, query, filter: dict, permission: str = 'read'):
         return AccessGrants.has_permission_filter(
