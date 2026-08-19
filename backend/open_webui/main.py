@@ -5,6 +5,7 @@ import copy
 import logging
 import mimetypes
 import os
+import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -293,14 +294,46 @@ async def emit_chat_list_event(metadata: dict, chat_id: str):
         await event_emitter({'type': 'chat:list', 'data': {'chat_id': chat_id, 'folder_id': folder_id}})
 
 
+NON_SPA_PATH_RE = re.compile(
+    r"""
+    ^
+    (?:
+        # 1. Hidden files / dotfiles (e.g., .env, .env.bak, .git/config, .htaccess)
+        \.
+      | .*/\.
+
+        # 2. Unmatched API and system endpoints
+      | (?:api|oauth|health|ready|socket\.io)(?:/|$)
+
+        # 3. Common scanner and bot probe targets
+      | .*(?:phpmyadmin|wp-admin|wp-login|cpanel|autodiscover|cgi-bin|xmlrpc|vendor|node_modules).*
+
+        # 4. Non-HTML file extensions (assets, scripts, configs, backups, media, fonts, archives)
+      | .*\.(?:
+            # Scripts, code, configs, & backups
+            js|mjs|cjs|css|map|json|wasm|php|asp|aspx|jsp|cgi|py|sh|sql|
+            env|bak|ini|conf|yml|yaml|log|xml|git|htaccess|ds_store|
+            # Images & Media
+            png|jpg|jpeg|gif|svg|ico|webp|avif|mp3|mp4|avi|mov|flv|webm|
+            # Fonts
+            woff|woff2|ttf|eot|otf|
+            # Archives & Documents
+            zip|tar|gz|7z|rar|pdf|txt|doc|docx
+        )$
+    )
+    """,
+    re.VERBOSE | re.IGNORECASE,
+)
+
+
 class SPAStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
         try:
             return await super().get_response(path, scope)
         except (HTTPException, StarletteHTTPException) as ex:
             if ex.status_code == 404:
-                if path.endswith('.js'):
-                    # Return 404 for javascript files
+                clean_path = path.strip('/')
+                if NON_SPA_PATH_RE.search(clean_path):
                     raise ex
                 else:
                     return await super().get_response('index.html', scope)
