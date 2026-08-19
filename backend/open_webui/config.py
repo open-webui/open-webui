@@ -364,6 +364,58 @@ OPENAI_API_BASE_URL = 'https://api.openai.com/v1'
 
 
 ####################################
+# OPENAI_COMPATIBLE_PROVIDERS
+####################################
+
+# OpenAI-compatible providers Open WebUI ships the base URL for. Setting a provider's API key env
+# var seeds a working connection on first start, so admins don't have to look the endpoint up and
+# type it in. Each entry may be pointed elsewhere with its own base URL env var (self-hosted or
+# regional deployments). Adding another provider is one entry here.
+OPENAI_COMPATIBLE_PROVIDERS = {
+    'melious': {
+        'name': 'Melious',
+        'base_url': 'https://api.melious.ai/v1',
+        'key_env': 'MELIOUS_API_KEY',
+        'base_url_env': 'MELIOUS_API_BASE_URL',
+    },
+}
+
+
+def load_openai_compatible_providers(base_urls: list[str], keys: list[str], api_configs: dict) -> None:
+    """Seed an OpenAI connection for every preconfigured provider whose API key env var is set.
+
+    Mutates the three lists/dicts in place. `base_urls` and `keys` are index-aligned, and
+    `api_configs` is keyed by that index, so keys are first normalized to the URL count the same
+    way `normalize_openai_api_keys` does. A base URL already present is left untouched, so an
+    explicit OPENAI_API_BASE_URLS entry always wins over the preset.
+    """
+    if len(keys) > len(base_urls):
+        del keys[len(base_urls) :]
+    else:
+        keys.extend([''] * (len(base_urls) - len(keys)))
+
+    configured_urls = {url.rstrip('/') for url in base_urls}
+
+    for provider in OPENAI_COMPATIBLE_PROVIDERS.values():
+        key = os.getenv(provider['key_env'], '').strip()
+        if not key:
+            continue
+
+        base_url = (os.getenv(provider['base_url_env'], '').strip() or provider['base_url']).rstrip('/')
+        if base_url in configured_urls:
+            log.info('%s is already configured at %s, skipping preset', provider['name'], base_url)
+            continue
+
+        base_urls.append(base_url)
+        keys.append(key)
+        api_configs[str(len(base_urls) - 1)] = {'enable': True, 'connection_type': 'external'}
+        configured_urls.add(base_url)
+
+
+load_openai_compatible_providers(OPENAI_API_BASE_URLS, OPENAI_API_KEYS, OPENAI_API_CONFIGS)
+
+
+####################################
 # MODELS
 ####################################
 
