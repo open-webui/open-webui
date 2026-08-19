@@ -2643,9 +2643,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if skill_ids:
         from open_webui.models.skills import Skills as SkillsModel
 
-        # Reuse the rows from the access query instead of re-fetching each
-        # skill by id.
-        accessible_skills = {s.id: s for s in await SkillsModel.get_skills_by_user_id(user.id, 'read')}
+        accessible_skills = {s.id: s for s in await SkillsModel.get_skills(user_id=user.id, ids=skill_ids)}
         for sid in skill_ids:
             s = accessible_skills.get(sid)
             if s and s.is_active:

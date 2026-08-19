@@ -163,9 +163,30 @@ class SkillsTable:
         except Exception:
             return None
 
-    async def get_skills(self, db: Optional[AsyncSession] = None) -> list[SkillUserModel]:
+    async def get_skills(
+        self,
+        user_id: str | None = None,
+        ids: list[str] | None = None,
+        db: AsyncSession | None = None,
+    ) -> list[SkillUserModel]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(Skill).order_by(Skill.updated_at.desc()))
+            stmt = select(Skill).order_by(Skill.updated_at.desc())
+
+            if ids is not None:
+                stmt = stmt.filter(Skill.id.in_(ids))
+
+            if user_id is not None:
+                user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user_id, db=db)}
+                stmt = AccessGrants.has_permission_filter(
+                    db=db,
+                    query=stmt,
+                    DocumentModel=Skill,
+                    filter={'user_id': user_id, 'group_ids': user_group_ids},
+                    resource_type='skill',
+                    permission='read',
+                )
+
+            result = await db.execute(stmt)
             all_skills = result.scalars().all()
 
             user_ids = list(set(skill.user_id for skill in all_skills))
@@ -193,28 +214,6 @@ class SkillsTable:
                     )
                 )
             return skills
-
-    async def get_skills_by_user_id(
-        self, user_id: str, permission: str = 'write', db: Optional[AsyncSession] = None
-    ) -> list[SkillUserModel]:
-        skills = await self.get_skills(db=db)
-        user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
-        user_group_ids = {group.id for group in user_groups}
-
-        result = []
-        for skill in skills:
-            if skill.user_id == user_id:
-                result.append(skill)
-            elif await AccessGrants.has_access(
-                user_id=user_id,
-                resource_type='skill',
-                resource_id=skill.id,
-                permission=permission,
-                user_group_ids=user_group_ids,
-                db=db,
-            ):
-                result.append(skill)
-        return result
 
     async def search_skills(
         self,
