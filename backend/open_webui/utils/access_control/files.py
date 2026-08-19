@@ -122,6 +122,7 @@ async def get_accessible_folder_files(
     entries: list[dict] | None,
     user: UserModel,
     db: AsyncSession | None = None,
+    user_group_ids: set[str] | None = None,
 ) -> list[dict]:
     """Filter folder.data['files'] entries to those the caller can read.
 
@@ -138,8 +139,8 @@ async def get_accessible_folder_files(
     if user.role == 'admin':
         return entries
 
-    # One group-membership fetch for the whole folder listing
-    user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+    if user_group_ids is None:
+        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
 
     accessible: list[dict] = []
     for entry in entries:
@@ -149,7 +150,9 @@ async def get_accessible_folder_files(
             if await has_access_to_file(entry_id, 'read', user, db=db, user_group_ids=user_group_ids):
                 accessible.append(entry)
         elif entry_type == 'collection':
-            if await Knowledges.check_access_by_user_id(entry_id, user.id, 'read', db=db):
+            if await Knowledges.check_access_by_user_id(
+                entry_id, user.id, 'read', db=db, user_group_ids=user_group_ids
+            ):
                 accessible.append(entry)
         elif entry_type == 'note':
             # Owner has no self-grant (notes are private by default), so check ownership too.
@@ -163,6 +166,7 @@ async def get_accessible_folder_files(
                     resource_type='note',
                     resource_id=entry_id,
                     permission='read',
+                    user_group_ids=user_group_ids,
                     db=db,
                 )
             ):
