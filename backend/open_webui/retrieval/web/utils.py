@@ -80,9 +80,29 @@ def resolve_hostname(hostname):
     return ipv4_addresses, ipv6_addresses
 
 
-def _is_global_addr(ip: str) -> bool:
+# Blocked despite ipaddress.is_global saying otherwise: none of these is a legitimate fetch target.
+_BLOCKED_NETWORKS = tuple(
+    ipaddress.ip_network(cidr)
+    for cidr in (
+        '168.63.129.16/32',  # Azure platform channel, reachable from every Azure VM
+        '192.88.99.0/24',  # 6to4 relay anycast, deprecated by RFC 7526
+        '224.0.0.0/4',  # IPv4 multicast
+        '::ffff:0:0:0/96',  # IPv4-translated (SIIT, RFC 2765), never routed
+        '100:0:0:1::/64',  # dummy prefix, RFC 9780
+        '5f00::/16',  # SRv6 SIDs, RFC 9602, internal to one segment routing domain
+        'fec0::/10',  # IPv6 site-local, deprecated by RFC 3879
+        'ff00::/8',  # IPv6 multicast
+    )
+)
+
+
+def _in_allowed_range(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    return addr.is_global and not any(addr in network for network in _BLOCKED_NETWORKS)
+
+
+def _is_fetchable_ip(ip: str) -> bool:
     addr = ipaddress.ip_address(ip)
-    if not addr.is_global:
+    if not _in_allowed_range(addr):
         return False
     if not isinstance(addr, ipaddress.IPv6Address):
         return True
@@ -105,7 +125,7 @@ def _is_global_addr(ip: str) -> bool:
             return False
         embedded.append(ipaddress.IPv4Address(bytes((b[6], b[7], b[9], b[10]))))
 
-    return all(ip.is_global for ip in embedded)
+    return all(_in_allowed_range(embedded_addr) for embedded_addr in embedded)
 
 
 def validate_url(url: Union[str, Sequence[str]]):
@@ -144,7 +164,7 @@ def validate_url(url: Union[str, Sequence[str]]):
             # Check if any of the resolved addresses are private
             # DNS rebinding is mitigated at the connection layer; see _SSRFSafeResolver / _SSRFSafeAdapter
             for ip in ipv4_addresses + ipv6_addresses:
-                if not _is_global_addr(ip):
+                if not _is_fetchable_ip(ip):
                     raise ValueError(ERROR_MESSAGES.INVALID_URL)
         return True
     elif isinstance(url, Sequence):
@@ -179,7 +199,7 @@ def _ssrf_safe_new_conn(self):
         raise OSError(f'getaddrinfo for {host!r} returned empty list')
     if not ENABLE_LOCAL_WEB_FETCH:
         for _, _, _, _, sa in infos:
-            if not _is_global_addr(sa[0]):
+            if not _is_fetchable_ip(sa[0]):
                 raise ValueError(ERROR_MESSAGES.INVALID_URL)
     err = None
     for fam, typ, proto, _, sa in infos:
@@ -240,7 +260,7 @@ class _SSRFSafeResolver(aiohttp.resolver.DefaultResolver):
         results = await super().resolve(host, port, family)
         if not ENABLE_LOCAL_WEB_FETCH:
             for entry in results:
-                if not _is_global_addr(entry['host']):
+                if not _is_fetchable_ip(entry['host']):
                     raise ValueError(ERROR_MESSAGES.INVALID_URL)
         return results
 
