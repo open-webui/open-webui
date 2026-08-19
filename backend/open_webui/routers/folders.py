@@ -99,6 +99,10 @@ async def get_folders(
     folders = await Folders.get_folders_by_user_id(user.id, db=db)
     folder_ids = {folder.id for folder in folders}
 
+    user_group_ids = None
+    if user.role != 'admin' and any(folder.data and 'files' in folder.data for folder in folders):
+        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, db=db)}
+
     # Verify folder data integrity
     folder_list = []
     for folder in folders:
@@ -106,7 +110,9 @@ async def get_folders(
             folder = await Folders.update_folder_parent_id_by_id_and_user_id(folder.id, user.id, None, db=db)
 
         if folder.data and 'files' in folder.data:
-            accessible_files = await get_accessible_folder_files(folder.data['files'], user, db=db)
+            accessible_files = await get_accessible_folder_files(
+                folder.data['files'], user, db=db, user_group_ids=user_group_ids
+            )
             if len(accessible_files) != len(folder.data.get('files', [])):
                 folder.data['files'] = accessible_files
                 await Folders.update_folder_by_id_and_user_id(
