@@ -275,7 +275,7 @@
 					on:click={(e) => {
 						e.preventDefault();
 						e.stopPropagation();
-						unloadModelHandler(item.model);
+						unloadModelHandler(item.value);
 					}}
 				>
 					<ArrowUpTray className="size-3" />
