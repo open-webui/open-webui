@@ -34,6 +34,8 @@ body:
           required: true
         - label: I have also searched in the CLOSED issues AND CLOSED discussions and found no related items (your issue might already be addressed on the development branch!).
           required: true
+        - label: I have checked whether this issue is already fixed on the `dev` branch or in the latest source.
+          required: true
         - label: I am using the latest version of Open WebUI.
           required: true
 

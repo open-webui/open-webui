@@ -36,6 +36,8 @@ body:
       options:
         - label: I have searched all existing **open AND closed** issues and discussions and found none comparable to my request.
           required: true
+        - label: I have checked whether this request is already implemented on the `dev` branch or in the latest source.
+          required: true
 
   - type: checkboxes
     id: feature-scope
