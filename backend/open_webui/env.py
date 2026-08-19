@@ -984,6 +984,16 @@ _default_group_share = os.getenv('DEFAULT_GROUP_SHARE_PERMISSION', 'members').st
 DEFAULT_GROUP_SHARE_PERMISSION = 'members' if _default_group_share == 'members' else _default_group_share == 'true'
 
 ####################################
+# CONFIG
+####################################
+
+# Seconds to hold the config table in memory. Floored at 1 because ttl=0 in aiocache means never expire.
+try:
+    CONFIG_CACHE_TTL = max(int(os.getenv('CONFIG_CACHE_TTL', '1')), 1)
+except (ValueError, TypeError):
+    CONFIG_CACHE_TTL = 1
+
+####################################
 # MODELS
 ####################################
 
