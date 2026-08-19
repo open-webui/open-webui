@@ -54,6 +54,12 @@ def get_sorted_filters(model_id, models):
     return sorted_filters
 
 
+def has_pipeline_outlet_filters(model, models):
+    # process_pipeline_outlet_filter also runs the model itself when it is a pipeline
+    model_id = model.get('id') if isinstance(model, dict) else model
+    return (isinstance(model, dict) and 'pipeline' in model) or bool(get_sorted_filters(model_id, models))
+
+
 async def get_openai_connection(url_idx: int) -> tuple[str, str]:
     base_urls = await Config.get('openai.api_base_urls', [])
     api_keys = await Config.get('openai.api_keys', [])

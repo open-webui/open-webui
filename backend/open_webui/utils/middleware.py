@@ -57,7 +57,7 @@ from open_webui.routers.images import (
     image_generations,
 )
 from open_webui.routers.pipelines import (
-    get_sorted_filters,
+    has_pipeline_outlet_filters,
     process_pipeline_inlet_filter,
     process_pipeline_outlet_filter,
 )
@@ -3701,7 +3701,8 @@ async def outlet_filter_handler(ctx):
 
     Replaces the separate POST /api/chat/completed round-trip.
     Persists outlet-modified content to DB and emits a chat:outlet event
-    so the frontend can sync its in-memory state.
+    so the frontend can sync its in-memory state. Returns immediately when
+    the model has no filters.
 
     For temp/API chats, messages are built from form_data plus ctx['assistant_message'].
     """
@@ -3723,6 +3724,13 @@ async def outlet_filter_handler(ctx):
 
     is_unsaved_chat = not is_saved_chat_id(chat_id)
     try:
+        filter_functions = (
+            await get_filter_functions(request, model, metadata.get('filter_ids', [])) if ENABLE_PLUGINS else []
+        )
+        # Nothing can modify the messages: skip the pass
+        if not filter_functions and not has_pipeline_outlet_filters(model, request.app.state.MODELS):
+            return
+
         messages_map = None
 
         if is_unsaved_chat:
@@ -3798,9 +3806,7 @@ async def outlet_filter_handler(ctx):
             '__model__': model,
         }
 
-        if ENABLE_PLUGINS:
-            filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
-
+        if filter_functions:
             outlet_result, _ = await process_filter_functions(
                 request=request,
                 filter_context=None,
@@ -6071,11 +6077,7 @@ async def streaming_chat_response_handler(response, ctx):
             has_api_outlet_filters = ENABLE_API_OUTLET_FILTERS and bool(filter_functions)
             if ENABLE_API_OUTLET_FILTERS and not has_api_outlet_filters:
                 try:
-                    model_id = model.get('id') if isinstance(model, dict) else model
-                    has_api_outlet_filters = bool(
-                        (isinstance(model, dict) and 'pipeline' in model)
-                        or get_sorted_filters(model_id, request.app.state.MODELS)
-                    )
+                    has_api_outlet_filters = has_pipeline_outlet_filters(model, request.app.state.MODELS)
                 except Exception:
                     has_api_outlet_filters = True
 
