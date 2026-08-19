@@ -1613,11 +1613,10 @@ async def add_file_context(messages: list, chat_id: str, user) -> list:
     stored_messages = get_message_list(history.get('messages', {}), history.get('currentId'))
 
     def format_file_tag(file):
-        file_id = file.get('id') or file.get('url')
-        attrs = f'type="{file.get("type", "file")}"'
-        if file_id:
-            attrs += f' id="{file_id}"'
-        attrs += f' url="{file["url"]}"'
+        # Every file reaching here has a url or a chat id, so id is always set.
+        attrs = f'type="{file.get("type", "file")}" id="{file.get("id") or file.get("url")}"'
+        if file.get('url'):
+            attrs += f' url="{file["url"]}"'
         if file.get('content_type'):
             attrs += f' content_type="{file["content_type"]}"'
         if file.get('name'):
@@ -1634,15 +1633,17 @@ async def add_file_context(messages: list, chat_id: str, user) -> list:
     stored_user_messages = [m for m in stored_messages if m.get('role') == 'user']
 
     for message, stored_message in zip(user_messages, stored_user_messages):
-        files_with_urls = [
+        # Chat references carry no url - they are addressed by id via view_chat.
+        attached_files = [
             file
             for file in stored_message.get('files', [])
-            if file.get('url') and not file.get('url').startswith('data:')
+            if (file.get('url') and not file.get('url').startswith('data:'))
+            or (file.get('type') == 'chat' and file.get('id'))
         ]
-        if not files_with_urls:
+        if not attached_files:
             continue
 
-        file_tags = [format_file_tag(file) for file in files_with_urls]
+        file_tags = [format_file_tag(file) for file in attached_files]
         file_context = '<attached_files>\n' + '\n'.join(file_tags) + '\n</attached_files>\n\n'
 
         content = message.get('content', '')
