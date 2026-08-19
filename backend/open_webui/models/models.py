@@ -275,6 +275,24 @@ class ModelsTable:
                 )
             return models
 
+    async def get_model_owners_attaching_file(self, file_id: str, db: AsyncSession | None = None) -> dict[str, str]:
+        """Map of model id to owner id for workspace models whose knowledge attaches this file."""
+        async with get_async_db_context(db) as db:
+            # File ids are server-generated uuids, so the text match can only over-match.
+            result = await db.execute(
+                select(Model.id, Model.user_id, Model.meta).filter(
+                    Model.base_model_id.is_not(None), cast(Model.meta, String).like(f'%"{file_id}"%')
+                )
+            )
+            return {
+                model_id: user_id
+                for model_id, user_id, meta in result.all()
+                if any(
+                    isinstance(item, dict) and item.get('type') == 'file' and item.get('id') == file_id
+                    for item in meta.get('knowledge') or []
+                )
+            }
+
     @staticmethod
     def _meta_has_tag(meta: dict | None, tag: str) -> bool:
         if not meta:
@@ -301,23 +319,16 @@ class ModelsTable:
                 for model in all_models
             ]
 
-    async def get_models_by_user_id(
-        self,
-        user_id: str,
-        permission: str = 'write',
-        db: AsyncSession | None = None,
-        user_group_ids: set[str] | None = None,
-    ) -> list[ModelUserResponse]:
+    async def get_models_by_user_id(self, user_id: str, db: AsyncSession | None = None) -> list[ModelUserResponse]:
         models = await self.get_models(db=db)
-        if user_group_ids is None:
-            user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user_id, db=db)}
+        user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user_id, db=db)}
 
         # One grants query for all non-owned models instead of one per model
         accessible_ids = await AccessGrants.get_accessible_resource_ids(
             user_id=user_id,
             resource_type='model',
             resource_ids=[model.id for model in models if model.user_id != user_id],
-            permission=permission,
+            permission='write',
             user_group_ids=user_group_ids,
             db=db,
         )

@@ -106,16 +106,22 @@ async def has_access_to_file(
 
     # Check if the file is directly attached to a shared workspace model (per the ownership
     # note above, model write is conferred only for files the model owner owns).
-    for model in await Models.get_models_by_user_id(
-        user.id, permission=access_type, db=db, user_group_ids=user_group_ids
-    ):
-        knowledge_items = getattr(model.meta, 'knowledge', None) or []
-        for item in knowledge_items:
-            if isinstance(item, dict) and item.get('type') == 'file' and item.get('id') == file.id:
-                if access_type == 'read' or model.user_id == file.user_id:
-                    return True
+    model_owners = await Models.get_model_owners_attaching_file(file.id, db=db)
+    if access_type != 'read':
+        model_owners = {model_id: owner_id for model_id, owner_id in model_owners.items() if owner_id == file.user_id}
+    if user.id in model_owners.values():
+        return True
 
-    return False
+    return bool(
+        await AccessGrants.get_accessible_resource_ids(
+            user_id=user.id,
+            resource_type='model',
+            resource_ids=list(model_owners),
+            permission=access_type,
+            user_group_ids=user_group_ids,
+            db=db,
+        )
+    )
 
 
 async def get_accessible_folder_files(
