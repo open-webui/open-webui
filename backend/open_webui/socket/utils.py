@@ -61,12 +61,28 @@ class RedisLock:
 
 
 class RedisDict:
+    # Contents and fingerprint must be written together, or a stale fingerprint suppresses the repair.
+    _SET_SCRIPT = """
+    local wanted = {}
+    for i = 2, #ARGV, 2 do
+        wanted[ARGV[i]] = true
+        redis.call('hset', KEYS[1], ARGV[i], ARGV[i + 1])
+    end
+    for _, field in ipairs(redis.call('hkeys', KEYS[1])) do
+        if not wanted[field] then
+            redis.call('hdel', KEYS[1], field)
+        end
+    end
+    -- Expiring forces a rewrite every 5 min, repairing a hash damaged outside this script.
+    redis.call('set', KEYS[2], ARGV[1], 'EX', 300)
+    """
+
     def __init__(self, name, redis_url, redis_sentinels=[], redis_cluster=False):
         self.name = name
-        # Per-process cache of the last payload fingerprint written by set().
-        # Used to skip redundant HSET round-trips when the model list hasn't
-        # changed — the dominant Redis write source on busy multi-pod setups.
-        self._last_signature: str | None = None
+        # Both keys must share a cluster slot: reuse the name's hash tag, or wrap it to make one.
+        tag_open = name.find('{')
+        is_tagged = tag_open != -1 and name.find('}', tag_open + 1) > tag_open + 1
+        self._signature_name = f'{name}:signature' if is_tagged else f'{{{name}}}:signature'
         self.redis = get_redis_connection(
             redis_url,
             redis_sentinels,
@@ -106,8 +122,7 @@ class RedisDict:
 
     def set(self, mapping: dict):
         if not mapping:
-            self.redis.delete(self.name)
-            self._last_signature = None
+            self.clear()
             return
 
         # Serialize values once — reused for both the fingerprint and the write.
@@ -120,27 +135,14 @@ class RedisDict:
             digest.update(b'\0')
         signature = digest.hexdigest()
 
-        # Skip the write when the prepared mapping is identical to the last one
-        # this process wrote.  The check is per-instance (not distributed), but
-        # still eliminates the majority of redundant writes because each pod
-        # typically produces the same model list on consecutive refreshes.
-        if signature == self._last_signature:
+        # Fast path: skip sending the payload when the hash already holds it; a lost race self-heals.
+        if self.redis.get(self._signature_name) == signature and self.redis.exists(self.name):
             return
 
-        # Fetch existing keys before writing so we know which ones to remove.
-        # HKEYS is cheap — it transfers only short key strings, not large JSON values.
-        existing_keys = set(self.redis.hkeys(self.name))
-        new_keys = set(mapping.keys())
-        keys_to_remove = existing_keys - new_keys
-
-        # HSET first (add/update all new values), then HDEL (remove stale keys).
-        # We never DELETE the whole hash — this eliminates the race window
-        # where concurrent readers would see an empty models dict.
-        self.redis.hset(self.name, mapping=serialized)
-        if keys_to_remove:
-            self.redis.hdel(self.name, *keys_to_remove)
-
-        self._last_signature = signature
+        args = [signature]
+        for field, value in serialized.items():
+            args += [field, value]
+        self.redis.eval(self._SET_SCRIPT, 2, self.name, self._signature_name, *args)
 
     def get(self, key, default=None):
         try:
@@ -149,8 +151,7 @@ class RedisDict:
             return default
 
     def clear(self):
-        self.redis.delete(self.name)
-        self._last_signature = None
+        self.redis.delete(self.name, self._signature_name)
 
     def update(self, other=None, **kwargs):
         if other is not None:
