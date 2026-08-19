@@ -260,6 +260,8 @@
 	{closeOnOutsideClick}
 	onOpenChange={(state) => {
 		if (state === false) {
+			toolQuery = '';
+			skillQuery = '';
 			onClose();
 		}
 	}}
@@ -474,6 +476,7 @@
 					<button
 						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
+							toolQuery = '';
 							tab = '';
 						}}
 					>
@@ -589,6 +592,7 @@
 					<button
 						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 						on:click={() => {
+							skillQuery = '';
 							tab = '';
 						}}
 					>
