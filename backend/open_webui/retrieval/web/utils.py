@@ -79,7 +79,25 @@ def resolve_hostname(hostname):
     return ipv4_addresses, ipv6_addresses
 
 
-_NAT64_PREFIX_48 = b'\x00\x64\xff\x9b\x00\x01'
+# Blocked despite ipaddress.is_global saying otherwise: none of these is a legitimate fetch target.
+_BLOCKED_NETWORKS = tuple(
+    ipaddress.ip_network(cidr)
+    for cidr in (
+        '168.63.129.16/32',  # Azure platform channel, reachable from every Azure VM
+        '192.88.99.0/24',  # 6to4 relay anycast, deprecated by RFC 7526
+        '224.0.0.0/4',  # IPv4 multicast
+        '::ffff:0:0:0/96',  # IPv4-translated (SIIT, RFC 2765), never routed
+        '64:ff9b:1::/48',  # NAT64 local-use prefix, RFC 8215, not a public destination
+        '100:0:0:1::/64',  # dummy prefix, RFC 9780
+        '5f00::/16',  # SRv6 SIDs, RFC 9602, internal to one segment routing domain
+        'fec0::/10',  # IPv6 site-local, deprecated by RFC 3879
+        'ff00::/8',  # IPv6 multicast
+    )
+)
+
+
+def _in_allowed_range(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    return addr.is_global and not any(addr in network for network in _BLOCKED_NETWORKS)
 
 
 def _embedded_ipv4(ip: str) -> list[ipaddress.IPv4Address]:
@@ -97,22 +115,20 @@ def _embedded_ipv4(ip: str) -> list[ipaddress.IPv4Address]:
         embedded.extend(addr.teredo)
 
     b = addr.packed
-    if b[:12] == b'\x00' * 12 or b[:12] == b'\x00\x64\xff\x9b' + b'\x00' * 8:
+    # Prefixes that put the address in the last four bytes: v4-compatible, NAT64 /96, v4-translated.
+    if b[:12] in (b'\x00' * 12, b'\x00\x64\xff\x9b' + b'\x00' * 8, b'\x00' * 8 + b'\xff\xff\x00\x00'):
         embedded.append(ipaddress.IPv4Address(b[12:]))
-    elif b[:6] == _NAT64_PREFIX_48:
+    elif b[:6] == b'\x00\x64\xff\x9b\x00\x01':
         embedded.append(ipaddress.IPv4Address(bytes((b[6], b[7], b[9], b[10]))))
 
     return embedded
 
 
-def _is_global_addr(ip: str) -> bool:
+def _is_fetchable_ip(ip: str) -> bool:
     addr = ipaddress.ip_address(ip)
-    if not addr.is_global:
+    if not _in_allowed_range(addr):
         return False
-    # The NAT64 /48 prefix reserves the u-octet, so a non-zero one is malformed.
-    if isinstance(addr, ipaddress.IPv6Address) and addr.packed[:6] == _NAT64_PREFIX_48 and addr.packed[8] != 0:
-        return False
-    return all(embedded.is_global for embedded in _embedded_ipv4(ip))
+    return all(_in_allowed_range(embedded) for embedded in _embedded_ipv4(ip))
 
 
 def _assert_host_allowed(host: str | None) -> None:
@@ -125,11 +141,11 @@ def _assert_addresses_allowed(addresses: Sequence[str]) -> None:
     # An IPv6 address can carry a blocked IPv4 address inside it, so match both spellings.
     candidates = [*addresses, *(str(ipv4) for address in addresses for ipv4 in _embedded_ipv4(address))]
     if is_host_blocked(candidates, WEB_FETCH_FILTER_LIST):
-        log.warning(f'Blocked by filter list: {", ".join(addresses)}')
+        log.warning(f'Blocked by filter list: {", ".join(candidates)}')
         raise ValueError(ERROR_MESSAGES.INVALID_URL)
     if not ENABLE_LOCAL_WEB_FETCH:
         for address in addresses:
-            if not _is_global_addr(address):
+            if not _is_fetchable_ip(address):
                 raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
 
