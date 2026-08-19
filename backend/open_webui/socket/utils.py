@@ -61,12 +61,22 @@ class RedisLock:
 
 
 class RedisDict:
-    def __init__(self, name, redis_url, redis_sentinels=[], redis_cluster=False):
+    def __init__(
+        self,
+        name,
+        redis_url,
+        redis_sentinels=[],
+        redis_cluster=False,
+        track_fingerprint=False,
+    ):
         self.name = name
-        # Per-process cache of the last payload fingerprint written by set().
-        # Used to skip redundant HSET round-trips when the model list hasn't
-        # changed — the dominant Redis write source on busy multi-pod setups.
-        self._last_signature: str | None = None
+        # When True, set() skips redundant writes by comparing against a
+        # fingerprint stored in Redis *beside* the hash — not on this instance —
+        # so the guard describes the state it protects (see set()). Only the
+        # model pool needs this; the websocket session/usage pools never call
+        # set(), and keeping the flag off leaves their item-level hot path free
+        # of the extra round trip.
+        self._track_fingerprint = track_fingerprint
         self.redis = get_redis_connection(
             redis_url,
             redis_sentinels,
@@ -74,9 +84,16 @@ class RedisDict:
             decode_responses=True,
         )
 
+    def _fingerprint_key(self):
+        return f'{self.name}:__signature__'
+
     def __setitem__(self, key, value):
         serialized_value = JSONCodec.dumps(value)
         self.redis.hset(self.name, key, serialized_value)
+        # The hash changed without going through set(), so any fingerprint that
+        # claims to describe its contents is now stale.
+        if self._track_fingerprint:
+            self.redis.delete(self._fingerprint_key())
 
     def __getitem__(self, key):
         value = self.redis.hget(self.name, key)
@@ -88,6 +105,8 @@ class RedisDict:
         result = self.redis.hdel(self.name, key)
         if result == 0:
             raise KeyError(key)
+        if self._track_fingerprint:
+            self.redis.delete(self._fingerprint_key())
 
     def __contains__(self, key):
         return self.redis.hexists(self.name, key)
@@ -107,7 +126,8 @@ class RedisDict:
     def set(self, mapping: dict):
         if not mapping:
             self.redis.delete(self.name)
-            self._last_signature = None
+            if self._track_fingerprint:
+                self.redis.delete(self._fingerprint_key())
             return
 
         # Serialize values once — reused for both the fingerprint and the write.
@@ -120,11 +140,12 @@ class RedisDict:
             digest.update(b'\0')
         signature = digest.hexdigest()
 
-        # Skip the write when the prepared mapping is identical to the last one
-        # this process wrote.  The check is per-instance (not distributed), but
-        # still eliminates the majority of redundant writes because each pod
-        # typically produces the same model list on consecutive refreshes.
-        if signature == self._last_signature:
+        # Skip the write only when the *shared* hash already holds exactly this
+        # mapping.  A fingerprint cached on the instance describes a state that
+        # lives elsewhere: worker A could keep skipping its (correct, full)
+        # write while the shared hash stays stuck on worker B's partial list,
+        # because A's fingerprint only ever changes when A's own list changes.
+        if self._track_fingerprint and self.redis.get(self._fingerprint_key()) == signature:
             return
 
         # Fetch existing keys before writing so we know which ones to remove.
@@ -140,7 +161,12 @@ class RedisDict:
         if keys_to_remove:
             self.redis.hdel(self.name, *keys_to_remove)
 
-        self._last_signature = signature
+        # Fingerprint written last, as a separate command: the two keys need not
+        # share a Redis Cluster hash slot, and a crash between the hash write
+        # and this one leaves the fingerprint absent — the next set() rewrites —
+        # rather than claiming contents that were never written.
+        if self._track_fingerprint:
+            self.redis.set(self._fingerprint_key(), signature)
 
     def get(self, key, default=None):
         try:
@@ -150,7 +176,10 @@ class RedisDict:
 
     def clear(self):
         self.redis.delete(self.name)
-        self._last_signature = None
+        # Drop the shared fingerprint too, or other workers would keep skipping
+        # the repopulating write that this clear is asking for.
+        if self._track_fingerprint:
+            self.redis.delete(self._fingerprint_key())
 
     def update(self, other=None, **kwargs):
         if other is not None:

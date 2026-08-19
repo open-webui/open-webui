@@ -121,6 +121,9 @@ if WEBSOCKET_MANAGER == 'redis':
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=ws_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
+        # set() skips redundant writes against a fingerprint stored beside the
+        # hash, so it must be tracked for the model pool (see RedisDict.set).
+        track_fingerprint=True,
     )
 
     SESSION_POOL = RedisDict(
