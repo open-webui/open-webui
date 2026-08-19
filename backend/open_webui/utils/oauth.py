@@ -199,6 +199,12 @@ JWSRegistry.default_header_registry.setdefault(
     'client_id',
     HeaderParameter('OAuth client identifier', 'str'),
 )
+# CyberArk Identity (Idaptive) includes a private app_id in ID token JWS headers;
+# register it so joserfc does not reject the token with UnsupportedHeaderError.
+JWSRegistry.default_header_registry.setdefault(
+    'app_id',
+    HeaderParameter('CyberArk Identity application identifier', 'str'),
+)
 
 
 def _normalize_token_expiry(token: dict) -> dict:
