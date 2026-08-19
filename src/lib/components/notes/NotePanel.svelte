@@ -11,6 +11,7 @@
 
 	let mediaQuery;
 	let largeScreen = false;
+	let resizing = false;
 
 	let minSize = 0;
 
@@ -74,10 +75,11 @@
 			</div>
 		</Drawer>
 	{/if}
-{:else if show}
+{:else if show || resizing}
 	<PaneResizer
 		class="relative flex items-center justify-center group border-l border-gray-50 dark:border-gray-850/30 hover:border-gray-200 dark:hover:border-gray-800  transition z-20"
 		id="controls-resizer"
+		onDraggingChange={(value) => (resizing = value)}
 	>
 		<div
 			class=" absolute -left-1.5 -right-1.5 -top-0 -bottom-0 z-20 cursor-col-resize bg-transparent"
