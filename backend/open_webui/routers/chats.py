@@ -1317,18 +1317,9 @@ async def compact_chat_by_id(
     return result
 
 
-############################
-# GetChatById
-############################
 
-
-@router.get('/{id}', response_model=ChatResponse | None)
-async def get_chat_by_id(
-    id: str,
-    request: Request,
-    user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
-):
+async def get_readable_chat_by_id(id: str, user, db: AsyncSession):
+    """Resolve a chat the user may read: owner, admin override, shared grant, or folder."""
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
 
     if not chat and user.role == 'admin':
@@ -1356,6 +1347,23 @@ async def get_chat_by_id(
                 folder = await Folders.get_folder_by_id(candidate.folder_id, db=db)
                 if folder and await has_folder_access(user.id, folder, 'read', db):
                     chat = candidate
+
+    return chat
+
+
+############################
+# GetChatById
+############################
+
+
+@router.get('/{id}', response_model=ChatResponse | None)
+async def get_chat_by_id(
+    id: str,
+    request: Request,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    chat = await get_readable_chat_by_id(id, user, db)
 
     if chat:
         data = ChatResponse.model_validate(chat, from_attributes=True).model_dump()
@@ -2177,10 +2185,12 @@ async def update_chat_folder_id_by_id(
 
 @router.get('/{id}/tags', response_model=list[TagModel])
 async def get_chat_tags_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    # Tag rows belong to the chat owner; readers (admin / shared / folder) must
+    # still see the same labels that GET /{id} already authorized them to open.
+    chat = await get_readable_chat_by_id(id, user, db)
     if chat:
         tags = chat.meta.get('tags', [])
-        return await Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
+        return await Tags.get_tags_by_ids_and_user_id(tags, chat.user_id, db=db)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
