@@ -79,30 +79,8 @@ def resolve_hostname(hostname):
     return ipv4_addresses, ipv6_addresses
 
 
-# Blocked despite ipaddress.is_global saying otherwise: none of these is a legitimate fetch target.
-_BLOCKED_NETWORKS = tuple(
-    ipaddress.ip_network(cidr)
-    for cidr in (
-        '168.63.129.16/32',  # Azure platform channel, reachable from every Azure VM
-        '192.88.99.0/24',  # 6to4 relay anycast, deprecated by RFC 7526
-        '224.0.0.0/4',  # IPv4 multicast
-        '::ffff:0:0:0/96',  # IPv4-translated (SIIT, RFC 2765), never routed
-        '64:ff9b:1::/48',  # NAT64 local-use prefix, RFC 8215, not a public destination
-        '100:0:0:1::/64',  # dummy prefix, RFC 9780
-        '5f00::/16',  # SRv6 SIDs, RFC 9602, internal to one segment routing domain
-        'fec0::/10',  # IPv6 site-local, deprecated by RFC 3879
-        'ff00::/8',  # IPv6 multicast
-    )
-)
-
-
-def _in_allowed_range(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
-    return addr.is_global and not any(addr in network for network in _BLOCKED_NETWORKS)
-
-
-def _embedded_ipv4(ip: str) -> list[ipaddress.IPv4Address]:
-    """The IPv4 addresses an IPv6 address carries inside it: mapped, 6to4, teredo and NAT64."""
-    addr = ipaddress.ip_address(ip)
+def _embedded_ipv4(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> list[ipaddress.IPv4Address]:
+    """The IPv4 addresses an IPv6 address carries: mapped, compatible, 6to4, teredo and NAT64."""
     if not isinstance(addr, ipaddress.IPv6Address):
         return []
 
@@ -115,20 +93,13 @@ def _embedded_ipv4(ip: str) -> list[ipaddress.IPv4Address]:
         embedded.extend(addr.teredo)
 
     b = addr.packed
-    # Prefixes that put the address in the last four bytes: v4-compatible, NAT64 /96, v4-translated.
-    if b[:12] in (b'\x00' * 12, b'\x00\x64\xff\x9b' + b'\x00' * 8, b'\x00' * 8 + b'\xff\xff\x00\x00'):
+    # Prefixes that put the address in the last four bytes: v4-compatible and NAT64 /96.
+    if b[:12] in (b'\x00' * 12, b'\x00\x64\xff\x9b' + b'\x00' * 8):
         embedded.append(ipaddress.IPv4Address(b[12:]))
     elif b[:6] == b'\x00\x64\xff\x9b\x00\x01':
         embedded.append(ipaddress.IPv4Address(bytes((b[6], b[7], b[9], b[10]))))
 
     return embedded
-
-
-def _is_fetchable_ip(ip: str) -> bool:
-    addr = ipaddress.ip_address(ip)
-    if not _in_allowed_range(addr):
-        return False
-    return all(_in_allowed_range(embedded) for embedded in _embedded_ipv4(ip))
 
 
 def _assert_host_allowed(host: str | None) -> None:
@@ -138,14 +109,20 @@ def _assert_host_allowed(host: str | None) -> None:
 
 
 def _assert_addresses_allowed(addresses: Sequence[str]) -> None:
-    # An IPv6 address can carry a blocked IPv4 address inside it, so match both spellings.
-    candidates = [*addresses, *(str(ipv4) for address in addresses for ipv4 in _embedded_ipv4(address))]
-    if is_host_blocked(candidates, WEB_FETCH_FILTER_LIST):
-        log.warning(f'Blocked by filter list: {", ".join(candidates)}')
+    # An IPv6 address can carry a blocked IPv4 address inside it, so judge both spellings.
+    parsed = [ipaddress.ip_address(address) for address in addresses]
+    candidates = [*parsed, *(ipv4 for address in parsed for ipv4 in _embedded_ipv4(address))]
+
+    # Block entries only: an allow entry names a host, so judging a resolved address against one
+    # would reject every allow-listed host.
+    if is_host_blocked([str(address) for address in candidates], WEB_FETCH_FILTER_LIST):
+        log.warning(f'Blocked by filter list: {", ".join(str(address) for address in candidates)}')
         raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
     if not ENABLE_LOCAL_WEB_FETCH:
-        for address in addresses:
-            if not _is_fetchable_ip(address):
+        for address in candidates:
+            if not address.is_global:
+                log.warning(f'Blocked non-global address: {address}')
                 raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
 
@@ -205,7 +182,7 @@ def safe_validate_urls(url: Sequence[str]) -> Sequence[str]:
 
 
 def _ssrf_safe_new_conn(self):
-    """Resolve DNS, validate all IPs are global, connect to validated IP.
+    """Resolve DNS, screen every resolved address, connect to one of them.
 
     Replaces urllib3's _new_conn so the DNS lookup that feeds the actual TCP
     connect is the same one we validate — no second resolution, no rebinding
