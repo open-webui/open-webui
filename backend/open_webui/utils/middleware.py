@@ -2609,7 +2609,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if is_saved_chat_id(metadata.get('chat_id')):
         chat = await Chats.get_chat_by_id(metadata['chat_id'])
 
-    if chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note':
+    is_note_chat = bool(chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note')
+
+    if is_note_chat:
         note_id = (chat.meta or {}).get('note_id')
         note = await Notes.get_note_by_id(note_id) if note_id else None
         if note and (
@@ -2632,9 +2634,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if note_files:
                 files = [*(files or []), *note_files]
 
-    use_builtin_tools = (
-        chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note'
-    ) or (
+    use_builtin_tools = is_note_chat or (
         bool(metadata.get('session_id'))
         and metadata.get('params', {}).get('function_calling') != 'legacy'
         and (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('builtin_tools', True)
@@ -2886,6 +2886,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 },
                 features,
                 model,
+                is_note_chat=is_note_chat,
             )
             for name, tool_dict in builtin_tools.items():
                 if name not in tools_dict:

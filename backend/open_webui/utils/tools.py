@@ -40,7 +40,6 @@ from open_webui.env import (
     REDIS_KEY_PREFIX,
 )
 from open_webui.models.access_grants import AccessGrants
-from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.tools import Tools
@@ -525,7 +524,7 @@ def get_attached_knowledge(model: dict, metadata: dict) -> list[dict]:
 
 
 async def get_builtin_tools(
-    request: Request, extra_params: dict, features: dict = None, model: dict = None
+    request: Request, extra_params: dict, features: dict = None, model: dict = None, is_note_chat: bool = False
 ) -> dict[str, dict]:
     """
     Get built-in tools for native function calling.
@@ -719,13 +718,8 @@ async def get_builtin_tools(
     ):
         builtin_functions.append(execute_code)
 
-    chat_id = metadata.get('chat_id') or ''
-    chat = None
-    if is_saved_chat_id(chat_id):
-        chat = await Chats.get_chat_by_id(chat_id)
-
     # Notes tools - search, view, create, and update user's notes
-    if (chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note') or (
+    if is_note_chat or (
         is_builtin_tool_enabled('notes') and config.get('notes.enable') and await has_user_permission('notes')
     ):
         builtin_functions.extend([search_notes, view_note, write_note, replace_note_content])
@@ -747,7 +741,7 @@ async def get_builtin_tools(
 
     # Task management - break down complex work into trackable steps
     # Task state is stored on the chats row; local/channel IDs do not have one.
-    if is_builtin_tool_enabled('tasks') and is_saved_chat_id(chat_id):
+    if is_builtin_tool_enabled('tasks') and is_saved_chat_id(metadata.get('chat_id')):
         builtin_functions.extend([create_tasks, update_task])
 
     # Automation tools - create and manage scheduled automations from chat
