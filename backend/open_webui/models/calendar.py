@@ -734,10 +734,10 @@ class CalendarEventTable:
         events = []
         for event, tz in rows:
             model = CalendarEventModel.model_validate(event)
-            # Determine per-event alert window
-            alert_minutes = None
-            if model.meta and 'alert_minutes' in model.meta:
-                alert_minutes = model.meta['alert_minutes']
+            # meta is user-writable and this poll is shared by every user.
+            alert_minutes = (model.meta or {}).get('alert_minutes')
+            if not isinstance(alert_minutes, (int, float)):
+                alert_minutes = None
 
             if alert_minutes is not None:
                 if alert_minutes < 0:
