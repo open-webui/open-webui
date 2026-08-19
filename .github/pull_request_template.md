@@ -5,7 +5,9 @@
    Do not open a PR as the first step.
    For real, reproducible bugs, start with a well-described Issue that explains the problem, why it matters, and what outcome you are looking for.
    For feature requests, enhancements, behavior changes, UI/UX changes, architecture changes, suspected fixes, or unconfirmed approaches, start with an active Discussion.
-   If you want to propose an implementation, include a local diff or patch in the Issue or Discussion.
+   If you want to propose an implementation, include it only as a reference in the Issue or Discussion, such as a local diff, patch, or branch.
+   Opening an Issue or Discussion does not mean a PR is the right next step. Maintainers will confirm when a PR would be useful.
+   We ask for this because PRs, especially from first-time contributors, often need broader maintainer context on product direction, scope, architecture, UX, edge cases, compatibility, documentation, and long-term maintenance before implementation.
    We may close unsolicited PRs without review.
    Contributors with a history of successful merged PRs may be given more latitude.
 3. Do NOT delete the CLA section at the bottom. It is required for the bot to accept your PR.
@@ -19,7 +21,11 @@ For real, reproducible bugs, start with a well-described [Issue](https://github.
 
 For feature requests, enhancements, behavior changes, UI/UX changes, architecture changes, suspected fixes, or unconfirmed approaches, start with an active [Discussion](https://github.com/open-webui/open-webui/discussions). Merely opening a discussion is not enough; it needs to be actively discussed.
 
-If you want to propose an implementation, include a local diff or patch in the Issue or Discussion for context.
+If you want to propose an implementation, include it only as a reference in the Issue or Discussion, such as a local diff, patch, or branch.
+
+Opening an Issue or Discussion does not mean a PR is the right next step. Maintainers will confirm when a PR would be useful.
+
+We ask for this because PRs, especially from first-time contributors, often need broader maintainer context on product direction, scope, architecture, UX, edge cases, compatibility, documentation, and long-term maintenance before implementation.
 
 Unsolicited PRs may be closed without review. Contributors with a history of successful merged PRs may be given more latitude.
 
