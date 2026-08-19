@@ -2,7 +2,6 @@
 	import Fuse from 'fuse.js';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
-	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
 	import { onMount, getContext, onDestroy, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
@@ -77,11 +76,6 @@
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import AttachWebpageModal from '$lib/components/chat/MessageInput/AttachWebpageModal.svelte';
 
-	let largeScreen = true;
-
-	let pane;
-	let showSidepanel = true;
-
 	let showAddWebpageModal = false;
 	let showAddTextContentModal = false;
 	let showNewDirectoryModal = false;
@@ -92,7 +86,6 @@
 	let showAccessControlModal = false;
 	let showResetConfirm = false;
 
-	let minSize = 0;
 	type DirectoryFileEntry = { path: string; filename: string; file: File };
 	type DirectoryManifestEntry = DirectoryFileEntry & { checksum: string; size: number };
 
@@ -917,7 +910,6 @@
 	};
 
 	let debounceTimeout = null;
-	let mediaQuery;
 
 	let dragged = false;
 	let isSaving = false;
@@ -978,14 +970,6 @@
 				toast.success($i18n.t('Knowledge updated successfully'));
 			}
 		}, 1000);
-	};
-
-	const handleMediaQuery = async (e) => {
-		if (e.matches) {
-			largeScreen = true;
-		} else {
-			largeScreen = false;
-		}
 	};
 
 	const readDirectoryEntries = async (reader: any) => {
@@ -1096,42 +1080,6 @@
 	};
 
 	onMount(async () => {
-		// listen to resize 1024px
-		mediaQuery = window.matchMedia('(min-width: 1024px)');
-
-		mediaQuery.addEventListener('change', handleMediaQuery);
-		handleMediaQuery(mediaQuery);
-
-		// Select the container element you want to observe
-		const container = document.getElementById('collection-container');
-
-		// initialize the minSize based on the container width
-		minSize = !largeScreen ? 100 : Math.floor((300 / container.clientWidth) * 100);
-
-		// Create a new ResizeObserver instance
-		const resizeObserver = new ResizeObserver((entries) => {
-			for (let entry of entries) {
-				const width = entry.contentRect.width;
-				// calculate the percentage of 300
-				const percentage = (300 / width) * 100;
-				// set the minSize to the percentage, must be an integer
-				minSize = !largeScreen ? 100 : Math.floor(percentage);
-
-				if (showSidepanel) {
-					if (pane && pane.isExpanded() && pane.getSize() < minSize) {
-						pane.resize(minSize);
-					}
-				}
-			}
-		});
-
-		// Start observing the container's size changes
-		resizeObserver.observe(container);
-
-		if (pane) {
-			pane.expand();
-		}
-
 		id = $page.params.id;
 		const res = await getKnowledgeById(localStorage.token, id).catch((e) => {
 			toast.error(`${e}`);
@@ -1160,7 +1108,6 @@
 			clearInterval(pendingPollTimer);
 			pendingPollTimer = null;
 		}
-		mediaQuery?.removeEventListener('change', handleMediaQuery);
 		const dropZone = document.querySelector('body');
 		dropZone?.removeEventListener('dragover', onDragOver);
 		dropZone?.removeEventListener('drop', onDrop);

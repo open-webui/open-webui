@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
-	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import { fade } from 'svelte/transition';
@@ -147,8 +146,6 @@
 	$: messageInputDropzoneId = embedded ? 'note-chat-input-dropzone' : 'chat-pane';
 
 	const eventTarget = new EventTarget();
-	let controlPane: Pane | undefined;
-	let controlPaneComponent: ChatControls | undefined;
 
 	let messageInput: MessageInput | undefined;
 	let messagesRef: Messages | undefined;
@@ -1556,20 +1553,7 @@
 			stopAudio();
 		});
 
-		const showControlsSubscribe = showControls.subscribe(async (value) => {
-			await tick();
-			if (controlPane && !$mobile) {
-				try {
-					if (value) {
-						controlPaneComponent?.openPane();
-					} else {
-						controlPane.collapse();
-					}
-				} catch (e) {
-					// ignore
-				}
-			}
-
+		const showControlsSubscribe = showControls.subscribe((value) => {
 			if (!value) {
 				showCallOverlay.set(false);
 				showArtifacts.set(false);
@@ -4249,8 +4233,8 @@
 				/>
 			{/if}
 
-			<PaneGroup direction="horizontal" class="w-full h-full">
-				<Pane defaultSize={50} minSize={30} class="h-full flex relative max-w-full flex-col">
+			<div class="w-full h-full flex">
+				<div class="h-full flex relative max-w-full min-w-0 flex-1 flex-col">
 					<FilesOverlay show={dragged} />
 					{#if embedded}
 						<div
@@ -4595,16 +4579,14 @@
 							</div>
 						{/if}
 					</div>
-				</Pane>
+				</div>
 
 				{#if !embedded}
 					<ChatControls
-						bind:this={controlPaneComponent}
 						bind:history
 						bind:chatFiles
 						bind:params
 						bind:files
-						bind:pane={controlPane}
 						chatId={$chatId}
 						chatUser={chatOwner}
 						modelId={selectedModelIds?.at(0) ?? null}
@@ -4620,10 +4602,9 @@
 						{showMessage}
 						{eventTarget}
 						{codeInterpreterEnabled}
-						containerId={chatContainerId}
 					/>
 				{/if}
-			</PaneGroup>
+			</div>
 		</div>
 	{:else if loading}
 		<div class=" flex items-center justify-center h-full w-full">
