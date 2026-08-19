@@ -1597,6 +1597,7 @@
 					<div class={recording ? '' : 'hidden'}>
 						<VoiceRecording
 							bind:recording
+							maxDurationSeconds={$config?.audio?.stt?.max_recording_duration ?? 0}
 							onCancel={async () => {
 								recording = false;
 

@@ -51,6 +51,7 @@
 	let STT_OPENAI_API_REQUEST_FORMAT = 'multipart';
 	let STT_ENGINE = '';
 	let STT_MODEL = '';
+	let STT_MAX_RECORDING_DURATION: number | '' = '';
 	let STT_SUPPORTED_CONTENT_TYPES = '';
 	let STT_WHISPER_MODEL = '';
 	let STT_AZURE_API_KEY = '';
@@ -165,6 +166,9 @@
 				OPENAI_API_REQUEST_FORMAT: STT_OPENAI_API_REQUEST_FORMAT,
 				ENGINE: STT_ENGINE,
 				MODEL: STT_MODEL,
+				MAX_RECORDING_DURATION: STT_MAX_RECORDING_DURATION
+					? Number(STT_MAX_RECORDING_DURATION)
+					: null,
 				SUPPORTED_CONTENT_TYPES: STT_SUPPORTED_CONTENT_TYPES.split(','),
 				WHISPER_MODEL: STT_WHISPER_MODEL,
 				DEEPGRAM_API_KEY: STT_DEEPGRAM_API_KEY,
@@ -219,6 +223,7 @@
 
 			STT_ENGINE = res.stt.ENGINE;
 			STT_MODEL = res.stt.MODEL;
+			STT_MAX_RECORDING_DURATION = res.stt.MAX_RECORDING_DURATION ?? '';
 			STT_SUPPORTED_CONTENT_TYPES = (res?.stt?.SUPPORTED_CONTENT_TYPES ?? []).join(',');
 			STT_WHISPER_MODEL = res.stt.WHISPER_MODEL;
 			STT_AZURE_API_KEY = res.stt.AZURE_API_KEY;
@@ -261,6 +266,22 @@
 					<option value="mistral">{$i18n.t('MistralAI')}</option>
 				</SettingsSelect>
 			</AdminSettingRow>
+
+			<AdminSettingField
+				label={$i18n.t('Maximum Recording Duration (seconds)')}
+				description={$i18n.t(
+					'Automatically stop and submit voice recordings after this many seconds. Leave blank for no limit.'
+				)}
+			>
+				<input
+					class={inputClass}
+					type="number"
+					min="1"
+					step="1"
+					bind:value={STT_MAX_RECORDING_DURATION}
+					placeholder={$i18n.t('No limit')}
+				/>
+			</AdminSettingField>
 
 			{#if STT_ENGINE !== 'web'}
 				<AdminSettingField

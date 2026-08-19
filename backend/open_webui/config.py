@@ -1552,6 +1552,10 @@ AUDIO_STT_ENGINE = os.getenv('AUDIO_STT_ENGINE', '')
 
 AUDIO_STT_MODEL = os.getenv('AUDIO_STT_MODEL', '')
 
+AUDIO_STT_MAX_RECORDING_DURATION = (
+    int(os.getenv('AUDIO_STT_MAX_RECORDING_DURATION')) if os.getenv('AUDIO_STT_MAX_RECORDING_DURATION') else None
+)
+
 AUDIO_STT_SUPPORTED_CONTENT_TYPES = [
     content_type.strip()
     for content_type in os.getenv('AUDIO_STT_SUPPORTED_CONTENT_TYPES', '').split(',')
@@ -3045,6 +3049,7 @@ DEFAULT_CONFIG = {
     'audio.stt.openai.api_request_format': AUDIO_STT_OPENAI_API_REQUEST_FORMAT,
     'audio.stt.engine': AUDIO_STT_ENGINE,
     'audio.stt.model': AUDIO_STT_MODEL,
+    'audio.stt.max_recording_duration': AUDIO_STT_MAX_RECORDING_DURATION,
     'audio.stt.supported_content_types': AUDIO_STT_SUPPORTED_CONTENT_TYPES,
     'audio.stt.allowed_extensions': AUDIO_STT_ALLOWED_EXTENSIONS,
     'audio.stt.azure.api_key': AUDIO_STT_AZURE_API_KEY,

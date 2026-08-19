@@ -2261,6 +2261,7 @@ async def get_app_config(request: Request):
         'audio.tts.voice',
         'audio.tts.split_on',
         'audio.stt.engine',
+        'audio.stt.max_recording_duration',
         'rag.file.max_size',
         'rag.file.max_count',
         'file.image_compression_width',
@@ -2363,6 +2364,7 @@ async def get_app_config(request: Request):
                     },
                     'stt': {
                         'engine': config.get('audio.stt.engine'),
+                        'max_recording_duration': config.get('audio.stt.max_recording_duration'),
                     },
                 },
                 'file': {

@@ -20,6 +20,7 @@
 	export let echoCancellation = true;
 	export let noiseSuppression = true;
 	export let autoGainControl = true;
+	export let maxDurationSeconds = 0;
 
 	export let className = ' p-2.5 w-full max-w-full';
 
@@ -37,6 +38,9 @@
 	const startDurationCounter = () => {
 		durationCounter = setInterval(() => {
 			durationSeconds++;
+			if (maxDurationSeconds > 0 && durationSeconds >= maxDurationSeconds && recording && !loading) {
+				void confirmRecording();
+			}
 		}, 1000);
 	};
 

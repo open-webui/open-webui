@@ -97,6 +97,7 @@ STT_CONFIG_KEYS = {
     'OPENAI_API_REQUEST_FORMAT': 'audio.stt.openai.api_request_format',
     'ENGINE': 'audio.stt.engine',
     'MODEL': 'audio.stt.model',
+    'MAX_RECORDING_DURATION': 'audio.stt.max_recording_duration',
     'SUPPORTED_CONTENT_TYPES': 'audio.stt.supported_content_types',
     'ALLOWED_EXTENSIONS': 'audio.stt.allowed_extensions',
     'WHISPER_MODEL': 'audio.stt.whisper_model',
@@ -256,6 +257,7 @@ class STTConfigForm(BaseModel):
     OPENAI_API_REQUEST_FORMAT: str = 'multipart'
     ENGINE: str
     MODEL: str
+    MAX_RECORDING_DURATION: Optional[int] = None
     SUPPORTED_CONTENT_TYPES: list[str] = []
     ALLOWED_EXTENSIONS: list[str] = []
     WHISPER_MODEL: str
