@@ -959,18 +959,15 @@ class ChatTable:
         """Write messages to the ``chat_message`` table so future lookups
         use the fast path.  Errors are logged but never raised.
         """
-        for message_id, message in messages.items():
-            if not isinstance(message, dict) or not message.get('role'):
-                continue
-            try:
-                await ChatMessages.upsert_message(
-                    message_id=message_id,
-                    chat_id=chat_id,
-                    user_id=user_id,
-                    data=message,
-                )
-            except Exception as e:
-                log.warning('Backfill failed for message %s in chat %s: %s', message_id, chat_id, e)
+        writable = {
+            message_id: message
+            for message_id, message in messages.items()
+            if isinstance(message, dict) and message.get('role')
+        }
+        try:
+            await ChatMessages.upsert_messages(chat_id, user_id, writable)
+        except Exception as e:
+            log.warning('Backfill failed for chat %s: %s', chat_id, e)
 
     async def reconcile_messages_by_chat_id(self, chat_id: str, user_id: str, messages: dict[str, dict]) -> None:
         """Sync ``chat_message`` rows with the committed JSON blob.
