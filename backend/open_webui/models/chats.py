@@ -6,6 +6,7 @@ import logging
 import re
 import time
 import uuid
+from typing import Literal
 
 # local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
@@ -1046,6 +1047,23 @@ class ChatTable:
             return None
 
         return chat.chat.get('history', {}).get('messages', {}).get(message_id, {})
+
+    async def get_message_list_field(
+        self, id: str, message_id: str, field: Literal['files', 'sources', 'embeds']
+    ) -> list[dict]:
+        # Read the column, not the row: the write path commits before validating, so rows the model rejects exist.
+        async with get_async_db_context() as db:
+            result = await db.execute(select(getattr(ChatMessage, field)).where(ChatMessage.id == f'{id}-{message_id}'))
+            row = result.first()
+        if row is not None:
+            return row[0] or []
+
+        # Legacy chats have no chat_message rows; fall back to the embedded history.
+        chat = await self.get_chat_by_id(id)
+        if chat is None:
+            return []
+        stored = chat.chat.get('history', {}).get('messages', {}).get(message_id, {})
+        return stored.get(field) or []
 
     async def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict, *, touch: bool = True

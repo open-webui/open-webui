@@ -1073,11 +1073,11 @@ async def get_event_emitter(request_info, update_db=True):
                 embeds = event_payload.get('embeds', [])
 
                 if not event_payload.get('replace', False):
-                    message = await Chats.get_message_by_id_and_message_id(
-                        request_info['chat_id'],
-                        request_info['message_id'],
+                    embeds.extend(
+                        await Chats.get_message_list_field(
+                            request_info['chat_id'], request_info['message_id'], 'embeds'
+                        )
                     )
-                    embeds.extend(message.get('embeds', []))
 
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
                     request_info['chat_id'],
@@ -1089,13 +1089,10 @@ async def get_event_emitter(request_info, update_db=True):
                 )
 
             elif event_type == 'files':
-                message = await Chats.get_message_by_id_and_message_id(
-                    request_info['chat_id'],
-                    request_info['message_id'],
-                )
-
                 files = event_data.get('data', {}).get('files', [])
-                files.extend(message.get('files', []))
+                files.extend(
+                    await Chats.get_message_list_field(request_info['chat_id'], request_info['message_id'], 'files')
+                )
 
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
                     request_info['chat_id'],
@@ -1109,12 +1106,9 @@ async def get_event_emitter(request_info, update_db=True):
             elif event_type in ('source', 'citation'):
                 data = event_data.get('data', {})
                 if data.get('type') is None:
-                    message = await Chats.get_message_by_id_and_message_id(
-                        request_info['chat_id'],
-                        request_info['message_id'],
+                    sources = await Chats.get_message_list_field(
+                        request_info['chat_id'], request_info['message_id'], 'sources'
                     )
-
-                    sources = message.get('sources', [])
                     sources.append(data)
 
                     await Chats.upsert_message_to_chat_by_id_and_message_id(
