@@ -4468,7 +4468,6 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                 async def stream_body_handler(response, form_data):
-                    nonlocal content_parts
                     nonlocal usage
                     nonlocal output
                     nonlocal prior_output
@@ -4485,14 +4484,20 @@ async def streaming_chat_response_handler(response, ctx):
                     last_delta_type = None
                     last_delta_key = None
 
-                    def response_stream_content(stream_output: list | None = None):
-                        return ''.join(content_parts) or get_output_text(
-                            stream_output if stream_output is not None else full_output()
-                        )
+                    joined_content = ''
+                    joined_part_count = 0
 
                     async def save_current_response_stream(stream_output: list | None = None):
+                        nonlocal joined_content
+                        nonlocal joined_part_count
+
                         if not chat_id or not metadata.get('message_id'):
                             return
+
+                        # content_parts is append-only, so its length tells us when the join is stale
+                        if joined_part_count != len(content_parts):
+                            joined_content = ''.join(content_parts)
+                            joined_part_count = len(content_parts)
 
                         current_stream_output = stream_output if stream_output is not None else full_output()
                         await save_response_stream(
@@ -4500,7 +4505,7 @@ async def streaming_chat_response_handler(response, ctx):
                             response_stream_task_id,
                             chat_id,
                             metadata.get('message_id'),
-                            response_stream_content(current_stream_output),
+                            joined_content or get_output_text(current_stream_output),
                             current_stream_output,
                         )
 
