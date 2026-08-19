@@ -157,6 +157,11 @@ class FolderTable:
         except Exception:
             return None
 
+    async def get_folders_by_ids(self, ids: list[str], db: AsyncSession | None = None) -> list[FolderModel]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Folder).filter(Folder.id.in_(ids)).order_by(Folder.updated_at.desc()))
+            return [FolderModel.model_validate(folder) for folder in result.scalars().all()]
+
     async def get_shared_folder_ids_for_user(
         self, user_id: str, user_group_ids: set[str], db: Optional[AsyncSession] = None
     ) -> dict[str, str]:
@@ -248,7 +253,9 @@ class FolderTable:
         self, parent_id: Optional[str], user_id: str, db: Optional[AsyncSession] = None
     ) -> list[FolderModel]:
         async with get_async_db_context(db) as db:
-            result = await db.execute(select(Folder).filter_by(parent_id=parent_id, user_id=user_id))
+            result = await db.execute(
+                select(Folder).filter_by(parent_id=parent_id, user_id=user_id).order_by(Folder.updated_at.desc())
+            )
             return [FolderModel.model_validate(folder) for folder in result.scalars().all()]
 
     async def get_folder_ids_by_id_and_user_id_in_subtree(
