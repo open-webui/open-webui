@@ -273,6 +273,43 @@ well-established, standard CSS technique. Confirmed only that the rule is syntac
 (clean HMR reload, no PostCSS errors) and correctly scoped. Worth a manual look next time the
 field actually gets autofilled.
 
+## Finding 8 — Finding 3's fix broke the "invert" primary-button pattern (found live, now fixed)
+
+Reported live with a screenshot: the "Create" button in the New Calendar modal
+(`CreateCalendarModal.svelte`) rendered as a white box with barely-legible text. Two compounding
+issues, not one:
+
+**Regression from Finding 3.** That fix targeted both `text-white` and `dark:text-white`. But bare
+`text-white` (no `dark:` prefix, 159 files) turned out to be mostly the *light-mode* half of a
+distinct, widespread pattern: `bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black
+dark:hover:bg-gray-100` — Open WebUI's "invert" primary-button convention (192 usages of
+`dark:bg-white` across 92 files: Save, Create, Send, and other primary CTAs). It's meant to pop
+white-on-black in light mode and invert to black-on-white in dark mode via `dark:text-black`.
+Finding 3's rule, scoped under `html.outis-mneme` for every property it touches, carries more
+specificity than Tailwind's `dark:` variant selector for `color` — so it beat `dark:text-black`
+outright, forcing near-white text onto what should have been dark text on a white button.
+Fixed by narrowing Finding 3 to `dark:text-white` only, which has no light-mode counterpart to
+fight and was the actual, correctly-scoped target all along.
+
+**The button itself wasn't theme-aligned either way.** Even with readable text restored, a pure
+white/black button is still a stark, literal-color surface sitting in an otherwise near-black,
+one-green-accent UI — not fixable by a text-color correction alone. Re-skinned the dark-mode half
+of the pattern onto the accent scale instead of literal white/black:
+
+```css
+html.outis-mneme [class~='dark:bg-white'] { background-color: var(--color-blue-500); }
+html.outis-mneme [class~='dark:hover:bg-gray-100'] { background-color: var(--color-blue-400); }
+html.outis-mneme [class~='dark:text-black'],
+html.outis-mneme [class~='dark:text-gray-900'] { color: var(--color-gray-950); }
+```
+
+`dark:hover:bg-gray-100` (70 usages) was checked for collateral matches before targeting it: 69 of
+70 pair directly with `dark:bg-white` on the same element; the one exception
+(`ConfirmDialog.svelte`) uses the same near-white-button family with `dark:bg-gray-100` as its base
+rather than pure white, so redirecting its hover step the same way is still correct, not
+collateral damage. Verified live: the Create button now renders as the theme's green accent with
+dark, readable text (screenshot-confirmed after landing this fix).
+
 ## Priority
 
 1. **Finding 1** (font size) — highest user-visible impact, lowest risk. **Implemented** in
@@ -293,6 +330,9 @@ field actually gets autofilled.
 7. **Finding 7** (browser autofill) — found live from direct user feedback on the login page, a
    gap that predates this theme (every existing theme has it). **Implemented**, not live-verified
    (see Finding 7 for why).
+8. **Finding 8** (invert-button regression + re-skin) — found live via screenshot right after
+   Finding 3 shipped; the highest-severity item found this session, since it made a real primary
+   action button unreadable. **Implemented and screenshot-verified live.**
 
 ## Acceptance
 
@@ -307,15 +347,14 @@ field actually gets autofilled.
   live: `.cm-content` and `.markdown-prose` both compute to `12px`)
 - `rounded-full` elements (avatars, buttons, status dots) and toast notifications are flat. ✅
   (Finding 6; verified live: avatar `border-radius` computes to `0px`)
-- `rounded-full` elements (avatars, buttons, status dots) and toast notifications are flat. ✅
-  (Finding 6; verified live: avatar `border-radius` computes to `0px`)
-- Literal `text-white`/`dark:text-white` sites resolve through the theme's own scale, not a
-  separate unthemed white. ✅ (Finding 3; not yet screenshot-verified against a live element, but
-  the selector/specificity mechanics match every other rule in this file, all of which were
-  verified live)
+- `dark:text-white` sites resolve through the theme's own scale, not a separate unthemed white —
+  and bare `text-white` is left alone so it still yields correctly to `dark:text-black` where that
+  pairing exists. ✅ (Finding 3, corrected by Finding 8)
 - Browser-autofilled inputs (login page and elsewhere) pick up the theme instead of the browser's
   own white/UA styling. ✅ implemented, ⚠️ not live-verified (Finding 7 — needs a real autofill
   trigger, which wasn't worth signing out of the live account to force)
+- The "invert" primary-button pattern (Create/Save/Send) reads as the theme's green accent with
+  dark, legible text, not a stark white box. ✅ (Finding 8; screenshot-verified live)
 - `dark`/`oled-dark`/`light`/`her`/`system` remain unmodified — this is a same-theme consistency
   pass, not a scope change. ✅ (only `outis-mneme-theme.css` and
   `codemirror-outis-mneme-theme.ts` touched, all CSS changes scoped to `html.outis-mneme`)

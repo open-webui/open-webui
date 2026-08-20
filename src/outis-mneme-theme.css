@@ -139,14 +139,46 @@ html.outis-mneme input:autofill {
    theme.css), overridable exactly like the gray and blue scales above --
    but overriding it globally would also retint every `bg-white`/
    `border-white` scrim and badge, which is the blanket-risk the original
-   theme spec explicitly avoided for this reason. Targeting the `text-white`/
-   `dark:text-white` class tokens directly instead: only text color moves,
-   backgrounds/borders/rings/decorations stay literal white as before, and
-   none of the 159 component files change. `[class~=...]` matches the exact
-   class token, not a substring. */
-html.outis-mneme [class~='text-white'],
+   theme spec explicitly avoided for this reason. Targeting the class token
+   directly instead: only text color moves, backgrounds/borders/rings/
+   decorations stay literal white as before, and none of the 159 component
+   files change. `[class~=...]` matches the exact class token, not a
+   substring.
+
+   Only `dark:text-white` is targeted here, not bare `text-white` (a first
+   pass covered both and broke the "invert" primary-button pattern below --
+   `text-white` is that pattern's *light-mode* half, meant to be overridden
+   by `dark:text-black` once dark mode is active; overriding it unconditionally
+   here out-specificities that dark: override via this rule's own
+   `html.outis-mneme` prefix, forcing near-white text onto what should have
+   been a dark-text-on-white button and making it unreadable. `dark:text-white`
+   has no such pairing to fight -- it is already conditional on dark mode, so
+   there is nothing for it to override. */
 html.outis-mneme [class~='dark:text-white'] {
 	color: var(--color-gray-50);
+}
+
+/* "Invert" primary-button pattern (`bg-black ... dark:bg-white
+   dark:text-black`, sometimes with a `dark:hover:bg-gray-100` hover step --
+   192 usages of dark:bg-white across 92 files: Save/Create/Send and other
+   primary CTAs). Stock design: pops white-on-black in light mode,
+   black-on-white in dark mode -- deliberately the loudest, most contrasting
+   button style. A stark white rectangle doesn't belong in this theme's
+   near-black, one-green-accent surface (reported live: a Create button read
+   as an unstyled white box). Re-skinned onto the accent scale instead, the
+   same hue every other interactive surface (links, focus rings, the Sign-in
+   button) already uses -- so a primary CTA reads as "the" accent color, not
+   a separate, unthemed white/black pair. Text stays dark for contrast against
+   the now-green fill. */
+html.outis-mneme [class~='dark:bg-white'] {
+	background-color: var(--color-blue-500);
+}
+html.outis-mneme [class~='dark:hover:bg-gray-100'] {
+	background-color: var(--color-blue-400);
+}
+html.outis-mneme [class~='dark:text-black'],
+html.outis-mneme [class~='dark:text-gray-900'] {
+	color: var(--color-gray-950);
 }
 
 /* `rounded-full` (144 component files) is a fixed 9999px utility, not driven
