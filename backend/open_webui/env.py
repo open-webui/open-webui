@@ -377,6 +377,13 @@ REDIS_CLUSTER = os.getenv('REDIS_CLUSTER', 'False').lower() == 'true'
 
 REDIS_KEY_PREFIX = os.getenv('REDIS_KEY_PREFIX', 'open-webui')
 
+# TTL in seconds for in-flight response-stream state; values <= 0 disable expiry
+REDIS_RESPONSE_STREAM_TTL = os.getenv('REDIS_RESPONSE_STREAM_TTL', '3600')
+try:
+    REDIS_RESPONSE_STREAM_TTL = int(REDIS_RESPONSE_STREAM_TTL)
+except ValueError:
+    REDIS_RESPONSE_STREAM_TTL = 3600
+
 REDIS_SENTINEL_HOSTS = os.getenv('REDIS_SENTINEL_HOSTS', '')
 REDIS_SENTINEL_PORT = os.getenv('REDIS_SENTINEL_PORT', '26379')
 

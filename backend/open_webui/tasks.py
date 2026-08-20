@@ -4,8 +4,9 @@ import logging
 from uuid import uuid4
 
 from redis.asyncio import Redis
+from redis.exceptions import NoPermissionError
 
-from open_webui.env import REDIS_KEY_PREFIX
+from open_webui.env import REDIS_KEY_PREFIX, REDIS_RESPONSE_STREAM_TTL
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 
 log = logging.getLogger(__name__)
@@ -20,6 +21,8 @@ REDIS_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks'
 REDIS_ITEM_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks:item'
 REDIS_RESPONSE_STREAMS_KEY = f'{REDIS_KEY_PREFIX}:tasks:response_streams'
 REDIS_PUBSUB_CHANNEL = f'{REDIS_KEY_PREFIX}:tasks:commands'
+
+_hexpire_unavailable = False
 
 
 async def redis_task_command_listener(app):
@@ -152,6 +155,8 @@ async def save_response_stream(
     content: str,
     output: list,
 ):
+    global _hexpire_unavailable
+
     if not task_id or not chat_id or not message_id:
         return
 
@@ -164,6 +169,25 @@ async def save_response_stream(
 
     if redis:
         await redis.hset(REDIS_RESPONSE_STREAMS_KEY, task_id, dumps_bytes(data))
+
+        if REDIS_RESPONSE_STREAM_TTL > 0 and not _hexpire_unavailable:
+            # HSET clears a hash field's TTL, so it must be re-armed after every write
+            try:
+                await redis.hexpire(REDIS_RESPONSE_STREAMS_KEY, REDIS_RESPONSE_STREAM_TTL, task_id)
+            except Exception as e:
+                # cluster clients raise a bare RedisError for commands the server
+                # does not know, so this must catch more than ResponseError
+                message = str(e).lower()
+                if (
+                    isinstance(e, NoPermissionError)
+                    or 'unknown command' in message
+                    or "doesn't exist in redis commands" in message
+                ):
+                    _hexpire_unavailable = True
+                    log.warning(
+                        f'Response-stream snapshots will not expire, HEXPIRE unusable (needs Redis 7.4+ and ACL access): {e}'
+                    )
+                # anything else (OOM, failover, connection loss) is transient and retried on the next write
     else:
         response_streams[task_id] = data
 
