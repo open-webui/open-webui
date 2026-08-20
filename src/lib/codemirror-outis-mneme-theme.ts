@@ -57,7 +57,13 @@ const danger = '#dd6969'; // softened from #ff4e4e to sit with the ring
 
 export const outisMnemeEditorTheme = /*@__PURE__*/ EditorView.theme(
 	{
-		'&': { color: text, backgroundColor: bg },
+		// @codemirror/view's own baseTheme hardcodes .cm-editor { font-size: 14px },
+		// unrelated to anything in this theme -- it sat close to the app's old
+		// 15px Inter prose size, but the reading area is now 12px
+		// (OUTIS_MNEME_CONSISTENCY_SPEC.md Finding 1), so code read visibly
+		// larger than the text around it. Matches the same 12px so a code
+		// block and the paragraph next to it read at the same size.
+		'&': { color: text, backgroundColor: bg, fontSize: '0.75rem' },
 		'.cm-content': { caretColor: accent },
 		'.cm-cursor, .cm-dropCursor': { borderLeftColor: accent },
 		'&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection':

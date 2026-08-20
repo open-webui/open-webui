@@ -27,17 +27,28 @@ html.outis-mneme {
 
 	/* Accent — blue is the interactive/focus/link color throughout the app;
 	   green is already used for "positive" states. Both map to one green
-	   scale so the whole app reads as a single accent hue. */
+	   scale so the whole app reads as a single accent hue.
+
+	   600-900 are re-derived from an even OKLCH lightness ramp between the
+	   500 (L 0.880, the validated hero accent — unchanged) and 950 (L 0.228,
+	   unchanged) anchors, ΔL≈0.130/step, chroma tapering alongside lightness.
+	   The original values interpolated 500->600 in raw hex and cliffed by
+	   ΔL=0.306 in one step -- 2.7-10x every other step in either this scale
+	   or the neutral scale -- so anything using blue-600/700 (a normal
+	   Tailwind hover/default pairing, ~5 direct usages found in components)
+	   read markedly dimmer than the 500 used for links/focus rings, with
+	   nothing perceptually in between. See OUTIS_MNEME_CONSISTENCY_SPEC.md
+	   Finding 2 for the full derivation and contrast numbers. */
 	--color-blue-50: #eafff5;
 	--color-blue-100: #d0ffe8;
 	--color-blue-200: #a6ffd2;
 	--color-blue-300: #6ffcb0;
 	--color-blue-400: #4dfa9e;
 	--color-blue-500: #2dff8f;
-	--color-blue-600: #1a8f52;
-	--color-blue-700: #146b3d;
-	--color-blue-800: #0f5230;
-	--color-blue-900: #0c3823;
+	--color-blue-600: #00cf76;
+	--color-blue-700: #00a05a;
+	--color-blue-800: #037340;
+	--color-blue-900: #064928;
 	--color-blue-950: #082217;
 
 	--color-green-50: var(--color-blue-50);
@@ -58,8 +69,7 @@ html.outis-mneme {
 	--color-yellow-500: #f5c542;
 	--color-yellow-600: #d9a82a;
 
-	/* Flat corners everywhere except rounded-full (a fixed 9999px utility,
-	   untouched — those are genuine circles: avatars, dots, icon buttons). */
+	/* Flat corners everywhere the radius scale reaches. */
 	--radius-xs: 0px;
 	--radius-sm: 0px;
 	--radius-md: 0px;
@@ -72,6 +82,12 @@ html.outis-mneme {
 
 	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
+	/* JetBrains Mono reads ~20% larger than Inter at an equal rem size (fixed
+	   width, taller x-height) -- validated live on .markdown-prose (15px felt
+	   right sized down to 12px). One shared ratio, applied to every
+	   reading-density class below instead of re-deriving it per class. */
+	--outis-mneme-prose-scale: 0.8;
+
 	/* Tailwind's own --font-sans/--font-mono tokens — separate from the
 	   direct font-family above. Components that opt into an explicit
 	   `font-sans`/`font-mono` utility class (menus, dropdowns, etc.) don't
@@ -83,6 +99,36 @@ html.outis-mneme {
 
 html.outis-mneme pre {
 	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* `rounded-full` (144 component files) is a fixed 9999px utility, not driven
+   by the --radius-* scale above, so flattening that scale alone leaves every
+   pill-shaped button (Sign in, Check Again, ...) and every genuine circle
+   (avatars, status dots, circular icon buttons) rounded. Square requested for
+   all of them, not just corner-radius elements — flatten the class directly.
+   One known gap: a single inline `border-radius: 50%` in a scoped
+   <style> block (Message.svelte's swipe-reply icon) isn't reachable by a
+   global class selector; low-traffic enough to leave for a follow-up. */
+html.outis-mneme .rounded-full {
+	border-radius: 0;
+}
+
+/* Toast notifications (svelte-sonner) ship their own corner radii via a
+   package-level --border-radius custom property and two hardcoded values
+   (a 4px action button, a 50% circular close button) -- none of it routes
+   through Tailwind's --radius-* scale, so the flattening above never
+   reached it. */
+html.outis-mneme [data-sonner-toaster] {
+	--border-radius: 0px;
+}
+
+html.outis-mneme [data-sonner-toast] [data-button],
+html.outis-mneme [data-sonner-toast] [data-close-button] {
+	border-radius: 0;
+}
+
+html.outis-mneme .sonner-loading-bar {
+	border-radius: 0;
 }
 
 /* app.css's `.dark body { background: #171717; color: #eee }` is a hardcoded
@@ -101,10 +147,29 @@ html.outis-mneme body {
    the nominal 15px felt oversized once the whole UI switched fonts. First
    pass (0.8125rem/13px) still read too big in practice; settled on
    0.75rem/12px, which lines up with the base 12px reading size most
-   monospace-first terminal/dashboard UIs use. Not a change to the
-   font-size scale generally, just this reading area. */
-html.outis-mneme .markdown-prose {
-	font-size: 0.75rem !important;
+   monospace-first terminal/dashboard UIs use.
+
+   `.input-prose` (the chat compose box) shares the same 0.9375rem/15px base
+   and the same oversize-in-JetBrains-Mono problem, but was left untuned --
+   the box you type into sat visibly larger than the response rendered
+   directly above it. `.markdown-prose-sm`/`.markdown-prose-xs`/
+   `.input-prose-sm` (citations, tool valve descriptions, notes) have the
+   same defect one step removed, at their own Tailwind text-sm/text-xs
+   bases. All five now share the one `--outis-mneme-prose-scale` ratio
+   instead of a size hand-picked per class. See
+   OUTIS_MNEME_CONSISTENCY_SPEC.md Finding 1. */
+html.outis-mneme .markdown-prose,
+html.outis-mneme .input-prose {
+	font-size: calc(0.9375rem * var(--outis-mneme-prose-scale)) !important; /* 12px */
+}
+
+html.outis-mneme .markdown-prose-sm,
+html.outis-mneme .input-prose-sm {
+	font-size: calc(0.875rem * var(--outis-mneme-prose-scale)) !important; /* 11.2px */
+}
+
+html.outis-mneme .markdown-prose-xs {
+	font-size: calc(0.75rem * var(--outis-mneme-prose-scale)) !important; /* 9.6px */
 }
 
 /* Headings inside the reading area (app.css's `prose-h1:text-xl
@@ -215,6 +280,14 @@ html.outis-mneme .input-prose-sm :not(pre) > code {
  * token outshines its neighbours. Keep these in sync with
  * codemirror-outis-mneme-theme.ts, which explains the reasoning in full.
  * ------------------------------------------------------------------ */
+
+/* CodeBlock.svelte's wrapper carries `text-sm` (14px), inherited by the
+   highlight.js path while a response is still streaming (before CodeMirror
+   takes over) -- same 14px-vs-12px mismatch fixed for CodeMirror itself in
+   codemirror-outis-mneme-theme.ts, same reason. */
+html.outis-mneme div[class*='language-'] {
+	font-size: 0.75rem;
+}
 
 html.outis-mneme .hljs {
 	background: #0f1512;
