@@ -458,15 +458,21 @@ function appendDelta(current: unknown, delta: unknown): unknown {
 	return delta ?? current ?? '';
 }
 
-function ensureOutputItem(
-	output: OutputItem[],
-	outputIndex: number,
-	fallback?: OutputItem
-): OutputItem {
-	while (output.length <= outputIndex) {
-		output.push(
-			fallback ?? { type: 'message', status: 'in_progress', role: 'assistant', content: [] }
-		);
+function placeholderItem(): OutputItem {
+	return { type: 'message', status: 'in_progress', role: 'assistant', content: [] };
+}
+
+// Pad any gap so a client that missed events never holds a sparse array.
+function padOutput(output: OutputItem[], index: number) {
+	while (output.length < index) {
+		output.push(placeholderItem());
+	}
+}
+
+function ensureItem(output: OutputItem[], outputIndex: number, fallback?: OutputItem): OutputItem {
+	padOutput(output, outputIndex);
+	if (output.length === outputIndex) {
+		output.push(fallback ?? placeholderItem());
 	}
 	output[outputIndex] = { ...output[outputIndex] };
 	return output[outputIndex];
@@ -481,10 +487,13 @@ function ensurePart(parts: OutputContentPart[], index: number, fallback?: Output
 }
 
 function findOutputItemIndex(output: OutputItem[], item: OutputItem): number {
+	// Type must match: a function_call_output shares its call_id with the
+	// function_call it answers and must not replace it.
 	return output.findIndex(
 		(existing) =>
-			(!!item.id && existing?.id === item.id) ||
-			(!!item.call_id && existing?.call_id === item.call_id)
+			existing?.type === item.type &&
+			((!!item.id && existing?.id === item.id) ||
+				(!!item.call_id && existing?.call_id === item.call_id))
 	);
 }
 
@@ -528,6 +537,7 @@ export function applyResponseStreamEvent(
 		} else if (outputIndex < nextOutput.length) {
 			nextOutput.splice(outputIndex, 0, item);
 		} else {
+			padOutput(nextOutput, outputIndex);
 			nextOutput[outputIndex] = item;
 		}
 		return nextOutput;
@@ -539,7 +549,9 @@ export function applyResponseStreamEvent(
 		}
 		const item = { ...event.item };
 		const existingIndex = findOutputItemIndex(nextOutput, item);
-		nextOutput[existingIndex >= 0 ? existingIndex : outputIndex] = item;
+		const targetIndex = existingIndex >= 0 ? existingIndex : outputIndex;
+		padOutput(nextOutput, targetIndex);
+		nextOutput[targetIndex] = item;
 		return nextOutput;
 	}
 
@@ -547,7 +559,7 @@ export function applyResponseStreamEvent(
 		return output;
 	}
 
-	const item = ensureOutputItem(nextOutput, outputIndex, {
+	const item = ensureItem(nextOutput, outputIndex, {
 		id: event.item_id,
 		type: eventType.includes('reasoning')
 			? 'reasoning'
