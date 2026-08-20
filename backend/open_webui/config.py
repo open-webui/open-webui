@@ -973,6 +973,10 @@ RAG_FILE_MAX_COUNT = int(os.getenv('RAG_FILE_MAX_COUNT')) if os.getenv('RAG_FILE
 
 RAG_FILE_MAX_SIZE = int(os.getenv('RAG_FILE_MAX_SIZE')) if os.getenv('RAG_FILE_MAX_SIZE') else None
 
+RAG_KNOWLEDGE_MAX_COUNT = int(os.getenv('RAG_KNOWLEDGE_MAX_COUNT')) if os.getenv('RAG_KNOWLEDGE_MAX_COUNT') else None
+
+RAG_KNOWLEDGE_MAX_SIZE = int(os.getenv('RAG_KNOWLEDGE_MAX_SIZE')) if os.getenv('RAG_KNOWLEDGE_MAX_SIZE') else None
+
 RAG_FILE_CONTENT_SEARCH_MAX_CHARS = int(os.getenv('RAG_FILE_CONTENT_SEARCH_MAX_CHARS', str(64 * 1024 * 1024)))
 
 FILE_IMAGE_COMPRESSION_WIDTH = (
@@ -2897,6 +2901,8 @@ DEFAULT_CONFIG = {
     'rag.full_context': RAG_FULL_CONTEXT,
     'rag.file.max_count': RAG_FILE_MAX_COUNT,
     'rag.file.max_size': RAG_FILE_MAX_SIZE,
+    'rag.knowledge.max_count': RAG_KNOWLEDGE_MAX_COUNT,
+    'rag.knowledge.max_size': RAG_KNOWLEDGE_MAX_SIZE,
     'file.image_compression_width': FILE_IMAGE_COMPRESSION_WIDTH,
     'file.image_compression_height': FILE_IMAGE_COMPRESSION_HEIGHT,
     'rag.file.allowed_extensions': RAG_ALLOWED_FILE_EXTENSIONS,

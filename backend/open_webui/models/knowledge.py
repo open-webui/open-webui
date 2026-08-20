@@ -672,6 +672,18 @@ class KnowledgeTable:
         except Exception:
             return []
 
+    async def get_file_count_by_id(
+        self, knowledge_id: str, db: Optional[AsyncSession] = None
+    ) -> int:
+        try:
+            async with get_async_db_context(db) as db:
+                result = await db.execute(
+                    select(func.count()).select_from(KnowledgeFile).filter_by(knowledge_id=knowledge_id)
+                )
+                return result.scalar() or 0
+        except Exception:
+            return 0
+
     async def add_file_to_knowledge_by_id(
         self,
         knowledge_id: str,

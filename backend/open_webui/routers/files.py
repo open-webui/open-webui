@@ -53,6 +53,7 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
+from open_webui.routers.knowledge import enforce_knowledge_upload_limits
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.json_codec import JSONCodec
 
@@ -224,6 +225,10 @@ async def process_uploaded_file(
                             f'{knowledge_id}: user {user.id} lacks write access'
                         )
                     else:
+                        await enforce_knowledge_upload_limits(
+                            knowledge_id, (file_item.meta or {}).get('size', 0), db=db_session,
+                        )
+
                         # Keep the generic file status stream open until the
                         # KB-specific vector write and durable link both finish.
                         await Files.update_file_data_by_id(file_item.id, {'status': 'processing'}, db=db_session)
@@ -389,6 +394,30 @@ async def upload_file_handler(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 detail=ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_size} MB'),
             )
+
+        # Enforce KB upload limits before any extraction/embedding work, not just
+        # before the final link — a file destined to be rejected shouldn't pay for
+        # text extraction or vector embedding first.
+        knowledge_id = file_metadata.get('knowledge_id')
+        if knowledge_id:
+            knowledge = await Knowledges.get_knowledge_by_id(id=knowledge_id, db=db)
+            can_write = bool(knowledge) and (
+                knowledge.user_id == user.id
+                or user.role == 'admin'
+                or await AccessGrants.has_access(
+                    user_id=user.id,
+                    resource_type='knowledge',
+                    resource_id=knowledge.id,
+                    permission='write',
+                    db=db,
+                )
+            )
+            if can_write:
+                try:
+                    await enforce_knowledge_upload_limits(knowledge_id, len(contents), db=db)
+                except ValueError as e:
+                    await asyncio.to_thread(Storage.delete_file, file_path)
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
         # SHA-256 of raw uploaded bytes for incremental sync diffing.
         # If the client pre-computed and sent file_hash, use that.

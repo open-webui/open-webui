@@ -266,6 +266,8 @@
 			// can distinguish "clear this field" from "don't change this field"
 			FILE_MAX_SIZE: RAGConfig.FILE_MAX_SIZE ?? '',
 			FILE_MAX_COUNT: RAGConfig.FILE_MAX_COUNT ?? '',
+			KNOWLEDGE_MAX_SIZE: RAGConfig.KNOWLEDGE_MAX_SIZE ?? '',
+			KNOWLEDGE_MAX_COUNT: RAGConfig.KNOWLEDGE_MAX_COUNT ?? '',
 			FILE_IMAGE_COMPRESSION_WIDTH: RAGConfig.FILE_IMAGE_COMPRESSION_WIDTH ?? '',
 			FILE_IMAGE_COMPRESSION_HEIGHT: RAGConfig.FILE_IMAGE_COMPRESSION_HEIGHT ?? '',
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
@@ -1466,6 +1468,37 @@
 							type="number"
 							placeholder={$i18n.t('Leave empty for unlimited')}
 							bind:value={RAGConfig.FILE_MAX_COUNT}
+							autocomplete="off"
+							min="0"
+						/>
+					</AdminSettingField>
+				</div>
+
+				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+					<AdminSettingField
+						label={$i18n.t('Max Knowledge Base File Size')}
+						description={$i18n.t(
+							'Maximum file size in MB for knowledge base uploads. Leave empty for unlimited.'
+						)}
+					>
+						<input
+							class={inputClass}
+							type="number"
+							placeholder={$i18n.t('Leave empty for unlimited')}
+							bind:value={RAGConfig.KNOWLEDGE_MAX_SIZE}
+							autocomplete="off"
+							min="0"
+						/>
+					</AdminSettingField>
+					<AdminSettingField
+						label={$i18n.t('Max Knowledge Base Files')}
+						description={$i18n.t('Maximum number of files allowed per knowledge base.')}
+					>
+						<input
+							class={inputClass}
+							type="number"
+							placeholder={$i18n.t('Leave empty for unlimited')}
+							bind:value={RAGConfig.KNOWLEDGE_MAX_COUNT}
 							autocomplete="off"
 							min="0"
 						/>

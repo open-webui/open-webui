@@ -1373,6 +1373,23 @@ async def get_knowledge_files_by_id(
 ############################
 
 
+async def enforce_knowledge_upload_limits(knowledge_id: str, file_size: int, db: AsyncSession) -> None:
+    """
+    Raise ValueError if adding a file of `file_size` bytes to `knowledge_id`
+    would exceed the configured global knowledge base upload limits
+    (Admin Settings → Documents → Max Knowledge Base Files / Max Knowledge Base File Size).
+    """
+    max_count = await Config.get('rag.knowledge.max_count')
+    if max_count is not None and max_count != 0:
+        current_count = await Knowledges.get_file_count_by_id(knowledge_id, db=db)
+        if current_count >= max_count:
+            raise ValueError(f'Knowledge base file limit reached ({max_count} files maximum).')
+
+    max_size = await Config.get('rag.knowledge.max_size')
+    if max_size is not None and max_size != 0 and file_size > max_size * 1024 * 1024:
+        raise ValueError(f'File size exceeds the {max_size} MB limit for knowledge base uploads.')
+
+
 class KnowledgeFileIdForm(BaseModel):
     file_id: str
     directory_id: Optional[str] = None
@@ -1430,6 +1447,11 @@ async def add_file_to_knowledge_by_id(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
+
+    try:
+        await enforce_knowledge_upload_limits(id, (file.meta or {}).get('size', 0), db=db)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     # Add content to the vector database
     try:
@@ -2036,6 +2058,26 @@ async def add_files_to_knowledge_batch(
     log.info('files/batch/add - %s files', len(form_data))
     file_ids = [form.file_id for form in form_data]
     files = await Files.get_files_by_ids(file_ids, db=db)
+
+    max_count = await Config.get('rag.knowledge.max_count')
+    if max_count is not None and max_count != 0:
+        current_count = await Knowledges.get_file_count_by_id(id, db=db)
+        if current_count + len(files) > max_count:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f'Knowledge base file limit exceeded: adding {len(files)} file(s) would exceed the {max_count} file maximum (currently {current_count}).',
+            )
+
+    max_size = await Config.get('rag.knowledge.max_size')
+    if max_size is not None and max_size != 0:
+        oversized = [
+            f.filename for f in files if f.meta and f.meta.get('size', 0) > max_size * 1024 * 1024
+        ]
+        if oversized:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f'File(s) exceed the {max_size} MB limit for knowledge base uploads: {", ".join(oversized)}',
+            )
 
     # Verify all requested files were found
     found_ids = {file.id for file in files}

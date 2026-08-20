@@ -422,17 +422,19 @@
 			return null;
 		}
 
-		if (
-			($config?.file?.max_size ?? null) !== null &&
-			file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
-		) {
-			console.log('File exceeds max size limit:', {
-				fileSize: file.size,
-				maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
-			});
+		const knowledgeMaxSize = $config?.knowledge?.max_size ?? null;
+		if (knowledgeMaxSize !== null && file.size > knowledgeMaxSize * 1024 * 1024) {
 			toast.error(
-				$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
-					maxSize: $config?.file?.max_size
+				$i18n.t(`File size should not exceed {{maxSize}} MB.`, { maxSize: knowledgeMaxSize })
+			);
+			return;
+		}
+
+		const knowledgeMaxCount = $config?.knowledge?.max_count ?? null;
+		if (knowledgeMaxCount !== null && (fileItemsTotal ?? 0) >= knowledgeMaxCount) {
+			toast.error(
+				$i18n.t(`Knowledge base file limit reached ({{maxCount}} files maximum).`, {
+					maxCount: knowledgeMaxCount
 				})
 			);
 			return;
@@ -618,12 +620,48 @@
 		return currentPath && path ? `${currentPath}/${path}` : currentPath || path;
 	};
 
+	// Mirrors the backend's enforce_knowledge_upload_limits: same source values
+	// ($config.knowledge), same semantics (0/null = unlimited). This is a UX
+	// fast-path only — the backend is still the source of truth.
+	const checkKnowledgeUploadLimits = (entries: DirectoryManifestEntry[]): boolean => {
+		const knowledgeMaxCount = $config?.knowledge?.max_count ?? null;
+		if (knowledgeMaxCount !== null && (fileItemsTotal ?? 0) + entries.length > knowledgeMaxCount) {
+			toast.error(
+				$i18n.t('Knowledge base file limit exceeded: adding {{count}} file(s) would exceed the {{maxCount}} file maximum.', {
+					count: entries.length,
+					maxCount: knowledgeMaxCount
+				})
+			);
+			return false;
+		}
+
+		const knowledgeMaxSize = $config?.knowledge?.max_size ?? null;
+		if (knowledgeMaxSize !== null) {
+			const oversized = entries.filter((entry) => entry.size > knowledgeMaxSize * 1024 * 1024);
+			if (oversized.length > 0) {
+				toast.error(
+					$i18n.t('File(s) exceed the {{maxSize}} MB limit for knowledge base uploads: {{files}}', {
+						maxSize: knowledgeMaxSize,
+						files: oversized.map((entry) => entry.filename).join(', ')
+					})
+				);
+				return false;
+			}
+		}
+
+		return true;
+	};
+
 	const uploadDirectoryEntries = async (entries: DirectoryFileEntry[]) => {
 		if (!knowledge) return;
 
 		try {
 			syncing = $i18n.t('Computing checksums ({{count}} files)', { count: entries.length });
 			const manifest = await buildDirectoryManifest(entries);
+
+			if (!checkKnowledgeUploadLimits(manifest)) {
+				return;
+			}
 
 			syncing = $i18n.t('Comparing with knowledge base...');
 			const diff = await syncKnowledgeDiff(
@@ -644,6 +682,7 @@
 
 			const directoryIdByPath = await createMissingDirectories(diff);
 
+			const failures: string[] = [];
 			let uploadedCount = 0;
 			for (const entry of manifest) {
 				uploadedCount++;
@@ -655,7 +694,7 @@
 				});
 
 				const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
-				await uploadFile(localStorage.token, fileObject, {
+				const uploadedFile = await uploadFile(localStorage.token, fileObject, {
 					knowledge_id: knowledge.id,
 					file_hash: entry.checksum,
 					directory_id: entry.path
@@ -665,9 +704,21 @@
 					toast.error(`${e}`);
 					return null;
 				});
+
+				if (uploadedFile?.error) {
+					failures.push(`${displayPath}: ${uploadedFile.error}`);
+				}
 			}
 
-			toast.success($i18n.t('File uploaded successfully'));
+			if (failures.length > 0) {
+				toast.error(
+					$i18n.t('{{count}} file(s) failed to upload:', { count: failures.length }) +
+						' ' +
+						failures.join('; ')
+				);
+			} else {
+				toast.success($i18n.t('File uploaded successfully'));
+			}
 			init();
 		} catch (e) {
 			toast.error(`${e}`);
@@ -722,6 +773,11 @@
 					diff.modified.some((m: any) => m.filename === entry.filename && m.path === entry.path)
 			);
 
+			if (!checkKnowledgeUploadLimits(filesToUpload)) {
+				return;
+			}
+
+			const failures: string[] = [];
 			let uploadedCount = 0;
 			for (const entry of filesToUpload) {
 				uploadedCount++;
@@ -733,14 +789,28 @@
 				});
 
 				const fileObject = new File([entry.file], entry.filename, { type: entry.file.type });
-				await uploadFile(localStorage.token, fileObject, {
+				const uploadedFile = await uploadFile(localStorage.token, fileObject, {
 					knowledge_id: knowledge.id,
 					file_hash: entry.checksum,
 					directory_id: entry.path ? directoryIdByPath[entry.path] : null
-				}).catch(() => null);
+				}).catch((e) => {
+					toast.error(`${e}`);
+					return null;
+				});
+
+				if (uploadedFile?.error) {
+					failures.push(`${displayPath}: ${uploadedFile.error}`);
+				}
 			}
 
 			// ── 7. Report ──
+			if (failures.length > 0) {
+				toast.error(
+					$i18n.t('{{count}} file(s) failed to upload:', { count: failures.length }) +
+						' ' +
+						failures.join('; ')
+				);
+			}
 			toast.success(
 				$i18n.t(
 					'Sync complete: {{added}} added, {{modified}} modified, {{deleted}} deleted, {{unmodified}} unmodified',
