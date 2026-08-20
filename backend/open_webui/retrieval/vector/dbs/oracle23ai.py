@@ -32,7 +32,6 @@ import array
 import json
 import logging
 import os
-import threading
 import time
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Union
@@ -163,65 +162,6 @@ class Oracle23aiClient(VectorDBBase):
                     time.sleep(wait_time)
                 else:
                     raise
-
-    def start_health_monitor(self, interval_seconds: int = 60):
-        """
-        Start a background thread to periodically check the health of the connection pool.
-
-        Args:
-            interval_seconds (int): Number of seconds between health checks
-        """
-
-        def _monitor():
-            while True:
-                try:
-                    log.info('[HealthCheck] Running periodic DB health check...')
-                    self.ensure_connection()
-                    log.info('[HealthCheck] Connection is healthy.')
-                except Exception as e:
-                    log.exception(f'[HealthCheck] Connection health check failed: {e}')
-                time.sleep(interval_seconds)
-
-        thread = threading.Thread(target=_monitor, daemon=True)
-        thread.start()
-        log.info('Started DB health monitor every %s seconds.', interval_seconds)
-
-    def _reconnect_pool(self):
-        """
-        Attempt to reinitialize the connection pool if it's been closed or broken.
-        """
-        try:
-            log.info('Attempting to reinitialize the Oracle connection pool...')
-
-            # Close existing pool if it exists
-            if self.pool:
-                try:
-                    self.pool.close()
-                except Exception as close_error:
-                    log.warning(f'Error closing existing pool: {close_error}')
-
-            # Re-create the appropriate connection pool based on DB type
-            if ORACLE_DB_USE_WALLET:
-                self._create_adb_pool()
-            else:  # DBCS
-                self._create_dbcs_pool()
-
-            log.info('Connection pool reinitialized.')
-        except Exception as e:
-            log.exception(f'Failed to reinitialize the connection pool: {e}')
-            raise
-
-    def ensure_connection(self):
-        """
-        Ensure the database connection is alive, reconnecting pool if needed.
-        """
-        try:
-            with self.get_connection() as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute('SELECT 1 FROM dual')
-        except Exception as e:
-            log.exception(f'Connection check failed: {e}, attempting to reconnect pool...')
-            self._reconnect_pool()
 
     def _output_type_handler(self, cursor, metadata):
         """

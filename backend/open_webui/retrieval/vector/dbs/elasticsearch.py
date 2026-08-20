@@ -210,10 +210,6 @@ class ElasticsearchClient(VectorDBBase):
     def _has_index(self, dimension: int):
         return self.client.indices.exists(index=self._get_index_name(dimension=dimension))
 
-    def get_or_create_index(self, dimension: int):
-        if not self._has_index(dimension=dimension):
-            self._create_index(dimension=dimension)
-
     # Status: works
     def get(self, collection_name: str) -> Optional[GetResult]:
         # Get all the items in the collection.

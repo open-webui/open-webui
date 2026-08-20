@@ -16,10 +16,7 @@ try:
 except ImportError:
     GRPC_AVAILABLE = False
 
-import asyncio  # for async upserts
 import concurrent.futures  # for parallel batch upserts
-import functools  # for partial binding in async tasks
-import random  # for jitter in retry backoff
 
 from open_webui.config import (
     PINECONE_API_KEY,
@@ -126,43 +123,6 @@ class PineconeClient(VectorDBBase):
         except Exception as e:
             log.error(f'Failed to initialize Pinecone index: {e}')
             raise RuntimeError(f'Failed to initialize Pinecone index: {e}')
-
-    def _retry_pinecone_operation(self, operation_func, max_retries=3):
-        """Retry Pinecone operations with exponential backoff for rate limits and network issues."""
-        for attempt in range(max_retries):
-            try:
-                return operation_func()
-            except Exception as e:
-                error_str = str(e).lower()
-                # Check if it's a retryable error (rate limits, network issues, timeouts)
-                is_retryable = any(
-                    keyword in error_str
-                    for keyword in [
-                        'rate limit',
-                        'quota',
-                        'timeout',
-                        'network',
-                        'connection',
-                        'unavailable',
-                        'internal error',
-                        '429',
-                        '500',
-                        '502',
-                        '503',
-                        '504',
-                    ]
-                )
-
-                if not is_retryable or attempt == max_retries - 1:
-                    # Don't retry for non-retryable errors or on final attempt
-                    raise
-
-                # Exponential backoff with jitter
-                delay = (2**attempt) + random.uniform(0, 1)
-                log.warning(
-                    f'Pinecone operation failed (attempt {attempt + 1}/{max_retries}), retrying in {delay:.2f}s: {e}'
-                )
-                time.sleep(delay)
 
     def _create_points(self, items: List[VectorItem], collection_name_with_prefix: str) -> List[Dict[str, Any]]:
         """Convert VectorItem objects to Pinecone point format."""
@@ -306,50 +266,6 @@ class PineconeClient(VectorDBBase):
         log.debug('Upsert of %s vectors took %.2f seconds', len(points), elapsed)
         log.info(
             "Successfully upserted %s vectors in parallel batches into '%s'", len(points), collection_name_with_prefix
-        )
-
-    async def insert_async(self, collection_name: str, items: List[VectorItem]) -> None:
-        """Async version of insert using asyncio and run_in_executor for improved performance."""
-        if not items:
-            log.warning('No items to insert')
-            return
-
-        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
-        points = self._create_points(items, collection_name_with_prefix)
-
-        # Create batches
-        batches = [points[i : i + BATCH_SIZE] for i in range(0, len(points), BATCH_SIZE)]
-        loop = asyncio.get_event_loop()
-        tasks = [loop.run_in_executor(None, functools.partial(self.index.upsert, vectors=batch)) for batch in batches]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        for result in results:
-            if isinstance(result, Exception):
-                log.error(f'Error in async insert batch: {result}')
-                raise result
-        log.info(
-            "Successfully async inserted %s vectors in batches into '%s'", len(points), collection_name_with_prefix
-        )
-
-    async def upsert_async(self, collection_name: str, items: List[VectorItem]) -> None:
-        """Async version of upsert using asyncio and run_in_executor for improved performance."""
-        if not items:
-            log.warning('No items to upsert')
-            return
-
-        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
-        points = self._create_points(items, collection_name_with_prefix)
-
-        # Create batches
-        batches = [points[i : i + BATCH_SIZE] for i in range(0, len(points), BATCH_SIZE)]
-        loop = asyncio.get_event_loop()
-        tasks = [loop.run_in_executor(None, functools.partial(self.index.upsert, vectors=batch)) for batch in batches]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        for result in results:
-            if isinstance(result, Exception):
-                log.error(f'Error in async upsert batch: {result}')
-                raise result
-        log.info(
-            "Successfully async upserted %s vectors in batches into '%s'", len(points), collection_name_with_prefix
         )
 
     def search(
