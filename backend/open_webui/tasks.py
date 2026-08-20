@@ -6,7 +6,7 @@ from uuid import uuid4
 from redis.asyncio import Redis
 
 from open_webui.env import REDIS_KEY_PREFIX
-from open_webui.utils.json_codec import JSONCodec
+from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ async def redis_list_item_tasks(redis: Redis, item_id: str) -> list[str]:
 
 
 async def redis_send_command(redis: Redis, command: dict):
-    command_json = JSONCodec.dumps(command)
+    command_json = dumps_bytes(command)
     # RedisCluster doesn't expose publish() directly, but the
     # PUBLISH command broadcasts across all cluster nodes server-side.
     if hasattr(redis, 'nodes_manager'):
@@ -163,7 +163,7 @@ async def save_response_stream(
     }
 
     if redis:
-        await redis.hset(REDIS_RESPONSE_STREAMS_KEY, task_id, JSONCodec.dumps(data))
+        await redis.hset(REDIS_RESPONSE_STREAMS_KEY, task_id, dumps_bytes(data))
     else:
         response_streams[task_id] = data
 
