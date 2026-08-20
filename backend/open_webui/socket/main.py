@@ -173,56 +173,65 @@ YDOC_MANAGER = YdocManager(
 )
 
 
+def session_pool_batches():
+    """All session pool entries, in bounded batches for the Redis backing."""
+    if WEBSOCKET_MANAGER == 'redis':
+        return SESSION_POOL.scan_batches()
+    return [list(SESSION_POOL.items())]
+
+
 async def periodic_session_pool_cleanup():
     """Reap orphaned SESSION_POOL entries that missed heartbeats (e.g. crashed instance)."""
     retry_delay = random.uniform(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, WEBSOCKET_REDIS_LOCK_TIMEOUT)
-    is_redis = WEBSOCKET_MANAGER == 'redis'
     renew_interval = max(WEBSOCKET_REDIS_LOCK_TIMEOUT / 2, 0.5)
     while True:
-        if not session_aquire_func():
-            log.debug('Session cleanup lock held by another node. Retrying.')
-            await asyncio.sleep(retry_delay)
-            continue
-
         try:
-            while True:
-                if not session_renew_func():
-                    log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
-                    break
+            if not session_aquire_func():
+                log.debug('Session cleanup lock held by another node. Retrying.')
+                await asyncio.sleep(retry_delay)
+                continue
 
-                now = int(time.time())
-                batches = SESSION_POOL.scan_batches() if is_redis else [list(SESSION_POOL.items())]
-                for batch in batches:
-                    expired = {
-                        sid: entry.get('id')
-                        for sid, entry in batch
-                        if now - entry.get('last_seen_at', 0) > SESSION_POOL_TIMEOUT
-                    }
-                    if expired:
-                        log.warning('Reaping %d orphaned session(s) (sid: user): %s', len(expired), expired)
-                        if is_redis:
-                            SESSION_POOL.discard(*expired)
-                        else:
-                            for sid in expired:
-                                SESSION_POOL.pop(sid, None)
-                    await asyncio.sleep(0)  # don't hold the loop for the whole sweep
-
-                next_cleanup_at = time.monotonic() + SESSION_POOL_TIMEOUT
-                lock_lost = False
+            try:
                 while True:
-                    sleep_for = min(renew_interval, next_cleanup_at - time.monotonic())
-                    if sleep_for <= 0:
-                        break
-                    await asyncio.sleep(sleep_for)
                     if not session_renew_func():
                         log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
-                        lock_lost = True
                         break
 
-                if lock_lost:
-                    break
-        finally:
-            session_release_func()
+                    now = int(time.time())
+                    for batch in session_pool_batches():
+                        expired = {
+                            sid: entry.get('id')
+                            for sid, entry in batch
+                            if now - entry.get('last_seen_at', 0) > SESSION_POOL_TIMEOUT
+                        }
+                        if expired:
+                            log.warning('Reaping %d orphaned session(s) (sid: user): %s', len(expired), expired)
+                            if WEBSOCKET_MANAGER == 'redis':
+                                SESSION_POOL.discard(*expired)
+                            else:
+                                for sid in expired:
+                                    SESSION_POOL.pop(sid, None)
+                        await asyncio.sleep(0)  # don't hold the loop for the whole sweep
+
+                    next_cleanup_at = time.monotonic() + SESSION_POOL_TIMEOUT
+                    lock_lost = False
+                    while True:
+                        sleep_for = min(renew_interval, next_cleanup_at - time.monotonic())
+                        if sleep_for <= 0:
+                            break
+                        await asyncio.sleep(sleep_for)
+                        if not session_renew_func():
+                            log.warning('Unable to renew session cleanup lock. Retrying cleanup ownership.')
+                            lock_lost = True
+                            break
+
+                    if lock_lost:
+                        break
+            finally:
+                session_release_func()
+        except Exception:
+            log.exception('Session pool cleanup failed. Retrying.')
+            await asyncio.sleep(retry_delay)
 
 
 async def periodic_usage_pool_cleanup():
@@ -302,10 +311,12 @@ def get_session_ids_from_room(room):
     return list(members) if members else []
 
 
-def get_session_ids_by_user_id(user_id: str) -> list[str]:
+async def get_session_ids_by_user_id(user_id: str) -> list[str]:
     """Get known session IDs for a user across the local rooms and shared session pool."""
     session_ids = set(get_session_ids_from_room(f'user:{user_id}'))
-    session_ids.update(sid for sid, entry in SESSION_POOL.items() if entry and entry.get('id') == user_id)
+    for batch in session_pool_batches():
+        session_ids.update(sid for sid, entry in batch if entry.get('id') == user_id)
+        await asyncio.sleep(0)  # don't hold the loop for the whole pool
     return list(session_ids)
 
 
@@ -354,7 +365,7 @@ async def disconnect_user_sessions(user_id: str):
     The client will automatically reconnect and re-authenticate with
     fresh data from the database.
     """
-    session_ids = get_session_ids_by_user_id(user_id)
+    session_ids = await get_session_ids_by_user_id(user_id)
     for sid in session_ids:
         try:
             await sio.disconnect(sid)
@@ -903,12 +914,14 @@ async def disconnect(sid, reason=None):
         pass
 
     # Clean up USAGE_POOL entries for this session
-    for model_id in list(USAGE_POOL.keys()):
-        connections = USAGE_POOL.get(model_id)
-        if connections and sid in connections:
+    for model_id, connections in list(USAGE_POOL.items()):
+        if sid in connections:
             del connections[sid]
             if not connections:
-                del USAGE_POOL[model_id]
+                try:
+                    del USAGE_POOL[model_id]
+                except KeyError:
+                    pass
             else:
                 USAGE_POOL[model_id] = connections
 
