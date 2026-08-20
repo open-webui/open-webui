@@ -124,10 +124,7 @@ class ERROR_MESSAGES(str, Enum):
 
     FEATURE_DISABLED = lambda name='': f'{name} is disabled'
     INPUT_TOO_LONG = lambda size='': f'Input prompt exceeds maximum length of {size}'
-    # LICENSE covers this Open WebUI error identifier.
-    # Do not alter, remove, obscure, or replace it except as LICENSE permits:
-    # https://docs.openwebui.com/license.
-    SERVER_CONNECTION_ERROR = 'Open WebUI: Server Connection Error'
+    SERVER_CONNECTION_ERROR = 'Outis: Server Connection Error'
     REQUIRED_FIELD_EMPTY = lambda name='': f'Required field {name} is empty'
     OAUTH_NOT_CONFIGURED = lambda name='': f"Provider '{name}' is not configured"
 

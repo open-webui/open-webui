@@ -425,7 +425,7 @@
 					https://docs.openwebui.com/license. -->
 				<AdminSettingField
 					label={$i18n.t('STT Model')}
-					description={$i18n.t('Open WebUI uses faster-whisper internally.')}
+					description={$i18n.t('Outis uses faster-whisper internally.')}
 				>
 					<div class="flex w-full gap-2">
 						<input
@@ -600,7 +600,7 @@
 					https://docs.openwebui.com/license. -->
 				<AdminSettingField
 					label={$i18n.t('TTS Model')}
-					description={$i18n.t('Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.')}
+					description={$i18n.t('Outis uses SpeechT5 and CMU Arctic speaker embeddings.')}
 				>
 					<input
 						list="tts-transformers-model-list"

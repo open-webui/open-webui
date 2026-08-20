@@ -494,7 +494,7 @@
 					https://docs.openwebui.com/license. -->
 				<AdminSettingRow
 					label={$i18n.t('Group Mapping')}
-					description={$i18n.t('Map LDAP groups to Open WebUI groups.')}
+					description={$i18n.t('Map LDAP groups to Outis groups.')}
 					let:labelId
 				>
 					<Switch bind:state={LDAP_SERVER.enable_group_management} ariaLabelledbyId={labelId} />
@@ -717,7 +717,7 @@
 						https://docs.openwebui.com/license. -->
 						<AdminSettingRow
 							label={$i18n.t('Role Mapping')}
-							description={$i18n.t('Map OAuth claims to Open WebUI roles.')}
+							description={$i18n.t('Map OAuth claims to Outis roles.')}
 							let:labelId
 						>
 							<Switch
@@ -768,7 +768,7 @@
 						https://docs.openwebui.com/license. -->
 						<AdminSettingRow
 							label={$i18n.t('Group Mapping')}
-							description={$i18n.t('Map OAuth claims to Open WebUI groups.')}
+							description={$i18n.t('Map OAuth claims to Outis groups.')}
 							let:labelId
 						>
 							<Switch

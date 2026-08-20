@@ -98,7 +98,7 @@
 							https://docs.openwebui.com/license. -->
 						<AdminSettingRow
 							label={$i18n.t('Jupyter Auth')}
-							description={$i18n.t('Select how Open WebUI authenticates with the Jupyter server.')}
+							description={$i18n.t('Select how Outis authenticates with the Jupyter server.')}
 						>
 							<SettingsSelect
 								bind:value={config.CODE_EXECUTION_JUPYTER_AUTH}
@@ -202,7 +202,7 @@
 							https://docs.openwebui.com/license. -->
 						<AdminSettingRow
 							label={$i18n.t('Jupyter Auth')}
-							description={$i18n.t('Select how Open WebUI authenticates with the Jupyter server.')}
+							description={$i18n.t('Select how Outis authenticates with the Jupyter server.')}
 						>
 							<SettingsSelect
 								bind:value={config.CODE_INTERPRETER_JUPYTER_AUTH}

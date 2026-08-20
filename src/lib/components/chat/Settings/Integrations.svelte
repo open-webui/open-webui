@@ -153,7 +153,7 @@
 							Do not alter, remove, obscure, or replace it except as LICENSE permits:
 							https://docs.openwebui.com/license. -->
 						{$i18n.t(
-							'CORS must be properly configured by the provider to allow requests from Open WebUI.'
+							'CORS must be properly configured by the provider to allow requests from Outis.'
 						)}
 						<a
 							class="ml-1 text-gray-500 underline hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
