@@ -3,15 +3,10 @@
 </script>
 
 <script lang="ts">
-	import { SvelteFlowProvider } from '@xyflow/svelte';
-	import { slide } from 'svelte/transition';
-	import { v4 as uuidv4 } from 'uuid';
-
 	import { onMount, tick, getContext } from 'svelte';
 	import {
 		config,
 		terminalServers,
-		mobile,
 		showControls,
 		showCallOverlay,
 		showArtifacts,
@@ -21,9 +16,6 @@
 		selectedTerminalId,
 		user
 	} from '$lib/stores';
-
-	import { uploadFile } from '$lib/apis/files';
-	import { toast } from 'svelte-sonner';
 
 	import Controls from './Controls/Controls.svelte';
 	import CallOverlay from './MessageInput/CallOverlay.svelte';
@@ -132,48 +124,6 @@
 	) {
 		selectedTerminalId.set(null);
 	}
-
-	// Attach a terminal file to the chat input
-	const handleTerminalAttach = async (blob: Blob, name: string, contentType: string) => {
-		const tempItemId = uuidv4();
-		const fileItem = {
-			type: 'file',
-			file: '',
-			id: null,
-			url: '',
-			name,
-			collection_name: '',
-			status: 'uploading',
-			error: '',
-			itemId: tempItemId,
-			size: blob.size
-		};
-
-		files = [...files, fileItem];
-
-		try {
-			const file = new File([blob], name, { type: contentType || 'application/octet-stream' });
-			const uploaded = await uploadFile(localStorage.token, file);
-			if (!uploaded) throw new Error('Upload failed');
-
-			const idx = files.findIndex((f) => f.itemId === tempItemId);
-			if (idx !== -1) {
-				files[idx] = {
-					...fileItem,
-					status: 'uploaded',
-					file: uploaded,
-					id: uploaded.id,
-					url: `${uploaded.id}`,
-					collection_name: uploaded?.meta?.collection_name
-				};
-				files = files;
-			}
-			toast.success($i18n.t('File attached to chat'));
-		} catch (e) {
-			files = files.filter((f) => f.itemId !== tempItemId);
-			toast.error($i18n.t('Failed to attach file'));
-		}
-	};
 
 	const handleMediaQuery = async (e) => {
 		if (e.matches) {
@@ -349,7 +299,7 @@
 									}}
 								/>
 							{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
-								<FileNav onAttach={handleTerminalAttach} {chatId} />
+								<FileNav {chatId} />
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav />
 							{:else}
@@ -475,7 +425,7 @@
 									}}
 								/>
 							{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
-								<FileNav onAttach={handleTerminalAttach} overlay={dragged} {chatId} />
+								<FileNav overlay={dragged} {chatId} />
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
 								<PyodideFileNav overlay={dragged} />
 							{:else}
