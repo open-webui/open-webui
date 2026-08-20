@@ -409,74 +409,6 @@ class PromptsTable:
 
             return PromptListResponse(items=prompts, total=total)
 
-    async def update_prompt_by_command(
-        self,
-        command: str,
-        form_data: PromptForm,
-        user_id: str,
-        db: AsyncSession | None = None,
-    ) -> PromptModel | None:
-        if not command:
-            return None
-        try:  # database transaction
-            async with get_async_db_context(db) as session:
-                result = await session.execute(select(Prompt).filter_by(command=command))
-                prompt = result.scalars().first()
-                if not prompt:
-                    return None
-
-                latest_history = await PromptHistories.get_latest_history_entry(prompt.id, db=session)
-                parent_id = latest_history.id if latest_history else None
-                current_access_grants = await self._get_access_grants(prompt.id, db=session)
-
-                # Check if content changed to decide on history creation
-                content_changed = (
-                    prompt.name != form_data.name
-                    or prompt.content != form_data.content
-                    or form_data.access_grants is not None
-                )
-
-                # Update prompt fields
-                prompt.name = form_data.name
-                prompt.content = form_data.content
-                prompt.data = form_data.data or prompt.data
-                prompt.meta = form_data.meta or prompt.meta
-                prompt.updated_at = int(time.time())
-                if form_data.access_grants is not None:
-                    await AccessGrants.set_access_grants('prompt', prompt.id, form_data.access_grants, db=session)
-                    current_access_grants = await self._get_access_grants(prompt.id, db=session)
-
-                await session.commit()
-
-                # Create history entry only if content changed
-                if content_changed:
-                    snapshot = {
-                        'name': form_data.name,
-                        'content': form_data.content,
-                        'command': command,
-                        'data': form_data.data or {},
-                        'meta': form_data.meta or {},
-                        'access_grants': [grant.model_dump() for grant in current_access_grants],
-                    }
-
-                    history_entry = await PromptHistories.create_history_entry(
-                        prompt_id=prompt.id,
-                        snapshot=snapshot,
-                        user_id=user_id,
-                        parent_id=parent_id,
-                        commit_message=form_data.commit_message,
-                        db=db,
-                    )
-
-                    # Set as production if flag is True (default)
-                    if form_data.is_production and history_entry:
-                        prompt.version_id = history_entry.id
-                        await session.commit()
-
-                return await self._to_prompt_model(prompt, db=session)
-        except Exception:
-            return None
-
     async def update_prompt_by_id(
         self,
         prompt_id: str,
@@ -640,23 +572,6 @@ class PromptsTable:
                 return None
         except Exception:
             return None
-
-    async def delete_prompt_by_command(self, command: str, db: AsyncSession | None = None) -> bool:
-        """Permanently delete a prompt and its history."""
-        try:
-            async with get_async_db_context(db) as session:
-                result = await session.execute(select(Prompt).filter_by(command=command))
-                prompt = result.scalars().first()
-                if prompt:
-                    await PromptHistories.delete_history_by_prompt_id(prompt.id, db=session)
-                    await AccessGrants.revoke_all_access('prompt', prompt.id, db=session)
-
-                    await session.delete(prompt)
-                    await session.commit()
-                    return True
-                return False
-        except Exception:
-            return False
 
     async def delete_prompt_by_id(self, prompt_id: str, db: AsyncSession | None = None) -> bool:
         """Permanently delete a prompt and its history."""

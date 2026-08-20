@@ -559,15 +559,6 @@ class UsersTable:
             row = (await session.execute(stmt)).scalars().first()
             return UserModel.model_validate(row) if row else None
 
-    async def get_num_users_active_today(self, db: AsyncSession | None = None) -> int | None:
-        async with get_async_db_context(db) as session:
-            current_timestamp = int(time.time())
-            today_midnight_timestamp = current_timestamp - (current_timestamp % 86400)
-            result = await session.execute(
-                select(func.count()).select_from(User).where(User.last_active_at > today_midnight_timestamp)
-            )
-            return result.scalar()
-
     async def update_user_role_by_id(self, id: str, role: str, db: AsyncSession | None = None) -> UserModel | None:
         async with get_async_db_context(db) as session:
             user = await session.get(User, id)

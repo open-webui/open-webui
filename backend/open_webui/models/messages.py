@@ -273,11 +273,6 @@ class MessageTable:
                 )
             return messages
 
-    async def get_reply_user_ids_by_message_id(self, id: str, db: Optional[AsyncSession] = None) -> list[str]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(Message.user_id).filter_by(parent_id=id))
-            return [row[0] for row in result.all()]
-
     async def get_messages_by_channel_id(
         self,
         channel_id: str,
@@ -570,18 +565,6 @@ class MessageTable:
     ) -> bool:
         async with get_async_db_context(db) as db:
             await db.execute(delete(MessageReaction).filter_by(message_id=id, user_id=user_id, name=name))
-            await db.commit()
-            return True
-
-    async def delete_reactions_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
-        async with get_async_db_context(db) as db:
-            await db.execute(delete(MessageReaction).filter_by(message_id=id))
-            await db.commit()
-            return True
-
-    async def delete_replies_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
-        async with get_async_db_context(db) as db:
-            await db.execute(delete(Message).filter_by(parent_id=id))
             await db.commit()
             return True
 

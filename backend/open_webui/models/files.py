@@ -179,27 +179,6 @@ class FilesTable:
             except Exception:
                 return None
 
-    async def get_file_metadata_by_id(self, id: str, db: AsyncSession | None = None) -> FileMetadataResponse | None:
-        async with get_async_db_context(db) as db:
-            try:
-                file = await db.get(File, id)
-                if not file:
-                    return None
-                return FileMetadataResponse(
-                    id=file.id,
-                    hash=file.hash,
-                    meta=file.meta,
-                    created_at=file.created_at,
-                    updated_at=file.updated_at,
-                )
-            except Exception:
-                return None
-
-    async def get_files(self, db: AsyncSession | None = None) -> list[FileModel]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(File))
-            return [FileModel.model_validate(file) for file in result.scalars().all()]
-
     async def count_files_by_user_id(
         self,
         user_id: str | None = None,
@@ -224,31 +203,6 @@ class FilesTable:
     async def get_files_by_ids(self, ids: list[str], db: AsyncSession | None = None) -> list[FileModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(File).filter(File.id.in_(ids)).order_by(File.updated_at.desc()))
-            return [FileModel.model_validate(file) for file in result.scalars().all()]
-
-    async def get_file_metadatas_by_ids(
-        self, ids: list[str], db: AsyncSession | None = None
-    ) -> list[FileMetadataResponse]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(File.id, File.hash, File.meta, File.created_at, File.updated_at)
-                .filter(File.id.in_(ids))
-                .order_by(File.updated_at.desc())
-            )
-            return [
-                FileMetadataResponse(
-                    id=row.id,
-                    hash=row.hash,
-                    meta=row.meta,
-                    created_at=row.created_at,
-                    updated_at=row.updated_at,
-                )
-                for row in result.all()
-            ]
-
-    async def get_files_by_user_id(self, user_id: str, db: AsyncSession | None = None) -> list[FileModel]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(File).filter_by(user_id=user_id))
             return [FileModel.model_validate(file) for file in result.scalars().all()]
 
     async def get_file_list(

@@ -197,21 +197,6 @@ class FeedbackTable:
         except Exception:
             return None
 
-    async def get_feedbacks_by_chat_id(self, chat_id: str, db: Optional[AsyncSession] = None) -> list[FeedbackModel]:
-        """Get all feedbacks for a specific chat."""
-        try:
-            async with get_async_db_context(db) as db:
-                # meta.chat_id stores the chat reference
-                result = await db.execute(
-                    select(Feedback)
-                    .filter(Feedback.meta['chat_id'].as_string() == chat_id)
-                    .order_by(Feedback.created_at.desc())
-                )
-                feedbacks = result.scalars().all()
-                return [FeedbackModel.model_validate(fb) for fb in feedbacks]
-        except Exception:
-            return []
-
     async def get_feedback_items(
         self,
         filter: dict = {},
@@ -421,11 +406,6 @@ class FeedbackTable:
             ModelHistoryCounts(date=date_str, won=counts['won'], lost=counts['lost'])
             for date_str, counts in sorted(daily_counts.items())
         ]
-
-    async def get_feedbacks_by_type(self, type: str, db: Optional[AsyncSession] = None) -> list[FeedbackModel]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(Feedback).filter_by(type=type).order_by(Feedback.updated_at.desc()))
-            return [FeedbackModel.model_validate(feedback) for feedback in result.scalars().all()]
 
     async def get_feedbacks_by_user_id(
         self,

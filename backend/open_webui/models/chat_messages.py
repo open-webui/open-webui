@@ -491,12 +491,6 @@ class ChatMessageTable:
             chat_ids = result.all()
             return [chat_id for chat_id, _ in chat_ids]
 
-    async def delete_messages_by_chat_id(self, chat_id: str, db: Optional[AsyncSession] = None) -> bool:
-        async with get_async_db_context(db) as db:
-            await db.execute(delete(ChatMessage).filter_by(chat_id=chat_id))
-            await db.commit()
-            return True
-
     async def delete_message_ids_by_chat_id(
         self,
         chat_id: str,
@@ -748,21 +742,6 @@ class ChatMessageTable:
                 'models_used': int(models_used),
                 'active_days': len(active_days),
             }
-
-    async def get_user_first_message_created_at(
-        self,
-        user_id: str,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[int]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(func.min(ChatMessage.created_at)).filter(
-                    ChatMessage.user_id == user_id,
-                    ChatMessage.created_at.isnot(None),
-                )
-            )
-            value = result.scalar()
-            return int(value) if value else None
 
     async def get_user_daily_usage(
         self,

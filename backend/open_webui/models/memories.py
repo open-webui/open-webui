@@ -123,25 +123,6 @@ class MemoriesTable:
             except Exception:
                 return None
 
-    async def get_memory_by_id(self, id: str, db: AsyncSession | None = None) -> MemoryModel | None:
-        async with get_async_db_context(db) as db:
-            try:
-                memory = await db.get(Memory, id)
-                return MemoryModel.model_validate(memory) if memory else None
-            except Exception:
-                return None
-
-    async def delete_memory_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
-        async with get_async_db_context(db) as db:
-            try:
-                await db.execute(delete(Memory).filter_by(id=id))
-                await db.commit()
-
-                return True
-
-            except Exception:
-                return False
-
     async def delete_memories_by_user_id(self, user_id: str, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as db:
             try:

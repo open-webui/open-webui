@@ -269,11 +269,6 @@ class FunctionsTable:
                 result = await db.execute(select(Function).filter_by(type=type))
             return [FunctionModel.model_validate(function) for function in result.scalars().all()]
 
-    async def get_global_filter_functions(self, db: AsyncSession | None = None) -> list[FunctionModel]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(Function).filter_by(type='filter', is_active=True, is_global=True))
-            return [FunctionModel.model_validate(function) for function in result.scalars().all()]
-
     async def get_active_function_ids_by_type(
         self, type: str, db: AsyncSession | None = None
     ) -> list[tuple[str, bool]]:
@@ -285,11 +280,6 @@ class FunctionsTable:
     async def get_active_filter_ids(self, db: AsyncSession | None = None) -> list[tuple[str, bool]]:
         """Return (id, is_global) for active filters without fetching plugin source."""
         return await self.get_active_function_ids_by_type('filter', db=db)
-
-    async def get_global_action_functions(self, db: AsyncSession | None = None) -> list[FunctionModel]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(Function).filter_by(type='action', is_active=True, is_global=True))
-            return [FunctionModel.model_validate(function) for function in result.scalars().all()]
 
     async def get_function_valves_by_id(self, id: str, db: AsyncSession | None = None) -> dict | None:
         async with get_async_db_context(db) as db:

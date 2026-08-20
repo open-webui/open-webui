@@ -8,7 +8,7 @@ from typing import Optional
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.models.users import UserResponse, Users
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Column, Index, Text, delete, func, select
+from sqlalchemy import JSON, BigInteger, Column, Index, Text, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 ####################
@@ -132,18 +132,6 @@ class PromptHistoryTable:
             if entry:
                 return PromptHistoryModel.model_validate(entry)
             return None
-
-    async def get_history_count(
-        self,
-        prompt_id: str,
-        db: Optional[AsyncSession] = None,
-    ) -> int:
-        """Get the number of history entries for a prompt."""
-        async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(func.count()).select_from(PromptHistory).filter(PromptHistory.prompt_id == prompt_id)
-            )
-            return result.scalar()
 
     async def compute_diff(
         self,

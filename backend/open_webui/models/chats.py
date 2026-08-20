@@ -12,7 +12,7 @@ from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.automations import AutomationRun
 from open_webui.models.chat_messages import ChatMessage, ChatMessages
 from open_webui.models.folders import Folders
-from open_webui.models.tags import Tag, TagModel, Tags
+from open_webui.models.tags import Tag, Tags
 from open_webui.utils.misc import get_output_text, sanitize_data_for_db, sanitize_text_for_db
 from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import (
@@ -287,14 +287,6 @@ class ChatTitleIdResponse(BaseModel):
     last_read_at: int | None = None
     snippet: str | None = None
     active: bool = False
-
-
-class SharedChatResponse(BaseModel):
-    id: str
-    title: str
-    share_id: str | None = None
-    updated_at: int
-    created_at: int
 
 
 class ChatListResponse(BaseModel):
@@ -1356,19 +1348,6 @@ class ChatTable:
             result = await session.execute(stmt.where(Chat.meta['internal'].as_boolean().is_not(True)))
             return result.scalar() or 0
 
-    async def get_shared_chat_list_by_user_id(
-        self,
-        user_id: str,
-        filter: dict | None = None,
-        skip: int = 0,
-        limit: int = 50,
-        db: AsyncSession | None = None,
-    ) -> list[SharedChatResponse]:
-        """Delegate to SharedChats for listing shared chats by user."""
-        from open_webui.models.shared_chats import SharedChats
-
-        return await SharedChats.get_by_user_id(user_id, filter=filter, skip=skip, limit=limit, db=db)
-
     async def get_chat_list_by_user_id(
         self,
         user_id: str,
@@ -1473,20 +1452,6 @@ class ChatTable:
                 )
                 for chat in all_chats
             ]
-
-    async def get_chat_list_by_chat_ids(
-        self,
-        chat_ids: list[str],
-        skip: int = 0,
-        limit: int = 50,
-        db: AsyncSession | None = None,
-    ) -> list[ChatModel]:
-        async with get_async_db_context(db) as session:
-            stmt = select(Chat).filter(Chat.id.in_(chat_ids)).filter_by(archived=False)
-            stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
-            result = await session.execute(stmt.order_by(Chat.updated_at.desc()))
-            all_chats = result.scalars().all()
-            return [ChatModel.model_validate(chat) for chat in all_chats]
 
     async def get_chat_metas_by_chat_ids(
         self,
@@ -2134,16 +2099,6 @@ class ChatTable:
         except Exception:
             return None
 
-    async def get_chat_tags_by_id_and_user_id(
-        self, id: str, user_id: str, db: AsyncSession | None = None
-    ) -> list[TagModel]:
-        async with get_async_db_context(db) as session:
-            stmt = select(Chat.meta).where(Chat.id == id)
-            result = await session.execute(stmt)
-            meta = result.scalar_one_or_none()
-            tag_ids = (meta or {}).get('tags', [])
-            return await Tags.get_tags_by_ids_and_user_id(tag_ids, user_id, db=session)
-
     async def get_chat_list_by_user_id_and_tag_name(
         self,
         user_id: str,
@@ -2279,17 +2234,6 @@ class ChatTable:
             counts = await self.count_chats_by_tag_ids_and_user_id(tag_ids, user_id, db=session)
             orphans = [tag_id for tag_id in tag_ids if counts.get(tag_id, 0) <= threshold]
             await Tags.delete_tags_by_ids_and_user_id(orphans, user_id, db=session)
-
-    async def count_chats_by_folder_id_and_user_id(
-        self, folder_id: str, user_id: str, db: AsyncSession | None = None
-    ) -> int:
-        async with get_async_db_context(db) as session:
-            stmt = select(func.count(Chat.id)).filter_by(user_id=user_id, folder_id=folder_id)
-            result = await session.execute(stmt.where(Chat.meta['internal'].as_boolean().is_not(True)))
-            count = result.scalar()
-
-            log.info("Count of chats for folder '%s': %s", folder_id, count)
-            return count
 
     async def count_chats_by_folder_ids_and_user_id(
         self, folder_ids: list[str], user_id: str, db: AsyncSession | None = None
@@ -2497,15 +2441,6 @@ class ChatTable:
             )
             all_chat_files = result.scalars().all()
             return [ChatFileModel.model_validate(chat_file) for chat_file in all_chat_files]
-
-    async def delete_chat_file(self, chat_id: str, file_id: str, db: AsyncSession | None = None) -> bool:
-        try:
-            async with get_async_db_context(db) as session:
-                await session.execute(delete(ChatFile).filter_by(chat_id=chat_id, file_id=file_id))
-                await session.commit()
-                return True
-        except Exception:
-            return False
 
     async def get_shared_chat_ids_by_file_id(self, file_id: str, db: AsyncSession | None = None) -> list[str]:
         """Return IDs of chats that contain this file and have an active share link."""

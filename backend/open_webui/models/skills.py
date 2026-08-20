@@ -154,15 +154,6 @@ class SkillsTable:
         except Exception:
             return None
 
-    async def get_skill_by_name(self, name: str, db: Optional[AsyncSession] = None) -> Optional[SkillModel]:
-        try:
-            async with get_async_db_context(db) as db:
-                result = await db.execute(select(Skill).filter_by(name=name))
-                skill = result.scalars().first()
-                return await self._to_skill_model(skill, db=db) if skill else None
-        except Exception:
-            return None
-
     async def get_skills(
         self,
         user_id: str | None = None,

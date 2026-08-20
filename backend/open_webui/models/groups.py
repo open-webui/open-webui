@@ -128,11 +128,6 @@ class GroupUpdateForm(GroupForm):
     pass
 
 
-class GroupListResponse(BaseModel):
-    items: list[GroupResponse] = []
-    total: int = 0
-
-
 class GroupTable:
     def _ensure_default_share_config(self, group_data: dict) -> dict:
         """Ensure the group data dict has a default share config if not already set."""
@@ -247,61 +242,6 @@ class GroupTable:
                 for group, count in rows
             ]
 
-    async def search_groups(
-        self,
-        filter: Optional[dict] = None,
-        skip: int = 0,
-        limit: int = 30,
-        db: Optional[AsyncSession] = None,
-    ) -> GroupListResponse:
-        async with get_async_db_context(db) as db:
-            stmt = select(Group)
-
-            if filter:
-                if 'query' in filter:
-                    stmt = stmt.filter(Group.name.ilike(f'%{filter["query"]}%'))
-                if 'member_id' in filter:
-                    stmt = stmt.filter(
-                        Group.id.in_(select(GroupMember.group_id).where(GroupMember.user_id == filter['member_id']))
-                    )
-
-                if 'share' in filter:
-                    share_value = filter['share']
-                    stmt = stmt.filter(Group.data.op('->>')('share') == str(share_value))
-
-            # Get total count
-            count_result = await db.execute(select(func.count()).select_from(stmt.subquery()))
-            total = count_result.scalar()
-
-            member_count = (
-                select(func.count(GroupMember.user_id))
-                .where(GroupMember.group_id == Group.id)
-                .correlate(Group)
-                .scalar_subquery()
-                .label('member_count')
-            )
-            result = await db.execute(
-                select(Group, member_count)
-                .where(Group.id.in_(select(stmt.subquery().c.id)))
-                .order_by(Group.updated_at.desc())
-                .offset(skip)
-                .limit(limit)
-            )
-            rows = result.all()
-
-            return {
-                'items': [
-                    GroupResponse.model_validate(
-                        {
-                            **GroupModel.model_validate(group).model_dump(),
-                            'member_count': count or 0,
-                        }
-                    )
-                    for group, count in rows
-                ],
-                'total': total,
-            }
-
     async def get_groups_by_member_id(self, user_id: str, db: Optional[AsyncSession] = None) -> list[GroupModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
@@ -352,22 +292,6 @@ class GroupTable:
 
             return [m[0] for m in members]
 
-    async def get_group_user_ids_by_ids(
-        self, group_ids: list[str], db: Optional[AsyncSession] = None
-    ) -> dict[str, list[str]]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(GroupMember.group_id, GroupMember.user_id).filter(GroupMember.group_id.in_(group_ids))
-            )
-            members = result.all()
-
-            group_user_ids: dict[str, list[str]] = {group_id: [] for group_id in group_ids}
-
-            for group_id, user_id in members:
-                group_user_ids[group_id].append(user_id)
-
-            return group_user_ids
-
     async def set_group_user_ids_by_id(
         self, group_id: str, user_ids: list[str], db: Optional[AsyncSession] = None
     ) -> None:
@@ -396,18 +320,6 @@ class GroupTable:
             result = await db.execute(select(func.count(GroupMember.user_id)).filter(GroupMember.group_id == id))
             count = result.scalar()
             return count if count else 0
-
-    async def get_group_member_counts_by_ids(self, ids: list[str], db: Optional[AsyncSession] = None) -> dict[str, int]:
-        if not ids:
-            return {}
-        async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(GroupMember.group_id, func.count(GroupMember.user_id))
-                .filter(GroupMember.group_id.in_(ids))
-                .group_by(GroupMember.group_id)
-            )
-            rows = result.all()
-            return {group_id: count for group_id, count in rows}
 
     async def update_group_by_id(
         self,
@@ -440,16 +352,6 @@ class GroupTable:
                 return True
         except Exception:
             return False
-
-    async def delete_all_groups(self, db: Optional[AsyncSession] = None) -> bool:
-        async with get_async_db_context(db) as db:
-            try:
-                await db.execute(delete(Group))
-                await db.commit()
-
-                return True
-            except Exception:
-                return False
 
     async def remove_user_from_all_groups(self, user_id: str, db: Optional[AsyncSession] = None) -> bool:
         async with get_async_db_context(db) as db:

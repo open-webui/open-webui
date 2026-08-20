@@ -186,19 +186,6 @@ class NoteTable:
             await AccessGrants.set_access_grants('note', note.id, form_data.access_grants, db=db)
             return await self._to_note_model(new_note, db=db)
 
-    async def get_notes(self, skip: int = 0, limit: int = 50, db: Optional[AsyncSession] = None) -> list[NoteModel]:
-        async with get_async_db_context(db) as db:
-            stmt = select(Note).order_by(Note.updated_at.desc())
-            if skip is not None:
-                stmt = stmt.offset(skip)
-            if limit is not None:
-                stmt = stmt.limit(limit)
-            result = await db.execute(stmt)
-            notes = result.scalars().all()
-            note_ids = [note.id for note in notes]
-            grants_map = await AccessGrants.get_grants_by_resources('note', note_ids, db=db)
-            return [await self._to_note_model(note, access_grants=grants_map.get(note.id, []), db=db) for note in notes]
-
     async def search_notes(
         self,
         user_id: str,

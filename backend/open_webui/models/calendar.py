@@ -822,21 +822,6 @@ class CalendarEventAttendeeTable:
             await db.commit()
             return CalendarEventAttendeeModel.model_validate(att)
 
-    async def get_attendees_by_event(
-        self, event_id: str, db: Optional[AsyncSession] = None
-    ) -> list[CalendarEventAttendeeModel]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(CalendarEventAttendee).filter(CalendarEventAttendee.event_id == event_id))
-            return [CalendarEventAttendeeModel.model_validate(r) for r in result.scalars().all()]
-
-    async def get_events_by_attendee(self, user_id: str, db: Optional[AsyncSession] = None) -> list[str]:
-        """Return event IDs where user is an attendee."""
-        async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(CalendarEventAttendee.event_id).filter(CalendarEventAttendee.user_id == user_id)
-            )
-            return [r[0] for r in result.all()]
-
 
 Calendars = CalendarTable()
 CalendarEvents = CalendarEventTable()

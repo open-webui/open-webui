@@ -80,73 +80,6 @@ class AccessGrantResponse(BaseModel):
 ####################
 
 
-def access_control_to_grants(
-    resource_type: str,
-    resource_id: str,
-    access_control: Optional[dict],
-) -> list[dict]:
-    """
-    Convert an old-style access_control JSON dict to a flat list of grant dicts.
-
-    Semantics:
-    - None  → public read (user:* read) — except files which are private
-    - {}    → private/owner-only (no grants)
-    - {read: {group_ids, user_ids}, write: {group_ids, user_ids}} → specific grants
-
-    Returns a list of dicts with keys: resource_type, resource_id, principal_type, principal_id, permission
-    """
-    grants = []
-
-    if access_control is None:
-        # NULL → public read (user:* for read)
-        # Exception: files with NULL are private (owner-only), no grants needed
-        if resource_type != 'file':
-            grants.append(
-                {
-                    'resource_type': resource_type,
-                    'resource_id': resource_id,
-                    'principal_type': 'user',
-                    'principal_id': '*',
-                    'permission': 'read',
-                }
-            )
-        return grants
-
-    # {} → private/owner-only, no grants
-    if not access_control:
-        return grants
-
-    # Parse structured permissions
-    for permission in ['read', 'write']:
-        perm_data = access_control.get(permission, {})
-        if not perm_data:
-            continue
-
-        for group_id in perm_data.get('group_ids', []):
-            grants.append(
-                {
-                    'resource_type': resource_type,
-                    'resource_id': resource_id,
-                    'principal_type': 'group',
-                    'principal_id': group_id,
-                    'permission': permission,
-                }
-            )
-
-        for user_id in perm_data.get('user_ids', []):
-            grants.append(
-                {
-                    'resource_type': resource_type,
-                    'resource_id': resource_id,
-                    'principal_type': 'user',
-                    'principal_id': user_id,
-                    'permission': permission,
-                }
-            )
-
-    return grants
-
-
 def normalize_access_grants(access_grants: Optional[list]) -> list[dict]:
     """
     Normalize direct access_grants payloads from API forms.
@@ -273,118 +206,12 @@ def strip_anyone_access_grants(access_grants: Optional[list]) -> list:
     ]
 
 
-def grants_to_access_control(grants: list) -> Optional[dict]:
-    """
-    Convert a list of grant objects (AccessGrantModel or AccessGrantResponse)
-    back to the old-style access_control JSON dict for backward compatibility.
-
-    Semantics:
-    - [] (empty) → {} (private/owner-only)
-    - Contains user:*:read → None (public), but write grants are preserved
-    - Otherwise → {read: {group_ids, user_ids}, write: {group_ids, user_ids}}
-
-    Note: "public" (user:*:read) still allows additional write permissions
-    to coexist.  When the wildcard read is present the function returns None
-    for the legacy dict, so callers that need write info should inspect the
-    grants list directly.
-    """
-    if not grants:
-        return {}  # No grants = private/owner-only
-
-    result = {
-        'read': {'group_ids': [], 'user_ids': []},
-        'write': {'group_ids': [], 'user_ids': []},
-    }
-
-    is_public = False
-    for grant in grants:
-        if grant.principal_type == 'user' and grant.principal_id == '*' and grant.permission == 'read':
-            is_public = True
-            continue  # Don't add wildcard to user_ids list
-
-        if grant.permission not in ('read', 'write'):
-            continue
-
-        if grant.principal_type == 'group':
-            if grant.principal_id not in result[grant.permission]['group_ids']:
-                result[grant.permission]['group_ids'].append(grant.principal_id)
-        elif grant.principal_type == 'user':
-            if grant.principal_id not in result[grant.permission]['user_ids']:
-                result[grant.permission]['user_ids'].append(grant.principal_id)
-
-    if is_public:
-        return None  # Public read access
-
-    return result
-
-
 ####################
 # Table Operations
 ####################
 
 
 class AccessGrantsTable:
-    async def grant_access(
-        self,
-        resource_type: str,
-        resource_id: str,
-        principal_type: str,
-        principal_id: str,
-        permission: str,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[AccessGrantModel]:
-        """Add a single access grant. Idempotent (ignores duplicates)."""
-        async with get_async_db_context(db) as db:
-            # Check for existing grant
-            result = await db.execute(
-                select(AccessGrant).filter_by(
-                    resource_type=resource_type,
-                    resource_id=resource_id,
-                    principal_type=principal_type,
-                    principal_id=principal_id,
-                    permission=permission,
-                )
-            )
-            existing = result.scalars().first()
-            if existing:
-                return AccessGrantModel.model_validate(existing)
-
-            grant = AccessGrant(
-                id=str(uuid.uuid4()),
-                resource_type=resource_type,
-                resource_id=resource_id,
-                principal_type=principal_type,
-                principal_id=principal_id,
-                permission=permission,
-                created_at=int(time.time()),
-            )
-            db.add(grant)
-            await db.commit()
-            return AccessGrantModel.model_validate(grant)
-
-    async def revoke_access(
-        self,
-        resource_type: str,
-        resource_id: str,
-        principal_type: str,
-        principal_id: str,
-        permission: str,
-        db: Optional[AsyncSession] = None,
-    ) -> bool:
-        """Remove a single access grant."""
-        async with get_async_db_context(db) as db:
-            result = await db.execute(
-                delete(AccessGrant).filter_by(
-                    resource_type=resource_type,
-                    resource_id=resource_id,
-                    principal_type=principal_type,
-                    principal_id=principal_id,
-                    permission=permission,
-                )
-            )
-            await db.commit()
-            return result.rowcount > 0
-
     async def revoke_all_access(
         self,
         resource_type: str,
@@ -401,44 +228,6 @@ class AccessGrantsTable:
             )
             await db.commit()
             return result.rowcount
-
-    async def set_access_control(
-        self,
-        resource_type: str,
-        resource_id: str,
-        access_control: Optional[dict],
-        db: Optional[AsyncSession] = None,
-    ) -> list[AccessGrantModel]:
-        """
-        Replace all grants for a resource from an access_control JSON dict.
-        This is the primary bridge for backward compat with the frontend.
-        """
-        async with get_async_db_context(db) as db:
-            # Delete all existing grants for this resource
-            await db.execute(
-                delete(AccessGrant).filter_by(
-                    resource_type=resource_type,
-                    resource_id=resource_id,
-                )
-            )
-
-            # Convert JSON to grant dicts
-            grant_dicts = access_control_to_grants(resource_type, resource_id, access_control)
-
-            # Insert new grants
-            results = []
-            for grant_dict in grant_dicts:
-                grant = AccessGrant(
-                    id=str(uuid.uuid4()),
-                    **grant_dict,
-                    created_at=int(time.time()),
-                )
-                db.add(grant)
-                results.append(grant)
-
-            await db.commit()
-
-            return [AccessGrantModel.model_validate(g) for g in results]
 
     async def set_access_grants(
         self,
@@ -476,27 +265,6 @@ class AccessGrantsTable:
 
             await db.commit()
             return [AccessGrantModel.model_validate(g) for g in results]
-
-    async def get_access_control(
-        self,
-        resource_type: str,
-        resource_id: str,
-        db: Optional[AsyncSession] = None,
-    ) -> Optional[dict]:
-        """
-        Reconstruct the old-style access_control JSON dict from grants.
-        For backward compat with the frontend.
-        """
-        async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(AccessGrant).filter_by(
-                    resource_type=resource_type,
-                    resource_id=resource_id,
-                )
-            )
-            grants = result.scalars().all()
-            grant_models = [AccessGrantModel.model_validate(g) for g in grants]
-            return grants_to_access_control(grant_models)
 
     async def get_grants_by_resource(
         self,

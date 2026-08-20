@@ -119,17 +119,6 @@ class SharedChatsTable:
                 return SharedChatModel.model_validate(shared_chat)
             return None
 
-    async def get_by_chat_id(self, chat_id: str, db: Optional[AsyncSession] = None) -> Optional[SharedChatModel]:
-        """Get the shared chat for a given original chat. Returns the most recent one."""
-        async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(SharedChat).filter_by(chat_id=chat_id).order_by(SharedChat.updated_at.desc()).limit(1)
-            )
-            shared_chat = result.scalars().first()
-            if shared_chat:
-                return SharedChatModel.model_validate(shared_chat)
-            return None
-
     async def get_by_user_id(
         self,
         user_id: str,

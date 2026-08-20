@@ -305,17 +305,6 @@ class OAuthSessionTable:
             log.error(f'Error deleting OAuth session: {e}')
             return False
 
-    async def delete_sessions_by_user_id(self, user_id: str, db: Optional[AsyncSession] = None) -> bool:
-        """Delete all OAuth sessions for a user"""
-        try:
-            async with get_async_db_context(db) as db:
-                await db.execute(delete(OAuthSession).filter_by(user_id=user_id))
-                await db.commit()
-                return True
-        except Exception as e:
-            log.error(f'Error deleting OAuth sessions by user ID: {e}')
-            return False
-
     async def delete_sessions_by_user_id_and_provider(
         self, user_id: str, provider: str, db: Optional[AsyncSession] = None
     ) -> bool:
@@ -327,17 +316,6 @@ class OAuthSessionTable:
                 return result.rowcount > 0
         except Exception as e:
             log.error(f'Error deleting OAuth sessions for user {user_id} and provider {provider}: {e}')
-            return False
-
-    async def delete_sessions_by_provider(self, provider: str, db: Optional[AsyncSession] = None) -> bool:
-        """Delete all OAuth sessions for a provider"""
-        try:
-            async with get_async_db_context(db) as db:
-                await db.execute(delete(OAuthSession).filter_by(provider=provider))
-                await db.commit()
-                return True
-        except Exception as e:
-            log.error(f'Error deleting OAuth sessions by provider {provider}: {e}')
             return False
 
 

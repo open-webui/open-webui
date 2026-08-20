@@ -563,26 +563,6 @@ class ChannelTable:
             await db.commit()
             return channel_member
 
-    async def leave_channel(self, channel_id: str, user_id: str, db: Optional[AsyncSession] = None) -> bool:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(ChannelMember).filter(
-                    ChannelMember.channel_id == channel_id,
-                    ChannelMember.user_id == user_id,
-                )
-            )
-            membership = result.scalars().first()
-            if not membership:
-                return False
-
-            membership.status = 'left'
-            membership.is_active = False
-            membership.left_at = int(time.time_ns())
-            membership.updated_at = int(time.time_ns())
-
-            await db.commit()
-            return True
-
     async def get_member_by_channel_and_user_id(
         self, channel_id: str, user_id: str, db: Optional[AsyncSession] = None
     ) -> Optional[ChannelMemberModel]:
@@ -603,30 +583,6 @@ class ChannelTable:
             result = await db.execute(select(ChannelMember).filter(ChannelMember.channel_id == channel_id))
             memberships = result.scalars().all()
             return [ChannelMemberModel.model_validate(membership) for membership in memberships]
-
-    async def pin_channel(
-        self,
-        channel_id: str,
-        user_id: str,
-        is_pinned: bool,
-        db: Optional[AsyncSession] = None,
-    ) -> bool:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(
-                select(ChannelMember).filter(
-                    ChannelMember.channel_id == channel_id,
-                    ChannelMember.user_id == user_id,
-                )
-            )
-            membership = result.scalars().first()
-            if not membership:
-                return False
-
-            membership.is_channel_pinned = is_pinned
-            membership.updated_at = int(time.time_ns())
-
-            await db.commit()
-            return True
 
     async def update_member_last_read_at(
         self, channel_id: str, user_id: str, db: Optional[AsyncSession] = None
@@ -694,23 +650,6 @@ class ChannelTable:
                 return await self._to_channel_model(channel, db=db) if channel else None
         except Exception:
             return None
-
-    async def get_channels_by_file_id(self, file_id: str, db: Optional[AsyncSession] = None) -> list[ChannelModel]:
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(ChannelFile).filter(ChannelFile.file_id == file_id))
-            channel_files = result.scalars().all()
-            channel_ids = [cf.channel_id for cf in channel_files]
-            result = await db.execute(select(Channel).filter(Channel.id.in_(channel_ids)))
-            channels = result.scalars().all()
-            grants_map = await AccessGrants.get_grants_by_resources('channel', channel_ids, db=db)
-            return [
-                await self._to_channel_model(
-                    channel,
-                    access_grants=grants_map.get(channel.id, []),
-                    db=db,
-                )
-                for channel in channels
-            ]
 
     async def get_channels_by_file_id_and_user_id(
         self, file_id: str, user_id: str, db: Optional[AsyncSession] = None
@@ -893,17 +832,6 @@ class ChannelTable:
                 channel_file.message_id = message_id
                 channel_file.updated_at = int(time.time())
 
-                await db.commit()
-                return True
-        except Exception:
-            return False
-
-    async def remove_file_from_channel_by_id(
-        self, channel_id: str, file_id: str, db: Optional[AsyncSession] = None
-    ) -> bool:
-        try:
-            async with get_async_db_context(db) as db:
-                await db.execute(delete(ChannelFile).filter_by(channel_id=channel_id, file_id=file_id))
                 await db.commit()
                 return True
         except Exception:

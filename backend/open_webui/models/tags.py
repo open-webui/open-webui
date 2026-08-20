@@ -50,24 +50,6 @@ class TagChatIdForm(BaseModel):
 
 
 class TagTable:
-    async def insert_new_tag(
-        self,
-        name: str,
-        user_id: str,
-        db: AsyncSession | None = None,
-    ) -> TagModel | None:
-        """Create a new tag, deriving the id from the name."""
-        async with get_async_db_context(db) as db:
-            tag_id = name.replace(' ', '_').lower()
-            try:
-                record = Tag(id=tag_id, user_id=user_id, name=name)
-                db.add(record)
-                await db.commit()
-                return TagModel.model_validate(record) if record else None
-            except Exception as e:
-                log.exception('Error inserting tag %r: %s', name, e)
-                return None  # insertion failed
-
     async def get_tag_by_name_and_user_id(
         self, name: str, user_id: str, db: AsyncSession | None = None
     ) -> TagModel | None:

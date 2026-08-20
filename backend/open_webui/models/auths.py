@@ -163,18 +163,6 @@ class AuthsTable:
                 return
             return resolved
 
-    async def authenticate_user_by_api_key(
-        self,
-        api_key: str,
-        db: AsyncSession | None = None,
-    ) -> UserModel | None:
-        """Look up the user that owns the given API key."""
-        log.info('authenticate_user_by_api_key')
-        if not api_key:
-            return
-        # delegate to the Users model for the actual lookup
-        return await Users.get_user_by_api_key(api_key, db=db)
-
     async def authenticate_user_by_email(
         self,
         email: str,
