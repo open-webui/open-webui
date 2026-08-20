@@ -312,6 +312,12 @@
 	export let collaboration = false;
 
 	export let showFormattingToolbar = true;
+	// Separate from showFormattingToolbar, which also gates the selection-triggered
+	// BubbleMenu -- this only controls the FloatingMenu that appears just from
+	// focusing an empty line, without any selection. Default true to match prior
+	// behavior; single-message inputs (chat/channel compose) turn it off so the
+	// toolbar only ever appears "on demand" (text selected), not on focus alone.
+	export let showFloatingMenu = true;
 
 	export let preserveBreaks = false;
 	export let generateAutoCompletion: Function = async () => null;
@@ -876,7 +882,11 @@
 									// Only show when editor is focused and text is selected
 									return view.hasFocus() && from !== to;
 								}
-							}),
+							})
+						]
+					: []),
+				...(richText && showFormattingToolbar && showFloatingMenu
+					? [
 							FloatingMenu.configure({
 								element: floatingMenuElement,
 								appendTo: () => document.body,
@@ -1367,14 +1377,16 @@
 		<FormattingButtons {editor} />
 	</div>
 
-	<div
-		bind:this={floatingMenuElement}
-		id="floating-menu"
-		class="p-0"
-		style="visibility: hidden; opacity: 0; position: absolute; z-index: 9999;"
-	>
-		<FormattingButtons {editor} />
-	</div>
+	{#if showFloatingMenu}
+		<div
+			bind:this={floatingMenuElement}
+			id="floating-menu"
+			class="p-0"
+			style="visibility: hidden; opacity: 0; position: absolute; z-index: 9999;"
+		>
+			<FormattingButtons {editor} />
+		</div>
+	{/if}
 {/if}
 
 <div

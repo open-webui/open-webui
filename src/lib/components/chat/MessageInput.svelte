@@ -2022,6 +2022,7 @@
 													richText={$settings?.richTextInput ?? true}
 													messageInput={true}
 													showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
+													showFloatingMenu={false}
 													floatingMenuPlacement={'top-start'}
 													insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}
 													shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
