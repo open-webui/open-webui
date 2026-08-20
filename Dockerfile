@@ -152,6 +152,9 @@ RUN set -e; \
     # Without an explicit dir this lands in /root/nltk_data, which is mode 0700
     # and so unreadable when the container does not run as root.
     python -c "import nltk; nltk.download('punkt_tab', download_dir='/usr/local/share/nltk_data')"; \
+    # unstructured installs this into site-packages on first use, which fails
+    # when the container is not root. See the note below this RUN.
+    python -m spacy download en_core_web_sm --no-cache-dir; \
     else \
     pip3 install 'torch<=2.9.1' torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir; \
     uv pip install --system -r requirements.txt --no-cache-dir; \
@@ -163,16 +166,18 @@ RUN set -e; \
     # Without an explicit dir this lands in /root/nltk_data, which is mode 0700
     # and so unreadable when the container does not run as root.
     python -c "import nltk; nltk.download('punkt_tab', download_dir='/usr/local/share/nltk_data')"; \
+    # unstructured installs this into site-packages on first use, which fails
+    # when the container is not root. See the note below this RUN.
+    python -m spacy download en_core_web_sm --no-cache-dir; \
     fi; \
     fi; \
     mkdir -p /app/backend/data; chown -R $UID:$GID /app/backend/data/; \
     if [ -d /app/backend/data/cache ]; then chmod -R a+rX /app/backend/data/cache; fi; \
     rm -rf /var/lib/apt/lists/*;
 
-# Optional: PPTX parsing through unstructured may need spaCy's English model.
-# Keep this out of the default image to avoid the extra image bloat; deployments
-# with read-only site-packages can uncomment it and bake the model in.
-# RUN python -m spacy download en_core_web_sm
+# The spaCy model above is installed by default rather than left for downstreams
+# to uncomment here (5b8975b7d): uncommenting requires building your own image,
+# so it is not available on a published tag. The slim tag still skips it.
 
 # Install Ollama if requested
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
