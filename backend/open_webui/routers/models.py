@@ -353,7 +353,7 @@ async def export_models(
     if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
         return await Models.get_models(db=db)
     else:
-        return await Models.get_models_by_user_id(user.id, db=db)
+        return await Models.get_models(writable_by_user_id=user.id, db=db)
 
 
 ############################
