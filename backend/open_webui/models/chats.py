@@ -250,10 +250,6 @@ class ChatTitleMessagesForm(BaseModel):
     messages: list[dict]
 
 
-class ChatTitleForm(BaseModel):
-    title: str
-
-
 class ChatResponse(BaseModel):
     id: str
     user_id: str

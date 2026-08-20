@@ -1516,12 +1516,6 @@ class UrlForm(BaseModel):
     url: str
 
 
-class UploadBlobForm(BaseModel):
-    """Form carrying a filename for blob uploads."""
-
-    filename: str
-
-
 def parse_huggingface_url(hf_url: str) -> str | None:
     """Extract the filename from a HuggingFace download URL."""
     try:

@@ -39,16 +39,6 @@ class TagModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)  # allows ORM model binding
 
 
-# --- tag schema forms ---
-# Forms
-####################
-
-
-class TagChatIdForm(BaseModel):
-    name: str
-    chat_id: str
-
-
 class TagTable:
     async def insert_new_tag(
         self,

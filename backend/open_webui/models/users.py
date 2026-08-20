@@ -152,19 +152,6 @@ class ApiKey(Base):
     updated_at = Column(BigInteger, nullable=False)
 
 
-class ApiKeyModel(BaseModel):
-    id: str
-    user_id: str
-    key: str
-    data: dict | None = None
-    expires_at: int | None = None
-    last_used_at: int | None = None
-    created_at: int  # timestamp in epoch
-    updated_at: int  # timestamp in epoch
-
-    model_config = ConfigDict(from_attributes=True)
-
-
 ####################
 # Forms
 ####################
@@ -185,15 +172,6 @@ class UpdateProfileForm(BaseModel):
 
 class UserGroupIdsModel(UserModel):
     group_ids: list[str] = []
-
-
-class UserModelResponse(UserModel):
-    model_config = ConfigDict(extra='allow')
-
-
-class UserListResponse(BaseModel):
-    users: list[UserModelResponse]
-    total: int
 
 
 class UserGroupIdsListResponse(BaseModel):
@@ -230,11 +208,6 @@ class UserIdNameStatusResponse(UserStatus):
 
 class UserInfoListResponse(BaseModel):
     users: list[UserInfoResponse]
-    total: int
-
-
-class UserIdNameListResponse(BaseModel):
-    users: list[UserIdNameResponse]
     total: int
 
 

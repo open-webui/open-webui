@@ -86,14 +86,6 @@ class GroupMember(Base):
     updated_at = Column(BigInteger, nullable=True)
 
 
-class GroupMemberModel(BaseModel):
-    id: str
-    group_id: str
-    user_id: str
-    created_at: Optional[int] = None  # timestamp in epoch
-    updated_at: Optional[int] = None  # timestamp in epoch
-
-
 ####################
 # Forms
 ####################

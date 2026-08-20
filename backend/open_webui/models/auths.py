@@ -34,15 +34,6 @@ class Auth(Base):  # credential ↔ user linkage
     active = Column(Boolean)  # account soft-disable toggle
 
 
-class AuthModel(BaseModel):
-    """Pydantic mirror of the ``auth`` table row."""
-
-    id: str
-    email: str
-    password: str
-    active: bool = True
-
-
 class Token(BaseModel):
     """JWT bearer-token response wrapper."""
 
@@ -66,10 +57,6 @@ class SigninForm(BaseModel):
 class LdapForm(BaseModel):
     user: str
     password: str
-
-
-class ProfileImageUrlForm(BaseModel):
-    profile_image_url: str
 
 
 class UpdatePasswordForm(BaseModel):

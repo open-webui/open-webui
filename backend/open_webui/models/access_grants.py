@@ -57,24 +57,6 @@ class AccessGrantModel(BaseModel):
     created_at: int
 
 
-class AccessGrantResponse(BaseModel):
-    """Slim grant model for API responses — resource context is implicit from the parent."""
-
-    id: str
-    principal_type: str
-    principal_id: str
-    permission: str
-
-    @classmethod
-    def from_grant(cls, grant: 'AccessGrantModel') -> 'AccessGrantResponse':
-        return cls(
-            id=grant.id,
-            principal_type=grant.principal_type,
-            principal_id=grant.principal_id,
-            permission=grant.permission,
-        )
-
-
 ####################
 # Conversion utilities
 ####################
@@ -275,7 +257,7 @@ def strip_anyone_access_grants(access_grants: Optional[list]) -> list:
 
 def grants_to_access_control(grants: list) -> Optional[dict]:
     """
-    Convert a list of grant objects (AccessGrantModel or AccessGrantResponse)
+    Convert a list of AccessGrantModel objects
     back to the old-style access_control JSON dict for backward compatibility.
 
     Semantics:

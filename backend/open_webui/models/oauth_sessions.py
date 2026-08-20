@@ -51,18 +51,6 @@ class OAuthSessionModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-####################
-# Forms
-####################
-
-
-class OAuthSessionResponse(BaseModel):
-    id: str
-    user_id: str
-    provider: str
-    expires_at: int
-
-
 class OAuthSessionTable:
     def __init__(self):
         self.encryption_key = OAUTH_SESSION_TOKEN_ENCRYPTION_KEY

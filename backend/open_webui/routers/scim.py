@@ -65,15 +65,6 @@ def scim_error(status_code: int, detail: str, scim_type: Optional[str] = None):
     return JSONResponse(status_code=status_code, content=error_body)
 
 
-class SCIMError(BaseModel):
-    """SCIM Error Response"""
-
-    schemas: List[str] = [SCIM_ERROR_SCHEMA]
-    status: str
-    scimType: Optional[str] = None
-    detail: Optional[str] = None
-
-
 class SCIMMeta(BaseModel):
     """SCIM Resource Metadata"""
 
