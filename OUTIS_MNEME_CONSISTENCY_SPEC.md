@@ -227,25 +227,50 @@ left for a follow-up rather than chased down.
    `src/outis-mneme-theme.css`.
 2. **Finding 2** (accent cliff) — quantitatively the largest single defect found (a `0.306` `L`
    jump against a `~0.08` baseline). **Implemented** (600–900 re-derived; 500/950 anchors
-   untouched, per the plan above). The original spec's own pattern was to adjust after a live
-   look (e.g. 13px→12px) — do the same here if the new 600/700 don't look right in practice.
+   untouched, per the plan above). Verified live post-deploy; the new 600/700 read fine in
+   practice.
 3. **Finding 4** — investigated, no code change; the suspected gap doesn't exist (see correction
    above).
-4. **Finding 3** (competing white/mint/amber ceilings) — real, but the largest in scope (368+ call
-   sites) and explicitly deferred: do as a follow-up pass once 1/2 have had a live look, re-diff
-   which sites still look inconsistent once the accent ramp itself stops fighting them for
-   attention. **Not implemented in this pass.**
+4. **Finding 5** (code-block font size) — found live after 1/2 landed, exactly the kind of
+   follow-up this pass anticipated. **Implemented** in both `codemirror-outis-mneme-theme.ts` and
+   `outis-mneme-theme.css`.
+5. **Finding 6** (`rounded-full` / toast corners) — scope expansion per explicit live direction.
+   **Implemented**.
+6. **Finding 3** (competing white/mint/amber ceilings) — real, but the largest in scope (368+ call
+   sites) and explicitly deferred: do as a follow-up pass, re-diff which sites still look
+   inconsistent now that 1/2/5/6 are live. **Not implemented in this pass — the one open item.**
 
 ## Acceptance
 
-- Chat compose box and the rendered response above it read at the same size. ✅
+- Chat compose box and the rendered response above it read at the same size. ✅ (verified live:
+  both compute to `12px`)
 - `NoteEditor`, `CitationModal`, and a tool's `Valves` panel read at a size consistent with the
   main thread, not at their pre-theme Inter measurements. ✅
 - No accent-scale step between `500` and `900` drops WCAG contrast below `4.5:1` in one jump from
   its neighbor the way `500→600` currently did. ✅ (`500→600` now `14.7:1→9.5:1`, `600→700` now
-  `9.5:1→5.8:1`)
+  `9.5:1→5.8:1`) — verified live: `getComputedStyle` on `html.outis-mneme` returns the new hexes.
+- A code block and the prose paragraph next to it read at the same size. ✅ (Finding 5; verified
+  live: `.cm-content` and `.markdown-prose` both compute to `12px`)
+- `rounded-full` elements (avatars, buttons, status dots) and toast notifications are flat. ✅
+  (Finding 6; verified live: avatar `border-radius` computes to `0px`)
 - `dark`/`oled-dark`/`light`/`her`/`system` remain unmodified — this is a same-theme consistency
-  pass, not a scope change. ✅ (only `outis-mneme-theme.css` touched, all changes scoped to
-  `html.outis-mneme`)
+  pass, not a scope change. ✅ (only `outis-mneme-theme.css` and
+  `codemirror-outis-mneme-theme.ts` touched, all CSS changes scoped to `html.outis-mneme`)
 - Still open: Finding 3 (needs a live visual pass across the 368+ `text-white` sites, not a
   blind find-replace).
+
+## Verification and deployment record
+
+Verified live against a real backend (not just the computed math above): npm-installed under
+Node 20 (repo requires `>=20`; the ambient Node was 18), ran `npm run dev`, and connected it to
+the real Open WebUI backend container on `outis` (port `3001`, tunneled to local `8080` — port
+`8080` on `outis` is a separate llama.cpp inference server, not this app). Confirmed via
+`getComputedStyle` in the running app, not just visual inspection, for every item checked off
+above.
+
+Shipped as commit `3b0c5b1d9` on `theme/outis-mneme`
+(https://github.com/ankurtrapasiya/open-webui), built by `.github/workflows/docker-outis-mneme.yaml`
+into `ghcr.io/ankurtrapasiya/open-webui:outis-mneme-3b0c5b1` (pinned) /
+`:outis-mneme` (moving), and redeployed on `outis` in place of the prior
+`outis-mneme-ddc98bb` container — same volume (`llama-server_open-webui-data`), network
+(`llama-server_default`), port mapping (`3001:8080`), restart policy, and env vars preserved.
