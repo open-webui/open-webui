@@ -29,7 +29,16 @@ fi
 
 # ── Secret key setup ─────────────────────────────────────────────────────────
 
-KEY_FILE="${WEBUI_SECRET_KEY_FILE:-.webui_secret_key}"
+# The script cd's to its own directory, which lives in the image: a key written
+# there is lost on every container recreate and is not writable when the
+# container does not run as root. Fall back to DATA_DIR instead.
+if [[ -n "${WEBUI_SECRET_KEY_FILE:-}" ]]; then
+  KEY_FILE="$WEBUI_SECRET_KEY_FILE"
+elif [[ -f .webui_secret_key && -s .webui_secret_key ]]; then
+  KEY_FILE=".webui_secret_key"
+else
+  KEY_FILE="${DATA_DIR:-./data}/.webui_secret_key"
+fi
 WEBUI_SECRET_KEY_LENGTH="${WEBUI_SECRET_KEY_LENGTH:-24}"
 PORT="${PORT:-8080}"
 HOST="${HOST:-0.0.0.0}"
@@ -37,13 +46,20 @@ HOST="${HOST:-0.0.0.0}"
 if [[ -z "${WEBUI_SECRET_KEY:-}" && -z "${WEBUI_JWT_SECRET_KEY:-}" ]]; then
   echo "No WEBUI_SECRET_KEY environment variable set, loading from file."
 
-  if [[ ! -f "$KEY_FILE" ]]; then
+  # Regenerate when missing or empty, never when merely unreadable: such a key may
+  # belong to another UID, and it also encrypts OAuth sessions and valves.
+  if [[ ! -s "$KEY_FILE" ]]; then
     echo "Generating new WEBUI_SECRET_KEY..."
     if ! [[ "$WEBUI_SECRET_KEY_LENGTH" =~ ^[1-9][0-9]*$ ]]; then
       echo "WEBUI_SECRET_KEY_LENGTH must be a positive integer." >&2
       exit 1
     fi
-    head -c "$WEBUI_SECRET_KEY_LENGTH" /dev/random | base64 > "$KEY_FILE"
+    # 0640/0750: a volume remounted under a different arbitrary UID keeps group 0.
+    (
+      umask 027
+      mkdir -p -- "$(dirname -- "$KEY_FILE")"
+      head -c "$WEBUI_SECRET_KEY_LENGTH" /dev/random | base64 > "$KEY_FILE"
+    )
   fi
 
   echo "Loading WEBUI_SECRET_KEY from ${KEY_FILE}"
