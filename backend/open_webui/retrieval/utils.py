@@ -5,7 +5,6 @@ import hashlib
 import logging
 import os
 import re
-import time
 from typing import Awaitable, Optional, Union
 from urllib.parse import quote
 
@@ -856,39 +855,6 @@ async def query_collection_with_hybrid_search(
     return merge_and_sort_query_results(results, k=k)
 
 
-def generate_openai_batch_embeddings(
-    model: str,
-    texts: list[str],
-    url: str = 'https://api.openai.com/v1',
-    key: str = '',
-    prefix: str = None,
-    user: UserModel = None,
-) -> list[list[float]]:
-    log.debug('generate_openai_batch_embeddings:model %s batch size: %s', model, len(texts))
-    json_data = {'input': texts, 'model': model}
-    if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
-        json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
-
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {key}',
-    }
-    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-        headers = include_user_info_headers(headers, user)
-
-    r = requests.post(
-        f'{url}/embeddings',
-        headers=headers,
-        json=json_data,
-    )
-    r.raise_for_status()
-    data = r.json()
-    if 'data' in data:
-        return [elem['embedding'] for elem in data['data']]
-    else:
-        raise ValueError("Unexpected OpenAI embeddings response: missing 'data' key")
-
-
 async def agenerate_openai_batch_embeddings(
     model: str,
     texts: list[str],
@@ -924,48 +890,6 @@ async def agenerate_openai_batch_embeddings(
                 return [item['embedding'] for item in data['data']]
             else:
                 raise ValueError("Unexpected OpenAI embeddings response: missing 'data' key")
-
-
-def generate_azure_openai_batch_embeddings(
-    model: str,
-    texts: list[str],
-    url: str,
-    key: str = '',
-    version: str = '',
-    prefix: str = None,
-    user: UserModel = None,
-) -> list[list[float]]:
-    log.debug('generate_azure_openai_batch_embeddings:deployment %s batch size: %s', model, len(texts))
-    json_data = {'input': texts}
-    if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
-        json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
-
-    url = f'{url}/openai/deployments/{model}/embeddings?api-version={version}'
-
-    for _ in range(5):
-        headers = {
-            'Content-Type': 'application/json',
-            'api-key': key,
-        }
-        if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-            headers = include_user_info_headers(headers, user)
-
-        r = requests.post(
-            url,
-            headers=headers,
-            json=json_data,
-        )
-        if r.status_code == 429:
-            retry = float(r.headers.get('Retry-After', '1'))
-            time.sleep(retry)
-            continue
-        r.raise_for_status()
-        data = r.json()
-        if 'data' in data:
-            return [elem['embedding'] for elem in data['data']]
-        else:
-            raise ValueError("Unexpected Azure OpenAI embeddings response: missing 'data' key")
-    raise Exception('Azure OpenAI embedding request failed: max retries (429) exceeded')
 
 
 async def agenerate_azure_openai_batch_embeddings(
@@ -1006,42 +930,6 @@ async def agenerate_azure_openai_batch_embeddings(
                 return [item['embedding'] for item in data['data']]
             else:
                 raise ValueError("Unexpected Azure OpenAI embeddings response: missing 'data' key")
-
-
-def generate_ollama_batch_embeddings(
-    model: str,
-    texts: list[str],
-    url: str,
-    key: str = '',
-    prefix: str = None,
-    user: UserModel = None,
-) -> list[list[float]]:
-    log.debug('generate_ollama_batch_embeddings:model %s batch size: %s', model, len(texts))
-    json_data = {'input': texts, 'model': model, 'truncate': True}
-    if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
-        json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
-
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {key}',
-    }
-    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
-        headers = include_user_info_headers(headers, user)
-
-    r = requests.post(
-        f'{url}/api/embed',
-        headers=headers,
-        json=json_data,
-    )
-    if r.status_code != 200:
-        error_detail = r.json().get('error', r.text)
-        raise Exception(f'Ollama embed error ({r.status_code}): {error_detail}')
-    data = r.json()
-
-    if 'embeddings' in data:
-        return data['embeddings']
-    else:
-        raise ValueError("Unexpected Ollama embeddings response: missing 'embeddings' key")
 
 
 async def agenerate_ollama_batch_embeddings(
