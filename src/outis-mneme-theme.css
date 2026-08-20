@@ -101,6 +101,54 @@ html.outis-mneme pre {
 	font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+/* The login/signup email+password inputs (and any other input a browser
+   recognizes for autofill) are `bg-transparent` in the component's own
+   markup -- correct, theme-following CSS. The white background reported
+   live comes from the browser itself: Chrome/Safari apply autofill styling
+   via an internal UA style that plain `background-color` cannot override,
+   at any specificity or with !important, once a field is autofilled or
+   Chrome recognizes a saved credential for it. The only working override is
+   this box-shadow-inset trick (paints an opaque inset shadow the size of the
+   field, visually replacing the background) plus -webkit-text-fill-color
+   (autofill also force-recolors the text itself, independent of `color`),
+   plus a very long background-color transition delay, which stops Chrome's
+   periodic re-application of its own yellow/white flash from being visible.
+   No prior handling for this existed anywhere in the codebase. */
+html.outis-mneme input:-webkit-autofill,
+html.outis-mneme input:-webkit-autofill:hover,
+html.outis-mneme input:-webkit-autofill:focus,
+html.outis-mneme input:-webkit-autofill:active {
+	box-shadow: 0 0 0 1000px var(--color-gray-950) inset !important;
+	-webkit-text-fill-color: var(--color-gray-50) !important;
+	caret-color: var(--color-gray-50);
+	transition: background-color 5000s ease-in-out 0s;
+}
+
+html.outis-mneme input:autofill {
+	background-color: var(--color-gray-950) !important;
+	color: var(--color-gray-50) !important;
+}
+
+/* Finding 3 (OUTIS_MNEME_CONSISTENCY_SPEC.md): literal `text-white`/
+   `dark:text-white` (368 usages, 159 files -- sidebar labels, modal headers,
+   primary buttons) sat at ~20:1 contrast, competing with the theme's own
+   near-white gray-50 (15.8:1) and the prose ladder's amber headings (13.1:1)
+   as three unrelated "brightest text" ceilings on screen at once.
+
+   `--color-white` is a real Tailwind v4 token (node_modules/tailwindcss/
+   theme.css), overridable exactly like the gray and blue scales above --
+   but overriding it globally would also retint every `bg-white`/
+   `border-white` scrim and badge, which is the blanket-risk the original
+   theme spec explicitly avoided for this reason. Targeting the `text-white`/
+   `dark:text-white` class tokens directly instead: only text color moves,
+   backgrounds/borders/rings/decorations stay literal white as before, and
+   none of the 159 component files change. `[class~=...]` matches the exact
+   class token, not a substring. */
+html.outis-mneme [class~='text-white'],
+html.outis-mneme [class~='dark:text-white'] {
+	color: var(--color-gray-50);
+}
+
 /* `rounded-full` (144 component files) is a fixed 9999px utility, not driven
    by the --radius-* scale above, so flattening that scale alone leaves every
    pill-shaped button (Sign in, Check Again, ...) and every genuine circle

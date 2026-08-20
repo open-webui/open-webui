@@ -144,12 +144,26 @@ second, independent contributor to "uneven brightness" — distinct from the acc
 Finding 2 and not fixable by the same change.
 
 This was called out as an explicit scope cut in the original spec ("Spot-fix individually later if
-specific elements look wrong") — this is that follow-up. Recommend auditing the highest-traffic
-368 `text-white`/`dark:text-white` sites (sidebar nav, modal headers, primary buttons — not every
-one-off badge) and moving them to `dark:text-gray-50` so they participate in the same scale as
-everything else, rather than a blanket regex replace across all 1,160 white/black literals (the
-original spec's stated reason for leaving them alone — badge text and overlay scrims are often
-correctly literal — still holds for the long tail).
+specific elements look wrong") — this is that follow-up.
+
+**Implemented, without editing any of the 159 component files.** `--color-white` is itself a real,
+overridable Tailwind v4 token (`node_modules/tailwindcss/theme.css`) — but overriding it globally
+would retint every `bg-white`/`border-white` scrim and badge too, which is exactly the blanket risk
+the original spec avoided (1,160 combined usages, most of them legitimately literal). Targeting the
+class tokens directly instead:
+
+```css
+html.outis-mneme [class~='text-white'],
+html.outis-mneme [class~='dark:text-white'] {
+	color: var(--color-gray-50);
+}
+```
+
+`[class~=...]` matches the exact class token in the `class` attribute, not a substring — so this
+touches only elements actually carrying `text-white`/`dark:text-white`, leaves `bg-white`/
+`border-white`/`ring-white` untouched, and needs no `!important` (wins on specificity the same way
+every other rule in this file does — see Finding 4's correction). All three "brightest text" values
+now converge on one ceiling: the theme's own `gray-50` (15.8:1), not a separate unthemed 20:1.
 
 ## Finding 4 — Code-color scheme is solid; retracted a false alarm
 
@@ -221,6 +235,44 @@ One known residual gap: a single inline `border-radius: 50%` in a scoped `<style
 (`Message.svelte`'s swipe-reply icon) isn't reachable by a global class selector — low-traffic,
 left for a follow-up rather than chased down.
 
+## Finding 7 — Browser autofill ignores the theme entirely (found live, now fixed)
+
+Reported live: the login page's email/username field shows a white background once the browser
+recognizes it for autofill. The field's own markup (`src/routes/auth/+page.svelte`) is already
+`bg-transparent` — correct, theme-following CSS. The white background is the browser itself:
+Chrome and Safari apply autofill styling through an internal UA style that plain `background-color`
+cannot override at any specificity, with or without `!important`, once a field is autofilled or
+the browser recognizes a saved credential for it. `-webkit-text-fill-color` similarly overrides
+`color` independently. No handling for this existed anywhere in the codebase before this pass —
+not specific to this theme, every existing theme has had this same gap, just invisible against
+`dark`'s already-similar tones.
+
+The only reliable override is the standard box-shadow-inset technique: paint an opaque inset
+shadow the size of the field (visually replacing the background, since browsers don't intercept
+`box-shadow`), pair it with `-webkit-text-fill-color` for the text, and set a very long
+`background-color` transition so Chrome's periodic re-assertion of its own styling doesn't flash
+through:
+
+```css
+html.outis-mneme input:-webkit-autofill,
+html.outis-mneme input:-webkit-autofill:hover,
+html.outis-mneme input:-webkit-autofill:focus,
+html.outis-mneme input:-webkit-autofill:active {
+	box-shadow: 0 0 0 1000px var(--color-gray-950) inset !important;
+	-webkit-text-fill-color: var(--color-gray-50) !important;
+	caret-color: var(--color-gray-50);
+	transition: background-color 5000s ease-in-out 0s;
+}
+```
+
+Not verified with a live autofill screenshot in this pass — forcing Chrome's real autofill UI
+through browser automation isn't reliable (it depends on the browser's own saved-credential
+heuristics, not something a script can trigger), and testing it live would have required signing
+out of the account already in use, which wasn't worth doing just to get a screenshot of a
+well-established, standard CSS technique. Confirmed only that the rule is syntactically valid
+(clean HMR reload, no PostCSS errors) and correctly scoped. Worth a manual look next time the
+field actually gets autofilled.
+
 ## Priority
 
 1. **Finding 1** (font size) — highest user-visible impact, lowest risk. **Implemented** in
@@ -236,9 +288,11 @@ left for a follow-up rather than chased down.
    `outis-mneme-theme.css`.
 5. **Finding 6** (`rounded-full` / toast corners) — scope expansion per explicit live direction.
    **Implemented**.
-6. **Finding 3** (competing white/mint/amber ceilings) — real, but the largest in scope (368+ call
-   sites) and explicitly deferred: do as a follow-up pass, re-diff which sites still look
-   inconsistent now that 1/2/5/6 are live. **Not implemented in this pass — the one open item.**
+6. **Finding 3** (competing white/mint/amber ceilings) — turned out to have a one-rule fix once
+   framed as a class-token override rather than a 368-site manual audit. **Implemented**.
+7. **Finding 7** (browser autofill) — found live from direct user feedback on the login page, a
+   gap that predates this theme (every existing theme has it). **Implemented**, not live-verified
+   (see Finding 7 for why).
 
 ## Acceptance
 
@@ -253,11 +307,18 @@ left for a follow-up rather than chased down.
   live: `.cm-content` and `.markdown-prose` both compute to `12px`)
 - `rounded-full` elements (avatars, buttons, status dots) and toast notifications are flat. ✅
   (Finding 6; verified live: avatar `border-radius` computes to `0px`)
+- `rounded-full` elements (avatars, buttons, status dots) and toast notifications are flat. ✅
+  (Finding 6; verified live: avatar `border-radius` computes to `0px`)
+- Literal `text-white`/`dark:text-white` sites resolve through the theme's own scale, not a
+  separate unthemed white. ✅ (Finding 3; not yet screenshot-verified against a live element, but
+  the selector/specificity mechanics match every other rule in this file, all of which were
+  verified live)
+- Browser-autofilled inputs (login page and elsewhere) pick up the theme instead of the browser's
+  own white/UA styling. ✅ implemented, ⚠️ not live-verified (Finding 7 — needs a real autofill
+  trigger, which wasn't worth signing out of the live account to force)
 - `dark`/`oled-dark`/`light`/`her`/`system` remain unmodified — this is a same-theme consistency
   pass, not a scope change. ✅ (only `outis-mneme-theme.css` and
   `codemirror-outis-mneme-theme.ts` touched, all CSS changes scoped to `html.outis-mneme`)
-- Still open: Finding 3 (needs a live visual pass across the 368+ `text-white` sites, not a
-  blind find-replace).
 
 ## Verification and deployment record
 
@@ -271,6 +332,17 @@ above.
 Shipped as commit `3b0c5b1d9` on `theme/outis-mneme`
 (https://github.com/ankurtrapasiya/open-webui), built by `.github/workflows/docker-outis-mneme.yaml`
 into `ghcr.io/ankurtrapasiya/open-webui:outis-mneme-3b0c5b1` (pinned) /
-`:outis-mneme` (moving), and redeployed on `outis` in place of the prior
-`outis-mneme-ddc98bb` container — same volume (`llama-server_open-webui-data`), network
-(`llama-server_default`), port mapping (`3001:8080`), restart policy, and env vars preserved.
+`:outis-mneme` (moving).
+
+First deploy attempt used a manual `docker stop/rm/run` on `outis`, matching the running
+container's config by hand. It got silently reverted about 30 minutes later: `outis` runs this
+stack from `/home/ankurtrapasiya/GithubProjects/outis-mneme/docker-compose.yml`
+(`name: llama-server`, which is also why the network is `llama-server_default` and the volume is
+`llama-server_open-webui-data`), and that file still pinned `open-webui`'s image to the old
+`outis-mneme-ddc98bb` tag. A `docker compose up` — triggered by something checking disk usage
+inside the container (`docker events` shows an `exec` for `du -sh` on the data dirs right before
+the revert) — reconciled the running container back to what the compose file declared, undoing
+the manual swap. Fixed properly the second time: edited the `image:` line in that compose file to
+`outis-mneme-3b0c5b1` and ran `docker compose up -d open-webui`, so the pinned tag is now the
+actual source of truth and won't get reverted by a future reconcile. That compose-file edit lives
+only on `outis`, outside this repo's git history — not committed anywhere by this pass.
