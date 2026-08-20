@@ -4958,13 +4958,18 @@ async def streaming_chat_response_handler(response, ctx):
                                             }
                                         )
 
+                                    # content and reasoning deltas are raw JSON: a stream filter can make them any type
                                     value = delta.get('content')
+                                    if value and not isinstance(value, str):
+                                        value = f'{value}'
 
                                     reasoning_content = (
                                         delta.get('reasoning_content')
                                         or delta.get('reasoning')
                                         or delta.get('thinking')
                                     )
+                                    if reasoning_content and not isinstance(reasoning_content, str):
+                                        reasoning_content = f'{reasoning_content}'
                                     reasoning_details = get_reasoning_details(delta)
                                     reasoning_detail_items = (
                                         [item for item in reasoning_details if isinstance(item, dict)]
@@ -5095,7 +5100,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             )
 
                                         # closure-cell str += recopies per chunk; append + join once at read is O(n)
-                                        content_parts.append(value if isinstance(value, str) else f'{value}')
+                                        content_parts.append(value)
 
                                         # Check if we're inside a tag-based block
                                         # (reasoning, code_interpreter, or solution).
