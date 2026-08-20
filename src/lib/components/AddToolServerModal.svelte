@@ -17,7 +17,11 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tags from './common/Tags.svelte';
 	import { getToolServerData } from '$lib/apis';
-	import { verifyToolServerConnection, registerOAuthClient } from '$lib/apis/configs';
+	import {
+		verifyToolServerConnection,
+		registerOAuthClient,
+		initiateOAuthRedirect
+	} from '$lib/apis/configs';
 	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -73,6 +77,29 @@
 		'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
 	const selectClass =
 		'bg-transparent pr-5 outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
+	const isMcpOAuth = () => type === 'mcp' && ['oauth_2.1', 'oauth_2.1_static'].includes(auth_type);
+	const verifyLabel = () =>
+		isMcpOAuth() ? $i18n.t('Check OAuth Discovery') : $i18n.t('Verify Connection');
+	const verifySuccessMessage = () =>
+		isMcpOAuth() ? $i18n.t('OAuth discovery successful') : $i18n.t('Connection successful');
+
+	const authorizeOAuthHandler = () => {
+		if (!id) {
+			toast.error($i18n.t('Please enter a valid ID'));
+			return;
+		}
+
+		if (!edit) {
+			toast.error($i18n.t('Please save the connection before authorizing OAuth'));
+			return;
+		}
+
+		initiateOAuthRedirect({
+			id: `server:mcp:${id}`,
+			serverId: id,
+			authType: 'mcp'
+		});
+	};
 
 	const registerOAuthClientHandler = async () => {
 		if (url === '') {
@@ -185,14 +212,21 @@
 				info: {
 					id,
 					name,
-					description
+					description,
+					...(isMcpOAuth()
+						? {
+								...(oauthServerUrl ? { oauth_server_url: oauthServerUrl } : {}),
+								...(oauthScope ? { oauth_scope: oauthScope } : {}),
+								oauth_resource_parameter: oauthResourceParameter
+							}
+						: {})
 				}
 			}).catch((err) => {
 				toast.error($i18n.t('Connection failed'));
 			});
 
 			if (res) {
-				toast.success($i18n.t('Connection successful'));
+				toast.success(verifySuccessMessage());
 				console.debug('Connection successful', res);
 			}
 		}
@@ -609,16 +643,13 @@
 										required
 									/>
 
-									<Tooltip
-										content={$i18n.t('Verify Connection')}
-										className="shrink-0 flex items-center mr-1"
-									>
+									<Tooltip content={verifyLabel()} className="shrink-0 flex items-center mr-1">
 										<button
 											class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
 											on:click={() => {
 												verifyHandler();
 											}}
-											aria-label={$i18n.t('Verify Connection')}
+											aria-label={verifyLabel()}
 											type="button"
 										>
 											<svg
@@ -653,8 +684,27 @@
 										</div>
 									</div>
 
-									{#if ['oauth_2.1', 'oauth_2.1_static'].includes(auth_type)}
+									{#if isMcpOAuth()}
 										<div class="flex items-center gap-2">
+											{#if oauthClientInfo}
+												<div class="flex flex-col justify-end items-center shrink-0">
+													<Tooltip
+														content={edit
+															? $i18n.t('Authorize OAuth')
+															: $i18n.t('Please save the connection before authorizing OAuth')}
+													>
+														<button
+															class=" text-xs underline dark:text-gray-500 dark:hover:text-gray-200 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:no-underline transition"
+															type="button"
+															disabled={!edit}
+															on:click={authorizeOAuthHandler}
+														>
+															{$i18n.t('Authorize OAuth')}
+														</button>
+													</Tooltip>
+												</div>
+											{/if}
+
 											<div class="flex flex-col justify-end items-center shrink-0">
 												<Tooltip
 													content={oauthClientInfo
@@ -792,6 +842,7 @@
 									on:click={() => {
 										showAccessControlModal = true;
 									}}
+									label={$i18n.t('Access Control')}
 								/>
 							{/if}
 						</div>

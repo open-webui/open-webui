@@ -5,10 +5,11 @@
 
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 
+	const i18n = getContext<Writable<i18nType>>('i18n');
+
 	export let className = '';
 	export let disabled = false;
-
-	const i18n = getContext<Writable<i18nType>>('i18n');
+	export let label = '';
 </script>
 
 <button
@@ -18,5 +19,5 @@
 	on:click
 >
 	<LockClosed strokeWidth="2.5" className="size-3 shrink-0" />
-	<span class="shrink-0">{$i18n.t('Access')}</span>
+	<span class="shrink-0">{label || $i18n.t('Access')}</span>
 </button>
