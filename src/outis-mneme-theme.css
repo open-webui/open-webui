@@ -249,6 +249,23 @@ html.outis-mneme .editor-selection {
 	background: rgba(45, 255, 143, 0.16);
 }
 
+/* `.editor-selection` above only ever applies once the editor has *lost*
+   focus -- SelectionDecoration in RichTextInput.svelte explicitly returns
+   null while `focused` is true (`if (focused || selection.empty) return
+   null`). The actual, far more common case -- selecting text while still
+   focused and typing -- is rendered by the browser's own native
+   `::selection` pseudo-element, which had no override anywhere in the
+   codebase (confirmed: no `::selection` rule existed before this one), so it
+   fell back to Chrome's stock light blue. That's what was actually visible
+   in the screenshot this was reported from. Same accentSoft value as
+   .editor-selection and CodeMirror's own `::selection` override
+   (codemirror-outis-mneme-theme.ts's `.cm-content ::selection` rule), so all
+   three selection surfaces in the app -- native text selection, the
+   editor's blur-preserved selection, and code blocks -- read as one color. */
+html.outis-mneme ::selection {
+	background: rgba(45, 255, 143, 0.16);
+}
+
 /* Chat message reading area (app.css's `.markdown-prose`, forced to
    0.9375rem/15px via a Tailwind !important arbitrary value). JetBrains Mono
    at a given rem size reads visually larger/wider than Inter at the same
