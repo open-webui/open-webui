@@ -181,6 +181,22 @@ html.outis-mneme [class~='dark:text-gray-900'] {
 	color: var(--color-gray-950);
 }
 
+/* Same white-text-on-accent-background problem as the invert-button pattern
+   above, different shape: `bg-blue-500 text-white` (unconditional, no dark:
+   prefix -- calendar "today" badges in CalendarView.svelte/CalendarSidebar.svelte,
+   and the selected-row indicator in FileEntryRow.svelte, 4 elements total).
+   White text on this theme's blue-500 (the bright green accent, #2dff8f)
+   measures 1.33:1 contrast -- effectively invisible, reported live via
+   screenshot ("20" unreadable on the calendar's today marker). Only 4 of the
+   10 `bg-blue-500` usages in the app pair it with `text-white` this way
+   (checked); the rest use translucent /20 backgrounds with their own
+   already-correct text colors, or no text color at all (a loading bar), so a
+   compound selector requiring both tokens on the same element is precise --
+   it can't reach those. */
+html.outis-mneme [class~='bg-blue-500'][class~='text-white'] {
+	color: var(--color-gray-950);
+}
+
 /* `rounded-full` (144 component files) is a fixed 9999px utility, not driven
    by the --radius-* scale above, so flattening that scale alone leaves every
    pill-shaped button (Sign in, Check Again, ...) and every genuine circle
