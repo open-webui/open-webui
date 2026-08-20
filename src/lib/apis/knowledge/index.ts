@@ -66,35 +66,6 @@ export const getExternalKnowledgeConnections = async (token: string) => {
 	return res;
 };
 
-export const createExternalKnowledgeConnection = async (token: string, connection: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/external/connections`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify(connection)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
 export const updateExternalKnowledgeConnection = async (
 	token: string,
 	id: string,
@@ -110,62 +81,6 @@ export const updateExternalKnowledgeConnection = async (
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify(connection)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const deleteExternalKnowledgeConnection = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/external/connections/${id}`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const testExternalKnowledgeConnection = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/external/connections/${id}/test`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -283,35 +198,6 @@ export const updateExternalKnowledgeSource = async (token: string, id: string, p
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/external/source/${id}`, {
 		method: 'PATCH',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify(payload)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const createExternalKnowledge = async (token: string, payload: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/external/knowledge/create`, {
-		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
@@ -580,22 +466,6 @@ export const getPendingKnowledgeFiles = async (token: string, id: string) => {
 
 	if (error) {
 		throw error;
-	}
-
-	return res;
-};
-
-export const streamPendingKnowledgeFiles = async (token: string, id: string) => {
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/files/pending?stream=true`, {
-		method: 'GET',
-		headers: {
-			Accept: 'text/event-stream',
-			authorization: `Bearer ${token}`
-		}
-	});
-
-	if (!res.ok) {
-		throw new Error('Failed to stream pending files');
 	}
 
 	return res;

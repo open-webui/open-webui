@@ -128,39 +128,6 @@ export const createCalendar = async (token: string, form: CalendarForm): Promise
 	return res;
 };
 
-export const updateCalendar = async (
-	token: string,
-	calendarId: string,
-	form: Partial<CalendarForm>
-): Promise<CalendarModel> => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/calendars/${calendarId}/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify(form)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
 export const deleteCalendar = async (token: string, calendarId: string): Promise<boolean> => {
 	let error = null;
 
@@ -187,37 +154,6 @@ export const deleteCalendar = async (token: string, calendarId: string): Promise
 	}
 
 	return res?.status ?? false;
-};
-
-export const setDefaultCalendar = async (
-	token: string,
-	calendarId: string
-): Promise<CalendarModel> => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/calendars/${calendarId}/default`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
 };
 
 // ── Events ─────────────────────────────────
@@ -276,37 +212,6 @@ export const createCalendarEvent = async (
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify(form)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getCalendarEventById = async (
-	token: string,
-	eventId: string
-): Promise<CalendarEventModel> => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/calendars/events/${eventId}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -384,75 +289,4 @@ export const deleteCalendarEvent = async (token: string, eventId: string): Promi
 	}
 
 	return res?.status ?? false;
-};
-
-export const rsvpCalendarEvent = async (
-	token: string,
-	eventId: string,
-	status: string
-): Promise<{ status: boolean; rsvp: string }> => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/calendars/events/${eventId}/rsvp`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ status })
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const searchCalendarEvents = async (
-	token: string,
-	query: string | null,
-	skip: number = 0,
-	limit: number = 30
-): Promise<{ items: CalendarEventModel[]; total: number }> => {
-	let error = null;
-
-	const params = new URLSearchParams();
-	if (query) params.append('query', query);
-	params.append('skip', skip.toString());
-	params.append('limit', limit.toString());
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/calendars/events/search?${params.toString()}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
 };
