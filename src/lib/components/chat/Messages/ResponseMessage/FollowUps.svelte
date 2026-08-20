@@ -8,14 +8,14 @@
 </script>
 
 <div class="mt-4">
-	<div class="text-sm font-normal">
+	<div class="text-[0.9375rem] font-normal">
 		{$i18n.t('Follow up')}
 	</div>
 
 	<div class="flex flex-col text-left gap-1 mt-1.5">
 		{#each followUps as followUp, idx (idx)}
 			<button
-				class=" py-1 bg-transparent text-left text-sm flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition cursor-pointer w-full"
+				class=" py-1 bg-transparent text-left text-[0.9375rem] flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition cursor-pointer w-full"
 				on:click={() => onClick(followUp)}
 				aria-label={$i18n.t('Follow up: {{question}}', { question: followUp })}
 			>

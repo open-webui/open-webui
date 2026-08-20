@@ -268,6 +268,44 @@ html.outis-mneme .markdown-prose-xs {
 	font-size: calc(0.75rem * var(--outis-mneme-prose-scale)) !important; /* 9.6px */
 }
 
+/* Finding 1 covered the two prose *classes* the reading area is built from
+   (.markdown-prose, .input-prose), but 0.9375rem/15px turns out to also be
+   hardcoded ad-hoc, as a repeated Tailwind arbitrary value, across ~20 other
+   message-chrome spots that were never wrapped in either class: the
+   "Explored ..." tool-status chip (ConsecutiveDetailsGroup.svelte,
+   StatusHistory/StatusItem.svelte, ToolCallDisplay.svelte, Collapsible.svelte),
+   the message author-name label (Name.svelte), the user's own message
+   display and its edit textarea (UserMessage.svelte, ResponseMessage.svelte,
+   OutputEditView.svelte), and structured-output rendering
+   (StructuredOutputRenderer.svelte, MarkdownTokens.svelte). Reported live via
+   screenshot: the "Explored ..." chip and the "Follow up" suggestions both
+   read visibly larger than the response text between them. One rule catches
+   every one of them, since they all share the identical literal class token
+   -- same 0.8x ratio as the reading area, so this reading chrome stays in
+   step with it instead of drifting again later. FollowUps.svelte was moved
+   onto this same token (it was `text-sm`, a different literal) rather than
+   given its own separate scale, so there's one convention for "message
+   reading chrome text size," not two. */
+html.outis-mneme [class~='text-[0.9375rem]'] {
+	font-size: calc(0.9375rem * var(--outis-mneme-prose-scale));
+}
+
+/* Tailwind's `emerald` family is a separate color scale from `green`/`blue`
+   and was never touched by this theme, so the "success/positive/connected"
+   checkmarks and status dots that use it (tool-call chips, terminal
+   connection status, automation status) render in stock Tailwind emerald --
+   a third green hue next to the theme's actual accent, visible right next to
+   the text sized by the rule above. `border-emerald-500` (AlertRenderer's
+   TIP-callout border) is deliberately left alone: that component assigns a
+   distinct hue per alert type (note/tip/important/warning/caution) on
+   purpose, and only the text color is what's visibly inconsistent here. */
+html.outis-mneme [class~='text-emerald-500'],
+html.outis-mneme [class~='text-emerald-600'],
+html.outis-mneme [class~='text-emerald-700'],
+html.outis-mneme [class~='dark:text-emerald-400'] {
+	color: var(--color-blue-500);
+}
+
 /* Headings inside the reading area (app.css's `prose-h1:text-xl
    prose-h2:text-lg prose-h3:text-base`, i.e. fixed 20px/18px/16px) don't
    inherit from .markdown-prose's font-size above — they're each given

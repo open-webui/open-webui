@@ -310,6 +310,51 @@ rather than pure white, so redirecting its hover step the same way is still corr
 collateral damage. Verified live: the Create button now renders as the theme's green accent with
 dark, readable text (screenshot-confirmed after landing this fix).
 
+## Finding 10 — Finding 1 fixed two prose classes; 0.9375rem was hardcoded ~20 more times
+
+Reported live via screenshot: a tool-status "Explored ..." chip and the "Follow up" suggestions
+both read visibly larger than the response text sitting between them. Root cause: `0.9375rem`
+(15px, the pre-fix reading-area size) turns out to be hardcoded as a repeated Tailwind arbitrary
+value (`text-[0.9375rem]`) across roughly twenty message-chrome spots that were never wrapped in
+`.markdown-prose`/`.input-prose`, so Finding 1 never reached them — the "Explored ..." chip
+(`ConsecutiveDetailsGroup.svelte`, `StatusHistory/StatusItem.svelte`, `ToolCallDisplay.svelte`,
+`Collapsible.svelte`), the message author-name label (`Name.svelte`), the user's own message
+display and edit textarea (`UserMessage.svelte`, `ResponseMessage.svelte`, `OutputEditView.svelte`),
+and structured-output rendering. One rule catches all of them, since they share the identical
+class token:
+
+```css
+html.outis-mneme [class~='text-[0.9375rem]'] {
+	font-size: calc(0.9375rem * var(--outis-mneme-prose-scale));
+}
+```
+
+`FollowUps.svelte` used a different literal (`text-sm`, 14px) — rather than give it its own scale,
+its two occurrences were moved onto `text-[0.9375rem]` directly in the component, so there's one
+convention for "message reading chrome text size," not two. Verified live: both compute to `12px`
+now (tested via `getComputedStyle` on a synthetic element carrying the class, since the actual
+elements require a live chat to render).
+
+While in the same screenshot: the "Explored" checkmark icon uses Tailwind's `emerald` family
+(`text-emerald-500/600/700`, `dark:text-emerald-400`), a separate color scale from `green`/`blue`
+that this theme never touched — a third green hue sitting next to the theme's actual accent.
+7 usages across 6 files (tool-call chips, terminal/automation connection status). Mapped to the
+accent instead:
+
+```css
+html.outis-mneme [class~='text-emerald-500'],
+html.outis-mneme [class~='text-emerald-600'],
+html.outis-mneme [class~='text-emerald-700'],
+html.outis-mneme [class~='dark:text-emerald-400'] {
+	color: var(--color-blue-500);
+}
+```
+
+`border-emerald-500` (`AlertRenderer.svelte`'s TIP-callout border) was deliberately left alone —
+that component assigns a distinct hue per markdown alert type (note/tip/important/warning/caution)
+on purpose, and only the text-color inconsistency was what showed up live. Verified live: a
+synthetic element with `text-emerald-500` computes to `rgb(45, 255, 143)`, the accent.
+
 ## Priority
 
 1. **Finding 1** (font size) — highest user-visible impact, lowest risk. **Implemented** in
