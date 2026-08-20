@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import hashlib
-import hmac
 import logging
 import os
 import uuid
@@ -30,7 +29,6 @@ from open_webui.env import (
     PASSWORD_VALIDATION_REGEX_PATTERN,
     REDIS_KEY_PREFIX,
     STATIC_DIR,
-    TRUSTED_SIGNATURE_KEY,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_SECRET_KEY,
     pk,
@@ -52,22 +50,6 @@ PASSWORD_BCRYPT_MAX_BYTES = 72
 ##############
 # Auth Utils
 ##############
-
-
-def verify_signature(payload: str, signature: str) -> bool:
-    """
-    Verifies the HMAC signature of the received payload.
-    """
-    try:
-        expected_signature = base64.b64encode(
-            hmac.new(TRUSTED_SIGNATURE_KEY, payload.encode(), hashlib.sha256).digest()
-        ).decode()
-
-        # Compare securely to prevent timing attacks
-        return hmac.compare_digest(expected_signature, signature)
-
-    except Exception:
-        return False
 
 
 def override_static(path: str, content: str):
@@ -323,10 +305,6 @@ async def revoke_user_tokens(request, user_id: str):
         str(int(datetime.now(UTC).timestamp())),
         ex=int(expires_delta.total_seconds()) if expires_delta else None,
     )
-
-
-def extract_token_from_auth_header(auth_header: str):
-    return auth_header[len('Bearer ') :]
 
 
 def create_api_key():

@@ -914,7 +914,6 @@ if WEBUI_NAME != 'Open WebUI':
 # https://docs.openwebui.com/license.
 WEBUI_FAVICON_URL = 'https://openwebui.com/favicon.png'
 WEBUI_BUILD_HASH = os.getenv('WEBUI_BUILD_HASH', 'dev-build')
-TRUSTED_SIGNATURE_KEY = os.getenv('TRUSTED_SIGNATURE_KEY', '')
 
 ####################################
 # Feature flags
