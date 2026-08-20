@@ -144,13 +144,3 @@ export const setAllChatsRead = () => {
 	chatsStore.update((items) => (items ? items.map(updateChat) : items));
 	pinnedChatsStore.update((items) => items.map(updateChat));
 };
-
-export const resetChatListState = () => {
-	requestGeneration += 1;
-	currentPage = 1;
-	paginationReady = false;
-	allLoaded = false;
-	loadingNextPage = false;
-	chatsStore.set(null);
-	pinnedChatsStore.set([]);
-};

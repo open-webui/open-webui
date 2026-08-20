@@ -30,9 +30,6 @@ export const mobile = writable(false);
 
 export const socket: Writable<null | Socket> = writable(null);
 export const socketConnected: Writable<boolean> = writable(true);
-export const activeUserIds: Writable<null | string[]> = writable(null);
-export const USAGE_POOL: Writable<null | string[]> = writable(null);
-
 export const theme = writable('system');
 
 export const shortCodesToEmojis = writable(
@@ -136,10 +133,8 @@ export const showChangelog = writable(false);
 
 export const showControls = writable(false);
 export const showEmbeds = writable(false);
-export const showOverview = writable(false);
 export const showArtifacts = writable(false);
 export const showCallOverlay = writable(false);
-export const showFileNav = writable(false);
 export const showFileNavPath: Writable<string | null> = writable(null);
 export const showFileNavDir: Writable<string | null> = writable(null);
 export const selectedTerminalId: Writable<string | null> = writable(null);
@@ -153,7 +148,6 @@ export const temporaryChatEnabled = writable(false);
 
 // Transient one-shot event from the desktop shell (Spotlight, drag-and-drop, etc.).
 // Set by +layout.svelte, consumed and cleared by Chat.svelte.
-export type DesktopEventFile = { name: string; mimeType: string; dataUrl: string };
 export type DesktopEvent = {
 	type: string;
 	data?: any;
