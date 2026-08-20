@@ -520,7 +520,17 @@
 			editor.commands.setContent(htmlContent);
 		}
 
-		selectNextTemplate(editor.view.state, editor.view.dispatch);
+		const templateFound = selectNextTemplate(editor.view.state, editor.view.dispatch);
+		if (!templateFound && text !== '') {
+			// setContent doesn't collapse the selection itself -- without this,
+			// whatever was selected before the call (which can end up spanning
+			// the whole new document once positions get clamped to its shorter
+			// length) stays selected. Reported live: clicking a suggestion chip
+			// selected the entire inserted prompt and popped the formatting
+			// bubble menu over it. Land the cursor at the end instead, same as
+			// typing the text in would.
+			editor.commands.setTextSelection(editor.state.doc.content.size);
+		}
 
 		// Ensure the editor is still valid before trying to focus
 		focus();
