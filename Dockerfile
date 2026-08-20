@@ -150,6 +150,8 @@ RUN set -e; \
     python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
     python -c "import nltk; nltk.download('punkt_tab')"; \
+    # unstructured installs this into root-owned site-packages on first use
+    python -m spacy download en_core_web_sm --no-cache-dir; \
     else \
     pip3 install 'torch<=2.9.1' torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir; \
     uv pip install --system -r requirements.txt --no-cache-dir; \
@@ -159,16 +161,13 @@ RUN set -e; \
     python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
     python -c "import nltk; nltk.download('punkt_tab')"; \
+    # unstructured installs this into root-owned site-packages on first use
+    python -m spacy download en_core_web_sm --no-cache-dir; \
     fi; \
     fi; \
     mkdir -p /app/backend/data; chown -R $UID:$GID /app/backend/data/; \
     if [ -d /app/backend/data/cache ]; then chmod -R a+rX /app/backend/data/cache; fi; \
     rm -rf /var/lib/apt/lists/*;
-
-# Optional: PPTX parsing through unstructured may need spaCy's English model.
-# Keep this out of the default image to avoid the extra image bloat; deployments
-# with read-only site-packages can uncomment it and bake the model in.
-# RUN python -m spacy download en_core_web_sm
 
 # Install Ollama if requested
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
