@@ -36,6 +36,7 @@
 	let auth_type = 'bearer';
 	let path = '/openapi.json';
 	let enabled = false;
+	let chatUploads: 'default' | 'filesystem' = 'default';
 	let chatContextMode: 'default' | 'chat_id' | 'off' = 'default';
 	let automationContextMode: 'default' | 'automation_id' | 'off' = 'default';
 	let showAdvanced = false;
@@ -80,6 +81,7 @@
 			auth_type = connection?.auth_type ?? 'bearer';
 			path = connection?.path ?? '/openapi.json';
 			enabled = connection?.enabled ?? true;
+			chatUploads = connection?.config?.chat_uploads === 'filesystem' ? 'filesystem' : 'default';
 			accessGrants = connection?.config?.access_grants ?? [];
 
 			// Restore policy state
@@ -125,6 +127,7 @@
 			auth_type = 'bearer';
 			path = '/openapi.json';
 			enabled = false;
+			chatUploads = 'default';
 			accessGrants = [];
 			chatContextMode = 'default';
 			automationContextMode = 'default';
@@ -373,6 +376,14 @@
 			contexts.automation = { context_id: 'automation_id' };
 		}
 		const useContexts = !direct && serverType === 'orchestrator' && Object.keys(contexts).length > 0;
+		const connectionConfig: Record<string, any> =
+			connection?.config && typeof connection.config === 'object' ? { ...connection.config } : {};
+		if (!direct) connectionConfig.access_grants = accessGrants;
+		else delete connectionConfig.access_grants;
+		if (useContexts) connectionConfig.contexts = contexts;
+		else delete connectionConfig.contexts;
+		if (chatUploads === 'filesystem') connectionConfig.chat_uploads = 'filesystem';
+		else delete connectionConfig.chat_uploads;
 
 		const result = {
 			...(!direct && id.trim() ? { id: id.trim() } : {}),
@@ -382,10 +393,7 @@
 			path,
 			auth_type,
 			enabled: enabled,
-			config: {
-				...(!direct ? { access_grants: accessGrants } : {}),
-				...(useContexts ? { contexts } : {})
-			},
+			config: connectionConfig,
 			// Policy fields
 			...(serverType ? { server_type: serverType } : {}),
 			...(serverType === 'orchestrator' && policyId ? { policy_id: policyId } : {})
@@ -530,6 +538,26 @@
 									{/if}
 								</button>
 							</Tooltip>
+						</div>
+
+						<div class="flex gap-2 mt-2">
+							<div class="flex flex-col w-full">
+								<div class="flex justify-between mb-0.5">
+									<label for="terminal-chat-uploads" class={`text-xs text-gray-500`}
+										>{$i18n.t('Chat Uploads')}</label
+									>
+								</div>
+								<div class="flex flex-1 items-center">
+									<select
+										id="terminal-chat-uploads"
+										class={`w-full text-sm ${selectClass}`}
+										bind:value={chatUploads}
+									>
+										<option value="default">{$i18n.t('Default')}</option>
+										<option value="filesystem">{$i18n.t('Filesystem')}</option>
+									</select>
+								</div>
+							</div>
 						</div>
 
 						<!-- Policy section (orchestrator only, admin only) -->

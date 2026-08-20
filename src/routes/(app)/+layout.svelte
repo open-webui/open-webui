@@ -161,7 +161,8 @@
 						})
 						.map((data, i) => ({
 							...data,
-							key: enabledTerminals[i]?.key ?? ''
+							key: enabledTerminals[i]?.key ?? '',
+							config: enabledTerminals[i]?.config ?? data?.config ?? {}
 						}))
 				: []),
 			// Store with proxy URL and session key for FileNav file browsing
@@ -170,7 +171,8 @@
 				url: `${WEBUI_API_BASE_URL}/terminals/${t.id}`,
 				name: t.name,
 				key: localStorage.token,
-				contexts: t.contexts ?? {}
+				contexts: t.contexts ?? {},
+				config: t.config ?? {}
 			}))
 		]);
 	};

@@ -43,6 +43,10 @@ export type TerminalServer = {
 	url: string;
 	name: string;
 	contexts?: Record<string, false | { context_id?: string }>;
+	config?: {
+		chat_uploads?: 'default' | 'filesystem';
+		[key: string]: unknown;
+	};
 };
 
 export const getTerminalServers = async (token: string): Promise<TerminalServer[]> => {

@@ -47,7 +47,14 @@
 				}))
 			);
 			data = data.filter((d) => d && !d.error);
-			terminalServers.set([...data, ...existingSystemTerminals]);
+			terminalServers.set([
+				...data.map((d, i) => ({
+					...d,
+					key: activeTerminals[i]?.key ?? '',
+					config: activeTerminals[i]?.config ?? d?.config ?? {}
+				})),
+				...existingSystemTerminals
+			]);
 		} else {
 			terminalServers.set(existingSystemTerminals);
 		}

@@ -27,6 +27,7 @@ from open_webui.utils.terminals import (
     terminal_context_available,
     terminal_context_config,
     terminal_context_id,
+    terminal_chat_uploads,
     terminal_contexts,
 )
 from open_webui.utils.tools import bearer_auth_header, normalize_bearer_token
@@ -87,6 +88,7 @@ async def list_terminal_servers(request: Request, user=Depends(get_verified_user
             'url': connection.get('url', ''),
             'name': connection.get('name', ''),
             'contexts': terminal_contexts(connection),
+            'config': {'chat_uploads': terminal_chat_uploads(connection)},
         }
         for connection in connections
         if connection.get('enabled', True) and await has_connection_access(user, connection, user_group_ids)

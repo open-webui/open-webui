@@ -56,6 +56,7 @@
 		getWeekday
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
+	import { getCwd, uploadToTerminal } from '$lib/apis/terminal';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
 	import { getChatById } from '$lib/apis/chats';
@@ -860,19 +861,43 @@
 		}
 	};
 
+	const getFilesystemUploadTerminal = (
+		selectedId = $selectedTerminalId,
+		servers: any[] | null = $terminalServers,
+		settingsValue: any = $settings
+	) => {
+		if (!selectedId) return null;
+
+		const systemTerminal = (servers ?? []).find(
+			(t: any) => t.id && t.id === selectedId && t.config?.chat_uploads === 'filesystem'
+		);
+		if (systemTerminal) return systemTerminal;
+
+		return (
+			(settingsValue?.terminalServers ?? []).find(
+				(t: any) =>
+					t.url === selectedId &&
+					t.enabled &&
+					t.config?.chat_uploads === 'filesystem'
+			) ?? null
+		);
+	};
+
 	const uploadFileHandler = async (file, process = true, itemData = {}) => {
 		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
 			toast.error($i18n.t('You do not have permission to upload files.'));
 			return null;
 		}
 
-		if (fileUploadCapableModels.length !== selectedModelIds.length) {
+		const filesystemUploadTerminal = getFilesystemUploadTerminal();
+
+		if (!filesystemUploadTerminal && fileUploadCapableModels.length !== selectedModelIds.length) {
 			toast.error($i18n.t('Model(s) do not support file upload'));
 			return null;
 		}
 
 		const tempItemId = uuidv4();
-		const fileItem = {
+		const fileItem: any = {
 			type: 'file',
 			file: '',
 			id: null,
@@ -895,6 +920,48 @@
 		}
 
 		files = [...files, fileItem];
+
+		if (filesystemUploadTerminal) {
+			try {
+				const cwd =
+					(await getCwd(
+						filesystemUploadTerminal.url,
+						filesystemUploadTerminal.key,
+						chatId || undefined
+					))?.cwd || '/';
+				const uploadedFile = await uploadToTerminal(
+					filesystemUploadTerminal.url,
+					filesystemUploadTerminal.key,
+					cwd,
+					file,
+					chatId || undefined
+				);
+
+				if (uploadedFile) {
+					fileItem.type = 'terminal_file';
+					fileItem.status = 'uploaded';
+					fileItem.id = uploadedFile.path;
+					fileItem.path = uploadedFile.path;
+					fileItem.url = uploadedFile.path;
+					fileItem.size = uploadedFile.size ?? file.size;
+					fileItem.file = uploadedFile;
+					files = files;
+				} else {
+					fileItem.status = 'error';
+					fileItem.error = $i18n.t('Failed to upload file.');
+					toast.error(fileItem.error);
+					files = files.filter((item) => item?.itemId !== tempItemId);
+				}
+			} catch (e) {
+				fileItem.status = 'error';
+				fileItem.error = `${e}`;
+				toast.error(`${e}`);
+				files = files.filter((item) => item?.itemId !== tempItemId);
+			} finally {
+				onUpdate({ file: fileItem });
+			}
+			return;
+		}
 
 		if (!$temporaryChatEnabled) {
 			try {
@@ -2078,7 +2145,13 @@
 									<InputMenu
 										bind:files
 										selectedModels={selectedModelIds}
-										{fileUploadCapableModels}
+										fileUploadCapableModels={getFilesystemUploadTerminal(
+											$selectedTerminalId,
+											$terminalServers,
+											$settings
+										)
+											? selectedModelIds
+											: fileUploadCapableModels}
 										{toolApprovalMode}
 										{onToolApprovalModeChange}
 										{screenCaptureHandler}
