@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from open_webui.env import (
     DATA_DIR,
     DATABASE_URL,
+    ENABLE_ADMIN_CHAT_ACCESS,
     ENABLE_DB_MIGRATIONS,
     ENV,
     FRONTEND_BUILD_DIR,
@@ -2084,8 +2085,6 @@ BYPASS_ADMIN_ACCESS_CONTROL = (
     ).lower()
     == 'true'
 )
-
-ENABLE_ADMIN_CHAT_ACCESS = os.getenv('ENABLE_ADMIN_CHAT_ACCESS', 'True').lower() == 'true'
 
 ENABLE_ADMIN_ANALYTICS = os.getenv('ENABLE_ADMIN_ANALYTICS', 'True').lower() == 'true'
 

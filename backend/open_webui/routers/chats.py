@@ -27,7 +27,6 @@ from open_webui.models.chats import (
     MessageStats,
     chat_search_content_query,
     chat_search_terms,
-    is_internal_chat,
 )
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
@@ -36,7 +35,7 @@ from open_webui.models.tags import TagModel, Tags
 from open_webui.socket.main import get_event_emitter
 from open_webui.tasks import get_response_streams_by_chat_id, has_active_tasks, stop_item_tasks
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
-from open_webui.utils.access_control.folders import has_folder_access, has_folder_write_access
+from open_webui.utils.access_control.folders import has_folder_write_access
 from open_webui.utils.auth import bearer_security, get_admin_user, get_current_user, get_verified_user
 from open_webui.utils.chat_fork import build_fork_history
 from open_webui.utils.context_compaction import compact_chat_branch, get_chat_context_usage
@@ -1329,33 +1328,11 @@ async def get_chat_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
-
-    if not chat and user.role == 'admin':
-        candidate = await Chats.get_chat_by_id(id, db=db)
-        if ENABLE_ADMIN_CHAT_ACCESS or (candidate and is_internal_chat(candidate.meta)):
-            chat = candidate
-
-    # Access explicitly granted to this user applies to admins too, so an admin
-    # does not lose a chat shared with them when ENABLE_ADMIN_CHAT_ACCESS is off.
-    if not chat:
-        has_grant = await AccessGrants.has_access(
-            user_id=user.id,
-            resource_type='shared_chat',
-            resource_id=id,
-            permission='read',
-            db=db,
-        )
-        if has_grant:
-            chat = await Chats.get_chat_by_id(id, db=db)
-
-        # Check folder-based access (shared folders)
-        if not chat:
-            candidate = await Chats.get_chat_by_id(id, db=db)
-            if candidate and candidate.folder_id:
-                folder = await Folders.get_folder_by_id(candidate.folder_id, db=db)
-                if folder and await has_folder_access(user.id, folder, 'read', db):
-                    chat = candidate
+    chat = await Chats.get_chat_by_id_for_user(
+        id,
+        user,
+        db=db,
+    )
 
     if chat:
         data = ChatResponse.model_validate(chat, from_attributes=True).model_dump()
@@ -2177,10 +2154,15 @@ async def update_chat_folder_id_by_id(
 
 @router.get('/{id}/tags', response_model=list[TagModel])
 async def get_chat_tags_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    chat = await Chats.get_chat_by_id_for_user(
+        id,
+        user,
+        db=db,
+    )
+
     if chat:
         tags = chat.meta.get('tags', [])
-        return await Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
+        return await Tags.get_tags_by_ids_and_user_id(tags, chat.user_id, db=db)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 

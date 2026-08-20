@@ -8,7 +8,9 @@ import time
 import uuid
 
 # local imports
+from open_webui.env import ENABLE_ADMIN_CHAT_ACCESS
 from open_webui.internal.db import Base, JSONField, get_async_db_context
+from open_webui.models.access_grants import AccessGrants
 from open_webui.models.automations import AutomationRun
 from open_webui.models.chat_messages import ChatMessage, ChatMessages
 from open_webui.models.folders import Folders
@@ -1633,6 +1635,41 @@ class ChatTable:
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
+
+    async def get_chat_by_id_for_user(
+        self,
+        id: str,
+        user,
+        db: AsyncSession | None = None,
+    ) -> ChatModel | None:
+        chat = await self.get_chat_by_id_and_user_id(id, user.id, db=db)
+        if chat:
+            return chat
+
+        chat = await self.get_chat_by_id(id, db=db)
+        if not chat:
+            return None
+
+        if user.role == 'admin' and (ENABLE_ADMIN_CHAT_ACCESS or is_internal_chat(chat.meta)):
+            return chat
+
+        if await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='shared_chat',
+            resource_id=id,
+            permission='read',
+            db=db,
+        ):
+            return chat
+
+        if chat.folder_id:
+            from open_webui.utils.access_control.folders import has_folder_access
+
+            folder = await Folders.get_folder_by_id(chat.folder_id, db=db)
+            if folder and await has_folder_access(user.id, folder, 'read', db):
+                return chat
+
+        return None
 
     async def is_chat_owner(self, id: str, user_id: str, db: AsyncSession | None = None) -> bool:
         """
