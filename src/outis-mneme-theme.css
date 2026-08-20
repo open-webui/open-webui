@@ -236,6 +236,19 @@ html.outis-mneme body {
 	color: #d4ede2;
 }
 
+/* app.css's `.editor-selection { background: rgba(180, 213, 255, 0.5) }` is
+   the same class of hardcoded-literal issue as `.dark body` above -- Tiptap's
+   text-selection highlight in every RichTextInput (chat compose, channel
+   compose, Notes) rendered in the stock blue, unrelated to the theme.
+   Reported live via screenshot ("select all" text). Reuses the exact
+   rgba(45, 255, 143, 0.16) accentSoft value already used for CodeMirror's
+   own selection highlight (codemirror-outis-mneme-theme.ts), so the two
+   selection highlights read as one consistent color rather than two
+   different green tints. */
+html.outis-mneme .editor-selection {
+	background: rgba(45, 255, 143, 0.16);
+}
+
 /* Chat message reading area (app.css's `.markdown-prose`, forced to
    0.9375rem/15px via a Tailwind !important arbitrary value). JetBrains Mono
    at a given rem size reads visually larger/wider than Inter at the same
