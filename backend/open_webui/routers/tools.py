@@ -48,14 +48,6 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-async def get_tool_module(request, tool_id, load_from_db=True):
-    """
-    Get the tool module by its ID.
-    """
-    tool_module, _ = await get_tool_module_from_cache(request, tool_id, load_from_db)
-    return tool_module
-
-
 ############################
 # GetTools
 # The danger is not in having tools, but in reaching

@@ -33,22 +33,8 @@ async def queue_prompt(prompt, client_id, base_url, api_key):
         raise
 
 
-async def get_image(filename, subfolder, folder_type, base_url, api_key):
-    log.info('get_image')
-    data = {'filename': filename, 'subfolder': subfolder, 'type': folder_type}
-    url_values = urllib.parse.urlencode(data)
-    session = await get_session()
-    async with session.get(
-        f'{base_url}/view?{url_values}',
-        headers={**default_headers, 'Authorization': f'Bearer {api_key}'},
-        ssl=AIOHTTP_CLIENT_SESSION_SSL,
-    ) as r:
-        r.raise_for_status()
-        return await r.read()
-
-
 def get_image_url(filename, subfolder, folder_type, base_url):
-    log.info('get_image')
+    log.info('get_image_url')
     data = {'filename': filename, 'subfolder': subfolder, 'type': folder_type}
     url_values = urllib.parse.urlencode(data)
     return f'{base_url}/view?{url_values}'

@@ -220,21 +220,6 @@ async def get_ollama_config_values() -> dict:
     return {field: values[storage_key] for field, storage_key in OLLAMA_CONFIG_KEYS.items() if storage_key in values}
 
 
-async def get_ollama_runtime_config() -> tuple[bool, list[str], dict]:
-    values = await Config.get_many('ollama.enable', 'ollama.base_urls', 'ollama.api_configs')
-    return (
-        values.get('ollama.enable'),
-        values.get('ollama.base_urls') or [],
-        values.get('ollama.api_configs') or {},
-    )
-
-
-async def get_ollama_connection(idx: int) -> tuple[str, dict, str | None]:
-    _, base_urls, api_configs = await get_ollama_runtime_config()
-    url = base_urls[idx]
-    return url, resolve_api_config(api_configs, idx, url), get_api_key(idx, url, api_configs)
-
-
 @router.head('/')
 @router.get('/')
 async def get_status() -> dict:

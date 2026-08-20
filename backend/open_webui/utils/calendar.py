@@ -6,7 +6,6 @@ RRULE expansion reusing the automation infra.
 
 import datetime as dt
 import logging
-from zoneinfo import ZoneInfo
 
 from open_webui.utils.automations import _resolve_tz
 
@@ -76,12 +75,3 @@ def expand_recurring_event(
         occurrence_start = rule.after(occurrence_start)
 
     return instances
-
-
-def ns_from_date(year: int, month: int, day: int, tz: str | None = None) -> int:
-    """Create epoch nanoseconds from a date."""
-    if tz:
-        date_time = dt.datetime(year, month, day, tzinfo=ZoneInfo(tz))
-    else:
-        date_time = dt.datetime(year, month, day)
-    return int(date_time.timestamp() * 1_000_000_000)

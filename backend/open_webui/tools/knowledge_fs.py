@@ -274,20 +274,6 @@ def _get_subdirs(tree: dict, parent_id: str | None) -> list[dict]:
     return sorted([d for d in tree['dirs'].values() if d['parent_id'] == parent_id], key=lambda d: d['name'])
 
 
-def _get_files_under_dir(tree: dict, dir_id: str) -> list[dict]:
-    """Get all files recursively under a directory."""
-    # Collect this dir + all descendant dir IDs
-    target_ids = {dir_id}
-    changed = True
-    while changed:
-        changed = False
-        for d in tree['dirs'].values():
-            if d['parent_id'] in target_ids and d['id'] not in target_ids:
-                target_ids.add(d['id'])
-                changed = True
-    return [f for f in tree['files'] if f['directory_id'] in target_ids]
-
-
 # =============================================================================
 # FILE RESOLUTION & ACCESS CONTROL
 # =============================================================================
@@ -504,16 +490,6 @@ async def _resolve_file(ref: str, user: dict, model_knowledge: list[dict] | None
             + '\n'.join(f'  {m["id"]}  {m["filename"]}  ({m.get("knowledge_name", "direct")})' for m in matches)
         }
 
-    return None
-
-
-async def _get_file_content(file_id: str) -> str | None:
-    """Get file content by ID."""
-    from open_webui.models.files import Files
-
-    f = await Files.get_file_by_id(file_id)
-    if f and f.data:
-        return f.data.get('content', '')
     return None
 
 

@@ -60,10 +60,6 @@ Base = declarative_base()
 log = logging.getLogger(__name__)
 
 
-def pgcrypto_encrypt(val, key):
-    return func.pgp_sym_encrypt(val, literal(key))
-
-
 def pgcrypto_decrypt(col, key, outtype='text'):
     return func.cast(func.pgp_sym_decrypt(col, literal(key)), outtype)
 

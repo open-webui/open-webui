@@ -94,12 +94,6 @@ async def resolve_filter_pipeline(request, model: dict, enabled_filter_ids: list
     return filter_ids, filter_functions
 
 
-async def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list = None):
-    filter_ids, _ = await resolve_filter_pipeline(request, model, enabled_filter_ids)
-
-    return filter_ids
-
-
 async def get_filter_functions(request, model: dict, enabled_filter_ids: list = None):
     _, filter_functions = await resolve_filter_pipeline(request, model, enabled_filter_ids)
     return filter_functions
