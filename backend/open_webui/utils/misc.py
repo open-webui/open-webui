@@ -8,7 +8,6 @@ import threading
 import time
 import uuid
 from datetime import timedelta
-from pathlib import Path
 from typing import Callable, Optional, Sequence, Union
 
 import aiohttp
@@ -546,13 +545,6 @@ def set_last_user_message_content(content: str, messages: list[dict]) -> list[di
     return messages
 
 
-def get_last_assistant_message_item(messages: list[dict]) -> dict | None:
-    for message in reversed(messages):
-        if message['role'] == 'assistant':
-            return message
-    return None
-
-
 def get_last_assistant_message(messages: list[dict]) -> str | None:
     for message in reversed(messages):
         if message['role'] == 'assistant':
@@ -565,14 +557,6 @@ def get_system_message(messages: list[dict]) -> dict | None:
         if message['role'] == 'system':
             return message
     return None
-
-
-def remove_system_message(messages: list[dict]) -> list[dict]:
-    return [message for message in messages if message['role'] != 'system']
-
-
-def pop_system_message(messages: list[dict]) -> tuple[dict | None, list[dict]]:
-    return get_system_message(messages), remove_system_message(messages)
 
 
 def merge_system_messages(messages: list[dict]) -> list[dict]:
@@ -669,25 +653,6 @@ def prepend_to_first_user_message_content(content: str, messages: list[dict]) ->
         if message['role'] == 'user':
             message = update_message_content(message, content, append=False)
             break
-    return messages
-
-
-def append_or_update_assistant_message(content: str, messages: list[dict]):
-    """
-    Adds a new assistant message at the end of the messages list
-    or updates the existing assistant message at the end.
-
-    :param msg: The message to be added or appended.
-    :param messages: The list of message dictionaries.
-    :return: The updated list of message dictionaries.
-    """
-
-    if messages and messages[-1].get('role') == 'assistant':
-        messages[-1]['content'] = f'{messages[-1]["content"]}\n{content}'
-    else:
-        # Insert at the end
-        messages.append({'role': 'assistant', 'content': content})
-
     return messages
 
 
@@ -820,19 +785,6 @@ def validate_email_format(email: str) -> bool:
     return bool(re.match(r'[^@]+@[^@]+\.[^@]+', email))
 
 
-def sanitize_filename(file_name):
-    # Convert to lowercase
-    lower_case_file_name = file_name.lower()
-
-    # Remove special characters using regular expression
-    sanitized_file_name = re.sub(r'[^\w\s]', '', lower_case_file_name)
-
-    # Replace spaces with dashes
-    final_file_name = re.sub(r'\s+', '-', sanitized_file_name)
-
-    return final_file_name
-
-
 def json_text_variants(value: str) -> list[str]:
     """Both spellings ``value`` can take inside a serialized JSON column, unquoted.
 
@@ -932,30 +884,6 @@ def sanitize_metadata(metadata: dict) -> dict:
     return _sanitize(metadata)
 
 
-def extract_folders_after_data_docs(path):
-    # Convert the path to a Path object if it's not already
-    path = Path(path)
-
-    # Extract parts of the path
-    parts = path.parts
-
-    # Find the index of '/data/docs' in the path
-    try:
-        index_data_docs = parts.index('data') + 1
-        index_docs = parts.index('docs', index_data_docs) + 1
-    except ValueError:
-        return []
-
-    # Exclude the filename and accumulate folder names
-    tags = []
-
-    folders = parts[index_docs:-1]
-    for idx, _ in enumerate(folders):
-        tags.append('/'.join(folders[: idx + 1]))
-
-    return tags
-
-
 def parse_duration(duration: str) -> timedelta | None:
     if duration == '-1' or duration == '0':
         return None
@@ -985,92 +913,6 @@ def parse_duration(duration: str) -> timedelta | None:
             total_duration += timedelta(weeks=number)
 
     return total_duration
-
-
-def parse_ollama_modelfile(model_text):
-    parameters_meta = {
-        'mirostat': int,
-        'mirostat_eta': float,
-        'mirostat_tau': float,
-        'num_ctx': int,
-        'repeat_last_n': int,
-        'repeat_penalty': float,
-        'temperature': float,
-        'seed': int,
-        'tfs_z': float,
-        'num_predict': int,
-        'top_k': int,
-        'top_p': float,
-        'num_keep': int,
-        'presence_penalty': float,
-        'frequency_penalty': float,
-        'num_batch': int,
-        'num_gpu': int,
-        'use_mmap': bool,
-        'use_mlock': bool,
-        'num_thread': int,
-    }
-
-    data = {'base_model_id': None, 'params': {}}
-
-    # Parse base model
-    base_model_match = re.search(r'^FROM\s+(\w+)', model_text, re.MULTILINE | re.IGNORECASE)
-    if base_model_match:
-        data['base_model_id'] = base_model_match.group(1)
-
-    # Parse template
-    template_match = re.search(r'TEMPLATE\s+"""(.+?)"""', model_text, re.DOTALL | re.IGNORECASE)
-    if template_match:
-        data['params'] = {'template': template_match.group(1).strip()}
-
-    # Parse stops
-    stops = re.findall(r'PARAMETER stop "(.*?)"', model_text, re.IGNORECASE)
-    if stops:
-        data['params']['stop'] = stops
-
-    # Parse other parameters from the provided list
-    for param, param_type in parameters_meta.items():
-        param_match = re.search(rf'PARAMETER {param} (.+)', model_text, re.IGNORECASE)
-        if param_match:
-            value = param_match.group(1)
-
-            try:
-                if param_type is int:
-                    value = int(value)
-                elif param_type is float:
-                    value = float(value)
-                elif param_type is bool:
-                    value = value.lower() == 'true'
-            except Exception as e:
-                log.exception(f'Failed to parse parameter {param}: {e}')
-                continue
-
-            data['params'][param] = value
-
-    # Parse adapter
-    adapter_match = re.search(r'ADAPTER (.+)', model_text, re.IGNORECASE)
-    if adapter_match:
-        data['params']['adapter'] = adapter_match.group(1)
-
-    # Parse system description
-    system_desc_match = re.search(r'SYSTEM\s+"""(.+?)"""', model_text, re.DOTALL | re.IGNORECASE)
-    system_desc_match_single = re.search(r'SYSTEM\s+([^\n]+)', model_text, re.IGNORECASE)
-
-    if system_desc_match:
-        data['params']['system'] = system_desc_match.group(1).strip()
-    elif system_desc_match_single:
-        data['params']['system'] = system_desc_match_single.group(1).strip()
-
-    # Parse messages
-    messages = []
-    message_matches = re.findall(r'MESSAGE (\w+) (.+)', model_text, re.IGNORECASE)
-    for role, content in message_matches:
-        messages.append({'role': role, 'content': content})
-
-    if messages:
-        data['params']['messages'] = messages
-
-    return data
 
 
 def convert_logit_bias_input_to_json(logit_bias_input) -> str | None:
