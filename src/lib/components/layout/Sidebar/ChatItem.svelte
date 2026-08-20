@@ -531,7 +531,7 @@
 	<div class="flex self-center flex-1 w-full min-w-0">
 		{#if unread}
 			<div class="shrink-0 self-center pr-2.5 flex transition-opacity duration-300">
-				<div class="size-1.5 bg-sky-500 rounded-full"></div>
+				<div class="size-1.5 bg-blue-500 rounded-full"></div>
 			</div>
 		{/if}
 		<div

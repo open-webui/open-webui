@@ -847,7 +847,7 @@
 
 						{#if !folders[folderId]?.shared && (folders[folderId]?.unread_count ?? 0) > 0}
 							<div
-								class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-sky-500/10 px-1 text-[0.625rem] font-semibold leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
+								class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-blue-500/10 px-1 text-[0.625rem] font-semibold leading-4 text-blue-600 dark:bg-blue-400/10 dark:text-blue-300"
 								title={$i18n.t('Unread')}
 							>
 								{formatUnreadCount(folders[folderId].unread_count)}
