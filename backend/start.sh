@@ -29,7 +29,28 @@ fi
 
 # ── Secret key setup ─────────────────────────────────────────────────────────
 
-KEY_FILE="${WEBUI_SECRET_KEY_FILE:-.webui_secret_key}"
+# Where the generated key lives, in order of preference:
+#   1. WEBUI_SECRET_KEY_FILE, if the operator set one
+#   2. an existing, non-empty ./.webui_secret_key, so installs that already have
+#      one keep it -- tested with -e, not -r, so that a key we cannot read is
+#      still selected and fails loudly below rather than being quietly bypassed
+#      in favour of a freshly generated one
+#   3. DATA_DIR, which is the mounted volume
+# This script cd's to its own directory, so for a container (2) resolves inside
+# the image rather than on the volume: the key is lost whenever the container is
+# recreated, which silently invalidates every session. That directory is also
+# not writable when the container runs as a non-root or arbitrary UID
+# (OpenShift's restricted SCC), and `set -e` then aborts the boot outright.
+# DATA_DIR is read from the environment only. A value set solely in
+# backend/.env is not visible here, and those deployments keep the old
+# behaviour; this does not make them worse, it just does not fix them.
+if [[ -n "${WEBUI_SECRET_KEY_FILE:-}" ]]; then
+  KEY_FILE="$WEBUI_SECRET_KEY_FILE"
+elif [[ -e .webui_secret_key && -s .webui_secret_key ]]; then
+  KEY_FILE=".webui_secret_key"
+else
+  KEY_FILE="${DATA_DIR:-./data}/.webui_secret_key"
+fi
 WEBUI_SECRET_KEY_LENGTH="${WEBUI_SECRET_KEY_LENGTH:-24}"
 PORT="${PORT:-8080}"
 HOST="${HOST:-0.0.0.0}"
@@ -37,13 +58,45 @@ HOST="${HOST:-0.0.0.0}"
 if [[ -z "${WEBUI_SECRET_KEY:-}" && -z "${WEBUI_JWT_SECRET_KEY:-}" ]]; then
   echo "No WEBUI_SECRET_KEY environment variable set, loading from file."
 
-  if [[ ! -f "$KEY_FILE" ]]; then
+  # Regenerate when the key is missing or empty, but deliberately NOT when it is
+  # merely unreadable. An empty key is a reachable state -- an interrupted write
+  # leaves one -- and on a volume it persists, so it would otherwise be loaded
+  # as "" on every later boot and fail with a misleading "WEBUI_SECRET_KEY is
+  # not set". A key we cannot read, on the other hand, may well be a perfectly
+  # good one belonging to another UID or group, and it is also the default
+  # encryption key for OAuth client info, OAuth session tokens and valves, so
+  # replacing it would destroy data at rest rather than merely sign people out.
+  # `-s` needs no read permission, so that case falls through to the `cat` below
+  # and fails loudly, which is what stock does today.
+  if [[ ! -s "$KEY_FILE" ]]; then
     echo "Generating new WEBUI_SECRET_KEY..."
     if ! [[ "$WEBUI_SECRET_KEY_LENGTH" =~ ^[1-9][0-9]*$ ]]; then
       echo "WEBUI_SECRET_KEY_LENGTH must be a positive integer." >&2
       exit 1
     fi
-    head -c "$WEBUI_SECRET_KEY_LENGTH" /dev/random | base64 > "$KEY_FILE"
+    # Resolve a symlink first so we replace its target, as the plain redirect
+    # used to, rather than swapping out the operator's link for a regular file.
+    if [[ -L "$KEY_FILE" ]]; then
+      # readlink -f exits non-zero and silent when a parent component is missing
+      # or the link is circular; say so rather than dying with no output.
+      key_link="$KEY_FILE"
+      KEY_FILE=$(readlink -f -- "$key_link") || {
+        echo "Cannot resolve the symlink at $key_link." >&2
+        exit 1
+      }
+    fi
+    mkdir -p -- "$(dirname -- "$KEY_FILE")"
+    # Write to a temporary file and rename so an interrupted write cannot leave
+    # a half-written key behind. Only reached when the target is missing or
+    # empty, so the rename never lands on a key worth keeping.
+    # 0640, not 0600: the key lives on a volume that may be remounted under a
+    # different arbitrary UID, and group 0 is the part OpenShift keeps stable.
+    key_tmp=$(mktemp -- "$KEY_FILE.XXXXXX")
+    trap 'rm -f -- "${key_tmp:-}"' EXIT
+    head -c "$WEBUI_SECRET_KEY_LENGTH" /dev/random | base64 > "$key_tmp"
+    chmod 640 -- "$key_tmp"
+    mv -f -- "$key_tmp" "$KEY_FILE"
+    trap - EXIT
   fi
 
   echo "Loading WEBUI_SECRET_KEY from ${KEY_FILE}"

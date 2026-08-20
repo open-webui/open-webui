@@ -18,3 +18,6 @@ uploads
 **/*.db
 _test
 backend/data/*
+# a dev key from `bash backend/start.sh` would otherwise be COPYd into the
+# image and then outrank the deployment's own persisted key
+backend/.webui_secret_key
