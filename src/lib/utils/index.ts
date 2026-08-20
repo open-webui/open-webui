@@ -1221,7 +1221,6 @@ export const getPromptVariables = (user_name, user_location, user_email = '') =>
  * @param {string} prompt - The string to replace the placeholders with.
  * @returns {string} The template string with the placeholders replaced by the prompt.
  */
-export const titleGenerationTemplate = (template: string, prompt: string): string => {
 	template = template.replace(
 		/{{prompt}}|{{prompt:start:(\d+)}}|{{prompt:end:(\d+)}}|{{prompt:middletruncate:(\d+)}}/g,
 		(match, startLength, endLength, middleLength) => {
