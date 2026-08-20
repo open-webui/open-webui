@@ -100,7 +100,7 @@
 					<div class="flex flex-col text-left leading-snug">
 						{#if prompt.title && prompt.title[0] !== ''}
 							<div
-								class="text-sm font-normal group-hover:text-gray-950 dark:text-gray-300 dark:group-hover:text-white transition line-clamp-1"
+								class="text-[0.9375rem] font-normal group-hover:text-gray-950 dark:text-gray-300 dark:group-hover:text-white transition line-clamp-1"
 							>
 								{prompt.title[0]}
 							</div>
@@ -111,7 +111,7 @@
 							</div>
 						{:else}
 							<div
-								class="text-sm font-normal group-hover:text-gray-950 dark:text-gray-300 dark:group-hover:text-white transition line-clamp-1"
+								class="text-[0.9375rem] font-normal group-hover:text-gray-950 dark:text-gray-300 dark:group-hover:text-white transition line-clamp-1"
 							>
 								{prompt.content}
 							</div>
