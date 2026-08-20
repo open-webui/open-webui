@@ -513,7 +513,7 @@ async def update_user_settings_by_session_user(
     if (
         user.role != 'admin'
         and ui_settings is not None
-        and 'toolServers' in ui_settings.keys()
+        and 'toolServers' in ui_settings
         and not await has_permission(
             user.id,
             'features.direct_tool_servers',
