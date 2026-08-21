@@ -1881,6 +1881,63 @@ export const extractContentFromFile = async (file: File) => {
 		});
 	}
 
+	// Uses jszip to pull the text out of an OpenDocument file (.odt/.ods/.odp)
+	async function extractOdfText(file: File) {
+		const [arrayBuffer, { default: JSZip }] = await Promise.all([
+			file.arrayBuffer(),
+			import('jszip')
+		]);
+
+		const content = await JSZip.loadAsync(arrayBuffer).then((zip) =>
+			zip.file('content.xml')?.async('string')
+		);
+		if (!content) {
+			throw new Error('content.xml not found');
+		}
+
+		const doc = new DOMParser().parseFromString(content, 'application/xml');
+		if (doc.getElementsByTagName('parsererror').length > 0) {
+			throw new Error('content.xml is not well-formed');
+		}
+
+		const TEXT_NS = 'urn:oasis:names:tc:opendocument:xmlns:text:1.0';
+		const TABLE_NS = 'urn:oasis:names:tc:opendocument:xmlns:table:1.0';
+
+		const textOf = (node: Element) => (node.textContent ?? '').trim();
+
+		// Spreadsheets read as rows of tab-separated cells, everything else as
+		// paragraphs and headings in document order.
+		const rows = Array.from(doc.getElementsByTagNameNS(TABLE_NS, 'table-row'));
+		if (rows.length > 0) {
+			return rows
+				.map((row) =>
+					Array.from(row.getElementsByTagNameNS(TABLE_NS, 'table-cell'))
+						.map(textOf)
+						.join('\t')
+						.trimEnd()
+				)
+				.filter((row) => row.length > 0)
+				.join('\n');
+		}
+
+		const blocks: string[] = [];
+		const walk = (node: Element) => {
+			for (const child of Array.from(node.children)) {
+				if (
+					child.namespaceURI === TEXT_NS &&
+					(child.localName === 'p' || child.localName === 'h')
+				) {
+					blocks.push(textOf(child));
+					continue;
+				}
+				walk(child);
+			}
+		};
+		walk(doc.documentElement);
+
+		return blocks.filter((block) => block.length > 0).join('\n');
+	}
+
 	async function extractDocxText(file: File) {
 		const [arrayBuffer, { default: mammoth }] = await Promise.all([
 			file.arrayBuffer(),
@@ -1904,6 +1961,14 @@ export const extractContentFromFile = async (file: File) => {
 		ext === '.docx'
 	) {
 		return await extractDocxText(file);
+	}
+
+	// OpenDocument check (LibreOffice: text, spreadsheet, presentation)
+	if (
+		type.startsWith('application/vnd.oasis.opendocument.') ||
+		['.odt', '.ods', '.odp'].includes(ext)
+	) {
+		return await extractOdfText(file);
 	}
 
 	// Text check (plain or common text-based)
