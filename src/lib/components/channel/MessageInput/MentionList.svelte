@@ -41,6 +41,7 @@
 			.sort((a, b) => a.label.localeCompare(b.label));
 
 	const getUserList = async () => {
+		const requestQuery = query;
 		const [channelMembers, searchResults] = await Promise.all([
 			channelId
 				? getChannelMembersById(localStorage.token, channelId, query, 'name', 'asc').catch(
@@ -55,6 +56,8 @@
 				return null;
 			})
 		]);
+
+		if (requestQuery !== query) return;
 
 		const memberUsers = (channelMembers?.users ?? []) as UserSuggestion[];
 		const searchedUsers = (searchResults?.users ?? []) as UserSuggestion[];
