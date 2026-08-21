@@ -20,25 +20,38 @@ REDIS_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks'
 REDIS_ITEM_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks:item'
 REDIS_RESPONSE_STREAMS_KEY = f'{REDIS_KEY_PREFIX}:tasks:response_streams'
 REDIS_PUBSUB_CHANNEL = f'{REDIS_KEY_PREFIX}:tasks:commands'
+REDIS_PUBSUB_RETRY_DELAY = 5
 
 
 async def redis_task_command_listener(app):
     redis: Redis = app.state.redis
-    pubsub = redis.pubsub()
-    await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)
-
-    async for message in pubsub.listen():
-        if message['type'] != 'message':
-            continue
+    while True:
+        pubsub = redis.pubsub()
         try:
-            command = JSONCodec.loads(message['data'])
-            if command.get('action') == 'stop':
-                task_id = command.get('task_id')
-                local_task = tasks.get(task_id)
-                if local_task:
-                    local_task.cancel()
+            await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)
+
+            async for message in pubsub.listen():
+                if message['type'] != 'message':
+                    continue
+                try:
+                    command = JSONCodec.loads(message['data'])
+                    if command.get('action') == 'stop':
+                        task_id = command.get('task_id')
+                        local_task = tasks.get(task_id)
+                        if local_task:
+                            local_task.cancel()
+                except Exception as e:
+                    log.exception(f'Error handling distributed task command: {e}')
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
-            log.exception(f'Error handling distributed task command: {e}')
+            log.warning(f'Task command listener disconnected, resubscribing in {REDIS_PUBSUB_RETRY_DELAY}s: {e}')
+            await asyncio.sleep(REDIS_PUBSUB_RETRY_DELAY)
+        finally:
+            try:
+                await pubsub.aclose()
+            except Exception:
+                pass
 
 
 ### ------------------------------
