@@ -215,7 +215,7 @@
 	bind:this={rootEl}
 	class="relative grid {hideThumbs
 		? 'grid-cols-[minmax(0,1fr)]'
-		: 'grid-cols-[144px_minmax(0,1fr)]'} h-full min-h-0 bg-transparent text-gray-900 dark:text-gray-100 {className}"
+		: 'grid-cols-[144px_minmax(0,1fr)]'} min-h-0 bg-transparent text-gray-900 dark:text-gray-100 {className}"
 >
 	<aside
 		class={hideThumbs
