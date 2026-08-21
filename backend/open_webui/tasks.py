@@ -20,15 +20,17 @@ REDIS_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks'
 REDIS_ITEM_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks:item'
 REDIS_RESPONSE_STREAMS_KEY = f'{REDIS_KEY_PREFIX}:tasks:response_streams'
 REDIS_PUBSUB_CHANNEL = f'{REDIS_KEY_PREFIX}:tasks:commands'
-REDIS_PUBSUB_RETRY_DELAY = 5
+REDIS_PUBSUB_RETRY_MAX_DELAY = 60
 
 
 async def redis_task_command_listener(app):
     redis: Redis = app.state.redis
+    retry_delay = 1
     while True:
         pubsub = redis.pubsub()
         try:
             await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)
+            retry_delay = 1
 
             async for message in pubsub.listen():
                 if message['type'] != 'message':
@@ -45,8 +47,14 @@ async def redis_task_command_listener(app):
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            log.warning(f'Task command listener disconnected, resubscribing in {REDIS_PUBSUB_RETRY_DELAY}s: {e}')
-            await asyncio.sleep(REDIS_PUBSUB_RETRY_DELAY)
+            if retry_delay >= REDIS_PUBSUB_RETRY_MAX_DELAY:
+                log.error(
+                    f'Task command listener still cannot subscribe, retrying in {retry_delay}s: {e}', exc_info=True
+                )
+            else:
+                log.warning(f'Task command listener disconnected, resubscribing in {retry_delay}s: {e}')
+            await asyncio.sleep(retry_delay)
+            retry_delay = min(retry_delay * 2, REDIS_PUBSUB_RETRY_MAX_DELAY)
         finally:
             try:
                 await pubsub.aclose()
