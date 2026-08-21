@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import json
 import logging
+import mimetypes
 import os
 import re
 from pathlib import Path
 from typing import Optional
 
 import aiohttp
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT, ENABLE_PLUGINS
@@ -37,6 +39,91 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+class PluginPageResponse(BaseModel):
+    """A browser page contributed by an active Function.
+
+    The asset URL is intentionally not accepted from Function metadata.  Functions
+    declare only a relative entrypoint; Open WebUI owns the namespace and revision.
+    """
+
+    id: str
+    title: str
+    path: str
+    entrypoint: str
+    sidebar: bool = False
+    order: int = 0
+    icon: str | None = None
+
+
+class PluginAppResponse(BaseModel):
+    id: str
+    title: str
+    version: str
+    default_page: str
+    pages: list[PluginPageResponse]
+    revision: str
+
+
+def _plugin_relative_path(entrypoint: object, extensions: tuple[str, ...] | None = None) -> str | None:
+    if not isinstance(entrypoint, str):
+        return None
+
+    entrypoint = entrypoint.strip()
+    if (
+        not entrypoint
+        or entrypoint.startswith(('/', '\\'))
+        or '://' in entrypoint
+        or '?' in entrypoint
+        or '#' in entrypoint
+        or any(part in {'', '.', '..'} for part in entrypoint.split('/'))
+        or (extensions is not None and not entrypoint.lower().endswith(extensions))
+    ):
+        return None
+    return entrypoint
+
+
+def _plugin_asset_path(path: str) -> str | None:
+    return _plugin_relative_path(path)
+
+
+def _plugin_app_response(function: FunctionModel, assets: object) -> PluginAppResponse | None:
+    if not isinstance(assets, dict) or not isinstance(assets.get('plugin.json'), (str, bytes)):
+        return None
+    try:
+        raw = assets['plugin.json']
+        manifest = json.loads(raw.decode('utf-8') if isinstance(raw, bytes) else raw)
+        if not isinstance(manifest, dict) or manifest.get('manifest_version') != 1 or manifest.get('id') != function.id:
+            return None
+        name, version, default_page, pages = (manifest.get(key) for key in ('name', 'version', 'default_page', 'pages'))
+        if not all(isinstance(value, str) and value.strip() for value in (name, version, default_page)) or not isinstance(pages, list):
+            return None
+        parsed_pages: list[PluginPageResponse] = []
+        page_ids = set()
+        page_paths = set()
+        for page in pages:
+            if not isinstance(page, dict): return None
+            page_id, title, path, entrypoint = (page.get(key) for key in ('id', 'title', 'path', 'entrypoint'))
+            navigation = page.get('navigation', {})
+            if (not isinstance(page_id, str) or not re.fullmatch(r'[A-Za-z0-9_-]+', page_id)
+                or not isinstance(title, str) or not title.strip()
+                or not isinstance(path, str) or not re.fullmatch(r'[A-Za-z0-9_-]+', path)
+                or not (entrypoint := _plugin_relative_path(entrypoint, ('.html', '.js', '.mjs')))
+                or entrypoint not in assets or page_id in page_ids or path in page_paths or not isinstance(navigation, dict)):
+                return None
+            order = navigation.get('order', 0)
+            if not isinstance(order, int) or isinstance(order, bool): return None
+            icon = navigation.get('icon')
+            if icon is not None and (not isinstance(icon, str) or not re.fullmatch(r'[A-Za-z0-9_-]+', icon)):
+                return None
+            page_ids.add(page_id)
+            page_paths.add(path)
+            parsed_pages.append(PluginPageResponse(id=page_id, title=title, path=path, entrypoint=entrypoint, sidebar=navigation.get('sidebar') is True, order=order, icon=icon))
+        if not parsed_pages or default_page not in page_ids: return None
+        return PluginAppResponse(id=function.id, title=name, version=version, default_page=default_page, pages=parsed_pages, revision=str(function.updated_at))
+    except (UnicodeDecodeError, json.JSONDecodeError, TypeError):
+        return None
+
 ############################
 # GetFunctions
 # Our daily functions give us, and forgive us
@@ -58,6 +145,84 @@ async def get_function_list(user=Depends(get_admin_user), db: AsyncSession = Dep
         return []
 
     return await Functions.get_function_list(db=db)
+
+
+############################
+# Plugin Pages
+############################
+
+
+@router.get('/apps', response_model=list[PluginAppResponse])
+async def get_plugin_apps(request: Request, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    """List active Functions that provide a trusted browser page."""
+    if not ENABLE_PLUGINS:
+        return []
+
+    apps = []
+    for function in await Functions.get_functions(active_only=True, db=db):
+        try:
+            module, _, _ = await get_function_module_from_cache(request, function.id, function=function)
+            app = _plugin_app_response(function, getattr(module, 'frontend_assets', None))
+            if app:
+                apps.append(app)
+        except Exception:
+            log.exception('Failed to load plugin manifest for %s', function.id)
+    return apps
+
+
+@router.get('/apps/{id}/assets/{revision}/{path:path}')
+async def get_plugin_asset(
+    request: Request,
+    id: str,
+    revision: str,
+    path: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Serve an asset declared by an active Function under an OW-owned namespace.
+
+    V1 intentionally keeps the package format minimal: a Function may expose a
+    ``frontend_assets`` mapping of relative paths to UTF-8 strings or bytes. This
+    makes plain HTML pages and pre-built ESM bundles installable without a second
+    storage model or a database migration.
+    """
+    if not ENABLE_PLUGINS:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    asset_path = _plugin_asset_path(path)
+    function = await Functions.get_function_by_id(id, db=db)
+    if not asset_path or not function or not function.is_active or revision != str(function.updated_at):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+    try:
+        function_module, _, _ = await get_function_module_from_cache(request, id, function=function)
+        assets = getattr(function_module, 'frontend_assets', None)
+        if _plugin_app_response(function, assets) is None or not isinstance(assets, dict) or asset_path not in assets:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+        asset = assets[asset_path]
+        if isinstance(asset, str):
+            content = asset.encode('utf-8')
+        elif isinstance(asset, bytes):
+            content = asset
+        else:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+        media_type = mimetypes.guess_type(asset_path)[0] or 'application/octet-stream'
+        if asset_path.endswith(('.js', '.mjs')):
+            media_type = 'text/javascript'
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={
+                'Cache-Control': 'private, max-age=31536000, immutable',
+                'X-Content-Type-Options': 'nosniff',
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        log.exception('Failed to serve plugin asset %s for %s', asset_path, id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
 
 ############################

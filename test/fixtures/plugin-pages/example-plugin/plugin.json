@@ -1,0 +1,11 @@
+{
+  "manifest_version": 1,
+  "id": "example_plugin",
+  "name": "Example Plugin",
+  "version": "1.0.0",
+  "default_page": "home",
+  "pages": [
+    { "id": "home", "title": "Home", "path": "home", "entrypoint": "pages/home/index.html", "navigation": { "sidebar": true, "order": 10, "icon": "notes" } },
+	    { "id": "second", "title": "Second", "path": "second", "entrypoint": "pages/second/index.html", "navigation": { "sidebar": false, "order": 20, "icon": "unknown_icon" } }
+  ]
+}

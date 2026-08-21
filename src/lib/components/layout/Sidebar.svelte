@@ -59,6 +59,7 @@
 	} from '$lib/apis/folders';
 	import { createNewNote, getPinnedNoteList, toggleNotePinnedStatusById } from '$lib/apis/notes';
 	import { updateUserSettings } from '$lib/apis/users';
+	import { getPluginApps, type PluginApp } from '$lib/apis/plugins';
 	import { createNoteHandler } from '$lib/components/notes/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
@@ -84,6 +85,7 @@
 	import EditPencilIcon from './Sidebar/icons/EditPencil.svelte';
 	import NotesIcon from './Sidebar/icons/Notes.svelte';
 	import SearchIcon from './Sidebar/icons/Search.svelte';
+	import PluginIcon from './Sidebar/PluginIcon.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 	import WorkspaceIcon from './Sidebar/icons/Workspace.svelte';
 	import { slide } from 'svelte/transition';
@@ -123,6 +125,7 @@
 	let pinnedModels = [];
 
 	let showPinnedModels = false;
+	let showPluginApps = true;
 	let showPinnedNotes = false;
 	let showChannels = false;
 	let showFolders = false;
@@ -144,6 +147,11 @@
 	let newFolderId = null;
 
 	let sharedFolders: any[] = [];
+	let pluginApps: PluginApp[] = [];
+
+	const initPluginApps = async () => {
+		pluginApps = await getPluginApps(localStorage.token).catch(() => []);
+	};
 
 	$: pinnedItems = $settings?.pinnedMenuItems ?? DEFAULT_PINNED_ITEMS;
 
@@ -647,6 +655,7 @@
 		});
 
 		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
+		await initPluginApps();
 
 		const unsubscribers = [
 			mobile.subscribe((value) => {
@@ -1271,6 +1280,29 @@
 						{/each}
 					</div>
 				</div>
+
+				{#if pluginApps.some((app) => app.pages.some((pluginPage) => pluginPage.sidebar))}
+					<SidebarSection
+						id="sidebar-plugin-apps"
+						bind:open={showPluginApps}
+						className="mt-0.5"
+						name={$i18n.t('Apps')}
+						dragAndDrop={false}
+					>
+						{#each pluginApps as app (app.id)}
+							{#each app.pages.filter((pluginPage) => pluginPage.sidebar).sort((a, b) => a.order - b.order) as pluginPage (pluginPage.id)}
+								<a
+									class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-900"
+									href={`/apps/${app.id}/${pluginPage.path}`}
+									on:click={itemClickHandler}
+								>
+									<PluginIcon icon={pluginPage.icon} />
+									<span class="truncate">{pluginPage.title}</span>
+								</a>
+							{/each}
+						{/each}
+					</SidebarSection>
+				{/if}
 
 				{#if ($models ?? []).length > 0 && (($settings?.pinnedModels ?? []).length > 0 || $config?.default_pinned_models)}
 					<SidebarSection
