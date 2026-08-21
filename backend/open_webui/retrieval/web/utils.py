@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import http.cookiejar
 import ipaddress
 import logging
@@ -699,6 +700,12 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
 
         hop_cookies: List[Tuple[str, str]] = []
 
+        def _safe_abort():
+            try:
+                route.abort()
+            except Exception:
+                pass
+
         try:
             headers = _forwardable_request_headers(req.all_headers())
             post_data = req.post_data_buffer
@@ -722,7 +729,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
             if 300 <= resp.status_code < 400:
                 for _ in range(20):
                     if not AIOHTTP_CLIENT_ALLOW_REDIRECTS:
-                        route.abort()
+                        _safe_abort()
                         return
 
                     location = resp.headers.get('location')
@@ -735,23 +742,32 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                     if not 300 <= resp.status_code < 400:
                         break
                 else:
-                    route.abort()
+                    _safe_abort()
                     return
         except Exception as e:
             log.debug('Playwright loader could not fetch %s: %s', req.url, e)
-            route.abort()
+            _safe_abort()
             return
 
-        route.fulfill(
-            status=resp.status_code,
-            headers=_fulfillable_response_headers(hop_cookies + list(resp.raw.headers.items())),
-            body=resp.content,
-        )
+        try:
+            route.fulfill(
+                status=resp.status_code,
+                headers=_fulfillable_response_headers(hop_cookies + list(resp.raw.headers.items())),
+                body=resp.content,
+            )
+        except Exception as e:
+            log.debug('Playwright loader could not fulfill %s: %s', req.url, e)
 
     async def _intercept_navigation(self, route, session):
         req = route.request
 
         hop_cookies: List[Tuple[str, str]] = []
+
+        async def _safe_abort():
+            try:
+                await route.abort()
+            except Exception:
+                pass
 
         try:
             headers = _forwardable_request_headers(await req.all_headers())
@@ -777,7 +793,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
             if 300 <= resp.status < 400:
                 for _ in range(20):
                     if not AIOHTTP_CLIENT_ALLOW_REDIRECTS:
-                        await route.abort()
+                        await _safe_abort()
                         return
 
                     location = resp.headers.get('location')
@@ -790,18 +806,21 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                     if not 300 <= resp.status < 400:
                         break
                 else:
-                    await route.abort()
+                    await _safe_abort()
                     return
         except Exception as e:
             log.debug('Playwright loader could not fetch %s: %s', req.url, e)
-            await route.abort()
+            await _safe_abort()
             return
 
-        await route.fulfill(
-            status=resp.status,
-            headers=_fulfillable_response_headers(hop_cookies + list(resp.headers.items())),
-            body=body,
-        )
+        try:
+            await route.fulfill(
+                status=resp.status,
+                headers=_fulfillable_response_headers(hop_cookies + list(resp.headers.items())),
+                body=body,
+            )
+        except Exception as e:
+            log.debug('Playwright loader could not fulfill %s: %s', req.url, e)
 
     def lazy_load(self) -> Iterator[Document]:
         """Safely load URLs synchronously with support for remote browser."""
@@ -823,15 +842,19 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                             get_ssrf_safe_requests_session(self.trust_env, store_cookies=False) as session,
                             browser.new_page(service_workers='block') as page,
                         ):
-                            page.route('**/*', lambda route: self._intercept_navigation_sync(route, session))
-                            page.route_web_socket('**/*', lambda ws_route: ws_route.close())
-                            response = page.goto(url, timeout=self.playwright_timeout)
-                            if response is None:
-                                raise ValueError(f'page.goto() returned None for url {url}')
+                            try:
+                                page.route('**/*', lambda route: self._intercept_navigation_sync(route, session))
+                                page.route_web_socket('**/*', lambda ws_route: ws_route.close())
+                                response = page.goto(url, timeout=self.playwright_timeout)
+                                if response is None:
+                                    raise ValueError(f'page.goto() returned None for url {url}')
 
-                            text = self.evaluator.evaluate(page, browser, response)
-                            metadata = {'source': url}
-                            yield Document(page_content=text, metadata=metadata)
+                                text = self.evaluator.evaluate(page, browser, response)
+                                metadata = {'source': url}
+                                yield Document(page_content=text, metadata=metadata)
+                            finally:
+                                with contextlib.suppress(Exception):
+                                    page.unroute_all(behavior='ignoreErrors')
                     except Exception as e:
                         if self.continue_on_failure:
                             log.exception(f'Error loading {url}: {e}')
@@ -858,15 +881,19 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                             get_ssrf_safe_session(self.trust_env, store_cookies=False) as session,
                             await browser.new_page(service_workers='block') as page,
                         ):
-                            await page.route('**/*', lambda route: self._intercept_navigation(route, session))
-                            await page.route_web_socket('**/*', lambda ws_route: ws_route.close())
-                            response = await page.goto(url, timeout=self.playwright_timeout)
-                            if response is None:
-                                raise ValueError(f'page.goto() returned None for url {url}')
+                            try:
+                                await page.route('**/*', lambda route: self._intercept_navigation(route, session))
+                                await page.route_web_socket('**/*', lambda ws_route: ws_route.close())
+                                response = await page.goto(url, timeout=self.playwright_timeout)
+                                if response is None:
+                                    raise ValueError(f'page.goto() returned None for url {url}')
 
-                            text = await self.evaluator.evaluate_async(page, browser, response)
-                            metadata = {'source': url}
-                            yield Document(page_content=text, metadata=metadata)
+                                text = await self.evaluator.evaluate_async(page, browser, response)
+                                metadata = {'source': url}
+                                yield Document(page_content=text, metadata=metadata)
+                            finally:
+                                with contextlib.suppress(Exception):
+                                    await page.unroute_all(behavior='ignoreErrors')
                     except Exception as e:
                         if self.continue_on_failure:
                             log.exception(f'Error loading {url}: {e}')
