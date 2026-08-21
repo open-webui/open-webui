@@ -12,7 +12,9 @@
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import ErrorCircle from '$lib/components/icons/ErrorCircle.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
+	import { isToolResultError } from '$lib/components/common/toolCallUtils';
 
 	import { settings } from '$lib/stores';
 
@@ -21,6 +23,7 @@
 	export let id = '';
 	export let tokens: Array<{
 		summary?: string;
+		text?: string;
 		attributes?: {
 			type?: string;
 			name?: string;
@@ -68,6 +71,16 @@
 	);
 
 	$: codeInterpreterCount = tokens.filter((t) => t?.attributes?.type === 'code_interpreter').length;
+
+	// True when any completed tool call in the group returned an error payload
+	// (e.g. {"error": "403 Client Error: ..."}), so the group summary can show a
+	// warning icon instead of a success check.
+	$: hasError = tokens.some((t) => {
+		if (t?.attributes?.type !== 'tool_calls') return false;
+		if (t?.attributes?.done !== 'true') return false;
+		const text = decode(t?.text ?? '').replace(/<summary>.*?<\/summary>/gi, '').trim();
+		return isToolResultError(text);
+	});
 
 	// Collect all embeds from tool_calls tokens
 	$: allEmbeds = (() => {
@@ -156,6 +169,10 @@
 				{:else if hasRejected}
 					<div class="text-red-400 dark:text-red-500">
 						<XMark className="size-4" strokeWidth="2.5" />
+					</div>
+				{:else if toolCallCount > 0 && hasError}
+					<div class="text-red-500 dark:text-red-400">
+						<ErrorCircle className="size-4" strokeWidth="2" />
 					</div>
 				{:else if toolCallCount > 0}
 					<div class="text-emerald-500 dark:text-emerald-400">

@@ -16,9 +16,11 @@
 	import WrenchSolid from '../icons/WrenchSolid.svelte';
 	import CheckCircle from '../icons/CheckCircle.svelte';
 	import XMark from '../icons/XMark.svelte';
+	import ErrorCircle from '../icons/ErrorCircle.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
 	import { settings } from '$lib/stores';
+	import { isToolResultError } from './toolCallUtils';
 
 	export let id: string = '';
 	export let attributes: {
@@ -113,6 +115,7 @@
 
 	$: parsedArgs = parseArguments(args);
 	$: parsedResult = parseJSONString(result);
+	$: isError = isDone && isToolResultError(result);
 
 	const toggleOpen = () => {
 		open = !open;
@@ -170,6 +173,10 @@
 				{:else if isRejected}
 					<div class="text-red-400 dark:text-red-500">
 						<XMark className="size-4" strokeWidth="2.5" />
+					</div>
+				{:else if isDone && isError}
+					<div class="text-red-500 dark:text-red-400">
+						<ErrorCircle className="size-4" strokeWidth="2" />
 					</div>
 				{:else if isDone}
 					<div class="text-emerald-500 dark:text-emerald-400">
