@@ -131,6 +131,16 @@ class ERROR_MESSAGES(str, Enum):
     REQUIRED_FIELD_EMPTY = lambda name='': f'Required field {name} is empty'
     OAUTH_NOT_CONFIGURED = lambda name='': f"Provider '{name}' is not configured"
 
+    # Custom role errors
+    CUSTOM_ROLE_NAME_TAKEN = lambda name='': f"A custom role named '{name}' already exists."
+    CUSTOM_ROLE_NOT_FOUND = 'The requested custom role was not found.'
+    CUSTOM_ROLE_RESERVED_NAME = lambda name='': f"'{name}' is a reserved role name."
+    CUSTOM_ROLE_INACTIVE = 'The custom role is no longer active.'
+    CUSTOM_ROLE_ASSIGN_FAILED = 'Failed to assign the custom role to the user.'
+    CUSTOM_ROLE_UNASSIGN_FAILED = 'Failed to remove the custom role from the user.'
+    CUSTOM_ROLE_CANNOT_ASSIGN_RESERVED = 'Cannot assign a reserved role via the custom role API.'
+    CUSTOM_ROLE_INVALID_REFERENCE = 'The role reference is not a valid custom role.'
+
 
 class TASKS(str, Enum):
     def __str__(self) -> str:

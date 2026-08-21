@@ -129,6 +129,22 @@ class EventDefinitions(BaseModel):
     USER_ROLE_UPDATED: EventDefinition = EventDefinition(
         name='user.role_updated', description='A user role was updated.', message='User role updated'
     )
+    CUSTOM_ROLE_CREATED: EventDefinition = EventDefinition(
+        name='custom_role.created', description='A custom role was created.', message='Custom role created'
+    )
+    CUSTOM_ROLE_UPDATED: EventDefinition = EventDefinition(
+        name='custom_role.updated', description='A custom role was updated.', message='Custom role updated'
+    )
+    CUSTOM_ROLE_DEACTIVATED: EventDefinition = EventDefinition(
+        name='custom_role.deactivated',
+        description='A custom role was deactivated.',
+        message='Custom role deactivated',
+    )
+    CUSTOM_ROLE_ASSIGNED: EventDefinition = EventDefinition(
+        name='custom_role.assigned',
+        description='A custom role was assigned to a user.',
+        message='Custom role assigned',
+    )
     USER_STATUS_UPDATED: EventDefinition = EventDefinition(
         name='user.status_updated', description='A user status was updated.', message='User status updated'
     )
@@ -530,6 +546,9 @@ class EventDefinitions(BaseModel):
     )
     SKILL_DISABLED: EventDefinition = EventDefinition(
         name='skill.disabled', description='A skill was disabled.', message='Skill disabled'
+    )
+    SKILL_ACCESS_UPDATED: EventDefinition = EventDefinition(
+        name='skill.access_updated', description='Skill access was updated.', message='Skill access updated'
     )
     PROMPT_CREATED: EventDefinition = EventDefinition(
         name='prompt.created', description='A prompt was created.', message='Prompt created'

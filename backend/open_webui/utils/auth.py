@@ -516,11 +516,42 @@ async def get_current_user_by_api_key(request, api_key: str):
     return user
 
 
-VERIFIED_USER_ROLES = {'user', 'admin'}
+RESERVED_VERIFIED_ROLES = {'user', 'admin'}
 
 
-def get_verified_user(user=Depends(get_current_user)):
-    if user.role not in VERIFIED_USER_ROLES:
+def is_verified_legacy_role(role: str) -> bool:
+    """Return True if the role string is one of the statically verified legacy roles."""
+    return role in RESERVED_VERIFIED_ROLES
+
+
+async def is_verified_custom_role(role: str) -> bool:
+    """Return True if the role is a valid, active custom role reference.
+
+    Custom role validation:
+    - Must be ``custom:<uuid>`` format.
+    - The referenced role must exist in the registry AND be active.
+    - Any validation failure returns False (fail-closed).
+    """
+    from open_webui.models.custom_roles import CustomRoles, extract_custom_role_id
+
+    role_id = extract_custom_role_id(role)
+    if role_id is None:
+        return False
+
+    active_role = await CustomRoles.get_active_role_by_id(role_id)
+    return active_role is not None
+
+
+async def is_verified_role(role: str) -> bool:
+    """Unified check: legacy roles or valid active custom roles."""
+    if role in RESERVED_VERIFIED_ROLES:
+        return True
+    return await is_verified_custom_role(role)
+
+
+async def get_verified_user(user=Depends(get_current_user)):
+    """Verified-user gate — accepts legacy roles and valid active custom roles."""
+    if not await is_verified_role(user.role):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -535,7 +566,7 @@ async def get_verified_user_by_token(token: str, redis=None):
         return None
 
     user = await Users.get_user_by_id(decoded['id'])
-    if user is None or user.role not in VERIFIED_USER_ROLES:
+    if user is None or not await is_verified_role(user.role):
         return None
 
     return user
@@ -546,7 +577,7 @@ async def get_verified_user_by_id(user_id: str | None):
         return None
 
     user = await Users.get_user_by_id(user_id)
-    if user is None or user.role not in VERIFIED_USER_ROLES:
+    if user is None or not await is_verified_role(user.role):
         return None
 
     return user
@@ -567,7 +598,7 @@ async def get_optional_verified_user_from_request(request: Request):
     try:
         if token.startswith('sk-'):
             user = await get_current_user_by_api_key(request, token)
-            return user if user.role in VERIFIED_USER_ROLES else None
+            return user if await is_verified_role(user.role) else None
 
         return await get_verified_user_by_token(token, getattr(request.app.state, 'redis', None))
     except HTTPException:
@@ -575,6 +606,7 @@ async def get_optional_verified_user_from_request(request: Request):
 
 
 def get_admin_user(user=Depends(get_current_user)):
+    """Exact-admin gate — only ``admin`` role passes.  Custom roles do NOT bypass admin checks."""
     if user.role != 'admin':
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

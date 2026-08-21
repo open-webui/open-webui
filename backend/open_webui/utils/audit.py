@@ -24,7 +24,7 @@ from asgiref.typing import (
     Scope as ASGIScope,
 )
 from loguru import logger
-from open_webui.env import AUDIT_INCLUDED_PATHS, AUDIT_LOG_LEVEL, ENABLE_AUDIT_GET_REQUESTS, MAX_BODY_LOG_SIZE
+from open_webui.env import AUDIT_LOG_LEVEL, MAX_BODY_LOG_SIZE
 from open_webui.models.users import UserModel
 from open_webui.utils.auth import get_current_user, get_http_authorization_cred
 from starlette.requests import Request
@@ -89,13 +89,19 @@ class AuditLogger:
 
 class AuditContext:
     """
-    Captures and aggregates the HTTP request and response bodies during the processing of a request. It ensures that only a configurable maximum amount of data is stored to prevent excessive memory usage.
+    Captures and aggregates the HTTP request and response bodies during
+    the processing of a request.  It ensures that only a configurable
+    maximum amount of data is stored to prevent excessive memory usage.
 
     Attributes:
-    request_body (bytearray): Accumulated request payload.
-    response_body (bytearray): Accumulated response payload.
-    max_body_size (int): Maximum number of bytes to capture.
-    metadata (Dict[str, Any]): A dictionary to store additional audit metadata (user, http verb, user agent, etc.).
+        request_body: Accumulated request payload.
+        response_body: Accumulated response payload.
+        max_body_size: Maximum number of bytes to capture.
+        metadata: A dictionary to store additional audit metadata.
+        redact_body: When *True*, the middleware redacts both request and
+            response bodies in the final audit entry.  Set by the middleware
+            *before* the downstream application executes so that even
+            validation / authorization failures are still redacted.
     """
 
     def __init__(self, max_body_size: int = MAX_BODY_LOG_SIZE):
@@ -103,6 +109,7 @@ class AuditContext:
         self.response_body = bytearray()
         self.max_body_size = max_body_size
         self.metadata: Dict[str, Any] = {}
+        self.redact_body: bool = False
 
     def add_request_chunk(self, chunk: bytes):
         if len(self.request_body) < self.max_body_size:
@@ -113,9 +120,23 @@ class AuditContext:
             self.response_body.extend(chunk[: self.max_body_size - len(self.response_body)])
 
 
+_SKILL_REDACT_PATTERN = re.compile(
+    r'^/api(?:/v1)?/group-manager/groups/[^/]+/skills'
+    r'(?:/(?:create|[a-zA-Z0-9_-]+(?:/(?:update|delete))?))?$'
+)
+
+
 class AuditLoggingMiddleware:
     """
-    ASGI middleware that intercepts HTTP requests and responses to perform audit logging. It captures request/response bodies (depending on audit level), headers, HTTP methods, and user information, then logs a structured audit entry at the end of the request cycle.
+    ASGI middleware that intercepts HTTP requests and responses to perform
+    audit logging.  It captures request/response bodies (depending on audit
+    level), headers, HTTP methods, and user information, then logs a
+    structured audit entry at the end of the request cycle.
+
+    **Scoped skill endpoints** (list / create / get / update / delete)
+    are automatically marked for body redaction *before* the downstream
+    application executes, so that even validation or authorization
+    failures are redacted in the audit trail.
     """
 
     DEFAULT_AUDITED_METHODS = {'PUT', 'PATCH', 'DELETE', 'POST'}
@@ -174,6 +195,14 @@ class AuditLoggingMiddleware:
             return await self.app(scope, receive, send)
 
         async with self._audit_context(request) as context:
+
+            # Middleware-level body redaction for scoped skill CRUD
+            # endpoints (list / create / get / update / delete).  This
+            # fires *before* the downstream app executes so that even
+            # 422 validation errors and 401/403 authorization failures
+            # have their bodies redacted.
+            if _SKILL_REDACT_PATTERN.match(request.url.path):
+                context.redact_body = True
 
             async def send_wrapper(message: ASGISendEvent) -> None:
                 if self.audit_level == AuditLevel.REQUEST_RESPONSE:
@@ -288,6 +317,14 @@ class AuditLoggingMiddleware:
                     '"password": "********"',
                     request_body,
                 )
+
+            # Middleware-level body redaction: the middleware marks
+            # context.redact_body for scoped skill CRUD endpoints
+            # before the downstream app executes, ensuring that even
+            # validation / authorization failures are redacted.
+            if context.redact_body:
+                request_body = '[REDACTED]'
+                response_body = '[REDACTED]'
 
             entry = AuditLogEntry(
                 id=str(uuid.uuid4()),

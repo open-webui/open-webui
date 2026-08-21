@@ -10,11 +10,13 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
     JSON,
     BigInteger,
+    CheckConstraint,
     Column,
     ForeignKey,
     Index,
     String,
     Text,
+    UniqueConstraint,
     and_,
     cast,
     delete,
@@ -72,8 +74,10 @@ class GroupModel(BaseModel):
 
 class GroupMember(Base):
     __tablename__ = 'group_member'
-    # The table's (group_id, user_id) unique constraint cannot serve user_id lookups.
-    __table_args__ = (Index('ix_group_member_user_id_group_id', 'user_id', 'group_id'),)
+    __table_args__ = (
+        UniqueConstraint('group_id', 'user_id', name='uq_group_member_group_user'),
+        Index('ix_group_member_user_id_group_id', 'user_id', 'group_id'),
+    )
 
     id = Column(Text, unique=True, primary_key=True)
     group_id = Column(
@@ -81,7 +85,11 @@ class GroupMember(Base):
         ForeignKey('group.id', ondelete='CASCADE'),
         nullable=False,
     )
-    user_id = Column(Text, nullable=False)
+    user_id = Column(
+        Text,
+        ForeignKey('user.id', ondelete='CASCADE'),
+        nullable=False,
+    )
     created_at = Column(BigInteger, nullable=True)
     updated_at = Column(BigInteger, nullable=True)
 
@@ -646,3 +654,144 @@ class GroupTable:
 
 
 Groups = GroupTable()
+
+
+####################
+# GroupOwnedAsset DB Schema
+# Tracks exactly one owning group per (resource_type, resource_id).
+# This is distinct from access_grants which are read/write ACL rows.
+####################
+
+SUPPORTED_OWNED_ASSET_TYPES: frozenset[str] = frozenset({'knowledge', 'prompt', 'skill'})
+
+
+class GroupOwnedAsset(Base):
+    __tablename__ = 'group_owned_asset'
+
+    id = Column(Text, primary_key=True, nullable=False, unique=True)
+    resource_type = Column(Text, nullable=False)
+    resource_id = Column(Text, nullable=False)
+    group_id = Column(
+        Text,
+        ForeignKey('group.id', ondelete='RESTRICT'),
+        nullable=False,
+    )
+    created_by = Column(Text, nullable=False)
+    created_at = Column(BigInteger, nullable=False)
+    updated_at = Column(BigInteger, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            'resource_type',
+            'resource_id',
+            name='uq_group_owned_asset_resource',
+        ),
+        Index('ix_group_owned_asset_group_id', 'group_id'),
+        CheckConstraint(
+            "resource_type IN ('knowledge', 'prompt', 'skill')",
+            name='ck_group_owned_asset_type',
+        ),
+    )
+
+
+class GroupOwnedAssetModel(BaseModel):
+    """Pydantic schema for a group_owned_asset row."""
+
+    id: str
+    resource_type: str
+    resource_id: str
+    group_id: str
+    created_by: str
+    created_at: int
+    updated_at: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GroupOwnedAssetsTable:
+    """Async database access methods for the ``group_owned_asset`` table."""
+
+    async def insert_asset(
+        self,
+        *,
+        resource_type: str,
+        resource_id: str,
+        group_id: str,
+        created_by: str,
+        db: AsyncSession | None = None,
+    ) -> GroupOwnedAssetModel:
+        """Insert a new ownership record.
+
+        Raises ``ValueError`` if the resource_type is not supported or if a
+        duplicate ``(resource_type, resource_id)`` already exists.
+        """
+        if resource_type not in SUPPORTED_OWNED_ASSET_TYPES:
+            raise ValueError(
+                f'Unsupported resource_type {resource_type!r}. '
+                f'Supported: {sorted(SUPPORTED_OWNED_ASSET_TYPES)}'
+            )
+
+        async with get_async_db_context(db) as session:
+            now = int(time.time())
+            asset_id = str(uuid.uuid4())
+
+            row = GroupOwnedAsset(
+                id=asset_id,
+                resource_type=resource_type,
+                resource_id=resource_id,
+                group_id=group_id,
+                created_by=created_by,
+                created_at=now,
+                updated_at=now,
+            )
+            session.add(row)
+            await session.flush()
+            return GroupOwnedAssetModel.model_validate(row)
+
+    async def get_asset_by_resource(
+        self,
+        resource_type: str,
+        resource_id: str,
+        db: AsyncSession | None = None,
+    ) -> GroupOwnedAssetModel | None:
+        async with get_async_db_context(db) as session:
+            result = await session.execute(
+                select(GroupOwnedAsset).where(
+                    GroupOwnedAsset.resource_type == resource_type,
+                    GroupOwnedAsset.resource_id == resource_id,
+                )
+            )
+            row = result.scalars().first()
+            return GroupOwnedAssetModel.model_validate(row) if row else None
+
+    async def get_assets_by_group_id(
+        self,
+        group_id: str,
+        *,
+        resource_type: str | None = None,
+        db: AsyncSession | None = None,
+    ) -> list[GroupOwnedAssetModel]:
+        async with get_async_db_context(db) as session:
+            stmt = select(GroupOwnedAsset).where(GroupOwnedAsset.group_id == group_id)
+            if resource_type is not None:
+                stmt = stmt.where(GroupOwnedAsset.resource_type == resource_type)
+            result = await session.execute(stmt.order_by(GroupOwnedAsset.created_at.desc()))
+            return [GroupOwnedAssetModel.model_validate(r) for r in result.scalars().all()]
+
+    async def delete_asset_by_resource(
+        self,
+        resource_type: str,
+        resource_id: str,
+        db: AsyncSession | None = None,
+    ) -> bool:
+        async with get_async_db_context(db) as session:
+            result = await session.execute(
+                delete(GroupOwnedAsset).where(
+                    GroupOwnedAsset.resource_type == resource_type,
+                    GroupOwnedAsset.resource_id == resource_id,
+                )
+            )
+            return result.rowcount > 0
+
+
+GroupOwnedAssets = GroupOwnedAssetsTable()

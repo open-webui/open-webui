@@ -1117,6 +1117,26 @@ async def add_user(
         except Exception as e:
             raise HTTPException(400, detail=str(e))
 
+        # Validate custom role references before insert
+        if form_data.role is not None:
+            from open_webui.models.custom_roles import is_custom_role_ref, extract_custom_role_id
+
+            if is_custom_role_ref(form_data.role):
+                from open_webui.models.custom_roles import CustomRoles
+
+                role_id = extract_custom_role_id(form_data.role)
+                active_role = await CustomRoles.get_active_role_by_id(role_id, db=db) if role_id else None
+                if not active_role:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=ERROR_MESSAGES.CUSTOM_ROLE_INACTIVE,
+                    )
+            elif form_data.role not in ('admin', 'user', 'pending'):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.CUSTOM_ROLE_INVALID_REFERENCE,
+                )
+
         hashed = await get_password_hash(form_data.password)
         user = await Auths.insert_new_auth(
             form_data.email.lower(),
