@@ -118,6 +118,16 @@
 		}
 	});
 
+	// Underline has no CommonMark/GFM syntax, so without a rule Turndown's
+	// default behavior for an inline element it doesn't recognize is to drop
+	// the tag and keep only its text, silently discarding the formatting.
+	turndownService.addRule('underline', {
+		filter: 'u',
+		replacement: function (content) {
+			return `<u>${content}</u>`;
+		}
+	});
+
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
