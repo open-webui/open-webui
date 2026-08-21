@@ -47,8 +47,12 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict, desc
         elif 'https://discord.com/api/webhooks' in url:
             content = _event_text(message, description, event_data)
             payload['content'] = content if len(content) < 2000 else f'{content[: 2000 - 20]}... (truncated)'
-        # Microsoft Teams Webhooks
-        elif 'webhook.office.com' in url:
+        # Microsoft Teams Webhooks (supports legacy webhook.office.com, logic.azure.com, and environment.api.powerplatform.com)
+        elif (
+            'webhook.office.com' in url
+            or 'logic.azure.com' in url
+            or 'environment.api.powerplatform.com' in url
+        ):
             action = event_data.get('action', 'undefined')
             user_data = event_data.get('user') or event_data.get('actor') or {}
             if isinstance(user_data, dict):
