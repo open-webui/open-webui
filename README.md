@@ -167,8 +167,16 @@ This will start the Open WebUI server, which you can access at [http://localhost
 - **If you're only using OpenAI API**, use this command:
 
   ```bash
-  docker run -d -p 3000:8080 -e OPENAI_API_KEY=your_secret_key -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+  docker run -d -p 3000:8080 \
+    -e OPENAI_API_BASE_URL=https://api.example.com/v1 \
+    -e OPENAI_API_KEY=your_secret_key \
+    -v open-webui:/app/backend/data \
+    --name open-webui \
+    --restart always \
+    ghcr.io/open-webui/open-webui:main
   ```
+
+  If you are using an OpenAI-compatible gateway or local server, set `OPENAI_API_BASE_URL` to its API endpoint. You can also configure connections later in **Admin Settings -> Connections**. Make sure the endpoint exposes the model ID you want to use.
 
 ### Installing Open WebUI with Bundled Ollama Support
 
