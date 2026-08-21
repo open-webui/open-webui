@@ -38,7 +38,7 @@ from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.messages import MessageForm
 from open_webui.models.users import Users
-from open_webui.utils.auth import create_token
+from open_webui.utils.auth import create_token, is_verified_role
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.task import prompt_template
 from open_webui.utils.terminals import get_terminal_server_url
@@ -505,7 +505,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         # Re-gate the rehydrated owner: a demoted/deactivated or de-permissioned owner must not run.
         from open_webui.utils.access_control import has_permission
 
-        if user.role not in ('user', 'admin') or (
+        if not await is_verified_role(user.role) or (
             user.role != 'admin'
             and not await has_permission(user.id, 'features.automations', await Config.get('user.permissions'))
         ):

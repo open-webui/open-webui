@@ -14,6 +14,33 @@ from open_webui.models.users import UserModel
 from open_webui.utils.json_codec import JSONCodec
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# ---------------------------------------------------------------------------
+# Custom-role permission resolution
+# ---------------------------------------------------------------------------
+
+# Roles that use legacy permission evaluation (default_permissions + group OR-merging).
+# ``admin`` is always bypass-admin and never flows through the ordinary permissions path.
+LEGACY_PERMISSION_ROLES = {'user', 'pending'}
+
+
+async def _get_custom_role_permissions(role: str, db: AsyncSession | None = None) -> dict[str, Any] | None:
+    """Look up the explicit permission set for a custom role reference.
+
+    Returns the permissions dict if the role is a valid active custom role,
+    or ``None`` if it cannot be resolved (unknown, malformed, or disabled).
+    """
+    from open_webui.models.custom_roles import CustomRoles, extract_custom_role_id
+
+    role_id = extract_custom_role_id(role)
+    if role_id is None:
+        return None
+
+    active_role = await CustomRoles.get_active_role_by_id(role_id, db=db)
+    if active_role is None:
+        return None
+
+    return active_role.permissions
+
 
 def fill_missing_permissions(permissions: dict[str, Any], default_permissions: dict[str, Any]) -> dict[str, Any]:
     """
@@ -33,27 +60,81 @@ async def get_permissions(
     user_id: str,
     default_permissions: dict[str, Any],
     db: AsyncSession | None = None,
+    user_role: str | None = None,
 ) -> dict[str, Any]:
     """
-    Get all permissions for a user by combining the permissions of all groups the user is a member of.
-    If a permission is defined in multiple groups, the most permissive value is used (True > False).
-    Permissions are nested in a dict with the permission key as the key and a boolean as the value.
+    Get all permissions for a user.
+
+    Resolution order:
+    1. If the user has a valid active custom role, return ONLY that role's
+       explicit permissions normalised against the server-owned catalog
+       (no group merging, no config defaults).
+    2. Otherwise (legacy ``user``/``pending``), combine the configured
+       default permissions with the most-permissive merge of all group
+       permissions — the existing behaviour.
     """
 
-    def combine_permissions(permissions: dict[str, Any], group_permissions: dict[str, Any]) -> dict[str, Any]:
-        """Combine permissions from multiple groups by taking the most permissive value."""
-        for key, value in group_permissions.items():
-            if isinstance(value, dict):
-                if key not in permissions:
-                    permissions[key] = {}
-                permissions[key] = combine_permissions(permissions[key], value)
-            else:
-                if key not in permissions:
-                    permissions[key] = value
-                else:
-                    permissions[key] = permissions[key] or value  # Use the most permissive value (True > False)
-        return permissions
+    # Fast path: if the caller already knows the role, use it.
+    if user_role is None:
+        from open_webui.models.users import Users as _Users
 
+        user_obj = await _Users.get_user_by_id(user_id, db=db)
+        if user_obj is None:
+            return JSONCodec.loads(JSONCodec.dumps(default_permissions))
+        user_role = user_obj.role
+
+    # ── Custom role path ──────────────────────────────────────────────
+    if user_role not in LEGACY_PERMISSION_ROLES and user_role != 'admin':
+        return await _resolve_custom_role_permissions(user_role, db=db)
+
+    # ── Legacy path (user / pending) ──────────────────────────────────
+    return await _resolve_legacy_permissions(user_id, default_permissions, db=db)
+
+
+async def _resolve_custom_role_permissions(role: str, db: AsyncSession | None = None) -> dict[str, Any]:
+    """Resolve permissions for a custom role reference.
+
+    Returns the normalised permission tree if the role is valid and active.
+    For unknown/disabled/malformed roles returns a full-deny tree derived
+    from the fixed server-owned catalog (fail-closed).
+    """
+    from open_webui.models.custom_roles import normalize_permissions
+
+    custom_perms = await _get_custom_role_permissions(role, db=db)
+    if custom_perms is not None:
+        return normalize_permissions(custom_perms)
+    # Unknown/disabled custom role — fail closed: return a full-deny
+    # tree derived from the fixed server-owned catalog, NOT from the
+    # caller's ``default_permissions`` shape.  This ensures caller
+    # config cannot alter the denial shape or grant anything.
+    return normalize_permissions(None)
+
+
+def _combine_permissions(permissions: dict[str, Any], group_permissions: dict[str, Any]) -> dict[str, Any]:
+    """Combine permissions from multiple groups by taking the most permissive value."""
+    for key, value in group_permissions.items():
+        if isinstance(value, dict):
+            if key not in permissions:
+                permissions[key] = {}
+            permissions[key] = _combine_permissions(permissions[key], value)
+        else:
+            if key not in permissions:
+                permissions[key] = value
+            else:
+                permissions[key] = permissions[key] or value  # Use the most permissive value (True > False)
+    return permissions
+
+
+async def _resolve_legacy_permissions(
+    user_id: str,
+    default_permissions: dict[str, Any],
+    db: AsyncSession | None = None,
+) -> dict[str, Any]:
+    """Resolve permissions for legacy ``user``/``pending`` roles.
+
+    Combines the configured default permissions with the most-permissive
+    merge of all group permissions.
+    """
     user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
 
     # Deep copy default permissions to avoid modifying the original dict
@@ -61,12 +142,29 @@ async def get_permissions(
 
     # Combine permissions from all user groups
     for group in user_groups:
-        permissions = combine_permissions(permissions, group.permissions or {})
+        permissions = _combine_permissions(permissions, group.permissions or {})
 
     # Ensure all fields from default_permissions are present and filled in
     permissions = fill_missing_permissions(permissions, default_permissions)
 
     return permissions
+
+
+def _empty_permissions(default_permissions: dict[str, Any]) -> dict[str, Any]:
+    """Return a permissions dict with all boolean leaves set to False.
+
+    Used for fail-closed resolution of unknown/disabled custom roles.
+    """
+    def _deny_tree(template: dict[str, Any]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in template.items():
+            if isinstance(value, dict):
+                result[key] = _deny_tree(value)
+            else:
+                result[key] = False
+        return result
+
+    return _deny_tree(default_permissions)
 
 
 async def has_permission(
@@ -76,10 +174,14 @@ async def has_permission(
     db: AsyncSession | None = None,
 ) -> bool:
     """
-    Check if a user has a specific permission by checking the group permissions
-    and fall back to default permissions if not found in any group.
+    Check if a user has a specific permission.
 
-    Permission keys can be hierarchical and separated by dots ('.').
+    Resolution:
+    1. Custom roles: check only the role's explicit permission tree
+       normalised against the server-owned catalog.
+       Unknown/disabled custom roles return False (fail-closed).
+    2. Legacy roles (user/pending): check group permissions, then default.
+    3. Admin: always returns True (admin bypass handled by callers).
     """
 
     def get_permission(permissions: dict[str, Any], keys: list[str]) -> bool:
@@ -93,6 +195,31 @@ async def has_permission(
 
     permission_hierarchy = permission_key.split('.')
 
+    # Resolve user role if not provided via caller context
+    from open_webui.models.users import Users as _Users
+
+    user_obj = await _Users.get_user_by_id(user_id, db=db)
+    if user_obj is None:
+        return False
+
+    user_role = user_obj.role
+
+    # ── Custom role path ──────────────────────────────────────────────
+    if user_role not in LEGACY_PERMISSION_ROLES and user_role != 'admin':
+        custom_perms = await _get_custom_role_permissions(user_role, db=db)
+        if custom_perms is not None:
+            # Normalize against the server-owned catalog
+            from open_webui.models.custom_roles import normalize_permissions
+            normalized = normalize_permissions(custom_perms)
+            return get_permission(normalized, permission_hierarchy)
+        # Unknown/disabled custom role — fail closed
+        return False
+
+    # ── Admin bypass ──────────────────────────────────────────────────
+    if user_role == 'admin':
+        return True
+
+    # ── Legacy path (user / pending) ──────────────────────────────────
     # Retrieve user group permissions
     user_groups = await Groups.get_groups_by_member_id(user_id, db=db)
 

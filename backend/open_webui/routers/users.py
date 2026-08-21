@@ -971,6 +971,26 @@ async def update_user_by_id(
         # Build update dict from only the provided fields
         update_data = {}
         if form_data.role is not None:
+            # Validate custom role references
+            from open_webui.models.custom_roles import is_custom_role_ref, extract_custom_role_id
+
+            if is_custom_role_ref(form_data.role):
+                from open_webui.models.custom_roles import CustomRoles
+
+                role_id = extract_custom_role_id(form_data.role)
+                active_role = await CustomRoles.get_active_role_by_id(role_id, db=db) if role_id else None
+                if not active_role:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=ERROR_MESSAGES.CUSTOM_ROLE_INACTIVE,
+                    )
+            elif form_data.role not in ('admin', 'user', 'pending'):
+                # Reject unknown non-custom role strings
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.CUSTOM_ROLE_INVALID_REFERENCE,
+                )
+
             update_data['role'] = form_data.role
         if form_data.name is not None:
             update_data['name'] = form_data.name

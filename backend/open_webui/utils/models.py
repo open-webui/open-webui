@@ -479,7 +479,7 @@ async def check_model_access(user, model, model_info=None, db=None):
 async def get_filtered_models(models, user, db=None):
     # Filter out models that the user does not have access to
     if (
-        user.role == 'user' or (user.role == 'admin' and not BYPASS_ADMIN_ACCESS_CONTROL)
+        user.role != 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
         model_infos = {}
         for model in models:

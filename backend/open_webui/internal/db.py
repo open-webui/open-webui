@@ -313,6 +313,10 @@ elif 'sqlite' in SQLALCHEMY_DATABASE_URL:
         else:
             cursor.execute('PRAGMA journal_mode=DELETE')
 
+        # Enable foreign key enforcement — required for RESTRICT/CASCADE
+        # FK actions on group_owned_asset and group_member.
+        cursor.execute('PRAGMA foreign_keys=ON')
+
         # Each PRAGMA is skipped when its env var is empty, allowing opt-out.
         if DATABASE_SQLITE_PRAGMA_SYNCHRONOUS:
             cursor.execute(f'PRAGMA synchronous={DATABASE_SQLITE_PRAGMA_SYNCHRONOUS}')

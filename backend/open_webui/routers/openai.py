@@ -931,7 +931,7 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
                 error_detail = f'Unexpected error: {str(e)}'
                 raise HTTPException(status_code=500, detail=error_detail)
 
-    if user.role == 'user' and not BYPASS_MODEL_ACCESS_CONTROL:
+    if user.role != 'admin' and not BYPASS_MODEL_ACCESS_CONTROL:
         models['data'] = await get_filtered_models(models, user)
 
     return models

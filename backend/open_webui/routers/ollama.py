@@ -488,7 +488,7 @@ async def get_ollama_tags(
         key = get_api_key(url_idx, url, (await Config.get('ollama.api_configs', {})))
         result = await send_request(f'{url}/api/tags', 'GET', key=key, user=user)
 
-    if user.role == 'user' and not BYPASS_MODEL_ACCESS_CONTROL:
+    if user.role != 'admin' and not BYPASS_MODEL_ACCESS_CONTROL:
         result['models'] = await get_filtered_models(result, user)
 
     return result
@@ -1491,7 +1491,7 @@ async def get_openai_models(
     now_ts = int(time.time())
     models = [{'id': m['model'], 'object': 'model', 'created': now_ts, 'owned_by': 'openai'} for m in raw_models]
 
-    if user.role == 'user' and not BYPASS_MODEL_ACCESS_CONTROL:
+    if user.role != 'admin' and not BYPASS_MODEL_ACCESS_CONTROL:
         model_ids = [m['id'] for m in models]
         model_infos = {mi.id: mi for mi in await Models.get_models_by_ids(model_ids, db=db)}
         user_group_ids = {g.id for g in await Groups.get_groups_by_member_id(user.id, db=db)}

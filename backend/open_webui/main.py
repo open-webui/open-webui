@@ -149,10 +149,12 @@ from open_webui.routers import (
     channels,
     chats,
     configs,
+    custom_roles,
     evaluations,
     files,
     folders,
     functions,
+    group_manager,
     groups,
     images,
     knowledge,
@@ -830,6 +832,7 @@ app.include_router(configs.router, prefix='/api/v1/configs', tags=['configs'])
 
 app.include_router(auths.router, prefix='/api/v1/auths', tags=['auths'])
 app.include_router(users.router, prefix='/api/v1/users', tags=['users'])
+app.include_router(custom_roles.router, prefix='/api/v1/custom-roles', tags=['custom-roles'])
 
 
 app.include_router(channels.router, prefix='/api/v1/channels', tags=['channels'])
@@ -847,6 +850,7 @@ app.include_router(skills.router, prefix='/api/v1/skills', tags=['skills'])
 app.include_router(memories.router, prefix='/api/v1/memories', tags=['memories'])
 app.include_router(folders.router, prefix='/api/v1/folders', tags=['folders'])
 app.include_router(groups.router, prefix='/api/v1/groups', tags=['groups'])
+app.include_router(group_manager.router, prefix='/api/v1/group-manager', tags=['group-manager'])
 app.include_router(files.router, prefix='/api/v1/files', tags=['files'])
 app.include_router(functions.router, prefix='/api/v1/functions', tags=['functions'])
 app.include_router(evaluations.router, prefix='/api/v1/evaluations', tags=['evaluations'])
