@@ -6,11 +6,52 @@ from open_webui.utils.misc import sanitize_text_for_db
 
 KEYS_TO_EXCLUDE = ['content', 'pages', 'tables', 'paragraphs', 'sections', 'figures']
 
+# A nested metadata value is deep-copied onto every chunk by the text splitter, so one
+# oversized value costs memory proportional to the chunk count. KEYS_TO_EXCLUDE catches the
+# field names we know about; this bounds the size of the nested values we do not.
+MAX_NESTED_METADATA_CHARS = 4096
+
+# Scalars are exempt on purpose: pinecone.py and s3vector.py put the chunk text itself into
+# metadata before calling process_metadata, and dropping that would lose the stored document.
+_CONTAINER_TYPES = (list, dict, tuple, set)
+
+# Floor charged per item visited, which is what bounds the walk by the ceiling rather than by
+# the size of the value.
+_ITEM_OVERHEAD = 2
+
+
+def _is_unbounded(value: Any) -> bool:
+    """True when str() of a container value would exceed MAX_NESTED_METADATA_CHARS characters.
+
+    Stops as soon as the ceiling is passed, so the work is bounded by the ceiling rather than
+    by the value, and nothing is serialized in order to measure it. Nesting is charged like any
+    other item, so depth cannot hide size and a cycle terminates. The charge under-estimates
+    what str() writes, so a value that would fit is never dropped.
+    """
+    if not isinstance(value, _CONTAINER_TYPES):
+        return False
+
+    budget = MAX_NESTED_METADATA_CHARS
+    stack: list[Any] = [value]
+    while stack:
+        current = stack.pop()
+        entries = current.items() if isinstance(current, dict) else enumerate(current)
+        for key, item in entries:
+            budget -= _ITEM_OVERHEAD + (len(key) if isinstance(key, str) else 0)
+            if isinstance(item, _CONTAINER_TYPES):
+                stack.append(item)
+            elif isinstance(item, (str, bytes, bytearray)):
+                # len() is O(1) here, and these are the only leaves that can be large. Never
+                # str() a leaf: that materializes what this guard exists to keep out.
+                budget -= len(item)
+            if budget < 0:
+                return True
+    return False
+
 
 def filter_metadata(metadata: dict[str, any]) -> dict[str, any]:
     # Removes large/redundant fields from metadata dict.
-    metadata = {key: value for key, value in metadata.items() if key not in KEYS_TO_EXCLUDE}
-    return metadata
+    return {key: value for key, value in metadata.items() if key not in KEYS_TO_EXCLUDE and not _is_unbounded(value)}
 
 
 def process_metadata(
@@ -21,7 +62,7 @@ def process_metadata(
     result = {}
     for key, value in metadata.items():
         # Skip large fields
-        if key in KEYS_TO_EXCLUDE:
+        if key in KEYS_TO_EXCLUDE or _is_unbounded(value):
             continue
         if value is None:
             continue
