@@ -569,7 +569,7 @@
 						{#if docxError}
 							<div class="text-red-500 text-sm p-4">{docxError}</div>
 						{:else if docxData}
-							<DocxPreview data={docxData} className="max-h-[60vh]" />
+							<DocxPreview data={docxData} className="h-[60vh]" />
 						{:else}
 							<div class="text-gray-500 text-sm p-4">No content available</div>
 						{/if}
