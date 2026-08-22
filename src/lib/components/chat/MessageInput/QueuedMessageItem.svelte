@@ -79,28 +79,33 @@
 
 	<!-- Actions -->
 	<div class="flex items-center gap-1 shrink-0">
-		<!-- Send immediately -->
+		<!-- Send immediately (allowed once uploads have settled; a failed upload is not
+			coming back, so the message can still be sent without it) -->
 		<Tooltip
-			content={files.some((file) => ['uploading', 'error'].includes(file.status))
+			content={files.some((file) => file.status === 'uploading')
 				? $i18n.t('Waiting for upload')
-				: $i18n.t('Send now')}
+				: files.some((file) => file.status === 'error')
+					? $i18n.t('Upload failed')
+					: $i18n.t('Send now')}
 		>
 			<button
 				type="button"
-				class="p-1 text-gray-400 transition-colors {files.some((file) =>
-					['uploading', 'error'].includes(file.status)
+				class="p-1 text-gray-400 transition-colors {files.some(
+					(file) => file.status === 'uploading'
 				)
 					? 'opacity-40 cursor-not-allowed'
 					: 'hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'}"
-				disabled={files.some((file) => ['uploading', 'error'].includes(file.status))}
+				disabled={files.some((file) => file.status === 'uploading')}
 				on:click={() => {
-					if (!files.some((file) => ['uploading', 'error'].includes(file.status))) {
+					if (!files.some((file) => file.status === 'uploading')) {
 						onSendNow(id);
 					}
 				}}
-				aria-label={files.some((file) => ['uploading', 'error'].includes(file.status))
+				aria-label={files.some((file) => file.status === 'uploading')
 					? $i18n.t('Waiting for upload')
-					: $i18n.t('Send now')}
+					: files.some((file) => file.status === 'error')
+						? $i18n.t('Upload failed')
+						: $i18n.t('Send now')}
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"

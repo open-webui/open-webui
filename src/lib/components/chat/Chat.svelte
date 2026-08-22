@@ -2461,9 +2461,7 @@
 		const lastMessage = history.currentId ? history.messages[history.currentId] : null;
 		if (
 			(lastMessage && lastMessage.role === 'assistant' && !lastMessage.done) ||
-			queue.some((m) =>
-				(m.files ?? []).some((file) => ['uploading', 'error'].includes(file.status))
-			)
+			queue.some((m) => (m.files ?? []).some((file) => file.status === 'uploading'))
 		) {
 			return;
 		}
@@ -2495,7 +2493,7 @@
 	const sendQueuedMessageNow = async (id) => {
 		const queue = $chatRequestQueues[$chatId] ?? [];
 		const item = queue.find((m) => m.id === id);
-		if (!item || (item.files ?? []).some((file) => ['uploading', 'error'].includes(file.status))) {
+		if (!item || (item.files ?? []).some((file) => file.status === 'uploading')) {
 			return;
 		}
 
@@ -2527,6 +2525,9 @@
 			...q,
 			[$chatId]: queue.filter((m) => m.id !== id)
 		}));
+		// Restart queue processing: removing a stuck message (e.g. one with a failed
+		// upload) must let the remaining queued messages through.
+		processNextInQueue($chatId);
 	};
 
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
@@ -3132,11 +3133,13 @@
 			return;
 		}
 
+		// Only queue behind genuinely in-flight uploads. A file stuck in 'error'
+		// will never finish uploading, so it must not hold new messages hostage.
 		if (
 			($chatRequestQueues[$chatId] ?? []).some((m) =>
-				(m.files ?? []).some((file) => ['uploading', 'error'].includes(file.status))
+				(m.files ?? []).some((file) => file.status === 'uploading')
 			) ||
-			(files.length > 0 && files.some((file) => ['uploading', 'error'].includes(file.status)))
+			(files.length > 0 && files.some((file) => file.status === 'uploading'))
 		) {
 			chatRequestQueues.update((q) => ({
 				...q,
