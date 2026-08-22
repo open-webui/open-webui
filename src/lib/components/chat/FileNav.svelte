@@ -1173,20 +1173,21 @@
 				return;
 			}
 
-			const lastSlash = filePath.lastIndexOf('/');
-			const dir = lastSlash > 0 ? filePath.substring(0, lastSlash + 1) : '/';
+				const lastSlash = filePath.lastIndexOf('/');
+				const dir = lastSlash > 0 ? filePath.substring(0, lastSlash + 1) : '/';
+				invalidateTreeCache(dir);
 
-			if (selectedFile) {
-				if (selectedFile === filePath || currentPath.startsWith(dir)) {
-					const fileName = selectedFile.split('/').pop() ?? '';
-					await openEntry({ name: fileName, type: 'file', size: 0 });
+				if (selectedFile) {
+					if (selectedFile === filePath || currentPath.startsWith(dir)) {
+						const fileName = selectedFile.split('/').pop() ?? '';
+						await openEntry({ name: fileName, type: 'file', size: 0 });
 				}
-			} else {
-				if (currentPath.startsWith(dir) || dir.startsWith(currentPath)) {
-					await loadDir(currentPath, { preserveTree: true });
+				} else {
+					if (currentPath.startsWith(dir) || dir.startsWith(currentPath)) {
+						await refreshBrowser();
+					}
 				}
-			}
-		});
+			});
 
 		if (!handledDisplayFile && terminal) {
 			loading = true;

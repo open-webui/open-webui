@@ -33,11 +33,12 @@
 		toolServers,
 		terminalServers,
 		user as _user,
-		showControls,
-		showSettings,
-		selectedTerminalId,
-		TTSWorker,
-		temporaryChatEnabled
+			showControls,
+			showSettings,
+			showFileNavDir,
+			selectedTerminalId,
+			TTSWorker,
+			temporaryChatEnabled
 	} from '$lib/stores';
 
 	import {
@@ -942,11 +943,12 @@
 					fileItem.status = 'uploaded';
 					fileItem.id = uploadedFile.path;
 					fileItem.path = uploadedFile.path;
-					fileItem.url = uploadedFile.path;
-					fileItem.size = uploadedFile.size ?? file.size;
-					fileItem.file = uploadedFile;
-					files = files;
-				} else {
+						fileItem.url = uploadedFile.path;
+						fileItem.size = uploadedFile.size ?? file.size;
+						fileItem.file = uploadedFile;
+						files = files;
+						showFileNavDir.set(uploadedFile.path);
+					} else {
 					fileItem.status = 'error';
 					fileItem.error = $i18n.t('Failed to upload file.');
 					toast.error(fileItem.error);
