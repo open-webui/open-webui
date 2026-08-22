@@ -3,7 +3,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import { formatFileSize } from '$lib/utils';
-	import { settings } from '$lib/stores';
+	import { settings, showFileNavPath } from '$lib/stores';
 
 	import FileItemModal from './FileItemModal.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
@@ -57,7 +57,11 @@
 		: 'gap-1 rounded-2xl p-1.5'} text-left"
 	type="button"
 	on:click={async () => {
-		if (item?.file?.data?.content || item?.type === 'file' || item?.content || modal) {
+		const filesystemPath = item?.type === 'filesystem' ? (item.path ?? item.url ?? item.id) : null;
+
+		if (filesystemPath) {
+			showFileNavPath.set(filesystemPath);
+		} else if (item?.file?.data?.content || item?.type === 'file' || item?.content || modal) {
 			showModal = !showModal;
 		} else {
 			if (url) {
@@ -111,7 +115,7 @@
 							? $i18n.t('Note')
 							: type === 'chat'
 								? $i18n.t('Chat')
-								: type === 'file'
+								: type === 'file' || type === 'filesystem'
 									? $i18n.t('File')
 									: $i18n.t('Document')}
 					placement="top"
@@ -145,7 +149,7 @@
 					? 'text-gray-800 dark:text-gray-100'
 					: 'text-gray-500'}"
 			>
-				{#if type === 'file'}
+				{#if type === 'file' || type === 'filesystem'}
 					{$i18n.t('File')}
 				{:else if type === 'note'}
 					{$i18n.t('Note')}
