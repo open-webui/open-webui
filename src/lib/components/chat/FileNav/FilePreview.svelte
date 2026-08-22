@@ -47,6 +47,12 @@
 	export let readOnly = false;
 
 	export let onSave: ((content: string) => Promise<void>) | null = null;
+	export let searchTarget: {
+		line: number;
+		column: number;
+		length: number;
+		requestId: number;
+	} | null = null;
 
 	export let editing = false;
 	let editContent = '';
@@ -350,7 +356,17 @@
 			className="w-full h-full"
 		/>
 	{:else if fileContent !== null}
-		{#if isHtml && !showRaw && serveUrl}
+		{#if searchTarget}
+			<div class="absolute inset-0">
+				<FileCodeEditor
+					bind:this={fileCodeEditorRef}
+					value={fileContent ?? ''}
+					filePath={selectedFile}
+					onSave={readOnly ? null : onSave}
+					{searchTarget}
+				/>
+			</div>
+		{:else if isHtml && !showRaw && serveUrl}
 			{#if overlay}
 				<div class="absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 			{/if}

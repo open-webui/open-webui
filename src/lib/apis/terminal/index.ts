@@ -19,6 +19,26 @@ export type TerminalFileSearchResponse = {
 	results: TerminalFileSearchResult[];
 };
 
+export type TerminalContentMatch = {
+	line: number;
+	column: number;
+	text: string;
+};
+
+export type TerminalFileMatch = {
+	path: string;
+	relative_path: string;
+	name: string;
+	type: 'file' | 'directory';
+	name_match: boolean;
+	content_matches: TerminalContentMatch[];
+};
+
+export type TerminalFileMatchesResponse = {
+	results: TerminalFileMatch[];
+	next_offset: number | null;
+};
+
 export type ListeningPort = {
 	port: number;
 	pid: number | null;
@@ -192,6 +212,37 @@ export const searchFiles = async (
 				modified: item.modified
 			}))
 	};
+};
+
+export const getFileMatches = async (
+	baseUrl: string,
+	apiKey: string,
+	query: string,
+	path: string = '.',
+	showHidden: boolean = false,
+	offset: number = 0,
+	sessionId?: string,
+	signal?: AbortSignal
+): Promise<TerminalFileMatchesResponse | null> => {
+	const headers: Record<string, string> = bearerHeaders(apiKey);
+	if (sessionId) headers['X-Session-Id'] = sessionId;
+
+	const params = new URLSearchParams({
+		query,
+		path,
+		show_hidden: String(showHidden),
+		offset: String(offset)
+	});
+	const res = await fetch(`${baseUrl.replace(/\/$/, '')}/files/matches?${params.toString()}`, {
+		headers,
+		signal
+	}).catch((err) => {
+		if (err?.name !== 'AbortError') console.error('open-terminal getFileMatches error:', err);
+		return null;
+	});
+	if (!res?.ok) return null;
+	const json = await res.json().catch(() => null);
+	return Array.isArray(json?.results) ? json : null;
 };
 
 export const readFile = async (
