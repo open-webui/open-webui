@@ -15,6 +15,8 @@
 	import CheckCircle from '../icons/CheckCircle.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
+	import GraphCard from './GraphCard.svelte';
+	import { isGraphUrlTool, extractGraphUrl } from '$lib/utils/graph-url';
 	import { settings } from '$lib/stores';
 
 	export let id: string = '';
@@ -95,10 +97,22 @@
 
 	$: parsedArgs = parseArguments(args);
 	$: parsedResult = parseJSONString(result);
+
+	// The one per-tool special case in this otherwise-generic renderer (see
+	// backend/open_webui/utils/middleware.py's own display_file/run_command
+	// precedent for hardcoded tool-name checks). Only swaps in once the
+	// call is done and a URL was actually extracted -- an in-progress call,
+	// a tool-name mismatch, or an unparseable result all fall through to
+	// the generic Output block below rather than silently rendering
+	// nothing, mirroring the reference repo's own graceful-degradation
+	// stance (see graph-url.ts's docstring).
+	$: graphUrl = isDone && isGraphUrlTool(attributes?.name ?? '') ? extractGraphUrl(result) : null;
 </script>
 
 <div {id} class={className}>
-	{#if !grouped && embeds && Array.isArray(embeds) && embeds.length > 0}
+	{#if !grouped && graphUrl}
+		<GraphCard url={graphUrl} />
+	{:else if !grouped && embeds && Array.isArray(embeds) && embeds.length > 0}
 		<!-- Embed Mode: Show iframes without collapsible behavior -->
 		<div class="py-1 w-full cursor-pointer">
 			<div class="w-full text-xs text-gray-500">

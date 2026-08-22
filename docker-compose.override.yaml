@@ -1,0 +1,28 @@
+services:
+  open-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile.claude-cli
+    image: open-webui-claude-cli:local
+    depends_on: !reset []
+    environment:
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      # Fixed, not '' (auto-generate-on-first-boot): the auto-generated key
+      # lives in the container's own writable layer
+      # (/app/backend/.webui_secret_key), *outside* the persistent
+      # open-webui:/app/backend/data volume, so it was silently regenerating
+      # on every `docker compose ... up -d` that recreated the container
+      # (every image rebuild) -- invalidating all existing login sessions
+      # each time. Generated once with `openssl rand -base64 32`; treat this
+      # value as a secret (don't commit a real deployment's key to a public
+      # repo).
+      WEBUI_SECRET_KEY: 'lIw84JYq+FYJiE3a7uh3kRSl7x5xEra3zzxZ9tLZbFQ='
+      RAG_EMBEDDING_ENGINE: ollama
+      RAG_EMBEDDING_MODEL: nomic-embed-text
+      # Redirects the claude CLI's config/credential storage into the
+      # already-persistent data volume (open-webui:/app/backend/data) so
+      # `claude auth login` only needs to happen once, not on every
+      # container recreation. See docs/ichirouganaim-integration/decisions.md.
+      CLAUDE_CONFIG_DIR: /app/backend/data/claude-cli-home
+    extra_hosts:
+      - host.docker.internal:host-gateway

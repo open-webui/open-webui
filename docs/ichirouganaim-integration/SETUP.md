@@ -1,0 +1,376 @@
+# Setup: claude-cli model on a fresh machine (e.g. a server)
+
+Step-by-step instructions to stand up this fork with the `claude_cli`
+model/Pipe working, from nothing, on any Docker host — a fresh clone on a
+server, not just this dev machine. For *why* things are built this way, see
+[`decisions.md`](decisions.md) and
+[`scoping-claude-cli-and-graph-modal.md`](scoping-claude-cli-and-graph-modal.md).
+This file is the "what to actually run," not the reasoning.
+
+## What you end up with
+
+`open-webui`, running in Docker, with an extra model in the dropdown called
+`claude_cli` that chats through a real `claude` CLI subprocess running
+*inside* that same container, authenticated with a Claude.ai subscription
+login (not a separate `ANTHROPIC_API_KEY`), optionally with tool access to
+one configured MCP server.
+
+## Prerequisites
+
+- Docker Engine + Docker Compose v2 (the `docker compose` subcommand, not
+  the older standalone `docker-compose`).
+- A Claude.ai account that can log into the `claude` CLI (`claude auth
+  login`'s normal browser flow). Any plan that supports Claude Code works —
+  this integration uses that login directly, not per-token API billing.
+- An amd64 or arm64 Linux Docker host, or macOS with Docker Desktop.
+  **The arm64 path (Apple Silicon) is fully verified end-to-end.** The
+  amd64 path is written to the same logic (`Dockerfile.claude-cli` resolves
+  package/binary architecture automatically from Docker's own
+  `TARGETARCH`) but is **unverified** — a `docker buildx build --platform
+  linux/amd64` cross-build was attempted to at least check it structurally,
+  but QEMU emulation never made real progress in this sandboxed session
+  (killed after 20+ minutes stuck at effectively zero CPU time) and had to
+  be abandoned rather than left claiming a check that didn't actually
+  finish. No amd64 hardware was available either. The exact `.deb`/Node.js
+  versions pinned in the Dockerfile are known-good for arm64 and Debian
+  publishes the same versions for amd64 from the same source, so it's
+  *likely* to just work — but budget time to debug it on first real amd64
+  use, and please fold whatever you find back into this file and
+  `decisions.md`.
+- **Real free disk space — at least 10-15GB, ideally more.** This isn't a
+  throwaway warning: an out-of-disk-space condition during this exact setup
+  once caused the `claude` CLI to silently produce zero output with no
+  error at all (fixed now by a version pin — see
+  [`decisions.md`](decisions.md) — but budget the space anyway; a good
+  chunk of a slow, several-hour debugging session traced back to this).
+  Run `docker system df` before starting, and periodically
+  `docker builder prune -f` (safe — only removes unused build cache) if it
+  creeps back up after repeated rebuilds.
+- **At least ~6GB of memory available to Docker itself, ideally more —
+  this is new as of the step 4/5 work (tool-call rendering + the graph-url
+  card) and matters more than it sounds like it should.** `Dockerfile.claude-cli`
+  now includes its own frontend-build stage (`npm run build`, i.e. a real
+  Vite/Rollup production build of the whole Svelte app, needed so the
+  container's frontend actually includes this integration's own UI changes
+  — `GraphCard.svelte`/`GraphModal.svelte`/`graph-url.ts` — instead of just
+  the stock upstream bundle `ghcr.io/open-webui/open-webui:main` ships).
+  That build step is memory-hungry. **Live-verified, not theoretical**: on a
+  Docker Desktop VM capped at 3.8GB total, this build reliably failed —
+  first with Node's own graceful `FATAL ERROR: ... JavaScript heap out of
+  memory` (V8 hit its auto-detected heap ceiling, still mid-build, not yet
+  done), then, after forcing a larger heap via `NODE_OPTIONS=--max-old-space-size=3072`
+  (already set in `Dockerfile.claude-cli`'s frontend-build stage — don't
+  remove it, it helped it progress further before still dying), with a hard
+  `SIGKILL`/`cannot allocate memory` from the kernel itself — the second
+  failure mode is the one that actually proves the ceiling is too low, not
+  just conservatively auto-detected: no amount of build-flag tuning fixes a
+  VM that plainly doesn't have the memory. See decisions.md's 2026-08-22
+  "Frontend build stage runs out of memory" entry for the full blow-by-blow
+  of both failure modes and why the workaround of stopping other running
+  containers didn't help either (the ceiling is the whole VM's allocation,
+  not contention from sibling containers). A machine with generous RAM
+  (e.g. a Mac Studio) shouldn't hit this at all — Docker Desktop's default
+  memory allocation on a high-RAM host is normally already well above this
+  ceiling — but if the build fails with either of the two symptoms above,
+  this is the cause, and the fix is giving Docker more memory (Docker
+  Desktop: Settings → Resources → Memory; Docker Engine on Linux isn't
+  capped the same way and shouldn't need this at all).
+
+## 1. Get the files onto the machine
+
+Clone this repo. Confirm these specific files are present — they are
+**not** part of upstream open-webui, and depending on how/when this repo
+was forked from your own history, may not have been committed yet:
+
+```
+Dockerfile.claude-cli
+docker-compose.override.yaml
+docs/ichirouganaim-integration/claude_cli.py
+docs/ichirouganaim-integration/sync_pipe.py
+docs/ichirouganaim-integration/bootstrap_admin_api_key.py
+docs/ichirouganaim-integration/bootstrap.sh
+```
+
+If any are missing, they need to be copied over or committed from
+wherever this fork was originally built — there's no way to regenerate
+them from the base open-webui repo alone.
+
+**As of the step 4/5 work, the frontend itself also matters, not just these
+integration-specific files.** `Dockerfile.claude-cli` now builds the whole
+Svelte frontend from this checkout's own `src/` (see step 3) rather than
+only extending the upstream image's pre-built bundle — so a full, normal
+`git clone` of this fork (not a partial/sparse checkout) is required, same
+as it would be for building open-webui's own root `Dockerfile`. Nothing
+extra to list here for that part specifically (it's just "the whole repo,"
+not a special file set) — this note exists so a partial copy of only the
+files above (which was a reasonable thing to do before this fork had a
+frontend-build step at all) doesn't quietly produce a container with a
+frontend build failure or a stale/incomplete UI.
+
+## 2. Configure `docker-compose.override.yaml` for this deployment
+
+The one in this repo already has the required pieces; review each before
+reusing it on a new machine:
+
+```yaml
+services:
+  open-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile.claude-cli
+    image: open-webui-claude-cli:local
+    depends_on: !reset []
+    environment:
+      WEBUI_SECRET_KEY: '<a fixed secret, see below>'
+      CLAUDE_CONFIG_DIR: /app/backend/data/claude-cli-home
+    extra_hosts:
+      - host.docker.internal:host-gateway
+```
+
+- **`build`/`image`** — required. Without this, `docker compose` pulls the
+  bare upstream image with no `claude` CLI, no Node, none of it.
+- **`WEBUI_SECRET_KEY`** — **generate your own** with
+  `openssl rand -base64 32`; don't reuse the value currently checked into
+  this repo's copy of the file (if it's been committed anywhere, treat it
+  as already-compromised and rotate it). Setting a fixed value here matters
+  for reasons that aren't obvious: left unset, open-webui auto-generates
+  one on first boot and writes it to a file *inside the container's own
+  writable layer*, not the persistent data volume — so it silently
+  regenerates on every container recreation (every rebuild), invalidating
+  every existing login session each time. A fixed value avoids that.
+- **`CLAUDE_CONFIG_DIR`** — required, leave as-is. Redirects the `claude`
+  CLI's own credential/session storage into the already-persistent
+  `open-webui:/app/backend/data` volume, so `claude auth login` (step 6)
+  only has to happen once per deployment, not on every restart.
+- **`extra_hosts: host.docker.internal:host-gateway`** — required if
+  anything the container needs to reach (an MCP server, Ollama, etc.) runs
+  on the same host machine outside Docker. Works the same way on native
+  Linux Docker Engine (20.10+) as it does on Docker Desktop — this isn't a
+  Mac-only convenience despite the name.
+- Anything else in this repo's copy of the file (`OLLAMA_BASE_URL`,
+  `RAG_EMBEDDING_ENGINE`, `RAG_EMBEDDING_MODEL`) is unrelated to the
+  `claude_cli` integration — leftover local configuration for this dev
+  machine's Ollama setup. Remove or adjust for the target server; none of
+  it is required for `claude_cli` to work.
+
+## 3. Build and start
+
+```bash
+docker compose -f docker-compose.yaml -f docker-compose.override.yaml build
+docker compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
+```
+
+The build now has two real phases, in order:
+
+1. **Frontend build** (`frontend-build` stage, `node:22-alpine3.20`): a
+   normal `npm ci --force && npm run build` of this checkout's own Svelte
+   frontend — the same recipe the root `Dockerfile` uses for the official
+   image, just producing a bundle that includes this integration's own
+   `GraphCard`/`GraphModal`/graph-url-card UI changes instead of the stock
+   one. This is the slow, memory-hungry phase — see the Prerequisites
+   section above if it fails with an out-of-memory error. Expect several
+   minutes here alone on a healthy machine, not "a couple of minutes"
+   total like earlier versions of this doc said (that estimate predates
+   this stage existing at all).
+2. **Backend/CLI layer** (extends `ghcr.io/open-webui/open-webui:main`):
+   installs Node.js (again, separately — this one's for running the
+   `claude` CLI at container runtime, unrelated to the frontend build
+   above), the `claude` CLI itself (pinned to a specific version — see
+   [`decisions.md`](decisions.md) for why an unpinned "latest" bit us
+   once), the sandboxing dependencies (`bubblewrap`, `socat`, `uidmap` and
+   their own dependencies) needed for the CLI to run as a non-root user
+   later, and finally overlays the frontend build's output from phase 1
+   on top of the base image's own stock bundle.
+
+Total time varies a lot by machine and whether Docker's build cache is
+warm; budget more than the old "a couple of minutes" estimate, especially
+on a clean build.
+
+Confirm it's up:
+
+```bash
+curl http://localhost:3000/health   # {"status":true}
+```
+
+(Port 3000 is the default from the base `docker-compose.yaml`; override
+with `OPEN_WEBUI_PORT` if needed.)
+
+## 4. Create your admin account
+
+Open `http://<host>:3000` in a browser and sign up. **The first account
+created becomes admin automatically** — this only applies to the very
+first signup on a fresh instance.
+
+## 5-6. Get an admin API key, then sync the `claude_cli` Pipe function
+
+**Recommended — one script does both:**
+
+```bash
+bash docs/ichirouganaim-integration/bootstrap.sh
+```
+
+Mints (or, on a re-run, reuses — see below) an admin API key, then
+immediately uses it to sync the Pipe. This is the combined form
+specifically so there's no manual copy-paste of the key between the two
+steps — that hand-off is the easiest place for a manual run to go wrong
+(stale key from a previous attempt, wrong container name, etc). Requires
+the admin account from step 4 to already exist first. Override
+`OPEN_WEBUI_CONTAINER` / `OPEN_WEBUI_BASE_URL` env vars if they differ from
+the defaults (`open-webui` / `http://localhost:3000`).
+
+**Safe to re-run**: by default it reuses an existing admin API key rather
+than silently rotating it (which would break anything already using the
+old one). Pass `--rotate` if you deliberately want a fresh key.
+
+Expect output ending in `Updated function "claude_cli".` (or `Created and
+activated...` on first run) and the API key printed at the end — save it,
+you'll need it again for step 8's MCP Valve update if you use MCP.
+
+**Doing it by hand instead** (if you'd rather not run a script that logs
+into the container), the two steps individually:
+
+1. Admin Settings (gear icon) → **Authentication** → toggle **API Keys**
+   on. Settings (your own account) → **Account** → **API Key** section →
+   **Create new key**. Copy the `sk-...` value.
+2. Then:
+
+   ```bash
+   export OPEN_WEBUI_BASE_URL=http://localhost:3000
+   export OPEN_WEBUI_API_KEY=sk-...   # from step above
+   python3 docs/ichirouganaim-integration/sync_pipe.py docs/ichirouganaim-integration/claude_cli.py
+   ```
+
+Either way, confirm the model shows up:
+
+```bash
+curl -s $OPEN_WEBUI_BASE_URL/api/models -H "Authorization: Bearer $OPEN_WEBUI_API_KEY" \
+  | grep -o '"id": *"claude_cli"'
+```
+
+(`sync_pipe.py` re-runs cleanly after edits too — `claude_cli.py` changes
+take effect immediately on the next sync, no container restart needed.)
+
+## 7. Authenticate the `claude` CLI inside the container (one-time)
+
+This is the one step that genuinely can't be scripted — it needs a real
+browser to complete an OAuth login, and needs to run against a real TTY:
+
+```bash
+docker exec -it open-webui claude auth login
+```
+
+Prints a URL (open it in any browser, doesn't have to be on the same
+machine) and either completes automatically or asks you to paste a code
+back into the terminal. Once done, this persists in the data volume
+(`CLAUDE_CONFIG_DIR`) — surviving container restarts and image rebuilds,
+but **not** surviving the *volume* itself being deleted/recreated, at
+which point it needs redoing.
+
+Confirm:
+
+```bash
+docker exec open-webui claude auth status
+# {"loggedIn": true, "authMethod": "claude.ai", ...}
+```
+
+## 8. (Optional) Wire up MCP tool access
+
+Skip this section entirely if you just want plain chat through `claude_cli`
+with no tools — steps 1-7 are already a complete, working setup for that.
+
+Setting the `MCP_SERVER_URL` Valve does two things at once: it points the
+CLI at your MCP server, *and* activates a locked-down flag combo
+(`--strict-mcp-config --tools "" --permission-mode bypassPermissions`) that
+removes every other tool and waives approval for the one configured MCP
+server. That pairing is only safe together — see `claude_cli.py`'s own
+comments and [`decisions.md`](decisions.md) for the full reasoning,
+including why this needs the CLI to run as a non-root user
+(`claude-runner`, set up automatically by `Dockerfile.claude-cli` /
+`claude_cli.py`) rather than as root.
+
+**First, confirm the container can actually reach your MCP server** —
+don't just assume it based on it working from the host:
+
+```bash
+docker exec open-webui curl -sS -o /dev/null -w "%{http_code}\n" --max-time 5 <your MCP URL>
+```
+
+A real HTTP status code (even a 4xx) means it's reachable. A connection
+error means the URL is wrong for this container's network — if the MCP
+server runs on the same host machine (outside Docker), use
+`http://host.docker.internal:<port>/...` (works because of the
+`extra_hosts` entry from step 2); if it runs elsewhere, use its real
+network address.
+
+Then set the Valve:
+
+```bash
+curl -s -X POST $OPEN_WEBUI_BASE_URL/api/v1/functions/id/claude_cli/valves/update \
+  -H "Authorization: Bearer $OPEN_WEBUI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"MCP_SERVER_URL":"<your MCP URL>"}'
+```
+
+## 9. Verify end to end
+
+Plain chat:
+
+```bash
+curl -sS -N $OPEN_WEBUI_BASE_URL/api/chat/completions \
+  -H "Authorization: Bearer $OPEN_WEBUI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"claude_cli","messages":[{"role":"user","content":"Reply with just: pong"}],"stream":true}'
+```
+
+Should stream back real `chat.completion.chunk` SSE events ending in
+`pong` and `[DONE]`. If MCP is configured, also try a message that
+actually needs a tool call, and confirm a genuine tool response comes
+back (not just that the request doesn't error).
+
+Or just open the web UI, pick `claude_cli` from the model dropdown, and
+send a message. With MCP configured, a tool call should render as the
+same collapsible "Executing X.../View Result from X" card native
+tool-calling produces (not raw JSON dumped into the chat) — confirms the
+step 4 work. If the MCP server exposes a `get_record_graph_url`-style tool
+and the model calls it, that one specific call should instead render as a
+small "View Graph" pill that opens a modal with the URL in an iframe when
+clicked — confirms step 5. Both need the frontend to have actually been
+rebuilt with this checkout's own source (see step 3's memory note) — the
+troubleshooting table below covers what it looks like when that hasn't
+happened.
+
+## Ongoing maintenance
+
+- **Disk space**: check `docker system df` periodically; `docker builder
+  prune -f` if build cache creeps back up. See the Prerequisites section
+  above for why this specifically matters here.
+- **Editing the Pipe**: edit `docs/ichirouganaim-integration/claude_cli.py`,
+  re-run `sync_pipe.py` — takes effect immediately, no restart needed. This
+  is a hot-sync straight into the running instance's DB, unrelated to the
+  image build below — the two update mechanisms are genuinely different
+  and don't substitute for each other.
+- **Rebuilding the image**: needed when `Dockerfile.claude-cli` itself
+  changes (e.g. bumping the pinned `claude-code` version) **or when any
+  frontend source file changes** (anything under `src/`, e.g. further
+  edits to `GraphCard.svelte`/`GraphModal.svelte`/`graph-url.ts`/
+  `ToolCallDisplay.svelte`) — as of the step 4/5 work, the image bakes in
+  a real build of this checkout's frontend (see step 3), so a frontend
+  change with no rebuild is invisible in the running container, unlike a
+  `claude_cli.py` edit:
+  `docker compose -f docker-compose.yaml -f docker-compose.override.yaml build && ... up -d`.
+- **Bumping the pinned `claude-code` version**: edit the version in
+  `Dockerfile.claude-cli`'s `npm install -g @anthropic-ai/claude-code@X.Y.Z`
+  line, rebuild. Don't remove the pin entirely (see Prerequisites and
+  `decisions.md` for why an unpinned version bit this project once).
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---|---|
+| `Exec format error` running `claude` inside the container | Wrong CPU architecture got installed. Shouldn't happen given the automatic `TARGETARCH` resolution, but if it does, this is the first thing to check — confirm `docker exec open-webui uname -m` matches what `Dockerfile.claude-cli` targeted. |
+| `--dangerously-skip-permissions cannot be used with root/sudo` | The CLI ran as root instead of `claude-runner`. Check `docker exec open-webui id` reports the expected setup exists, and that `claude_cli.py`'s `_prepare_privilege_drop()` logic hasn't been broken by an edit. |
+| Chat with `claude_cli` returns nothing at all, no error, but the request completes (exit 0) | Almost certainly disk space, even though it doesn't look related — see Prerequisites. Check `docker exec open-webui df -h /` and `docker system df`. |
+| `claude auth status` unexpectedly shows `loggedIn: false` after previously working | The data volume was recreated (not just the container) — re-run `claude auth login` (step 7). |
+| MCP tool calls fail or time out | Re-check reachability *from inside the container* (step 8's `curl` check), not just from the host — these are genuinely different network paths. |
+| `docker compose build` fails during `npm run build` with `JavaScript heap out of memory` or `SIGKILL`/`cannot allocate memory` | Docker doesn't have enough memory allocated for the frontend build stage — see the Prerequisites section's memory bullet and `decisions.md`'s 2026-08-22 "Frontend build stage runs out of memory" entry. Give Docker more memory (Docker Desktop: Settings → Resources → Memory) and retry; stopping other running containers to free memory does *not* help (confirmed live) — it's the VM's total allocation ceiling, not contention. |
+| A tool call that should show the "View Graph" card instead renders as a generic "View Result from `mcp__mcp__get_record_graph_url`" row | Either the frontend build in step 3 didn't actually pick up `GraphCard.svelte`/`GraphModal.svelte`/`graph-url.ts` (confirm the image was rebuilt *after* these files existed in the checkout, not before), or the tool result didn't parse as a URL (`extractGraphUrl` falls through to the generic renderer rather than showing nothing — see `src/lib/utils/graph-url.ts`'s docstring for the shapes it handles). |

@@ -1,0 +1,123 @@
+# Extends the upstream open-webui image with the `claude` CLI so the
+# claude_cli Pipe function (docs/ichirouganaim-integration/claude_cli.py)
+# can spawn it from inside this container. Node has to be installed here
+# (not just bind-mounted from the host) because @anthropic-ai/claude-code
+# ships OS/arch-specific native binaries selected by npm's own platform
+# detection at install time -- an install done on the host (macOS) can't
+# run inside this Debian-based Linux container. See
+# docs/ichirouganaim-integration/decisions.md for the live-verified detail.
+
+######## WebUI frontend, rebuilt from this checkout ########
+# ghcr.io/open-webui/open-webui:main's own baked-in frontend bundle is the
+# stock upstream build -- it doesn't know about this integration's own
+# frontend changes (GraphCard/GraphModal/graph-url.ts, the
+# ToolCallDisplay.svelte branch -- see decisions.md's step 4/5 entries).
+# Mirrors the root Dockerfile's own frontend build stage exactly (same base
+# image, same npm ci --force + npm run build) rather than inventing a
+# different recipe, so this stays the one proven-working way to build this
+# app's frontend. --platform=$BUILDPLATFORM: the frontend build output is
+# plain static JS/HTML/CSS, not architecture-specific, so building it
+# natively on the build host (rather than emulating TARGETARCH here too)
+# is strictly faster; live-verified building the final image below via the
+# base Dockerfile's own use of this exact pattern.
+FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS frontend-build
+ARG BUILD_HASH=dev-build
+WORKDIR /app
+RUN apk add --no-cache git
+COPY package.json package-lock.json ./
+RUN npm ci --force
+COPY . .
+ENV APP_BUILD_HASH=${BUILD_HASH}
+# V8's own auto-detected heap ceiling (based on whatever memory it sees
+# available at startup) landed around ~2GB in this build and wasn't enough
+# -- it died mid-GC-collapse ("Ineffective mark-compacts near heap limit"),
+# not from a hard OS-level OOM-kill, meaning it was still working within
+# its own self-imposed ceiling when it ran out of room. Forcing a higher
+# explicit ceiling here (rather than relying on auto-detection) is a cheap
+# thing to try before assuming the whole VM needs more memory -- if this
+# still dies the same graceful way, that would point at V8 genuinely
+# needing more heap than fits; if it instead gets OS-killed outright, that
+# confirms the surrounding VM itself doesn't have enough real memory,
+# independent of this setting. See decisions.md for what actually happened.
+ENV NODE_OPTIONS="--max-old-space-size=3072"
+RUN npm run build
+
+FROM ghcr.io/open-webui/open-webui:main
+
+# TARGETARCH is set automatically by buildx/`docker compose build` to match
+# the build host (or --platform, if given) -- "amd64" or "arm64". Debian's
+# package archive uses those same strings directly; Node.js uses "x64" for
+# the first one, so it needs translating. Built and verified on arm64
+# (Apple Silicon); the amd64 path is untranslated-but-unverified -- if a
+# server build ever fails here, that's the first thing to check.
+ARG TARGETARCH
+
+# Installed from the official tarball rather than `apt-get install nodejs`:
+# this build environment's apt fails GPG verification on Debian's archive
+# keyring (unrelated to this image, an environment-specific issue hit live
+# while building this -- see docs/ichirouganaim-integration/decisions.md).
+# The tarball only depends on HTTPS, not apt's keyring.
+ARG NODE_VERSION=20.18.1
+RUN case "${TARGETARCH}" in \
+      amd64) NODE_ARCH=x64 ;; \
+      arm64) NODE_ARCH=arm64 ;; \
+      *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac && \
+    curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
+    | tar -xJ -C /usr/local --strip-components=1
+
+# Pinned, not `npm install -g @anthropic-ai/claude-code` unpinned: 2.1.197
+# (whatever "latest" resolved to during initial scoping) silently swallowed
+# an ENOSPC error instead of reporting it -- a full Docker build-cache disk
+# caused every non-root invocation to exit 0 with zero output, no error at
+# all, which took an extensive live debugging session to track down (see
+# decisions.md). 2.1.239 fixed the error reporting (confirmed live: same
+# ENOSPC condition, but it now prints "ENOSPC: no space left on device"
+# instead of exiting silently). Pinning avoids ever silently drifting back
+# to a cached older install via Docker's layer cache, and avoids picking up
+# an untested newer version automatically.
+RUN npm install -g @anthropic-ai/claude-code@2.1.239
+
+# The Linux sandbox claude uses for non-root Bash-tool execution needs
+# bubblewrap + socat (confirmed via Claude Code's own sandboxing docs) and
+# uidmap's newuidmap/newgidmap (bubblewrap's own unprivileged-userns setup
+# needs these; useradd below provisions /etc/subuid /etc/subgid
+# automatically, but the binaries that use them are a separate package).
+# Installed as direct .deb downloads from Debian's mirror, not `apt-get
+# install`: this build environment's apt fails GPG verification on every
+# Debian mirror it tries (`At least one invalid signature was encountered`)
+# -- confirmed live to be this specific sandboxed build environment's clock
+# reading far enough in the future (2026) that Debian's shipped archive
+# keyring reads as expired, not a problem with Debian or this base image.
+# The tarball/direct-.deb path only depends on HTTPS, not apt's keyring.
+# Debian's own archive uses "amd64"/"arm64" natively -- same as
+# TARGETARCH, no translation needed (unlike Node.js above).
+RUN cd /tmp && \
+    for pkg in \
+      b/bubblewrap/bubblewrap_0.8.0-2+deb12u1_${TARGETARCH}.deb \
+      s/socat/socat_1.7.4.4-2_${TARGETARCH}.deb \
+      t/tcp-wrappers/libwrap0_7.6.q-31_${TARGETARCH}.deb \
+      s/shadow/libsubid4_4.13+dfsg1-1+deb12u2_${TARGETARCH}.deb \
+      s/shadow/uidmap_4.13+dfsg1-1+deb12u2_${TARGETARCH}.deb \
+    ; do \
+      curl -fsSL -O "http://deb.debian.org/debian/pool/main/${pkg}"; \
+    done && \
+    dpkg -i libwrap0_*.deb libsubid4_*.deb bubblewrap_*.deb socat_*.deb uidmap_*.deb && \
+    rm -f *.deb
+
+# The open-webui process itself keeps running as root (unchanged) -- this
+# user exists only so the Pipe can spawn the `claude` subprocess under it
+# specifically. The CLI refuses --permission-mode bypassPermissions when
+# run as root (a deliberate guardrail: root + a fully bypassed permission
+# gate is a much bigger blast radius than the one MCP server this is
+# actually scoped to) -- confirmed live, see decisions.md.
+RUN useradd --create-home --uid 1000 claude-runner
+
+# Overlay this checkout's own rebuilt frontend (the frontend-build stage
+# above) on top of whatever ghcr.io/open-webui/open-webui:main already
+# baked into /app/build -- same paths the root Dockerfile's own "copy
+# built frontend files" step writes, so this fully replaces the stock
+# bundle rather than merging with it.
+COPY --from=frontend-build /app/build /app/build
+COPY --from=frontend-build /app/CHANGELOG.md /app/CHANGELOG.md
+COPY --from=frontend-build /app/package.json /app/package.json
