@@ -15,7 +15,7 @@ Invariants enforced at the application layer (not DB CHECK constraints):
   and normalised to a canonical full boolean tree (omissions are False).
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
@@ -23,9 +23,9 @@ from open_webui.migrations.util import get_existing_tables
 
 # revision identifiers, used by Alembic.
 revision: str = 'c5a8d3e2f1b0'
-down_revision: Union[str, None] = '6d09d1bf1f23'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = '6d09d1bf1f23'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -37,7 +37,7 @@ def upgrade() -> None:
             sa.Column('id', sa.Text(), nullable=False, primary_key=True),
             sa.Column('name', sa.Text(), nullable=False, unique=True),
             sa.Column('display_name', sa.Text(), nullable=False),
-            sa.Column('active', sa.Boolean(), nullable=False, server_default=sa.text('1')),
+            sa.Column('active', sa.Boolean(), nullable=False, server_default=sa.true()),
             # permissions: JSON tree validated against the server-owned
             # _PERMISSION_CATALOG.  Stored as TEXT via JSONField for
             # SQLite/Postgres portability.  Application validation

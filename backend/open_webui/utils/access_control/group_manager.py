@@ -35,7 +35,7 @@ Locking order (stable, both backends)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Rows are locked in a deterministic order to prevent deadlocks:
 
-    User → CustomRole → GroupMember → Group
+    CustomRole → User → GroupMember → Group
 
 On PostgreSQL each ``SELECT ... FOR UPDATE`` acquires an exclusive row
 lock.  On SQLite the ``BEGIN IMMEDIATE`` write lock already serialises
@@ -289,7 +289,7 @@ def _check_capability(capability: str, custom_perms: dict[str, Any]) -> None:
 # ------------------------------------------------------------------
 
 
-async def require_group_manager(
+async def require_group_manager(  # noqa: C901
     user_id: str,
     group_id: str,
     capability: str,
@@ -346,13 +346,13 @@ async def require_group_manager(
             f'Valid: groups.{sorted(groups_catalog)}',
         )
 
-    # ── 2. Lock User row (stable order: User first) ─────────────────
+    # ── 2. Read User role without locking to identify the CustomRole ──
     from open_webui.models.users import User
 
     user_result = await db.execute(
-        select(User).where(User.id == user_id).with_for_update()
+        select(User.id, User.role).where(User.id == user_id)
     )
-    user_row = user_result.scalars().first()
+    user_row = user_result.first()
     if user_row is None:
         raise GroupManagerError('user_not_found', f'User {user_id!r} not found.')
 
@@ -374,8 +374,12 @@ async def require_group_manager(
             'Assign a custom role with the required groups.* capability.',
         )
 
-    # ── 4. Lock CustomRole row (stable order: second) ───────────────
-    from open_webui.models.custom_roles import CustomRole, extract_custom_role_id
+    # ── 4. Lock CustomRole row (stable order: first) ─────────────────
+    from open_webui.models.custom_roles import (
+        CustomRole,
+        CustomRoleModel,
+        extract_custom_role_id,
+    )
 
     role_id = extract_custom_role_id(user_role)
     if role_id is None:
@@ -398,7 +402,23 @@ async def require_group_manager(
             '(unknown, inactive, or disabled).',
         )
 
-    custom_perms: dict[str, Any] = role_row.permissions
+    custom_perms = CustomRoleModel.model_validate(role_row).permissions
+
+    # Lock the user only after the role.  Custom-role assignment and
+    # deactivation use the same CustomRole → User order.  Re-check the
+    # reference after locking so a concurrent legacy/user-role update cannot
+    # authorize against the unlocked snapshot above.
+    locked_user_result = await db.execute(
+        select(User).where(User.id == user_id).with_for_update()
+    )
+    locked_user_row = locked_user_result.scalars().first()
+    if locked_user_row is None:
+        raise GroupManagerError('user_not_found', f'User {user_id!r} not found.')
+    if locked_user_row.role != user_role:
+        raise GroupManagerError(
+            'invalid_custom_role',
+            f'User {user_id!r} changed roles during authorization.',
+        )
 
     # ── 5. Normalise and check the capability leaf (P1.4: is True) ──
     _check_capability(capability, custom_perms)

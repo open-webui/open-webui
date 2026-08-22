@@ -1188,15 +1188,15 @@ class TestLinearizability:
         by inspecting the source code (locking intent)."""
         import inspect
         source = inspect.getsource(require_group_manager)
-        # Must have at least 4 with_for_update() calls: User, CustomRole,
+        # Must have at least 4 with_for_update() calls: CustomRole, User,
         # GroupMember, Group — in that stable order.
         assert source.count('with_for_update()') >= 4
-        # Verify stable order in source: User → CustomRole → GroupMember → Group
-        idx_user = source.find('select(User)')
+        # Verify stable order in source: CustomRole → User → GroupMember → Group
         idx_role = source.find('select(CustomRole)')
+        idx_user = source.find('select(User)')
         idx_member = source.find('select(GroupMember)')
         idx_group = source.find('select(Group)')
-        assert 0 < idx_user < idx_role < idx_member < idx_group
+        assert 0 < idx_role < idx_user < idx_member < idx_group
 
 
 # ===================================================================

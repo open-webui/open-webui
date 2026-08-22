@@ -502,6 +502,18 @@ class TestCustomRoleLifecycle:
 
 
 class TestCustomRoleLifecycleRouter:
+    def test_custom_role_mutations_lock_role_before_user(self):
+        import inspect
+
+        from open_webui.models.custom_roles import CustomRolesTable
+        from open_webui.routers.custom_roles import assign_custom_role
+
+        assign_source = inspect.getsource(assign_custom_role)
+        update_source = inspect.getsource(CustomRolesTable.update_role)
+
+        assert assign_source.find('get_active_role_by_id') < assign_source.find('update_user_role_by_id')
+        assert update_source.find('with_for_update()') < update_source.find('_reset_assigned_users')
+
     @pytest.mark.asyncio
     async def test_assign_endpoint_rejects_exact_admin_self_assignment(self, db):
         from types import SimpleNamespace
@@ -1368,6 +1380,49 @@ class TestCatalogImmutability:
 
 @pytest.mark.asyncio
 class TestMigrationSchema:
+
+    async def test_custom_role_boolean_default_compiles_for_postgresql_and_sqlite(self, monkeypatch):
+        import importlib
+
+        import sqlalchemy as sa
+        from sqlalchemy.dialects import postgresql, sqlite
+        from sqlalchemy.schema import CreateTable
+
+        migration = importlib.import_module(
+            'open_webui.migrations.versions.c5a8d3e2f1b0_add_custom_role_table'
+        )
+
+        class RecordingOp:
+            def __init__(self):
+                self.columns = []
+
+            def create_table(self, _name, *elements, **_kwargs):
+                self.columns = [element for element in elements if isinstance(element, sa.Column)]
+
+            def create_index(self, *_args, **_kwargs):
+                pass
+
+        recording_op = RecordingOp()
+        monkeypatch.setattr(migration, 'op', recording_op)
+        monkeypatch.setattr(migration, 'get_existing_tables', lambda: set())
+        migration.upgrade()
+
+        active = next(column for column in recording_op.columns if column.name == 'active')
+        table = sa.Table(
+            'custom_role',
+            sa.MetaData(),
+            sa.Column(
+                'active',
+                active.type,
+                nullable=active.nullable,
+                server_default=active.server_default.arg,
+            ),
+        )
+        postgres_sql = str(CreateTable(table).compile(dialect=postgresql.dialect()))
+        sqlite_sql = str(CreateTable(table).compile(dialect=sqlite.dialect()))
+
+        assert 'active BOOLEAN DEFAULT true NOT NULL' in postgres_sql
+        assert 'active BOOLEAN DEFAULT 1 NOT NULL' in sqlite_sql
 
     async def test_custom_role_table_schema(self, db):
         """Verify the ``custom_role`` table has the expected columns,
