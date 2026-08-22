@@ -21,6 +21,7 @@ Security contract:
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 import time
@@ -81,7 +82,7 @@ class GroupManagerPromptCreateForm(BaseModel):
     content: str
     data: dict | None = None
     meta: dict | None = None
-    tags: list[str | None] = None
+    tags: list[str | None] | None = None
 
 
 class GroupManagerKnowledgeUpdateForm(BaseModel):
@@ -94,7 +95,7 @@ class GroupManagerPromptUpdateForm(BaseModel):
     content: str | None = None
     data: dict | None = None
     meta: dict | None = None
-    tags: list[str | None] = None
+    tags: list[str | None] | None = None
 
 
 class GroupManagerACLDeltaForm(BaseModel):
@@ -1182,17 +1183,14 @@ def _normalize_skill_meta(raw: Any) -> SkillMeta:
 def _make_group_skill_id(group_id: str, slug: str) -> str:
     """Build a collision-safe, group-namespaced skill ID.
 
-    Format: ``g-{group_id_short}--{slug}``  (≤ 255 chars total).
-    The prefix guarantees isolation across groups; the slug is
-    user-supplied but validated; and the composite is unique per-group
-    because ``(resource_type, resource_id)`` in ``group_owned_asset``
-    is globally unique.
+    Format: ``g-{sha256(group_id)}--{slug}`` (≤ 196 chars for valid slugs).
+    The full SHA-256 digest prevents groups with shared ID prefixes from
+    colliding; the slug is user-supplied but validated; and the composite is
+    unique per-group because ``(resource_type, resource_id)`` in
+    ``group_owned_asset`` is globally unique.
     """
-    short_gid = group_id[:12]
-    skill_id = f'g-{short_gid}--{slug}'
-    # Guard against overflow — the skill.id column is String (no length
-    # limit in practice, but keep IDs reasonable).
-    return skill_id[:255]
+    group_namespace = hashlib.sha256(group_id.encode('utf-8')).hexdigest()
+    return f'g-{group_namespace}--{slug}'
 
 
 def _validate_skill_slug(slug: str) -> str:

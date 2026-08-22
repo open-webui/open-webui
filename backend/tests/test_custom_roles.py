@@ -716,7 +716,7 @@ class TestPermissionIsolation:
     async def test_disabled_custom_role_all_false(self, db):
         from open_webui.config import DEFAULT_USER_PERMISSIONS
         from open_webui.models.users import User
-        from open_webui.utils.access_control import get_permissions
+        from open_webui.utils.access_control import get_permissions, has_permission
 
         now = int(time.time())
         uid = str(uuid.uuid4())
@@ -754,6 +754,9 @@ class TestPermissionIsolation:
                     assert v is False
 
         assert_all_false(perms)
+        assert await has_permission(
+            uid, 'workspace.models', DEFAULT_USER_PERMISSIONS, db=db
+        ) is False
 
 
 # ===================================================================
@@ -995,7 +998,7 @@ class TestInvalidInactiveRefs:
     async def test_unknown_custom_role_ref_yields_empty_perms(self, db):
         from open_webui.config import DEFAULT_USER_PERMISSIONS
         from open_webui.models.users import User
-        from open_webui.utils.access_control import get_permissions
+        from open_webui.utils.access_control import get_permissions, has_permission
 
         now = int(time.time())
         uid = str(uuid.uuid4())
@@ -1024,6 +1027,9 @@ class TestInvalidInactiveRefs:
                     assert v is False
 
         assert_all_false(perms)
+        assert await has_permission(
+            uid, 'workspace.models', DEFAULT_USER_PERMISSIONS, db=db
+        ) is False
 
     async def test_malformed_ref_yields_empty_perms(self, db):
         from open_webui.config import DEFAULT_USER_PERMISSIONS

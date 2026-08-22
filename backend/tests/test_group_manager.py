@@ -2040,6 +2040,21 @@ class TestRouterKnowledgeCreation:
 
 class TestRouterPromptCreation:
 
+    def test_prompt_tags_are_optional_for_create_and_update(self):
+        from open_webui.routers.group_manager import GroupManagerPromptUpdateForm
+
+        create_form = GroupManagerPromptCreateForm(
+            command='/optional-tags', name='Optional Tags', content='content', tags=None
+        )
+        update_form = GroupManagerPromptUpdateForm(tags=None)
+
+        assert create_form.tags is None
+        assert update_form.tags is None
+        assert GroupManagerPromptCreateForm(
+            command='/omitted-tags', name='Omitted Tags', content='content'
+        ).tags is None
+        assert GroupManagerPromptUpdateForm().tags is None
+
     @pytest.mark.asyncio
     async def test_create_prompt_with_ownership(self, manager_db):
         """create_group_prompt creates prompt + ownership + read grant."""

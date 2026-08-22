@@ -351,11 +351,14 @@ class TestSkillSlugAndId:
     def test_group_namespaced_id_format(self):
         gid = 'abc123-def456-ghi789'
         result = _make_group_skill_id(gid, 'my-skill')
-        assert result == 'g-abc123-def45--my-skill'
+        assert result.startswith('g-')
+        assert result.endswith('--my-skill')
+        assert len(result.split('--', 1)[0]) == 66
+        assert len(result) <= 255
 
     def test_group_namespaced_id_uniqueness_by_group(self):
-        gid_a = 'aaaa1111-bbbb2222-cccc3333'
-        gid_b = 'dddd4444-eeee5555-ffff6666'
+        gid_a = 'shared-prefix-aaaaaaaaaaaaaaaa'
+        gid_b = 'shared-prefix-bbbbbbbbbbbbbbbb'
         id_a = _make_group_skill_id(gid_a, 'my-skill')
         id_b = _make_group_skill_id(gid_b, 'my-skill')
         assert id_a != id_b

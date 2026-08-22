@@ -150,23 +150,6 @@ async def _resolve_legacy_permissions(
     return permissions
 
 
-def _empty_permissions(default_permissions: dict[str, Any]) -> dict[str, Any]:
-    """Return a permissions dict with all boolean leaves set to False.
-
-    Used for fail-closed resolution of unknown/disabled custom roles.
-    """
-    def _deny_tree(template: dict[str, Any]) -> dict[str, Any]:
-        result: dict[str, Any] = {}
-        for key, value in template.items():
-            if isinstance(value, dict):
-                result[key] = _deny_tree(value)
-            else:
-                result[key] = False
-        return result
-
-    return _deny_tree(default_permissions)
-
-
 async def has_permission(
     user_id: str,
     permission_key: str,
