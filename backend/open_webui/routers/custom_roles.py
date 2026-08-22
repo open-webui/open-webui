@@ -354,6 +354,12 @@ async def assign_custom_role(
             detail=ERROR_MESSAGES.USER_NOT_FOUND,
         )
 
+    if target_user.id == user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+        )
+
     # Cannot demote the first admin user
     first_user = await Users.get_first_user(db=db)
     if first_user and target_user.id == first_user.id and target_user.role == 'admin':

@@ -29,8 +29,10 @@ import uuid
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from open_webui.constants import ERROR_MESSAGES
 from open_webui.models.custom_roles import (
     RESERVED_ROLE_NAMES,
+    CustomRoleAssignForm,
     CustomRoleCreateForm,
     CustomRoles,
     CustomRoleUpdateForm,
@@ -500,6 +502,46 @@ class TestCustomRoleLifecycle:
 
 
 class TestCustomRoleLifecycleRouter:
+    @pytest.mark.asyncio
+    async def test_assign_endpoint_rejects_exact_admin_self_assignment(self, db):
+        from types import SimpleNamespace
+
+        from fastapi import HTTPException
+        from open_webui.models.users import User
+        from open_webui.routers.custom_roles import assign_custom_role
+
+        role = await CustomRoles.create_role(
+            CustomRoleCreateForm(name='self_assignment', display_name='Self Assignment'), db=db
+        )
+        now = int(time.time())
+        first_admin_id = str(uuid.uuid4())
+        admin_id = str(uuid.uuid4())
+        for user_id, created_at in ((first_admin_id, now - 10), (admin_id, now)):
+            db.add(
+                User(
+                    id=user_id,
+                    email=f'{user_id}@test.local',
+                    name='Admin',
+                    role='admin',
+                    profile_image_url='/user.png',
+                    last_active_at=now,
+                    created_at=created_at,
+                    updated_at=now,
+                )
+            )
+        await db.flush()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await assign_custom_role(
+                SimpleNamespace(),
+                CustomRoleAssignForm(role_id=role.id, user_id=admin_id),
+                user=SimpleNamespace(id=admin_id, role='admin'),
+                db=db,
+            )
+
+        assert exc_info.value.status_code == 403
+        assert exc_info.value.detail == ERROR_MESSAGES.ACTION_PROHIBITED
+        assert (await db.get(User, admin_id)).role == 'admin'
 
     @pytest.mark.asyncio
     async def test_deactivate_endpoint_resets_users_and_emits_metadata_events(self, db, monkeypatch):

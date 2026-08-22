@@ -20,6 +20,10 @@
 	} from '$lib/apis/groupManager';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import AssetList from './GroupManager/AssetList.svelte';
+	import {
+		allGroupManagerRequestsDenied,
+		isGroupManagerAuthorizationFailure
+	} from '$lib/utils/groupManager';
 
 	const i18n: any = getContext('i18n');
 	let groups: any[] = [];
@@ -59,8 +63,9 @@
 			const results = [memberResult, assetResult, skillResult];
 			const successful = results.filter((result) => result.status === 'fulfilled');
 			if (successful.length === 0) {
-				denied = true;
-				throw (results[0] as PromiseRejectedResult).reason;
+				const errors = results.map((result) => (result as PromiseRejectedResult).reason);
+				denied = allGroupManagerRequestsDenied(errors);
+				throw errors[0];
 			}
 			members = memberResult.status === 'fulfilled' ? memberResult.value : [];
 			assets = assetResult.status === 'fulfilled' ? assetResult.value : [];
@@ -119,8 +124,9 @@
 			if (groupId) await loadGroup();
 			else denied = true;
 		} catch (error) {
-			denied = true;
+			denied = isGroupManagerAuthorizationFailure(error);
 			errorMessage = (error as any)?.message ?? `${error}`;
+			if (!isGroupManagerAuthorizationFailure(error)) toast.error(errorMessage);
 		} finally {
 			loading = false;
 		}
