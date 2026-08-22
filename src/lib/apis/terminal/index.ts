@@ -11,6 +11,14 @@ export type TerminalFileList = {
 	writable?: boolean;
 };
 
+export type TerminalFileSearchResult = FileEntry & {
+	path: string;
+};
+
+export type TerminalFileSearchResponse = {
+	results: TerminalFileSearchResult[];
+};
+
 export type ListeningPort = {
 	port: number;
 	pid: number | null;
@@ -37,6 +45,21 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 const bearerHeaders = (apiKey: string): Record<string, string> => ({
 	Authorization: `Bearer ${apiKey.trim()}`
 });
+
+const joinTerminalPath = (base: string, child: string) => {
+	if (!child) return base;
+	if (child.startsWith('/') || /^[A-Za-z]:[\\/]/.test(child)) return child;
+	return `${base.replace(/[\\/]+$/, '')}/${child.replace(/^[\\/]+/, '')}`;
+};
+
+const basename = (path: string) =>
+	path.replace(/\\/g, '/').split('/').filter(Boolean).at(-1) ?? path;
+
+const hasHiddenPathPart = (path: string) =>
+	path
+		.replace(/\\/g, '/')
+		.split('/')
+		.some((part) => part.startsWith('.'));
 
 export type TerminalServer = {
 	id: string;
@@ -110,6 +133,65 @@ export const listFiles = async (
 			return null;
 		});
 	return res?.entries ? { entries: res.entries, writable: res.writable } : null;
+};
+
+export const searchFiles = async (
+	baseUrl: string,
+	apiKey: string,
+	query: string,
+	path: string = '.',
+	limit: number = 20,
+	type: 'file' | 'directory' | 'any' = 'any',
+	sessionId?: string,
+	showHidden: boolean = false
+): Promise<TerminalFileSearchResponse | null> => {
+	const headers: Record<string, string> = bearerHeaders(apiKey);
+	if (sessionId) headers['X-Session-Id'] = sessionId;
+
+	const searchParams = new URLSearchParams({
+		query,
+		path,
+		limit: String(limit),
+		type,
+		show_hidden: String(showHidden)
+	});
+	const base = baseUrl.replace(/\/$/, '');
+	const searchRes = await fetch(`${base}/files/search?${searchParams.toString()}`, {
+		headers
+	}).catch(() => null);
+
+	if (searchRes?.ok) {
+		const json = await searchRes.json().catch(() => null);
+		if (Array.isArray(json?.results)) return { results: json.results };
+	}
+
+	const globParams = new URLSearchParams({
+		pattern: query.trim() ? `*${query.trim()}*` : '*',
+		path,
+		type,
+		max_results: String(limit)
+	});
+	const globRes = await fetch(`${base}/files/glob?${globParams.toString()}`, {
+		headers
+	}).catch((err) => {
+		console.error('open-terminal searchFiles error:', err);
+		return null;
+	});
+	if (!globRes?.ok) return null;
+
+	const json = await globRes.json().catch(() => null);
+	const root = json?.path ?? path;
+	return {
+		results: (json?.matches ?? [])
+			.filter((item: FileEntry & { path: string }) => showHidden || !hasHiddenPathPart(item.path))
+			.map((item: FileEntry & { path: string }) => ({
+				path: joinTerminalPath(root, item.path),
+				name: basename(item.path),
+				type: item.type,
+				size: item.size,
+				modified: item.modified
+			}))
+	};
 };
 
 export const readFile = async (

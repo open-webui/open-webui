@@ -1359,6 +1359,26 @@
 									status: 'processed'
 								}
 							];
+						} else if (type === 'filesystem') {
+							const path = data.path ?? data.url ?? data.id;
+							if (
+								!path ||
+								files.find((f) => f.type === 'filesystem' && (f.path ?? f.url ?? f.id) === path)
+							) {
+								return;
+							}
+							files = [
+								...files,
+								{
+									type: 'filesystem',
+									id: path,
+									path,
+									url: path,
+									name: data.name,
+									size: data.size,
+									status: 'processed'
+								}
+							];
 						} else {
 							if (files.find((f) => f.url === data || f.name === data)) {
 								return;

@@ -88,8 +88,8 @@
 </script>
 
 <div class={(filteredItems ?? []).length > 0 ? '' : 'hidden'} id="suggestions-container">
-	<DropdownMenu className="w-72 font-sans text-xs">
-		<div class="overflow-y-auto scrollbar-thin max-h-60">
+	<DropdownMenu className="w-72 max-w-[calc(100vw-1rem)] overflow-x-hidden font-sans text-xs">
+		<div class="max-h-60 overflow-y-auto overflow-x-hidden scrollbar-thin">
 			{#if char === '/'}
 				<SlashCommands
 					bind:this={suggestionElement}
@@ -190,6 +190,13 @@
 
 							onUpload({
 								type: 'file',
+								data: data
+							});
+						} else if (type === 'filesystem') {
+							insertTextHandler('');
+
+							onUpload({
+								type: 'filesystem',
 								data: data
 							});
 						} else if (type === 'web') {

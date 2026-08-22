@@ -1882,7 +1882,12 @@ async def chat_completion_files_handler(
     __event_emitter__ = extra_params['__event_emitter__']
     sources = []
 
-    if files := body.get('metadata', {}).get('files', None):
+    files = [
+        item
+        for item in (body.get('metadata', {}).get('files', None) or [])
+        if item.get('type') != 'filesystem'
+    ]
+    if files:
         # Check if all files are in full context mode
         all_full_context = all(item.get('context') == 'full' for item in files)
 
