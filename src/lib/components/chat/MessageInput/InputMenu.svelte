@@ -27,6 +27,7 @@
 	import Knowledge from './InputMenu/Knowledge.svelte';
 	import AttachWebpageModal from './AttachWebpageModal.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+	import Photo from '$lib/components/icons/Photo.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -123,6 +124,16 @@
 	class="hidden"
 />
 
+<!-- Hidden file input used to open the image/gallery picker (nice on mobile) -->
+<input
+	id="image-input"
+	type="file"
+	accept="image/*"
+	multiple
+	on:change={handleFileChange}
+	class="hidden"
+/>
+
 <Dropdown
 	bind:show
 	visualViewportAware
@@ -209,6 +220,38 @@
 							<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
 						</button>
 					</Tooltip>
+
+					{#if $mobile}
+						<Tooltip
+							content={fileUploadCapableModels.length !== selectedModels.length
+								? $i18n.t('Model(s) do not support file upload')
+								: !fileUploadEnabled
+									? $i18n.t('You do not have permission to upload files.')
+									: ''}
+							className="w-full"
+						>
+							<button
+								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[13px] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl {!fileUploadEnabled
+									? 'opacity-50'
+									: ''}"
+								type="button"
+								on:click={() => {
+									if (fileUploadEnabled) {
+										const imageInputElement = document.getElementById('image-input');
+
+										if (imageInputElement) {
+											imageInputElement.click();
+										}
+										show = false;
+									}
+								}}
+							>
+								<Photo />
+
+								<div class="line-clamp-1">{$i18n.t('Upload Image')}</div>
+							</button>
+						</Tooltip>
+					{/if}
 
 					<Tooltip
 						content={fileUploadCapableModels.length !== selectedModels.length
