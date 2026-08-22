@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import time
 import uuid
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from open_webui.models.custom_roles import (
@@ -35,6 +35,7 @@ from open_webui.models.custom_roles import (
     CustomRoles,
     CustomRoleUpdateForm,
     extract_custom_role_id,
+    get_permission_catalog,
     is_custom_role_ref,
     make_custom_role_ref,
     normalize_permissions,
@@ -78,6 +79,42 @@ class TestCustomRoleRefFormat:
     def test_make_custom_role_ref(self):
         rid = str(uuid.uuid4())
         assert make_custom_role_ref(rid) == f'custom:{rid}'
+
+
+# ===================================================================
+# Permission catalog endpoint
+# ===================================================================
+
+
+class TestCustomRolePermissionCatalogEndpoint:
+
+    @pytest.mark.asyncio
+    async def test_returns_canonical_catalog_with_group_capabilities(self):
+        from types import SimpleNamespace
+
+        from open_webui.routers.custom_roles import get_custom_role_permission_catalog
+
+        result = await get_custom_role_permission_catalog(user=SimpleNamespace(role='admin'))
+
+        assert result == get_permission_catalog()
+        assert set(result['groups']) == {
+            'manage_members',
+            'manage_assets',
+            'manage_skills',
+        }
+        assert all(value is False for value in result['groups'].values())
+
+    def test_endpoint_is_exact_admin_protected_and_precedes_role_id_route(self):
+        from fastapi.routing import APIRoute
+        from open_webui.routers.custom_roles import router
+        from open_webui.utils.auth import get_admin_user
+
+        routes = [route for route in router.routes if isinstance(route, APIRoute)]
+        permission_route = next(route for route in routes if route.path == '/permissions')
+        role_route = next(route for route in routes if route.path == '/{role_id}')
+
+        assert get_admin_user in [dependency.call for dependency in permission_route.dependant.dependencies]
+        assert router.routes.index(permission_route) < router.routes.index(role_route)
 
 
 # ===================================================================
@@ -309,6 +346,271 @@ class TestCustomRoleLifecycle:
         )
         deactivated = await CustomRoles.deactivate_role(role.id, db=db)
         assert deactivated.active is False
+
+    async def test_deactivate_resets_assigned_users_only(self, db):
+        from open_webui.models.users import User
+        from sqlalchemy import select
+
+        role = await CustomRoles.create_role(
+            CustomRoleCreateForm(name='reset_on_deactivate', display_name='Reset'), db=db
+        )
+        unrelated = await CustomRoles.create_role(
+            CustomRoleCreateForm(name='unrelated_role', display_name='Unrelated'), db=db
+        )
+        now = int(time.time())
+        assigned_id = str(uuid.uuid4())
+        unrelated_id = str(uuid.uuid4())
+        assigned = User(
+            id=assigned_id,
+            email=f'{assigned_id}@test.local',
+            name='Assigned',
+            role=f'custom:{role.id}',
+            profile_image_url='/user.png',
+            last_active_at=now,
+            created_at=now,
+            updated_at=now,
+        )
+        unaffected = User(
+            id=unrelated_id,
+            email=f'{unrelated_id}@test.local',
+            name='Unaffected',
+            role=f'custom:{unrelated.id}',
+            profile_image_url='/user.png',
+            last_active_at=now,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add_all([assigned, unaffected])
+        await db.flush()
+
+        await CustomRoles.deactivate_role(role.id, db=db)
+
+        rows = (
+            await db.execute(select(User).where(User.id.in_([assigned_id, unrelated_id])))
+        ).scalars().all()
+        by_id = {row.id: row for row in rows}
+        assert by_id[assigned_id].role == 'user'
+        assert by_id[unrelated_id].role == f'custom:{unrelated.id}'
+
+    async def test_delete_resets_assignments_and_is_safe_when_repeated(self, db):
+        from open_webui.models.users import User
+
+        role = await CustomRoles.create_role(
+            CustomRoleCreateForm(name='reset_on_delete', display_name='Delete Reset'), db=db
+        )
+        now = int(time.time())
+        user_id = str(uuid.uuid4())
+        user = User(
+            id=user_id,
+            email=f'{user_id}@test.local',
+            name='Delete Assigned',
+            role=f'custom:{role.id}',
+            profile_image_url='/user.png',
+            last_active_at=now,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(user)
+        await db.flush()
+
+        deleted = await CustomRoles.delete_role(role.id, db=db)
+
+        assert deleted.id == role.id
+        assert await CustomRoles.get_role_by_id(role.id, db=db) is None
+        refreshed = await db.get(User, user_id)
+        assert refreshed.role == 'user'
+        assert await CustomRoles.delete_role(role.id, db=db) is None
+
+    async def test_failed_deactivation_rolls_back_role_and_user_reset(self, manager_db):
+        from open_webui.models.users import User
+
+        role = await CustomRoles.create_role(
+            CustomRoleCreateForm(name='rollback_deactivate', display_name='Rollback'), db=manager_db
+        )
+        now = int(time.time())
+        user_id = str(uuid.uuid4())
+        user = User(
+            id=user_id,
+            email=f'{user_id}@test.local',
+            name='Rollback Assigned',
+            role=f'custom:{role.id}',
+            profile_image_url='/user.png',
+            last_active_at=now,
+            created_at=now,
+            updated_at=now,
+        )
+        manager_db.add(user)
+        await manager_db.flush()
+        await manager_db.commit()
+
+        with patch.object(
+            manager_db,
+            'commit',
+            new_callable=AsyncMock,
+            side_effect=RuntimeError('commit failed'),
+        ):
+            with pytest.raises(RuntimeError, match='commit failed'):
+                await CustomRoles.deactivate_role(role.id, db=manager_db)
+
+        role_after = await CustomRoles.get_role_by_id(role.id, db=manager_db)
+        user_after = await manager_db.get(User, user_id)
+        assert role_after.active is True
+        assert user_after.role == f'custom:{role.id}'
+
+    async def test_failed_delete_rolls_back_role_and_user_reset(self, manager_db):
+        from open_webui.models.users import User
+
+        role = await CustomRoles.create_role(
+            CustomRoleCreateForm(name='rollback_delete', display_name='Rollback Delete'), db=manager_db
+        )
+        now = int(time.time())
+        user_id = str(uuid.uuid4())
+        manager_db.add(
+            User(
+                id=user_id,
+                email=f'{user_id}@test.local',
+                name='Rollback Delete Assigned',
+                role=f'custom:{role.id}',
+                profile_image_url='/user.png',
+                last_active_at=now,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        await manager_db.flush()
+        await manager_db.commit()
+
+        with patch.object(
+            manager_db,
+            'commit',
+            new_callable=AsyncMock,
+            side_effect=RuntimeError('commit failed'),
+        ):
+            with pytest.raises(RuntimeError, match='commit failed'):
+                await CustomRoles.delete_role(role.id, db=manager_db)
+
+        assert await CustomRoles.get_role_by_id(role.id, db=manager_db) is not None
+        user_after = await manager_db.get(User, user_id)
+        assert user_after.role == f'custom:{role.id}'
+
+
+# ===================================================================
+# Role lifecycle router
+# ===================================================================
+
+
+class TestCustomRoleLifecycleRouter:
+
+    @pytest.mark.asyncio
+    async def test_deactivate_endpoint_resets_users_and_emits_metadata_events(self, db, monkeypatch):
+        from types import SimpleNamespace
+
+        from open_webui.models.users import User
+        from open_webui.routers.custom_roles import deactivate_custom_role
+
+        role = await CustomRoles.create_role(
+            CustomRoleCreateForm(name='router_deactivate', display_name='Router Deactivate'), db=db
+        )
+        now = int(time.time())
+        user_id = str(uuid.uuid4())
+        db.add(
+            User(
+                id=user_id,
+                email=f'{user_id}@test.local',
+                name='Router Assigned',
+                role=f'custom:{role.id}',
+                profile_image_url='/user.png',
+                last_active_at=now,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        await db.flush()
+
+        events = []
+
+        async def capture_event(_request, event, **kwargs):
+            events.append((event.name, kwargs.get('data')))
+
+        monkeypatch.setattr('open_webui.routers.custom_roles.publish_event', capture_event)
+        request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(instance_id='test')))
+        admin = SimpleNamespace(id='admin', role='admin')
+
+        result = await deactivate_custom_role(
+            request,
+            role.id,
+            user=admin,
+            db=db,
+        )
+
+        assert result.active is False
+        assert (await db.get(User, user_id)).role == 'user'
+        assert ('custom_role.deactivated', {'name': role.name, 'reset_to': 'user', 'reset_user_count': 1}) in events
+        assert ('user.role_updated', {'role': 'user', 'reason': 'custom_role_deactivated'}) in events
+
+    @pytest.mark.asyncio
+    async def test_delete_endpoint_removes_role_resets_users_and_emits_event(self, db, monkeypatch):
+        from types import SimpleNamespace
+
+        from open_webui.models.users import User
+        from open_webui.routers.custom_roles import delete_custom_role
+
+        role = await CustomRoles.create_role(
+            CustomRoleCreateForm(name='router_delete', display_name='Router Delete'), db=db
+        )
+        now = int(time.time())
+        user_id = str(uuid.uuid4())
+        db.add(
+            User(
+                id=user_id,
+                email=f'{user_id}@test.local',
+                name='Router Delete Assigned',
+                role=f'custom:{role.id}',
+                profile_image_url='/user.png',
+                last_active_at=now,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        await db.flush()
+
+        events = []
+
+        async def capture_event(_request, event, **kwargs):
+            events.append((event.name, kwargs.get('data')))
+
+        monkeypatch.setattr('open_webui.routers.custom_roles.publish_event', capture_event)
+        request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(instance_id='test')))
+        admin = SimpleNamespace(id='admin', role='admin')
+
+        result = await delete_custom_role(
+            request,
+            role.id,
+            user=admin,
+            db=db,
+        )
+
+        assert result.id == role.id
+        assert await CustomRoles.get_role_by_id(role.id, db=db) is None
+        assert (await db.get(User, user_id)).role == 'user'
+        assert ('custom_role.deleted', {'name': role.name, 'reset_to': 'user', 'reset_user_count': 1}) in events
+        assert ('user.role_updated', {'role': 'user', 'reason': 'custom_role_deleted'}) in events
+
+    def test_lifecycle_routes_require_exact_admin(self):
+        from fastapi.routing import APIRoute
+        from open_webui.routers.custom_roles import router
+        from open_webui.utils.auth import get_admin_user
+
+        routes = [route for route in router.routes if isinstance(route, APIRoute)]
+        lifecycle_routes = [
+            route
+            for route in routes
+            if route.path in {'/{role_id}', '/{role_id}/deactivate'}
+            and ('DELETE' in route.methods or route.path.endswith('/deactivate'))
+        ]
+        assert len(lifecycle_routes) == 2
+        for route in lifecycle_routes:
+            assert get_admin_user in [dependency.call for dependency in route.dependant.dependencies]
 
 
 # ===================================================================

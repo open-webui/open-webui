@@ -1,6 +1,73 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { getUserPosition } from '$lib/utils';
 
+export type CustomRole = {
+	id: string;
+	name: string;
+	display_name: string;
+	active: boolean;
+	permissions: Record<string, any>;
+	created_at: number;
+	updated_at: number;
+};
+
+const customRoleRequest = async (token: string, path: string, options: RequestInit = {}) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/custom-roles${path}`, {
+		...options,
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`,
+			...(options.headers ?? {})
+		}
+	});
+	if (!res.ok) {
+		const error = await res.json().catch(() => ({}));
+		throw error?.detail ?? 'Unable to complete the custom role request.';
+	}
+	return res.json();
+};
+
+export const getCustomRoles = async (token: string, includeInactive = false, page = 1) =>
+	customRoleRequest(token, `/?include_inactive=${includeInactive}&page=${page}`);
+
+/** Server-owned custom-role permission contract. Do not replace with client defaults. */
+export const getCustomRolePermissionCatalog = async (token: string) =>
+	customRoleRequest(token, '/permissions');
+
+export const createCustomRole = async (
+	token: string,
+	role: { name: string; display_name: string; permissions: Record<string, any> }
+) => customRoleRequest(token, '/create', { method: 'POST', body: JSON.stringify(role) });
+
+export const updateCustomRole = async (
+	token: string,
+	id: string,
+	role: { display_name?: string; active?: boolean; permissions?: Record<string, any> }
+) => customRoleRequest(token, `/${id}/update`, { method: 'POST', body: JSON.stringify(role) });
+
+export const deactivateCustomRole = async (token: string, id: string) =>
+	customRoleRequest(token, `/${id}/deactivate`, { method: 'POST' });
+
+export const reactivateCustomRole = async (token: string, id: string) =>
+	customRoleRequest(token, `/${id}/update`, {
+		method: 'POST',
+		body: JSON.stringify({ active: true })
+	});
+
+export const deleteCustomRole = async (token: string, id: string) =>
+	customRoleRequest(token, `/${id}`, { method: 'DELETE' });
+
+export const assignCustomRole = async (token: string, userId: string, roleId: string) =>
+	customRoleRequest(token, '/assign', {
+		method: 'POST',
+		body: JSON.stringify({ user_id: userId, role_id: roleId })
+	});
+
+export const unassignCustomRole = async (token: string, roleId: string, userId: string) =>
+	customRoleRequest(token, `/${roleId}/unassign?user_id=${encodeURIComponent(userId)}`, {
+		method: 'POST'
+	});
+
 export const getUserGroups = async (token: string) => {
 	let error = null;
 

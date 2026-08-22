@@ -6,7 +6,13 @@
 
 	import { goto } from '$app/navigation';
 
-	import { updateUserById, getUserGroupsById } from '$lib/apis/users';
+	import {
+		assignCustomRole,
+		getCustomRoles,
+		getUserGroupsById,
+		unassignCustomRole,
+		updateUserById
+	} from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -14,7 +20,7 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import UserProfileImage from '$lib/components/chat/Settings/Account/UserProfileImage.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 	const dispatch = createEventDispatcher();
 	dayjs.extend(localizedFormat);
 
@@ -22,19 +28,44 @@
 	export let selectedUser;
 	export let sessionUser;
 
-	$: if (show) {
+	let initializedUserId = '';
+	$: if (show && selectedUser?.id && initializedUserId !== selectedUser.id) {
+		initializedUserId = selectedUser.id;
 		init();
 	}
+	$: if (!show) initializedUserId = '';
 
 	const init = () => {
 		if (selectedUser) {
-			_user = selectedUser;
+			_user = { ...selectedUser };
 			_user.password = '';
 			loadUserGroups();
+			loadCustomRoles();
 		}
 	};
 
-	let _user = {
+	const loadCustomRoles = async () => {
+		customRolesLoading = true;
+		customRolesError = '';
+		try {
+			const response = await getCustomRoles(localStorage.token, true);
+			customRoles = response?.items ?? [];
+		} catch (error) {
+			customRolesError = `${error}`;
+			customRoles = [];
+		} finally {
+			customRolesLoading = false;
+		}
+	};
+
+	const isCustomRole = (value: string) => value?.startsWith('custom:');
+	const customRoleId = (value: string) => value?.slice('custom:'.length);
+	const legacyRoles = new Set(['admin', 'user', 'pending']);
+	const isActiveCustomRole = (value: string) =>
+		isCustomRole(value) &&
+		customRoles.some((customRole) => customRole.id === customRoleId(value) && customRole.active);
+
+	let _user: any = {
 		profile_image_url: '',
 		role: 'pending',
 		name: '',
@@ -43,15 +74,41 @@
 	};
 
 	let userGroups: any[] | null = null;
+	let customRoles: any[] = [];
+	let customRolesLoading = false;
+	let customRolesError = '';
 
 	const submitHandler = async () => {
-		const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
-			toast.error(`${error}`);
-		});
+		try {
+			const { role, ...profileData } = _user;
+			const currentRoleIsCustom = isCustomRole(selectedUser.role);
+			const targetIsLegacy = legacyRoles.has(role);
+			const targetIsActiveCustom = isActiveCustomRole(role);
+			const roleChanged = role !== selectedUser.role;
 
-		if (res) {
+			// Custom-role references are owned by the custom-role endpoints. Never
+			// send a stale, inactive, unknown, or malformed reference to the legacy
+			// user update endpoint during a profile-only save.
+			if (targetIsLegacy && !currentRoleIsCustom) {
+				await updateUserById(localStorage.token, selectedUser.id, _user as any);
+			} else {
+				await updateUserById(localStorage.token, selectedUser.id, profileData as any);
+			}
+
+			if (targetIsActiveCustom && roleChanged) {
+				await assignCustomRole(localStorage.token, selectedUser.id, customRoleId(role));
+			} else if (targetIsLegacy && currentRoleIsCustom) {
+				await unassignCustomRole(
+					localStorage.token,
+					customRoleId(selectedUser.role),
+					selectedUser.id
+				);
+				await updateUserById(localStorage.token, selectedUser.id, _user as any);
+			}
 			dispatch('save');
 			show = false;
+		} catch (error) {
+			toast.error(`${error}`);
 		}
 	};
 
@@ -142,13 +199,34 @@
 												class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
 												bind:value={_user.role}
 												aria-label={$i18n.t('Role')}
-												disabled={_user.id == sessionUser.id}
+												disabled={_user.id == sessionUser?.id}
 												required
 											>
 												<option value="admin">{$i18n.t('Admin')}</option>
 												<option value="user">{$i18n.t('User')}</option>
 												<option value="pending">{$i18n.t('Pending')}</option>
+												{#if customRolesLoading}
+													<option disabled>{$i18n.t('Loading custom roles…')}</option>
+												{:else}
+													{#each customRoles.filter((customRole) => customRole.active || customRole.id === customRoleId(_user.role)) as customRole}
+														<option value={`custom:${customRole.id}`} disabled={!customRole.active}>
+															{customRole.display_name}{customRole.active
+																? ''
+																: ` (${$i18n.t('Inactive')})`}
+														</option>
+													{/each}
+													{#if isCustomRole(_user.role) && !customRoles.some((customRole) => customRole.id === customRoleId(_user.role))}
+														<option value={_user.role}
+															>{$i18n.t('Current custom role')} ({customRoleId(_user.role)})</option
+														>
+													{/if}
+												{/if}
 											</select>
+											{#if customRolesError}
+												<div class="mt-1 text-xs text-red-600 dark:text-red-400" role="alert">
+													{$i18n.t('Custom roles could not be loaded')}: {customRolesError}
+												</div>
+											{/if}
 										</div>
 									</div>
 
@@ -200,13 +278,15 @@
 									{/if}
 
 									<div class="flex flex-col w-full">
-										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
+										<label for="edit-user-password" class="mb-1 text-xs text-gray-500"
+											>{$i18n.t('New Password')}</label
+										>
 
 										<div class="flex-1">
 											<SensitiveInput
+												id="edit-user-password"
 												class="w-full text-sm bg-transparent outline-hidden"
 												type="password"
-												aria-label={$i18n.t('New Password')}
 												placeholder={$i18n.t('Enter New Password')}
 												bind:value={_user.password}
 												autocomplete="new-password"

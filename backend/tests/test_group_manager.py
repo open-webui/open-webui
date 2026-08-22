@@ -43,16 +43,19 @@ from open_webui.models.groups import (
 )
 from open_webui.routers.group_manager import (
     GroupManagerACLDeltaForm,
+    GroupManagerGroupInfo,
     GroupManagerKnowledgeCreateForm,
     GroupManagerKnowledgeUpdateForm,
     GroupManagerMemberIdsForm,
     GroupManagerPromptCreateForm,
+    list_manageable_groups,
 )
 from open_webui.utils.access_control.group_manager import (
     GroupManagerError,
     group_manager_tx,
     require_group_manager,
 )
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -518,6 +521,97 @@ class TestCrossGroupDenial:
             with pytest.raises(GroupManagerError) as exc_info:
                 await require_group_manager(uid, gid_b, 'groups.manage_members', manager_db)
             assert exc_info.value.reason == 'not_a_member'
+
+
+# ===================================================================
+# Scoped group discovery
+# ===================================================================
+
+class TestListManageableGroups:
+
+    @pytest.mark.asyncio
+    async def test_returns_only_current_memberships_and_capabilities(self, manager_db):
+        """Discovery uses active custom-role capabilities plus membership."""
+        uid = f'mgr-{uuid.uuid4().hex[:8]}'
+        member_group = f'grp-member-{uuid.uuid4().hex[:8]}'
+        creator_only_group = f'grp-creator-{uuid.uuid4().hex[:8]}'
+        await _create_user_in_db(manager_db, uid)
+
+        role = await _create_custom_role(
+            manager_db,
+            name=f'discovery-role-{uuid.uuid4().hex[:8]}',
+            permissions={'groups': {'manage_assets': True}},
+        )
+        await _assign_custom_role(manager_db, uid, role.id)
+        await _create_group_in_db(manager_db, member_group, uid)
+        await _add_membership(manager_db, member_group, uid)
+        await _create_group_in_db(manager_db, creator_only_group, uid)
+
+        result = await list_manageable_groups(
+            user=SimpleNamespace(id=uid),
+            db=manager_db,
+        )
+
+        assert result == [
+            GroupManagerGroupInfo(
+                id=member_group,
+                name=f'group-{member_group[:8]}',
+                capabilities=['groups.manage_assets'],
+            )
+        ]
+
+    @pytest.mark.asyncio
+    async def test_deactivated_role_and_removed_membership_disappear(self, manager_db):
+        """Discovery reflects the same current authorization boundary as mutations."""
+        uid, gid, role = await _setup_valid_asset_manager(manager_db)
+
+        result = await list_manageable_groups(
+            user=SimpleNamespace(id=uid),
+            db=manager_db,
+        )
+        assert result[0].id == gid
+        assert result[0].capabilities == [
+            'groups.manage_members',
+            'groups.manage_assets',
+        ]
+
+        await manager_db.execute(
+            sa_delete(GroupMember).where(
+                GroupMember.group_id == gid,
+                GroupMember.user_id == uid,
+            )
+        )
+        await manager_db.commit()
+
+        result = await list_manageable_groups(
+            user=SimpleNamespace(id=uid),
+            db=manager_db,
+        )
+        assert result == []
+
+        await _add_membership(manager_db, gid, uid)
+        await CustomRoles.deactivate_role(role.id, db=manager_db)
+        result = await list_manageable_groups(
+            user=SimpleNamespace(id=uid),
+            db=manager_db,
+        )
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_admin_and_legacy_roles_are_not_discovered(self, manager_db):
+        """Legacy/admin users do not gain the additive manager workspace scope."""
+        for role in ('admin', 'user', 'pending'):
+            uid = f'{role}-{uuid.uuid4().hex[:8]}'
+            gid = f'grp-{uuid.uuid4().hex[:8]}'
+            await _create_user_in_db(manager_db, uid, role=role)
+            await _create_group_in_db(manager_db, gid, uid)
+            await _add_membership(manager_db, gid, uid)
+
+            result = await list_manageable_groups(
+                user=SimpleNamespace(id=uid),
+                db=manager_db,
+            )
+            assert result == []
 
 
 # ===================================================================

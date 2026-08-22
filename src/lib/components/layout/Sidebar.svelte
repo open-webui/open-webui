@@ -168,7 +168,10 @@
 					$user?.permissions?.workspace?.knowledge ||
 					$user?.permissions?.workspace?.prompts ||
 					$user?.permissions?.workspace?.tools ||
-					$user?.permissions?.workspace?.skills
+					$user?.permissions?.workspace?.skills ||
+					$user?.permissions?.groups?.manage_members ||
+					$user?.permissions?.groups?.manage_assets ||
+					$user?.permissions?.groups?.manage_skills
 				);
 			case 'automations':
 				return (

@@ -11,6 +11,7 @@
 	export let ariaLabel = '';
 	export let tooltip = false;
 	export let inherited = false;
+	export let disabled = false;
 
 	const i18n: any = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -36,6 +37,7 @@
 			{id}
 			aria-labelledby={ariaLabelledbyId || undefined}
 			aria-label={ariaLabel || undefined}
+			{disabled}
 			class="focus-ring relative h-4 min-h-4 w-7 shrink-0 cursor-pointer rounded-full mx-[0.0625rem] transition-colors duration-150 disabled:cursor-not-allowed {($settings?.highContrastMode ??
 			false)
 				? 'focus:outline focus:outline-2 focus:outline-gray-800! focus:dark:outline-gray-200!'
