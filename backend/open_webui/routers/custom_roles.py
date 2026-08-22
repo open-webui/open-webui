@@ -6,15 +6,18 @@ Custom roles are stored as ``custom:<uuid>`` references in ``User.role``.
 Endpoints:
 - POST /create       — create a new custom role
 - GET /              — list all custom roles (paginated)
+- GET /permissions   — return the server-owned permission catalog
 - GET /{role_id}     — get a single custom role by ID
 - POST /{role_id}/update — update display_name, active, or permissions
 - POST /{role_id}/deactivate — soft-deactivate (set active=False)
+- DELETE /{role_id}  — delete a role and reset its assignments
 - POST /assign       — assign a custom role to a user
 """
 
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.constants import ERROR_MESSAGES
@@ -27,6 +30,7 @@ from open_webui.models.custom_roles import (
     CustomRoleResponse,
     CustomRoles,
     CustomRoleUpdateForm,
+    get_permission_catalog,
     make_custom_role_ref,
 )
 from open_webui.models.users import Users
@@ -54,6 +58,23 @@ def _role_response(role) -> CustomRoleResponse:
         created_at=role.created_at,
         updated_at=role.updated_at,
     )
+
+
+async def _publish_role_reset_events(
+    request: Request,
+    actor,
+    user_ids: list[str],
+    reason: str,
+) -> None:
+    """Publish metadata-only role updates after a lifecycle transaction commits."""
+    for user_id in user_ids:
+        await publish_event(
+            request,
+            EVENTS.USER_ROLE_UPDATED,
+            actor=actor,
+            subject_id=user_id,
+            data={'role': 'user', 'reason': reason},
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -127,6 +148,17 @@ async def list_custom_roles(
 
 
 # ---------------------------------------------------------------------------
+# Permission catalog
+# ---------------------------------------------------------------------------
+
+
+@router.get('/permissions', response_model=dict[str, Any])
+async def get_custom_role_permission_catalog(user=Depends(get_admin_user)):
+    """Return the canonical server-owned permission catalog for role editors."""
+    return get_permission_catalog()
+
+
+# ---------------------------------------------------------------------------
 # Read
 # ---------------------------------------------------------------------------
 
@@ -164,6 +196,16 @@ async def update_custom_role(
 
     The role name and ID are immutable.
     """
+    if form_data.active is False:
+        role_for_update = await CustomRoles.get_role_by_id(role_id, db=db, for_update=True)
+        if not role_for_update:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ERROR_MESSAGES.CUSTOM_ROLE_NOT_FOUND,
+            )
+        reset_user_ids = await CustomRoles.get_assigned_user_ids(role_id, db=db)
+    else:
+        reset_user_ids = []
     role = await CustomRoles.update_role(role_id, form_data, db=db)
     if not role:
         raise HTTPException(
@@ -171,13 +213,20 @@ async def update_custom_role(
             detail=ERROR_MESSAGES.CUSTOM_ROLE_NOT_FOUND,
         )
 
+    lifecycle_event = EVENTS.CUSTOM_ROLE_DEACTIVATED if form_data.active is False else EVENTS.CUSTOM_ROLE_UPDATED
+    lifecycle_data = {'name': role.name, 'display_name': role.display_name, 'active': role.active}
+    if form_data.active is False:
+        lifecycle_data.update({'reset_to': 'user', 'reset_user_count': len(reset_user_ids)})
+
     await publish_event(
         request,
-        EVENTS.CUSTOM_ROLE_UPDATED,
+        lifecycle_event,
         actor=user,
         subject_id=role.id,
-        data={'name': role.name, 'display_name': role.display_name, 'active': role.active},
+        data=lifecycle_data,
     )
+    if reset_user_ids:
+        await _publish_role_reset_events(request, user, reset_user_ids, 'custom_role_deactivated')
 
     return _role_response(role)
 
@@ -194,11 +243,14 @@ async def deactivate_custom_role(
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    """Soft-deactivate a custom role (set active=False).
-
-    Users currently assigned this role will fail-closed on the next request
-    because the role is no longer active.
-    """
+    """Deactivate a custom role and reset current assignments to ``user``."""
+    role_for_update = await CustomRoles.get_role_by_id(role_id, db=db, for_update=True)
+    if not role_for_update:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.CUSTOM_ROLE_NOT_FOUND,
+        )
+    reset_user_ids = await CustomRoles.get_assigned_user_ids(role_id, db=db)
     role = await CustomRoles.deactivate_role(role_id, db=db)
     if not role:
         raise HTTPException(
@@ -211,8 +263,58 @@ async def deactivate_custom_role(
         EVENTS.CUSTOM_ROLE_DEACTIVATED,
         actor=user,
         subject_id=role.id,
-        data={'name': role.name},
+        data={
+            'name': role.name,
+            'reset_to': 'user',
+            'reset_user_count': len(reset_user_ids),
+        },
     )
+    if reset_user_ids:
+        await _publish_role_reset_events(request, user, reset_user_ids, 'custom_role_deactivated')
+
+    return _role_response(role)
+
+
+# ---------------------------------------------------------------------------
+# Delete
+# ---------------------------------------------------------------------------
+
+
+@router.delete('/{role_id}', response_model=CustomRoleResponse)
+async def delete_custom_role(
+    request: Request,
+    role_id: str,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Delete a custom role and atomically reset current assignments to ``user``."""
+    role_for_update = await CustomRoles.get_role_by_id(role_id, db=db, for_update=True)
+    if not role_for_update:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.CUSTOM_ROLE_NOT_FOUND,
+        )
+    reset_user_ids = await CustomRoles.get_assigned_user_ids(role_id, db=db)
+    role = await CustomRoles.delete_role(role_id, db=db)
+    if not role:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.CUSTOM_ROLE_NOT_FOUND,
+        )
+
+    await publish_event(
+        request,
+        EVENTS.CUSTOM_ROLE_DELETED,
+        actor=user,
+        subject_id=role.id,
+        data={
+            'name': role.name,
+            'reset_to': 'user',
+            'reset_user_count': len(reset_user_ids),
+        },
+    )
+    if reset_user_ids:
+        await _publish_role_reset_events(request, user, reset_user_ids, 'custom_role_deleted')
 
     return _role_response(role)
 
@@ -237,7 +339,7 @@ async def assign_custom_role(
     - The caller cannot assign roles to themselves via this endpoint.
     """
     # Validate that the role_id is a real, active custom role
-    role = await CustomRoles.get_active_role_by_id(form_data.role_id, db=db)
+    role = await CustomRoles.get_active_role_by_id(form_data.role_id, db=db, for_update=True)
     if not role:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

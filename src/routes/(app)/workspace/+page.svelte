@@ -15,6 +15,12 @@
 				goto('/workspace/tools', { replaceState: true });
 			} else if ($user?.permissions?.workspace?.skills) {
 				goto('/workspace/skills', { replaceState: true });
+			} else if (
+				$user?.permissions?.groups?.manage_members ||
+				$user?.permissions?.groups?.manage_assets ||
+				$user?.permissions?.groups?.manage_skills
+			) {
+				goto('/workspace/group-manager', { replaceState: true });
 			} else {
 				goto('/', { replaceState: true });
 			}

@@ -1,8 +1,9 @@
 """Scoped group-manager router.
 
-Additive endpoints under ``/api/v1/group-manager/groups/{group_id}/...``
-that allow group managers (custom-role holders with ``groups.manage_members``
-or ``groups.manage_assets``) to operate on a single group.
+Additive endpoints under ``/api/v1/group-manager/groups`` and
+``/api/v1/group-manager/groups/{group_id}/...`` that allow group managers
+(custom-role holders with ``groups.manage_members``, ``groups.manage_assets``,
+or ``groups.manage_skills``) to discover and operate on a single group.
 
 Security contract:
 - Every mutation uses ``group_manager_tx(db)`` then
@@ -36,6 +37,7 @@ from open_webui.models.access_grants import (
 )
 from open_webui.models.groups import (
     SUPPORTED_OWNED_ASSET_TYPES,
+    Group,
     GroupMember,
     GroupOwnedAsset,
     GroupOwnedAssets,
@@ -45,6 +47,7 @@ from open_webui.models.prompts import Prompt
 from open_webui.models.skills import Skill, SkillMeta
 from open_webui.models.users import User
 from open_webui.utils.access_control.group_manager import (
+    GroupManagerError,
     group_manager_tx,
     require_group_manager,
 )
@@ -139,6 +142,14 @@ class GroupManagerMemberInfo(BaseModel):
     id: str
     user_id: str
     created_at: int | None = None
+
+
+class GroupManagerGroupInfo(BaseModel):
+    """Minimal group discovery contract for the manager workspace."""
+
+    id: str
+    name: str
+    capabilities: list[str]
 
 
 # =====================================================================
@@ -296,6 +307,59 @@ async def _verify_ownership(
 # =====================================================================
 # Membership management (manage_members)
 # =====================================================================
+
+GROUP_MANAGER_CAPABILITIES: tuple[str, ...] = (
+    'groups.manage_members',
+    'groups.manage_assets',
+    'groups.manage_skills',
+)
+
+
+@router.get(
+    '/groups',
+    response_model=list[GroupManagerGroupInfo],
+)
+async def list_manageable_groups(
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """List groups for which the caller currently has a manager capability.
+
+    Membership is used only to enumerate candidates.  Each capability is
+    re-authorized through ``require_group_manager`` inside the same transaction
+    so custom-role activity, capability, and current membership remain the
+    source of truth.  Creator IDs and access grants are deliberately ignored.
+    """
+    response: list[GroupManagerGroupInfo] = []
+
+    async with group_manager_tx(db):
+        result = await db.execute(
+            select(Group)
+            .join(GroupMember, GroupMember.group_id == Group.id)
+            .where(GroupMember.user_id == user.id)
+            .order_by(Group.updated_at.desc(), Group.id.asc())
+        )
+        groups = result.scalars().all()
+
+        for group in groups:
+            capabilities: list[str] = []
+            for capability in GROUP_MANAGER_CAPABILITIES:
+                try:
+                    await require_group_manager(user.id, group.id, capability, db)
+                except GroupManagerError:
+                    continue
+                capabilities.append(capability)
+
+            if capabilities:
+                response.append(
+                    GroupManagerGroupInfo(
+                        id=group.id,
+                        name=group.name,
+                        capabilities=capabilities,
+                    )
+                )
+
+    return response
 
 
 @router.get(

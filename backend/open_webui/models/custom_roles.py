@@ -482,9 +482,17 @@ class CustomRolesTable:
         self,
         role_id: str,
         db: AsyncSession | None = None,
+        *,
+        for_update: bool = False,
     ) -> CustomRoleModel | None:
         async with get_async_db_context(db) as session:
-            row = await session.get(CustomRole, role_id)
+            if for_update:
+                result = await session.execute(
+                    select(CustomRole).where(CustomRole.id == role_id).with_for_update()
+                )
+                row = result.scalars().first()
+            else:
+                row = await session.get(CustomRole, role_id)
             return CustomRoleModel.model_validate(row) if row else None
 
     async def get_role_by_name(
@@ -504,9 +512,11 @@ class CustomRolesTable:
         self,
         role_id: str,
         db: AsyncSession | None = None,
+        *,
+        for_update: bool = False,
     ) -> CustomRoleModel | None:
         """Return the role only if it exists AND is active (fail-closed)."""
-        role = await self.get_role_by_id(role_id, db=db)
+        role = await self.get_role_by_id(role_id, db=db, for_update=for_update)
         if role and role.active:
             return role
         return None
@@ -545,7 +555,10 @@ class CustomRolesTable:
         db: AsyncSession | None = None,
     ) -> CustomRoleModel | None:
         async with get_async_db_context(db) as session:
-            row = await session.get(CustomRole, role_id)
+            result = await session.execute(
+                select(CustomRole).where(CustomRole.id == role_id).with_for_update()
+            )
+            row = result.scalars().first()
             if not row:
                 return None
 
@@ -559,10 +572,17 @@ class CustomRolesTable:
             if form.permissions is not None:
                 updates['permissions'] = normalize_permissions(form.permissions)
 
-            await session.execute(
-                update(CustomRole).where(CustomRole.id == role_id).values(**updates)
-            )
-            await session.commit()
+            try:
+                await session.execute(
+                    update(CustomRole).where(CustomRole.id == role_id).values(**updates)
+                )
+                if form.active is False:
+                    await self._reset_assigned_users(session, role_id, now)
+                await session.commit()
+            except BaseException:
+                if session.in_transaction():
+                    await session.rollback()
+                raise
 
             # Re-fetch to return fresh state
             row = await session.get(CustomRole, role_id)
@@ -573,12 +593,68 @@ class CustomRolesTable:
         role_id: str,
         db: AsyncSession | None = None,
     ) -> CustomRoleModel | None:
-        """Soft-delete: set active=False.  Users keep the reference but lose access."""
+        """Deactivate and reset all assignments to the legacy ``user`` role."""
         return await self.update_role(
             role_id,
             CustomRoleUpdateForm(active=False),
             db=db,
         )
+
+    async def get_assigned_user_ids(
+        self,
+        role_id: str,
+        db: AsyncSession | None = None,
+    ) -> list[str]:
+        """Return users currently carrying the opaque reference for *role_id*."""
+        from open_webui.models.users import User
+
+        async with get_async_db_context(db) as session:
+            result = await session.execute(
+                select(User.id).where(User.role == make_custom_role_ref(role_id))
+            )
+            return list(result.scalars().all())
+
+    async def _reset_assigned_users(
+        self,
+        session: AsyncSession,
+        role_id: str,
+        now: int,
+    ) -> int:
+        """Reset exact custom-role references without touching other roles."""
+        from open_webui.models.users import User
+
+        result = await session.execute(
+            update(User)
+            .where(User.role == make_custom_role_ref(role_id))
+            .values(role='user', updated_at=now)
+        )
+        return int(getattr(result, 'rowcount', 0) or 0)
+
+    async def delete_role(
+        self,
+        role_id: str,
+        db: AsyncSession | None = None,
+    ) -> CustomRoleModel | None:
+        """Delete a role and atomically reset all of its assignments to ``user``."""
+        async with get_async_db_context(db) as session:
+            result = await session.execute(
+                select(CustomRole).where(CustomRole.id == role_id).with_for_update()
+            )
+            row = result.scalars().first()
+            if not row:
+                return None
+
+            role = CustomRoleModel.model_validate(row)
+            try:
+                await self._reset_assigned_users(session, role_id, int(time.time()))
+                await session.delete(row)
+                await session.commit()
+            except BaseException:
+                if session.in_transaction():
+                    await session.rollback()
+                raise
+
+            return role
 
     async def role_name_exists(
         self,

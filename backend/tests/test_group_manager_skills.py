@@ -611,15 +611,21 @@ class TestFormerManagerDenial:
 
     @pytest.mark.asyncio
     async def test_deactivated_role_denied(self, manager_db):
-        """After deactivating the role, the manager is denied."""
+        """After deactivation, the assignment is reset before access is denied."""
         uid, gid, role = await _setup_skill_manager(manager_db)
 
         await CustomRoles.deactivate_role(role.id, db=manager_db)
 
+        from open_webui.models.users import User
+
+        user_row = await manager_db.get(User, uid)
+        assert user_row.role == 'user'
+        await manager_db.commit()
+
         async with group_manager_tx(manager_db):
             with pytest.raises(GroupManagerError) as exc_info:
                 await require_group_manager(uid, gid, 'groups.manage_skills', manager_db)
-            assert exc_info.value.reason == 'invalid_custom_role'
+            assert exc_info.value.reason == 'legacy_role_denied'
 
 
 # ===================================================================
