@@ -21,6 +21,7 @@
 	export let id = '';
 	export let tokens: Array<{
 		summary?: string;
+		text?: string;
 		attributes?: {
 			type?: string;
 			name?: string;
@@ -50,6 +51,49 @@
 		}
 	}
 
+	function isToolResultError(value: unknown): boolean {
+		if (typeof value === 'string') {
+			const text = value.trim().toLowerCase();
+			if (
+				text.startsWith('error:') ||
+				text.startsWith('exception:') ||
+				text.startsWith('traceback') ||
+				text.startsWith('http error!')
+			) {
+				return true;
+			}
+		}
+
+		let parsed = value;
+		while (typeof parsed === 'string') {
+			try {
+				parsed = JSON.parse(parsed);
+			} catch {
+				break;
+			}
+		}
+		if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return false;
+
+		const result = parsed as Record<string, unknown>;
+		const error = result.error;
+		if (
+			(typeof error === 'string' && error.trim().length > 0) ||
+			(typeof error === 'object' && error !== null)
+		) {
+			return true;
+		}
+
+		const status = typeof result.status === 'string' ? result.status.trim().toLowerCase() : '';
+		if (status === 'error' || status === 'failed') return true;
+
+		const message = result.message;
+		return (
+			(result.success === false || result.ok === false) &&
+			((typeof message === 'string' && message.trim().length > 0) ||
+				(typeof message === 'object' && message !== null))
+		);
+	}
+
 	$: toolCallCount = tokens.filter((t) => t?.attributes?.type === 'tool_calls').length;
 	$: reasoningCount = tokens.filter((t) => t?.attributes?.type === 'reasoning').length;
 	$: pendingToolTokens = tokens.filter(
@@ -65,6 +109,12 @@
 	);
 	$: hasRejected = tokens.some(
 		(t) => t?.attributes?.type === 'tool_calls' && t?.attributes?.status === 'rejected'
+	);
+	$: hasError = tokens.some(
+		(t) =>
+			t?.attributes?.type === 'tool_calls' &&
+			(t?.attributes?.status === 'failed' ||
+				(t?.attributes?.done === 'true' && isToolResultError(decode(t?.text ?? ''))))
 	);
 
 	$: codeInterpreterCount = tokens.filter((t) => t?.attributes?.type === 'code_interpreter').length;
@@ -155,6 +205,10 @@
 					</div>
 				{:else if hasRejected}
 					<div class="text-red-400 dark:text-red-500">
+						<XMark className="size-4" strokeWidth="2.5" />
+					</div>
+				{:else if toolCallCount > 0 && hasError}
+					<div class="text-red-500 dark:text-red-400">
 						<XMark className="size-4" strokeWidth="2.5" />
 					</div>
 				{:else if toolCallCount > 0}

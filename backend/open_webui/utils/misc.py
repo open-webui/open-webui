@@ -312,7 +312,7 @@ def convert_output_to_messages(
         for item in output
         if item.get('type') == 'function_call'
         and item.get('call_id')
-        and item.get('status') in {'completed', 'rejected'}
+        and item.get('status') in {'completed', 'failed', 'rejected'}
     }
     result_call_ids = {
         item.get('call_id') for item in output if item.get('type') == 'function_call_output' and item.get('call_id')

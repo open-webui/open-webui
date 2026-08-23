@@ -142,6 +142,48 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 
 
+def _is_tool_result_error(value: Any) -> bool:
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if (
+            text.startswith('error:')
+            or text.startswith('exception:')
+            or text.startswith('traceback')
+            or text.startswith('http error!')
+        ):
+            return True
+
+    parsed = value
+    while isinstance(parsed, str):
+        try:
+            parsed = JSONCodec.loads(parsed)
+        except (JSONCodec.JSONDecodeError, TypeError, ValueError):
+            break
+
+    if not isinstance(parsed, dict):
+        return False
+
+    error = parsed.get('error')
+    if isinstance(error, str):
+        has_error = bool(error.strip())
+    else:
+        has_error = isinstance(error, (dict, list)) and bool(error)
+    if has_error:
+        return True
+
+    status = parsed.get('status')
+    if isinstance(status, str) and status.strip().lower() in {'error', 'failed'}:
+        return True
+
+    if parsed.get('success') is False or parsed.get('ok') is False:
+        message = parsed.get('message')
+        return has_error or (
+            bool(message.strip()) if isinstance(message, str) else isinstance(message, (dict, list)) and bool(message)
+        )
+
+    return False
+
+
 async def publish_chat_finished_event(
     request: Request, user: UserModel, metadata: dict, title: str, content: str, output: list | None = None
 ):
@@ -1299,7 +1341,7 @@ async def chat_completion_tools_handler(
                         tool_result = await tool_function(**tool_function_params)
 
                 except Exception as e:
-                    tool_result = str(e)
+                    tool_result = {'error': str(e)}
 
                 tool_result, tool_result_files, tool_result_embeds = await process_tool_result(
                     request,
@@ -3076,7 +3118,7 @@ async def execute_tool_call_for_output(request, form_data, user, metadata, event
             )
             result = await function(**params)
     except Exception as e:
-        result = str(e)
+        result = {'error': str(e)}
 
     result, files, embeds = await process_tool_result(
         request,
@@ -3096,28 +3138,6 @@ async def execute_tool_call_for_output(request, form_data, user, metadata, event
         **({'files': files} if files else {}),
         **({'embeds': embeds} if embeds else {}),
     }
-
-
-def append_tool_result_output(output: list[dict], result: dict) -> None:
-    output_parts = [{'type': 'input_text', 'text': result.get('content', '')}]
-    display_files = []
-    for file_item in result.get('files', []):
-        if file_item.get('type') == 'image' and file_item.get('url', '').startswith('data:'):
-            output_parts.append({'type': 'input_image', 'image_url': file_item['url']})
-        else:
-            display_files.append(file_item)
-
-    output.append(
-        {
-            'type': 'function_call_output',
-            'id': output_id('fco'),
-            'call_id': result.get('tool_call_id', ''),
-            'output': output_parts,
-            'status': 'completed',
-            **({'files': display_files} if display_files else {}),
-            **({'embeds': result.get('embeds')} if result.get('embeds') else {}),
-        }
-    )
 
 
 async def drain_approved_tool_calls(request, form_data, user, model, metadata) -> bool:
@@ -3186,9 +3206,27 @@ async def drain_approved_tool_calls(request, form_data, user, model, metadata) -
             event_emitter,
             tool_call,
         )
-        item['status'] = 'completed'
         item['arguments'] = tool_call.get('function', {}).get('arguments', '{}')
-        append_tool_result_output(output, result)
+        output_parts = [{'type': 'input_text', 'text': result.get('content', '')}]
+        item['status'] = 'failed' if _is_tool_result_error(result.get('content', '')) else 'completed'
+        display_files = []
+        for file_item in result.get('files', []):
+            if file_item.get('type') == 'image' and file_item.get('url', '').startswith('data:'):
+                output_parts.append({'type': 'input_image', 'image_url': file_item['url']})
+            else:
+                display_files.append(file_item)
+
+        output.append(
+            {
+                'type': 'function_call_output',
+                'id': output_id('fco'),
+                'call_id': result.get('tool_call_id', ''),
+                'output': output_parts,
+                'status': item['status'],
+                **({'files': display_files} if display_files else {}),
+                **({'embeds': result.get('embeds')} if result.get('embeds') else {}),
+            }
+        )
         changed = True
 
     if changed:
@@ -5489,7 +5527,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 )
                                 result = await function(**params)
                         except Exception as e:
-                            result = str(e)
+                            result = {'error': str(e)}
                         return params, result, tool, tool_type, direct_tool
 
                     delegate_calls = [
@@ -5575,19 +5613,13 @@ async def streaming_chat_response_handler(response, ctx):
                             }
                         )
 
-                    # Update function_call statuses and append function_call_output items
-                    for tc in response_tool_calls:
-                        call_id = tc.get('id', '')
-                        # Mark function_call as completed
-                        for item in output:
-                            if item.get('type') == 'function_call' and item.get('call_id') == call_id:
-                                item['status'] = 'completed'
-                                # Update arguments with parsed/sanitized version
-                                item['arguments'] = tc.get('function', {}).get('arguments', '{}')
-                                break
-
+                    result_status_by_call_id = {}
                     for result in results:
                         output_parts = [{'type': 'input_text', 'text': result.get('content', '')}]
+                        local_output_status = (
+                            'failed' if _is_tool_result_error(result.get('content', '')) else 'completed'
+                        )
+                        result_status_by_call_id[result.get('tool_call_id', '')] = local_output_status
 
                         # Separate image data URIs (for LLM via input_image) from
                         # other files (for frontend display via files attribute).
@@ -5606,11 +5638,20 @@ async def streaming_chat_response_handler(response, ctx):
                                 'id': output_id('fco'),
                                 'call_id': result.get('tool_call_id', ''),
                                 'output': output_parts,
-                                'status': 'completed',
+                                'status': local_output_status,
                                 **({'files': display_files} if display_files else {}),
                                 **({'embeds': result.get('embeds')} if result.get('embeds') else {}),
                             }
                         )
+
+                    # Update function_call statuses and parsed/sanitized arguments.
+                    for tc in response_tool_calls:
+                        call_id = tc.get('id', '')
+                        for item in output:
+                            if item.get('type') == 'function_call' and item.get('call_id') == call_id:
+                                item['status'] = result_status_by_call_id.get(call_id, 'completed')
+                                item['arguments'] = tc.get('function', {}).get('arguments', '{}')
+                                break
 
                     # Append a new empty message item for the next response
                     output.append(
