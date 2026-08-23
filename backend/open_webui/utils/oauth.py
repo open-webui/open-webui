@@ -1919,6 +1919,12 @@ class OAuthManager:
             else:
                 # Fallback to the default sub claim if not configured
                 sub = user_data.get(OAUTH_PROVIDERS[provider].get('sub_claim', 'sub'))
+            if sub is not None:
+                # Some providers use a numeric id as the sub claim (e.g. GitHub's
+                # "id"); normalize to str so DB lookups compare text to text
+                # instead of failing on PostgreSQL with "operator does not exist:
+                # text = integer", and so stored subs are consistent
+                sub = str(sub)
             if not sub:
                 log.warning(f'OAuth callback failed, sub is missing: {user_data}')
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
