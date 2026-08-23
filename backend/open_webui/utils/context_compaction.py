@@ -11,7 +11,6 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_message_list
 from open_webui.utils.payload import apply_params_to_form_data
 from open_webui.utils.task import (
-    get_task_model_id,
     prompt_template,
     prompt_variables_template,
     replace_messages_variable,
@@ -347,24 +346,11 @@ async def _generate_summary(
     from open_webui.utils.chat import generate_chat_completion
 
     task_config = await Config.get_many(
-        'task.model.default',
-        'task.model.external',
         'task.model.params',
         'chat.context_compaction.model',
     )
     context_compaction_model = task_config.get('chat.context_compaction.model')
-    task_model_id = (
-        context_compaction_model
-        if context_compaction_model in models
-        else get_task_model_id(
-            model_id,
-            task_config.get('task.model.default'),
-            task_config.get('task.model.external'),
-            models,
-        )
-    )
-    if task_model_id not in models:
-        task_model_id = model_id
+    task_model_id = context_compaction_model if context_compaction_model in models else model_id
     if task_model_id not in models:
         raise ValueError('No available model for context compaction')
 
