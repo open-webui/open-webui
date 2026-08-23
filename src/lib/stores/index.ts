@@ -252,6 +252,7 @@ type Settings = {
 	scrollOnBranchChange?: boolean;
 	scrollOnResponseGeneration?: boolean;
 	showFilesOnTerminalSelect?: boolean;
+	terminalFileDisplay?: 'sidebar' | 'inline';
 	directConnections?: null;
 	chatBubble?: boolean;
 	copyFormatted?: boolean;

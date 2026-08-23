@@ -37,6 +37,7 @@
 	let scrollOnBranchChange = true;
 	let scrollOnResponseGeneration = true;
 	let showFilesOnTerminalSelect = true;
+	let terminalFileDisplay: 'sidebar' | 'inline' = 'sidebar';
 	let userLocation = false;
 
 	// Interface
@@ -298,6 +299,7 @@
 		scrollOnBranchChange = currentSettings?.scrollOnBranchChange ?? true;
 		scrollOnResponseGeneration = currentSettings?.scrollOnResponseGeneration ?? true;
 		showFilesOnTerminalSelect = currentSettings?.showFilesOnTerminalSelect ?? true;
+		terminalFileDisplay = currentSettings?.terminalFileDisplay === 'inline' ? 'inline' : 'sidebar';
 
 		temporaryChatByDefault = currentSettings?.temporaryChatByDefault ?? false;
 		chatDirection = currentSettings?.chatDirection ?? 'auto';
@@ -1254,6 +1256,31 @@
 				</div>
 				<p class={settingDescriptionClass}>
 					{$i18n.t('Group multi-model responses into tabs.')}
+				</p>
+			</div>
+
+			<div>
+				<div class={settingRowClass}>
+					<div id="terminal-file-display-label" class={settingLabelClass}>
+						{$i18n.t('Terminal File Display')}
+					</div>
+
+					<button
+						aria-labelledby="terminal-file-display-label terminal-file-display-state"
+						class={actionButtonClass}
+						on:click={() => {
+							terminalFileDisplay = terminalFileDisplay === 'inline' ? 'sidebar' : 'inline';
+							saveSettings({ terminalFileDisplay });
+						}}
+						type="button"
+					>
+						<span id="terminal-file-display-state">
+							{terminalFileDisplay === 'inline' ? $i18n.t('Inline') : $i18n.t('Sidebar')}
+						</span>
+					</button>
+				</div>
+				<p class={settingDescriptionClass}>
+					{$i18n.t('Choose where terminal display_file results appear by default.')}
 				</p>
 			</div>
 

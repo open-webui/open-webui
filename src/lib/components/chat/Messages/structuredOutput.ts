@@ -169,7 +169,7 @@ function getInlineFileFromToolOutput(callItem?: OutputItem, resultItem?: OutputI
 	}
 
 	const args = parseJSONStringValue(callItem.arguments) as Record<string, unknown>;
-	if (!args || typeof args !== 'object' || args.inline !== true) {
+	if (!args || typeof args !== 'object') {
 		return null;
 	}
 
@@ -179,6 +179,7 @@ function getInlineFileFromToolOutput(callItem?: OutputItem, resultItem?: OutputI
 		typeof result !== 'object' ||
 		result.type !== 'file' ||
 		result.source !== 'open_terminal' ||
+		result.displayed !== true ||
 		result.exists === false ||
 		!result.path ||
 		!result.terminal_selector

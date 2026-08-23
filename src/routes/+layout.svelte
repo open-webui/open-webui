@@ -459,8 +459,41 @@
 		return { toolServer, toolServerData, token };
 	};
 
+	const isDirectTerminalServer = (serverUrl) =>
+		!!serverUrl &&
+		(($settings?.terminalServers ?? []).some((server) => server.url === serverUrl) ||
+			($terminalServers ?? []).some((server) => !server.id && server.url === serverUrl));
+
+	const terminalFileResult = (result, params, serverUrl, chatId) => {
+		const path = result?.path ?? params?.path;
+		const name = result?.name ?? String(path ?? '').split('/').filter(Boolean).at(-1) ?? 'file';
+		const contentType = result?.content_type ?? result?.mime_type ?? 'application/octet-stream';
+
+		return {
+			...(result ?? {}),
+			type: 'file',
+			source: 'open_terminal',
+			displayed: true,
+			terminal_selector: serverUrl,
+			terminal_url: serverUrl,
+			session_id: chatId,
+			path,
+			full_path: result?.full_path ?? path,
+			name,
+			mime_type: contentType,
+			content_type: contentType
+		};
+	};
+
 	const executeTool = async (data, cb, chatId) => {
 		const { toolServer, toolServerData, token } = resolveToolServer(data.server?.url);
+		const defaultInline =
+			data?.name === 'display_file' &&
+			data?.params?.path &&
+			data?.params?.inline === undefined &&
+			$settings?.terminalFileDisplay === 'inline' &&
+			isDirectTerminalServer(data.server?.url);
+		const params = defaultInline ? { ...data.params, inline: true } : data?.params;
 
 		console.log('executeTool', data, toolServer);
 
@@ -469,26 +502,33 @@
 				token,
 				toolServer.url,
 				data?.name,
-				data?.params,
+				params,
 				toolServerData,
 				chatId
 			);
 
 			console.log('executeToolServer', res);
 			const result = Array.isArray(res) ? res[0] : res;
+			const inlineDisplayFile = data?.name === 'display_file' && params?.path && params?.inline === true;
+			const output =
+				inlineDisplayFile && result?.exists !== false
+					? Array.isArray(res)
+						? [terminalFileResult(result, params, toolServer.url, chatId)]
+						: terminalFileResult(result, params, toolServer.url, chatId)
+					: res;
 
-			if (data?.name === 'display_file' && data?.params?.path && data?.params?.inline !== true) {
+			if (data?.name === 'display_file' && params?.path && !inlineDisplayFile) {
 				if (result?.exists !== false) {
-					displayFileHandler(data.params.path, { showControls, showFileNavPath });
+					displayFileHandler(params.path, { showControls, showFileNavPath });
 				}
 			}
 
-			if (['write_file'].includes(data?.name) && data?.params?.path) {
-				showFileNavDir.set(result?.path ?? data.params.path);
+			if (['write_file'].includes(data?.name) && params?.path) {
+				showFileNavDir.set(result?.path ?? params.path);
 			}
 
 			if (cb) {
-				cb(structuredClone(res));
+				cb(structuredClone(output));
 			}
 		} else {
 			if (cb) {
