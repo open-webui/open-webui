@@ -215,8 +215,10 @@
 							{#if document.metadata?.html}
 								<iframe
 									class="w-full border-0 h-auto rounded-none"
-									sandbox="allow-scripts allow-forms{($settings?.iframeSandboxAllowSameOrigin ??
+									sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ??
 									false)
+										? ' allow-forms'
+										: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false)
 										? ' allow-same-origin'
 										: ''}"
 									srcdoc={injectCsp(document.document, $config?.ui?.iframe_csp ?? '')}
