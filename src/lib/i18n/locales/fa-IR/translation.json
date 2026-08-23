@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 برای بدون محدودیت، یا یک عدد مثبت برای محدودیت مشخص",
 	"(latest)": "(آخرین)",
-	"(leave blank for to use commercial endpoint)": "(برای استفاده از نقطه پایانی تجاری خالی بگذارید)",
+	"(leave blank to use the commercial endpoint)": "(برای استفاده از نقطه پایانی تجاری خالی بگذارید)",
 	"[Last] dddd [at] h:mm A": "[آخرین] dddd [در] h:mm A",
 	"[Today at] h:mm A": "[امروز در] h:mm A",
 	"[Yesterday at] h:mm A": "[دیروز در] h:mm A",

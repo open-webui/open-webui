@@ -1303,7 +1303,7 @@ class OAuthManager:
 
         Args:
             user_id: The user ID
-            provider: Optional provider name. If None, gets the most recent session.
+            session_id: The OAuth session ID to fetch/refresh.
             force_refresh: Force token refresh even if current token appears valid
 
         Returns:

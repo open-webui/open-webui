@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 வரம்பு இல்லை, அல்லது ஒரு குறிப்பிட்ட வரம்பிற்கு நேர்மறை முழு எண்",
 	"(latest)": "(சமீபத்திய)",
-	"(leave blank for to use commercial endpoint)": "(வணிக முனைப்புள்ளியைப் பயன்படுத்துவதற்கு காலியாக விடவும்)",
+	"(leave blank to use the commercial endpoint)": "(வணிக முனைப்புள்ளியைப் பயன்படுத்துவதற்கு காலியாக விடவும்)",
 	"[Last] dddd [at] h:mm A": "[கடந்த] dddd [அன்று] h:mm A",
 	"[Today at] h:mm A": "[இன்று] h:mm A",
 	"[Yesterday at] h:mm A": "[நேற்று] h:mm A",

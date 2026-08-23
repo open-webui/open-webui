@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "Cheksiz uchun -1 yoki ma'lum chegara uchun musbat butun son",
 	"(latest)": "(oxirgi)",
-	"(leave blank for to use commercial endpoint)": "(tijoriy so'nggi nuqtadan foydalanish uchun bo'sh qoldiring)",
+	"(leave blank to use the commercial endpoint)": "(tijoriy so'nggi nuqtadan foydalanish uchun bo'sh qoldiring)",
 	"[Last] dddd [at] h:mm A": "",
 	"[Today at] h:mm A": "",
 	"[Yesterday at] h:mm A": "",

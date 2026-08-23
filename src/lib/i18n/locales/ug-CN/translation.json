@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "چەك قويماسلىق ئۈچۈن 1-، ياكى بەلگىلىك بىر چەك ئۈچۈن مۇسبەت پۈتۈن سان كىرگۈزۈڭ",
 	"(latest)": "(ئەڭ يېڭىسى)",
-	"(leave blank for to use commercial endpoint)": "(تجارەتلىك ئۇلانمىنى ئىشلىتىش ئۈچۈن بوش قالدۇرۇڭ)",
+	"(leave blank to use the commercial endpoint)": "(تجارەتلىك ئۇلانمىنى ئىشلىتىش ئۈچۈن بوش قالدۇرۇڭ)",
 	"[Last] dddd [at] h:mm A": "",
 	"[Today at] h:mm A": "",
 	"[Yesterday at] h:mm A": "",

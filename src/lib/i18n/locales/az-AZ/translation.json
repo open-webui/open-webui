@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "Limitsiz üçün -1, yaxud konkret limit üçün müsbət tam ədəd daxil edin",
 	"(latest)": "(ən sonuncu)",
-	"(leave blank for to use commercial endpoint)": "(kommersiya son nöqtəsindən istifadə etmək üçün boş buraxın)",
+	"(leave blank to use the commercial endpoint)": "(kommersiya son nöqtəsindən istifadə etmək üçün boş buraxın)",
 	"[Last] dddd [at] h:mm A": "[Sonuncu] dddd [saat] h:mm A",
 	"[Today at] h:mm A": "[Bu gün saat] h:mm A",
 	"[Yesterday at] h:mm A": "[Dünən saat] h:mm A",

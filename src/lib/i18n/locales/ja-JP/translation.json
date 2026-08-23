@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1で無制限、または正の整数で制限を指定",
 	"(latest)": "(最新)",
-	"(leave blank for to use commercial endpoint)": "(商用エンドポイントを使用する場合は空欄のままにしてください)",
+	"(leave blank to use the commercial endpoint)": "(商用エンドポイントを使用する場合は空欄のままにしてください)",
 	"[Last] dddd [at] h:mm A": "dddd h:mm A",
 	"[Today at] h:mm A": "[今日の] h:mm A",
 	"[Yesterday at] h:mm A": "[昨日の] h:mm A",

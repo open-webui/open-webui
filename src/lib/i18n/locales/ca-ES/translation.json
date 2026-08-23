@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 per a cap límit, o un nombre positiu per a un límit específic",
 	"(latest)": "(últim)",
-	"(leave blank for to use commercial endpoint)": "(deixa-ho buit per utilitzar un punt d'accés comercial)",
+	"(leave blank to use the commercial endpoint)": "(deixa-ho buit per utilitzar un punt d'accés comercial)",
 	"[Last] dddd [at] h:mm A": "[Darrer] dddd [a] h:mm A",
 	"[Today at] h:mm A": "[Avui a les] h:mm A",
 	"[Yesterday at] h:mm A": "[Ahir a les] h:mm A",

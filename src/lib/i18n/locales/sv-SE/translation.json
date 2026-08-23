@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 för ingen gräns, eller ett positivt heltal för en specifik gräns",
 	"(latest)": "(senaste)",
-	"(leave blank for to use commercial endpoint)": "(lämna tomt för att använda kommersiell endpoint)",
+	"(leave blank to use the commercial endpoint)": "(lämna tomt för att använda kommersiell endpoint)",
 	"[Last] dddd [at] h:mm A": "[Senaste] dddd [kl] h:mm A",
 	"[Today at] h:mm A": "Idag kl h:mm A",
 	"[Yesterday at] h:mm A": "Igår kl h:mm A",

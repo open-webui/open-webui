@@ -368,7 +368,7 @@
 						<input
 							class={inputClass}
 							bind:value={STT_AZURE_BASE_URL}
-							placeholder={$i18n.t('(leave blank for to use commercial endpoint)')}
+							placeholder={$i18n.t('(leave blank to use the commercial endpoint)')}
 						/>
 					</AdminSettingField>
 					<AdminSettingField label={$i18n.t('Max Speakers')}>
@@ -554,7 +554,7 @@
 						<input
 							class={inputClass}
 							bind:value={TTS_AZURE_SPEECH_BASE_URL}
-							placeholder={$i18n.t('(leave blank for to use commercial endpoint)')}
+							placeholder={$i18n.t('(leave blank to use the commercial endpoint)')}
 						/>
 					</AdminSettingField>
 				</div>

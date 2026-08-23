@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 ནི་ཚད་མེད་པའི་ཆེད་དམ། ཡང་ན་ཧྲིལ་གྲངས་དགོས་ངེས་ཤིག་ཚད་བཀག་ངེས་ཅན་ཞིག་གི་ཆེད་དུ།",
 	"(latest)": "(ཆེས་གསར།)",
-	"(leave blank for to use commercial endpoint)": "",
+	"(leave blank to use the commercial endpoint)": "",
 	"[Last] dddd [at] h:mm A": "",
 	"[Today at] h:mm A": "",
 	"[Yesterday at] h:mm A": "",

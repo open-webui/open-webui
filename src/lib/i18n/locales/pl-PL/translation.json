@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 oznacza brak limitu, liczba dodatnia oznacza konkretny limit",
 	"(latest)": "(najnowszy)",
-	"(leave blank for to use commercial endpoint)": "(pozostaw puste, aby użyć komercyjnego punktu końcowego)",
+	"(leave blank to use the commercial endpoint)": "(pozostaw puste, aby użyć komercyjnego punktu końcowego)",
 	"[Last] dddd [at] h:mm A": "[Ostatnio] dddd [o] H:mm",
 	"[Today at] h:mm A": "[Dziś o] H:mm",
 	"[Yesterday at] h:mm A": "[Wczoraj o] H:mm",
