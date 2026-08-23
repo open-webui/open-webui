@@ -960,7 +960,7 @@ def add_terminal_display_file_inline_param(spec: dict) -> dict:
     spec['description'] = (
         f"{spec.get('description', '')} "
         "Set inline=true when the file should be shown inline in the chat message instead of opening the file viewer. "
-        "After calling display_file with inline=true, do not emit Markdown image or link syntax for that file."
+        "After display_file succeeds, do not display the same file again or emit Markdown for it."
     ).strip()
     parameters = spec.setdefault('parameters', {'type': 'object', 'properties': {}, 'required': []})
     parameters.setdefault('type', 'object')
