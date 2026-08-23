@@ -99,7 +99,7 @@ class ERROR_MESSAGES(str, Enum):
 
     INVALID_URL = 'The URL you provided is invalid. Please double-check and try again.'
 
-    WEB_SEARCH_ERROR = lambda err='': err if err else 'Something went wrong while searching the web.'
+    WEB_SEARCH_ERROR = 'Something went wrong while searching the web.'
 
     OLLAMA_API_DISABLED = 'The Ollama API is disabled. Please enable it to use this feature.'
 
