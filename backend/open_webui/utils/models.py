@@ -155,7 +155,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     existing_ids = {m['id'] for m in models}
 
     for custom_model in custom_models:
-        if custom_model.base_model_id is None:
+        if custom_model.base_model_id is None or custom_model.base_model_id == custom_model.id:
             # Override applied directly to a base model (shares the same ID)
             model = base_model_lookup.get(custom_model.id)
 
