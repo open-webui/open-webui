@@ -5,7 +5,7 @@
 	export let side: 'left' | 'right' = 'right';
 	export let width = 350;
 	export let minWidth = 300;
-	export let maxWidth = 640;
+	export let maxWidth: number | null = null;
 	export let storageKey = '';
 	export let className = '';
 	export let resizerId = 'controls-resizer';
@@ -14,7 +14,8 @@
 	let startClientX = 0;
 	let startWidth = 0;
 
-	const clamp = (value: number) => Math.min(maxWidth, Math.max(minWidth, value));
+	const clamp = (value: number) =>
+		maxWidth === null ? Math.max(minWidth, value) : Math.min(maxWidth, Math.max(minWidth, value));
 
 	const persistWidth = () => {
 		if (storageKey) {

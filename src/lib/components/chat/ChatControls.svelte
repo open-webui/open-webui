@@ -310,7 +310,6 @@
 		open={$showControls}
 		bind:width={controlsWidth}
 		minWidth={350}
-		maxWidth={640}
 		storageKey="chatControlsSize"
 		className="h-full z-10 bg-white dark:bg-gray-900"
 	>
