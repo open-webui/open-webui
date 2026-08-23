@@ -721,7 +721,7 @@
 										<FullHeightIframe
 											src={embed}
 											allowScripts={true}
-											allowForms={true}
+											allowForms={$settings?.iframeSandboxAllowForms ?? true}
 											allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
 											allowPopups={true}
 										/>
