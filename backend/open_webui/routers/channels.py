@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
-from open_webui.env import STATIC_DIR
+from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, STATIC_DIR
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant, has_public_write_access_grant
 from open_webui.models.config import Config
@@ -1814,10 +1814,14 @@ async def get_webhook_profile_image(webhook_id: str, user=Depends(get_verified_u
     if webhook.profile_image_url:
         # Check if it's url or base64
         if webhook.profile_image_url.startswith('http'):
-            return Response(
-                status_code=status.HTTP_302_FOUND,
-                headers={'Location': webhook.profile_image_url},
-            )
+            if ENABLE_PROFILE_IMAGE_URL_FORWARDING:
+                return Response(
+                    status_code=status.HTTP_302_FOUND,
+                    headers={'Location': webhook.profile_image_url},
+                )
+            # Fall through to the default favicon when forwarding is disabled
+            # to prevent client-side IP/UA/Referer leaks via 302 to external
+            # origins (same guard as the user profile image endpoint).
         elif webhook.profile_image_url.startswith('data:image'):
             try:
                 header, base64_data = webhook.profile_image_url.split(',', 1)
