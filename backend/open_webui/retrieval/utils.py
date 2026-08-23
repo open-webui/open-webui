@@ -200,11 +200,12 @@ def _extract_text_from_binary_response(
 def _is_text_content_type(content_type: str) -> bool:
     """Return True if the content type should be handled by the web loader."""
     ct = content_type.split(';')[0].strip().lower()
+    if not ct:  # empty / missing → assume HTML
+        return True
     if ct.startswith('text/'):
         return True
-    if any(t in ct for t in ['xml', 'json', 'javascript']):
-        return True
-    return not ct  # empty / missing → assume HTML
+    # Matching "xml" anywhere also claimed every Office type, whose name contains "openxmlformats".
+    return ct.endswith(('+xml', '+json')) or ct in ('application/xml', 'application/json', 'application/javascript')
 
 
 async def get_content_from_url(request, url: str) -> str:
