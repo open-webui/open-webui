@@ -2854,7 +2854,10 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
 
     except Exception as e:
         log.exception('Web search failed')
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e))
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e, ERROR_MESSAGES.WEB_SEARCH_ERROR()),
+        )
 
     if len(urls) == 0:
         raise HTTPException(
