@@ -5,6 +5,7 @@ import copy
 import inspect
 import json
 import logging
+import mimetypes
 import os
 import random
 import re
@@ -244,6 +245,62 @@ def _start_tag_pattern(start_tag: str) -> str:
 def output_id(prefix: str) -> str:
     """Generate OR-style ID: prefix + 24-char hex UUID."""
     return f'{prefix}_{uuid4().hex[:24]}'
+
+
+def build_terminal_file_tool_result(
+    tool_function_name: str,
+    tool_function_params: dict,
+    tool_result: Any,
+    tool: dict | None,
+    metadata: dict | None,
+) -> dict | None:
+    if isinstance(tool_result, (list, tuple)) and tool_result and isinstance(tool_result[0], dict):
+        tool_result = tool_result[0]
+
+    if (
+        tool_function_name != 'display_file'
+        or tool_function_params.get('inline') is not True
+        or not isinstance(tool_result, dict)
+        or tool_result.get('exists') is False
+    ):
+        return None
+
+    tool_id = (tool or {}).get('tool_id', '')
+    terminal_id = metadata.get('terminal_id') if metadata else None
+    if isinstance(tool_id, str) and tool_id.startswith('terminal:'):
+        terminal_id = tool_id.split(':', 1)[1]
+
+    server_url = ((tool or {}).get('server') or {}).get('url')
+    terminal_selector = terminal_id or server_url
+    path = tool_result.get('path') or tool_function_params.get('path')
+    if not terminal_selector or not path:
+        return None
+    mime_type, _ = mimetypes.guess_type(path)
+    mime_type = mime_type or 'application/octet-stream'
+
+    return {
+        **tool_result,
+        'type': 'file',
+        'source': 'open_terminal',
+        'displayed': True,
+        'terminal_selector': terminal_selector,
+        **({'terminal_id': terminal_id} if terminal_id else {}),
+        **({'terminal_url': server_url} if server_url and not terminal_id else {}),
+        'session_id': metadata.get('chat_id') if metadata else None,
+        'path': path,
+        'full_path': tool_result.get('full_path') or path,
+        'name': tool_result.get('name') or os.path.basename(path),
+        'mime_type': tool_result.get('mime_type') or tool_result.get('content_type') or mime_type,
+        'content_type': tool_result.get('content_type') or tool_result.get('mime_type') or mime_type,
+    }
+
+
+def tool_result_content(tool_result: Any) -> str:
+    if not tool_result:
+        return ''
+    if isinstance(tool_result, (dict, list)):
+        return JSONCodec.dumps(tool_result, ensure_ascii=False)
+    return str(tool_result)
 
 
 def merge_streamed_reasoning_details(target: list, details) -> None:
@@ -1171,6 +1228,8 @@ async def terminal_event_handler(
         return
 
     if tool_function_name == 'display_file':
+        if tool_function_params.get('inline') is True:
+            return
         path = tool_function_params.get('path', '')
         if not path:
             return
@@ -3120,6 +3179,10 @@ async def execute_tool_call_for_output(request, form_data, user, metadata, event
     except Exception as e:
         result = {'error': str(e)}
 
+    terminal_file_result = build_terminal_file_tool_result(name, params, result, tool, metadata)
+    if terminal_file_result:
+        result = terminal_file_result
+
     result, files, embeds = await process_tool_result(
         request,
         name,
@@ -3134,7 +3197,7 @@ async def execute_tool_call_for_output(request, form_data, user, metadata, event
 
     return {
         'tool_call_id': tool_call.get('id', ''),
-        'content': str(result) if result else '',
+        'content': tool_result_content(result),
         **({'files': files} if files else {}),
         **({'embeds': embeds} if embeds else {}),
     }
@@ -5562,6 +5625,16 @@ async def streaming_chat_response_handler(response, ctx):
                             )
                             continue
 
+                        terminal_file_result = build_terminal_file_tool_result(
+                            tool_function_name,
+                            tool_function_params,
+                            tool_result,
+                            tool,
+                            metadata,
+                        )
+                        if terminal_file_result:
+                            tool_result = terminal_file_result
+
                         tool_result, tool_result_files, tool_result_embeds = await process_tool_result(
                             request,
                             tool_function_name,
@@ -5607,7 +5680,7 @@ async def streaming_chat_response_handler(response, ctx):
                         results.append(
                             {
                                 'tool_call_id': tool_call_id,
-                                'content': str(tool_result) if tool_result else '',
+                                'content': tool_result_content(tool_result),
                                 **({'files': tool_result_files} if tool_result_files else {}),
                                 **({'embeds': tool_result_embeds} if tool_result_embeds else {}),
                             }

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import ToolCallDisplay from '$lib/components/common/ToolCallDisplay.svelte';
+	import TerminalOutputFile from './TerminalOutputFile.svelte';
 	import { resolveChatMessageToolCall } from '$lib/apis/chats';
 	import { settings } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
@@ -161,6 +162,8 @@
 				{/each}
 			</div>
 		</ConsecutiveDetailsGroup>
+	{:else if displayItem.type === 'file'}
+		<TerminalOutputFile item={displayItem.item} {chatId} />
 	{:else}
 		{@const detailToken = displayItem.token}
 		{#if detailToken.attributes?.type === 'tool_calls'}

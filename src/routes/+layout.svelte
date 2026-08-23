@@ -475,15 +475,16 @@
 			);
 
 			console.log('executeToolServer', res);
+			const result = Array.isArray(res) ? res[0] : res;
 
-			if (data?.name === 'display_file' && data?.params?.path) {
-				if (res?.exists !== false) {
+			if (data?.name === 'display_file' && data?.params?.path && data?.params?.inline !== true) {
+				if (result?.exists !== false) {
 					displayFileHandler(data.params.path, { showControls, showFileNavPath });
 				}
 			}
 
 			if (['write_file'].includes(data?.name) && data?.params?.path) {
-				showFileNavDir.set(res?.path ?? data.params.path);
+				showFileNavDir.set(result?.path ?? data.params.path);
 			}
 
 			if (cb) {

@@ -57,6 +57,11 @@ export type OutputDisplayItem =
 			type: 'detail_group';
 			id: string;
 			tokens: OutputDetailToken[];
+	  }
+	| {
+			type: 'file';
+			id: string;
+			item: Record<string, unknown>;
 	  };
 
 type ResponseStreamEvent = {
@@ -140,6 +145,48 @@ function getToolResultText(item?: OutputItem): string {
 			return typeof part.text === 'string' ? part.text : String(part.text);
 		})
 		.join('');
+}
+
+function parseJSONStringValue(value: unknown): unknown {
+	if (typeof value !== 'string') {
+		return value;
+	}
+
+	let parsed: unknown = value.trim();
+	while (typeof parsed === 'string') {
+		try {
+			parsed = JSON.parse(parsed);
+		} catch {
+			break;
+		}
+	}
+	return parsed;
+}
+
+function getInlineFileFromToolOutput(callItem?: OutputItem, resultItem?: OutputItem) {
+	if (!callItem || !resultItem || callItem.name !== 'display_file') {
+		return null;
+	}
+
+	const args = parseJSONStringValue(callItem.arguments) as Record<string, unknown>;
+	if (!args || typeof args !== 'object' || args.inline !== true) {
+		return null;
+	}
+
+	const result = parseJSONStringValue(getToolResultText(resultItem)) as Record<string, unknown>;
+	if (
+		!result ||
+		typeof result !== 'object' ||
+		result.type !== 'file' ||
+		result.source !== 'open_terminal' ||
+		result.exists === false ||
+		!result.path ||
+		!result.terminal_selector
+	) {
+		return null;
+	}
+
+	return result;
 }
 
 function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string, OutputItem>) {
@@ -297,10 +344,13 @@ export function buildOutputDisplayItems(output: OutputItem[] = []): OutputDispla
 	const displayItems: OutputDisplayItem[] = [];
 	const currentDetailTokens: OutputDetailToken[] = [];
 	const toolOutputByCallId: Record<string, OutputItem> = {};
+	const toolCallByCallId: Record<string, OutputItem> = {};
 
 	for (const item of output) {
 		if (item?.type === 'function_call_output' && item.call_id) {
 			toolOutputByCallId[item.call_id] = item;
+		} else if (item?.type === 'function_call' && (item.call_id || item.id)) {
+			toolCallByCallId[item.call_id ?? item.id ?? ''] = item;
 		}
 	}
 
@@ -323,6 +373,18 @@ export function buildOutputDisplayItems(output: OutputItem[] = []): OutputDispla
 
 	output.forEach((item, index) => {
 		if (item?.type === 'function_call_output') {
+			const inlineFile = getInlineFileFromToolOutput(
+				toolCallByCallId[item.call_id ?? ''],
+				item
+			);
+			if (inlineFile) {
+				flushDetails();
+				displayItems.push({
+					type: 'file',
+					id: item.id ?? `file-${index}`,
+					item: inlineFile
+				});
+			}
 			return;
 		}
 
