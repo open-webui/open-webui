@@ -1,6 +1,7 @@
 # tasks.py
 import asyncio
 import logging
+from contextlib import suppress
 from uuid import uuid4
 
 from redis.asyncio import Redis
@@ -20,25 +21,46 @@ REDIS_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks'
 REDIS_ITEM_TASKS_KEY = f'{REDIS_KEY_PREFIX}:tasks:item'
 REDIS_RESPONSE_STREAMS_KEY = f'{REDIS_KEY_PREFIX}:tasks:response_streams'
 REDIS_PUBSUB_CHANNEL = f'{REDIS_KEY_PREFIX}:tasks:commands'
+REDIS_PUBSUB_RECONNECT_INTERVAL = 1.0
+REDIS_PUBSUB_MAX_RECONNECT_INTERVAL = 30.0
 
 
 async def redis_task_command_listener(app):
     redis: Redis = app.state.redis
-    pubsub = redis.pubsub()
-    await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)
+    reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
 
-    async for message in pubsub.listen():
-        if message['type'] != 'message':
-            continue
+    while True:
+        pubsub = None
         try:
-            command = JSONCodec.loads(message['data'])
-            if command.get('action') == 'stop':
-                task_id = command.get('task_id')
-                local_task = tasks.get(task_id)
-                if local_task:
-                    local_task.cancel()
+            pubsub = redis.pubsub()
+            await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)
+            reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
+
+            async for message in pubsub.listen():
+                if message['type'] != 'message':
+                    continue
+                try:
+                    command = JSONCodec.loads(message['data'])
+                    if command.get('action') != 'stop':
+                        continue
+
+                    local_task = tasks.get(command.get('task_id'))
+                    if local_task:
+                        local_task.cancel()
+                except Exception as e:
+                    log.exception(f'Error handling distributed task command: {e}')
+            log.warning('Redis task command listener stopped. Retrying.')
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
-            log.exception(f'Error handling distributed task command: {e}')
+            log.exception(f'Redis task command listener failed. Retrying: {e}')
+        finally:
+            if pubsub:
+                with suppress(Exception):
+                    await pubsub.aclose()
+
+        await asyncio.sleep(reconnect_interval)
+        reconnect_interval = min(reconnect_interval * 2, REDIS_PUBSUB_MAX_RECONNECT_INTERVAL)
 
 
 ### ------------------------------
