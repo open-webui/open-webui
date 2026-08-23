@@ -427,6 +427,8 @@ async def get_all_models(request: Request, user: UserModel | None = None):
         for m in response.get('models', []):
             if prefix_id:
                 m['model'] = f'{prefix_id}.{m["model"]}'
+                if m.get('name'):
+                    m['name'] = f'{prefix_id}.{m["name"]}'
             if allowed_tags:
                 m['tags'] = allowed_tags
             if connection_type:

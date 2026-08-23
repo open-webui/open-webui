@@ -747,6 +747,8 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
                 if prefix_id:
                     model['id'] = f'{prefix_id}.{model.get("id", model.get("name", ""))}'
+                    if model.get('name'):
+                        model['name'] = f'{prefix_id}.{model["name"]}'
 
                 if tags:
                     model['tags'] = tags
