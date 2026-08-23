@@ -1027,7 +1027,9 @@ async def delete_file_by_id(
         if result:
             try:
                 await asyncio.to_thread(Storage.delete_file, file.path)
-                await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=f'file-{id}')
+                file_collection = f'file-{id}'
+                if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+                    await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
             except Exception as e:
                 log.exception(e)
                 log.error('Error deleting files')

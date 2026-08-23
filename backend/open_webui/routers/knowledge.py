@@ -1041,6 +1041,7 @@ async def update_external_knowledge_source(
 class KnowledgeFilesResponse(KnowledgeResponse):
     files: list[FileMetadataResponse | None] = None
     write_access: bool | None = False
+    warnings: dict | None = None
 
 
 @router.get('/{id}', response_model=KnowledgeFilesResponse | None)
