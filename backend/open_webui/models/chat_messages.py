@@ -168,6 +168,7 @@ class ChatMessage(Base):
         Index('chat_message_chat_parent_idx', 'chat_id', 'parent_id'),
         Index('chat_message_model_created_idx', 'model_id', 'created_at'),
         Index('chat_message_user_created_idx', 'user_id', 'created_at'),
+        Index('chat_message_chat_role_done_idx', 'chat_id', 'role', 'done'),  # unfinished-assistant probe
     )
 
 
