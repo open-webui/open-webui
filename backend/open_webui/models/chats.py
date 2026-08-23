@@ -149,6 +149,7 @@ class Chat(Base):  # database table mapping for chat entity
     current_message_id = Column(Text, nullable=True)
 
     last_read_at = Column(BigInteger, nullable=True)
+    timer_at = Column(BigInteger, nullable=True)  # ns due time, set only while a timer chat waits to be claimed
 
     __table_args__ = (
         # Performance indexes for common queries
@@ -157,6 +158,23 @@ class Chat(Base):  # database table mapping for chat entity
         Index('user_id_archived_idx', 'user_id', 'archived'),
         Index('updated_at_user_id_idx', 'updated_at', 'user_id'),
         Index('folder_id_user_id_idx', 'folder_id', 'user_id'),
+        Index('user_id_updated_at_id_idx', 'user_id', updated_at.desc(), 'id'),
+        Index(
+            'timer_at_idx',
+            'timer_at',
+            sqlite_where=text('timer_at IS NOT NULL'),
+            postgresql_where=text('timer_at IS NOT NULL'),
+        ),
+        # timer_at key column turns the IS NOT NULL into a seek, so this beats the plain user_id indexes
+        Index(
+            'user_id_timer_at_idx',
+            'user_id',
+            'timer_at',
+            sqlite_where=text('timer_at IS NOT NULL'),
+            postgresql_where=text('timer_at IS NOT NULL'),
+        ),
+        # covering index: lets SQLite serve count_unread_by_folder_ids without reading chat rows
+        Index('user_id_folder_unread_idx', 'user_id', 'folder_id', 'archived', 'updated_at', 'last_read_at', 'id'),
     )
 
 
@@ -187,6 +205,7 @@ class ChatModel(BaseModel):
     current_message_id: str | None = None
 
     last_read_at: int | None = None
+    timer_at: int | None = None
 
     @field_validator('variables', mode='before')
     @classmethod
@@ -502,6 +521,7 @@ class ChatTable:
         db: AsyncSession | None = None,
         *,
         internal_meta: dict | None = None,
+        timer_at: int | None = None,
     ) -> ChatModel | None:
         async with get_async_db_context(db) as session:
             chat = ChatModel(
@@ -514,6 +534,7 @@ class ChatTable:
                     'chat': self._clean_null_bytes(form_data.chat),
                     'folder_id': form_data.folder_id,
                     'meta': internal_meta or {},
+                    'timer_at': timer_at,
                     'variables': form_data.variables or {},
                     'current_message_id': self.get_current_message_id(form_data.chat),
                     'created_at': int(time.time()),
