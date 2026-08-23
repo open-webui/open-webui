@@ -770,10 +770,14 @@ app.add_middleware(AuthTokenMiddleware, fastapi_app=app)
 app.add_middleware(WebsocketUpgradeGuardMiddleware)
 
 
+# 'Access-Control-Allow-Origin: *' must not be combined with credentials;
+# Starlette instead reflects the request origin, which grants every site
+# credentialed cross-origin access. Only allow credentials when explicit
+# origins are configured.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ALLOW_ORIGIN,
-    allow_credentials=True,
+    allow_credentials='*' not in CORS_ALLOW_ORIGIN,
     allow_methods=['*'],
     allow_headers=['*'],
 )
