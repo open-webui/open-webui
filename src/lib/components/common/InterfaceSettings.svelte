@@ -104,8 +104,10 @@
 
 	let webSearch: string | null = null;
 
+	let iframeSandboxAllowScripts = true;
 	let iframeSandboxAllowSameOrigin = false;
-	let iframeSandboxAllowForms = false;
+	let iframeSandboxAllowForms = true;
+	let iframeSandboxAllowDownloads = true;
 
 	let showManageFloatingActionButtonsModal = false;
 	let showManageImageCompressionModal = false;
@@ -302,8 +304,10 @@
 		userLocation = currentSettings?.userLocation ?? false;
 		showChatTitleInTab = currentSettings?.showChatTitleInTab ?? true;
 
+		iframeSandboxAllowScripts = currentSettings?.iframeSandboxAllowScripts ?? true;
 		iframeSandboxAllowSameOrigin = currentSettings?.iframeSandboxAllowSameOrigin ?? false;
-		iframeSandboxAllowForms = currentSettings?.iframeSandboxAllowForms ?? false;
+		iframeSandboxAllowForms = currentSettings?.iframeSandboxAllowForms ?? true;
+		iframeSandboxAllowDownloads = currentSettings?.iframeSandboxAllowDownloads ?? true;
 
 		stylizedPdfExport = currentSettings?.stylizedPdfExport ?? true;
 
@@ -1533,6 +1537,29 @@
 
 			<div>
 				<div class={settingRowClass}>
+					<div id="iframe-sandbox-allow-scripts-label" class={settingLabelClass}>
+						{$i18n.t('iframe Sandbox Allow Scripts')}
+					</div>
+
+					<div class={settingControlClass}>
+						<Switch
+							ariaLabelledbyId="iframe-sandbox-allow-scripts-label"
+							tooltip={true}
+							bind:state={iframeSandboxAllowScripts}
+							inherited={isDefaultSetting('iframeSandboxAllowScripts')}
+							on:change={() => {
+								saveSettings({ iframeSandboxAllowScripts });
+							}}
+						/>
+					</div>
+				</div>
+				<p class={settingDescriptionClass}>
+					{$i18n.t('Allow scripts inside sandboxed iframes.')}
+				</p>
+			</div>
+
+			<div>
+				<div class={settingRowClass}>
 					<div id="iframe-sandbox-allow-same-origin-label" class={settingLabelClass}>
 						{$i18n.t('iframe Sandbox Allow Same Origin')}
 					</div>
@@ -1574,6 +1601,29 @@
 				</div>
 				<p class={settingDescriptionClass}>
 					{$i18n.t('Allow forms inside sandboxed artifact iframes.')}
+				</p>
+			</div>
+
+			<div>
+				<div class={settingRowClass}>
+					<div id="iframe-sandbox-allow-downloads-label" class={settingLabelClass}>
+						{$i18n.t('iframe Sandbox Allow Downloads')}
+					</div>
+
+					<div class={settingControlClass}>
+						<Switch
+							ariaLabelledbyId="iframe-sandbox-allow-downloads-label"
+							tooltip={true}
+							bind:state={iframeSandboxAllowDownloads}
+							inherited={isDefaultSetting('iframeSandboxAllowDownloads')}
+							on:change={() => {
+								saveSettings({ iframeSandboxAllowDownloads });
+							}}
+						/>
+					</div>
+				</div>
+				<p class={settingDescriptionClass}>
+					{$i18n.t('Allow downloads inside sandboxed iframes.')}
 				</p>
 			</div>
 

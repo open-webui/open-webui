@@ -372,7 +372,11 @@
 			{/if}
 			<iframe
 				src={serveUrl}
-				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
+				sandbox="{($settings?.iframeSandboxAllowScripts ?? true)
+					? 'allow-scripts'
+					: ''}{($settings?.iframeSandboxAllowDownloads ?? true)
+					? ' allow-downloads'
+					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
 				class="w-full h-full border-none bg-white"
@@ -384,7 +388,11 @@
 			{/if}
 			<iframe
 				srcdoc={injectCsp(fileContent, $config?.ui?.iframe_csp ?? '')}
-				sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
+				sandbox="{($settings?.iframeSandboxAllowScripts ?? true)
+					? 'allow-scripts'
+					: ''}{($settings?.iframeSandboxAllowDownloads ?? true)
+					? ' allow-downloads'
+					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
 				class="w-full h-full border-none bg-white"
