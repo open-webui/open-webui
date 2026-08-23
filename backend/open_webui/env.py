@@ -812,6 +812,10 @@ MINERU_MAX_MARKDOWN_BYTES = (
     int(os.getenv('MINERU_MAX_MARKDOWN_BYTES')) if os.getenv('MINERU_MAX_MARKDOWN_BYTES') else None
 )
 
+# Most an archive-based document may unpack to. A 120k-row spreadsheet reaches ~33 MB.
+# Set to 0 to disable the check.
+RAG_FILE_MAX_UNPACKED_SIZE = int(os.getenv('RAG_FILE_MAX_UNPACKED_SIZE', 100 * 1024 * 1024))
+
 # When enabled, skips pydub-based preprocessing (format conversion, compression,
 # and chunked splitting) before sending files to processing engines. Useful when
 # the upstream provider handles these steps or when ffmpeg is unavailable.

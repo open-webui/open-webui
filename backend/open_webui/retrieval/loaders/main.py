@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import zipfile
+import zlib
 
 import ftfy
 import requests
@@ -21,6 +22,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     GLOBAL_LOG_LEVEL,
     MINERU_MAX_MARKDOWN_BYTES,
+    RAG_FILE_MAX_UNPACKED_SIZE,
     REQUESTS_VERIFY,
 )
 from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
@@ -300,6 +302,42 @@ class DoclingLoader:
                 except Exception:
                     error_msg += f' - {r.text}'
             raise Exception(f'Error calling Docling: {error_msg}')
+
+
+def _reject_overexpanding_archive(file_path: str) -> None:
+    """Reject a zip-based document that unpacks to far more than it stores."""
+    if not RAG_FILE_MAX_UNPACKED_SIZE:
+        return
+
+    try:
+        archive = zipfile.ZipFile(file_path)
+    except (zipfile.BadZipFile, OSError):
+        return  # not a zip-based document, so there is nothing here to expand
+    except (NotImplementedError, UnicodeDecodeError) as e:
+        # It parsed as a zip far enough to reject it on its own contents, so fail closed.
+        raise ValueError('Document could not be read as a well-formed archive') from e
+
+    with archive:
+        # Small documents get a flat 10 MB, larger ones 100x what they store, and nothing
+        # gets past the ceiling: padding an archive with junk inflates the stored size for free.
+        limit = min(max(10 * 1024 * 1024, 100 * os.path.getsize(file_path)), RAG_FILE_MAX_UNPACKED_SIZE)
+        unpacked = 0
+        try:
+            for entry in archive.infolist():
+                # Only deflate honours a block size; bzip2 and lzma expand a whole member per
+                # read(), which would put the payload in memory before we could count it. The
+                # document formats we parse here all mandate stored or deflate anyway.
+                if entry.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED):
+                    raise ValueError('Document uses an unsupported archive compression method')
+
+                with archive.open(entry) as part:
+                    while block := part.read(1024 * 1024):
+                        unpacked += len(block)
+                        if unpacked > limit:
+                            raise ValueError('Document unpacks to far more than it stores and was rejected')
+        except (zipfile.BadZipFile, OSError, RuntimeError, zlib.error, UnicodeDecodeError, EOFError) as e:
+            # Fail closed: an archive we can open but cannot walk is one we cannot bound.
+            raise ValueError('Document could not be read as a well-formed archive') from e
 
 
 class Loader:
@@ -666,6 +704,8 @@ class Loader:
                 file_path=file_path,
             )
         else:
+            _reject_overexpanding_archive(file_path)
+
             if file_ext == 'pdf':
                 loader = PyPDFLoader(
                     file_path,
