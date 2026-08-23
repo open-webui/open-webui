@@ -2856,7 +2856,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
         log.exception('Web search failed')
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e, ERROR_MESSAGES.WEB_SEARCH_ERROR()),
+            detail=ERROR_MESSAGES.DEFAULT(e, ERROR_MESSAGES.WEB_SEARCH_ERROR),
         )
 
     if len(urls) == 0:
@@ -2952,7 +2952,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
         log.exception('Web search content loading failed')
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e, ERROR_MESSAGES.WEB_SEARCH_ERROR()),
+            detail=ERROR_MESSAGES.DEFAULT(e, ERROR_MESSAGES.WEB_SEARCH_ERROR),
         )
 
 
