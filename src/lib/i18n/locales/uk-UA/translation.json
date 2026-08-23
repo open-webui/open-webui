@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 для без обмежень або додатне ціле число для конкретного обмеження",
 	"(latest)": "(остання)",
-	"(leave blank for to use commercial endpoint)": "",
+	"(leave blank to use the commercial endpoint)": "",
 	"[Last] dddd [at] h:mm A": "",
 	"[Today at] h:mm A": "",
 	"[Yesterday at] h:mm A": "",

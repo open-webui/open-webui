@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 rajoituksetta tai positiivinen kokonaisluku enimmäismääräksi",
 	"(latest)": "(uusin)",
-	"(leave blank for to use commercial endpoint)": "(Jätä tyhjäksi, jos haluat käyttää kaupallista päätettä)",
+	"(leave blank to use the commercial endpoint)": "(Jätä tyhjäksi, jos haluat käyttää kaupallista päätettä)",
 	"[Last] dddd [at] h:mm A": "[Viimeisin] dddd h:mm A",
 	"[Today at] h:mm A": "[Tänään] h:mm A",
 	"[Yesterday at] h:mm A": "[Eilen] h:mm A",

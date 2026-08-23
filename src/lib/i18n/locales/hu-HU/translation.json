@@ -1,7 +1,7 @@
 {
   "-1 for no limit, or a positive integer for a specific limit": "-1 a korlátlanhoz, vagy pozitív egész szám egy konkrét limithoz",
   "(latest)": "(legújabb)",
-  "(leave blank for to use commercial endpoint)": "(hagyd üresen a kereskedelmi végpont használatához)",
+  "(leave blank to use the commercial endpoint)": "(hagyd üresen a kereskedelmi végpont használatához)",
   "[Last] dddd [at] h:mm A": "[Legutóbb] dddd [ekkor:] h:mm A",
   "[Today at] h:mm A": "[Ma ekkor:] h:mm A",
   "[Yesterday at] h:mm A": "[Tegnap ekkor:] h:mm A",

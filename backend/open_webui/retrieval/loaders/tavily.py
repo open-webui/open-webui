@@ -33,7 +33,6 @@ class TavilyLoader(BaseLoader):
         Args:
             urls: URL or list of URLs to extract content from.
             api_key: The Tavily API key.
-            include_images: Whether to include images in the extraction.
             extract_depth: Depth of extraction, either "basic" or "advanced".
                 advanced extraction retrieves more data, including tables and
                 embedded content, with higher success but may increase latency.

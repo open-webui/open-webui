@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 表示无限制，正整数表示具体限制额度",
 	"(latest)": "（最新版）",
-	"(leave blank for to use commercial endpoint)": "（留空以使用商用端点）",
+	"(leave blank to use the commercial endpoint)": "（留空以使用商用端点）",
 	"[Last] dddd [at] h:mm A": "[上次] dddd [于] h:mm A",
 	"[Today at] h:mm A": "[今天] h:mm A",
 	"[Yesterday at] h:mm A": "[昨天] h:mm A",

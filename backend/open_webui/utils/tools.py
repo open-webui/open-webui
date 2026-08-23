@@ -877,7 +877,7 @@ def convert_function_to_pydantic_model(func: Callable, function_introspection=No
 
     Args:
         func: The function whose type hints and docstring should be converted.
-        model_name: The name of the generated Pydantic model.
+        function_introspection: Optional precomputed (signature, type_hints) tuple; derived from func when None.
 
     Returns:
         A Pydantic model class.

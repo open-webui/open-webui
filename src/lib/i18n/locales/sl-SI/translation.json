@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 za brez omejitve ali pozitivno celo število za določeno omejitev",
 	"(latest)": "(najnovejše)",
-	"(leave blank for to use commercial endpoint)": "(pustite prazno za uporabo komercialne končne točke)",
+	"(leave blank to use the commercial endpoint)": "(pustite prazno za uporabo komercialne končne točke)",
 	"[Last] dddd [at] h:mm A": "[Prejšnji] dddd [ob] H:mm",
 	"[Today at] h:mm A": "[Danes ob] H:mm",
 	"[Yesterday at] h:mm A": "[Včeraj ob] H:mm",

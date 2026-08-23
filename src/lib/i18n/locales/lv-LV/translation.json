@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 bez ierobežojuma vai pozitīvs skaitlis konkrētam ierobežojumam",
 	"(latest)": "(jaunākā)",
-	"(leave blank for to use commercial endpoint)": "(atstājiet tukšu, lai izmantotu komerciālo galapunktu)",
+	"(leave blank to use the commercial endpoint)": "(atstājiet tukšu, lai izmantotu komerciālo galapunktu)",
 	"[Last] dddd [at] h:mm A": "[Pagājušā] dddd [plkst.] H:mm",
 	"[Today at] h:mm A": "[Šodien plkst.] H:mm",
 	"[Yesterday at] h:mm A": "[Vakar plkst.] H:mm",

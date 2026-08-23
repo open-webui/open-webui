@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1은 제한 없음을 의미하며, 양의 정수는 특정 제한을 나타냅니다",
 	"(latest)": "(최신)",
-	"(leave blank for to use commercial endpoint)": "(상용 엔드포인트를 사용하시려면 비워두세요)",
+	"(leave blank to use the commercial endpoint)": "(상용 엔드포인트를 사용하시려면 비워두세요)",
 	"[Last] dddd [at] h:mm A": "[지난] dddd A h:mm",
 	"[Today at] h:mm A": "[오늘] A h:mm",
 	"[Yesterday at] h:mm A": "[어제] A h:mm",
