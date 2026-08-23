@@ -530,10 +530,6 @@ async def get_channel_members_by_id(
 
         if query:
             filter['query'] = query
-        if order_by:
-            filter['order_by'] = order_by
-        if direction:
-            filter['direction'] = direction
 
         if channel.type == 'group':
             filter['channel_id'] = channel.id
@@ -544,7 +540,13 @@ async def get_channel_members_by_id(
                 filter['user_ids'] = permitted_ids.get('user_ids')
                 filter['group_ids'] = permitted_ids.get('group_ids')
 
-        result = await Users.get_users(filter=filter, skip=skip, limit=limit, db=db)
+        result = await Users.get_users(
+            filter=filter,
+            sort={'order_by': order_by, 'direction': direction},
+            skip=skip,
+            limit=limit,
+            db=db,
+        )
 
         fetched_users = result['users']
         total = result['total']
