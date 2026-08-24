@@ -32,6 +32,7 @@ from open_webui.utils.terminals import (
 )
 from open_webui.utils.tools import bearer_auth_header, normalize_bearer_token
 from starlette.background import BackgroundTask
+from starlette.requests import ClientDisconnect
 
 log = logging.getLogger(__name__)
 
@@ -172,13 +173,14 @@ async def proxy_terminal(
     if content_type:
         headers['Content-Type'] = content_type
 
-    body = await request.body()
     session = aiohttp.ClientSession(
         timeout=aiohttp.ClientTimeout(total=300, connect=10),
         trust_env=True,
     )
 
     try:
+        body = await request.body()
+
         upstream_response = await session.request(
             method=request.method,
             url=target_url,
@@ -219,6 +221,13 @@ async def proxy_terminal(
 
         return Response(content=response_body, status_code=status_code, headers=filtered_headers)
 
+    except ClientDisconnect:
+        await session.close()
+        return Response(status_code=499)
+    except (aiohttp.ClientConnectionError, TimeoutError) as error:
+        await session.close()
+        log.error('Terminal proxy error: %s', str(error) or type(error).__name__)
+        return JSONResponse({'error': f'Terminal proxy error: {error}'}, status_code=502)
     except Exception as error:
         await session.close()
         log.exception('Terminal proxy error: %s', error)
