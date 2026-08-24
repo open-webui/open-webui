@@ -11,7 +11,11 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, RAG_EMBEDDING_CONTENT_PREFIX
+from open_webui.config import (
+    BYPASS_ADMIN_ACCESS_CONTROL,
+    ENABLE_KNOWLEDGE_FILE_RETENTION,
+    RAG_EMBEDDING_CONTENT_PREFIX,
+)
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
@@ -55,6 +59,25 @@ router = APIRouter()
 ############################
 
 PAGE_ITEM_COUNT = 30
+
+
+async def delete_file_resource(file: FileModel, db: AsyncSession) -> bool:
+    try:
+        file_collection = f'file-{file.id}'
+        if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+            await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+    except Exception as e:
+        log.debug('This was most likely caused by bypassing embedding processing')
+        log.debug(e)
+
+    result = await Files.delete_file_by_id(file.id, db=db)
+    if result and file.path:
+        try:
+            await asyncio.to_thread(Storage.delete_file, file.path)
+        except Exception as e:
+            log.debug(e)
+
+    return result
 
 ############################
 # Knowledge Base Embedding
@@ -1569,7 +1592,7 @@ async def remove_file_from_knowledge_by_id(
     request: Request,
     id: str,
     form_data: KnowledgeFileIdForm,
-    delete_file: bool = Query(True),
+    delete_file: bool = Query(not ENABLE_KNOWLEDGE_FILE_RETENTION),
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -1630,18 +1653,7 @@ async def remove_file_from_knowledge_by_id(
 
     # Anyone with write permission or higher can delete files
     if delete_file and (file.user_id == user.id or user.role == 'admin'):
-        try:
-            # Remove the file's collection from vector database
-            file_collection = f'file-{form_data.file_id}'
-            if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-                await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
-        except Exception as e:
-            log.debug('This was most likely caused by bypassing embedding processing')
-            log.debug(e)
-            pass
-
-        # Delete file from database
-        await Files.delete_file_by_id(form_data.file_id, db=db)
+        await delete_file_resource(file, db)
 
     if knowledge:
         response = KnowledgeFilesResponse(
@@ -1786,11 +1798,17 @@ async def reset_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    files = await Knowledges.get_files_by_id(id, db=db) if not ENABLE_KNOWLEDGE_FILE_RETENTION else []
+
     try:
         await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:
         log.debug(e)
         pass
+
+    for file in files:
+        if file.user_id == user.id or user.role == 'admin':
+            await delete_file_resource(file, db)
 
     knowledge = await Knowledges.reset_knowledge_by_id(id=id, include_directories=include_directories, db=db)
     if knowledge:
@@ -1966,19 +1984,13 @@ async def sync_knowledge_cleanup(
         except Exception:
             pass
 
-        try:
-            collection_name = f'file-{file_id}'
-            if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name):
-                await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name)
-        except Exception:
-            pass
-
-        if file.user_id == user.id or user.role == 'admin':
-            await Files.delete_file_by_id(file_id, db=db)
-            try:
-                await asyncio.to_thread(Storage.delete_file, file.path)
-            except Exception:
-                pass
+        linked_knowledges = await Knowledges.get_knowledges_by_file_id(file_id, db=db)
+        if (
+            not ENABLE_KNOWLEDGE_FILE_RETENTION
+            and not linked_knowledges
+            and (file.user_id == user.id or user.role == 'admin')
+        ):
+            await delete_file_resource(file, db)
 
     # ── Remove orphaned directories (children before parents) ──
     for dir_id in reversed(form_data.dir_ids):
