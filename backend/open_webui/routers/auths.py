@@ -1671,6 +1671,7 @@ async def token_exchange(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Token missing required 'sub' claim",
         )
+    sub = str(sub)
 
     email = user_data.get(email_claim, '')
     if not email:
@@ -1700,7 +1701,13 @@ async def token_exchange(
         user = await Users.get_user_by_email(email, db=db)
         if user:
             # Link the OAuth sub to this user
-            await Users.update_user_oauth_by_id(user.id, provider, sub, db=db)
+            user = await Users.update_user_oauth_by_id(user.id, provider, sub, db=db) or user
+
+    if user:
+        provider_oauth = (user.oauth or {}).get(provider) if isinstance(user.oauth, dict) else None
+        # Lazy repair for legacy rows that stored numeric provider ids as JSON numbers.
+        if isinstance(provider_oauth, dict) and provider_oauth.get('sub') != sub:
+            user = await Users.update_user_oauth_by_id(user.id, provider, sub, db=db) or user
 
     if not user:
         raise HTTPException(

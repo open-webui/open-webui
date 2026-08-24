@@ -360,9 +360,14 @@ class UsersTable:
         db: AsyncSession | None = None,
     ) -> UserModel | None:
         """Look up a user by OAuth provider + subject claim."""
+        sub = str(sub)
         async with get_async_db_context(db) as session:
             # Subscript, never contains(): on a JSON column contains() degrades to a substring LIKE.
-            query = select(User).where(User.oauth[provider]['sub'].as_string() == sub)
+            sub_expr = User.oauth[provider]['sub'].as_string()
+            query = select(User).where(sub_expr == sub)
+            # SQLite preserves JSON numeric type here; Postgres ->> already compares numeric JSON as text.
+            if session.get_bind().dialect.name == 'sqlite' and sub.isdecimal():
+                query = select(User).where(or_(sub_expr == sub, sub_expr == int(sub)))
             row = (await session.execute(query)).scalars().first()
             return UserModel.model_validate(row) if row else None
 
@@ -677,7 +682,10 @@ class UsersTable:
             if not user:
                 return None
             oauth = dict(user.oauth or {})
-            oauth[provider] = {'sub': sub}
+            provider_oauth = oauth.get(provider)
+            provider_oauth = dict(provider_oauth) if isinstance(provider_oauth, dict) else {}
+            provider_oauth['sub'] = str(sub)
+            oauth[provider] = provider_oauth
             user.oauth = oauth
             await session.commit()
             return UserModel.model_validate(user)
