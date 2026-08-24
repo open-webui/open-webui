@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 import DOMPurify from 'dompurify';
 import { WEBUI_BASE_URL } from '$lib/constants';
+import type { FileNavOpenRequest } from '$lib/stores';
+import { normalizeDocumentTargetPage } from '$lib/utils/documentPreview';
 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -2321,10 +2323,12 @@ export const formatSkillName = (name) => {
  */
 export const displayFileHandler = (
 	path: string,
-	stores: { showControls: Writable<boolean>; showFileNavPath: Writable<string | null> }
+	stores: { showControls: Writable<boolean>; showFileNavPath: Writable<FileNavOpenRequest | null> },
+	options: { page?: unknown } = {}
 ) => {
 	if (path) {
 		stores.showControls.set(true);
-		stores.showFileNavPath.set(path);
+		const page = normalizeDocumentTargetPage(options.page);
+		stores.showFileNavPath.set(page ? { path, page } : path);
 	}
 };

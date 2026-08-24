@@ -481,7 +481,8 @@
 			full_path: result?.full_path ?? path,
 			name,
 			mime_type: contentType,
-			content_type: contentType
+			content_type: contentType,
+			page: result?.page ?? params?.page
 		};
 	};
 
@@ -519,7 +520,7 @@
 
 			if (data?.name === 'display_file' && params?.path && !inlineDisplayFile) {
 				if (result?.exists !== false) {
-					displayFileHandler(params.path, { showControls, showFileNavPath });
+					displayFileHandler(params.path, { showControls, showFileNavPath }, { page: params?.page });
 				}
 			}
 

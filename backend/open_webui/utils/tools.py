@@ -969,6 +969,9 @@ def add_terminal_display_file_inline_param(spec: dict) -> dict:
         'type': 'boolean',
         'description': 'Show the file inline in the chat message instead of opening the file viewer.',
     }
+        'minimum': 1,
+        'description': 'For PDF, DOCX, and PPTX files, open the preview at this 1-based page or slide number.',
+    }
     return spec
 
 

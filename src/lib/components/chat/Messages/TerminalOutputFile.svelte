@@ -8,6 +8,7 @@
 	import FilePreview from '$lib/components/chat/FileNav/FilePreview.svelte';
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 	import { fileIconName } from '$lib/components/chat/FileNav/fileIcon';
+	import { normalizeDocumentTargetPage } from '$lib/utils/documentPreview';
 
 	export let item: any;
 	export let chatId = '';
@@ -42,6 +43,7 @@
 
 	$: path = String(item?.full_path || item?.path || '');
 	$: name = String(item?.name || path.split('/').filter(Boolean).at(-1) || 'file');
+	$: targetPage = normalizeDocumentTargetPage(item?.page);
 	$: selector = item?.terminal_selector;
 	$: terminal = resolveTerminal();
 	$: unavailable = !terminal;
@@ -165,7 +167,7 @@
 	function openInFiles() {
 		if (unavailable || !path) return;
 		showControls.set(true);
-		showFileNavPath.set(path);
+		showFileNavPath.set(targetPage ? { path, page: targetPage } : path);
 	}
 
 	async function downloadFile() {
@@ -249,6 +251,7 @@
 					{fileOfficeHtml}
 					{fileOfficeSlides}
 					{currentSlide}
+					{targetPage}
 					{excelSheetNames}
 					{selectedExcelSheet}
 					onSheetChange={loadExcelSheet}

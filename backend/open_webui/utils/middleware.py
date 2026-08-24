@@ -277,6 +277,7 @@ def build_terminal_file_tool_result(
         return None
     mime_type, _ = mimetypes.guess_type(path)
     mime_type = mime_type or 'application/octet-stream'
+    page = tool_result.get('page') or tool_function_params.get('page')
 
     return {
         **tool_result,
@@ -292,6 +293,7 @@ def build_terminal_file_tool_result(
         'name': tool_result.get('name') or os.path.basename(path),
         'mime_type': tool_result.get('mime_type') or tool_result.get('content_type') or mime_type,
         'content_type': tool_result.get('content_type') or tool_result.get('mime_type') or mime_type,
+        **({'page': page} if page else {}),
     }
 
 
@@ -1242,11 +1244,15 @@ async def terminal_event_handler(
                 pass
         if isinstance(parsed, dict) and parsed.get('exists') is False:
             return
+        page = tool_function_params.get('page')
 
         await event_emitter(
             {
                 'type': f'terminal:{tool_function_name}',
-                'data': {'path': path},
+                'data': {
+                    'path': path,
+                    **({'page': page} if page else {}),
+                },
             }
         )
     elif tool_function_name in ('write_file', 'replace_file_content'):

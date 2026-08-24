@@ -39,6 +39,7 @@
 	export let fileOfficeHtml: string | null = null;
 	export let fileOfficeSlides: string[] | null = null;
 	export let currentSlide = 0;
+	export let targetPage: number | null = null;
 	export let excelSheetNames: string[] = [];
 	export let selectedExcelSheet = '';
 	export let onSheetChange: ((sheet: string) => void) | null = null;
@@ -320,11 +321,11 @@
 			</audio>
 		</div>
 	{:else if filePdfData !== null}
-		<PDFViewer bind:this={pdfViewerRef} data={filePdfData} className="w-full h-full" />
+		<PDFViewer bind:this={pdfViewerRef} data={filePdfData} {targetPage} className="w-full h-full" />
 	{:else if fileSqliteData !== null}
 		<SqliteView data={fileSqliteData} />
 	{:else if fileDocxData !== null}
-		<DocxPreview data={fileDocxData} className="w-full h-full" />
+		<DocxPreview data={fileDocxData} {targetPage} className="w-full h-full" />
 	{:else if fileOfficeHtml !== null}
 		<div class="flex flex-col h-full">
 			<div class="office-preview overflow-auto flex-1 min-h-0">
@@ -353,6 +354,7 @@
 			bind:this={pptxPreviewRef}
 			slides={fileOfficeSlides}
 			bind:currentSlide
+			{targetPage}
 			className="w-full h-full"
 		/>
 	{:else if fileContent !== null}

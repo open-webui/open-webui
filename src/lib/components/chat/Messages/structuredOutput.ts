@@ -187,7 +187,7 @@ function getInlineFileFromToolOutput(callItem?: OutputItem, resultItem?: OutputI
 		return null;
 	}
 
-	return result;
+	return result.page === undefined && args.page !== undefined ? { ...result, page: args.page } : result;
 }
 
 function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string, OutputItem>) {

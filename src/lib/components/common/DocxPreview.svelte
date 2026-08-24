@@ -2,6 +2,7 @@
 	import DOMPurify from 'dompurify';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import type { Readable } from 'svelte/store';
+	import { clampDocumentTargetPage } from '$lib/utils/documentPreview';
 
 	import Spinner from './Spinner.svelte';
 
@@ -13,6 +14,7 @@
 
 	export let data: ArrayBuffer | null = null;
 	export let className = '';
+	export let targetPage: number | null = null;
 
 	let outerContainer: HTMLDivElement;
 	let containerEl: HTMLDivElement;
@@ -84,6 +86,16 @@
 		updateFitScale();
 	};
 
+	const scrollToTargetPage = async () => {
+		if (!containerEl) return;
+		const pages = containerEl.querySelectorAll('section.docx');
+		const page = clampDocumentTargetPage(targetPage, pages.length);
+		if (!page) return;
+
+		await tick();
+		(pages[page - 1] as HTMLElement | undefined)?.scrollIntoView({ block: 'start' });
+	};
+
 	const renderDocx = async (arrayBuffer: ArrayBuffer | null) => {
 		const currentRender = ++renderId;
 		clearPreview();
@@ -112,6 +124,7 @@
 			});
 			await tick();
 			updateFitScale();
+			await scrollToTargetPage();
 		} catch (e) {
 			console.error('Error rendering DOCX preview:', e);
 
@@ -129,6 +142,10 @@
 	};
 
 	$: if (mounted) renderDocx(data);
+
+	$: if (!loading && targetPage && !fallbackHtml) {
+		void scrollToTargetPage();
+	}
 
 	onMount(() => {
 		mounted = true;

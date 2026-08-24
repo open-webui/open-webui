@@ -1,12 +1,14 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 	import panzoom, { type PanZoom } from 'panzoom';
+	import { clampDocumentTargetPage } from '$lib/utils/documentPreview';
 	import Spinner from './Spinner.svelte';
 
 	export let url: string | null = null;
 	export let data: ArrayBuffer | Uint8Array | null = null;
 	export let className = 'w-full h-[70vh]';
+	export let targetPage: number | null = null;
 
 	type PdfDocument = import('pdfjs-dist').PDFDocumentProxy;
 	type PdfTextLayer = InstanceType<typeof import('pdfjs-dist').TextLayer>;
@@ -96,6 +98,17 @@
 			zoomLevel = 1;
 			rerenderPages(1);
 		}
+	};
+
+	const scrollToTargetPage = async () => {
+		if (!outerContainer || !sceneElement || !pdfDoc) return;
+		const page = clampDocumentTargetPage(targetPage, pdfDoc.numPages);
+		if (!page) return;
+
+		await tick();
+		const pageWrapper = sceneElement.querySelectorAll('.pdf-page-wrapper')[page - 1] as
+			HTMLElement | undefined;
+		pageWrapper?.scrollIntoView({ block: 'start' });
 	};
 
 	// Re-render existing canvases at a new zoom level (preserves panzoom transform)
@@ -223,6 +236,7 @@
 
 		lastRenderedZoom = 1;
 		initPanzoom();
+		await scrollToTargetPage();
 	};
 
 	const loadPdf = async () => {
@@ -257,6 +271,10 @@
 	onMount(() => {
 		loadPdf();
 	});
+
+	$: if (!loading && pdfDoc && targetPage) {
+		void scrollToTargetPage();
+	}
 
 	onDestroy(() => {
 		if (rerenderTimer) clearTimeout(rerenderTimer);

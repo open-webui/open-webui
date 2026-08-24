@@ -37,6 +37,7 @@
 	} from '$lib/apis/terminal';
 	import { isCodeFile } from '$lib/utils/codeHighlight';
 	import { isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
+	import { normalizeDocumentTargetPage } from '$lib/utils/documentPreview';
 
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -302,6 +303,7 @@
 	let fileLoading = false;
 	let filePreviewRef: FilePreview;
 	let fileSearchTarget: FileSearchTarget | null = null;
+	let documentTargetPage: number | null = null;
 
 	// ── Office preview state ────────────────────────────────────────────
 	let fileOfficeHtml: string | null = null;
@@ -691,6 +693,7 @@
 	// ── File preview management ──────────────────────────────────────────
 	const clearFilePreview = () => {
 		fileSearchTarget = null;
+		documentTargetPage = null;
 		fileContent = null;
 		if (fileImageUrl) {
 			URL.revokeObjectURL(fileImageUrl);
@@ -810,7 +813,7 @@
 		}
 	};
 
-	const openEntry = async (entry: FileEntry) => {
+	const openEntry = async (entry: FileEntry, options: { page?: unknown } = {}) => {
 		const fullPath =
 			'fullPath' in entry ? (entry as BrowserRow).fullPath : entryPath(currentPath, entry);
 		const parentPath = 'parentPath' in entry ? (entry as BrowserRow).parentPath : currentPath;
@@ -832,6 +835,7 @@
 		selectedFile = filePath;
 		fileLoading = true;
 		clearFilePreview();
+		documentTargetPage = normalizeDocumentTargetPage(options.page);
 
 		if (isImage(filePath)) {
 			const result = await downloadFileBlob(
@@ -1317,10 +1321,12 @@
 
 		let handledDisplayFile = false;
 
-		const unsubFileNav = showFileNavPath.subscribe(async (filePath) => {
-			if (!filePath || !selectedTerminal) return;
+		const unsubFileNav = showFileNavPath.subscribe(async (request) => {
+			if (!request || !selectedTerminal) return;
 			handledDisplayFile = true;
 			showFileNavPath.set(null);
+			let filePath = typeof request === 'string' ? request : request.path;
+			const targetPage = typeof request === 'string' ? null : request.page;
 			filePath = normalizePath(filePath);
 			if (!isInsideFileRoot(filePath)) {
 				await loadDir(fileRoot?.path ?? '/');
@@ -1337,10 +1343,10 @@
 
 			const entry = entries.find((e) => e.name === fileName);
 			if (entry) {
-				await openEntry(entry);
+				await openEntry(entry, { page: targetPage });
 			} else {
 				// File may not be in listing; open it directly
-				await openEntry({ name: fileName, type: 'file', size: 0 });
+				await openEntry({ name: fileName, type: 'file', size: 0 }, { page: targetPage });
 			}
 		});
 
@@ -1741,6 +1747,7 @@
 					{fileContent}
 					{fileOfficeHtml}
 					{fileOfficeSlides}
+					targetPage={documentTargetPage}
 					{excelSheetNames}
 					{selectedExcelSheet}
 					searchTarget={fileSearchTarget}
