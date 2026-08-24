@@ -19,6 +19,7 @@
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
+	export let onMemberChange: Function = () => {};
 
 	export let show = false;
 	export let edit = false;
@@ -280,7 +281,7 @@
 								{:else if selectedTab == 'permissions'}
 									<Permissions bind:permissions {defaultPermissions} />
 								{:else if selectedTab == 'users'}
-									<Users bind:userCount groupId={group?.id} />
+									<Users bind:userCount groupId={group?.id} {onMemberChange} />
 								{:else if selectedTab == 'preview'}
 									<GroupPreviewPanel groupId={group?.id} />
 								{/if}

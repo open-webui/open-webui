@@ -24,6 +24,7 @@
 
 	export let groupId: string;
 	export let userCount = 0;
+	export let onMemberChange: Function = () => {};
 
 	let users = null;
 	let total = null;
@@ -74,19 +75,26 @@
 	};
 
 	const toggleMember = async (userId, state) => {
+		let res = null;
+
 		if (state === 'checked') {
-			await addUserToGroup(localStorage.token, groupId, [userId]).catch((error) => {
+			res = await addUserToGroup(localStorage.token, groupId, [userId]).catch((error) => {
 				toast.error(`${error}`);
 				return null;
 			});
 		} else {
-			await removeUserFromGroup(localStorage.token, groupId, [userId]).catch((error) => {
+			res = await removeUserFromGroup(localStorage.token, groupId, [userId]).catch((error) => {
 				toast.error(`${error}`);
 				return null;
 			});
 		}
 
-		getUserList();
+		if (res) {
+			userCount = res.member_count ?? userCount;
+			onMemberChange(res);
+		}
+
+		await getUserList();
 	};
 
 	$: if (page !== null && orderBy !== null && direction !== null) {
