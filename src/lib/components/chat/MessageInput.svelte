@@ -657,6 +657,9 @@
 		view.dispatch(tr);
 
 		await tick();
+		chatInputElement?.setText(prompt);
+
+		await tick();
 		await inputVariableHandler(text);
 		await tick();
 		focus({ preventScroll: true });
