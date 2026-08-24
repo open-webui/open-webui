@@ -6,7 +6,7 @@ import logging
 import re
 import time
 import uuid
-from typing import Literal
+from typing import Any, Literal
 
 # local imports
 from open_webui.env import ENABLE_ADMIN_CHAT_ACCESS
@@ -1071,13 +1071,13 @@ class ChatTable:
 
         return chat.chat.get('history', {}).get('messages', {}).get(message_id, {})
 
-    async def get_message_metadata_list(
+    async def get_message_metadata(
         self,
         chat_id: str,
         message_id: str,
         metadata_key: Literal['files', 'sources', 'embeds'],
-    ) -> list[dict]:
-        """Read one list-valued message field without rebuilding the whole history."""
+    ) -> Any | None:
+        """Read one message metadata field without rebuilding the whole history."""
         async with get_async_db_context() as db:
             # Read the column directly; some stored rows cannot be validated as full ChatMessageModel objects.
             result = await db.execute(
@@ -1086,14 +1086,14 @@ class ChatTable:
             metadata_row = result.first()
 
         if metadata_row is not None:
-            return metadata_row[0] or []
+            return metadata_row[0]
 
         chat = await self.get_chat_by_id(chat_id)
         if chat is None:
-            return []
+            return None
 
         message = chat.chat.get('history', {}).get('messages', {}).get(message_id, {})
-        return message.get(metadata_key) or []
+        return message.get(metadata_key)
 
     async def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict, *, touch: bool = True

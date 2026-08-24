@@ -1074,8 +1074,9 @@ async def get_event_emitter(request_info, update_db=True):
                 embeds = event_payload.get('embeds', [])
 
                 if not event_payload.get('replace', False):
-                    existing_embeds = await Chats.get_message_metadata_list(chat_id, message_id, 'embeds')
-                    embeds.extend(existing_embeds)
+                    existing_embeds = await Chats.get_message_metadata(chat_id, message_id, 'embeds')
+                    if isinstance(existing_embeds, list):
+                        embeds.extend(existing_embeds)
 
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
                     chat_id,
@@ -1088,8 +1089,9 @@ async def get_event_emitter(request_info, update_db=True):
 
             elif event_type == 'files':
                 files = event_data.get('data', {}).get('files', [])
-                existing_files = await Chats.get_message_metadata_list(chat_id, message_id, 'files')
-                files.extend(existing_files)
+                existing_files = await Chats.get_message_metadata(chat_id, message_id, 'files')
+                if isinstance(existing_files, list):
+                    files.extend(existing_files)
 
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
                     chat_id,
@@ -1103,7 +1105,9 @@ async def get_event_emitter(request_info, update_db=True):
             elif event_type in ('source', 'citation'):
                 data = event_data.get('data', {})
                 if data.get('type') is None:
-                    sources = await Chats.get_message_metadata_list(chat_id, message_id, 'sources')
+                    sources = await Chats.get_message_metadata(chat_id, message_id, 'sources')
+                    if not isinstance(sources, list):
+                        sources = []
                     sources.append(data)
 
                     await Chats.upsert_message_to_chat_by_id_and_message_id(
