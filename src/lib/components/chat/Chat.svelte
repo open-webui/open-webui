@@ -3227,6 +3227,9 @@
 			: atSelectedModel !== undefined
 				? [atSelectedModel.id]
 				: selectedModels;
+		if (!modelId && history.messages[parentId]) {
+			history.messages[parentId].models = [...selectedModelIds];
+		}
 
 		// Create response messages for each selected model
 		// Build message_ids list: [{model_id, message_id, modelIdx}, ...]
