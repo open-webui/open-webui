@@ -25,6 +25,14 @@
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
 		TASK_MODEL_PARAMS: {},
+		TASK_TITLE_MODEL: '',
+		TASK_IMAGE_PROMPT_MODEL: '',
+		TASK_AUTOCOMPLETE_GENERATION_MODEL: '',
+		TASK_TAGS_GENERATION_MODEL: '',
+		TASK_FOLLOW_UP_MODEL: '',
+		TASK_SEARCH_QUERY_GENERATION_MODEL: '',
+		TASK_RETRIEVAL_QUERY_GENERATION_MODEL: '',
+		TASK_TOOLS_FUNCTION_CALLING_MODEL: '',
 		ENABLE_TITLE_GENERATION: true,
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_FOLLOW_UP_GENERATION: true,
@@ -387,6 +395,32 @@
 
 				{#if taskConfig.ENABLE_TITLE_GENERATION}
 					<AdminSettingField
+						label={$i18n.t('Title Generation Model')}
+						description={$i18n.t(
+							'Choose a dedicated model for Title Generation.'
+						)}
+					>
+						<SettingsSelect
+							bind:value={taskConfig.TASK_TITLE_MODEL}
+							className="w-full"
+							placeholder={$i18n.t('Select a model')}
+							on:change={() => {
+								taskConfig.TASK_TITLE_MODEL = normalizeModelSelection(
+									taskConfig.TASK_TITLE_MODEL
+								);
+							}}
+						>
+							<option value="" selected>{$i18n.t('Current Model')}</option>
+							{#each modelOptions as model}
+								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+									{model.name}
+									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+								</option>
+							{/each}
+						</SettingsSelect>
+					</AdminSettingField>
+
+					<AdminSettingField
 						label={$i18n.t('Title Generation Prompt')}
 						description={$i18n.t('Shapes the short label generated for each chat.')}
 					>
@@ -433,6 +467,32 @@
 
 				{#if taskConfig.ENABLE_FOLLOW_UP_GENERATION}
 					<AdminSettingField
+						label={$i18n.t('Follow up Generation Model')}
+						description={$i18n.t(
+							'Choose a dedicated model for Follow up Generation.'
+						)}
+					>
+						<SettingsSelect
+							bind:value={taskConfig.TASK_FOLLOW_UP_MODEL}
+							className="w-full"
+							placeholder={$i18n.t('Select a model')}
+							on:change={() => {
+								taskConfig.TASK_FOLLOW_UP_MODEL = normalizeModelSelection(
+									taskConfig.TASK_FOLLOW_UP_MODEL
+								);
+							}}
+						>
+							<option value="" selected>{$i18n.t('Current Model')}</option>
+							{#each modelOptions as model}
+								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+									{model.name}
+									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+								</option>
+							{/each}
+						</SettingsSelect>
+					</AdminSettingField>
+
+					<AdminSettingField
 						label={$i18n.t('Follow Up Generation Prompt')}
 						description={$i18n.t('Guides the suggestions shown after an assistant response.')}
 					>
@@ -455,6 +515,32 @@
 				</AdminSettingRow>
 
 				{#if taskConfig.ENABLE_TAGS_GENERATION}
+					<AdminSettingField
+						label={$i18n.t('Tags Generation Model')}
+						description={$i18n.t(
+							'Choose a dedicated model for Tags Generation.'
+						)}
+					>
+						<SettingsSelect
+							bind:value={taskConfig.TASK_TAGS_GENERATION_MODEL}
+							className="w-full"
+							placeholder={$i18n.t('Select a model')}
+							on:change={() => {
+								taskConfig.TASK_TAGS_GENERATION_MODEL = normalizeModelSelection(
+									taskConfig.TASK_TAGS_GENERATION_MODEL
+								);
+							}}
+						>
+							<option value="" selected>{$i18n.t('Current Model')}</option>
+							{#each modelOptions as model}
+								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+									{model.name}
+									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+								</option>
+							{/each}
+						</SettingsSelect>
+					</AdminSettingField>
+
 					<AdminSettingField
 						label={$i18n.t('Tags Generation Prompt')}
 						description={$i18n.t('Controls how chat tags are inferred.')}
@@ -479,6 +565,33 @@
 						ariaLabelledbyId={labelId}
 					/>
 				</AdminSettingRow>
+				{#if taskConfig.ENABLE_RETRIEVAL_QUERY_GENERATION}
+					<AdminSettingField
+						label={$i18n.t('Retrieval Query Generation Model')}
+						description={$i18n.t(
+							'Choose a dedicated model for Retrieval Query Generation.'
+						)}
+					>
+						<SettingsSelect
+							bind:value={taskConfig.TASK_RETRIEVAL_QUERY_GENERATION_MODEL}
+							className="w-full"
+							placeholder={$i18n.t('Select a model')}
+							on:change={() => {
+								taskConfig.TASK_RETRIEVAL_QUERY_GENERATION_MODEL = normalizeModelSelection(
+									taskConfig.TASK_RETRIEVAL_QUERY_GENERATION_MODEL
+								);
+							}}
+						>
+							<option value="" selected>{$i18n.t('Current Model')}</option>
+							{#each modelOptions as model}
+								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+									{model.name}
+									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+								</option>
+							{/each}
+						</SettingsSelect>
+					</AdminSettingField>
+				{/if}
 
 				<AdminSettingRow
 					label={$i18n.t('Web Search Query Generation')}
@@ -490,6 +603,33 @@
 						ariaLabelledbyId={labelId}
 					/>
 				</AdminSettingRow>
+				{#if taskConfig.ENABLE_SEARCH_QUERY_GENERATION}
+					<AdminSettingField
+						label={$i18n.t('Search Query Generation Model')}
+						description={$i18n.t(
+							'Choose a dedicated model for Search Query Generation.'
+						)}
+					>
+						<SettingsSelect
+							bind:value={taskConfig.TASK_SEARCH_QUERY_GENERATION_MODEL}
+							className="w-full"
+							placeholder={$i18n.t('Select a model')}
+							on:change={() => {
+								taskConfig.TASK_SEARCH_QUERY_GENERATION_MODEL = normalizeModelSelection(
+									taskConfig.TASK_SEARCH_QUERY_GENERATION_MODEL
+								);
+							}}
+						>
+							<option value="" selected>{$i18n.t('Current Model')}</option>
+							{#each modelOptions as model}
+								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+									{model.name}
+									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+								</option>
+							{/each}
+						</SettingsSelect>
+					</AdminSettingField>
+				{/if}
 
 				<AdminSettingField
 					label={$i18n.t('Query Generation Prompt')}
@@ -514,6 +654,32 @@
 				</AdminSettingRow>
 
 				{#if taskConfig.ENABLE_AUTOCOMPLETE_GENERATION}
+					<AdminSettingField
+						label={$i18n.t('Autocomplete Generation Model')}
+						description={$i18n.t(
+							'Choose a dedicated model for Autocomplete Generation.'
+						)}
+					>
+						<SettingsSelect
+							bind:value={taskConfig.TASK_AUTOCOMPLETE_GENERATION_MODEL}
+							className="w-full"
+							placeholder={$i18n.t('Select a model')}
+							on:change={() => {
+								taskConfig.TASK_AUTOCOMPLETE_GENERATION_MODEL = normalizeModelSelection(
+									taskConfig.TASK_AUTOCOMPLETE_GENERATION_MODEL
+								);
+							}}
+						>
+							<option value="" selected>{$i18n.t('Current Model')}</option>
+							{#each modelOptions as model}
+								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+									{model.name}
+									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+								</option>
+							{/each}
+						</SettingsSelect>
+					</AdminSettingField>
+
 					<AdminSettingField
 						label={$i18n.t('Autocomplete Generation Input Max Length')}
 						description={$i18n.t('Limit how much draft text is sent for suggestion generation.')}
@@ -543,6 +709,32 @@
 				{/if}
 
 				<AdminSettingField
+					label={$i18n.t('Image Prompt Generation Model')}
+					description={$i18n.t(
+						'Choose a dedicated model for Image Prompt Generation.'
+					)}
+				>
+					<SettingsSelect
+						bind:value={taskConfig.TASK_IMAGE_PROMPT_MODEL}
+						className="w-full"
+						placeholder={$i18n.t('Select a model')}
+						on:change={() => {
+							taskConfig.TASK_IMAGE_PROMPT_MODEL = normalizeModelSelection(
+								taskConfig.TASK_IMAGE_PROMPT_MODEL
+							);
+						}}
+					>
+						<option value="" selected>{$i18n.t('Current Model')}</option>
+						{#each modelOptions as model}
+							<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+								{model.name}
+								{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+							</option>
+						{/each}
+					</SettingsSelect>
+				</AdminSettingField>
+
+				<AdminSettingField
 					label={$i18n.t('Image Prompt Generation Prompt')}
 					description={$i18n.t('Rewrites user intent into an image-generation prompt.')}
 				>
@@ -551,6 +743,32 @@
 						bind:value={taskConfig.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE}
 						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 					/>
+				</AdminSettingField>
+
+				<AdminSettingField
+					label={$i18n.t('Tools Function Calling Model')}
+					description={$i18n.t(
+						'Choose a dedicated model for Tools Function Calling.'
+					)}
+				>
+					<SettingsSelect
+						bind:value={taskConfig.TASK_TOOLS_FUNCTION_CALLING_MODEL}
+						className="w-full"
+						placeholder={$i18n.t('Select a model')}
+						on:change={() => {
+							taskConfig.TASK_TOOLS_FUNCTION_CALLING_MODEL = normalizeModelSelection(
+								taskConfig.TASK_TOOLS_FUNCTION_CALLING_MODEL
+							);
+						}}
+					>
+						<option value="" selected>{$i18n.t('Current Model')}</option>
+						{#each modelOptions as model}
+							<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+								{model.name}
+								{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+							</option>
+						{/each}
+					</SettingsSelect>
 				</AdminSettingField>
 
 				<AdminSettingField
