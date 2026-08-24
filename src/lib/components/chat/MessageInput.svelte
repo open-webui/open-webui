@@ -2161,8 +2161,11 @@
 								</div>
 							</div>
 
-							<div class=" flex justify-between mt-0.5 mb-2 mx-0.5 max-w-full" dir="ltr">
-								<div class="ml-1 self-end flex items-center shrink-0">
+							<div
+								class=" flex flex-wrap justify-between gap-y-1 mt-0.5 mb-2 mx-0.5 max-w-full overflow-hidden"
+								dir="ltr"
+							>
+								<div class="ml-1 self-end flex items-center shrink-0 max-w-full @max-md:basis-full">
 									<InputMenu
 										bind:files
 										selectedModels={selectedModelIds}
@@ -2299,7 +2302,7 @@
 											</div>
 										{/if}
 
-										<div class="ml-1 flex gap-1.5 shrink-0">
+										<div class="ml-1 flex gap-1.5 shrink-0 has-[>*]:mr-1.5">
 											{#if (selectedToolIds ?? []).length > 0}
 												<Tooltip
 													content={$i18n.t('{{COUNT}} Available Tools', {
@@ -2483,22 +2486,25 @@
 													</button>
 												</Tooltip>
 											{/each}
-
-											{#if !history?.currentId || history.messages[history.currentId]?.done == true}
-												<!-- Terminal Server Selector -->
-												{@const hasDirectToolServerAccess =
-													$_user?.role === 'admin' ||
-													($_user?.permissions?.features?.direct_tool_servers ?? true)}
-												{#if terminalCapableModels.length > 0 && (($terminalServers ?? []).some((t) => t.id) || (hasDirectToolServerAccess && (($terminalServers ?? []).some((t) => !t.id) || ($settings?.terminalServers ?? []).some((s) => s.url))))}
-													<TerminalMenu bind:show={showTerminalMenu} />
-												{/if}
-											{/if}
 										</div>
 									</div>
 								</div>
 
-								<div class="self-end flex space-x-1 mr-1 min-w-0 gap-[0.03125rem]">
-									<div class="flex min-w-0 max-w-[10rem] items-center sm:max-w-[13rem]">
+								<div
+									class="self-end flex grow justify-end space-x-1 mr-1 min-w-0 gap-[0.03125rem] @max-md:ml-1"
+								>
+									{#if !history?.currentId || history.messages[history.currentId]?.done == true}
+										<!-- Terminal Server Selector -->
+										{@const hasDirectToolServerAccess =
+											$_user?.role === 'admin' ||
+											($_user?.permissions?.features?.direct_tool_servers ?? true)}
+										{#if terminalCapableModels.length > 0 && (($terminalServers ?? []).some((t) => t.id) || (hasDirectToolServerAccess && (($terminalServers ?? []).some((t) => !t.id) || ($settings?.terminalServers ?? []).some((s) => s.url))))}
+											<div class="mr-auto flex min-w-[4.5rem] items-center">
+												<TerminalMenu bind:show={showTerminalMenu} />
+											</div>
+										{/if}
+									{/if}
+									<div class="flex min-w-0 max-w-[10rem] items-center @sm:max-w-[13rem]">
 										<ModelSelector
 											bind:this={modelSelector}
 											bind:selectedModels

@@ -119,12 +119,12 @@
 		$i18n.t('Terminal');
 </script>
 
-<div class="flex items-center translate-x-0.5">
+<div class="flex min-w-0 items-center translate-x-0.5">
 	<Dropdown bind:show align="start">
-		<Tooltip content={$i18n.t('Terminal')} placement="top">
+		<Tooltip className="flex min-w-0" content={$i18n.t('Terminal')} placement="top">
 			<button
 				type="button"
-				class="flex items-center gap-1.5 translate-y-[1px] text-[0.8125rem] text-gray-600 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-800/40 dark:hover:text-gray-200 transition rounded-lg cursor-pointer {$selectedTerminalId &&
+				class="flex min-w-0 items-center gap-1.5 translate-y-[1px] text-[0.8125rem] text-gray-600 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-800/40 dark:hover:text-gray-200 transition rounded-lg cursor-pointer {$selectedTerminalId &&
 				selectedLabel
 					? ' p-1 '
 					: ' p-1 opacity-50'}"
@@ -132,7 +132,9 @@
 				<Cloud className="size-3.5" strokeWidth="2" />
 
 				{#if $selectedTerminalId && selectedLabel}
-					<span class="truncate text-[0.8125rem] max-w-[6.25rem] sm:max-w-[9.375rem]">{selectedLabel}</span>
+					<span class="truncate text-[0.8125rem] max-w-[6.25rem] @sm:max-w-[9.375rem]"
+						>{selectedLabel}</span
+					>
 				{/if}
 			</button>
 		</Tooltip>
