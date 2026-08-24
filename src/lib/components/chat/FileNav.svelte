@@ -629,35 +629,14 @@
 		return isInsideFileRoot(path) ? asDirectoryPath(path) : fileRoot.path;
 	};
 
-	const rootFromCwd = (cwd: TerminalCwd | null, pathHint?: string) => {
-		const cwdPath = cwd?.cwd ? asDirectoryPath(cwd.cwd) : null;
-		const homePath = cwd?.home ? asDirectoryPath(cwd.home) : null;
-		const hintPath = pathHint ? asDirectoryPath(pathHint) : null;
+	const rootFromCwd = (cwd: TerminalCwd | null) => {
 		const rootPath = cwd?.root?.path ? asDirectoryPath(cwd.root.path) : null;
-
-		if (rootPath && rootPath !== '/') return cwd?.root;
-
-		const knownRoot = fileRoot ?? savedFileRoot;
-		if (
-			knownRoot?.path &&
-			hintPath &&
-			hintPath !== '/' &&
-			(hintPath === knownRoot.path || hintPath.startsWith(knownRoot.path))
-		) {
-			return knownRoot;
-		}
-
-		const pathForHome = hintPath && hintPath !== '/' ? hintPath : cwdPath;
-		if (homePath && pathForHome && (pathForHome === homePath || pathForHome.startsWith(homePath))) {
-			return { path: homePath, label: 'Home' };
-		}
-
-		return undefined;
+		return rootPath && rootPath !== '/' ? cwd?.root : undefined;
 	};
 
-	const applyCwd = (cwd: TerminalCwd | null, pathHint?: string) => {
+	const applyCwd = (cwd: TerminalCwd | null) => {
 		const cwdPath = cwd?.cwd ? asDirectoryPath(cwd.cwd) : null;
-		setFileRoot(rootFromCwd(cwd, pathHint));
+		setFileRoot(rootFromCwd(cwd));
 		const path = cwdPath ?? fileRoot?.path ?? '/';
 		return clampToFileRoot(path);
 	};
@@ -1385,7 +1364,7 @@
 
 				const serverCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
 				const useServerPath = !!chatId || savedPath === '/';
-				const serverPath = applyCwd(serverCwd, useServerPath ? undefined : savedPath);
+				const serverPath = applyCwd(serverCwd);
 				if (useServerPath) {
 					// Fetch session-specific cwd from the server (or global default for new chats)
 					savedPath = serverPath;
@@ -1911,7 +1890,7 @@
 					</div>
 				{/if}
 
-					{#if !isSearching && !loading && !error && !uploading && !($selectedTerminalId && $terminalServers === null)}
+				{#if !isSearching && !loading && !error && !uploading && !($selectedTerminalId && $terminalServers === null)}
 					{#if creatingFolder}
 						<div class="flex h-7 items-center gap-2 px-2">
 							<FileTypeIcon name={newFolderName} type="directory" />
