@@ -564,6 +564,7 @@
 						align="end"
 						onChange={async (value) => {
 							localStorage.workspaceViewOption = value;
+							page = 1;
 							await tick();
 						}}
 					/>
