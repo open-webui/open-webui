@@ -205,12 +205,7 @@ from open_webui.utils import logger
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.folders import has_folder_write_access
 from open_webui.utils.actions import chat_action as chat_action_handler
-from open_webui.utils.asgi_middleware import (
-    AuthTokenMiddleware,
-    CommitSessionMiddleware,
-    RedirectMiddleware,
-    WebsocketUpgradeGuardMiddleware,
-)
+from open_webui.utils.asgi_middleware import AppHTTPMiddleware
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.auth import (
     create_admin_user,
@@ -267,7 +262,6 @@ from open_webui.utils.oauth import (
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.redis import get_redis_client
-from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.session_pool import cleanup_response, get_client_timeout, get_session, stream_wrapper
 from open_webui.utils.tool_approval import (
     ResolveToolCallForm,
@@ -807,11 +801,7 @@ if ENABLE_COMPRESSION_MIDDLEWARE:
 # `terminate_force_close` tracebacks under aiosqlite and as random
 # CancelledError storms across the request path. See
 # `open_webui.utils.asgi_middleware` for the rationale.
-app.add_middleware(RedirectMiddleware)
-app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(CommitSessionMiddleware)
-app.add_middleware(AuthTokenMiddleware, fastapi_app=app)
-app.add_middleware(WebsocketUpgradeGuardMiddleware)
+app.add_middleware(AppHTTPMiddleware)
 
 
 app.add_middleware(
@@ -2906,7 +2896,7 @@ def _sync_db_ping() -> None:
     """Verify the database is reachable with a simple SELECT 1.
 
     Uses a raw connection from the engine pool instead of the thread-local
-    ScopedSession.  This is necessary because CommitSessionMiddleware
+    ScopedSession.  This is necessary because AppHTTPMiddleware
     deliberately skips healthcheck paths (/health, /ready, /health/db),
     so any ScopedSession opened on a healthcheck worker thread is never
     rolled back or removed.  If the session ever enters an invalid state
