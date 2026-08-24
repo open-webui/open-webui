@@ -276,6 +276,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🏞 **Clearing a model's picture.** A model's picture can be reset to the default logo again, where since 0.11.0 a custom one could only ever be replaced. [#29007](https://github.com/open-webui/open-webui/pull/29007), [#27685](https://github.com/open-webui/open-webui/issues/27685), [Commit](https://github.com/open-webui/open-webui/commit/06e7aac219b3027a9d578624c473b041ad26a692)
 - 👤 **Fallback profile pictures.** A profile picture that fails to load, such as one belonging to a deleted account, now falls back to the default avatar instead of showing clipped placeholder text beside the message. [#28270](https://github.com/open-webui/open-webui/pull/28270), [#28269](https://github.com/open-webui/open-webui/issues/28269)
 - ⏱️ **Unanswered prompts in tools.** On deployments that set "WEBSOCKET_EVENT_CALLER_TIMEOUT", a question a tool asks you that goes unanswered now reports a timeout rather than an empty reply, and waiting too long no longer risks disconnecting a tab that is still open. [#28311](https://github.com/open-webui/open-webui/pull/28311)
+- 👪 **Group member counts updating.** Adding or removing someone from a group in the admin panel now updates that group's member count straight away, where it stayed at the old number until the page was reloaded. [Commit](https://github.com/open-webui/open-webui/commit/18bf0ade7b35fb25ff7920ad3713624d93f04401)
 
 ### Changed
 
