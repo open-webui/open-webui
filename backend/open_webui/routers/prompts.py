@@ -25,7 +25,7 @@ from open_webui.models.prompts import (
 )
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -37,6 +37,11 @@ class PromptMetadataForm(BaseModel):
     name: str
     command: str
     tags: list[str | None] = None
+
+    @field_validator('command', mode='before')
+    @classmethod
+    def check_command(cls, v: str) -> str:
+        return v.lstrip('/') if isinstance(v, str) else v
 
 
 router = APIRouter()

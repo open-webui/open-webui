@@ -15,7 +15,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.prompt_history import PromptHistories
 from open_webui.models.users import User, UserModel, UserResponse, Users
 from open_webui.utils.misc import json_text_variants
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -91,6 +91,11 @@ class PromptForm(BaseModel):
     version_id: str | None = None  # Active version
     commit_message: str | None = None  # For history tracking
     is_production: bool | None = True  # Whether to set new version as production
+
+    @field_validator('command', mode='before')
+    @classmethod
+    def check_command(cls, v: str) -> str:
+        return v.lstrip('/') if isinstance(v, str) else v
 
 
 class PromptsTable:
