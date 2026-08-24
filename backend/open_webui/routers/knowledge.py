@@ -1733,7 +1733,12 @@ async def delete_knowledge_by_id(
     # Clean up vector DB
     if is_external_knowledge(knowledge):
         connection_id = (knowledge.meta or {}).get('external', {}).get('connection_id')
-        if connection_id:
+        # Connections are admin-owned and shared across knowledge bases
+        if (
+            connection_id
+            and user.role == 'admin'
+            and await _count_external_connection_mappings(connection_id, db=db) <= 1
+        ):
             connections = [
                 connection for connection in await _get_external_connections() if connection.get('id') != connection_id
             ]
