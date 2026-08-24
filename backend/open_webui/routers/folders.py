@@ -97,7 +97,15 @@ async def get_folders(
     await check_folders_permission(request, user, db=db)
 
     folders = await Folders.get_folders_by_user_id(user.id, db=db)
-    folder_ids = {folder.id for folder in folders}
+    parent_by_id = {folder.id: folder.parent_id for folder in folders}
+
+    def is_in_parent_cycle(folder_id):
+        seen_ids = {folder_id}
+        current_id = parent_by_id.get(folder_id)
+        while current_id and current_id not in seen_ids:
+            seen_ids.add(current_id)
+            current_id = parent_by_id.get(current_id)
+        return current_id == folder_id
 
     user_group_ids = None
     if user.role != 'admin' and any(folder.data and 'files' in folder.data for folder in folders):
@@ -106,7 +114,9 @@ async def get_folders(
     # Verify folder data integrity
     folder_list = []
     for folder in folders:
-        if folder.parent_id and folder.parent_id not in folder_ids:
+        # A missing or looping parent hides the folder from the tree, so put it back at the root
+        if folder.parent_id and (folder.parent_id not in parent_by_id or is_in_parent_cycle(folder.id)):
+            parent_by_id[folder.id] = None
             folder = await Folders.update_folder_parent_id_by_id_and_user_id(folder.id, user.id, None, db=db)
 
         if folder.data and 'files' in folder.data:
@@ -395,6 +405,14 @@ async def update_folder_parent_id_by_id(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT('Folder already exists'),
+            )
+
+        if form_data.parent_id and form_data.parent_id in await Folders.get_folder_ids_by_id_and_user_id_in_subtree(
+            id, user.id, db=db
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT('Cannot move a folder into itself or one of its subfolders'),
             )
 
         try:
