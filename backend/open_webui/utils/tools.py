@@ -102,7 +102,12 @@ from open_webui.tools.builtin import (
 )
 from open_webui.utils.access_control import has_access, has_connection_access, has_permission
 from open_webui.utils.chat_id import is_saved_chat_id
-from open_webui.utils.headers import get_custom_headers, include_user_info_headers
+from open_webui.utils.headers import (
+    bearer_auth_header,
+    get_custom_headers,
+    include_user_info_headers,
+    normalize_bearer_token,
+)
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import is_string_allowed
 from open_webui.utils.plugin import get_tool_contents_cache, get_tools_cache, load_tool_module_by_id
@@ -117,15 +122,6 @@ from pydantic import BaseModel, Field, create_model
 from pydantic.fields import FieldInfo
 
 log = logging.getLogger(__name__)
-
-
-def normalize_bearer_token(token: Any) -> str:
-    return token.strip() if isinstance(token, str) else token or ''
-
-
-def bearer_auth_header(token: Any) -> dict[str, str]:
-    token = normalize_bearer_token(token)
-    return {'Authorization': f'Bearer {token}'} if token else {}
 
 
 async def build_tool_server_headers(

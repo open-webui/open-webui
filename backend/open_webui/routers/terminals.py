@@ -19,6 +19,7 @@ from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.utils.access_control import has_connection_access
 from open_webui.utils.auth import get_verified_user
+from open_webui.utils.headers import bearer_auth_header, normalize_bearer_token
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.terminals import (
     TERMINAL_CONTEXT_HEADER,
@@ -30,7 +31,6 @@ from open_webui.utils.terminals import (
     terminal_chat_uploads,
     terminal_contexts,
 )
-from open_webui.utils.tools import bearer_auth_header, normalize_bearer_token
 from starlette.background import BackgroundTask
 from starlette.requests import ClientDisconnect
 
