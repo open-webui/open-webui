@@ -56,6 +56,7 @@ type RAGConfigForm = {
 	ENABLE_GOOGLE_DRIVE_INTEGRATION?: boolean;
 	ENABLE_ONEDRIVE_INTEGRATION?: boolean;
 	EXTERNAL_DOCUMENT_LOADER_HEADERS?: Record<string, string>;
+	TIKA_SERVER_VERSION?: string | null;
 	chunk?: ChunkConfigForm;
 	content_extraction?: ContentExtractConfigForm;
 	web_loader_ssl_verification?: boolean;

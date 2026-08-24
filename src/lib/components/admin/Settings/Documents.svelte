@@ -653,16 +653,27 @@
 						{/if}
 					</AdminSettingField>
 				{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika'}
-					<AdminSettingField
-						label={$i18n.t('Tika Server URL')}
-						description={$i18n.t('Tika server endpoint used for content extraction.')}
-					>
-						<input
-							class={inputClass}
-							placeholder={$i18n.t('Enter Tika Server URL')}
-							bind:value={RAGConfig.TIKA_SERVER_URL}
-						/>
-					</AdminSettingField>
+					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+						<AdminSettingField
+							label={$i18n.t('Tika Server URL')}
+							description={$i18n.t('Tika server endpoint used for content extraction.')}
+						>
+							<input
+								class={inputClass}
+								placeholder={$i18n.t('Enter Tika Server URL')}
+								bind:value={RAGConfig.TIKA_SERVER_URL}
+							/>
+						</AdminSettingField>
+						<AdminSettingField
+							label={$i18n.t('Tika Server Version')}
+							description={$i18n.t('Select the Tika server API version.')}
+						>
+							<SettingsSelect bind:value={RAGConfig.TIKA_SERVER_VERSION}>
+								<option value="3">{$i18n.t('Tika 3.x')}</option>
+								<option value="4">{$i18n.t('Tika 4.x')}</option>
+							</SettingsSelect>
+						</AdminSettingField>
+					</div>
 				{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
 					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 						<AdminSettingField

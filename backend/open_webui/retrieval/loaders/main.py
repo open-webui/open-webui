@@ -186,10 +186,11 @@ class PptxLoader:
 
 
 class TikaLoader:
-    def __init__(self, url, file_path, mime_type=None, extract_images=None):
+    def __init__(self, url, file_path, mime_type=None, extract_images=None, server_version='3'):
         self.url = url
         self.file_path = file_path
         self.mime_type = mime_type
+        self.server_version = str(server_version or '3')
 
         self.extract_images = extract_images
 
@@ -205,16 +206,15 @@ class TikaLoader:
         if self.extract_images == True:
             headers['X-Tika-PDFextractInlineImages'] = 'true'
 
-        endpoint = self.url
-        if not endpoint.endswith('/'):
-            endpoint += '/'
-        endpoint += 'tika/text'
+        endpoint_path = 'tika/json/text' if self.server_version == '4' else 'tika/text'
+        content_key = 'tk:content' if self.server_version == '4' else 'X-TIKA:content'
+        endpoint = f'{self.url.rstrip("/")}/{endpoint_path}'
 
         r = requests.put(endpoint, data=data, headers=headers, verify=REQUESTS_VERIFY)
 
         if r.ok:
             raw_metadata = r.json()
-            text = raw_metadata.get('X-TIKA:content', '<No text content found>').strip()
+            text = raw_metadata.get(content_key, '<No text content found>').strip()
 
             if 'Content-Type' in raw_metadata:
                 headers['Content-Type'] = raw_metadata['Content-Type']
@@ -503,6 +503,7 @@ class Loader:
                 loader = TikaLoader(
                     url=self.kwargs.get('TIKA_SERVER_URL'),
                     file_path=file_path,
+                    server_version=self.kwargs.get('TIKA_SERVER_VERSION'),
                     extract_images=self.kwargs.get('PDF_EXTRACT_IMAGES'),
                 )
         elif (

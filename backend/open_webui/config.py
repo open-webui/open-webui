@@ -925,6 +925,8 @@ EXTERNAL_DOCUMENT_LOADER_HEADERS = external_document_loader_headers
 
 TIKA_SERVER_URL = os.getenv('TIKA_SERVER_URL', 'http://tika:9998')
 
+TIKA_SERVER_VERSION = os.getenv('TIKA_SERVER_VERSION', '3')
+
 DOCLING_SERVER_URL = os.getenv('DOCLING_SERVER_URL', 'http://docling:5001')
 
 DOCLING_API_KEY = os.getenv('DOCLING_API_KEY', '')
@@ -2878,6 +2880,7 @@ DEFAULT_CONFIG = {
     'rag.external_document_loader_api_key': EXTERNAL_DOCUMENT_LOADER_API_KEY,
     'rag.external_document_loader_headers': EXTERNAL_DOCUMENT_LOADER_HEADERS,
     'rag.tika_server_url': TIKA_SERVER_URL,
+    'rag.tika_server_version': TIKA_SERVER_VERSION,
     'rag.docling_server_url': DOCLING_SERVER_URL,
     'rag.docling_api_key': DOCLING_API_KEY,
     'rag.docling_params': DOCLING_PARAMS,

@@ -387,6 +387,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'TAVILY_EXTRACT_DEPTH': 'web.search.tavily_extract_depth',
     'TEXT_SPLITTER': 'rag.text_splitter',
     'TIKA_SERVER_URL': 'rag.tika_server_url',
+    'TIKA_SERVER_VERSION': 'rag.tika_server_version',
     'TIKTOKEN_ENCODING_NAME': 'rag.tiktoken_encoding_name',
     'TOP_K': 'rag.top_k',
     'TOP_K_RERANKER': 'rag.top_k_reranker',
@@ -659,6 +660,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'EXTERNAL_DOCUMENT_LOADER_API_KEY': config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         'EXTERNAL_DOCUMENT_LOADER_HEADERS': config.EXTERNAL_DOCUMENT_LOADER_HEADERS,
         'TIKA_SERVER_URL': config.TIKA_SERVER_URL,
+        'TIKA_SERVER_VERSION': config.TIKA_SERVER_VERSION,
         'DOCLING_SERVER_URL': config.DOCLING_SERVER_URL,
         'DOCLING_API_KEY': config.DOCLING_API_KEY,
         'DOCLING_PARAMS': config.DOCLING_PARAMS,
@@ -894,6 +896,7 @@ class ConfigForm(BaseModel):
     EXTERNAL_DOCUMENT_LOADER_HEADERS: dict | None = None
 
     TIKA_SERVER_URL: str | None = None
+    TIKA_SERVER_VERSION: str | None = None
     DOCLING_SERVER_URL: str | None = None
     DOCLING_API_KEY: str | None = None
     DOCLING_PARAMS: dict | None = None
@@ -1069,6 +1072,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     )
     config.TIKA_SERVER_URL = (
         form_data.TIKA_SERVER_URL if form_data.TIKA_SERVER_URL is not None else config.TIKA_SERVER_URL
+    )
+    config.TIKA_SERVER_VERSION = (
+        form_data.TIKA_SERVER_VERSION if form_data.TIKA_SERVER_VERSION is not None else config.TIKA_SERVER_VERSION
     )
     config.DOCLING_SERVER_URL = (
         form_data.DOCLING_SERVER_URL if form_data.DOCLING_SERVER_URL is not None else config.DOCLING_SERVER_URL
@@ -1368,6 +1374,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'EXTERNAL_DOCUMENT_LOADER_API_KEY': config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         'EXTERNAL_DOCUMENT_LOADER_HEADERS': config.EXTERNAL_DOCUMENT_LOADER_HEADERS,
         'TIKA_SERVER_URL': config.TIKA_SERVER_URL,
+        'TIKA_SERVER_VERSION': config.TIKA_SERVER_VERSION,
         'DOCLING_SERVER_URL': config.DOCLING_SERVER_URL,
         'DOCLING_API_KEY': config.DOCLING_API_KEY,
         'DOCLING_PARAMS': config.DOCLING_PARAMS,
