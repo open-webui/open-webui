@@ -1318,13 +1318,17 @@ async def chat_completion_tools_handler(
         'task.model.default',
         'task.model.external',
         'task.tools.prompt_template',
+        'task.tools_function_calling.model',
     )
-    task_model_id = get_task_model_id(
-        body['model'],
-        task_config.get('task.model.default'),
-        task_config.get('task.model.external'),
-        models,
-    )
+
+    task_model_id = task_config.get('task.tools_function_calling.model')
+    if not task_model_id or task_model_id not in models:
+        task_model_id = get_task_model_id(
+            body['model'],
+            task_config.get('task.model.default'),
+            task_config.get('task.model.external'),
+            models,
+        )
 
     skip_files = False
     sources = []

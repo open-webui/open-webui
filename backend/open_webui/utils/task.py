@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 # Let the right tool be given for the work at hand,
 # not the one that flatters, but the one that serves.
-def get_task_model_id(default_model_id: str, task_model: str, task_model_external: str, models) -> str:
+def get_task_model_id(default_model_id: str, task_model: str, task_model_external: str, models, task: str = '') -> str:
     # Set the task model
     task_model_id = default_model_id
     # Check if the user has a custom task model and use that model

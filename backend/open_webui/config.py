@@ -2173,9 +2173,27 @@ ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', None)
 ####################################
 
 
+# TASK_MODELS
+
 TASK_MODEL = os.getenv('TASK_MODEL', '')
 
 TASK_MODEL_EXTERNAL = os.getenv('TASK_MODEL_EXTERNAL', '')
+
+TASK_TITLE_MODEL = os.getenv('TASK_TITLE_MODEL', '')
+
+TASK_IMAGE_PROMPT_MODEL = os.getenv('TASK_IMAGE_PROMPT_MODEL', '')
+
+TASK_AUTOCOMPLETE_GENERATION_MODEL = os.getenv('TASK_AUTOCOMPLETE_GENERATION_MODEL', '')
+
+TASK_TAGS_GENERATION_MODEL = os.getenv('TASK_TAGS_GENERATION_MODEL', '')
+
+TASK_FOLLOW_UP_MODEL = os.getenv('TASK_FOLLOW_UP_MODEL', '')
+
+TASK_SEARCH_QUERY_GENERATION_MODEL = os.getenv('TASK_SEARCH_QUERY_GENERATION_MODEL', '')
+
+TASK_RETRIEVAL_QUERY_GENERATION_MODEL = os.getenv('TASK_RETRIEVAL_QUERY_GENERATION_MODEL', '')
+
+TASK_TOOLS_FUNCTION_CALLING_MODEL = os.getenv('TASK_TOOLS_FUNCTION_CALLING_MODEL', '')
 
 try:
     task_model_params = JSONCodec.loads(os.getenv('TASK_MODEL_PARAMS', '{}'))
@@ -2184,6 +2202,8 @@ except Exception as e:
     task_model_params = {}
 
 TASK_MODEL_PARAMS = task_model_params
+
+# OTHER STUFF
 
 CONTEXT_COMPACTION_MODEL = os.getenv('CONTEXT_COMPACTION_MODEL', '')
 
@@ -3117,6 +3137,14 @@ DEFAULT_CONFIG = {
     'task.model.default': TASK_MODEL,
     'task.model.external': TASK_MODEL_EXTERNAL,
     'task.model.params': TASK_MODEL_PARAMS,
+    'task.tools_function_calling.model': TASK_TOOLS_FUNCTION_CALLING_MODEL,
+    'task.title.model': TASK_TITLE_MODEL,
+    'task.image_prompt.model': TASK_IMAGE_PROMPT_MODEL,
+    'task.autocomplete_generation.model': TASK_AUTOCOMPLETE_GENERATION_MODEL,
+    'task.tags_generation.model': TASK_TAGS_GENERATION_MODEL,
+    'task.follow_up.model': TASK_FOLLOW_UP_MODEL,
+    'task.query_search.model': TASK_SEARCH_QUERY_GENERATION_MODEL,
+    'task.query_retrieval.model': TASK_RETRIEVAL_QUERY_GENERATION_MODEL,
     'chat.context_compaction.model': CONTEXT_COMPACTION_MODEL,
     'chat.context_compaction.enable': ENABLE_CONTEXT_COMPACTION,
     'chat.context_compaction.token_threshold': CONTEXT_COMPACTION_TOKEN_THRESHOLD,

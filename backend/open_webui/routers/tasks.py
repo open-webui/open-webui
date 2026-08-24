@@ -42,6 +42,16 @@ TASK_CONFIG_KEYS = {
     'TASK_MODEL': 'task.model.default',
     'TASK_MODEL_EXTERNAL': 'task.model.external',
     'TASK_MODEL_PARAMS': 'task.model.params',
+    # Name format important here, should follow f'task.{task_name}.model' form (see get_task_model_generation_config)
+    'TASK_TITLE_MODEL': 'task.title.model',
+    'TASK_IMAGE_PROMPT_MODEL': 'task.image_prompt.model',
+    'TASK_AUTOCOMPLETE_GENERATION_MODEL': 'task.autocomplete_generation.model',
+    'TASK_TAGS_GENERATION_MODEL': 'task.tags_generation.model',
+    'TASK_FOLLOW_UP_MODEL': 'task.follow_up.model',
+    'TASK_SEARCH_QUERY_GENERATION_MODEL': 'task.query_search.model',
+    'TASK_RETRIEVAL_QUERY_GENERATION_MODEL': 'task.query_retrieval.model',
+    'TASK_TOOLS_FUNCTION_CALLING_MODEL': 'task.tools_function_calling.model',
+    # others
     'TITLE_GENERATION_PROMPT_TEMPLATE': 'task.title.prompt_template',
     'IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE': 'task.image.prompt_template',
     'ENABLE_AUTOCOMPLETE_GENERATION': 'task.autocomplete.enable',
@@ -77,15 +87,24 @@ def apply_task_model_params(payload: dict, models: dict, task_model_id: str, par
     return apply_params_to_form_data(payload, model, params or None)
 
 
-async def get_task_model_generation_config(default_model_id: str, models) -> tuple[str, dict]:
-    config = await Config.get_many(
+async def get_task_model_generation_config(default_model_id: str, models, task_name: str = '') -> tuple[str, dict]:
+    keys = [
         'task.model.default',
         'task.model.external',
         'task.model.params',
-    )
+    ]
+    if task_name:
+        keys.append(f'task.{task_name}.model')
+
+    config = await Config.get_many(*keys)
     params = config.get('task.model.params') or {}
     if not isinstance(params, dict):
         params = {}
+
+    # Check if user has manually set a specific model for this task
+    task_model_id = config.get(f'task.{task_name}.model') if task_name else None
+    if task_model_id and task_model_id in models:
+        return task_model_id, {key: value for key, value in params.items() if value is not None and value != ''}
 
     return (
         get_task_model_id(
@@ -114,6 +133,14 @@ class TaskConfigForm(BaseModel):
     TASK_MODEL: Optional[str]
     TASK_MODEL_EXTERNAL: Optional[str]
     TASK_MODEL_PARAMS: dict | None = None
+    TASK_TITLE_MODEL: str | None
+    TASK_IMAGE_PROMPT_MODEL: str | None
+    TASK_AUTOCOMPLETE_GENERATION_MODEL: str | None
+    TASK_TAGS_GENERATION_MODEL: str | None
+    TASK_FOLLOW_UP_MODEL: str | None
+    TASK_SEARCH_QUERY_GENERATION_MODEL: str | None
+    TASK_RETRIEVAL_QUERY_GENERATION_MODEL: str | None
+    TASK_TOOLS_FUNCTION_CALLING_MODEL: str | None
     ENABLE_TITLE_GENERATION: bool
     TITLE_GENERATION_PROMPT_TEMPLATE: str
     IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: str
@@ -129,7 +156,7 @@ class TaskConfigForm(BaseModel):
     QUERY_GENERATION_PROMPT_TEMPLATE: str
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: str
     ENABLE_VOICE_MODE_PROMPT: bool
-    VOICE_MODE_PROMPT_TEMPLATE: Optional[str]
+    VOICE_MODE_PROMPT_TEMPLATE: str | None
 
 
 @router.post('/config/update')
@@ -166,7 +193,7 @@ async def generate_title(request: Request, form_data: dict, user=Depends(get_ver
             detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
         )
 
-    task_model_id, task_model_params = await get_task_model_generation_config(model_id, models)
+    task_model_id, task_model_params = await get_task_model_generation_config(model_id, models, 'title')
 
     log.debug('generating chat title using model %s for user %s ', task_model_id, user.email)
 
@@ -234,7 +261,7 @@ async def generate_follow_ups(request: Request, form_data: dict, user=Depends(ge
             detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
         )
 
-    task_model_id, task_model_params = await get_task_model_generation_config(model_id, models)
+    task_model_id, task_model_params = await get_task_model_generation_config(model_id, models, 'follow_up')
 
     log.debug('generating chat title using model %s for user %s ', task_model_id, user.email)
 
@@ -299,7 +326,7 @@ async def generate_chat_tags(request: Request, form_data: dict, user=Depends(get
             detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
         )
 
-    task_model_id, task_model_params = await get_task_model_generation_config(model_id, models)
+    task_model_id, task_model_params = await get_task_model_generation_config(model_id, models, 'tags_generation')
 
     log.debug('generating chat tags using model %s for user %s ', task_model_id, user.email)
 
@@ -358,7 +385,7 @@ async def generate_image_prompt(request: Request, form_data: dict, user=Depends(
             detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
         )
 
-    task_model_id, task_model_params = await get_task_model_generation_config(model_id, models)
+    task_model_id, task_model_params = await get_task_model_generation_config(model_id, models, 'image_prompt')
 
     log.debug('generating image prompt using model %s for user %s ', task_model_id, user.email)
 
@@ -435,7 +462,7 @@ async def generate_queries(request: Request, form_data: dict, user=Depends(get_v
             detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
         )
 
-    task_model_id, task_model_params = await get_task_model_generation_config(model_id, models)
+    task_model_id, task_model_params = await get_task_model_generation_config(model_id, models, 'query_search' if type == 'web_search' else 'query_retrieval' if type == 'retrieval' else '')
 
     log.debug('generating %s queries using model %s for user %s', type, task_model_id, user.email)
 
@@ -511,7 +538,7 @@ async def generate_autocompletion(request: Request, form_data: dict, user=Depend
             detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
         )
 
-    task_model_id, task_model_params = await get_task_model_generation_config(model_id, models)
+    task_model_id, task_model_params = await get_task_model_generation_config(model_id, models, 'autocomplete_generation')
 
     log.debug('generating autocompletion using model %s for user %s', task_model_id, user.email)
 
