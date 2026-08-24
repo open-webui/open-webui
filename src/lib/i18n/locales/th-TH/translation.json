@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 สำหรับไม่จำกัด หรือจำนวนเต็มบวกสำหรับจำกัดค่าเฉพาะ",
 	"(latest)": "(ล่าสุด)",
-	"(leave blank for to use commercial endpoint)": "(เว้นว่างไว้เพื่อใช้ endpoint เชิงพาณิชย์)",
+	"(leave blank to use the commercial endpoint)": "(เว้นว่างไว้เพื่อใช้ endpoint เชิงพาณิชย์)",
 	"[Last] dddd [at] h:mm A": "[ล่าสุด] dddd [เวลา] h:mm A",
 	"[Today at] h:mm A": "[วันนี้ เวลา] h:mm A",
 	"[Yesterday at] h:mm A": "[เมื่อวานเวลา] h:mm A",

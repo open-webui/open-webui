@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 gan teorainn, nó slánuimhir dheimhneach le haghaidh teorann sonrach",
 	"(latest)": "(is déanaí)",
-	"(leave blank for to use commercial endpoint)": "(fág bán le haghaidh críochphointe tráchtála a úsáid)",
+	"(leave blank to use the commercial endpoint)": "(fág bán le haghaidh críochphointe tráchtála a úsáid)",
 	"[Last] dddd [at] h:mm A": "[Deireanach] dddd [ag] h:mm A",
 	"[Today at] h:mm A": "[Inniu ag] h:mm A",
 	"[Yesterday at] h:mm A": "[Inné ag] h:mm A",

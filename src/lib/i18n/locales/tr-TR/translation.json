@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "Sınır yoksa -1, belirli bir sınır için pozitif bir tamsayı.",
 	"(latest)": "(en son)",
-	"(leave blank for to use commercial endpoint)": "Ticari uç noktayı kullanmak için boş bırakın",
+	"(leave blank to use the commercial endpoint)": "Ticari uç noktayı kullanmak için boş bırakın",
 	"[Last] dddd [at] h:mm A": "[Geçen] dddd [saat] HH:mm",
 	"[Today at] h:mm A": "[Bugün saat] HH:mm",
 	"[Yesterday at] h:mm A": "[Dün saat] HH:mm",

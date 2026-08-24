@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 ლიმიტის გამოსართავად, ან დადებითი მთელი რიცხვი კონკრეტული ლიმიტისთვის",
 	"(latest)": "(უახლესი)",
-	"(leave blank for to use commercial endpoint)": "(დატოვეთ ცარიელი ფასიანი ბოლოწერტილის გამოსაყენებლად)",
+	"(leave blank to use the commercial endpoint)": "(დატოვეთ ცარიელი ფასიანი ბოლოწერტილის გამოსაყენებლად)",
 	"[Last] dddd [at] h:mm A": "[ბოლო] dddd [დრო] h:mm A",
 	"[Today at] h:mm A": "[დღეს,] h:mm A",
 	"[Yesterday at] h:mm A": "[გუშინ, ] h:mm A",

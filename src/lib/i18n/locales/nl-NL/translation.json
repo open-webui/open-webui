@@ -1,7 +1,7 @@
 {
 	"-1 for no limit, or a positive integer for a specific limit": "-1 voor geen limiet, of een positief getal voor een specifieke limiet",
 	"(latest)": "(nieuwste)",
-	"(leave blank for to use commercial endpoint)": "(laat leeg om een commercieel endpoint te gebruiken)",
+	"(leave blank to use the commercial endpoint)": "(laat leeg om een commercieel endpoint te gebruiken)",
 	"[Last] dddd [at] h:mm A": "[Vorige] dddd [om] h:mm A",
 	"[Today at] h:mm A": "[Vandaag om] h:mm A",
 	"[Yesterday at] h:mm A": "[Gisteren om] h:mm A",
