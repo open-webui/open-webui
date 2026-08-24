@@ -6,21 +6,46 @@
 	export let width = 350;
 	export let minWidth = 300;
 	export let maxWidth: number | null = null;
+	export let minSiblingWidth = 0;
+	export let closeOnDragBelowMinWidth = false;
 	export let storageKey = '';
 	export let className = '';
 	export let resizerId = 'controls-resizer';
+	export let onClose: () => void = () => {};
 
+	let panelElement: HTMLDivElement | null = null;
 	let isResizing = false;
 	let startClientX = 0;
 	let startWidth = 0;
 
-	const clamp = (value: number) =>
-		maxWidth === null ? Math.max(minWidth, value) : Math.min(maxWidth, Math.max(minWidth, value));
+	const getMaxWidth = () => {
+		const siblingMaxWidth =
+			minSiblingWidth > 0 && panelElement?.parentElement
+				? Math.max(0, panelElement.parentElement.clientWidth - minSiblingWidth)
+				: null;
+
+		if (maxWidth === null) {
+			return siblingMaxWidth;
+		}
+		return siblingMaxWidth === null ? maxWidth : Math.min(maxWidth, siblingMaxWidth);
+	};
+
+	const clamp = (value: number) => {
+		const resolvedMaxWidth = getMaxWidth();
+		const minimum = resolvedMaxWidth === null ? minWidth : Math.min(minWidth, resolvedMaxWidth);
+		const clampedToMin = Math.max(minimum, value);
+		return resolvedMaxWidth === null ? clampedToMin : Math.min(resolvedMaxWidth, clampedToMin);
+	};
 
 	const persistWidth = () => {
 		if (storageKey) {
 			localStorage.setItem(storageKey, String(width));
 		}
+	};
+
+	const close = () => {
+		open = false;
+		onClose();
 	};
 
 	const resizeStartHandler = (e: MouseEvent) => {
@@ -42,7 +67,13 @@
 
 	const resizeHandler = (endClientX: number) => {
 		const dx = endClientX - startClientX;
-		width = clamp(side === 'right' ? startWidth - dx : startWidth + dx);
+		const nextWidth = side === 'right' ? startWidth - dx : startWidth + dx;
+		if (closeOnDragBelowMinWidth && nextWidth < minWidth) {
+			close();
+			resizeEndHandler();
+			return;
+		}
+		width = clamp(nextWidth);
 	};
 
 	const resizeKeyHandler = (e: KeyboardEvent) => {
@@ -63,6 +94,13 @@
 		}
 	});
 
+	$: if (open && panelElement) {
+		const clampedWidth = clamp(width);
+		if (clampedWidth !== width) {
+			width = clampedWidth;
+		}
+	}
+
 	onDestroy(() => {
 		if (isResizing) {
 			document.body.style.userSelect = '';
@@ -74,6 +112,9 @@
 	on:mousemove={(e) => {
 		if (!isResizing) return;
 		resizeHandler(e.clientX);
+	}}
+	on:resize={() => {
+		if (open) width = clamp(width);
 	}}
 	on:mouseup={resizeEndHandler}
 />
@@ -97,7 +138,7 @@
 		</div>
 	{/if}
 
-	<div class={className} style="width: {width}px; flex: 0 0 {width}px;">
+	<div bind:this={panelElement} class={className} style="width: {width}px; flex: 0 0 {width}px;">
 		<slot />
 	</div>
 
