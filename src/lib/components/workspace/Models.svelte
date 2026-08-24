@@ -20,7 +20,8 @@
 		pinnedModels,
 		settings,
 		user,
-		workspaceActions
+		workspaceActions,
+		workspaceCounts
 	} from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import {
@@ -165,6 +166,7 @@
 			if (res) {
 				models = res.items;
 				total = res.total;
+				workspaceCounts.update((counts) => ({ ...counts, models: total }));
 
 				// get tags
 				tags = await getModelTags(localStorage.token).catch((error) => {
