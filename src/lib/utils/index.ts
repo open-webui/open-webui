@@ -1906,6 +1906,95 @@ export const extractContentFromFile = async (file: File) => {
 		});
 	}
 
+	async function extractOdsText(file: File) {
+		const [arrayBuffer, XLSX] = await Promise.all([file.arrayBuffer(), import('xlsx')]);
+		const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+
+		return workbook.SheetNames.map((name) =>
+			XLSX.utils.sheet_to_csv(workbook.Sheets[name], { FS: '\t' }).trim()
+		)
+			.filter(Boolean)
+			.join('\n\n');
+	}
+
+	async function extractOdfText(file: File) {
+		const [arrayBuffer, { default: JSZip }] = await Promise.all([
+			file.arrayBuffer(),
+			import('jszip')
+		]);
+
+		const content = await JSZip.loadAsync(arrayBuffer).then((zip) =>
+			zip.file('content.xml')?.async('string')
+		);
+		if (!content) {
+			throw new Error('content.xml not found');
+		}
+
+		const doc = new DOMParser().parseFromString(content, 'application/xml');
+		if (doc.getElementsByTagName('parsererror').length > 0) {
+			throw new Error('content.xml is not well-formed');
+		}
+
+		const TEXT_NS = 'urn:oasis:names:tc:opendocument:xmlns:text:1.0';
+		const TABLE_NS = 'urn:oasis:names:tc:opendocument:xmlns:table:1.0';
+		const textOf = (node: Node): string => {
+			if (node.nodeType === Node.TEXT_NODE) {
+				return node.textContent ?? '';
+			}
+			if (node.nodeType !== Node.ELEMENT_NODE) {
+				return '';
+			}
+
+			const element = node as Element;
+			if (element.namespaceURI === TEXT_NS) {
+				if (element.localName === 's') {
+					const count = Number(
+						element.getAttributeNS(TEXT_NS, 'c') ?? element.getAttribute('text:c')
+					);
+					return ' '.repeat(Number.isFinite(count) && count > 0 ? count : 1);
+				}
+				if (element.localName === 'tab') {
+					return '\t';
+				}
+				if (element.localName === 'line-break') {
+					return '\n';
+				}
+			}
+
+			return Array.from(element.childNodes).map(textOf).join('');
+		};
+
+		const blocks: string[] = [];
+		const walk = (node: Element) => {
+			if (node.namespaceURI === TABLE_NS && node.localName === 'table-row') {
+				const row = Array.from(node.getElementsByTagNameNS(TABLE_NS, 'table-cell'))
+					.map((cell) => textOf(cell).trim())
+					.join('\t')
+					.trimEnd();
+
+				if (row.length > 0) {
+					blocks.push(row);
+				}
+				return;
+			}
+
+			if (node.namespaceURI === TEXT_NS && (node.localName === 'p' || node.localName === 'h')) {
+				const text = textOf(node).trim();
+				if (text.length > 0) {
+					blocks.push(text);
+				}
+				return;
+			}
+
+			for (const child of Array.from(node.children)) {
+				walk(child);
+			}
+		};
+
+		walk(doc.documentElement);
+		return blocks.join('\n');
+	}
+
 	async function extractDocxText(file: File) {
 		const [arrayBuffer, { default: mammoth }] = await Promise.all([
 			file.arrayBuffer(),
@@ -1929,6 +2018,20 @@ export const extractContentFromFile = async (file: File) => {
 		ext === '.docx'
 	) {
 		return await extractDocxText(file);
+	}
+
+	// OpenDocument spreadsheet check
+	if (type === 'application/vnd.oasis.opendocument.spreadsheet' || ext === '.ods') {
+		return await extractOdsText(file);
+	}
+
+	// OpenDocument text/presentation check
+	if (
+		type === 'application/vnd.oasis.opendocument.text' ||
+		type === 'application/vnd.oasis.opendocument.presentation' ||
+		['.odt', '.odp'].includes(ext)
+	) {
+		return await extractOdfText(file);
 	}
 
 	// Text check (plain or common text-based)

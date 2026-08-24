@@ -32,6 +32,9 @@ export const SUPPORTED_FILE_TYPE = [
 	'text/x-python',
 	'text/css',
 	'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+	'application/vnd.oasis.opendocument.text',
+	'application/vnd.oasis.opendocument.spreadsheet',
+	'application/vnd.oasis.opendocument.presentation',
 	'application/octet-stream',
 	'application/x-javascript',
 	'text/markdown',
@@ -90,13 +93,16 @@ export const SUPPORTED_FILE_EXTENSIONS = [
 	'svelte',
 	'doc',
 	'docx',
+	'odt',
 	'pdf',
 	'csv',
 	'txt',
 	'xls',
 	'xlsx',
+	'ods',
 	'pptx',
 	'ppt',
+	'odp',
 	'msg'
 ];
 
