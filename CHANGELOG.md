@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.11.1] - 2026-08-23
+## [0.11.1] - 2026-08-24
 
 ### Added
 
@@ -222,7 +222,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🗳 **Web searches failing without saying why.** A web search that fails now explains itself instead of returning nothing at all, which most often happens when a search engine has been selected without its key being configured. [#28942](https://github.com/open-webui/open-webui/pull/28942)
 - ✅ **Checklists in notes.** A checklist in a note now previews and downloads as a proper checklist, where each item carried a stray second pair of brackets and its text began two lines below the box. [#27671](https://github.com/open-webui/open-webui/pull/27671), [#26067](https://github.com/open-webui/open-webui/issues/26067)
 - 🧿 **Shortening a conversation with the wrong model.** Choosing to shorten long conversations with the model you are chatting with now does that, where it used the configured task model instead on any instance that has one. [Commit](https://github.com/open-webui/open-webui/commit/5093a9938937153e287db27a671f5ba1fb5d7592), [#27603](https://github.com/open-webui/open-webui/issues/27603)
-- 🖥 **Stopping a reply after a connection blip.** Stopping a reply now keeps working across a cluster after a brief interruption to the shared cache, where the listener that carries the stop between instances gave up for good and only a restart brought it back. [Commit](https://github.com/open-webui/open-webui/commit/bf3a58dbcd18ddc2c7f130d8f9529477fe7cb042)
+- 🖥 **Stopping a reply after the shared cache restarts.** Stopping a reply now keeps working across a cluster after the shared cache restarts or its connection drops, where the part that carries a stop between instances gave up for good and silently, and only restarting the application brought it back. [Commit](https://github.com/open-webui/open-webui/commit/bf3a58dbcd18ddc2c7f130d8f9529477fe7cb042), [#28909](https://github.com/open-webui/open-webui/issues/28909)
 - 📼 **Attached links to media and archives.** Attaching a link that leads to something other than a web page, such as a video or an archive, now reads it as the file it is rather than trying to treat it as text. [Commit](https://github.com/open-webui/open-webui/commit/886248de36e3a60c3687d1bee6af110e14110eca)
 - 🗒 **Editing a workflow from settings.** Opening the code editor for a ComfyUI workflow from the images settings now brings it to the front, where it opened behind the settings dialog and could not be reached at all. [#27648](https://github.com/open-webui/open-webui/pull/27648), [#27647](https://github.com/open-webui/open-webui/issues/27647)
 - 🖼 **Downloading a generated image.** Downloading an image from its preview now saves the image, where it could silently save a small file containing an authentication error instead, and a download that does fail now says so. [Commit](https://github.com/open-webui/open-webui/commit/2578174637e48cafa4bcb09adbb1b7f4b545a8d5), [#27723](https://github.com/open-webui/open-webui/pull/27723), [#27722](https://github.com/open-webui/open-webui/issues/27722)
