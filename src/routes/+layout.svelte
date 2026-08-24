@@ -495,6 +495,10 @@
 			$settings?.terminalFileDisplay === 'inline' &&
 			isDirectTerminalServer(data.server?.url);
 		const params = defaultInline ? { ...data.params, inline: true } : data?.params;
+		const serverParams = data?.name === 'display_file' && params ? { ...params } : params;
+		if (serverParams && data?.name === 'display_file') {
+			delete serverParams.page;
+		}
 
 		console.log('executeTool', data, toolServer);
 
@@ -503,7 +507,7 @@
 				token,
 				toolServer.url,
 				data?.name,
-				params,
+				serverParams,
 				toolServerData,
 				chatId
 			);

@@ -960,6 +960,7 @@ def add_terminal_display_file_inline_param(spec: dict) -> dict:
     spec['description'] = (
         f"{spec.get('description', '')} "
         "Set inline=true when the file should be shown inline in the chat message instead of opening the file viewer. "
+        "Set page for PDF, DOCX, and PPTX files when you want the preview to open at a specific 1-based page or slide. "
         "After display_file succeeds, do not display the same file again or emit Markdown for it."
     ).strip()
     parameters = spec.setdefault('parameters', {'type': 'object', 'properties': {}, 'required': []})
@@ -1442,12 +1443,15 @@ async def get_terminal_tools(
 
         async def make_tool_function(fn_name, srv_data, hdrs, cks):
             async def tool_function(**kwargs):
+                params = dict(kwargs)
+                if fn_name == 'display_file':
+                    params.pop('page', None)
                 return await execute_tool_server(
                     url=srv_data['url'],
                     headers=hdrs,
                     cookies=cks,
                     name=fn_name,
-                    params=kwargs,
+                    params=params,
                     server_data=srv_data,
                 )
 
