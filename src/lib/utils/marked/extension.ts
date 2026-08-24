@@ -102,11 +102,30 @@ function detailsExtension() {
 	};
 }
 
+function underlineExtension() {
+	return {
+		name: 'underline',
+		level: 'inline',
+		start: (src: string) => src.indexOf('<u>'),
+		tokenizer(this: any, src: string) {
+			const match = /^<u>([\s\S]+?)<\/u>/.exec(src);
+			if (!match) return;
+
+			return {
+				type: 'underline',
+				raw: match[0],
+				text: match[1],
+				tokens: this.lexer.inlineTokens(match[1])
+			};
+		}
+	};
+}
+
 export default function (options = {}) {
 	return {
 		tokenizer: {
 			lheading: lheadingTokenizer as any
 		},
-		extensions: [detailsExtension()]
+		extensions: [detailsExtension(), underlineExtension()]
 	};
 }
