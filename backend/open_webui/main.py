@@ -13,6 +13,7 @@ from uuid import uuid4
 
 import aiohttp
 import anyio.to_thread
+from cryptography.fernet import InvalidToken
 from fastapi import (
     Depends,
     FastAPI,
@@ -625,8 +626,18 @@ async def initialize_runtime_config(app: FastAPI):
                         f'mcp:{server_id}',
                         OAuthClientInformationFull(**oauth_client_info),
                     )
+                except InvalidToken:
+                    log.error(
+                        'Error adding OAuth client for MCP tool server %s: InvalidToken. '
+                        'Stored OAuth client data is invalid; reconnect this tool server.',
+                        server_id,
+                    )
                 except Exception as e:
-                    log.error(f'Error adding OAuth client for MCP tool server {server_id}: {e}')
+                    log.error(
+                        'Error adding OAuth client for MCP tool server %s: %s',
+                        server_id,
+                        f'{type(e).__name__}: {e}' if str(e) else type(e).__name__,
+                    )
 
     arena_models = await Config.get('evaluation.arena.models', []) or []
     if any('access_control' in m.get('meta', {}) for m in arena_models):
@@ -2686,8 +2697,19 @@ async def register_client(request, client_id: str) -> bool:
                 oauth_server_key,
                 oauth_scope=oauth_scope,
             )
+    except InvalidToken:
+        log.error(
+            'OAuth client re-registration failed for %s: InvalidToken. '
+            'Stored OAuth client data is invalid; reconnect this tool server.',
+            client_id,
+        )
+        return False
     except Exception as e:
-        log.error(f'OAuth client re-registration failed for {client_id}: {e}')
+        log.error(
+            'OAuth client re-registration failed for %s: %s',
+            client_id,
+            f'{type(e).__name__}: {e}' if str(e) else type(e).__name__,
+        )
         return False
 
     try:

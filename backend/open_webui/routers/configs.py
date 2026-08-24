@@ -279,7 +279,11 @@ async def set_tool_servers_config(
                         OAuthClientInformationFull(**oauth_client_info),
                     )
                 except Exception as e:
-                    log.debug('Failed to add OAuth client for MCP tool server: %s', e)
+                    log.debug(
+                        'Failed to add OAuth client for MCP tool server %s: %s',
+                        server_id,
+                        f'{type(e).__name__}: {e}' if str(e) else type(e).__name__,
+                    )
                     continue
 
     await publish_event(
