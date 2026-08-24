@@ -267,7 +267,7 @@ from open_webui.utils.oauth import (
 from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.redis import get_redis_client
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
-from open_webui.utils.session_pool import cleanup_response, get_session, stream_wrapper
+from open_webui.utils.session_pool import cleanup_response, get_client_timeout, get_session, stream_wrapper
 from open_webui.utils.tool_approval import (
     ResolveToolCallForm,
     build_tool_approval_resume_payload,
@@ -1908,7 +1908,7 @@ async def count_message_tokens(
 
 
 async def passthrough_anthropic_messages(request: Request, form_data: dict, user) -> Response | dict:
-    requested_model, payload, url, key, headers, cookies = await openai.get_anthropic_token_count_target(
+    requested_model, payload, url, key, headers, cookies = await openai.get_anthropic_request_target(
         request, form_data, user
     )
     request_url = f'{url.rstrip("/")}/messages'
@@ -1924,7 +1924,7 @@ async def passthrough_anthropic_messages(request: Request, form_data: dict, user
             headers=headers,
             cookies=cookies,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            timeout=aiohttp.ClientTimeout(total=openai.AIOHTTP_CLIENT_TIMEOUT),
+            timeout=get_client_timeout(stream=bool(payload.get('stream'))),
         )
 
         if 'text/event-stream' in response.headers.get('Content-Type', ''):

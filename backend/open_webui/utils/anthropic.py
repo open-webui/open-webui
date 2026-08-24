@@ -12,6 +12,8 @@ from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
 
+ANTHROPIC_VERSION = '2023-06-01'
+
 ANTHROPIC_CONVERTED_REQUEST_PARAMS = {
     'model',
     'messages',
@@ -48,7 +50,7 @@ async def get_anthropic_models(url: str, key: str, user: UserModel = None) -> di
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             headers = {
                 'x-api-key': key,
-                'anthropic-version': '2023-06-01',
+                'anthropic-version': ANTHROPIC_VERSION,
             }
 
             if ENABLE_FORWARD_USER_INFO_HEADERS and user:
