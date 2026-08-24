@@ -4181,6 +4181,7 @@ async def streaming_chat_response_handler(response, ctx):
         async def response_handler(response, events):
             filter_context = FilterContext()
             tag_scan_positions = {}
+            tag_boundary_positions = {}
             response_stream_task_id = metadata.get('task_id') or metadata.get('message_id')
 
             def tag_output_handler(content_type, tags, output):
@@ -4236,6 +4237,29 @@ async def streaming_chat_response_handler(response, ctx):
                     item_id = item.get('id')
                     if item_id:
                         tag_scan_positions.pop((item_id, content_type), None)
+                        tag_boundary_positions.pop((item_id, content_type), None)
+
+                def get_tag_boundaries(item, text, scanned_length):
+                    """Index of the last '<', and of the last '>' or newline, before scanned_length."""
+                    key = (item.get('id'), content_type)
+                    scanned, last_open, last_boundary = tag_boundary_positions.get(key, (0, -1, -1))
+                    if scanned > scanned_length:  # the item was rewritten, so the cached positions are stale
+                        scanned, last_open, last_boundary = 0, -1, -1
+
+                    if scanned < scanned_length:
+                        # only text added since the last call can move either position
+                        open_tag = text.rfind('<', scanned, scanned_length)
+                        if open_tag != -1:
+                            last_open = open_tag
+                        boundary = max(
+                            text.rfind('>', scanned, scanned_length),
+                            text.rfind('\n', scanned, scanned_length),
+                        )
+                        if boundary != -1:
+                            last_boundary = boundary
+                        tag_boundary_positions[key] = (scanned_length, last_open, last_boundary)
+
+                    return last_open, last_boundary
 
                 # Map content_type to output item type
                 output_type_map = {
@@ -4258,11 +4282,7 @@ async def streaming_chat_response_handler(response, ctx):
                     if scanned_length and any(
                         start_tag.startswith('<') and start_tag.endswith('>') for start_tag, _ in tags
                     ):
-                        last_tag_boundary = max(
-                            item_text.rfind('>', 0, scanned_length),
-                            item_text.rfind('\n', 0, scanned_length),
-                        )
-                        open_tag_start = item_text.rfind('<', 0, scanned_length)
+                        open_tag_start, last_tag_boundary = get_tag_boundaries(item, item_text, scanned_length)
                         if open_tag_start > last_tag_boundary:
                             search_start = min(search_start, open_tag_start)
 
