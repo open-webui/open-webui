@@ -1491,6 +1491,10 @@ async def get_tool_server_data(url: str, headers: dict | None) -> dict[str, Any]
                         # Fall back to YAML for non-.yml URLs that aren't valid JSON
                         res = yaml.safe_load(text_content)
 
+    except (aiohttp.ClientConnectionError, TimeoutError) as err:
+        error = str(err) or type(err).__name__
+        log.error(f'Could not fetch tool server spec from {url}: {error}')
+        raise Exception(error)
     except Exception as err:
         log.exception(f'Could not fetch tool server spec from {url}')
         if isinstance(err, dict) and 'detail' in err:
