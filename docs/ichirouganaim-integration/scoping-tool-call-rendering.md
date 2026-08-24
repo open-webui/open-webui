@@ -101,6 +101,15 @@ repo). Since `claude_cli.py`'s `_build_args()` names the configured server
 trusting this paraphrase; the exact string matters for `isGraphUrlTool()`'s
 match logic in step 5.
 
+**Update, 2026-08-22**: the server key was renamed from `"mcp"` to
+`"ichirouganaim_mcp"` (`claude_cli.py`'s `MCP_SERVER_KEY` constant) to drop
+the confusing `mcp__mcp__` doubling — tool names are now shaped like
+`mcp__ichirouganaim_mcp__get_record_graph_url`. `isGraphUrlTool()` in
+`graph-url.ts` was already written to match on a `__`-prefixed suffix
+rather than the full name (see its own comment), so it didn't need a code
+change for this — this note exists only so the exact string quoted above
+doesn't read as still-current.
+
 **No raw tool-call JSON was captured from this session's browser test** —
 what's quoted in this repo's chat history (with the user) is the
 *rendered* prose the model produced, not the underlying `assistant`/`user`

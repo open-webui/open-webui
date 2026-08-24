@@ -91,6 +91,18 @@ docs/ichirouganaim-integration/bootstrap_admin_api_key.py
 docs/ichirouganaim-integration/bootstrap.sh
 ```
 
+The five scripts referenced later, in "Long-term operation," are optional
+but worth having too — not required for a working setup, only for ongoing
+maintenance once it's been running a while:
+
+```
+docs/ichirouganaim-integration/check_claude_auth.sh
+docs/ichirouganaim-integration/backup_data_volume.sh
+docs/ichirouganaim-integration/check_claude_code_version.sh
+docs/ichirouganaim-integration/docker_disk_cleanup.sh
+docs/ichirouganaim-integration/concurrency_test.sh
+```
+
 If any are missing, they need to be copied over or committed from
 wherever this fork was originally built — there's no way to regenerate
 them from the base open-webui repo alone.
@@ -363,6 +375,174 @@ happened.
   line, rebuild. Don't remove the pin entirely (see Prerequisites and
   `decisions.md` for why an unpinned version bit this project once).
 
+## Long-term operation (days into weeks into months)
+
+Everything above gets a fresh deployment working. This section is about
+what can quietly go wrong (or need attention) the longer it stays up, and
+what's actually automatable about that versus what genuinely needs a human
+— see `decisions.md`'s 2026-08-22/23 entries for the full reasoning behind
+each of these.
+
+**The one thing that matters most, and can't be automated away**: the
+`claude` CLI's own OAuth login (step 7) is what everything else depends
+on. It should keep working indefinitely via normal token refresh, but
+*will* break if the Claude.ai subscription lapses, the session gets
+revoked from Claude.ai's own account settings, or Anthropic forces a
+re-auth for a security reason. When it breaks, `claude_cli.py` fails
+cleanly (a visible error in the chat, not a crash) — but the fix always
+needs a human with a real browser (`docker exec -it open-webui claude auth
+login`), the same as initial setup. Nothing here can script around that;
+the best available mitigation is finding out *before* someone hits a
+broken chat:
+
+```bash
+docs/ichirouganaim-integration/check_claude_auth.sh
+```
+
+Exits 0 if logged in, 1 with a clear message otherwise — safe to run on a
+schedule (cron, a monitoring system, whatever's available) purely for
+early warning. Never modifies anything.
+
+**Things that are handled automatically now, no action needed**:
+
+- `sessions.json` (the chat-id → claude-session-id map) used to grow
+  forever — confirmed by reading the code, it was only ever pruned on a
+  hard CLI failure, never for successful chats or deleted ones. Fixed
+  directly in `claude_cli.py`: it's now bounded to the 500 most recently
+  used chats (same strategy the reference implementation this was ported
+  from already used, see that constant's own comment), evicting the
+  least-recently-used entry once over that bound. Nothing to run
+  periodically for this anymore.
+
+**Things worth checking periodically, informational only — nothing here
+changes anything on its own**:
+
+- **A newer `claude-code` version might exist.** The pin is deliberate
+  (Prerequisites/`decisions.md` — an unpinned "latest" once silently
+  swallowed a real error), so nothing should auto-bump it. This just
+  reports what's pinned vs. what's current, with the manual steps to
+  adopt a newer one if you decide to:
+
+  ```bash
+  docs/ichirouganaim-integration/check_claude_code_version.sh
+  ```
+
+- **Docker disk usage** — same `docker system df` / `docker builder prune
+  -f` guidance from the Prerequisites section and "Ongoing maintenance"
+  above, wrapped as a script for convenience if you want to put it on a
+  schedule instead of remembering to run it by hand:
+
+  ```bash
+  docs/ichirouganaim-integration/docker_disk_cleanup.sh
+  ```
+
+**Back up the data volume.** Chat history, the admin account, the synced
+`claude_cli` Pipe function, and — critically — the `claude` CLI's own
+OAuth login all live in one Docker volume with no automatic backup.
+Nothing destroys it in normal operation, but an accidental `docker compose
+down -v`, a Docker Desktop reset, or host disk failure wipes all of it at
+once, including that OAuth login — meaning a full re-setup from scratch,
+browser-based `claude auth login` included. Worth doing periodically for
+any deployment meant to stay up for months:
+
+```bash
+docs/ichirouganaim-integration/backup_data_volume.sh [output-dir]
+```
+
+Auto-discovers the actual volume name from the running container (it's
+not literally called `open-webui` — Compose prefixes it with the project
+name, which varies by checkout — confirmed live, don't hardcode it).
+Restore instructions are in the script's own header comment; broadly:
+extract the tarball into a *fresh, empty* volume, not on top of a live
+one.
+
+**A design tradeoff worth knowing about, not something to silently
+change**: `Dockerfile.claude-cli` builds `FROM
+ghcr.io/open-webui/open-webui:main`, a moving tag, not a fixed version.
+Any future rebuild — even one done only to bump the `claude-code` pin —
+pulls whatever upstream's `main` looks like *at that moment*, potentially
+bundling in unrelated upstream changes along with the intended one. If
+predictable rebuilds matter more than staying current with upstream,
+consider pinning to a specific upstream version tag instead; this wasn't
+changed here since it's a real tradeoff, not an obvious fix.
+
+**Genuine unknowns — not investigated, no automation possible without
+knowing more**:
+
+- How long Anthropic retains a resumable CLI session's transcript
+  server-side (the `--resume <id>` mechanism `claude_cli.py` relies on for
+  chat continuity). A very old, dormant chat might fail to resume after
+  enough inactivity and just start a fresh session instead — not
+  destructive, but worth knowing the exact window isn't documented
+  anywhere this project has access to.
+- Whether `ichirouganaim_mcp` (a separate, host-native process — see
+  `decisions.md`'s 2026-08-22 "Frontend build stage runs out of memory"
+  entry for how the full three-piece stack is laid out) has its own
+  credential or session that could expire independently of the `claude`
+  CLI's own login. Not reviewed as part of this integration.
+
+**Concurrency: how many users can chat through `claude_cli` at once.**
+Multiple users *can* use it simultaneously — `pipe()` spawns an
+independent subprocess per request, not one serialized process, and a
+real `sessions.json` race condition that could have corrupted concurrent
+chats' session continuity was found and fixed (see decisions.md's
+2026-08-23 concurrency-testing entry for the full story, including why
+the first fix attempt looked correct and wasn't). But there's a real
+capacity ceiling to plan around: **each concurrent request spawns a whole
+subprocess tree** (`setpriv` → the `claude` binary → its own `node`
+runtime → the sandboxing layer), not one lightweight process — confirmed
+live, the container's PID count jumped to 150-190 for only 12-25
+concurrent requests. On a memory-constrained machine that adds up fast:
+on this session's own 3.83GiB-limited dev machine, 12 concurrent requests
+ran cleanly but 15 crashed the container outright (confirmed via
+`docker inspect`'s `RestartCount` incrementing, not just a slow
+response). That ceiling is this machine's own memory budget, not
+`claude_cli.py`'s design — the same conclusion this file's memory
+Prerequisites bullet already reached for the frontend *build*, now
+confirmed to apply to request-serving *load* too.
+
+**This needs re-testing on whatever machine actually runs this in
+production** — the numbers above are specific to a 3.83GiB-limited dev
+machine, not a general limit. Use the included test tool, starting small
+and working up rather than jumping straight to a large number:
+
+```bash
+export OPEN_WEBUI_API_KEY=sk-...
+docs/ichirouganaim-integration/concurrency_test.sh 5
+docs/ichirouganaim-integration/concurrency_test.sh 15
+docs/ichirouganaim-integration/concurrency_test.sh 50
+```
+
+It fires N genuinely concurrent completions, verifies each gets its own
+uncrossed response back, and prints the container's memory/PID trace for
+the run — if a run crashes the container, that trace plus
+`docker inspect <container> --format 'restartCount={{.RestartCount}}'`
+confirms it, the same way it was diagnosed this session. Spends real
+Claude usage — one real completion per concurrent request in the test.
+
+**Important caveat: the numbers above are for plain chat only, not real
+MCP/deed-entry-style workflows, and probably don't transfer** —
+`concurrency_test.sh` sends a single-turn "echo this token back" prompt,
+finishing all N requests in 16-21s even at N=25, which likely means not
+every request was ever *fully* concurrent with every other one. A real
+deed-entry conversation (`list_workflows` → `get_workflow` → creating
+records/events/parties → finalize) runs many tool-calling rounds over
+minutes, not seconds — making genuine full overlap across N concurrent
+users *more* likely, not less, which points toward a *lower* safe N than
+what's measured here, not the same one. It also hits three more services
+this integration hasn't reviewed the concurrency limits of at all:
+`ichirouganaim_mcp`, `ichirouganaim`-django, and its MySQL database — any
+one of those could become the real bottleneck before `open-webui`'s own
+container memory does. **A real deed-entry-style concurrency test, run
+against that whole stack together, is still an open item** — deliberately
+not run on the dev machine this session (it already crashes under plain
+chat at N=15; a heavier MCP-tool-calling version would almost certainly
+crash it faster while spending substantially more real Claude usage per
+attempt, for data that wouldn't answer where the real ceiling is or which
+service hits it first). See `decisions.md`'s 2026-08-23 entry for the full
+reasoning. Don't treat the N=12/15 numbers above as a deed-entry capacity
+plan — they're a plain-chat baseline only.
+
 ## Troubleshooting
 
 | Symptom | Likely cause |
@@ -373,4 +553,5 @@ happened.
 | `claude auth status` unexpectedly shows `loggedIn: false` after previously working | The data volume was recreated (not just the container) — re-run `claude auth login` (step 7). |
 | MCP tool calls fail or time out | Re-check reachability *from inside the container* (step 8's `curl` check), not just from the host — these are genuinely different network paths. |
 | `docker compose build` fails during `npm run build` with `JavaScript heap out of memory` or `SIGKILL`/`cannot allocate memory` | Docker doesn't have enough memory allocated for the frontend build stage — see the Prerequisites section's memory bullet and `decisions.md`'s 2026-08-22 "Frontend build stage runs out of memory" entry. Give Docker more memory (Docker Desktop: Settings → Resources → Memory) and retry; stopping other running containers to free memory does *not* help (confirmed live) — it's the VM's total allocation ceiling, not contention. |
-| A tool call that should show the "View Graph" card instead renders as a generic "View Result from `mcp__mcp__get_record_graph_url`" row | Either the frontend build in step 3 didn't actually pick up `GraphCard.svelte`/`GraphModal.svelte`/`graph-url.ts` (confirm the image was rebuilt *after* these files existed in the checkout, not before), or the tool result didn't parse as a URL (`extractGraphUrl` falls through to the generic renderer rather than showing nothing — see `src/lib/utils/graph-url.ts`'s docstring for the shapes it handles). |
+| A tool call that should show the "View Graph" card instead renders as a generic "View Result from `mcp__ichirouganaim_mcp__get_record_graph_url`" row | Either the frontend build in step 3 didn't actually pick up `GraphCard.svelte`/`GraphModal.svelte`/`graph-url.ts` (confirm the image was rebuilt *after* these files existed in the checkout, not before), or the tool result didn't parse as a URL (`extractGraphUrl` falls through to the generic renderer rather than showing nothing — see `src/lib/utils/graph-url.ts`'s docstring for the shapes it handles). |
+| The container becomes unreachable / restarts under concurrent chat load | Almost certainly memory exhaustion, not a code bug — see the "Concurrency" section above and `decisions.md`'s 2026-08-23 entry. Confirm with `docker inspect <container> --format 'restartCount={{.RestartCount}}'` (incrementing means it genuinely crashed) and re-run `concurrency_test.sh` at a lower N to find where it stops happening on this specific machine. |

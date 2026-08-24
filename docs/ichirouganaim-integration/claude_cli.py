@@ -8,6 +8,7 @@ version: 0.2.0
 from __future__ import annotations
 
 import asyncio
+import fcntl
 import json
 import os
 import uuid
@@ -16,6 +17,22 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 CLAUDE_RUNNER_USER = 'claude-runner'
+
+# The claude CLI namespaces every MCP tool as mcp__<this key>__<tool> (e.g.
+# mcp__ichirouganaim_mcp__get_record_graph_url) -- confirmed live, see
+# decisions.md. Was 'mcp' (giving the redundant-looking mcp__mcp__<tool>)
+# until renamed here; graph-url.ts's isGraphUrlTool() matches on a
+# '__get_record_graph_url' suffix rather than hardcoding the full name, so
+# it doesn't need updating when this changes.
+MCP_SERVER_KEY = 'ichirouganaim_mcp'
+
+# sessions.json (chat_id -> claude session_id) has no other eviction path --
+# _forget_session_id only fires on a hard CLI failure, so a long-lived
+# deployment's successful chats would otherwise accumulate here forever.
+# Same bound and eviction strategy as the reference repo's own
+# sessionIdByChatId (lib/claude-cli-provider.ts's MAX_SESSIONS), ported
+# here since this file had no bound of its own before.
+MAX_SESSIONS = 500
 
 
 def _chown_recursive(path: Path, uid: int, gid: int) -> None:
@@ -83,20 +100,98 @@ class Pipe:
         f = self._sessions_file()
         if not f.exists():
             return {}
+        # Raw os-level fd, not Python's buffered open(mode='a+') -- see
+        # _update_sessions' own comment for why: mixing O_APPEND with a
+        # truncate-then-rewrite pattern is a real, confirmed-live bug, not
+        # just a style choice.
         try:
-            return json.loads(f.read_text(encoding='utf-8'))
+            fd = os.open(f, os.O_RDONLY)
+        except OSError:
+            return {}
+        try:
+            fcntl.flock(fd, fcntl.LOCK_SH)
+            try:
+                size = os.fstat(fd).st_size
+                raw = os.pread(fd, size, 0) if size else b''
+                return json.loads(raw.decode('utf-8')) if raw else {}
+            finally:
+                fcntl.flock(fd, fcntl.LOCK_UN)
         except (json.JSONDecodeError, OSError):
             return {}
+        finally:
+            os.close(fd)
+
+    def _update_sessions(self, mutate) -> None:
+        """Read-modify-write sessions.json under an exclusive file lock.
+
+        With today's default (UVICORN_WORKERS=1, a single process/event
+        loop), Python's own cooperative scheduling already serializes this
+        -- there's no `await` between the read and the write, so no other
+        coroutine can interleave. That protection disappears the moment
+        anyone scales past one worker (separate OS processes, no shared
+        GIL) -- confirmed live this is a real gap, not just theoretical,
+        see decisions.md's concurrency-testing entry.
+
+        Uses raw `os.open`/`os.pread`/`os.pwrite` (positioned I/O, no file
+        offset involved) rather than Python's buffered `open(..., 'a+')` --
+        **live-verified this matters, not a style preference**: an earlier
+        version used `'a+'` + `seek(0)` + `truncate()` + `write()`, which
+        looked correct and passed small/lightly-loaded tests, but under
+        real concurrent load (50 processes racing, tested inside the real
+        container) lost the majority of writes, reproducibly. O_APPEND
+        (implied by `'a'`/`'a+'`) makes the kernel reposition every write
+        to the file's *actual current* end-of-file at write time, which
+        interacts badly with a prior `truncate()` under concurrent
+        modification -- exactly the kind of subtle bug this project's own
+        "verify live, don't assume" discipline exists to catch. Switching
+        to flag-based `os.open` (no `O_APPEND`) plus `pread`/`pwrite`
+        (explicit byte offsets, no reliance on any tracked file position)
+        removed the failure entirely across repeated live stress tests --
+        see decisions.md.
+
+        `mutate` receives the current dict and returns the replacement.
+        """
+        f = self._sessions_file()
+        fd = os.open(f, os.O_RDWR | os.O_CREAT, 0o644)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            try:
+                size = os.fstat(fd).st_size
+                raw = os.pread(fd, size, 0) if size else b''
+                try:
+                    sessions = json.loads(raw.decode('utf-8')) if raw else {}
+                except json.JSONDecodeError:
+                    sessions = {}
+                sessions = mutate(sessions)
+                data = json.dumps(sessions).encode('utf-8')
+                os.ftruncate(fd, 0)
+                os.pwrite(fd, data, 0)
+            finally:
+                fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
 
     def _remember_session_id(self, chat_id: str, session_id: str) -> None:
-        sessions = self._load_sessions()
-        sessions[chat_id] = session_id
-        self._sessions_file().write_text(json.dumps(sessions), encoding='utf-8')
+        def mutate(sessions: dict) -> dict:
+            # Pop-then-set (not a plain overwrite) moves an already-present
+            # chat_id to the end -- dict insertion order doesn't otherwise
+            # change on reassigning an existing key, which would make the
+            # eviction below evict by first-ever-use instead of by
+            # least-recently-used.
+            sessions.pop(chat_id, None)
+            sessions[chat_id] = session_id
+            while len(sessions) > MAX_SESSIONS:
+                sessions.pop(next(iter(sessions)), None)
+            return sessions
+
+        self._update_sessions(mutate)
 
     def _forget_session_id(self, chat_id: str) -> None:
-        sessions = self._load_sessions()
-        if sessions.pop(chat_id, None) is not None:
-            self._sessions_file().write_text(json.dumps(sessions), encoding='utf-8')
+        def mutate(sessions: dict) -> dict:
+            sessions.pop(chat_id, None)
+            return sessions
+
+        self._update_sessions(mutate)
 
     def _prepare_privilege_drop(self) -> tuple[int, int, str | None] | None:
         """Best-effort: if running as root and CLAUDE_RUNNER_USER exists,
@@ -264,7 +359,7 @@ class Pipe:
         args = ['-p', message, '--output-format', 'stream-json', '--include-partial-messages', '--verbose']
 
         if self.valves.MCP_SERVER_URL:
-            mcp_config = json.dumps({'mcpServers': {'mcp': {'type': 'http', 'url': self.valves.MCP_SERVER_URL}}})
+            mcp_config = json.dumps({'mcpServers': {MCP_SERVER_KEY: {'type': 'http', 'url': self.valves.MCP_SERVER_URL}}})
             # This combo is only safe together: --strict-mcp-config + --tools ""
             # remove every other tool before --permission-mode bypassPermissions
             # waives approval for what's left (the one configured MCP server).

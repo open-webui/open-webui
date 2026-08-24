@@ -22,10 +22,14 @@
  * that changes.
  */
 
-// _build_args()'s hardcoded MCP server key in claude_cli.py names every
-// tool `mcp__mcp__<tool>` -- the CLI's own namespacing convention, not this
-// fork's native middleware.py one (which uses a different, single-
-// underscore scheme and isn't reachable via this Pipe at all).
+// claude_cli.py's MCP_SERVER_KEY constant names every tool
+// `mcp__<that key>__<tool>` (currently `mcp__ichirouganaim_mcp__<tool>`) --
+// the CLI's own namespacing convention, not this fork's native
+// middleware.py one (which uses a different, single-underscore scheme and
+// isn't reachable via this Pipe at all). Matched here on a `__`-prefixed
+// suffix rather than the full name, so a rename of that key on the Python
+// side (like `mcp` -> `ichirouganaim_mcp`, decisions.md 2026-08-22) doesn't
+// need a matching change here.
 const BARE_NAME = 'get_record_graph_url';
 
 export function isGraphUrlTool(toolName: string): boolean {

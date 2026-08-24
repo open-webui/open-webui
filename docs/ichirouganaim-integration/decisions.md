@@ -757,3 +757,208 @@ explicit memory bullet describing both failure signatures above (the graceful V8
 machine with generous RAM, but worth having documented rather than rediscovering live again on a second
 machine. `SETUP.md`'s step 3 and troubleshooting table were updated to match; see that file directly
 rather than duplicating the wording here.
+
+## 2026-08-22 — MCP server key renamed from `"mcp"` to `"ichirouganaim_mcp"`
+
+User asked for a clearer name -- `mcp__mcp__<tool>` (the doubled "mcp") read as confusing/redundant.
+Changed `claude_cli.py`'s `_build_args()` to use a new `MCP_SERVER_KEY = 'ichirouganaim_mcp'` module
+constant instead of the inline `'mcp'` literal, so tool names are now shaped like
+`mcp__ichirouganaim_mcp__get_record_graph_url` (the `mcp__<key>__<tool>` outer pattern itself is the
+`claude` CLI's own fixed convention, not something this rename touches -- only `<key>` changed).
+
+**No other code changed**: `graph-url.ts`'s `isGraphUrlTool()` was already written to match on a
+`__get_record_graph_url` suffix rather than the full name specifically to survive exactly this kind of
+rename without a matching frontend change (see that function's own comment, which predates this rename)
+-- confirmed by re-reading it before touching anything, not assumed. Updated its comment and
+`scoping-tool-call-rendering.md`'s now-superseded `mcp__mcp__...` example string with a pointer to this
+entry, so a future reader doesn't take the old string as still-current; left `decisions.md`'s own earlier
+entries (the live captures that predate this rename) untouched, since they're accurate historical records
+of what was true *at the time*, not a live reference to correct.
+
+**Not yet re-verified live**: this rename hasn't been tested against a real `claude` CLI invocation yet
+(no further live usage was spent on it this session) -- structurally it should work identically, since
+MCP server keys are just JSON object keys in `--mcp-config` with no format constraint beyond being a
+valid identifier, but the "verify this live, don't just trust the paraphrase" discipline this whole
+project has followed throughout means this should get a real check (a fresh `list_workflows`- or
+`get_record_graph_url`-style call, confirming the new `mcp__ichirouganaim_mcp__<tool>` name actually
+appears) once this rebuilds on the Mac Studio, not assumed correct just because it reads correctly.
+
+## 2026-08-23 — Long-term operation: closed a real unbounded-growth bug, added four maintenance scripts
+
+User asked what could disrupt this deployment over days into weeks into months of continuous use, and
+what part of that could be handled programmatically rather than just documented. Went through the actual
+code and running system rather than speculating, and split what came out of that into three buckets: one
+real bug worth fixing directly, things worth automating as scripts, and genuine unknowns outside this
+project's own code.
+
+**Fixed directly, not just documented**: `sessions.json` (the `chat_id` -> claude `session_id` map
+`claude_cli.py` uses for `--resume`) had no eviction path for a successful chat, ever -- read
+`_forget_session_id`'s only call site (the hard-CLI-failure branch) to confirm this, not assumed. Over a
+long-lived deployment with many chats this file would grow forever, including for chats later deleted in
+open-webui (no hook into chat deletion either). Fixed by porting the reference repo's own already-solved
+approach (`lib/claude-cli-provider.ts`'s `sessionIdByChatId`, a bounded `Map` with insertion-order
+eviction, `MAX_SESSIONS = 500`) into `claude_cli.py` directly -- pop-then-set on `_remember_session_id` so
+re-using an already-mapped chat moves it to the "freshest" end (plain dict reassignment doesn't reorder an
+existing key), then evict-oldest once over the bound. No external script needed for this one; it's
+self-managing now.
+
+**Four new scripts** (`docs/ichirouganaim-integration/`), each **live-tested against the real running
+local instance before being documented as working**, not just written and assumed correct:
+
+- `check_claude_auth.sh` -- checks `claude auth status` inside the container, exit 0/1. Can only detect
+  the OAuth session breaking (subscription lapse, a revoked session, a forced re-auth), never fix it --
+  the fix always needs a human with a real browser, same constraint as initial setup, confirmed nothing
+  about that can be scripted around. Tested live: correctly reported the real logged-in state.
+- `backup_data_volume.sh` -- backs up the persistent Docker volume (chat history, admin account, the
+  synced Pipe, and critically the `claude` CLI's own OAuth login all live in this one volume with no other
+  backup mechanism). **First version had a real bug, caught by testing it live, not by review alone**:
+  hardcoded the volume name as `open-webui`, but the actual running volume is
+  `open-webui_open-webui` -- Compose prefixes the name declared in `docker-compose.yaml` with the project
+  name, which defaults to the checkout's own directory name and so varies by machine. Fixed to
+  auto-discover the real volume name from the running container's actual mount instead of guessing.
+  Re-tested live after the fix: correctly found the volume, produced a real 250MB tarball, confirmed via
+  `tar tzf` that it actually contains `webui.db` and `claude-cli-home/` (the OAuth login data) rather than
+  just checking the command exited 0.
+- `check_claude_code_version.sh` -- reports the pinned `claude-code` version vs. the latest on npm,
+  informational only, never auto-bumps (the pin is deliberate, see the ENOSPC entry above). Tested live:
+  correctly found a real newer version (2.1.241 vs. the pinned 2.1.239) and printed the right manual steps
+  to adopt it.
+- `docker_disk_cleanup.sh` -- wraps the `docker system df` / `docker builder prune -f` guidance already in
+  SETUP.md's Prerequisites section into a runnable script. Tested live: reclaimed a real 4.363GB of stale
+  build cache from this session's own repeated rebuilds.
+
+**Genuinely not automatable, documented instead** (`SETUP.md`'s new "Long-term operation" section): the
+`claude` CLI's OAuth login itself (can only be monitored, never auto-fixed -- see above), how long
+Anthropic retains a resumable CLI session's transcript server-side (genuinely unknown, not investigated),
+whether `ichirouganaim_mcp` has its own independent credential/session that could expire (a separate,
+host-native process -- outside this integration's own code, not reviewed). Also flagged, as a design
+tradeoff rather than a bug: `Dockerfile.claude-cli`'s `FROM ghcr.io/open-webui/open-webui:main` tracks a
+moving tag, so any future rebuild (even one only meant to bump the `claude-code` pin) pulls whatever
+upstream's `main` looks like at that moment -- not changed here since pinning it is a real tradeoff
+(predictability vs. staying current), not an obvious fix.
+
+## 2026-08-23 — Concurrency testing: a real sessions.json data-loss bug found and fixed, then real load-tested up to the point this machine's own memory gave out
+
+User asked whether multiple open-webui users could use `claude_cli` at the same time, given it's one
+shared Claude.ai account. Answer's yes at the process level (`pipe()` spawns an independent subprocess
+per request, no global serialization), but reading the code surfaced a real, unverified risk in
+`sessions.json` (the `chat_id` -> claude `session_id` map): a plain read-modify-write with no locking.
+User asked to fix it and load-test up to 50 concurrent requests, logging the findings here.
+
+### The fix went through two real, live-verified iterations -- the first one looked correct and wasn't
+
+**Iteration 1**: added `fcntl.flock()` around the read-modify-write in a new `_update_sessions()` method,
+using Python's buffered `open(f, 'a+', encoding='utf-8')` + `seek(0)` + `truncate()` + `write()`. Looked
+correct, and a first multiprocessing stress test (50 OS processes via `Pool.map`, 200 total writes) even
+passed once. **Did not trust the single pass** -- re-ran it five more times and it failed reproducibly
+(~majority of runs lost most writes, e.g. 200 expected -> 63 actual). Root cause, confirmed by testing
+inside the real Linux container (not just macOS, where flock semantics can genuinely differ) with a
+properly-controlled test (`multiprocessing.Barrier` forcing genuinely simultaneous starts, not relying on
+`Pool`'s own scheduling, which turned out to sometimes serialize workers and hide the race entirely): mode
+`'a+'` implies `O_APPEND`, and the kernel repositions every `write()` to the file's *actual current*
+end-of-file at write time -- this interacts badly with a `truncate()` immediately before it under
+concurrent modification, a known anti-pattern for "rewrite a file in place" logic (`O_APPEND` is meant for
+guaranteed-append-at-end writes, like a log file, not read-modify-replace).
+
+**Iteration 2** (the one that shipped): rewrote `_load_sessions`/`_update_sessions` using raw
+`os.open()`/`os.pread()`/`os.pwrite()`/`os.ftruncate()` -- no `O_APPEND`, explicit byte offsets, no
+reliance on any tracked file position at all. Re-ran the exact same 200-write/50-process stress test
+**inside the real container 8 times in a row**: 8/8 clean passes, zero lost writes. This is exactly the
+kind of bug this project's own "verify live, don't assume" discipline exists to catch -- the first fix
+read as obviously correct and would have shipped without the repeated live testing.
+
+### Real end-to-end load test through the live `:3000` instance, escalating as asked
+
+Built `docs/ichirouganaim-integration/concurrency_test.sh`: fires N genuinely concurrent chat completions
+against the real running instance (`parent_id: null`, no pre-created `chat_id` -- ruled out a *different*,
+unrelated request-shape mismatch first: providing both `id` and an existing `chat_id` together hit a
+separate code path in `main.py`'s `chat_completion` that returned a bare `null` instead of streaming,
+confirmed by isolating exactly which field combination triggered it before working around it rather than
+past it), each with a unique token the model echoes back, so a response landing on the wrong request would
+be caught, not just "some response came back." Samples the container's own memory/PID count for the
+duration of the run.
+
+**Escalation results**:
+
+| N | Result | Peak container memory | Peak PIDs |
+|---|---|---|---|
+| 2 | PASS | ~1.3GiB / 3.83GiB (34%) | 63 |
+| 5 | PASS | -- | -- |
+| 10 | PASS | -- | -- |
+| 12 | PASS | 3.09GiB / 3.83GiB (81%) | 180 |
+| 15 | **Container crashed** | 3.34GiB / 3.83GiB (87%) | 184 |
+| 25 | **Container crashed** | 3.25GiB / 3.83GiB (85%) | 192 |
+
+(Later rows tested first is not the order shown -- ran 2, 5, 10 clean, then 25 crashed, confirmed the
+crash reproduced on a second run of 25, then bisected downward: 15 also crashed, 12 passed. Table above is
+sorted by N for readability.)
+
+**The crashes are a real, live-confirmed finding, but not a code defect**: `docker inspect`'s
+`RestartCount` incremented each time (confirmed live, not inferred) and the container's own startup
+banner reappeared in `docker logs` -- it genuinely crashed and was brought back by Docker's restart
+policy, not a slow response or a client-side timeout. `OOMKilled` didn't show `true` on the container's
+own state, but the memory trace makes the mechanism clear regardless: each concurrent `claude_cli`
+request spawns a real subprocess *tree* (`setpriv` -> `claude` binary -> its own `node` runtime -> the
+sandboxing layer), not a single lightweight process -- confirmed by the PID count jumping to 150-190 for
+only 12-25 concurrent *requests*. On this machine's 3.83GiB Docker Desktop VM (the same constrained
+allocation the frontend build OOM entries above already document), that many concurrent process trees
+exhausts real memory well before 25 concurrent requests, regardless of the sessions.json fix's own
+correctness -- which held up perfectly at every N that didn't crash the container outright, including
+right up to 12, just under the observed ~85% memory line.
+
+**Conclusion — answering the original question**: the code itself is correct under real concurrent load
+(the sessions.json fix, load-tested, not just unit-tested in isolation). This *specific* 3.83GiB-limited
+machine cannot sustain 50 concurrent users -- it starts failing somewhere between 12 and 15. That ceiling
+is this machine's own memory budget, not a property of `claude_cli.py`'s design -- the same conclusion
+this session already reached independently for the frontend build (see the "Frontend build stage runs out
+of memory" entry above), now confirmed to apply to request-serving load too, not just build time. **This
+needs re-testing on the Mac Studio** once the migration happens -- `concurrency_test.sh` is written to be
+re-run there directly (`OPEN_WEBUI_BASE_URL`/`OPEN_WEBUI_CONTAINER` overridable), and a machine with
+substantially more real memory should clear 50 without hitting this same wall, but that's an expectation
+to verify live there, not something to assume from this session's numbers alone.
+
+**A real script bug found and fixed along the way, also live-verified**: `concurrency_test.sh`'s first
+version used a bare `wait` after backgrounding both the N request subshells *and* a memory-sampling loop
+-- `wait` with no arguments waits for *every* background job of the shell, including the sampler's own
+`while true` loop, which never exits on its own. This deadlocked the whole script (confirmed live: it hung
+indefinitely past the point all requests had actually finished, had to be killed manually). Fixed by
+capturing each request subshell's PID and waiting on those specifically, not the sampler.
+
+### Caveat, not yet tested: these numbers are for plain chat only, not real MCP/deed-entry workflows
+
+User asked, correctly, whether the N=12-passes/N=15-crashes numbers above would hold for a real
+deed-entry-style ingestion conversation (list_workflows -> get_workflow -> creating records/events/parties
+-> finalize, the actual production use case) instead of `concurrency_test.sh`'s single-turn "echo this
+token back" prompt. **They almost certainly would not, and probably in the worse direction, not tested
+yet**:
+
+- **The test measured a brief burst, not sustained load.** All N requests together finished in 16-21s for
+  even N=25 -- meaning some had likely already finished before others started, so not all N were ever
+  *fully* concurrent at once. A real deed-entry conversation runs many tool-calling rounds over minutes,
+  not seconds, making it far more likely that N concurrent *deed* conversations are *all* genuinely alive
+  simultaneously -- worse for peak memory, not better, than what got measured.
+- **MCP tool-calling adds a second, completely untested resource ceiling.** `concurrency_test.sh` never
+  calls any MCP tool -- plain chat only. A real deed-entry workflow means every concurrent chat also hits
+  `ichirouganaim_mcp`, which hits `ichirouganaim-django` and its MySQL database -- three more services
+  with their own concurrency limits (worker count, connection pool size, etc.) that haven't been reviewed
+  at all as part of this integration (same gap as the "genuine unknowns" section of SETUP.md's Long-term
+  Operation notes). Even if `open-webui`'s own container memory held up fine, one of *those* services could
+  become the real bottleneck first -- a different failure mode than anything measured this session.
+- **Tool results can be large.** `decisions.md`'s own earlier entry on the 32MB stream-buffer bump exists
+  because a real `get_workflow` response needed it -- bigger payloads flowing through each subprocess add
+  memory overhead beyond what the short "echo a token" test exercised. Probably a smaller effect than the
+  two above, but a real one, not zero.
+
+**Decision: don't run this heavier test on the current dev machine.** It already crashes at 15 *simple*
+concurrent chats; N concurrent full deed workflows would almost certainly crash it faster, while spending
+substantially more real Claude usage per failed attempt (many tool-calling rounds per chat instead of one
+short reply) for data that would mostly just confirm "yes, worse, as expected" rather than answer the
+actual open question (where's the *real* ceiling, and which service hits it first).
+
+**Still needs doing, explicitly flagged as an open follow-up, not closed out**: a real concurrent
+deed-entry-style load test, run against the *whole* stack together (`open-webui` + `ichirouganaim_mcp` +
+`ichirouganaim`-django + its MySQL DB, not `open-webui` in isolation), once that full stack is actually
+running on the target hardware. `concurrency_test.sh` would need a real variant for this -- prompting for
+an actual deed-entry-style task instead of an echoed token, and verification would need to check for
+genuine tool-call success/record creation rather than a simple string match. Not built this session; noted
+here so it isn't lost track of.
