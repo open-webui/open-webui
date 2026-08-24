@@ -52,6 +52,7 @@
 		getCurrentDateTime,
 		getFormattedDate,
 		getFormattedTime,
+		getUsageTokenCount,
 		getUserPosition,
 		getUserTimezone,
 		getWeekday
@@ -482,13 +483,10 @@
 
 		for (let idx = activeMessages.length - 1; idx >= 0; idx -= 1) {
 			const usage = activeMessages[idx]?.usage ?? activeMessages[idx]?.info?.usage;
-			const inputTokens = usage?.input_tokens ?? usage?.prompt_tokens;
-			if (inputTokens) {
+			const usageTokens = getUsageTokenCount(usage);
+			if (usageTokens) {
 				hasUsageCheckpoint = true;
-				estimatedTokens =
-					Number(inputTokens || 0) +
-					Number(usage.output_tokens ?? usage.completion_tokens ?? 0) +
-					estimateMessagesTokens(activeMessages.slice(idx + 1));
+				estimatedTokens = usageTokens + estimateMessagesTokens(activeMessages.slice(idx + 1));
 				break;
 			}
 		}
