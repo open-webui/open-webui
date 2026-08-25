@@ -46,6 +46,7 @@
 		testExternalKnowledgeRetrieval
 	} from '$lib/apis/knowledge';
 	import { processUrl } from '$lib/apis/retrieval';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import { blobToFile, copyToClipboard } from '$lib/utils';
 	import { computeFileHash } from '$lib/utils/hash';
@@ -909,6 +910,10 @@
 		}
 	};
 
+	const openFileHandler = (fileId: string) => {
+		window.open(`${WEBUI_API_BASE_URL}/files/${encodeURIComponent(fileId)}/content`, '_blank');
+	};
+
 	let debounceTimeout = null;
 
 	let dragged = false;
@@ -1555,6 +1560,7 @@
 														}
 													}
 												}}
+												onOpen={(fileId) => openFileHandler(fileId)}
 												onDelete={(fileId) => {
 													selectedFileId = null;
 													selectedFile = null;
