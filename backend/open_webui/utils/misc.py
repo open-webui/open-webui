@@ -40,6 +40,31 @@ def merge_model_params(base: dict, override: dict) -> dict:
     return params
 
 
+def get_response_error_detail(response: object) -> str:
+    status_code = getattr(response, 'status_code', None)
+    fallback = f'Provider returned HTTP {status_code}' if status_code else 'Provider returned an error'
+
+    try:
+        body = response.body
+        if not isinstance(body, str):
+            body = body.decode('utf-8', 'replace')
+        detail = JSONCodec.loads(body)
+    except Exception:
+        return fallback
+
+    while isinstance(detail, dict):
+        next_detail = None
+        for key in ('error', 'message', 'detail'):
+            if key in detail:
+                next_detail = detail[key]
+                break
+        if next_detail is None:
+            return str(detail)
+        detail = next_detail
+
+    return detail if isinstance(detail, str) else str(detail)
+
+
 def _strip_filter_entry(entry):
     # Compose list-form env syntax passes surrounding quotes through verbatim
     return (entry or '').strip().strip('"\'').strip()

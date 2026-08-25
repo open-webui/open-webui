@@ -241,7 +241,7 @@ from open_webui.utils.middleware import (
     process_chat_payload,
     process_chat_response,
 )
-from open_webui.utils.misc import merge_model_params
+from open_webui.utils.misc import get_response_error_detail, merge_model_params
 from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.models import (
     check_model_access,
@@ -1638,14 +1638,7 @@ async def chat_completion(
             # raise so the except-block below emits chat:message:error +
             # chat:tasks:cancel, unblocking the frontend.
             if isinstance(response, JSONResponse) and response.status_code >= 400:
-                try:
-                    error_body = JSONCodec.loads(response.body.decode('utf-8', 'replace'))
-                    detail = error_body.get('error', error_body) if isinstance(error_body, dict) else error_body
-                    if isinstance(detail, dict):
-                        detail = detail.get('message', detail.get('detail', str(detail)))
-                except Exception:
-                    detail = f'Provider returned HTTP {response.status_code}'
-                raise Exception(detail)
+                raise Exception(get_response_error_detail(response))
 
             ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
 
