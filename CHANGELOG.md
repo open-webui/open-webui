@@ -288,6 +288,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎟️ **Connections whose tags were saved as plain text.** A connection with tags stored as plain text no longer breaks its editor panel or silently blanks the tags on every model coming from it. [Commit](https://github.com/open-webui/open-webui/commit/8be4c5fa6a849a9ff4a74f6a2870a115a836e68a)
 - 🔌 **Stream filters on direct API calls.** A filter reading a streamed event as an object now works on requests made straight to the chat completions endpoint, matching every other path, where it used to raise and end the reply partway. [Commit](https://github.com/open-webui/open-webui/commit/684111715f742f56a3c7efac9eb7a1e68e54a3ec)
 - 🔇 **Filter failures that said nothing.** When a filter's outlet or stream hook raises, the failure is now reported with the filter's name and a traceback at the default log level, where it was swallowed and left plugin authors with nothing to go on. [Commit](https://github.com/open-webui/open-webui/commit/35fbde0a3fb303b7076b03465b1a2b0ba832df53)
+- 🪜 **Custom models whose base model was removed.** With the custom model fallback turned on, chatting with a workspace model whose base model no longer exists now falls back to the default model for everyone, where anyone without administrator rights was still turned away with a model not found error. [Commit](https://github.com/open-webui/open-webui/commit/20fe43d9da621957c48fc92104bc8f1cc0d691b7)
 
 ### Changed
 
