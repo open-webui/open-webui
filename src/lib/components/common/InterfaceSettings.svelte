@@ -109,6 +109,7 @@
 	let iframeSandboxAllowSameOrigin = false;
 	let iframeSandboxAllowForms = true;
 	let iframeSandboxAllowDownloads = true;
+	let terminalPreviewAllowSameOrigin = true;
 
 	let showManageFloatingActionButtonsModal = false;
 	let showManageImageCompressionModal = false;
@@ -310,6 +311,7 @@
 		iframeSandboxAllowSameOrigin = currentSettings?.iframeSandboxAllowSameOrigin ?? false;
 		iframeSandboxAllowForms = currentSettings?.iframeSandboxAllowForms ?? true;
 		iframeSandboxAllowDownloads = currentSettings?.iframeSandboxAllowDownloads ?? true;
+		terminalPreviewAllowSameOrigin = currentSettings?.terminalPreviewAllowSameOrigin ?? true;
 
 		stylizedPdfExport = currentSettings?.stylizedPdfExport ?? true;
 
@@ -1304,6 +1306,29 @@
 				</div>
 				<p class={settingDescriptionClass}>
 					{$i18n.t('Open the file browser after selecting a terminal.')}
+				</p>
+			</div>
+
+			<div>
+				<div class={settingRowClass}>
+					<div id="terminal-preview-allow-same-origin-label" class={settingLabelClass}>
+						{$i18n.t('Terminal Preview Allow Same Origin')}
+					</div>
+
+					<div class={settingControlClass}>
+						<Switch
+							ariaLabelledbyId="terminal-preview-allow-same-origin-label"
+							tooltip={true}
+							bind:state={terminalPreviewAllowSameOrigin}
+							inherited={isDefaultSetting('terminalPreviewAllowSameOrigin')}
+							on:change={() => {
+								saveSettings({ terminalPreviewAllowSameOrigin });
+							}}
+						/>
+					</div>
+				</div>
+				<p class={settingDescriptionClass}>
+					{$i18n.t('Allow terminal previews to access same-origin browser APIs.')}
 				</p>
 			</div>
 

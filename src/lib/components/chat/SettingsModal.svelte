@@ -274,6 +274,8 @@
 				'iframe sandbox allow same origin',
 				'iframesandboxallowforms',
 				'iframesandboxallowsameorigin',
+				'terminal preview allow same origin',
+				'terminalpreviewallowsameorigin',
 				'imagecompression',
 				'image compression',
 				'imagemaxcompressionsize',
