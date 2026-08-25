@@ -1111,12 +1111,26 @@ ENABLE_LOCAL_WEB_FETCH = (
 ENABLE_RAG_LOCAL_WEB_FETCH = ENABLE_LOCAL_WEB_FETCH
 
 
+# Operators extend this through WEB_FETCH_FILTER_LIST.
 DEFAULT_WEB_FETCH_FILTER_LIST = [
     '!169.254.169.254',
     '!fd00:ec2::254',
     '!metadata.google.internal',
     '!metadata.azure.com',
     '!100.100.100.200',
+    '!168.63.129.16',  # Azure platform channel, reachable from every Azure VM
+    '!192.88.99.0/24',  # 6to4 relay anycast, deprecated by RFC 7526
+    '!224.0.0.0/4',  # IPv4 multicast
+    '!::ffff:0:0:0/96',  # IPv4-translated (SIIT, RFC 2765), never routed
+    '!64:ff9b:1::/48',  # NAT64 local-use prefix, RFC 8215, not a public destination
+    '!100:0:0:1::/64',  # dummy prefix, RFC 9780
+    '!2001:1::1',  # PCP anycast, RFC 7723, answered by the local network's own edge device
+    '!2001:1::2',  # TURN anycast, RFC 8155, likewise
+    '!2001:20::/28',  # ORCHIDv2, RFC 7343, never routed
+    '!2001:30::/28',  # DRIP, RFC 9374, never routed
+    '!5f00::/16',  # SRv6 SIDs, RFC 9602, internal to one segment routing domain
+    '!fec0::/10',  # IPv6 site-local, deprecated by RFC 3879
+    '!ff00::/8',  # IPv6 multicast
 ]
 
 web_fetch_filter_list = os.getenv('WEB_FETCH_FILTER_LIST', '')

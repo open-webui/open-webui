@@ -23,7 +23,6 @@ from typing import (
 )
 
 import aiohttp
-import aiohttp.resolver
 import certifi
 import requests
 import urllib3.connection
@@ -64,7 +63,7 @@ from open_webui.retrieval.loaders.external_web import ExternalWebLoader
 from open_webui.retrieval.loaders.microsoft_web_iq import MicrosoftWebIQLoader
 from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.retrieval.web.firecrawl import scrape_firecrawl_url
-from open_webui.utils.misc import is_host_allowed
+from open_webui.utils.misc import is_host_allowed, is_host_blocked
 
 log = logging.getLogger(__name__)
 
@@ -80,12 +79,10 @@ def resolve_hostname(hostname):
     return ipv4_addresses, ipv6_addresses
 
 
-def _is_global_addr(ip: str) -> bool:
-    addr = ipaddress.ip_address(ip)
-    if not addr.is_global:
-        return False
+def _embedded_ipv4(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> list[ipaddress.IPv4Address]:
+    """The IPv4 addresses an IPv6 address carries: mapped, compatible, 6to4, teredo and NAT64."""
     if not isinstance(addr, ipaddress.IPv6Address):
-        return True
+        return []
 
     embedded = []
     if addr.ipv4_mapped:
@@ -96,16 +93,37 @@ def _is_global_addr(ip: str) -> bool:
         embedded.extend(addr.teredo)
 
     b = addr.packed
-    if b[:12] == b'\x00' * 12:
-        embedded.append(ipaddress.IPv4Address(b[12:]))
-    elif b[:12] == b'\x00\x64\xff\x9b' + b'\x00' * 8:
+    # Prefixes that put the address in the last four bytes: v4-compatible and NAT64 /96.
+    if b[:12] in (b'\x00' * 12, b'\x00\x64\xff\x9b' + b'\x00' * 8):
         embedded.append(ipaddress.IPv4Address(b[12:]))
     elif b[:6] == b'\x00\x64\xff\x9b\x00\x01':
-        if b[8] != 0:
-            return False
         embedded.append(ipaddress.IPv4Address(bytes((b[6], b[7], b[9], b[10]))))
 
-    return all(ip.is_global for ip in embedded)
+    return embedded
+
+
+def _assert_host_allowed(host: str | None) -> None:
+    if WEB_FETCH_FILTER_LIST and not is_host_allowed(host, WEB_FETCH_FILTER_LIST):
+        log.warning(f'Blocked by filter list: {host}')
+        raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
+
+def _assert_addresses_allowed(addresses: Sequence[str]) -> None:
+    # An IPv6 address can carry a blocked IPv4 address inside it, so judge both spellings.
+    parsed = [ipaddress.ip_address(address) for address in addresses]
+    candidates = [*parsed, *(ipv4 for address in parsed for ipv4 in _embedded_ipv4(address))]
+
+    # Block entries only: an allow entry names a host, so judging a resolved address against one
+    # would reject every allow-listed host.
+    if is_host_blocked([str(address) for address in candidates], WEB_FETCH_FILTER_LIST):
+        log.warning(f'Blocked by filter list: {", ".join(str(address) for address in candidates)}')
+        raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
+    if not ENABLE_LOCAL_WEB_FETCH:
+        for address in candidates:
+            if not address.is_global:
+                log.warning(f'Blocked non-global address: {address}')
+                raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
 
 def validate_url(url: Union[str, Sequence[str]]):
@@ -128,24 +146,22 @@ def validate_url(url: Union[str, Sequence[str]]):
             log.warning(f'Blocked non-HTTP(S) protocol: {parsed_url.scheme} in URL: {url}')
             raise ValueError(ERROR_MESSAGES.INVALID_URL)
 
-        # Blocklist check using unified filtering logic
-        if WEB_FETCH_FILTER_LIST:
-            # Match on the parsed hostname, not the full URL: a path component would
-            # otherwise let any URL slip past a hostname-based block/allow entry.
-            if not is_host_allowed(parsed_url.hostname, WEB_FETCH_FILTER_LIST):
-                log.warning(f'URL blocked by filter list: {url}')
-                raise ValueError(ERROR_MESSAGES.INVALID_URL)
+        # Match on the parsed hostname, not the full URL: a path component would
+        # otherwise let any URL slip past a hostname-based block/allow entry.
+        _assert_host_allowed(parsed_url.hostname)
 
-        if not ENABLE_LOCAL_WEB_FETCH:
-            # Local web fetch is disabled, filter out URLs that resolve to non-global IP addresses.
-            parsed_url = urllib.parse.urlparse(url)
-            # Get IPv4 and IPv6 addresses
+        try:
             ipv4_addresses, ipv6_addresses = resolve_hostname(parsed_url.hostname)
-            # Check if any of the resolved addresses are private
-            # DNS rebinding is mitigated at the connection layer; see _SSRFSafeResolver / _SSRFSafeAdapter
-            for ip in ipv4_addresses + ipv6_addresses:
-                if not _is_global_addr(ip):
-                    raise ValueError(ERROR_MESSAGES.INVALID_URL)
+        except (socket.gaierror, UnicodeError) as e:
+            # With local fetch on, a proxied deployment can carry names only the proxy resolves.
+            if not ENABLE_LOCAL_WEB_FETCH:
+                log.warning(f'Could not resolve host {parsed_url.hostname}: {e}')
+                raise ValueError(ERROR_MESSAGES.INVALID_URL) from None
+            ipv4_addresses, ipv6_addresses = [], []
+
+        # A hostname match alone lets a DNS record point at a blocked address.
+        # DNS rebinding is mitigated at the connection layer; see _SSRFSafeConnector / _SSRFSafeAdapter
+        _assert_addresses_allowed(ipv4_addresses + ipv6_addresses)
         return True
     elif isinstance(url, Sequence):
         return all(validate_url(u) for u in url)
@@ -166,7 +182,7 @@ def safe_validate_urls(url: Sequence[str]) -> Sequence[str]:
 
 
 def _ssrf_safe_new_conn(self):
-    """Resolve DNS, validate all IPs are global, connect to validated IP.
+    """Resolve DNS, screen every resolved address, connect to one of them.
 
     Replaces urllib3's _new_conn so the DNS lookup that feeds the actual TCP
     connect is the same one we validate — no second resolution, no rebinding
@@ -177,10 +193,7 @@ def _ssrf_safe_new_conn(self):
     infos = socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM)
     if not infos:
         raise OSError(f'getaddrinfo for {host!r} returned empty list')
-    if not ENABLE_LOCAL_WEB_FETCH:
-        for _, _, _, _, sa in infos:
-            if not _is_global_addr(sa[0]):
-                raise ValueError(ERROR_MESSAGES.INVALID_URL)
+    _assert_addresses_allowed([sa[0] for _, _, _, _, sa in infos])
     err = None
     for fam, typ, proto, _, sa in infos:
         sock = None
@@ -223,7 +236,7 @@ class _SafeHTTPSPool(urllib3.connectionpool.HTTPSConnectionPool):
 
 
 class _SSRFSafeAdapter(HTTPAdapter):
-    """requests transport adapter that validates resolved IPs at connect time."""
+    """requests adapter that rejects filter-listed request targets and non-global IPs at connect time."""
 
     def init_poolmanager(self, *args, **kwargs):
         super().init_poolmanager(*args, **kwargs)
@@ -232,21 +245,29 @@ class _SSRFSafeAdapter(HTTPAdapter):
             'https': _SafeHTTPSPool,
         }
 
+    def send(self, request, *args, **kwargs):
+        # Per request, not per connection: the connection layer sees the proxy.
+        _assert_host_allowed(urllib.parse.urlparse(request.url).hostname)
+        return super().send(request, *args, **kwargs)
 
-class _SSRFSafeResolver(aiohttp.resolver.DefaultResolver):
-    """aiohttp resolver that rejects non-global IPs unless local fetch is on."""
 
-    async def resolve(self, host, port=0, family=socket.AF_INET):
-        results = await super().resolve(host, port, family)
-        if not ENABLE_LOCAL_WEB_FETCH:
-            for entry in results:
-                if not _is_global_addr(entry['host']):
-                    raise ValueError(ERROR_MESSAGES.INVALID_URL)
+class _SSRFSafeConnector(aiohttp.TCPConnector):
+    """Rejects filter-listed request targets, and non-global IPs on each new connection."""
+
+    async def connect(self, req, traces, timeout):
+        # Per request, not per connection: _resolve_host sees the proxy and pooled reuse skips it.
+        _assert_host_allowed(req.url.host)
+        return await super().connect(req, traces, timeout)
+
+    async def _resolve_host(self, host, port, traces=None):
+        # aiohttp answers IP-literal hosts itself without consulting a resolver.
+        results = await super()._resolve_host(host, port, traces=traces)
+        _assert_addresses_allowed([entry['host'] for entry in results])
         return results
 
 
 def get_ssrf_safe_session(trust_env: bool = True, store_cookies: bool = True) -> aiohttp.ClientSession:
-    """A one-off aiohttp session that re-validates the connect-time IP via _SSRFSafeResolver,
+    """A one-off aiohttp session that re-validates every connection via _SSRFSafeConnector,
     defeating DNS rebinding. Use for validate_url-gated fetches of user-supplied URLs that must
     not use the shared (rebinding-vulnerable) pool. Use as a context manager so it is closed:
     ``async with get_ssrf_safe_session() as session: ...``.
@@ -255,7 +276,7 @@ def get_ssrf_safe_session(trust_env: bool = True, store_cookies: bool = True) ->
     IP check, because the proxy resolves the hostname instead.
     """
     return aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(resolver=_SSRFSafeResolver()),
+        connector=_SSRFSafeConnector(),
         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
         trust_env=trust_env,
         cookie_jar=None if store_cookies else aiohttp.DummyCookieJar(),
@@ -912,7 +933,7 @@ class SafeWebBaseLoader(WebBaseLoader):
         self.session.mount('https://', _SSRFSafeAdapter())
 
     async def _fetch(self, url: str, retries: int = 3, cooldown: int = 2, backoff: float = 1.5) -> str:
-        connector = aiohttp.TCPConnector(resolver=_SSRFSafeResolver())
+        connector = _SSRFSafeConnector()
         async with aiohttp.ClientSession(trust_env=self.trust_env, connector=connector) as session:
             for i in range(retries):
                 try:

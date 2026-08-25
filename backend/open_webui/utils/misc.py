@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import collections.abc
 import hashlib
+import ipaddress
 import logging
 import re
 import threading
 import time
 import uuid
 from datetime import timedelta
+from functools import lru_cache
 from pathlib import Path
 from typing import Callable, Optional, Sequence, Union
 
@@ -87,17 +89,39 @@ def is_string_allowed(string: Union[str, Sequence[str]], filter_list: list[str |
     return True
 
 
+@lru_cache(maxsize=512)
+def as_network(pattern: str) -> ipaddress.IPv4Network | ipaddress.IPv6Network | None:
+    """A filter entry read as an address range, or None when the entry names a host instead.
+
+    Surrounding whitespace and a trailing dot are stripped here rather than by each caller,
+    since ip_network rejects both and the callers do not normalise the same way.
+    """
+    try:
+        return ipaddress.ip_network((pattern or '').strip().lower().rstrip('.'), strict=False)
+    except ValueError:
+        return None
+
+
 def _host_matches_pattern(host: str, pattern: str) -> bool:
     """Match a hostname against a filter entry on DNS label boundaries.
 
     `pattern` matches `host` when equal or a parent domain of it, so `corp.com`
-    matches `api.corp.com` but not `evilcorp.com`, and an IP literal matches only
-    itself. Avoids the raw-suffix confusion of a plain endswith.
+    matches `api.corp.com` but not `evilcorp.com`. Avoids the raw-suffix confusion
+    of a plain endswith.
+
+    An entry that names an address or a CIDR range is matched by containment instead, so
+    `10.0.0.0/8` covers `10.1.2.3` and an address matches any spelling of itself in its own family.
     """
     host = (host or '').strip().lower().rstrip('.')
     pattern = (pattern or '').strip().lower().rstrip('.')
     if not host or not pattern:
         return False
+    network = as_network(pattern)
+    if network is not None:
+        try:
+            return ipaddress.ip_address(host) in network
+        except ValueError:
+            return False  # a hostname is never inside an address range
     return host == pattern or host.endswith('.' + pattern)
 
 
@@ -108,21 +132,26 @@ def is_host_allowed(host: Union[str, Sequence[str]], filter_list: list[str | Non
     Pass a parsed hostname, never a full URL: matching against a URL lets a path
     component defeat the filter (e.g. ``https://blocked.example/x`` ends with ``/x``,
     not the blocked host). Entries prefixed with ``!`` are blocked; the rest form an allowlist.
+    An entry naming an address or a CIDR range is matched by containment instead.
     """
     if not filter_list:
         return True
 
-    allow_list, block_list = get_allow_block_lists(filter_list)
+    allow_list, _ = get_allow_block_lists(filter_list)
     hosts = [host] if isinstance(host, str) else list(host or [])
 
     if allow_list:
         if not any(_host_matches_pattern(h, allowed) for h in hosts for allowed in allow_list):
             return False
 
-    if any(_host_matches_pattern(h, blocked) for h in hosts for blocked in block_list):
-        return False
+    return not is_host_blocked(hosts, filter_list)
 
-    return True
+
+def is_host_blocked(host: Union[str, Sequence[str]], filter_list: list[str | None] = None) -> bool:
+    """Whether a host or resolved address matches a block entry, ignoring any allow entries."""
+    _, block_list = get_allow_block_lists(filter_list)
+    hosts = [host] if isinstance(host, str) else list(host or [])
+    return any(_host_matches_pattern(h, blocked) for h in hosts for blocked in block_list)
 
 
 def get_message_list(messages_map, message_id):
