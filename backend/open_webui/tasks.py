@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from redis.asyncio import Redis
 
-from open_webui.env import REDIS_KEY_PREFIX
+from open_webui.env import REDIS_KEY_PREFIX, REDIS_RESPONSE_STREAM_TTL
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 
 log = logging.getLogger(__name__)
@@ -186,6 +186,9 @@ async def save_response_stream(
 
     if redis:
         await redis.hset(REDIS_RESPONSE_STREAMS_KEY, task_id, dumps_bytes(data))
+        if REDIS_RESPONSE_STREAM_TTL > 0:
+            with suppress(Exception):
+                await redis.hexpire(REDIS_RESPONSE_STREAMS_KEY, REDIS_RESPONSE_STREAM_TTL, task_id)
     else:
         response_streams[task_id] = data
 
