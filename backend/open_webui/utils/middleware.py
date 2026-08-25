@@ -6266,14 +6266,26 @@ async def streaming_chat_response_handler(response, ctx):
                     yield wrap_item(JSONCodec.dumps(event))
 
             async for data in original_generator:
-                data, _ = await process_filter_functions(
-                    request=request,
-                    filter_context=filter_context,
-                    filter_functions=filter_functions,
-                    filter_type='stream',
-                    form_data=data,
-                    extra_params=extra_params,
-                )
+                if filter_functions:
+                    line = data.decode('utf-8', 'replace') if isinstance(data, bytes) else data
+                    if isinstance(line, str) and line.startswith('data:'):
+                        payload = line.removeprefix('data:').strip()
+                        if payload and payload != '[DONE]':
+                            try:
+                                event = JSONCodec.loads(payload)
+                            except JSONCodec.JSONDecodeError:
+                                event = None
+
+                            if isinstance(event, dict):
+                                event, _ = await process_filter_functions(
+                                    request=request,
+                                    filter_context=filter_context,
+                                    filter_functions=filter_functions,
+                                    filter_type='stream',
+                                    form_data=event,
+                                    extra_params=extra_params,
+                                )
+                                data = wrap_item(JSONCodec.dumps(event)) if event else None
 
                 if data:
                     if has_api_outlet_filters:
