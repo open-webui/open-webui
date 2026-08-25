@@ -171,19 +171,21 @@
 	};
 
 	const bulkToggleHandler = async (enable: boolean) => {
-		const targets = (automations ?? []).filter((a) => a.is_active !== enable);
-		if (targets.length === 0) return;
+		const allAutomations = await getAllAutomations(query, statusFilter).catch((err) => {
+			toast.error(`${err}`);
+			return null;
+		});
+		if (!allAutomations) return;
 
-		// Optimistic UI update via map for proper Svelte reactivity
-		automations = (automations ?? []).map((a) =>
-			targets.some((t) => t.id === a.id) ? { ...a, is_active: enable } : a
-		);
+		const targets = allAutomations.filter((a) => a.is_active !== enable);
+		if (targets.length === 0) return;
 
 		try {
 			await Promise.all(targets.map((a) => toggleAutomationById(localStorage.token, a.id)));
+			if (statusFilter !== 'all') page = 1;
+			await getAutomationList();
 		} catch (err) {
 			toast.error(`${err}`);
-			// Refresh from server to restore consistent state
 			await getAutomationList();
 		}
 	};
@@ -235,13 +237,13 @@
 		return automation.folder_id ? $i18n.t('Folder') : $i18n.t('New chat');
 	};
 
-	const getAllAutomations = async () => {
+	const getAllAutomations = async (query: string | null = null, status = 'all') => {
 		let currentPage = 1;
 		let allAutomations: AutomationResponse[] = [];
 		let totalAutomations = 0;
 
 		do {
-			const res = await getAutomationItems(localStorage.token, null, 'all', currentPage);
+			const res = await getAutomationItems(localStorage.token, query, status, currentPage);
 			const pageItems = res?.items ?? [];
 			totalAutomations = res?.total ?? pageItems.length;
 			allAutomations = [...allAutomations, ...pageItems];
