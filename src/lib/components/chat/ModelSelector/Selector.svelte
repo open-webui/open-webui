@@ -370,40 +370,43 @@
 	).filter((item) => includeHidden || !(item.model?.info?.meta?.hidden ?? false));
 
 	$: sanitizedSearchValue = searchValue.trim();
-	$: downloadTargets = !selectionOnly && sanitizedSearchValue && $user?.role === 'admin'
-		? [
-				...(ollamaVersion
-					? [
-							{
-								id: 'ollama',
-								label: $i18n.t('Ollama'),
-								poolKey: sanitizedSearchValue,
-								download: $MODEL_DOWNLOAD_POOL[sanitizedSearchValue],
-								actionLabel: $i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
-									searchValue: searchValue
-								}),
-								type: 'ollama'
-							}
-						]
-					: []),
-				...providerDownloadConnections.map((connection) => {
-					const poolKey = getProviderPoolKey(connection, sanitizedSearchValue);
-					return {
-						...connection,
-						id: `${connection.provider}:${connection.idx}`,
-						label: getProviderLabel(connection.provider),
-						poolKey,
-						download: $MODEL_DOWNLOAD_POOL[poolKey],
-						actionLabel: $i18n.t(`Download "{{searchValue}}" from {{provider}}`, {
-							searchValue: searchValue,
-							provider: getProviderLabel(connection.provider)
-						}),
-						type: 'provider'
-					};
-				})
-			]
-		: [];
-	$: activeDownloadKeys = new Set(downloadTargets.filter((target) => target.download).map((target) => target.poolKey));
+	$: downloadTargets =
+		!selectionOnly && sanitizedSearchValue && $user?.role === 'admin'
+			? [
+					...(ollamaVersion
+						? [
+								{
+									id: 'ollama',
+									label: $i18n.t('Ollama'),
+									poolKey: sanitizedSearchValue,
+									download: $MODEL_DOWNLOAD_POOL[sanitizedSearchValue],
+									actionLabel: $i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
+										searchValue: searchValue
+									}),
+									type: 'ollama'
+								}
+							]
+						: []),
+					...providerDownloadConnections.map((connection) => {
+						const poolKey = getProviderPoolKey(connection, sanitizedSearchValue);
+						return {
+							...connection,
+							id: `${connection.provider}:${connection.idx}`,
+							label: getProviderLabel(connection.provider),
+							poolKey,
+							download: $MODEL_DOWNLOAD_POOL[poolKey],
+							actionLabel: $i18n.t(`Download "{{searchValue}}" from {{provider}}`, {
+								searchValue: searchValue,
+								provider: getProviderLabel(connection.provider)
+							}),
+							type: 'provider'
+						};
+					})
+				]
+			: [];
+	$: activeDownloadKeys = new Set(
+		downloadTargets.filter((target) => target.download).map((target) => target.poolKey)
+	);
 
 	$: if (
 		selectedTag !== undefined ||
@@ -549,14 +552,14 @@
 
 			MODEL_DOWNLOAD_POOL.set({
 				...$MODEL_DOWNLOAD_POOL,
-					[sanitizedModelTag]: {
-						...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
-						abortController: controller,
-						reader,
-						model: sanitizedModelTag,
-						done: false
-					}
-				});
+				[sanitizedModelTag]: {
+					...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
+					abortController: controller,
+					reader,
+					model: sanitizedModelTag,
+					done: false
+				}
+			});
 
 			while (true) {
 				try {
@@ -679,7 +682,12 @@
 		});
 
 		try {
-			const res = await downloadProviderModel(localStorage.token, connection.idx, model, controller.signal);
+			const res = await downloadProviderModel(
+				localStorage.token,
+				connection.idx,
+				model,
+				controller.signal
+			);
 			const jobId = res?.job_id;
 
 			if (res?.status) {
@@ -784,24 +792,23 @@
 		}
 
 		const openaiConfig = await getOpenAIConfig(localStorage.token).catch(() => null);
-		providerDownloadConnections =
-			openaiConfig?.ENABLE_OPENAI_API
-				? (openaiConfig.OPENAI_API_BASE_URLS ?? [])
-						.map((url: string, idx: number) => {
-							const config =
-								openaiConfig.OPENAI_API_CONFIGS?.[idx] ??
-								openaiConfig.OPENAI_API_CONFIGS?.[String(idx)] ??
-								openaiConfig.OPENAI_API_CONFIGS?.[url] ??
-								{};
+		providerDownloadConnections = openaiConfig?.ENABLE_OPENAI_API
+			? (openaiConfig.OPENAI_API_BASE_URLS ?? [])
+					.map((url: string, idx: number) => {
+						const config =
+							openaiConfig.OPENAI_API_CONFIGS?.[idx] ??
+							openaiConfig.OPENAI_API_CONFIGS?.[String(idx)] ??
+							openaiConfig.OPENAI_API_CONFIGS?.[url] ??
+							{};
 
-							return {
-								idx,
-								url,
-								provider: normalizeProvider(config?.provider ?? '')
-							};
-						})
-						.filter((connection) => MANAGEMENT_PROVIDERS.has(connection.provider))
-				: [];
+						return {
+							idx,
+							url,
+							provider: normalizeProvider(config?.provider ?? '')
+						};
+					})
+					.filter((connection) => MANAGEMENT_PROVIDERS.has(connection.provider))
+			: [];
 	};
 
 	onMount(() => {
@@ -1032,24 +1039,24 @@
 								class="w-full bg-transparent text-[0.8125rem] font-normal outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
 								placeholder={searchPlaceholder}
 								autocomplete="off"
-									aria-label={$i18n.t('Search In Models')}
-									on:keydown={(e) => {
-										if (e.code === 'Enter') {
-											if (selectedModelIdx >= filteredItems.length) {
-												const target = downloadTargets[selectedModelIdx - filteredItems.length];
+								aria-label={$i18n.t('Search In Models')}
+								on:keydown={(e) => {
+									if (e.code === 'Enter') {
+										if (selectedModelIdx >= filteredItems.length) {
+											const target = downloadTargets[selectedModelIdx - filteredItems.length];
 											if (target && !target.download) {
 												downloadModelHandler(target);
 											}
-											} else if (filteredItems[selectedModelIdx]) {
-												selectItem(filteredItems[selectedModelIdx], selectedModelIdx);
-											}
+										} else if (filteredItems[selectedModelIdx]) {
+											selectItem(filteredItems[selectedModelIdx], selectedModelIdx);
+										}
 										return; // dont need to scroll on selection
 									} else if (e.code === 'ArrowDown') {
-											e.stopPropagation();
-											selectedModelIdx = Math.min(
-												selectedModelIdx + 1,
-												Math.max(filteredItems.length - 1 + downloadTargets.length, 0)
-											);
+										e.stopPropagation();
+										selectedModelIdx = Math.min(
+											selectedModelIdx + 1,
+											Math.max(filteredItems.length - 1 + downloadTargets.length, 0)
+										);
 									} else if (e.code === 'ArrowUp') {
 										e.stopPropagation();
 										selectedModelIdx = Math.max(selectedModelIdx - 1, 0);
@@ -1129,12 +1136,14 @@
 										{$i18n.t('Manage Connections')}
 									</button>
 								</div>
-								{:else}
-									<div class="">
-										<div class="flex min-h-8 items-center rounded-xl px-2 text-[0.8125rem] text-gray-700 dark:text-gray-100">
-											{$i18n.t('No results found')}
-										</div>
+							{:else}
+								<div class="">
+									<div
+										class="flex min-h-8 items-center rounded-xl px-2 text-[0.8125rem] text-gray-700 dark:text-gray-100"
+									>
+										{$i18n.t('No results found')}
 									</div>
+								</div>
 							{/if}
 						{:else}
 							<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1172,114 +1181,39 @@
 							</div>
 						{/if}
 
-							{#each downloadTargets as target, targetIndex (target.id)}
-								{#if target.download}
-									<Tooltip
-										content={target.download?.digest && target.download.digest !== 'downloading'
-											? target.download.digest
-											: searchValue}
-										placement="top-start"
-									>
-										<div
-											role="option"
-											aria-selected={selectedModelIdx === filteredItems.length + targetIndex}
-											data-arrow-selected={selectedModelIdx === filteredItems.length + targetIndex}
-											class="flex h-8 w-full select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100 {selectedModelIdx ===
-											filteredItems.length + targetIndex
-												? 'bg-gray-50/70 dark:bg-gray-800/60'
-												: ''}"
-										>
-											<Spinner className="size-3 shrink-0 text-gray-400 dark:text-gray-500" />
-											<div class="min-w-0 flex-1 truncate">
-												{$i18n.t('Downloading "{{searchValue}}"', { searchValue: searchValue })}
-											</div>
-											{#if 'pullProgress' in target.download}
-												<div class="shrink-0 text-[0.6875rem] tabular-nums text-gray-500 dark:text-gray-400">
-													{target.download.pullProgress}%
-												</div>
-											{/if}
-											<button
-												class="focus-ring flex size-4 shrink-0 items-center justify-center rounded text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-												aria-label={$i18n.t('Cancel download of {{model}}', { model: searchValue })}
-												on:click|stopPropagation={() => {
-													cancelModelPullHandler(target.poolKey);
-												}}
-											>
-												<svg
-													class="size-2.5"
-													aria-hidden="true"
-													xmlns="http://www.w3.org/2000/svg"
-													width="24"
-													height="24"
-													fill="currentColor"
-													viewBox="0 0 24 24"
-												>
-													<path
-														stroke="currentColor"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="2.5"
-														d="M6 18 17.94 6M18 18 6.06 6"
-													/>
-												</svg>
-											</button>
-										</div>
-									</Tooltip>
-								{:else}
-									<Tooltip content={target.actionLabel} placement="top-start">
-										<button
-											type="button"
-											role="option"
-											aria-selected={selectedModelIdx === filteredItems.length + targetIndex}
-											data-arrow-selected={selectedModelIdx === filteredItems.length + targetIndex}
-											class="focus-ring flex h-8 w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40 {selectedModelIdx ===
-											filteredItems.length + targetIndex
-												? 'bg-gray-50/70 dark:bg-gray-800/60'
-												: ''}"
-											on:click={() => {
-												downloadModelHandler(target);
-											}}
-										>
-											<Download className="size-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
-											<div class="min-w-0 flex-1 truncate">
-												{$i18n.t('Download "{{searchValue}}"', { searchValue: searchValue })}
-											</div>
-											<div class="shrink-0 truncate text-[0.6875rem] text-gray-500 dark:text-gray-400">
-												{target.label}
-											</div>
-										</button>
-									</Tooltip>
-								{/if}
-							{/each}
-
-							{#each selectionOnly ? [] : Object.keys($MODEL_DOWNLOAD_POOL).filter((model) => !activeDownloadKeys.has(model)) as model}
-								{@const download = $MODEL_DOWNLOAD_POOL[model]}
-								{@const downloadName = download?.model ?? model}
+						{#each downloadTargets as target, targetIndex (target.id)}
+							{#if target.download}
 								<Tooltip
-									content={download?.digest && download.digest !== 'downloading'
-										? download.digest
-										: downloadName}
+									content={target.download?.digest && target.download.digest !== 'downloading'
+										? target.download.digest
+										: searchValue}
 									placement="top-start"
 								>
 									<div
-										class="flex h-8 w-full select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100"
+										role="option"
+										aria-selected={selectedModelIdx === filteredItems.length + targetIndex}
+										data-arrow-selected={selectedModelIdx === filteredItems.length + targetIndex}
+										class="flex h-8 w-full select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100 {selectedModelIdx ===
+										filteredItems.length + targetIndex
+											? 'bg-gray-50/70 dark:bg-gray-800/60'
+											: ''}"
 									>
 										<Spinner className="size-3 shrink-0 text-gray-400 dark:text-gray-500" />
 										<div class="min-w-0 flex-1 truncate">
-											Downloading "{downloadName}"{download?.providerLabel
-												? ` from ${download.providerLabel}`
-												: ''}
+											{$i18n.t('Downloading "{{searchValue}}"', { searchValue: searchValue })}
 										</div>
-										{#if 'pullProgress' in download}
-											<div class="shrink-0 text-[0.6875rem] tabular-nums text-gray-500 dark:text-gray-400">
-												{download.pullProgress}%
+										{#if 'pullProgress' in target.download}
+											<div
+												class="shrink-0 text-[0.6875rem] tabular-nums text-gray-500 dark:text-gray-400"
+											>
+												{target.download.pullProgress}%
 											</div>
 										{/if}
 										<button
 											class="focus-ring flex size-4 shrink-0 items-center justify-center rounded text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-											aria-label={$i18n.t('Cancel download of {{model}}', { model: downloadName })}
+											aria-label={$i18n.t('Cancel download of {{model}}', { model: searchValue })}
 											on:click|stopPropagation={() => {
-												cancelModelPullHandler(model);
+												cancelModelPullHandler(target.poolKey);
 											}}
 										>
 											<svg
@@ -1302,7 +1236,88 @@
 										</button>
 									</div>
 								</Tooltip>
-							{/each}
+							{:else}
+								<Tooltip content={target.actionLabel} placement="top-start">
+									<button
+										type="button"
+										role="option"
+										aria-selected={selectedModelIdx === filteredItems.length + targetIndex}
+										data-arrow-selected={selectedModelIdx === filteredItems.length + targetIndex}
+										class="focus-ring flex h-8 w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 hover:bg-gray-50/40 dark:text-gray-100 dark:hover:bg-gray-800/40 {selectedModelIdx ===
+										filteredItems.length + targetIndex
+											? 'bg-gray-50/70 dark:bg-gray-800/60'
+											: ''}"
+										on:click={() => {
+											downloadModelHandler(target);
+										}}
+									>
+										<Download className="size-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
+										<div class="min-w-0 flex-1 truncate">
+											{$i18n.t('Download "{{searchValue}}"', { searchValue: searchValue })}
+										</div>
+										<div
+											class="shrink-0 truncate text-[0.6875rem] text-gray-500 dark:text-gray-400"
+										>
+											{target.label}
+										</div>
+									</button>
+								</Tooltip>
+							{/if}
+						{/each}
+
+						{#each selectionOnly ? [] : Object.keys($MODEL_DOWNLOAD_POOL).filter((model) => !activeDownloadKeys.has(model)) as model}
+							{@const download = $MODEL_DOWNLOAD_POOL[model]}
+							{@const downloadName = download?.model ?? model}
+							<Tooltip
+								content={download?.digest && download.digest !== 'downloading'
+									? download.digest
+									: downloadName}
+								placement="top-start"
+							>
+								<div
+									class="flex h-8 w-full select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100"
+								>
+									<Spinner className="size-3 shrink-0 text-gray-400 dark:text-gray-500" />
+									<div class="min-w-0 flex-1 truncate">
+										Downloading "{downloadName}"{download?.providerLabel
+											? ` from ${download.providerLabel}`
+											: ''}
+									</div>
+									{#if 'pullProgress' in download}
+										<div
+											class="shrink-0 text-[0.6875rem] tabular-nums text-gray-500 dark:text-gray-400"
+										>
+											{download.pullProgress}%
+										</div>
+									{/if}
+									<button
+										class="focus-ring flex size-4 shrink-0 items-center justify-center rounded text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+										aria-label={$i18n.t('Cancel download of {{model}}', { model: downloadName })}
+										on:click|stopPropagation={() => {
+											cancelModelPullHandler(model);
+										}}
+									>
+										<svg
+											class="size-2.5"
+											aria-hidden="true"
+											xmlns="http://www.w3.org/2000/svg"
+											width="24"
+											height="24"
+											fill="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke="currentColor"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2.5"
+												d="M6 18 17.94 6M18 18 6.06 6"
+											/>
+										</svg>
+									</button>
+								</div>
+							</Tooltip>
+						{/each}
 					</div>
 
 					{#if showSetDefault}

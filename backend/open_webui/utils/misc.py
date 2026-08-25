@@ -318,9 +318,7 @@ def get_reasoning_details(payload: dict):
         return None
 
     provider_fields = payload.get('provider_specific_fields') or {}
-    provider_details = (
-        provider_fields.get('reasoning_details') if isinstance(provider_fields, dict) else None
-    )
+    provider_details = provider_fields.get('reasoning_details') if isinstance(provider_fields, dict) else None
     return payload.get('reasoning_details') or provider_details
 
 

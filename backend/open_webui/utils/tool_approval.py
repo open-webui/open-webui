@@ -43,8 +43,7 @@ async def resolve_tool_call_output(
         (
             item
             for item in output
-            if item.get('type') == 'function_call'
-            and (item.get('call_id') or item.get('id')) == form_data.call_id
+            if item.get('type') == 'function_call' and (item.get('call_id') or item.get('id')) == form_data.call_id
         ),
         None,
     )

@@ -556,7 +556,14 @@
 		}, 200);
 	};
 
-	$: queueFileSearch(searchText, selectedTerminal, currentPath, showHidden, selectedFile, previewPort);
+	$: queueFileSearch(
+		searchText,
+		selectedTerminal,
+		currentPath,
+		showHidden,
+		selectedFile,
+		previewPort
+	);
 
 	const loadMoreMatches = async () => {
 		const offset = nextMatchOffset;

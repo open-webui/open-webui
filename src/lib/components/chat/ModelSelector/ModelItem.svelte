@@ -131,7 +131,8 @@
 						</div>
 					{/if}
 				{:else if item.model.provider === 'lmstudio' || item.model.provider === 'llama.cpp'}
-					{@const parameterSize = item.model.params_string ?? item.model.details?.parameter_size ?? ''}
+					{@const parameterSize =
+						item.model.params_string ?? item.model.details?.parameter_size ?? ''}
 					{@const quantization =
 						item.model.quantization?.name ?? item.model.details?.quantization_level ?? ''}
 					{@const size = item.model.size_bytes ?? item.model.size}
@@ -141,7 +142,9 @@
 								content={`${quantization ? `${quantization} ` : ''}${formatSize(size)}`}
 								className="self-end"
 							>
-								<span class="line-clamp-1 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400">
+								<span
+									class="line-clamp-1 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400"
+								>
 									{parameterSize || quantization || formatSize(size)}
 								</span>
 							</Tooltip>

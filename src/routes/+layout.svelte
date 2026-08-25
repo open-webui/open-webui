@@ -468,7 +468,13 @@
 
 	const terminalFileResult = (result, params, serverUrl, chatId) => {
 		const path = result?.path ?? params?.path;
-		const name = result?.name ?? String(path ?? '').split('/').filter(Boolean).at(-1) ?? 'file';
+		const name =
+			result?.name ??
+			String(path ?? '')
+				.split('/')
+				.filter(Boolean)
+				.at(-1) ??
+			'file';
 		const contentType = result?.content_type ?? result?.mime_type ?? 'application/octet-stream';
 
 		return {
@@ -516,7 +522,8 @@
 
 			console.log('executeToolServer', res);
 			const result = Array.isArray(res) ? res[0] : res;
-			const inlineDisplayFile = data?.name === 'display_file' && params?.path && params?.inline === true;
+			const inlineDisplayFile =
+				data?.name === 'display_file' && params?.path && params?.inline === true;
 			const output =
 				inlineDisplayFile && result?.exists !== false
 					? Array.isArray(res)
@@ -526,7 +533,11 @@
 
 			if (data?.name === 'display_file' && params?.path && !inlineDisplayFile) {
 				if (result?.exists !== false) {
-					displayFileHandler(params.path, { showControls, showFileNavPath }, { page: params?.page });
+					displayFileHandler(
+						params.path,
+						{ showControls, showFileNavPath },
+						{ page: params?.page }
+					);
 				}
 			}
 

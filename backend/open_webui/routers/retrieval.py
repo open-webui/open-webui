@@ -2205,9 +2205,10 @@ async def _fetch_url(url: str, max_size_mb: int | str | None) -> dict:
 
             if not is_attachment and base_content_type in {'', 'application/octet-stream', 'binary/octet-stream'}:
                 sample = first_chunk[:4096].lstrip().lower()
-                if sample.startswith(
-                    (b'<!doctype html', b'<html', b'<head', b'<body', b'<?xml')
-                ) or b'<html' in sample[:1024]:
+                if (
+                    sample.startswith((b'<!doctype html', b'<html', b'<head', b'<body', b'<?xml'))
+                    or b'<html' in sample[:1024]
+                ):
                     return {'kind': 'web'}
 
             if max_bytes and content_length:

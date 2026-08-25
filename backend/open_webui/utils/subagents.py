@@ -339,10 +339,7 @@ async def delegate(
             for file in metadata.get('files') or []
             if str(file.get('id') or '') in requested_file_ids
             or str(file.get('url') or '') in requested_file_ids
-            or (
-                isinstance(file.get('file'), dict)
-                and str(file.get('file', {}).get('id') or '') in requested_file_ids
-            )
+            or (isinstance(file.get('file'), dict) and str(file.get('file', {}).get('id') or '') in requested_file_ids)
         ]
         found_file_ids = {
             str(value)

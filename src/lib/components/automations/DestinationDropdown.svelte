@@ -76,7 +76,9 @@
 		: folderOptions;
 	$: normalizedChannelSearch = channelSearch.trim().toLowerCase();
 	$: filteredChannelOptions = normalizedChannelSearch
-		? channelOptions.filter((channel) => channelName(channel).toLowerCase().includes(normalizedChannelSearch))
+		? channelOptions.filter((channel) =>
+				channelName(channel).toLowerCase().includes(normalizedChannelSearch)
+			)
 		: channelOptions;
 
 	const selectChat = () => {
@@ -139,7 +141,10 @@
 	<div slot="content">
 		<DropdownMenu className="w-72 max-h-72 overflow-hidden shadow-lg">
 			{#if tab === ''}
-				<div class="max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin" in:fly={{ x: -20, duration: 150 }}>
+				<div
+					class="max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
+					in:fly={{ x: -20, duration: 150 }}
+				>
 					<button
 						type="button"
 						class="flex h-[1.6875rem] w-full cursor-pointer items-center justify-between gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100 {target_type ===
@@ -239,7 +244,9 @@
 									<Folder className="size-3.5 shrink-0" />
 									<span class="min-w-0 truncate">{folderName(folder)}</span>
 									{#if path}
-										<span class="min-w-0 truncate text-[0.6875rem] text-gray-400 dark:text-gray-500">
+										<span
+											class="min-w-0 truncate text-[0.6875rem] text-gray-400 dark:text-gray-500"
+										>
 											{path}
 										</span>
 									{/if}

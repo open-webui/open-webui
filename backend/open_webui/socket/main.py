@@ -103,11 +103,7 @@ else:
 
 # Timeout duration in seconds
 TIMEOUT_DURATION = 3
-SESSION_POOL_TIMEOUT = (
-    max(WEBSOCKET_HEARTBEAT_INTERVAL * 4, 120)
-    if WEBSOCKET_HEARTBEAT_INTERVAL is not None
-    else 120
-)
+SESSION_POOL_TIMEOUT = max(WEBSOCKET_HEARTBEAT_INTERVAL * 4, 120) if WEBSOCKET_HEARTBEAT_INTERVAL is not None else 120
 
 # Dictionary to maintain the user pool
 

@@ -2320,11 +2320,7 @@ class OAuthManager:
                 raise jwt.InvalidTokenError(str(e))
 
             signing_key = next(
-                (
-                    key
-                    for key in jwk_set.keys
-                    if key.key_id == token_kid and key.public_key_use in ['sig', None]
-                ),
+                (key for key in jwk_set.keys if key.key_id == token_kid and key.public_key_use in ['sig', None]),
                 None,
             )
             if not signing_key:

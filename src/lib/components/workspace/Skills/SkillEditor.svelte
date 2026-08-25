@@ -178,7 +178,8 @@
 		<div class="min-h-0 flex-1 overflow-hidden rounded-lg bg-gray-50/60 dark:bg-white/[0.03]">
 			{#if disabled}
 				<div class="h-full overflow-y-auto px-3 py-2">
-					<pre class="whitespace-pre-wrap font-mono text-[0.6875rem] leading-relaxed">{content}</pre>
+					<pre
+						class="whitespace-pre-wrap font-mono text-[0.6875rem] leading-relaxed">{content}</pre>
 				</div>
 			{:else}
 				<textarea

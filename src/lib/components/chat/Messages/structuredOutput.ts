@@ -187,7 +187,9 @@ function getInlineFileFromToolOutput(callItem?: OutputItem, resultItem?: OutputI
 		return null;
 	}
 
-	return result.page === undefined && args.page !== undefined ? { ...result, page: args.page } : result;
+	return result.page === undefined && args.page !== undefined
+		? { ...result, page: args.page }
+		: result;
 }
 
 function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string, OutputItem>) {
@@ -213,14 +215,13 @@ function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string,
 	}
 
 	return {
-		summary:
-			isPending
-				? 'Tool Approval Needed'
-				: isDone
-					? 'Tool Executed'
-					: isExecuting
-						? 'Executing...'
-						: 'Preparing...',
+		summary: isPending
+			? 'Tool Approval Needed'
+			: isDone
+				? 'Tool Executed'
+				: isExecuting
+					? 'Executing...'
+					: 'Preparing...',
 		text: getToolResultText(resultItem),
 		attributes: {
 			type: 'tool_calls',
@@ -374,10 +375,7 @@ export function buildOutputDisplayItems(output: OutputItem[] = []): OutputDispla
 
 	output.forEach((item, index) => {
 		if (item?.type === 'function_call_output') {
-			const inlineFile = getInlineFileFromToolOutput(
-				toolCallByCallId[item.call_id ?? ''],
-				item
-			);
+			const inlineFile = getInlineFileFromToolOutput(toolCallByCallId[item.call_id ?? ''], item);
 			if (inlineFile) {
 				flushDetails();
 				displayItems.push({

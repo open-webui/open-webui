@@ -3,7 +3,13 @@
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { toast } from 'svelte-sonner';
-	import { settings, selectedTerminalId, showControls, showFileNavPath, terminalServers } from '$lib/stores';
+	import {
+		settings,
+		selectedTerminalId,
+		showControls,
+		showFileNavPath,
+		terminalServers
+	} from '$lib/stores';
 	import { downloadFileBlob, readFile } from '$lib/apis/terminal';
 	import FilePreview from '$lib/components/chat/FileNav/FilePreview.svelte';
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
@@ -50,7 +56,11 @@
 	$: previewKey = terminal ? `${terminal.url}|${terminal.key}|${path}|${chatId}` : '';
 	$: previewClass = isImage(path)
 		? 'h-[22rem]'
-		: isPdf(path) || isOffice(path) || getExt(path) === 'html' || getExt(path) === 'htm' || getExt(path) === 'svg'
+		: isPdf(path) ||
+			  isOffice(path) ||
+			  getExt(path) === 'html' ||
+			  getExt(path) === 'htm' ||
+			  getExt(path) === 'svg'
 			? 'h-96'
 			: 'h-72';
 	$: if (expanded && terminal && path && previewKey !== loadedKey && !loading) {
@@ -192,14 +202,18 @@
 <div
 	class="my-2 w-full overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/8 dark:bg-gray-950/20"
 >
-	<div class="flex h-8 items-center {expanded ? 'border-b border-gray-100 dark:border-white/8' : ''}">
+	<div
+		class="flex h-8 items-center {expanded ? 'border-b border-gray-100 dark:border-white/8' : ''}"
+	>
 		<button
 			type="button"
 			class="flex h-full min-w-0 flex-1 items-center gap-2 px-2.5 text-left"
 			on:click={() => (expanded = !expanded)}
 			aria-expanded={expanded}
 		>
-			<div class="flex size-5 shrink-0 items-center justify-center text-gray-500 dark:text-gray-400">
+			<div
+				class="flex size-5 shrink-0 items-center justify-center text-gray-500 dark:text-gray-400"
+			>
 				<Icon name={fileIconName(name || path || '', 'file')} size={14} />
 			</div>
 			<div class="min-w-0 flex-1 truncate text-xs font-medium text-gray-800 dark:text-gray-100">
@@ -235,7 +249,9 @@
 		{:else if error}
 			<div class="px-4 py-3 text-xs text-red-500 dark:text-red-400">{error}</div>
 		{:else}
-			<div class="{previewClass} max-h-[75vh] min-h-24 resize-y overflow-hidden bg-gray-50 dark:bg-gray-950">
+			<div
+				class="{previewClass} max-h-[75vh] min-h-24 resize-y overflow-hidden bg-gray-50 dark:bg-gray-950"
+			>
 				<FilePreview
 					selectedFile={path}
 					fileLoading={loading}
@@ -258,7 +274,9 @@
 					readOnly={true}
 				/>
 				{#if !loading && fileImageUrl === null && fileVideoUrl === null && fileAudioUrl === null && filePdfData === null && fileSqliteData === null && fileDocxData === null && fileContent === null && fileOfficeHtml === null && fileOfficeSlides === null}
-					<div class="flex h-full items-center justify-center px-3 text-xs text-gray-500 dark:text-gray-400">
+					<div
+						class="flex h-full items-center justify-center px-3 text-xs text-gray-500 dark:text-gray-400"
+					>
 						{t('No preview available')}
 					</div>
 				{/if}

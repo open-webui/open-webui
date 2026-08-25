@@ -55,11 +55,13 @@
 	const iconButtonClass =
 		'inline-flex h-7 items-center justify-center rounded-lg border border-gray-100/50 bg-gray-50/40 px-2.5 text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.06]';
 
-	const getModelId = (model: ProviderModel) => model.key ?? model.id ?? model.name ?? model.model ?? '';
+	const getModelId = (model: ProviderModel) =>
+		model.key ?? model.id ?? model.name ?? model.model ?? '';
 
 	const getDisplayName = (model: ProviderModel) => model.display_name ?? getModelId(model);
 
-	const getUnloadId = (model: ProviderModel) => model.loaded_instances?.[0]?.id ?? getModelId(model);
+	const getUnloadId = (model: ProviderModel) =>
+		model.loaded_instances?.[0]?.id ?? getModelId(model);
 
 	const getStatus = (model: ProviderModel) => {
 		if (model.loaded_instances?.length) {
@@ -140,11 +142,7 @@
 		const model = modelRef.trim();
 		if (!model) return;
 
-		await runModelAction(
-			model,
-			downloadProviderModel,
-			$i18n.t('Model download started')
-		);
+		await runModelAction(model, downloadProviderModel, $i18n.t('Model download started'));
 		modelRef = '';
 	};
 
@@ -210,7 +208,11 @@
 			autocomplete="off"
 		/>
 		<Tooltip content={$i18n.t('Download Model')}>
-			<button class={iconButtonClass} type="submit" disabled={actionModel !== '' || modelRef.trim() === ''}>
+			<button
+				class={iconButtonClass}
+				type="submit"
+				disabled={actionModel !== '' || modelRef.trim() === ''}
+			>
 				<Download className="size-4" />
 			</button>
 		</Tooltip>
@@ -225,7 +227,9 @@
 			{$i18n.t('No models found')}
 		</div>
 	{:else}
-		<div class="max-h-96 overflow-y-auto rounded-lg border border-gray-100/50 dark:border-white/[0.04]">
+		<div
+			class="max-h-96 overflow-y-auto rounded-lg border border-gray-100/50 dark:border-white/[0.04]"
+		>
 			{#each providerModels as model}
 				{@const modelId = getModelId(model)}
 				{@const displayName = getDisplayName(model)}

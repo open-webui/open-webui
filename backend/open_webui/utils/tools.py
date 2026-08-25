@@ -954,10 +954,10 @@ def add_terminal_display_file_inline_param(spec: dict) -> dict:
         return spec
 
     spec['description'] = (
-        f"{spec.get('description', '')} "
-        "Set inline=true when the file should be shown inline in the chat message instead of opening the file viewer. "
-        "Set page for PDF, DOCX, and PPTX files when you want the preview to open at a specific 1-based page or slide. "
-        "After display_file succeeds, do not display the same file again or emit Markdown for it."
+        f'{spec.get("description", "")} '
+        'Set inline=true when the file should be shown inline in the chat message instead of opening the file viewer. '
+        'Set page for PDF, DOCX, and PPTX files when you want the preview to open at a specific 1-based page or slide. '
+        'After display_file succeeds, do not display the same file again or emit Markdown for it.'
     ).strip()
     parameters = spec.setdefault('parameters', {'type': 'object', 'properties': {}, 'required': []})
     parameters.setdefault('type', 'object')
@@ -1411,11 +1411,7 @@ async def get_terminal_tools(
 
     context_id = terminal_context_id(connection, metadata, terminal_context)
     config = terminal_context_config(connection, terminal_context)
-    if (
-        isinstance(config, dict)
-        and config.get('context_id') in {'chat_id', 'automation_id'}
-        and not context_id
-    ):
+    if isinstance(config, dict) and config.get('context_id') in {'chat_id', 'automation_id'} and not context_id:
         raise RuntimeError(f"Terminal server '{terminal_id}' requires a saved {terminal_context} context")
     if context_id:
         headers[TERMINAL_CONTEXT_HEADER] = context_id
@@ -1586,8 +1582,7 @@ async def get_tool_servers_data(servers: list[dict[str, Any]]) -> list[dict[str,
             'openapi': response,
             'info': response.get('info', {}),
             'specs': [
-                add_terminal_display_file_inline_param(spec)
-                for spec in convert_openapi_to_tool_payload(response)
+                add_terminal_display_file_inline_param(spec) for spec in convert_openapi_to_tool_payload(response)
             ],
         }
 

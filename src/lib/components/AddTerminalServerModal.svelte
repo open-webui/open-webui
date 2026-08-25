@@ -375,7 +375,8 @@
 		else if (automationContextMode === 'automation_id') {
 			contexts.automation = { context_id: 'automation_id' };
 		}
-		const useContexts = !direct && serverType === 'orchestrator' && Object.keys(contexts).length > 0;
+		const useContexts =
+			!direct && serverType === 'orchestrator' && Object.keys(contexts).length > 0;
 		const connectionConfig: Record<string, any> =
 			connection?.config && typeof connection.config === 'object' ? { ...connection.config } : {};
 		if (!direct) connectionConfig.access_grants = accessGrants;
@@ -583,259 +584,261 @@
 							</button>
 
 							{#if showOrchestratorAdvanced}
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col w-full">
-									<div class="flex justify-between mb-1">
-										<div class={`text-xs text-gray-500`}>
-											{$i18n.t('Terminal Contexts')}
+								<div class="flex gap-2 mt-2">
+									<div class="flex flex-col w-full">
+										<div class="flex justify-between mb-1">
+											<div class={`text-xs text-gray-500`}>
+												{$i18n.t('Terminal Contexts')}
+											</div>
 										</div>
-									</div>
-									<div class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
-										<label for="terminal-chat-context">{$i18n.t('Chat')}</label>
-										<select
-											id="terminal-chat-context"
-											class={`text-xs ${selectClass}`}
-											bind:value={chatContextMode}
+										<div
+											class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2 text-xs text-gray-500 dark:text-gray-400"
 										>
-											<option value="default">{$i18n.t('Shared')}</option>
-											<option value="chat_id">{$i18n.t('Per chat')}</option>
-											<option value="off">{$i18n.t('Off')}</option>
-										</select>
-										<label for="terminal-automation-context">{$i18n.t('Automation')}</label>
-										<select
-											id="terminal-automation-context"
-											class={`text-xs ${selectClass}`}
-											bind:value={automationContextMode}
-										>
-											<option value="default">{$i18n.t('Shared')}</option>
-											<option value="automation_id">{$i18n.t('Per automation')}</option>
-											<option value="off">{$i18n.t('Off')}</option>
-										</select>
-									</div>
-								</div>
-							</div>
-
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col w-full">
-									<div class="flex justify-between mb-0.5">
-										<div class={`text-xs text-gray-500`}>
-											{$i18n.t('Policy ID')}
-										</div>
-									</div>
-									<div class="flex flex-1 items-center">
-										<input
-											id="policy-id"
-											class={`w-full flex-1 text-sm font-mono ${inputClass}`}
-											type="text"
-											bind:value={policyId}
-											placeholder="python-ds"
-											autocomplete="off"
-											disabled={edit && !!connection?.policy_id}
-										/>
-									</div>
-								</div>
-							</div>
-							{#if loadingPolicy}
-								<div class="mt-2 text-xs text-gray-500">{$i18n.t('Loading policy...')}</div>
-							{:else if policyLoadError}
-								<div class="mt-2 text-xs text-red-600 dark:text-red-400">
-									{$i18n.t('Failed to load policy: {{error}}', { error: policyLoadError })}
-								</div>
-							{/if}
-
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col w-full">
-									<div class="flex justify-between mb-0.5">
-										<div class={`text-xs text-gray-500`}>
-											{$i18n.t('Image')}
-											<span class="opacity-50">({$i18n.t('optional')})</span>
-										</div>
-									</div>
-									<div class="flex flex-1 items-center">
-										<input
-											id="policy-image"
-											class={`w-full flex-1 text-sm font-mono ${inputClass}`}
-											type="text"
-											bind:value={policyImage}
-											placeholder="ghcr.io/open-webui/open-terminal:latest"
-											autocomplete="off"
-										/>
-									</div>
-								</div>
-							</div>
-
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col flex-1">
-									<div class="flex justify-between mb-0.5">
-										<div class={`text-xs text-gray-500`}>
-											{$i18n.t('CPU')}
-										</div>
-									</div>
-									<div class="flex flex-1 items-center">
-										<input
-											id="policy-cpu"
-											class={`w-full flex-1 text-sm font-mono ${inputClass}`}
-											type="text"
-											bind:value={policyCpu}
-											placeholder="1"
-											autocomplete="off"
-										/>
-									</div>
-								</div>
-								<div class="flex flex-col flex-1">
-									<div class="flex justify-between mb-0.5">
-										<div class={`text-xs text-gray-500`}>
-											{$i18n.t('Memory')}
-										</div>
-									</div>
-									<div class="flex flex-1 items-center">
-										<input
-											id="policy-memory"
-											class={`w-full flex-1 text-sm font-mono ${inputClass}`}
-											type="text"
-											bind:value={policyMemory}
-											placeholder="1Gi"
-											autocomplete="off"
-										/>
-									</div>
-								</div>
-							</div>
-
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col flex-1">
-									<div class="flex justify-between mb-0.5">
-										<div class={`text-xs text-gray-500`}>
-											{$i18n.t('Storage')}
-										</div>
-									</div>
-									<div class="flex gap-2">
-										<div class="flex-shrink-0 self-start">
-											<select class={`w-full text-sm ${selectClass}`} bind:value={policyStorage}>
-												<option value="ephemeral">{$i18n.t('Ephemeral')}</option>
-												<option value="persistent">{$i18n.t('Persistent')}</option>
+											<label for="terminal-chat-context">{$i18n.t('Chat')}</label>
+											<select
+												id="terminal-chat-context"
+												class={`text-xs ${selectClass}`}
+												bind:value={chatContextMode}
+											>
+												<option value="default">{$i18n.t('Shared')}</option>
+												<option value="chat_id">{$i18n.t('Per chat')}</option>
+												<option value="off">{$i18n.t('Off')}</option>
+											</select>
+											<label for="terminal-automation-context">{$i18n.t('Automation')}</label>
+											<select
+												id="terminal-automation-context"
+												class={`text-xs ${selectClass}`}
+												bind:value={automationContextMode}
+											>
+												<option value="default">{$i18n.t('Shared')}</option>
+												<option value="automation_id">{$i18n.t('Per automation')}</option>
+												<option value="off">{$i18n.t('Off')}</option>
 											</select>
 										</div>
-										{#if policyStorage === 'persistent'}
-											<div class="flex flex-1 items-center">
-												<input
-													id="policy-storage-size"
-													class={`w-full flex-1 text-sm font-mono ${inputClass}`}
-													type="text"
-													bind:value={policyStorageSize}
-													placeholder="5Gi"
-													autocomplete="off"
-												/>
+									</div>
+								</div>
+
+								<div class="flex gap-2 mt-2">
+									<div class="flex flex-col w-full">
+										<div class="flex justify-between mb-0.5">
+											<div class={`text-xs text-gray-500`}>
+												{$i18n.t('Policy ID')}
 											</div>
-										{/if}
+										</div>
+										<div class="flex flex-1 items-center">
+											<input
+												id="policy-id"
+												class={`w-full flex-1 text-sm font-mono ${inputClass}`}
+												type="text"
+												bind:value={policyId}
+												placeholder="python-ds"
+												autocomplete="off"
+												disabled={edit && !!connection?.policy_id}
+											/>
+										</div>
+									</div>
+								</div>
+								{#if loadingPolicy}
+									<div class="mt-2 text-xs text-gray-500">{$i18n.t('Loading policy...')}</div>
+								{:else if policyLoadError}
+									<div class="mt-2 text-xs text-red-600 dark:text-red-400">
+										{$i18n.t('Failed to load policy: {{error}}', { error: policyLoadError })}
+									</div>
+								{/if}
+
+								<div class="flex gap-2 mt-2">
+									<div class="flex flex-col w-full">
+										<div class="flex justify-between mb-0.5">
+											<div class={`text-xs text-gray-500`}>
+												{$i18n.t('Image')}
+												<span class="opacity-50">({$i18n.t('optional')})</span>
+											</div>
+										</div>
+										<div class="flex flex-1 items-center">
+											<input
+												id="policy-image"
+												class={`w-full flex-1 text-sm font-mono ${inputClass}`}
+												type="text"
+												bind:value={policyImage}
+												placeholder="ghcr.io/open-webui/open-terminal:latest"
+												autocomplete="off"
+											/>
+										</div>
 									</div>
 								</div>
 
-								<div class="flex flex-col flex-1">
-									<div class="flex justify-between mb-0.5">
-										<div class={`text-xs text-gray-500`}>
-											{$i18n.t('Idle Timeout')}
-											<span class="opacity-50">({$i18n.t('min')})</span>
+								<div class="flex gap-2 mt-2">
+									<div class="flex flex-col flex-1">
+										<div class="flex justify-between mb-0.5">
+											<div class={`text-xs text-gray-500`}>
+												{$i18n.t('CPU')}
+											</div>
+										</div>
+										<div class="flex flex-1 items-center">
+											<input
+												id="policy-cpu"
+												class={`w-full flex-1 text-sm font-mono ${inputClass}`}
+												type="text"
+												bind:value={policyCpu}
+												placeholder="1"
+												autocomplete="off"
+											/>
 										</div>
 									</div>
-									<div class="flex flex-1 items-center">
-										<input
-											id="idle-timeout"
-											class={`w-full flex-1 text-sm font-mono ${inputClass}`}
-											type="number"
-											min="0"
-											bind:value={policyIdleTimeout}
-											placeholder="30"
-											autocomplete="off"
-										/>
+									<div class="flex flex-col flex-1">
+										<div class="flex justify-between mb-0.5">
+											<div class={`text-xs text-gray-500`}>
+												{$i18n.t('Memory')}
+											</div>
+										</div>
+										<div class="flex flex-1 items-center">
+											<input
+												id="policy-memory"
+												class={`w-full flex-1 text-sm font-mono ${inputClass}`}
+												type="text"
+												bind:value={policyMemory}
+												placeholder="1Gi"
+												autocomplete="off"
+											/>
+										</div>
 									</div>
 								</div>
-							</div>
 
-							<!-- Env Vars -->
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col w-full">
-									<div class="flex justify-between items-center mb-0.5">
-										<div class={`text-xs text-gray-500`}>
-											{$i18n.t('Environment Variables')}
+								<div class="flex gap-2 mt-2">
+									<div class="flex flex-col flex-1">
+										<div class="flex justify-between mb-0.5">
+											<div class={`text-xs text-gray-500`}>
+												{$i18n.t('Storage')}
+											</div>
 										</div>
-										<button
-											type="button"
-											class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
-											on:click={() =>
-												(policyEnvPairs = [...policyEnvPairs, { key: '', value: '' }])}
-										>
-											+ {$i18n.t('Add')}
-										</button>
+										<div class="flex gap-2">
+											<div class="flex-shrink-0 self-start">
+												<select class={`w-full text-sm ${selectClass}`} bind:value={policyStorage}>
+													<option value="ephemeral">{$i18n.t('Ephemeral')}</option>
+													<option value="persistent">{$i18n.t('Persistent')}</option>
+												</select>
+											</div>
+											{#if policyStorage === 'persistent'}
+												<div class="flex flex-1 items-center">
+													<input
+														id="policy-storage-size"
+														class={`w-full flex-1 text-sm font-mono ${inputClass}`}
+														type="text"
+														bind:value={policyStorageSize}
+														placeholder="5Gi"
+														autocomplete="off"
+													/>
+												</div>
+											{/if}
+										</div>
 									</div>
-									{#each policyEnvPairs as pair, idx}
-										<div class="flex gap-1.5 mb-1">
+
+									<div class="flex flex-col flex-1">
+										<div class="flex justify-between mb-0.5">
+											<div class={`text-xs text-gray-500`}>
+												{$i18n.t('Idle Timeout')}
+												<span class="opacity-50">({$i18n.t('min')})</span>
+											</div>
+										</div>
+										<div class="flex flex-1 items-center">
 											<input
-												class={`flex-1 text-sm font-mono ${inputClass}`}
-												type="text"
-												bind:value={pair.key}
-												placeholder="KEY"
+												id="idle-timeout"
+												class={`w-full flex-1 text-sm font-mono ${inputClass}`}
+												type="number"
+												min="0"
+												bind:value={policyIdleTimeout}
+												placeholder="30"
+												autocomplete="off"
 											/>
-											<input
-												class={`flex-[2] text-sm font-mono ${inputClass}`}
-												type="text"
-												bind:value={pair.value}
-												placeholder="value"
-											/>
+										</div>
+									</div>
+								</div>
+
+								<!-- Env Vars -->
+								<div class="flex gap-2 mt-2">
+									<div class="flex flex-col w-full">
+										<div class="flex justify-between items-center mb-0.5">
+											<div class={`text-xs text-gray-500`}>
+												{$i18n.t('Environment Variables')}
+											</div>
 											<button
 												type="button"
-												class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition px-1"
+												class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
 												on:click={() =>
-													(policyEnvPairs = policyEnvPairs.filter((_, i) => i !== idx))}
+													(policyEnvPairs = [...policyEnvPairs, { key: '', value: '' }])}
 											>
-												<XMark className={'size-3'} />
+												+ {$i18n.t('Add')}
 											</button>
 										</div>
-									{/each}
-								</div>
-							</div>
-
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col w-full">
-									<div class="flex justify-between mb-0.5">
-										<div class={`text-xs text-gray-500`}>
-											{$i18n.t('Lifecycle JSON')}
-										</div>
+										{#each policyEnvPairs as pair, idx}
+											<div class="flex gap-1.5 mb-1">
+												<input
+													class={`flex-1 text-sm font-mono ${inputClass}`}
+													type="text"
+													bind:value={pair.key}
+													placeholder="KEY"
+												/>
+												<input
+													class={`flex-[2] text-sm font-mono ${inputClass}`}
+													type="text"
+													bind:value={pair.value}
+													placeholder="value"
+												/>
+												<button
+													type="button"
+													class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition px-1"
+													on:click={() =>
+														(policyEnvPairs = policyEnvPairs.filter((_, i) => i !== idx))}
+												>
+													<XMark className={'size-3'} />
+												</button>
+											</div>
+										{/each}
 									</div>
-									<textarea
-										id="lifecycle-json"
-										class={`w-full min-h-24 resize-y text-xs font-mono ${inputClass}`}
-										bind:value={lifecycleJson}
-										spellcheck="false"
-										placeholder={`{\n  "reset": {\n    "schedule": "@weekly",\n    "timezone": "UTC"\n  }\n}`}
-									></textarea>
 								</div>
-							</div>
 
-							<div class="flex flex-wrap items-center justify-between gap-2 mt-2">
-								<div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-									<label class="flex items-center gap-1.5">
-										<input type="checkbox" bind:checked={refreshOnlyIdle} />
-										<span>{$i18n.t('Idle only')}</span>
-									</label>
-									<label class="flex items-center gap-1.5">
-										<input type="checkbox" bind:checked={refreshReset} />
-										<span>{$i18n.t('Reset persisted files')}</span>
-									</label>
+								<div class="flex gap-2 mt-2">
+									<div class="flex flex-col w-full">
+										<div class="flex justify-between mb-0.5">
+											<div class={`text-xs text-gray-500`}>
+												{$i18n.t('Lifecycle JSON')}
+											</div>
+										</div>
+										<textarea
+											id="lifecycle-json"
+											class={`w-full min-h-24 resize-y text-xs font-mono ${inputClass}`}
+											bind:value={lifecycleJson}
+											spellcheck="false"
+											placeholder={`{\n  "reset": {\n    "schedule": "@weekly",\n    "timezone": "UTC"\n  }\n}`}
+										></textarea>
+									</div>
 								</div>
-								<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-									{$i18n.t(
-										'Policy changes apply to newly provisioned terminals. Refresh matching terminals to apply them to existing terminals.'
-									)}
+
+								<div class="flex flex-wrap items-center justify-between gap-2 mt-2">
+									<div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+										<label class="flex items-center gap-1.5">
+											<input type="checkbox" bind:checked={refreshOnlyIdle} />
+											<span>{$i18n.t('Idle only')}</span>
+										</label>
+										<label class="flex items-center gap-1.5">
+											<input type="checkbox" bind:checked={refreshReset} />
+											<span>{$i18n.t('Reset persisted files')}</span>
+										</label>
+									</div>
+									<div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+										{$i18n.t(
+											'Policy changes apply to newly provisioned terminals. Refresh matching terminals to apply them to existing terminals.'
+										)}
+									</div>
+									<button
+										type="button"
+										class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition"
+										disabled={refreshing}
+										on:click={refreshHandler}
+									>
+										{refreshing ? $i18n.t('Refreshing...') : $i18n.t('Refresh Terminals')}
+									</button>
 								</div>
-								<button
-									type="button"
-									class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition"
-									disabled={refreshing}
-									on:click={refreshHandler}
-								>
-									{refreshing ? $i18n.t('Refreshing...') : $i18n.t('Refresh Terminals')}
-								</button>
-							</div>
 							{/if}
 						{/if}
 
