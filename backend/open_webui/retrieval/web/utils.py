@@ -585,6 +585,7 @@ class SafeMicrosoftWebIQLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         self,
         web_paths: Union[str, List[str]],
         api_key: str,
+        api_base_url: str = MICROSOFT_WEB_IQ_API_BASE_URL,
         language: str = 'en',
         verify_ssl: bool = True,
         trust_env: bool = False,
@@ -594,6 +595,7 @@ class SafeMicrosoftWebIQLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
     ):
         self.web_paths = web_paths if isinstance(web_paths, list) else [web_paths]
         self.api_key = api_key
+        self.api_base_url = api_base_url
         self.language = language
         self.verify_ssl = verify_ssl
         self.trust_env = trust_env
