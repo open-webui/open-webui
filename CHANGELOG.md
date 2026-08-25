@@ -286,6 +286,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📓 **Notes opening blank.** A note whose shared editing session has not been started yet now opens with its stored content even when several people open it at once, where previously anyone but a lone first viewer got an empty document. [Commit](https://github.com/open-webui/open-webui/commit/5078d987f83943671f1d23ebe66bcc8d2af902c3)
 - 🤫 **Replies stopping silently after a tool ran.** When a provider rejects the follow-up request made after a tool finishes, the reason is now shown in the chat instead of the reply simply ending with nothing said. [Commit](https://github.com/open-webui/open-webui/commit/a610d77137fabf60a2e0daa961a8ef8f7320293a)
 - 🎟️ **Connections whose tags were saved as plain text.** A connection with tags stored as plain text no longer breaks its editor panel or silently blanks the tags on every model coming from it. [Commit](https://github.com/open-webui/open-webui/commit/8be4c5fa6a849a9ff4a74f6a2870a115a836e68a)
+- 🔌 **Stream filters on direct API calls.** A filter reading a streamed event as an object now works on requests made straight to the chat completions endpoint, matching every other path, where it used to raise and end the reply partway. [Commit](https://github.com/open-webui/open-webui/commit/684111715f742f56a3c7efac9eb7a1e68e54a3ec)
+- 🔇 **Filter failures that said nothing.** When a filter's outlet or stream hook raises, the failure is now reported with the filter's name and a traceback at the default log level, where it was swallowed and left plugin authors with nothing to go on. [Commit](https://github.com/open-webui/open-webui/commit/35fbde0a3fb303b7076b03465b1a2b0ba832df53)
 
 ### Changed
 
