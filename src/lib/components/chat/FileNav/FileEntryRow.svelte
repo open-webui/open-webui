@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, tick, onDestroy } from 'svelte';
-	import { formatFileSize } from '$lib/utils';
+	import { copyToClipboard, formatFileSize } from '$lib/utils';
 	import type { FileEntry } from '$lib/apis/terminal';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -402,12 +402,12 @@
 					<button
 						type="button"
 						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
-						on:click={(e) => {
+						on:click={async (e) => {
 							e.stopPropagation();
 							menuOpen = false;
-							navigator.clipboard.writeText(entryPath).then(() => {
+							if (await copyToClipboard(entryPath)) {
 								toast.success($i18n.t('Path copied'));
-							});
+							}
 						}}
 					>
 						<Icon name="copy" size={12} strokeWidth={1.4} />
