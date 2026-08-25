@@ -3996,6 +3996,7 @@
 
 	const MAX_DRAFT_LENGTH = 5000;
 	let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
+	const getDraftChatId = () => chatIdProp || null;
 
 	const getChatInputDraft = () => ({
 		prompt,
@@ -4451,9 +4452,9 @@
 										onQueueSendNow={sendQueuedMessageNow}
 										onQueueEdit={editQueuedMessage}
 										onQueueDelete={deleteQueuedMessage}
-										onChange={(data) => {
+										onChange={(data: any) => {
 											if (!$temporaryChatEnabled) {
-												saveDraft(data, $chatId);
+												saveDraft(data, getDraftChatId());
 											}
 										}}
 										onWebSearchToggle={handleWebSearchToggle}
@@ -4461,7 +4462,7 @@
 											showChatVariablesModal = true;
 										}}
 										on:submit={async (e) => {
-											clearDraft($chatId);
+											clearDraft(getDraftChatId());
 											if (e.detail || files.length > 0) {
 												await tick();
 
@@ -4543,12 +4544,17 @@
 										onQueueSendNow={sendQueuedMessageNow}
 										onQueueEdit={editQueuedMessage}
 										onQueueDelete={deleteQueuedMessage}
+										onChange={(data: any) => {
+											if (!$temporaryChatEnabled) {
+												saveDraft(data, getDraftChatId());
+											}
+										}}
 										onWebSearchToggle={handleWebSearchToggle}
 										on:chatVariables={() => {
 											showChatVariablesModal = true;
 										}}
 										on:submit={async (e) => {
-											clearDraft($chatId);
+											clearDraft(getDraftChatId());
 											if (e.detail || files.length > 0) {
 												await tick();
 												submitHandler(withSelectedText(e.detail));
@@ -4593,9 +4599,9 @@
 									on:chatVariables={() => {
 										showChatVariablesModal = true;
 									}}
-									onChange={(data) => {
+									onChange={(data: any) => {
 										if (!$temporaryChatEnabled) {
-											saveDraft(data);
+											saveDraft(data, getDraftChatId());
 										}
 									}}
 									on:submit={async (e) => {
