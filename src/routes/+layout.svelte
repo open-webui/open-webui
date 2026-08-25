@@ -1069,7 +1069,8 @@
 
 		window.addEventListener('message', windowMessageEventHandler);
 
-		const pendingOAuthToolId = sessionStorage.getItem('pendingOAuthToolId');
+		const pendingOAuthToolId =
+			sessionStorage.getItem('pendingOAuthToolId') ?? localStorage.getItem('pendingOAuthToolId');
 		if (window.opener && window.location.pathname === '/' && pendingOAuthToolId) {
 			window.opener.postMessage(
 				{
@@ -1081,6 +1082,8 @@
 			);
 			sessionStorage.removeItem('pendingOAuthToolId');
 			sessionStorage.removeItem('oauthRedirectInProgressToolId');
+			localStorage.removeItem('pendingOAuthToolId');
+			localStorage.removeItem('oauthRedirectInProgressToolId');
 			window.close();
 		}
 

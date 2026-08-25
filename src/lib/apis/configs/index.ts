@@ -572,9 +572,13 @@ export const initiateOAuthRedirect = (tool: {
 }) => {
 	sessionStorage.setItem('pendingOAuthToolId', tool.id);
 	sessionStorage.setItem('oauthRedirectInProgressToolId', tool.id);
+	localStorage.setItem('pendingOAuthToolId', tool.id);
+	localStorage.setItem('oauthRedirectInProgressToolId', tool.id);
 	const authUrl = getOAuthClientAuthorizationUrl(tool.serverId, tool.authType ?? 'mcp');
 	const tab = window.open(authUrl, '_blank');
 	if (!tab) {
+		localStorage.removeItem('pendingOAuthToolId');
+		localStorage.removeItem('oauthRedirectInProgressToolId');
 		window.open(authUrl, '_self', 'noopener');
 	}
 };
