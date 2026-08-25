@@ -109,7 +109,7 @@
 	let iframeSandboxAllowSameOrigin = false;
 	let iframeSandboxAllowForms = true;
 	let iframeSandboxAllowDownloads = true;
-	let terminalPreviewAllowSameOrigin = true;
+	let terminalPreviewAllowSameOrigin = false;
 
 	let showManageFloatingActionButtonsModal = false;
 	let showManageImageCompressionModal = false;
@@ -311,7 +311,7 @@
 		iframeSandboxAllowSameOrigin = currentSettings?.iframeSandboxAllowSameOrigin ?? false;
 		iframeSandboxAllowForms = currentSettings?.iframeSandboxAllowForms ?? true;
 		iframeSandboxAllowDownloads = currentSettings?.iframeSandboxAllowDownloads ?? true;
-		terminalPreviewAllowSameOrigin = currentSettings?.terminalPreviewAllowSameOrigin ?? true;
+		terminalPreviewAllowSameOrigin = currentSettings?.terminalPreviewAllowSameOrigin ?? false;
 
 		stylizedPdfExport = currentSettings?.stylizedPdfExport ?? true;
 
