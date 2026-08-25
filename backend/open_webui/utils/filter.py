@@ -172,22 +172,25 @@ async def process_filter_function(
     skip_files = (
         function_module.file_handler if filter_type == 'inlet' and hasattr(function_module, 'file_handler') else None
     )
-    valves_by_id = await apply_filter_valves(function_module, filter_context, valves_by_id, filter_ids, filter_id)
 
     try:
+        valves_by_id = await apply_filter_valves(function_module, filter_context, valves_by_id, filter_ids, filter_id)
         sig = inspect.signature(handler)
         params = get_filter_params(sig, filter_id, filter_type, form_data, extra_params)
 
         if '__user__' in sig.parameters:
             try:
                 await apply_user_valves(function_module, filter_context, filter_id, params)
-            except Exception as e:
-                log.exception(f'Failed to get user values: {e}')
+            except Exception:
+                log.exception('Failed to get user valves for filter %s', filter_id)
 
         form_data = await run_filter_handler(handler, params)
-    except Exception as e:
-        log.debug('Error in %s handler %s: %s', filter_type, filter_id, e)
-        raise e
+    except Exception:
+        if filter_type == 'inlet':
+            log.debug('Error in inlet filter %s', filter_id, exc_info=True)
+        else:
+            log.exception('Error in %s filter %s', filter_type, filter_id)
+        raise
 
     return form_data, valves_by_id, skip_files
 
