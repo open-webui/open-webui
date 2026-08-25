@@ -1099,17 +1099,43 @@ async def chat_completion(
     metadata = {}
     try:
         model_info = None
+        fallback_model = None
+        missing_base_model = False
         if not model_item.get('direct', False):
             if model_id not in request.app.state.MODELS:
                 raise Exception('Model not found')
 
             model = request.app.state.MODELS[model_id]
             model_info = await Models.get_model_by_id(model_id)
+            missing_base_model = bool(
+                model_info
+                and model_info.base_model_id
+                and model_info.base_model_id not in request.app.state.MODELS
+            )
+
+            if missing_base_model and ENABLE_CUSTOM_MODEL_FALLBACK:
+                fallback_model_id = next(
+                    (
+                        model_id.strip()
+                        for model_id in ((await Config.get('ui.default_models')) or '').split(',')
+                        if model_id.strip()
+                    ),
+                    None,
+                )
+                if fallback_model_id:
+                    fallback_model = request.app.state.MODELS.get(fallback_model_id)
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and (user.role != 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL):
                 try:
-                    await check_model_access(user, model, model_info=model_info)
+                    access_model_info = (
+                        model_info.model_copy(update={'base_model_id': None})
+                        if fallback_model is not None
+                        else model_info
+                    )
+                    await check_model_access(user, model, model_info=access_model_info)
+                    if fallback_model is not None:
+                        await check_model_access(user, fallback_model)
                 except Exception as e:
                     raise e
         else:
@@ -1130,22 +1156,12 @@ async def chat_completion(
             form_data['params'] = merge_model_params(model_info_params, request_params)
 
         # Check base model existence for custom models
-        if model_info and model_info.base_model_id:
-            base_model_id = model_info.base_model_id
-            if base_model_id not in request.app.state.MODELS:
-                if ENABLE_CUSTOM_MODEL_FALLBACK:
-                    default_models = ((await Config.get('ui.default_models')) or '').split(',')
-
-                    fallback_model_id = default_models[0].strip() if default_models[0] else None
-
-                    if fallback_model_id and fallback_model_id in request.app.state.MODELS:
-                        # Update model and form_data so routing uses the fallback model's type
-                        model = request.app.state.MODELS[fallback_model_id]
-                        form_data['model'] = fallback_model_id
-                    else:
-                        raise Exception('Model not found')
-                else:
-                    raise Exception('Model not found')
+        if missing_base_model:
+            if fallback_model is None:
+                raise Exception('Model not found')
+            # Update model and form_data so routing uses the fallback model's type
+            model = fallback_model
+            form_data['model'] = fallback_model['id']
 
         # Chat Params
         stream_delta_chunk_size = form_data.get('params', {}).get('stream_delta_chunk_size')
