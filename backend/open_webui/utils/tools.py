@@ -984,14 +984,15 @@ def get_builtin_function_introspection(func: Callable):
 
 
 @cache
-def build_builtin_tool_spec(func: Callable) -> dict:
+def build_builtin_tool_spec_json(func: Callable) -> str:
     pydantic_model = convert_function_to_pydantic_model(func, get_builtin_function_introspection(func))
     spec = convert_pydantic_model_to_openai_function_spec(pydantic_model)
-    return clean_openai_tool_schema(spec)
+    return JSONCodec.dumps(clean_openai_tool_schema(spec))
 
 
 def get_builtin_tool_spec(func: Callable) -> dict:
-    return copy.deepcopy(build_builtin_tool_spec(func))
+    # callers mutate the spec, so parse a fresh copy out of the cached JSON
+    return JSONCodec.loads(build_builtin_tool_spec_json(func))
 
 
 def get_functions_from_tool(tool: object) -> list[Callable]:
