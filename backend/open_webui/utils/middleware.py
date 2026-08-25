@@ -4583,13 +4583,14 @@ async def streaming_chat_response_handler(response, ctx):
             reasoning_tags_param = metadata.get('params', {}).get('reasoning_tags')
             DETECT_REASONING_TAGS = reasoning_tags_param is not False
 
-            # Mirror the five gates from utils/tools.py get_builtin_tools so the
-            # legacy XML-tag path enforces the same authz as native FC.
+            # Legacy tool-calling only: native FC gets execute_code as a builtin tool.
+            # Same five authz gates as utils/tools.py get_builtin_tools.
             features = metadata.get('features', {}) or {}
             model_capabilities = model.get('info', {}).get('meta', {}).get('capabilities') or {}
             builtin_tools_meta = model.get('info', {}).get('meta', {}).get('builtinTools', {})
             DETECT_CODE_INTERPRETER = (
-                bool(features.get('code_interpreter'))
+                metadata.get('params', {}).get('function_calling') == 'legacy'
+                and bool(features.get('code_interpreter'))
                 and builtin_tools_meta.get('code_interpreter', True)
                 and await Config.get('code_interpreter.enable')
                 and model_capabilities.get('code_interpreter', True)
