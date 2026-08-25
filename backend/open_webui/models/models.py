@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from copy import deepcopy
-from typing import Any, Optional
+from typing import Any
 
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
@@ -13,7 +13,6 @@ from open_webui.utils.misc import json_text_variants
 from open_webui.utils.validate import validate_profile_image_url
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, cast, delete, func, or_, select, update
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -21,6 +20,18 @@ log = logging.getLogger(__name__)
 # Track invalid profile_image_url values we've already warned about so we
 # don't flood the logs on every DB read (the validator fires per-row).
 _warned_profile_urls: set[str] = set()
+
+
+def normalize_model_tags(tags: Any) -> list[dict[str, str]]:
+    if not isinstance(tags, list):
+        return []
+
+    normalized = []
+    for tag in tags:
+        name = tag.get('name') if isinstance(tag, dict) else tag
+        if isinstance(name, str) and name.strip():
+            normalized.append({'name': name.strip()})
+    return normalized
 
 
 def strip_extracted_content_from_model_knowledge(knowledge: Any) -> Any:
@@ -99,15 +110,7 @@ class ModelMeta(BaseModel):
     @classmethod
     def normalize_tags(cls, data):
         if isinstance(data, dict) and 'tags' in data:
-            raw_tags = data['tags']
-            if isinstance(raw_tags, list):
-                normalized = []
-                for tag in raw_tags:
-                    if isinstance(tag, str):
-                        normalized.append({'name': tag})
-                    elif isinstance(tag, dict) and 'name' in tag:
-                        normalized.append(tag)
-                data['tags'] = normalized
+            data['tags'] = normalize_model_tags(data['tags'])
         return data
 
 

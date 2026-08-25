@@ -140,7 +140,7 @@ from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.config import Config
 from open_webui.models.functions import Functions
 from open_webui.models.messages import Messages
-from open_webui.models.models import Models
+from open_webui.models.models import Models, normalize_model_tags
 from open_webui.models.users import Users
 from open_webui.routers import (
     analytics,
@@ -890,19 +890,17 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
     models = await get_filtered_models(models, user)
 
     for model in models:
+        info = model.get('info') if isinstance(model.get('info'), dict) else {}
+        meta = info.get('meta') if isinstance(info.get('meta'), dict) else {}
+
         # Remove profile image URL to reduce payload size
-        if model.get('info', {}).get('meta', {}).get('profile_image_url'):
-            model['info']['meta'].pop('profile_image_url', None)
+        meta.pop('profile_image_url', None)
 
-        try:
-            model_tags = [tag.get('name') for tag in model.get('info', {}).get('meta', {}).get('tags', [])]
-            tags = [tag.get('name') for tag in model.get('tags', [])]
+        if 'tags' in meta:
+            meta['tags'] = normalize_model_tags(meta['tags'])
 
-            tags = list(set(model_tags + tags))
-            model['tags'] = [{'name': tag} for tag in tags]
-        except Exception as e:
-            log.debug('Error processing model tags: %s', e)
-            model['tags'] = []
+        tags = normalize_model_tags(meta.get('tags')) + normalize_model_tags(model.get('tags'))
+        model['tags'] = list({tag['name']: tag for tag in tags}.values())
 
     model_order_list = await Config.get('ui.model_order_list')
     if model_order_list:
@@ -1856,6 +1854,7 @@ async def chat_completion(
 # Alias for chat_completion (Legacy)
 generate_chat_completions = chat_completion
 generate_chat_completion = chat_completion
+
 
 @app.post('/api/v1/chats/{id}/messages/{message_id}/resolve')
 async def resolve_chat_message_tool_call(
