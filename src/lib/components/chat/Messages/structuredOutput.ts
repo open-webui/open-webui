@@ -458,7 +458,11 @@ function appendDelta(current: unknown, delta: unknown): unknown {
 	return delta ?? current ?? '';
 }
 
-function ensureItem(output: OutputItem[], outputIndex: number, fallback?: OutputItem): OutputItem {
+function ensureOutputItem(
+	output: OutputItem[],
+	outputIndex: number,
+	fallback?: OutputItem
+): OutputItem {
 	while (output.length <= outputIndex) {
 		output.push(
 			fallback ?? { type: 'message', status: 'in_progress', role: 'assistant', content: [] }
@@ -481,6 +485,15 @@ function findOutputItemIndex(output: OutputItem[], item: OutputItem): number {
 		(existing) =>
 			(!!item.id && existing?.id === item.id) ||
 			(!!item.call_id && existing?.call_id === item.call_id)
+	);
+}
+
+function responseEventUpdatesOutputItem(eventType: string): boolean {
+	return (
+		eventType === 'response.content_part.added' ||
+		eventType === 'response.reasoning_summary_part.added' ||
+		eventType.endsWith('.delta') ||
+		eventType.endsWith('.done')
 	);
 }
 
@@ -530,7 +543,11 @@ export function applyResponseStreamEvent(
 		return nextOutput;
 	}
 
-	const item = ensureItem(nextOutput, outputIndex, {
+	if (!responseEventUpdatesOutputItem(eventType)) {
+		return output;
+	}
+
+	const item = ensureOutputItem(nextOutput, outputIndex, {
 		id: event.item_id,
 		type: eventType.includes('reasoning')
 			? 'reasoning'

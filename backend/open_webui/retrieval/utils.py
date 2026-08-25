@@ -153,6 +153,7 @@ def build_loader_from_config(request, config: dict):
     from open_webui.retrieval.loaders.main import Loader
 
     loader_config = {key: config.get(key) for key in LOADER_CONFIG_KEYS if key.isupper()}
+    loader_config['FILE_MAX_SIZE'] = config.get('file_max_size')
     return Loader(
         engine=loader_config['CONTENT_EXTRACTION_ENGINE'],
         **{key: value for key, value in loader_config.items() if key != 'CONTENT_EXTRACTION_ENGINE'},
