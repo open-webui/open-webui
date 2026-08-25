@@ -1241,64 +1241,48 @@ async def stream_wrapper(response, session, content_handler=None):
 
 def stream_chunks_handler(stream: aiohttp.StreamReader):
     """
-    Handle stream response chunks without using aiohttp's line reader.
-    When configured and a single line exceeds max_buffer_size, returns an empty
-    JSON string {} and skips subsequent data until encountering normally sized data.
+    Assemble lines from raw chunks, so a line over aiohttp's reader limit no longer aborts the stream.
+    When CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE is set, a line exceeding it is dropped.
 
     :param stream: The stream reader to handle.
-    :return: An async generator that yields the stream data.
+    :return: An async generator that yields the stream one line at a time.
     """
 
     max_buffer_size = CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
-    if max_buffer_size is not None and max_buffer_size <= 0:
-        max_buffer_size = None
+    if max_buffer_size is None or max_buffer_size <= 0:
+        max_buffer_size = float('inf')  # unset: no line is too long
 
     async def yield_safe_stream_chunks():
-        buffer = b''
-        skip_mode = False
+        buffer = bytearray()  # bytearray, not bytes: `+=` on bytes reallocates, quadratic on long lines
+        dropping_line_tail = False
 
         async for data, _ in stream.iter_chunks():
             if not data:
                 continue
 
-            # In skip_mode, if buffer already exceeds the limit, clear it (it's part of an oversized line)
-            if max_buffer_size is not None and skip_mode and len(buffer) > max_buffer_size:
-                buffer = b''
+            buffer += data
 
-            lines = (buffer + data).split(b'\n')
+            # Only split once a line completed: splitting every chunk re-copies the buffer, quadratic
+            if b'\n' in data:
+                *lines, rest = bytes(buffer).split(b'\n')
+                buffer = bytearray(rest)
 
-            # Process complete lines (except the last possibly incomplete fragment)
-            for i in range(len(lines) - 1):
-                line = lines[i]
-
-                if skip_mode:
-                    # Skip mode: check if current line is small enough to exit skip mode
-                    if max_buffer_size is None or len(line) <= max_buffer_size:
-                        skip_mode = False
-                        yield line
-                    else:
-                        yield b'data: {}\n'
-                else:
-                    # Normal mode: check if line exceeds limit
-                    if max_buffer_size is not None and len(line) > max_buffer_size:
-                        skip_mode = True
-                        yield b'data: {}\n'
-                        log.info('Skip mode triggered, line size: %s', len(line))
+                for line in lines:
+                    if dropping_line_tail:
+                        dropping_line_tail = False
+                    elif len(line) > max_buffer_size:
+                        log.info('Dropped line over max buffer size: %s bytes', len(line))
                     else:
                         yield line + b'\n'
 
-            # Save the last incomplete fragment
-            buffer = lines[-1]
+            # Oversized line still arriving: drop it instead of buffering the rest
+            if len(buffer) > max_buffer_size:
+                if not dropping_line_tail:
+                    log.info('Dropping line over max buffer size, buffered so far: %s bytes', len(buffer))
+                dropping_line_tail = True
+                buffer.clear()
 
-            # Check if buffer exceeds limit
-            if max_buffer_size is not None and not skip_mode and len(buffer) > max_buffer_size:
-                skip_mode = True
-                log.info('Skip mode triggered, buffer size: %s', len(buffer))
-                # Clear oversized buffer to prevent unlimited growth
-                buffer = b''
-
-        # Process remaining buffer data
-        if buffer and not skip_mode:
-            yield buffer + b'\n'
+        if buffer and not dropping_line_tail:
+            yield bytes(buffer)
 
     return yield_safe_stream_chunks()
