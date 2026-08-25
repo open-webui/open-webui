@@ -281,6 +281,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⏱️ **Unanswered prompts in tools.** On deployments that set "WEBSOCKET_EVENT_CALLER_TIMEOUT", a question a tool asks you that goes unanswered now reports a timeout rather than an empty reply, and waiting too long no longer risks disconnecting a tab that is still open. [#28311](https://github.com/open-webui/open-webui/pull/28311)
 - 👪 **Group member counts updating.** Adding or removing someone from a group in the admin panel now updates that group's member count straight away, where it stayed at the old number until the page was reloaded. [Commit](https://github.com/open-webui/open-webui/commit/18bf0ade7b35fb25ff7920ad3713624d93f04401)
 - 🕳️ **Blank messages left in a conversation.** Streamed events that never fill in an item no longer leave an empty assistant message saved in the conversation and sent back to the model on every later turn. [Commit](https://github.com/open-webui/open-webui/commit/2a0274a0a039dbe0a1ad4d24003b085aae7b896b)
+- 📓 **Notes opening blank.** A note whose shared editing session has not been started yet now opens with its stored content even when several people open it at once, where previously anyone but a lone first viewer got an empty document. [Commit](https://github.com/open-webui/open-webui/commit/5078d987f83943671f1d23ebe66bcc8d2af902c3)
 
 ### Changed
 
