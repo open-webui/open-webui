@@ -699,17 +699,29 @@ class ChatTable:
         *,
         touch: bool = True,
     ) -> ChatModel | None:
-        """Persist updated chat content, sanitizing null bytes."""
-        try:  # load the chat record for in-place mutation
+        """Patch top-level chat keys; history is merged so stale writers don't drop messages."""
+        try:
             async with get_async_db_context(db) as session:
-                chat_item = await session.get(Chat, id)
+                chat_item = await session.get(
+                    Chat,
+                    id,
+                    populate_existing=True,
+                    with_for_update=session.bind.dialect.name == 'postgresql',
+                )
                 if chat_item is None:
                     return None
 
-                chat_item.chat = self._clean_null_bytes(chat)
-                chat_item.title = self._clean_null_bytes(chat['title']) if 'title' in chat else 'New Chat'
+                stored = chat_item.chat or {}
+                updated = {**stored, **chat}
+                if 'history' in chat:
+                    # The caller built its history from an earlier read; merge so messages saved since then survive.
+                    updated['history'] = self.merge_history(stored.get('history'), chat['history'])
+
+                updated = self._clean_null_bytes(updated)
+                chat_item.chat = updated
+                chat_item.title = updated.get('title', 'New Chat')
                 if any(key in chat for key in ('history', 'messages', 'currentId', 'branchPointMessageId')):
-                    chat_item.current_message_id = self.get_current_message_id(chat)
+                    chat_item.current_message_id = self.get_current_message_id(updated)
 
                 if touch:
                     chat_item.updated_at = int(time.time())
@@ -816,7 +828,12 @@ class ChatTable:
     async def update_chat_title_by_id(self, id: str, title: str) -> ChatModel | None:
         try:
             async with get_async_db_context() as session:
-                chat_item = await session.get(Chat, id)
+                chat_item = await session.get(
+                    Chat,
+                    id,
+                    populate_existing=True,
+                    with_for_update=session.bind.dialect.name == 'postgresql',
+                )
                 if chat_item is None:
                     return None
                 clean_title = self._clean_null_bytes(title)
@@ -877,11 +894,12 @@ class ChatTable:
     def merge_history(existing_history: dict | None, incoming_history: dict | None) -> dict:
         existing = (existing_history or {}).get('messages') or {}
         incoming = (incoming_history or {}).get('messages') or {}
-        merged = {**existing, **incoming}
-        merged = {message_id: message for message_id, message in merged.items() if isinstance(message, dict)}
+        merged = {
+            message_id: {**message, 'childrenIds': []}
+            for message_id, message in {**existing, **incoming}.items()
+            if isinstance(message, dict)
+        }
 
-        for message in merged.values():
-            message['childrenIds'] = []
         for message_id, message in merged.items():
             parent_id = message.get('parentId')
             if parent_id in merged:
@@ -1108,7 +1126,12 @@ class ChatTable:
 
         try:
             async with get_async_db_context() as session:
-                chat_item = await session.get(Chat, id)
+                chat_item = await session.get(
+                    Chat,
+                    id,
+                    populate_existing=True,
+                    with_for_update=session.bind.dialect.name == 'postgresql',
+                )
                 if chat_item is None:
                     return None
 
@@ -1149,7 +1172,12 @@ class ChatTable:
     async def delete_message_from_chat_by_id_and_message_id(self, id: str, message_id: str) -> ChatModel | None:
         try:
             async with get_async_db_context() as session:
-                chat_item = await session.get(Chat, id)
+                chat_item = await session.get(
+                    Chat,
+                    id,
+                    populate_existing=True,
+                    with_for_update=session.bind.dialect.name == 'postgresql',
+                )
                 if chat_item is None:
                     return None
 
@@ -1191,7 +1219,12 @@ class ChatTable:
         try:
             status = self._clean_null_bytes(status)
             async with get_async_db_context() as session:
-                chat_item = await session.get(Chat, id)
+                chat_item = await session.get(
+                    Chat,
+                    id,
+                    populate_existing=True,
+                    with_for_update=session.bind.dialect.name == 'postgresql',
+                )
                 if chat_item is None:
                     return None
 
@@ -1216,13 +1249,20 @@ class ChatTable:
         except Exception:
             return None
 
-    async def add_message_files_by_id_and_message_id(self, id: str, message_id: str, files: list[dict]) -> list[dict]:
+    async def add_message_files_by_id_and_message_id(
+        self, id: str, message_id: str, files: list[dict]
+    ) -> list[dict] | None:
         async with get_async_db_context() as session:
-            chat = await self.get_chat_by_id(id, db=session)
-            if chat is None:
+            chat_item = await session.get(
+                Chat,
+                id,
+                populate_existing=True,
+                with_for_update=session.bind.dialect.name == 'postgresql',
+            )
+            if chat_item is None:
                 return None
 
-            chat = chat.chat
+            chat = chat_item.chat or {}
             history = chat.get('history', {})
 
             message_files = []
@@ -1232,8 +1272,14 @@ class ChatTable:
                 message_files = message_files + files
                 history['messages'][message_id]['files'] = message_files
 
+            # Written here rather than through update_chat_by_id: with session sharing off that opens a second
+            # connection, which then blocks on the lock this one holds.
             chat['history'] = history
-            await self.update_chat_by_id(id, chat, db=session)
+            chat_item.chat = self._clean_null_bytes(chat)
+            # History was mutated in place, so the new blob compares equal to the loaded one.
+            flag_modified(chat_item, 'chat')
+            chat_item.updated_at = int(time.time())
+            await session.commit()
             return message_files
 
     async def insert_shared_chat_by_chat_id(self, chat_id: str, db: AsyncSession | None = None) -> ChatModel | None:

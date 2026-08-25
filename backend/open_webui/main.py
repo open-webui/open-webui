@@ -1472,15 +1472,13 @@ async def chat_completion(
                     # The old frontend saveChatHandler did this on every message;
                     # now the backend owns persistence.
                     chat_files = metadata.get('files')
-                    if chat_files is not None or selected_chat_models:
-                        existing_chat = await Chats.get_chat_by_id(chat_id)
-                        if existing_chat:
-                            updated = {**existing_chat.chat}
-                            if chat_files is not None:
-                                updated['files'] = chat_files
-                            if selected_chat_models:
-                                updated['models'] = selected_chat_models
-                            await Chats.update_chat_by_id(chat_id, updated, touch=False)
+                    chat_fields = {}
+                    if chat_files is not None:
+                        chat_fields['files'] = chat_files
+                    if selected_chat_models:
+                        chat_fields['models'] = selected_chat_models
+                    if chat_fields:
+                        await Chats.update_chat_by_id(chat_id, chat_fields, touch=False)
 
                     await Chats.update_chat_variables_by_id(chat_id, chat_variables)
 

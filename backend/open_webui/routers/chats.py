@@ -1361,15 +1361,8 @@ async def update_chat_by_id(
 ):
     chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
     if chat:
-        updated_chat = {**chat.chat, **form_data.chat}
-        if 'history' in form_data.chat:
-            updated_chat['history'] = Chats.merge_history(
-                chat.chat.get('history'),
-                form_data.chat.get('history'),
-            )
-
         touch = 'history' in form_data.chat or 'messages' in form_data.chat
-        chat = await Chats.update_chat_by_id(id, updated_chat, db=db, touch=touch)
+        chat = await Chats.update_chat_by_id(id, form_data.chat, db=db, touch=touch)
         if form_data.variables is not None:
             chat = (
                 await Chats.update_chat_variables_by_id(
@@ -1383,7 +1376,7 @@ async def update_chat_by_id(
 
         # Reconcile chat_message rows without inferring deletes from missing IDs.
         # Message deletion has its own endpoint below.
-        messages = (updated_chat.get('history') or {}).get('messages') or {}
+        messages = ((chat.chat or {}).get('history') or {}).get('messages') or {}
         if messages:
             await Chats.reconcile_messages_by_chat_id(id, user.id, messages)
 
