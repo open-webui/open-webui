@@ -53,7 +53,7 @@
 				</div>
 			{/if}
 
-			<div class="px-5 pb-3 w-full flex flex-col justify-center">
+			<div class="px-3 pb-3 w-full flex flex-col justify-center">
 				<div class=" text-sm dark:text-gray-300 mb-1">
 					{#each selectedTools as tool}
 						{@const status = authStatus(tool)}
