@@ -823,8 +823,13 @@ BYPASS_RETRIEVAL_ACCESS_CONTROL = os.getenv('BYPASS_RETRIEVAL_ACCESS_CONTROL', '
 # denied — closing the legacy unscoped namespace.
 ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS = os.getenv('ENABLE_RETRIEVAL_UNSCOPED_COLLECTIONS', 'False').lower() == 'true'
 
+# Falls back to the upload size limit, because a document cannot legitimately carry more metadata
+# than the file itself is allowed to be. Left unbounded, a small archive that expands enormously
+# during extraction can exhaust memory. RAG_FILE_MAX_SIZE is in MB.
 RAG_METADATA_MAX_VALUE_CHARS = (
-    int(os.getenv('RAG_METADATA_MAX_VALUE_CHARS')) if os.getenv('RAG_METADATA_MAX_VALUE_CHARS') else None
+    int(os.getenv('RAG_METADATA_MAX_VALUE_CHARS'))
+    if os.getenv('RAG_METADATA_MAX_VALUE_CHARS')
+    else ((int(os.getenv('RAG_FILE_MAX_SIZE', '0')) or 0) * 1024 * 1024 or None)
 )
 
 MINERU_MAX_MARKDOWN_BYTES = (
