@@ -4034,13 +4034,17 @@
 		}
 	};
 
-	const oauthRedirectHandler = async (tool: {
-		id: string;
-		serverId: string;
-		authType?: string | null;
-	}) => {
+	const oauthRedirectHandler = async (
+		tool: {
+			id: string;
+			serverId: string;
+			authType?: string | null;
+		},
+		draft = getChatInputDraft()
+	) => {
+		await tick();
 		saveSessionSelectedModels();
-		await saveDraft(getChatInputDraft(), null, false);
+		await saveDraft(draft, null, false);
 		initiateOAuthRedirect(tool);
 	};
 
