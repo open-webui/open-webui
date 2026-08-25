@@ -1413,32 +1413,6 @@
 			return;
 		}
 
-		if (type === 'oauth:complete') {
-			const toolId = event.data.toolId;
-			if (!toolId) return;
-
-			if (event.data.error) {
-				sessionStorage.removeItem('oauthRedirectInProgressToolId');
-				localStorage.removeItem('oauthRedirectInProgressToolId');
-				toast.error(event.data.error);
-				return;
-			}
-
-			sessionStorage.removeItem('pendingOAuthToolId');
-			sessionStorage.removeItem('oauthRedirectInProgressToolId');
-			localStorage.removeItem('pendingOAuthToolId');
-			localStorage.removeItem('oauthRedirectInProgressToolId');
-			const updatedTools = await getTools(localStorage.token).catch(() => null);
-			if (updatedTools) {
-				tools.set(updatedTools);
-			}
-			selectedToolIds = [...new Set([...selectedToolIds, toolId])];
-			pendingOAuthTools = pendingOAuthTools.filter((tool) => tool.id !== toolId);
-			await tick();
-			await continueOAuthRedirect();
-			return;
-		}
-
 		if (type === 'action:submit') {
 			console.debug(event.data.text);
 
