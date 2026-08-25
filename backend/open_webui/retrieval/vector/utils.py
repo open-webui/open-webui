@@ -61,6 +61,33 @@ def process_metadata(
     return result
 
 
+def iter_filter_conditions(filter: dict[str, Any] | None):
+    for key, value in (filter or {}).items():
+        if isinstance(value, dict):
+            if set(value) != {'$in'}:
+                raise ValueError(f"Unsupported metadata filter for '{key}': {value}")
+            yield key, '$in', list(value['$in'])
+        else:
+            yield key, '$eq', value
+
+
+def normalize_filter(filter: dict[str, Any] | None) -> dict[str, Any]:
+    return {key: {'$in': value} if op == '$in' else value for key, op, value in iter_filter_conditions(filter)}
+
+
+def metadata_matches_filter(metadata: dict[str, Any], filter: dict[str, Any] | None) -> bool:
+    if not isinstance(metadata, dict):
+        return False
+    for key, op, value in iter_filter_conditions(filter):
+        actual = metadata.get(key)
+        if op == '$in':
+            if actual not in value:
+                return False
+        elif actual != value:
+            return False
+    return True
+
+
 def merge_hybrid_search_results(
     vector_result: SearchResult | None,
     fts_results: list[dict[str, Any]],

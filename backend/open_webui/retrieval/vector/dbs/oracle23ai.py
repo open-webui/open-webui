@@ -32,6 +32,7 @@ import array
 import json
 import logging
 import os
+import re
 import threading
 import time
 from decimal import Decimal
@@ -56,9 +57,29 @@ from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
 )
+from open_webui.retrieval.vector.utils import iter_filter_conditions
 from open_webui.utils.json_codec import JSONCodec
 
 log = logging.getLogger(__name__)
+_SAFE_METADATA_KEY_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]{0,63}$')
+
+
+def _metadata_where(filter: Optional[dict]) -> tuple[str, dict[str, Any]]:
+    clause = ''
+    params: dict[str, Any] = {}
+    for i, (key, op, value) in enumerate(iter_filter_conditions(filter)):
+        if not isinstance(key, str) or not _SAFE_METADATA_KEY_RE.fullmatch(key):
+            raise ValueError(f'Invalid Oracle metadata filter key: {key!r}')
+        json_value = f"JSON_VALUE(dc.vmetadata, '$.{key}' RETURNING VARCHAR2(4096))"
+        if op == '$in':
+            names = [f'value_{i}_{j}' for j, _ in enumerate(value)]
+            clause += f' AND {json_value} IN ({", ".join(f":{name}" for name in names)})' if names else ' AND 1 = 0'
+            params.update({name: str(item) for name, item in zip(names, value)})
+        else:
+            name = f'value_{i}'
+            clause += f' AND {json_value} = :{name}'
+            params[name] = str(value)
+    return clause, params
 
 
 class Oracle23aiClient(VectorDBBase):
@@ -549,6 +570,7 @@ class Oracle23aiClient(VectorDBBase):
                 return None
 
             num_queries = len(vectors)
+            filter_clause, filter_params = _metadata_where(filter)
 
             ids = [[] for _ in range(num_queries)]
             distances = [[] for _ in range(num_queries)]
@@ -561,12 +583,12 @@ class Oracle23aiClient(VectorDBBase):
                         vector_blob = self._vector_to_blob(vector)
 
                         cursor.execute(
-                            """
-                            SELECT dc.id, dc.text, 
+                            f"""
+                            SELECT dc.id, dc.text,
                                 JSON_SERIALIZE(dc.vmetadata RETURNING VARCHAR2(4096)) as vmetadata,
                                 VECTOR_DISTANCE(dc.vector, :query_vector, COSINE) as distance
                             FROM document_chunk dc
-                            WHERE dc.collection_name = :collection_name
+                            WHERE dc.collection_name = :collection_name{filter_clause}
                             ORDER BY VECTOR_DISTANCE(dc.vector, :query_vector, COSINE)
                             FETCH APPROX FIRST :limit ROWS ONLY
                         """,
@@ -574,6 +596,7 @@ class Oracle23aiClient(VectorDBBase):
                                 'query_vector': vector_blob,
                                 'collection_name': collection_name,
                                 'limit': limit,
+                                **filter_params,
                             },
                         )
 
