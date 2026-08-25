@@ -111,6 +111,7 @@ from open_webui.env import (
     SAFE_MODE,
     SCIM_TOKEN,
     VERSION,
+    WEBSOCKET_HEARTBEAT_INTERVAL,
     # Admin Account Runtime Creation
     WEBUI_ADMIN_EMAIL,
     WEBUI_ADMIN_NAME,
@@ -2297,6 +2298,11 @@ async def get_app_config(request: Request):
             'enable_signup': config.get('ui.enable_signup'),
             'enable_login_form': config.get('ui.enable_login_form'),
             'enable_websocket': ENABLE_WEBSOCKET_SUPPORT,
+            **(
+                {'websocket_heartbeat_interval': WEBSOCKET_HEARTBEAT_INTERVAL}
+                if WEBSOCKET_HEARTBEAT_INTERVAL is not None
+                else {}
+            ),
             # --- Authenticated: only consumed by logged-in frontend ---
             **(
                 {
