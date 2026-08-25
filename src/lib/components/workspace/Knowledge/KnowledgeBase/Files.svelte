@@ -10,6 +10,7 @@
 	const i18n = getContext('i18n');
 
 	import { capitalizeFirstLetter, formatFileSize } from '$lib/utils';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -45,7 +46,6 @@
 	export let directories = [];
 
 	export let onClick: (fileId: string | undefined) => void = () => {};
-	export let onOpen: (fileId: string) => void = () => {};
 	export let onDelete: (fileId: string | undefined) => void = () => {};
 	export let onRename: (fileId: string, name: string) => void = () => {};
 	export let onNavigateDirectory: (directoryId: string) => void = () => {};
@@ -76,13 +76,6 @@
 
 	const cancelRename = () => {
 		editingFileId = null;
-	};
-
-	const openFile = (file: KnowledgeFile) => {
-		const fileId = file?.id ?? file?.tempId;
-		if (!fileId) return;
-
-		onOpen(fileId);
 	};
 </script>
 
@@ -117,16 +110,15 @@
 		>
 			<div class="flex items-center">
 				{#if file?.status !== 'uploading'}
-					<Tooltip content={$i18n.t('Open file')}>
-						<button
-							class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-							type="button"
-							aria-label={$i18n.t('Open file')}
-							on:click={() => openFile(file)}
-						>
-							<DocumentPage className="size-3.5" />
-						</button>
-					</Tooltip>
+					<button
+						class="p-1 rounded-full transition"
+						type="button"
+						on:click={() => {
+							onClick(file?.id ?? file?.tempId);
+						}}
+					>
+						<DocumentPage className="size-3.5" />
+					</button>
 				{:else}
 					<Spinner className="size-3.5" />
 				{/if}
@@ -228,7 +220,10 @@
 								<button
 									type="button"
 									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-gray-900 dark:hover:text-gray-100"
-									on:click={() => openFile(file)}
+									on:click={() => {
+										let fileId = file?.id ?? file?.tempId;
+										window.open(`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`, '_blank');
+									}}
 								>
 									<Download className="size-3.5" />
 									{$i18n.t('Download')}

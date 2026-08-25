@@ -1560,7 +1560,6 @@
 														}
 													}
 												}}
-												onOpen={(fileId) => openFileHandler(fileId)}
 												onDelete={(fileId) => {
 													selectedFileId = null;
 													selectedFile = null;
@@ -1624,8 +1623,18 @@
 													<ChevronLeft strokeWidth="2.5" />
 												</button>
 											</div>
-											<div class=" flex-1 text-sm line-clamp-1">
-												{selectedFile?.meta?.name}
+											<div class="flex-1 text-sm line-clamp-1">
+												<a
+													href="#"
+													class="hover:underline line-clamp-1"
+													on:click|preventDefault={() => {
+														if (selectedFile?.id) {
+															openFileHandler(selectedFile.id);
+														}
+													}}
+												>
+													{selectedFile?.meta?.name}
+												</a>
 											</div>
 
 											{#if knowledge?.write_access}
