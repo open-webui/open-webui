@@ -962,3 +962,121 @@ running on the target hardware. `concurrency_test.sh` would need a real variant 
 an actual deed-entry-style task instead of an echoed token, and verification would need to check for
 genuine tool-call success/record creation rather than a simple string match. Not built this session; noted
 here so it isn't lost track of.
+
+## 2026-08-23 — Real deed-entry concurrency harness: built, but left with an unresolved bug -- paused mid-debugging, not finished
+
+Started building `docs/ichirouganaim-integration/deed_concurrency_test.py` per the follow-up above: a
+real multi-turn, human-approval-gated deed-entry conversation simulator (using the actual
+`docs/prompts/example.standard-deed-prompt.md` from `ichirouganaim_mcp`, with a dummy
+`CONCURRENCY-TEST-VOL-<timestamp>` volume swapped in for the real archival one, per user's choice of
+"full multi-turn simulation" over a single-prompt shortcut). Two real bugs found and fixed along the way,
+both live-verified:
+
+1. **`chat_id` provided on turn 1 breaks new-chat provisioning.** Supplying a self-generated `chat_id`
+   up front (so later turns could reference it) makes `main.py`'s own `is_new_chat` check `False` (it
+   requires *no* `chat_id` present) -- turn 1 silently routed into the "existing chat" branch for a chat
+   that didn't exist yet, returning HTTP 200 with an empty body and never actually creating the chat
+   (confirmed live: the chat_id didn't resolve via `GET /api/v1/chats/<id>` afterward). Fixed by
+   pre-creating the chat via `POST /api/v1/chats/new` first, so every turn -- including the first --
+   consistently uses the "existing chat" branch for a chat that's genuinely there. Also found and used the
+   previously-missing piece from the earlier "null response" mystery in this same conversation: `main.py`
+   expects a structured `user_message` object (`id`, `parentId`, `role`, `content`) as its own top-level
+   field, separate from the `messages` array and from the top-level `id`/`parent_id` (which are for the
+   *assistant* placeholder) -- omitting it is what caused chat history to never build correctly.
+2. **`post_completion`'s line-by-line SSE iteration silently returned zero content for a real, long,
+   tool-calling response**, even though the chat *did* persist with real, substantial model output
+   (confirmed by reading it back via the API -- the model's actual response, including it correctly
+   pushing back on a "blanket pre-approval" override in the test prompt as a suspicious instruction
+   conflict, was fully present in the chat's stored `output`). `ok=True` was returned every time, not an
+   error -- ruled out a caught exception. Switched `post_completion` to `resp.read()` (read the whole body,
+   confirmed working via a separate manual debug call) instead of `for raw_line in resp:`, since a fast,
+   no-tool-call request worked fine under either approach but a real multi-minute tool-calling response
+   consistently didn't under line iteration.
+
+**Not resolved**: after the `resp.read()` fix, a follow-up isolated debug call (a single, cheap
+`list_workflows`-only prompt, not the full expensive standing-instructions turn) still came back as a bare
+4-byte `"null"` response body -- the same failure signature seen much earlier in this same session before
+the `user_message` field was discovered, even though this later call *did* include `user_message`
+correctly. No server-side log line for that specific request could be found anywhere in `docker logs`,
+which is itself suspicious (every other request in this session, successful or not, produced a uvicorn
+access-log line) -- not yet explained. Session got interrupted here by an unrelated, higher-priority ask
+(native MCP Tool Server registration, next entry) before this could be chased further.
+
+**Status, explicitly**: `deed_concurrency_test.py` exists in the repo, has the two fixes above applied and
+live-verified individually, but has **not** been confirmed to work end-to-end for even a single full
+conversation since the `resp.read()` fix -- the last full run (before that fix) technically "completed"
+with real chat content persisted server-side but zero content captured by the harness itself, and the
+smaller follow-up debug probe (after the fix) hit the unexplained bare-`null` response. Do not treat this
+script as validated. Next session picking this up should start by resolving the bare-`null`/no-log-line
+mystery on a cheap single-tool-call request before trusting any concurrency numbers this script produces.
+
+## 2026-08-23 — Native MCP Tool Server registration: a genuinely different mechanism from claude_cli's own MCP Valve
+
+User asked to "hook the MCP back into open-webui" -- initially read as "make sure `claude_cli`'s own
+`MCP_SERVER_URL` Valve still works" (checked live: it did, valve intact, server reachable both from host
+and container), then clarified: they meant registering the MCP server so **any model** in this instance
+can use it, not just `claude_cli`. That's a different, independent mechanism -- `claude_cli.py`'s own
+Valve is consumed directly by the `claude` CLI subprocess, bypassing this fork's own MCP client
+entirely; this fork's built-in **Tool Server** support
+(`backend/open_webui/routers/configs.py`'s `/api/v1/configs/tool_servers` endpoints,
+`backend/open_webui/utils/middleware.py`'s `connect_mcp_server`) is what native models actually reach
+through. The two connections to the same MCP server don't conflict -- confirmed live, running both
+simultaneously.
+
+**A real bug found in `configure_mcp.sh` (the Valve-reliability script from earlier) while testing it
+more thoroughly**: its reachability check used `HTTP_CODE="$(docker exec ... curl ... || echo
+'CONN_FAIL')"`. curl prints `"000"` to stdout on a connection failure *and* exits non-zero -- so on a
+genuine failure, the command substitution captured **both**: curl's own `"000"` output, then (since the
+overall pipeline still exited non-zero) the `|| echo 'CONN_FAIL'` fallback text appended after it, giving
+`"000CONN_FAIL"` -- a string that matched *neither* of the script's exact-match failure checks (`=
+"CONN_FAIL"` or `= "000"`), so a genuinely unreachable URL was silently accepted and written to the Valve.
+Caught by deliberately testing the failure path, not just the success path (this project's own
+discipline, again paying off) -- reproduced live, fixed by checking `$?` separately after the command
+substitution instead of combining `||` inside it, re-tested both the failure path (now correctly rejected,
+Valve left untouched) and the success path (still works) to confirm.
+
+**Built `register_mcp_tool_server.sh`.** Key implementation details, each verified against the actual
+code rather than assumed:
+
+- `ToolServerConnection`'s shape (`backend/open_webui/routers/configs.py:217-227`): for `type: "mcp"`,
+  `path` is unused entirely -- confirmed by reading `/tool_servers/verify`'s own branching, which calls
+  `MCPClient().connect(form_data.url, ...)` directly for MCP-type connections (only the `openapi` branch
+  combines `url`+`path`). Left `path` as an empty string.
+- **Access control defaults to admin-only.** `has_connection_access` (`utils/access_control/__init__.py`):
+  no `config.access_grants` configured means only admins can use the connection, even with
+  `BYPASS_ADMIN_ACCESS_CONTROL` off for non-admin-bypass scenarios -- confirmed by reading the function
+  directly, not assumed from the field being optional. The script's `--public` flag needed the *exact*
+  grant shape `has_access`'s own docstring documents for public read
+  (`{"principal_type": "user", "principal_id": "*", "permission": "read"}`) -- an earlier draft guessed a
+  different, made-up shape (`{"type": "public"}`) before this was checked against the real docstring and
+  corrected prior to any live test.
+- **Registering a connection makes it *selectable*, not automatically used.** Traced
+  `connect_mcp_server`'s only call site in `middleware.py`: it fires when a chat request's `tool_ids`
+  contains `"server:mcp:<server_id>"`, which comes from the chat's own request metadata (the UI's "+"
+  tools picker, or a model's own default-enabled tools) -- not something registering the connection alone
+  turns on for every model. Documented as an explicit, separate follow-up step in `SETUP.md`, not silently
+  glossed over.
+
+**Live-verified, idempotent, no Claude usage spent** (this only talks to the MCP server directly, never
+invokes a model): registered `ichirouganaim_mcp` at `http://host.docker.internal:8931/mcp` --
+`/tool_servers/verify` reported **137 tools discovered** (matches the tool count implied by the earlier
+`system init` capture's own tools list from step 4's live testing). Re-ran with `--public` added: still
+exactly 1 connection afterward (confirmed idempotent, not duplicated), `access_grants` correctly updated
+to the public-read shape.
+
+**Not yet tried**: an actual chat where a native (non-`claude_cli`) model calls a tool through this
+registration. Everything verified above is the backend talking to the MCP server directly
+(`/tool_servers/verify`'s own handshake) -- no model was ever involved, so this doesn't yet prove a real
+model can successfully use it mid-conversation, only that the connection itself is live and discoverable.
+
+**Correction to an assumption in the first version of this entry, caught via a real frontend-source
+search rather than left standing**: guessed a Tool Server could be set as a given model's own
+default-enabled tool through the model editor, as a "further step this script doesn't do." Searched the
+actual frontend source instead of trusting that guess: `Workspace → Models → edit`'s `ToolsSelector.svelte`
+only reads from the internal Tools registry (`$lib/apis/tools`, individually registered Python function
+tools -- a different, older mechanism), never references `tool_server.connections` at all. **There is
+currently no way to make a model auto-use a registered Tool Server by default** -- the only mechanism is
+the per-chat "+" tools picker (`ToolServersModal.svelte`), every single time, for every chat that needs
+it. `SETUP.md` corrected to state this as confirmed rather than the earlier speculative phrasing.
+`Integrations.svelte` (Admin Settings → Integrations, labeled "External Tool Servers" in the UI) is where
+the registered connection is visible/editable in the browser.

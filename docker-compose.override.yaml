@@ -6,7 +6,7 @@ services:
     image: open-webui-claude-cli:local
     depends_on: !reset []
     environment:
-      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_BASE_URL: http://ollama:11434
       # Fixed, not '' (auto-generate-on-first-boot): the auto-generated key
       # lives in the container's own writable layer
       # (/app/backend/.webui_secret_key), *outside* the persistent

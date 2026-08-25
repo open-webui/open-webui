@@ -91,11 +91,14 @@ docs/ichirouganaim-integration/bootstrap_admin_api_key.py
 docs/ichirouganaim-integration/bootstrap.sh
 ```
 
-The five scripts referenced later, in "Long-term operation," are optional
-but worth having too — not required for a working setup, only for ongoing
-maintenance once it's been running a while:
+The scripts referenced later, in step 8/8b and "Long-term operation," are
+optional but worth having too — not required for a working setup, only
+for wiring up MCP access and ongoing maintenance once it's been running a
+while:
 
 ```
+docs/ichirouganaim-integration/configure_mcp.sh
+docs/ichirouganaim-integration/register_mcp_tool_server.sh
 docs/ichirouganaim-integration/check_claude_auth.sh
 docs/ichirouganaim-integration/backup_data_volume.sh
 docs/ichirouganaim-integration/check_claude_code_version.sh
@@ -322,6 +325,65 @@ curl -s -X POST $OPEN_WEBUI_BASE_URL/api/v1/functions/id/claude_cli/valves/updat
   -H "Content-Type: application/json" \
   -d '{"MCP_SERVER_URL":"<your MCP URL>"}'
 ```
+
+**Or, packaged as a script** (does the same reachability check plus a
+readback confirming the write actually took, rather than trusting "the
+API call didn't error"):
+
+```bash
+docs/ichirouganaim-integration/configure_mcp.sh <your MCP URL>
+docs/ichirouganaim-integration/configure_mcp.sh ""   # clears it, disables MCP for claude_cli
+```
+
+## 8b. (Optional) Register the MCP server for *every* model, not just `claude_cli`
+
+Step 8 above only wires the MCP server into `claude_cli` specifically —
+the `claude` CLI subprocess connects to it directly, bypassing this
+fork's own MCP client entirely. If you also want native (non-`claude_cli`)
+models in this instance to be able to use the same MCP server, that's a
+genuinely different, independent mechanism: this fork's built-in **Tool
+Server** support
+(`backend/open_webui/routers/configs.py`'s `/api/v1/configs/tool_servers`
+endpoints). The two don't conflict — the MCP server ends up with two
+separate client connections into it, which any real MCP server is
+designed to handle.
+
+```bash
+docs/ichirouganaim-integration/register_mcp_tool_server.sh \
+  --id ichirouganaim_mcp \
+  --url <your MCP URL> \
+  --name "Ichirouganaim MCP" \
+  [--public]
+```
+
+Verifies the MCP server actually responds (via a real handshake, no
+Claude usage spent) before saving, and re-running with the same `--id`
+updates the existing entry in place rather than duplicating it. Without
+`--public`, the registered connection defaults to **admin-only** access
+(confirmed by reading `has_connection_access` directly — no
+`access_grants` configured means only admins can use it); `--public`
+grants read access to every user via the exact grant shape `has_access`'s
+own docstring documents for that.
+
+**Registering it makes it *available*, not automatically used by every
+model.** A chat still needs `tool_ids` containing
+`"server:mcp:<your-id>"` for that specific request to actually connect
+and call it. **Confirmed live (frontend source, not assumed): there's
+currently no way to make a model auto-use a Tool Server by default at
+all** — a model's own edit page (`Workspace → Models → edit` →
+`ToolsSelector.svelte`) only lets you pick from the internal Tools
+registry (`$lib/apis/tools`, a separate, older mechanism — individually
+registered Python function tools, not Tool Server connections), and
+doesn't reference `tool_server.connections` at all. The *only* way to
+enable a registered Tool Server for a conversation is per-chat: the "+"
+tools icon in the message input toolbar, which opens
+`ToolServersModal.svelte` listing both internal Tools and Tool Servers —
+select it there, every time, for every chat that needs it.
+
+**Where to check it's registered**: Admin Settings (gear icon) →
+**Integrations** tab (labeled "External Tool Servers" in the UI,
+`Integrations.svelte`) — the connection this script created should be
+listed there, editable/removable the same as one added by hand.
 
 ## 9. Verify end to end
 
