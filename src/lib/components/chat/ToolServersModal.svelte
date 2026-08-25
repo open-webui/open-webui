@@ -79,7 +79,7 @@
 										</span>
 									{/if}
 									{#if status}
-										<span class="size-2 rounded-full {status.dot} shrink-0"></span>
+										<span class="size-1.5 rounded-full {status.dot} shrink-0"></span>
 									{/if}
 								</div>
 
