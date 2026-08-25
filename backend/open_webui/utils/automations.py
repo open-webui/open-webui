@@ -436,7 +436,7 @@ async def _execute_channel_automation(
             db,
         )
 
-    tool_ids, features, filter_ids, _ = await _resolve_model_defaults(app, model_id)
+    tool_ids, features, filter_ids, terminal_id = await _resolve_model_defaults(app, model_id)
 
     form_data = {
         'model': model_id,
@@ -460,6 +460,8 @@ async def _execute_channel_automation(
         form_data['features'] = features
     if filter_ids:
         form_data['filter_ids'] = filter_ids
+    if terminal_id:
+        form_data['terminal_id'] = terminal_id
 
     await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 
