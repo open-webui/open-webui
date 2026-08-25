@@ -254,7 +254,8 @@ def get_output_text(output: list | None) -> str:
         text = ''.join(
             str(part.get('text')) for part in parts if isinstance(part, dict) and part.get('text') is not None
         )
-        if text.strip():
+        # isspace() avoids the full-string copy strip() would make
+        if text and not text.isspace():
             texts.append(text)
 
     return '\n'.join(texts)
