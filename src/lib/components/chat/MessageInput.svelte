@@ -67,7 +67,6 @@
 	import { getSessionUser } from '$lib/apis/auths';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
-	import { initiateOAuthRedirect } from '$lib/apis/configs';
 	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
 
 	import { createNoteHandler } from '../notes/utils';
@@ -193,6 +192,7 @@
 	export let onToolApprovalModeChange: Function = () => {};
 
 	export let pendingOAuthTools = [];
+	export let oauthRedirectHandler: Function = () => {};
 
 	let showTerminalMenu = false;
 
@@ -2259,6 +2259,7 @@
 												bind:webSearchEnabled
 												bind:imageGenerationEnabled
 												bind:codeInterpreterEnabled
+												{oauthRedirectHandler}
 												{onWebSearchToggle}
 												closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
 												onShowValves={(e) => {
@@ -2478,7 +2479,7 @@
 												<Tooltip content={$i18n.t('Click to connect')} placement="top">
 													<button
 														on:click|preventDefault={() => {
-															initiateOAuthRedirect(pendingTool);
+															oauthRedirectHandler(pendingTool);
 														}}
 														type="button"
 														class="group px-2 py-[0.3125rem] flex gap-1.5 items-center text-xs rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden

@@ -56,6 +56,7 @@
 	export let webSearchEnabled = false;
 	export let toolApprovalMode = 'full';
 	export let onToolApprovalModeChange: Function = () => {};
+	export let oauthRedirectHandler: Function = () => {};
 
 	export let onUpload: Function = (e) => {};
 	export let onUpdate: (data?: { file?: any }) => void = () => {};
@@ -246,6 +247,7 @@
 						bind:showCommands
 						bind:dragged
 						{pendingOAuthTools}
+						{oauthRedirectHandler}
 						{toolApprovalMode}
 						{onToolApprovalModeChange}
 						{stopResponse}

@@ -312,9 +312,9 @@
 	$: contextUsage = getContextUsage() ?? (contextCompactionEnabled ? serverContextUsage : null);
 	$: embeddedHeaderTitle = embeddedTitle || $chatTitle || $i18n.t('Chat');
 
-	let selectedToolIds = [];
-	let selectedSkillIds = [];
-	let selectedFilterIds = [];
+	let selectedToolIds: string[] = [];
+	let selectedSkillIds: string[] = [];
+	let selectedFilterIds: string[] = [];
 	let pendingOAuthTools = [];
 
 	let imageGenerationEnabled = false;
@@ -408,7 +408,7 @@
 	// Chat Input
 	let prompt = '';
 	let chatFiles = [];
-	let files = [];
+	let files: any[] = [];
 	let params = {};
 	let chatVariables = {};
 	let showChatVariablesModal = false;
@@ -737,6 +737,31 @@
 		});
 	};
 
+	const restoreChatInput = async (storageChatInput: string | null) => {
+		if (!storageChatInput || $temporaryChatEnabled) {
+			return false;
+		}
+
+		try {
+			const input = JSON.parse(storageChatInput);
+			prompt = input.prompt ?? '';
+			messageInput?.setText(prompt);
+			files = input.files ?? [];
+			selectedToolIds = input.selectedToolIds ?? [];
+			selectedSkillIds = input.selectedSkillIds ?? [];
+			selectedFilterIds = input.selectedFilterIds ?? [];
+			webSearchEnabled = input.webSearchEnabled ?? false;
+			imageGenerationEnabled = input.imageGenerationEnabled ?? false;
+			codeInterpreterEnabled = input.codeInterpreterEnabled ?? false;
+			if (input.toolApprovalMode) {
+				await handleToolApprovalModeChange(input.toolApprovalMode);
+			}
+			return true;
+		} catch (e) {
+			return false;
+		}
+	};
+
 	const withSelectedText = (text: string) =>
 		embedded && selectedText?.trim()
 			? `${text}\n\nSelected note text for replace_note_content operations:\n${selectedText.trim()}`
@@ -820,25 +845,7 @@
 				await processNextInQueue(chatIdProp);
 			}
 
-			if (storageChatInput) {
-				try {
-					const input = JSON.parse(storageChatInput);
-
-					if (!$temporaryChatEnabled) {
-						messageInput?.setText(input.prompt);
-						files = input.files;
-						selectedToolIds = input.selectedToolIds;
-						selectedSkillIds = input.selectedSkillIds ?? [];
-						selectedFilterIds = input.selectedFilterIds;
-						webSearchEnabled = input.webSearchEnabled;
-						imageGenerationEnabled = input.imageGenerationEnabled;
-						codeInterpreterEnabled = input.codeInterpreterEnabled;
-						if (input.toolApprovalMode) {
-							handleToolApprovalModeChange(input.toolApprovalMode);
-						}
-					}
-				} catch (e) {}
-			} else {
+			if (!(await restoreChatInput(storageChatInput))) {
 				await setDefaults();
 			}
 
@@ -941,9 +948,7 @@
 			return;
 		}
 
-		saveSessionSelectedModels();
-		await tick();
-		initiateOAuthRedirect(nextTool);
+		await oauthRedirectHandler(nextTool);
 	};
 
 	const resetInput = async () => {
@@ -1590,23 +1595,7 @@
 				imageGenerationEnabled = false;
 				codeInterpreterEnabled = false;
 
-				try {
-					const input = JSON.parse(storageChatInput);
-
-					if (!$temporaryChatEnabled) {
-						messageInput?.setText(input.prompt);
-						files = input.files;
-						selectedToolIds = input.selectedToolIds;
-						selectedSkillIds = input.selectedSkillIds ?? [];
-						selectedFilterIds = input.selectedFilterIds;
-						webSearchEnabled = input.webSearchEnabled;
-						imageGenerationEnabled = input.imageGenerationEnabled;
-						codeInterpreterEnabled = input.codeInterpreterEnabled;
-						if (input.toolApprovalMode) {
-							handleToolApprovalModeChange(input.toolApprovalMode);
-						}
-					}
-				} catch (e) {}
+				await restoreChatInput(storageChatInput);
 			}
 
 			messageInput?.focus({ preventScroll: true });
@@ -2125,6 +2114,7 @@
 		autoScroll = true;
 
 		await resetInput();
+		await restoreChatInput(sessionStorage.getItem('chat-input'));
 		await chatId.set('');
 		await chatTitle.set('');
 
@@ -4007,21 +3997,50 @@
 	const MAX_DRAFT_LENGTH = 5000;
 	let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
 
-	const saveDraft = async (draft: any, chatId: string | null = null) => {
+	const getChatInputDraft = () => ({
+		prompt,
+		files: files
+			.filter((file) => file.type !== 'image')
+			.map((file) => ({
+				...file,
+				user: undefined,
+				access_grants: undefined
+			})),
+		selectedToolIds,
+		selectedSkillIds,
+		selectedFilterIds,
+		imageGenerationEnabled,
+		webSearchEnabled,
+		codeInterpreterEnabled,
+		toolApprovalMode
+	});
+
+	const saveDraft = async (draft: any, chatId: string | null = null, debounce = true) => {
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
 		}
 
 		if (draft.prompt !== null && draft.prompt.length < MAX_DRAFT_LENGTH) {
-			saveDraftTimeout = setTimeout(async () => {
-				await sessionStorage.setItem(
-					`chat-input${chatId ? `-${chatId}` : ''}`,
-					JSON.stringify(draft)
-				);
-			}, 500);
+			const key = `chat-input${chatId ? `-${chatId}` : ''}`;
+			const write = () => sessionStorage.setItem(key, JSON.stringify(draft));
+			if (debounce) {
+				saveDraftTimeout = setTimeout(write, 500);
+			} else {
+				write();
+			}
 		} else {
 			sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
 		}
+	};
+
+	const oauthRedirectHandler = async (tool: {
+		id: string;
+		serverId: string;
+		authType?: string | null;
+	}) => {
+		saveSessionSelectedModels();
+		await saveDraft(getChatInputDraft(), null, false);
+		initiateOAuthRedirect(tool);
 	};
 
 	const clearDraft = async (chatId: string | null = null) => {
@@ -4406,6 +4425,7 @@
 										bind:imageGenerationEnabled
 										bind:codeInterpreterEnabled
 										{pendingOAuthTools}
+										{oauthRedirectHandler}
 										bind:webSearchEnabled
 										bind:atSelectedModel
 										bind:showCommands
@@ -4497,6 +4517,7 @@
 										bind:imageGenerationEnabled
 										bind:codeInterpreterEnabled
 										{pendingOAuthTools}
+										{oauthRedirectHandler}
 										bind:webSearchEnabled
 										bind:atSelectedModel
 										bind:showCommands
@@ -4557,6 +4578,7 @@
 									{toolApprovalMode}
 									onToolApprovalModeChange={handleToolApprovalModeChange}
 									{pendingOAuthTools}
+									{oauthRedirectHandler}
 									{stopResponse}
 									{createMessagePair}
 									{onSelect}

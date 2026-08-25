@@ -4,7 +4,6 @@
 
 	import { user, tools as _tools, skills as _skills, toolServers } from '$lib/stores';
 
-	import { initiateOAuthRedirect } from '$lib/apis/configs';
 	import { deleteOAuthSession } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
@@ -46,6 +45,7 @@
 
 	export let selectedModels: string[] = [];
 	export let fileUploadCapableModels: string[] = [];
+	export let oauthRedirectHandler: Function = () => {};
 
 	export let toggleFilters: {
 		id: string;
@@ -217,7 +217,7 @@
 			e.preventDefault();
 
 			const parts = toolId.split(':');
-			initiateOAuthRedirect({
+			oauthRedirectHandler({
 				id: toolId,
 				serverId: parts.at(-1) ?? toolId,
 				authType: parts.length > 1 ? (parts[0] === 'server' ? parts[1] : parts[0]) : null
