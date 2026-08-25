@@ -284,6 +284,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 👪 **Group member counts updating.** Adding or removing someone from a group in the admin panel now updates that group's member count straight away, where it stayed at the old number until the page was reloaded. [Commit](https://github.com/open-webui/open-webui/commit/18bf0ade7b35fb25ff7920ad3713624d93f04401)
 - 🕳️ **Blank messages left in a conversation.** Streamed events that never fill in an item no longer leave an empty assistant message saved in the conversation and sent back to the model on every later turn. [Commit](https://github.com/open-webui/open-webui/commit/2a0274a0a039dbe0a1ad4d24003b085aae7b896b)
 - 📓 **Notes opening blank.** A note whose shared editing session has not been started yet now opens with its stored content even when several people open it at once, where previously anyone but a lone first viewer got an empty document. [Commit](https://github.com/open-webui/open-webui/commit/5078d987f83943671f1d23ebe66bcc8d2af902c3)
+- 🤫 **Replies stopping silently after a tool ran.** When a provider rejects the follow-up request made after a tool finishes, the reason is now shown in the chat instead of the reply simply ending with nothing said. [Commit](https://github.com/open-webui/open-webui/commit/a610d77137fabf60a2e0daa961a8ef8f7320293a)
+- 🎟️ **Connections whose tags were saved as plain text.** A connection with tags stored as plain text no longer breaks its editor panel or silently blanks the tags on every model coming from it. [Commit](https://github.com/open-webui/open-webui/commit/8be4c5fa6a849a9ff4a74f6a2870a115a836e68a)
 
 ### Changed
 
